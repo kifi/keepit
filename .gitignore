@@ -1,13 +1,47 @@
+# showbox dirs
+showbox/logs
+showbox/project/project
+showbox/project/target
+showbox/target
+showbox/tmp
+showbox/.classpath
+showbox/.project
+showbox/.settings/*
+showbox/.settings
+showbox/dist/*
+showbox/.pydevproject
+showbox/app_version.txt
+showbox/conf/app_version.txt
+showbox/conf/app_compilation_date.txt
+showbox/access*
+showbox/log/*
+showbox/log
+showbox/.target
+showbox/.target/*
+showbox/cx.properties
+
+*.swp
+
+# Compiled source #
+###################
+*.com
 *.class
+*.dll
+*.exe
+*.o
+*.so
+
+# IDE Files   #
+###############
+workspace.xml
+
+# Logs and databases #
+######################
 *.log
 
-# sbt specific
-dist/*
-target/
-lib_managed/
-src_managed/
-project/boot/
-project/plugins/project/
-
-# Scala-IDE specific
-.scala_dependencies
+# OS generated files #
+######################
+.DS_Store*
+ehthumbs.db
+Icon?
+Thumbs.db
