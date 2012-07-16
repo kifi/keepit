@@ -19,13 +19,11 @@ case class User(
   lastName: String,
   state: State[User] = User.States.ACTIVE,
   facebookId: Option[FacebookId] = None,
-  facebookAccessToken: Option[FacebookAccessToken] = None,
-  enableAllStores: Boolean = false
+  facebookAccessToken: Option[FacebookAccessToken] = None
 ) {
   def withFacebookId(facebookId: FacebookId, facebookAccessToken: Option[FacebookAccessToken]) = copy(facebookId = Some(facebookId), facebookAccessToken = facebookAccessToken)
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
   def withExternalId(id: ExternalId[User]) = copy(externalId = id)
-  def withEnableAllStores(enable: Boolean) = copy(enableAllStores = enable)
   
   def save(implicit conn: Connection): User = {
     val entity = UserEntity(this.copy(updatedAt = currentDateTime))
@@ -47,9 +45,18 @@ object User {
   def all(implicit conn: Connection): Seq[User] =
     UserEntity.all.map(_.view)
   
+  def intern(facebookId: FacebookId)(implicit conn: Connection): User = {
+    getOpt(facebookId).getOrElse {
+      User(firstName = "", lastName = "", facebookId = Some(facebookId)).save
+    }
+  }
+
+  def getOpt(facebookId: FacebookId)(implicit conn: Connection): Option[User] =
+    (UserEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.facebookId EQ facebookId.toString()) unique }.map(_.view)
+    
   def get(id: Id[User])(implicit conn: Connection): User =
     getOpt(id).getOrElse(throw NotFoundException(id))
-
+    
   def getOpt(id: Id[User])(implicit conn: Connection): Option[User] =
     UserEntity.get(id).map(_.view)
     
@@ -79,7 +86,6 @@ private[model] class UserEntity extends Entity[User, UserEntity] {
   val state = "state".STATE[User].NOT_NULL(User.States.ACTIVE)
   val facebookId = "facebook_id".VARCHAR(16)
   val facebookAccessToken = "facebook_access_token".VARCHAR(512)
-  val enableAllStores = "enable_all_stores".BOOLEAN
   
   def relation = UserEntity
   
@@ -92,8 +98,7 @@ private[model] class UserEntity extends Entity[User, UserEntity] {
     lastName = lastName(),
     state = state(),
     facebookId = facebookId.map(FacebookId(_)),
-    facebookAccessToken = facebookAccessToken.map(FacebookAccessToken(_)),
-    enableAllStores = enableAllStores()
+    facebookAccessToken = facebookAccessToken.map(FacebookAccessToken(_))
   )
 }
 
@@ -111,7 +116,6 @@ private[model] object UserEntity extends UserEntity with EntityTable[User, UserE
     user.state := view.state
     user.facebookId.set(view.facebookId.map(_.value))
     user.facebookAccessToken.set(view.facebookAccessToken.map(_.value))
-    user.enableAllStores := view.enableAllStores
     user
   }
 }

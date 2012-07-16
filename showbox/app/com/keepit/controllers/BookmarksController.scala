@@ -14,22 +14,30 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 import com.keepit.controllers.CommonActions._
-import com.keepit.model.Bookmark
 import com.keepit.common.db.CX
+import com.keepit.model.Bookmark
+import com.keepit.model.FacebookId
+import com.keepit.model.User
 
 object BookmarksController extends Controller {
   
   def addBookmarks() = JsonAction { request =>
     val json = request.body
-    val (bookmarks, userInfo) = parseJson(json)
+    val (bookmarks, facebookId) = parseJson(json)
+    val user = internUser(facebookId)
     println(bookmarks mkString "\n")
+    println(user)
     Ok(JsObject(List("status" -> JsString("success"))))
   }
   
-  private def parseJson(json: JsValue) = try {
+  private def internUser(facebookId: FacebookId): User = CX.withConnection { implicit conn =>
+    User.intern(facebookId)
+  }
+  
+  private def parseJson(json: JsValue) : (List[Bookmark], FacebookId) = try {
     val bookmarks = parseBookmarks(json \ "bookmarks") 
-    val userInfo = parseUserInfo(json \ "user_info")
-    (bookmarks, userInfo)
+    val fbId = parseUserInfo(json \ "user_info")
+    (bookmarks, fbId)
   } catch {
     case e => 
       println("Error parsing %s".format(json))
@@ -44,10 +52,10 @@ object BookmarksController extends Controller {
     case e => throw new Exception("can't figure what to do with %s".format(e))  
   }
   
-  private def parseUserInfo(value: JsValue): Unit = {
-    val fbId = (value \ "facebook_id").as[String]
-    println("fbId:")
-    println(fbId)
+  private def parseUserInfo(value: JsValue): FacebookId = {
+    val fbId = FacebookId((value \ "facebook_id").as[String])
+    println("fbId:" + fbId)
+    fbId
   }
   
   private def parseBookmark(json: JsObject): Bookmark = {

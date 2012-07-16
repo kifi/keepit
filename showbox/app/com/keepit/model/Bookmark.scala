@@ -24,6 +24,7 @@ case class Bookmark(
   urlHash: String,
   bookmarkPath: Option[String],
   isPrivate: Boolean,
+  userId: Id[User],
   state: State[Bookmark] = Bookmark.States.ACTIVE
 ) {
   
