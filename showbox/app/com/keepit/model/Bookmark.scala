@@ -38,12 +38,12 @@ case class Bookmark(
 
 object Bookmark {
   
-  def apply(title: String, url: String): Bookmark = {
+  def apply(title: String, url: String, user: User): Bookmark = {
     //better: use http://stackoverflow.com/a/4057470/81698
     val normalized = new URI(url).normalize().toString()
     val binaryHash = MessageDigest.getInstance("MD5").digest(normalized.getBytes("UTF-8"))
     val hash = new String(new Base64().encode(binaryHash), "UTF-8")
-    Bookmark(title = title, url = url, normalizedUrl = normalized, urlHash = hash, isPrivate = false, bookmarkPath = None) 
+    Bookmark(title = title, url = url, normalizedUrl = normalized, urlHash = hash, isPrivate = false, bookmarkPath = None, userId = user.id.get) 
   }
   
   //Used for admin, checking that we can talk with the db
@@ -85,6 +85,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
   val normalizedUrl = "normalized_url".VARCHAR(16).NOT_NULL
   val urlHash = "url_hash".VARCHAR(512).NOT_NULL
   val bookmarkPath = "bookmark_path".VARCHAR(512).NOT_NULL
+  val userId = "user_id".ID[User].NOT_NULL
   val isPrivate = "is_private".BOOLEAN.NOT_NULL
   
   def relation = BookmarkEntity
@@ -100,6 +101,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
     urlHash = urlHash(),
     normalizedUrl = normalizedUrl(),
     isPrivate = isPrivate(),
+    userId = userId(),
     bookmarkPath = bookmarkPath.value
   )
 }

@@ -23,8 +23,9 @@ object BookmarksController extends Controller {
   
   def addBookmarks() = JsonAction { request =>
     val json = request.body
-    val (bookmarks, facebookId) = parseJson(json)
+    val facebookId = parseUserInfo(json \ "user_info")
     val user = internUser(facebookId)
+    val bookmarks = parseBookmarks(json \ "bookmarks", user) 
     println(bookmarks mkString "\n")
     println(user)
     Ok(JsObject(List("status" -> JsString("success"))))
@@ -33,22 +34,11 @@ object BookmarksController extends Controller {
   private def internUser(facebookId: FacebookId): User = CX.withConnection { implicit conn =>
     User.intern(facebookId)
   }
-  
-  private def parseJson(json: JsValue) : (List[Bookmark], FacebookId) = try {
-    val bookmarks = parseBookmarks(json \ "bookmarks") 
-    val fbId = parseUserInfo(json \ "user_info")
-    (bookmarks, fbId)
-  } catch {
-    case e => 
-      println("Error parsing %s".format(json))
-      e.printStackTrace()
-      throw e
-  }
-  
-  private def parseBookmarks(value: JsValue): List[Bookmark] = value match {
-    case JsArray(elements) => (elements map parseBookmarks flatten).toList  
-    case json: JsObject if(json.keys.contains("children")) => parseBookmarks( json \ "children" )  
-    case json: JsObject => List(parseBookmark(json))  
+    
+  private def parseBookmarks(value: JsValue, user: User): List[Bookmark] = value match {
+    case JsArray(elements) => (elements map {e => parseBookmarks(e, user)} flatten).toList  
+    case json: JsObject if(json.keys.contains("children")) => parseBookmarks( json \ "children" , user)  
+    case json: JsObject => List(parseBookmark(json, user))  
     case e => throw new Exception("can't figure what to do with %s".format(e))  
   }
   
@@ -58,11 +48,11 @@ object BookmarksController extends Controller {
     fbId
   }
   
-  private def parseBookmark(json: JsObject): Bookmark = {
+  private def parseBookmark(json: JsObject, user: User): Bookmark = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
     CX.withConnection { implicit conn =>
-      Bookmark(title, url).save
+      Bookmark(title, url, user).save
     }
   }
   
