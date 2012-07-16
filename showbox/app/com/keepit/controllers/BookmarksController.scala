@@ -20,15 +20,27 @@ import com.keepit.common.db.CX
 object BookmarksController extends Controller {
   
   def addBookmarks() = JsonAction { request =>
-    parseBookmarks(request.body \ "bookmarks") 
-    parseUserInfo(request.body \ "user_info") 
+    val json = request.body
+    val (bookmarks, userInfo) = parseJson(json)
+    println(bookmarks mkString "\n")
     Ok(JsObject(List("status" -> JsString("success"))))
   }
   
-  private def parseBookmarks(value: JsValue): Unit = value match {
-    case JsArray(elements) => elements map parseBookmarks
+  private def parseJson(json: JsValue) = try {
+    val bookmarks = parseBookmarks(json \ "bookmarks") 
+    val userInfo = parseUserInfo(json \ "user_info")
+    (bookmarks, userInfo)
+  } catch {
+    case e => 
+      println("Error parsing %s".format(json))
+      e.printStackTrace()
+      throw e
+  }
+  
+  private def parseBookmarks(value: JsValue): List[Bookmark] = value match {
+    case JsArray(elements) => (elements map parseBookmarks flatten).toList  
     case json: JsObject if(json.keys.contains("children")) => parseBookmarks( json \ "children" )  
-    case json: JsObject => parseBookmark( json )  
+    case json: JsObject => List(parseBookmark(json))  
     case e => throw new Exception("can't figure what to do with %s".format(e))  
   }
   
@@ -38,7 +50,7 @@ object BookmarksController extends Controller {
     println(fbId)
   }
   
-  private def parseBookmark(json: JsObject) = {
+  private def parseBookmark(json: JsObject): Bookmark = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
     CX.withConnection { implicit conn =>

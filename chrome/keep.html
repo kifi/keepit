@@ -5,6 +5,7 @@
     console.log("background page kicking in!");
     function getPicture(userInfo) {
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
+        userInfo["facebook_id"] = cookie.value;
         userInfo["picture"] = "https://graph.facebook.com/" + cookie.value + "/picture";
       });
     }
@@ -23,9 +24,13 @@
       chrome.bookmarks.getTree(function(bookmarks) {
         console.log("bookmarks:");
         console.log(bookmarks);
-        var bookmarksJson = JSON.stringify(bookmarks);
+        var json = {
+          "bookmarks": bookmarks,
+          "user_info": userInfo
+        }
+        var tosend = JSON.stringify(json);
         xhr.open("POST", 'http://localhost:9000/bookmarks/add', true);
-        xhr.send(bookmarksJson);
+        xhr.send(tosend);
       });
     }
 
