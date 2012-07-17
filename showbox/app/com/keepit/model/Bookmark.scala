@@ -22,9 +22,9 @@ case class Bookmark(
   url: String,
   normalizedUrl: String,
   urlHash: String,
-  bookmarkPath: Option[String],
+  bookmarkPath: Option[String] = None,
   isPrivate: Boolean,
-  userId: Id[User],
+  userId: Option[Id[User]] = None,
   state: State[Bookmark] = Bookmark.States.ACTIVE
 ) {
   
@@ -34,6 +34,8 @@ case class Bookmark(
     entity.view
   }
   
+  def loadUsingHash(implicit conn: Connection): Option[Bookmark] =
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE ((b.userId EQ userId.get) AND (b.urlHash EQ urlHash)) unique }.map(_.view)
 }
 
 object Bookmark {
@@ -43,7 +45,7 @@ object Bookmark {
     val normalized = new URI(url).normalize().toString()
     val binaryHash = MessageDigest.getInstance("MD5").digest(normalized.getBytes("UTF-8"))
     val hash = new String(new Base64().encode(binaryHash), "UTF-8")
-    Bookmark(title = title, url = url, normalizedUrl = normalized, urlHash = hash, isPrivate = false, bookmarkPath = None, userId = user.id.get) 
+    Bookmark(title = title, url = url, normalizedUrl = normalized, urlHash = hash, isPrivate = false, userId = user.id) 
   }
   
   //Used for admin, checking that we can talk with the db
@@ -59,7 +61,7 @@ object Bookmark {
   
   def get(id: Id[Bookmark])(implicit conn: Connection): Bookmark =
     getOpt(id).getOrElse(throw NotFoundException(id))
-
+    
   def getOpt(id: Id[Bookmark])(implicit conn: Connection): Option[Bookmark] =
     BookmarkEntity.get(id).map(_.view)
     
@@ -67,7 +69,7 @@ object Bookmark {
     getOpt(externalId).getOrElse(throw NotFoundException(externalId))
   
   def getOpt(externalId: ExternalId[Bookmark])(implicit conn: Connection): Option[Bookmark] =
-    (BookmarkEntity AS "b").map { u => SELECT (u.*) FROM u WHERE (u.externalId EQ externalId) unique }.map(_.view)
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.externalId EQ externalId) unique }.map(_.view)
     
   object States {
     val ACTIVE = State[Bookmark]("active")
@@ -85,7 +87,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
   val normalizedUrl = "normalized_url".VARCHAR(16).NOT_NULL
   val urlHash = "url_hash".VARCHAR(512).NOT_NULL
   val bookmarkPath = "bookmark_path".VARCHAR(512).NOT_NULL
-  val userId = "user_id".ID[User].NOT_NULL
+  val userId = "user_id".ID[User]
   val isPrivate = "is_private".BOOLEAN.NOT_NULL
   
   def relation = BookmarkEntity
@@ -101,7 +103,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
     urlHash = urlHash(),
     normalizedUrl = normalizedUrl(),
     isPrivate = isPrivate(),
-    userId = userId(),
+    userId = userId.value,
     bookmarkPath = bookmarkPath.value
   )
 }
@@ -122,6 +124,7 @@ private[model] object BookmarkEntity extends BookmarkEntity with EntityTable[Boo
     bookmark.normalizedUrl := view.normalizedUrl
     bookmark.bookmarkPath.set(view.bookmarkPath)
     bookmark.isPrivate := view.isPrivate
+    bookmark.userId.set(view.userId)
     bookmark
   }
 }

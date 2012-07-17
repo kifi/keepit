@@ -7,11 +7,9 @@
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
         userInfo["facebook_id"] = cookie.value;
         userInfo["picture"] = "https://graph.facebook.com/" + cookie.value + "/picture";
+        postBookmarks();
       });
     }
-
-    var userInfo = {}
-    getPicture(userInfo);
 
     function postBookmarks() {
       var xhr = new XMLHttpRequest();
@@ -34,7 +32,8 @@
       });
     }
 
-    postBookmarks();
+    var userInfo = {}
+    getPicture(userInfo);
 
   	function onRequest(request, sender, sendResponse) {
       console.log("on request with " + JSON.stringify(request));
@@ -79,7 +78,6 @@
         // chrome.tabs.executeScript(null, {code:"console.log('done injecting!!')"});
         sendResponse({message: "created"});
       } else {
-        debugger;
         chrome.tabs.executeScript(null, {file:"hover.js"});
       }
 

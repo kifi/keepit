@@ -45,12 +45,6 @@ object User {
   def all(implicit conn: Connection): Seq[User] =
     UserEntity.all.map(_.view)
   
-  def intern(facebookId: FacebookId)(implicit conn: Connection): User = {
-    getOpt(facebookId).getOrElse {
-      User(firstName = "", lastName = "", facebookId = Some(facebookId)).save
-    }
-  }
-
   def getOpt(facebookId: FacebookId)(implicit conn: Connection): Option[User] =
     (UserEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.facebookId EQ facebookId.toString()) unique }.map(_.view)
     
