@@ -12,6 +12,7 @@ import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
+import scala.collection.mutable
 
 case class Bookmark(
   id: Option[Id[Bookmark]] = None,
@@ -23,7 +24,7 @@ case class Bookmark(
   normalizedUrl: String,
   urlHash: String,
   bookmarkPath: Option[String] = None,
-  isPrivate: Boolean,
+  isPrivate: Boolean = false,
   userId: Option[Id[User]] = None,
   state: State[Bookmark] = Bookmark.States.ACTIVE
 ) {
@@ -45,7 +46,7 @@ object Bookmark {
     val normalized = new URI(url).normalize().toString()
     val binaryHash = MessageDigest.getInstance("MD5").digest(normalized.getBytes("UTF-8"))
     val hash = new String(new Base64().encode(binaryHash), "UTF-8")
-    Bookmark(title = title, url = url, normalizedUrl = normalized, urlHash = hash, isPrivate = false, userId = user.id) 
+    Bookmark(title = title, url = url, normalizedUrl = normalized, urlHash = hash, userId = user.id) 
   }
   
   //Used for admin, checking that we can talk with the db
@@ -56,6 +57,18 @@ object Bookmark {
     bookmark.get.view
   }
 
+  def search(term: String)(implicit conn: Connection): Map[Bookmark, Int] = {
+    val res = new mutable.HashMap[Bookmark, Int]() {
+      override def default(key: Bookmark): Int = 0
+    }
+    term.split("\\s") map {_.toLowerCase()} flatMap { token =>
+      (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.title LIKE ("%" + token + "%")) }.list.map( _.view )
+    } foreach { bookmark =>
+      res(bookmark) += 1
+    }
+    res.toMap
+  }
+  
   def all(implicit conn: Connection): Seq[Bookmark] =
     BookmarkEntity.all.map(_.view)
   

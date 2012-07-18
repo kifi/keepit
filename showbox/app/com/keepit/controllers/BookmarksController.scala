@@ -31,6 +31,13 @@ object BookmarksController extends Controller {
     Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
   }
   
+  def allView = Action{ request =>
+    val bookmarks = CX.withConnection { implicit conn =>
+      Bookmark.all
+    }
+    Ok(views.html.bookmarks(bookmarks))
+  }
+  
   def addBookmarks() = JsonAction { request =>
     val json = request.body
     println(json)
@@ -45,7 +52,13 @@ object BookmarksController extends Controller {
     User.getOpt(facebookId) match {
       case Some(user) => user
       case None =>
-        val json = Json.parse(WS.url("https://graph.facebook.com/" + facebookId.value).get().await(30, TimeUnit.SECONDS).get.body)
+        val json = try {
+          Json.parse(WS.url("https://graph.facebook.com/" + facebookId.value).get().await(30, TimeUnit.SECONDS).get.body)
+        } catch {
+          case e =>
+            e.printStackTrace()
+            Json.parse("""{"first_name": "NA", "last_name": "NA"}""")
+        }
         println("fb obj = " + json)
         User(
             firstName = (json \ "first_name").as[String],

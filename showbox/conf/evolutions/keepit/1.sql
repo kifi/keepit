@@ -32,6 +32,8 @@ CREATE TABLE bookmark (
     bookmark_path varchar(256),
     is_private boolean,
     
+    KEY (url_hash),
+    KEY (user_id, url_hash),
     PRIMARY KEY (id),
     
     CONSTRAINT bookmark_u_external_id UNIQUE (external_id),

@@ -32,12 +32,14 @@ object ApplicationBuild extends Build {
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
       // add some imports to the routes file
       routesImport ++= Seq(
-        "com.keepit.common.db.{ExternalId, Id}"
+        "com.keepit.common.db.{ExternalId, Id}",
+        "com.keepit.model._"
       ),
       
       // add some imports to the templates files
       templatesImport ++= Seq(
-        "com.keepit.common.db.{ExternalId, Id}"
+        "com.keepit.common.db.{ExternalId, Id}",
+        "com.keepit.model._"
       )
     )
 
