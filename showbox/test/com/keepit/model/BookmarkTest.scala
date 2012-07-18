@@ -31,6 +31,10 @@ class BookmarkTest extends SpecificationWithJUnit {
           Bookmark.search("title")
         }
         titles.size === 2
+        val sortedTitles = Bookmark.orderResults(titles)
+        sortedTitles.size === 2
+        sortedTitles(0).urlHash === "AAA"
+        sortedTitles(1).urlHash === "BBB"
       }
     }
   }

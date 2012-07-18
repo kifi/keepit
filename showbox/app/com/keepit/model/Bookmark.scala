@@ -57,6 +57,10 @@ object Bookmark {
     bookmark.get.view
   }
 
+  def orderResults(res: Map[Bookmark, Int]): List[Bookmark] = res.toList.sortWith{
+    (a, b) => a._2 > b._2
+  }.map(_._1)
+  
   def search(term: String)(implicit conn: Connection): Map[Bookmark, Int] = {
     val res = new mutable.HashMap[Bookmark, Int]() {
       override def default(key: Bookmark): Int = 0
