@@ -27,6 +27,10 @@ class BookmarkTest extends SpecificationWithJUnit {
           Bookmark.search("short")
         }
         shorts.size === 1
+        val titles = CX.withConnection { implicit c =>
+          Bookmark.search("title")
+        }
+        titles.size === 2
       }
     }
   }

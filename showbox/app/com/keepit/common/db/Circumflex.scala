@@ -6,6 +6,7 @@ import com.keepit.common.time._
 import java.util.UUID
 import org.joda.time.{DateTime, DateTimeZone}
 import ru.circumflex.orm._
+import ru.circumflex.core._
 import java.sql.Connection
 import play.api.db._
 import scala.collection.mutable.Buffer
@@ -337,6 +338,14 @@ object CX extends Logging {
     override val name = "keepit"
     override lazy val connectionProvider = new BasicConnectionProvider(name, readOnly)
     override lazy val typeConverter = new CustomTypeConverter
+    
+    override lazy val dialect = cx.instantiate[Dialect]("orm.dialect", url match {
+      case u if (u.startsWith("jdbc:mysql:")) => new MySQLDialect
+      case u if (u.startsWith("jdbc:h2:")) => new H2Dialect() {
+        override def ILIKE(ex1: String, ex2: String = "?") = "LOWER(%s) LIKE %s".format(ex1, ex2)
+      }
+      case _ => throw new Exception("unknowd dialect " + url)
+    })
   }
   
   def withReadOnlyConnection[A](block: Connection => A)(implicit app: Application): A = executeBlockWithConnection(true, block)

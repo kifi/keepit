@@ -62,7 +62,7 @@ object Bookmark {
       override def default(key: Bookmark): Int = 0
     }
     term.split("\\s") map {_.toLowerCase()} flatMap { token =>
-      (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.title LIKE ("%" + token + "%")) }.list.map( _.view )
+      (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.title ILIKE ("%" + token + "%")) }.list.map( _.view )
     } foreach { bookmark =>
       res(bookmark) += 1
     }
