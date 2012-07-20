@@ -17,7 +17,7 @@ class UserSerializer extends Serializer[User] {
       ))
     )
 
-  def writes (users: List[User]): JsValue = 
+  def writes (users: Seq[User]): JsValue = 
     JsArray(users map { user => 
       JsObject(List(
         "userId" -> JsNumber(user.id.get.id),

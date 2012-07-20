@@ -59,11 +59,6 @@ object User {
   
   def getOpt(externalId: ExternalId[User])(implicit conn: Connection): Option[User] =
     (UserEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.externalId EQ externalId) unique }.map(_.view)
-
-  def getUsersWithoutFacebook(implicit conn: Connection): Seq[User] = { 
-    val activeState = User.States.ACTIVE //It may solve the classloader issue we have on restart  
-    (UserEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ((u.facebookId IS_NULL) AND (u.state EQ activeState))}.list.map(_.view)
-  }
     
   object States {
     val ACTIVE = State[User]("active")
