@@ -15,12 +15,17 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 import com.keepit.controllers.CommonActions._
 import com.keepit.common.db.CX
-import com.keepit.model.Bookmark
-import com.keepit.model.FacebookId
-import com.keepit.model.User
+import com.keepit.model._
 import com.keepit.serializer.BookmarkSerializer
+import com.keepit.serializer.{BookmarkPersonalSearchResultSerializer => BPSRS}
 import play.api.libs.json.JsArray
 import java.util.concurrent.TimeUnit
+import com.keepit.common.db.ExternalId
+import com.keepit.model.BookmarkSearchResults
+import play.api.http.ContentTypes
+
+//note: users.size != count if some users has the bookmark marked as private
+case class BookmarkPersonalSearchResult(bookmark: Bookmark, count: Int, users: Seq[User], score: Float)
 
 object BookmarksController extends Controller {
 
@@ -36,7 +41,7 @@ object BookmarksController extends Controller {
       Bookmark.all
     }
     Ok(views.html.bookmarks(bookmarks))
-  }
+  }  
   
   def addBookmarks() = JsonAction { request =>
     val json = request.body
@@ -90,8 +95,34 @@ object BookmarksController extends Controller {
           println("new bookmark %s".format(bookmark))
           bookmark.save
       }
-      
     }
+  }
+  
+  def searchBookmarks(term: String, facebookUser: String) = Action { request =>
+    val res = CX.withConnection { implicit conn =>
+      val user = User.getOpt(FacebookId(facebookUser)).get
+      val res: Seq[BookmarkSearchResults] = Bookmark.search(term)
+      res map { r =>
+        toPersonalSearchResult(r, user)
+      }
+    }
+    Ok(BPSRS.resSerializer.writes(res)).as(ContentTypes.JSON)
+  }
+  
+  private[controllers] def toPersonalSearchResult(res: BookmarkSearchResults, user: User): BookmarkPersonalSearchResult = {
+    val bookmark = res.bookmarks.filter(_.userId == user.id).head
+    val count = res.bookmarks.size
+    val users = res.bookmarks.map(_.userId.get).map{ userId =>
+      CX.withConnection { implicit c =>
+        User.get(userId)
+      }
+    }
+    BookmarkPersonalSearchResult(bookmark, count, users, res.score)
+  }
+  
+  
+  def orderResults(res: Map[Bookmark, Int]): List[(Bookmark, Int)] = res.toList.sortWith{
+    (a, b) => a._2 > b._2
   }
   
 }

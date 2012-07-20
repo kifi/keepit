@@ -14,6 +14,8 @@ import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
 
+case class BookmarkSearchResults(bookmarks: Seq[Bookmark], score: Float)
+
 case class Bookmark(
   id: Option[Id[Bookmark]] = None,
   createdAt: DateTime = currentDateTime,
@@ -57,20 +59,29 @@ object Bookmark {
     bookmark.get.view
   }
 
-  def orderResults(res: Map[Bookmark, Int]): List[Bookmark] = res.toList.sortWith{
-    (a, b) => a._2 > b._2
-  }.map(_._1)
-  
-  def search(term: String)(implicit conn: Connection): Map[Bookmark, Int] = {
-    val res = new mutable.HashMap[Bookmark, Int]() {
-      override def default(key: Bookmark): Int = 0
+  def search(term: String)(implicit conn: Connection): Seq[BookmarkSearchResults] = {
+    val bookmarkScore = new mutable.HashMap[Bookmark, Float]() {
+      override def default(key: Bookmark) = 0F
+    }
+    val bookmarkCluster = new mutable.HashMap[String, Set[Bookmark]]() {
+      override def default(key: String) = Set()
     }
     term.split("\\s") map {_.toLowerCase()} flatMap { token =>
       (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.title ILIKE ("%" + token + "%")) }.list.map( _.view )
     } foreach { bookmark =>
-      res(bookmark) += 1
+      bookmarkCluster(bookmark.urlHash) += bookmark
+      bookmarkScore(bookmark) += 1F
     }
-    res.toMap
+    val clusterScore = new mutable.HashMap[String, Float]() {
+      override def default(key: String) = 0F
+    }
+    bookmarkScore foreach { entry =>
+      val hash = entry._1.urlHash
+      clusterScore(hash) += (entry._2 / bookmarkCluster(hash).size)
+    }
+    bookmarkCluster.toSeq.map{ entry =>
+      BookmarkSearchResults(entry._2.toSeq, clusterScore(entry._1))
+    }
   }
   
   def all(implicit conn: Connection): Seq[Bookmark] =
