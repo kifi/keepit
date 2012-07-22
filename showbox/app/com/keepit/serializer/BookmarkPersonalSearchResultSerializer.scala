@@ -18,9 +18,7 @@ class BookmarkPersonalSearchResultSerializer extends Writes[BookmarkPersonalSear
 
   def writes (ress: Seq[BookmarkPersonalSearchResult]): JsValue = 
     JsArray(ress map { res => 
-      JsObject(List(
-        "resObject" -> BookmarkPersonalSearchResultSerializer.resSerializer.writes(res)
-      ))
+      BookmarkPersonalSearchResultSerializer.resSerializer.writes(res)
     })
 
 }

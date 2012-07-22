@@ -45,7 +45,7 @@ object Bookmark {
   
   def apply(title: String, url: String, user: User): Bookmark = {
     //better: use http://stackoverflow.com/a/4057470/81698
-    val normalized = new URI(url).normalize().toString()
+    val normalized = url //new URI(url).normalize().toString()
     val binaryHash = MessageDigest.getInstance("MD5").digest(normalized.getBytes("UTF-8"))
     val hash = new String(new Base64().encode(binaryHash), "UTF-8")
     Bookmark(title = title, url = url, normalizedUrl = normalized, urlHash = hash, userId = user.id) 

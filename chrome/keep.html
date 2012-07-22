@@ -44,7 +44,8 @@
       if (request.type === "init_page") {
         initPage(request, sendResponse, sender.tab);
       } else if(request.type === "get_keeps") {
-        getKeeps(request, sendResponse);
+        //getKeeps(request, sendResponse);
+        searchOnServer(request, sendResponse);
       } else if(request.type === "get_user_info") {
         sendResponse(userInfo);
       } else if(request.type === "add_bookmarks") {
@@ -69,6 +70,23 @@
       chrome.bookmarks.search(request.query, function(results){
         sendResponse({message: results});
       })
+    }
+
+    function searchOnServer(request, sendResponse) {
+      debugger;
+      var xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4) {
+          console.log("xhr response:");
+          console.log(xhr.response);
+          sendResponse({message: xhr.response});
+        }
+      }
+      term = request.query;
+      facebookUser = userInfo["facebook_id"];
+      xhr.open("GET", 'http://localhost:9000/bookmarks/search?term='+term+'&facebookUser='+facebookUser, true);
+      xhr.send();
+
     }
 
     function initPage(request, sendResponse, tab) {

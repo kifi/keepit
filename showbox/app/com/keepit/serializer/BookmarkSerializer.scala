@@ -6,7 +6,7 @@ import com.keepit.model.Bookmark
 
 import play.api.libs.json._
 
-class BookmarkSerializer extends Serializer[Bookmark] {
+class BookmarkSerializer extends Reads[Bookmark] with Writes[Bookmark] {
   
   def writes(bookmark: Bookmark): JsValue =
     JsObject(List(

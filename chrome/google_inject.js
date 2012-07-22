@@ -38,21 +38,30 @@
         head.after(tail);
         //$('#rso').prepend(head)
         //head.after(tail)
-
-        $(response.message).each(function(i, e){
-          var link = $('<li class="g"><div class="vsc"><h3 class="r"><a href="'+e.url+'">'+e.title+'</a></h3><div class="vspib" aria-label="Result details" role="button" tabindex="0"></div><div class="s"><div class="f kv"><cite>'+e.url+'</cite></div></div></div><!--n--></li>');
+        var json = $.parseJSON(response.message)
+        $(json).each(function(i, e){
+          var link = $('<li class="g"><div class="vsc"><h3 class="r"><a href="'+e.bookmark.url+'">'+e.bookmark.title+'</a></h3><div class="vspib" aria-label="Result details" role="button" tabindex="0"></div><div class="s"><div class="f kv"><cite>'+e.bookmark.url+'</cite></div></div></div><!--n--></li>');
           tail.before(link);
         });
         ol.hide();
         console.log(ol);
+        var iterations = 10;
         function showResults() {
+          if ($('#keepit').length > 0) {
+//            debugger;
+            return;
+          }
           var googleResults = $('#ires');
           console.log(googleResults);
+          debugger;
           if (googleResults.length > 0) {
             googleResults.prepend(ol);
             ol.slideDown();
-          } else {
-            setTimeout(function(){showResults();}, 100);
+          } 
+          if (iterations > 0) {
+            console.log("test show results, iterations = " + iterations);
+            iterations = iterations - 1;
+            setTimeout(function(){showResults();}, 1000);
           }
         }
         async(showResults());

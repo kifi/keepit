@@ -99,6 +99,7 @@ object BookmarksController extends Controller {
   }
   
   def searchBookmarks(term: String, facebookUser: String) = Action { request =>
+    println("searching with %s using fb id %s".format(term, facebookUser))
     val res = CX.withConnection { implicit conn =>
       val user = User.getOpt(FacebookId(facebookUser)).get
       val res: Seq[BookmarkSearchResults] = Bookmark.search(term)
@@ -106,11 +107,12 @@ object BookmarksController extends Controller {
         toPersonalSearchResult(r, user)
       }
     }
+    println(res mkString "\n")
     Ok(BPSRS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
   
   private[controllers] def toPersonalSearchResult(res: BookmarkSearchResults, user: User): BookmarkPersonalSearchResult = {
-    val bookmark = res.bookmarks.filter(_.userId == user.id).head
+    val bookmark = res.bookmarks.filter(_.userId == user.id).headOption.getOrElse(res.bookmarks.head)
     val count = res.bookmarks.size
     val users = res.bookmarks.map(_.userId.get).map{ userId =>
       CX.withConnection { implicit c =>
