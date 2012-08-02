@@ -37,10 +37,12 @@ object BookmarksController extends Controller {
   }
   
   def allView = Action{ request =>
-    val bookmarks = CX.withConnection { implicit conn =>
-      Bookmark.all
+    val bookmarksAndUsers = CX.withConnection { implicit conn =>
+      val bookmarks = Bookmark.all
+      val users = bookmarks map (_.userId.get) map User.get
+      bookmarks zip users
     }
-    Ok(views.html.bookmarks(bookmarks))
+    Ok(views.html.bookmarks(bookmarksAndUsers))
   }  
   
   def addBookmarks() = JsonAction { request =>

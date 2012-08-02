@@ -1,0 +1,21 @@
+<configuration>
+  <!-- always a good activate OnConsoleStatusListener -->
+  <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener" />  
+
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+   <file>log/app.log</file>
+   <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+     <fileNamePattern>log/app.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+   </rollingPolicy>
+   <encoder>
+     <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+   </encoder>
+  </appender>
+
+  <logger name="ru.circumflex" level="INFO"/>
+  <logger name="com.ning.http" level="INFO"/>
+                 
+  <root level="INFO">          
+    <appender-ref ref="FILE" />
+  </root>  
+</configuration>

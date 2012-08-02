@@ -31,7 +31,7 @@
       var old = $('#keepit');
       old.slideUp(function(){old.remove();});
       function addResults() {
-        var ol = $('<ol id="keepit"></ol>');
+        var ol = $('<ol id="keepit" class="kpt-results"></ol>');
         var head = $('<li class="g keepit"><div class="vsc"><h3 class="r"><center>Your Bookmarks</center></h3></div><!--n--></li>')
         var tail = $('<li class="g keepit"><div class="vsc"><h3 class="r"><center>Google Results</center></h3></div><!--n--></li>')
         ol.append(head);
@@ -49,6 +49,7 @@
           tail.before(link);
         });
         ol.hide();
+        ol.css("height", "0px");
         console.log(ol);
         var iterations = 10;
         function showResults() {
@@ -59,7 +60,13 @@
           console.log(googleResults);
           if (googleResults.length > 0) {
             googleResults.prepend(ol);
-            ol.slideDown();
+            //neight needs to be proportional to num of elements with max = 3
+            ol.show();
+            ol.animate({
+              height: '+=90' 
+            }, 3000, function() {
+              console.log("done expanding");
+            })
           } 
           if (iterations > 0) {
             console.log("test show results, iterations = " + iterations);

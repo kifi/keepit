@@ -1,4 +1,4 @@
-@(bookmarks: Seq[Bookmark])
+@(bookmarksAndUsers: Seq[(Bookmark, User)])
 
 <!DOCTYPE html>
 
@@ -12,11 +12,13 @@
     <body>
 		  <table>
 		    <tr>
+		      <th>User</th>
 		      <th>Internal Id</th>
 		      <th>Title</th>
 		    </tr>
-		  @for(bookmark <- bookmarks) {
+		  @for((bookmark, user) <- bookmarksAndUsers) {
 		    <tr>
+		      <td>@user.id.get.id</td>
 		      <td>@bookmark.id.get.id</td>
 		      <td><a href="@bookmark.url">@bookmark.title</a></td>
 		    </tr>

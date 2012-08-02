@@ -3,8 +3,7 @@
 # ~~~~
 
 # Home page
-GET     /                           controllers.Application.index
-GET     /bookmarks                  com.keepit.controllers.BookmarksController.allView
+GET     /                           com.keepit.controllers.BookmarksController.allView
 
 POST    /bookmarks/add              com.keepit.controllers.BookmarksController.addBookmarks
 GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all

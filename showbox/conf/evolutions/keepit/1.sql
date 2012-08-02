@@ -40,4 +40,16 @@ CREATE TABLE bookmark (
     CONSTRAINT bookmark_f_user FOREIGN KEY (user_id) REFERENCES user(id) 
 );
 
+CREATE TABLE evolutions (
+    id bigint(20) NOT NULL AUTO_INCREMENT,
+    created_at timestamp NOT NULL,
+    name varchar(256) NOT NULL,
+    description varchar(512) DEFAULT '',
+
+    PRIMARY KEY (id),
+    CONSTRAINT evolutions_u_name UNIQUE (name)
+);
+
+insert into evolutions (name, description) values('1.sql', 'adding user and bookmark');
+
 # --- !Downs

@@ -3,6 +3,10 @@
     // Called when a message is passed.  We assume that the content script
   	// wants to show the page action.
     console.log("background page kicking in!");
+
+    var server = "localhost:9000"
+//    var server = "keepitfindit.com"
+
     function getPicture(userInfo) {
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
         userInfo["facebook_id"] = cookie.value;
@@ -27,7 +31,7 @@
           "user_info": userInfo
         }
         var tosend = JSON.stringify(json);
-        xhr.open("POST", 'http://localhost:9000/bookmarks/add', true);
+        xhr.open("POST", 'http://'+server+'/bookmarks/add', true);
         xhr.send(tosend);
       });
     }
@@ -83,7 +87,7 @@
       }
       term = request.query;
       facebookUser = userInfo["facebook_id"];
-      xhr.open("GET", 'http://localhost:9000/bookmarks/search?term='+term+'&facebookUser='+facebookUser, true);
+      xhr.open("GET", 'http://'+server+'/bookmarks/search?term='+term+'&facebookUser='+facebookUser, true);
       xhr.send();
 
     }
@@ -102,8 +106,10 @@
 
     function injectGoogleDiv(tab) {
       //chrome.bookmarks.getTree(function(tree){console.log(tree);})
-      chrome.tabs.executeScript(null, {code:"console.log('tab:"+tab.id+"')"});
-      chrome.tabs.executeScript(null, {file:"google_inject.js"});
+      chrome.tabs.executeScript(null, {code:"console.log('tab:"+tab.id+"')"});      
+      chrome.tabs.insertCSS(null, {file:"google_inject.css"}, function(){
+        chrome.tabs.executeScript(null, {file:"google_inject.js"});
+      });
     }
   	// Listen for the content script to send a message to the background page.
   	chrome.extension.onRequest.addListener(onRequest);
