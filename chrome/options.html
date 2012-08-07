@@ -1,0 +1,50 @@
+<html>
+<head><title>Keep It Extension Options</title></head>
+<script type="text/javascript">
+
+chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
+    if (request.method == "getEnv")
+      sendResponse({env: localStorage['env']});
+    else
+      sendResponse({}); // snub them.
+});
+
+// Saves options to localStorage.
+function save_options() {
+  var env = "development";
+  if (document.getElementById("env_prod").checked) {
+    localStorage["env"]="production";
+  }
+  else
+  {
+    localStorage["env"]="development";
+  }
+}
+// Restores select box state to saved value from localStorage.
+function restore_options() {
+  var env = localStorage["env"];
+
+  if (!env) {
+    return;
+  }
+  if (env=="development") {
+    document.getElementById("env_dev").checked=true;
+    document.getElementById("env_prod").checked=false;
+  }
+  if (env=="production") {
+    document.getElementById("env_dev").checked=false;
+    document.getElementById("env_prod").checked=true;
+  }
+}
+</script>
+<body onload="restore_options()">
+<div width="100px">
+<fieldset>
+  <legend>Environment:</legend>
+  <input type="radio" id="env_dev"  name="env" value="development"  />Development<br/>
+  <input type="radio" id="env_prod" name="env" value="production"  />Production<br/> 
+  <button onclick="save_options()">Save</button>
+</fieldset>
+</div>
+</body>
+</html>
