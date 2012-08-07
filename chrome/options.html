@@ -3,10 +3,15 @@
 <script type="text/javascript">
 
 chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
-    if (request.method == "getEnv")
-      sendResponse({env: localStorage['env']});
+    if (request.method == "getEnv") {
+      var env = localStorage["env"];
+      console.log("env is "+env);
+      if (env==null || env===undefined)
+        env = "production";
+      sendResponse({"env": env});
+    }
     else
-      sendResponse({}); // snub them.
+      sendResponse({}); 
 });
 
 // Saves options to localStorage.
@@ -24,9 +29,10 @@ function save_options() {
 function restore_options() {
   var env = localStorage["env"];
 
-  if (!env) {
-    return;
+  if (env==null || env===undefined) {
+    env = "production";
   }
+
   if (env=="development") {
     document.getElementById("env_dev").checked=true;
     document.getElementById("env_prod").checked=false;
