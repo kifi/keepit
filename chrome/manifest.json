@@ -3,6 +3,7 @@
   "version": "1.0",
   "manifest_version": 1,
   "description": "The Keep It Plugin",
+  "options_page": "options.html",
   "page_action": {
     "default_icon": "keep_19.png", // optional
     "default_title": "Keep It!",    // optional; shown in tooltip

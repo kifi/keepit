@@ -1,6 +1,7 @@
 console.log("injecting keep it hover div");
 (function() {
   $ = jQuery.noConflict()
+  var env = "undefined";
   function async(fun) {
     setTimeout(fun, 1000);
   }
@@ -21,6 +22,7 @@ console.log("injecting keep it hover div");
     });
     hover.append(button);
     hover.append("<br/><input type='checkbox' value='private'>private</input>")
+    hover.append("<br/>env: "+env)
     hover.hide();
     $("body").append(hover);
     setTimeout(function() {
@@ -39,6 +41,9 @@ console.log("injecting keep it hover div");
     });
   }
 
-  async(getUserInfo(showBookmarkHover));
+    chrome.extension.sendRequest({method: "getEnv"}, function(response) {
+      env = response.env;
+      async(getUserInfo(showBookmarkHover));
 
+    });
 })();
