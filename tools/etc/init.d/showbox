@@ -4,7 +4,7 @@
 # description: Java deamon script
 #
 # Set this to your Java installation
-JAVA_HOME=/usr/java/jdk1.6.0_34
+JAVA_HOME=/usr/java/jdk1.6.0_33
  
 serviceNameLo="showbox"                                  # service name with the first letter in lowercase
 serviceName="Showbox"                                    # service name
