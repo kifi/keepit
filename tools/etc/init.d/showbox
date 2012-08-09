@@ -17,7 +17,7 @@ maxShutdownTime=15                                       # maximum number of sec
 pidFile="$applDir/$serviceNameLo.pid"                    # name of PID file (PID = process ID number)
 javaCommand="java"                                       # name of the Java launcher without the path
 javaExe="$JAVA_HOME/bin/$javaCommand"                    # file name of the Java application launcher executable
-javaArgs="-Ddb.$serviceNameLo.password=securemydata -Dhttp.port=9000 -Xms512M -Xmx1024m -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -cp \"$applDir/lib/*\" play.core.server.NettyServer $applDir"                   # arguments for Java launcher
+javaArgs="-Dhttp.port=9000 -Xms512M -Xmx1024m -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -cp \"$applDir/lib/*\" play.core.server.NettyServer $applDir"                   # arguments for Java launcher
 javaCommandLine="$javaExe $javaArgs"                     # command line to start the Java service application
 javaCommandLineKeyword="prod/$serviceNameLo.conf"        # a keyword that occurs on the commandline, used to detect an already running service process and to distinguish it from others
  
