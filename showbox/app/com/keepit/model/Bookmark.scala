@@ -137,7 +137,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
 }
 
 private[model] object BookmarkEntity extends BookmarkEntity with EntityTable[Bookmark, BookmarkEntity] {
-  override def relationName = "Bookmark"
+  override def relationName = "bookmark"
   
   def apply(view: Bookmark): BookmarkEntity = {
     val bookmark = new BookmarkEntity
