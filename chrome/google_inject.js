@@ -39,12 +39,14 @@
         //$('#rso').prepend(head)
         //head.after(tail)
         var json = $.parseJSON(response.message)
+        var resultCount = 0;
         $(json).each(function(i, e){
           var link = $('<li class="g"></li>');
           link.append('<div class="vsc"><h3 class="r"><a href="'+e.bookmark.url+'">'+e.bookmark.title+'</a></h3><div class="vspib" aria-label="Result details" role="button" tabindex="0"></div><div class="s"><div class="f kv"><cite>'+e.bookmark.url+'</cite></div></div></div><!--n-->')
           $(e.users).each(function(j, user){
             var user = $('<span style="margin:2px"><a data-hover="tooltip" title="'+user.firstName+' '+user.lastName+'" class="name_tooltip_link" href="http://www.facebook.com/'+user.facebookId+'" target="_blank"><img src="https://graph.facebook.com/'+user.facebookId+'/picture?type=square" width="30" height="30" alt=""></a></span>');
             link.append(user);
+            resultCount++;
           });
           tail.before(link);
         });
@@ -63,8 +65,8 @@
             //neight needs to be proportional to num of elements with max = 3
             ol.show();
             ol.animate({
-              height: '+=90' 
-            }, 3000, function() {
+              height: '+=' + (109 * resultCount) 
+            }, 1000, function() {
               console.log("done expanding");
             })
           } 
