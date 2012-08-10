@@ -10,7 +10,7 @@ CREATE TABLE user (
     first_name varchar(256) NOT NULL,
     last_name varchar(256) NOT NULL,
     facebook_id varchar(16) NOT NULL,
-    facebook_access_token varchar(512) NOT NULL,
+    facebook_access_token varchar(512),
     
     PRIMARY KEY (id),
     

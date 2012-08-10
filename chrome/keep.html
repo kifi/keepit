@@ -4,8 +4,12 @@
   	// wants to show the page action.
     console.log("background page kicking in!");
 
-    var server = "localhost:9000"
-//    var server = "keepitfindit.com"
+    var server = "keepitfindit.com"
+    var env = localStorage["env"];
+    if (env === "development") {
+      //assuming the default of production if env is not set.
+      server = "localhost:9000"
+    }
 
     function getPicture(userInfo) {
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
