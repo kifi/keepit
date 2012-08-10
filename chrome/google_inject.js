@@ -65,7 +65,7 @@
             //neight needs to be proportional to num of elements with max = 3
             ol.show();
             ol.animate({
-              height: '+=' + (109 * resultCount) 
+              height: '+=' + (80 + 100 * resultCount) 
             }, 1000, function() {
               console.log("done expanding");
             })
