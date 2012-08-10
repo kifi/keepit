@@ -1,0 +1,38 @@
+{
+  "name": "Keep It",
+  "version": "1.0",
+  "manifest_version": 1,
+  "description": "The Keep It Plugin",
+  "page_action": {
+    "default_icon": "keep_19.png", // optional
+    "default_title": "Keep It!",    // optional; shown in tooltip
+    "default_popup": "keep.html"    // optional
+  },  
+  "background_page" : "keep.html",
+  "content_scripts" : [
+    {
+      "matches" : [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js" : ["contentscript.js", "jquery-1.7.2.min.js"],
+      "css": ["keepit.css"],
+      "run_at" : "document_end",
+      "all_frames" : false
+    }
+  ],
+  "permissions": [
+    "tabs",
+    "cookies",
+    "bookmarks",
+    "http://*/",
+    "https://*/",
+    "https://www.netwallet.com/",
+    "http://www.netwallet.com/",
+    "unlimitedStorage"
+  ],
+  "icons" : {
+    "48" : "keep_48.png",
+    "128" : "keep_128.png"
+  }
+}

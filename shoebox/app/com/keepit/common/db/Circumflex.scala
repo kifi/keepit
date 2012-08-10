@@ -329,13 +329,13 @@ object CX extends Logging {
   private class BasicOrmConf(readOnly: Boolean = false)(implicit app: Application) extends Logging with ORMConfiguration {
     
     override val url = {
-      val connection = DB.getConnection("showbox")
+      val connection = DB.getConnection("shoebox")
       val url = connection.getMetaData.getURL
       connection.close()
       url
     }
     
-    override val name = "showbox"
+    override val name = "shoebox"
     override lazy val connectionProvider = new BasicConnectionProvider(name, readOnly)
     override lazy val typeConverter = new CustomTypeConverter
     

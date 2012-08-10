@@ -10,7 +10,7 @@ import org.joda.time.format.DateTimeFormat
 
 object ApplicationBuild extends Build {
 
-    val appName         = "showbox"
+    val appName         = "shoebox"
     val appVersion      = "%s-%s".format("git rev-parse --abbrev-ref HEAD".!!.trim, "git rev-parse --short HEAD".!!.trim)
     val PT = DateTimeZone.forID("America/Los_Angeles")
     val now = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.ENGLISH).withZone(PT).print(new DateTime(PT))
