@@ -1,24 +1,24 @@
-# showbox dirs
-showbox/logs
-showbox/project/project
-showbox/project/target
-showbox/target
-showbox/tmp
-showbox/.classpath
-showbox/.project
-showbox/.settings/*
-showbox/.settings
-showbox/dist/*
-showbox/.pydevproject
-showbox/app_version.txt
-showbox/conf/app_version.txt
-showbox/conf/app_compilation_date.txt
-showbox/access*
-showbox/log/*
-showbox/log
-showbox/.target
-showbox/.target/*
-showbox/cx.properties
+# shoebox dirs
+shoebox/logs
+shoebox/project/project
+shoebox/project/target
+shoebox/target
+shoebox/tmp
+shoebox/.classpath
+shoebox/.project
+shoebox/.settings/*
+shoebox/.settings
+shoebox/dist/*
+shoebox/.pydevproject
+shoebox/app_version.txt
+shoebox/conf/app_version.txt
+shoebox/conf/app_compilation_date.txt
+shoebox/access*
+shoebox/log/*
+shoebox/log
+shoebox/.target
+shoebox/.target/*
+shoebox/cx.properties
 
 *.swp
 
@@ -46,6 +46,6 @@ ehthumbs.db
 Icon?
 Thumbs.db
 fabfile.pyc
-showbox/.cache
+shoebox/.cache
 shoebox/conf/app_compilation_date.txt
 shoebox/conf/app_version.txt
