@@ -340,7 +340,9 @@ object CX extends Logging {
     override lazy val typeConverter = new CustomTypeConverter
     
     override lazy val dialect = cx.instantiate[Dialect]("orm.dialect", url match {
-      case u if (u.startsWith("jdbc:mysql:")) => new MySQLDialect
+      case u if (u.startsWith("jdbc:mysql:")) => new MySQLDialect() {
+        override def ILIKE(ex1: String, ex2: String = "?") = "%s LIKE %s".format(ex1, ex2)
+      }
       case u if (u.startsWith("jdbc:h2:")) => new H2Dialect() {
         override def ILIKE(ex1: String, ex2: String = "?") = "LOWER(%s) LIKE %s".format(ex1, ex2)
       }
