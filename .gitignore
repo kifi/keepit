@@ -47,3 +47,5 @@ Icon?
 Thumbs.db
 fabfile.pyc
 showbox/.cache
+shoebox/conf/app_compilation_date.txt
+shoebox/conf/app_version.txt
