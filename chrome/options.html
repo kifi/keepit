@@ -1,5 +1,6 @@
 <html>
 <head><title>Keep It Extension Options</title></head>
+<script type="text/javascript" src="jquery-1.7.2.min.js"></script>
 <script type="text/javascript">
 
 chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
@@ -16,8 +17,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
 
 // Saves options to localStorage.
 function save_options() {
-  var env = "development";
-  if (document.getElementById("env_prod").checked) {
+  if ($("#env_prod").is(":checked")) {
     localStorage["env"]="production";
   }
   else
@@ -25,25 +25,27 @@ function save_options() {
     localStorage["env"]="development";
   }
 }
-// Restores select box state to saved value from localStorage.
+
 function restore_options() {
   var env = localStorage["env"];
 
   if (env==null || env===undefined) {
     env = "production";
+		localStorage["env"]=env;
   }
 
   if (env=="development") {
-    document.getElementById("env_dev").checked=true;
-    document.getElementById("env_prod").checked=false;
+    $("#env_dev").attr("checked","checked");
   }
   if (env=="production") {
-    document.getElementById("env_dev").checked=false;
-    document.getElementById("env_prod").checked=true;
+    $("#env_prod").attr("checked","checked");
   }
+	
 }
 </script>
+
 <body onload="restore_options()">
+
 <div width="100px">
 <fieldset>
   <legend>Environment:</legend>
