@@ -58,7 +58,12 @@
         sendResponse(userInfo);
       } else if(request.type === "add_bookmarks") {
         addKeep(request, sendResponse);
-      }
+      } else if (request.type == "get_env") {
+				var env = localStorage["env"];
+				if (!env)
+					env = "production";
+				sendResponse({"env": env});
+			}
   	  // Return nothing to let the connection be cleaned up.
   	}
 

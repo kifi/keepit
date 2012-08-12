@@ -41,7 +41,7 @@ console.log("injecting keep it hover div");
     });
   }
 
-    chrome.extension.sendRequest({method: "getEnv"}, function(response) {
+    chrome.extension.sendRequest({"type": "get_env"}, function(response) {
       env = response.env;
       async(getUserInfo(showBookmarkHover));
 
