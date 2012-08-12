@@ -5,12 +5,15 @@
   	// wants to show the page action.
     console.log("background page kicking in!");
 
-    var server = "keepitfindit.com"
-    var env = localStorage["env"];
-    if (env === "development") {
-      //assuming the default of production if env is not set.
-      server = "localhost:9000"
-    }
+		function getServer(){
+			var server = "keepitfindit.com"
+			var env = localStorage["env"];
+			if (env === "development") {
+				//assuming the default of production if env is not set.
+				server = "localhost:9000"
+			}
+			return server;
+		}
 
     function getPicture(userInfo) {
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
@@ -36,7 +39,7 @@
           "user_info": userInfo
         }
         var tosend = JSON.stringify(json);
-        xhr.open("POST", 'http://'+server+'/bookmarks/add', true);
+        xhr.open("POST", 'http://'+getServer()+'/bookmarks/add', true);
         xhr.send(tosend);
       });
     }
@@ -74,7 +77,24 @@
         var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
         chrome.bookmarks.create(bookmark, function(created) {
           sendResponse(created);
-        });        
+
+					var xhr = new XMLHttpRequest();
+					xhr.onreadystatechange = function() {
+						if (xhr.readyState == 4) {
+							console.log("xhr response:");
+							console.log(xhr.responseText);
+						}
+					}
+					console.log("about to pot bookmark");
+					console.log(bookmark);
+					var json = {
+						"bookmarks": [bookmark],
+						"user_info": userInfo
+					}
+					var tosend = JSON.stringify(json);
+					xhr.open("POST", 'http://'+getServer()+'/bookmarks/add', true);
+					xhr.send(tosend);
+				});        
     }
 
     function searchOnServer(request, sendResponse) {
@@ -88,7 +108,7 @@
       }
       term = request.query;
       facebookUser = userInfo["facebook_id"];
-      xhr.open("GET", 'http://'+server+'/bookmarks/search?term='+term+'&facebookUser='+facebookUser, true);
+      xhr.open("GET", 'http://'+getServer()+'/bookmarks/search?term='+term+'&facebookUser='+facebookUser, true);
       xhr.send();
 
     }
