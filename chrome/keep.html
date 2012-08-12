@@ -1,4 +1,5 @@
 <html>
+	<script src="bookmarks.js"></script>
   <script>
     // Called when a message is passed.  We assume that the content script
   	// wants to show the page action.
@@ -42,6 +43,7 @@
 
     var userInfo = {}
     getPicture(userInfo);
+		var bookmarks = getBookMarks(); // creates bookmarks structure under bookmarks bar(if not exists) /keepIt/private /keepIt/public
 
   	function onRequest(request, sender, sendResponse) {
       console.log("on request with " + JSON.stringify(request));
@@ -52,7 +54,6 @@
       if (request.type === "init_page") {
         initPage(request, sendResponse, sender.tab);
       } else if(request.type === "get_keeps") {
-        //getKeeps(request, sendResponse);
         searchOnServer(request, sendResponse);
       } else if(request.type === "get_user_info") {
         sendResponse(userInfo);
@@ -68,21 +69,12 @@
   	}
 
     function addKeep(request, sendResponse) {
-      chrome.bookmarks.getTree(function (res) {
-        var root = res[0];
-        var bookmarkBar = root.children[0];
-        var bookmark = {'parentId': bookmarkBar.id, 'title': request.title, 'url': request.url};
+				console.log("creating bookmark. private: "+request.private+" tile "+request.title);
+        var parent = (request.private) ? bookmarks.private : bookmarks.public;
+        var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
         chrome.bookmarks.create(bookmark, function(created) {
           sendResponse(created);
         });        
-      });
-    }
-
-    function getKeeps(request, sendResponse) {
-      chrome.tabs.executeScript(null, {code:"console.log('got keeps message!!')"});
-      chrome.bookmarks.search(request.query, function(results){
-        sendResponse({message: results});
-      })
     }
 
     function searchOnServer(request, sendResponse) {
