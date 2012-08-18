@@ -103,7 +103,8 @@ object BookmarksController extends Controller {
   def searchBookmarks(term: String, facebookUser: String) = Action { request =>
     println("searching with %s using fb id %s".format(term, facebookUser))
     val res = CX.withConnection { implicit conn =>
-      val user = User.getOpt(FacebookId(facebookUser)).get
+      val user = User.getOpt(FacebookId(facebookUser)).getOrElse(
+          throw new Exception("facebook id %s not found for term %s".format(facebookUser, term)))
       val res: Seq[BookmarkSearchResults] = Bookmark.search(term)
       res map { r =>
         toPersonalSearchResult(r, user)
