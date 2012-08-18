@@ -24,7 +24,7 @@
     }
     console.log("search term: " + query);
     chrome.extension.sendRequest({type: "get_keeps", query: queryInput.val()}, function(response) {
-      if (response.message.length == 0) {
+      if (!(response.message) || response.message.length == 0) {
         return;
       }
       console.log("keeps are: " + JSON.stringify(response));
