@@ -1,4 +1,5 @@
 <html>
+	<script type="text/javascript" src="jquery-1.7.2.min.js"></script>
 	<script src="bookmarks.js"></script>
   <script>
     // Called when a message is passed.  We assume that the content script
@@ -6,11 +7,11 @@
     console.log("background page kicking in!");
 
 		function getServer(){
-			var server = "keepitfindit.com"
+			var server = "localhost:9000"
 			var env = localStorage["env"];
-			if (env === "development") {
-				//assuming the default of production if env is not set.
-				server = "localhost:9000"
+			if (env === "production") {
+				//assuming the default of developemnt if env is not set.
+				server = "keepitfindit.com"
 			}
 			return server;
 		}
@@ -19,11 +20,11 @@
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
         userInfo["facebook_id"] = cookie.value;
         userInfo["picture"] = "https://graph.facebook.com/" + cookie.value + "/picture";
-        postBookmarks();
+        postBookmarks(chrome.bookmarks.getTree);
       });
     }
 
-    function postBookmarks() {
+    function postBookmarks(bookmarksSupplier) {
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
@@ -31,22 +32,24 @@
           console.log(xhr.responseText);
         }
       }
-      chrome.bookmarks.getTree(function(bookmarks) {
-        console.log("bookmarks:");
-        console.log(bookmarks);
-        var json = {
-          "bookmarks": bookmarks,
-          "user_info": userInfo
-        }
-        var tosend = JSON.stringify(json);
-        xhr.open("POST", 'http://'+getServer()+'/bookmarks/add', true);
-        xhr.send(tosend);
-      });
+      bookmarksSupplier(function(bookmarks){bookmarksPoster(bookmarks, xhr)});
+    }
+
+		function bookmarksPoster(bookmarks, xhr) {
+			console.log("bookmarks:");
+      console.log(bookmarks);
+      var json = {
+       "bookmarks": bookmarks,
+        "user_info": userInfo
+      }
+      var tosend = JSON.stringify(json);
+      xhr.open("POST", 'http://'+getServer()+'/bookmarks/add', true);
+      xhr.send(tosend);
     }
 
     var userInfo = {}
     getPicture(userInfo);
-		var bookmarks = getBookMarks(); // creates bookmarks structure under bookmarks bar(if not exists) /keepIt/private /keepIt/public
+		getBookMarks();
 
   	function onRequest(request, sender, sendResponse) {
       console.log("on request with " + JSON.stringify(request));
@@ -61,7 +64,7 @@
       } else if(request.type === "get_user_info") {
         sendResponse(userInfo);
       } else if(request.type === "add_bookmarks") {
-        addKeep(request, sendResponse);
+        getBookMarks(function(bookmarks){addKeep(bookmarks, request, sendResponse)});
       } else if (request.type == "get_env") {
 				var env = localStorage["env"];
 				if (!env)
@@ -71,30 +74,15 @@
   	  // Return nothing to let the connection be cleaned up.
   	}
 
-    function addKeep(request, sendResponse) {
-				console.log("creating bookmark. private: "+request.private+" tile "+request.title);
-        var parent = (request.private) ? bookmarks.private : bookmarks.public;
-        var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
-        chrome.bookmarks.create(bookmark, function(created) {
-          sendResponse(created);
-
-					var xhr = new XMLHttpRequest();
-					xhr.onreadystatechange = function() {
-						if (xhr.readyState == 4) {
-							console.log("xhr response:");
-							console.log(xhr.responseText);
-						}
-					}
-					console.log("about to pot bookmark");
-					console.log(bookmark);
-					var json = {
-						"bookmarks": [bookmark],
-						"user_info": userInfo
-					}
-					var tosend = JSON.stringify(json);
-					xhr.open("POST", 'http://'+getServer()+'/bookmarks/add', true);
-					xhr.send(tosend);
-				});        
+    function addKeep(bookmarks, request, sendResponse) {
+			console.log("creating bookmark. private: "+request.private+" tile "+request.title);
+      var parent = (request.private) ? bookmarks.private : bookmarks.public;
+			console.log("parent bookmark is "+JSON.stringify(parent));
+      var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
+      chrome.bookmarks.create(bookmark, function(created) {
+        sendResponse(created);
+				postBookmarks(function (poster) {poster([bookmark]);});
+			});
     }
 
     function searchOnServer(request, sendResponse) {
@@ -110,7 +98,6 @@
       facebookUser = userInfo["facebook_id"];
       xhr.open("GET", 'http://'+getServer()+'/bookmarks/search?term='+term+'&facebookUser='+facebookUser, true);
       xhr.send();
-
     }
 
     function initPage(request, sendResponse, tab) {

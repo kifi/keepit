@@ -29,8 +29,8 @@ function save_options() {
 function restore_options() {
   var env = localStorage["env"];
 
-  if (env==null || env===undefined) {
-    env = "production";
+  if (!env) {
+    env = "development";
 		localStorage["env"]=env;
   }
 
