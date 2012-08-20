@@ -11,7 +11,7 @@ console.log("injecting keep it hover div");
     var button = $("<button id='keep_action' type='button'>Keep Bookmark</button>")
     button.click(function() {
       console.log("bookmarking page " + document.location.href);
-      chrome.extension.sendRequest({type: "add_bookmarks", url: document.location.href, title: document.title}, function(response) {
+      chrome.extension.sendRequest({type: "add_bookmarks", url: document.location.href, title: document.title, private: $("#keepit_private").is(":checked")}, function(response) {
         console.log("bookmark added! -> " + JSON.stringify(response));
         hover.empty();
         hover.append("<center>Share with facebook!<br/><br/>");
@@ -21,7 +21,7 @@ console.log("injecting keep it hover div");
       });
     });
     hover.append(button);
-    hover.append("<br/><input type='checkbox' value='private'>private</input>")
+    hover.append("<br/><input type='checkbox' id='keepit_private' value='private'>private</input>")
     hover.append("<br/>env: "+env)
     hover.hide();
     $("body").append(hover);
