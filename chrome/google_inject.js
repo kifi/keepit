@@ -31,6 +31,10 @@
       var old = $('#keepit');
       old.slideUp(function(){old.remove();});
       function addResults() {
+        var json = $.parseJSON(response.message)
+        if (json.length === 0) {
+          return;
+        }
         var ol = $('<ol id="keepit" class="kpt-results"></ol>');
         var head = $('<li class="g keepit"><div class="vsc"><h3 class="r"><center>Your Bookmarks</center></h3></div><!--n--></li>')
         var tail = $('<li class="g keepit"><div class="vsc"><h3 class="r"><center>Google Results</center></h3></div><!--n--></li>')
@@ -38,7 +42,6 @@
         head.after(tail);
         //$('#rso').prepend(head)
         //head.after(tail)
-        var json = $.parseJSON(response.message)
         var resultCount = 0;
         $(json).each(function(i, e){
           var link = $('<li class="g"></li>');
