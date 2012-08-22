@@ -7,6 +7,11 @@ console.log("injecting keep it hover div");
   }
   
   function showBookmarkHover(userInfo) {
+    var existingElements = $('#keepit_hover').length;
+    if (existingElements > 0) {
+      log.warn("hover is already injected. There are " + existingElements + " existing elements")
+      return;
+    }
     var hover = $("<div id='keepit_hover'></div>");
     var button = $("<button id='keep_action' type='button'>Keep Bookmark</button>")
     button.click(function() {
@@ -23,12 +28,10 @@ console.log("injecting keep it hover div");
     hover.append(button);
     hover.append("<br/><input type='checkbox' id='keepit_private' value='private'>private</input>")
     hover.append("<br/>env: "+env)
-    //hover.hide();
     $("body").append(hover);
     setTimeout(function() {
       //$(window).scroll(function () {
         //if( $(this).scrollTop() > 10 ) {
-          //$('#keepit_hover').fadeIn(300);
           $('#keepit_hover').animate({
               right: '+=150'
             },
