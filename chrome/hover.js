@@ -9,7 +9,7 @@ console.log("injecting keep it hover div");
   function showBookmarkHover(userInfo) {
     var existingElements = $('#keepit_hover').length;
     if (existingElements > 0) {
-      log.warn("hover is already injected. There are " + existingElements + " existing elements")
+      console.warn("hover is already injected. There are " + existingElements + " existing elements")
       return;
     }
     var hover = $("<div id='keepit_hover'></div>");
