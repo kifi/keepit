@@ -107,10 +107,11 @@
         // chrome.tabs.executeScript(null, {code:"console.log('done injecting!!')"});
         sendResponse({message: "created"});
       } else if (request.isGoogle === false) {
+        console.log("injecting hover: " + request);
         chrome.tabs.executeScript(null, {file:"hover.js"});
       } else {
         //we're going to switch it to log later on, lets fast fail now.
-        throw Error("init page request does not have a valid 'isGoogle' value: " + request)
+        throw Error("init page request does not have a valid 'isGoogle' value: " + request);
       }
 
     }
