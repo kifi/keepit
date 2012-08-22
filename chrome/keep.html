@@ -101,13 +101,16 @@
     }
 
     function initPage(request, sendResponse, tab) {
-      if (request.isGoogle) {
+      if (request.isGoogle === true) {
         // chrome.tabs.executeScript(null, {code:"console.log('before injecting!!')"});
         injectGoogleDiv(tab);
         // chrome.tabs.executeScript(null, {code:"console.log('done injecting!!')"});
         sendResponse({message: "created"});
-      } else {
+      } else if (request.isGoogle === false) {
         chrome.tabs.executeScript(null, {file:"hover.js"});
+      } else {
+        //we're going to switch it to log later on, lets fast fail now.
+        throw Error("init page request does not have a valid 'isGoogle' value: " + request)
       }
 
     }
