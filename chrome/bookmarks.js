@@ -15,11 +15,15 @@ function getBookMarks(callback) {
 	function findBar() {
 		chrome.bookmarks.getChildren(bookmarks.root.id, function(children) {
 			bookmarks.bar = $.grep(children, function (bm) { return bm.title=="Bookmarks Bar"; })[0];
+			if (!bookmarks.bar) {
+				throw Error("Could not find bookmarks.bar named 'Bookmarks Bar' at " + children)
+			}
 			internKeepIt();
 		});
 	}
 
 	function internKeepIt() {
+
 		chrome.bookmarks.getChildren(bookmarks.bar.id, function(children) {
 			var res = $.grep(children, function (bm) { return bm.title == "KeepIt"; });
 			if (res.length > 0) {
@@ -53,6 +57,9 @@ function getBookMarks(callback) {
 	}
 
 	function createKeepIt(){
+			if (!bookmarks.bar) {
+				throw Error("Could not find bookmarks.bar at " + bookmarks);
+			}
 		chrome.bookmarks.create({'parentId': bookmarks.bar.id, 'title': 'KeepIt'}, function(bm) {
 			bookmarks.keepIt=bm;
 			internPrivate();
