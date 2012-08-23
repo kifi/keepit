@@ -21,11 +21,12 @@ function getBookMarks(callback) {
 
 	function internKeepIt() {
 		chrome.bookmarks.getChildren(bookmarks.bar.id, function(children) {
-			var res = $.grep(children, function (bm) { return bm.title=="KeepIt"; })
-			if (res.length>0) {
-				bookmarks.keepIt=res[0];
+			var res = $.grep(children, function (bm) { return bm.title == "KeepIt"; });
+			if (res.length > 0) {
+				bookmarks.keepIt = res.shift();
 				internPrivate();
-			} else createKeepIt();
+			} else 
+				createKeepIt();
 		});
 	}
 
