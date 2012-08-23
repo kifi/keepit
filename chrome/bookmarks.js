@@ -14,11 +14,12 @@ function getBookMarks(callback) {
 
 	function findBar() {
 		chrome.bookmarks.getChildren(bookmarks.root.id, function(children) {
-			bookmarks.bar = $.grep(children, function (bm) { return bm.title=="Bookmarks Bar"; })[0];
-			if (!bookmarks.bar) {
-				throw Error("Could not find bookmarks.bar named 'Bookmarks Bar' at " + children)
+			var bookmarks.bar = $.grep(children, function (bm) { return bm.title=="Bookmarks Bar"; });
+			if (bookmarks.bar.length === 0) {
+				console.log("Could not find bookmarks.bar named 'Bookmarks Bar' at " + children);
+				bookmarks.bar = children[0];
 			}
-			internKeepIt();
+  		internKeepIt();
 		});
 	}
 
