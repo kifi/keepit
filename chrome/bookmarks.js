@@ -14,15 +14,16 @@ function getBookMarks(callback) {
 
 	function findBar() {
 		chrome.bookmarks.getChildren(bookmarks.root.id, function(children) {
-		  bookmarks.bar = $.grep(children, function (bm) { 
-		  	var foundIt = (bm.title.toLowerCase == "bookmarks bar");
+		  var bar = $.grep(children, function (bm) { 
+		  	var foundIt = (bm.title.toLowerCase() == "bookmarks bar");
 		  	console.log(bm.title + " == bookmarks bar : " + foundIt); 
 		  	return foundIt; 
 		  });
-			if (bookmarks.bar.length === 0) {
+			if (bar.length === 0) {
 				console.error("Could not find bookmarks.bar named 'bookmarks bar' at " + children);
-				bookmarks.bar = children[0];
+				bar = children[0];
 			}
+			bookmarks.bar = bar[0];
   		internKeepIt();
 		});
 	}
