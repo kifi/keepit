@@ -17,7 +17,7 @@ function getBookMarks(callback) {
 			var bookmarks.bar = $.grep(children, function (bm) { return bm.title=="Bookmarks Bar"; });
 			if (bookmarks.bar.length === 0) {
 				console.log("Could not find bookmarks.bar named 'Bookmarks Bar' at " + children);
-				bookmarks.bar = children[0];
+				bookmarks.bar = bookmarks.root;
 			}
   		internKeepIt();
 		});
