@@ -18,6 +18,9 @@
 
     function getPicture(userInfo) {
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
+        if (!cookie) {
+          throw Error("Could not find the facebook cookie!");
+        }
         userInfo["facebook_id"] = cookie.value;
         userInfo["picture"] = "https://graph.facebook.com/" + cookie.value + "/picture";
         postBookmarks(chrome.bookmarks.getTree);
