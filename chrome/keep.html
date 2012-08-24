@@ -7,11 +7,12 @@
     console.log("background page kicking in!");
 
 		function getServer(){
+      var server = "keepitfindit.com"
 			var server = "localhost:9000"
 			var env = localStorage["env"];
-			if (env === "production") {
+			if (env === "development") {
 				//assuming the default of developemnt if env is not set.
-				server = "keepitfindit.com"
+        server = "localhost:9000"
 			}
 			return server;
 		}
