@@ -84,8 +84,8 @@ function getBookMarks(callback) {
 	console.log("looking for bookmarks");
 
 	if(getBookMarks.prototype.cachedBookmarks){
-		console.log("using cache: "+JSON.stringify(getBookMarks.prototype.cachedBookmarks));
+//		console.log("using cache: "+JSON.stringify(getBookMarks.prototype.cachedBookmarks));
 		callback(getBookMarks.prototype.cachedBookmarks);
-	}
+	} else
 	findRoot();
 }
