@@ -80,7 +80,6 @@
     function addKeep(bookmarks, request, sendResponse) {
 			console.log("creating bookmark. private: "+request.private+" tile "+request.title);
       var parent = (request.private) ? bookmarks.private : bookmarks.public;
-			console.log("parent bookmark is "+JSON.stringify(parent));
       var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
       chrome.bookmarks.create(bookmark, function(created) {
         sendResponse(created);
