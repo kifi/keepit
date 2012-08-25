@@ -7,12 +7,11 @@
     console.log("background page kicking in!");
 
 		function getServer(){
-      var server = "keepitfindit.com"
-			var server = "localhost:9000"
+      var server = "keepitfindit.com";
 			var env = localStorage["env"];
 			if (env === "development") {
+        server = "localhost:9000";
 				//assuming the default of developemnt if env is not set.
-        server = "localhost:9000"
 			}
 			return server;
 		}
@@ -57,9 +56,6 @@
 
   	function onRequest(request, sender, sendResponse) {
       console.log("on request with " + JSON.stringify(request));
-  	  // Show the page action for the tab that the sender (content script)
-  	  // was on.
-  	  chrome.pageAction.show(sender.tab.id);
       console.log("executing request " + request.type)
       if (request.type === "init_page") {
         initPage(request, sendResponse, sender.tab);
@@ -81,6 +77,7 @@
     function addKeep(bookmarks, request, sendResponse) {
 			console.log("creating bookmark. private: "+request.private+" tile "+request.title);
       var parent = (request.private) ? bookmarks.private : bookmarks.public;
+			console.log("parent bookmark is "+JSON.stringify(parent));
       var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
       chrome.bookmarks.create(bookmark, function(created) {
         sendResponse(created);
@@ -99,7 +96,9 @@
       }
       term = request.query;
       facebookUser = userInfo["facebook_id"];
-      xhr.open("GET", 'http://'+getServer()+'/bookmarks/search?term='+term+'&facebookUser='+facebookUser, true);
+      var url = 'http://'+getServer()+'/bookmarks/search?term='+term+'&facebookUser='+facebookUser;
+      console.log("url is the " + url);
+      xhr.open("GET", url, true);
       xhr.send();
     }
 
