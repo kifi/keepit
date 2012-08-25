@@ -15,31 +15,47 @@ console.log("injecting keep it hover div");
     var hover = $("<div id='keepit_hover' class='keepit_hover'></div>");
     var bar = $("<div class='keep_hover_bar'>" + 
       "<a data-hover='tooltip' class='name_tooltip_link' href='http://www.facebook.com/" + user.facebook_id + "' target='_blank'><img src='https://graph.facebook.com/" + user.facebook_id + "/picture?type=square' width='24' height='24' alt=''></a>" +
-      "Keepit" + 
+      "<span class='keep_hover_bar_title'>Keepit</span>" + 
       "</div>");
     hover.append(bar);
+    var buttons = $("<div id='keep_hover_buttons' class='keep_hover_buttons'></div>")
     var button = $("<div id='keep_action' class='keep_action' type='button'>Keep Bookmark</button>")
-    hover.append(button);
-    hover.append("<br/><input type='checkbox' id='keepit_private' value='private'>private</input>");
+    buttons.append(button);
+    buttons.append("<input type='checkbox' id='keepit_private' class='keepit_private' value='private'> Private</input>");
+    hover.append(buttons);
+    var close = $("<div class='hover_close'>Close</div>")
+    hover.append(close);
 
     button.click(function() {
       console.log("bookmarking page " + document.location.href);
       chrome.extension.sendRequest({type: "add_bookmarks", url: document.location.href, title: document.title, private: $("#keepit_private").is(":checked")}, function(response) {
         console.log("bookmark added! -> " + JSON.stringify(response));
-        $('.keepit_hover').animate({
-            right: '-=207'
-          },
-        300);
+        slideOut();
       });
     });
+
+    close.click(function() {
+      slideOut();
+    });
+
     $("body").append(hover);
     setTimeout(function() {
-      $('.keepit_hover').animate({
-          right: '+=207'
-        },
-        300);
+      slideIn();
     }, 1000);//1 seconds
-    //$(".keepit_hover").onClick
+  }
+
+  function slideOut() {
+    $('.keepit_hover').animate({
+        right: '-=230'
+      },
+      300);
+  }
+
+  function slideIn() {
+    $('.keepit_hover').animate({
+        right: '+=230'
+      },
+      300);
   }
 
   function getUserInfo(callback) {
