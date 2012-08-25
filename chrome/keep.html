@@ -2,9 +2,14 @@
 	<script type="text/javascript" src="jquery-1.7.2.min.js"></script>
 	<script src="bookmarks.js"></script>
   <script>
-    // Called when a message is passed.  We assume that the content script
-  	// wants to show the page action.
-    console.log("background page kicking in!");
+    function log(message, tab) {
+      if(tab) {
+        message = "[" + tab.id + "] " + message
+      } 
+      console.log(message);
+    }
+
+    log("background page kicking in!");
 
 		function getServer(){
       var server = "keepitfindit.com";
@@ -31,16 +36,16 @@
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
-          console.log("xhr response:");
-          console.log(xhr.responseText);
+          log("xhr response:");
+          log(xhr.responseText);
         }
       }
       bookmarksSupplier(function(bookmarks){bookmarksPoster(bookmarks, xhr)});
     }
 
 		function bookmarksPoster(bookmarks, xhr) {
-			console.log("bookmarks:");
-      console.log(bookmarks);
+			log("bookmarks:");
+      log(bookmarks);
       var json = {
         "bookmarks": bookmarks,
         "user_info": userInfo
@@ -55,10 +60,11 @@
 		getBookMarks();
 
   	function onRequest(request, sender, sendResponse) {
-      console.log("on request with " + JSON.stringify(request));
-      console.log("executing request " + request.type)
+      var tab = sender.tab;
+      log("on request with " + JSON.stringify(request), tab);
+      log("executing request " + request.type, tab)
       if (request.type === "init_page") {
-        initPage(request, sendResponse, sender.tab);
+        initPage(request, sendResponse, tab);
       } else if(request.type === "get_keeps") {
         searchOnServer(request, sendResponse);
       } else if(request.type === "get_user_info") {
@@ -75,10 +81,14 @@
   	}
 
     function addKeep(bookmarks, request, sendResponse) {
-			console.log("creating bookmark. private: "+request.private+" tile "+request.title);
+			log("creating bookmark. private: " + request.private + " tile " + request.title);
       var parent = (request.private) ? bookmarks.private : bookmarks.public;
-			console.log("parent bookmark is "+JSON.stringify(parent));
-      var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
+			log("parent bookmark is "+JSON.stringify(parent));
+      var bookmark = {
+        'parentId': parent.id, 
+        'title': request.title, 
+        'url': request.url
+      };
       chrome.bookmarks.create(bookmark, function(created) {
         sendResponse(created);
 				postBookmarks(function (poster) {poster([bookmark]);});
@@ -89,15 +99,15 @@
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
-          console.log("xhr response:");
-          console.log(xhr.response);
+          log("xhr response:");
+          log(xhr.response);
           sendResponse({message: xhr.response});
         }
       }
       term = request.query;
       facebookUser = userInfo["facebook_id"];
-      var url = 'http://'+getServer()+'/bookmarks/search?term='+term+'&facebookUser='+facebookUser;
-      console.log("url is the " + url);
+      var url = 'http://' + getServer() + '/bookmarks/search?term=' + term + '&facebookUser=' + facebookUser;
+      log("url is the " + url);
       xhr.open("GET", url, true);
       xhr.send();
     }
@@ -107,7 +117,7 @@
         injectGoogleDiv(tab);
         sendResponse({message: "created"});
       } else if (request.isGoogle === false) {
-        console.log("injecting hover: " + request);
+        log("injecting hover: " + request, tab);
         chrome.tabs.executeScript(tab.id, {file:"hover.js"});
       } else {
         //we're going to switch it to log later on, lets fast fail now.
@@ -118,7 +128,7 @@
 
     function injectGoogleDiv(tab) {
       //chrome.bookmarks.getTree(function(tree){console.log(tree);})
-      chrome.tabs.executeScript(tab.id, {code:"console.log('tab: " + tab.id + "')"});      
+      chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit] tab: " + tab.id + "')"});      
       chrome.tabs.insertCSS(tab.id, {file:"google_inject.css"}, function(){
         chrome.tabs.executeScript(tab.id, {file:"google_inject.js"});
       });
@@ -126,17 +136,7 @@
   	// Listen for the content script to send a message to the background page.
   	chrome.extension.onRequest.addListener(onRequest);
 
-    function addNewKeep() {
-      chrome.tabs.executeScript(null, {code:"console.log('clicked!!')"});
-    }
   </script>
   <body>
-    <p>
-      Keep!
-      <button onClick"addNewKeep()">Yea</button>
-      <a target="_top" 
-        href="https://www.facebook.com/dialog/oauth/?client_id=157864447681740&redirect_uri=https%3A%2F%2Fwww.keepit.com&scope=email">
-        Connect with Facebook!</a>
-    </p>
   </body>
 </html>
