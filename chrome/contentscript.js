@@ -4,9 +4,10 @@
     console.log("should run only on top window");
     return;
   }
+  if (document.location.href.indexOf("chrome-devtools://") >=0) return;
   var isGoogle = (document.location.host == "www.google.com");
   console.log("keepit: location is " + document.location.host + " isGoogle = " + isGoogle);
 
-  chrome.extension.sendRequest({type: "init_page", isGoogle: isGoogle}, function(response) {});
+  chrome.extension.sendRequest({type: "init_page", location:  document.location.href ,isGoogle: isGoogle}, function(response) {});
 
 })();

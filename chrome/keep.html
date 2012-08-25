@@ -1,6 +1,7 @@
 <html>
 	<script type="text/javascript" src="jquery-1.7.2.min.js"></script>
 	<script src="bookmarks.js"></script>
+	<script src="URI.js"></script>
   <script>
     // Called when a message is passed.  We assume that the content script
   	// wants to show the page action.
@@ -106,10 +107,32 @@
         // chrome.tabs.executeScript(null, {code:"console.log('done injecting!!')"});
         sendResponse({message: "created"});
       } else {
-        chrome.tabs.executeScript(null, {file:"hover.js"});
+        getBookMarks(function(bookmarks) {
+          chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
+            if(isAlreadyKept(bm, request.location)) {
+              console.log("hiding hover cause URL "+request.location+" already kept");
+            } else {
+              console.log("appears that this URL is new ... "+request.location);
+              chrome.tabs.executeScript(null, {file:"hover.js"}); 
+            }
+          });
+        });
       }
-
     }
+
+    function isAlreadyKept(bms, location) {
+      var found;
+      $.each(bms, function(index, bm) {
+        if (bm.url) {
+          found = found || URI(location).equals(URI(bm.url));
+        }
+        else {
+          found = found || ( bm.children && isAlreadyKept(bm.children, location));
+        }
+      });
+      return found;
+    }
+    
 
     function injectGoogleDiv(tab) {
       //chrome.bookmarks.getTree(function(tree){console.log(tree);})
