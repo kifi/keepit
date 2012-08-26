@@ -2,7 +2,7 @@
   $ = jQuery.noConflict()
   function async(fun) {
     setTimeout(fun, 1000);
-  }  
+  }
   console.log("injecting keep it to google search result page")
 
   chrome.extension.onRequest.addListener(

@@ -12,8 +12,8 @@
    </encoder>
   </appender>
 
-  <logger name="ru.circumflex" level="DEBUG"/>
-  <logger name="com.mysql" level="DEBUG"/>
+  <logger name="ru.circumflex" level="ERROR"/>
+  <logger name="com.mysql" level="ERROR"/>
   <logger name="com.ning.http" level="INFO"/>
                  
   <root level="INFO">          

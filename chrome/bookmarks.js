@@ -14,18 +14,29 @@ function getBookMarks(callback) {
 
 	function findBar() {
 		chrome.bookmarks.getChildren(bookmarks.root.id, function(children) {
-			bookmarks.bar = $.grep(children, function (bm) { return bm.title=="Bookmarks Bar"; })[0];
-			internKeepIt();
+		  var bar = $.grep(children, function (bm) { 
+		  	var foundIt = (bm.title.toLowerCase() == "bookmarks bar");
+		  	console.log(bm.title + " == bookmarks bar : " + foundIt); 
+		  	return foundIt; 
+		  });
+			if (bar.length === 0) {
+				console.error("Could not find bookmarks.bar named 'bookmarks bar' at " + children);
+				bar = children[0];
+			}
+			bookmarks.bar = bar[0];
+  		internKeepIt();
 		});
 	}
 
 	function internKeepIt() {
+
 		chrome.bookmarks.getChildren(bookmarks.bar.id, function(children) {
-			var res = $.grep(children, function (bm) { return bm.title=="KeepIt"; })
-			if (res.length>0) {
-				bookmarks.keepIt=res[0];
+			var res = $.grep(children, function (bm) { return bm.title == "KeepIt"; });
+			if (res.length > 0) {
+				bookmarks.keepIt = res.shift();
 				internPrivate();
-			} else createKeepIt();
+			} else 
+				createKeepIt();
 		});
 	}
 
@@ -52,6 +63,9 @@ function getBookMarks(callback) {
 	}
 
 	function createKeepIt(){
+			if (!bookmarks.bar) {
+				throw Error("Could not find bookmarks.bar at " + bookmarks);
+			}
 		chrome.bookmarks.create({'parentId': bookmarks.bar.id, 'title': 'KeepIt'}, function(bm) {
 			bookmarks.keepIt=bm;
 			internPrivate();
