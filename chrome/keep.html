@@ -129,6 +129,7 @@
         else {
           found = found || ( bm.children && isAlreadyKept(bm.children, location));
         }
+        return !found
       });
       return found;
     }
