@@ -23,6 +23,15 @@
   font-family: arial, helvetica; 
   font-size: 12px; 
   font-weight: normal;
+  font-style: normal;
+  font-variant: normal;
+
+  text-align: left;
+
+  line-height: 16px;
+
+  margin: 0px 0px 0px 0px;
+  padding: 0px 0px 0px 0px;
 }
 
 .keep_hover_bar {
