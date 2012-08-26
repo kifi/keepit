@@ -2,10 +2,7 @@ console.log("injecting keep it hover div");
 (function() {
   $ = jQuery.noConflict()
   var env = "undefined";
-  function async(fun) {
-    setTimeout(fun, 1000);
-  }
-  
+
   function showBookmarkHover(user) {
     var existingElements = $('#keepit_hover').length;
     if (existingElements > 0) {
@@ -38,7 +35,8 @@ console.log("injecting keep it hover div");
       slideOut();
     });
 
-    $("body").append(hover);
+    $("body").after(hover);
+
     setTimeout(function() {
       slideIn();
     }, 1000);//1 seconds
@@ -64,9 +62,10 @@ console.log("injecting keep it hover div");
     });
   }
 
+  setTimeout(function() {
     chrome.extension.sendRequest({"type": "get_env"}, function(response) {
       env = response.env;
-      async(getUserInfo(showBookmarkHover));
-
+      getUserInfo(showBookmarkHover);
     });
+  }, 30000);
 })();
