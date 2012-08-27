@@ -90,10 +90,10 @@ object BookmarksController extends Controller {
     CX.withConnection { implicit conn =>
       val bookmark = Bookmark(title, url, user)
       bookmark.loadUsingHash match {
-        case Some(existing) =>
-          println("bookmark %s already exist in db, not persisting!".format(existing))
+        case existing: Seq[Bookmark] if existing.length > 0 =>
+          println("bookmarks %s already exist in db, not persisting!".format(existing mkString))
           existing
-        case None => 
+        case _ => 
           println("new bookmark %s".format(bookmark))
           bookmark.save
       }
