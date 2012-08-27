@@ -3,27 +3,15 @@
 <script type="text/javascript" src="jquery-1.7.2.min.js"></script>
 <script type="text/javascript">
 
-chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
-    if (request.method == "getEnv") {
-      var env = localStorage["env"];
-      console.log("env is "+env);
-      if (env==null || env===undefined)
-        env = "production";
-      sendResponse({"env": env});
-    }
-    else
-      sendResponse({}); 
-});
-
 // Saves options to localStorage.
 function save_options() {
   if ($("#env_prod").is(":checked")) {
     localStorage["env"] = "production";
   }
-  else
-  {
+  else {
     localStorage["env"] = "development";
   }
+  localStorage["max_search_results"] = $("#max_search_results").val();
 }
 
 function restore_options() {
@@ -40,7 +28,7 @@ function restore_options() {
   if (env=="production") {
     $("#env_prod").attr("checked","checked");
   }
-	
+  $("#max_search_results").val(localStorage["max_search_results"]);
 }
 </script>
 
@@ -49,8 +37,9 @@ function restore_options() {
 <div width="100px">
 <fieldset>
   <legend>Environment:</legend>
-  <input type="radio" id="env_dev"  name="env" value="development"  />Development<br/>
-  <input type="radio" id="env_prod" name="env" value="production"  />Production<br/> 
+  <input type="radio" id="env_dev"  name="env" value="development"/>Development<br/>
+  <input type="radio" id="env_prod" name="env" value="production"/>Production<br/> 
+  Max Search Results: <input type="text" id="max_search_results" name="max_search_results" value="10"></imput><br/> 
   <button onclick="save_options()">Save</button>
 </fieldset>
 </div>

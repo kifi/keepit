@@ -13,7 +13,7 @@
 
 		function getServer(){
       var server = "keepitfindit.com";
-			var env = localStorage["env"];
+			var env = getOptions().env
 			if (env === "development") {
         server = "localhost:9000";
 				//assuming the default of developemnt if env is not set.
@@ -36,7 +36,7 @@
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
-          log("xhr response:");
+          log("[postBookmarks] xhr response:");
           log(xhr.responseText);
         }
       }
@@ -71,11 +71,9 @@
         sendResponse(userInfo);
       } else if(request.type === "add_bookmarks") {
         getBookMarks(function(bookmarks){addKeep(bookmarks, request, sendResponse)});
-      } else if (request.type == "get_env") {
-				var env = localStorage["env"];
-				if (!env)
-					env = "production";
-				sendResponse({"env": env});
+      } else if (request.type == "get_opt") {
+        var opt = getOptions();
+				sendResponse(opt);
 			}
   	  // Return nothing to let the connection be cleaned up.
   	}
@@ -99,9 +97,14 @@
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
-          log("xhr response:");
+          log("[searchOnServer] xhr response:");
           log(xhr.response);
-          sendResponse({message: xhr.response});
+          var searchResults = $.parseJSON(xhr.response);
+          var maxRes = getOptions().maxRes;
+          if (searchResults.length > maxRes) {
+            searchResults = searchResults.slice(0, maxRes);
+          }
+          sendResponse(searchResults);
         }
       }
       term = request.query;
@@ -129,12 +132,27 @@
     function injectGoogleDiv(tab) {
       //chrome.bookmarks.getTree(function(tree){console.log(tree);})
       chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit] tab: " + tab.id + "')"});      
-      chrome.tabs.insertCSS(tab.id, {file:"google_inject.css"}, function(){
-        chrome.tabs.executeScript(tab.id, {file:"google_inject.js"});
-      });
+      chrome.tabs.executeScript(tab.id, {file:"google_inject.js"});
     }
   	// Listen for the content script to send a message to the background page.
   	chrome.extension.onRequest.addListener(onRequest);
+
+    function getOptions() {
+      var env = localStorage["env"];
+      console.log("env is "+env);
+      if (env==null || env===undefined) {
+        env = "production";
+      }
+      var maxResStr = localStorage["max_search_results"]
+      if (!maxResStr) {
+        maxResStr = 5;
+      }
+      var maxRes = Number(maxResStr);
+      return {
+        "env": env, 
+        "maxRes": maxRes
+      }
+    }
 
   </script>
   <body>

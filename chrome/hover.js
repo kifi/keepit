@@ -63,9 +63,9 @@ console.log("injecting keep it hover div");
   }
 
   setTimeout(function() {
-    chrome.extension.sendRequest({"type": "get_env"}, function(response) {
+    chrome.extension.sendRequest({"type": "get_opt"}, function(response) {
       env = response.env;
       getUserInfo(showBookmarkHover);
     });
-  }, 30000);
+  }, 3000);
 })();
