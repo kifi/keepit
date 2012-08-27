@@ -37,8 +37,8 @@ case class Bookmark(
     entity.view
   }
   
-  def loadUsingHash(implicit conn: Connection): Option[Bookmark] =
-    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE ((b.userId EQ userId.get) AND (b.urlHash EQ urlHash)) unique }.map(_.view)
+  def loadUsingHash(implicit conn: Connection): Seq[Bookmark] =
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE ((b.userId EQ userId.get) AND (b.urlHash EQ urlHash)) }.map(_.view)
 }
 
 object Bookmark {
