@@ -18,11 +18,11 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
 // Saves options to localStorage.
 function save_options() {
   if ($("#env_prod").is(":checked")) {
-    localStorage["env"]="production";
+    localStorage["env"] = "production";
   }
   else
   {
-    localStorage["env"]="development";
+    localStorage["env"] = "development";
   }
 }
 
@@ -30,7 +30,7 @@ function restore_options() {
   var env = localStorage["env"];
 
   if (!env) {
-    env = "development";
+    env = "production";
 		localStorage["env"]=env;
   }
 
