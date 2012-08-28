@@ -121,7 +121,12 @@
         sendResponse({message: "created"});
       } else if (request.isGoogle === false) {
         log("injecting hover: " + request, tab);
-        chrome.tabs.executeScript(tab.id, {file:"hover.js"});
+        var hoverTimeout = getOptions().hoverTimeout;
+        if (hoverTimeout > 0) {
+          setTimeout(function() {
+            chrome.tabs.executeScript(tab.id, {file:"hover.js"});
+          }, hoverTimeout);
+        }
       } else {
         //we're going to switch it to log later on, lets fast fail now.
         throw Error("init page request does not have a valid 'isGoogle' value: " + request);
@@ -144,15 +149,30 @@
         env = "production";
       }
       var maxResStr = localStorage["max_search_results"]
-      if (!maxResStr) {
+      if (!isNumber(maxResStr)) {
         maxResStr = 5;
       }
       var maxRes = Number(maxResStr);
+
+      var hoverTimeout = localStorage["hover_timeout"]
+      if (!hoverTimeout) {
+        hoverTimeout = 10;
+      }
+      if (!isNumber(hoverTimeout)) {
+        hoverTimeout = 0;
+      }
+      hoverTimeout = Number(hoverTimeout);
+
       return {
         "env": env, 
+        "hoverTimeout": hoverTimeout, 
         "maxRes": maxRes
       }
     }
+
+    function isNumber(n) {
+      return !isNaN(parseFloat(n)) && isFinite(n);
+    }    
 
   </script>
   <body>
