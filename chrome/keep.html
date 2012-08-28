@@ -15,17 +15,6 @@
 
     log("background page kicking in!");
 
-		function getServer(){
-      var server = "keepitfindit.com";
-			var env = getOptions().env
-			if (env === "development") {
-        server = "localhost:9000";
-				//assuming the default of developemnt if env is not set.
-				server = "keepitfindit.com"
-			}
-			return server;
-		}
-
     function getPicture(userInfo) {
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
         userInfo["facebook_id"] = cookie.value;
@@ -164,7 +153,6 @@
 
     function getOptions() {
       var env = localStorage["env"];
-      console.log("env is " + env);
       if (!env) {
         env = "production";
       }
@@ -183,10 +171,16 @@
       }
       hoverTimeout = Number(hoverTimeout);
 
+      var server = "keepitfindit.com";
+      if (env === "development") {
+        server = "localhost:9000";
+      }
+
       return {
         "env": env, 
         "hoverTimeout": hoverTimeout, 
-        "maxRes": maxRes
+        "maxRes": maxRes,
+        "server": server
       }
     }
 
