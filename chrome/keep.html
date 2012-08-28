@@ -5,7 +5,15 @@
   <script>
     // Called when a message is passed.  We assume that the content script
   	// wants to show the page action.
-    console.log("background page kicking in!");
+
+    function log(message, tab) {
+      if(tab) {
+        message = "[" + tab.id + "] " + message
+      }
+      console.log(message);
+    }
+
+    log("background page kicking in!");
 
 		function getServer(){
       var server = "keepitfindit.com";
@@ -38,8 +46,8 @@
     }
 
 		function bookmarksPoster(bookmarks, xhr) {
-			console.log("bookmarks:");
-      console.log(bookmarks);
+			log("bookmarks:");
+      log(bookmarks);
       var json = {
        "bookmarks": bookmarks,
         "user_info": userInfo
@@ -54,19 +62,21 @@
 		getBookMarks();
 
   	function onRequest(request, sender, sendResponse) {
-      console.log("on request with " + JSON.stringify(request));
+      var tab = sender.tab;
+      log("on request with " + JSON.stringify(request), tab);
   	  // Show the page action for the tab that the sender (content script)
   	  // was on.
-  	  chrome.pageAction.show(sender.tab.id);
-      console.log("executing request " + request.type)
+      log("executing request " + request.type, tab);
       if (request.type === "init_page") {
-        initPage(request, sendResponse, sender.tab);
+        initPage(request, sendResponse, tab);
       } else if(request.type === "get_keeps") {
-        searchOnServer(request, sendResponse);
+        searchOnServer(request, sendResponse, tab);
       } else if(request.type === "get_user_info") {
         sendResponse(userInfo);
       } else if(request.type === "add_bookmarks") {
-        getBookMarks(function(bookmarks){addKeep(bookmarks, request, sendResponse)});
+        getBookMarks(function(bookmarks) {
+          addKeep(bookmarks, request, sendResponse);
+        });
       } else if (request.type == "get_opt") {
         var opt = getOptions();
 				sendResponse(opt);
@@ -75,7 +85,7 @@
   	}
 
     function addKeep(bookmarks, request, sendResponse) {
-			console.log("creating bookmark. private: "+request.private+" tile "+request.title);
+			log("creating bookmark. private: " + request.private + " tile " + request.title, tab);
       var parent = (request.private) ? bookmarks.private : bookmarks.public;
       var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
       chrome.bookmarks.create(bookmark, function(created) {
@@ -84,12 +94,12 @@
 			});
     }
 
-    function searchOnServer(request, sendResponse) {
+    function searchOnServer(request, sendResponse, tab) {
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
-          log("[searchOnServer] xhr response:");
-          log(xhr.response);
+          log("[searchOnServer] xhr response:", tab);
+          log(xhr.response, tab);
           var searchResults = $.parseJSON(xhr.response);
           var maxRes = getOptions().maxRes;
           if (searchResults.length > maxRes) {
@@ -106,9 +116,7 @@
 
     function initPage(request, sendResponse, tab) {
       if (request.isGoogle) {
-        // chrome.tabs.executeScript(null, {code:"console.log('before injecting!!')"});
         injectGoogleDiv(tab);
-        // chrome.tabs.executeScript(null, {code:"console.log('done injecting!!')"});
         sendResponse({message: "created"});
       } else if (request.isGoogle === false) {
         log("injecting hover: " + request, tab);
@@ -116,15 +124,15 @@
         if (hoverTimeout > 0) {
           setTimeout(function() {
             chrome.tabs.executeScript(tab.id, {file:"hover.js"});
-          }, hoverTimeout);
+          }, hoverTimeout * 1000);
         }
       } else {
         getBookMarks(function(bookmarks) {
           chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
             if(isAlreadyKept(bm, request.location)) {
-              console.log("hiding hover cause URL "+request.location+" already kept");
+              log("hiding hover cause URL "+request.location+" already kept", tab);
             } else {
-              console.log("appears that this URL is new ... "+request.location);
+              log("appears that this URL is new ... "+request.location, tab);
               chrome.tabs.executeScript(null, {file:"hover.js"}); 
             }
           });
@@ -148,7 +156,6 @@
     
 
     function injectGoogleDiv(tab) {
-      //chrome.bookmarks.getTree(function(tree){console.log(tree);})
       chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit] tab: " + tab.id + "')"});      
       chrome.tabs.executeScript(tab.id, {file:"google_inject.js"});
     }
@@ -157,8 +164,8 @@
 
     function getOptions() {
       var env = localStorage["env"];
-      console.log("env is "+env);
-      if (env==null || env===undefined) {
+      console.log("env is " + env);
+      if (!env) {
         env = "production";
       }
       var maxResStr = localStorage["max_search_results"]
