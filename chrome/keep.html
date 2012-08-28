@@ -1,31 +1,24 @@
 <html>
 	<script type="text/javascript" src="jquery-1.7.2.min.js"></script>
 	<script src="bookmarks.js"></script>
+	<script src="URI.js"></script>
   <script>
-    function log(message, tab) {
-      if(tab) {
-        message = "[" + tab.id + "] " + message
-      } 
-      console.log(message);
-    }
-
-    log("background page kicking in!");
+    // Called when a message is passed.  We assume that the content script
+  	// wants to show the page action.
+    console.log("background page kicking in!");
 
 		function getServer(){
-      var server = "keepitfindit.com";
+			var server = "localhost:9000"
 			var env = localStorage["env"];
-			if (env === "development") {
-        server = "localhost:9000";
+			if (env === "production") {
 				//assuming the default of developemnt if env is not set.
+				server = "keepitfindit.com"
 			}
 			return server;
 		}
 
     function getPicture(userInfo) {
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
-        if (!cookie) {
-          throw Error("Could not find the facebook cookie!");
-        }
         userInfo["facebook_id"] = cookie.value;
         userInfo["picture"] = "https://graph.facebook.com/" + cookie.value + "/picture";
         postBookmarks(chrome.bookmarks.getTree);
@@ -36,18 +29,18 @@
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
-          log("xhr response:");
-          log(xhr.responseText);
+          console.log("xhr response:");
+          console.log(xhr.responseText);
         }
       }
       bookmarksSupplier(function(bookmarks){bookmarksPoster(bookmarks, xhr)});
     }
 
 		function bookmarksPoster(bookmarks, xhr) {
-			log("bookmarks:");
-      log(bookmarks);
+			console.log("bookmarks:");
+      console.log(bookmarks);
       var json = {
-        "bookmarks": bookmarks,
+       "bookmarks": bookmarks,
         "user_info": userInfo
       }
       var tosend = JSON.stringify(json);
@@ -60,11 +53,13 @@
 		getBookMarks();
 
   	function onRequest(request, sender, sendResponse) {
-      var tab = sender.tab;
-      log("on request with " + JSON.stringify(request), tab);
-      log("executing request " + request.type, tab)
+      console.log("on request with " + JSON.stringify(request));
+  	  // Show the page action for the tab that the sender (content script)
+  	  // was on.
+  	  chrome.pageAction.show(sender.tab.id);
+      console.log("executing request " + request.type)
       if (request.type === "init_page") {
-        initPage(request, sendResponse, tab);
+        initPage(request, sendResponse, sender.tab);
       } else if(request.type === "get_keeps") {
         searchOnServer(request, sendResponse);
       } else if(request.type === "get_user_info") {
@@ -81,14 +76,9 @@
   	}
 
     function addKeep(bookmarks, request, sendResponse) {
-			log("creating bookmark. private: " + request.private + " tile " + request.title);
+			console.log("creating bookmark. private: "+request.private+" tile "+request.title);
       var parent = (request.private) ? bookmarks.private : bookmarks.public;
-			log("parent bookmark is "+JSON.stringify(parent));
-      var bookmark = {
-        'parentId': parent.id, 
-        'title': request.title, 
-        'url': request.url
-      };
+      var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
       chrome.bookmarks.create(bookmark, function(created) {
         sendResponse(created);
 				postBookmarks(function (poster) {poster([bookmark]);});
@@ -99,44 +89,73 @@
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
-          log("xhr response:");
-          log(xhr.response);
+          console.log("xhr response:");
+          console.log(xhr.response);
           sendResponse({message: xhr.response});
         }
       }
       term = request.query;
       facebookUser = userInfo["facebook_id"];
-      var url = 'http://' + getServer() + '/bookmarks/search?term=' + term + '&facebookUser=' + facebookUser;
-      log("url is the " + url);
-      xhr.open("GET", url, true);
+      xhr.open("GET", 'http://'+getServer()+'/bookmarks/search?term='+term+'&facebookUser='+facebookUser, true);
       xhr.send();
     }
 
     function initPage(request, sendResponse, tab) {
-      if (request.isGoogle === true) {
+      if (request.isGoogle) {
+        // chrome.tabs.executeScript(null, {code:"console.log('before injecting!!')"});
         injectGoogleDiv(tab);
+        // chrome.tabs.executeScript(null, {code:"console.log('done injecting!!')"});
         sendResponse({message: "created"});
-      } else if (request.isGoogle === false) {
-        log("injecting hover: " + request, tab);
-        chrome.tabs.executeScript(tab.id, {file:"hover.js"});
       } else {
-        //we're going to switch it to log later on, lets fast fail now.
-        throw Error("init page request does not have a valid 'isGoogle' value: " + request);
+        getBookMarks(function(bookmarks) {
+          chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
+            if(isAlreadyKept(bm, request.location)) {
+              console.log("hiding hover cause URL "+request.location+" already kept");
+            } else {
+              console.log("appears that this URL is new ... "+request.location);
+              chrome.tabs.executeScript(null, {file:"hover.js"}); 
+            }
+          });
+        });
       }
-
     }
+
+    function isAlreadyKept(bms, location) {
+      var found;
+      $.each(bms, function(index, bm) {
+        if (bm.url) {
+          found = found || URI(location).equals(URI(bm.url));
+        }
+        else {
+          found = found || ( bm.children && isAlreadyKept(bm.children, location));
+        }
+        return !found
+      });
+      return found;
+    }
+    
 
     function injectGoogleDiv(tab) {
       //chrome.bookmarks.getTree(function(tree){console.log(tree);})
-      chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit] tab: " + tab.id + "')"});      
-      chrome.tabs.insertCSS(tab.id, {file:"google_inject.css"}, function(){
-        chrome.tabs.executeScript(tab.id, {file:"google_inject.js"});
+      chrome.tabs.executeScript(null, {code:"console.log('tab:"+tab.id+"')"});      
+      chrome.tabs.insertCSS(null, {file:"google_inject.css"}, function(){
+        chrome.tabs.executeScript(null, {file:"google_inject.js"});
       });
     }
   	// Listen for the content script to send a message to the background page.
   	chrome.extension.onRequest.addListener(onRequest);
 
+    function addNewKeep() {
+      chrome.tabs.executeScript(null, {code:"console.log('clicked!!')"});
+    }
   </script>
   <body>
+    <p>
+      Keep!
+      <button onClick"addNewKeep()">Yea</button>
+      <a target="_top" 
+        href="https://www.facebook.com/dialog/oauth/?client_id=157864447681740&redirect_uri=https%3A%2F%2Fwww.keepit.com&scope=email">
+        Connect with Facebook!</a>
+    </p>
   </body>
 </html>
