@@ -42,7 +42,7 @@
         "user_info": userInfo
       }
       var tosend = JSON.stringify(json);
-      xhr.open("POST", 'http://'+getServer()+'/bookmarks/add', true);
+      xhr.open("POST", 'http://' + getOptions().server + '/bookmarks/add', true);
       xhr.send(tosend);
     }
 
@@ -99,7 +99,7 @@
       }
       term = request.query;
       facebookUser = userInfo["facebook_id"];
-      xhr.open("GET", 'http://'+getServer()+'/bookmarks/search?term='+term+'&facebookUser='+facebookUser, true);
+      xhr.open("GET", 'http://' + getOptions().server + '/bookmarks/search?term=' + term + '&facebookUser=' + facebookUser, true);
       xhr.send();
     }
 
