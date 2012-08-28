@@ -15,6 +15,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 import com.keepit.controllers.CommonActions._
 import com.keepit.common.db.CX
+import com.keepit.common.db._
 import com.keepit.model._
 import com.keepit.serializer.BookmarkSerializer
 import com.keepit.serializer.{BookmarkPersonalSearchResultSerializer => BPSRS}
@@ -29,6 +30,23 @@ case class BookmarkPersonalSearchResult(bookmark: Bookmark, count: Int, users: S
 
 object BookmarksController extends Controller {
 
+  def edit(id: Id[Bookmark]) = Action{ request =>
+    CX.withConnection { implicit conn =>
+      val bookmark = Bookmark.get(id) 
+      val user = User.get(bookmark.userId.get)
+      Ok(views.html.editBookmark(bookmark, user))
+    }
+  }
+  
+  //this is an admin only task!!!
+  def delete(id: Id[Bookmark]) = Action{ request =>
+    CX.withConnection { implicit conn =>
+      val bookmark = Bookmark.get(id)
+      bookmark.delete()
+      Redirect(com.keepit.controllers.routes.BookmarksController.allView)
+    }
+  }  
+  
   def all = Action{ request =>
     val bookmarks = CX.withConnection { implicit conn =>
       Bookmark.all
@@ -90,10 +108,10 @@ object BookmarksController extends Controller {
     CX.withConnection { implicit conn =>
       val bookmark = Bookmark(title, url, user)
       bookmark.loadUsingHash match {
-        case Some(existing) =>
-          println("bookmark %s already exist in db, not persisting!".format(existing))
-          existing
-        case None => 
+        case existing if existing.length > 0 =>
+          println("bookmarks %s already exist in db, not persisting!".format(existing mkString))
+          existing.head
+        case Nil => 
           println("new bookmark %s".format(bookmark))
           bookmark.save
       }

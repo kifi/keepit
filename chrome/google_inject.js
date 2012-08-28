@@ -1,8 +1,5 @@
 (function() {
   $ = jQuery.noConflict()
-  function async(fun) {
-    setTimeout(fun, 1000);
-  }
   console.log("injecting keep it to google search result page")
 
   chrome.extension.onRequest.addListener(
@@ -23,18 +20,8 @@
       return;
     }
     console.log("search term: " + query);
-    chrome.extension.sendRequest({type: "get_keeps", query: queryInput.val()}, function(response) {
-      if (!(response.message) || response.message.length == 0) {
-        return;
-      }
-      console.log("keeps are: " + JSON.stringify(response));
-      var old = $('#keepit');
-      old.slideUp(function(){old.remove();});
+    chrome.extension.sendRequest({type: "get_keeps", query: queryInput.val()}, function(searchResults) {
       function addResults() {
-        var json = $.parseJSON(response.message)
-        if (json.length === 0) {
-          return;
-        }
         var ol = $('<ol id="keepit" class="kpt-results"></ol>');
         var head = $('<li class="g keepit"><div class="vsc"><h3 class="r"><center>Your Bookmarks</center></h3></div><!--n--></li>')
         var tail = $('<li class="g keepit"><div class="vsc"><h3 class="r"><center>Google Results</center></h3></div><!--n--></li>')
@@ -43,7 +30,7 @@
         //$('#rso').prepend(head)
         //head.after(tail)
         var resultCount = 0;
-        $(json).each(function(i, e){
+        $(searchResults).each(function(i, e){
           var link = $('<li class="g"></li>');
           link.append('<div class="vsc"><h3 class="r"><a href="'+e.bookmark.url+'">'+e.bookmark.title+'</a></h3><div class="vspib" aria-label="Result details" role="button" tabindex="0"></div><div class="s"><div class="f kv"><cite>'+e.bookmark.url+'</cite></div></div></div><!--n-->')
           resultCount++;
@@ -66,6 +53,7 @@
           if (googleResults.length > 0) {
             googleResults.prepend(ol);
             //neight needs to be proportional to num of elements with max = 3
+            ol.css("height", "0px");
             ol.show();
             ol.animate({
               height: '+=' + (80 + 100 * resultCount) 
@@ -79,9 +67,23 @@
             setTimeout(function(){showResults();}, 1000);
           }
         }
-        async(showResults());
+        showResults();
       }
-      async(addResults());
+      if (!(searchResults) || searchResults.length == 0) {
+        console.log("No search results!");
+        return;
+      }
+      debugger;
+      console.log("keeps are: " + searchResults);
+      var old = $('#keepit');
+      if (old && old.length > 0) {
+        old.slideUp(function(){
+          old.remove();
+          addResults();
+        });
+      } else {
+        addResults();
+      }
     });
   }
   
@@ -89,11 +91,11 @@
   console.log("jquery val = " + queryInput.val());
   $('#main').change(function() {
     if ($('#keepit').length === 0) {
-      async(function(){updateQuery();});
+      updateQuery();
     }
   });
   queryInput.change(function(){
-    async(function(){updateQuery();});
+    updateQuery();
   });
 
 })()

@@ -7,6 +7,8 @@ GET     /bookmarks                  com.keepit.controllers.BookmarksController.a
 
 POST    /bookmarks/add              com.keepit.controllers.BookmarksController.addBookmarks
 GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all
+GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
+POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
 
 GET     /bookmarks/search           com.keepit.controllers.BookmarksController.searchBookmarks(term: String, facebookUser: String)
 

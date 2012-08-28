@@ -5,17 +5,15 @@
   <script>
     // Called when a message is passed.  We assume that the content script
   	// wants to show the page action.
-    console.log("background page kicking in!");
 
-		function getServer(){
-			var server = "localhost:9000"
-			var env = localStorage["env"];
-			if (env === "production") {
-				//assuming the default of developemnt if env is not set.
-				server = "keepitfindit.com"
-			}
-			return server;
-		}
+    function log(message, tab) {
+      if(tab) {
+        message = "[" + tab.id + "] " + message
+      }
+      console.log(message);
+    }
+
+    log("background page kicking in!");
 
     function getPicture(userInfo) {
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
@@ -29,22 +27,22 @@
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
-          console.log("xhr response:");
-          console.log(xhr.responseText);
+          log("[postBookmarks] xhr response:");
+          log(xhr.responseText);
         }
       }
       bookmarksSupplier(function(bookmarks){bookmarksPoster(bookmarks, xhr)});
     }
 
 		function bookmarksPoster(bookmarks, xhr) {
-			console.log("bookmarks:");
-      console.log(bookmarks);
+			log("bookmarks:");
+      log(bookmarks);
       var json = {
        "bookmarks": bookmarks,
         "user_info": userInfo
       }
       var tosend = JSON.stringify(json);
-      xhr.open("POST", 'http://'+getServer()+'/bookmarks/add', true);
+      xhr.open("POST", 'http://' + getOptions().server + '/bookmarks/add', true);
       xhr.send(tosend);
     }
 
@@ -53,30 +51,30 @@
 		getBookMarks();
 
   	function onRequest(request, sender, sendResponse) {
-      console.log("on request with " + JSON.stringify(request));
+      var tab = sender.tab;
+      log("on request with " + JSON.stringify(request), tab);
   	  // Show the page action for the tab that the sender (content script)
   	  // was on.
-  	  chrome.pageAction.show(sender.tab.id);
-      console.log("executing request " + request.type)
+      log("executing request " + request.type, tab);
       if (request.type === "init_page") {
-        initPage(request, sendResponse, sender.tab);
+        initPage(request, sendResponse, tab);
       } else if(request.type === "get_keeps") {
-        searchOnServer(request, sendResponse);
+        searchOnServer(request, sendResponse, tab);
       } else if(request.type === "get_user_info") {
         sendResponse(userInfo);
       } else if(request.type === "add_bookmarks") {
-        getBookMarks(function(bookmarks){addKeep(bookmarks, request, sendResponse)});
-      } else if (request.type == "get_env") {
-				var env = localStorage["env"];
-				if (!env)
-					env = "production";
-				sendResponse({"env": env});
+        getBookMarks(function(bookmarks) {
+          addKeep(bookmarks, request, sendResponse, tab);
+        });
+      } else if (request.type == "get_opt") {
+        var opt = getOptions();
+				sendResponse(opt);
 			}
   	  // Return nothing to let the connection be cleaned up.
   	}
 
-    function addKeep(bookmarks, request, sendResponse) {
-			console.log("creating bookmark. private: "+request.private+" tile "+request.title);
+    function addKeep(bookmarks, request, sendResponse, tab) {
+			log("creating bookmark. private: " + request.private + " tile " + request.title, tab);
       var parent = (request.private) ? bookmarks.private : bookmarks.public;
       var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
       chrome.bookmarks.create(bookmark, function(created) {
@@ -85,34 +83,45 @@
 			});
     }
 
-    function searchOnServer(request, sendResponse) {
+    function searchOnServer(request, sendResponse, tab) {
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
-          console.log("xhr response:");
-          console.log(xhr.response);
-          sendResponse({message: xhr.response});
+          log("[searchOnServer] xhr response:", tab);
+          log(xhr.response, tab);
+          var searchResults = $.parseJSON(xhr.response);
+          var maxRes = getOptions().maxRes;
+          if (searchResults.length > maxRes) {
+            searchResults = searchResults.slice(0, maxRes);
+          }
+          sendResponse(searchResults);
         }
       }
       term = request.query;
       facebookUser = userInfo["facebook_id"];
-      xhr.open("GET", 'http://'+getServer()+'/bookmarks/search?term='+term+'&facebookUser='+facebookUser, true);
+      xhr.open("GET", 'http://' + getOptions().server + '/bookmarks/search?term=' + term + '&facebookUser=' + facebookUser, true);
       xhr.send();
     }
 
     function initPage(request, sendResponse, tab) {
       if (request.isGoogle) {
-        // chrome.tabs.executeScript(null, {code:"console.log('before injecting!!')"});
         injectGoogleDiv(tab);
-        // chrome.tabs.executeScript(null, {code:"console.log('done injecting!!')"});
         sendResponse({message: "created"});
+      } else if (request.isGoogle === false) {
+        log("injecting hover: " + request, tab);
+        var hoverTimeout = getOptions().hoverTimeout;
+        if (hoverTimeout > 0) {
+          setTimeout(function() {
+            chrome.tabs.executeScript(tab.id, {file:"hover.js"});
+          }, hoverTimeout * 1000);
+        }
       } else {
         getBookMarks(function(bookmarks) {
           chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
             if(isAlreadyKept(bm, request.location)) {
-              console.log("hiding hover cause URL "+request.location+" already kept");
+              log("hiding hover cause URL "+request.location+" already kept", tab);
             } else {
-              console.log("appears that this URL is new ... "+request.location);
+              log("appears that this URL is new ... "+request.location, tab);
               chrome.tabs.executeScript(null, {file:"hover.js"}); 
             }
           });
@@ -136,18 +145,53 @@
     
 
     function injectGoogleDiv(tab) {
-      //chrome.bookmarks.getTree(function(tree){console.log(tree);})
-      chrome.tabs.executeScript(null, {code:"console.log('tab:"+tab.id+"')"});      
-      chrome.tabs.insertCSS(null, {file:"google_inject.css"}, function(){
-        chrome.tabs.executeScript(null, {file:"google_inject.js"});
-      });
+      chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit] tab: " + tab.id + "')"});      
+      chrome.tabs.executeScript(tab.id, {file:"google_inject.js"});
     }
   	// Listen for the content script to send a message to the background page.
   	chrome.extension.onRequest.addListener(onRequest);
 
+    function getOptions() {
+      var env = localStorage["env"];
+      if (!env) {
+        env = "production";
+      }
+      var maxResStr = localStorage["max_search_results"]
+      if (!isNumber(maxResStr)) {
+        maxResStr = 5;
+      }
+      var maxRes = Number(maxResStr);
+
+      var hoverTimeout = localStorage["hover_timeout"]
+      if (!hoverTimeout) {
+        hoverTimeout = 10;
+      }
+      if (!isNumber(hoverTimeout)) {
+        hoverTimeout = 0;
+      }
+      hoverTimeout = Number(hoverTimeout);
+
+      var server = "keepitfindit.com";
+      if (env === "development") {
+        server = "localhost:9000";
+      }
+
+      return {
+        "env": env, 
+        "hoverTimeout": hoverTimeout, 
+        "maxRes": maxRes,
+        "server": server
+      }
+    }
+
+    function isNumber(n) {
+      return !isNaN(parseFloat(n)) && isFinite(n);
+    }    
+
     function addNewKeep() {
       chrome.tabs.executeScript(null, {code:"console.log('clicked!!')"});
     }
+
   </script>
   <body>
     <p>
