@@ -38,6 +38,15 @@ object BookmarksController extends Controller {
     }
   }
   
+  //this is an admin only task!!!
+  def delete(id: Id[Bookmark]) = Action{ request =>
+    CX.withConnection { implicit conn =>
+      val bookmark = Bookmark.get(id)
+      bookmark.delete()
+      Redirect(com.keepit.controllers.routes.BookmarksController.allView)
+    }
+  }  
+  
   def all = Action{ request =>
     val bookmarks = CX.withConnection { implicit conn =>
       Bookmark.all

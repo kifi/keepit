@@ -37,6 +37,13 @@ case class Bookmark(
     entity.view
   }
   
+  def delete()(implicit conn: Connection): Unit = {
+    val res = (BookmarkEntity AS "b").map { b => DELETE (b) WHERE (b.id EQ this.id.get) execute }
+    if (res != 1) {
+      throw new Exception("[%s] did not delete %s".format(res, this))
+    }
+  }
+  
   def loadUsingHash(implicit conn: Connection): Seq[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE ((b.userId EQ userId.get) AND (b.urlHash EQ urlHash)) list}.map(_.view)
 }
@@ -51,14 +58,6 @@ object Bookmark {
     Bookmark(title = title, url = url, normalizedUrl = normalized, urlHash = hash, userId = user.id) 
   }
   
-  //Used for admin, checking that we can talk with the db
-  def loadTest()(implicit conn: Connection): Unit = {
-    val bookmark: Option[BookmarkEntity] = (BookmarkEntity AS "b").map { u =>
-      SELECT (u.*) FROM u LIMIT 1
-    } unique;
-    bookmark.get.view
-  }
-
   def search(term: String)(implicit conn: Connection): Seq[BookmarkSearchResults] = {
     val bookmarkScore = new mutable.HashMap[Bookmark, Float]() {
       override def default(key: Bookmark) = 0F
