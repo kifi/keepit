@@ -75,7 +75,7 @@
         sendResponse(userInfo);
       } else if(request.type === "add_bookmarks") {
         getBookMarks(function(bookmarks) {
-          addKeep(bookmarks, request, sendResponse);
+          addKeep(bookmarks, request, sendResponse, tab);
         });
       } else if (request.type == "get_opt") {
         var opt = getOptions();
@@ -84,7 +84,7 @@
   	  // Return nothing to let the connection be cleaned up.
   	}
 
-    function addKeep(bookmarks, request, sendResponse) {
+    function addKeep(bookmarks, request, sendResponse, tab) {
 			log("creating bookmark. private: " + request.private + " tile " + request.title, tab);
       var parent = (request.private) ? bookmarks.private : bookmarks.public;
       var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};

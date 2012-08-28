@@ -24,8 +24,15 @@ console.log("injecting keep it hover div");
     hover.append(close);
 
     button.click(function() {
-      console.log("bookmarking page " + document.location.href);
-      chrome.extension.sendRequest({type: "add_bookmarks", url: document.location.href, title: document.title, private: $("#keepit_private").is(":checked")}, function(response) {
+      debugger;
+      console.log("bookmarking page: " + document.location.href);
+      var request = {
+        type: "add_bookmarks", 
+        url: document.location.href, 
+        title: document.title, 
+        private: $("#keepit_private").is(":checked")
+      }
+      chrome.extension.sendRequest(request, function(response) {
         console.log("bookmark added! -> " + JSON.stringify(response));
         slideOut();
       });
