@@ -90,6 +90,9 @@
           log("[searchOnServer] xhr response:", tab);
           log(xhr.response, tab);
           var searchResults = $.parseJSON(xhr.response);
+          if (searchResults.length === 0) {
+            return;
+          }
           var maxRes = getOptions().maxRes;
           if (searchResults.length > maxRes) {
             searchResults = searchResults.slice(0, maxRes);
