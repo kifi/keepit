@@ -13,25 +13,44 @@
       console.log(message);
     }
 
+    function error(exception, message) {
+      var errMessage = exception.message;
+      if(message) {
+        errMessage = "[" + message + "] " + exception.message;
+      }
+      console.error(exception);
+      console.error(errMessage);
+      console.error(exception.stack);
+      alert("exception: " + exception.message);
+    }
+
     log("background page kicking in!");
 
     function getPicture(userInfo) {
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
-        userInfo["facebook_id"] = cookie.value;
-        userInfo["picture"] = "https://graph.facebook.com/" + cookie.value + "/picture";
-        postBookmarks(chrome.bookmarks.getTree);
+        try {
+          userInfo["facebook_id"] = cookie.value;
+          userInfo["picture"] = "https://graph.facebook.com/" + cookie.value + "/picture";
+          postBookmarks(chrome.bookmarks.getTree);
+        } catch (e) {
+          error(e);
+        }
       });
     }
 
     function postBookmarks(bookmarksSupplier) {
-      var xhr = new XMLHttpRequest();
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-          log("[postBookmarks] xhr response:");
-          log(xhr.responseText);
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function() {
+          if (xhr.readyState == 4) {
+            log("[postBookmarks] xhr response:");
+            log(xhr.responseText);
+          }
         }
+        bookmarksSupplier(function(bookmarks){bookmarksPoster(bookmarks, xhr)});
+      } catch (e) {
+        error(e);
       }
-      bookmarksSupplier(function(bookmarks){bookmarksPoster(bookmarks, xhr)});
     }
 
 		function bookmarksPoster(bookmarks, xhr) {
@@ -51,26 +70,30 @@
 		getBookMarks();
 
   	function onRequest(request, sender, sendResponse) {
-      var tab = sender.tab;
-      log("on request with " + JSON.stringify(request), tab);
-  	  // Show the page action for the tab that the sender (content script)
-  	  // was on.
-      log("executing request " + request.type, tab);
-      if (request.type === "init_page") {
-        initPage(request, sendResponse, tab);
-      } else if(request.type === "get_keeps") {
-        searchOnServer(request, sendResponse, tab);
-      } else if(request.type === "get_user_info") {
-        sendResponse(userInfo);
-      } else if(request.type === "add_bookmarks") {
-        getBookMarks(function(bookmarks) {
-          addKeep(bookmarks, request, sendResponse, tab);
-        });
-      } else if (request.type == "get_opt") {
-        var opt = getOptions();
-				sendResponse(opt);
-			}
-  	  // Return nothing to let the connection be cleaned up.
+      try {
+        var tab = sender.tab;
+        log("on request with " + JSON.stringify(request), tab);
+    	  // Show the page action for the tab that the sender (content script)
+    	  // was on.
+        log("executing request " + request.type, tab);
+        if (request.type === "init_page") {
+          initPage(request, sendResponse, tab);
+        } else if(request.type === "get_keeps") {
+          searchOnServer(request, sendResponse, tab);
+        } else if(request.type === "get_user_info") {
+          sendResponse(userInfo);
+        } else if(request.type === "add_bookmarks") {
+          getBookMarks(function(bookmarks) {
+            addKeep(bookmarks, request, sendResponse, tab);
+          });
+        } else if (request.type == "get_opt") {
+          var opt = getOptions();
+  				sendResponse(opt);
+  			}
+    	  // Return nothing to let the connection be cleaned up.
+      } catch (e) {
+        error(e);
+      }
   	}
 
     function addKeep(bookmarks, request, sendResponse, tab) {
@@ -78,8 +101,12 @@
       var parent = (request.private) ? bookmarks.private : bookmarks.public;
       var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
       chrome.bookmarks.create(bookmark, function(created) {
-        sendResponse(created);
-				postBookmarks(function (poster) {poster([bookmark]);});
+        try {
+          sendResponse(created);
+  				postBookmarks(function (poster) {poster([bookmark]);});
+        } catch (e) {
+          error(e);
+        }
 			});
     }
 
@@ -107,83 +134,99 @@
     }
 
     function initPage(request, sendResponse, tab) {
-      if (request.isGoogle) {
-        injectGoogleDiv(tab);
-        sendResponse({message: "created"});
-      } else if (request.isGoogle === false) {
-        log("injecting hover: " + request, tab);
-        var hoverTimeout = getOptions().hoverTimeout;
-        if (hoverTimeout > 0) {
-          setTimeout(function() {
-            chrome.tabs.executeScript(tab.id, {file:"hover.js"});
-          }, hoverTimeout * 1000);
-        }
-      } else {
-        getBookMarks(function(bookmarks) {
-          chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
-            if(isAlreadyKept(bm, request.location)) {
-              log("hiding hover cause URL "+request.location+" already kept", tab);
-            } else {
-              log("appears that this URL is new ... "+request.location, tab);
-              chrome.tabs.executeScript(null, {file:"hover.js"}); 
-            }
+      try {
+        if (request.isGoogle) {
+          injectGoogleDiv(tab);
+          sendResponse({message: "created"});
+        } else if (request.isGoogle === false) {
+          log("injecting hover: " + request, tab);
+          var hoverTimeout = getOptions().hoverTimeout;
+          if (hoverTimeout > 0) {
+            setTimeout(function() {
+              chrome.tabs.executeScript(tab.id, {file:"hover.js"});
+            }, hoverTimeout * 1000);
+          }
+        } else {
+          getBookMarks(function(bookmarks) {
+            chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
+              if(isAlreadyKept(bm, request.location)) {
+                log("hiding hover cause URL "+request.location+" already kept", tab);
+              } else {
+                log("appears that this URL is new ... "+request.location, tab);
+                chrome.tabs.executeScript(null, {file:"hover.js"}); 
+              }
+            });
           });
-        });
+        }
+      } catch (e) {
+        error(e);
       }
     }
 
     function isAlreadyKept(bms, location) {
-      var found;
-      $.each(bms, function(index, bm) {
-        if (bm.url) {
-          found = found || URI(location).equals(URI(bm.url));
-        }
-        else {
-          found = found || ( bm.children && isAlreadyKept(bm.children, location));
-        }
-        return !found
-      });
-      return found;
+      try {
+        var found;
+        $.each(bms, function(index, bm) {
+          if (bm.url) {
+            found = found || URI(location).equals(URI(bm.url));
+          }
+          else {
+            found = found || ( bm.children && isAlreadyKept(bm.children, location));
+          }
+          return !found
+        });
+        return found;
+      } catch (e) {
+        error(e);
+      }
     }
     
-
     function injectGoogleDiv(tab) {
-      chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit] tab: " + tab.id + "')"});      
-      chrome.tabs.executeScript(tab.id, {file:"google_inject.js"});
+      try {
+        chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit] tab: " + tab.id + "')"});      
+        chrome.tabs.executeScript(tab.id, {file:"google_inject.js"});
+      } catch (e) {
+        error(e);
+      }
     }
+
   	// Listen for the content script to send a message to the background page.
   	chrome.extension.onRequest.addListener(onRequest);
 
     function getOptions() {
-      var env = localStorage["env"];
-      if (!env) {
-        env = "production";
-      }
-      var maxResStr = localStorage["max_search_results"]
-      if (!isNumber(maxResStr)) {
-        maxResStr = 5;
-      }
-      var maxRes = Number(maxResStr);
+      try {
+        var env = localStorage["env"];
+        if (!env) {
+          env = "production";
+        }
+        var maxResStr = localStorage["max_search_results"]
+        if (!isNumber(maxResStr)) {
+          maxResStr = 5;
+        }
+        var maxRes = Number(maxResStr);
 
-      var hoverTimeout = localStorage["hover_timeout"]
-      if (!hoverTimeout) {
-        hoverTimeout = 10;
-      }
-      if (!isNumber(hoverTimeout)) {
-        hoverTimeout = 0;
-      }
-      hoverTimeout = Number(hoverTimeout);
+        var hoverTimeout = localStorage["hover_timeout"]
+        if (!hoverTimeout) {
+          hoverTimeout = 10;
+        }
+        if (!isNumber(hoverTimeout)) {
+          hoverTimeout = 0;
+        }
+        hoverTimeout = Number(hoverTimeout);
 
-      var server = "keepitfindit.com";
-      if (env === "development") {
-        server = "localhost:9000";
-      }
+        var server = "keepitfindit.com";
+        if (env === "development") {
+          server = "localhost:9000";
+        }
 
-      return {
-        "env": env, 
-        "hoverTimeout": hoverTimeout, 
-        "maxRes": maxRes,
-        "server": server
+        return {
+          "env": env, 
+          "hoverTimeout": hoverTimeout, 
+          "maxRes": maxRes,
+          "server": server
+        }
+      } catch (e) {
+        error(e);
       }
     }
 
