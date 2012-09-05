@@ -88,14 +88,14 @@ function getBookMarks(callback) {
 
 
 	function done(bookmarks){
-		console.log("finish bokmars traversing");
+		log("finish bokmars traversing");
 		getBookMarks.prototype.cachedBookmarks = bookmarks; 
 		if (callback)
 			callback(bookmarks);
 	}
 
 	var bookmarks={};
-	console.log("looking for bookmarks");
+	log("looking for bookmarks");
 
 	if(getBookMarks.prototype.cachedBookmarks){
 //		console.log("using cache: "+JSON.stringify(getBookMarks.prototype.cachedBookmarks));

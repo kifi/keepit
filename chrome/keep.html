@@ -165,25 +165,19 @@
           log("injecting hover: " + request, tab);
           var hoverTimeout = getOptions().hoverTimeout;
           if (hoverTimeout > 0) {
-            setTimeout(function() {
-              catching(function() {
-                chrome.tabs.executeScript(tab.id, {file:"hover.js"});
+            getBookMarks(function(bookmarks) {
+              chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
+                if(isAlreadyKept(bm, request.location)) {
+                  log("hiding hover cause URL "+request.location+" already kept", tab);
+                } else {
+                  log("injecting hover: " + request, tab);
+                  setTimeout(function() {
+                    chrome.tabs.executeScript(tab.id, {file:"hover.js"});
+                  }, hoverTimeout * 1000);
+                }
               });
-            }, hoverTimeout * 1000);
-          }
-        } else {
-          getBookMarks(function(bookmarks) {
-            chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
-              if(isAlreadyKept(bm, request.location)) {
-                log("hiding hover cause URL "+request.location+" already kept", tab);
-              } else {
-                log("appears that this URL is new ... "+request.location, tab);
-                catching(function() {
-                  chrome.tabs.executeScript(null, {file:"hover.js"}); 
-                });
-              }
             });
-          });
+          }
         }
       } catch (e) {
         error(e);
