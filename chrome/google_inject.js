@@ -1,4 +1,4 @@
-(function() {
+(function () { try {
   $ = jQuery.noConflict()
 
   var lastInjected = null;
@@ -8,34 +8,33 @@
   }
 
   function error(exception, message) {
+    debugger;
+    var errMessage = exception.message;
     if(message) {
-      console.error("[" + message + "] " + exception.message);
+      errMessage = "[" + message + "] " + exception.message;
     }
     console.error(exception);
+    console.error(errMessage);
+    console.error(exception.stack);
     alert("exception: " + exception.message);
   }
 
   log("injecting keep it to google search result page")
 
-  chrome.extension.onRequest.addListener(
-    function(request, sender, sendResponse) {
-      log("onRequest");
-    });
-
-  chrome.extension.onConnect.addListener(function(port) {
-    log("onConnect: " + port);
-  });  
-
-  var queryInput = $(document.getElementsByName('q')[0]);
   
   function updateQuery() { 
+    var queryInput = $("input[name='q']");
     var query = queryInput.val();
     if (!query) {
       log("query is undefined");
       return;
     }
     log("search term: " + query);
-    chrome.extension.sendRequest({type: "get_keeps", query: queryInput.val()}, function(searchResults) {
+    var request = {
+      type: "get_keeps", 
+      query: queryInput.val()
+    };
+    chrome.extension.sendRequest(request, function(searchResults) {
       try {
         if (!(searchResults) || searchResults.length == 0) {
           log("No search results!");
@@ -59,15 +58,13 @@
 
   updateQuery();
 
-  console.log("jquery val = " + queryInput.val());
-
   $('#main').change(function() {
     if ($('#keepit').length === 0) {
       updateQuery();
     }
   });
 
-  queryInput.change(function(){
+  $("input[name='q']").change(function(){
     updateQuery();
   });
 
@@ -108,7 +105,6 @@
       }
       var iterations = 10;
       function showResults() {
-        debugger;
         if (ol.head !== lastInjected) {
           return;
         }
@@ -121,9 +117,11 @@
           }
           if (element.length == 0) {
             $('#ires').prepend(ol);
-            setTimeout(function(){showResults();}, 1000);
+            setTimeout(function(){ showResults(); }, 1000);
           } else if (!element.is(":visible")) {
-            injectDiv(ol, resultCount, function(){setTimeout(function(){showResults();}, 1000);});
+            injectDiv(ol, resultCount, function(){
+              setTimeout(function(){ showResults(); }, 1000);
+            });
           }
         }
       }
@@ -138,7 +136,6 @@
       return;
     }
     //neight needs to be proportional to num of elements with max = 3
-    debugger;
     console.log("result count is " + resultCount + ", expending...");
     ol.slideDown(1000, function() {
       console.log("done expanding. now at " + ol.css("height"));
@@ -146,4 +143,9 @@
     });
   }
 
-})()
+} catch(exception) {
+    debugger;
+    alert("exception: " + exception.message);
+    console.error(exception);
+    console.error(exception.stack);
+}})()
