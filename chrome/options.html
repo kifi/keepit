@@ -4,6 +4,11 @@
 <script type="text/javascript">
 
 // Saves options to localStorage.
+
+function upload() {
+  chrome.extension.sendRequest({type: "upload_all_bookmarks"}, function(response) {});
+}
+
 function save_options() {
   if ($("#env_prod").is(":checked")) {
     localStorage["env"] = "production";
@@ -52,6 +57,7 @@ function restore_options() {
   <font size="small">If the value of the timeout is not a positive number (as in '0' or "NA") the hover will not show</font><br/> 
   KeepIt ID: <input type="text" id="keepit_id" name="keepit_id" value="10"></input><br/> 
   <button onclick="save_options()">Save</button>
+  <button onclick="upload()">Upload all my bookmarks</button>
 </fieldset>
 </div>
 </body>
