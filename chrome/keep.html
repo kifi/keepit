@@ -172,12 +172,15 @@
       if (env === "development") {
         server = "localhost:9000";
       }
+      
+      var keepitId = localStorage["keepit_id"];
 
       return {
         "env": env, 
         "hoverTimeout": hoverTimeout, 
         "maxRes": maxRes,
-        "server": server
+        "server": server,
+        "keepitId": keepitId
       }
     }
 
