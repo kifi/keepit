@@ -10,7 +10,7 @@ GET     /bookmarks/all              com.keepit.controllers.BookmarksController.a
 GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
 
-GET     /bookmarks/search           com.keepit.controllers.BookmarksController.searchBookmarks(term: String, facebookUser: String)
+GET     /bookmarks/search           com.keepit.controllers.BookmarksController.searchBookmarks(term: String, keepitId: Id[User])
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
