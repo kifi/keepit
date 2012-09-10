@@ -50,11 +50,6 @@
       xhr.send(tosend);
     }
 
-    var userInfo = {}
-    getPicture(userInfo);
-    getKeepitId(userInfo)
-		getBookMarks();
-
   	function onRequest(request, sender, sendResponse) {
       var tab = sender.tab;
       log("on request with " + JSON.stringify(request), tab);
@@ -204,6 +199,12 @@
     function addNewKeep() {
       chrome.tabs.executeScript(null, {code:"console.log('clicked!!')"});
     }
+
+    var userInfo = {}
+    getPicture(userInfo);
+    getKeepitId(userInfo)
+		getBookMarks();
+
 
   </script>
   <body>
