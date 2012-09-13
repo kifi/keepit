@@ -1,9 +1,7 @@
 package com.keepit.controllers
 
 import play.api.data._
-
 import java.util.concurrent.TimeUnit
-
 import play.api._
 import play.api.Play.current
 import play.api.data.Forms._
@@ -16,16 +14,17 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
-
 import com.keepit.common.db.Id
 import com.keepit.common.db.CX
 import com.keepit.common.db.ExternalId
 import com.keepit.model.FacebookSession
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
+import com.keepit.model._
 import com.keepit.serializer.UserSerializer._
 import com.keepit.serializer.UserSerializer
 import com.keepit.controllers.CommonActions._
+import com.keepit.model.FacebookId
 
 object UserController extends Controller {
 
@@ -44,6 +43,24 @@ object UserController extends Controller {
         case Some(externalId) => user.withExternalId(externalId)
         case None => user
       }
+      user = user.save
+      user
+    }
+    Ok(JsObject(List(
+        "userId" -> JsNumber(user.id.get.id),
+        "userObject" -> UserSerializer.userSerializer.writes(user)
+    )))
+  }
+  
+  /**
+   * Call me using: 
+   * curl -X POST localhost:9000/users/anonymous;echo
+   */
+  def createAnonymous = Action { request =>
+    val user = CX.withConnection { implicit c =>
+      val externalId = ExternalId[User]()
+      var user = User(firstName = "anonymous", lastName = "anonymous", facebookId = Some(FacebookId.FACEBOOK_ID_NOT_FOUND))
+      	.withExternalId(externalId)
       user = user.save
       user
     }
