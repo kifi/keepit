@@ -13,20 +13,20 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
+import play.api.libs.json.JsArray
+import play.api.http.ContentTypes
 import com.keepit.controllers.CommonActions._
 import com.keepit.common.db.CX
 import com.keepit.common.db._
 import com.keepit.model._
 import com.keepit.serializer.BookmarkSerializer
-import com.keepit.serializer.{BookmarkPersonalSearchResultSerializer => BPSRS}
-import play.api.libs.json.JsArray
-import java.util.concurrent.TimeUnit
+import com.keepit.serializer.{URIPersonalSearchResultSerializer => BPSRS}
 import com.keepit.common.db.ExternalId
-import com.keepit.model.BookmarkSearchResults
-import play.api.http.ContentTypes
+import java.util.concurrent.TimeUnit
+import java.sql.Connection
 
 //note: users.size != count if some users has the bookmark marked as private
-case class BookmarkPersonalSearchResult(bookmark: Bookmark, count: Int, users: Seq[User], score: Float)
+case class PersonalSearchResult(uri: NormalizedURI, count: Int, users: Seq[User], score: Float)
 
 object BookmarksController extends Controller {
 
@@ -106,14 +106,13 @@ object BookmarksController extends Controller {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
     CX.withConnection { implicit conn =>
-      val bookmark = Bookmark(title, url, user)
-      bookmark.loadUsingHash match {
-        case existing if existing.length > 0 =>
-          println("bookmarks %s already exist in db, not persisting!".format(existing mkString))
-          existing.head
-        case Nil => 
-          println("new bookmark %s".format(bookmark))
-          bookmark.save
+      val normalizedUri = NormalizedURI.getByUrl(url) match {
+        case Some(uri) => uri
+        case None => NormalizedURI(title, url).save
+      }
+      Bookmark.load(normalizedUri, user) match {
+        case Some(bookmark) => bookmark
+        case None => Bookmark(normalizedUri, user, title, url).save
       }
     }
   }
@@ -123,7 +122,7 @@ object BookmarksController extends Controller {
     val res = CX.withConnection { implicit conn =>
       val user = User.getOpt(FacebookId(facebookUser)).getOrElse(
           throw new Exception("facebook id %s not found for term %s".format(facebookUser, term)))
-      val res: Seq[BookmarkSearchResults] = Bookmark.search(term)
+      val res: Seq[URISearchResults] = NormalizedURI.search(term)
       res map { r =>
         toPersonalSearchResult(r, user)
       }
@@ -132,17 +131,14 @@ object BookmarksController extends Controller {
     Ok(BPSRS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
   
-  private[controllers] def toPersonalSearchResult(res: BookmarkSearchResults, user: User): BookmarkPersonalSearchResult = {
-    val bookmark = res.bookmarks.filter(_.userId == user.id).headOption.getOrElse(res.bookmarks.head)
-    val count = res.bookmarks.size
-    val users = res.bookmarks.map(_.userId.get).map{ userId =>
-      CX.withConnection { implicit c =>
-        User.get(userId)
-      }
+  private[controllers] def toPersonalSearchResult(res: URISearchResults, user: User)(implicit conn: Connection): PersonalSearchResult = {
+    val uri = res.uri
+    val count = uri.bookmarks().size
+    val users = uri.bookmarks().map(_.userId.get).map{ userId =>
+      User.get(userId)
     }
-    BookmarkPersonalSearchResult(bookmark, count, users, res.score)
+    PersonalSearchResult(uri, count, users, res.score)
   }
-  
   
   def orderResults(res: Map[Bookmark, Int]): List[(Bookmark, Int)] = res.toList.sortWith{
     (a, b) => a._2 > b._2

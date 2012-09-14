@@ -6,23 +6,22 @@ import com.keepit.controllers._
 
 import play.api.libs.json._
 
-class BookmarkPersonalSearchResultSerializer extends Writes[BookmarkPersonalSearchResult] {
+class URIPersonalSearchResultSerializer extends Writes[PersonalSearchResult] {
   //case class BookmarkPersonalSearchResult(bookmark: Bookmark, count: Int, users: Seq[User], score: Float)
-  def writes(res: BookmarkPersonalSearchResult): JsValue =
+  def writes(res: PersonalSearchResult): JsValue =
     JsObject(List(
       "count"  -> JsString(res.count.toString()),
-      "bookmark" -> BookmarkSerializer.bookmarkSerializer.writes(res.bookmark),
+      "bookmark" -> BookmarkSerializer.bookmarkSerializer.writes(res.uris),
       "score" -> JsNumber(res.score),
       "users" -> UserSerializer.userSerializer.writes(res.users)
     ))
 
-  def writes (ress: Seq[BookmarkPersonalSearchResult]): JsValue = 
+  def writes (ress: Seq[PersonalSearchResult]): JsValue = 
     JsArray(ress map { res => 
       BookmarkPersonalSearchResultSerializer.resSerializer.writes(res)
     })
-
 }
 
-object BookmarkPersonalSearchResultSerializer {
-  implicit val resSerializer = new BookmarkPersonalSearchResultSerializer
+object URIPersonalSearchResultSerializer {
+  implicit val resSerializer = new URIPersonalSearchResultSerializer
 }
