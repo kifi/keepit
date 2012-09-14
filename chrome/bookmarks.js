@@ -16,7 +16,6 @@ function getBookMarks(callback) {
 		chrome.bookmarks.getChildren(bookmarks.root.id, function(children) {
 		  var bar = $.grep(children, function (bm) { 
 		  	var foundIt = (bm.title.toLowerCase() == "bookmarks bar");
-		  	console.log(bm.title + " == bookmarks bar : " + foundIt); 
 		  	return foundIt; 
 		  });
 			if (bar.length === 0) {
@@ -98,7 +97,6 @@ function getBookMarks(callback) {
 	log("looking for bookmarks");
 
 	if(getBookMarks.prototype.cachedBookmarks){
-//		console.log("using cache: "+JSON.stringify(getBookMarks.prototype.cachedBookmarks));
 		callback(getBookMarks.prototype.cachedBookmarks);
 	} else
 	findRoot();
