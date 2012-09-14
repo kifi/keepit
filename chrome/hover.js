@@ -24,7 +24,6 @@ console.log("injecting keep it hover div");
     hover.append(close);
 
     button.click(function() {
-      debugger;
       console.log("bookmarking page: " + document.location.href);
       var request = {
         type: "add_bookmarks", 
