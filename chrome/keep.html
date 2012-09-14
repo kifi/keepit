@@ -39,6 +39,10 @@
       });
     }
 
+    function getKeepitId(userInfo) {
+      userInfo["keepit_id"] = getOptions().keepitId;
+    }
+
     function postBookmarks(bookmarksSupplier) {
       try {
         var xhr = new XMLHttpRequest();
@@ -75,6 +79,7 @@
 
     var userInfo = {}
     getPicture(userInfo);
+    getKeepitId(userInfo)
 		getBookMarks();
 
   	function onRequest(request, sender, sendResponse) {
@@ -97,13 +102,21 @@
         } else if (request.type == "get_opt") {
           var opt = getOptions();
   				sendResponse(opt);
-  			}
+        } else if (request.type == "upload_all_bookmarks") {
+          upload_all_bookmarks();
+        }
     	  // Return nothing to let the connection be cleaned up.
       } catch (e) {
         error(e);
       }
       log("done request...");
   	}
+
+    function upload_all_bookmarks() {
+      log("going to upload all my bookamrks to server");
+      getPicture(userInfo);
+      getKeepitId(userInfo)
+    }
 
     function addKeep(bookmarks, request, sendResponse, tab) {
 			log("creating bookmark. private: " + request.private + " tile " + request.title, tab);
@@ -137,8 +150,8 @@
         }
       }
       term = request.query;
-      facebookUser = userInfo["facebook_id"];
-      xhr.open("GET", 'http://' + getOptions().server + '/bookmarks/search?term=' + term + '&facebookUser=' + facebookUser, true);
+      keepitId = userInfo["keepit_id"];
+      xhr.open("GET", 'http://' + getOptions().server + '/bookmarks/search?term=' + term + '&keepitId=' + keepitId, true);
       xhr.send();
     }
 
