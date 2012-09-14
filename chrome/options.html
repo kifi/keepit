@@ -1,9 +1,26 @@
 <html>
 <head><title>Keep It Extension Options</title></head>
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "http://connect.facebook.net/en_US/all.js#xfbml=1&appId=530357056981814";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+<div class="fb-login-button" data-show-faces="true" data-width="200" data-max-rows="1"></div>
+
 <script type="text/javascript" src="jquery-1.7.2.min.js"></script>
 <script type="text/javascript">
 
 // Saves options to localStorage.
+
+function upload() {
+  chrome.extension.sendRequest({type: "upload_all_bookmarks"}, function(response) {});
+}
+
 function save_options() {
   if ($("#env_prod").is(":checked")) {
     localStorage["env"] = "production";
@@ -13,6 +30,11 @@ function save_options() {
   }
   localStorage["max_search_results"] = $("#max_search_results").val();
   localStorage["hover_timeout"] = $("#hover_timeout").val();
+  var keepitId = $("#keepit_id").val();
+  if (!keepitId) { 
+    alert("plz provide keepitID");
+  }
+  localStorage["keepit_id"] = keepitId;
 }
 
 function restore_options() {
@@ -31,6 +53,7 @@ function restore_options() {
   }
   $("#max_search_results").val(localStorage["max_search_results"]);
   $("#hover_timeout").val(localStorage["hover_timeout"]);
+  $("#keepit_id").val(localStorage["keepit_id"]);
 }
 </script>
 
@@ -41,10 +64,12 @@ function restore_options() {
   <legend>Environment:</legend>
   <input type="radio" id="env_dev"  name="env" value="development"/>Development<br/>
   <input type="radio" id="env_prod" name="env" value="production"/>Production<br/> 
-  Max Search Results: <input type="text" id="max_search_results" name="max_search_results" value="10"></imput><br/> 
-  Show Hover timeout in seconds: <input type="text" id="hover_timeout" name="hover_timeout" value="10"></imput><br/> 
+  Max Search Results: <input type="text" id="max_search_results" name="max_search_results" value="10"></input><br/> 
+  Show Hover timeout in seconds: <input type="text" id="hover_timeout" name="hover_timeout" value="10"></input><br/> 
   <font size="small">If the value of the timeout is not a positive number (as in '0' or "NA") the hover will not show</font><br/> 
+  KeepIt ID: <input type="text" id="keepit_id" name="keepit_id" value="10"></input><br/> 
   <button onclick="save_options()">Save</button>
+  <button onclick="upload()">Upload all my bookmarks</button>
 </fieldset>
 </div>
 </body>

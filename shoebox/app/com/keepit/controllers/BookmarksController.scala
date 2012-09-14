@@ -24,6 +24,9 @@ import com.keepit.serializer.{URIPersonalSearchResultSerializer => BPSRS}
 import com.keepit.common.db.ExternalId
 import java.util.concurrent.TimeUnit
 import java.sql.Connection
+import com.keepit.model.BookmarkSearchResults
+import play.api.http.ContentTypes
+import play.api.libs.json.JsString
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchResult(uri: NormalizedURI, count: Int, users: Seq[User], score: Float)
@@ -66,30 +69,38 @@ object BookmarksController extends Controller {
   def addBookmarks() = JsonAction { request =>
     val json = request.body
     println(json)
-    val facebookId = parseUserInfo(json \ "user_info")
-    val user = internUser(facebookId)
+    val facebookId = parseFacebookId(json \ "user_info")
+    val keepitId = parseKeepitId(json \ "user_info")
+    val user = internUser(facebookId, keepitId)
     val bookmarks = parseBookmarks(json \ "bookmarks", user) 
     println(user)
-    Ok(JsObject(List("status" -> JsString("success"))))
+    Ok(JsObject(("status" -> JsString("success")) :: 
+        ("userId" -> JsString(user.id.map(id => id.toString()).getOrElse(""))) :: Nil))
   }
   
-  private def internUser(facebookId: FacebookId): User = CX.withConnection { implicit conn =>
-    User.getOpt(facebookId) match {
-      case Some(user) => user
-      case None =>
-        val json = try {
-          Json.parse(WS.url("https://graph.facebook.com/" + facebookId.value).get().await(30, TimeUnit.SECONDS).get.body)
-        } catch {
-          case e =>
-            e.printStackTrace()
-            Json.parse("""{"first_name": "NA", "last_name": "NA"}""")
-        }
-        println("fb obj = " + json)
-        User(
-            firstName = (json \ "first_name").as[String],
-            lastName = (json \ "last_name").as[String],
-            facebookId = Some(facebookId)
-        ).save
+  private def internUser(facebookId: FacebookId, keepitId : Id[User]): User = CX.withConnection { implicit conn =>
+    User.getOpt(keepitId) match {
+      case Some(user) =>
+        user
+      case None => 
+        User.getOpt(facebookId) match {
+	      	case Some(user) => 
+	      	  user
+		    case None =>
+		      val json = try {
+		        Json.parse(WS.url("https://graph.facebook.com/" + facebookId.value).get().await(30, TimeUnit.SECONDS).get.body)
+		      } catch {
+		        case e =>
+		          e.printStackTrace()
+		          Json.parse("""{"first_name": "NA", "last_name": "NA"}""")
+		      }
+		      println("fb obj = " + json)
+		      User(
+		          firstName = (json \ "first_name").as[String],
+		          lastName = (json \ "last_name").as[String],
+		          facebookId = Some(facebookId)
+		      ).save
+	  }
     }
   }
     
@@ -100,7 +111,8 @@ object BookmarksController extends Controller {
     case e => throw new Exception("can't figure what to do with %s".format(e))  
   }
   
-  private def parseUserInfo(value: JsValue): FacebookId = FacebookId((value \ "facebook_id").as[String])
+  private def parseFacebookId(value: JsValue): FacebookId = FacebookId((value \ "facebook_id").as[String])
+  private def parseKeepitId(value: JsValue): Id[User] = Id[User](Integer.parseInt(((value \ "keepit_id").as[String])))
   
   private def parseBookmark(json: JsObject, user: User): Bookmark = {
     val title = (json \ "title").as[String]
@@ -117,11 +129,11 @@ object BookmarksController extends Controller {
     }
   }
   
-  def searchBookmarks(term: String, facebookUser: String) = Action { request =>
-    println("searching with %s using fb id %s".format(term, facebookUser))
+  def searchBookmarks(term: String, keepitId: Id[User]) = Action { request =>
+    println("searching with %s using keepit id %s".format(term, keepitId))
     val res = CX.withConnection { implicit conn =>
-      val user = User.getOpt(FacebookId(facebookUser)).getOrElse(
-          throw new Exception("facebook id %s not found for term %s".format(facebookUser, term)))
+      val user = User.getOpt(keepitId).getOrElse(
+          throw new Exception("keepi id %s not found for term %s".format(keepitId, term)))
       val res: Seq[URISearchResults] = NormalizedURI.search(term)
       res map { r =>
         toPersonalSearchResult(r, user)

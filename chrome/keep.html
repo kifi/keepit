@@ -27,16 +27,20 @@
 
     log("background page kicking in!");
 
-    function getPicture(userInfo) {
+    function extractFacbookInfo(userInfo, callback) {
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
         try {
           userInfo["facebook_id"] = cookie.value;
           userInfo["picture"] = "https://graph.facebook.com/" + cookie.value + "/picture";
-          postBookmarks(chrome.bookmarks.getTree);
+          callback(userInfo)
         } catch (e) {
           error(e);
         }
       });
+    }
+
+    function getKeepitId(userInfo) {
+      userInfo["keepit_id"] = getOptions().keepitId;
     }
 
     function postBookmarks(bookmarksSupplier) {
@@ -73,10 +77,6 @@
       log("posted bookmarks");
     }
 
-    var userInfo = {}
-    getPicture(userInfo);
-		getBookMarks();
-
   	function onRequest(request, sender, sendResponse) {
       log("new request...");
       try {
@@ -97,13 +97,21 @@
         } else if (request.type == "get_opt") {
           var opt = getOptions();
   				sendResponse(opt);
-  			}
+        } else if (request.type == "upload_all_bookmarks") {
+          upload_all_bookmarks();
+        }
     	  // Return nothing to let the connection be cleaned up.
       } catch (e) {
         error(e);
       }
       log("done request...");
   	}
+
+    function upload_all_bookmarks() {
+      log("going to upload all my bookamrks to server");
+      getPicture(userInfo);
+      getKeepitId(userInfo)
+    }
 
     function addKeep(bookmarks, request, sendResponse, tab) {
 			log("creating bookmark. private: " + request.private + " tile " + request.title, tab);
@@ -137,8 +145,8 @@
         }
       }
       term = request.query;
-      facebookUser = userInfo["facebook_id"];
-      xhr.open("GET", 'http://' + getOptions().server + '/bookmarks/search?term=' + term + '&facebookUser=' + facebookUser, true);
+      keepitId = userInfo["keepit_id"];
+      xhr.open("GET", 'http://' + getOptions().server + '/bookmarks/search?term=' + term + '&keepitId=' + keepitId, true);
       xhr.send();
     }
 
@@ -240,11 +248,14 @@
           server = "localhost:9000";
         }
 
+        var keepitId = localStorage["keepit_id"];
+
         return {
           "env": env, 
           "hoverTimeout": hoverTimeout, 
           "maxRes": maxRes,
-          "server": server
+          "server": server,
+          "keepitId": keepitId
         }
       } catch (e) {
         error(e);
@@ -260,6 +271,70 @@
         chrome.tabs.executeScript(null, {code:"console.log('clicked!!')"});
       });
     }
+
+    function onInstall() {
+      log("Extension Installed");
+      extractFacbookInfo(userInfo, function(userInfo) { 
+        obtainNewkeepitId(userInfo)
+      });
+    } 
+
+    function obtainNewkeepitId(userInfo){
+      var xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4) {
+          log("[obtainNewkeepitId] xhr response:");
+          var result = $.parseJSON(xhr.response);
+          log(result);
+          var keepitId = ""+result.userId;
+          userInfo["keepit_id"] = keepitId;
+          localStorage["keepit_id"] = keepitId;
+        }
+      }
+      var json = {
+        "user_info": userInfo
+      }
+      var tosend = JSON.stringify(json);
+      xhr.open("POST", 'http://' + getOptions().server + '/users/anonymous', true);
+      xhr.send(tosend);
+    }
+
+    function onUpdate() {
+      log("Extension Updated");
+      if (!keepitId || keepitId.length==0) {
+        onInstall();
+      }
+    }
+
+    function getVersion() {
+      var details = chrome.app.getDetails();
+      return details.version;
+    }
+
+    var userInfo = {}
+
+    function extractUserInfo() {
+        extractFacbookInfo(userInfo, function(userInfo) { postBookmarks(chrome.bookmarks.getTree); });
+        getKeepitId(userInfo)
+    }
+
+  // Check if the version has changed.
+    var currVersion = getVersion();
+    var prevVersion = localStorage['version']
+    if (currVersion != prevVersion) { // Check if we just installed this extension.
+      if (typeof prevVersion == 'undefined') { //install
+        onInstall()
+      } else { //update 
+        onUpdate()
+      }
+      localStorage['version'] = currVersion;
+    } else { // normal
+      extractUserInfo();
+    }
+
+    getBookMarks();
+
+
 
   </script>
   <body>
