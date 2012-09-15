@@ -24,7 +24,6 @@ import com.keepit.serializer.{URIPersonalSearchResultSerializer => BPSRS}
 import com.keepit.common.db.ExternalId
 import java.util.concurrent.TimeUnit
 import java.sql.Connection
-import com.keepit.model.BookmarkSearchResults
 import play.api.http.ContentTypes
 import play.api.libs.json.JsString
 

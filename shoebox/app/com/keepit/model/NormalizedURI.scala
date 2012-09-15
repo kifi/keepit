@@ -63,24 +63,31 @@ object NormalizedURI {
     new String(new Base64().encode(binaryHash), "UTF-8") 
   }
   
-  private def tokenize(term: String) = term.split("\\s") map {_.toLowerCase()} flatten
+  private def tokenize(term: String): Seq[String] = term.split("\\s") map {_.toLowerCase()}
   
-  private def score(token: String, uri: NormalizedURI, uriScore: mutable.HashMap[NormalizedURI, Float]) = 1F + { if (uri.url.toLowerCase.contains(token)) {
-      uriScore(uri) += 1F
+  private def score(term: String, uri: NormalizedURI) = 1F + { uri.url.toLowerCase.contains(term) match {
+      case true => 1F
+      case false => 0F
     }
   }
   
   def search(term: String)(implicit conn: Connection): Seq[URISearchResults] = {
+    val uris: Seq[NormalizedURI] = tokenize(term) map searchToken flatten;
+    createSearchResults(term, uris)
+  }
+  
+  private def createSearchResults(term: String, uris: Seq[NormalizedURI]): Seq[URISearchResults] = {
     val uriScore = new mutable.HashMap[NormalizedURI, Float]().withDefaultValue(0F)
-    tokenize(term) map { token =>
-      (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.title ILIKE ("%" + token + "%")) }.list.map( _.view )
-    } foreach { uri =>
-      uriScore(uri) += score(token, uri, uriScore)
+    uris foreach { uri =>
+      uriScore(uri) += score(term, uri)
     }
     uriScore.toSeq.map{ entry =>
-      URISearchResults(entry._2.toSeq, clusterScore(entry._1))
+      URISearchResults(entry._1, entry._2)
     }
   }
+  
+  private def searchToken(token: String)(implicit conn: Connection): Seq[NormalizedURI] = 
+    (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.title ILIKE ("%" + token + "%")) }.list.map( _.view )
   
   def getByUrl(url: String)(implicit conn: Connection): Option[NormalizedURI] = {
     var hash = hashUrl(normalize(url))
@@ -126,7 +133,8 @@ private[model] class NormalizedURIEntity extends Entity[NormalizedURI, Normalize
     externalId = externalId(),
     title = title(),
     url = url(),
-    state = state()
+    state = state(),
+    urlHash = urlHash()
   )
 }
 

@@ -11,14 +11,14 @@ class URIPersonalSearchResultSerializer extends Writes[PersonalSearchResult] {
   def writes(res: PersonalSearchResult): JsValue =
     JsObject(List(
       "count"  -> JsString(res.count.toString()),
-      "bookmark" -> BookmarkSerializer.bookmarkSerializer.writes(res.uris),
+      "bookmark" -> NormalizedURISerializer.normalizedURISerializer.writes(res.uri),
       "score" -> JsNumber(res.score),
       "users" -> UserSerializer.userSerializer.writes(res.users)
     ))
 
   def writes (ress: Seq[PersonalSearchResult]): JsValue = 
     JsArray(ress map { res => 
-      BookmarkPersonalSearchResultSerializer.resSerializer.writes(res)
+      URIPersonalSearchResultSerializer.resSerializer.writes(res)
     })
 }
 
