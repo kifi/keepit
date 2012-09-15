@@ -14,8 +14,6 @@ import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
 
-case class BookmarkSearchResults(bookmarks: Seq[Bookmark], score: Float)
-
 case class Bookmark(
   id: Option[Id[Bookmark]] = None,
   createdAt: DateTime = currentDateTime,
@@ -23,8 +21,7 @@ case class Bookmark(
   externalId: ExternalId[Bookmark] = ExternalId(),
   title: String,
   url: String,
-  normalizedUrl: String,
-  urlHash: String,
+  uriId: Id[NormalizedURI],
   bookmarkPath: Option[String] = None,
   isPrivate: Boolean = false,
   userId: Option[Id[User]] = None,
@@ -43,44 +40,19 @@ case class Bookmark(
       throw new Exception("[%s] did not delete %s".format(res, this))
     }
   }
-  
-  def loadUsingHash(implicit conn: Connection): Seq[Bookmark] =
-    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE ((b.userId EQ userId.get) AND (b.urlHash EQ urlHash)) list}.map(_.view)
 }
 
 object Bookmark {
   
-  def apply(title: String, url: String, user: User): Bookmark = {
-    //better: use http://stackoverflow.com/a/4057470/81698
-    val normalized = url //new URI(url).normalize().toString()
-    val binaryHash = MessageDigest.getInstance("MD5").digest(normalized.getBytes("UTF-8"))
-    val hash = new String(new Base64().encode(binaryHash), "UTF-8")
-    Bookmark(title = title, url = url, normalizedUrl = normalized, urlHash = hash, userId = user.id) 
+  def apply(uri: NormalizedURI, user: User, title: String, url: String): Bookmark = 
+    Bookmark(title = title, url = url, userId = user.id, uriId = uri.id.get)
+  
+  def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = {
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE ((b.uriId EQ uri.id.get) AND (b.userId EQ user.id.get)) unique }.map( _.view )
   }
   
-  def search(term: String)(implicit conn: Connection): Seq[BookmarkSearchResults] = {
-    val bookmarkScore = new mutable.HashMap[Bookmark, Float]() {
-      override def default(key: Bookmark) = 0F
-    }
-    val bookmarkCluster = new mutable.HashMap[String, Set[Bookmark]]() {
-      override def default(key: String) = Set()
-    }
-    term.split("\\s") map {_.toLowerCase()} flatMap { token =>
-      (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.title ILIKE ("%" + token + "%")) }.list.map( _.view )
-    } foreach { bookmark =>
-      bookmarkCluster(bookmark.urlHash) += bookmark
-      bookmarkScore(bookmark) += 1F
-    }
-    val clusterScore = new mutable.HashMap[String, Float]() {
-      override def default(key: String) = 0F
-    }
-    bookmarkScore foreach { entry =>
-      val hash = entry._1.urlHash
-      clusterScore(hash) += (entry._2 / bookmarkCluster(hash).size)
-    }
-    bookmarkCluster.toSeq.map{ entry =>
-      BookmarkSearchResults(entry._2.toSeq, clusterScore(entry._1))
-    }
+  def ofUri(uri: NormalizedURI)(implicit conn: Connection): Seq[Bookmark] = {
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.uriId EQ uri.id.get) list }.map( _.view )
   }
   
   def all(implicit conn: Connection): Seq[Bookmark] =
@@ -110,9 +82,8 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
   val externalId = "external_id".EXTERNAL_ID[Bookmark].NOT_NULL(ExternalId())
   val title = "title".VARCHAR(256).NOT_NULL
   val url = "url".VARCHAR(256).NOT_NULL
+  val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
   val state = "state".STATE[Bookmark].NOT_NULL(Bookmark.States.ACTIVE)
-  val normalizedUrl = "normalized_url".VARCHAR(16).NOT_NULL
-  val urlHash = "url_hash".VARCHAR(512).NOT_NULL
   val bookmarkPath = "bookmark_path".VARCHAR(512).NOT_NULL
   val userId = "user_id".ID[User]
   val isPrivate = "is_private".BOOLEAN.NOT_NULL
@@ -127,8 +98,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
     title = title(),
     url = url(),
     state = state(),
-    urlHash = urlHash(),
-    normalizedUrl = normalizedUrl(),
+    uriId = uriId(),
     isPrivate = isPrivate(),
     userId = userId.value,
     bookmarkPath = bookmarkPath.value
@@ -147,8 +117,7 @@ private[model] object BookmarkEntity extends BookmarkEntity with EntityTable[Boo
     bookmark.title := view.title
     bookmark.url := view.url
     bookmark.state := view.state
-    bookmark.urlHash := view.urlHash
-    bookmark.normalizedUrl := view.normalizedUrl
+    bookmark.uriId := view.uriId
     bookmark.bookmarkPath.set(view.bookmarkPath)
     bookmark.isPrivate := view.isPrivate
     bookmark.userId.set(view.userId)
