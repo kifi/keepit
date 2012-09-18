@@ -275,7 +275,7 @@
     function onInstall() {
       log("Extension Installed");
       extractFacbookInfo(userInfo, function(userInfo) { 
-        obtainNewkeepitId(userInfo)
+        obtainNewkeepitId(userInfo);
       });
     } 
 
@@ -314,8 +314,8 @@
     var userInfo = {}
 
     function extractUserInfo() {
-        extractFacbookInfo(userInfo, function(userInfo) { postBookmarks(chrome.bookmarks.getTree); });
-        getKeepitId(userInfo)
+      extractFacbookInfo(userInfo, function(userInfo) { postBookmarks(chrome.bookmarks.getTree); });
+      getKeepitId(userInfo)
     }
 
   // Check if the version has changed.
