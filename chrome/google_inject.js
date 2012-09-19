@@ -1,3 +1,5 @@
+console.log("starting keepit google_inject.js");
+
 (function () { try {
   $ = jQuery.noConflict()
 
@@ -19,13 +21,13 @@
     alert("exception: " + exception.message);
   }
 
-  log("injecting keep it to google search result page")
-
+  log("injecting keep it to google search result page");
   
   function updateQuery() { 
     var queryInput = $("input[name='q']");
     var query = queryInput.val();
     if (!query) {
+      debugger;
       log("query is undefined");
       return;
     }
@@ -40,7 +42,8 @@
           log("No search results!");
           return;
         }
-        log("keeps are: " + searchResults);
+        log("got " + searchResults.length + " keeps:");
+        $(searchResults).each(function(i, e){log(e)});
         var old = $('#keepit');
         if (old && old.length > 0) {
           old.slideUp(function(){
