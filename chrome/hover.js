@@ -1,4 +1,5 @@
 console.log("injecting keep it hover div");
+
 (function() {
   $ = jQuery.noConflict()
   var env = "undefined";

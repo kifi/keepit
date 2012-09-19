@@ -157,15 +157,12 @@
 
     function initPage(request, sendResponse, tab) {
       try {
-        if (request.isGoogle) {
+        if (request.isGoogle === true) {
           log("injecting to google result page: starting...", tab);
-          injectGoogleDiv(tab);
-          log("injecting to google result page: done!", tab);
-          try {
-            sendResponse({message: "created"});
-          } catch (e) {
-            error(e);
-          }
+          setTimeout(function() {
+            injectGoogleDiv(tab);
+            log("injecting to google result page: done!", tab);
+          }, 5000);
         } else if (request.isGoogle === false) {
           log("injecting hover: " + request, tab);
           var hoverTimeout = getOptions().hoverTimeout;
@@ -177,12 +174,18 @@
                 } else {
                   log("injecting hover: " + request, tab);
                   setTimeout(function() {
+                    chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit:hover] tab: " + tab.id + "')"}, 
+                      function(vars){
+                        log("[callback] executed hover remote logging", tab);
+                    });
                     chrome.tabs.executeScript(tab.id, {file:"hover.js"});
                   }, hoverTimeout * 1000);
                 }
               });
             });
           }
+        } else {
+          throw Error("request isGoogle is not well defined: " + request.isGoogle);
         }
       } catch (e) {
         error(e);
@@ -208,9 +211,16 @@
     }
     
     function injectGoogleDiv(tab) {
+      log("injecting google_inject.js into tab", tab)
       try {
-        chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit] tab: " + tab.id + "')"});      
-        chrome.tabs.executeScript(tab.id, {file:"google_inject.js"});
+        chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit:google] tab: " + tab.id + "')"}, 
+          function(vars){
+            log("[callback] executed logging", tab);
+        });
+        chrome.tabs.executeScript(tab.id, {file:"google_inject.js"}, function(vars){
+          log("[callback] executed google_inject.js", tab);
+        });
+        log("injected google_inject.js into tab", tab)
       } catch (e) {
         error(e);
       }
@@ -261,9 +271,7 @@
     }    
 
     function addNewKeep() {
-      catching(function() {
-        chrome.tabs.executeScript(null, {code:"console.log('clicked!!')"});
-      });
+      alert("did nothing!")
     }
 
     function onInstall() {
@@ -299,22 +307,18 @@
 
     var userInfo = {keepit_id:null}
 
-    function extractUserInfo() {
-      userInfo =  getOptions().userInfo;
-      keepitId = getOptions().userInfo.keepit_id;
+    function hasUserInfoInLocalStorage() {
+      var ls = localStorage["user_info"];
+      if (!ls) return false;
+      try {
+        userInfo = JSON.parse(ls);
+        if (userInfo.keepit_id && userInfo.facebook_id) return true
+      } catch (e) {
+        log("could not parse JSON "+ls);
+      }
+      return false
     }
 
-  function hasUserInfoInLocalStorage() {
-    var ls = localStorage["user_info"];
-    if (!ls) return false;
-    try {
-      userInfo = JSON.parse(ls);
-      if (userInfo.keepit_id && userInfo.facebook_id) return true
-    } catch (e) {
-      log("could not parse JSON "+ls);
-    }
-    return false
-  }
   // Check if the version has changed.
     var currVersion = getVersion();
     var prevVersion = localStorage['version']

@@ -99,7 +99,7 @@ object BookmarksController extends Controller {
 		          lastName = (json \ "last_name").as[String],
 		          facebookId = Some(facebookId)
 		      ).save
-	  }
+	    }
     }
   }
     
