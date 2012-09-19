@@ -30,17 +30,14 @@
     function extractFacbookInfo(userInfo, callback) {
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
         try {
-          userInfo["facebook_id"] = cookie.value;
-          userInfo["picture"] = "https://graph.facebook.com/" + cookie.value + "/picture";
+          userInfo.facebook_id = cookie.value;
+          userInfo.avatarUrl = "https://graph.facebook.com/" + cookie.value + "/picture";
+          localStorage["user_info"]=JSON.stringify(userInfo);
           callback(userInfo)
         } catch (e) {
           error(e);
         }
       });
-    }
-
-    function getKeepitId(userInfo) {
-      userInfo["keepit_id"] = getOptions().keepitId;
     }
 
     function postBookmarks(bookmarksSupplier) {
@@ -247,15 +244,12 @@
         if (env === "development") {
           server = "localhost:9000";
         }
-
-        var keepitId = localStorage["keepit_id"];
-
         return {
           "env": env, 
           "hoverTimeout": hoverTimeout, 
           "maxRes": maxRes,
           "server": server,
-          "keepitId": keepitId
+          "userInfo": JSON.parse(localStorage["user_info"])
         }
       } catch (e) {
         error(e);
@@ -274,36 +268,28 @@
 
     function onInstall() {
       log("Extension Installed");
-      extractFacbookInfo(userInfo, function(userInfo) { 
-        obtainNewkeepitId(userInfo)
-      });
     } 
 
-    function obtainNewkeepitId(userInfo){
+    function obtainNewkeepitId(userInfo, callback){
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
           log("[obtainNewkeepitId] xhr response:");
           var result = $.parseJSON(xhr.response);
-          log(result);
           var keepitId = ""+result.userId;
-          userInfo["keepit_id"] = keepitId;
-          localStorage["keepit_id"] = keepitId;
+          log(result);
+          log("keepitId="+keepitId);
+          userInfo.keepit_id = keepitId;
+          localStorage["user_info"]=JSON.stringify(userInfo); 
+          callback();
         }
       }
-      var json = {
-        "user_info": userInfo
-      }
-      var tosend = JSON.stringify(json);
       xhr.open("POST", 'http://' + getOptions().server + '/users/anonymous', true);
-      xhr.send(tosend);
+      xhr.send(JSON.stringify({user_info:userInfo}));
     }
 
     function onUpdate() {
       log("Extension Updated");
-      if (!keepitId || keepitId.length==0) {
-        onInstall();
-      }
     }
 
     function getVersion() {
@@ -311,30 +297,48 @@
       return details.version;
     }
 
-    var userInfo = {}
+    var userInfo = {keepit_id:null}
 
     function extractUserInfo() {
-        extractFacbookInfo(userInfo, function(userInfo) { postBookmarks(chrome.bookmarks.getTree); });
-        getKeepitId(userInfo)
+      userInfo =  getOptions().userInfo;
+      keepitId = getOptions().userInfo.keepit_id;
     }
 
+  function hasUserInfoInLocalStorage() {
+    var ls = localStorage["user_info"];
+    if (!ls) return false;
+    try {
+      userInfo = JSON.parse(ls);
+      if (userInfo.keepit_id && userInfo.facebook_id) return true
+    } catch (e) {
+      log("could not parse JSON "+ls);
+    }
+    return false
+  }
   // Check if the version has changed.
     var currVersion = getVersion();
     var prevVersion = localStorage['version']
     if (currVersion != prevVersion) { // Check if we just installed this extension.
       if (typeof prevVersion == 'undefined') { //install
-        onInstall()
+        onInstall();      
       } else { //update 
         onUpdate()
       }
       localStorage['version'] = currVersion;
-    } else { // normal
-      extractUserInfo();
     }
+  
+    if (!hasUserInfoInLocalStorage()){
+      userInfo = {keepit_id:null};
+      localStorage["user_info"]=JSON.stringify(userInfo); // initialzie user info
+      extractFacbookInfo(userInfo, function(userInfo) { 
+        obtainNewkeepitId(userInfo, function(){postBookmarks(chrome.bookmarks.getTree);})
+      });
+    } else {
+      log("find user info in local storage")
+    }
+    log(userInfo)
 
     getBookMarks();
-
-
 
   </script>
   <body>
