@@ -74,7 +74,7 @@ object BookmarksController extends Controller {
     val bookmarks = parseBookmarks(json \ "bookmarks", user) 
     println(user)
     Ok(JsObject(("status" -> JsString("success")) :: 
-        ("userId" -> JsString(user.id.map(id => id.toString()).getOrElse(""))) :: Nil))
+        ("userId" -> JsString(user.id.map(id => id.id.toString()).getOrElse(""))) :: Nil))
   }
   
   private def internUser(facebookId: FacebookId, keepitId : Id[User]): User = CX.withConnection { implicit conn =>
