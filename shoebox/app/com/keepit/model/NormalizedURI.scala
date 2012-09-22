@@ -13,10 +13,11 @@ import java.net.URI
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
+import com.keepit.common.logging.Logging
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
-case class NormalizedURI(
+case class NormalizedURI  (
   id: Option[Id[NormalizedURI]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
@@ -25,9 +26,10 @@ case class NormalizedURI(
   url: String,
   urlHash: String,
   state: State[NormalizedURI] = NormalizedURI.States.ACTIVE
-) {
+) extends Logging {
   
   def save(implicit conn: Connection): NormalizedURI = {
+    log.info("saving new uri %s with hash %s".format(url, urlHash))
     val entity = NormalizedURIEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
     entity.view
