@@ -25,11 +25,12 @@ import com.keepit.serializer.UserSerializer._
 import com.keepit.serializer.UserSerializer
 import com.keepit.controllers.CommonActions._
 import com.keepit.model.FacebookId
+import play.api.http.ContentTypes
 
-object UserController extends Controller {
+object UserController extends Controller with Logging {
 
   /**
-   * Call me using: 
+   * Call me using:
    * curl -d '{"firstName":"Joe","lastName":"Smith"}' localhost:9000/admin/user/create;echo
    */
   def createUser = JsonAction { request =>
@@ -51,16 +52,29 @@ object UserController extends Controller {
         "userObject" -> UserSerializer.userSerializer.writes(user)
     )))
   }
-  
+
+    /**
+   * Call me using:
+   * curl localhost:9000/users/keepurl?url=http://www.ynet.co.il/;echo
+   */
+  def usersKeptUrl(url: String) = Action { request =>    
+    val users = CX.withConnection { implicit c =>
+      val nuri = NormalizedURI("title", url)
+      log.info("userWhoKeptUrl %s (hash=%s)".format(url, nuri.urlHash))
+      User.getbyUrlHash(nuri.urlHash)
+    }
+    Ok(UserSerializer.userSerializer.writes(users)).as(ContentTypes.JSON)
+  }
+
   /**
-   * Call me using: 
+   * Call me using:
    * curl -X POST localhost:9000/users/anonymous;echo
    */
   def createAnonymous = Action { request =>
     val user = CX.withConnection { implicit c =>
       val externalId = ExternalId[User]()
       var user = User(firstName = "anonymous", lastName = "anonymous", facebookId = Some(FacebookId.FACEBOOK_ID_NOT_FOUND))
-      	.withExternalId(externalId)
+        .withExternalId(externalId)
       user = user.save
       user
     }
@@ -69,9 +83,9 @@ object UserController extends Controller {
         "userObject" -> UserSerializer.userSerializer.writes(user)
     )))
   }
-  
+
   /**
-   * Call me using: 
+   * Call me using:
    * $ curl localhost:9000/admin/user/get/all | python -mjson.tool
    */
   def getUsers = Action { request =>
@@ -85,20 +99,20 @@ object UserController extends Controller {
         ))
     }))
   }
-  
+
   def getUser(id: Id[User]) = Action { request =>
     val user = CX.withConnection { implicit c =>
       User.get(id)
     }
     Ok(UserSerializer.userSerializer.writes(user))
   }
-  
+
   def getUserByExternal(id: ExternalId[User]) = Action { request =>
     val user = CX.withConnection { implicit c =>
       User.get(id)
     }
     Ok(UserSerializer.userSerializer.writes(user))
   }
-  
+
 }
 

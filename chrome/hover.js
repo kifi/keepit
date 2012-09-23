@@ -3,6 +3,7 @@ console.log("injecting keep it hover div");
 (function() {
   $ = jQuery.noConflict()
   var env = "undefined";
+  var server = "undefined";
 
   function showBookmarkHover(user) {
     var existingElements = $('#keepit_hover').length;
@@ -16,6 +17,14 @@ console.log("injecting keep it hover div");
       "<span class='keep_hover_bar_title'>Keepit</span>" + 
       "</div>");
     hover.append(bar);
+    var othersKeptThisPage = $("<div id='keep_hover_others'  class='keep_hover_others'></div>");
+    var othersFaces = $("<div id='keep_faces'</div>");
+    var othersSummary = $("<div id='keep_summary'</div>");
+
+    othersKeptThisPage.append(othersFaces);
+    othersKeptThisPage.append(othersSummary);
+    hover.append(othersKeptThisPage);
+
     var buttons = $("<div id='keep_hover_buttons' class='keep_hover_buttons'></div>")
     var button = $("<div id='keep_action' class='keep_action' type='button'>Keep Bookmark</button>")
     buttons.append(button);
@@ -72,7 +81,33 @@ console.log("injecting keep it hover div");
   setTimeout(function() {
     chrome.extension.sendRequest({"type": "get_opt"}, function(response) {
       env = response.env;
+      server =  response.server;
       getUserInfo(showBookmarkHover);
+      getuserskeptThisUrl();
     });
   }, 3000);
+
+  function getuserskeptThisUrl() {
+    $.get("http://"+server+"/users/keepurl?url="+document.location.href,
+        null,
+        function(users) {         
+          console.log("got "+users.length+" result from /users/keepUrl");
+          console.log(users);          
+          if (users.length==0) return;
+          var summary="";
+          if (users.length == 1) {
+            summary="one of your friends";
+          } else {
+            summary = users.length+" other friends";
+          }
+          $("#keep_summary").html("<span class='keep_summary_friends'>"+summary+"</span></br>choose to keep this bookmark");
+          var faces = $("#keep_faces");
+          $(users).each(function(index, user){
+            var img =  $("<img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square' width='24' height='24' alt=''>");
+            faces.append(img);
+          });
+        },
+        "json"
+    )//.error(callback);
+  }
 })();
