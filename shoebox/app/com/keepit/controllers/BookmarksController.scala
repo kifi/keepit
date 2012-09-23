@@ -26,11 +26,12 @@ import java.util.concurrent.TimeUnit
 import java.sql.Connection
 import play.api.http.ContentTypes
 import play.api.libs.json.JsString
+import com.keepit.common.logging.Logging
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchResult(uri: NormalizedURI, count: Int, users: Seq[User], score: Float)
 
-object BookmarksController extends Controller {
+object BookmarksController extends Controller with Logging {
 
   def edit(id: Id[Bookmark]) = Action{ request =>
     CX.withConnection { implicit conn =>
@@ -67,12 +68,12 @@ object BookmarksController extends Controller {
   
   def addBookmarks() = JsonAction { request =>
     val json = request.body
-    println(json)
+    log.debug(json)
     val facebookId = parseFacebookId(json \ "user_info")
     val keepitId = parseKeepitId(json \ "user_info")
     val user = internUser(facebookId, keepitId)
-    val bookmarks = parseBookmarks(json \ "bookmarks", user) 
-    println(user)
+    parseBookmarks(json \ "bookmarks", user) 
+    log.info(user)
     Ok(JsObject(("status" -> JsString("success")) :: 
         ("userId" -> JsString(user.id.map(id => id.toString()).getOrElse(""))) :: Nil))
   }

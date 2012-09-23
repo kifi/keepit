@@ -59,12 +59,19 @@ object User {
   
   def getOpt(externalId: ExternalId[User])(implicit conn: Connection): Option[User] =
     (UserEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.externalId EQ externalId) unique }.map(_.view)
+
+  def getbyUrlHash(hashUrl: String)(implicit conn: Connection): Seq[User] = {
+    val user = UserEntity AS "u"
+    val bookmark = BookmarkEntity AS "b"
+    val nuri = NormalizedURIEntity AS "nuri"
+    user.map { user => SELECT(user.*) FROM (((user JOIN bookmark).ON("b.user_id = u.id")) JOIN nuri).ON("b.uri_id = nuri.id") WHERE (nuri.urlHash EQ hashUrl) list }.map(_.view)
+  }
     
   object States {
     val ACTIVE = State[User]("active")
     val INACTIVE = State[User]("inactive")
   }
-}
+} 
 
 private[model] class UserEntity extends Entity[User, UserEntity] {
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)

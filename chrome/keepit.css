@@ -6,7 +6,7 @@
   position: fixed;
   top: 180px;
   right: -230px;
-  height: 146px;
+  height: 246px;
   width: 207px;
 
   background-color: #FFFFFF;
@@ -56,6 +56,20 @@
   margin: 15px 13px 0px 0px;
   font-size: 9px; 
 }
+
+.keep_hover_others {
+  padding: 0px 0px 0px 0px;
+  margin: 18px 10px 10px 36px;
+}
+
+.keep_face {
+  padding: 0px 4px 0px 0px;
+}
+
+.keep_summary_friends {
+  color: blue;
+}
+
 
 .keep_hover_buttons {
   height: 53px;
