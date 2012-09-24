@@ -19,9 +19,11 @@ class BookmarkTest extends SpecificationWithJUnit {
     CX.withConnection { implicit c =>
       val user1 = User(firstName = "Joe", lastName = "Smith").save
       val user2 = User(firstName = "Moo", lastName = "Brown").save
-      Bookmark(userId = user1.id, title = "my title is short", url = "http://www.keepit.com/short", urlHash = "AAA", normalizedUrl = "http://www.keepit.com/1").save
-      Bookmark(userId = user1.id, title = "my title is long", url = "http://www.keepit.com/long", urlHash = "BBB", normalizedUrl = "http://www.keepit.com/2").save
-      Bookmark(userId = user2.id, title = "my title is long", url = "http://www.keepit.com/long", urlHash = "BBB", normalizedUrl = "http://www.keepit.com/2").save
+      val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/1", urlHash = "AAA").save
+      val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/1", urlHash = "BBB").save
+      Bookmark(userId = user1.id, title = "my title is short", url = "http://www.keepit.com/short", uriId = uri1.id.get).save
+      Bookmark(userId = user1.id, title = "my title is long", url = "http://www.keepit.com/long", uriId = uri2.id.get).save
+      Bookmark(userId = user2.id, title = "my title is long", url = "http://www.keepit.com/long", uriId = uri2.id.get).save
     }
   }
   
@@ -30,7 +32,7 @@ class BookmarkTest extends SpecificationWithJUnit {
       running(FakeApplication()) {
         setup()
         val none = CX.withConnection { implicit c =>
-          Bookmark.search("none")
+          NormalizedURI.search("none")
         }
         none.size === 0
       }
@@ -39,10 +41,12 @@ class BookmarkTest extends SpecificationWithJUnit {
       running(FakeApplication()) {
         setup()
         val shorts = CX.withConnection { implicit c =>
-          Bookmark.search("short")
+          NormalizedURI.search("short")
         }
         shorts.size === 1
-        shorts(0).bookmarks.size === 1
+        CX.withConnection { implicit c =>
+          shorts(0).uri.bookmarks.size === 1
+        }
         shorts(0).score === 1F
       }
     }
@@ -50,14 +54,18 @@ class BookmarkTest extends SpecificationWithJUnit {
       running(FakeApplication()) {
         setup()
         val titles = CX.withConnection { implicit c =>
-          Bookmark.search("title")
+          NormalizedURI.search("title")
         }
         titles.size === 2
-        titles(0).bookmarks.size === 1
+        CX.withConnection { implicit c =>
+          titles(0).uri.bookmarks.size === 1
+        }
         titles(0).score === 1F
-        titles(0).bookmarks(0).urlHash === "AAA"
-        titles(1).bookmarks.size === 2
-        titles(1).bookmarks(0).urlHash === "BBB"
+        titles(0).uri.urlHash === "AAA"
+        CX.withConnection { implicit c =>
+          titles(1).uri.bookmarks.size === 2
+        }
+        titles(1).uri.urlHash === "BBB"
         titles(1).score === 1F
       }
     }
@@ -65,18 +73,20 @@ class BookmarkTest extends SpecificationWithJUnit {
       running(FakeApplication()) {
         setup()
         val titles = CX.withConnection { implicit c =>
-          Bookmark.search("short title")
+          NormalizedURI.search("short title")
         }
         titles.size === 2
-        titles(0).bookmarks.size === 1
+        CX.withConnection { implicit c =>
+          titles(0).uri.bookmarks.size === 1
+        }
         titles(0).score === 2F
-        titles(0).bookmarks(0).urlHash === "AAA"
-        titles(1).bookmarks.size === 2
-        titles(1).bookmarks(0).urlHash === "BBB"
+        titles(0).uri.urlHash === "AAA"
+        CX.withConnection { implicit c =>
+          titles(1).uri.bookmarks.size === 2
+        }
+        titles(1).uri.urlHash === "BBB"
         titles(1).score === 1F
       }
     }
   }
-
-  
 }
