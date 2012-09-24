@@ -2,8 +2,8 @@ console.log("injecting keep it hover div");
 
 (function() {
   $ = jQuery.noConflict()
-  var env = "undefined";
-  var server = "undefined";
+  var env;
+  var server;
 
   function showBookmarkHover(user) {
     var existingElements = $('#keepit_hover').length;
@@ -88,7 +88,7 @@ console.log("injecting keep it hover div");
   }, 3000);
 
   function getuserskeptThisUrl() {
-    $.get("http://"+server+"/users/keepurl?url="+document.location.href,
+    $.get("http://"+server+"/users/keepurl?url="+encodeURIComponent(document.location.href),
         null,
         function(users) {         
           console.log("got "+users.length+" result from /users/keepUrl");
