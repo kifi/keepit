@@ -85,7 +85,7 @@ object NormalizedURI {
     }
     uriScore.toSeq.map{ entry =>
       URISearchResults(entry._1, entry._2)
-    }
+    }.sortWith{(a, b) => a.score > b.score}
   }
   
   private def searchToken(token: String)(implicit conn: Connection): Seq[NormalizedURI] = 
