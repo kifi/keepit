@@ -19,8 +19,8 @@ class BookmarkTest extends SpecificationWithJUnit {
     CX.withConnection { implicit c =>
       val user1 = User(firstName = "Joe", lastName = "Smith").save
       val user2 = User(firstName = "Moo", lastName = "Brown").save
-      val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/1", urlHash = "AAA").save
-      val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/1", urlHash = "BBB").save
+      val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/title/short", urlHash = "AAA").save
+      val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/long", urlHash = "BBB").save
       Bookmark(userId = user1.id, title = "my title is short", url = "http://www.keepit.com/short", uriId = uri1.id.get).save
       Bookmark(userId = user1.id, title = "my title is long", url = "http://www.keepit.com/long", uriId = uri2.id.get).save
       Bookmark(userId = user2.id, title = "my title is long", url = "http://www.keepit.com/long", uriId = uri2.id.get).save
@@ -47,7 +47,7 @@ class BookmarkTest extends SpecificationWithJUnit {
         CX.withConnection { implicit c =>
           shorts(0).uri.bookmarks.size === 1
         }
-        shorts(0).score === 1F
+        shorts(0).score === 2F
       }
     }
     "search titles" in {
@@ -60,7 +60,7 @@ class BookmarkTest extends SpecificationWithJUnit {
         CX.withConnection { implicit c =>
           titles(0).uri.bookmarks.size === 1
         }
-        titles(0).score === 1F
+        titles(0).score === 2F
         titles(0).uri.urlHash === "AAA"
         CX.withConnection { implicit c =>
           titles(1).uri.bookmarks.size === 2
