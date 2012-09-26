@@ -1,76 +1,110 @@
 <html>
-<head><title>Keep It Extension Options</title></head>
+  <head>
+    <title>Keep It Extension Options</title>
+  </head>
 
-<div id="fb-root"></div>
-<script>(function(d, s, id) {
-  var js, fjs = d.getElementsByTagName(s)[0];
-  if (d.getElementById(id)) return;
-  js = d.createElement(s); js.id = id;
-  js.src = "http://connect.facebook.net/en_US/all.js#xfbml=1&appId=530357056981814";
-  fjs.parentNode.insertBefore(js, fjs);
-}(document, 'script', 'facebook-jssdk'));</script>
+  <script type="text/javascript" src="jquery-1.7.2.min.js"></script>
+  <script type="text/javascript">
 
-<div class="fb-login-button" data-show-faces="true" data-width="200" data-max-rows="1"></div>
-
-<script type="text/javascript" src="jquery-1.7.2.min.js"></script>
-<script type="text/javascript">
-
-// Saves options to localStorage.
-
-function upload() {
-  chrome.extension.sendRequest({type: "upload_all_bookmarks"}, function(response) {});
-}
-
-function save_options() {
-  if ($("#env_prod").is(":checked")) {
-    localStorage["env"] = "production";
-  }
-  else {
-    localStorage["env"] = "development";
-  }
-  localStorage["max_search_results"] = $("#max_search_results").val();
-  localStorage["hover_timeout"] = $("#hover_timeout").val();
-  var keepitId = $("#keepit_id").val();
-  if (!keepitId) { 
-    alert("plz provide keepitID");
-  }
-  localStorage["keepit_id"] = keepitId;
-}
-
-function restore_options() {
-  var env = localStorage["env"];
-
-  if (!env) {
-    env = "production";
-		localStorage["env"]=env;
+  // Saves options to localStorage.
+  
+  function upload() {
+    chrome.extension.sendRequest({type: "upload_all_bookmarks"}, function(response) {});
   }
 
-  if (env=="development") {
-    $("#env_dev").attr("checked","checked");
+  function save_options() {
+    if ($("#env_prod").is(":checked")) {
+      localStorage["env"] = "production";
+    }
+    else {
+      localStorage["env"] = "development";
+    }
+    localStorage["max_search_results"] = $("#max_search_results").val();
+    localStorage["hover_timeout"] = $("#hover_timeout").val();
+    var keepitId = $("#keepit_id").val();
+    localStorage["user_info"]= JSON.stringify(localStorage["user_info"])
   }
-  if (env=="production") {
-    $("#env_prod").attr("checked","checked");
+
+  function getuserinfo(callback) {
+    $.get("http://dev.keepitfindit.com:9000/isLoggedIn",
+        null,
+        function(data) {         
+          callback(data) 
+        },
+        "json"
+    ).error(callback);
   }
-  $("#max_search_results").val(localStorage["max_search_results"]);
-  $("#hover_timeout").val(localStorage["hover_timeout"]);
-  $("#keepit_id").val(localStorage["keepit_id"]);
-}
-</script>
 
-<body onload="restore_options()">
 
-<div width="100px">
-<fieldset>
-  <legend>Environment:</legend>
-  <input type="radio" id="env_dev"  name="env" value="development"/>Development<br/>
-  <input type="radio" id="env_prod" name="env" value="production"/>Production<br/> 
-  Max Search Results: <input type="text" id="max_search_results" name="max_search_results" value="10"></input><br/> 
-  Show Hover timeout in seconds: <input type="text" id="hover_timeout" name="hover_timeout" value="10"></input><br/> 
-  <font size="small">If the value of the timeout is not a positive number (as in '0' or "NA") the hover will not show</font><br/> 
-  KeepIt ID: <input type="text" id="keepit_id" name="keepit_id" value="10"></input><br/> 
-  <button onclick="save_options()">Save</button>
-  <button onclick="upload()">Upload all my bookmarks</button>
-</fieldset>
-</div>
-</body>
+  function renderUserInfo(userInfo) {
+    if (userInfo && userInfo.status && userInfo.status=="loggedin") {
+      localStorage["user_info"]  = JSON.stringify(userInfo);
+      $("#user_info_data").show();
+      $("#connect_to_server").hide();
+      $("#user_name").html(userInfo.name)
+      $("#user_avatar").attr("src",userInfo.avatarUrl);
+    } else {
+      localStorage["user_info"]  = null;
+      $("#connect_to_server").show();
+      $("#user_info_data").hide();
+    }     
+  }
+  function restore_options() {
+    var env = localStorage["env"];
+
+    if (!env) {
+      env = "production";
+      localStorage["env"]=env;
+    }
+
+    if (env=="development") {
+      $("#env_dev").attr("checked","checked");
+    }
+    if (env=="production") {
+      $("#env_prod").attr("checked","checked");
+    }
+    $("#max_search_results").val(localStorage["max_search_results"]);
+    $("#hover_timeout").val(localStorage["hover_timeout"]);
+    if (localStorage["user_info"]) {
+      var userInfo = JSON.parse(localStorage["user_info"]);
+      if (userInfo && userInfo.keepit_id) {
+        $("#keepit_id").val(userInfo.keepit_id);
+      }
+    }
+
+  $("#facebook_connect_link").click(function(){
+    window.open("http://dev.keepitfindit.com:9000/authenticate/facebook", "connect", "width=500,height=400");
+    return false;
+  });
+  
+  getuserinfo(renderUserInfo);
+
+  }
+  </script>
+
+  <body onload="restore_options()">
+      
+      <div id="user_info">
+        <div id="user_info_data">
+          Hello: <span id="user_name"></span><img id="user_avatar" src="#"></img>
+        </div>
+        <div id="connect_to_server">
+          <a id="facebook_connect_link" target="_" href="#"><img src="facebookConnect.png"></img></a>
+        </div>
+      </div> 
+
+    <div width="100px">
+      <fieldset>
+        <legend>Environment:</legend>
+        <input type="radio" id="env_dev"  name="env" value="development"/>Development<br/>
+        <input type="radio" id="env_prod" name="env" value="production"/>Production<br/> 
+        Max Search Results: <input type="text" id="max_search_results" name="max_search_results" value="10"></input><br/> 
+        Show Hover timeout in seconds: <input type="text" id="hover_timeout" name="hover_timeout" value="10"></input><br/> 
+        <font size="small">If the value of the timeout is not a positive number (as in '0' or "NA") the hover will not show</font><br/> 
+        KeepIt ID: <input type="text" id="keepit_id" name="keepit_id" value="10" readonly="readonly"></input><br/> 
+        <button onclick="save_options()">Save</button>
+        <button onclick="upload()">Upload all my bookmarks</button>
+      </fieldset>
+    </div>
+  </body>
 </html>
