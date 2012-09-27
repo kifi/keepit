@@ -1,0 +1,24 @@
+@(user: User)
+
+@userWithFacebookDisplay(user: User, facebookId: FacebookId) = {
+  <span style="margin:2px">
+    <a data-hover="tooltip" title="@user.firstName @user.lastName+" class="name_tooltip_link" href="@com.keepit.controllers.routes.UserController.userView(user.id.get)">
+      <img src="https://graph.facebook.com/@facebookId/picture?type=square" width="30" height="30" alt=""/>@user.firstName @user.lastName
+    </a>
+  </span>
+}
+
+@userWithoutFacebookDisplay(user: User) = {
+  <span style="margin:2px; font-size:50%">
+    </br>(@user.id.get) @user.firstName (No Facebook Id)
+  </span>
+}
+
+@{user.facebookId match {
+  case Some(id) => {
+    userWithFacebookDisplay(user, id)
+  }
+  case None => {
+    userWithoutFacebookDisplay(user)
+  }
+}}

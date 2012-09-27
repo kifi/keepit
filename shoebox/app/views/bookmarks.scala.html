@@ -12,21 +12,15 @@
     <body>
 		  <table>
 		    <tr>
+          <th>Id</th>
 		      <th>User</th>
-		      <th>Id</th>
 		      <th></th>
 		      <th>Title</th>
 		    </tr>
 		  @for((bookmark, user) <- bookmarksAndUsers) {
 		    <tr>
-		      <td>
-            <span style="margin:2px">
-              <a data-hover="tooltip" title="@user.firstName @user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@user.facebookId" target="_blank">
-                <img src="https://graph.facebook.com/@user.facebookId/picture?type=square" width="30" height="30" alt="">
-              </a>
-            </span>
-		      </td>
-		      <td>@bookmark.id.get.id</td>
+          <td>@bookmark.id.get.id</td>
+		      <td>@adminHelper.userDisplay(user)</td>
 		      <td><a href="@com.keepit.controllers.routes.BookmarksController.edit(bookmark.id.get)">edit</td>
 		      <td><a href="@bookmark.url">@bookmark.title</a></td>
 		    </tr>

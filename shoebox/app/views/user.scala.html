@@ -1,0 +1,48 @@
+@(user: User, bookmarks: Seq[Bookmark])
+
+@userWithFacebookDisplay(user: User, facebookId: FacebookId) = {
+  <span style="margin:2px">
+    <a data-hover="tooltip" title="@user.firstName @user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@facebookId" target="_blank">
+      <img src="https://graph.facebook.com/@facebookId/picture?type=square" width="30" height="30" alt=""/>
+    </a>
+  </span>
+}
+
+@userWithoutFacebookDisplay(user: User) = {
+  <span style="margin:2px; font-size:50%">No Facebook Id</span>
+}
+
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>User: @{user.firstName} @{user.lastName}</title>
+        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+        <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
+    </head>
+    <body>
+      <h2>User details</h2>
+	      Name: @{user.firstName} @{user.lastName}<br/>
+	      Id: @{user.id}<br/>
+	      Facebook Account: @{user.facebookId match {
+	        case Some(id) => {
+	          userWithFacebookDisplay(user, id)
+	        }
+	        case None => {
+	          userWithoutFacebookDisplay(user)
+	        }
+	      }}<br/>
+	      Account created at: @adminHelper.dateDisplay(user.createdAt) @adminHelper.timeDisplay(user.createdAt)<br/>
+      <h2>Bookmarks</h2>
+		  <table>
+			  @for(bookmark <- bookmarks) {
+			    <tr>
+            <td>#@bookmark.id.get.id</td>
+			      <td><a href="@com.keepit.controllers.routes.BookmarksController.edit(bookmark.id.get)">edit</td>
+			      <td><a href="@bookmark.url">@bookmark.title</a></td>
+			    </tr>
+			  }
+		  </table>
+    </body>
+</html>
