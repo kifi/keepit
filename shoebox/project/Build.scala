@@ -29,11 +29,31 @@ object ApplicationBuild extends Build {
       "org.clapper" %% "grizzled-slf4j" % "0.6.9"
     )
 
+   val ssDependencies = Seq(
+      // Add your project dependencies here,
+      "com.typesafe" %% "play-plugins-util" % "2.0.1",
+      "org.mindrot" % "jbcrypt" % "0.3m"
+    )
+
+    val secureSocial = PlayProject(
+    	"securesocial", appVersion, ssDependencies, mainLang = SCALA, path = file("modules/securesocial")
+    ).settings(
+      resolvers ++= Seq(
+        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
+        "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+      )
+    )
+
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
       // add some imports to the routes file
       routesImport ++= Seq(
         "com.keepit.common.db.{ExternalId, Id}",
         "com.keepit.model._"
+      ),
+
+      resolvers ++= Seq(
+        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
+        "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
       ),
       
       // add some imports to the templates files
@@ -41,6 +61,6 @@ object ApplicationBuild extends Build {
         "com.keepit.common.db.{ExternalId, Id}",
         "com.keepit.model._"
       )
-    )
+    ).dependsOn(secureSocial)//.aggregate(secureSocial)
 
 }
