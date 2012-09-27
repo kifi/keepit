@@ -114,5 +114,13 @@ object UserController extends Controller with Logging {
     Ok(UserSerializer.userSerializer.writes(user))
   }
 
+  def userView(userId: Id[User]) = Action { implicit request => 
+    val (user, bookmarks) = CX.withConnection { implicit c =>
+      val user = User.get(userId)
+      val bookmarks = Bookmark.ofUser(user)
+      (user, bookmarks)
+    }
+    Ok(views.html.user(user, bookmarks))
+  }
 }
 

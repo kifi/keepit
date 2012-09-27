@@ -55,6 +55,10 @@ object Bookmark {
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.uriId EQ uri.id.get) list }.map( _.view )
   }
   
+  def ofUser(user: User)(implicit conn: Connection): Seq[Bookmark] = {
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.userId EQ user.id.get) list }.map( _.view )
+  }
+  
   def all(implicit conn: Connection): Seq[Bookmark] =
     BookmarkEntity.all.map(_.view)
   
