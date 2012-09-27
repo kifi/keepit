@@ -26,7 +26,6 @@ import play.api.libs.ws.{Response, WS}
  * A Facebook Provider
  */
 class FacebookProvider(application: Application) extends OAuth2Provider(application) {
-  println("in FacebookProvider")
   val MeApi = "https://graph.facebook.com/me?fields=name,picture,email&access_token="
   val Error = "error"
   val Message = "message"
