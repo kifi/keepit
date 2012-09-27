@@ -1,5 +1,19 @@
 @(bookmarksAndUsers: Seq[(Bookmark, User)])
 
+@userWithFacebookDisplay(user: User, facebookId: FacebookId) = {
+  <span style="margin:2px">
+    <a data-hover="tooltip" title="@user.firstName @user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@facebookId" target="_blank">
+      <img src="https://graph.facebook.com/@facebookId/picture?type=square" width="30" height="30" alt=""/>
+    </a>
+  </span>
+}
+
+@userWithoutFacebookDisplay(user: User) = {
+  <span style="margin:2px; font-size:50%">
+    No Facebook Id:</br>(@user.id.get) @user.firstName
+  </span>
+}
+
 <!DOCTYPE html>
 
 <html>
@@ -20,11 +34,14 @@
 		  @for((bookmark, user) <- bookmarksAndUsers) {
 		    <tr>
 		      <td>
-            <span style="margin:2px">
-              <a data-hover="tooltip" title="@user.firstName @user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@user.facebookId" target="_blank">
-                <img src="https://graph.facebook.com/@user.facebookId/picture?type=square" width="30" height="30" alt="">
-              </a>
-            </span>
+		        @{user.facebookId match {
+              case Some(id) => {
+                userWithFacebookDisplay(user, id)
+		          }
+		          case None => {
+	  	          userWithoutFacebookDisplay(user)
+		          }
+		        }}
 		      </td>
 		      <td>@bookmark.id.get.id</td>
 		      <td><a href="@com.keepit.controllers.routes.BookmarksController.edit(bookmark.id.get)">edit</td>

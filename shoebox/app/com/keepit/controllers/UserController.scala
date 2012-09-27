@@ -73,7 +73,7 @@ object UserController extends Controller with Logging {
   def createAnonymous = Action { request =>
     val user = CX.withConnection { implicit c =>
       val externalId = ExternalId[User]()
-      var user = User(firstName = "anonymous", lastName = "anonymous", facebookId = Some(FacebookId.FACEBOOK_ID_NOT_FOUND))
+      var user = User(firstName = "anonymous", lastName = "anonymous", facebookId = None)
         .withExternalId(externalId)
       user = user.save
       user
