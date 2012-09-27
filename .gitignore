@@ -20,6 +20,10 @@ shoebox/.target
 shoebox/.target/*
 shoebox/cx.properties
 
+shoebox/modules/securesocial/.classpath
+shoebox/modules/securesocial/.project
+shoebox/modules/securesocial/.cache
+shoebox/modules/securesocial/.target
 *.swp
 
 # Compiled source #
