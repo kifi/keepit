@@ -26,11 +26,9 @@ object ProviderRegistry {
   private var providers = Map[String, IdentityProvider]()
 
   def register(provider: IdentityProvider) {
-    println("registrating  provider %s".format(provider))
-    if ( providers.contains(provider.providerId) ) {
-      throw new RuntimeException("There is already a provider registered for type: %s".format(provider.providerId))
-    }
-
+//    if ( providers.contains(provider.providerId) ) {
+//      throw new RuntimeException("There is already a provider registered for type: %s".format(provider.providerId))
+//    }
     val p = (provider.providerId, provider)
     providers += p
     Logger.info("Registered Identity Provider: %s".format(provider.providerId))
