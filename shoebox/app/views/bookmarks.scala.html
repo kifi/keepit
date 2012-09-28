@@ -16,6 +16,7 @@
 		      <th>User</th>
 		      <th></th>
 		      <th>Title</th>
+		      <th>creation</th>
 		    </tr>
 		  @for((bookmark, user) <- bookmarksAndUsers) {
 		    <tr>
@@ -23,6 +24,7 @@
 		      <td>@adminHelper.userDisplay(user)</td>
 		      <td><a href="@com.keepit.controllers.routes.BookmarksController.edit(bookmark.id.get)">edit</td>
 		      <td><a href="@bookmark.url">@bookmark.title</a></td>
+		      <td>@bookmark.createdAt</td>
 		    </tr>
 		  }
 		  </table>

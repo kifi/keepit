@@ -26,7 +26,8 @@ object ApplicationBuild extends Build {
     val appDependencies = Seq(
       "ru.circumflex" % "circumflex-orm" % "2.1" % "compile->default",
       "mysql" % "mysql-connector-java" % "5.1.10",
-      "org.clapper" %% "grizzled-slf4j" % "0.6.9"
+      "org.clapper" %% "grizzled-slf4j" % "0.6.9"//,
+      //"org.apache.lucene" % "lucene-core" % "3.0.0"
     )
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
