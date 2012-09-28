@@ -61,6 +61,6 @@ object ApplicationBuild extends Build {
         "com.keepit.common.db.{ExternalId, Id}",
         "com.keepit.model._"
       )
-    ).dependsOn(secureSocial)//.aggregate(secureSocial)
+    ).dependsOn(secureSocial).aggregate(secureSocial)
 
 }
