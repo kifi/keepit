@@ -7,9 +7,13 @@ import java.io.File
 import java.util.Locale
 import org.joda.time.{DateTime, DateTimeZone, LocalDate, LocalTime}
 import org.joda.time.format.DateTimeFormat
+import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
 
 object ApplicationBuild extends Build {
 
+  override def settings = super.settings ++ Seq(
+      EclipseKeys.skipParents in ThisBuild := false)
+      
     val appName         = "shoebox"
     val appVersion      = "%s-%s".format("git rev-parse --abbrev-ref HEAD".!!.trim, "git rev-parse --short HEAD".!!.trim)
     val PT = DateTimeZone.forID("America/Los_Angeles")
