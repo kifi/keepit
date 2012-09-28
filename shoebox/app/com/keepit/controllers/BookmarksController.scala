@@ -61,6 +61,7 @@ object BookmarksController extends Controller with Logging {
     val bookmarksAndUsers = CX.withConnection { implicit conn =>
       val bookmarks = Bookmark.all
       val users = bookmarks map (_.userId.get) map User.get
+      val uris = bookmarks map (_.uriId) map NormalizedURI.get map _.stats()
       bookmarks zip users
     }
     Ok(views.html.bookmarks(bookmarksAndUsers))
