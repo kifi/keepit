@@ -29,6 +29,11 @@
 
     function extractFacbookInfo(userInfo, callback) {
       chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
+        if (!cookie) {
+          var message = "facebook cookie does not exist!"
+          alert(message);
+          throw Error(message);
+        }
         try {
           userInfo.facebook_id = cookie.value;
           userInfo.avatarUrl = "https://graph.facebook.com/" + cookie.value + "/picture";
