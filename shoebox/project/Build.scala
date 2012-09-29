@@ -7,9 +7,13 @@ import java.io.File
 import java.util.Locale
 import org.joda.time.{DateTime, DateTimeZone, LocalDate, LocalTime}
 import org.joda.time.format.DateTimeFormat
+import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
 
 object ApplicationBuild extends Build {
 
+  override def settings = super.settings ++ Seq(
+      EclipseKeys.skipParents in ThisBuild := false)
+      
     val appName         = "shoebox"
     val appVersion      = "%s-%s".format("git rev-parse --abbrev-ref HEAD".!!.trim, "git rev-parse --short HEAD".!!.trim)
     val PT = DateTimeZone.forID("America/Los_Angeles")
@@ -26,7 +30,23 @@ object ApplicationBuild extends Build {
     val appDependencies = Seq(
       "ru.circumflex" % "circumflex-orm" % "2.1" % "compile->default",
       "mysql" % "mysql-connector-java" % "5.1.10",
-      "org.clapper" %% "grizzled-slf4j" % "0.6.9"
+      "org.clapper" %% "grizzled-slf4j" % "0.6.9"//,
+      //"org.apache.lucene" % "lucene-core" % "3.0.0"
+    )
+
+   val ssDependencies = Seq(
+      // Add your project dependencies here,
+      "com.typesafe" %% "play-plugins-util" % "2.0.1",
+      "org.mindrot" % "jbcrypt" % "0.3m"
+    )
+
+    val secureSocial = PlayProject(
+    	"securesocial", appVersion, ssDependencies, mainLang = SCALA, path = file("modules/securesocial")
+    ).settings(
+      resolvers ++= Seq(
+        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
+        "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+      )
     )
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
@@ -35,12 +55,17 @@ object ApplicationBuild extends Build {
         "com.keepit.common.db.{ExternalId, Id}",
         "com.keepit.model._"
       ),
+
+      resolvers ++= Seq(
+        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
+        "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+      ),
       
       // add some imports to the templates files
       templatesImport ++= Seq(
         "com.keepit.common.db.{ExternalId, Id}",
         "com.keepit.model._"
       )
-    )
+    ).dependsOn(secureSocial).aggregate(secureSocial)
 
 }

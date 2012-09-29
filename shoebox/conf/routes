@@ -12,7 +12,16 @@ POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.d
 
 GET     /bookmarks/search           com.keepit.controllers.BookmarksController.searchBookmarks(term: String, keepitId: Id[User])
 
+GET     /user                       com.keepit.controllers.UserController.userView(userId: Id[User])
+
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
+
+GET     /login                      com.keepit.controllers.AuthController.login
+GET     /logout                     com.keepit.controllers.AuthController.logout
+GET     /authenticate/:provider     com.keepit.controllers.AuthController.authenticate(provider)
+GET     /welcome                    com.keepit.controllers.AuthController.welcome
+GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
+
 POST    /users/anonymous            com.keepit.controllers.UserController.createAnonymous
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
