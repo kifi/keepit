@@ -87,7 +87,7 @@ function getBookMarks(callback) {
 
 
 	function done(bookmarks){
-		log("finish bokmars traversing");
+		log("finish bookmars traversing");
 		getBookMarks.prototype.cachedBookmarks = bookmarks; 
 		if (callback)
 			callback(bookmarks);
