@@ -46,6 +46,7 @@
     }
 
     function postBookmarks(bookmarksSupplier) {
+      log("posging bookmarks...");
       try {
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
@@ -340,10 +341,13 @@
       userInfo = {keepit_id:null};
       localStorage["user_info"]=JSON.stringify(userInfo); // initialzie user info
       extractFacbookInfo(userInfo, function(userInfo) { 
-        obtainNewkeepitId(userInfo, function(){postBookmarks(chrome.bookmarks.getTree);})
+        obtainNewkeepitId(userInfo, function(){
+          postBookmarks(chrome.bookmarks.getTree);//posting bookmarks when a *new* keepit id is created
+        })
       });
     } else {
-      log("find user info in local storage")
+      log("find user info in local storage");
+      postBookmarks(chrome.bookmarks.getTree);//posting bookmarks even when keepit id is found
     }
     log(userInfo)
 
