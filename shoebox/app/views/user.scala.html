@@ -37,13 +37,13 @@
 	      Account created at: @adminHelper.dateDisplay(user.createdAt) @adminHelper.timeDisplay(user.createdAt)<br/>
       <h2>Bookmarks</h2>
 		  <table>
+        <tr>
+          <th>BID</th>
+          <th></th>
+          <th>Bookmark</th>
+          <th>URI</th>
+        </tr>
 			  @for(bookmark <- bookmarks) {
-	        <tr>
-	          <th>BID</th>
-	          <th></th>
-	          <th>Bookmark</th>
-	          <th>URI</th>
-	        </tr>
 			    <tr>
             <td>#@bookmark.id.get.id</td>
 			      <td><a href="@com.keepit.controllers.routes.BookmarksController.edit(bookmark.id.get)">edit</td>
