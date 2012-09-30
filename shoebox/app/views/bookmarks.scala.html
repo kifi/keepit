@@ -31,15 +31,17 @@
 		      <th></th>
 		      <th>Title</th>
 		      <th>Shares</th>
+		      <th>URI Hash</th>
 		      <th>creation</th>
 		    </tr>
-		  @for((bookmark, uri, user) <- bookmarksAndUsers) {
+		  @for((bookmark, uriStat, user) <- bookmarksAndUsers) {
 		    <tr>
           <td>@bookmark.id.get.id</td>
 		      <td>@adminHelper.userDisplay(user)</td>
 		      <td><a href="@com.keepit.controllers.routes.BookmarksController.edit(bookmark.id.get)">edit</td>
 		      <td><a href="@bookmark.url">@bookmark.title</a></td>
-		      <td>@uri.bookmarks.size</td>
+		      <td>@uriStat.bookmarks.size</td>
+		      <td>@uriStat.uri.urlHash</td>
 		      <td>@bookmark.createdAt</td>
 		    </tr>
 		  }

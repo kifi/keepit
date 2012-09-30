@@ -32,7 +32,8 @@ CREATE TABLE normalized_uri (
     KEY (url_hash),
     PRIMARY KEY (id),
     
-    CONSTRAINT normalized_uri_u_external_id UNIQUE (external_id) 
+    CONSTRAINT normalized_uri_u_external_id UNIQUE (external_id), 
+    CONSTRAINT normalized_uri_u_url_hash UNIQUE (url_hash) 
 );
 
 
