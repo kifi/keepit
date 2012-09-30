@@ -1,4 +1,4 @@
-@(bookmarksAndUsers: Seq[(Bookmark, NormalizedURI, User)])
+@(bookmarksAndUsers: Seq[(Bookmark, NormalizedURIStats, User)])
 
 <!DOCTYPE html>
 
@@ -16,13 +16,15 @@
 		      <th>User</th>
 		      <th></th>
 		      <th>Title</th>
+		      <th>Shares</th>
 		    </tr>
-		  @for((bookmark, user) <- bookmarksAndUsers) {
+		  @for((bookmark, uri, user) <- bookmarksAndUsers) {
 		    <tr>
           <td>@bookmark.id.get.id</td>
 		      <td>@adminHelper.userDisplay(user)</td>
 		      <td><a href="@com.keepit.controllers.routes.BookmarksController.edit(bookmark.id.get)">edit</td>
 		      <td><a href="@bookmark.url">@bookmark.title</a></td>
+		      <td>@uri.bookmarks.size</td>
 		    </tr>
 		  }
 		  </table>
