@@ -17,6 +17,8 @@ import com.keepit.common.logging.Logging
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
+case class NormalizedURIStats(uri: NormalizedURI, bookmarks: Seq[Bookmark])
+
 case class NormalizedURI  (
   id: Option[Id[NormalizedURI]] = None,
   createdAt: DateTime = currentDateTime,
@@ -47,6 +49,11 @@ case class NormalizedURI  (
         res
       case Some(bmks) => 
         bmks
+  }
+  
+  def stats()(implicit conn: Connection): NormalizedURIStats = {
+    var uriBookmarks = bookmarks()
+    NormalizedURIStats(this, uriBookmarks)
   }
 }
 
