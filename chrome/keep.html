@@ -161,6 +161,10 @@
       }
     }
 
+    var restrictedUrlPatternsForHover = [
+      "www.facebook.com"
+    ]
+
     function initPage(request, sendResponse, tab) {
       try {
         if (request.isGoogle === true) {
@@ -170,13 +174,21 @@
             log("injecting to google result page: done!", tab);
           }, 5000);
         } else if (request.isGoogle === false) {
+          var pageLocation = request.location;
           log("injecting hover: " + request, tab);
           var hoverTimeout = getOptions().hoverTimeout;
+          var restrictedElements = $.grep(restrictedUrlPatternsForHover, function(e, i){
+            return pageLocation.indexOf(e) >= 0;
+          });
+          if (restrictedElements.length > 0) {
+            log("restricted hover page: " + restrictedElements);
+            return;
+          }
           if (hoverTimeout > 0) {
             getBookMarks(function(bookmarks) {
               chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
-                if(isAlreadyKept(bm, request.location)) {
-                  log("hiding hover cause URL "+request.location+" already kept", tab);
+                if(isAlreadyKept(bm, pageLocation)) {
+                  log("hiding hover cause URL " + pageLocation + " already kept", tab);
                 } else {
                   log("injecting hover: " + request, tab);
                   setTimeout(function() {
