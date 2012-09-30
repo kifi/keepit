@@ -76,7 +76,7 @@ object BookmarksController extends Controller with Logging {
     parseBookmarks(json \ "bookmarks", user) 
     log.info(user)
     Ok(JsObject(("status" -> JsString("success")) :: 
-        ("userId" -> JsString(user.id.map(id => id.toString()).getOrElse(""))) :: Nil))
+        ("userId" -> JsString(user.id.map(id => id.id.toString()).getOrElse(""))) :: Nil))
   }
   
   private def internUser(facebookId: FacebookId, keepitId : Id[User]): User = CX.withConnection { implicit conn =>

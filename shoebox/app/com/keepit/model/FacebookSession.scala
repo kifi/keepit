@@ -18,12 +18,8 @@ import com.keepit.common.db.State
 
 case class FacebookAccessToken(value: String)
 
-case class FacebookId(val value: String, val notFound: Boolean = false) {
+case class FacebookId(val value: String) {
   override def toString = value
-}
-
-object FacebookId {
-  val FACEBOOK_ID_NOT_FOUND = FacebookId(value = "_ID_NOT_FOUND_", true)
 }
 
 case class FacebookSession(id: Option[Id[FacebookSession]] = None, 
