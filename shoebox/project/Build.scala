@@ -30,7 +30,10 @@ object ApplicationBuild extends Build {
     val appDependencies = Seq(
       "ru.circumflex" % "circumflex-orm" % "2.1" % "compile->default",
       "mysql" % "mysql-connector-java" % "5.1.10",
-      "org.clapper" %% "grizzled-slf4j" % "0.6.9"//,
+      "org.clapper" %% "grizzled-slf4j" % "0.6.9",
+//      "jivesoftware" % "smack" % "3.2.2"
+      "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
+      "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2"
       //"org.apache.lucene" % "lucene-core" % "3.0.0"
     )
 
@@ -58,7 +61,8 @@ object ApplicationBuild extends Build {
 
       resolvers ++= Seq(
         "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
-        "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+        "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
+        "kevoree Repository" at "http://maven2.kevoree.org/release/"
       ),
       
       // add some imports to the templates files
