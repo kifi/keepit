@@ -25,6 +25,7 @@ shoebox/modules/securesocial/.project
 shoebox/modules/securesocial/.cache
 shoebox/modules/securesocial/.target
 shoebox/modules/securesocial/.settings
+shoebox/modules/securesocial/bin/*
 *.swp
 
 # Compiled source #
