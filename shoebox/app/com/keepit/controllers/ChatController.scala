@@ -28,6 +28,7 @@ import org.jivesoftware.smack.packet.Message.Type
 import com.keepit.common.db.Id
 import play.api.libs.json.JsValue
 import securesocial.core.providers.FacebookProvider
+import com.keepit.common.db.ExternalId
 //import scala.collection.immutable.Map
 
 object ChatController extends Controller with SecureSocial with Logging {
@@ -47,24 +48,22 @@ object ChatController extends Controller with SecureSocial with Logging {
   private def parseMessage(value: JsValue): String = (value \ "message").as[String]
   private def parseUrl(value: JsValue): String = (value \ "url").as[String]
 
-  def chat(recipientId: Id[User]) = SecuredAction() { implicit request =>
-    log.info("request.body.asJson is %s".format(request.body.asJson))
+  def chat(externalId: ExternalId[User]) = SecuredAction() { implicit request =>
     val tpl = request.body.asJson.map { json =>
         ( (json \ "url").asOpt[String],  
         (json \ "message").asOpt[String] ) 
     }
-    log.info("touple is %s".format(tpl.get))
     
     val url = tpl.get._1.get
     val message = tpl.get._2.get
-    log.info("url is %s and message is %s".format(url, message))
+    log.info("will chat with user (externalId) %s, url is %s and message is %s".format(externalId, url, message))
     val connection = createConnection
     connection.connect()
     CX.withConnection { implicit c =>
 
-      val recipientFacebookId = User.get(recipientId).facebookId
+      val recipientFacebookId = User.getOpt(externalId).get.facebookId
       recipientFacebookId.map(rfid => {
-        log.info("user Id %s has facebookId %s".format(recipientId, recipientFacebookId))
+        log.info("user externalId %s has facebookId %s".format(externalId, recipientFacebookId))
         val accessToken = request.user.oAuth2Info.map(info => info.accessToken)
         val apiKey = "530357056981814" //should be loaded from conf
         connection.login(apiKey, accessToken.get)
