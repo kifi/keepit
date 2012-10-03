@@ -65,7 +65,13 @@ object ApplicationBuild extends Build {
       templatesImport ++= Seq(
         "com.keepit.common.db.{ExternalId, Id}",
         "com.keepit.model._"
+      ),
+      
+      libraryDependencies ++= Seq(
+        "com.google.inject" % "guice" % "3.0",
+        "org.scalatest" %% "scalatest" % "2.0.M4" % "test"
       )
+      
     ).dependsOn(secureSocial).aggregate(secureSocial)
 
 }
