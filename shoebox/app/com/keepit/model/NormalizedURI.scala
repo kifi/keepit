@@ -17,6 +17,8 @@ import com.keepit.common.logging.Logging
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
+case class NormalizedURIStats(uri: NormalizedURI, bookmarks: Seq[Bookmark])
+
 case class NormalizedURI  (
   id: Option[Id[NormalizedURI]] = None,
   createdAt: DateTime = currentDateTime,
@@ -47,6 +49,11 @@ case class NormalizedURI  (
         res
       case Some(bmks) => 
         bmks
+  }
+  
+  def stats()(implicit conn: Connection): NormalizedURIStats = {
+    var uriBookmarks = bookmarks()
+    NormalizedURIStats(this, uriBookmarks)
   }
 }
 
@@ -91,9 +98,9 @@ object NormalizedURI {
   private def searchToken(token: String)(implicit conn: Connection): Seq[NormalizedURI] = 
     (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.title ILIKE ("%" + token + "%")) }.list.map( _.view )
   
-  def getByUrl(url: String)(implicit conn: Connection): Option[NormalizedURI] = {
+  def getByNormalizedUrl(url: String)(implicit conn: Connection): Option[NormalizedURI] = {
     var hash = hashUrl(normalize(url))
-    (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlHash EQ url) unique }.map( _.view )    
+    (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlHash EQ hash) unique }.map( _.view )    
   }
   
   def all(implicit conn: Connection): Seq[NormalizedURI] =

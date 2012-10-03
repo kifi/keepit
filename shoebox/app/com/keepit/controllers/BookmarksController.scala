@@ -61,7 +61,8 @@ object BookmarksController extends Controller with Logging {
     val bookmarksAndUsers = CX.withConnection { implicit conn =>
       val bookmarks = Bookmark.all
       val users = bookmarks map (_.userId.get) map User.get
-      bookmarks zip users
+      val uris = bookmarks map (_.uriId) map NormalizedURI.get map {u => u.stats()}
+      (bookmarks, uris, users).zipped.toList.seq
     }
     Ok(views.html.bookmarks(bookmarksAndUsers))
   }  
@@ -72,7 +73,7 @@ object BookmarksController extends Controller with Logging {
     val facebookId = parseFacebookId(json \ "user_info")
     val keepitId = parseKeepitId(json \ "user_info")
     val user = internUser(facebookId, keepitId)
-    parseBookmarks(json \ "bookmarks", user) 
+    internBookmarks(json \ "bookmarks", user) 
     log.info(user)
     Ok(JsObject(("status" -> JsString("success")) :: 
         ("userId" -> JsString(user.id.map(id => id.id.toString()).getOrElse(""))) :: Nil))
@@ -104,21 +105,21 @@ object BookmarksController extends Controller with Logging {
     }
   }
     
-  private def parseBookmarks(value: JsValue, user: User): List[Bookmark] = value match {
-    case JsArray(elements) => (elements map {e => parseBookmarks(e, user)} flatten).toList  
-    case json: JsObject if(json.keys.contains("children")) => parseBookmarks( json \ "children" , user)  
-    case json: JsObject => List(parseBookmark(json, user))  
+  private def internBookmarks(value: JsValue, user: User): List[Bookmark] = value match {
+    case JsArray(elements) => (elements map {e => internBookmarks(e, user)} flatten).toList  
+    case json: JsObject if(json.keys.contains("children")) => internBookmarks( json \ "children" , user)  
+    case json: JsObject => List(internBookmark(json, user))  
     case e => throw new Exception("can't figure what to do with %s".format(e))  
   }
   
   private def parseFacebookId(value: JsValue): FacebookId = FacebookId((value \ "facebook_id").as[String])
   private def parseKeepitId(value: JsValue): Id[User] = Id[User](Integer.parseInt(((value \ "keepit_id").as[String])))
   
-  private def parseBookmark(json: JsObject, user: User): Bookmark = {
+  private def internBookmark(json: JsObject, user: User): Bookmark = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
     CX.withConnection { implicit conn =>
-      val normalizedUri = NormalizedURI.getByUrl(url) match {
+      val normalizedUri = NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) => uri
         case None => NormalizedURI(title, url).save
       }
@@ -133,7 +134,7 @@ object BookmarksController extends Controller with Logging {
     println("searching with %s using keepit id %s".format(term, keepitId))
     val res = CX.withConnection { implicit conn =>
       val user = User.getOpt(keepitId).getOrElse(
-          throw new Exception("keepi id %s not found for term %s".format(keepitId, term)))
+          throw new Exception("keepit id %s not found for term %s".format(keepitId, term)))
       val res: Seq[URISearchResults] = NormalizedURI.search(term)
       res map { r =>
         toPersonalSearchResult(r, user)

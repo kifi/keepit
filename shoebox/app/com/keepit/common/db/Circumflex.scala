@@ -15,6 +15,9 @@ import play.api.mvc.QueryStringBindable
 import com.keepit.common.logging.Logging
 import java.sql.SQLException
 import scala.util.control.ControlThrowable
+import scala.io.Source
+import java.io.BufferedReader
+import java.sql.Clob
 
 class CustomTypeConverter extends TypeConverter {
   override def write(st: java.sql.PreparedStatement, parameter: Any, paramIndex: Int) {
@@ -189,6 +192,58 @@ trait StateFields[R <: Record[_, R]] { self: R =>
     new StateDefinitionHelper(str, this)
 }
 
+// field types that use java.sql.Clob
+class ClobField[R <: Record[_, R]](name: String, record: R)
+    extends XmlSerializable[String, R](name, record, ormConf.dialect.textType) {
+  
+  def fromString(str: String): Option[String] = Some(str)
+  override def toString(value: Option[String]): String = value.get
+
+  override def read(rs: java.sql.ResultSet, alias: String): Option[String] = {
+    val o = rs.getObject(alias)
+    if (rs.wasNull) {
+      None
+    } else {
+      Some(resultToString(o))
+    }
+  }
+  
+  //depends on the driver, h2 returns a clob and mysql returns a string.
+  private def resultToString(result: Any): String = if(result.getClass().isAssignableFrom(classOf[String])) {
+    result.asInstanceOf[String]
+  } else {
+    clobToString(result.asInstanceOf[Clob])
+  }
+  
+  private def clobToString(result: Clob): String = {
+    val clob: Clob = try {
+      result.asInstanceOf[Clob]
+    } catch {
+      //ControlThrowable is used for control flow of scala's closure management. You must throw it up! 
+      case e: ControlThrowable => throw e
+      case e => throw new DbException("error converting instance %s to clob with for name %s. cause: %s\n%s".format(result.toString(), name, e.toString(), e.getStackTrace() mkString "\n"), e)
+    }
+    val reader = new BufferedReader(clob.getCharacterStream())
+    val builder = new StringBuilder()
+    var aux = reader.readLine()
+    while (aux != null) {
+      builder.append(aux)
+      aux = reader.readLine()
+    }
+    builder.toString()
+  }
+}
+
+/** Converts strings to ClobFields.  Useful for implicit conversion via the ClobFields mixin. */
+class ClobDefinitionHelper[R <: Record[_, R]](name: String, record: R) {
+  def CLOB = new ClobField[R](name, record)
+}
+
+/** Mixin to add implicit conversion from String to ClobField via CLOB method */
+trait ClobFields[R <: Record[_, R]] { self: R =>
+  implicit def str2ClobHelper(str: String): ClobDefinitionHelper[R] =
+    new ClobDefinitionHelper(str, this)
+}
 
 // field types that use org.joda.time.DateTime instead of java.util.Date
 class JodaTimestampField[R <: Record[_, R]](name: String, record: R)
@@ -209,7 +264,7 @@ class JodaTimestampField[R <: Record[_, R]](name: String, record: R)
       } catch {
         //ControlThrowable is used for control flow of scala's closure management. You must throw it up! 
         case e: ControlThrowable => throw e
-        case e => throw new DbException("error converting instance %s to timestemp with alias %s. cause: %s\n%s".format(o.toString(), alias, e.toString(), e.getStackTrace() mkString "\n"), e)
+        case e => throw new DbException("error converting instance %s to timestemp with alias %s for name %s. cause: %s\n%s".format(o.toString(), alias, name, e.toString(), e.getStackTrace() mkString "\n"), e)
       }
       Some(timestemp.toDateTime)
     }
@@ -288,6 +343,7 @@ abstract class Entity[T, R <: Record[Id[T], R]]
   with TypedIdentityGenerator[T, R]
   with StateFields[R]
   with JodaFields[R]
+  with ClobFields[R]
 { 
   this: R =>
   

@@ -33,8 +33,8 @@ object ApplicationBuild extends Build {
       "org.clapper" %% "grizzled-slf4j" % "0.6.9",
 //      "jivesoftware" % "smack" % "3.2.2"
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
-      "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2"
-      //"org.apache.lucene" % "lucene-core" % "3.0.0"
+      "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
+      "org.apache.lucene" % "lucene-core" % "3.0.0"
     )
 
    val ssDependencies = Seq(
@@ -69,7 +69,13 @@ object ApplicationBuild extends Build {
       templatesImport ++= Seq(
         "com.keepit.common.db.{ExternalId, Id}",
         "com.keepit.model._"
+      ),
+      
+      libraryDependencies ++= Seq(
+        "com.google.inject" % "guice" % "3.0",
+        "org.scalatest" %% "scalatest" % "2.0.M4" % "test"
       )
+      
     ).dependsOn(secureSocial).aggregate(secureSocial)
 
 }
