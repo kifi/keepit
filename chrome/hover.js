@@ -123,8 +123,8 @@ console.log("injecting keep it hover div");
 
     var img = $("<img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square' width='24' height='24' alt=''>");
     chatBox.append(img);
-    var message = $("<input type='text' class='keepit_text_message'>");
-    var button = $("<button class='keepit_chat_button'>");
+    var message = $("<input type='text' class='keepit_text_message'/>");
+    var button = $("<button class='keepit_chat_button'>send</button>");
     chatBox.append(message);
     chatBox.append(button);
     var closeForm= $("<a href='#' class='keepit_close_form'>X</a>");
@@ -138,7 +138,7 @@ console.log("injecting keep it hover div");
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
-          log("[chat response] xhr response:");
+          console.log("[chat response] xhr response:");
           var result = $.parseJSON(xhr.response);
           console.log(result);
         }
