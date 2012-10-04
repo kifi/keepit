@@ -31,6 +31,7 @@ object ApplicationBuild extends Build {
       "ru.circumflex" % "circumflex-orm" % "2.1" % "compile->default",
       "mysql" % "mysql-connector-java" % "5.1.10",
       "org.clapper" %% "grizzled-slf4j" % "0.6.9",
+      "com.typesafe.akka" % "akka-testkit" % "2.0.2",
       "org.apache.lucene" % "lucene-core" % "3.0.0"
     )
 

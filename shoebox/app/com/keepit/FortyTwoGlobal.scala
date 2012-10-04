@@ -50,7 +50,7 @@ abstract class FortyTwoGlobal(val mode: play.api.Mode.Mode) extends GlobalSettin
   }
   
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
-//    require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
+    require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
     log.info("Starting " + this)
     val baseUrl: String = current.configuration.getString("application.baseUrl").get
     log.info("FortyTwo %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
