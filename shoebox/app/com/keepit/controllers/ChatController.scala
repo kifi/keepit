@@ -4,8 +4,8 @@ import java.net.URLEncoder
 import java.util.GregorianCalendar
 import java.util.HashMap
 import play.api.mvc.{ Action, Controller }
+import play.api.mvc.BodyParsers.parse.tolerantJson
 import play.api.i18n.Messages
-import securesocial.core._
 import play.api.{ Play, Logger }
 import Play.current
 import play.api.data._
@@ -27,13 +27,14 @@ import org.jivesoftware.smack.packet.Message
 import org.jivesoftware.smack.packet.Message.Type
 import com.keepit.common.db.Id
 import play.api.libs.json.JsValue
+import securesocial.core._
 import securesocial.core.providers.FacebookProvider
 import com.keepit.common.db.ExternalId
 //import scala.collection.immutable.Map
 
 object ChatController extends Controller with SecureSocial with Logging {
 
-  def createConnection = {
+  def createConnection() = {
     val config = new ConnectionConfiguration("chat.facebook.com", 5222)
     //    Connection.DEBUG_ENABLED = true;
     //    config.setDebuggerEnabled(Connection.DEBUG_ENABLED);
@@ -48,36 +49,32 @@ object ChatController extends Controller with SecureSocial with Logging {
   private def parseMessage(value: JsValue): String = (value \ "message").as[String]
   private def parseUrl(value: JsValue): String = (value \ "url").as[String]
 
-  def chat(externalId: ExternalId[User]) = SecuredAction() { implicit request =>
-    val tpl = request.body.asJson.map { json =>
-        ( (json \ "url").asOpt[String],  
-        (json \ "message").asOpt[String] ) 
-    }
-    
-    val url = tpl.get._1.get
-    val message = tpl.get._2.get
+  def chat(externalId: ExternalId[User]) = SecuredAction(false, tolerantJson) { implicit request =>
+    val url = parseUrl(request.body)
+    val message = parseMessage(request.body)
     log.info("will chat with user (externalId) %s, url is %s and message is %s".format(externalId, url, message))
-    val connection = createConnection
-    connection.connect()
-    CX.withConnection { implicit c =>
-
-      val recipientFacebookId = User.getOpt(externalId).get.facebookId
-      recipientFacebookId.map(rfid => {
-        log.info("user externalId %s has facebookId %s".format(externalId, recipientFacebookId))
-        val accessToken = request.user.oAuth2Info.map(info => info.accessToken)
-        val apiKey = "530357056981814" //should be loaded from conf
-        connection.login(apiKey, accessToken.get)
-        send(connection, url, message, String.valueOf(rfid.value))
-
-        connection.disconnect()
-      })
+    
+    val user = CX.withConnection { implicit c =>
+      User.get(externalId)
+    }
+    user.facebookId match {
+        case Some(rfid) =>
+          val connection = createConnection()
+          connection.connect()
+          log.info("user %s has facebookId %s".format(user, rfid))
+          val accessToken = request.user.oAuth2Info.map(info => info.accessToken).getOrElse(throw new IllegalStateException("access token is missing for user %s".format(user)))
+          val apiKey = "530357056981814" //should be loaded from conf
+          connection.login(apiKey, accessToken)
+          send(connection, url, message, rfid)
+          connection.disconnect()
+        case None => throw new IllegalStateException("Tried to send message to user %s that did not have a facebook id".format(user))
     }
     Ok(JsObject(("status" -> JsString("success")) :: Nil))
   }
 
-  private def send(connection: XMPPConnection, url: String, txt: String, receipant: String) {
+  private def send(connection: XMPPConnection, url: String, txt: String, receipant: FacebookId) {
     println("sending msg to %s about URL %s (%s)".format(receipant, url, txt))
-    connection.getChatManager().createChat("-" + receipant + "@chat.facebook.com", new MessageListener() {
+    connection.getChatManager().createChat("-%s@chat.facebook.com".format(receipant), new MessageListener() {
       def processMessage(chat: Chat, message: Message) =
         println("Received message from %s: %s ".format(message.getFrom, message.getBody))
     }).sendMessage("looking now at %s. and wanted to tell you: %s".format(url, txt))
