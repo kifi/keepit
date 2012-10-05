@@ -148,6 +148,6 @@ console.log("injecting keep it hover div");
       getUserInfo(showBookmarkHover);
       getUsersKeptThisUrl();
     });
-  }, 3000);
+  }, 1);
 
 })();
