@@ -2,8 +2,7 @@ console.log("injecting keep it hover div");
 
 (function() {
   $ = jQuery.noConflict()
-  var env;
-  var server;
+  var config;
 
   function showBookmarkHover(user) {
     var existingElements = $('#keepit_hover').length;
@@ -79,7 +78,7 @@ console.log("injecting keep it hover div");
   }
 
   function getUsersKeptThisUrl() {
-    $.get("http://"+server+"/users/keepurl?url="+encodeURIComponent(document.location.href),
+    $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href),
         null,
         function(users) {         
           console.log("got "+users.length+" result from /users/keepUrl");
@@ -134,17 +133,16 @@ console.log("injecting keep it hover div");
           console.log(result);
         }
       }
-      xhr.open("POST", 'http://dev.ezkeep.com:9000/chat/'+user.exuuid, true);
+      xhr.open("POST", 'http://' + config.server + '/chat/' + user.exuuid, true);
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send(JSON.stringify(  {"url": document.location.href, "message":message.val() } ));
-      console.log("sent")
+      console.log("sent");
     });
   }
 
   setTimeout(function() {
-    chrome.extension.sendRequest({"type": "get_opt"}, function(response) {
-      env = response.env;
-      server =  response.server;
+    chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
+      config = response;
       getUserInfo(showBookmarkHover);
       getUsersKeptThisUrl();
     });

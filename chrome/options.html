@@ -26,13 +26,15 @@
   }
 
   function getuserinfo(callback) {
-    $.get("http://dev.ezkeep.com:9000/isLoggedIn",
-        null,
-        function(data) {         
-          callback(data) 
-        },
-        "json"
-    ).error(callback);
+    chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
+      $.get("http://" + config.server + "/isLoggedIn",
+          null,
+          function(data) {         
+            callback(data) 
+          },
+          "json"
+      ).error(callback);
+    }
   }
 
 
@@ -73,8 +75,10 @@
     }
 
   $("#facebook_connect_link").click(function(){
-    window.open("http://dev.keepitfindit.com:9000/authenticate/facebook", "connect", "width=500,height=400");
-    return false;
+    chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
+      window.open("http://" + config.server + "/authenticate/facebook", "connect", "width=500,height=400");
+      return false;
+    }
   });
   
   getuserinfo(renderUserInfo);
