@@ -1,18 +1,18 @@
 <html>
   <head>
-    <title>Keep It Extension Options</title>
+    <title>Keep It Extension Configs</title>
   </head>
 
   <script type="text/javascript" src="jquery-1.7.2.min.js"></script>
   <script type="text/javascript">
 
-  // Saves options to localStorage.
+  // Saves configs to localStorage.
   
   function upload() {
     chrome.extension.sendRequest({type: "upload_all_bookmarks"}, function(response) {});
   }
 
-  function save_options() {
+  function saveConfigs() {
     if ($("#env_prod").is(":checked")) {
       localStorage["env"] = "production";
     }
@@ -26,13 +26,15 @@
   }
 
   function getuserinfo(callback) {
-    $.get("http://dev.keepitfindit.com:9000/isLoggedIn",
-        null,
-        function(data) {         
-          callback(data) 
-        },
-        "json"
-    ).error(callback);
+    chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
+      $.get("http://" + config.server + "/isLoggedIn",
+          null,
+          function(data) {         
+            callback(data) 
+          },
+          "json"
+      ).error(callback);
+    }
   }
 
 
@@ -49,7 +51,7 @@
       $("#user_info_data").hide();
     }     
   }
-  function restore_options() {
+  function restoreConfigs() {
     var env = localStorage["env"];
 
     if (!env) {
@@ -73,8 +75,10 @@
     }
 
   $("#facebook_connect_link").click(function(){
-    window.open("http://dev.keepitfindit.com:9000/authenticate/facebook", "connect", "width=500,height=400");
-    return false;
+    chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
+      window.open("http://" + config.server + "/authenticate/facebook", "connect", "width=500,height=400");
+      return false;
+    }
   });
   
   getuserinfo(renderUserInfo);
@@ -82,7 +86,7 @@
   }
   </script>
 
-  <body onload="restore_options()">
+  <body onload="restoreConfigs()">
       
       <div id="user_info">
         <div id="user_info_data">
@@ -102,7 +106,7 @@
         Show Hover timeout in seconds: <input type="text" id="hover_timeout" name="hover_timeout" value="10"></input><br/> 
         <font size="small">If the value of the timeout is not a positive number (as in '0' or "NA") the hover will not show</font><br/> 
         KeepIt ID: <input type="text" id="keepit_id" name="keepit_id" value="10" readonly="readonly"></input><br/> 
-        <button onclick="save_options()">Save</button>
+        <button onclick="saveConfigs()">Save</button>
         <button onclick="upload()">Upload all my bookmarks</button>
       </fieldset>
     </div>

@@ -75,7 +75,7 @@
         "user_info": userInfo
       }
       var tosend = JSON.stringify(json);
-      xhr.open("POST", 'http://' + getOptions().server + '/bookmarks/add', true);
+      xhr.open("POST", 'http://' + getConfigs().server + '/bookmarks/add', true);
       xhr.send(tosend);
       log("posted bookmarks");
     }
@@ -97,9 +97,9 @@
           getBookMarks(function(bookmarks) {
             addKeep(bookmarks, request, sendResponse, tab);
           });
-        } else if (request.type == "get_opt") {
-          var opt = getOptions();
-  				sendResponse(opt);
+        } else if (request.type == "get_conf") {
+          var conf = getConfigs();
+  				sendResponse(conf);
         } else if (request.type == "upload_all_bookmarks") {
           upload_all_bookmarks();
         }
@@ -140,7 +140,7 @@
           if (searchResults.length === 0) {
             return;
           }
-          var maxRes = getOptions().maxRes;
+          var maxRes = getConfigs().maxRes;
           if (searchResults.length > maxRes) {
             searchResults = searchResults.slice(0, maxRes);
           }
@@ -149,7 +149,7 @@
       }
       term = request.query;
       keepitId = userInfo["keepit_id"];
-      xhr.open("GET", 'http://' + getOptions().server + '/bookmarks/search?term=' + term + '&keepitId=' + keepitId, true);
+      xhr.open("GET", 'http://' + getConfigs().server + '/bookmarks/search?term=' + term + '&keepitId=' + keepitId, true);
       xhr.send();
     }
 
@@ -180,7 +180,7 @@
         } else if (request.isGoogle === false) {
           var pageLocation = request.location;
           log("injecting hover: " + request, tab);
-          var hoverTimeout = getOptions().hoverTimeout;
+          var hoverTimeout = getConfigs().hoverTimeout;
           var restrictedElements = $.grep(restrictedUrlPatternsForHover, function(e, i){
             return pageLocation.indexOf(e) >= 0;
           });
@@ -251,7 +251,7 @@
   	// Listen for the content script to send a message to the background page.
   	chrome.extension.onRequest.addListener(onRequest);
 
-    function getOptions() {
+    function getConfigs() {
       try {
         var env = localStorage["env"];
         if (!env) {
@@ -274,7 +274,7 @@
 
         var server = "ezkeep.com";
         if (env === "development") {
-          server = "localhost:9000";
+          server = "dev.ezkeep.com:9000";
         }
         return {
           "env": env, 
@@ -314,7 +314,7 @@
           callback();
         }
       }
-      xhr.open("POST", 'http://' + getOptions().server + '/users/anonymous', true);
+      xhr.open("POST", 'http://' + getConfigs().server + '/users/anonymous', true);
       xhr.send(JSON.stringify({user_info:userInfo}));
     }
 
