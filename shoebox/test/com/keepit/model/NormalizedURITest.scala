@@ -11,6 +11,7 @@ import ru.circumflex.orm._
 import com.keepit.controllers._
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
+import com.keepit.test.EmptyApplication
 
 @RunWith(classOf[JUnitRunner])
 class NormalizedURITest extends SpecificationWithJUnit {
@@ -29,7 +30,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
 
   "NormalizedURIs search by url" should {
     "search gets nothing" in {
-      running(FakeApplication()) {
+      running(new EmptyApplication()) {
         setup()
         CX.withConnection { implicit c =>
           NormalizedURI.getByNormalizedUrl("http://www.keepit.com/med") === None
@@ -37,7 +38,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
       }
     }
     "search gets short" in {
-      running(FakeApplication()) {
+      running(new EmptyApplication()) {
         setup()
         CX.withConnection { implicit c =>
           val all = NormalizedURI.all
@@ -48,7 +49,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
       }
     }
     "search gets long" in {
-      running(FakeApplication()) {
+      running(new EmptyApplication()) {
         setup()
         CX.withConnection { implicit c =>
           NormalizedURI.getByNormalizedUrl("http://www.keepit.com/long").get.url === "http://www.keepit.com/long" 
@@ -59,7 +60,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
   
   "NormalizedURIs search by title" should {
     "search none" in {
-      running(FakeApplication()) {
+      running(new EmptyApplication()) {
         setup()
         val none = CX.withConnection { implicit c =>
           NormalizedURI.search("none")
@@ -68,7 +69,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
       }
     }
     "search short" in {
-      running(FakeApplication()) {
+      running(new EmptyApplication()) {
         setup()
         val shorts = CX.withConnection { implicit c =>
           NormalizedURI.search("short")
@@ -81,7 +82,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
       }
     }
     "search titles" in {
-      running(FakeApplication()) {
+      running(new EmptyApplication()) {
         setup()
         val titles = CX.withConnection { implicit c =>
           NormalizedURI.search("title") map { u => (u.uri.title, u) } toMap
@@ -100,7 +101,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
       }
     }
     "search short titles" in {
-      running(FakeApplication()) {
+      running(new EmptyApplication()) {
         setup()
         val titles = CX.withConnection { implicit c =>
           NormalizedURI.search("short title")
