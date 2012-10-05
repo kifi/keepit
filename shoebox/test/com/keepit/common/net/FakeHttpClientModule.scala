@@ -1,4 +1,4 @@
-package com.netwallet.common.net
+package com.keepit.common.net
 
 import com.tzavellas.sse.guice.ScalaModule
 

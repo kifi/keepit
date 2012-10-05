@@ -20,7 +20,7 @@ class PostOfficeTest extends Specification with TestAkkaSystem {
 
   "PostOffice" should {
     "persist and load email" in {
-      running(new TellerApplication().withFakeHealthcheck()) {
+      running(new ShoeboxApplication().withFakeHealthcheck()) {
         val mail1 = inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.TEAM, subject = "foo 1", htmlBody = "some body in html 1"))
         val outbox1 = CX.withConnection { implicit c => ElectronicMail.outbox() }
         outbox1.size === 1

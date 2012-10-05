@@ -44,7 +44,7 @@ console.log("injecting keep it hover div");
       chrome.extension.sendRequest(request, function(response) {
         console.log("bookmark added! -> " + JSON.stringify(response));
         slideOut();
-      });
+     });
     });
 
     close.click(function() {
@@ -103,11 +103,50 @@ console.log("injecting keep it hover div");
           $("#keep_summary").html("<span class='keep_summary_friends'>"+summary+"</span></br>choose to keep this bookmark");
           var faces = $("#keep_faces");
           $(users).each(function(index, user){
-            var img =  $("<img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square' width='24' height='24' alt=''>");
+            var img =  $("<a href='#'><img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square' width='24' height='24' alt=''></a>");
             faces.append(img);
+            img.click(function() {
+              chatWith(user);
+            });
           });
         },
         "json"
     )//.error(callback);
+  }
+
+
+  function chatWith(user) {
+    console.log("Im here");
+    
+    var chatBox = $("<div class='keepit_chat_box'>  </div>");
+    $('#keepit_hover').append(chatBox);
+
+    var img = $("<img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square' width='24' height='24' alt=''>");
+    chatBox.append(img);
+    var message = $("<input type='text' class='keepit_text_message'/>");
+    var button = $("<button class='keepit_chat_button'>send</button>");
+    chatBox.append(message);
+    chatBox.append(button);
+    var closeForm= $("<a href='#' class='keepit_close_form'>X</a>");
+    chatBox.append(closeForm);
+    
+    closeForm.click(function() {
+      chatBox.remove();
+    });
+    button.click(function(){
+      console.log("going to send chat: " + document.location.href);
+      var xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4) {
+          console.log("[chat response] xhr response:");
+          var result = $.parseJSON(xhr.response);
+          console.log(result);
+        }
+      }
+      xhr.open("POST", 'http://dev.keepitfindit.com:9000/chat/'+user.exuuid, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send(JSON.stringify(  {"url": document.location.href, "message":message.val() } ));
+      console.log("sent")
+    });
   }
 })();

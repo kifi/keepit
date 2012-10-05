@@ -1,4 +1,4 @@
-package com.netwallet.common.net
+package com.keepit.common.net
 
 import play.api.libs.json._
 import org.specs2.mutable.Specification

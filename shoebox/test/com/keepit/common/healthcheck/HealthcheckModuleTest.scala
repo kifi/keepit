@@ -8,14 +8,15 @@ import play.api.test.Helpers.running
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
-import com.keepit.test.TellerApplication
+import com.keepit.test.ShoeboxApplication
+import com.keepit.shoebox.ShoeboxModule
 
 @RunWith(classOf[JUnitRunner])
 class HealthcheckModuleTest extends Specification {
 
   "HealthcheckModule" should {
     "load" in {
-      running(new TellerApplication().withFakeMail()) {
+      running(new ShoeboxApplication().withFakeMail()) {
         
         val mail1 = inject[Healthcheck].reportStart()
         val outbox1 = inject[FakeOutbox]
