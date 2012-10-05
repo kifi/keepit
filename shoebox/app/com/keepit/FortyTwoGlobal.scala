@@ -55,8 +55,10 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
     }
     log.info("Starting " + this)
     val baseUrl: String = current.configuration.getString("application.baseUrl").get
-    log.info("FortyTwo %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
-        FortyTwoServices.currentService, FortyTwoServices.currentVersion, FortyTwoServices.compilationTime, baseUrl))
+    var startMessage = "FortyTwo %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
+        FortyTwoServices.currentService, FortyTwoServices.currentVersion, FortyTwoServices.compilationTime, baseUrl)
+    log.info(startMessage)
+    println(startMessage)
     scope.onStart(app)
 //    if (app.mode != Mode.Test) healthcheck.reportStart()
   }
