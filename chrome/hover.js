@@ -78,15 +78,6 @@ console.log("injecting keep it hover div");
     });
   }
 
-  setTimeout(function() {
-    chrome.extension.sendRequest({"type": "get_opt"}, function(response) {
-      env = response.env;
-      server =  response.server;
-      getUserInfo(showBookmarkHover);
-      getUsersKeptThisUrl();
-    });
-  }, 3000);
-
   function getUsersKeptThisUrl() {
     $.get("http://"+server+"/users/keepurl?url="+encodeURIComponent(document.location.href),
         null,
@@ -149,4 +140,14 @@ console.log("injecting keep it hover div");
       console.log("sent")
     });
   }
+
+  setTimeout(function() {
+    chrome.extension.sendRequest({"type": "get_opt"}, function(response) {
+      env = response.env;
+      server =  response.server;
+      getUserInfo(showBookmarkHover);
+      getUsersKeptThisUrl();
+    });
+  }, 3000);
+
 })();
