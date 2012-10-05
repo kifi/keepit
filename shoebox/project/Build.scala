@@ -31,20 +31,27 @@ object ApplicationBuild extends Build {
       "ru.circumflex" % "circumflex-orm" % "2.1" % "compile->default",
       "mysql" % "mysql-connector-java" % "5.1.10",
       "org.clapper" %% "grizzled-slf4j" % "0.6.9",
-//      "jivesoftware" % "smack" % "3.2.2"
+      "com.typesafe.akka" % "akka-testkit" % "2.0.2",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
-      "org.apache.lucene" % "lucene-core" % "3.0.0"
+      "org.apache.lucene" % "lucene-core" % "3.0.0"         
     )
 
-   val ssDependencies = Seq(
-      // Add your project dependencies here,
+    /*
+     * play-plugins-util is dependent on guice 2.x while we use guice 3.x.
+     * guice 2.x is imported from com.cedarsoft and it screws up the entire runtime!
+     * for more info
+     * https://github.com/harrah/xsbt/wiki/Library-Management
+     * https://github.com/typesafehub/play-plugins/blob/master/guice/project/Build.scala
+     * http://stackoverflow.com/questions/10958215/how-to-exclude-commons-logging-from-a-scala-sbt-slf4j-project 
+     */
+    val secureSocialDependencies = Seq(
       "com.typesafe" %% "play-plugins-util" % "2.0.1",
-      "org.mindrot" % "jbcrypt" % "0.3m"
-    )
+      "org.mindrot" % "jbcrypt" % "0.3m"         
+    ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
     val secureSocial = PlayProject(
-    	"securesocial", appVersion, ssDependencies, mainLang = SCALA, path = file("modules/securesocial")
+    	"securesocial", appVersion, secureSocialDependencies, mainLang = SCALA, path = file("modules/securesocial")
     ).settings(
       resolvers ++= Seq(
         "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
