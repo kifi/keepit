@@ -251,7 +251,7 @@
   	// Listen for the content script to send a message to the background page.
   	chrome.extension.onRequest.addListener(onRequest);
 
-    function getOptions() {
+    function getConfigs() {
       try {
         var env = localStorage["env"];
         if (!env) {
