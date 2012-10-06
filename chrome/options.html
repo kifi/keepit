@@ -34,7 +34,7 @@
           },
           "json"
       ).error(callback);
-    }
+    });
   }
 
 
@@ -74,11 +74,11 @@
       }
     }
 
-  $("#facebook_connect_link").click(function(){
+  $("#facebook_connect_link").click(function() {
     chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
       window.open("http://" + config.server + "/authenticate/facebook", "connect", "width=500,height=400");
       return false;
-    }
+    });
   });
   
   getuserinfo(renderUserInfo);
