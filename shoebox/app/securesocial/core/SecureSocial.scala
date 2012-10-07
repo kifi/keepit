@@ -72,7 +72,7 @@ trait SecureSocial extends Controller {
           if ( apiClient ) {
             apiClientForbidden(request)
           } else {
-            Redirect(routes.LoginPage.logout())
+            Redirect(com.keepit.controllers.routes.AuthController.logout())
           }
         }
       }.getOrElse {
@@ -82,7 +82,7 @@ trait SecureSocial extends Controller {
         if ( apiClient ) {
           apiClientForbidden(request)
         } else {
-          Redirect(routes.LoginPage.login()).flashing("error" -> Messages("securesocial.loginRequired")).withSession(
+          Redirect(com.keepit.controllers.routes.AuthController.login()).flashing("error" -> Messages("securesocial.loginRequired")).withSession(
             session + (SecureSocial.OriginalUrlKey -> request.uri)
           )
         }

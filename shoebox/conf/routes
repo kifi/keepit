@@ -18,6 +18,7 @@ GET     /users/keepurl              com.keepit.controllers.UserController.usersK
 GET     /login                      com.keepit.controllers.AuthController.login
 GET     /logout                     com.keepit.controllers.AuthController.logout
 GET     /authenticate/:provider     com.keepit.controllers.AuthController.authenticate(provider)
+GET     /authenticate/:provider     com.keepit.controllers.AuthController.authenticateByPost(provider)
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
 GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
 
@@ -27,3 +28,12 @@ POST    /chat/:recipientId          com.keepit.controllers.ChatController.chat(r
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
+
+
+##########################################
+# Secure social routes
+##########################################
+
+# User Registration
+GET     /signup                     securesocial.controllers.Registration.signUp
+POST    /signup                     securesocial.controllers.Registration.handleSignUp

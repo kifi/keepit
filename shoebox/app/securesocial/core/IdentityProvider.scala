@@ -83,7 +83,7 @@ abstract class IdentityProvider(application: Application) extends Plugin {
    * to the provider url.
    * @return
    */
-  def authenticationUrl:String = routes.LoginPage.authenticate(providerId).url
+  def authenticationUrl:String = com.keepit.controllers.routes.AuthController.authenticate(providerId).url
 
   /**
    * The property key used for all the provider properties.

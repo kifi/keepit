@@ -89,7 +89,7 @@ object Registration extends Controller {
           AuthenticationMethod.UserPassword,
           passwordInfo = Some(use[PasswordHasher].hash(info.password)))
         UserService.save(user)
-        Redirect(routes.LoginPage.login()).flashing("success" -> "Thank you for signing up.  Check your email for further instructions")
+        Redirect(com.keepit.controllers.routes.AuthController.login()).flashing("success" -> "Thank you for signing up.  Check your email for further instructions")
       }
     )
   }
