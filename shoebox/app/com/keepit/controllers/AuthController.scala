@@ -80,6 +80,7 @@ object AuthController extends Controller with securesocial.core.SecureSocial
    * @return
    */
   def authenticate(provider: String) = handleAuth(provider)
+  def authenticateByPost(provider: String) = handleAuth(provider)
 
   
   private def handleAuth(provider: String) = Action { implicit request =>

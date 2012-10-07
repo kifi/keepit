@@ -64,7 +64,7 @@ object LoginPage extends Controller
    * @return
    */
   def logout = Action { implicit request =>
-    val to = Play.configuration.getString(onLogoutGoTo).getOrElse(routes.LoginPage.login().absoluteURL())
+    val to = Play.configuration.getString(onLogoutGoTo).getOrElse(com.keepit.controllers.routes.AuthController.login().absoluteURL())
     Redirect(to).withSession(session - SecureSocial.UserKey - SecureSocial.ProviderKey)
   }
 
@@ -97,7 +97,7 @@ object LoginPage extends Controller
           })
         } catch {
           case ex: AccessDeniedException => Logger.warn("User declined access using provider " + provider)
-          Redirect(routes.LoginPage.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
+          Redirect(com.keepit.controllers.routes.AuthController.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
         }
       }
       case _ => NotFound

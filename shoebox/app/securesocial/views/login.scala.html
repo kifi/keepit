@@ -29,7 +29,7 @@
     <div class="clearfix">
         <p>@Messages("securesocial.login.useEmailAndPassword")</p>
 
-        @helper.form(action = securesocial.controllers.routes.LoginPage.authenticateByPost("userpass"), 'class -> "form-horizontal",  'autocomplete -> "off") {
+        @helper.form(action = com.keepit.controllers.routes.AuthController.authenticateByPost("userpass"), 'class -> "form-horizontal",  'autocomplete -> "off") {
             <fieldset>
 
                 @helper.inputText(
@@ -46,7 +46,7 @@
 
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">@Messages("securesocial.login.title")</button>
-                    <a class="btn" href="@securesocial.controllers.routes.LoginPage.login()">@Messages("securesocial.signup.cancel")</a>
+                    <a class="btn" href="@com.keepit.controllers.routes.AuthController.login()">@Messages("securesocial.signup.cancel")</a>
                 </div>
 
             </fieldset>
