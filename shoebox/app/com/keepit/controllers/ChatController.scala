@@ -30,6 +30,7 @@ import play.api.libs.json.JsValue
 import securesocial.core._
 import securesocial.core.providers.FacebookProvider
 import com.keepit.common.db.ExternalId
+import securesocial.core.providers.FacebookProvider
 //import scala.collection.immutable.Map
 
 object ChatController extends Controller with SecureSocial with Logging {
@@ -57,13 +58,16 @@ object ChatController extends Controller with SecureSocial with Logging {
     val user = CX.withConnection { implicit c =>
       User.get(externalId)
     }
+    
+    val settings = ProviderRegistry.get(FacebookProvider.Facebook).get.asInstanceOf[OAuth2Provider].settings
+    
     user.facebookId match {
         case Some(rfid) =>
           val connection = createConnection()
           connection.connect()
           log.info("user %s has facebookId %s".format(user, rfid))
           val accessToken = request.user.oAuth2Info.map(info => info.accessToken).getOrElse(throw new IllegalStateException("access token is missing for user %s".format(user)))
-          val apiKey = "530357056981814" //should be loaded from conf
+          val apiKey = settings.clientId
           connection.login(apiKey, accessToken)
           send(connection, url, message, rfid)
           connection.disconnect()
