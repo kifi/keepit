@@ -27,16 +27,6 @@ object ApplicationBuild extends Build {
     writeToFile("conf/app_version.txt", appVersion)
     writeToFile("conf/app_compilation_date.txt", now)
 
-    val appDependencies = Seq(
-      "ru.circumflex" % "circumflex-orm" % "2.1" % "compile->default",
-      "mysql" % "mysql-connector-java" % "5.1.10",
-      "org.clapper" %% "grizzled-slf4j" % "0.6.9",
-      "com.typesafe.akka" % "akka-testkit" % "2.0.2",
-      "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
-      "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
-      "org.apache.lucene" % "lucene-core" % "3.0.0"         
-    )
-
     /*
      * play-plugins-util is dependent on guice 2.x while we use guice 3.x.
      * guice 2.x is imported from com.cedarsoft and it screws up the entire runtime!
@@ -45,19 +35,18 @@ object ApplicationBuild extends Build {
      * https://github.com/typesafehub/play-plugins/blob/master/guice/project/Build.scala
      * http://stackoverflow.com/questions/10958215/how-to-exclude-commons-logging-from-a-scala-sbt-slf4j-project 
      */
-    val secureSocialDependencies = Seq(
+    val appDependencies = Seq(
+      "ru.circumflex" % "circumflex-orm" % "2.1" % "compile->default",
+      "mysql" % "mysql-connector-java" % "5.1.10",
+      "org.clapper" %% "grizzled-slf4j" % "0.6.9",
+      "com.typesafe.akka" % "akka-testkit" % "2.0.2",
+      "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
+      "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
+      "org.apache.lucene" % "lucene-core" % "3.0.0",
+      //used for securesocial
       "com.typesafe" %% "play-plugins-util" % "2.0.1",
       "org.mindrot" % "jbcrypt" % "0.3m"         
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
-
-    val secureSocial = PlayProject(
-    	"securesocial", appVersion, secureSocialDependencies, mainLang = SCALA, path = file("modules/securesocial")
-    ).settings(
-      resolvers ++= Seq(
-        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
-        "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
-      )
-    )
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
       // add some imports to the routes file
@@ -67,9 +56,10 @@ object ApplicationBuild extends Build {
       ),
 
       resolvers ++= Seq(
-        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
         "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-        "kevoree Repository" at "http://maven2.kevoree.org/release/"
+        "kevoree Repository" at "http://maven2.kevoree.org/release/",
+        //used for securesocial
+        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/"
       ),
       
       // add some imports to the templates files
@@ -82,7 +72,5 @@ object ApplicationBuild extends Build {
         "com.google.inject" % "guice" % "3.0",
         "org.scalatest" %% "scalatest" % "2.0.M4" % "test"
       )
-      
-    ).dependsOn(secureSocial).aggregate(secureSocial)
-
+    )
 }
