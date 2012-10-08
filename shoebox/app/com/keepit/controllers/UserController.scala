@@ -122,5 +122,10 @@ object UserController extends Controller with Logging {
     }
     Ok(views.html.user(user, bookmarks))
   }
+
+  def usersView = Action { implicit request => 
+    val users = CX.withConnection { implicit c => User.all }
+    Ok(views.html.users(users))
+  }
 }
 

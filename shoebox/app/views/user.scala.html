@@ -23,6 +23,7 @@
         <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
     </head>
     <body>
+      [<a href="@com.keepit.controllers.routes.UserController.usersView">All Users</a>]<br/><br/>
       <h2>User details</h2>
 	      Name: @{user.firstName} @{user.lastName}<br/>
 	      Id: @{user.id}<br/>
@@ -39,15 +40,12 @@
 		  <table>
         <tr>
           <th>BID</th>
-          <th></th>
           <th>Bookmark</th>
-          <th>URI</th>
         </tr>
 			  @for(bookmark <- bookmarks) {
 			    <tr>
             <td>#@bookmark.id.get.id</td>
-			      <td><a href="@com.keepit.controllers.routes.BookmarksController.edit(bookmark.id.get)">edit</td>
-			      <td><a href="@bookmark.url">@bookmark.title</a></td>
+            <td>@adminHelper.bookmarkDisplay(bookmark)</td>
 			    </tr>
 			  }
 		  </table>
