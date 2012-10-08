@@ -36,87 +36,6 @@ import com.keepit.common.db.CX
  */
 object AuthController extends Controller with securesocial.core.SecureSocial
 {
-  /**
-   * The property that specifies the page the user is redirected to if there is no original URL saved in
-   * the session.
-   */
-  val onLoginGoTo = "securesocial.onLoginGoTo"
-
-  /**
-   * The property that specifies the page the user is redirected to after logging out.
-   */
-  val onLogoutGoTo = "securesocial.onLogoutGoTo"
-
-  /**
-   * The root path
-   */
-  val Root = "/"
-
-
-
-  /**
-   * Renders the login page
-   * @return
-   */
-  def login = Action { implicit request =>
-    Ok(securesocial.views.html.login(ProviderRegistry.all().values, securesocial.core.providers.UsernamePasswordProvider.loginForm))
-  }
-
-  /**
-   * Logs out the user by clearing the credentials from the session.
-   * The browser is redirected either to the login page or to the page specified in the onLogoutGoTo property.
-   *
-   * @return
-   */
-  def logout = Action { implicit request =>
-    val to = Play.configuration.getString(onLogoutGoTo).getOrElse(routes.AuthController.login().absoluteURL())
-    Redirect(to).withSession(session - SecureSocial.UserKey - SecureSocial.ProviderKey)
-  }
-
-  /**
-   * The authentication flow for all providers starts here.
-   *
-   * @param provider The id of the provider that needs to handle the call
-   * @return
-   */
-  def authenticate(provider: String) = handleAuth(provider)
-  def authenticateByPost(provider: String) = handleAuth(provider)
-
-  
-  private def handleAuth(provider: String) = Action { implicit request =>
-    ProviderRegistry.get(provider) match {
-      case Some(p) => {
-        try {
-          p.authenticate().fold( result => result , {
-            user =>
-              if ( Logger.isDebugEnabled ) {
-                Logger.debug("User logged in : [" + user + "]")
-                
-              }
-              CX.withConnection { implicit c =>
-              	val keepitId = internUser(FacebookId(user.id.id),user.displayName, user.displayName).id 
-              	Logger.debug("intern user with facebookId %s, keepitId = %s".format(user.id.id, keepitId))
-              }
-              
-              val toUrl = session.get(SecureSocial.OriginalUrlKey).getOrElse(
-                Play.configuration.getString(onLoginGoTo).getOrElse("/welcome")
-              )
-              Redirect(toUrl).withSession { session +
-                (SecureSocial.UserKey -> user.id.id) +
-                (SecureSocial.ProviderKey -> user.id.providerId) -
-                SecureSocial.OriginalUrlKey
-              }
-          })
-        } catch {
-          case ex: AccessDeniedException => Logger.warn("User declined access using provider " + provider)
-          Redirect(routes.AuthController.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
-        }
-      }
-      case _ => NotFound
-    }
-  }
-  
- 
   def isLoggedIn = SecuredAction(true) { implicit request => {
 	  def socialUser = UserService.find(request.user.id)
       
@@ -145,19 +64,6 @@ object AuthController extends Controller with securesocial.core.SecureSocial
 
   
   def welcome = SecuredAction() { implicit request =>
-    Ok(views.html.welcome(request.user))
-  }
-  
-  private def internUser(facebookId: FacebookId, firstName : String, lastName : String): User = CX.withConnection { implicit conn =>     
-  	User.getOpt(facebookId) match {
- 			case Some(user) => 
- 				user
- 			case None =>
- 				User(
- 					firstName = firstName,
- 					lastName = lastName,
- 					facebookId = Some(facebookId)
- 				).save
-  	}
+    Ok(securesocial.views.html.protectedAction(request.user))
   }
 }

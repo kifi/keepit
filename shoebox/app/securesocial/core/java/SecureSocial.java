@@ -150,7 +150,7 @@ public class SecureSocial {
                     } else {
                         ctx.flash().put("error", play.i18n.Messages.get("securesocial.loginRequired"));
                         ctx.session().put(ORIGINAL_URL, ctx.request().uri());
-                        return redirect(com.keepit.controllers.routes.AuthController.login());
+                        return redirect(securesocial.controllers.routes.LoginPage.login());
                     }
                 } else {
                     SocialUser user = currentUser();
@@ -165,7 +165,7 @@ public class SecureSocial {
                             ctx.session().remove(PROVIDER_KEY);
                             return forbidden( forbiddenJson() );
                         } else {
-                            return redirect(com.keepit.controllers.routes.AuthController.logout());
+                            return redirect(securesocial.controllers.routes.LoginPage.logout());
                         }
                     }
                 }
