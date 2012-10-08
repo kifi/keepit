@@ -3,7 +3,7 @@
 # ~~~~
 
 # Home page
-GET     /bookmarks                  com.keepit.controllers.BookmarksController.allView
+GET     /bookmarks                  com.keepit.controllers.BookmarksController.bookmarksView
 
 POST    /bookmarks/add              com.keepit.controllers.BookmarksController.addBookmarks
 GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all
@@ -12,6 +12,7 @@ POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.d
 
 GET     /bookmarks/search           com.keepit.controllers.BookmarksController.searchBookmarks(term: String, keepitId: Id[User])
 
+GET     /users                      com.keepit.controllers.UserController.usersView
 GET     /user                       com.keepit.controllers.UserController.userView(userId: Id[User])
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
 
