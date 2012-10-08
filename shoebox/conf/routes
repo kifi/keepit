@@ -15,10 +15,6 @@ GET     /bookmarks/search           com.keepit.controllers.BookmarksController.s
 GET     /user                       com.keepit.controllers.UserController.userView(userId: Id[User])
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
 
-GET     /login                      com.keepit.controllers.AuthController.login
-GET     /logout                     com.keepit.controllers.AuthController.logout
-GET     /authenticate/:provider     com.keepit.controllers.AuthController.authenticate(provider)
-GET     /authenticate/:provider     com.keepit.controllers.AuthController.authenticateByPost(provider)
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
 GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
 
@@ -34,6 +30,15 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 # Secure social routes
 ##########################################
 
+# Login page
+GET     /login                      securesocial.controllers.LoginPage.login
+GET     /logout                     securesocial.controllers.LoginPage.logout
+
 # User Registration
 GET     /signup                     securesocial.controllers.Registration.signUp
 POST    /signup                     securesocial.controllers.Registration.handleSignUp
+
+# Providers entry points
+GET     /authenticate/:provider     securesocial.controllers.LoginPage.authenticate(provider)
+POST    /authenticate/:provider     securesocial.controllers.LoginPage.authenticateByPost(provider)
+
