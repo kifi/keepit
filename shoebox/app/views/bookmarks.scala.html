@@ -1,19 +1,5 @@
 @(bookmarksAndUsers: Seq[(Bookmark, NormalizedURIStats, User)])
 
-@userWithFacebookDisplay(user: User, facebookId: FacebookId) = {
-  <span style="margin:2px">
-    <a data-hover="tooltip" title="@user.firstName @user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@facebookId" target="_blank">
-      <img src="https://graph.facebook.com/@facebookId/picture?type=square" width="30" height="30" alt=""/>
-    </a>
-  </span>
-}
-
-@userWithoutFacebookDisplay(user: User) = {
-  <span style="margin:2px; font-size:50%">
-    No Facebook Id:</br>(@user.id.get) @user.firstName
-  </span>
-}
-
 <!DOCTYPE html>
 
 <html>
@@ -21,14 +7,13 @@
         <title>All Bookmarks</title>
         <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-        <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
     </head>
     <body>
+      <h2>All Bookmarks</h2>
 		  <table>
 		    <tr>
           <th>Id</th>
 		      <th>User</th>
-		      <th></th>
 		      <th>Title</th>
 		      <th>Shares</th>
 		      <th>URI Hash</th>
@@ -38,8 +23,7 @@
 		    <tr>
           <td>@bookmark.id.get.id</td>
 		      <td>@adminHelper.userDisplay(user)</td>
-		      <td><a href="@com.keepit.controllers.routes.BookmarksController.edit(bookmark.id.get)">edit</td>
-		      <td><a href="@bookmark.url">@bookmark.title</a></td>
+		      <td>@adminHelper.bookmarkDisplay(bookmark)</td>
 		      <td>@uriStat.bookmarks.size</td>
 		      <td>@uriStat.uri.urlHash</td>
 		      <td>@bookmark.createdAt</td>

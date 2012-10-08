@@ -46,7 +46,7 @@ object BookmarksController extends Controller with Logging {
     CX.withConnection { implicit conn =>
       val bookmark = Bookmark.get(id)
       bookmark.delete()
-      Redirect(com.keepit.controllers.routes.BookmarksController.allView)
+      Redirect(com.keepit.controllers.routes.BookmarksController.bookmarksView)
     }
   }  
   
@@ -57,7 +57,7 @@ object BookmarksController extends Controller with Logging {
     Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
   }
   
-  def allView = Action{ request =>
+  def bookmarksView = Action{ request =>
     val bookmarksAndUsers = CX.withConnection { implicit conn =>
       val bookmarks = Bookmark.all
       val users = bookmarks map (_.userId.get) map User.get
