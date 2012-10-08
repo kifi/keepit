@@ -41,3 +41,4 @@ POST    /signup                     securesocial.controllers.Registration.handle
 # Providers entry points
 GET     /authenticate/:provider     securesocial.controllers.LoginPage.authenticate(provider)
 POST    /authenticate/:provider     securesocial.controllers.LoginPage.authenticateByPost(provider)
+
