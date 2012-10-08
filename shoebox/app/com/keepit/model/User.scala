@@ -4,11 +4,14 @@ import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
 import com.keepit.common.db.NotFoundException
 import com.keepit.common.time._
 import com.keepit.common.crypto._
+import com.keepit.serializer.SocialUserSerializer
 import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
 import ru.circumflex.orm._
+import securesocial.core.SocialUser
+import play.api.libs.json._
 
 case class User(
   id: Option[Id[User]] = None,
@@ -19,9 +22,10 @@ case class User(
   lastName: String,
   state: State[User] = User.States.ACTIVE,
   facebookId: Option[FacebookId] = None,
-  facebookAccessToken: Option[FacebookAccessToken] = None
+  socialUser: Option[SocialUser] = None
 ) {
-  def withFacebookId(facebookId: FacebookId, facebookAccessToken: Option[FacebookAccessToken]) = copy(facebookId = Some(facebookId), facebookAccessToken = facebookAccessToken)
+  //assuming only facebook id for now
+  def withSecureSocial(socialUser: SocialUser) = copy(facebookId = Some(FacebookId(socialUser.id.id)), socialUser = Some(socialUser))
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
   def withExternalId(id: ExternalId[User]) = copy(externalId = id)
   
@@ -81,7 +85,7 @@ private[model] class UserEntity extends Entity[User, UserEntity] {
   val lastName = "last_name".VARCHAR(256).NOT_NULL
   val state = "state".STATE[User].NOT_NULL(User.States.ACTIVE)
   val facebookId = "facebook_id".VARCHAR(16)
-  val facebookAccessToken = "facebook_access_token".VARCHAR(512)
+  val socialUser = "social_user".VARCHAR(2048)
   
   def relation = UserEntity
   
@@ -94,7 +98,7 @@ private[model] class UserEntity extends Entity[User, UserEntity] {
     lastName = lastName(),
     state = state(),
     facebookId = facebookId.map(FacebookId(_)),
-    facebookAccessToken = facebookAccessToken.map(FacebookAccessToken(_))
+    socialUser = socialUser.map{ s => new SocialUserSerializer().reads(Json.parse(s)) }
   )
 }
 
@@ -111,7 +115,7 @@ private[model] object UserEntity extends UserEntity with EntityTable[User, UserE
     user.lastName := view.lastName
     user.state := view.state
     user.facebookId.set(view.facebookId.map(_.value))
-    user.facebookAccessToken.set(view.facebookAccessToken.map(_.value))
+    user.socialUser.set(view.socialUser.map{ s => new SocialUserSerializer().writes(s).toString() })
     user
   }
 }
