@@ -4,6 +4,7 @@ console.log("starting keepit google_inject.js");
   $ = jQuery.noConflict()
 
   var lastInjected = null;
+  var config = null;
 
   function log(message) {
     console.log(message);
@@ -59,6 +60,10 @@ console.log("starting keepit google_inject.js");
     });
   }
 
+  chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
+    config = response;
+  });
+
   updateQuery();
 
   $('#main').change(function() {
@@ -91,7 +96,20 @@ console.log("starting keepit google_inject.js");
         link.append('<div class="vsc"><h3 class="r"><a href="'+e.bookmark.url+'">'+e.bookmark.title+'</a></h3><div class="vspib" aria-label="Result details" role="button" tabindex="0"></div><div class="s"><div class="f kv"><cite>'+e.bookmark.url+'</cite></div></div></div><!--n-->')
         resultCount++;
         $(e.users).each(function(j, user){
-          var user = $('<span style="margin:2px"><a data-hover="tooltip" title="'+user.firstName+' '+user.lastName+'" class="name_tooltip_link" href="http://www.facebook.com/'+user.facebookId+'" target="_blank"><img src="https://graph.facebook.com/'+user.facebookId+'/picture?type=square" width="30" height="30" alt=""></a></span>');
+          var user;
+          if(user.facebookId) {
+            user = $(
+              '<span style="margin:2px">' +
+                '<a data-hover="tooltip" title="' + user.firstName + ' ' + user.lastName + '" class="name_tooltip_link" href="http://www.facebook.com/' + user.facebookId + '" target="_blank">' + 
+                  '<img src="https://graph.facebook.com/' + user.facebookId + '/picture?type=square" width="30" height="30" alt="' + user.firstName + ' ' + user.lastName + '">' + 
+                '</a>' + 
+              '</span>');
+          } else {
+            user = 
+              '<span style="margin:2px">' +
+                '<img src="http://' + config.server + '/assets/images/missing_user.jpg" width="30" height="30" alt="Anon User">' + 
+              '</span>';
+          }
           link.append(user);
         });
         tail.before(link);
