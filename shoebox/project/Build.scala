@@ -45,7 +45,8 @@ object ApplicationBuild extends Build {
       "org.apache.lucene" % "lucene-core" % "3.0.0",
       //used for securesocial
       "com.typesafe" %% "play-plugins-util" % "2.0.1",
-      "org.mindrot" % "jbcrypt" % "0.3m"         
+      "org.mindrot" % "jbcrypt" % "0.3m",
+      "edu.uci.ics" % "crawler4j" % "3.3"
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
