@@ -11,6 +11,7 @@ console.log("injecting keep it hover div");
       return;
     }
     var hover = $("<div id='keepit_hover' class='keepit_hover'></div>");
+
     var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
     var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
     var bar = $("<div class='keep_hover_bar'>" + 
@@ -97,11 +98,16 @@ console.log("injecting keep it hover div");
           $("#keep_summary").html("<span class='keep_summary_friends'>"+summary+"</span></br>choose to keep this bookmark");
           var faces = $("#keep_faces");
           $(users).each(function(index, user){
-            var img =  $("<a href='#'><img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square' width='24' height='24' alt=''></a>");
-            faces.append(img);
-            img.click(function() {
-              chatWith(user);
-            });
+            if(user.facebookId) {
+              var img =  $("<a href='#'><img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square' width='24' height='24' alt=''></a>");
+              faces.append(img);
+              img.click(function() {
+                chatWith(user);
+              });
+            } else { //facebook id is missing for some reason!
+              var img =  $("<img class='keep_face' src='/assets/images/missing_user.jpg' width='24' height='24' alt=''>");
+              faces.append(img);
+            }
           });
         },
         "json"
@@ -144,12 +150,10 @@ console.log("injecting keep it hover div");
     });
   }
 
-  setTimeout(function() {
-    chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
-      config = response;
-      getUserInfo(showBookmarkHover);
-      getUsersKeptThisUrl();
-    });
-  }, 1);
+  chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
+    config = response;
+    getUserInfo(showBookmarkHover);
+    getUsersKeptThisUrl();
+  });
 
 })();
