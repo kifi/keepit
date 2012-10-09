@@ -7,6 +7,10 @@
   <script type="text/javascript">
 
   // Saves configs to localStorage.
+
+  $("#user_info_data").hide();
+  $("#connect_to_server").hide();
+
   
   function upload() {
     chrome.extension.sendRequest({type: "upload_all_bookmarks"}, function(response) {});
@@ -27,7 +31,13 @@
     localStorage["max_search_results"] = $("#max_search_results").val();
     localStorage["hover_timeout"] = $("#hover_timeout").val();
     var keepitId = $("#keepit_id").val();
-    localStorage["user_info"]= JSON.stringify(localStorage["user_info"])
+    if (localStorage["user_info"]) {
+      var userInfo = JSON.parse(localStorage["user_info"]);
+      if (userInfo) {
+        userInfo.keepit_id = $("#keepit_id").val();
+      }
+      localStorage["user_info"]= userInfo;
+    }
   }
 
   function getuserinfo(callback) {
@@ -38,20 +48,25 @@
             callback(data) 
           },
           "json"
-      ).error(callback);
+      ).error(function(error) {
+        console.log(error.responseText);
+        alert("user is not logged in: " + error.responseText);
+        callback(null);
+      });
     });
   }
 
 
   function renderUserInfo(userInfo) {
+    debugger;
     if (userInfo && userInfo.status && userInfo.status=="loggedin") {
       localStorage["user_info"]  = JSON.stringify(userInfo);
       $("#user_info_data").show();
       $("#connect_to_server").hide();
-      $("#user_name").html(userInfo.name)
-      $("#user_avatar").attr("src",userInfo.avatarUrl);
+      $("#user_name").html(userInfo.name);
+      $("#user_avatar").attr("src", userInfo.avatarUrl);
     } else {
-      localStorage["user_info"]  = null;
+      localStorage.removeItem("user_info");
       $("#connect_to_server").show();
       $("#user_info_data").hide();
     }     
@@ -110,7 +125,7 @@
         Max Search Results: <input type="text" id="max_search_results" name="max_search_results" value="10"></input><br/> 
         Show Hover timeout in seconds: <input type="text" id="hover_timeout" name="hover_timeout" value="10"></input><br/> 
         <font size="small">If the value of the timeout is not a positive number (as in '0' or "NA") the hover will not show</font><br/> 
-        KeepIt ID: <input type="text" id="keepit_id" name="keepit_id" value="" readonly="readonly"></input><br/> 
+        KeepIt ID: <input type="text" id="keepit_id" name="keepit_id" value=""></input><br/> 
         <button onclick="saveConfigs()">Save</button><br/> 
         <button onclick="upload()">Upload all my bookmarks</button><br/> 
         <button onclick="resetUser()">Reset User Info</button><br/> 
