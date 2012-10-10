@@ -13,9 +13,9 @@ class Scraper {
   val pageFetcher = new PageFetcher(config)
   val parser = new Parser(config);
   
-  def getArticle(urlId: Long, url: String): Option[Article] = {
-    val webURL = new WebURL
+  def fetchArticle(urlId: Long, url: String): Article = {
     var fetchResult: PageFetchResult = null
+    val webURL = new WebURL
     webURL.setURL(url)
     try {
       val fetchResult = pageFetcher.fetchHeader(webURL);
@@ -27,7 +27,7 @@ class Scraper {
         } else if (fetchResult.getStatusCode() == CustomFetchStatus.PageTooBig) {
           // logger.info("Skipping a page which was bigger than max allowed size: " + curURL.getURL());
         }
-        None
+        throw new ScraperException(statusCode, "error: htmlStatusCode=" + statusCode)
       } else {
         // the status is OK. now scrape it
         val page = new Page(webURL)
@@ -36,20 +36,19 @@ class Scraper {
             case htmlData: HtmlParseData =>
               val title = htmlData.getTitle()
               val content = htmlData.getText()
-              Some(Article(urlId, url, title, content))
-            case _ => None // ignore
+              Article(urlId, url, title, content)
+            case _ => throw new ScraperException(statusCode, "not html")
           }
         } else {
-          None
+          throw new ScraperException(statusCode, "parse failed")
         }
       }
-    } catch {
-      case e: Exception =>
-        e.printStackTrace()
-    	//logger.error(e.getMessage() + ", while processing: " + curURL.getURL())
-        None
     } finally {
       if (fetchResult != null) fetchResult.discardContentIfNotConsumed();
     }
   }
+
+  class ScraperException(val httpStatusCode: Int, msg: String) extends Exception(msg)
 }
+
+  
