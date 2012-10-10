@@ -19,7 +19,9 @@
       if(message) {
         errMessage = "[" + message + "] " + exception.message;
       }
-      console.error(exception);
+      if (exception) {
+        console.error(exception);
+      }
       console.error(errMessage);
       console.error(exception.stack);
       alert("exception: " + exception.message);
@@ -98,8 +100,9 @@
             addKeep(bookmarks, request, sendResponse, tab);
           });
         } else if (request.type == "get_conf") {
+          debugger;
           var conf = getConfigs();
-  				sendResponse(conf);
+          sendResponse(conf);
         } else if (request.type == "upload_all_bookmarks") {
           upload_all_bookmarks();
         }
@@ -276,13 +279,18 @@
         if (env === "development") {
           server = "dev.ezkeep.com:9000";
         }
-        return {
+        var userInfo = localStorage["user_info"];
+        if (userInfo) {
+          var userInfoString = JSON.parse(userInfo);
+        }
+        var config = {
           "env": env, 
           "hoverTimeout": hoverTimeout, 
           "maxRes": maxRes,
           "server": server,
-          "userInfo": JSON.parse(localStorage["user_info"])
+          "userInfo": userInfoString
         }
+        return config;
       } catch (e) {
         error(e);
       }
