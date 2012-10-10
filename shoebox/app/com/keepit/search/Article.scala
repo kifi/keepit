@@ -1,3 +1,5 @@
 package com.keepit.search
 
-case class Article(id: Long, url: String, title:String, content:String)
+import com.keepit.model.NormalizedURI
+
+case class Article(normalizedUri: NormalizedURI, title:String, content:String)
