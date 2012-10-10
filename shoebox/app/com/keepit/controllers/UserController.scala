@@ -27,9 +27,7 @@ import com.keepit.controllers.CommonActions._
 import com.keepit.model.FacebookId
 import play.api.http.ContentTypes
 
-object 
-
-extends Controller with Logging {
+object UserController extends Controller with Logging {
 
   /**
    * Call me using:
@@ -51,7 +49,7 @@ extends Controller with Logging {
     }
     Ok(JsObject(List(
       "userId" -> JsNumber(user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
-      "externalId" -> JsString(user.externalId),
+      "externalId" -> JsString(user.externalId.id),
       "userObject" -> UserSerializer.userSerializer.writes(user)
     )))
   }
@@ -83,7 +81,7 @@ extends Controller with Logging {
     }
     Ok(JsObject(List(
       "userId" -> JsNumber(user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
-      "externalId" -> JsString(user.externalId),
+      "externalId" -> JsString(user.externalId.id),
       "userObject" -> UserSerializer.userSerializer.writes(user)
     )))
   }
@@ -99,7 +97,7 @@ extends Controller with Logging {
     Ok(JsArray(users map { user => 
       JsObject(List(
         "userId" -> JsNumber(user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
-        "externalId" -> JsString(user.externalId),
+      "externalId" -> JsString(user.externalId.id),
         "userObject" -> UserSerializer.userSerializer.writes(user)
       ))
     }))
