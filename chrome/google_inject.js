@@ -96,6 +96,7 @@ console.log("starting keepit google_inject.js");
         link.append('<div class="vsc"><h3 class="r"><a href="'+e.bookmark.url+'">'+e.bookmark.title+'</a></h3><div class="vspib" aria-label="Result details" role="button" tabindex="0"></div><div class="s"><div class="f kv"><cite>'+e.bookmark.url+'</cite></div></div></div><!--n-->')
         resultCount++;
         var socialBar = $("<div class='keep_social_bar'/>");
+        var missingId = 1;
         $(e.users).each(function(j, user){
           console.log("there are " + e.users.length + " users who kept this bookmark:");
           console.log(e.users);
@@ -106,8 +107,8 @@ console.log("starting keepit google_inject.js");
                 '<img class="keep_face" src="https://graph.facebook.com/' + user.facebookId + '/picture?type=square" alt="' + user.firstName + ' ' + user.lastName + '">' + 
               '</a>');
           } else {
-            user = 
-              '<img class="keep_face" src="http://' + config.server + '/assets/images/missing_user.jpg" alt="Anon User">';
+            user = $('<img class="keep_face" src="http://' + config.server + '/assets/images/missing_user' + missingId + '.jpg" alt="Anon User">');
+            missingId++;
           }
           socialBar.append(user);
         });
