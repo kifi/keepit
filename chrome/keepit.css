@@ -82,10 +82,10 @@
 
 .keep_face {
   float: left;
-  padding: 0px 4px 0px 0px;
+  padding: 0px 0px 0px 0px;
   width: 24px;
   height: 24px;
-  margin: 0px 2px 0px 2px;
+  margin: 0px 0px 0px 1px;
 }
 
 .keep_summary_friends {
