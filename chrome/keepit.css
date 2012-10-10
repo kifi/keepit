@@ -62,16 +62,35 @@
   margin: 18px 10px 10px 36px;
 }
 
+.social_bar_message {
+  float: left;
+  color: #878787;
+  font-size: 11px;
+  padding: 6px 0px 0px 0px;
+  margin: 0px 0px 0px 3px;
+  font-family: arial, helvetica; 
+}
+
+.social_bar_action {
+  float: right;
+  color: #2D4486;
+  font-size: 12px;
+  padding: 5px 0px 0px 0px;
+  margin: 0px 0px 0px 3px;
+  font-family: arial, helvetica; 
+}
+
 .keep_face {
+  float: left;
   padding: 0px 4px 0px 0px;
   width: 24px;
   height: 24px;
+  margin: 0px 2px 0px 2px;
 }
 
 .keep_summary_friends {
   color: blue;
 }
-
 
 .keep_hover_buttons {
   height: 53px;
@@ -101,6 +120,7 @@
 }
 
 .keep_social_bar {
+  margin: 4px 0px 0px 0px;
   padding: 0px 4px 0px 0px;
   width: 100%;
   height: 24px;

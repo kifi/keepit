@@ -102,19 +102,19 @@ console.log("starting keepit google_inject.js");
           var user;
           if(user.facebookId) {
             user = $(
-              '<span style="margin:2px">' +
-                '<a data-hover="tooltip" title="' + user.firstName + ' ' + user.lastName + '" class="name_tooltip_link" href="http://www.facebook.com/' + user.facebookId + '" target="_blank">' + 
-                  '<img class="keep_face" src="https://graph.facebook.com/' + user.facebookId + '/picture?type=square" alt="' + user.firstName + ' ' + user.lastName + '">' + 
-                '</a>' + 
-              '</span>');
+              '<a data-hover="tooltip" title="' + user.firstName + ' ' + user.lastName + '" class="name_tooltip_link" href="http://www.facebook.com/' + user.facebookId + '" target="_blank">' + 
+                '<img class="keep_face" src="https://graph.facebook.com/' + user.facebookId + '/picture?type=square" alt="' + user.firstName + ' ' + user.lastName + '">' + 
+              '</a>');
           } else {
             user = 
-              '<span style="margin:2px">' +
-                '<img class="keep_face" src="http://' + config.server + '/assets/images/missing_user.jpg" alt="Anon User">' + 
-              '</span>';
+              '<img class="keep_face" src="http://' + config.server + '/assets/images/missing_user.jpg" alt="Anon User">';
           }
           socialBar.append(user);
         });
+        if (e.users.length === 1) {
+          singleUserSocialBar(socialBar);
+        }
+        addActionToSocialBar(socialBar);
         link.append(socialBar);
         tail.before(link);
       });
@@ -154,6 +154,14 @@ console.log("starting keepit google_inject.js");
     } catch (e) {
       error(e);
     }
+  }
+
+  function singleUserSocialBar(socialBar) {
+    socialBar.append("<div class='social_bar_message'>You Kept it</div>");
+  }
+
+  function addActionToSocialBar(socialBar) {
+    socialBar.append("<div class='social_bar_action'>Share It</div>");
   }
 
   function injectDiv(ol, resultCount, callback) {
