@@ -22,7 +22,7 @@ console.log("injecting keep it hover div");
       "</div>");
     hover.append(bar);
     var othersKeptThisPage = $("<div id='keep_hover_others'  class='keep_hover_others'></div>");
-    var othersFaces = $("<div id='keep_faces'</div>");
+    var othersFaces = $("<div id='keep_face'</div>");
     var othersSummary = $("<div id='keep_summary'</div>");
 
     othersKeptThisPage.append(othersFaces);
@@ -96,16 +96,16 @@ console.log("injecting keep it hover div");
             summary = users.length+" other friends";
           }
           $("#keep_summary").html("<span class='keep_summary_friends'>"+summary+"</span></br>choose to keep this bookmark");
-          var faces = $("#keep_faces");
+          var faces = $("#keep_face");
           $(users).each(function(index, user){
             if(user.facebookId) {
-              var img =  $("<a href='#'><img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square' width='24' height='24' alt=''></a>");
+              var img =  $("<a href='#'><img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square'></a>");
               faces.append(img);
               img.click(function() {
                 chatWith(user);
               });
             } else { //facebook id is missing for some reason!
-              var img =  $("<img class='keep_face' src='/assets/images/missing_user.jpg' width='24' height='24' alt=''>");
+              var img =  $("<img class='keep_face' src='/assets/images/missing_user.jpg'");
               faces.append(img);
             }
           });
