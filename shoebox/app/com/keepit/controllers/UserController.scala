@@ -48,8 +48,9 @@ object UserController extends Controller with Logging {
       user
     }
     Ok(JsObject(List(
-        "userId" -> JsNumber(user.id.get.id),
-        "userObject" -> UserSerializer.userSerializer.writes(user)
+      "userId" -> JsNumber(user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
+      "externalId" -> JsString(user.externalId.id),
+      "userObject" -> UserSerializer.userSerializer.writes(user)
     )))
   }
 
@@ -79,8 +80,9 @@ object UserController extends Controller with Logging {
       user
     }
     Ok(JsObject(List(
-        "userId" -> JsNumber(user.id.get.id),
-        "userObject" -> UserSerializer.userSerializer.writes(user)
+      "userId" -> JsNumber(user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
+      "externalId" -> JsString(user.externalId.id),
+      "userObject" -> UserSerializer.userSerializer.writes(user)
     )))
   }
 
@@ -94,9 +96,10 @@ object UserController extends Controller with Logging {
     }
     Ok(JsArray(users map { user => 
       JsObject(List(
-        "userId" -> JsNumber(user.id.get.id),
+        "userId" -> JsNumber(user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
+      "externalId" -> JsString(user.externalId.id),
         "userObject" -> UserSerializer.userSerializer.writes(user)
-        ))
+      ))
     }))
   }
 
