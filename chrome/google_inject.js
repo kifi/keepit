@@ -95,23 +95,27 @@ console.log("starting keepit google_inject.js");
         var link = $('<li class="g"></li>');
         link.append('<div class="vsc"><h3 class="r"><a href="'+e.bookmark.url+'">'+e.bookmark.title+'</a></h3><div class="vspib" aria-label="Result details" role="button" tabindex="0"></div><div class="s"><div class="f kv"><cite>'+e.bookmark.url+'</cite></div></div></div><!--n-->')
         resultCount++;
+        var socialBar = $("<div class='keep_social_bar'/>");
         $(e.users).each(function(j, user){
+          console.log("there are " + e.users.length + " users who kept this bookmark:");
+          console.log(e.users);
           var user;
           if(user.facebookId) {
             user = $(
               '<span style="margin:2px">' +
                 '<a data-hover="tooltip" title="' + user.firstName + ' ' + user.lastName + '" class="name_tooltip_link" href="http://www.facebook.com/' + user.facebookId + '" target="_blank">' + 
-                  '<img src="https://graph.facebook.com/' + user.facebookId + '/picture?type=square" width="30" height="30" alt="' + user.firstName + ' ' + user.lastName + '">' + 
+                  '<img class="keep_face" src="https://graph.facebook.com/' + user.facebookId + '/picture?type=square" alt="' + user.firstName + ' ' + user.lastName + '">' + 
                 '</a>' + 
               '</span>');
           } else {
             user = 
               '<span style="margin:2px">' +
-                '<img src="http://' + config.server + '/assets/images/missing_user.jpg" width="30" height="30" alt="Anon User">' + 
+                '<img class="keep_face" src="http://' + config.server + '/assets/images/missing_user.jpg" alt="Anon User">' + 
               '</span>';
           }
-          link.append(user);
+          socialBar.append(user);
         });
+        link.append(socialBar);
         tail.before(link);
       });
       ol.hide();
