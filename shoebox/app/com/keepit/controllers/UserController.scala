@@ -27,7 +27,9 @@ import com.keepit.controllers.CommonActions._
 import com.keepit.model.FacebookId
 import play.api.http.ContentTypes
 
-object UserController extends Controller with Logging {
+object 
+
+extends Controller with Logging {
 
   /**
    * Call me using:
@@ -48,8 +50,9 @@ object UserController extends Controller with Logging {
       user
     }
     Ok(JsObject(List(
-        "userId" -> JsNumber(user.id.get.id),
-        "userObject" -> UserSerializer.userSerializer.writes(user)
+      "userId" -> JsNumber(user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
+      "externalId" -> JsString(user.externalId),
+      "userObject" -> UserSerializer.userSerializer.writes(user)
     )))
   }
 
@@ -79,8 +82,9 @@ object UserController extends Controller with Logging {
       user
     }
     Ok(JsObject(List(
-        "userId" -> JsNumber(user.id.get.id),
-        "userObject" -> UserSerializer.userSerializer.writes(user)
+      "userId" -> JsNumber(user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
+      "externalId" -> JsString(user.externalId),
+      "userObject" -> UserSerializer.userSerializer.writes(user)
     )))
   }
 
@@ -94,9 +98,10 @@ object UserController extends Controller with Logging {
     }
     Ok(JsArray(users map { user => 
       JsObject(List(
-        "userId" -> JsNumber(user.id.get.id),
+        "userId" -> JsNumber(user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
+        "externalId" -> JsString(user.externalId),
         "userObject" -> UserSerializer.userSerializer.writes(user)
-        ))
+      ))
     }))
   }
 

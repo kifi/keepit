@@ -71,7 +71,7 @@
 			log("bookmarks:");
       log(bookmarks);
       var json = {
-       "bookmarks": bookmarks,
+        "bookmarks": bookmarks,
         "user_info": userInfo
       }
       var tosend = JSON.stringify(json);
@@ -310,12 +310,14 @@
           log(result);
           log("keepitId="+keepitId);
           userInfo.keepit_id = keepitId;
-          localStorage["user_info"]=JSON.stringify(userInfo); 
+          localStorage["user_info"] = JSON.stringify(userInfo); 
           callback();
         }
       }
       xhr.open("POST", 'http://' + getConfigs().server + '/users/anonymous', true);
-      xhr.send(JSON.stringify({user_info:userInfo}));
+      xhr.send(JSON.stringify({
+        user_info: userInfo
+      }));
     }
 
     function onUpdate() {
