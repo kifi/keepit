@@ -58,7 +58,6 @@
 
 
   function renderUserInfo(userInfo) {
-    debugger;
     if (userInfo && userInfo.status && userInfo.status=="loggedin") {
       localStorage["user_info"]  = JSON.stringify(userInfo);
       $("#user_info_data").show();

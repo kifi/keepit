@@ -112,8 +112,13 @@ console.log("starting keepit google_inject.js");
           }
           socialBar.append(user);
         });
-        if (e.users.length === 1) {
+        var numOfUsers = e.users.length;
+        if (numOfUsers === 1) {
           singleUserSocialBar(socialBar);
+        } else if (numOfUsers > 1) {
+          multipleUserSocialBar(socialBar, numOfUsers);
+        } else { //no users
+          noUserSocialBar(socialBar);
         }
         addActionToSocialBar(socialBar);
         link.append(socialBar);
@@ -159,6 +164,12 @@ console.log("starting keepit google_inject.js");
 
   function singleUserSocialBar(socialBar) {
     socialBar.append("<div class='social_bar_message'>You Kept it</div>");
+  }
+
+  function multipleUserSocialBar(socialBar, numOfUsers) {
+    socialBar.append("<div class='social_bar_message'>you and <span class='social_bar_message_highlighted'>" +
+      numOfUsers + " other friends</span>" + 
+      " choose to keep this</div>");
   }
 
   function addActionToSocialBar(socialBar) {
