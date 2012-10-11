@@ -32,7 +32,9 @@ class CustomTypeConverter extends TypeConverter {
   }
 }
 
-case class Id[T](id: Long)
+case class Id[T](id: Long) {
+  override def toString = id.toString
+}
 
 object Id {
   implicit def queryStringBinder[T](implicit longBinder: QueryStringBindable[Long]) = new QueryStringBindable[Id[T]] {

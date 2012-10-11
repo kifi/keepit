@@ -1,7 +1,9 @@
 package com.keepit.search
 
 import com.keepit.common.logging.Logging
-import scala.collection.Map
+import com.keepit.common.db.Id
+import com.keepit.model.NormalizedURI
+import scala.collection.mutable.{Map => MutableMap}
 import com.amazonaws.auth._
 import com.amazonaws.services.s3._
 import com.amazonaws.services.s3.model.ObjectMetadata
@@ -10,11 +12,11 @@ import com.amazonaws.AmazonServiceException
 import java.io.{InputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.lang.UnsupportedOperationException
 
-class S3ArticleStore(bucketName: String, accessKey: String, secretKey: String) extends Map[Long, Article] with Logging {
+class S3ArticleStore(bucketName: String, accessKey: String, secretKey: String) extends MutableMap[Id[NormalizedURI], Article] with Logging {
   val awsCredentials = new BasicAWSCredentials(accessKey, secretKey)
   val amazonS3Client = new AmazonS3Client(awsCredentials)
 
-  def + [T >: Article](kv: (Long, T)):Map[Long, T] = {
+  def += (kv: (Id[NormalizedURI], Article)) = {
     kv match {
       case (normalizedUrlId, article) =>
         doWithS3Client("adding an item to S3ArticleStore"){ s3Client =>
@@ -24,14 +26,14 @@ class S3ArticleStore(bucketName: String, accessKey: String, secretKey: String) e
     this
   }
   
-  def - (normalizedUrlId: Long) = {
+  def -= (normalizedUrlId: Id[NormalizedURI]) = {
     doWithS3Client("removing an item from S3ArticleStore"){ s3Client =>
       s3Client.deleteObject(bucketName, normalizedUrlId.toString)
     }
     this
   }
   
-  def get(normalizedUrlId: Long): Option[Article] = {
+  def get(normalizedUrlId: Id[NormalizedURI]): Option[Article] = {
     doWithS3Client("getting an item from S3ArticleStore"){ s3Client =>
       val s3obj = s3Client.getObject(bucketName, normalizedUrlId.toString)
       val is = s3obj.getObjectContent
