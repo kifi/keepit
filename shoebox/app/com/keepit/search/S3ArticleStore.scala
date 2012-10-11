@@ -12,7 +12,9 @@ import com.amazonaws.AmazonServiceException
 import java.io.{InputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.lang.UnsupportedOperationException
 
-class S3ArticleStore(bucketName: String, accessKey: String, secretKey: String) extends MutableMap[Id[NormalizedURI], Article] with Logging {
+trait ArticleStore extends MutableMap[Id[NormalizedURI], Article]
+
+class S3ArticleStoreImpl(bucketName: String, accessKey: String, secretKey: String) extends ArticleStore with Logging {
   val awsCredentials = new BasicAWSCredentials(accessKey, secretKey)
   val amazonS3Client = new AmazonS3Client(awsCredentials)
 

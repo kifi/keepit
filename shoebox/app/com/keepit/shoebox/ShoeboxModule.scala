@@ -11,6 +11,7 @@ import com.keepit.common.healthcheck.HealthcheckImpl
 import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.PostOfficeImpl
 import com.keepit.common.net._
+import com.keepit.scraper._
 import com.keepit.inject._
 import play.api.Play
 import com.keepit.common.mail.MailSender
@@ -21,19 +22,16 @@ case class ShoeboxModule() extends ScalaModule {
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
     
-    bind[ActorSystem].toProvider[ActorPlugin]
+    bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
+    bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
   }
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin = {
-    new ActorPlugin("shoebox-actor-system")
-  }
+  def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-actor-system")
   
   @Provides
-  def httpClientProvider: HttpClient = {
-      new HttpClientImpl()
-  }
+  def httpClientProvider: HttpClient = new HttpClientImpl()
   
   @Provides
   @AppScoped
