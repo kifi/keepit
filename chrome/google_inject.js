@@ -94,7 +94,15 @@ console.log("starting keepit google_inject.js");
       var resultCount = 0;
       $(searchResults).each(function(i, e){
         var link = $('<li class="g"></li>');
-        link.append('<div class="vsc"><h3 class="r"><a href="'+e.bookmark.url+'">'+e.bookmark.title+'</a></h3><div class="vspib" aria-label="Result details" role="button" tabindex="0"></div><div class="s"><div class="f kv"><cite>'+e.bookmark.url+'</cite></div></div></div><!--n-->')
+        var greenUrl = e.bookmark.url;
+        if (greenUrl.indexOf("https://drive.google.com/") === 0) { //we need to do the classification on the server.
+          greenUrl = $("<img class='keep_face' src='/assets/images/google_drive_logo_48x42.png'/> A folder in your google drive");
+        }
+        link.append(
+          '<div class="vsc"><h3 class="r"><a href="' + e.bookmark.url + '">' + e.bookmark.title + 
+          '</a></h3><div class="vspib" aria-label="Result details" role="button" tabindex="0"></div><div class="s"><div class="f kv"><cite>' + 
+          greenUrl + 
+          '</cite></div></div></div><!--n-->')
         resultCount++;
         var socialBar = $("<div class='keep_social_bar'/>");
         var missingId = 1;
@@ -102,7 +110,6 @@ console.log("starting keepit google_inject.js");
         console.log(e.users);
         console.log("there are " + e.users.length + " users who kept this bookmark:");
         $(e.users).each(function(j, user){
-          debugger;
           if (userInfo.externalId == user.externalId) {
             selfKeptIt = true;
           }
