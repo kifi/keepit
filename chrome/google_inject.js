@@ -94,9 +94,15 @@ console.log("starting keepit google_inject.js");
       var resultCount = 0;
       $(searchResults).each(function(i, e){
         var link = $('<li class="g"></li>');
-        var greenUrl = "<cite>" + e.bookmark.url + "</cite>";
+        var bookmarkUrl = e.bookmark.url;
+        var greenUrl;
         if (e.bookmark.url.indexOf("https://drive.google.com/") === 0) { //we need to do the classification on the server.
           greenUrl = "<cite><img class='keep_classified_logo' src='http://" + config.server + "/assets/images/google_drive_logo_48x42.png'/> <span class='classified_link_text'>A folder in your google drive</span></cite>";
+        } else {
+          if (bookmarkUrl.length > 75) {
+            bookmarkUrl = bookmarkUrl.substring(0, 75) + "..."
+          }
+          greenUrl = "<cite>" + bookmarkUrl + "</cite>";
         }
         link.append(
           '<div class="vsc"><h3 class="r"><a href="' + e.bookmark.url + '">' + e.bookmark.title + 
