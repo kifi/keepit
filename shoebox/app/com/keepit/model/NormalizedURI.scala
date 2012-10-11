@@ -37,6 +37,8 @@ case class NormalizedURI  (
     entity.view
   }
   
+  def withState(state: State[NormalizedURI]) = copy(state = state)
+  
   def loadUsingHash(implicit conn: Connection): Option[NormalizedURI] =
     (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlHash EQ urlHash) unique}.map(_.view)
   
