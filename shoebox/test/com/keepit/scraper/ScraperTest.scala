@@ -50,13 +50,11 @@ class ScraperTest extends SpecificationWithJUnit {
     
     "fetch ACTIVE uris and scrape them" in {
       running(new EmptyApplication()) {
-        var uri1: NormalizedURI = null
-        var uri2: NormalizedURI = null
-        CX.withConnection { implicit c =>
+        var (uri1, uri2) = CX.withConnection { implicit c =>
           val user1 = User(firstName = "Joe", lastName = "Smith").save
           val user2 = User(firstName = "Moo", lastName = "Brown").save
-          uri1 = NormalizedURI(title = "existing", url = "http://www.keepit.com/existing").save
-          uri2 = NormalizedURI(title = "missing", url = "http://www.keepit.com/missing").save
+          (NormalizedURI(title = "existing", url = "http://www.keepit.com/existing").save, 
+           NormalizedURI(title = "missing", url = "http://www.keepit.com/missing").save)
         }
         val store = MutableMap.empty[Id[NormalizedURI], Article]
         val scraper = getMockScraper(store)
