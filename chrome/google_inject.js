@@ -28,7 +28,6 @@ console.log("starting keepit google_inject.js");
     var queryInput = $("input[name='q']");
     var query = queryInput.val();
     if (!query) {
-      debugger;
       log("query is undefined");
       return;
     }
@@ -37,7 +36,9 @@ console.log("starting keepit google_inject.js");
       type: "get_keeps", 
       query: queryInput.val()
     };
-    chrome.extension.sendRequest(request, function(searchResults) {
+    chrome.extension.sendRequest(request, function(results) {
+      var searchResults = results.searchResults;
+      var userInfo = results.userInfo;
       try {
         if (!(searchResults) || searchResults.length == 0) {
           log("No search results!");
@@ -49,10 +50,10 @@ console.log("starting keepit google_inject.js");
         if (old && old.length > 0) {
           old.slideUp(function(){
             old.remove();
-            addResults(searchResults);
+            addResults(userInfo, searchResults);
           });
         } else {
-          addResults(searchResults);
+          addResults(userInfo, searchResults);
         }
       } catch (e) {
         error(e);
@@ -78,7 +79,7 @@ console.log("starting keepit google_inject.js");
 
   /*******************************************************/
 
-  function addResults(searchResults) {
+  function addResults(userInfo, searchResults) {
     try {
       var old = $('#keepit');
       if (old.length > 0) {
@@ -101,6 +102,9 @@ console.log("starting keepit google_inject.js");
         console.log(e.users);
         console.log("there are " + e.users.length + " users who kept this bookmark:");
         $(e.users).each(function(j, user){
+          if (userInfo.externalId == user.externalId) {
+            selfKeptIt = true;
+          }
           var userView;
           if(user.facebookId) {
             userView = $(
