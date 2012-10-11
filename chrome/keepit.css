@@ -62,16 +62,20 @@
   margin: 18px 10px 10px 36px;
 }
 
+.social_bar_text {
+  padding: 4px 0px 0px 0px;
+}
+
 .social_bar_message {
   color: #878787;
   font-size: 11px;
-  padding: 6px 0px 0px 0px;
   margin: 0px 0px 0px 3px;
   font-family: arial, helvetica; 
 }
 
 .social_bar_message_highlighted {
   color: #2D4486;
+  margin: 0px 0px 0px 3px;
   font-size: 11px;
   font-family: arial, helvetica; 
 }

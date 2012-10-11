@@ -118,25 +118,27 @@ console.log("starting keepit google_inject.js");
           }
           socialBar.append(userView);
         });
+        var socialBarText = $("<div class='social_bar_text'/>")
         var numOfUsers = e.users.length;
         if (selfKeptIt) {
           if (numOfUsers === 1) {
-            socialBar.append("<span class='social_bar_message'>You Kept it</span>");
+            socialBarText.append("<span class='social_bar_message'>You Kept it</span>");
           } else {
-            socialBar.append("<span class='social_bar_message'>You and</span>");
+            socialBarText.append("<span class='social_bar_message'>You and</span>");
           }
         }
         if (numOfUsers === 1) {
-          socialBar.append(
+          socialBarText.append(
             "<span class='social_bar_message_highlighted'> one other friend</span>" +
-            " <span class='social_bar_message'>choose to keep this</span>");
+            "<span class='social_bar_message'>choose to keep this</span>");
         } else if (numOfUsers > 1) {
-          socialBar.append(
+          socialBarText.append(
             "<span class='social_bar_message_highlighted'>" + numOfUsers + " other friends</span>" + 
-            " <span class='social_bar_message'>choose to keep this</span>");
+            "<span class='social_bar_message'>choose to keep this</span>");
         } else { //no users
           throw Error("not implemented yet");
         }
+        socialBar.append(socialBarText);
         addActionToSocialBar(socialBar);
         link.append(socialBar);
         tail.before(link);
