@@ -146,7 +146,7 @@
           if (searchResults.length > maxRes) {
             searchResults = searchResults.slice(0, maxRes);
           }
-          sendResponse(searchResults);
+          sendResponse({"userInfo": userInfo, "searchResults": searchResults});
         }
       }
       term = request.query;
@@ -337,7 +337,7 @@
       return details.version;
     }
 
-    var userInfo = {keepit_id:null}
+    var userInfo = {keepit_id: null}
 
     function hasUserInfoInLocalStorage() {
       var ls = localStorage["user_info"];

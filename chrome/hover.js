@@ -143,7 +143,7 @@ console.log("injecting keep it hover div");
           console.log(result);
         }
       }
-      xhr.open("POST", 'http://' + config.server + '/chat/' + user.exuuid, true);
+      xhr.open("POST", 'http://' + config.server + '/chat/' + user.externalId, true);
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send(JSON.stringify(  {"url": document.location.href, "message":message.val() } ));
       console.log("sent");
