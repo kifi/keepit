@@ -10,7 +10,7 @@ class UserSerializer extends Writes[User] {
   
   def writes(user: User): JsValue =
     JsObject(List(
-      "exuuid"  -> JsString(user.externalId.toString),
+      "externalId"  -> JsString(user.externalId.toString),
       "firstName" -> JsString(user.firstName),
       "lastName"  -> JsString(user.lastName),
       "facebookId"  -> { user.facebookId map {id => JsString(id.value)} getOrElse (JsNull) }
