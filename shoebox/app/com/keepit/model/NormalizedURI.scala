@@ -65,6 +65,12 @@ object NormalizedURI {
     NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized)) 
   }
   
+  def apply(title: String, url: String, state: State[NormalizedURI]): NormalizedURI = {
+    //better: use http://stackoverflow.com/a/4057470/81698
+    val normalized = normalize(url)
+    NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized), state = state) 
+  }
+  
   private def normalize(url: String) = url //new URI(url).normalize().toString()
   
   private def hashUrl(normalizedUrl: String): String = {
@@ -83,6 +89,10 @@ object NormalizedURI {
   def search(term: String)(implicit conn: Connection): Seq[URISearchResults] = {
     val uris: Seq[NormalizedURI] = tokenize(term) map searchToken flatten;
     createSearchResults(term, uris)
+  }
+  
+  def getByState(state: State[NormalizedURI])(implicit conn: Connection): Seq[NormalizedURI] = {
+    (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.state EQ state) }.list.map( _.view )
   }
   
   private def createSearchResults(term: String, uris: Seq[NormalizedURI]): Seq[URISearchResults] = {
@@ -120,6 +130,9 @@ object NormalizedURI {
     
   object States {
     val ACTIVE = State[NormalizedURI]("active")
+    val SCRAPED	= State[NormalizedURI]("scraped")
+    val SCRAPE_FAILED = State[NormalizedURI]("scrape_failed")
+    val INDEXED = State[NormalizedURI]("indexed")
     val INACTIVE = State[NormalizedURI]("inactive")
   }
 }

@@ -120,4 +120,37 @@ class NormalizedURITest extends SpecificationWithJUnit {
       }
     }
   }
+  
+  "NormalizedURIs get created url" should {
+    "search gets nothing" in {
+      running(new EmptyApplication()) {
+    	CX.withConnection { implicit c =>
+    	  val user1 = User(firstName = "Joe", lastName = "Smith").save
+    	  val user2 = User(firstName = "Moo", lastName = "Brown").save
+    	  val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURI.States.INACTIVE).save
+          val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURI.States.SCRAPED).save
+    	}
+        CX.withConnection { implicit c =>
+          NormalizedURI.getByState(NormalizedURI.States.ACTIVE).isEmpty === true
+        }
+      }
+    }
+    "search gets short" in {
+      running(new EmptyApplication()) {
+    	CX.withConnection { implicit c =>
+    	  val user1 = User(firstName = "Joe", lastName = "Smith").save
+    	  val user2 = User(firstName = "Moo", lastName = "Brown").save
+    	  val uri1 = NormalizedURI(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURI.States.ACTIVE).save
+          val uri2 = NormalizedURI(title = "two title", url = "http://www.keepit.com/two", state = NormalizedURI.States.SCRAPED).save
+          val uri3 = NormalizedURI(title = "three title", url = "http://www.keepit.com/three", state = NormalizedURI.States.ACTIVE).save
+    	}
+        CX.withConnection { implicit c =>
+          var all = NormalizedURI.getByState(NormalizedURI.States.ACTIVE)
+          println(all.mkString("\n"))
+          all.size === 2
+        }
+      }
+    }
+  }  
+  
 }
