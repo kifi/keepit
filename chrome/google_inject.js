@@ -97,23 +97,29 @@ console.log("starting keepit google_inject.js");
         resultCount++;
         var socialBar = $("<div class='keep_social_bar'/>");
         var missingId = 1;
+        var selfKeptIt = false;
+        console.log(e.users);
+        console.log("there are " + e.users.length + " users who kept this bookmark:");
         $(e.users).each(function(j, user){
-          console.log("there are " + e.users.length + " users who kept this bookmark:");
-          console.log(e.users);
-          var user;
+          var userView;
           if(user.facebookId) {
-            user = $(
+            userView = $(
               '<a data-hover="tooltip" title="' + user.firstName + ' ' + user.lastName + '" class="name_tooltip_link" href="http://www.facebook.com/' + user.facebookId + '" target="_blank">' + 
                 '<img class="keep_face" src="https://graph.facebook.com/' + user.facebookId + '/picture?type=square" alt="' + user.firstName + ' ' + user.lastName + '">' + 
               '</a>');
           } else {
-            user = $('<img class="keep_face" src="http://' + config.server + '/assets/images/missing_user' + missingId + '.jpg" alt="Anon User">');
+            userView = $('<img class="keep_face" src="http://' + config.server + '/assets/images/missing_user' + missingId + '.jpg" alt="Anon User">');
             missingId++;
           }
-          socialBar.append(user);
+          socialBar.append(userView);
         });
-        if (e.users.length === 1) {
+        var numOfUsers = e.users.length;
+        if (numOfUsers === 1) {
           singleUserSocialBar(socialBar);
+        } else if (numOfUsers > 1) {
+          multipleUserSocialBar(socialBar, numOfUsers);
+        } else { //no users
+          noUserSocialBar(socialBar);
         }
         addActionToSocialBar(socialBar);
         link.append(socialBar);
@@ -159,6 +165,12 @@ console.log("starting keepit google_inject.js");
 
   function singleUserSocialBar(socialBar) {
     socialBar.append("<div class='social_bar_message'>You Kept it</div>");
+  }
+
+  function multipleUserSocialBar(socialBar, numOfUsers) {
+    socialBar.append("<div class='social_bar_message'>you and <span class='social_bar_message_highlighted'>" +
+      numOfUsers + " other friends</span>" + 
+      " choose to keep this</div>");
   }
 
   function addActionToSocialBar(socialBar) {

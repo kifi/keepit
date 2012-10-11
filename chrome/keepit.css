@@ -71,6 +71,12 @@
   font-family: arial, helvetica; 
 }
 
+.social_bar_message_highlighted {
+  color: #2D4486;
+  font-size: 11px;
+  font-family: arial, helvetica; 
+}
+
 .social_bar_action {
   float: right;
   color: #2D4486;

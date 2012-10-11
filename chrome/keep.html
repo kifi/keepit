@@ -100,7 +100,6 @@
             addKeep(bookmarks, request, sendResponse, tab);
           });
         } else if (request.type == "get_conf") {
-          debugger;
           var conf = getConfigs();
           sendResponse(conf);
         } else if (request.type == "upload_all_bookmarks") {
