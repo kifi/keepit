@@ -87,8 +87,8 @@ console.log("starting keepit google_inject.js");
       }
       var ol = $('<ol id="keepit" class="kpt-results"></ol>');
       lastInjected = ol.head;
-      var head = $('<li class="g keepit"><div class="vsc"><h3 class="r"><center>Your Bookmarks</center></h3></div><!--n--></li>')
-      var tail = $('<li class="g keepit"><div class="vsc"><h3 class="r"><center>Google Results</center></h3></div><!--n--></li>')
+      var head = $('<li class="g keepit"><div class="vsc"><h3 class="r">KIFI Validated Results</h3></div><!--n--></li>')
+      var tail = $('<li class="g keepit"><div class="vsc"><h3 class="r">Google Results</h3></div><!--n--></li>')
       ol.append(head);
       head.after(tail);
       var resultCount = 0;
@@ -96,7 +96,7 @@ console.log("starting keepit google_inject.js");
         var link = $('<li class="g"></li>');
         var greenUrl = "<cite>" + e.bookmark.url + "</cite>";
         if (e.bookmark.url.indexOf("https://drive.google.com/") === 0) { //we need to do the classification on the server.
-          greenUrl = "<cite><img class='keep_face' src='http://" + config.server + "/assets/images/google_drive_logo_48x42.png'/> <span class='classified_link_text'>A folder in your google drive</span></cite>";
+          greenUrl = "<cite><img class='keep_classified_logo' src='http://" + config.server + "/assets/images/google_drive_logo_48x42.png'/> <span class='classified_link_text'>A folder in your google drive</span></cite>";
         }
         link.append(
           '<div class="vsc"><h3 class="r"><a href="' + e.bookmark.url + '">' + e.bookmark.title + 
