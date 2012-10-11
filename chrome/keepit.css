@@ -89,11 +89,25 @@
   font-family: arial, helvetica; 
 }
 
+.classified_link_text {
+  float: left;
+  padding: 3px 0px 0px 5px;
+  margin: 0px 0px 0px 0px;
+
+}
+
+.keep_classified_logo {
+  float: left;
+  height: 18px;
+  padding: 0px 0px 0px 0px;
+  margin: 0px 0px 0px 1px;
+}
+
 .keep_face {
   float: left;
-  padding: 0px 0px 0px 0px;
   width: 24px;
   height: 24px;
+  padding: 0px 0px 0px 0px;
   margin: 0px 0px 0px 1px;
 }
 
