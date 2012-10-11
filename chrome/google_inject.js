@@ -94,15 +94,15 @@ console.log("starting keepit google_inject.js");
       var resultCount = 0;
       $(searchResults).each(function(i, e){
         var link = $('<li class="g"></li>');
-        var greenUrl = e.bookmark.url;
-        if (greenUrl.indexOf("https://drive.google.com/") === 0) { //we need to do the classification on the server.
-          greenUrl = $("<img class='keep_face' src='/assets/images/google_drive_logo_48x42.png'/> A folder in your google drive");
+        var greenUrl = "<cite>" + e.bookmark.url + "</cite>";
+        if (e.bookmark.url.indexOf("https://drive.google.com/") === 0) { //we need to do the classification on the server.
+          greenUrl = "<cite><img class='keep_face' src='http://" + config.server + "/assets/images/google_drive_logo_48x42.png'/> <span class='social_bar_text'>A folder in your google drive</span></cite>";
         }
         link.append(
           '<div class="vsc"><h3 class="r"><a href="' + e.bookmark.url + '">' + e.bookmark.title + 
-          '</a></h3><div class="vspib" aria-label="Result details" role="button" tabindex="0"></div><div class="s"><div class="f kv"><cite>' + 
+          '</a></h3><div class="vspib" aria-label="Result details" role="button" tabindex="0"></div><div class="s"><div class="f kv">' + 
           greenUrl + 
-          '</cite></div></div></div><!--n-->')
+          '</div></div></div><!--n-->')
         resultCount++;
         var socialBar = $("<div class='keep_social_bar'/>");
         var missingId = 1;
