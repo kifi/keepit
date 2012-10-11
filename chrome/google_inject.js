@@ -102,6 +102,7 @@ console.log("starting keepit google_inject.js");
         console.log(e.users);
         console.log("there are " + e.users.length + " users who kept this bookmark:");
         $(e.users).each(function(j, user){
+          debugger;
           if (userInfo.externalId == user.externalId) {
             selfKeptIt = true;
           }
@@ -118,12 +119,23 @@ console.log("starting keepit google_inject.js");
           socialBar.append(userView);
         });
         var numOfUsers = e.users.length;
+        if (selfKeptIt) {
+          if (numOfUsers === 1) {
+            socialBar.append("<span class='social_bar_message'>You Kept it</span>");
+          } else {
+            socialBar.append("<span class='social_bar_message'>You and</span>");
+          }
+        }
         if (numOfUsers === 1) {
-          singleUserSocialBar(socialBar);
+          socialBar.append(
+            "<span class='social_bar_message_highlighted'> one other friend</span>" +
+            " <span class='social_bar_message'>choose to keep this</span>");
         } else if (numOfUsers > 1) {
-          multipleUserSocialBar(socialBar, numOfUsers);
+          socialBar.append(
+            "<span class='social_bar_message_highlighted'>" + numOfUsers + " other friends</span>" + 
+            " <span class='social_bar_message'>choose to keep this</span>");
         } else { //no users
-          noUserSocialBar(socialBar);
+          throw Error("not implemented yet");
         }
         addActionToSocialBar(socialBar);
         link.append(socialBar);
@@ -165,16 +177,6 @@ console.log("starting keepit google_inject.js");
     } catch (e) {
       error(e);
     }
-  }
-
-  function singleUserSocialBar(socialBar) {
-    socialBar.append("<div class='social_bar_message'>You Kept it</div>");
-  }
-
-  function multipleUserSocialBar(socialBar, numOfUsers) {
-    socialBar.append("<div class='social_bar_message'>you and <span class='social_bar_message_highlighted'>" +
-      numOfUsers + " other friends</span>" + 
-      " choose to keep this</div>");
   }
 
   function addActionToSocialBar(socialBar) {

@@ -10,7 +10,7 @@ class NormalizedURISerializer extends Writes[NormalizedURI] {
   
   def writes(normalizedURI: NormalizedURI): JsValue =
     JsObject(List(
-      "exuuid"  -> JsString(normalizedURI.externalId.toString),
+      "externalId"  -> JsString(normalizedURI.externalId.toString),
       "title"  -> JsString(normalizedURI.title),
       "url"  -> JsString(normalizedURI.url)
     ))
