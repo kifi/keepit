@@ -98,9 +98,9 @@ console.log("starting keepit google_inject.js");
         var socialBar = $("<div class='keep_social_bar'/>");
         var missingId = 1;
         var selfKeptIt = false;
+        console.log(e.users);
+        console.log("there are " + e.users.length + " users who kept this bookmark:");
         $(e.users).each(function(j, user){
-          console.log("there are " + e.users.length + " users who kept this bookmark:");
-          console.log(e.users);
           var userView;
           if(user.facebookId) {
             userView = $(
