@@ -11,29 +11,51 @@ import com.keepit.common.healthcheck.HealthcheckImpl
 import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.PostOfficeImpl
 import com.keepit.common.net._
+import com.keepit.scraper._
 import com.keepit.inject._
 import play.api.Play
+import play.api.Play.current
 import com.keepit.common.mail.MailSender
+import com.keepit.search._
+import com.amazonaws.services.s3._
+import com.amazonaws.auth.BasicAWSCredentials
 
 case class ShoeboxModule() extends ScalaModule {
   def configure(): Unit = {
+    
     var appScope = new AppScope
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
     
-    bind[ActorSystem].toProvider[ActorPlugin]
+    bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
+    bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
   }
 
+  @Singleton
   @Provides
-  @AppScoped
-  def actorPluginProvider: ActorPlugin = {
-    new ActorPlugin("shoebox-actor-system")
+  def articleStore(bucketName: S3Bucket, amazonS3Client: AmazonS3): ArticleStore = 
+    new S3ArticleStoreImpl(bucketName, amazonS3Client)
+  
+  @Singleton
+  @Provides
+  def s3Bucket: S3Bucket = S3Bucket(current.configuration.getString("amazon.s3.bucket").get)
+  
+  @Singleton
+  @Provides
+  def amazonS3Client(): AmazonS3 = { 
+    var conf = current.configuration.getConfig("amazon.s3").get
+    val awsCredentials = new BasicAWSCredentials(
+        conf.getString("accessKey").get, 
+        conf.getString("secretKey").get)
+    new AmazonS3Client(awsCredentials)
   }
   
   @Provides
-  def httpClientProvider: HttpClient = {
-      new HttpClientImpl()
-  }
+  @AppScoped
+  def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-actor-system")
+  
+  @Provides
+  def httpClientProvider: HttpClient = new HttpClientImpl()
   
   @Provides
   @AppScoped
