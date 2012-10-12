@@ -31,7 +31,7 @@ private[scraper] class ScraperActor(scraper: Scraper) extends Actor with Logging
 
 trait ScraperPlugin extends Plugin
 
-class ScraperPluginImpl(system: ActorSystem, scraper: Scraper) extends ScraperPlugin {
+class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extends ScraperPlugin {
   
   implicit val actorTimeout = Timeout(5 seconds)
   

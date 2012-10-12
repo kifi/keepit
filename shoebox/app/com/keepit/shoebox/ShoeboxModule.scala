@@ -14,10 +14,15 @@ import com.keepit.common.net._
 import com.keepit.scraper._
 import com.keepit.inject._
 import play.api.Play
+import play.api.Play.current
 import com.keepit.common.mail.MailSender
+import com.keepit.search._
+import com.amazonaws.services.s3._
+import com.amazonaws.auth.BasicAWSCredentials
 
 case class ShoeboxModule() extends ScalaModule {
   def configure(): Unit = {
+    
     var appScope = new AppScope
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
@@ -26,6 +31,22 @@ case class ShoeboxModule() extends ScalaModule {
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
   }
 
+  @Provides
+  def articleStore(bucketName: S3Bucket, amazonS3Client: AmazonS3): ArticleStore = 
+    new S3ArticleStoreImpl(bucketName, amazonS3Client)
+  
+  @Provides
+  def s3Bucket: S3Bucket = S3Bucket(current.configuration.getString("amazon.s3.bucket").get)
+  
+  @Provides
+  def amazonS3Client(): AmazonS3 = { 
+    var conf = current.configuration.getConfig("amazon.s3").get
+    val awsCredentials = new BasicAWSCredentials(
+        conf.getString("accessKey").get, 
+        conf.getString("secretKey").get)
+    new AmazonS3Client(awsCredentials)
+  }
+  
   @Provides
   @AppScoped
   def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-actor-system")
