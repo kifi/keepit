@@ -18,13 +18,14 @@ import edu.uci.ics.crawler4j.fetcher.{PageFetcher, PageFetchResult}
 import edu.uci.ics.crawler4j.url.WebURL
 import org.apache.http.HttpStatus
 import scala.collection.mutable.{Map => MutableMap}
+import com.keepit.search.ArticleStore
 
 @RunWith(classOf[JUnitRunner])
 class ScraperTest extends SpecificationWithJUnit {
 
   "Scraper" should {
     "get a article from an existing website" in {
-      val store = MutableMap.empty[Id[NormalizedURI], Article]
+      val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/existing"
       val uri = NormalizedURI(title = "title", url = url, state = NormalizedURI.States.ACTIVE).copy(id = Some(Id(33)))
@@ -36,7 +37,7 @@ class ScraperTest extends SpecificationWithJUnit {
     }
     
     "throw an error from a non-existing website" in {
-      val store = scala.collection.mutable.Map.empty[Id[NormalizedURI], Article]
+      val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/missing"
       val uri = NormalizedURI(title = "title", url = url, state = NormalizedURI.States.ACTIVE).copy(id = Some(Id(44)))
@@ -53,7 +54,7 @@ class ScraperTest extends SpecificationWithJUnit {
           (NormalizedURI(title = "existing", url = "http://www.keepit.com/existing").save, 
            NormalizedURI(title = "missing", url = "http://www.keepit.com/missing").save)
         }
-        val store = MutableMap.empty[Id[NormalizedURI], Article]
+        val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         scraper.run
         store.size === 1
@@ -69,7 +70,7 @@ class ScraperTest extends SpecificationWithJUnit {
     }
   }
 
-  def getMockScraper(articleStore: MutableMap[Id[NormalizedURI], Article]) = {
+  def getMockScraper(articleStore: ArticleStore) = {
   	new Scraper(articleStore) {
   	  override def fetchArticle(uri: NormalizedURI): Either[Article, ScraperError]	 = {
   	    uri.url match {
