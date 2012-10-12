@@ -62,7 +62,8 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   
   class ArticleIndexable(val uri: NormalizedURI, arcicleStore: MutableMap[Id[NormalizedURI], Article]) extends Indexable[NormalizedURI] {
     override val uid = uri.id.get
-    override val idPayloadFieldName = "URI_ID"
+    override val idFieldName = "URI_ID"
+    override val idPayloadFieldName = "URI_ID_PAYLOAD"
     
     override def buildDocument = {
       val doc = super.buildDocument

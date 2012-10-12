@@ -10,9 +10,10 @@ import java.io.IOException
 import scala.collection.JavaConversions._
 
 class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) extends Logging {
-  
+
+  lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
+
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
-    val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
     try {
       f(indexWriter)
     } catch {
@@ -31,10 +32,15 @@ class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig
   def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int)(afterCommit: Seq[Indexable[T]]=>Unit) {
     doWithIndexWriter{ indexWriter =>
       indexables.grouped(commitBatchSize).foreach{ commitBatch =>
-        indexWriter.addDocuments(commitBatch.map(_.buildDocument))
+        commitBatch.foreach{ indexable =>
+          indexWriter.updateDocument(indexable.idTerm, indexable.buildDocument)
+        }
         indexWriter.commit()
         afterCommit(commitBatch)
       }
     }
+    println("numdocs=" + numDocs)
   }
+  
+  def numDocs = indexWriter.numDocs()
 }
