@@ -39,7 +39,6 @@ class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig
         afterCommit(commitBatch)
       }
     }
-    println("numdocs=" + numDocs)
   }
   
   def numDocs = indexWriter.numDocs()
