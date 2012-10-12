@@ -12,24 +12,21 @@ import java.io.IOException
 
 trait Indexable[T] {
 
-  val uid: Id[T]
-  val idFieldName: String
-  val idPayloadFieldName: String
-  val idPayloadTermText = "ID"
-  lazy val idTerm = new Term(idFieldName, uid.id.toString)
-  
+  val id: Id[T]
+  val idTerm = Indexer.idFieldTerm.createTerm(id.toString)
+
   def buildDocument: Document = {
     val doc = new Document()
-    doc.add(new Field(idFieldName, uid.id.toString, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO))
-    doc.add(new Field(idPayloadFieldName, new IdPayloadTokenStream))
+    doc.add(new Field(Indexer.idFieldName, idTerm.text(), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO))
+    doc.add(new Field(Indexer.idPayloadFieldName, new IdPayloadTokenStream(id.id)))
     doc
   }
-    
+
   protected def buildTextField(fieldName: String, fieldValue: String) = {
-	new Field(fieldName, fieldValue, Field.Store.NO, Field.Index.ANALYZED, Field.TermVector.NO)
+    new Field(fieldName, fieldValue, Field.Store.NO, Field.Index.ANALYZED, Field.TermVector.NO)
   }
   
-  class IdPayloadTokenStream extends TokenStream {
+  class IdPayloadTokenStream(id: Long) extends TokenStream {
     var returnToken = true;
 
     @throws(classOf[IOException])
@@ -38,7 +35,6 @@ trait Indexable[T] {
         case true =>
           val payloadAttr = addAttribute(classOf[PayloadAttribute])
           val buf = new Array[Byte](8)
-          val id = uid.id
           buf(0) = id.toByte
           buf(1) = (id >> 8).toByte
           buf(2) = (id >> 16).toByte
@@ -49,12 +45,12 @@ trait Indexable[T] {
           buf(7) = (id >> 56).toByte
           payloadAttr.setPayload(new Payload(buf))
           val termAttr: CharTermAttribute = addAttribute(classOf[CharTermAttribute]);
-          termAttr.append(idPayloadTermText)
+          termAttr.append(Indexer.idPayloadTermText)
           returnToken = false
           true
         case false => false
       }
-    }  
+    }
   }
 }
 

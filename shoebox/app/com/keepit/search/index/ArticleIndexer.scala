@@ -46,11 +46,11 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       val uris = CX.withConnection { implicit c =>
         NormalizedURI.getByState(SCRAPED)
       }
-      indexDocuments(uris.iterator.map{ buildIndexable(_) }, commitBatchSize){ commitBatch =>
+      indexDocuments(uris.iterator.map{ uri => buildIndexable(uri) }, commitBatchSize){ commitBatch =>
         commitBatch.foreach{ indexable =>
           CX.withConnection { implicit c =>
-            indexable.asInstanceOf[ArticleIndexable].uri.withState(NormalizedURI.States.INDEXED).save
-          }          
+            NormalizedURI.get(indexable.id).withState(NormalizedURI.States.INDEXED).save
+          }
         }
       }
     } catch {
@@ -58,13 +58,11 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
   }
   
-  def buildIndexable(uri: NormalizedURI) = new ArticleIndexable(uri, articleStore)
+  def buildIndexable(uri: NormalizedURI) = {
+    new ArticleIndexable(uri.id.get, uri, articleStore)
+  }
   
-  class ArticleIndexable(val uri: NormalizedURI, arcicleStore: MutableMap[Id[NormalizedURI], Article]) extends Indexable[NormalizedURI] {
-    override val uid = uri.id.get
-    override val idFieldName = "URI_ID"
-    override val idPayloadFieldName = "URI_ID_PAYLOAD"
-    
+  class ArticleIndexable(override val id: Id[NormalizedURI], uri: NormalizedURI, arcicleStore: MutableMap[Id[NormalizedURI], Article]) extends Indexable[NormalizedURI] {
     override def buildDocument = {
       val doc = super.buildDocument
       articleStore.get(uri.id.get) match {
@@ -77,5 +75,5 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
         case None => doc
       }
     }
-  } 
+  }
 }
