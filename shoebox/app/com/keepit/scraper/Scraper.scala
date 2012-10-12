@@ -68,7 +68,7 @@ class Scraper(articleStore: scala.collection.mutable.Map[Id[NormalizedURI], Arti
       	    case htmlData: HtmlParseData =>
       	      val title = htmlData.getTitle()
               val content = htmlData.getText()
-      		  Left(Article(normalizedUri, title, content)) // return Article             
+      		  Left(Article(normalizedUri.id.get, title, content)) // return Article             
       		case _ => Right(ScraperError(normalizedUri, statusCode, "not html"))
           }
       	} else {

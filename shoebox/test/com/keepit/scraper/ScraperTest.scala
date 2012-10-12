@@ -22,15 +22,12 @@ import scala.collection.mutable.{Map => MutableMap}
 @RunWith(classOf[JUnitRunner])
 class ScraperTest extends SpecificationWithJUnit {
 
-  def setup() = {
-  }
-
   "Scraper" should {
     "get a article from an existing website" in {
       val store = MutableMap.empty[Id[NormalizedURI], Article]
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/existing"
-      val uri = NormalizedURI(title = "title", url = url, state = NormalizedURI.States.ACTIVE)
+      val uri = NormalizedURI(title = "title", url = url, state = NormalizedURI.States.ACTIVE).copy(id = Some(Id(33)))
       val result = scraper.fetchArticle(uri)
 
       result.isLeft === true // Left is Article
@@ -42,7 +39,7 @@ class ScraperTest extends SpecificationWithJUnit {
       val store = scala.collection.mutable.Map.empty[Id[NormalizedURI], Article]
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/missing"
-      val uri = NormalizedURI(title = "title", url = url, state = NormalizedURI.States.ACTIVE)
+      val uri = NormalizedURI(title = "title", url = url, state = NormalizedURI.States.ACTIVE).copy(id = Some(Id(44)))
       val result = scraper.fetchArticle(uri)
       result.isRight === true // Right is ScraperError
       result.right.get.httpStatusCode === HttpStatus.SC_NOT_FOUND
@@ -73,13 +70,13 @@ class ScraperTest extends SpecificationWithJUnit {
   }
 
   def getMockScraper(articleStore: MutableMap[Id[NormalizedURI], Article]) = {
-	new Scraper(articleStore) {
-	  override def fetchArticle(uri: NormalizedURI): Either[Article, ScraperError]	 = {
-	    uri.url match {
-	      case "http://www.keepit.com/existing" => Left(Article(uri, "foo", "bar"))
-	      case "http://www.keepit.com/missing" => Right(ScraperError(uri, HttpStatus.SC_NOT_FOUND, "not found"))
-	    }
-	  } 
-	}
+  	new Scraper(articleStore) {
+  	  override def fetchArticle(uri: NormalizedURI): Either[Article, ScraperError]	 = {
+  	    uri.url match {
+  	      case "http://www.keepit.com/existing" => Left(Article(uri.id.get, "foo", "bar"))
+  	      case "http://www.keepit.com/missing" => Right(ScraperError(uri, HttpStatus.SC_NOT_FOUND, "not found"))
+  	    }
+  	  } 
+  	}
   }
 }
