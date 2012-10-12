@@ -31,13 +31,16 @@ case class ShoeboxModule() extends ScalaModule {
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
   }
 
+  @Singleton
   @Provides
   def articleStore(bucketName: S3Bucket, amazonS3Client: AmazonS3): ArticleStore = 
     new S3ArticleStoreImpl(bucketName, amazonS3Client)
   
+  @Singleton
   @Provides
   def s3Bucket: S3Bucket = S3Bucket(current.configuration.getString("amazon.s3.bucket").get)
   
+  @Singleton
   @Provides
   def amazonS3Client(): AmazonS3 = { 
     var conf = current.configuration.getConfig("amazon.s3").get

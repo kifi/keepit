@@ -24,6 +24,7 @@ import com.keepit.search._
 import com.amazonaws.services.s3._
 import com.amazonaws.auth.BasicAWSCredentials
 import play.api.Play.current
+import com.google.inject.Singleton
 
 case class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -35,27 +36,26 @@ case class DevModule() extends ScalaModule with Logging {
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
   }
 
+  @Singleton
   @Provides
-  def articleStore(bucketName: S3Bucket, amazonS3Client: AmazonS3): ArticleStore = 
-    new S3ArticleStoreImpl(bucketName, amazonS3Client)
-  
-  @Provides
-  def s3Bucket: S3Bucket = S3Bucket(current.configuration.getString("amazon.s3.bucket").get)
-  
-  @Provides
-  def amazonS3Client(): AmazonS3 = { 
+  def articleStore: ArticleStore = {
     var conf = current.configuration.getConfig("amazon.s3").get
-    val awsCredentials = new BasicAWSCredentials(
-        conf.getString("accessKey").get, 
-        conf.getString("secretKey").get)
-    new AmazonS3Client(awsCredentials)
+    conf.getString("bucket") match {
+      case None => 
+        new HashMap[Id[NormalizedURI], Article] with ArticleStore
+      case Some(bucketName) =>
+        val bucket = S3Bucket(bucketName)
+        val awsCredentials = new BasicAWSCredentials(
+            conf.getString("accessKey").get, 
+            conf.getString("secretKey").get)
+        val client = new AmazonS3Client(awsCredentials)
+        new S3ArticleStoreImpl(bucket, client)
+    }
   }
   
   @Provides
   @AppScoped
   def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-dev-actor-system")
   
-  @Provides
-  def articleStore: ArticleStore = new HashMap[Id[NormalizedURI], Article] with ArticleStore
   
 }
