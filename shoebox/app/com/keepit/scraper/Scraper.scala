@@ -21,35 +21,39 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
   val parser = new Parser(config);
   
   def run() {
+    log.info("starting a new scrape round")
     try {
       val uris = CX.withConnection { implicit c =>
         NormalizedURI.getByState(ACTIVE)
       }
+      log.info("got %s uris to scrape".format(uris.length))
       processURIs(uris)
     } catch {
       case ex: Throwable => log.error("error in scaper run", ex) // log and eat the exception
     }
   }
   
-  def processURIs(uris: Seq[NormalizedURI]) {
-    uris.map{ uri =>
-      fetchArticle(uri) match {
-        case Left(article) =>
-          // store article in a store map
-          try {
-            articleStore += (uri.id.get -> article)
-            // succeeded. update the state to SCRAPED and save
-            CX.withConnection { implicit c =>
-              uri.withState(NormalizedURI.States.SCRAPED).save
-            }
-          } catch {
-            case ex:Exception => log.error("failed to store an article: uri.id=" + uri.id.get.id)
-          }
-        case Right(error) =>
+  def processURIs(uris: Seq[NormalizedURI]): Unit = uris foreach processURI
+  
+  def processURI(uri: NormalizedURI): Unit = {
+    log.info("scraping %s".format(uri))
+    fetchArticle(uri) match {
+      case Left(article) =>
+        // store article in a store map
+        try {
+          articleStore += (uri.id.get -> article)
+          // succeeded. update the state to SCRAPED and save
           CX.withConnection { implicit c =>
-            uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
+            uri.withState(NormalizedURI.States.SCRAPED).save
           }
-      }
+          log.info("fetched uri %s => %s".format(uri, article))
+        } catch {
+          case ex:Exception => log.error("failed to store an article: uri.id=" + uri.id.get.id)
+        }
+      case Right(error) =>
+        CX.withConnection { implicit c =>
+          uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
+        }
     }
   }
   
