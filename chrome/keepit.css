@@ -63,6 +63,7 @@
 }
 
 .social_bar_text {
+  float: left;
   padding: 4px 0px 0px 0px;
 }
 
