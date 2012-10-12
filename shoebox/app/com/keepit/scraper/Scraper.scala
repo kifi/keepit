@@ -2,7 +2,7 @@ package com.keepit.scraper
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
-import com.keepit.search.Article
+import com.keepit.search.{Article, ArticleStore}
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.db.CX
@@ -11,9 +11,11 @@ import edu.uci.ics.crawler4j.fetcher.{CustomFetchStatus, PageFetcher, PageFetchR
 import edu.uci.ics.crawler4j.parser.{HtmlParseData, Parser}
 import edu.uci.ics.crawler4j.url.WebURL
 import org.apache.http.HttpStatus;
+import com.google.inject.Inject
+
 import play.api.Play.current
 
-class Scraper(articleStore: scala.collection.mutable.Map[Id[NormalizedURI], Article]) extends Logging {
+class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
   val config = new CrawlConfig()
   val pageFetcher = new PageFetcher(config)
   val parser = new Parser(config);

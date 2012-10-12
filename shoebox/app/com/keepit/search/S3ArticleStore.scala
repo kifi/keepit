@@ -12,10 +12,15 @@ import com.amazonaws.AmazonServiceException
 import java.io.{InputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.lang.UnsupportedOperationException
 
-class S3ArticleStore(bucketName: String, accessKey: String, secretKey: String) extends MutableMap[Id[NormalizedURI], Article] with Logging {
-  val awsCredentials = new BasicAWSCredentials(accessKey, secretKey)
-  val amazonS3Client = new AmazonS3Client(awsCredentials)
 
+trait ArticleStore extends MutableMap[Id[NormalizedURI], Article]
+
+case class S3Bucket(name: String) 
+
+class S3ArticleStoreImpl(bucketName: S3Bucket, amazonS3Client: AmazonS3) extends ArticleStore with Logging {
+
+  implicit def bucketName(bucket: S3Bucket): String = bucket.name
+  
   def += (kv: (Id[NormalizedURI], Article)) = {
     kv match {
       case (normalizedUrlId, article) =>
@@ -51,7 +56,7 @@ class S3ArticleStore(bucketName: String, accessKey: String, secretKey: String) e
   
   override def empty = throw new UnsupportedOperationException
   
-  private def doWithS3Client[T](what: =>String)(body: AmazonS3Client=>T): Option[T] = {
+  private def doWithS3Client[T](what: =>String)(body: AmazonS3=>T): Option[T] = {
     var ret: Option[T] = None
     try {
       ret = Some(body(amazonS3Client))
