@@ -18,19 +18,17 @@ import edu.uci.ics.crawler4j.fetcher.{PageFetcher, PageFetchResult}
 import edu.uci.ics.crawler4j.url.WebURL
 import org.apache.http.HttpStatus
 import scala.collection.mutable.{Map => MutableMap}
+import com.keepit.search.ArticleStore
 
 @RunWith(classOf[JUnitRunner])
 class ScraperTest extends SpecificationWithJUnit {
-
-  def setup() = {
-  }
 
   "Scraper" should {
     "get a article from an existing website" in {
       val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/existing"
-      val uri = NormalizedURI(title = "title", url = url, state = NormalizedURI.States.ACTIVE)
+      val uri = NormalizedURI(title = "title", url = url, state = NormalizedURI.States.ACTIVE).copy(id = Some(Id(33)))
       val result = scraper.fetchArticle(uri)
 
       result.isLeft === true // Left is Article
@@ -42,7 +40,7 @@ class ScraperTest extends SpecificationWithJUnit {
       val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/missing"
-      val uri = NormalizedURI(title = "title", url = url, state = NormalizedURI.States.ACTIVE)
+      val uri = NormalizedURI(title = "title", url = url, state = NormalizedURI.States.ACTIVE).copy(id = Some(Id(44)))
       val result = scraper.fetchArticle(uri)
       result.isRight === true // Right is ScraperError
       result.right.get.httpStatusCode === HttpStatus.SC_NOT_FOUND
@@ -72,13 +70,14 @@ class ScraperTest extends SpecificationWithJUnit {
     }
   }
 
-  def getMockScraper(articleStore: FakeArticleStore) = 
+  def getMockScraper(articleStore: ArticleStore) = {
   	new Scraper(articleStore) {
   	  override def fetchArticle(uri: NormalizedURI): Either[Article, ScraperError]	 = {
   	    uri.url match {
-  	      case "http://www.keepit.com/existing" => Left(Article(uri, "foo", "bar"))
+  	      case "http://www.keepit.com/existing" => Left(Article(uri.id.get, "foo", "bar"))
   	      case "http://www.keepit.com/missing" => Right(ScraperError(uri, HttpStatus.SC_NOT_FOUND, "not found"))
   	    }
   	  } 
   	}
+  }
 }
