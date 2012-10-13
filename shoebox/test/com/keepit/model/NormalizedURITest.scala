@@ -28,6 +28,24 @@ class NormalizedURITest extends SpecificationWithJUnit {
     }
   }
 
+
+  "get by state" should {
+    "search gets nothing" in {
+      running(new EmptyApplication()) {
+        setup()
+        CX.withConnection { implicit c =>
+          var uris = NormalizedURI.getByState(NormalizedURI.States.ACTIVE)
+          uris.size === 2
+          uris(0).withState(NormalizedURI.States.INACTIVE).save
+          NormalizedURI.getByState(NormalizedURI.States.ACTIVE).size === 1
+          uris(1).withState(NormalizedURI.States.INACTIVE).save
+          NormalizedURI.getByState(NormalizedURI.States.ACTIVE).size === 0
+          NormalizedURI.getByState(NormalizedURI.States.INACTIVE).size === 2
+        }
+      }
+    }
+  }  
+  
   "NormalizedURIs search by url" should {
     "search gets nothing" in {
       running(new EmptyApplication()) {
