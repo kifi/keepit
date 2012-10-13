@@ -29,7 +29,9 @@ private[scraper] class ScraperActor(scraper: Scraper) extends Actor with Logging
   }
 }
 
-trait ScraperPlugin extends Plugin
+trait ScraperPlugin extends Plugin {
+  def scrape(): Int
+}
 
 class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extends ScraperPlugin {
   
@@ -48,4 +50,9 @@ class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extend
   override def onStop(): Unit = {
     _cancellables.map(_.cancel)
   }
+  
+  override def scrape(): Int = {
+    val future = actor.ask(Scrape)(1 minutes).mapTo[Int]
+    Await.result(future, 1 minutes)
+  } 
 }
