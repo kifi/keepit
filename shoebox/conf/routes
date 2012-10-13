@@ -26,6 +26,11 @@ POST    /chat/:recipientId          com.keepit.controllers.ChatController.chat(r
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
 
+##########################################
+# Admin
+##########################################
+
+GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape
 
 ##########################################
 # Secure social routes
