@@ -17,7 +17,8 @@
 		      <th>Title</th>
 		      <th>Shares</th>
 		      <th>URI Hash</th>
-		      <th>creation</th>
+		      <th>Creation</th>
+		      <th>URI State</th>
 		    </tr>
 		  @for((bookmark, uriStat, user) <- bookmarksAndUsers) {
 		    <tr>
@@ -27,6 +28,7 @@
 		      <td>@uriStat.bookmarks.size</td>
 		      <td>@uriStat.uri.urlHash</td>
 		      <td>@bookmark.createdAt</td>
+		      <td>@uriStat.uri.state.value</td>
 		    </tr>
 		  }
 		  </table>
