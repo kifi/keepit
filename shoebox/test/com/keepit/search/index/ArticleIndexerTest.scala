@@ -1,6 +1,8 @@
 package com.keepit.search.index
 
+import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
+import com.keepit.search.ArticleStore
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.db.CX
@@ -14,7 +16,6 @@ import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
-import scala.collection.mutable.{Map => MutableMap}
 import org.apache.lucene.store.RAMDirectory
 
 @RunWith(classOf[JUnitRunner])
@@ -28,14 +29,14 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
         var (uri1, uri2, uri3) = CX.withConnection { implicit c =>
           val user1 = User(firstName = "Joe", lastName = "Smith").save
           val user2 = User(firstName = "Moo", lastName = "Brown").save
-          (NormalizedURI(title = "a1", url = "http://www.keepit.com/article1", state=ACTIVE).save, 
+          (NormalizedURI(title = "a1", url = "http://www.keepit.com/article1", state=ACTIVE).save,
            NormalizedURI(title = "a2", url = "http://www.keepit.com/article2", state=SCRAPED).save,
            NormalizedURI(title = "a3", url = "http://www.keepit.com/article3", state=INDEXED).save)
         }
-        val store = MutableMap.empty[Id[NormalizedURI], Article]
-        store += (uri1.id.get -> Article(uri1, "title1", "content1 all"))
-        store += (uri2.id.get -> Article(uri2, "title2", "content2 all"))
-        store += (uri3.id.get -> Article(uri3, "title3", "content3 all"))
+        val store = new FakeArticleStore()
+        store += (uri1.id.get -> Article(uri1.id.get, "title1", "content1 all"))
+        store += (uri2.id.get -> Article(uri2.id.get, "title2", "content2 all"))
+        store += (uri3.id.get -> Article(uri3.id.get, "title3", "content3 all"))
 
         val indexer = ArticleIndexer(ramDir, store)
         indexer.run

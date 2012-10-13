@@ -3,6 +3,7 @@ package com.keepit.search.index
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.search.Article
+import com.keepit.search.ArticleStore
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.db.CX
@@ -15,19 +16,18 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import org.apache.lucene.util.Version
-import scala.collection.mutable.{Map => MutableMap}
 import java.io.File
 import java.io.IOException
 
 object ArticleIndexer {
-  def apply(directoryPath: String, articleStore: MutableMap[Id[NormalizedURI], Article]): ArticleIndexer = {
+  def apply(directoryPath: String, articleStore: ArticleStore): ArticleIndexer = {
     val dir = new File(directoryPath).getCanonicalFile()
     val indexDirectory: Directory = new MMapDirectory(dir)
     
     apply(indexDirectory, articleStore)
   }
   
-  def apply(indexDirectory: Directory, articleStore: MutableMap[Id[NormalizedURI], Article]): ArticleIndexer = {
+  def apply(indexDirectory: Directory, articleStore: ArticleStore): ArticleIndexer = {
     val analyzer = new StandardAnalyzer(Version.LUCENE_36)
     analyzer.setMaxTokenLength(256)
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
@@ -36,7 +36,7 @@ object ArticleIndexer {
   }
 }
 
-class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, articleStore: MutableMap[Id[NormalizedURI], Article])
+class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, articleStore: ArticleStore)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
   val commitBatchSize = 100
@@ -62,7 +62,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     new ArticleIndexable(uri.id.get, uri, articleStore)
   }
   
-  class ArticleIndexable(override val id: Id[NormalizedURI], uri: NormalizedURI, arcicleStore: MutableMap[Id[NormalizedURI], Article]) extends Indexable[NormalizedURI] {
+  class ArticleIndexable(override val id: Id[NormalizedURI], uri: NormalizedURI, articleStore: ArticleStore) extends Indexable[NormalizedURI] {
     override def buildDocument = {
       val doc = super.buildDocument
       articleStore.get(uri.id.get) match {
