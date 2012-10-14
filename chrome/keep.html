@@ -339,7 +339,7 @@
 
 
     }
-    function hasUserInfoInLocalStorage() {
+    function hasKeepitIdAndFacebookId() {
       var ls = localStorage["user_info"];
       if (!ls) return false;
       try {
@@ -363,38 +363,43 @@
       localStorage['version'] = currVersion;
     }
     var popup=null
-    chrome.windows.onRemoved.addListener(function(windowId) {
-      if (windowId === popup) {
-      popup = undefined;
-      startHandShake(function(data) {
-        if (data) {
-          log("got handshake data ");
-          log(data);
-          userInfo.facebook_id = data.facebookId;
-          userInfo.keepit_id = data.keepitId
-          userInfo.avatarUrl = data.avatarUrl;
-          log("updating userInfo ");
-          log(userInfo);
-          localStorage["user_info"]=JSON.stringify(userInfo);
-        } else { 
-          log("handshake failed");
-        }
-      });
-     }
-    });
 
-    if (!hasUserInfoInLocalStorage()) {
+    function openFacebookConnect() {    
+      chrome.windows.onRemoved.addListener(function(windowId) {
+        if (windowId === popup) {
+        popup = undefined;
+        startHandShake(function(data) {
+          if (data) {
+            log("got handshake data ");
+            log(data);
+            userInfo.facebook_id = data.facebookId;
+            userInfo.keepit_id = data.keepitId
+            userInfo.avatarUrl = data.avatarUrl;
+            log("updating userInfo ");
+            log(userInfo);
+            localStorage["user_info"]=JSON.stringify(userInfo);
+          } else { 
+            log("handshake failed");
+          }
+        });
+       }
+      });
+
+      chrome.windows.create({'url': 'http://'+getConfigs().server+'/authenticate/facebook', 'type': 'popup'}, function(window) {popup=window.id} );
+    }
+
+    if (!hasKeepitIdAndFacebookId()) {
       userInfo = {keepit_id:null};
       localStorage["user_info"]=JSON.stringify(userInfo); // initialzie user info
-      chrome.windows.create({'url': 'http://'+getConfigs().server+'/authenticate/facebook', 'type': 'popup'}, function(window) {popup=window.id} );
-      log("keepit is (suppose) to be disabled now");
+      log("sopen facebokk connect - till it is closed keepit is (suppose) to be disabled");
+      openFacebookConnect();
     } else {
       log("find user info in local storage");
       log(userInfo);
       postBookmarks(chrome.bookmarks.getTree);//posting bookmarks even when keepit id is found
       getBookMarks();
     }
-    
+
   </script>
   <body>
     <p>
