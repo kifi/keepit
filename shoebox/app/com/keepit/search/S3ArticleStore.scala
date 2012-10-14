@@ -21,11 +21,13 @@ class S3ArticleStoreImpl(bucketName: S3Bucket, amazonS3Client: AmazonS3) extends
 
   implicit def bucketName(bucket: S3Bucket): String = bucket.name
   
+  private def idToArticleJsonKey(id: Id[NormalizedURI]): String = "%s.json".format(id.id)
+  
   def += (kv: (Id[NormalizedURI], Article)) = {
     kv match {
       case (normalizedUrlId, article) =>
         doWithS3Client("adding an item to S3ArticleStore"){ s3Client =>
-          s3Client.putObject(bucketName, normalizedUrlId.toString, toInputStream(article.asInstanceOf[Article]), new ObjectMetadata)
+          s3Client.putObject(bucketName, idToArticleJsonKey(normalizedUrlId), toInputStream(article.asInstanceOf[Article]), new ObjectMetadata)
         }
     }
     this
@@ -33,14 +35,14 @@ class S3ArticleStoreImpl(bucketName: S3Bucket, amazonS3Client: AmazonS3) extends
   
   def -= (normalizedUrlId: Id[NormalizedURI]) = {
     doWithS3Client("removing an item from S3ArticleStore"){ s3Client =>
-      s3Client.deleteObject(bucketName, normalizedUrlId.toString)
+      s3Client.deleteObject(bucketName, idToArticleJsonKey(normalizedUrlId))
     }
     this
   }
   
   def get(normalizedUrlId: Id[NormalizedURI]): Option[Article] = {
     doWithS3Client("getting an item from S3ArticleStore"){ s3Client =>
-      val s3obj = s3Client.getObject(bucketName, normalizedUrlId.toString)
+      val s3obj = s3Client.getObject(bucketName, idToArticleJsonKey(normalizedUrlId))
       val is = s3obj.getObjectContent
       val ois = new ObjectInputStream(is)
       try {
