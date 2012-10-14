@@ -31,6 +31,7 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 ##########################################
 
 GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape
+GET     /admin/scraped/:uriId       com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
 
 ##########################################
 # Secure social routes
