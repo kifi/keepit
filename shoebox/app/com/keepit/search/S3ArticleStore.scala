@@ -1,9 +1,12 @@
 package com.keepit.search
 
+import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
-import scala.collection.mutable.{Map => MutableMap}
+import com.keepit.serializer.ArticleSerializer
+import com.keepit.inject._
+import play.api.Play.current
 import com.amazonaws.auth._
 import com.amazonaws.services.s3._
 import com.amazonaws.services.s3.model.ObjectMetadata
@@ -11,6 +14,7 @@ import com.amazonaws.AmazonClientException
 import com.amazonaws.AmazonServiceException
 import java.io.{InputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.lang.UnsupportedOperationException
+import play.api.libs.json.Json
 
 
 trait ArticleStore extends MutableMap[Id[NormalizedURI], Article]
@@ -18,8 +22,10 @@ trait ArticleStore extends MutableMap[Id[NormalizedURI], Article]
 case class S3Bucket(name: String) 
 
 class S3ArticleStoreImpl(bucketName: S3Bucket, amazonS3Client: AmazonS3) extends ArticleStore with Logging {
-
-  implicit def bucketName(bucket: S3Bucket): String = bucket.name
+  
+  private val ENCODING = "UTF-8"
+  
+  implicit def bucketName(bucket: S3Bucket): String = bucket.name      
   
   private def idToArticleJsonKey(id: Id[NormalizedURI]): String = "%s.json".format(id.id)
   
@@ -27,7 +33,13 @@ class S3ArticleStoreImpl(bucketName: S3Bucket, amazonS3Client: AmazonS3) extends
     kv match {
       case (normalizedUrlId, article) =>
         doWithS3Client("adding an item to S3ArticleStore"){ s3Client =>
-          s3Client.putObject(bucketName, idToArticleJsonKey(normalizedUrlId), toInputStream(article.asInstanceOf[Article]), new ObjectMetadata)
+          val metadata = new ObjectMetadata()
+          metadata.setContentEncoding(ENCODING)
+          metadata.setContentType("application/json")
+          s3Client.putObject(bucketName, 
+              idToArticleJsonKey(normalizedUrlId), 
+              toInputStream(article.asInstanceOf[Article]), 
+              metadata)
         }
     }
     this
@@ -44,12 +56,12 @@ class S3ArticleStoreImpl(bucketName: S3Bucket, amazonS3Client: AmazonS3) extends
     doWithS3Client("getting an item from S3ArticleStore"){ s3Client =>
       val s3obj = s3Client.getObject(bucketName, idToArticleJsonKey(normalizedUrlId))
       val is = s3obj.getObjectContent
-      val ois = new ObjectInputStream(is)
       try {
-        ois.readObject.asInstanceOf[Article]
+        val jsonString = scala.io.Source.fromInputStream(is, ENCODING).getLines().mkString("\n")
+        val json = Json.parse(jsonString)
+        inject[ArticleSerializer].reads(json)
       } finally {
         is.close
-        ois.close
       }
     }
   }
@@ -70,16 +82,7 @@ class S3ArticleStoreImpl(bucketName: S3Bucket, amazonS3Client: AmazonS3) extends
     ret
   }
   
-  private def toInputStream(article: Article): InputStream = {
-    val totalStringSize = article.title.length + article.content.length
-    val buf = new SerializationBuffer(totalStringSize * 2 + 100)
-    val os = new ObjectOutputStream(buf)
-    os.writeObject(article)
-    os.close
-    buf.getInputStream
-  }
+  private def toInputStream(article: Article): InputStream = 
+    new ByteArrayInputStream(inject[ArticleSerializer].writes(article).toString().getBytes(ENCODING))
   
-  private class SerializationBuffer(initialSize: Int) extends ByteArrayOutputStream(initialSize) {
-    def getInputStream = new ByteArrayInputStream(buf, 0, count)
-  }
 }
