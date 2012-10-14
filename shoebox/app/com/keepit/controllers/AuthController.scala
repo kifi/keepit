@@ -64,6 +64,7 @@ object AuthController extends Controller with securesocial.core.SecureSocial
 
   
   def welcome = SecuredAction() { implicit request =>
+    Logger.debug("in welcome. with user : [ %s ]".format(request.user ))
     Ok(securesocial.views.html.protectedAction(request.user))
   }
 }

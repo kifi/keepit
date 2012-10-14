@@ -113,7 +113,7 @@ object BookmarksController extends Controller with Logging {
   }
   
   private def parseFacebookId(value: JsValue): FacebookId = FacebookId((value \ "facebook_id").as[String])
-  private def parseKeepitId(value: JsValue): Id[User] = Id[User](((value \ "keepit_id").as[Int]))//deprecated, need to use external id
+  private def parseKeepitId(value: JsValue): Id[User] =Id[User](   (value \ "keepit_id").as[String].toInt)      //deprecated, need to use external id
   private def parseKeepitExternalId(value: JsValue): ExternalId[User] = ExternalId[User](((value \ "external_id").as[String]))
   
   private def internBookmark(json: JsObject, user: User): Bookmark = {
