@@ -29,8 +29,11 @@ object ScraperController extends Controller with Logging {
   
   def getScraped(id: Id[NormalizedURI]) = Action { implicit request => 
     val store = inject[ArticleStore]
-    val article = store.get(id)
-    Ok(article.toString())
+    val article = store.get(id).get
+    val uri = CX.withConnection { implicit c =>
+      NormalizedURI.get(article.normalizedUriId)
+    }
+    Ok(views.html.article(article, uri))
   }
 }
 
