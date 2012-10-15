@@ -38,7 +38,7 @@ class S3ArticleStoreImpl(bucketName: S3Bucket, amazonS3Client: AmazonS3) extends
           metadata.setContentType("application/json")
           s3Client.putObject(bucketName, 
               idToArticleJsonKey(normalizedUrlId), 
-              toInputStream(article.asInstanceOf[Article]), 
+              toInputStream(article), 
               metadata)
         }
     }

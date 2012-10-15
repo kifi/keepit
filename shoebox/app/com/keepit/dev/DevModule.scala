@@ -7,6 +7,9 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import com.keepit.model.NormalizedURI
 import com.keepit.search.Article
+import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.index.ArticleIndexerPlugin
+import com.keepit.search.index.ArticleIndexerPluginImpl
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckImpl
@@ -25,6 +28,10 @@ import com.amazonaws.services.s3._
 import com.amazonaws.auth.BasicAWSCredentials
 import play.api.Play.current
 import com.google.inject.Singleton
+import org.apache.lucene.store.Directory
+import org.apache.lucene.store.RAMDirectory
+import org.apache.lucene.store.MMapDirectory
+import java.io.File
 
 case class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -34,6 +41,7 @@ case class DevModule() extends ScalaModule with Logging {
     
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
+    bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
   }
 
   @Singleton
@@ -51,6 +59,19 @@ case class DevModule() extends ScalaModule with Logging {
         val client = new AmazonS3Client(awsCredentials)
         new S3ArticleStoreImpl(bucket, client)
     }
+  }
+  
+  @Singleton
+  @Provides
+  def articleIndexer(articleStore: ArticleStore): ArticleIndexer = {
+    val indexDir = current.configuration.getString("index.article.directory") match {
+      case None => 
+        new RAMDirectory()
+      case Some(dirPath) =>
+        val dir = new File(dirPath).getCanonicalFile()
+        new MMapDirectory(dir)
+    }
+    ArticleIndexer(indexDir, articleStore)
   }
   
   @Provides
