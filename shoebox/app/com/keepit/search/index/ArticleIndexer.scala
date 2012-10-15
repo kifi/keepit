@@ -20,13 +20,6 @@ import java.io.File
 import java.io.IOException
 
 object ArticleIndexer {
-  def apply(directoryPath: String, articleStore: ArticleStore): ArticleIndexer = {
-    val dir = new File(directoryPath).getCanonicalFile()
-    val indexDirectory: Directory = new MMapDirectory(dir)
-    
-    apply(indexDirectory, articleStore)
-  }
-  
   def apply(indexDirectory: Directory, articleStore: ArticleStore): ArticleIndexer = {
     val analyzer = new StandardAnalyzer(Version.LUCENE_36)
     analyzer.setMaxTokenLength(256)
@@ -41,20 +34,25 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
 
   val commitBatchSize = 100
   
-  def run = {
+  def run(): Int = {
     try {
       val uris = CX.withConnection { implicit c =>
         NormalizedURI.getByState(SCRAPED)
       }
+      var cnt = 0
       indexDocuments(uris.iterator.map{ uri => buildIndexable(uri) }, commitBatchSize){ commitBatch =>
         commitBatch.foreach{ indexable =>
           CX.withConnection { implicit c =>
             NormalizedURI.get(indexable.id).withState(NormalizedURI.States.INDEXED).save
           }
         }
+        cnt += commitBatch.size
       }
+      cnt
     } catch {
-      case ex: Throwable => log.error("error in indexing run", ex) // log and eat the exception
+      case ex: Throwable => 
+        log.error("error in indexing run", ex) // log and eat the exception
+        throw ex
     }
   }
   

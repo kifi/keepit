@@ -1,0 +1,18 @@
+@(article: com.keepit.search.Article, uri: NormalizedURI)
+
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Article: @{article.title}</title>
+        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+        <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
+    </head>
+    <body>
+      <b>URI first introduced on:</b> @{uri.createdAt}<br/>
+      <b>URI title (may differ from article's) is:</b> @{uri.title}<br/>
+      <h2><a href="@uri.url">@{article.title}</a></h2>
+      @{article.content}
+    </body>
+</html>

@@ -16,6 +16,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
 import com.keepit.scraper.ScraperPlugin
+import com.keepit.model.NormalizedURI
+import com.keepit.search.ArticleStore
 
 object ScraperController extends Controller with Logging {
 
@@ -23,6 +25,15 @@ object ScraperController extends Controller with Logging {
     val scraper = inject[ScraperPlugin]
     val urls = scraper.scrape()
     Ok("scraped %s urls".format(urls))
+  }
+  
+  def getScraped(id: Id[NormalizedURI]) = Action { implicit request => 
+    val store = inject[ArticleStore]
+    val article = store.get(id).get
+    val uri = CX.withConnection { implicit c =>
+      NormalizedURI.get(article.normalizedUriId)
+    }
+    Ok(views.html.article(article, uri))
   }
 }
 
