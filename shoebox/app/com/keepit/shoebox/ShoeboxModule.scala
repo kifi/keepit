@@ -13,12 +13,18 @@ import com.keepit.common.mail.PostOfficeImpl
 import com.keepit.common.net._
 import com.keepit.scraper._
 import com.keepit.inject._
+import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.index.ArticleIndexerPlugin
+import com.keepit.search.index.ArticleIndexerPluginImpl
 import play.api.Play
 import play.api.Play.current
 import com.keepit.common.mail.MailSender
 import com.keepit.search._
 import com.amazonaws.services.s3._
 import com.amazonaws.auth.BasicAWSCredentials
+import org.apache.lucene.store.Directory
+import org.apache.lucene.store.MMapDirectory
+import java.io.File
 
 case class ShoeboxModule() extends ScalaModule {
   def configure(): Unit = {
@@ -29,6 +35,7 @@ case class ShoeboxModule() extends ScalaModule {
     
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
+    bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
   }
 
   @Singleton
@@ -48,6 +55,14 @@ case class ShoeboxModule() extends ScalaModule {
         conf.getString("accessKey").get, 
         conf.getString("secretKey").get)
     new AmazonS3Client(awsCredentials)
+  }
+  
+  @Singleton
+  @Provides
+  def articleIndexer(articleStore: ArticleStore): ArticleIndexer = {
+    var dirPath = current.configuration.getString("index.article.directory").get
+    val dir = new File(dirPath).getCanonicalFile()
+    ArticleIndexer(new MMapDirectory(dir), articleStore)
   }
   
   @Provides

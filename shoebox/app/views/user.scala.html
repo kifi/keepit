@@ -25,8 +25,8 @@
     <body>
       [<a href="@com.keepit.controllers.routes.UserController.usersView">All Users</a>]<br/><br/>
       <h2>User details</h2>
-	      Name: @{user.firstName} @{user.lastName}<br/>
-	      Id: @{user.id}<br/>
+	      Name: @user.firstName @user.lastName<br/>
+	      Id: @user.id<br/>
 	      Facebook Account: @{user.facebookId match {
 	        case Some(id) => {
 	          userWithFacebookDisplay(user, id)

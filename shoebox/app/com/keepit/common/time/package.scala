@@ -28,7 +28,9 @@ package object time {
   val HEADER_DATETIME_FORMAT = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z")
                                              .withLocale(Locale.ENGLISH)
                                              .withZone(zones.GMT)
-  
+  val STANDARD_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss Z")
+                                             .withLocale(Locale.ENGLISH)
+                                             .withZone(zones.PT)
   
                                              
   def currentDateTime(implicit zone: DateTimeZone) = new DateTime(zone)
@@ -54,6 +56,7 @@ package object time {
     def toLocalDateInZone(implicit zone: DateTimeZone): LocalDate = date.withZone(zone).toLocalDate
     def toLocalTimeInZone(implicit zone: DateTimeZone): LocalTime = date.withZone(zone).toLocalTime
     def toHttpHeaderString: String = HEADER_DATETIME_FORMAT.print(date)
+    def toStandardTimeString: String = STANDARD_DATETIME_FORMAT.print(date)
     
     def isSameDay(otherDate: DateTime)(implicit zone: DateTimeZone): Boolean = {
       val z = date.withZone(zone)
