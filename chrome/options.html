@@ -17,7 +17,8 @@
   }
 
   function resetUser() {
-    localStorage.removeItem("user_info");
+    localStorage.removeItem("user");
+    localStorage.removeItem("user_info"); //to delete old user storgae
     restoreConfigs();
   }
 
@@ -31,12 +32,12 @@
     localStorage["max_search_results"] = $("#max_search_results").val();
     localStorage["hover_timeout"] = $("#hover_timeout").val();
     var keepitId = $("#keepit_id").val();
-    if (localStorage["user_info"]) {
-      var userInfo = JSON.parse(localStorage["user_info"]);
+    if (localStorage["user"]) {
+      var userInfo = JSON.parse(localStorage["user"]);
       if (userInfo) {
         userInfo.keepit_id = $("#keepit_id").val();
       }
-      localStorage["user_info"]= userInfo;
+      localStorage["user"]= JSON.stringify(userInfo);
     }
   }
 
@@ -59,13 +60,13 @@
 
   function renderUserInfo(userInfo) {
     if (userInfo && userInfo.status && userInfo.status=="loggedin") {
-      localStorage["user_info"]  = JSON.stringify(userInfo);
+      localStorage["user"]  = JSON.stringify(userInfo);
       $("#user_info_data").show();
       $("#connect_to_server").hide();
       $("#user_name").html(userInfo.name);
       $("#user_avatar").attr("src", userInfo.avatarUrl);
     } else {
-      localStorage.removeItem("user_info");
+      localStorage.removeItem("user");
       $("#connect_to_server").show();
       $("#user_info_data").hide();
     }     
@@ -86,8 +87,8 @@
     }
     $("#max_search_results").val(localStorage["max_search_results"]);
     $("#hover_timeout").val(localStorage["hover_timeout"]);
-    if (localStorage["user_info"]) {
-      var userInfo = JSON.parse(localStorage["user_info"]);
+    if (localStorage["user"]) {
+      var userInfo = JSON.parse(localStorage["user"]);
       if (userInfo && userInfo.keepit_id) {
         $("#keepit_id").val(userInfo.keepit_id);
       }

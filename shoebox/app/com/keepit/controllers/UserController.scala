@@ -39,7 +39,8 @@ object UserController extends Controller with Logging {
       val firstName = (json \ "firstName").as[String]
       val lastName = (json \ "lastName").as[String]
       val externalId = (json \ "externalId").asOpt[String].map(ExternalId[User](_))
-      var user = User(firstName = firstName, lastName = lastName)
+      val facebookId = (json \ "facebookId").as[String]
+      var user = User(firstName = firstName, lastName = lastName, facebookId = FacebookId(facebookId))
       user = externalId match {
         case Some(externalId) => user.withExternalId(externalId)
         case None => user
@@ -65,25 +66,6 @@ object UserController extends Controller with Logging {
       User.getbyUrlHash(nuri.urlHash)
     }
     Ok(UserSerializer.userSerializer.writes(users)).as(ContentTypes.JSON)
-  }
-
-  /**
-   * Call me using:
-   * curl -X POST localhost:9000/users/anonymous;echo
-   */
-  def createAnonymous = Action { request =>
-    val user = CX.withConnection { implicit c =>
-      val externalId = ExternalId[User]()
-      var user = User(firstName = "anonymous", lastName = "anonymous", facebookId = None)
-        .withExternalId(externalId)
-      user = user.save
-      user
-    }
-    Ok(JsObject(List(
-      "userId" -> JsNumber(user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
-      "externalId" -> JsString(user.externalId.id),
-      "userObject" -> UserSerializer.userSerializer.writes(user)
-    )))
   }
 
   /**

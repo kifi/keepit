@@ -19,7 +19,7 @@ case class BookmarkSource(value: String) {
   implicit def source(value: String) = BookmarkSource(value)
 }
 
-object BookmarkSource(value: String) {
+object BookmarkSource {
   implicit def source(value: String) = BookmarkSource(value)
 }
 
@@ -117,7 +117,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
     isPrivate = isPrivate(),
     userId = userId.value,
     bookmarkPath = bookmarkPath.value,
-    source = source
+    source = source()
   )
 }
 
@@ -137,6 +137,7 @@ private[model] object BookmarkEntity extends BookmarkEntity with EntityTable[Boo
     bookmark.bookmarkPath.set(view.bookmarkPath)
     bookmark.isPrivate := view.isPrivate
     bookmark.userId.set(view.userId)
+    bookmark.source := view.source.value
     bookmark
   }
 }

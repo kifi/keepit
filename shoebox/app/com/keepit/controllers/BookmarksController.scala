@@ -28,9 +28,6 @@ import play.api.http.ContentTypes
 import play.api.libs.json.JsString
 import com.keepit.common.logging.Logging
 
-//note: users.size != count if some users has the bookmark marked as private
-case class PersonalSearchResult(uri: NormalizedURI, count: Int, users: Seq[User], score: Float)
-
 object BookmarksController extends Controller with Logging {
 
   def edit(id: Id[Bookmark]) = Action{ request =>
@@ -70,11 +67,12 @@ object BookmarksController extends Controller with Logging {
   def addBookmarks() = JsonAction { request =>
     val json = request.body
     log.debug(json)
+    log.info("keepit_id = [%s]".format(json \ "user_info"))
     val bookmarkSource = (json \ "bookmark_source").asOpt[String]
     val facebookId = parseFacebookId(json \ "user_info")
     val keepitId = parseKeepitId(json \ "user_info")//todo: need to use external id
     val user = internUser(facebookId, keepitId)
-    internBookmarks(json \ "bookmarks", user) 
+    internBookmarks(json \ "bookmarks", user, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN"))) 
     log.info(user)
     Ok(JsObject(("status" -> JsString("success")) :: 
         ("userId" -> JsString(user.id.map(id => id.id.toString()).getOrElse(""))) :: Nil))//todo: need to send external id
@@ -100,16 +98,16 @@ object BookmarksController extends Controller with Logging {
 		      User(
 		          firstName = (json \ "first_name").as[String],
 		          lastName = (json \ "last_name").as[String],
-		          facebookId = Some(facebookId)
+		          facebookId = facebookId
 		      ).save
 	    }
     }
   }
     
-  private def internBookmarks(value: JsValue, user: User): List[Bookmark] = value match {
-    case JsArray(elements) => (elements map {e => internBookmarks(e, user)} flatten).toList  
-    case json: JsObject if(json.keys.contains("children")) => internBookmarks( json \ "children" , user)  
-    case json: JsObject => List(internBookmark(json, user))  
+  private def internBookmarks(value: JsValue, user: User, source: BookmarkSource): List[Bookmark] = value match {
+    case JsArray(elements) => (elements map {e => internBookmarks(e, user, source)} flatten).toList  
+    case json: JsObject if(json.keys.contains("children")) => internBookmarks( json \ "children" , user, source)  
+    case json: JsObject => List(internBookmark(json, user, source))  
     case e => throw new Exception("can't figure what to do with %s".format(e))  
   }
   
@@ -117,7 +115,7 @@ object BookmarksController extends Controller with Logging {
   private def parseKeepitId(value: JsValue): Id[User] = Id[User](((value \ "keepit_id").as[Int]))//deprecated, need to use external id
   private def parseKeepitExternalId(value: JsValue): ExternalId[User] = ExternalId[User](((value \ "external_id").as[String]))
   
-  private def internBookmark(json: JsObject, user: User): Bookmark = {
+  private def internBookmark(json: JsObject, user: User, source: BookmarkSource): Bookmark = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
     CX.withConnection { implicit conn =>
@@ -127,36 +125,9 @@ object BookmarksController extends Controller with Logging {
       }
       Bookmark.load(normalizedUri, user) match {
         case Some(bookmark) => bookmark
-        case None => Bookmark(normalizedUri, user, title, url).save
+        case None => Bookmark(normalizedUri, user, title, url, source).save
       }
     }
-  }
-  
-  def searchBookmarks(term: String, keepitId: Id[User]) = Action { request =>
-    println("searching with %s using keepit id %s".format(term, keepitId))
-    val res = CX.withConnection { implicit conn =>
-      val user = User.getOpt(keepitId).getOrElse(
-          throw new Exception("keepit id %s not found for term %s".format(keepitId, term)))
-      val res: Seq[URISearchResults] = NormalizedURI.search(term)
-      res map { r =>
-        toPersonalSearchResult(r, user)
-      }
-    }
-    println(res mkString "\n")
-    Ok(BPSRS.resSerializer.writes(res)).as(ContentTypes.JSON)
-  }
-  
-  private[controllers] def toPersonalSearchResult(res: URISearchResults, user: User)(implicit conn: Connection): PersonalSearchResult = {
-    val uri = res.uri
-    val count = uri.bookmarks().size
-    val users = uri.bookmarks().map(_.userId.get).map{ userId =>
-      User.get(userId)
-    }
-    PersonalSearchResult(uri, count, users, res.score)
-  }
-  
-  def orderResults(res: Map[Bookmark, Int]): List[(Bookmark, Int)] = res.toList.sortWith{
-    (a, b) => a._2 > b._2
   }
   
 }

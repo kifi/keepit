@@ -54,25 +54,22 @@ object ChatController extends Controller with SecureSocial with Logging {
     val url = parseUrl(request.body)
     val message = parseMessage(request.body)
     log.info("will chat with user (externalId) %s, url is %s and message is %s".format(externalId, url, message))
-    
+
     val user = CX.withConnection { implicit c =>
       User.get(externalId)
     }
-    
+
     val settings = ProviderRegistry.get(FacebookProvider.Facebook).get.asInstanceOf[OAuth2Provider].settings
-    
-    user.facebookId match {
-        case Some(rfid) =>
-          val connection = createConnection()
-          connection.connect()
-          log.info("user %s has facebookId %s".format(user, rfid))
-          val accessToken = request.user.oAuth2Info.map(info => info.accessToken).getOrElse(throw new IllegalStateException("access token is missing for user %s".format(user)))
-          val apiKey = settings.clientId
-          connection.login(apiKey, accessToken)
-          send(connection, url, message, rfid)
-          connection.disconnect()
-        case None => throw new IllegalStateException("Tried to send message to user %s that did not have a facebook id".format(user))
-    }
+
+    val connection = createConnection()
+    connection.connect()
+    log.info("user %s has facebookId %s".format(user, user.facebookId))
+    val accessToken = request.user.oAuth2Info.map(info => info.accessToken).getOrElse(throw new IllegalStateException("access token is missing for user %s".format(user)))
+    val apiKey = settings.clientId
+    connection.login(apiKey, accessToken)
+    send(connection, url, message, user.facebookId)
+    connection.disconnect()
+
     Ok(JsObject(("status" -> JsString("success")) :: Nil))
   }
 

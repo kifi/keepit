@@ -17,11 +17,16 @@ import play.api.Play.current
 import org.joda.time.Seconds
 
 object Scraper {
-  val BATCH_SIZE = 100
+  val BATCH_SIZE = 50
 }
 
 class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
-  val config = new CrawlConfig()
+  val config = {
+    val conf = new CrawlConfig()
+    conf.setIncludeHttpsPages(true)
+    conf
+  }
+  
   val pageFetcher = new PageFetcher(config)
   val parser = new Parser(config);
   
@@ -39,7 +44,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
     scrapedArticles
   }
   
-  def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris.par map { uri =>
+  def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris map { uri =>
     try {
       processURI(uri)
     } catch {
@@ -50,7 +55,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         }
         (errorURI, None)
     }
-  } seq
+  }
   
   def processURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
@@ -98,12 +103,11 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
       } else if (statusCode == HttpStatus.SC_MOVED_PERMANENTLY || statusCode == HttpStatus.SC_MOVED_TEMPORARILY) {
         // TODO: redirect?
         // val movedToUrl = result.getMovedToUrl();
-        Right(ScraperError(normalizedUri, statusCode, "fetch failed: httpStatusCode=" + statusCode))
+        Right(ScraperError(normalizedUri, statusCode, "fetch failed: httpStatusCode=%d description=%s".format(statusCode, CustomFetchStatus.getStatusDescription(statusCode))))
       } else if (result.getStatusCode() == CustomFetchStatus.PageTooBig) {
-        // logger.info("Skipping a page which was bigger than max allowed size: " + curURL.getURL());
-        Right(ScraperError(normalizedUri, statusCode, "fetch failed: page size exceeded maximum. revisit crawler4j config"))
+        Right(ScraperError(normalizedUri, statusCode, "fetch failed: httpStatusCode=%d description=%s [%s]".format(statusCode, CustomFetchStatus.getStatusDescription(statusCode), "revisit crawler4j config")))
       } else {
-        Right(ScraperError(normalizedUri, statusCode, "fetch failed: httpStatusCode=" + statusCode))
+        Right(ScraperError(normalizedUri, statusCode, "fetch failed: httpStatusCode=%d description=%s".format(statusCode, CustomFetchStatus.getStatusDescription(statusCode))))
       }
     } finally {
       fetchResult.foreach(_.discardContentIfNotConsumed())

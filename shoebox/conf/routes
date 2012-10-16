@@ -12,8 +12,8 @@ GET     /bookmarks/all              com.keepit.controllers.BookmarksController.a
 GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
 
-GET     /bookmarks/search           com.keepit.controllers.BookmarksController.searchBookmarks(term: String, keepitId: Id[User])
-GET     /search                     com.keepit.controllers.SearchController.search(term: String)
+#GET     /bookmarks/search           com.keepit.controllers.BookmarksController.searchBookmarks(term: String, keepitId: Id[User])
+GET     /bookmarks/search           com.keepit.controllers.SearchController.search(term: String, keepitId: Id[User])
 
 GET     /users                      com.keepit.controllers.UserController.usersView
 GET     /user                       com.keepit.controllers.UserController.userView(userId: Id[User])
@@ -21,8 +21,6 @@ GET     /users/keepurl              com.keepit.controllers.UserController.usersK
 
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
 GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
-
-POST    /users/anonymous            com.keepit.controllers.UserController.createAnonymous
 
 POST    /chat/:recipientId          com.keepit.controllers.ChatController.chat(recipientId: ExternalId[User])
 

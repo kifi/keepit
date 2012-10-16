@@ -29,19 +29,34 @@ import play.api.http.ContentTypes
 import play.api.libs.json.JsString
 import com.keepit.common.logging.Logging
 import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.index.Hit
+
+//note: users.size != count if some users has the bookmark marked as private
+case class PersonalSearchResult(uri: NormalizedURI, count: Int, users: Seq[User], score: Float)
 
 object SearchController extends Controller with Logging {
  
-  def search(term: String) = Action { request =>
-    println("searching with T%s".format(term))
-    val searchRes = inject[ArticleIndexer].search(term).get
-    val augmentedRes = CX.withConnection { implicit c =>
-      searchRes map { hit =>
-        (NormalizedURI.get(Id[NormalizedURI](hit.id)), hit.score)
+  def search(term: String, keepitId: Id[User]) = Action { request =>
+    println("searching with %s using keepit id %s".format(term, keepitId))
+    val searchRes = inject[ArticleIndexer].search(term)
+    val res = CX.withConnection { implicit conn =>
+      val user = User.getOpt(keepitId).getOrElse(
+          throw new Exception("keepit id %s not found for term %s".format(keepitId, term)))
+      searchRes map { r =>
+        toPersonalSearchResult(r, user)
       }
     }
-    println(augmentedRes mkString "\n")
-    Ok(augmentedRes mkString "\n").as(ContentTypes.TEXT)
+    println(res mkString "\n")
+    Ok(BPSRS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
- 
+  
+  private[controllers] def toPersonalSearchResult(res: Hit, user: User)(implicit conn: Connection): PersonalSearchResult = {
+    val uri = NormalizedURI.get(Id[NormalizedURI](res.id))
+    val count = uri.bookmarks().size
+    val users = uri.bookmarks().map(_.userId.get).map{ userId =>
+      User.get(userId)
+    }
+    PersonalSearchResult(uri, count, users, res.score)
+  }
+  
 }
