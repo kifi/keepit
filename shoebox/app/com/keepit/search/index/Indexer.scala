@@ -92,10 +92,6 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
   
-  def initSearcher {
-    if (IndexReader.indexExists(indexDirectory)) refreshSearcher
-  }
-  
   def refreshSearcher() {
     val reader = IndexReader.openIfChanged(searcher.indexReader) // this may return null
     if (reader != null) searcher = new Searcher(reader, ArrayIdMapper(reader))
