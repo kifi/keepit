@@ -79,7 +79,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
       }
     }
     
-    "search indexed documents" in {
+    "search documents (hits in contents)" in {
       val indexer = ArticleIndexer(ramDir, store)
       
       indexer.search("alldocs").get.size === 3
@@ -87,13 +87,45 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
       var res = indexer.search("content1").get
       res.size === 1
       res.head.id === uriIdArray(0)
-
+      
       res = indexer.search("content2").get
       res.size === 1
       res.head.id === uriIdArray(1)
-
+      
       res = indexer.search("content3").get
       res.size === 1
+      res.head.id === uriIdArray(2)
+    }
+    
+    "search documents (hits in titles)" in {
+      val indexer = ArticleIndexer(ramDir, store)
+      
+      var res = indexer.search("title1").get
+      res.size === 1
+      res.head.id === uriIdArray(0)
+      
+      res = indexer.search("title2").get
+      res.size === 1
+      res.head.id === uriIdArray(1)
+      
+      res = indexer.search("title3").get
+      res.size === 1
+      res.head.id === uriIdArray(2)
+    }
+    
+    "search documents (hits in contents and titles)" in {
+      val indexer = ArticleIndexer(ramDir, store)
+      
+      var res = indexer.search("title1 alldocs").get
+      res.size === 3
+      res.head.id === uriIdArray(0)
+      
+      res = indexer.search("title2 alldocs").get
+      res.size === 3
+      res.head.id === uriIdArray(1)
+      
+      res = indexer.search("title3 alldocs").get
+      res.size === 3
       res.head.id === uriIdArray(2)
     }
   }

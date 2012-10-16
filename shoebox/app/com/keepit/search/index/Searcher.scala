@@ -8,6 +8,8 @@ import org.apache.lucene.search.Scorer
 import scala.collection.mutable.ArrayBuffer
 
 class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends IndexSearcher(indexReader) {
+
+  // search: hits are ordered by score
   def search(query: Query): Seq[Hit] = {
     doSearch(query){ scorer =>
       val hitBuf = new ArrayBuffer[Hit]()
@@ -24,7 +26,7 @@ class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends Ind
   def doSearch[R](query: Query)(f:Scorer => R) = {
     val rewrittenQuery = rewrite(query)
     val weight = createNormalizedWeight(rewrittenQuery)
-    val scorer = weight.scorer(indexReader, false, true)
+    val scorer = weight.scorer(indexReader, true, true)
     f(scorer)
   }
 }

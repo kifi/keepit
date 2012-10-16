@@ -15,6 +15,8 @@ import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.queryParser.QueryParser
 import org.apache.lucene.search.Query
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import org.apache.lucene.util.Version
@@ -59,10 +61,10 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
   }
   
-  private val parser = new QueryParser(Version.LUCENE_36, "c", indexWriterConfig.getAnalyzer())
+  private val parser = new ArticleQueryParser
 
-  def parse(queryString: String): Query = {
-    parser.parse(queryString)
+  def parse(queryText: String): Query = {
+    parser.parse(queryText)
   }
   
   def search(queryString: String): Option[Seq[Hit]] = searcher.map{ _.search(parse(queryString)) }
@@ -83,6 +85,15 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           doc
         case None => doc
       }
+    }
+  }
+  
+  class ArticleQueryParser extends QueryParser(Version.LUCENE_36, "b", indexWriterConfig.getAnalyzer()) {
+    override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
+      val booleanQuery = new BooleanQuery
+      booleanQuery.add(super.getFieldQuery("t", queryText, quoted), Occur.SHOULD)
+      booleanQuery.add(super.getFieldQuery("c", queryText, quoted), Occur.SHOULD)
+      booleanQuery
     }
   }
 }

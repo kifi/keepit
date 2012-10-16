@@ -83,7 +83,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     }
   }
   
-  def parse(queryString: String): Query
+  def parse(queryText: String): Query
   
   def numDocs = indexWriter.numDocs()
   
