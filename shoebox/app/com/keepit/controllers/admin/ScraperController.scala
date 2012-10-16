@@ -23,8 +23,8 @@ object ScraperController extends Controller with Logging {
 
   def scrape = Action { implicit request => 
     val scraper = inject[ScraperPlugin]
-    val urls = scraper.scrape()
-    Ok("scraped %s urls".format(urls))
+    val articles = scraper.scrape()
+    Ok(views.html.scrape(articles))
   }
   
   def getScraped(id: Id[NormalizedURI]) = Action { implicit request => 

@@ -2,6 +2,7 @@ package com.keepit.scraper
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
+import com.keepit.common.time._
 import com.keepit.search.{Article, ArticleStore}
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
@@ -10,44 +11,49 @@ import edu.uci.ics.crawler4j.crawler.{CrawlConfig, Page }
 import edu.uci.ics.crawler4j.fetcher.{CustomFetchStatus, PageFetcher, PageFetchResult}
 import edu.uci.ics.crawler4j.parser.{HtmlParseData, Parser}
 import edu.uci.ics.crawler4j.url.WebURL
-import org.apache.http.HttpStatus;
+import org.apache.http.HttpStatus
 import com.google.inject.Inject
-
 import play.api.Play.current
+import org.joda.time.Seconds
 
 class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
   val config = new CrawlConfig()
   val pageFetcher = new PageFetcher(config)
   val parser = new Parser(config);
   
-  def run(): Int = {
+  def run(): Seq[(NormalizedURI, Option[Article])] = {
+    val startedTime = currentDateTime
     log.info("starting a new scrape round")
     val uris = CX.withConnection { implicit c =>
       NormalizedURI.getByState(ACTIVE)
     }
     log.info("got %s uris to scrape".format(uris.length))
-    processURIs(uris).size
+    val scrapedArticles = processURIs(uris)
+    val jobTime = Seconds.secondsBetween(startedTime, currentDateTime).getSeconds()
+    log.info("succesfuly scraped %s articles out of %s in %s seconds:\n%s".format(
+        scrapedArticles.size, uris.size, jobTime, scrapedArticles map {a => a._1} mkString "\n"))
+    scrapedArticles
   }
   
-  def processURIs(uris: Seq[NormalizedURI]): Seq[Article] = uris map processURI flatten
+  def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris map processURI
   
-  def processURI(uri: NormalizedURI): Option[Article] = {
+  def processURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
     fetchArticle(uri) match {
       case Left(article) =>
         // store article in a store map
         articleStore += (uri.id.get -> article)
         // succeeded. update the state to SCRAPED and save
-        CX.withConnection { implicit c =>
+        val scrapedURI = CX.withConnection { implicit c =>
           uri.withState(NormalizedURI.States.SCRAPED).save
         }
         log.info("fetched uri %s => %s".format(uri, article))
-        Some(article)
+        (scrapedURI, Some(article))
       case Right(error) =>
-        CX.withConnection { implicit c =>
+        val errorURI = CX.withConnection { implicit c =>
           uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
         }
-        None
+        (errorURI, None)
     }
   }
   

@@ -1,0 +1,49 @@
+@(articles: Seq[(NormalizedURI, Option[com.keepit.search.Article])])
+
+
+@scrapedArticle(uri: NormalizedURI) = {
+  @adminHelper.articleDisplay(uri)
+}
+
+@unscrapedArticle() = {
+  <font color="red">Article not scraped</font>
+}
+
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Scrape job</title>
+        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+        <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
+    </head>
+    <body>
+      <h2>Scraped @articles.size URIs</h2>
+      <table>
+        <tr>
+          <th>Id</th>
+          <th>Title</th>
+          <th>Creation</th>
+          <th>URI State</th>
+        </tr>
+	      @for((uri, articleOpt) <- articles) {
+	        <tr>
+	          <td>@uri.id.get.id</td>
+	          <td><a href="@uri.url">@uri.title</a></td>
+	          <td>@uri.createdAt</td>
+	          <td>@uri.state.value</td>
+            <td>@{articleOpt match {
+              case Some(article) => { 
+                scrapedArticle(uri)
+              }
+              case None => { 
+                unscrapedArticle()                
+              }
+            }}
+            </td>
+	        </tr>
+	      }
+      </table>
+    </body>
+</html>
