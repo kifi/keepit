@@ -46,7 +46,7 @@ object ApplicationBuild extends Build {
       //used for securesocial
       "com.typesafe" %% "play-plugins-util" % "2.0.1",
       "org.mindrot" % "jbcrypt" % "0.3m",
-      "edu.uci.ics" % "crawler4j" % "3.3",
+      "edu.uci.ics" % "crawler4j" % "3.4",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20"
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
