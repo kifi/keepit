@@ -90,7 +90,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   
   def parse(queryText: String): Query
   
-  def numDocs = indexWriter.numDocs()
+  def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
   
   def initSearcher {
     if (IndexReader.indexExists(indexDirectory)) refreshSearcher
