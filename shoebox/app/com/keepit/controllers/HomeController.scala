@@ -31,6 +31,7 @@ import com.keepit.common.logging.Logging
 object HomeController extends Controller with Logging {
 
   def home = Action{ request =>
+    log.info("yet another homepage access!")
     val html = io.Source.fromURL(Play.resource("/public/html/index.html").get).mkString
     Ok(html).as(ContentTypes.HTML)
   }
