@@ -260,7 +260,7 @@
         if (env === "development") {
           server = "dev.ezkeep.com:9000";
         }
-        var userInfo = localStorage["user_info"];
+        var userInfo = localStorage["user"];
         if (userInfo) {
           var userInfoString = JSON.parse(userInfo);
         }
@@ -269,7 +269,7 @@
           "hoverTimeout": hoverTimeout, 
           "maxRes": maxRes,
           "server": server,
-          "userInfo": userInfoString
+          "user": userInfoString
         }
         return config;
       } catch (e) {
@@ -300,7 +300,7 @@
           log("keepitId=" + keepitId + " with external id=" + externalId);
           userInfo.keepit_id = keepitId;
           userInfo.externalId = externalId;
-          localStorage["user_info"] = JSON.stringify(userInfo); 
+          localStorage["user"] = JSON.stringify(userInfo); 
           callback();
         }
       }
@@ -340,7 +340,7 @@
 
     }
     function hasKeepitIdAndFacebookId() {
-      var ls = localStorage["user_info"];
+      var ls = localStorage["user"];
       if (!ls) return false;
       try {
         userInfo = JSON.parse(ls);
@@ -377,7 +377,7 @@
             userInfo.avatarUrl = data.avatarUrl;
             log("updating userInfo ");
             log(userInfo);
-            localStorage["user_info"]=JSON.stringify(userInfo);
+            localStorage["user"]=JSON.stringify(userInfo);
             postBookmarks(chrome.bookmarks.getTree);//posting bookmarks
             log("handshake failed");
           }
@@ -390,7 +390,7 @@
 
     if (!hasKeepitIdAndFacebookId()) {
       userInfo = {keepit_id:null};
-      localStorage["user_info"]=JSON.stringify(userInfo); // initialzie user info
+      localStorage["user"]=JSON.stringify(userInfo); // initialzie user info
       log("open facebook connect - till it is closed keepit is (suppose) to be disabled");
       openFacebookConnect();
     } else {
