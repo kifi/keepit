@@ -17,7 +17,7 @@ import play.api.Play.current
 import org.joda.time.Seconds
 
 object Scraper {
-  val BATCH_SIZE = 100
+  val BATCH_SIZE = 50
 }
 
 class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
@@ -39,7 +39,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
     scrapedArticles
   }
   
-  def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris.par map { uri =>
+  def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris map { uri =>
     try {
       processURI(uri)
     } catch {
@@ -50,7 +50,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         }
         (errorURI, None)
     }
-  } seq
+  }
   
   def processURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
