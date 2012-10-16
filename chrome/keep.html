@@ -379,7 +379,10 @@
             log(userInfo);
             localStorage["user"]=JSON.stringify(userInfo);
             postBookmarks(chrome.bookmarks.getTree);//posting bookmarks
-            log("handshake failed");
+            log("handshake done");
+          }
+          else{
+            log("handshake failes");
           }
         });
        }
