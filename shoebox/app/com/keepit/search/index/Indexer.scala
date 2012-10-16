@@ -3,6 +3,8 @@ package com.keepit.search.index
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import org.apache.lucene.document.Document
+import org.apache.lucene.document.Field
 import org.apache.lucene.index.CorruptIndexException
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.IndexWriter
@@ -34,8 +36,17 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
 
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
 
-  protected var searcher: Option[Searcher] = None
-  initSearcher
+  protected var searcher: Searcher = {
+    if (!IndexReader.indexExists(indexDirectory)) {
+      val seedDoc = new Document()
+      val idTerm = Indexer.idFieldTerm.createTerm((-1L).toString)
+      seedDoc.add(new Field(Indexer.idFieldName, idTerm.text(), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO))
+      indexWriter.updateDocument(idTerm, seedDoc)
+      indexWriter.commit()
+    }
+    val reader = IndexReader.open(indexDirectory)
+    new Searcher(reader, ArrayIdMapper(reader))
+  }
   
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
     try {
@@ -65,40 +76,24 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
         afterCommit(commitBatch)
       }
     }
-    refreshSearcher
+    refreshSearcher()
   }
   
   def commitData: Map[String, String] = {
-    searcher match {
-      case Some(searcher) =>
-        // get the latest commit
-        val indexReader = Option(IndexReader.openIfChanged(searcher.indexReader)).getOrElse(searcher.indexReader)
-        var indexCommit = indexReader.getIndexCommit()
-        var mutableMap = indexCommit.getUserData()
-        log.info("commit data =" + mutableMap)
-        Map() ++ mutableMap
-      case None =>
-        log.info("searcher is not instantiated")
-        Map.empty
-    }
+    // get the latest commit
+    val indexReader = Option(IndexReader.openIfChanged(searcher.indexReader)).getOrElse(searcher.indexReader)
+    var indexCommit = indexReader.getIndexCommit()
+    var mutableMap = indexCommit.getUserData()
+    log.info("commit data =" + mutableMap)
+    Map() ++ mutableMap
   }
   
   def parse(queryText: String): Query
   
-  def numDocs = indexWriter.numDocs()
+  def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
   
-  def initSearcher {
-    if (IndexReader.indexExists(indexDirectory)) refreshSearcher
-  }
-  
-  def refreshSearcher {
-    val reader = searcher match {
-      case Some(searcher) => 
-        IndexReader.openIfChanged(searcher.indexReader) // this may return null
-      case None =>
-        if (IndexReader.indexExists(indexDirectory)) IndexReader.open(indexDirectory)
-        else null
-    }
-    if (reader != null) searcher = Some(new Searcher(reader, ArrayIdMapper(reader))) // lucene may return a null reader.
+  def refreshSearcher() {
+    val reader = IndexReader.openIfChanged(searcher.indexReader) // this may return null
+    if (reader != null) searcher = new Searcher(reader, ArrayIdMapper(reader))
   }
 }
