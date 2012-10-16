@@ -3,7 +3,7 @@
 # ~~~~
 
 # Home page
-GET     /                           controllers.Default.TemporaryRedirect(url = "/assets/html/index.html")
+GET     /                           com.keepit.controllers.HomeController.home
 
 GET     /bookmarks                  com.keepit.controllers.BookmarksController.bookmarksView
 
