@@ -16,6 +16,10 @@ import com.google.inject.Inject
 import play.api.Play.current
 import org.joda.time.Seconds
 
+object Scraper {
+  val BATCH_SIZE = 50
+}
+
 class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
   val config = new CrawlConfig()
   val pageFetcher = new PageFetcher(config)
@@ -25,7 +29,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
     val startedTime = currentDateTime
     log.info("starting a new scrape round")
     val uris = CX.withConnection { implicit c =>
-      NormalizedURI.getByState(ACTIVE)
+      NormalizedURI.getByState(ACTIVE, Scraper.BATCH_SIZE)
     }
     log.info("got %s uris to scrape".format(uris.length))
     val scrapedArticles = processURIs(uris)

@@ -93,8 +93,12 @@ object NormalizedURI {
     createSearchResults(term, uris)
   }
   
-  def getByState(state: State[NormalizedURI])(implicit conn: Connection): Seq[NormalizedURI] = {
-    (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.state EQ state) }.list.map( _.view )
+  def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit conn: Connection): Seq[NormalizedURI] = {
+    if (limit <= 0) {
+      (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.state EQ state) }.list.map( _.view )
+    } else {
+      (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.state EQ state) LIMIT limit }.list.map( _.view )
+    }
   }
   
   private def createSearchResults(term: String, uris: Seq[NormalizedURI]): Seq[URISearchResults] = {
