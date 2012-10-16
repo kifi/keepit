@@ -35,7 +35,18 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
     scrapedArticles
   }
   
-  def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris map processURI
+  def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris map { uri =>
+    try {
+      processURI(uri)
+    } catch {
+      case e => 
+        log.error("uncaught exception while scraping uri %s".format(uri), e)
+        val errorURI = CX.withConnection { implicit c =>
+          uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
+        }
+        (errorURI, None)
+    }
+  }
   
   def processURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
