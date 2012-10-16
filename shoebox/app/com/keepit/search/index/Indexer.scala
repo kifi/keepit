@@ -10,7 +10,8 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Payload
 import org.apache.lucene.index.Term
 import org.apache.lucene.store.Directory
-
+import org.apache.lucene.search.Query
+import org.apache.lucene.util.Version
 import java.io.File
 import java.io.IOException
 import scala.collection.JavaConversions._
@@ -29,11 +30,12 @@ object Indexer {
   }
 }
 
-class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) extends Logging {
+abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) extends Logging {
 
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
 
-  var searcher: Option[Searcher] = None
+  protected var searcher: Option[Searcher] = None
+  initSearcher
   
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
     try {
@@ -81,6 +83,7 @@ class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig
     }
   }
   
+  def parse(queryText: String): Query
   
   def numDocs = indexWriter.numDocs()
   
