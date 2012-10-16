@@ -41,6 +41,9 @@ class NormalizedURITest extends SpecificationWithJUnit {
           uris(1).withState(NormalizedURI.States.INACTIVE).save
           NormalizedURI.getByState(NormalizedURI.States.ACTIVE).size === 0
           NormalizedURI.getByState(NormalizedURI.States.INACTIVE).size === 2
+          NormalizedURI.getByState(NormalizedURI.States.INACTIVE, 1).size === 1
+          NormalizedURI.getByState(NormalizedURI.States.INACTIVE, 0).size === 2
+          NormalizedURI.getByState(NormalizedURI.States.INACTIVE, -1).size === 2
         }
       }
     }
