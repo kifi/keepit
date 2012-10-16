@@ -362,7 +362,7 @@
       }
       localStorage['version'] = currVersion;
     }
-    var popup=null
+    var popup=null;
 
     function openFacebookConnect() {    
       chrome.windows.onRemoved.addListener(function(windowId) {
@@ -378,7 +378,7 @@
             log("updating userInfo ");
             log(userInfo);
             localStorage["user_info"]=JSON.stringify(userInfo);
-          } else { 
+            postBookmarks(chrome.bookmarks.getTree);//posting bookmarks
             log("handshake failed");
           }
         });
@@ -391,7 +391,7 @@
     if (!hasKeepitIdAndFacebookId()) {
       userInfo = {keepit_id:null};
       localStorage["user_info"]=JSON.stringify(userInfo); // initialzie user info
-      log("sopen facebokk connect - till it is closed keepit is (suppose) to be disabled");
+      log("open facebook connect - till it is closed keepit is (suppose) to be disabled");
       openFacebookConnect();
     } else {
       log("find user info in local storage");

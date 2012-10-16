@@ -19,8 +19,6 @@ GET     /users/keepurl              com.keepit.controllers.UserController.usersK
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
 GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
 
-POST    /users/anonymous            com.keepit.controllers.UserController.createAnonymous
-
 POST    /chat/:recipientId          com.keepit.controllers.ChatController.chat(recipientId: ExternalId[User])
 
 # Map static resources from the /public folder to the /assets URL path

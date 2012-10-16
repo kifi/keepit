@@ -70,6 +70,7 @@ object BookmarksController extends Controller with Logging {
   def addBookmarks() = JsonAction { request =>
     val json = request.body
     log.debug(json)
+    log.info("keepit_id = [%s]".format(json \ "user_info"))
     val facebookId = parseFacebookId(json \ "user_info")
     val keepitId = parseKeepitId(json \ "user_info")//todo: need to use external id
     val user = internUser(facebookId, keepitId)
@@ -99,7 +100,7 @@ object BookmarksController extends Controller with Logging {
 		      User(
 		          firstName = (json \ "first_name").as[String],
 		          lastName = (json \ "last_name").as[String],
-		          facebookId = Some(facebookId)
+		          facebookId = facebookId
 		      ).save
 	    }
     }
@@ -113,7 +114,7 @@ object BookmarksController extends Controller with Logging {
   }
   
   private def parseFacebookId(value: JsValue): FacebookId = FacebookId((value \ "facebook_id").as[String])
-  private def parseKeepitId(value: JsValue): Id[User] =Id[User](   (value \ "keepit_id").as[String].toInt)      //deprecated, need to use external id
+  private def parseKeepitId(value: JsValue): Id[User] = Id[User](((value \ "keepit_id").as[Int]))//deprecated, need to use external id
   private def parseKeepitExternalId(value: JsValue): ExternalId[User] = ExternalId[User](((value \ "external_id").as[String]))
   
   private def internBookmark(json: JsObject, user: User): Bookmark = {

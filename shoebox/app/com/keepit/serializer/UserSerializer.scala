@@ -13,7 +13,7 @@ class UserSerializer extends Writes[User] {
       "externalId"  -> JsString(user.externalId.toString),
       "firstName" -> JsString(user.firstName),
       "lastName"  -> JsString(user.lastName),
-      "facebookId"  -> { user.facebookId map {id => JsString(id.value)} getOrElse (JsNull) }
+      "facebookId"  -> JsString(user.facebookId.value)
       )
     )
 

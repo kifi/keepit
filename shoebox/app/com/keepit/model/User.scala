@@ -21,11 +21,11 @@ case class User(
   firstName: String,
   lastName: String,
   state: State[User] = User.States.ACTIVE,
-  facebookId: Option[FacebookId] = None,
+  facebookId: FacebookId,
   socialUser: Option[SocialUser] = None
 ) {
   //assuming only facebook id for now
-  def withSecureSocial(socialUser: SocialUser) = copy(facebookId = Some(FacebookId(socialUser.id.id)), socialUser = Some(socialUser))
+  def withSecureSocial(socialUser: SocialUser) = copy(facebookId = FacebookId(socialUser.id.id), socialUser = Some(socialUser))
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
   def withExternalId(id: ExternalId[User]) = copy(externalId = id)
   
@@ -49,9 +49,12 @@ object User {
   def all(implicit conn: Connection): Seq[User] =
     UserEntity.all.map(_.view)
   
+  def get(facebookId: FacebookId)(implicit conn: Connection): User =
+    getOpt(facebookId).getOrElse(throw new Exception("could not find facebookId = %s".format(facebookId.value)))
+
   def getOpt(facebookId: FacebookId)(implicit conn: Connection): Option[User] =
     (UserEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.facebookId EQ facebookId.toString()) unique }.map(_.view)
-    
+
   def get(id: Id[User])(implicit conn: Connection): User =
     getOpt(id).getOrElse(throw NotFoundException(id))
     
@@ -97,7 +100,7 @@ private[model] class UserEntity extends Entity[User, UserEntity] {
     firstName = firstName(),
     lastName = lastName(),
     state = state(),
-    facebookId = facebookId.map(FacebookId(_)),
+    facebookId = FacebookId(facebookId()),
     socialUser = socialUser.map{ s => new SocialUserSerializer().reads(Json.parse(s)) }
   )
 }
@@ -114,7 +117,7 @@ private[model] object UserEntity extends UserEntity with EntityTable[User, UserE
     user.firstName := view.firstName
     user.lastName := view.lastName
     user.state := view.state
-    user.facebookId.set(view.facebookId.map(_.value))
+    user.facebookId := view.facebookId.value
     user.socialUser.set(view.socialUser.map{ s => new SocialUserSerializer().writes(s).toString() })
     user
   }
