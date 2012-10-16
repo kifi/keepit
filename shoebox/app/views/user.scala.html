@@ -9,10 +9,6 @@
   </span>
 }
 
-@userWithoutFacebookDisplay(user: User) = {
-  <span style="margin:2px; font-size:50%">No Facebook Id</span>
-}
-
 <!DOCTYPE html>
 
 <html>
@@ -27,14 +23,7 @@
       <h2>User details</h2>
 	      Name: @user.firstName @user.lastName<br/>
 	      Id: @user.id<br/>
-	      Facebook Account: @{user.facebookId match {
-	        case Some(id) => {
-	          userWithFacebookDisplay(user, id)
-	        }
-	        case None => {
-	          userWithoutFacebookDisplay(user)
-	        }
-	      }}<br/>
+	      Facebook Account: @userWithFacebookDisplay(user, user.facebookId)<br/>
 	      Account created at: @adminHelper.dateDisplay(user.createdAt) @adminHelper.timeDisplay(user.createdAt)<br/>
       <h2>User kept @bookmarks.size Bookmarks</h2>
 		  <table>
