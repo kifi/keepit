@@ -13,6 +13,10 @@ import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.queryParser.QueryParser
+import org.apache.lucene.search.Query
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import org.apache.lucene.util.Version
@@ -35,9 +39,10 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   val commitBatchSize = 100
   
   def run(): Int = {
+    log.info("starting a new indexing round")
     try {
       val uris = CX.withConnection { implicit c =>
-        NormalizedURI.getByState(SCRAPED)
+        NormalizedURI.getByState(SCRAPED, commitBatchSize * 3)
       }
       var cnt = 0
       indexDocuments(uris.iterator.map{ uri => buildIndexable(uri) }, commitBatchSize){ commitBatch =>
@@ -56,6 +61,14 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
   }
   
+  private val parser = new ArticleQueryParser
+
+  def parse(queryText: String): Query = {
+    parser.parse(queryText)
+  }
+  
+  def search(queryString: String): Seq[Hit] = searcher.search(parse(queryString))
+  
   def buildIndexable(uri: NormalizedURI) = {
     new ArticleIndexable(uri.id.get, uri, articleStore)
   }
@@ -72,6 +85,15 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           doc
         case None => doc
       }
+    }
+  }
+  
+  class ArticleQueryParser extends QueryParser(Version.LUCENE_36, "b", indexWriterConfig.getAnalyzer()) {
+    override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
+      val booleanQuery = new BooleanQuery
+      booleanQuery.add(super.getFieldQuery("t", queryText, quoted), Occur.SHOULD)
+      booleanQuery.add(super.getFieldQuery("c", queryText, quoted), Occur.SHOULD)
+      booleanQuery
     }
   }
 }

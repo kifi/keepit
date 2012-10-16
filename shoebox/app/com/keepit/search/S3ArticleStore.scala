@@ -15,6 +15,8 @@ import com.amazonaws.AmazonServiceException
 import java.io.{InputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.lang.UnsupportedOperationException
 import play.api.libs.json.Json
+import com.amazonaws.services.s3.model.AmazonS3Exception
+import com.amazonaws.services.s3.model.S3Object
 
 
 trait ArticleStore extends MutableMap[Id[NormalizedURI], Article]
@@ -36,10 +38,10 @@ class S3ArticleStoreImpl(bucketName: S3Bucket, amazonS3Client: AmazonS3) extends
           val metadata = new ObjectMetadata()
           metadata.setContentEncoding(ENCODING)
           metadata.setContentType("application/json")
-          s3Client.putObject(bucketName, 
+          Some(s3Client.putObject(bucketName, 
               idToArticleJsonKey(normalizedUrlId), 
               toInputStream(article), 
-              metadata)
+              metadata))
         }
     }
     this
@@ -47,36 +49,45 @@ class S3ArticleStoreImpl(bucketName: S3Bucket, amazonS3Client: AmazonS3) extends
   
   def -= (normalizedUrlId: Id[NormalizedURI]) = {
     doWithS3Client("removing an item from S3ArticleStore"){ s3Client =>
-      s3Client.deleteObject(bucketName, idToArticleJsonKey(normalizedUrlId))
+      Some(s3Client.deleteObject(bucketName, idToArticleJsonKey(normalizedUrlId)))
     }
     this
   }
   
   def get(normalizedUrlId: Id[NormalizedURI]): Option[Article] = {
     doWithS3Client("getting an item from S3ArticleStore"){ s3Client =>
-      val s3obj = s3Client.getObject(bucketName, idToArticleJsonKey(normalizedUrlId))
-      val is = s3obj.getObjectContent
-      try {
-        val jsonString = scala.io.Source.fromInputStream(is, ENCODING).getLines().mkString("\n")
-        val json = Json.parse(jsonString)
-        inject[ArticleSerializer].reads(json)
-      } finally {
-        is.close
-      }
+      val key = idToArticleJsonKey(normalizedUrlId)
+      val s3obj = try {
+        Some(s3Client.getObject(bucketName, key)) 
+      } catch {
+        case e: AmazonS3Exception if (e.getMessage().contains("The specified key does not exist")) => None
+      } 
+      s3obj map extractArticle
     }
   }
+  
+  private def extractArticle(s3obj: S3Object) = {
+    val is = s3obj.getObjectContent
+    try {
+      val jsonString = scala.io.Source.fromInputStream(is, ENCODING).getLines().mkString("\n")
+      val json = Json.parse(jsonString)
+      inject[ArticleSerializer].reads(json)
+    } finally {
+      is.close
+    }
+  } 
   
   def iterator = throw new UnsupportedOperationException
   
   override def empty = throw new UnsupportedOperationException
   
-  private def doWithS3Client[T](what: =>String)(body: AmazonS3=>T): Option[T] = {
+  private def doWithS3Client[T](what: =>String)(body: AmazonS3 => Option[T]): Option[T] = {
     var ret: Option[T] = None
     try {
-      ret = Some(body(amazonS3Client))
+      ret = body(amazonS3Client) 
     } catch {
       case ex: Exception =>
-        log.error("failed: "+what, ex)
+        log.error("failed: " + what , ex)
         throw ex
     }
     ret

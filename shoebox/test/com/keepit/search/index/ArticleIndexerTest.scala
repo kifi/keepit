@@ -22,6 +22,8 @@ import org.apache.lucene.store.RAMDirectory
 class ArticleIndexerTest extends SpecificationWithJUnit {
 
   val ramDir = new RAMDirectory
+  val store = new FakeArticleStore()
+  val uriIdArray = new Array[Long](3)
   
   "ArticleIndexer" should {
     "index scraped URIs" in {
@@ -33,11 +35,15 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
            NormalizedURI(title = "a2", url = "http://www.keepit.com/article2", state=SCRAPED).save,
            NormalizedURI(title = "a3", url = "http://www.keepit.com/article3", state=INDEXED).save)
         }
-        val store = new FakeArticleStore()
-        store += (uri1.id.get -> Article(uri1.id.get, "title1", "content1 all"))
-        store += (uri2.id.get -> Article(uri2.id.get, "title2", "content2 all"))
-        store += (uri3.id.get -> Article(uri3.id.get, "title3", "content3 all"))
+        store += (uri1.id.get -> Article(uri1.id.get, "title1", "content1 alldocs"))
+        store += (uri2.id.get -> Article(uri2.id.get, "title2", "content2 alldocs"))
+        store += (uri3.id.get -> Article(uri3.id.get, "title3", "content3 alldocs"))
 
+        // saving ids for the search test
+        uriIdArray(0) = uri1.id.get.id
+        uriIdArray(1) = uri2.id.get.id
+        uriIdArray(2) = uri3.id.get.id
+        
         val indexer = ArticleIndexer(ramDir, store)
         indexer.run
         
@@ -71,6 +77,56 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
         uri2.state === INDEXED
         uri3.state === INDEXED
       }
+    }
+    
+    "search documents (hits in contents)" in {
+      val indexer = ArticleIndexer(ramDir, store)
+      
+      indexer.search("alldocs").size === 3
+      
+      var res = indexer.search("content1")
+      res.size === 1
+      res.head.id === uriIdArray(0)
+      
+      res = indexer.search("content2")
+      res.size === 1
+      res.head.id === uriIdArray(1)
+      
+      res = indexer.search("content3")
+      res.size === 1
+      res.head.id === uriIdArray(2)
+    }
+    
+    "search documents (hits in titles)" in {
+      val indexer = ArticleIndexer(ramDir, store)
+      
+      var res = indexer.search("title1")
+      res.size === 1
+      res.head.id === uriIdArray(0)
+      
+      res = indexer.search("title2")
+      res.size === 1
+      res.head.id === uriIdArray(1)
+      
+      res = indexer.search("title3")
+      res.size === 1
+      res.head.id === uriIdArray(2)
+    }
+    
+    "search documents (hits in contents and titles)" in {
+      val indexer = ArticleIndexer(ramDir, store)
+      
+      var res = indexer.search("title1 alldocs")
+      res.size === 3
+      res.head.id === uriIdArray(0)
+      
+      res = indexer.search("title2 alldocs")
+      res.size === 3
+      res.head.id === uriIdArray(1)
+      
+      res = indexer.search("title3 alldocs")
+      res.size === 3
+      res.head.id === uriIdArray(2)
     }
   }
 }

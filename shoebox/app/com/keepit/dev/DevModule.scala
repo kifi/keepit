@@ -69,6 +69,11 @@ case class DevModule() extends ScalaModule with Logging {
         new RAMDirectory()
       case Some(dirPath) =>
         val dir = new File(dirPath).getCanonicalFile()
+        if (!dir.exists()) {
+          if (!dir.mkdirs()) {
+            throw new Exception("could not create dir %s".format(dir))
+          }
+        }
         new MMapDirectory(dir)
     }
     ArticleIndexer(indexDir, articleStore)

@@ -28,9 +28,6 @@ import play.api.http.ContentTypes
 import play.api.libs.json.JsString
 import com.keepit.common.logging.Logging
 
-//note: users.size != count if some users has the bookmark marked as private
-case class PersonalSearchResult(uri: NormalizedURI, count: Int, users: Seq[User], score: Float)
-
 object BookmarksController extends Controller with Logging {
 
   def edit(id: Id[Bookmark]) = Action{ request =>
@@ -130,33 +127,6 @@ object BookmarksController extends Controller with Logging {
         case None => Bookmark(normalizedUri, user, title, url).save
       }
     }
-  }
-  
-  def searchBookmarks(term: String, keepitId: Id[User]) = Action { request =>
-    println("searching with %s using keepit id %s".format(term, keepitId))
-    val res = CX.withConnection { implicit conn =>
-      val user = User.getOpt(keepitId).getOrElse(
-          throw new Exception("keepit id %s not found for term %s".format(keepitId, term)))
-      val res: Seq[URISearchResults] = NormalizedURI.search(term)
-      res map { r =>
-        toPersonalSearchResult(r, user)
-      }
-    }
-    println(res mkString "\n")
-    Ok(BPSRS.resSerializer.writes(res)).as(ContentTypes.JSON)
-  }
-  
-  private[controllers] def toPersonalSearchResult(res: URISearchResults, user: User)(implicit conn: Connection): PersonalSearchResult = {
-    val uri = res.uri
-    val count = uri.bookmarks().size
-    val users = uri.bookmarks().map(_.userId.get).map{ userId =>
-      User.get(userId)
-    }
-    PersonalSearchResult(uri, count, users, res.score)
-  }
-  
-  def orderResults(res: Map[Bookmark, Int]): List[(Bookmark, Int)] = res.toList.sortWith{
-    (a, b) => a._2 > b._2
   }
   
 }
