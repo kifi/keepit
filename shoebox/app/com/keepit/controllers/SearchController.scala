@@ -34,7 +34,7 @@ object SearchController extends Controller with Logging {
  
   def search(term: String) = Action { request =>
     println("searching with T%s".format(term))
-    val searchRes = inject[ArticleIndexer].search(term).get
+    val searchRes = inject[ArticleIndexer].search(term)
     val augmentedRes = CX.withConnection { implicit c =>
       searchRes map { hit =>
         (NormalizedURI.get(Id[NormalizedURI](hit.id)), hit.score)

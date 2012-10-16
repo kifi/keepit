@@ -42,7 +42,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     log.info("starting a new indexing round")
     try {
       val uris = CX.withConnection { implicit c =>
-        NormalizedURI.getByState(SCRAPED)
+        NormalizedURI.getByState(SCRAPED, commitBatchSize * 3)
       }
       var cnt = 0
       indexDocuments(uris.iterator.map{ uri => buildIndexable(uri) }, commitBatchSize){ commitBatch =>
@@ -67,7 +67,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     parser.parse(queryText)
   }
   
-  def search(queryString: String): Option[Seq[Hit]] = searcher.map{ _.search(parse(queryString)) }
+  def search(queryString: String): Seq[Hit] = searcher.search(parse(queryString))
   
   def buildIndexable(uri: NormalizedURI) = {
     new ArticleIndexable(uri.id.get, uri, articleStore)
