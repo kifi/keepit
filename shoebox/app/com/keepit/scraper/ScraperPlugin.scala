@@ -3,6 +3,8 @@ package com.keepit.scraper
 import scala.collection.mutable.MutableList
 import com.keepit.search.ArticleStore
 import com.keepit.common.logging.Logging
+import com.keepit.search.Article
+import com.keepit.model.NormalizedURI
 import play.api.Plugin
 import play.api.templates.Html
 import akka.util.Timeout
@@ -24,13 +26,13 @@ case object Scrape
 private[scraper] class ScraperActor(scraper: Scraper) extends Actor with Logging {
   
   def receive() = {
-    case Scrape => scraper.run()
+    case Scrape => sender ! scraper.run()
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
 
 trait ScraperPlugin extends Plugin {
-  def scrape(): Int
+  def scrape(): Seq[(NormalizedURI, Option[Article])]
 }
 
 class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extends ScraperPlugin {
@@ -51,8 +53,8 @@ class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extend
     _cancellables.map(_.cancel)
   }
   
-  override def scrape(): Int = {
-    val future = actor.ask(Scrape)(1 minutes).mapTo[Int]
+  override def scrape(): Seq[(NormalizedURI, Option[Article])] = {
+    val future = actor.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
     Await.result(future, 1 minutes)
   } 
 }
