@@ -37,7 +37,7 @@
       if (userInfo) {
         userInfo.keepit_id = $("#keepit_id").val();
       }
-      localStorage["user"]= userInfo;
+      localStorage["user"]= JSON.stringify(userInfo);
     }
   }
 
