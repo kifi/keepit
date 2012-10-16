@@ -14,6 +14,15 @@ import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
 
+case class BookmarkSource(value: String) {
+  implicit def getValue = value
+  implicit def source(value: String) = BookmarkSource(value)
+}
+
+object BookmarkSource(value: String) {
+  implicit def source(value: String) = BookmarkSource(value)
+}
+
 case class Bookmark(
   id: Option[Id[Bookmark]] = None,
   createdAt: DateTime = currentDateTime,
@@ -25,7 +34,8 @@ case class Bookmark(
   bookmarkPath: Option[String] = None,
   isPrivate: Boolean = false,
   userId: Option[Id[User]] = None,
-  state: State[Bookmark] = Bookmark.States.ACTIVE
+  state: State[Bookmark] = Bookmark.States.ACTIVE,
+  source: BookmarkSource
 ) {
   
   def save(implicit conn: Connection): Bookmark = {
@@ -44,8 +54,8 @@ case class Bookmark(
 
 object Bookmark {
   
-  def apply(uri: NormalizedURI, user: User, title: String, url: String): Bookmark = 
-    Bookmark(title = title, url = url, userId = user.id, uriId = uri.id.get)
+  def apply(uri: NormalizedURI, user: User, title: String, url: String, source: BookmarkSource): Bookmark = 
+    Bookmark(title = title, url = url, userId = user.id, uriId = uri.id.get, source = source)
   
   def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = {
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE ((b.uriId EQ uri.id.get) AND (b.userId EQ user.id.get)) unique }.map( _.view )
@@ -91,6 +101,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
   val bookmarkPath = "bookmark_path".VARCHAR(512).NOT_NULL
   val userId = "user_id".ID[User]
   val isPrivate = "is_private".BOOLEAN.NOT_NULL
+  val source = "source".VARCHAR(256).NOT_NULL
   
   def relation = BookmarkEntity
   
@@ -105,7 +116,8 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
     uriId = uriId(),
     isPrivate = isPrivate(),
     userId = userId.value,
-    bookmarkPath = bookmarkPath.value
+    bookmarkPath = bookmarkPath.value,
+    source = source
   )
 }
 

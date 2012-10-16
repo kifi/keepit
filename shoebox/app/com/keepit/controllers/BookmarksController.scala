@@ -70,6 +70,7 @@ object BookmarksController extends Controller with Logging {
   def addBookmarks() = JsonAction { request =>
     val json = request.body
     log.debug(json)
+    val bookmarkSource = (json \ "bookmark_source").asOpt[String]
     val facebookId = parseFacebookId(json \ "user_info")
     val keepitId = parseKeepitId(json \ "user_info")//todo: need to use external id
     val user = internUser(facebookId, keepitId)
