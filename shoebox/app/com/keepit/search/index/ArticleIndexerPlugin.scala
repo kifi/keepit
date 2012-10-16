@@ -24,7 +24,7 @@ case object Index
 private[index] class ArticleIndexerActor(articleIndexer: ArticleIndexer) extends Actor with Logging {
   
   def receive() = {
-    case Index => articleIndexer.run()
+    case Index => sender ! articleIndexer.run()
     case m => throw new Exception("unknown message %s".format(m))
   }
 }

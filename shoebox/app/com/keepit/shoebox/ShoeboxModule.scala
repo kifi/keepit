@@ -11,6 +11,7 @@ import com.keepit.common.healthcheck.HealthcheckImpl
 import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.PostOfficeImpl
 import com.keepit.common.net._
+import com.keepit.common.logging.Logging
 import com.keepit.scraper._
 import com.keepit.inject._
 import com.keepit.search.index.ArticleIndexer
@@ -26,7 +27,7 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import java.io.File
 
-case class ShoeboxModule() extends ScalaModule {
+case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
     
     var appScope = new AppScope
@@ -62,6 +63,12 @@ case class ShoeboxModule() extends ScalaModule {
   def articleIndexer(articleStore: ArticleStore): ArticleIndexer = {
     var dirPath = current.configuration.getString("index.article.directory").get
     val dir = new File(dirPath).getCanonicalFile()
+    if (!dir.exists()) {
+      if (!dir.mkdirs()) {
+        throw new Exception("could not create dir %s".format(dir))
+      }
+    }
+    log.info("storing search index in %s".format(dir.getAbsolutePath()))
     ArticleIndexer(new MMapDirectory(dir), articleStore)
   }
   
