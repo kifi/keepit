@@ -29,24 +29,6 @@
 
     log("background page kicking in!");
 
-    function extractFacbookInfo(userInfo, callback) {
-      chrome.cookies.get({"url":"http://facebook.com", "name": "c_user"}, function(cookie){
-        if (!cookie) {
-          var message = "facebook cookie does not exist!"
-          alert(message);
-          throw Error(message);
-        }
-        try {
-          userInfo.facebook_id = cookie.value;
-          userInfo.avatarUrl = "https://graph.facebook.com/" + cookie.value + "/picture";
-          localStorage["user_info"]=JSON.stringify(userInfo);
-          callback(userInfo)
-        } catch (e) {
-          error(e);
-        }
-      });
-    }
-
     function postBookmarks(bookmarksSupplier) {
       log("posging bookmarks...");
       try {
@@ -278,7 +260,7 @@
         if (env === "development") {
           server = "dev.ezkeep.com:9000";
         }
-        var userInfo = localStorage["user_info"];
+        var userInfo = localStorage["user"];
         if (userInfo) {
           var userInfoString = JSON.parse(userInfo);
         }
@@ -287,7 +269,7 @@
           "hoverTimeout": hoverTimeout, 
           "maxRes": maxRes,
           "server": server,
-          "userInfo": userInfoString
+          "user": userInfoString
         }
         return config;
       } catch (e) {
@@ -318,7 +300,7 @@
           log("keepitId=" + keepitId + " with external id=" + externalId);
           userInfo.keepit_id = keepitId;
           userInfo.externalId = externalId;
-          localStorage["user_info"] = JSON.stringify(userInfo); 
+          localStorage["user"] = JSON.stringify(userInfo); 
           callback();
         }
       }
@@ -339,8 +321,26 @@
 
     var userInfo = {keepit_id: null}
 
-    function hasUserInfoInLocalStorage() {
-      var ls = localStorage["user_info"];
+    function startHandShake(callback){
+      log("starting handShake");
+      $.get("http://" + getConfigs().server + "/isLoggedIn", null,
+        function(data) {         
+          log("got success response "+data);
+          log(data)
+          callback(data) 
+        },
+        "json"
+      ).error(function(error) {
+        console.log(error.responseText);
+        alert("got error resposne" + error.responseText);
+        callback(null);
+      });
+
+
+
+    }
+    function hasKeepitIdAndFacebookId() {
+      var ls = localStorage["user"];
       if (!ls) return false;
       try {
         userInfo = JSON.parse(ls);
@@ -362,22 +362,46 @@
       }
       localStorage['version'] = currVersion;
     }
-  
-    if (!hasUserInfoInLocalStorage()){
-      userInfo = {keepit_id:null};
-      localStorage["user_info"]=JSON.stringify(userInfo); // initialzie user info
-      extractFacbookInfo(userInfo, function(userInfo) { 
-        obtainNewkeepitId(userInfo, function(){
-          postBookmarks(chrome.bookmarks.getTree);//posting bookmarks when a *new* keepit id is created
-        })
+    var popup=null;
+
+    function openFacebookConnect() {    
+      chrome.windows.onRemoved.addListener(function(windowId) {
+        if (windowId === popup) {
+        popup = undefined;
+        startHandShake(function(data) {
+          if (data) {
+            log("got handshake data ");
+            log(data);
+            userInfo.facebook_id = data.facebookId;
+            userInfo.keepit_id = data.keepitId
+            userInfo.avatarUrl = data.avatarUrl;
+            log("updating userInfo ");
+            log(userInfo);
+            localStorage["user"]=JSON.stringify(userInfo);
+            postBookmarks(chrome.bookmarks.getTree);//posting bookmarks
+            log("handshake done");
+          }
+          else{
+            log("handshake failes");
+          }
+        });
+       }
       });
+
+      chrome.windows.create({'url': 'http://'+getConfigs().server+'/authenticate/facebook', 'type': 'popup'}, function(window) {popup=window.id} );
+    }
+
+    if (!hasKeepitIdAndFacebookId()) {
+      userInfo = {keepit_id:null};
+      localStorage["user"]=JSON.stringify(userInfo); // initialzie user info
+      log("open facebook connect - till it is closed keepit is (suppose) to be disabled");
+      openFacebookConnect();
     } else {
       log("find user info in local storage");
+      log(userInfo);
       postBookmarks(chrome.bookmarks.getTree);//posting bookmarks even when keepit id is found
+      getBookMarks();
     }
-    log(userInfo)
-
-    getBookMarks();
 
   </script>
   <body>

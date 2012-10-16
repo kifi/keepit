@@ -27,6 +27,7 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
+import play.api.libs.json._
 import com.keepit.model.User
 import com.keepit.model.FacebookId
 import com.keepit.common.db.CX
@@ -45,10 +46,10 @@ object AuthController extends Controller with securesocial.core.SecureSocial
 		  Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)) 
 	  else
 	  {
-	    var keepitId = "";
+	    var keepitId = 0l
 	  	CX.withConnection { implicit c =>
-	    	val user = User.getOpt(FacebookId(socialUser.get.id.id))
-	    	if(user!=None) keepitId = user.get.id.get.id.toString()
+	    	val user = User.get(FacebookId(socialUser.get.id.id))
+	    	keepitId = user.id.get.id
 	  	}
 			Ok(JsObject(
 			  ("status" -> JsString("loggedin")) ::
@@ -56,7 +57,7 @@ object AuthController extends Controller with securesocial.core.SecureSocial
 			  ("name" -> JsString(socialUser.get.displayName)) :: 
 			  ("facebookId" -> JsString(socialUser.get.id.id)) ::
 			  ("provider" -> JsString(socialUser.get.id.providerId)) ::
-			  ("keepitId" -> JsString(keepitId)) ::
+			  ("keepitId" -> JsNumber(keepitId)) ::
 			  Nil)
 			)
 		}
@@ -64,6 +65,7 @@ object AuthController extends Controller with securesocial.core.SecureSocial
 
   
   def welcome = SecuredAction() { implicit request =>
+    Logger.debug("in welcome. with user : [ %s ]".format(request.user ))
     Ok(securesocial.views.html.protectedAction(request.user))
   }
 }

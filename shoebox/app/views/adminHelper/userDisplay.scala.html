@@ -8,17 +8,6 @@
   </span>
 }
 
-@userWithoutFacebookDisplay(user: User) = {
-  <span style="margin:2px; font-size:50%">
-    </br>(@user.id.get) @user.firstName @user.lastName (No Facebook Id)
-  </span>
-}
 
-@{user.facebookId match {
-  case Some(id) => {
-    userWithFacebookDisplay(user, id)
-  }
-  case None => {
-    userWithoutFacebookDisplay(user)
-  }
-}}
+
+@userWithFacebookDisplay(user, user.facebookId) 
