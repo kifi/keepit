@@ -68,8 +68,17 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     doWithIndexWriter{ indexWriter =>
       indexables.grouped(commitBatchSize).foreach{ commitBatch =>
         commitBatch.foreach{ indexable =>
-          indexWriter.updateDocument(indexable.idTerm, indexable.buildDocument)
-          log.info("indexed id=%s".format(indexable.id))
+          val document = try {
+            Some(indexable.buildDocument)
+          } catch {
+            case e => 
+              log.error("failed to build document for uri %s".format(indexable.id), e)
+              None
+          } 
+          document map { doc => 
+            indexWriter.updateDocument(indexable.idTerm, doc)
+            log.info("indexed id=%s".format(indexable.id))
+          }
         }
         indexWriter.commit(Map(Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString))
         log.info("index commited")
