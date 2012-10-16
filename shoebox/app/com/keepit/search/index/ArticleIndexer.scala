@@ -13,6 +13,8 @@ import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.queryParser.QueryParser
+import org.apache.lucene.search.Query
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import org.apache.lucene.util.Version
@@ -35,6 +37,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   val commitBatchSize = 100
   
   def run(): Int = {
+    log.info("starting a new indexing round")
     try {
       val uris = CX.withConnection { implicit c =>
         NormalizedURI.getByState(SCRAPED)
@@ -55,6 +58,14 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
         throw ex
     }
   }
+  
+  private val parser = new QueryParser(Version.LUCENE_36, "c", indexWriterConfig.getAnalyzer())
+
+  def parse(queryString: String): Query = {
+    parser.parse(queryString)
+  }
+  
+  def search(queryString: String): Option[Seq[Hit]] = searcher.map{ _.search(parse(queryString)) }
   
   def buildIndexable(uri: NormalizedURI) = {
     new ArticleIndexable(uri.id.get, uri, articleStore)
