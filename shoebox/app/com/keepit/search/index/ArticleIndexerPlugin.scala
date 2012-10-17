@@ -38,7 +38,7 @@ trait ArticleIndexerPlugin extends Plugin {
   def index(): Int
 }
 
-class ArticleIndexerPluginImpl @Inject() (system: ActorSystem, articleIndexer: ArticleIndexer) extends ArticleIndexerPlugin {
+class ArticleIndexerPluginImpl @Inject() (system: ActorSystem, articleIndexer: ArticleIndexer) extends ArticleIndexerPlugin with Logging {
   
   implicit val actorTimeout = Timeout(5 seconds)
   
@@ -48,11 +48,13 @@ class ArticleIndexerPluginImpl @Inject() (system: ActorSystem, articleIndexer: A
   private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
   override def onStart(): Unit = {
+    log.info("starting ArticleIndexerPluginImpl")
     _cancellables = Seq(
       system.scheduler.schedule(30 seconds, 1 minutes, actor, Index)
     )
   }
   override def onStop(): Unit = {
+    log.info("stoping ArticleIndexerPluginImpl")
     _cancellables.map(_.cancel)
   }
   
