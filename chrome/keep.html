@@ -389,7 +389,12 @@
        }
       });
 
-      chrome.windows.create({'url': 'http://'+getConfigs().server+'/authenticate/facebook', 'type': 'popup'}, function(window) {popup=window.id} );
+      chrome.windows.create({
+        'url': 'http://' + getConfigs().server + '/authenticate/facebook', 
+        'type': 'popup'
+      }, function(window) {
+        popup = window.id
+      });
     }
 
     if (!hasKeepitIdAndFacebookId()) {
