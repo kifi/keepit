@@ -1,7 +1,6 @@
 package com.keepit.common.store
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.S3Bucket
 import com.keepit.common.db.Id
 import com.keepit.inject._
 import com.amazonaws.auth._
@@ -15,6 +14,8 @@ import play.api.libs.json.Json
 import play.api.libs.json.Format
 import java.io.InputStream
 import java.io.ByteArrayInputStream
+
+case class S3Bucket(name: String) 
 
 trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
 
