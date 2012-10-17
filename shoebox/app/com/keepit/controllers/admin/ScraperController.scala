@@ -36,6 +36,7 @@ object ScraperController extends Controller with Logging {
       case SCRAPED => updateStateFrom(state)
       case SCRAPE_FAILED => updateStateFrom(state)
       case INDEXED => updateStateFrom(state)
+      case INDEX_FAILED => updateStateFrom(state)
       case _ => // ignore
     }
     val scraper = inject[ScraperPlugin]

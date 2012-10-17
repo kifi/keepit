@@ -28,6 +28,7 @@ object ArticleIndexerController extends Controller with Logging {
     }
     state match { // TODO: factor out valid state transitions
       case INDEXED => updateStateFrom(state)
+      case INDEX_FAILED => updateStateFrom(state)
       case _ => // ignore 
     }
     val indexer = inject[ArticleIndexerPlugin]
