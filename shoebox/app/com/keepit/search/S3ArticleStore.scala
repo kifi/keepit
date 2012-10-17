@@ -20,7 +20,7 @@ import com.amazonaws.services.s3.model.S3Object
 import com.keepit.common.store.ObjectStore
 
 
-trait ArticleStore extends ObjectStore[Id[NormalizedURI], Article]
+trait ArticleStore extends ObjectStore[NormalizedURI, Article]
 
 case class S3Bucket(name: String) 
 

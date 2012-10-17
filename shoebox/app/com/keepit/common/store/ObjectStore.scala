@@ -1,5 +1,7 @@
 package com.keepit.common.store
 
+import com.keepit.common.db.Id
+
 trait ObjectStore[A, B] {
 
   /** Adds a new key/value pair to this map.
@@ -8,13 +10,13 @@ trait ObjectStore[A, B] {
    *  @param    kv the key/value pair.
    *  @return   the map itself
    */
-  def += (kv: (A, B)): this.type
+  def += (kv: (Id[A], B)): this.type
   
   /** Removes a key from this map.
    *  @param    key the key to be removed
    *  @return   the map itself.
    */
-  def -= (key: A): this.type
+  def -= (key: Id[A]): this.type
 
   /** Optionally returns the value associated with a key.
    *
@@ -22,6 +24,6 @@ trait ObjectStore[A, B] {
    *  @return an option value containing the value associated with `key` in this map,
    *          or `None` if none exists.
    */
-  def get(key: A): Option[B]
+  def get(key: Id[A]): Option[B]
   
 }
