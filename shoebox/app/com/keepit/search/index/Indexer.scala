@@ -16,7 +16,10 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.util.Version
 import java.io.File
 import java.io.IOException
+import java.lang.OutOfMemoryError
 import scala.collection.JavaConversions._
+
+case class IndexError(msg: String)
 
 object Indexer {
   val idFieldName = "_ID"
@@ -64,21 +67,36 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     }
   }  
    
-  def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int)(afterCommit: Seq[Indexable[T]]=>Unit): Unit = {
+  def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int)(afterCommit: Seq[(Indexable[T], Option[IndexError])]=>Unit): Unit = {
     doWithIndexWriter{ indexWriter =>
-      indexables.grouped(commitBatchSize).foreach{ commitBatch =>
-        commitBatch.foreach{ indexable =>
+      indexables.grouped(commitBatchSize).foreach{ indexableBatch =>
+        val commitBatch = indexableBatch.map{ indexable =>
           val document = try {
-            Some(indexable.buildDocument)
+            Left(indexable.buildDocument)
           } catch {
-            case e => 
-              log.error("failed to build document for uri %s".format(indexable.id), e)
-              None
+            case e =>
+              val msg = "failed to build document for uri %s".format(indexable.id)
+              log.error(msg, e)
+              Right(IndexError(msg))
           } 
-          document map { doc => 
-            indexWriter.updateDocument(indexable.idTerm, doc)
-            log.info("indexed id=%s".format(indexable.id))
+          val error = document match {
+            case Left(doc) => 
+              try {
+                indexWriter.updateDocument(indexable.idTerm, doc)
+                log.info("indexed id=%s".format(indexable.id))
+                None
+              } catch {
+                case e: CorruptIndexException => throw e  // fatal
+                case e: OutOfMemoryError => throw e       // fatal
+                case e: IOException => throw e            // fatal
+                case e =>
+                  val msg = "failed to index document for uri %s".format(indexable.id)
+                  log.error(msg, e)
+                  Some(IndexError(msg))
+              }
+            case Right(error) => Some(error)
           }
+          (indexable, error)
         }
         indexWriter.commit(Map(Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString))
         log.info("index commited")
@@ -106,3 +124,4 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     if (reader != null) searcher = new Searcher(reader, ArrayIdMapper(reader))
   }
 }
+
