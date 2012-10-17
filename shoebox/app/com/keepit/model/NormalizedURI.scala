@@ -139,6 +139,7 @@ object NormalizedURI {
     val SCRAPED	= State[NormalizedURI]("scraped")
     val SCRAPE_FAILED = State[NormalizedURI]("scrape_failed")
     val INDEXED = State[NormalizedURI]("indexed")
+    val INDEX_FAILED = State[NormalizedURI]("index_failed")
     val INACTIVE = State[NormalizedURI]("inactive")
   }
 }
