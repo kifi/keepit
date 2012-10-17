@@ -20,6 +20,7 @@ import com.keepit.controllers.CommonActions._
 import com.keepit.common.db.CX
 import com.keepit.common.db._
 import com.keepit.model._
+import com.keepit.inject._
 import com.keepit.serializer.BookmarkSerializer
 import com.keepit.serializer.{URIPersonalSearchResultSerializer => BPSRS}
 import com.keepit.common.db.ExternalId
@@ -27,6 +28,7 @@ import com.keepit.common.logging.Logging
 import java.util.concurrent.TimeUnit
 import java.sql.Connection
 import securesocial.core._
+import com.keepit.scraper.ScraperPlugin
 
 object BookmarksController extends Controller with Logging with SecureSocial {
 
@@ -121,13 +123,19 @@ object BookmarksController extends Controller with Logging with SecureSocial {
     CX.withConnection { implicit conn =>
       val normalizedUri = NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) => uri
-        case None => NormalizedURI(title, url).save
+        case None => createNewURI(title, url)
       }
       Bookmark.load(normalizedUri, user) match {
         case Some(bookmark) => bookmark
         case None => Bookmark(normalizedUri, user, title, url, source).save
       }
     }
+  }
+  
+  private def createNewURI(title: String, url: String)(implicit conn: Connection) = {
+    val uri = NormalizedURI(title, url).save
+    inject[ScraperPlugin].asyncScrape(uri)
+    uri
   }
   
 }

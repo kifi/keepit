@@ -44,8 +44,9 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
     scrapedArticles
   }
   
-  def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris map { uri =>
-    try {
+  def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris map safeProcessURI
+  
+  def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
       processURI(uri)
     } catch {
       case e => 
@@ -55,9 +56,9 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         }
         (errorURI, None)
     }
-  }
   
-  def processURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
+  
+  private def processURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
     fetchArticle(uri) match {
       case Left(article) =>
