@@ -28,6 +28,7 @@ import play.api.data.validation.Constraints._
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json._
+import com.keepit.common.logging.Logging
 import com.keepit.model.User
 import com.keepit.model.FacebookId
 import com.keepit.common.db.CX
@@ -35,12 +36,12 @@ import com.keepit.common.db.CX
 /**
  * The Login page controller
  */
-object AuthController extends Controller with SecureSocial
+object AuthController extends Controller with SecureSocial with Logging
 {
   def isLoggedIn = SecuredAction(true) { implicit request => {
 	  def socialUser = UserService.find(request.user.id)
       
-	  println("facebook id %s".format(socialUser.get.id.id))
+	  log.info("facebook id %s".format(socialUser.get.id.id))
 	  
 	  if (socialUser==None) 
 		  Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)) 
