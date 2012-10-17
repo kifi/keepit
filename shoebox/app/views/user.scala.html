@@ -30,11 +30,13 @@
         <tr>
           <th>BID</th>
           <th>Bookmark</th>
+          <th>Source</th>
         </tr>
 			  @for(bookmark <- bookmarks) {
 			    <tr>
             <td>#@bookmark.id.get.id</td>
             <td>@adminHelper.bookmarkDisplay(bookmark)</td>
+            <td>@bookmark.source</td>
 			    </tr>
 			  }
 		  </table>

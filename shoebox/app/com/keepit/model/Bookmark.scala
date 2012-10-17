@@ -17,6 +17,7 @@ import scala.collection.mutable
 case class BookmarkSource(value: String) {
   implicit def getValue = value
   implicit def source(value: String) = BookmarkSource(value)
+  override def toString = value
 }
 
 object BookmarkSource {
