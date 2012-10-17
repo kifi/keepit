@@ -68,10 +68,11 @@ object BookmarksController extends Controller with Logging {
     val json = request.body
     log.debug(json)
     log.info("keepit_id = [%s]".format(json \ "user_info"))
+    val bookmarkSource = (json \ "bookmark_source").asOpt[String]
     val facebookId = parseFacebookId(json \ "user_info")
     val keepitId = parseKeepitId(json \ "user_info")//todo: need to use external id
     val user = internUser(facebookId, keepitId)
-    internBookmarks(json \ "bookmarks", user) 
+    internBookmarks(json \ "bookmarks", user, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN"))) 
     log.info(user)
     Ok(JsObject(("status" -> JsString("success")) :: 
         ("userId" -> JsString(user.id.map(id => id.id.toString()).getOrElse(""))) :: Nil))//todo: need to send external id
@@ -103,10 +104,10 @@ object BookmarksController extends Controller with Logging {
     }
   }
     
-  private def internBookmarks(value: JsValue, user: User): List[Bookmark] = value match {
-    case JsArray(elements) => (elements map {e => internBookmarks(e, user)} flatten).toList  
-    case json: JsObject if(json.keys.contains("children")) => internBookmarks( json \ "children" , user)  
-    case json: JsObject => List(internBookmark(json, user))  
+  private def internBookmarks(value: JsValue, user: User, source: BookmarkSource): List[Bookmark] = value match {
+    case JsArray(elements) => (elements map {e => internBookmarks(e, user, source)} flatten).toList  
+    case json: JsObject if(json.keys.contains("children")) => internBookmarks( json \ "children" , user, source)  
+    case json: JsObject => List(internBookmark(json, user, source))  
     case e => throw new Exception("can't figure what to do with %s".format(e))  
   }
   
@@ -114,7 +115,7 @@ object BookmarksController extends Controller with Logging {
   private def parseKeepitId(value: JsValue): Id[User] = Id[User](((value \ "keepit_id").as[Int]))//deprecated, need to use external id
   private def parseKeepitExternalId(value: JsValue): ExternalId[User] = ExternalId[User](((value \ "external_id").as[String]))
   
-  private def internBookmark(json: JsObject, user: User): Bookmark = {
+  private def internBookmark(json: JsObject, user: User, source: BookmarkSource): Bookmark = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
     CX.withConnection { implicit conn =>
@@ -124,7 +125,7 @@ object BookmarksController extends Controller with Logging {
       }
       Bookmark.load(normalizedUri, user) match {
         case Some(bookmark) => bookmark
-        case None => Bookmark(normalizedUri, user, title, url).save
+        case None => Bookmark(normalizedUri, user, title, url, source).save
       }
     }
   }

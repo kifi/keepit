@@ -22,9 +22,9 @@ class NormalizedURITest extends SpecificationWithJUnit {
       val user2 = User(firstName = "Moo", lastName = "Brown", facebookId = FacebookId("fb2")).save
       val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/short").save
       val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/long").save
-      Bookmark(userId = user1.id, title = "my title is short", url = "http://www.keepit.com/short?track=foo", uriId = uri1.id.get).save
-      Bookmark(userId = user1.id, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get).save
-      Bookmark(userId = user2.id, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get).save
+      Bookmark(userId = user1.id, title = "my title is short", url = "http://www.keepit.com/short?track=foo", uriId = uri1.id.get, source = BookmarkSource("NA")).save
+      Bookmark(userId = user1.id, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
+      Bookmark(userId = user2.id, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
     }
   }
 
