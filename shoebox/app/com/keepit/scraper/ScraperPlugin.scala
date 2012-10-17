@@ -35,7 +35,7 @@ trait ScraperPlugin extends Plugin {
   def scrape(): Seq[(NormalizedURI, Option[Article])]
 }
 
-class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extends ScraperPlugin {
+class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extends ScraperPlugin with Logging {
   
   implicit val actorTimeout = Timeout(5 seconds)
   
@@ -45,11 +45,13 @@ class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extend
   private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
   override def onStart(): Unit = {
+    log.info("starting ArticleIndexerPluginImpl")
     _cancellables = Seq(
       system.scheduler.schedule(0 seconds, 1 minutes, actor, Scrape)
     )
   }
   override def onStop(): Unit = {
+    log.info("stopping ArticleIndexerPluginImpl")
     _cancellables.map(_.cancel)
   }
   
