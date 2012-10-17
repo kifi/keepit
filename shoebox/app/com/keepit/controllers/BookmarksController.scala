@@ -15,6 +15,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 import play.api.libs.json.JsArray
 import play.api.http.ContentTypes
+import play.api.http.ContentTypes
 import com.keepit.controllers.CommonActions._
 import com.keepit.common.db.CX
 import com.keepit.common.db._
@@ -22,13 +23,12 @@ import com.keepit.model._
 import com.keepit.serializer.BookmarkSerializer
 import com.keepit.serializer.{URIPersonalSearchResultSerializer => BPSRS}
 import com.keepit.common.db.ExternalId
+import com.keepit.common.logging.Logging
 import java.util.concurrent.TimeUnit
 import java.sql.Connection
-import play.api.http.ContentTypes
-import play.api.libs.json.JsString
-import com.keepit.common.logging.Logging
+import securesocial.core._
 
-object BookmarksController extends Controller with Logging {
+object BookmarksController extends Controller with Logging with SecureSocial {
 
   def edit(id: Id[Bookmark]) = Action{ request =>
     CX.withConnection { implicit conn =>
@@ -39,7 +39,7 @@ object BookmarksController extends Controller with Logging {
   }
   
   //this is an admin only task!!!
-  def delete(id: Id[Bookmark]) = Action{ request =>
+  def delete(id: Id[Bookmark]) = SecuredAction(false) { request =>
     CX.withConnection { implicit conn =>
       val bookmark = Bookmark.get(id)
       bookmark.delete()
@@ -47,14 +47,14 @@ object BookmarksController extends Controller with Logging {
     }
   }  
   
-  def all = Action{ request =>
+  def all = SecuredAction(true) { request =>
     val bookmarks = CX.withConnection { implicit conn =>
       Bookmark.all
     }
     Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
   }
   
-  def bookmarksView = Action{ request =>
+  def bookmarksView = SecuredAction(false) { request =>
     val bookmarksAndUsers = CX.withConnection { implicit conn =>
       val bookmarks = Bookmark.all
       val users = bookmarks map (_.userId.get) map User.get
