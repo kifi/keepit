@@ -165,6 +165,8 @@ case class State[T](val value: String) {
   override def toString = value
 }
 
+class StateException(message: String) extends Exception(message)
+
 object State {
 
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[State[T]] {

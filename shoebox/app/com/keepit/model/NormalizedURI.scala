@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
 import com.keepit.common.db.NotFoundException
+import com.keepit.common.db.StateException
 import com.keepit.common.time._
 import com.keepit.common.crypto._
 import java.security.SecureRandom
@@ -88,11 +89,6 @@ object NormalizedURI {
     }
   }
   
-  def search(term: String)(implicit conn: Connection): Seq[URISearchResults] = {
-    val uris: Seq[NormalizedURI] = tokenize(term) map searchToken flatten;
-    createSearchResults(term, uris)
-  }
-  
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit conn: Connection): Seq[NormalizedURI] = {
     if (limit <= 0) {
       (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.state EQ state) }.list.map( _.view )
@@ -100,19 +96,6 @@ object NormalizedURI {
       (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.state EQ state) LIMIT limit }.list.map( _.view )
     }
   }
-  
-  private def createSearchResults(term: String, uris: Seq[NormalizedURI]): Seq[URISearchResults] = {
-    val uriScore = new mutable.HashMap[NormalizedURI, Float]().withDefaultValue(0F)
-    uris foreach { uri =>
-      uriScore(uri) += score(term, uri)
-    }
-    uriScore.toSeq.map{ entry =>
-      URISearchResults(entry._1, entry._2)
-    }.sortWith{(a, b) => a.score > b.score}
-  }
-  
-  private def searchToken(token: String)(implicit conn: Connection): Seq[NormalizedURI] = 
-    (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.title ILIKE ("%" + token + "%")) }.list.map( _.view )
   
   def getByNormalizedUrl(url: String)(implicit conn: Connection): Option[NormalizedURI] = {
     var hash = hashUrl(normalize(url))
@@ -141,6 +124,40 @@ object NormalizedURI {
     val INDEXED = State[NormalizedURI]("indexed")
     val INDEX_FAILED = State[NormalizedURI]("index_failed")
     val INACTIVE = State[NormalizedURI]("inactive")
+    
+    type Transitions = Map[State[NormalizedURI], Set[State[NormalizedURI]]]
+
+    val ALL_TRANSITIONS: Transitions = Map(
+        (ACTIVE -> Set(SCRAPED, SCRAPE_FAILED, INACTIVE)),
+        (SCRAPED -> Set(ACTIVE, INDEXED, INDEX_FAILED, INACTIVE)),
+        (SCRAPE_FAILED -> Set(ACTIVE, INACTIVE)),
+        (INDEXED -> Set(ACTIVE, SCRAPED, INACTIVE)),
+        (INDEX_FAILED -> Set(ACTIVE, SCRAPED, INACTIVE)),
+        (INACTIVE -> Set(ACTIVE)))
+
+    val ADMIN_TRANSITIONS: Transitions = Map(
+        (ACTIVE -> Set.empty),
+        (SCRAPED -> Set(ACTIVE)),
+        (SCRAPE_FAILED -> Set(ACTIVE)),
+        (INDEXED -> Set(ACTIVE, SCRAPED)),
+        (INDEX_FAILED -> Set(ACTIVE, SCRAPED)),
+        (INACTIVE -> Set.empty))
+
+    def transitionByAdmin[T](transition: (State[NormalizedURI], State[NormalizedURI]))(f: =>T) = {
+      validate(ADMIN_TRANSITIONS, transition)
+      f
+    }
+    
+    def validate(transitions: Transitions, transition: (State[NormalizedURI], State[NormalizedURI])): Unit = {
+      transition match {
+        case (from, to) =>
+          transitions.get(from) match {
+            case Some(possibleStates) =>
+              if (!possibleStates.contains(to)) throw new StateException("invalid transition: %s -> %s".format(from, to))
+            case None => throw new StateException("no such state: %s".format(from))
+          }
+      }
+    }
   }
 }
 
