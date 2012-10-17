@@ -17,9 +17,10 @@ import java.lang.UnsupportedOperationException
 import play.api.libs.json.Json
 import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.S3Object
+import com.keepit.common.store.ObjectStore
 
 
-trait ArticleStore extends MutableMap[Id[NormalizedURI], Article]
+trait ArticleStore extends ObjectStore[Id[NormalizedURI], Article]
 
 case class S3Bucket(name: String) 
 
@@ -76,10 +77,6 @@ class S3ArticleStoreImpl(bucketName: S3Bucket, amazonS3Client: AmazonS3) extends
       is.close
     }
   } 
-  
-  def iterator = throw new UnsupportedOperationException
-  
-  override def empty = throw new UnsupportedOperationException
   
   private def doWithS3Client[T](what: =>String)(body: AmazonS3 => Option[T]): Option[T] = {
     var ret: Option[T] = None

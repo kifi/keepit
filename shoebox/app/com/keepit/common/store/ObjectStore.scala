@@ -1,6 +1,6 @@
 package com.keepit.common.store
 
-trait ObjectStore[A, B, +This <: ObjectStore[A, B, This]] {
+trait ObjectStore[A, B] {
 
   /** Adds a new key/value pair to this map.
    *  If the map already contains a
