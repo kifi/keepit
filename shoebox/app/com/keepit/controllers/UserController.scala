@@ -26,8 +26,9 @@ import com.keepit.serializer.UserSerializer
 import com.keepit.controllers.CommonActions._
 import com.keepit.model.FacebookId
 import play.api.http.ContentTypes
+import securesocial.core._
 
-object UserController extends Controller with Logging {
+object UserController extends Controller with Logging with SecureSocial {
 
   /**
    * Call me using:
@@ -99,7 +100,7 @@ object UserController extends Controller with Logging {
     Ok(UserSerializer.userSerializer.writes(user))
   }
 
-  def userView(userId: Id[User]) = Action { implicit request => 
+  def userView(userId: Id[User]) = SecuredAction(false) { implicit request => 
     val (user, bookmarks) = CX.withConnection { implicit c =>
       val user = User.get(userId)
       val bookmarks = Bookmark.ofUser(user)
@@ -108,7 +109,7 @@ object UserController extends Controller with Logging {
     Ok(views.html.user(user, bookmarks))
   }
 
-  def usersView = Action { implicit request => 
+  def usersView = SecuredAction(false) { implicit request => 
     val users = CX.withConnection { implicit c => User.all }
     Ok(views.html.users(users))
   }
