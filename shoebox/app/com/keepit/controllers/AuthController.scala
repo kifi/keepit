@@ -40,7 +40,7 @@ object AuthController extends Controller with SecureSocial with Logging
 {
   def isLoggedIn = SecuredAction(true) { implicit request => 
 	  UserService.find(request.user.id) match {
-	    case None =>  
+	    case None =>
 		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)) 
 	    case Some(socialUser) => 
 	      log.info("facebook id %s".format(socialUser.id.id))
