@@ -35,7 +35,7 @@ import com.keepit.common.db.CX
 /**
  * The Login page controller
  */
-object AuthController extends Controller with securesocial.core.SecureSocial
+object AuthController extends Controller with SecureSocial
 {
   def isLoggedIn = SecuredAction(true) { implicit request => {
 	  def socialUser = UserService.find(request.user.id)

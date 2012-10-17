@@ -29,7 +29,7 @@
 
     log("background page kicking in!");
 
-    function postBookmarks(bookmarksSupplier) {
+    function postBookmarks(bookmarksSupplier, bookmarkSource) {
       log("posging bookmarks...");
       try {
         var xhr = new XMLHttpRequest();
@@ -41,7 +41,7 @@
         }
         bookmarksSupplier(function(bookmarks){
           try {
-            bookmarksPoster(bookmarks, xhr);
+            bookmarksPoster(bookmarks, bookmarkSource, xhr);
           } catch (e) {
             error(e);
           }
@@ -51,12 +51,13 @@
       }
     }
 
-		function bookmarksPoster(bookmarks, xhr) {
+		function bookmarksPoster(bookmarks, bookmarkSource, xhr) {
 			log("bookmarks:");
       log(bookmarks);
       var json = {
         "bookmarks": bookmarks,
-        "user_info": userInfo
+        "user_info": userInfo,
+        "bookmark_source": bookmarkSource
       }
       var tosend = JSON.stringify(json);
       xhr.open("POST", 'http://' + getConfigs().server + '/bookmarks/add', true);
@@ -107,7 +108,7 @@
       chrome.bookmarks.create(bookmark, function(created) {
         try {
           sendResponse(created);
-  				postBookmarks(function (poster) {poster([bookmark]);});
+  				postBookmarks(function (poster) {poster([bookmark]);}, "HOVER_KEEP");
         } catch (e) {
           error(e);
         }
@@ -378,7 +379,7 @@
             log("updating userInfo ");
             log(userInfo);
             localStorage["user"]=JSON.stringify(userInfo);
-            postBookmarks(chrome.bookmarks.getTree);//posting bookmarks
+            postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");//posting bookmarks
             log("handshake done");
           }
           else{
@@ -399,7 +400,7 @@
     } else {
       log("find user info in local storage");
       log(userInfo);
-      postBookmarks(chrome.bookmarks.getTree);//posting bookmarks even when keepit id is found
+      postBookmarks(chrome.bookmarks.getTree, "PLUGIN_START");//posting bookmarks even when keepit id is found
       getBookMarks();
     }
 

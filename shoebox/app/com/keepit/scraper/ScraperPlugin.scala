@@ -22,20 +22,23 @@ import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
 
 case object Scrape
+case class ScrapeInstance(uri: NormalizedURI)
 
 private[scraper] class ScraperActor(scraper: Scraper) extends Actor with Logging {
   
   def receive() = {
     case Scrape => sender ! scraper.run()
+    case ScrapeInstance(uri) => scraper.safeProcessURI(uri)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
 
 trait ScraperPlugin extends Plugin {
   def scrape(): Seq[(NormalizedURI, Option[Article])]
+  def asyncScrape(uri: NormalizedURI): Unit
 }
 
-class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extends ScraperPlugin {
+class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extends ScraperPlugin with Logging {
   
   implicit val actorTimeout = Timeout(5 seconds)
   
@@ -45,16 +48,20 @@ class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extend
   private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
   override def onStart(): Unit = {
+    log.info("starting ArticleIndexerPluginImpl")
     _cancellables = Seq(
       system.scheduler.schedule(0 seconds, 1 minutes, actor, Scrape)
     )
   }
   override def onStop(): Unit = {
+    log.info("stopping ArticleIndexerPluginImpl")
     _cancellables.map(_.cancel)
   }
   
   override def scrape(): Seq[(NormalizedURI, Option[Article])] = {
     val future = actor.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
     Await.result(future, 1 minutes)
-  } 
+  }
+  
+  override def asyncScrape(uri: NormalizedURI): Unit = actor ! ScrapeInstance(uri)
 }
