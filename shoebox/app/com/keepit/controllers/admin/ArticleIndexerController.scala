@@ -23,17 +23,14 @@ object ArticleIndexerController extends Controller with Logging {
   }
 
   def indexByState(state: State[NormalizedURI]) = Action { implicit request =>
-    def updateStateFrom(oldState: State[NormalizedURI]) = CX.withConnection { implicit c =>
-      NormalizedURI.getByState(oldState).foreach{ uri => uri.withState(SCRAPED).save }
+    transitionByAdmin(state -> SCRAPED) {
+      CX.withConnection { implicit c =>
+        NormalizedURI.getByState(state).foreach{ uri => uri.withState(SCRAPED).save }
+      }
+      val indexer = inject[ArticleIndexerPlugin]
+      val cnt = indexer.index()
+      Ok("indexed %d articles".format(cnt))
     }
-    state match { // TODO: factor out valid state transitions
-      case INDEXED => updateStateFrom(state)
-      case INDEX_FAILED => updateStateFrom(state)
-      case _ => // ignore 
-    }
-    val indexer = inject[ArticleIndexerPlugin]
-    val cnt = indexer.index()
-    Ok("indexed %d articles".format(cnt))
   }
 
   def indexInfo = Action { implicit request => 
