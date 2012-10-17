@@ -46,12 +46,17 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       }
       var cnt = 0
       indexDocuments(uris.iterator.map{ uri => buildIndexable(uri) }, commitBatchSize){ commitBatch =>
-        commitBatch.foreach{ indexable =>
+        commitBatch.foreach{ case (indexable, indexError)  =>
           CX.withConnection { implicit c =>
-            NormalizedURI.get(indexable.id).withState(NormalizedURI.States.INDEXED).save
+            val state = indexError match {
+              case Some(error) => NormalizedURI.States.INDEX_FAILED
+              case None => 
+                cnt += 1
+                NormalizedURI.States.INDEXED
+            }
+            NormalizedURI.get(indexable.id).withState(state).save
           }
         }
-        cnt += commitBatch.size
       }
       cnt
     } catch {
