@@ -26,6 +26,7 @@ import com.amazonaws.auth.BasicAWSCredentials
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import java.io.File
+import com.keepit.common.store.S3Bucket
 
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
