@@ -15,7 +15,7 @@ class FacebookSocialGraph @Inject() (httpClient: HttpClient) {
     val oAuth2Info = user.socialUser.get.oAuth2Info.get
     val accessToken = oAuth2Info.accessToken
     val json = httpClient.get(url(SocialId(user.facebookId.value), accessToken)).json
-    SocialUserRawInfo(user.id, SocialId((json \ "username").as[String]), (json \ "name").asOpt[String].getOrElse("%s %s".format(user.firstName, user.lastName)), json)
+    SocialUserRawInfo(user.id, SocialId((json \ "username").as[String]), SocialNetworks.FACEBOOK, (json \ "name").asOpt[String].getOrElse("%s %s".format(user.firstName, user.lastName)), json)
   } 
   
   def url(id: SocialId, accessToken: String) = "https://graph.facebook.com/%s?access_token=%s&fields=%s,friends.fields(%s)".format(

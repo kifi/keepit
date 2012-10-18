@@ -19,8 +19,8 @@ import com.keepit.common.net.HttpClientImpl
 import com.keepit.model.User
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
 import com.keepit.common.net.FakeHttpClient
-import com.keepit.common.social.FacebookSocialGraph;
-
+import com.keepit.common.social.FacebookSocialGraph
+import com.keepit.model.SocialUserInfo
 import play.api.Play
 import java.net.URL
 import java.io.File
@@ -41,11 +41,21 @@ class FacebookSocialGraphTest extends SpecificationWithJUnit {
           tokenType = None, expiresIn = None, refreshToken = None)
         val socialUser = SocialUser(UserId("100004067535411", "facebook"), "Boaz Tal", Some("boaz.tal@gmail.com"), 
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
-        val user = User(id = Some(Id[User](4)), firstName = "Eishay", lastName = "Smith", facebookId = FacebookId("eishay"), socialUser = Some(socialUser))
+        val user = CX.withConnection { implicit c =>
+          User(firstName = "Eishay", lastName = "Smith", facebookId = FacebookId("eishay"), socialUser = Some(socialUser)).save
+        }
         val info = graph.fetchJson(user)
         info.fullName === "Eishay Smith"
         info.userId === user.id
         info.socialId.id === "eishay"
+        val model = info.toSocialUserInfo
+        model.userId === info.userId
+        val saved = CX.withConnection { implicit c =>
+          model.save
+        }
+        CX.withConnection { implicit c =>
+          SocialUserInfo.get(saved.id.get) === saved
+        }
       }
     }
   }  

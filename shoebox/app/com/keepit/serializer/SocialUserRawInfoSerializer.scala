@@ -3,9 +3,10 @@ package com.keepit.serializer
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.time._
+import com.keepit.common.social.SocialNetworks
+import com.keepit.common.social.SocialUserRawInfo
 import com.keepit.model.FacebookId
 import com.keepit.search.Article
-import com.keepit.common.social.SocialUserRawInfo
 import com.keepit.model.SocialId
 import securesocial.core._
 import securesocial.core.AuthenticationMethod._
@@ -17,6 +18,7 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
     JsObject(List(
         "userId" -> (info.userId map { e => JsNumber(e.id) } getOrElse(JsNull)),
         "socialId" -> JsString(info.socialId.id),
+        "networkType" -> JsString(info.networkType.name),
         "fullName" -> JsString(info.fullName),
         "json" -> info.json 
       )
@@ -25,6 +27,9 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
   def reads(json: JsValue): SocialUserRawInfo = SocialUserRawInfo(
       (json \ "userId").asOpt[Long].map(Id(_)), 
       SocialId((json \ "socialId").as[String]), 
+      (json \ "socialId").as[String] match {
+        case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK 
+      }, 
       (json \ "fullName").as[String],
       (json \ "json")
    )
