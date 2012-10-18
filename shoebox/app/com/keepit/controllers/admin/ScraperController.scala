@@ -29,9 +29,9 @@ object ScraperController extends Controller with Logging {
   }
   
   def scrapeByState(state: State[NormalizedURI]) = Action { implicit request =>
-    transitionByAdmin(state -> ACTIVE) {
+    transitionByAdmin(state -> Set(ACTIVE)) { newState =>
       CX.withConnection { implicit c =>
-        NormalizedURI.getByState(state).foreach{ uri => uri.withState(ACTIVE).save }
+        NormalizedURI.getByState(state).foreach{ uri => uri.withState(newState).save }
       }
       val scraper = inject[ScraperPlugin]
       val articles = scraper.scrape()
@@ -43,7 +43,7 @@ object ScraperController extends Controller with Logging {
     val store = inject[ArticleStore]
     val article = store.get(id).get
     val uri = CX.withConnection { implicit c =>
-      NormalizedURI.get(article.normalizedUriId)
+      NormalizedURI.get(article.id)
     }
     Ok(views.html.article(article, uri))
   }

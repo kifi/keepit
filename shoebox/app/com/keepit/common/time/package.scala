@@ -28,7 +28,7 @@ package object time {
   val HEADER_DATETIME_FORMAT = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z")
                                              .withLocale(Locale.ENGLISH)
                                              .withZone(zones.GMT)
-  val STANDARD_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss Z")
+  val STANDARD_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS Z")
                                              .withLocale(Locale.ENGLISH)
                                              .withZone(zones.PT)
   
@@ -51,6 +51,9 @@ package object time {
   implicit def sqlTimestampToDateTimeConverter(timestamp: java.sql.Timestamp)(implicit zone: DateTimeZone) =
     new DateTime(timestamp.getTime, zone)
   
+  def parseStandardTime(timeString: String) = STANDARD_DATETIME_FORMAT.parseDateTime(timeString)
+  
+  def parseHttpHeaderTime(timeString: String) = HEADER_DATETIME_FORMAT.parseDateTime(timeString)
   
   class RichDateTime(date: DateTime) {
     def toLocalDateInZone(implicit zone: DateTimeZone): LocalDate = date.withZone(zone).toLocalDate
