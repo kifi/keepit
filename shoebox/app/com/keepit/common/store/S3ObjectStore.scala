@@ -31,13 +31,13 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
   
   def += (kv: (Id[A], B)) = {
     kv match {
-      case (normalizedUrlId, value) =>
+      case (key, value) =>
         doWithS3Client("adding an item to S3Store"){ s3Client =>
           val metadata = new ObjectMetadata()
           metadata.setContentEncoding(ENCODING)
           metadata.setContentType("application/json")
           Some(s3Client.putObject(bucketName, 
-              idToBJsonKey(normalizedUrlId), 
+              idToBJsonKey(key), 
               toInputStream(value), 
               metadata))
         }
@@ -45,26 +45,26 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
     this
   }
   
-  def -= (normalizedUrlId: Id[A]) = {
+  def -= (key: Id[A]) = {
     doWithS3Client("removing an item from S3BStore"){ s3Client =>
-      Some(s3Client.deleteObject(bucketName, idToBJsonKey(normalizedUrlId)))
+      Some(s3Client.deleteObject(bucketName, idToBJsonKey(key)))
     }
     this
   }
   
-  def get(normalizedUrlId: Id[A]): Option[B] = {
+  def get(id: Id[A]): Option[B] = {
     doWithS3Client("getting an item from S3BStore"){ s3Client =>
-      val key = idToBJsonKey(normalizedUrlId)
+      val key = idToBJsonKey(id)
       val s3obj = try {
         Some(s3Client.getObject(bucketName, key)) 
       } catch {
         case e: AmazonS3Exception if (e.getMessage().contains("The specified key does not exist")) => None
       } 
-      s3obj map extractB
+      s3obj map extractValue
     }
   }
   
-  private def extractB(s3obj: S3Object) = {
+  private def extractValue(s3obj: S3Object) = {
     val is = s3obj.getObjectContent
     try {
       val jsonString = scala.io.Source.fromInputStream(is, ENCODING).getLines().mkString("\n")
