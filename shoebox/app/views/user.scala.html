@@ -24,6 +24,7 @@
 	      Name: @user.firstName @user.lastName<br/>
 	      Id: @user.id<br/>
 	      Facebook Account: @userWithFacebookDisplay(user, user.facebookId)<br/>
+	      OAuth: @user.socialUser<br/>
 	      Account created at: @adminHelper.dateDisplay(user.createdAt) @adminHelper.timeDisplay(user.createdAt)<br/>
       <h2>User kept @bookmarks.size Bookmarks</h2>
 		  <table>
