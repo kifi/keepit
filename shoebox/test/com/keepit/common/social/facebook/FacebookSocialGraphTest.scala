@@ -19,6 +19,8 @@ import com.keepit.common.net.HttpClientImpl
 import com.keepit.model.User
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
 import com.keepit.common.net.FakeHttpClient
+import com.keepit.common.social.FacebookSocialGraph;
+
 import play.api.Play
 import java.net.URL
 import java.io.File
@@ -41,9 +43,9 @@ class FacebookSocialGraphTest extends SpecificationWithJUnit {
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
         val user = User(id = Some(Id[User](4)), firstName = "Eishay", lastName = "Smith", facebookId = FacebookId("eishay"), socialUser = Some(socialUser))
         val info = graph.fetchJson(user)
-        info.name === "Eishay Smith"
+        info.userName === "Eishay Smith"
         info.userId === user.id
-        info.facebookId.value === "eishay"
+        info.socialId.id === "eishay"
       }
     }
   }  
