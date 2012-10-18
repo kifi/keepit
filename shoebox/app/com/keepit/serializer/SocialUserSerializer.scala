@@ -7,7 +7,7 @@ import securesocial.core.AuthenticationMethod._
 
 import play.api.libs.json._
 
-class SocialUserSerializer extends Writes[SocialUser] with Reads[SocialUser] {
+class SocialUserSerializer extends Format[SocialUser] {
   
   def writes(user: SocialUser): JsValue =
     JsObject(List(

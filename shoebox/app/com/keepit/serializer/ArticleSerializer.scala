@@ -8,7 +8,7 @@ import securesocial.core.AuthenticationMethod._
 import play.api.libs.json._
 import com.keepit.search.Article
 
-class ArticleSerializer extends Writes[Article] with Reads[Article] {
+class ArticleSerializer extends Format[Article] {
   
   def writes(article: Article): JsValue =
     JsObject(List(
