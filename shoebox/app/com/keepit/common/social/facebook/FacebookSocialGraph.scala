@@ -11,10 +11,11 @@ object FacebookSocialGraph {
 
 class FacebookSocialGraph @Inject() (httpClient: HttpClient) {
   
-  def fetchJson(user: User) = {
+  def fetchJson(user: User): FacebookUserInfo = {
     val oAuth2Info = user.socialUser.get.oAuth2Info.get
     val accessToken = oAuth2Info.accessToken
-    httpClient.get(url(user.facebookId, accessToken)).json
+    val json = httpClient.get(url(user.facebookId, accessToken)).json
+    FacebookUserInfo(user.id, user.facebookId, (json \ "name").asOpt[String].getOrElse("%s %s".format(user.firstName, user.lastName)), json)
   } 
   
   def url(facebookId: FacebookId, accessToken: String) = "https://graph.facebook.com/%s?access_token=%s&fields=%s,friends.fields(%s)".format(
