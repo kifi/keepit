@@ -62,7 +62,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
     log.info("scraping %s".format(uri))
     fetchArticle(uri) match {
       case Left(article) =>
-        // store article in a store map
+        // store a scraped article in a store map
         articleStore += (uri.id.get -> article)
         // succeeded. update the state to SCRAPED and save
         val scrapedURI = CX.withConnection { implicit c =>
@@ -71,6 +71,17 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         log.info("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
       case Right(error) =>
+        // store a fallback article in a store map
+        val article = Article(
+            id = uri.id.get,
+            title = uri.title,
+            content = "",
+            scrapedAt = currentDateTime,
+            httpContentType = None,
+            NormalizedURI.States.SCRAPE_FAILED,
+            Option(error.msg))
+        articleStore += (uri.id.get -> article)
+        // succeeded. update the state to SCRAPE_FAILED and save
         val errorURI = CX.withConnection { implicit c =>
           uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
         }
@@ -92,11 +103,16 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         val page = new Page(webURL)
         if (result.fetchContent(page) && parser.parse(page, normalizedUri.url)) {
           page.getParseData() match {
-      	    case htmlData: HtmlParseData =>
-      	      val title = htmlData.getTitle()
-              val content = htmlData.getText()
-      		  Left(Article(normalizedUri.id.get, title, content)) // return Article             
-      		case _ => Right(ScraperError(normalizedUri, statusCode, "not html"))
+            case htmlData: HtmlParseData =>
+              Left(Article(
+                  id = normalizedUri.id.get,
+                  title = Option(htmlData.getTitle()).getOrElse(""),
+                  content = Option(htmlData.getText()).getOrElse(""),
+                  scrapedAt = currentDateTime,
+                  httpContentType = Option(page.getContentType()),
+                  state = SCRAPED,
+                  message = None))
+            case _ => Right(ScraperError(normalizedUri, statusCode, "not html"))
           }
       	} else {
           Right(ScraperError(normalizedUri, statusCode, "parse failed"))

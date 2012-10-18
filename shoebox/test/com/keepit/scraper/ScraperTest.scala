@@ -1,10 +1,10 @@
 package com.keepit.scraper
 
 import com.keepit.search.Article
-import com.keepit.model.NormalizedURI
-import com.keepit.common.db.CX
-import com.keepit.common.db.Id
+import com.keepit.common.db.{CX, Id, State}
+import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.model.NormalizedURI.States._
 import com.keepit.test.EmptyApplication
 import org.junit.runner.RunWith
 import org.specs2.mutable._
@@ -33,7 +33,7 @@ class ScraperTest extends SpecificationWithJUnit {
 
       result.isLeft === true // Left is Article
       result.left.get.title === "foo"
-      result.left.get.content === "bar"        
+      result.left.get.content === "bar"
     }
     
     "throw an error from a non-existing website" in {
@@ -57,7 +57,7 @@ class ScraperTest extends SpecificationWithJUnit {
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         scraper.run
-        store.size === 1
+        store.size === 2
       
         // get URIs from db
         CX.withConnection { implicit c =>
@@ -74,7 +74,14 @@ class ScraperTest extends SpecificationWithJUnit {
   	new Scraper(articleStore) {
   	  override def fetchArticle(uri: NormalizedURI): Either[Article, ScraperError]	 = {
   	    uri.url match {
-  	      case "http://www.keepit.com/existing" => Left(Article(uri.id.get, "foo", "bar"))
+  	      case "http://www.keepit.com/existing" => Left(Article(
+  	          id = uri.id.get,
+  	          title = "foo",
+  	          content = "bar",
+  	          scrapedAt = currentDateTime,
+  	          httpContentType = Option("text/html"),
+  	          state = SCRAPED,
+  	          message = None))
   	      case "http://www.keepit.com/missing" => Right(ScraperError(uri, HttpStatus.SC_NOT_FOUND, "not found"))
   	    }
   	  } 

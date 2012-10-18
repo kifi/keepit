@@ -37,22 +37,27 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
   val commitBatchSize = 100
+  val fetchSize = commitBatchSize * 3
   
   def run(): Int = {
     log.info("starting a new indexing round")
     try {
       val uris = CX.withConnection { implicit c =>
-        NormalizedURI.getByState(SCRAPED, commitBatchSize * 3)
+        val uris = NormalizedURI.getByState(SCRAPE_FAILED, fetchSize)
+        if (uris.size < fetchSize) uris ++ NormalizedURI.getByState(SCRAPED, fetchSize - uris.size)
+        else uris
       }
       var cnt = 0
       indexDocuments(uris.iterator.map{ uri => buildIndexable(uri) }, commitBatchSize){ commitBatch =>
         commitBatch.foreach{ case (indexable, indexError)  =>
           CX.withConnection { implicit c =>
+            val articleIndexable = indexable.asInstanceOf[ArticleIndexable]
             val state = indexError match {
-              case Some(error) => NormalizedURI.States.INDEX_FAILED
+              case Some(error) => 
+                findNextState(articleIndexable.uri.state -> Set(INDEX_FAILED, FALLBACK_FAILED))
               case None => 
                 cnt += 1
-                NormalizedURI.States.INDEXED
+                findNextState(articleIndexable.uri.state -> Set(INDEXED, FALLBACKED))
             }
             NormalizedURI.get(indexable.id).withState(state).save
           }
@@ -78,7 +83,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     new ArticleIndexable(uri.id.get, uri, articleStore)
   }
   
-  class ArticleIndexable(override val id: Id[NormalizedURI], uri: NormalizedURI, articleStore: ArticleStore) extends Indexable[NormalizedURI] {
+  class ArticleIndexable(override val id: Id[NormalizedURI], val uri: NormalizedURI, articleStore: ArticleStore) extends Indexable[NormalizedURI] {
     override def buildDocument = {
       val doc = super.buildDocument
       articleStore.get(uri.id.get) match {

@@ -23,9 +23,9 @@ object ArticleIndexerController extends Controller with Logging {
   }
 
   def indexByState(state: State[NormalizedURI]) = Action { implicit request =>
-    transitionByAdmin(state -> SCRAPED) {
+    transitionByAdmin(state -> Set(SCRAPED, SCRAPE_FAILED)) { newState =>
       CX.withConnection { implicit c =>
-        NormalizedURI.getByState(state).foreach{ uri => uri.withState(SCRAPED).save }
+        NormalizedURI.getByState(state).foreach{ uri => uri.withState(newState).save }
       }
       val indexer = inject[ArticleIndexerPlugin]
       val cnt = indexer.index()
