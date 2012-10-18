@@ -17,7 +17,7 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
     JsObject(List(
         "userId" -> (info.userId map { e => JsNumber(e.id) } getOrElse(JsNull)),
         "socialId" -> JsString(info.socialId.id),
-        "userName" -> JsString(info.userName),
+        "fullName" -> JsString(info.fullName),
         "json" -> info.json 
       )
     )
@@ -25,7 +25,7 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
   def reads(json: JsValue): SocialUserRawInfo = SocialUserRawInfo(
       (json \ "userId").asOpt[Long].map(Id(_)), 
       SocialId((json \ "socialId").as[String]), 
-      (json \ "userName").as[String],
+      (json \ "fullName").as[String],
       (json \ "json")
    )
 }

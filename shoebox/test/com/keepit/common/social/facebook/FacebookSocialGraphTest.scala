@@ -43,7 +43,7 @@ class FacebookSocialGraphTest extends SpecificationWithJUnit {
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
         val user = User(id = Some(Id[User](4)), firstName = "Eishay", lastName = "Smith", facebookId = FacebookId("eishay"), socialUser = Some(socialUser))
         val info = graph.fetchJson(user)
-        info.userName === "Eishay Smith"
+        info.fullName === "Eishay Smith"
         info.userId === user.id
         info.socialId.id === "eishay"
       }

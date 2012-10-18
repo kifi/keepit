@@ -5,4 +5,4 @@ import com.keepit.common.db.Id
 import play.api.libs.json.JsValue
 import com.keepit.model.SocialId
 
-case class SocialUserRawInfo(userId: Option[Id[User]], socialId: SocialId, userName: String, json: JsValue)
+case class SocialUserRawInfo(userId: Option[Id[User]], socialId: SocialId, fullName: String, json: JsValue)
