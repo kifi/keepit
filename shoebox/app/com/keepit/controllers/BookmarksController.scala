@@ -67,41 +67,16 @@ object BookmarksController extends Controller with Logging {
   def addBookmarks() = JsonAction { request =>
     val json = request.body
     log.debug(json)
-    log.info("keepit_id = [%s]".format(json \ "user_info"))
+    log.info("user_info = [%s]".format(json \ "user_info"))
     val facebookId = parseFacebookId(json \ "user_info")
-    val keepitId = parseKeepitId(json \ "user_info")//todo: need to use external id
-    val user = internUser(facebookId, keepitId)
-    internBookmarks(json \ "bookmarks", user) 
+    val keepitExternalId = parseKeepitExternalId(json \ "user_info")
+    val user = CX.withConnection { implicit conn => User.get(keepitExternalId) }
     log.info(user)
+    internBookmarks(json \ "bookmarks", user) 
     Ok(JsObject(("status" -> JsString("success")) :: 
         ("userId" -> JsString(user.id.map(id => id.id.toString()).getOrElse(""))) :: Nil))//todo: need to send external id
   }
   
-  private def internUser(facebookId: FacebookId, keepitId : Id[User]): User = CX.withConnection { implicit conn =>
-    User.getOpt(keepitId) match {
-      case Some(user) =>
-        user
-      case None => 
-        User.getOpt(facebookId) match {
-	      	case Some(user) => 
-	      	  user
-		    case None =>
-		      val json = try {
-		        Json.parse(WS.url("https://graph.facebook.com/" + facebookId.value).get().await(30, TimeUnit.SECONDS).get.body)
-		      } catch {
-		        case e =>
-		          e.printStackTrace()
-		          Json.parse("""{"first_name": "NA", "last_name": "NA"}""")
-		      }
-		      println("fb obj = " + json)
-		      User(
-		          firstName = (json \ "first_name").as[String],
-		          lastName = (json \ "last_name").as[String],
-		          facebookId = facebookId
-		      ).save
-	    }
-    }
-  }
     
   private def internBookmarks(value: JsValue, user: User): List[Bookmark] = value match {
     case JsArray(elements) => (elements map {e => internBookmarks(e, user)} flatten).toList  
@@ -111,8 +86,7 @@ object BookmarksController extends Controller with Logging {
   }
   
   private def parseFacebookId(value: JsValue): FacebookId = FacebookId((value \ "facebook_id").as[String])
-  private def parseKeepitId(value: JsValue): Id[User] = Id[User](((value \ "keepit_id").as[Int]))//deprecated, need to use external id
-  private def parseKeepitExternalId(value: JsValue): ExternalId[User] = ExternalId[User](((value \ "external_id").as[String]))
+  private def parseKeepitExternalId(value: JsValue): ExternalId[User] = ExternalId[User](((value \ "keepit_external_id").as[String]))
   
   private def internBookmark(json: JsObject, user: User): Bookmark = {
     val title = (json \ "title").as[String]

@@ -61,6 +61,7 @@ object UserController extends Controller with Logging {
    */
   def usersKeptUrl(url: String) = Action { request =>    
     val users = CX.withConnection { implicit c =>
+      log.info("looking for users who kept [%s]".format(url))
       val nuri = NormalizedURI("title", url)
       log.info("userWhoKeptUrl %s (hash=%s)".format(url, nuri.urlHash))
       User.getbyUrlHash(nuri.urlHash)

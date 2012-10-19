@@ -31,35 +31,35 @@ import play.api.libs.json._
 import com.keepit.model.User
 import com.keepit.model.FacebookId
 import com.keepit.common.db.CX
+import com.keepit.common.logging.Logging
 
 /**
  * The Login page controller
  */
-object AuthController extends Controller with securesocial.core.SecureSocial
+object AuthController extends Controller with securesocial.core.SecureSocial with Logging
 {
   def isLoggedIn = SecuredAction(true) { implicit request => {
-	  def socialUser = UserService.find(request.user.id)
       
-	  println("facebook id %s".format(socialUser.get.id.id))
 	  
-	  if (socialUser==None) 
-		  Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)) 
-	  else
-	  {
-	    var keepitId = 0l
-	  	CX.withConnection { implicit c =>
-	    	val user = User.get(FacebookId(socialUser.get.id.id))
-	    	keepitId = user.id.get.id
-	  	}
-			Ok(JsObject(
-			  ("status" -> JsString("loggedin")) ::
-			  ("avatarUrl" -> JsString(socialUser.get.avatarUrl.get)) ::
-			  ("name" -> JsString(socialUser.get.displayName)) :: 
-			  ("facebookId" -> JsString(socialUser.get.id.id)) ::
-			  ("provider" -> JsString(socialUser.get.id.providerId)) ::
-			  ("keepitId" -> JsNumber(keepitId)) ::
-			  Nil)
-			)
+	  UserService.find(request.user.id) match {
+	    
+	    case None => Ok(JsObject(("status" -> JsString("loggedout")) :: Nil))
+	    case Some(socialUser) => {  
+	      log.info("facebook id {} %s".format(socialUser.id.id))
+	      val user = 
+	          CX.withConnection { implicit c =>
+	            User.get(FacebookId(socialUser.id.id))
+	          }
+	      Ok(JsObject(
+	        ("status" -> JsString("loggedin")) ::
+	        ("avatarUrl" -> JsString(socialUser.avatarUrl.get)) ::
+	        ("name" -> JsString(socialUser.displayName)) :: 
+	        ("facebookId" -> JsString(socialUser.id.id)) ::
+	        ("provider" -> JsString(socialUser.id.providerId)) ::
+//	        ("keepitId" -> JsNumber(user.id.get.id)) ::
+	        ("externalId" -> JsString(user.externalId.id)) ::
+	        Nil))
+	    }
 		}
   }}
 
