@@ -53,7 +53,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
     try {
-      f(indexWriter)
+      indexWriter.synchronized{ f(indexWriter) }
     } catch {
       case ioe: IOException =>
         log.error("indexing failed", ioe)
@@ -75,7 +75,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
             Left(indexable.buildDocument)
           } catch {
             case e =>
-              val msg = "failed to build document for uri %s".format(indexable.id)
+              val msg = "failed to build document for id=%s".format(indexable.id)
               log.error(msg, e)
               Right(IndexError(msg))
           } 
@@ -90,7 +90,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
                 case e: OutOfMemoryError => throw e       // fatal
                 case e: IOException => throw e            // fatal
                 case e =>
-                  val msg = "failed to index document for uri %s".format(indexable.id)
+                  val msg = "failed to index document for id=%s".format(indexable.id)
                   log.error(msg, e)
                   Some(IndexError(msg))
               }

@@ -66,7 +66,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       cnt
     } catch {
       case ex: Throwable => 
-        log.error("error in indexing run", ex) // log and eat the exception
+        log.error("error in indexing run", ex)
         throw ex
     }
   }
