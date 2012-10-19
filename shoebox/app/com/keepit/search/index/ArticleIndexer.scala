@@ -100,10 +100,16 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   
   class ArticleQueryParser extends QueryParser(Version.LUCENE_36, "b", indexWriterConfig.getAnalyzer()) {
     override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
-      val booleanQuery = new BooleanQuery
-      booleanQuery.add(super.getFieldQuery("t", queryText, quoted), Occur.SHOULD)
-      booleanQuery.add(super.getFieldQuery("c", queryText, quoted), Occur.SHOULD)
-      booleanQuery
+      (super.getFieldQuery("t", queryText, quoted), super.getFieldQuery("c", queryText, quoted)) match {
+        case (null, null) => null
+        case (query, null) => query
+        case (null, query) => query
+        case (q1, q2) =>
+          val booleanQuery = new BooleanQuery
+          booleanQuery.add(q1, Occur.SHOULD)
+          booleanQuery.add(q2, Occur.SHOULD)
+          booleanQuery
+      }
     }
   }
 }
