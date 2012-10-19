@@ -13,7 +13,7 @@ GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.e
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
 
 #GET     /bookmarks/search           com.keepit.controllers.BookmarksController.searchBookmarks(term: String, keepitId: Id[User])
-GET     /bookmarks/search           com.keepit.controllers.SearchController.search(term: String, keepitId: Id[User])
+GET     /bookmarks/search           com.keepit.controllers.SearchController.search(term: String, externalId: ExternalId[User])
 
 GET     /users                      com.keepit.controllers.UserController.usersView
 GET     /user                       com.keepit.controllers.UserController.userView(userId: Id[User])
