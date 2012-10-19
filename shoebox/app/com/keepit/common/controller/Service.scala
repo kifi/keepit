@@ -45,5 +45,7 @@ object FortyTwoServices {
 	  val PT = DateTimeZone.forID("America/Los_Angeles")
 	  DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.ENGLISH).withZone(PT).parseDateTime(timeStr)
   }
+
+  lazy val baseUrl: String = Play.current.configuration.getString("application.baseUrl").get  
 }
 

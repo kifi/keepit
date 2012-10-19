@@ -2,11 +2,11 @@
   <!-- always a good activate OnConsoleStatusListener -->
   <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener" />  
 
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>%-5level - %msg%n</pattern>
-        </encoder>
-    </appender>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+	   <encoder>
+	     <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+	   </encoder>
+  </appender>
 
   <logger name="ru.circumflex" level="ERROR"/>
   <logger name="com.mysql" level="ERROR"/>

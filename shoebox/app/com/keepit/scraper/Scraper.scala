@@ -17,11 +17,16 @@ import play.api.Play.current
 import org.joda.time.Seconds
 
 object Scraper {
-  val BATCH_SIZE = 100
+  val BATCH_SIZE = 10
 }
 
 class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
-  val config = new CrawlConfig()
+  val config = {
+    val conf = new CrawlConfig()
+    conf.setIncludeHttpsPages(true)
+    conf
+  }
+  
   val pageFetcher = new PageFetcher(config)
   val parser = new Parser(config);
   
@@ -39,8 +44,9 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
     scrapedArticles
   }
   
-  def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris.par map { uri =>
-    try {
+  def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris map safeProcessURI
+  
+  def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
       processURI(uri)
     } catch {
       case e => 
@@ -50,13 +56,13 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         }
         (errorURI, None)
     }
-  } seq
   
-  def processURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
+  
+  private def processURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
     fetchArticle(uri) match {
       case Left(article) =>
-        // store article in a store map
+        // store a scraped article in a store map
         articleStore += (uri.id.get -> article)
         // succeeded. update the state to SCRAPED and save
         val scrapedURI = CX.withConnection { implicit c =>
@@ -65,6 +71,17 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         log.info("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
       case Right(error) =>
+        // store a fallback article in a store map
+        val article = Article(
+            id = uri.id.get,
+            title = uri.title,
+            content = "",
+            scrapedAt = currentDateTime,
+            httpContentType = None,
+            NormalizedURI.States.SCRAPE_FAILED,
+            Option(error.msg))
+        articleStore += (uri.id.get -> article)
+        // succeeded. update the state to SCRAPE_FAILED and save
         val errorURI = CX.withConnection { implicit c =>
           uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
         }
@@ -86,11 +103,16 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         val page = new Page(webURL)
         if (result.fetchContent(page) && parser.parse(page, normalizedUri.url)) {
           page.getParseData() match {
-      	    case htmlData: HtmlParseData =>
-      	      val title = htmlData.getTitle()
-              val content = htmlData.getText()
-      		  Left(Article(normalizedUri.id.get, title, content)) // return Article             
-      		case _ => Right(ScraperError(normalizedUri, statusCode, "not html"))
+            case htmlData: HtmlParseData =>
+              Left(Article(
+                  id = normalizedUri.id.get,
+                  title = Option(htmlData.getTitle()).getOrElse(""),
+                  content = Option(htmlData.getText()).getOrElse(""),
+                  scrapedAt = currentDateTime,
+                  httpContentType = Option(page.getContentType()),
+                  state = SCRAPED,
+                  message = None))
+            case _ => Right(ScraperError(normalizedUri, statusCode, "not html"))
           }
       	} else {
           Right(ScraperError(normalizedUri, statusCode, "parse failed"))
@@ -98,12 +120,11 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
       } else if (statusCode == HttpStatus.SC_MOVED_PERMANENTLY || statusCode == HttpStatus.SC_MOVED_TEMPORARILY) {
         // TODO: redirect?
         // val movedToUrl = result.getMovedToUrl();
-        Right(ScraperError(normalizedUri, statusCode, "fetch failed: httpStatusCode=" + statusCode))
+        Right(ScraperError(normalizedUri, statusCode, "fetch failed: httpStatusCode=%d description=%s".format(statusCode, CustomFetchStatus.getStatusDescription(statusCode))))
       } else if (result.getStatusCode() == CustomFetchStatus.PageTooBig) {
-        // logger.info("Skipping a page which was bigger than max allowed size: " + curURL.getURL());
-        Right(ScraperError(normalizedUri, statusCode, "fetch failed: page size exceeded maximum. revisit crawler4j config"))
+        Right(ScraperError(normalizedUri, statusCode, "fetch failed: httpStatusCode=%d description=%s [%s]".format(statusCode, CustomFetchStatus.getStatusDescription(statusCode), "revisit crawler4j config")))
       } else {
-        Right(ScraperError(normalizedUri, statusCode, "fetch failed: httpStatusCode=" + statusCode))
+        Right(ScraperError(normalizedUri, statusCode, "fetch failed: httpStatusCode=%d description=%s".format(statusCode, CustomFetchStatus.getStatusDescription(statusCode))))
       }
     } finally {
       fetchResult.foreach(_.discardContentIfNotConsumed())

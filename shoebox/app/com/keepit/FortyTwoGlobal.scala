@@ -53,13 +53,14 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
     if (app.mode != Mode.Test) {
       require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
     }
-    log.info("Starting " + this)
+    log.info("Starting %s".format(this))
     val baseUrl: String = current.configuration.getString("application.baseUrl").get
     var startMessage = "FortyTwo %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
         FortyTwoServices.currentService, FortyTwoServices.currentVersion, FortyTwoServices.compilationTime, baseUrl)
     log.info(startMessage)
     println(startMessage)
     scope.onStart(app)
+    log.info("%s started".format(this))
 //    if (app.mode != Mode.Test) healthcheck.reportStart()
   }
   
