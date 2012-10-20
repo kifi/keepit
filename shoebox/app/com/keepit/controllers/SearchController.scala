@@ -30,9 +30,10 @@ import play.api.libs.json.JsString
 import com.keepit.common.logging.Logging
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.Hit
+import com.keepit.common.social.UserWithSocial
 
 //note: users.size != count if some users has the bookmark marked as private
-case class PersonalSearchResult(uri: NormalizedURI, count: Int, users: Seq[User], score: Float)
+case class PersonalSearchResult(uri: NormalizedURI, count: Int, users: Seq[UserWithSocial], score: Float)
 
 object SearchController extends Controller with Logging {
  
@@ -54,7 +55,9 @@ object SearchController extends Controller with Logging {
     val uri = NormalizedURI.get(Id[NormalizedURI](res.id))
     val count = uri.bookmarks().size
     val users = uri.bookmarks().map(_.userId.get).map{ userId =>
-      User.get(userId)
+      val user = User.get(userId) 
+      val info = SocialUserInfo.getByUser(user.id.get).head
+      UserWithSocial(user, info)
     }
     PersonalSearchResult(uri, count, users, res.score)
   }

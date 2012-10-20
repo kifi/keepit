@@ -49,8 +49,8 @@ class ScraperTest extends SpecificationWithJUnit {
     "fetch ACTIVE uris and scrape them" in {
       running(new EmptyApplication()) {
         var (uri1, uri2) = CX.withConnection { implicit c =>
-          val user1 = User(firstName = "Joe", lastName = "Smith", facebookId = FacebookId("fb1")).save
-          val user2 = User(firstName = "Moo", lastName = "Brown", facebookId = FacebookId("fb2")).save
+          val user1 = User(firstName = "Joe", lastName = "Smith").save
+          val user2 = User(firstName = "Moo", lastName = "Brown").save
           (NormalizedURI(title = "existing", url = "http://www.keepit.com/existing").save, 
            NormalizedURI(title = "missing", url = "http://www.keepit.com/missing").save)
         }

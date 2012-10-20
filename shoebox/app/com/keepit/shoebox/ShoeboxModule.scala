@@ -27,6 +27,7 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import java.io.File
 import com.keepit.common.store.S3Bucket
+import com.keepit.common.social.{SocialGraphPluginImpl, SocialGraphPlugin}
 
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -38,6 +39,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
+    bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
   }
 
   @Singleton

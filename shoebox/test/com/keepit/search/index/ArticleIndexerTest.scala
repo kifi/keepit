@@ -40,11 +40,11 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
     "index scraped URIs" in {
       running(new EmptyApplication()) {
         var (uri1, uri2, uri3) = CX.withConnection { implicit c =>
-          val user1 = User(firstName = "Joe", lastName = "Smith", facebookId = FacebookId("fb1")).save
-          val user2 = User(firstName = "Moo", lastName = "Brown", facebookId = FacebookId("fb2")).save
-          (NormalizedURI(title = "a1", url = "http://www.keepit.com/article1", state=ACTIVE).save,
-           NormalizedURI(title = "a2", url = "http://www.keepit.com/article2", state=SCRAPED).save,
-           NormalizedURI(title = "a3", url = "http://www.keepit.com/article3", state=INDEXED).save)
+          val user1 = User(firstName = "Joe", lastName = "Smith").save
+          val user2 = User(firstName = "Moo", lastName = "Brown").save
+          (NormalizedURI(title = "a1", url = "http://www.keepit.com/article1", state = ACTIVE).save,
+           NormalizedURI(title = "a2", url = "http://www.keepit.com/article2", state = SCRAPED).save,
+           NormalizedURI(title = "a3", url = "http://www.keepit.com/article3", state = INDEXED).save)
         }
         store += (uri1.id.get -> mkArticle(uri1.id.get, "title1", "content1 alldocs"))
         store += (uri2.id.get -> mkArticle(uri2.id.get, "title2", "content2 alldocs"))

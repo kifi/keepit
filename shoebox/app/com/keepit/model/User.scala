@@ -4,13 +4,11 @@ import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
 import com.keepit.common.db.NotFoundException
 import com.keepit.common.time._
 import com.keepit.common.crypto._
-import com.keepit.serializer.SocialUserSerializer
 import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
 import ru.circumflex.orm._
-import securesocial.core.SocialUser
 import play.api.libs.json._
 
 case class User(
@@ -20,12 +18,8 @@ case class User(
   externalId: ExternalId[User] = ExternalId(),
   firstName: String,
   lastName: String,
-  state: State[User] = User.States.ACTIVE,
-  facebookId: FacebookId,
-  socialUser: Option[SocialUser] = None
+  state: State[User] = User.States.ACTIVE
 ) {
-  //assuming only facebook id for now
-  def withSecureSocial(socialUser: SocialUser) = copy(facebookId = FacebookId(socialUser.id.id), socialUser = Some(socialUser))
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
   def withExternalId(id: ExternalId[User]) = copy(externalId = id)
   
@@ -49,12 +43,6 @@ object User {
   def all(implicit conn: Connection): Seq[User] =
     UserEntity.all.map(_.view)
   
-  def get(facebookId: FacebookId)(implicit conn: Connection): User =
-    getOpt(facebookId).getOrElse(throw new Exception("could not find facebookId = %s".format(facebookId.value)))
-
-  def getOpt(facebookId: FacebookId)(implicit conn: Connection): Option[User] =
-    (UserEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.facebookId EQ facebookId.toString()) unique }.map(_.view)
-
   def get(id: Id[User])(implicit conn: Connection): User =
     getOpt(id).getOrElse(throw NotFoundException(id))
     
@@ -87,8 +75,6 @@ private[model] class UserEntity extends Entity[User, UserEntity] {
   val firstName = "first_name".VARCHAR(256).NOT_NULL
   val lastName = "last_name".VARCHAR(256).NOT_NULL
   val state = "state".STATE[User].NOT_NULL(User.States.ACTIVE)
-  val facebookId = "facebook_id".VARCHAR(16)
-  val socialUser = "social_user".VARCHAR(2048)
   
   def relation = UserEntity
   
@@ -99,9 +85,7 @@ private[model] class UserEntity extends Entity[User, UserEntity] {
     externalId = externalId(),
     firstName = firstName(),
     lastName = lastName(),
-    state = state(),
-    facebookId = FacebookId(facebookId()),
-    socialUser = socialUser.map{ s => new SocialUserSerializer().reads(Json.parse(s)) }
+    state = state()
   )
 }
 
@@ -117,8 +101,6 @@ private[model] object UserEntity extends UserEntity with EntityTable[User, UserE
     user.firstName := view.firstName
     user.lastName := view.lastName
     user.state := view.state
-    user.facebookId := view.facebookId.value
-    user.socialUser.set(view.socialUser.map{ s => new SocialUserSerializer().writes(s).toString() })
     user
   }
 }

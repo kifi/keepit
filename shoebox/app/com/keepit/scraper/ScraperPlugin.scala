@@ -25,7 +25,6 @@ case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
 
 private[scraper] class ScraperActor(scraper: Scraper) extends Actor with Logging {
-  
   def receive() = {
     case Scrape => sender ! scraper.run()
     case ScrapeInstance(uri) => scraper.safeProcessURI(uri)
