@@ -368,10 +368,7 @@
        }
       });
 
-      chrome.windows.create({
-        'url': 'http://' + getConfigs().server + '/authenticate/facebook', 
-        'type': 'popup'
-      }, function(window) {
+      chrome.windows.create({'url': 'http://' + getConfigs().server + '/authenticate/facebook', 'type': 'popup', 'width' : 300, 'height' : 300}, function(window) {
         popup = window.id
       });
     }
