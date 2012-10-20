@@ -44,8 +44,8 @@ object AuthController extends Controller with securesocial.core.SecureSocial wit
 	    case None => Ok(JsObject(("status" -> JsString("loggedout")) :: Nil))
 	    case Some(socialUser) => {  
 	      log.info("facebook id {} %s".format(socialUser.id.id))
-	      val keepitId = CX.withConnection { implicit c =>
-  	    	User.get(FacebookId(socialUser.id.id)).id.get
+	      val user = CX.withConnection { implicit c =>
+  	    	User.get(FacebookId(socialUser.id.id))
   	  	}
   			Ok(JsObject(
   			  ("status" -> JsString("loggedin")) ::
@@ -53,12 +53,12 @@ object AuthController extends Controller with securesocial.core.SecureSocial wit
   			  ("name" -> JsString(socialUser.displayName)) :: 
   			  ("facebookId" -> JsString(socialUser.id.id)) ::
   			  ("provider" -> JsString(socialUser.id.providerId)) ::
-  			  ("keepitId" -> JsNumber(keepitId.id)) ::
+  			  ("externalId" -> JsString(user.externalId.id)) ::
   			  Nil)
         )
 	    }
-		}
-  }
+	  }
+  }}
   
   def welcome = SecuredAction() { implicit request =>
     log.debug("in welcome. with user : [ %s ]".format(request.user ))
