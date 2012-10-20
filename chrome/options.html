@@ -31,14 +31,6 @@
     }
     localStorage["max_search_results"] = $("#max_search_results").val();
     localStorage["hover_timeout"] = $("#hover_timeout").val();
-    var keepitId = $("#keepit_id").val();
-    if (localStorage["user"]) {
-      var userInfo = JSON.parse(localStorage["user"]);
-      if (userInfo) {
-        userInfo.keepit_id = $("#keepit_id").val();
-      }
-      localStorage["user"]= JSON.stringify(userInfo);
-    }
   }
 
   function getuserinfo(callback) {
@@ -57,20 +49,20 @@
     });
   }
 
-
   function renderUserInfo(userInfo) {
     if (userInfo && userInfo.status && userInfo.status=="loggedin") {
       localStorage["user"]  = JSON.stringify(userInfo);
       $("#user_info_data").show();
       $("#connect_to_server").hide();
       $("#user_name").html(userInfo.name);
-      $("#user_avatar").attr("src", userInfo.avatarUrl);
+      $("#user_avatar").attr("src", userInfo.avatar_url);
     } else {
       localStorage.removeItem("user");
       $("#connect_to_server").show();
       $("#user_info_data").hide();
     }     
   }
+
   function restoreConfigs() {
     var env = localStorage["env"];
 
@@ -87,24 +79,16 @@
     }
     $("#max_search_results").val(localStorage["max_search_results"]);
     $("#hover_timeout").val(localStorage["hover_timeout"]);
-    if (localStorage["user"]) {
-      var userInfo = JSON.parse(localStorage["user"]);
-      if (userInfo && userInfo.keepit_id) {
-        $("#keepit_id").val(userInfo.keepit_id);
-      }
-    }
 
-  $("#facebook_connect_link").click(function() {
-    chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
-      var url = "http://" + config.server + "/authenticate/facebook";
-      console.log("openning facebook window from " + url, "connect", "width=500,height=400");
-      window.open(url);
-      return false;
-    });
-  });
-  
-  getuserinfo(renderUserInfo);
-
+    $("#facebook_connect_link").click(function() {
+      chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
+        var url = "http://" + config.server + "/authenticate/facebook";
+        console.log("openning facebook window from " + url, "connect", "width=500,height=400");
+        window.open(url);
+        return false;
+      });
+    });  
+    getuserinfo(renderUserInfo);
   }
   </script>
 
@@ -127,7 +111,6 @@
         Max Search Results: <input type="text" id="max_search_results" name="max_search_results" value="10"></input><br/> 
         Show Hover timeout in seconds: <input type="text" id="hover_timeout" name="hover_timeout" value="10"></input><br/> 
         <font size="small">If the value of the timeout is not a positive number (as in '0' or "NA") the hover will not show</font><br/> 
-        KeepIt ID: <input type="text" id="keepit_id" name="keepit_id" value=""></input><br/> 
         <button onclick="saveConfigs()">Save</button><br/> 
         <button onclick="upload()">Upload all my bookmarks</button><br/> 
         <button onclick="resetUser()">Reset User Info</button><br/> 

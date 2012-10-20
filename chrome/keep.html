@@ -133,8 +133,8 @@
         }
       }
       term = request.query;
-      keepitId = userInfo["keepit_id"];
-      xhr.open("GET", 'http://' + getConfigs().server + '/bookmarks/search?term=' + term + '&keepitId=' + keepitId, true);
+      var externalId = userInfo["keepit_external_id"];
+      xhr.open("GET", 'http://' + getConfigs().server + '/bookmarks/search?term=' + term + '&externalId=' + externalId, true);
       xhr.send();
     }
 
@@ -290,27 +290,6 @@
       log("Extension Installed");
     } 
 
-    function obtainNewkeepitId(userInfo, callback){
-      var xhr = new XMLHttpRequest();
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-          log("[obtainNewkeepitId] xhr response:");
-          var result = $.parseJSON(xhr.response);
-          var keepitId = result.userId;
-          var externalId = result.externalId;
-          log("keepitId=" + keepitId + " with external id=" + externalId);
-          userInfo.keepit_id = keepitId;
-          userInfo.externalId = externalId;
-          localStorage["user"] = JSON.stringify(userInfo); 
-          callback();
-        }
-      }
-      xhr.open("POST", 'http://' + getConfigs().server + '/users/anonymous', true);
-      xhr.send(JSON.stringify({
-        user_info: userInfo
-      }));
-    }
-
     function onUpdate() {
       log("Extension Updated");
     }
@@ -320,7 +299,7 @@
       return details.version;
     }
 
-    var userInfo = {keepit_id: null}
+    var userInfo = {keepit_external_id: null}
 
     function startHandShake(callback){
       log("starting handShake");
@@ -345,7 +324,7 @@
       if (!ls) return false;
       try {
         userInfo = JSON.parse(ls);
-        if (userInfo.keepit_id && userInfo.facebook_id) return true
+        if (userInfo.keepit_external_id) return true
       } catch (e) {
         log("could not parse JSON "+ls);
       }
@@ -374,8 +353,8 @@
             log("got handshake data ");
             log(data);
             userInfo.facebook_id = data.facebookId;
-            userInfo.keepit_id = data.keepitId
-            userInfo.avatarUrl = data.avatarUrl;
+            userInfo.keepit_external_id = data.externalId;
+            userInfo.avatar_url = data.avatarUrl;
             log("updating userInfo ");
             log(userInfo);
             localStorage["user"]=JSON.stringify(userInfo);
@@ -398,7 +377,7 @@
     }
 
     if (!hasKeepitIdAndFacebookId()) {
-      userInfo = {keepit_id:null};
+      userInfo = {keepit_external_id:null};
       localStorage["user"]=JSON.stringify(userInfo); // initialzie user info
       log("open facebook connect - till it is closed keepit is (suppose) to be disabled");
       openFacebookConnect();
