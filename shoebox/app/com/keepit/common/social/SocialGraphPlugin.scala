@@ -22,6 +22,9 @@ import com.google.inject.Inject
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.model.User
+import com.keepit.common.db.CX
+import com.keepit.common.db.CX._
+import play.api.Play.current
 
 //case object FetchAll
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
@@ -29,7 +32,13 @@ private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor with Logging {
   def receive() = {
 //    case FetchAll => sender ! graph.fetchAll()
-    case FetchUserInfo(user) => graph.fetchJson(user)
+    case FetchUserInfo(user) => 
+      val rawInfo = graph.fetchSocialUserRawInfo(user)
+      log.info("fetched raw info %s for %s".format(rawInfo, user))
+      CX.withConnection { implicit c =>
+        user.withState(SocialUserInfo.States.FETCHED_USING_SELF).save
+      }
+      //todo(eishay): push to s3
     case m => throw new Exception("unknown message %s".format(m))
   }
 }

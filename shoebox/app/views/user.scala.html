@@ -2,9 +2,9 @@
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
-    <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId" target="_blank">
+    <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId.id" target="_blank">
       <img src="https://graph.facebook.com/@userWithSocial.socialUserInfo.socialId.id/picture?type=square" width="30" height="30" alt=""/>
-      @userWithSocial.socialUserInfo.socialId
+      @userWithSocial.socialUserInfo.socialId.id
     </a>
   </span>
 }
@@ -19,8 +19,7 @@
         <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
         <script type="text/javascript">
           function refreshSociaUserInfo() {
-            location.href="admin/"
-            alert("done!");
+            location.href="@com.keepit.controllers.routes.UserController.refreshSocialInfo(userWithSocial.user.id.get)"
           }
         </script>
     </head>
@@ -42,14 +41,12 @@
           <th>BID</th>
           <th>Bookmark</th>
           <th>Source</th>
-          <th>Social User Info</th>
         </tr>
 			  @for(bookmark <- bookmarks) {
 			    <tr>
             <td>#@bookmark.id.get.id</td>
             <td>@adminHelper.bookmarkDisplay(bookmark)</td>
             <td>@bookmark.source</td>
-            <td>@socialUserInfos.toString()</td>
 			    </tr>
 			  }
 		  </table>
