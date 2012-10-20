@@ -32,20 +32,20 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.User
 import com.keepit.model.FacebookId
 import com.keepit.common.db.CX
+import com.keepit.common.logging.Logging
 
 /**
  * The Login page controller
  */
-object AuthController extends Controller with SecureSocial with Logging
+object AuthController extends Controller with securesocial.core.SecureSocial with Logging
 {
-  def isLoggedIn = SecuredAction(true) { implicit request => 
+  def isLoggedIn = SecuredAction(true) { implicit request => {
 	  UserService.find(request.user.id) match {
-	    case None =>
-		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)) 
-	    case Some(socialUser) => 
-	      log.info("facebook id %s".format(socialUser.id.id))
-	      val keepitId = CX.withConnection { implicit c =>
-  	    	User.get(FacebookId(socialUser.id.id)).id.get
+	    case None => Ok(JsObject(("status" -> JsString("loggedout")) :: Nil))
+	    case Some(socialUser) => {  
+	      log.info("facebook id {} %s".format(socialUser.id.id))
+	      val user = CX.withConnection { implicit c =>
+  	    	User.get(FacebookId(socialUser.id.id))
   	  	}
   			Ok(JsObject(
   			  ("status" -> JsString("loggedin")) ::
@@ -53,11 +53,12 @@ object AuthController extends Controller with SecureSocial with Logging
   			  ("name" -> JsString(socialUser.displayName)) :: 
   			  ("facebookId" -> JsString(socialUser.id.id)) ::
   			  ("provider" -> JsString(socialUser.id.providerId)) ::
-  			  ("keepitId" -> JsNumber(keepitId.id)) ::
+  			  ("externalId" -> JsString(user.externalId.id)) ::
   			  Nil)
-  			)
-		}
-  }
+        )
+	    }
+	  }
+  }}
   
   def welcome = SecuredAction() { implicit request =>
     log.debug("in welcome. with user : [ %s ]".format(request.user ))
