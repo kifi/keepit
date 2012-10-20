@@ -25,17 +25,19 @@ import com.keepit.serializer.BookmarkSerializer
 import com.keepit.serializer.{URIPersonalSearchResultSerializer => BPSRS}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
+import com.keepit.common.social._
 import java.util.concurrent.TimeUnit
 import java.sql.Connection
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
+import com.keepit.common.net.HttpClient
 
 object BookmarksController extends Controller with Logging with SecureSocial {
 
   def edit(id: Id[Bookmark]) = Action{ request =>
     CX.withConnection { implicit conn =>
       val bookmark = Bookmark.get(id) 
-      val user = User.get(bookmark.userId.get)
+      val user = UserWithSocial.toUserWithSocial(User.get(bookmark.userId.get))
       Ok(views.html.editBookmark(bookmark, user))
     }
   }
@@ -59,7 +61,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   def bookmarksView = SecuredAction(false) { request =>
     val bookmarksAndUsers = CX.withConnection { implicit conn =>
       val bookmarks = Bookmark.all
-      val users = bookmarks map (_.userId.get) map User.get
+      val users = bookmarks map (_.userId.get) map User.get map UserWithSocial.toUserWithSocial
       val uris = bookmarks map (_.uriId) map NormalizedURI.get map {u => u.stats()}
       (bookmarks, uris, users).zipped.toList.seq
     }
@@ -71,41 +73,16 @@ object BookmarksController extends Controller with Logging with SecureSocial {
     log.debug(json)
     log.info("keepit_id = [%s]".format(json \ "user_info"))
     val bookmarkSource = (json \ "bookmark_source").asOpt[String]
-    val facebookId = parseFacebookId(json \ "user_info")
     val keepitId = parseKeepitId(json \ "user_info")//todo: need to use external id
-    val user = internUser(facebookId, keepitId)
+    val user = CX.withConnection { implicit conn =>
+      User.get(keepitId)
+    }
     internBookmarks(json \ "bookmarks", user, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN"))) 
     log.info(user)
     Ok(JsObject(("status" -> JsString("success")) :: 
         ("userId" -> JsString(user.id.map(id => id.id.toString()).getOrElse(""))) :: Nil))//todo: need to send external id
   }
   
-  private def internUser(facebookId: FacebookId, keepitId : Id[User]): User = CX.withConnection { implicit conn =>
-    User.getOpt(keepitId) match {
-      case Some(user) =>
-        user
-      case None => 
-        User.getOpt(facebookId) match {
-	      	case Some(user) => 
-	      	  user
-		    case None =>
-		      val json = try {
-		        Json.parse(WS.url("https://graph.facebook.com/" + facebookId.value).get().await(30, TimeUnit.SECONDS).get.body)
-		      } catch {
-		        case e =>
-		          e.printStackTrace()
-		          Json.parse("""{"first_name": "NA", "last_name": "NA"}""")
-		      }
-		      println("fb obj = " + json)
-		      User(
-		          firstName = (json \ "first_name").as[String],
-		          lastName = (json \ "last_name").as[String],
-		          facebookId = facebookId
-		      ).save
-	    }
-    }
-  }
-    
   private def internBookmarks(value: JsValue, user: User, source: BookmarkSource): List[Bookmark] = value match {
     case JsArray(elements) => (elements map {e => internBookmarks(e, user, source)} flatten).toList  
     case json: JsObject if(json.keys.contains("children")) => internBookmarks( json \ "children" , user, source)  
@@ -113,7 +90,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
     case e => throw new Exception("can't figure what to do with %s".format(e))  
   }
   
-  private def parseFacebookId(value: JsValue): FacebookId = FacebookId((value \ "facebook_id").as[String])
+  private def parseSocialId(value: JsValue): SocialId = SocialId((value \ "facebook_id").as[String])
   private def parseKeepitId(value: JsValue): Id[User] = Id[User](((value \ "keepit_id").as[Int]))//deprecated, need to use external id
   private def parseKeepitExternalId(value: JsValue): ExternalId[User] = ExternalId[User](((value \ "external_id").as[String]))
   

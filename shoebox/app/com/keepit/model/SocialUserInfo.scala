@@ -16,8 +16,7 @@ import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.social.SocialNetworks
 import com.keepit.common.social.SocialUserRawInfo
 import com.keepit.common.social.SocialNetworks
-
-case class SocialId(id: String)
+import com.keepit.common.social.SocialId
 
 case class SocialUserInfo(
   id: Option[Id[SocialUserInfo]] = None,
@@ -25,10 +24,14 @@ case class SocialUserInfo(
   updatedAt: DateTime = currentDateTime,
   userId: Option[Id[User]] = None,
   fullName: String,
-  state: State[SocialUserInfo] = SocialUserInfo.States.ACTIVE,
+  state: State[SocialUserInfo] = SocialUserInfo.States.CREATED,
   socialId: SocialId,
-  networkType: SocialNetworkType
+  networkType: SocialNetworkType,
+  credentials: Option[SocialUser] = None
 ) {
+  
+  def withUser(user: User) = copy(userId = Some(user.id.get))//want to make sure the user has an id, fail hard if not!
+  def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials))//want to make sure the user has an id, fail hard if not!
   
   def save(implicit conn: Connection): SocialUserInfo = {
     val entity = SocialUserInfoEntity(this.copy(updatedAt = currentDateTime))
@@ -45,11 +48,23 @@ object SocialUserInfo {
   def get(id: Id[SocialUserInfo])(implicit conn: Connection): SocialUserInfo =
     getOpt(id).getOrElse(throw NotFoundException(id))
     
+  def get(id: SocialId, networkType: SocialNetworkType)(implicit conn: Connection): SocialUserInfo =
+    getOpt(id, networkType).getOrElse(throw new Exception("not found %s:%s".format(id, networkType)))
+    
+  def getByUser(userId: Id[User])(implicit conn: Connection): Seq[SocialUserInfo] =
+    (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.userId EQ userId) list }.map(_.view)
+    
+  def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit conn: Connection): Option[SocialUserInfo] =
+    (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ((u.socialId EQ id.id) AND (u.networkType EQ networkType.name)) unique }.map(_.view)
+    
   def getOpt(id: Id[SocialUserInfo])(implicit conn: Connection): Option[SocialUserInfo] =
     SocialUserInfoEntity.get(id).map(_.view)
     
   object States {
-    val ACTIVE = State[SocialUserInfo]("active")
+    val CREATED = State[SocialUserInfo]("created")
+    val FETCHED_USING_FRIEND = State[SocialUserInfo]("fetched_using_friend")
+    val FETCHED_USING_SELF = State[SocialUserInfo]("fetched_using_self")
+    val FETCHE_FAIL = State[SocialUserInfo]("fetch_fail")
     val INACTIVE = State[SocialUserInfo]("inactive")
   }
 } 
@@ -59,10 +74,11 @@ private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialU
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val userId = "user_id".ID[User]
   val fullName = "full_name".VARCHAR(512).NOT_NULL
-  val state = "state".STATE[SocialUserInfo].NOT_NULL(SocialUserInfo.States.ACTIVE)
+  val state = "state".STATE[SocialUserInfo].NOT_NULL(SocialUserInfo.States.CREATED)
   val socialId = "social_id".VARCHAR(32).NOT_NULL
   val networkType = "network_type".VARCHAR(32).NOT_NULL
-  
+  val credentials = "credentials".VARCHAR(2048)
+
   def relation = SocialUserInfoEntity
   
   def view(implicit conn: Connection): SocialUserInfo = SocialUserInfo(
@@ -75,7 +91,8 @@ private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialU
     networkType = networkType() match {
       case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK
       case _ => throw new RuntimeException("unknown network type %s".format(networkType()))
-    }
+    },
+    credentials = credentials.map{ s => new SocialUserSerializer().reads(Json.parse(s)) }
   )
 }
 
@@ -92,6 +109,7 @@ private[model] object SocialUserInfoEntity extends SocialUserInfoEntity with Ent
     user.state := view.state
     user.socialId := view.socialId.id
     user.networkType := view.networkType.name
+    user.credentials.set(view.credentials.map{ s => new SocialUserSerializer().writes(s).toString() })
     user
   }
 }

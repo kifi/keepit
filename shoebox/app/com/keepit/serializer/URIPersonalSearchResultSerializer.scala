@@ -13,7 +13,7 @@ class URIPersonalSearchResultSerializer extends Writes[PersonalSearchResult] {
       "count"  -> JsString(res.count.toString()),
       "bookmark" -> NormalizedURISerializer.normalizedURISerializer.writes(res.uri),
       "score" -> JsNumber(res.score),
-      "users" -> UserSerializer.userSerializer.writes(res.users)
+      "users" -> UserWithSocialSerializer.userWithSocialSerializer.writes(res.users)
     ))
 
   def writes (ress: Seq[PersonalSearchResult]): JsValue = 

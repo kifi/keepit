@@ -29,9 +29,10 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json._
 import com.keepit.common.logging.Logging
-import com.keepit.model.User
-import com.keepit.model.FacebookId
+import com.keepit.model.SocialUserInfo
 import com.keepit.common.db.CX
+import com.keepit.common.social.SocialId
+import com.keepit.common.social.SocialNetworks
 
 /**
  * The Login page controller
@@ -45,7 +46,7 @@ object AuthController extends Controller with SecureSocial with Logging
 	    case Some(socialUser) => 
 	      log.info("facebook id %s".format(socialUser.id.id))
 	      val keepitId = CX.withConnection { implicit c =>
-  	    	User.get(FacebookId(socialUser.id.id)).id.get
+  	    	SocialUserInfo.get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).id.get
   	  	}
   			Ok(JsObject(
   			  ("status" -> JsString("loggedin")) ::

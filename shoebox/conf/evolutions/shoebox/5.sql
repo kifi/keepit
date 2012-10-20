@@ -6,10 +6,11 @@ CREATE TABLE social_user_info (
     updated_at datetime NOT NULL,
     state varchar(20) NOT NULL,
 
-    user_id bigint(20) NOT NULL,
+    user_id bigint(20),
     full_name varchar(512) NOT NULL,
     social_id varchar(32) NOT NULL,
     network_type varchar(32) NOT NULL,
+    credentials varchar(2048),
     
     KEY (social_id, network_type),
     KEY (user_id),
@@ -17,6 +18,9 @@ CREATE TABLE social_user_info (
     
     CONSTRAINT social_user_info_f_user FOREIGN KEY (user_id) REFERENCES user(id) 
 );
+
+alter table user
+    drop column social_user;
 
 insert into evolutions (name, description) values('5.sql', 'adding social_user_info');
 
