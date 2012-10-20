@@ -20,20 +20,25 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
     CX.withConnection { implicit conn =>
       SocialUserInfo.getOpt(SocialId(id.id), SocialNetworks.FACEBOOK)
     } match {
-      case None => None
-      case Some(user) => user.credentials
+      case None =>
+        log.debug("No SocialUserInfo found for %s".format(id))
+        None
+      case Some(user) => 
+        log.debug("User found: %s for %s".format(user, id))
+        user.credentials
     }
   
 
-  def save(socialUser: SocialUser): Unit = 
-    CX.withConnection { implicit conn => {
-      //todo(eishay) take the network type from the socialUser
-      val socialUserInfo = internUser(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK, socialUser)
-      socialUserInfo.withCredentials(socialUser).save 
-    }    
+  def save(socialUser: SocialUser): Unit = CX.withConnection { implicit conn => 
+    //todo(eishay) take the network type from the socialUser
+    log.debug("` %s".format(socialUser))
+    val socialUserInfo = internUser(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK, socialUser)
+    log.debug("persisting %s into %s".format(socialUser, socialUserInfo))
+    socialUserInfo.withCredentials(socialUser).save 
   }
   
   private def createUser(displayName: String) = {
+    log.debug("creating new user for %s".format(displayName))
     val nameParts = displayName.split(' ')
     User(firstName = nameParts(0),
         lastName = nameParts.tail.mkString(" ")
@@ -50,7 +55,11 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
         socialUserInfo.withUser(user).save
       case None =>
         val user = createUser(socialUser.displayName).save
-        SocialUserInfo(userId = user.id, socialId = socialId, networkType = SocialNetworks.FACEBOOK, fullName = socialUser.displayName, credentials = Some(socialUser)).save
+        log.debug("creating new SocialUserInfo for %s".format(user))
+        val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved 
+            socialId = socialId, networkType = SocialNetworks.FACEBOOK, fullName = socialUser.displayName, credentials = Some(socialUser)).save
+        log.debug("SocialUserInfo created is %s".format(userInfo))
+        userInfo
     }
   }
   

@@ -7,7 +7,9 @@ case class UserWithSocial(user: User, socialUserInfo: SocialUserInfo)
 
 object UserWithSocial {
   def toUserWithSocial(user: User)(implicit conn: Connection) = {
-    val socialInfo = SocialUserInfo.getByUser(user.id.get).head
-    UserWithSocial(user, socialInfo)
+    val socialInfos = SocialUserInfo.getByUser(user.id.get)
+    if (socialInfos.size != 1) throw new Exception("Expected to have exactly one social info for user %s, got %s. All social infos are:".
+        format(user, socialInfos, SocialUserInfo.all))
+    UserWithSocial(user, socialInfos.head)
   }
 }

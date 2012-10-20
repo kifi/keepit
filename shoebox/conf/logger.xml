@@ -11,7 +11,7 @@
   <logger name="ru.circumflex" level="ERROR"/>
   <logger name="com.mysql" level="ERROR"/>
   <logger name="com.ning.http" level="INFO"/>
-  <logger name="com.keepit" level="INFO"/>
+  <logger name="com.keepit" level="DEBUG"/>
                  
   <root level="INFO">          
     <appender-ref ref="STDOUT" />

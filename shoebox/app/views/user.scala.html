@@ -3,7 +3,7 @@
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
     <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId" target="_blank">
-      <img src="https://graph.facebook.com/@userWithSocial.socialUserInfo.socialId/picture?type=square" width="30" height="30" alt=""/>
+      <img src="https://graph.facebook.com/@userWithSocial.socialUserInfo.socialId.id/picture?type=square" width="30" height="30" alt=""/>
       @userWithSocial.socialUserInfo.socialId
     </a>
   </span>

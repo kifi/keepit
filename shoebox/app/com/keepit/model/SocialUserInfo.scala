@@ -87,6 +87,7 @@ private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialU
     updatedAt = updatedAt(),
     fullName = fullName(),
     state = state(),
+    userId = userId.value,
     socialId = SocialId(socialId()),
     networkType = networkType() match {
       case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK

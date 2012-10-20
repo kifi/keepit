@@ -40,24 +40,25 @@ class FacebookSocialGraphTest extends SpecificationWithJUnit {
         val socialUser = SocialUser(UserId("100004067535411", "facebook"), "Boaz Tal", Some("boaz.tal@gmail.com"), 
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
 
-        val socialUserInfo = CX.withConnection { implicit c =>
-          val user = User(firstName = "Eishay", lastName = "Smith").save
-          SocialUserInfo(userId = user.id, fullName = "Eishay Smith", socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
+        val user = CX.withConnection { implicit c =>
+          User(firstName = "Eishay", lastName = "Smith").save
         }
+        val unsaved = SocialUserInfo(userId = user.id, fullName = "Eishay Smith", socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
+        val socialUserInfo = CX.withConnection { implicit c =>
+          unsaved.save
+        }
+        
+        unsaved.userId === user.id
+        socialUserInfo.userId === user.id
+        socialUserInfo.fullName === "Eishay Smith"
+        socialUserInfo.socialId.id === "eishay"
+        socialUserInfo.credentials.get === socialUser
+          
         val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo)
         rawInfo.fullName === "Eishay Smith"
         rawInfo.userId === socialUserInfo.userId
 
         rawInfo.socialId.id === "eishay"
-        val model = rawInfo.toSocialUserInfo
-        model.userId === rawInfo.userId
-        val saved = CX.withConnection { implicit c =>
-          model.save
-        }
-          
-        CX.withConnection { implicit c =>
-          SocialUserInfo.get(saved.id.get) === saved
-        }
       }
     }
   }  
