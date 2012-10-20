@@ -5,8 +5,8 @@ import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
-import com.keepit.common.db.CX
-import com.keepit.common.db.Id
+import com.keepit.common.db.{Id, CX}
+import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.test.EmptyApplication
 import org.junit.runner.RunWith
@@ -24,6 +24,17 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
   val ramDir = new RAMDirectory
   val store = new FakeArticleStore()
   val uriIdArray = new Array[Long](3)
+
+  def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
+    Article(
+        id = normalizedUriId,
+        title = title,
+        content = content,
+        scrapedAt = currentDateTime,
+        httpContentType = Some("text/html"),
+        state = SCRAPED,
+        message = None)
+  }
   
   "ArticleIndexer" should {
     "index scraped URIs" in {
@@ -35,9 +46,9 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
            NormalizedURI(title = "a2", url = "http://www.keepit.com/article2", state = SCRAPED).save,
            NormalizedURI(title = "a3", url = "http://www.keepit.com/article3", state = INDEXED).save)
         }
-        store += (uri1.id.get -> Article(uri1.id.get, "title1", "content1 alldocs"))
-        store += (uri2.id.get -> Article(uri2.id.get, "title2", "content2 alldocs"))
-        store += (uri3.id.get -> Article(uri3.id.get, "title3", "content3 alldocs"))
+        store += (uri1.id.get -> mkArticle(uri1.id.get, "title1", "content1 alldocs"))
+        store += (uri2.id.get -> mkArticle(uri2.id.get, "title2", "content2 alldocs"))
+        store += (uri3.id.get -> mkArticle(uri3.id.get, "title3", "content3 alldocs"))
 
         // saving ids for the search test
         uriIdArray(0) = uri1.id.get.id
