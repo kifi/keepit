@@ -5,7 +5,7 @@ import com.google.inject.Provides
 import com.google.inject.Provider
 import akka.actor.ActorSystem
 import akka.actor.Props
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{NormalizedURI, SocialUserInfo}
 import com.keepit.search.Article
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.ArticleIndexerPlugin
@@ -33,7 +33,7 @@ import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.store.MMapDirectory
 import java.io.File
 import com.keepit.common.store.S3Bucket
-import com.keepit.common.social.{SocialGraphPluginImpl, SocialGraphPlugin}
+import com.keepit.common.social._
 
 case class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -51,7 +51,7 @@ case class DevModule() extends ScalaModule with Logging {
   @Provides
   def articleStore: ArticleStore = {
     var conf = current.configuration.getConfig("amazon.s3").get
-    conf.getString("bucket") match {
+    conf.getString("article.bucket") match {
       case None => 
         new HashMap[Id[NormalizedURI], Article] with ArticleStore
       case Some(bucketName) =>
@@ -64,6 +64,24 @@ case class DevModule() extends ScalaModule with Logging {
     }
   }
   
+
+  @Singleton
+  @Provides
+  def socialUserRawInfoStore: SocialUserRawInfoStore = {
+    var conf = current.configuration.getConfig("amazon.s3").get
+    conf.getString("social.bucket") match {
+      case None => 
+        new HashMap[Id[SocialUserInfo], SocialUserRawInfo] with SocialUserRawInfoStore
+      case Some(bucketName) =>
+        val bucket = S3Bucket(bucketName)
+        val awsCredentials = new BasicAWSCredentials(
+            conf.getString("accessKey").get, 
+            conf.getString("secretKey").get)
+        val client = new AmazonS3Client(awsCredentials)
+        new S3SocialUserRawInfoStoreImpl(bucket, client)
+    }
+  }
+
   @Singleton
   @Provides
   def articleIndexer(articleStore: ArticleStore): ArticleIndexer = {

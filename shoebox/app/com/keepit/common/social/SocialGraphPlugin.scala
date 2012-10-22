@@ -22,6 +22,7 @@ import com.google.inject.Inject
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.model.User
+import com.keepit.inject._
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
 import play.api.Play.current
@@ -38,7 +39,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
       CX.withConnection { implicit c =>
         user.withState(SocialUserInfo.States.FETCHED_USING_SELF).save
       }
-      //todo(eishay): push to s3
+      inject[SocialUserRawInfoStore] += (user.id.get -> rawInfo)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
