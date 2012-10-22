@@ -71,14 +71,12 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   def addBookmarks() = JsonAction { request =>
     val json = request.body
     log.debug(json)
-    log.info("keepit_id = [%s]".format(json \ "user_info"))
+    log.info("user_info = [%s]".format(json \ "user_info"))
     val bookmarkSource = (json \ "bookmark_source").asOpt[String]
-    val keepitId = parseKeepitId(json \ "user_info")//todo: need to use external id
-    val user = CX.withConnection { implicit conn =>
-      User.get(keepitId)
-    }
+    val keepitExternalId = parseKeepitExternalId(json \ "user_info")
+    val user = CX.withConnection { implicit conn => User.get(keepitExternalId) }
+    log.info("adding bookmarks of user %s".format(user))
     internBookmarks(json \ "bookmarks", user, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN"))) 
-    log.info(user)
     Ok(JsObject(("status" -> JsString("success")) :: 
         ("userId" -> JsString(user.id.map(id => id.id.toString()).getOrElse(""))) :: Nil))//todo: need to send external id
   }
@@ -91,8 +89,8 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   }
   
   private def parseSocialId(value: JsValue): SocialId = SocialId((value \ "facebook_id").as[String])
-  private def parseKeepitId(value: JsValue): Id[User] = Id[User](((value \ "keepit_id").as[Int]))//deprecated, need to use external id
-  private def parseKeepitExternalId(value: JsValue): ExternalId[User] = ExternalId[User](((value \ "external_id").as[String]))
+
+  private def parseKeepitExternalId(value: JsValue): ExternalId[User] = ExternalId[User](((value \ "keepit_external_id").as[String]))
   
   private def internBookmark(json: JsObject, user: User, source: BookmarkSource): Bookmark = {
     val title = (json \ "title").as[String]
