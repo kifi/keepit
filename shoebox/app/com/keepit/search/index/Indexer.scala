@@ -66,6 +66,10 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
         throw outOfMemory
     }
   }  
+  
+  def close(): Unit = {
+    indexWriter.close()
+  }
    
   def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int)(afterCommit: Seq[(Indexable[T], Option[IndexError])]=>Unit): Unit = {
     doWithIndexWriter{ indexWriter =>
