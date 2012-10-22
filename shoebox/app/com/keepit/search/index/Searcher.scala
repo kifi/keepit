@@ -30,6 +30,6 @@ class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends Ind
     f(scorer)
   }
 }
-  
+
 case class Hit(id: Long, score: Float)
 

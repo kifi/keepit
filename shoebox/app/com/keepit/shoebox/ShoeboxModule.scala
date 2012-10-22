@@ -14,6 +14,7 @@ import com.keepit.common.net._
 import com.keepit.common.logging.Logging
 import com.keepit.scraper._
 import com.keepit.inject._
+import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexerPluginImpl
@@ -73,6 +74,20 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     ArticleIndexer(new MMapDirectory(dir), articleStore)
   }
   
+  @Singleton
+  @Provides
+  def uriGraph: URIGraph = {
+    var dirPath = current.configuration.getString("index.urigraph.directory").get
+    val dir = new File(dirPath).getCanonicalFile()
+    if (!dir.exists()) {
+      if (!dir.mkdirs()) {
+        throw new Exception("could not create dir %s".format(dir))
+      }
+    }
+    log.info("storing URIGraph in %s".format(dir.getAbsolutePath()))
+    URIGraph(new MMapDirectory(dir))
+  }
+
   @Provides
   @AppScoped
   def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-actor-system")
