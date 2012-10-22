@@ -29,6 +29,7 @@ import play.api.http.ContentTypes
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social.{SocialGraphPlugin, UserWithSocial}
+import com.keepit.common.social.SocialUserRawInfoStore
 
 object UserController extends Controller with Logging with SecureSocial {
 
@@ -84,7 +85,10 @@ object UserController extends Controller with Logging with SecureSocial {
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
       (userWithSocial, bookmarks, socialUserInfos)
     }
-    Ok(views.html.user(user, bookmarks, socialUserInfos))
+    val rawInfos = socialUserInfos map {info =>
+      inject[SocialUserRawInfoStore].get(info.id.get)
+    } 
+    Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten))
   }
 
   def usersView = SecuredAction(false) { implicit request => 

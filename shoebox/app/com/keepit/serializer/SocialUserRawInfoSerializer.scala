@@ -27,7 +27,7 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
       userId = (json \ "userId").asOpt[Long].map(Id(_)), 
       socialUserInfoId = Some(Id[SocialUserInfo]((json \ "socialUserInfoId").as[Int])), 
       socialId = SocialId((json \ "socialId").as[String]), 
-      networkType = (json \ "socialId").as[String] match {
+      networkType = (json \ "networkType").as[String] match {
         case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK 
       },
       (json \ "fullName").as[String],
