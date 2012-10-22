@@ -1,4 +1,4 @@
-@(userWithSocial: UserWithSocial, bookmarks: Seq[Bookmark], socialUserInfos: Seq[SocialUserInfo])
+@(userWithSocial: UserWithSocial, bookmarks: Seq[Bookmark], socialUserInfos: Seq[SocialUserInfo], rawInfos: Seq[SocialUserRawInfo])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
@@ -30,6 +30,7 @@
 	      Id: @userWithSocial.user.id<br/>
 	      Facebook Account: @userWithFacebookDisplay(userWithSocial)<br/>
 	      OAuth: @socialUserInfos<br/>
+	      Social Raw info: @rawInfos<br/>
 	      Account created at: @adminHelper.dateDisplay(userWithSocial.user.createdAt) @adminHelper.timeDisplay(userWithSocial.user.createdAt)<br/>
 	      <br/>
 	      <button onclick="refreshSociaUserInfo()">Refresh Social User Info!</button>
