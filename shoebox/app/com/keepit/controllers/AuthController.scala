@@ -29,9 +29,11 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json._
 import com.keepit.common.logging.Logging
+import com.keepit.model.SocialUserInfo
 import com.keepit.model.User
-import com.keepit.model.FacebookId
 import com.keepit.common.db.CX
+import com.keepit.common.social.SocialId
+import com.keepit.common.social.SocialNetworks
 import com.keepit.common.logging.Logging
 
 /**
@@ -41,11 +43,13 @@ object AuthController extends Controller with securesocial.core.SecureSocial wit
 {
   def isLoggedIn = SecuredAction(true) { implicit request => {
 	  UserService.find(request.user.id) match {
-	    case None => Ok(JsObject(("status" -> JsString("loggedout")) :: Nil))
-	    case Some(socialUser) => {  
-	      log.info("facebook id {} %s".format(socialUser.id.id))
+	    case None =>
+		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)) 
+	    case Some(socialUser) => 
+	      log.info("facebook id %s".format(socialUser.id.id))
 	      val user = CX.withConnection { implicit c =>
-  	    	User.get(FacebookId(socialUser.id.id))
+  	    	val userId = SocialUserInfo.get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).userId.get
+  	    	User.get(userId)
   	  	}
   			Ok(JsObject(
   			  ("status" -> JsString("loggedin")) ::
@@ -58,7 +62,7 @@ object AuthController extends Controller with securesocial.core.SecureSocial wit
         )
 	    }
 	  }
-  }}
+  }
   
   def welcome = SecuredAction() { implicit request =>
     log.debug("in welcome. with user : [ %s ]".format(request.user ))

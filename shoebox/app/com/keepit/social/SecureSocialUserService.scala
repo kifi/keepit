@@ -4,9 +4,12 @@ import play.api.Application
 import securesocial.core.{UserServicePlugin, UserId, SocialUser}
 import com.keepit.common.db.CX
 import com.keepit.common.db._
+import com.keepit.common.net.HttpClient
 import com.keepit.model._
+import com.keepit.inject._
 import play.api.Play.current
 import com.keepit.common.logging.Logging
+import com.keepit.common.social.{SocialId, SocialNetworks, SocialNetworkType}
 
 class SecureSocialUserService(application: Application) extends UserServicePlugin(application) with Logging {
 
@@ -15,34 +18,49 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
    */
   def find(id: UserId): Option[SocialUser] = 
     CX.withConnection { implicit conn =>
-      User.getOpt(FacebookId(id.id))
+      SocialUserInfo.getOpt(SocialId(id.id), SocialNetworks.FACEBOOK)
     } match {
-      case None => None
-      case Some(user) => user.socialUser
+      case None =>
+        log.debug("No SocialUserInfo found for %s".format(id))
+        None
+      case Some(user) => 
+        log.debug("User found: %s for %s".format(user, id))
+        user.credentials
     }
   
 
-  def save(socialUser: SocialUser): Unit = 
-    CX.withConnection { implicit conn => {
-      val user = User.getOpt(FacebookId(socialUser.id.id))
-      user match {
-        case None => {
-          log.info("could not find a user for facebookId [%s]. will create one".format(socialUser.id.id))
-          createUser(socialUser)
-        }
-        case Some(us) => us.withSecureSocial(socialUser).save 
-      }
-    }    
+  def save(socialUser: SocialUser): Unit = CX.withConnection { implicit conn => 
+    //todo(eishay) take the network type from the socialUser
+    log.debug("` %s".format(socialUser))
+    val socialUserInfo = internUser(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK, socialUser)
+    log.debug("persisting %s into %s".format(socialUser, socialUserInfo))
+    socialUserInfo.withCredentials(socialUser).save 
   }
   
-   def createUser(socialUser : SocialUser) = {
-    CX.withConnection { implicit conn => {
-      log.info("a new keepit ID was created to facebookId [%s]".format(socialUser.id.id))
-      val user = User(firstName = socialUser.displayName, lastName = socialUser.displayName, 
-          facebookId = FacebookId(socialUser.id.id)).withSecureSocial(socialUser)
-      val returnedUser = user.save
-      log.info("a new user was created [%s]".format(returnedUser))
-      returnedUser
-   }}
-   }
+  private def createUser(displayName: String) = {
+    log.debug("creating new user for %s".format(displayName))
+    val nameParts = displayName.split(' ')
+    User(firstName = nameParts(0),
+        lastName = nameParts.tail.mkString(" ")
+    )    
+  }
+
+  private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser): SocialUserInfo = CX.withConnection { implicit conn =>
+    SocialUserInfo.getOpt(socialId, socialNetworkType) match {
+      case Some(socialUserInfo) if (!socialUserInfo.userId.isEmpty) => socialUserInfo
+      case Some(socialUserInfo) if (socialUserInfo.userId.isEmpty) =>
+        val user = createUser(socialUserInfo.fullName).save
+        //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
+        //todo(eishay): send a direct fetch request 
+        socialUserInfo.withUser(user).save
+      case None =>
+        val user = createUser(socialUser.displayName).save
+        log.debug("creating new SocialUserInfo for %s".format(user))
+        val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved 
+            socialId = socialId, networkType = SocialNetworks.FACEBOOK, fullName = socialUser.displayName, credentials = Some(socialUser)).save
+        log.debug("SocialUserInfo created is %s".format(userInfo))
+        userInfo
+    }
+  }
+  
 }

@@ -14,7 +14,6 @@ import play.api.data.validation.Constraints._
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import com.keepit.model.User
-import com.keepit.model.FacebookId
 import com.keepit.common.db.CX
 import play.api.libs.ws.WS
 import org.jivesoftware.smack._
@@ -31,6 +30,8 @@ import securesocial.core._
 import securesocial.core.providers.FacebookProvider
 import com.keepit.common.db.ExternalId
 import securesocial.core.providers.FacebookProvider
+import com.keepit.model.SocialUserInfo
+import com.keepit.common.social.SocialId
 //import scala.collection.immutable.Map
 
 object ChatController extends Controller with SecureSocial with Logging {
@@ -50,30 +51,34 @@ object ChatController extends Controller with SecureSocial with Logging {
   private def parseMessage(value: JsValue): String = (value \ "message").as[String]
   private def parseUrl(value: JsValue): String = (value \ "url").as[String]
 
-  def chat(externalId: ExternalId[User]) = SecuredAction(false, tolerantJson) { implicit request =>
+  def chat(receipantExternalId: ExternalId[User]) = SecuredAction(false, tolerantJson) { implicit request =>
     val url = parseUrl(request.body)
     val message = parseMessage(request.body)
-    log.info("will chat with user (externalId) %s, url is %s and message is %s".format(externalId, url, message))
+    log.info("will chat with user (externalId) %s, url is %s and message is %s".format(receipantExternalId, url, message))
 
-    val user = CX.withConnection { implicit c =>
-      User.get(externalId)
+    val receipantSocialUserInfo = CX.withConnection { implicit c =>
+      val user = User.get(receipantExternalId)
+      val infos = SocialUserInfo.getByUser(user.id.get)
+      //at this point we must have a single info per user
+      if (infos.size != 1) throw new Exception("info for %s is not ONE: \n%s".format(user, infos.mkString("\n")))
+      infos(0)
     }
 
     val settings = ProviderRegistry.get(FacebookProvider.Facebook).get.asInstanceOf[OAuth2Provider].settings
 
     val connection = createConnection()
     connection.connect()
-    log.info("user %s has facebookId %s".format(user, user.facebookId))
-    val accessToken = request.user.oAuth2Info.map(info => info.accessToken).getOrElse(throw new IllegalStateException("access token is missing for user %s".format(user)))
+    log.info("chatting using %s".format(receipantSocialUserInfo))
+    val accessToken = request.user.oAuth2Info.map(info => info.accessToken).getOrElse(throw new IllegalStateException("access token is missing for user %s".format(receipantSocialUserInfo)))
     val apiKey = settings.clientId
     connection.login(apiKey, accessToken)
-    send(connection, url, message, user.facebookId)
+    send(connection, url, message, receipantSocialUserInfo.socialId)
     connection.disconnect()
 
     Ok(JsObject(("status" -> JsString("success")) :: Nil))
   }
 
-  private def send(connection: XMPPConnection, url: String, txt: String, receipant: FacebookId) {
+  private def send(connection: XMPPConnection, url: String, txt: String, receipant: SocialId) {
     println("sending msg to %s about URL %s (%s)".format(receipant, url, txt))
     connection.getChatManager().createChat("-%s@chat.facebook.com".format(receipant), new MessageListener() {
       def processMessage(chat: Chat, message: Message) =
