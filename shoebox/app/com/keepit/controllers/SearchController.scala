@@ -21,7 +21,7 @@ import com.keepit.common.db._
 import com.keepit.model._
 import com.keepit.inject._
 import com.keepit.serializer.BookmarkSerializer
-import com.keepit.serializer.{URIPersonalSearchResultSerializer => BPSRS}
+import com.keepit.serializer.{ URIPersonalSearchResultSerializer ⇒ BPSRS }
 import com.keepit.common.db.ExternalId
 import java.util.concurrent.TimeUnit
 import java.sql.Connection
@@ -36,30 +36,30 @@ import com.keepit.common.social.UserWithSocial
 case class PersonalSearchResult(uri: NormalizedURI, count: Int, users: Seq[UserWithSocial], score: Float)
 
 object SearchController extends Controller with Logging {
- 
-  def search(term: String, externalId: ExternalId[User]) = Action { request =>
+
+  def search(term: String, externalId: ExternalId[User]) = Action { request ⇒
     println("searching with %s using externalId id %s".format(term, externalId))
     val searchRes = inject[ArticleIndexer].search(term)
-    val res = CX.withConnection { implicit conn =>
+    val res = CX.withConnection { implicit conn ⇒
       val user = User.getOpt(externalId).getOrElse(
-          throw new Exception("externalId %s not found for term %s".format(externalId, term)))
-      searchRes map { r =>
+        throw new Exception("externalId %s not found for term %s".format(externalId, term)))
+      searchRes map { r ⇒
         toPersonalSearchResult(r, user)
       }
     }
     println(res mkString "\n")
     Ok(BPSRS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
-  
+
   private[controllers] def toPersonalSearchResult(res: Hit, user: User)(implicit conn: Connection): PersonalSearchResult = {
     val uri = NormalizedURI.get(Id[NormalizedURI](res.id))
     val count = uri.bookmarks().size
-    val users = uri.bookmarks().map(_.userId.get).map{ userId =>
-      val user = User.get(userId) 
+    val users = uri.bookmarks().map(_.userId).map { userId ⇒
+      val user = User.get(userId)
       val info = SocialUserInfo.getByUser(user.id.get).head
       UserWithSocial(user, info)
     }
     PersonalSearchResult(uri, count, users, res.score)
   }
-  
+
 }
