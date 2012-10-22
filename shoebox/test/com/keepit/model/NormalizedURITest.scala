@@ -22,12 +22,11 @@ class NormalizedURITest extends SpecificationWithJUnit {
       val user2 = User(firstName = "Moo", lastName = "Brown").save
       val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/short").save
       val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/long").save
-      Bookmark(userId = user1.id, title = "my title is short", url = "http://www.keepit.com/short?track=foo", uriId = uri1.id.get, source = BookmarkSource("NA")).save
-      Bookmark(userId = user1.id, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
-      Bookmark(userId = user2.id, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
+      Bookmark(userId = user1.id.get, title = "my title is short", url = "http://www.keepit.com/short?track=foo", uriId = uri1.id.get, source = BookmarkSource("NA")).save
+      Bookmark(userId = user1.id.get, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
+      Bookmark(userId = user2.id.get, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
     }
   }
-
 
   "get by state" should {
     "search gets nothing" in {
@@ -47,8 +46,8 @@ class NormalizedURITest extends SpecificationWithJUnit {
         }
       }
     }
-  }  
-  
+  }
+
   "NormalizedURIs search by url" should {
     "search gets nothing" in {
       running(new EmptyApplication()) {
@@ -65,7 +64,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
           val all = NormalizedURI.all
           all.size === 2
           println(all.mkString("\n"))
-          NormalizedURI.getByNormalizedUrl("http://www.keepit.com/short").get.url === "http://www.keepit.com/short" 
+          NormalizedURI.getByNormalizedUrl("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
         }
       }
     }
@@ -73,21 +72,21 @@ class NormalizedURITest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         setup()
         CX.withConnection { implicit c =>
-          NormalizedURI.getByNormalizedUrl("http://www.keepit.com/long").get.url === "http://www.keepit.com/long" 
+          NormalizedURI.getByNormalizedUrl("http://www.keepit.com/long").get.url === "http://www.keepit.com/long"
         }
       }
     }
-  }  
-  
+  }
+
   "NormalizedURIs get created url" should {
     "search gets nothing" in {
       running(new EmptyApplication()) {
-    	CX.withConnection { implicit c =>
-    	  val user1 = User(firstName = "Joe", lastName = "Smith").save
-    	  val user2 = User(firstName = "Moo", lastName = "Brown").save
-    	  val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURI.States.INACTIVE).save
+        CX.withConnection { implicit c =>
+          val user1 = User(firstName = "Joe", lastName = "Smith").save
+          val user2 = User(firstName = "Moo", lastName = "Brown").save
+          val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURI.States.INACTIVE).save
           val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURI.States.SCRAPED).save
-    	}
+        }
         CX.withConnection { implicit c =>
           NormalizedURI.getByState(NormalizedURI.States.ACTIVE).isEmpty === true
         }
@@ -95,13 +94,13 @@ class NormalizedURITest extends SpecificationWithJUnit {
     }
     "search gets short" in {
       running(new EmptyApplication()) {
-    	CX.withConnection { implicit c =>
-    	  val user1 = User(firstName = "Joe", lastName = "Smith").save
-    	  val user2 = User(firstName = "Moo", lastName = "Brown").save
-    	  val uri1 = NormalizedURI(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURI.States.ACTIVE).save
+        CX.withConnection { implicit c =>
+          val user1 = User(firstName = "Joe", lastName = "Smith").save
+          val user2 = User(firstName = "Moo", lastName = "Brown").save
+          val uri1 = NormalizedURI(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURI.States.ACTIVE).save
           val uri2 = NormalizedURI(title = "two title", url = "http://www.keepit.com/two", state = NormalizedURI.States.SCRAPED).save
           val uri3 = NormalizedURI(title = "three title", url = "http://www.keepit.com/three", state = NormalizedURI.States.ACTIVE).save
-    	}
+        }
         CX.withConnection { implicit c =>
           var all = NormalizedURI.getByState(NormalizedURI.States.ACTIVE)
           println(all.mkString("\n"))
@@ -109,6 +108,6 @@ class NormalizedURITest extends SpecificationWithJUnit {
         }
       }
     }
-  }  
-  
+  }
+
 }
