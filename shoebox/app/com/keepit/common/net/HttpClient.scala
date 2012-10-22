@@ -50,7 +50,7 @@ case class HttpClientImpl(val timeout: Long = 2, val timeoutUnit: TimeUnit = Tim
   private def req(url: String): WSRequestHolder = WS.url(url).withHeaders(headers: _*)
   private def res(request: WSRequestHolder, response: Response): ClientResponse = new ClientResponseImpl(request, response)
   
-  def longTimeout(): HttpClientImpl = copy(timeout = 30)
+  def longTimeout(): HttpClientImpl = copy(timeout = 2, timeoutUnit = TimeUnit.MINUTES)
 }
 
 trait ClientResponse {

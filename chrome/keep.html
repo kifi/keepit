@@ -373,6 +373,17 @@
       });
     }
 
+    function resetUserObjectIfInDevMode() {
+      var config = getConfigs();
+      if(config.env == "development") {
+        log("dev mode detected, removing user " + JSON.stringify(config.user));
+        localStorage.removeItem("user");
+        log("user removed");
+      }
+    }
+
+    resetUserObjectIfInDevMode();
+
     if (!hasKeepitIdAndFacebookId()) {
       userInfo = {keepit_external_id:null};
       localStorage["user"]=JSON.stringify(userInfo); // initialzie user info
