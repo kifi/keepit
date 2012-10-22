@@ -54,7 +54,7 @@ object SearchController extends Controller with Logging {
   private[controllers] def toPersonalSearchResult(res: Hit, user: User)(implicit conn: Connection): PersonalSearchResult = {
     val uri = NormalizedURI.get(Id[NormalizedURI](res.id))
     val count = uri.bookmarks().size
-    val users = uri.bookmarks().map(_.userId.get).map{ userId =>
+    val users = uri.bookmarks().map(_.userId).map{ userId =>
       val user = User.get(userId) 
       val info = SocialUserInfo.getByUser(user.id.get).head
       UserWithSocial(user, info)

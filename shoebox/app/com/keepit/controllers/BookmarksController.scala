@@ -37,7 +37,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   def edit(id: Id[Bookmark]) = Action{ request =>
     CX.withConnection { implicit conn =>
       val bookmark = Bookmark.get(id) 
-      val user = UserWithSocial.toUserWithSocial(User.get(bookmark.userId.get))
+      val user = UserWithSocial.toUserWithSocial(User.get(bookmark.userId))
       Ok(views.html.editBookmark(bookmark, user))
     }
   }
@@ -61,7 +61,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   def bookmarksView = SecuredAction(false) { request =>
     val bookmarksAndUsers = CX.withConnection { implicit conn =>
       val bookmarks = Bookmark.all
-      val users = bookmarks map (_.userId.get) map User.get map UserWithSocial.toUserWithSocial
+      val users = bookmarks map (_.userId) map User.get map UserWithSocial.toUserWithSocial
       val uris = bookmarks map (_.uriId) map NormalizedURI.get map {u => u.stats()}
       (bookmarks, uris, users).zipped.toList.seq
     }

@@ -34,7 +34,7 @@ case class Bookmark(
   uriId: Id[NormalizedURI],
   bookmarkPath: Option[String] = None,
   isPrivate: Boolean = false,
-  userId: Option[Id[User]] = None,
+  userId: Id[User],
   state: State[Bookmark] = Bookmark.States.ACTIVE,
   source: BookmarkSource
 ) {
@@ -56,7 +56,7 @@ case class Bookmark(
 object Bookmark {
   
   def apply(uri: NormalizedURI, user: User, title: String, url: String, source: BookmarkSource): Bookmark = 
-    Bookmark(title = title, url = url, userId = user.id, uriId = uri.id.get, source = source)
+    Bookmark(title = title, url = url, userId = user.id.get, uriId = uri.id.get, source = source)
   
   def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = {
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE ((b.uriId EQ uri.id.get) AND (b.userId EQ user.id.get)) unique }.map( _.view )
@@ -116,7 +116,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
     state = state(),
     uriId = uriId(),
     isPrivate = isPrivate(),
-    userId = userId.value,
+    userId = userId(),
     bookmarkPath = bookmarkPath.value,
     source = source()
   )
