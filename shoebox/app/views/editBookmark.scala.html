@@ -1,4 +1,4 @@
-@(bookmark: Bookmark, user: User)
+@(bookmark: Bookmark, userWithSocial: UserWithSocial)
 
 <!DOCTYPE html>
 
@@ -14,7 +14,7 @@
        <h2>Bookmark details</h2>
 	     Title: <a href="@bookmark.url">@bookmark.title</a><br/>
 	     Bookmark ID: <td>@bookmark.id.get.id<br/><br/>
-	     Saved by @adminHelper.userDisplay(user)
+	     Saved by @adminHelper.userDisplay(userWithSocial)
 	         on @adminHelper.dateDisplay(bookmark.createdAt) - @adminHelper.timeDisplay(bookmark.createdAt)<br/>
 				@helper.form(action = com.keepit.controllers.routes.BookmarksController.delete(bookmark.id.get)) {
 				    <input type="submit" value="Delete"></input>
