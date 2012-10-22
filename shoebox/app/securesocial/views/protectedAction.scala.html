@@ -1,5 +1,5 @@
 @(user: securesocial.core.SocialUser)
-
+@import play.api.Play.current
 @main("SecureSocial - Sample Protected Page") {
 <div class="page-header">
     <h2><img src="@user.avatarUrl" alt="@user.displayName" width="40px" height="40px"/> Welcome @user.displayName #@user.avatarUrl# </h2>
@@ -38,4 +38,12 @@
     <a class="btn" href="@securesocial.controllers.routes.LoginPage.logout()">Logout</a>
     <a href="javascript:void(0)" onclick="window.close()">Close</a>
 </div>
+<script type="text/javascript">
+      function shouldAutoClose() {
+        var mode = ("@play.api.Play.application.mode"==="Prod");
+      }
+      if (shouldAutoClose()){
+        window.close();
+      }
+</script>
 }
