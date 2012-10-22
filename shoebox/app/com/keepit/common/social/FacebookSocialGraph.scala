@@ -29,7 +29,7 @@ class FacebookSocialGraph @Inject() (httpClient: HttpClient) {
     oAuth2Info.accessToken
   }
   
-  def fetchJson(socialUserInfo: SocialUserInfo): JsValue = httpClient.get(url(socialUserInfo.socialId, getAccessToken(socialUserInfo))).json
+  def fetchJson(socialUserInfo: SocialUserInfo): JsValue = httpClient.longTimeout.get(url(socialUserInfo.socialId, getAccessToken(socialUserInfo))).json
   
   def url(id: SocialId, accessToken: String) = "https://graph.facebook.com/%s?access_token=%s&fields=%s,friends.fields(%s)".format(
       id.id, accessToken, FacebookSocialGraph.FULL_PROFILE, FacebookSocialGraph.FULL_PROFILE)

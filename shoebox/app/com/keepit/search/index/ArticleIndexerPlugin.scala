@@ -56,6 +56,7 @@ class ArticleIndexerPluginImpl @Inject() (system: ActorSystem, articleIndexer: A
   override def onStop(): Unit = {
     log.info("stopping ArticleIndexerPluginImpl")
     _cancellables.map(_.cancel)
+    articleIndexer.close()
   }
   
   override def index(): Int = {
