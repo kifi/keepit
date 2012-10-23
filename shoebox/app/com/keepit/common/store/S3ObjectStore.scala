@@ -12,6 +12,8 @@ import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.S3Object
 import play.api.libs.json.Json
 import play.api.libs.json.Format
+import play.api.Play
+import play.api.Play.current
 import java.io.InputStream
 import java.io.ByteArrayInputStream
 
@@ -25,9 +27,14 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
   
   private val ENCODING = "UTF-8"
   
-  implicit def bucketName(bucket: S3Bucket): String = bucket.name      
+  implicit def bucketName(bucket: S3Bucket): String = bucket.name
   
-  private def idToBJsonKey(id: Id[A]): String = "%s.json".format(id.id)
+  private def keyPrefix: String = Play.isDev match {
+    case true => System.getProperty("user.name") + "_"
+    case false => ""
+  }
+  
+  private def idToBJsonKey(id: Id[A]): String = "%s%s.json".format(keyPrefix, id.id)
   
   def += (kv: (Id[A], B)) = {
     kv match {
