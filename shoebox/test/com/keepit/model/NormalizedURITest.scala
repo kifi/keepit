@@ -29,6 +29,41 @@ class NormalizedURITest extends SpecificationWithJUnit {
   }
 
 
+  "bookmark pagination" should {
+    "get all" in {
+      running(new EmptyApplication()) {
+        setup()
+        CX.withConnection { implicit c =>
+          Bookmark.page(0, 10).size === 3
+        }
+      }
+    }
+    "get first" in {
+      running(new EmptyApplication()) {
+        setup()
+        CX.withConnection { implicit c =>
+          Bookmark.page(0, 2).size === 2
+        }
+      }
+    }
+    "get last" in {
+      running(new EmptyApplication()) {
+        setup()
+        CX.withConnection { implicit c =>
+          Bookmark.page(1, 2).size === 1
+        }
+      }
+    }
+    "get none" in {
+      running(new EmptyApplication()) {
+        setup()
+        CX.withConnection { implicit c =>
+          Bookmark.page(2, 2).size === 0
+        }
+      }
+    }
+  }
+
   "get by state" should {
     "search gets nothing" in {
       running(new EmptyApplication()) {
