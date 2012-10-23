@@ -27,7 +27,7 @@ CREATE TABLE normalized_uri (
 
     title varchar(2048) NOT NULL,
     url varchar(2048) NOT NULL,
-    url_hash varchar(512) NOT NULL,
+    url_hash varchar(26) NOT NULL,
     is_private boolean,
     
     KEY (url_hash),
@@ -36,7 +36,6 @@ CREATE TABLE normalized_uri (
     CONSTRAINT normalized_uri_u_external_id UNIQUE (external_id), 
     CONSTRAINT normalized_uri_u_url_hash UNIQUE (url_hash) 
 );
-
 
 CREATE TABLE bookmark (
     id bigint(20) NOT NULL AUTO_INCREMENT,
