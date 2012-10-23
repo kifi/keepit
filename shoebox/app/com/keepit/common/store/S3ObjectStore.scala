@@ -43,10 +43,16 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
           val metadata = new ObjectMetadata()
           metadata.setContentEncoding(ENCODING)
           metadata.setContentType("application/json")
-          Some(s3Client.putObject(bucketName, 
+          try {
+            Some(s3Client.putObject(bucketName, 
               idToBJsonKey(key), 
               toInputStream(value), 
               metadata))
+          } catch {
+            case e =>
+              log.error("could not send object key: [%s]\nvalue: [%s]\nto bucket %s".format(key, value, bucketName))
+              throw e
+          }
         }
     }
     this
