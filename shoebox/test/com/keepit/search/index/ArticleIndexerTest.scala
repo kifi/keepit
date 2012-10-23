@@ -44,6 +44,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
     def load(): Int = throw new UnsupportedOperationException
     def update(id:Id[User]): Int = throw new UnsupportedOperationException
     def getURIGraphSearcher: URIGraphSearcher  = throw new UnsupportedOperationException
+    def close(){}
   }
   
   "ArticleIndexer" should {

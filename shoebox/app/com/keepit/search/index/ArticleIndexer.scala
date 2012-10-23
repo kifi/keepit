@@ -84,7 +84,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   def search(queryString: String): Seq[Hit] = searcher.search(parse(queryString))
   
   def search(queryString: String, userId: Id[User], friends: Set[Id[User]],
-             maxMyBookMark: Int, maxFriendsBookmark: Int, maxOthersBookmark: Int): ArticleSearchResult = {
+             maxMyBookmark: Int, maxFriendsBookmark: Int, maxOthersBookmark: Int): ArticleSearchResult = {
     
     // get searchers. subsequent operations should use these for consistency since indexing may refresh them
     val articleSearcher = searcher
@@ -95,7 +95,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     val friendEdgeSet = new UserToUserEdgeSet(userId, friends)
 
     val mapper = articleSearcher.idMapper
-    val myHits = articleSearcher.getHitQueue(maxMyBookMark)
+    val myHits = articleSearcher.getHitQueue(maxMyBookmark)
     val friendsHits = articleSearcher.getHitQueue(maxFriendsBookmark)
     val othersHits = articleSearcher.getHitQueue(maxOthersBookmark)
     

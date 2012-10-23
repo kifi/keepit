@@ -33,6 +33,7 @@ trait URIGraph {
   def load(): Int
   def update(userId: Id[User]): Int
   def getURIGraphSearcher(): URIGraphSearcher
+  def close(): Unit
 }
 
 class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig)

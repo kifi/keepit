@@ -39,7 +39,7 @@ GET     /admin/article/index/:state com.keepit.controllers.admin.ArticleIndexerC
 GET     /admin/article/indexInfo    com.keepit.controllers.admin.ArticleIndexerController.indexInfo
 GET     /admin/article/refreshSearcher  com.keepit.controllers.admin.ArticleIndexerController.refreshSearcher
 GET     /admin/uriGraph/load        com.keepit.controllers.admin.URIGraphController.load
-GET     /admin/uriGraph/update      com.keepit.controllers.admin.URIGraphController.update(userId: Id[User])
+GET     /admin/uriGraph/update/:userId com.keepit.controllers.admin.URIGraphController.update(userId: Id[User])
 GET     /admin/social/refresh/:userId com.keepit.controllers.UserController.refreshSocialInfo(userId: Id[User])
 
 

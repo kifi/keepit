@@ -26,8 +26,8 @@ private[graph] class URIGraphActor(uriGraph: URIGraph) extends Actor with Loggin
   
   def receive() = {
     case Load => 
-      var userLoaded = uriGraph.load()
-    case Update(u) => uriGraph.update(u)
+      var userLoaded = sender ! uriGraph.load()
+    case Update(u) => sender ! uriGraph.update(u)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
@@ -52,6 +52,7 @@ class URIGraphPluginImpl @Inject() (system: ActorSystem, uriGraph: URIGraph) ext
   override def onStop(): Unit = {
     log.info("stopping URIGrpahPluginImpl")
     _cancellables.map(_.cancel)
+    uriGraph.close()
   }
   
   override def load(): Int = {
