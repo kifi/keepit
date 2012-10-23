@@ -26,6 +26,8 @@ import com.keepit.inject._
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
 import play.api.Play.current
+import play.api.libs.json.JsArray
+import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
 
 //case object FetchAll
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
@@ -39,7 +41,39 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
       CX.withConnection { implicit c =>
         user.withState(SocialUserInfo.States.FETCHED_USING_SELF).save
       }
-      inject[SocialUserRawInfoStore] += (user.id.get -> rawInfo)
+      val store = inject[SocialUserRawInfoStore]
+      store += (user.id.get -> rawInfo)
+      
+      val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD", 
+        tokenType = None, expiresIn = None, refreshToken = None)
+      
+      (rawInfo.json \ "friends" \ "data").asInstanceOf[JsArray].value map { friend =>
+        val socialId = SocialId((friend \ "username").asInstanceOf[String])
+        CX.withConnection { implicit c =>
+          SocialUserInfo.getOpt(socialId, SocialNetworks.FACEBOOK) match {
+            case Some(socialUser) =>
+              // do nothing for now. later we will merge with current record
+            case None =>
+              val socialUserInfo = SocialUser(UserId("100004067535411", "facebook"), "Boaz Tal", Some("boaz.tal@gmail.com"), 
+                Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
+          }
+        }
+      }
+      
+      /*.asInstanceOf[JsArray] {
+        val socialId = ...
+        SocialUserInfo.getOpt(socialId, NetworkTypes.FACEBOOK) match {
+          
+        }
+      }*/
+      /*
+       * for each son in the user friends list
+       *   if (facebook id already has a local social user info) -> ignore //in the future we'll do a merge 
+       *   create new SocialUserInfo and persist
+       *   create new SocialUserRawInfo with the json snippet 
+       *   push the SocialUserRawInfo to s3
+       *   mark the SocialUserRawInfo as fetched_using_friend
+       */
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
