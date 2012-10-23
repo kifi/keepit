@@ -23,7 +23,7 @@ class FakeHttpClient(expectedUrl: Option[String] = None,
     new FakeClientResponse(expectedResponse)
   }
   
-  override def longTimeout(): HttpClient = throw new Exception("longTimeout not implemented")
+  override def longTimeout(): HttpClient = this
 
   override def postPromise(url: String, body: JsValue): Promise[ClientResponse] = throw new Exception("not supported")
   override def getPromise(url: String): Promise[ClientResponse] = throw new Exception("not supported")
