@@ -73,7 +73,7 @@ class URIGraphTest extends SpecificationWithJUnit {
         }
         
         val graphDir = new RAMDirectory
-        val graph = URIGraph(graphDir)
+        val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
         graph.load() === users.size        
         
         val searcher = graph.getURIGraphSearcher()
@@ -104,7 +104,7 @@ class URIGraphTest extends SpecificationWithJUnit {
         }
         
         val graphDir = new RAMDirectory
-        val graph = URIGraph(graphDir)
+        val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
         graph.load() === users.size        
         
         val searcher = graph.getURIGraphSearcher()
@@ -136,7 +136,7 @@ class URIGraphTest extends SpecificationWithJUnit {
         }
         
         val graphDir = new RAMDirectory
-        val graph = URIGraph(graphDir)
+        val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
         graph.load() === users.size        
         
         val searcher = graph.getURIGraphSearcher()

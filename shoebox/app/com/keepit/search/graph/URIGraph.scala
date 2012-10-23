@@ -25,16 +25,23 @@ object URIGraph {
     val analyzer = new KeywordAnalyzer()
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
 
-    new URIGraph(indexDirectory, config)
+    new URIGraphImpl(indexDirectory, config)
   }
 }
 
-class URIGraph(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) extends Indexer[User](indexDirectory, indexWriterConfig) {
+trait URIGraph {
+  def load(): Int
+  def update(userId: Id[User]): Int
+  def getURIGraphSearcher(): URIGraphSearcher
+}
+
+class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig)
+  extends Indexer[User](indexDirectory, indexWriterConfig) with URIGraph {
 
   val commitBatchSize = 100
   val fetchSize = commitBatchSize * 3
 
-  def commitCallback(commitBatch: Seq[(Indexable[User], Option[IndexError])]) = {
+  private def commitCallback(commitBatch: Seq[(Indexable[User], Option[IndexError])]) = {
     var cnt = 0
     commitBatch.foreach{ case (indexable, indexError) =>
       indexError match {

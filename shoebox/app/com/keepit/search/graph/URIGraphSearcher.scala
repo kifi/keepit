@@ -21,8 +21,8 @@ class URIGraphSearcher(searcher: Searcher) {
     new UserToUriEdgeSet(sourceId, uriIdSet)
   }
   
-  def intersect(friends: UserToUserEdgeSet, bookmarkUser: UriToUserEdgeSet): UserToUserEdgeSet = {
-    val iter = intersect(friends.getDestDocIdSetIterator(searcher), bookmarkUser.getDestDocIdSetIterator(searcher))
+  def intersect(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): UserToUserEdgeSet = {
+    val iter = intersect(friends.getDestDocIdSetIterator(searcher), bookmarkUsers.getDestDocIdSetIterator(searcher))
     val destIdSet = iter.map{ searcher.idMapper.getId(_) }.map{ new Id[User](_) }.toSet
     new UserToUserEdgeSet(friends.sourceId, destIdSet)
   }

@@ -3,6 +3,8 @@ package com.keepit.search.index
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
+import com.keepit.search.graph.URIGraph
+import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.db.{Id, CX}
@@ -17,6 +19,8 @@ import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import org.apache.lucene.store.RAMDirectory
+import com.keepit.search.graph.UserToUserEdgeSet
+import scala.math._
 
 @RunWith(classOf[JUnitRunner])
 class ArticleIndexerTest extends SpecificationWithJUnit {
@@ -34,6 +38,12 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
         httpContentType = Some("text/html"),
         state = SCRAPED,
         message = None)
+  }
+  
+  def getFakeURIGraph = new URIGraph {
+    def load(): Int = throw new UnsupportedOperationException
+    def update(id:Id[User]): Int = throw new UnsupportedOperationException
+    def getURIGraphSearcher: URIGraphSearcher  = throw new UnsupportedOperationException
   }
   
   "ArticleIndexer" should {
@@ -55,7 +65,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
         uriIdArray(1) = uri2.id.get.id
         uriIdArray(2) = uri3.id.get.id
         
-        val indexer = ArticleIndexer(ramDir, store)
+        val indexer = ArticleIndexer(ramDir, store, getFakeURIGraph)
         indexer.run
         
         indexer.numDocs === 1
@@ -91,7 +101,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
     }
     
     "search documents (hits in contents)" in {
-      val indexer = ArticleIndexer(ramDir, store)
+      val indexer = ArticleIndexer(ramDir, store, getFakeURIGraph)
       
       indexer.search("alldocs").size === 3
       
@@ -109,7 +119,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
     }
     
     "search documents (hits in titles)" in {
-      val indexer = ArticleIndexer(ramDir, store)
+      val indexer = ArticleIndexer(ramDir, store, getFakeURIGraph)
       
       var res = indexer.search("title1")
       res.size === 1
@@ -125,7 +135,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
     }
     
     "search documents (hits in contents and titles)" in {
-      val indexer = ArticleIndexer(ramDir, store)
+      val indexer = ArticleIndexer(ramDir, store, getFakeURIGraph)
       
       var res = indexer.search("title1 alldocs")
       res.size === 3
@@ -138,6 +148,83 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
       res = indexer.search("title3 alldocs")
       res.size === 3
       res.head.id === uriIdArray(2)
+    }
+    
+    "search and categorize using social graph" in {
+      running(new EmptyApplication()) {
+        val (users, uris) = CX.withConnection { implicit c =>
+          ((0 to 9).map(n => User(firstName = "foo" + n, lastName = "").save).toList,
+           (0 to 9).map(n => NormalizedURI(title = "a" + n, url = "http://www.keepit.com/article" + n, state=SCRAPED).save).toList)
+        }
+        val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
+        val bookmarks = CX.withConnection { implicit c =>
+          expectedUriToUserEdges.flatMap{ case (uri, users) =>
+            users.map{ user =>
+              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+            }
+          }
+        }
+
+        val store = {
+          uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
+            store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs".format(idx)))
+            store
+          }
+        }
+        
+        val graphDir = new RAMDirectory
+        val graph = URIGraph(graphDir)
+        val indexDir = new RAMDirectory
+        val indexer = ArticleIndexer(indexDir, store, graph)
+        
+        graph.load() === users.size
+        indexer.run() === uris.size
+        
+        val graphSearcher = graph.getURIGraphSearcher()
+        
+        val maxMine = 4
+        val maxFriends = 3
+        val maxOthers = 2
+        
+        users.foreach{ user =>
+           val userId = user.id.get
+           users.sliding(3).foreach{ friends =>
+            val friendIds = friends.map(_.id.get).toSet - userId
+            val userToUserEdgeSet = new UserToUserEdgeSet(userId, friendIds)
+            val res = indexer.search("alldocs", userId, friendIds, maxMine, maxFriends, maxOthers)
+            
+            //println("----")
+            val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
+            res.myHits.size === min(myUriIds.size, maxMine)
+            res.myHits.foreach{ h =>
+              //println("users:" + h)
+              (myUriIds contains h.uriId) === true 
+              (h.friends subsetOf friendIds) == true
+            }
+            
+            val friendsUriIds = friends.foldLeft(Set.empty[Id[NormalizedURI]]){ (s, f) => 
+              s ++ graphSearcher.getUserToUriEdgeSet(f.id.get).destIdSet
+            } -- myUriIds
+            res.friendsHits.size === min(friendsUriIds.size, maxFriends)
+            res.friendsHits.foreach{ h =>
+              //println("friends:"+ h)
+              (myUriIds contains h.uriId) === false
+              (friendsUriIds contains h.uriId) === true
+              (h.friends subsetOf friendIds) == true
+            }
+            
+            val othersUriIds = (uris.map(_.id.get).toSet) -- friendsUriIds -- myUriIds
+            res.othersHits.size === min(othersUriIds.size, maxOthers)
+            res.othersHits.foreach{ h =>
+              //println("others:"+ h)
+              (myUriIds contains h.uriId) === false
+              (friendsUriIds contains h.uriId) === false
+              h.friends.isEmpty == true
+            }
+          }
+        }
+        indexer.numDocs === uris.size
+      }
     }
   }
 }

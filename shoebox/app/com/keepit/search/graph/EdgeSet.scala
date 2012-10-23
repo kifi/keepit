@@ -13,6 +13,7 @@ trait EdgeSet[S,D] {
   val sourceId: Id[S]
 
   def destIdSet: Set[Id[D]]
+  def destIdLongSet: Set[Long]
   
   def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator
 }
@@ -30,6 +31,8 @@ object EdgeSetUtil {
 }
 
 class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destIdSet: Set[Id[D]]) extends EdgeSet[S, D] {
+  
+  def destIdLongSet = destIdSet.map(_.id)
   
   def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = getDestDocIdSetIterator(searcher.idMapper)
   
@@ -60,8 +63,10 @@ class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destId
 abstract class LuceneBackedEdgeSet[S, D](override val sourceId: Id[S], searcher: Searcher) extends EdgeSet[S, D] {
   import EdgeSetUtil._
   
-  lazy val lazyDestIdSet = getDestDocIdSetIterator(searcher).map(docid => searcher.idMapper.getId(docid)).map(toId(_)).toSet
+  lazy val lazyDestIdLongSet = getDestDocIdSetIterator(searcher).map(docid => searcher.idMapper.getId(docid)).toSet
+  lazy val lazyDestIdSet = lazyDestIdLongSet.map(toId(_))
 
+  override def destIdLongSet = lazyDestIdLongSet
   override def destIdSet = lazyDestIdSet
   
   def getDestDocIdSetIterator(searcher: Searcher) = {

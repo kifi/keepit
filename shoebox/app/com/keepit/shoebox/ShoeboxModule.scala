@@ -15,6 +15,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.scraper._
 import com.keepit.inject._
 import com.keepit.search.graph.URIGraph
+import com.keepit.search.graph.URIGraphPlugin
+import com.keepit.search.graph.URIGraphPluginImpl
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexerPluginImpl
@@ -40,6 +42,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
+    bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
   }
 
@@ -69,7 +72,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
   
   @Singleton
   @Provides
-  def articleIndexer(articleStore: ArticleStore): ArticleIndexer = {
+  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph): ArticleIndexer = {
     var dirPath = current.configuration.getString("index.article.directory").get
     val dir = new File(dirPath).getCanonicalFile()
     if (!dir.exists()) {
@@ -78,7 +81,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
       }
     }
     log.info("storing search index in %s".format(dir.getAbsolutePath()))
-    ArticleIndexer(new MMapDirectory(dir), articleStore)
+    ArticleIndexer(new MMapDirectory(dir), articleStore, uriGraph)
   }
   
   @Singleton
