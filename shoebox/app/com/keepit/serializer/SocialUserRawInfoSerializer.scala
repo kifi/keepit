@@ -30,8 +30,8 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
       networkType = (json \ "networkType").as[String] match {
         case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK 
       },
-      (json \ "fullName").as[String],
-      (json \ "json")
+      fullName = (json \ "fullName").as[String],
+      json = (json \ "json")
    )
 }
 

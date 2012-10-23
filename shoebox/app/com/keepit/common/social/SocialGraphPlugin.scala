@@ -43,30 +43,8 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
       }
       val store = inject[SocialUserRawInfoStore]
       store += (user.id.get -> rawInfo)
+      inject[SocialUserImportFriends].importFriends(rawInfo.json)
       
-      // Q: Is it better to use the same connection over this whole block, or only when needed (many times)?
-      
-      CX.withConnection { implicit c =>
-        (rawInfo.json \ "friends" \ "data").asInstanceOf[JsArray].value map { friend =>
-          val socialId = SocialId((friend \ "username").asInstanceOf[String])
-          SocialUserInfo.getOpt(socialId, SocialNetworks.FACEBOOK) match {
-            case Some(socialUser) =>
-              // do nothing for now. later we will merge with current record
-            case None =>
-              val socialId = (friend \ "username").asInstanceOf[String]
-              val socialUserInfo = SocialUserInfo(fullName = (friend \ "name").asInstanceOf[String], socialId = SocialId(socialId), networkType = SocialNetworks.FACEBOOK).withState(SocialUserInfo.States.FETCHED_USING_FRIEND)
-              
-              socialUserInfo.save // persist
-              
-              // Q: How do I get the socialUserInfoId from the socialInfo I just created? As I did?
-              val socialRawInfo = SocialUserRawInfo(userId = None, socialUserInfoId = socialUserInfo.id, socialId = SocialId(socialId), networkType = socialUserInfo.networkType, fullName = socialUserInfo.fullName, json = friend)
-              
-              store += (socialUserInfo.id.get -> socialRawInfo)
-              
-              // Q: Or, would a better way be to create the socialRawInfo first, and call toSocialUserInfo()?
-          }
-        }
-      }
     case m => throw new Exception("unknown message %s".format(m))
   }
 }

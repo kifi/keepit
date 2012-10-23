@@ -14,11 +14,13 @@ import com.keepit.dev.DevModule
 import com.keepit.inject._
 import com.keepit.FortyTwoGlobal
 import com.tzavellas.sse.guice.ScalaModule
+import com.keepit.common.store.FakeStoreModule
 
 class TestApplication(override val global: TestGlobal) extends play.api.test.FakeApplication() {
   def withFakeMail() = overrideWith(FakeMailModule())
   def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
   def withFakeHttpClient() = overrideWith(FakeHttpClientModule())
+  def withFakeStore() = overrideWith(FakeStoreModule())
   
   def overrideWith(model: Module): TestApplication = 
     new TestApplication(new TestGlobal(Modules.`override`(global.module).`with`(model))) 
