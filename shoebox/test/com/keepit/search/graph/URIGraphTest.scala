@@ -23,12 +23,12 @@ class URIGraphTest extends SpecificationWithJUnit {
 
   private def setupDB = {
     CX.withConnection { implicit c =>
-      (List(User(firstName = "Agrajag", lastName = "", facebookId = FacebookId("fbA")).save,
-            User(firstName = "Barmen", lastName = "", facebookId = FacebookId("fbB")).save,
-            User(firstName = "Colin", lastName = "", facebookId = FacebookId("fbC")).save,
-            User(firstName = "Dan", lastName = "", facebookId = FacebookId("fbD")).save,
-            User(firstName = "Eccentrica", lastName = "", facebookId = FacebookId("fbE")).save,
-            User(firstName = "Hactar", lastName = "", facebookId = FacebookId("fbF")).save),
+      (List(User(firstName = "Agrajag", lastName = "").save,
+            User(firstName = "Barmen", lastName = "").save,
+            User(firstName = "Colin", lastName = "").save,
+            User(firstName = "Dan", lastName = "").save,
+            User(firstName = "Eccentrica", lastName = "").save,
+            User(firstName = "Hactar", lastName = "").save),
        List(NormalizedURI(title = "a1", url = "http://www.keepit.com/article1", state=SCRAPED).save,
             NormalizedURI(title = "a2", url = "http://www.keepit.com/article2", state=SCRAPED).save,
             NormalizedURI(title = "a3", url = "http://www.keepit.com/article3", state=SCRAPED).save,
@@ -67,7 +67,7 @@ class URIGraphTest extends SpecificationWithJUnit {
         val bookmarks = CX.withConnection { implicit c =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id, source = BookmarkSource("test")).save
+              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
             }
           }
         }
@@ -98,7 +98,7 @@ class URIGraphTest extends SpecificationWithJUnit {
         val bookmarks = CX.withConnection { implicit c =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id, source = BookmarkSource("test")).save
+              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
             }
           }
         }
@@ -109,7 +109,7 @@ class URIGraphTest extends SpecificationWithJUnit {
         
         val searcher = graph.getURIGraphSearcher()
         
-        val expectedUserIdToUriIdEdges = bookmarks.groupBy(_.userId.get).map{ case (userId, bookmarks) => (userId, bookmarks.map(_.uriId)) }
+        val expectedUserIdToUriIdEdges = bookmarks.groupBy(_.userId).map{ case (userId, bookmarks) => (userId, bookmarks.map(_.uriId)) }
         expectedUserIdToUriIdEdges.map{ case (userId, uriIds) =>
           val expected = uriIds.toSet
           val answer = searcher.getUserToUriEdgeSet(userId).destIdSet
@@ -130,7 +130,7 @@ class URIGraphTest extends SpecificationWithJUnit {
         val bookmarks = CX.withConnection { implicit c =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id, source = BookmarkSource("test")).save
+              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
             }
           }
         }
