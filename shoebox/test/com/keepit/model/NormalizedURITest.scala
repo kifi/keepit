@@ -18,13 +18,13 @@ class NormalizedURITest extends SpecificationWithJUnit {
 
   def setup() = {
     CX.withConnection { implicit c =>
-      val user1 = User(firstName = "Joe", lastName = "Smith", facebookId = FacebookId("fb1")).save
-      val user2 = User(firstName = "Moo", lastName = "Brown", facebookId = FacebookId("fb2")).save
+      val user1 = User(firstName = "Joe", lastName = "Smith").save
+      val user2 = User(firstName = "Moo", lastName = "Brown").save
       val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/short").save
       val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/long").save
-      Bookmark(userId = user1.id, title = "my title is short", url = "http://www.keepit.com/short?track=foo", uriId = uri1.id.get, source = BookmarkSource("NA")).save
-      Bookmark(userId = user1.id, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
-      Bookmark(userId = user2.id, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
+      Bookmark(userId = user1.id.get, title = "my title is short", url = "http://www.keepit.com/short?track=foo", uriId = uri1.id.get, source = BookmarkSource("NA")).save
+      Bookmark(userId = user1.id.get, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
+      Bookmark(userId = user2.id.get, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
     }
   }
 
@@ -83,8 +83,8 @@ class NormalizedURITest extends SpecificationWithJUnit {
     "search gets nothing" in {
       running(new EmptyApplication()) {
     	CX.withConnection { implicit c =>
-    	  val user1 = User(firstName = "Joe", lastName = "Smith", facebookId = FacebookId("fb1")).save
-    	  val user2 = User(firstName = "Moo", lastName = "Brown", facebookId = FacebookId("fb2")).save
+    	  val user1 = User(firstName = "Joe", lastName = "Smith").save
+    	  val user2 = User(firstName = "Moo", lastName = "Brown").save
     	  val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURI.States.INACTIVE).save
           val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURI.States.SCRAPED).save
     	}
@@ -96,8 +96,8 @@ class NormalizedURITest extends SpecificationWithJUnit {
     "search gets short" in {
       running(new EmptyApplication()) {
     	CX.withConnection { implicit c =>
-    	  val user1 = User(firstName = "Joe", lastName = "Smith", facebookId = FacebookId("fb1")).save
-    	  val user2 = User(firstName = "Moo", lastName = "Brown", facebookId = FacebookId("fb2")).save
+    	  val user1 = User(firstName = "Joe", lastName = "Smith").save
+    	  val user2 = User(firstName = "Moo", lastName = "Brown").save
     	  val uri1 = NormalizedURI(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURI.States.ACTIVE).save
           val uri2 = NormalizedURI(title = "two title", url = "http://www.keepit.com/two", state = NormalizedURI.States.SCRAPED).save
           val uri3 = NormalizedURI(title = "three title", url = "http://www.keepit.com/three", state = NormalizedURI.States.ACTIVE).save

@@ -28,6 +28,7 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import java.io.File
 import com.keepit.common.store.S3Bucket
+import com.keepit.common.social._
 
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -39,17 +40,23 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
+    bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
   }
 
   @Singleton
   @Provides
-  def articleStore(bucketName: S3Bucket, amazonS3Client: AmazonS3): ArticleStore = 
+  def articleStore(amazonS3Client: AmazonS3): ArticleStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.article.bucket").get)
     new S3ArticleStoreImpl(bucketName, amazonS3Client)
-  
+  }
+
   @Singleton
   @Provides
-  def s3Bucket: S3Bucket = S3Bucket(current.configuration.getString("amazon.s3.bucket").get)
-  
+  def socialUserRawInfoStore(amazonS3Client: AmazonS3): SocialUserRawInfoStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.social.bucket").get)
+    new S3SocialUserRawInfoStoreImpl(bucketName, amazonS3Client)
+  }
+
   @Singleton
   @Provides
   def amazonS3Client(): AmazonS3 = { 

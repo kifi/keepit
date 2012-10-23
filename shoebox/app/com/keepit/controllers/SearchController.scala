@@ -30,18 +30,19 @@ import play.api.libs.json.JsString
 import com.keepit.common.logging.Logging
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.Hit
+import com.keepit.common.social.UserWithSocial
 
 //note: users.size != count if some users has the bookmark marked as private
-case class PersonalSearchResult(uri: NormalizedURI, count: Int, users: Seq[User], score: Float)
+case class PersonalSearchResult(uri: NormalizedURI, count: Int, users: Seq[UserWithSocial], score: Float)
 
 object SearchController extends Controller with Logging {
  
-  def search(term: String, keepitId: Id[User]) = Action { request =>
-    println("searching with %s using keepit id %s".format(term, keepitId))
+  def search(term: String, externalId: ExternalId[User]) = Action { request =>
+    println("searching with %s using externalId id %s".format(term, externalId))
     val searchRes = inject[ArticleIndexer].search(term)
     val res = CX.withConnection { implicit conn =>
-      val user = User.getOpt(keepitId).getOrElse(
-          throw new Exception("keepit id %s not found for term %s".format(keepitId, term)))
+      val user = User.getOpt(externalId).getOrElse(
+          throw new Exception("externalId %s not found for term %s".format(externalId, term)))
       searchRes map { r =>
         toPersonalSearchResult(r, user)
       }
@@ -53,8 +54,10 @@ object SearchController extends Controller with Logging {
   private[controllers] def toPersonalSearchResult(res: Hit, user: User)(implicit conn: Connection): PersonalSearchResult = {
     val uri = NormalizedURI.get(Id[NormalizedURI](res.id))
     val count = uri.bookmarks().size
-    val users = uri.bookmarks().map(_.userId.get).map{ userId =>
-      User.get(userId)
+    val users = uri.bookmarks().map(_.userId).map{ userId =>
+      val user = User.get(userId) 
+      val info = SocialUserInfo.getByUser(user.id.get).head
+      UserWithSocial(user, info)
     }
     PersonalSearchResult(uri, count, users, res.score)
   }
