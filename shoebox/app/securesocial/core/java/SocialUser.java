@@ -18,7 +18,6 @@ package securesocial.core.java;
 
 import play.libs.Scala;
 import scala.Option;
-import securesocial.core.PasswordInfo$;
 
 /**
  * A class representing a connected user and its authentication details.
