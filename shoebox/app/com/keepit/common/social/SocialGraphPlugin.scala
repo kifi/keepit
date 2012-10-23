@@ -26,6 +26,8 @@ import com.keepit.inject._
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
 import play.api.Play.current
+import play.api.libs.json.JsArray
+import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
 
 //case object FetchAll
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
@@ -39,7 +41,10 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
       CX.withConnection { implicit c =>
         user.withState(SocialUserInfo.States.FETCHED_USING_SELF).save
       }
-      inject[SocialUserRawInfoStore] += (user.id.get -> rawInfo)
+      val store = inject[SocialUserRawInfoStore]
+      store += (user.id.get -> rawInfo)
+      inject[SocialUserImportFriends].importFriends(rawInfo.json)
+      
     case m => throw new Exception("unknown message %s".format(m))
   }
 }

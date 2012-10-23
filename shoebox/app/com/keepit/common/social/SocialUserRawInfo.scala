@@ -11,3 +11,11 @@ case class SocialUserRawInfo(userId: Option[Id[User]], socialUserInfoId: Option[
     case None => SocialUserInfo(userId = userId, fullName = fullName, socialId = socialId, networkType = networkType)
   }
 }
+
+object SocialUserRawInfo {
+  def apply(socialUserInfo: SocialUserInfo, json: JsValue): SocialUserRawInfo = {
+    SocialUserRawInfo(userId = socialUserInfo.userId, socialUserInfoId = socialUserInfo.id, 
+                      socialId = socialUserInfo.socialId, networkType = socialUserInfo.networkType,
+                      fullName = socialUserInfo.fullName, json = json)
+  }
+}
