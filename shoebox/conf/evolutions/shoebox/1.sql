@@ -102,7 +102,7 @@ CREATE TABLE electronic_mail (
 CREATE TABLE evolutions (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     created_at timestamp NOT NULL,
-    name varchar(256) NOT NULL,
+    name varchar(64) NOT NULL,
     description varchar(512) DEFAULT '',
 
     PRIMARY KEY (id),
