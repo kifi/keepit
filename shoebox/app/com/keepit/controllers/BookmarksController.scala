@@ -47,7 +47,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
     CX.withConnection { implicit conn =>
       val bookmark = Bookmark.get(id)
       bookmark.delete()
-      Redirect(com.keepit.controllers.routes.BookmarksController.bookmarksView)
+      Redirect(com.keepit.controllers.routes.BookmarksController.bookmarksView(0))
     }
   }  
   
@@ -58,14 +58,18 @@ object BookmarksController extends Controller with Logging with SecureSocial {
     Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
   }
   
-  def bookmarksView = SecuredAction(false) { request =>
+  def bookmarksFirstPageView = Action {
+    Redirect(com.keepit.controllers.routes.BookmarksController.bookmarksView(0))
+  }
+    
+  def bookmarksView(page: Int = 0) = SecuredAction(false) { request =>
     val bookmarksAndUsers = CX.withConnection { implicit conn =>
-      val bookmarks = Bookmark.all
+      val bookmarks = Bookmark.page(page)
       val users = bookmarks map (_.userId) map User.get map UserWithSocial.toUserWithSocial
       val uris = bookmarks map (_.uriId) map NormalizedURI.get map {u => u.stats()}
       (bookmarks, uris, users).zipped.toList.seq
     }
-    Ok(views.html.bookmarks(bookmarksAndUsers))
+    Ok(views.html.bookmarks(bookmarksAndUsers, page))
   }  
   
   def addBookmarks() = JsonAction { request =>
