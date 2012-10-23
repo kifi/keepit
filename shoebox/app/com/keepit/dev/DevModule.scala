@@ -7,6 +7,9 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import com.keepit.model.{NormalizedURI, SocialUserInfo}
 import com.keepit.search.Article
+import com.keepit.search.graph.URIGraph
+import com.keepit.search.graph.URIGraphPlugin
+import com.keepit.search.graph.URIGraphPluginImpl
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexerPluginImpl
@@ -44,6 +47,7 @@ case class DevModule() extends ScalaModule with Logging {
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
+    bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
   }
 
@@ -84,7 +88,7 @@ case class DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def articleIndexer(articleStore: ArticleStore): ArticleIndexer = {
+  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph): ArticleIndexer = {
     val indexDir = current.configuration.getString("index.article.directory") match {
       case None => 
         new RAMDirectory()
@@ -97,11 +101,29 @@ case class DevModule() extends ScalaModule with Logging {
         }
         new MMapDirectory(dir)
     }
-    ArticleIndexer(indexDir, articleStore)
+    ArticleIndexer(indexDir, articleStore, uriGraph)
   }
-
+  
   @Provides
   def httpClientProvider: HttpClient = new HttpClientImpl()
+  
+  @Singleton
+  @Provides
+  def uriGraph: URIGraph = {
+    val indexDir = current.configuration.getString("index.urigraph.directory") match {
+      case None => 
+        new RAMDirectory()
+      case Some(dirPath) =>
+        val dir = new File(dirPath).getCanonicalFile()
+        if (!dir.exists()) {
+          if (!dir.mkdirs()) {
+            throw new Exception("could not create dir %s".format(dir))
+          }
+        }
+        new MMapDirectory(dir)
+    }
+    URIGraph(indexDir)
+  }
   
   @Provides
   @AppScoped

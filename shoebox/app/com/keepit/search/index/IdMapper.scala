@@ -1,9 +1,11 @@
 package com.keepit.search.index
 
 import org.apache.lucene.index.IndexReader
+import scala.collection.immutable.LongMap
 
 abstract class IdMapper {
   def getId(docid: Int): Long
+  def getDocId(id: Long): Option[Int]
 }
 
 object ArrayIdMapper {
@@ -49,5 +51,8 @@ object ArrayIdMapper {
 }
 
 class ArrayIdMapper(idArray: Array[Long]) extends IdMapper {
+  lazy val reserveMap: Map[Long, Int] = idArray.zipWithIndex.foldLeft(LongMap.empty[Int]){ (m, t) => m + t }
+  
   def getId(docid: Int) = idArray(docid) // no range check done for performance
+  def getDocId(id: Long) = reserveMap.get(id)
 }
