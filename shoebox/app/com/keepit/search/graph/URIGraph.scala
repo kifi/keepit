@@ -87,7 +87,7 @@ class URIGraph(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) 
   
   def search(queryString: String): Seq[Hit] = searcher.search(parse(queryString))
 
-  def getURIGraphSearcher = new URIGraphSearcher(searcher)
+  def getURIGraphSearcher() = new URIGraphSearcher(searcher)
   
   def buildIndexable(user: User) = {
     val bookmarks = CX.withConnection { implicit c =>
@@ -106,7 +106,9 @@ class URIGraph(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) 
       doc
     }
     
-    def buildURIListPayloadField(bookmarks: Seq[Bookmark]) = buildDataPayloadField(URIGraph.userTerm, URIList.toByteArray(bookmarks))
+    def buildURIListPayloadField(bookmarks: Seq[Bookmark]) = {
+      buildDataPayloadField(URIGraph.userTerm.createTerm(id.toString), URIList.toByteArray(bookmarks))
+    }
     
     def buildURIIdField(bookmarks: Seq[Bookmark]) = {
       val fld = buildIteratorField(URIGraph.uriTerm.field(), bookmarks.iterator.filter(bm => !bm.isPrivate)){ bm => bm.uriId.toString }

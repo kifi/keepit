@@ -11,7 +11,8 @@ import org.apache.lucene.index.Term
 
 trait EdgeSet[S,D] {
   val sourceId: Id[S]
-  val destIdSet: Set[Id[D]]
+
+  def destIdSet: Set[Id[D]]
   
   def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator
 }
@@ -39,7 +40,7 @@ class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destId
       var curDoc = NO_MORE_DOCS
       var curIdx = -1
       
-      def docID() = docids(curDoc)
+      def docID() = curDoc
       
       def nextDoc() = {
         curIdx += 1
@@ -59,22 +60,31 @@ class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destId
 abstract class LuceneBackedEdgeSet[S, D](override val sourceId: Id[S], searcher: Searcher) extends EdgeSet[S, D] {
   import EdgeSetUtil._
   
-  lazy val destIdSet = getDestDocIdSetIterator(searcher).map(docid => searcher.idMapper.getId(docid)).map(toId(_)).toSet
+  lazy val lazyDestIdSet = getDestDocIdSetIterator(searcher).map(docid => searcher.idMapper.getId(docid)).map(toId(_)).toSet
+
+  override def destIdSet = lazyDestIdSet
   
   def getDestDocIdSetIterator(searcher: Searcher) = {
     val termDocs = searcher.indexReader.termDocs(createSourceTerm)
+    
     new DocIdSetIterator {
       var curDoc = NO_MORE_DOCS
       
       def docID() = curDoc
       
       def nextDoc() = {
-        curDoc = if (termDocs.next()) termDocs.doc() else NO_MORE_DOCS
+        curDoc = if (termDocs.next()) termDocs.doc() else {
+          termDocs.close()
+          NO_MORE_DOCS
+        }
         curDoc
       }
       
       def advance(target: Int) = {
-        curDoc = if (termDocs.skipTo(target)) termDocs.doc() else NO_MORE_DOCS
+        curDoc = if (termDocs.skipTo(target)) termDocs.doc() else {
+          termDocs.close()
+          NO_MORE_DOCS
+        }
         curDoc
       }
     }

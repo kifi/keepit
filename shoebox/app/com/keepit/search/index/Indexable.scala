@@ -4,6 +4,7 @@ import com.keepit.common.db.Id
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.Payload
@@ -41,22 +42,24 @@ trait Indexable[T] {
   }
 
   def buildDataPayloadField(term: Term, data: Array[Byte]): Field = {
-    val fld = new Field(term.field(), new DataPayloadTokenStream(term, data))
+    val fld = new Field(term.field(), new DataPayloadTokenStream(term.text(), data))
     fld.setOmitNorms(true)
     fld
   }
 
-  class DataPayloadTokenStream(term: Term, data: Array[Byte]) extends TokenStream {
+  class DataPayloadTokenStream(termText: String, data: Array[Byte]) extends TokenStream {
+    val termAttr = addAttribute(classOf[CharTermAttribute])
+    val payloadAttr = addAttribute(classOf[PayloadAttribute])
+    val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute]);
     var returnToken = true;
 
     @throws(classOf[IOException])
     override def incrementToken(): Boolean = {
       returnToken match {
         case true =>
-          val payloadAttr = addAttribute(classOf[PayloadAttribute])
           payloadAttr.setPayload(new Payload(data))
-          val termAttr: CharTermAttribute = addAttribute(classOf[CharTermAttribute]);
-          termAttr.append(term.text())
+          termAttr.append(termText)
+          posIncrAttr.setPositionIncrement(1)
           returnToken = false
           true
         case false => false
@@ -69,14 +72,17 @@ trait Indexable[T] {
   }
   
   class IteratorTokenStream[A](iterator: Iterator[A], toToken: (A=>String)) extends TokenStream {
-    var returnToken = iterator.hasNext;
-
+    val termAttr = addAttribute(classOf[CharTermAttribute])
+    val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute]);
+    
     @throws(classOf[IOException])
     override def incrementToken(): Boolean = {
-      returnToken match {
+      clearAttributes()
+      iterator.hasNext match {
         case true =>
-          val termAttr: CharTermAttribute = addAttribute(classOf[CharTermAttribute]);
-          termAttr.append(toToken(iterator.next))
+          val termText = toToken(iterator.next)
+          termAttr.append(termText)
+          posIncrAttr.setPositionIncrement(1)
           true
         case false => false
       }
