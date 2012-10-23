@@ -4,22 +4,22 @@
 # description: Java deamon script
 #
 # Set this to your Java installation
-JAVA_HOME=/usr/java/jdk1.6.0_33
+JAVA_HOME=/usr/java/jdk1.6.0_34
  
-serviceNameLo="showbox"                                  # service name with the first letter in lowercase
-serviceName="Showbox"                                    # service name
-serviceUser="kpt"                                        # OS user name for the service
-serviceGroup="kpt"                                       # OS group name for the service
-applDir="/home/kpt/prod/$serviceNameLo"            # home directory of the service application
-serviceUserHome="/home/$serviceUser"                     # home directory of the service user
-serviceLogFile="$applDir/log/$serviceNameLo.out"         # log file for StdOut/StdErr
-maxShutdownTime=15                                       # maximum number of seconds to wait for the daemon to terminate normally
-pidFile="$applDir/$serviceNameLo.pid"                    # name of PID file (PID = process ID number)
-javaCommand="java"                                       # name of the Java launcher without the path
-javaExe="$JAVA_HOME/bin/$javaCommand"                    # file name of the Java application launcher executable
-javaArgs="-Dhttp.port=9000 -Xms512M -Xmx1024m -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -cp \"$applDir/lib/*\" play.core.server.NettyServer $applDir"                   # arguments for Java launcher
-javaCommandLine="$javaExe $javaArgs"                     # command line to start the Java service application
-javaCommandLineKeyword="prod/$serviceNameLo.conf"        # a keyword that occurs on the commandline, used to detect an already running service process and to distinguish it from others
+serviceNameLo="shoebox"                                  # service name with the first letter in lowercase
+serviceName="Shoebox"                                    # service name
+serviceUser="fortytwo"                                      # OS user name for the service
+serviceGroup="fortytwo"                                    # OS group name for the service
+applDir="/home/$serviceUser/run/$serviceNameLo"                          # home directory of the service application
+serviceUserHome="/home/$serviceUser"                       # home directory of the service user
+serviceLogFile="$applDir/log/$serviceNameLo.out"               # log file for StdOut/StdErr
+maxShutdownTime=15                                         # maximum number of seconds to wait for the daemon to terminate normally
+pidFile="$applDir/$serviceNameLo.pid"                      # name of PID file (PID = process ID number)
+javaCommand="java"                                         # name of the Java launcher without the path
+javaExe="$JAVA_HOME/bin/$javaCommand"                      # file name of the Java application launcher executable
+javaArgs="-Ddb.$serviceNameLo.password=keepmydatasecure -Dhttp.port=9000 -Xms512M -Xmx1024m -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -cp \"$applDir/lib/*\" play.core.server.NettyServer $applDir"                     # arguments for Java launcher
+javaCommandLine="$javaExe $javaArgs"                       # command line to start the Java service application
+javaCommandLineKeyword="prod/$serviceNameLo.conf"                     # a keyword that occurs on the commandline, used to detect an already running service process and to distinguish it from others
  
 # Makes the file $1 writable by the group $serviceGroup.
 function makeFileWritable {
@@ -59,9 +59,9 @@ function startServiceProcess {
    mkdir -p $applDir/log
    makeFileWritable $serviceLogFile || return 1
    chown -R $serviceUser $applDir/log || return 1
-   echo $javaCommandLine
+   #echo $javaCommandLine
    cmd="nohup $javaCommandLine >>$serviceLogFile 2>&1 & echo \$! >$pidFile"
-   echo "$applDir : $cmd"
+   #echo "$applDir : $cmd"
    $SHELL -c "$cmd" || return 1
    sleep 0.1
    pid="$(<$pidFile)"

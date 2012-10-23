@@ -1,15 +1,20 @@
-@(bookmarksAndUsers: Seq[(Bookmark, NormalizedURIStats, UserWithSocial)])
+@(bookmarksAndUsers: Seq[(Bookmark, NormalizedURIStats, UserWithSocial)], page: Int)
 
 <!DOCTYPE html>
 
 <html>
     <head>
-        <title>All @bookmarksAndUsers.size Bookmarks</title>
+        <title>All @bookmarksAndUsers.size Bookmarks page @page</title>
         <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
     </head>
     <body>
-      <h2>All @bookmarksAndUsers.size Bookmarks</h2>
+      @if(page > 0) {
+        <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(page - 1)">Prev </a>&nbsp;&nbsp;&nbsp;
+      }
+      <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(page + 1)">Next</a>
+      <br/><br/>
+      <h2>Showing @bookmarksAndUsers.size Bookmarks</h2>
 		  <table>
 		    <tr>
           <th>Id</th>

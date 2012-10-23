@@ -72,6 +72,9 @@ object Bookmark {
   
   def all(implicit conn: Connection): Seq[Bookmark] =
     BookmarkEntity.all.map(_.view)
+    
+  def page(page: Int = 0, size: Int = 20)(implicit conn: Connection): Seq[Bookmark] =
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b LIMIT size OFFSET (page * size) ORDER_BY (b.createdAt DESC) list }.map( _.view )
   
   def get(id: Id[Bookmark])(implicit conn: Connection): Bookmark =
     getOpt(id).getOrElse(throw NotFoundException(id))
