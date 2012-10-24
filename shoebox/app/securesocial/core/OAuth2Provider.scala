@@ -24,11 +24,12 @@ import Play.current
 import play.api.mvc.{Results, Result, Request}
 import securesocial.controllers.routes
 import play.api.libs.ws.{Response, WS}
+import com.keepit.common.logging.Logging
 
 /**
  * Base class for all OAuth2 providers
  */
-abstract class OAuth2Provider(application: Application) extends IdentityProvider(application) {
+abstract class OAuth2Provider(application: Application) extends IdentityProvider(application) with Logging {
   val settings = createSettings()
 
   def authMethod = AuthenticationMethod.OAuth2
@@ -92,6 +93,14 @@ abstract class OAuth2Provider(application: Application) extends IdentityProvider
     request.queryString.get(OAuth2Constants.Code).flatMap(_.headOption) match {
       case Some(code) =>
         // we're being redirected back from the authorization server with the access code.
+        
+        val sessionId = request.session.get(IdentityProvider.SessionId)
+        log.info("session id = %s".format(sessionId))
+        val originalState = request.session.get(IdentityProvider.SessionId)
+        log.info("originalState = %s".format(originalState))
+        val currentState = request.queryString.get(OAuth2Constants.State).flatMap(_.headOption)
+        log.info("currentState = %s".format(currentState))
+            
         val user = for (
           // check if the state we sent is equal to the one we're receiving now before continuing the flow.
           sessionId <- request.session.get(IdentityProvider.SessionId) ;
@@ -109,7 +118,15 @@ abstract class OAuth2Provider(application: Application) extends IdentityProvider
         }
         user match  {
           case Some(u) => Right(u)
-          case _ => throw new AuthenticationException()
+          case _ => 
+            val sessionId = request.session.get(IdentityProvider.SessionId)
+            log.error("session id = %s".format(sessionId))
+            val originalState = request.session.get(IdentityProvider.SessionId)
+            log.error("originalState = %s".format(originalState))
+            val currentState = request.queryString.get(OAuth2Constants.State).flatMap(_.headOption)
+            log.error("currentState = %s".format(currentState))
+            log.error("queryString = %s".format(request.queryString mkString "\n"))
+            throw new AuthenticationException()
         }
       case None =>
         // There's no code in the request, this is the first step in the oauth flow
