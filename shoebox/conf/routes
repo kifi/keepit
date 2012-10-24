@@ -6,7 +6,7 @@
 GET     /                           com.keepit.controllers.HomeController.home
 
 GET     /bookmarks                  com.keepit.controllers.BookmarksController.bookmarksFirstPageView
-GET     /bookmarks/:page            com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
+GET     /bookmarks/page/:page       com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
 
 POST    /bookmarks/add              com.keepit.controllers.BookmarksController.addBookmarks
 GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all
