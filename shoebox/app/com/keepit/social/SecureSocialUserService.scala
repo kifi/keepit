@@ -4,6 +4,7 @@ import play.api.Application
 import securesocial.core.{UserServicePlugin, UserId, SocialUser}
 import com.keepit.common.db.CX
 import com.keepit.common.db._
+import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.net.HttpClient
 import com.keepit.model._
 import com.keepit.inject._
@@ -33,6 +34,9 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
     //todo(eishay) take the network type from the socialUser
     log.debug("` %s".format(socialUser))
     val socialUserInfo = internUser(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK, socialUser)
+    if (socialUserInfo.state != SocialUserInfo.States.FETCHED_USING_SELF) {
+      inject[SocialGraphPlugin].asyncFetch(socialUserInfo)
+    }
     log.debug("persisting %s into %s".format(socialUser, socialUserInfo))
     socialUserInfo.withCredentials(socialUser).save 
   }

@@ -134,7 +134,7 @@
       }
       term = request.query;
       var externalId = userInfo["keepit_external_id"];
-      xhr.open("GET", 'http://' + getConfigs().server + '/bookmarks/search?term=' + term + '&externalId=' + externalId, true);
+      xhr.open("GET", 'http://' + getConfigs().server + '/search?term=' + term + '&externalId=' + externalId, true);
       xhr.send();
     }
 
@@ -257,7 +257,7 @@
         }
         hoverTimeout = Number(hoverTimeout);
 
-        var server = "ezkeep.com";
+        var server = "keepitfindit.com";
         if (env === "development") {
           server = "dev.ezkeep.com:9000";
         }
