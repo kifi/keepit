@@ -15,7 +15,7 @@
   <logger name="ru.circumflex" level="ERROR"/>
   <logger name="com.mysql" level="ERROR"/>
   <logger name="com.ning.http" level="INFO"/>
-  <logger name="securesocial.core" level="INFO"/>
+  <logger name="securesocial.core" level="DEBUG"/>
                  
   <root level="INFO">          
     <appender-ref ref="FILE" />
