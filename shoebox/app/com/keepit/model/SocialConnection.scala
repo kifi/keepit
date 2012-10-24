@@ -40,24 +40,43 @@ object SocialConnection {
     SocialConnectionEntity.get(id).map(_.view)
     
     
-  def getKifiUserConnections(id: Id[User])(implicit conn: Connection): Set[Id[User]] = { // ??? naming ???
+  def getFortyTwoUserConnections(id: Id[User])(implicit conn: Connection): Set[Id[User]] = { // ??? naming ???
     val statement = conn.createStatement
+    val suidSQL = """
+        select 
+             id 
+        from 
+             social_user_info 
+        where 
+             user_id = %s""".format(id.id)
+    val connectionsSQL = """
+        select 
+             social_user_1, social_user_2
+        from 
+             (%s) as suid, social_connection as sc 
+        where 
+             (sc.social_user_1 in (suid.id)) or (sc.social_user_2 in (suid.id))""".format(suidSQL)
+    val rs = statement.executeQuery("""
+        select 
+             sui.user_id
+        from 
+             (%s) as connections, 
+             social_user_info as sui 
+        where 
+             (sui.id in (connections.social_user_1) or sui.id in (connections.social_user_2))
+             AND
+             (sui.user_id is not null)
+             AND
+             (sui.user_id != %s)""".format(connectionsSQL, id.id))
     try {
-      val rs = statement.executeQuery("select sui.user_id from (select social_user_1, social_user_2 from (select id from social_user_info where user_id = " + id.id + ") as suid, social_connection as sc where (sc.social_user_1 in (suid.id)) or (sc.social_user_2 in (suid.id))) as connections, social_user_info as sui where sui.id in (connections.social_user_1) or sui.id in (connections.social_user_2)")
-      val result = Iterator.continually((rs, rs.next)).takeWhile(_._2).map(_._1).map(res => Id[User](res.getLong("user_id"))).toSet
-      rs.close //fix me!
-      result.filterNot(_ == id)
+      Iterator.continually((rs, rs.next)).takeWhile(_._2).map(_._1).map(res => Id[User](res.getLong("user_id"))).toSet
     }
     finally {
       statement.close
-      //rs.close ???
+      rs.close
     }
   }
-  
-  def getSocialConnections(id: Id[SocialUserInfo])(implicit conn: Connection) = {
-    // todo
-  }
-  
+    
   def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo])(implicit conn: Connection): Option[SocialConnection] = {
     (SocialConnectionEntity AS "sc").map { sc => SELECT (sc.*) FROM sc WHERE (
         ((sc.socialUser1 EQ u1) AND (sc.socialUser2 EQ u2)) OR 

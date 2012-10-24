@@ -26,31 +26,51 @@ class SocialConnectionTest extends SpecificationWithJUnit {
     "give Kifi user's connections" in {
       running(new EmptyApplication().withFakeStore) {
         
-        val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay.json")).mkString)
-        
-        val result = inject[SocialUserImportFriends].importFriends(json)
-        
-        val socialUserInfo = CX.withConnection { implicit conn =>
-          SocialUserInfo(fullName = "Bob Smith", socialId = SocialId("bsmith"), networkType = SocialNetworks.FACEBOOK).withUser(User(firstName = "fn1", lastName = "ln1").save).save
+        def loadJson(filename: String): Unit = {
+          val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(filename))).mkString)
+          inject[SocialUserImportFriends].importFriends(json)
         }
         
+        loadJson("facebook_graph_andrew.json")
+        loadJson("facebook_graph_eishay.json")
+        
+        val socialUserInfo = CX.withConnection { implicit conn =>
+          // Eishay's Facebook Account
+          //SocialUserInfo(fullName = "Eishay Smith", socialId = SocialId("646386018"), networkType = SocialNetworks.FACEBOOK).save
+            SocialUserInfo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(User(firstName = "Eishay", lastName = "Smith").save).save
+        }
+
+        val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay.json"))).mkString)
+        
+        // Create FortyTwo accounts on certain users
+        val users = scala.collection.mutable.MutableList[User]()
+        
         CX.withConnection { implicit conn =>
-          SocialUserInfo.get(result(0).socialUserInfoId.get).withUser(User(firstName = "fn1", lastName = "ln1").save).save
-          SocialUserInfo.get(result(1).socialUserInfoId.get).withUser(User(firstName = "fn2", lastName = "ln2").save).save
-          SocialUserInfo.get(result(2).socialUserInfoId.get).withUser(User(firstName = "fn3", lastName = "ln3").save).save
-          SocialUserInfo.get(result(3).socialUserInfoId.get).withUser(User(firstName = "fn4", lastName = "ln4").save).save
+          users += User(firstName = "Andrew", lastName = "Conner").save
+          users += User(firstName = "Igor", lastName = "Perisic").save
+          users += User(firstName = "Kelvin", lastName = "Jiang").save
+          users += User(firstName = "John", lastName = "Cochran").save
+          
+          // These are friends of Eishay
+          SocialUserInfo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(users(0)).save
+          SocialUserInfo.get(SocialId("28779"), SocialNetworks.FACEBOOK).withUser(users(1)).save
+          SocialUserInfo.get(SocialId("102113"), SocialNetworks.FACEBOOK).withUser(users(2)).save
+
+          // Not Eishay's friend
+          SocialUserInfo.get(SocialId("113102"), SocialNetworks.FACEBOOK).withUser(users(3)).save
         }
         
         inject[SocialUserCreateConnections].createConnections(socialUserInfo, json)
         
         val connections = CX.withConnection { implicit conn =>
-          SocialConnection.getKifiUserConnections(socialUserInfo.userId.get)
+          SocialConnection.getFortyTwoUserConnections(socialUserInfo.userId.get)
         }
         
-        println(connections)
-        
-        //connections === Set(2,3,4,5).map(i=> Id[User](i))
-        1===1
+        connections.size === 3
+        connections.contains(users(0).id.get) === true
+        connections.contains(users(1).id.get) === true
+        connections.contains(users(3).id.get) === false
+
       }
     }
   }
