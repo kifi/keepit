@@ -55,6 +55,8 @@ object SocialConnection {
   def getByUser(id: Id[User])(implicit conn: Connection) = {
     val rs = conn.createStatement.executeQuery("select sui.user_id from (select social_user_1, social_user_2 from (select id from social_user_info where user_id = " + id.id + ") as suid, social_connection as sc where (sc.social_user_1 in (suid.id)) or (sc.social_user_2 in (suid.id))) as connections, social_user_info as sui where sui.id in (connections.social_user_1) or sui.id in (connections.social_user_2)")
     val result = Iterator.continually((rs, rs.next)).takeWhile(_._2).map(_._1).map(res => Id[User](res.getLong("user_id"))).toSet
+    
+    rs.close
     result.filterNot(_ == id)
 
   }
