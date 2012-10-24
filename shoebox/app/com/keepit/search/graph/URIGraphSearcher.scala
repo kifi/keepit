@@ -8,8 +8,10 @@ import org.apache.lucene.search.DocIdSetIterator
 
 class URIGraphSearcher(searcher: Searcher) {
   
-  def getUriToUserEdgeSet(sourceId: Id[NormalizedURI]) = new UriToUserEdgeSet(sourceId, searcher)
+  def getUserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) = new UserToUserEdgeSet(sourceId, destIdSet)
   
+  def getUriToUserEdgeSet(sourceId: Id[NormalizedURI]) = new UriToUserEdgeSet(sourceId, searcher)
+
   def getUserToUriEdgeSet(sourceId: Id[User], publicOnly: Boolean = true) = {
     val uriIdSet = getURIList(sourceId) match {
       case Some(uriList) =>

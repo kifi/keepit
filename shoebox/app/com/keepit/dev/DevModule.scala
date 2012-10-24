@@ -88,7 +88,7 @@ case class DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph): ArticleIndexer = {
+  def articleIndexer(articleStore: ArticleStore): ArticleIndexer = {
     val indexDir = current.configuration.getString("index.article.directory") match {
       case None => 
         new RAMDirectory()
@@ -101,7 +101,7 @@ case class DevModule() extends ScalaModule with Logging {
         }
         new MMapDirectory(dir)
     }
-    ArticleIndexer(indexDir, articleStore, uriGraph)
+    ArticleIndexer(indexDir, articleStore)
   }
   
   @Provides

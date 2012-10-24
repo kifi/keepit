@@ -81,7 +81,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
       }
     }
     log.info("storing search index in %s".format(dir.getAbsolutePath()))
-    ArticleIndexer(new MMapDirectory(dir), articleStore, uriGraph)
+    ArticleIndexer(new MMapDirectory(dir), articleStore)
   }
   
   @Singleton
