@@ -79,16 +79,21 @@ object UserController extends Controller with Logging with SecureSocial {
   }
 
   def userView(userId: Id[User]) = SecuredAction(false) { implicit request => 
-    val (user, bookmarks, socialUserInfos) = CX.withConnection { implicit c =>
+    val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections) = CX.withConnection { implicit c =>
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId)) 
       val bookmarks = Bookmark.ofUser(userWithSocial.user)
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
-      (userWithSocial, bookmarks, socialUserInfos)
+      val socialConnections = SocialConnection.getUserConnections(userId)
+      val fortyTwoConnections = SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial
+
+      
+      (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections)
     }
     val rawInfos = socialUserInfos map {info =>
       inject[SocialUserRawInfoStore].get(info.id.get)
     } 
-    Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten))
+
+    Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections))
   }
 
   def usersView = SecuredAction(false) { implicit request => 

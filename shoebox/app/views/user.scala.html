@@ -1,4 +1,4 @@
-@(userWithSocial: UserWithSocial, bookmarks: Seq[Bookmark], socialUserInfos: Seq[SocialUserInfo], rawInfos: Seq[SocialUserRawInfo])
+@(userWithSocial: UserWithSocial, bookmarks: Seq[Bookmark], socialUserInfos: Seq[SocialUserInfo], rawInfos: Seq[SocialUserRawInfo], socialConnections: Seq[SocialUserInfo], fortyTwoConnections: Set[UserWithSocial])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
@@ -30,7 +30,7 @@
 	      Id: @userWithSocial.user.id<br/>
 	      Facebook Account: @userWithFacebookDisplay(userWithSocial)<br/>
 	      OAuth: @socialUserInfos<br/>
-	      Social Raw info: @rawInfos<br/>
+	      Social Raw info: <br/><textarea rows="7" cols="80">@rawInfos</textarea><br/>
 	      Account created at: @adminHelper.dateDisplay(userWithSocial.user.createdAt) @adminHelper.timeDisplay(userWithSocial.user.createdAt)<br/>
 	      <br/>
 	      <button onclick="refreshSociaUserInfo()">Refresh Social User Info!</button>
@@ -52,5 +52,27 @@
 			  }
 		  </table>
 		  
+		  <h2>User connected to @fortyTwoConnections.size FortyTwo Users</h2>
+      @for(userWithSocial <- fortyTwoConnections) {
+        <tr>
+          <td>@userWithSocial.user.id.get.id</td>
+          <td>@userWithSocial.user.externalId</td>
+          <td>@adminHelper.userDisplay(userWithSocial)</td>
+          <td>@userWithSocial.user.createdAt</td>
+        </tr>
+      }
+      
+      
+		  <h2>User connected to @socialConnections.size Social Users</h2>
+		  <span>
+        @for(socialConnection <- socialConnections) {
+          <a href="http://facebook.com/@socialConnection.socialId.id">@socialConnection.fullName</a>
+          @if(socialConnection.userId.isDefined) {
+            (<a href="@com.keepit.controllers.routes.UserController.userView(socialConnection.userId.get)">fortytwo account</a>)
+          }
+        }
+		  </span>
+      
+      
     </body>
 </html>
