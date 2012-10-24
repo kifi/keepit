@@ -12,6 +12,7 @@ import com.keepit.inject._
 import com.google.inject.Guice
 import com.google.inject.Injector
 import com.google.inject.Stage
+import com.keepit.common.social.SocialGraphPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
 
@@ -24,6 +25,7 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
     super.onStart(app)
     inject[ScraperPlugin].scrape()
     inject[ArticleIndexerPlugin].index()
+    inject[SocialGraphPlugin].fetchAll()
     log.info("shoebox started")
   }
 

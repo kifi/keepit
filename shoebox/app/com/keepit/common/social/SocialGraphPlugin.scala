@@ -31,27 +31,48 @@ import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
 
 //case object FetchAll
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
+private case object FetchAll
 
 private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor with Logging {
   def receive() = {
-//    case FetchAll => sender ! graph.fetchAll()
-    case FetchUserInfo(user) => 
-      val rawInfo = graph.fetchSocialUserRawInfo(user)
-      log.info("fetched raw info %s for %s".format(rawInfo, user))
-      CX.withConnection { implicit c =>
-        user.withState(SocialUserInfo.States.FETCHED_USING_SELF).save
+    case FetchAll =>
+      val unprocessedUsers = CX.withConnection { implicit c =>
+        SocialUserInfo.getUnprocessed()
       }
-      val store = inject[SocialUserRawInfoStore]
-      store += (user.id.get -> rawInfo)
-      inject[SocialUserImportFriends].importFriends(rawInfo.json)
+      unprocessedUsers foreach { user =>
+        self ! FetchUserInfo(user)
+      }
+      sender ! unprocessedUsers.size
+      
+    case FetchUserInfo(user) => 
+      try {
+        val rawInfo = graph.fetchSocialUserRawInfo(user)
+        log.info("fetched raw info %s for %s".format(rawInfo, user))
+        CX.withConnection { implicit c =>
+          user.withState(SocialUserInfo.States.FETCHED_USING_SELF).save
+        }
+        val store = inject[SocialUserRawInfoStore]
+        store += (user.id.get -> rawInfo)
+        inject[SocialUserImportFriends].importFriends(rawInfo.json)
+        
+        inject[SocialUserCreateConnections].createConnections(user, rawInfo.json)
+      }
+      catch {
+        case ex => 
+          CX.withConnection { implicit c =>
+            user.withState(SocialUserInfo.States.FETCHE_FAIL).save
+          }
+          log.error("Problem Fetching User Info for %s".format(user), ex)
+      }
+
       
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
 
 trait SocialGraphPlugin extends Plugin {
-//  def scrape(): Seq[(NormalizedURI, Option[Article])]
   def asyncFetch(socialUserInfo: SocialUserInfo): Unit
+  def fetchAll(): Unit
 }
 
 class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: FacebookSocialGraph) extends SocialGraphPlugin with Logging {
@@ -65,19 +86,19 @@ class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: Faceboo
   override def enabled: Boolean = true
   override def onStart(): Unit = {
     log.info("starting SocialGraphPluginImpl")
-//    _cancellables = Seq(
-//      system.scheduler.schedule(0 seconds, 1 minutes, actor, FetchAll)
-//    )
+    _cancellables = Seq(
+      system.scheduler.schedule(0 seconds, 1 minutes, actor, FetchAll)
+    )
   }
   override def onStop(): Unit = {
     log.info("stopping SocialGraphPluginImpl")
     _cancellables.map(_.cancel)
   }
   
-//  override def fetchAll(): Seq[(NormalizedURI, Option[Article])] = {
-//    val future = actor.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
-//    Await.result(future, 1 minutes)
-//  }
+  def fetchAll(): Unit = {
+    val future = actor.ask(FetchAll)(1 minutes).mapTo[Int]
+    Await.result(future, 1 minutes)
+  } 
   
   override def asyncFetch(socialUserInfo: SocialUserInfo): Unit = actor ! FetchUserInfo(socialUserInfo)
 }
