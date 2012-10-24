@@ -42,7 +42,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
       unprocessedUsers foreach { user =>
         self ! FetchUserInfo(user)
       }
-      sender ! unprocessedUsers
+      sender ! unprocessedUsers.size
       
     case FetchUserInfo(user) => 
       val rawInfo = graph.fetchSocialUserRawInfo(user)
@@ -62,6 +62,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
 
 trait SocialGraphPlugin extends Plugin {
   def asyncFetch(socialUserInfo: SocialUserInfo): Unit
+  def fetchAll(): Unit
 }
 
 class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: FacebookSocialGraph) extends SocialGraphPlugin with Logging {
@@ -83,6 +84,11 @@ class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: Faceboo
     log.info("stopping SocialGraphPluginImpl")
     _cancellables.map(_.cancel)
   }
+  
+  def fetchAll(): Unit = {
+    val future = actor.ask(FetchAll)(1 minutes).mapTo[Int]
+    Await.result(future, 1 minutes)
+  } 
   
   override def asyncFetch(socialUserInfo: SocialUserInfo): Unit = actor ! FetchUserInfo(socialUserInfo)
 }
