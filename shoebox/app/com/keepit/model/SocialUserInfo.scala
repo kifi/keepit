@@ -61,6 +61,11 @@ object SocialUserInfo {
   def getOpt(id: Id[SocialUserInfo])(implicit conn: Connection): Option[SocialUserInfo] =
     SocialUserInfoEntity.get(id).map(_.view)
     
+  def getUnprocessed()(implicit conn: Connection): Seq[SocialUserInfo] = {
+    val UNPROCESSED_STATE = States.CREATED::States.FETCHED_USING_FRIEND::Nil
+    (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ((u.state IN(UNPROCESSED_STATE)) AND (u.credentials IS_NOT_NULL)) list }.map(_.view)
+  }
+    
   object States {
     val CREATED = State[SocialUserInfo]("created")
     val FETCHED_USING_FRIEND = State[SocialUserInfo]("fetched_using_friend")

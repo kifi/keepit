@@ -48,7 +48,7 @@ class SocialUserInfoTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         
         val none_unprocessed = CX.withConnection { implicit c =>
-          SocialUserInfo.getUnprocessed()
+          SocialUserInfo.getUnprocessed() 
         }
         
         none_unprocessed.size === 0

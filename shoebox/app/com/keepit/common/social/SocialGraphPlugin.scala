@@ -54,6 +54,8 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
       store += (user.id.get -> rawInfo)
       inject[SocialUserImportFriends].importFriends(rawInfo.json)
       
+      inject[SocialUserCreateConnections].createConnections(user, rawInfo.json)
+      
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
