@@ -10,6 +10,7 @@ import org.joda.time.DateTime
 import play.api._
 import ru.circumflex.orm._
 import play.api.libs.json._
+import com.keepit.common.logging.Logging
 
 case class SocialConnection(
   id: Option[Id[SocialConnection]] = None,
@@ -28,7 +29,7 @@ case class SocialConnection(
   
 }
 
-object SocialConnection {
+object SocialConnection extends Logging {
 
   def all(implicit conn: Connection): Seq[SocialConnection] =
     SocialConnectionEntity.all.map(_.view)
@@ -81,6 +82,21 @@ object SocialConnection {
     (SocialConnectionEntity AS "sc").map { sc => SELECT (sc.*) FROM sc WHERE (
         ((sc.socialUser1 EQ u1) AND (sc.socialUser2 EQ u2)) OR 
         ((sc.socialUser1 EQ u2) AND (sc.socialUser2 EQ u1))) unique } map ( _.view )
+  }
+  
+  def getUserConnections(id: Id[User])(implicit conn: Connection) = {
+    
+    val suis = SocialUserInfo.getByUser(id).map(_.id.get)
+    
+    val conns = (SocialConnectionEntity AS "sc").map { sc =>
+      SELECT (sc.*) FROM sc WHERE ((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) list
+    } map (_.view) map (s => if(suis.contains(s.socialUser1)) s.socialUser2 else s.socialUser1 ) toList
+    
+    (SocialUserInfoEntity AS "sui").map { sui =>
+      SELECT (sui.*) FROM sui WHERE (sui.id IN(conns)) list
+    } map (_.view)
+    
+    
   }
 
     
