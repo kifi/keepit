@@ -67,9 +67,10 @@ object BookmarksController extends Controller with Logging with SecureSocial {
       val bookmarks = Bookmark.page(page)
       val users = bookmarks map (_.userId) map User.get map UserWithSocial.toUserWithSocial
       val uris = bookmarks map (_.uriId) map NormalizedURI.get map {u => u.stats()}
-      (bookmarks, uris, users).zipped.toList.seq
+      val count = Bookmark.count
+      (count, (bookmarks, uris, users).zipped.toList.seq)
     }
-    Ok(views.html.bookmarks(bookmarksAndUsers, page))
+    Ok(views.html.bookmarks(bookmarksAndUsers, page, count))
   }  
   
   def addBookmarks() = JsonAction { request =>
