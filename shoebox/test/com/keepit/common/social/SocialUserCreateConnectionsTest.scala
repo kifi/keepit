@@ -48,16 +48,10 @@ class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
           SocialUserInfo(fullName = "Bob Smith", socialId = SocialId("bsmith"), networkType = SocialNetworks.FACEBOOK).withUser(User(firstName = "fn1", lastName = "ln1").save).save
         }
         
-        CX.withConnection { implicit conn =>
-          SocialUserInfo.get(result(1).socialUserInfoId.get).withUser(User(firstName = "fn1", lastName = "ln1").save).save
-          SocialUserInfo.get(result(2).socialUserInfoId.get).withUser(User(firstName = "fn1", lastName = "ln1").save).save
-          SocialUserInfo.get(result(3).socialUserInfoId.get).withUser(User(firstName = "fn1", lastName = "ln1").save).save
-          SocialUserInfo.get(result(4).socialUserInfoId.get).withUser(User(firstName = "fn1", lastName = "ln1").save).save
-        }
         
         val connections = inject[SocialUserCreateConnections].createConnections(socialUserInfo, json)
 
-        connections.size === 4      
+        connections.size === 199    
       }
     }
   }

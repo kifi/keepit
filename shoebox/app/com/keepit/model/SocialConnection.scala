@@ -19,7 +19,6 @@ case class SocialConnection(
   socialUser2: Id[SocialUserInfo],
   state: State[SocialConnection] = SocialConnection.States.ACTIVE
 ) {
-  //def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
   
   def save(implicit conn: Connection): SocialConnection = {
     val entity = SocialConnectionEntity(this.copy(updatedAt = currentDateTime))
@@ -30,13 +29,6 @@ case class SocialConnection(
 }
 
 object SocialConnection {
-  //Used for admin, checking that we can talk with the db
-  def loadTest()(implicit conn: Connection): Unit = {
-    val socialconnection: Option[SocialConnectionEntity] = (SocialConnectionEntity AS "sc").map { sc =>
-      SELECT (sc.*) FROM sc LIMIT 1
-    } unique;
-    socialconnection.get.view
-  }
 
   def all(implicit conn: Connection): Seq[SocialConnection] =
     SocialConnectionEntity.all.map(_.view)
@@ -47,18 +39,29 @@ object SocialConnection {
   def getOpt(id: Id[SocialConnection])(implicit conn: Connection): Option[SocialConnection] =
     SocialConnectionEntity.get(id).map(_.view)
     
-  /*def getByUser(id: Id[User]) = // bi-directional
-    (SocialConnectionEntity AS "sc").map { sc => 
-      (SELECT ) list 
-    }.map(_.view)*/
     
-  def getByUser(id: Id[User])(implicit conn: Connection) = {
-    val rs = conn.createStatement.executeQuery("select sui.user_id from (select social_user_1, social_user_2 from (select id from social_user_info where user_id = " + id.id + ") as suid, social_connection as sc where (sc.social_user_1 in (suid.id)) or (sc.social_user_2 in (suid.id))) as connections, social_user_info as sui where sui.id in (connections.social_user_1) or sui.id in (connections.social_user_2)")
-    val result = Iterator.continually((rs, rs.next)).takeWhile(_._2).map(_._1).map(res => Id[User](res.getLong("user_id"))).toSet
-    
-    rs.close
-    result.filterNot(_ == id)
-
+  def getKifiUserConnections(id: Id[User])(implicit conn: Connection): Set[Id[User]] = { // ??? naming ???
+    val statement = conn.createStatement
+    try {
+      val rs = statement.executeQuery("select sui.user_id from (select social_user_1, social_user_2 from (select id from social_user_info where user_id = " + id.id + ") as suid, social_connection as sc where (sc.social_user_1 in (suid.id)) or (sc.social_user_2 in (suid.id))) as connections, social_user_info as sui where sui.id in (connections.social_user_1) or sui.id in (connections.social_user_2)")
+      val result = Iterator.continually((rs, rs.next)).takeWhile(_._2).map(_._1).map(res => Id[User](res.getLong("user_id"))).toSet
+      rs.close //fix me!
+      result.filterNot(_ == id)
+    }
+    finally {
+      statement.close
+      //rs.close ???
+    }
+  }
+  
+  def getSocialConnections(id: Id[SocialUserInfo])(implicit conn: Connection) = {
+    // todo
+  }
+  
+  def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo])(implicit conn: Connection): Option[SocialConnection] = {
+    (SocialConnectionEntity AS "sc").map { sc => SELECT (sc.*) FROM sc WHERE (
+        ((sc.socialUser1 EQ u1) AND (sc.socialUser2 EQ u2)) OR 
+        ((sc.socialUser1 EQ u2) AND (sc.socialUser2 EQ u1))) unique } map ( _.view )
   }
 
     

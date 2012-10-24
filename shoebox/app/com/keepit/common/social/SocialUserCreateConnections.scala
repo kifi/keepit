@@ -16,8 +16,11 @@ class SocialUserCreateConnections() extends Logging {
     CX.withConnection { implicit conn => 
       extractFriends(parentJson) map { friend =>
         SocialUserInfo.get(SocialId((friend \ "id").as[String]), SocialNetworks.FACEBOOK)
-      } filter (_.userId.isDefined) map { friend =>
-        SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = friend.id.get).save
+      } map { friend =>
+        SocialConnection.getConnectionOpt(socialUserInfo.id.get, friend.id.get) match {
+          case Some(c) => c
+          case None => SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = friend.id.get).save
+        }
       }
     }
   
