@@ -45,16 +45,26 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
       sender ! unprocessedUsers.size
       
     case FetchUserInfo(user) => 
-      val rawInfo = graph.fetchSocialUserRawInfo(user)
-      log.info("fetched raw info %s for %s".format(rawInfo, user))
-      CX.withConnection { implicit c =>
-        user.withState(SocialUserInfo.States.FETCHED_USING_SELF).save
+      try {
+        val rawInfo = graph.fetchSocialUserRawInfo(user)
+        log.info("fetched raw info %s for %s".format(rawInfo, user))
+        CX.withConnection { implicit c =>
+          user.withState(SocialUserInfo.States.FETCHED_USING_SELF).save
+        }
+        val store = inject[SocialUserRawInfoStore]
+        store += (user.id.get -> rawInfo)
+        inject[SocialUserImportFriends].importFriends(rawInfo.json)
+        
+        inject[SocialUserCreateConnections].createConnections(user, rawInfo.json)
       }
-      val store = inject[SocialUserRawInfoStore]
-      store += (user.id.get -> rawInfo)
-      inject[SocialUserImportFriends].importFriends(rawInfo.json)
-      
-      inject[SocialUserCreateConnections].createConnections(user, rawInfo.json)
+      catch {
+        case ex => 
+          CX.withConnection { implicit c =>
+            user.withState(SocialUserInfo.States.FETCHE_FAIL).save
+          }
+          log.error("Problem Fetching User Info for %s".format(user), ex)
+      }
+
       
     case m => throw new Exception("unknown message %s".format(m))
   }

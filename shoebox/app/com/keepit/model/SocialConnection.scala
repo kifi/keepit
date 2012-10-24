@@ -40,7 +40,7 @@ object SocialConnection {
     SocialConnectionEntity.get(id).map(_.view)
     
     
-  def getFortyTwoUserConnections(id: Id[User])(implicit conn: Connection): Set[Id[User]] = { // ??? naming ???
+  def getFortyTwoUserConnections(id: Id[User])(implicit conn: Connection): Set[Id[User]] = {
     val statement = conn.createStatement
     val suidSQL = """
         select 
