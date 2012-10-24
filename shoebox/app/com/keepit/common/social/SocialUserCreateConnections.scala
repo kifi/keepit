@@ -4,10 +4,10 @@ import com.keepit.common.db.CX
 import com.keepit.common.logging.Logging
 import com.keepit.model.SocialConnection
 import com.keepit.model.SocialUserInfo
-
 import play.api.Play.current
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsValue
+import com.keepit.model.User
 
 
 class SocialUserCreateConnections() extends Logging {

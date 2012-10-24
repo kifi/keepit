@@ -23,53 +23,132 @@ class SocialConnectionTest extends SpecificationWithJUnit {
   
 
   "SocialConnection" should {
-    "give Kifi user's connections" in {
+
+    "give Kifi user's connections (min set)" in {
       running(new EmptyApplication().withFakeStore) {
         
-        def loadJson(filename: String): Unit = {
+        def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(filename))).mkString)
-          inject[SocialUserImportFriends].importFriends(json)
+          println(inject[SocialUserImportFriends].importFriends(json).size)
         }
         
-        loadJson("facebook_graph_andrew.json")
-        loadJson("facebook_graph_eishay.json")
+        loadJsonImportFriends("facebook_graph_andrew_min.json")
+        loadJsonImportFriends("facebook_graph_eishay_min.json")
         
-        val socialUserInfo = CX.withConnection { implicit conn =>
-          // Eishay's Facebook Account
-          //SocialUserInfo(fullName = "Eishay Smith", socialId = SocialId("646386018"), networkType = SocialNetworks.FACEBOOK).save
+        CX.withConnection { implicit conn =>
+          println("Connections: " + SocialUserInfo.all.size)
+        }
+        
+        val eishaySocialUserInfo = CX.withConnection { implicit conn =>
             SocialUserInfo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(User(firstName = "Eishay", lastName = "Smith").save).save
         }
+        val andrewSocialUserInfo = CX.withConnection { implicit conn =>
+            SocialUserInfo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(User(firstName = "Andrew", lastName = "Conner").save).save
+        }
 
-        val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay.json"))).mkString)
+        val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay_min.json"))).mkString)
+        val andrewJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_andrew_min.json"))).mkString)
+
         
         // Create FortyTwo accounts on certain users
         val users = scala.collection.mutable.MutableList[User]()
         
         CX.withConnection { implicit conn =>
-          users += User(firstName = "Andrew", lastName = "Conner").save
           users += User(firstName = "Igor", lastName = "Perisic").save
           users += User(firstName = "Kelvin", lastName = "Jiang").save
           users += User(firstName = "John", lastName = "Cochran").save
           
           // These are friends of Eishay
-          SocialUserInfo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(users(0)).save
-          SocialUserInfo.get(SocialId("28779"), SocialNetworks.FACEBOOK).withUser(users(1)).save
-          SocialUserInfo.get(SocialId("102113"), SocialNetworks.FACEBOOK).withUser(users(2)).save
+          SocialUserInfo.get(SocialId("28779"), SocialNetworks.FACEBOOK).withUser(users(0)).save
+          SocialUserInfo.get(SocialId("102113"), SocialNetworks.FACEBOOK).withUser(users(1)).save
 
           // Not Eishay's friend
-          SocialUserInfo.get(SocialId("113102"), SocialNetworks.FACEBOOK).withUser(users(3)).save
+          SocialUserInfo.get(SocialId("113102"), SocialNetworks.FACEBOOK).withUser(users(2)).save
         }
         
-        inject[SocialUserCreateConnections].createConnections(socialUserInfo, json)
+        inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, eishayJson)
+        inject[SocialUserCreateConnections].createConnections(andrewSocialUserInfo, andrewJson)
         
-        val connections = CX.withConnection { implicit conn =>
-          SocialConnection.getFortyTwoUserConnections(socialUserInfo.userId.get)
+        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = CX.withConnection { implicit conn =>
+          SocialConnection.all.size === 18
+          (SocialConnection.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
+          SocialConnection.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
         }
         
-        connections.size === 3
-        connections.contains(users(0).id.get) === true
-        connections.contains(users(1).id.get) === true
-        connections.contains(users(3).id.get) === false
+        eishayFortyTwoConnection.size === 3
+        eishayFortyTwoConnection.contains(users(0).id.get) === true
+        eishayFortyTwoConnection.contains(users(1).id.get) === true
+        eishayFortyTwoConnection.contains(users(2).id.get) === false
+        
+        
+        andrewFortyTwoConnection.size === 2
+        andrewFortyTwoConnection.contains(users(0).id.get) === false
+        andrewFortyTwoConnection.contains(users(1).id.get) === false
+        andrewFortyTwoConnection.contains(users(2).id.get) === true
+
+      }
+    }
+    "give Kifi user's connections (full set)" in {
+      running(new EmptyApplication().withFakeStore) {
+        
+        def loadJsonImportFriends(filename: String): Unit = {
+          val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(filename))).mkString)
+          println(inject[SocialUserImportFriends].importFriends(json).size)
+        }
+        
+        loadJsonImportFriends("facebook_graph_andrew.json")
+        loadJsonImportFriends("facebook_graph_eishay.json")
+        
+        CX.withConnection { implicit conn =>
+          println("Connections: " + SocialUserInfo.all.size)
+        }
+        
+        val eishaySocialUserInfo = CX.withConnection { implicit conn =>
+            SocialUserInfo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(User(firstName = "Eishay", lastName = "Smith").save).save
+        }
+        val andrewSocialUserInfo = CX.withConnection { implicit conn =>
+            SocialUserInfo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(User(firstName = "Andrew", lastName = "Conner").save).save
+        }
+
+        val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay.json"))).mkString)
+        val andrewJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_andrew.json"))).mkString)
+
+        
+        // Create FortyTwo accounts on certain users
+        val users = scala.collection.mutable.MutableList[User]()
+        
+        CX.withConnection { implicit conn =>
+          users += User(firstName = "Igor", lastName = "Perisic").save
+          users += User(firstName = "Kelvin", lastName = "Jiang").save
+          users += User(firstName = "John", lastName = "Cochran").save
+          
+          // These are friends of Eishay
+          SocialUserInfo.get(SocialId("28779"), SocialNetworks.FACEBOOK).withUser(users(0)).save
+          SocialUserInfo.get(SocialId("102113"), SocialNetworks.FACEBOOK).withUser(users(1)).save
+
+          // Not Eishay's friend
+          SocialUserInfo.get(SocialId("113102"), SocialNetworks.FACEBOOK).withUser(users(2)).save
+        }
+        
+        inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, eishayJson)
+        inject[SocialUserCreateConnections].createConnections(andrewSocialUserInfo, andrewJson)
+        
+        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = CX.withConnection { implicit conn =>
+          SocialConnection.all.size === 612
+          (SocialConnection.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
+          SocialConnection.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
+        }
+        
+        eishayFortyTwoConnection.size === 3
+        eishayFortyTwoConnection.contains(users(0).id.get) === true
+        eishayFortyTwoConnection.contains(users(1).id.get) === true
+        eishayFortyTwoConnection.contains(users(2).id.get) === false
+        
+        
+        andrewFortyTwoConnection.size === 2
+        andrewFortyTwoConnection.contains(users(0).id.get) === false
+        andrewFortyTwoConnection.contains(users(1).id.get) === false
+        andrewFortyTwoConnection.contains(users(2).id.get) === true
 
       }
     }
