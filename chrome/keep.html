@@ -6,11 +6,8 @@
     // Called when a message is passed.  We assume that the content script
   	// wants to show the page action.
 
-    function log(message, tab) {
-      if(tab) {
-        message = "[" + tab.id + "] " + message
-      }
-      console.log(message);
+    function log(message) {
+      console.log("[" + new Date().getTime() + "] " + message);
     }
 
     function error(exception, message) {
@@ -181,7 +178,7 @@
                 } else {
                   log("injecting hover: " + request, tab);
                   setTimeout(function() {
-                    chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit:hover] tab: " + tab.id + "')"}, 
+                    chrome.tabs.executeScript(tab.id, {code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:hover] tab: " + tab.id + "')"}, 
                       function(vars){
                         log("[callback] executed hover remote logging", tab);
                     });
@@ -220,7 +217,7 @@
     function injectGoogleDiv(tab) {
       log("injecting google_inject.js into tab", tab)
       try {
-        chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit:google] tab: " + tab.id + "')"}, 
+        chrome.tabs.executeScript(tab.id, {code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:google] tab: " + tab.id + "')"}, 
           function(vars){
             log("[callback] executed logging", tab);
         });
@@ -311,7 +308,7 @@
         },
         "json"
       ).error(function(error) {
-        console.log(error.responseText);
+        log(error.responseText);
         alert("got error resposne" + error.responseText);
         callback(null);
       });

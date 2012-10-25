@@ -1,7 +1,12 @@
 
 (function() {
+  function log(message) {
+    console.log("[" + new Date().getTime() + "] " + message);
+  }
+
+  log("FT content script starting");
   if (window.top !== window) {
-    console.log("should run only on top window");
+    log("should run only on top window");
     return;
   }
   var href = document.location.href;
@@ -11,19 +16,19 @@
   if (isGoogle) {
     var mngb = document.getElementById("mngb");
     if (!mngb) {
-      console.log("google mngb is not there, forget it!");
+      log("google mngb is not there, forget it!");
       return;
     }
   }
-  console.log("keepit: location is " + host + " isGoogle = " + isGoogle);
+  log("keepit: location is " + host + " isGoogle = " + isGoogle);
 
   chrome.extension.sendRequest({
     type: "init_page", 
     location: document.location.href,
     isGoogle: isGoogle
     }, function(response) {
-      console.log("init page response: ");
-      console.log(response);      
+      log("[" + new Date().getTime() + "] init page response");
+      log(response);      
     }
   );
 
