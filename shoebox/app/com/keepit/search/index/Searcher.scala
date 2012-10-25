@@ -13,23 +13,29 @@ class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends Ind
 
   // search: hits are ordered by score
   def search(query: Query): Seq[Hit] = {
+    val hitBuf = new ArrayBuffer[Hit]()
     doSearch(query){ scorer =>
-      val hitBuf = new ArrayBuffer[Hit]()
       var doc = scorer.nextDoc()
       while (doc != NO_MORE_DOCS) {
         var score = scorer.score()
         hitBuf += Hit(idMapper.getId(doc), score)
         doc = scorer.nextDoc()
       }
-      hitBuf.sortWith((a, b) => a.score >= b.score).toSeq
     }
+    hitBuf.sortWith((a, b) => a.score >= b.score).toSeq
   }
   
-  def doSearch[R](query: Query)(f:Scorer => R) = {
+  def doSearch[R](query: Query)(f: Scorer => Unit) = {
     val rewrittenQuery = rewrite(query)
-    val weight = createNormalizedWeight(rewrittenQuery)
-    val scorer = weight.scorer(indexReader, true, true)
-    f(scorer)
+    if (rewrittenQuery != null) {
+      val weight = createNormalizedWeight(rewrittenQuery)
+      if(weight != null) {
+        val scorer = weight.scorer(indexReader, true, true)
+        if (scorer != null) {
+          f(scorer)
+        }
+      }
+    }
   }
   
   def getHitQueue(size: Int) = new HitQueue(size)

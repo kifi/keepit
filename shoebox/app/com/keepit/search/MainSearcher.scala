@@ -8,51 +8,55 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.PriorityQueue
 import scala.math._
 
-class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph) {
+class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: SearchConfig) {
+  // get config params
+  val maxMyBookmarks = config.asInt("maxMyBookmarks")
+  val maxTextHitsPerCategory = config.asInt("maxTextHitsPerCategory")
+  val myBookmarkBoost = config.asFloat("myBookmarkBoost")
+  val sharingBoost = config.asFloat("sharingBoost")
+  val othersBookmarkWeight = config.asFloat("othersBookmarkWeight")
+    
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
   val articleSearcher = articleIndexer.getArticleSearcher
   val uriGraphSearcher = uriGraph.getURIGraphSearcher
-  val noFriends = Set.empty[Id[User]]
+  val NO_FRIEND_IDS = Set.empty[Id[User]]
   
   def searchText(queryString: String, userId: Id[User], friends: Set[Id[User]], filterOut: Set[Long], maxTextHitsPerCategory: Int) = {
   
-    val myUris = uriGraphSearcher.getUserToUriEdgeSet(userId).destIdLongSet
-    val friendlyUris = myUris ++ friends.flatMap(uriGraphSearcher.getUserToUriEdgeSet(_).destIdLongSet)
+    val myUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = false).destIdLongSet
+    val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
+    val friendlyUris = myUris ++ friends.flatMap(uriGraphSearcher.getUserToUriEdgeSet(_, publicOnly = true).destIdLongSet)
     
     val mapper = articleSearcher.idMapper
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
     
-    val articleQuery = articleIndexer.parse(queryString)
-    articleSearcher.doSearch(articleQuery){ scorer =>
-      var doc = scorer.nextDoc()
-      while (doc != NO_MORE_DOCS) {
-        val id = mapper.getId(doc)
-        if (!filterOut.contains(id)) {
-          val score = scorer.score()
-          if (friendlyUris.contains(id)) {
-            if (myUris.contains(id)) {
-              myHits.insert(id, true, score, noFriends)
+    articleIndexer.parse(queryString).map{ articleQuery =>
+      articleSearcher.doSearch(articleQuery){ scorer =>
+        var doc = scorer.nextDoc()
+        while (doc != NO_MORE_DOCS) {
+          val id = mapper.getId(doc)
+          if (!filterOut.contains(id)) {
+            val score = scorer.score()
+            if (friendlyUris.contains(id)) {
+              if (myUris.contains(id)) {
+                myHits.insert(id, true, myPublicUris.contains(id), score, NO_FRIEND_IDS)                
+              } else {
+                friendsHits.insert(id, false, false, score, NO_FRIEND_IDS)
+              }
             } else {
-              friendsHits.insert(id, false, score, noFriends)
+              othersHits.insert(id, false, false, score, NO_FRIEND_IDS)
             }
-          } else {
-            othersHits.insert(id, false, score, noFriends)
           }
+          doc = scorer.nextDoc()
         }
-        doc = scorer.nextDoc()
       }
     }
     (myHits, friendsHits, othersHits)
   }
   
-  def search(queryString: String, userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], numHitsToReturn: Int, config: SearchConfig): Seq[ArticleHit] = {
-    val maxMyBookmarks = config.asInt("maxMyBookmarks")
-    val maxTextHitsPerCategory = config.asInt("maxTextHitsPerCategory")
-    val myBookmarkBoost = config.asFloat("myBookmarkBoost")
-    val sharingBoost = config.asFloat("sharingBoost")
-    val othersBookmarkWeight = config.asFloat("othersBookmarkWeight")
+  def search(queryString: String, userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], numHitsToReturn: Int): Seq[ArticleHit] = {
     
     val (myHits, friendsHits, othersHits) = searchText(queryString, userId, friendIds, filterOut, maxTextHitsPerCategory = maxTextHitsPerCategory)
     
@@ -62,9 +66,9 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph) {
     
     myHits.foreach{ h =>
       val id = Id[NormalizedURI](h.id)
-      val sharingFriends = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
-      h.friends = sharingFriends
-      h.score = score(h.score / myHits.highScore, myBookmarkBoost, sharingFriends.size.toFloat, sharingBoost)
+      val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
+      h.users = sharingUsers
+      h.score = score(h.score / myHits.highScore, myBookmarkBoost, sharingUsers.size.toFloat, sharingBoost)
       hits.insert(h)
     }
     
@@ -75,9 +79,9 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph) {
     if (hits.size < numHitsToReturn) {
       friendsHits.foreach{ h =>
         val id = Id[NormalizedURI](h.id)
-        val sharingFriends = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
-        h.friends = sharingFriends
-        h.score = score(h.score / friendsHits.highScore, 1.0f, sharingFriends.size.toFloat, sharingBoost)
+        val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
+        h.users = sharingUsers
+        h.score = score(h.score / friendsHits.highScore, 1.0f, sharingUsers.size.toFloat, sharingBoost)
         hits.insert(h)
       }
     }
@@ -110,9 +114,9 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
 
   var overflow: MutableArticleHit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
   
-  def insert(id: Long, isMyBookmark: Boolean, score: Float, friends: Set[Id[User]]) {
-    if (overflow == null) overflow = new MutableArticleHit(id, isMyBookmark, score, friends)
-    else overflow(id, isMyBookmark, score, friends)
+  def insert(id: Long, isMyBookmark: Boolean, isPrivate: Boolean, score: Float, friends: Set[Id[User]]) {
+    if (overflow == null) overflow = new MutableArticleHit(id, isMyBookmark, isPrivate, score, friends)
+    else overflow(id, isMyBookmark, isPrivate, score, friends)
     
     if (score > highScore) highScore = score
     
@@ -159,15 +163,16 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
   }
 }
 
-case class ArticleHit(uriId: Id[NormalizedURI], isMyBookmark: Boolean, friends: Set[Id[User]], score: Float)
+case class ArticleHit(uriId: Id[NormalizedURI], isMyBookmark: Boolean, isPrivate: Boolean, users: Set[Id[User]], score: Float)
 
 // mutable hit object for efficiency
-class MutableArticleHit(var id: Long, var isMyBookmark: Boolean, var score: Float, var friends: Set[Id[User]]) {
-  def apply(newId: Long, newIsMyBookmark: Boolean, newScore: Float, newFriends: Set[Id[User]]) = {
+class MutableArticleHit(var id: Long, var isMyBookmark: Boolean, var isPrivate: Boolean, var score: Float, var users: Set[Id[User]]) {
+  def apply(newId: Long, newIsMyBookmark: Boolean, newIsPrivate: Boolean, newScore: Float, newUsers: Set[Id[User]]) = {
     id = newId
     isMyBookmark = newIsMyBookmark
+    isPrivate = newIsPrivate
     score = newScore
-    friends = newFriends
+    users = newUsers
   }
-  def toArticleHit = ArticleHit(Id[NormalizedURI](id), isMyBookmark, friends, score)
+  def toArticleHit = ArticleHit(Id[NormalizedURI](id), isMyBookmark, isPrivate, users, score)
 }
