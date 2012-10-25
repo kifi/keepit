@@ -33,6 +33,13 @@ import com.keepit.common.social.SocialUserRawInfoStore
 
 object SocialUserController extends Controller with Logging with SecureSocial {
 
+  def resetSocialUser(socialUserId: Id[SocialUserInfo]) = SecuredAction(false) { implicit request =>
+    val socialUserInfo = CX.withConnection { implicit conn =>
+      SocialUserInfo.get(socialUserId).reset().save
+    }
+    Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfo.id.get))
+  }
+  
   def socialUserView(socialUserId: Id[SocialUserInfo]) = SecuredAction(false) { implicit request => 
     
     val (socialUserInfo, socialConnections) = CX.withConnection { implicit conn =>
@@ -51,7 +58,6 @@ object SocialUserController extends Controller with Logging with SecureSocial {
     val socialUsers = CX.withConnection { implicit c => SocialUserInfo.all.sortWith((a,b) => a.fullName < b.fullName) }
     Ok(views.html.socialUsers(socialUsers))
   }
-  
   def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = SecuredAction(false) { implicit request => 
     val graph = inject[SocialGraphPlugin]
     CX.withConnection { implicit conn =>
