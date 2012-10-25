@@ -48,7 +48,7 @@ object SocialUserController extends Controller with Logging with SecureSocial {
   }
 
   def socialUsersView = SecuredAction(false) { implicit request => 
-    val socialUsers = CX.withConnection { implicit c => SocialUserInfo.all }
+    val socialUsers = CX.withConnection { implicit c => SocialUserInfo.all.sortWith((a,b) => a.fullName < b.fullName) }
     Ok(views.html.socialUsers(socialUsers))
   }
   
