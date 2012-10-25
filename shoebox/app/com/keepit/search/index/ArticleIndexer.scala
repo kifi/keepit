@@ -75,13 +75,16 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   
   private val parser = new ArticleQueryParser
 
-  def parse(queryText: String): Query = {
-    parser.parse(queryText)
-  }
+  def parse(queryText: String): Option[Query] = Option(parser.parse(queryText))
   
   def getArticleSearcher() = searcher
   
-  def search(queryString: String): Seq[Hit] = searcher.search(parse(queryString))
+  def search(queryText: String): Seq[Hit] = {
+    parse(queryText) match {
+      case Some(query) => searcher.search(query)
+      case None => Seq.empty[Hit]
+    }
+  }
   
   def buildIndexable(uri: NormalizedURI) = {
     new ArticleIndexable(uri.id.get, uri, articleStore)

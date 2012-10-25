@@ -31,6 +31,7 @@ import java.sql.Connection
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.net.HttpClient
+import com.keepit.search.graph.URIGraphPlugin
 
 object BookmarksController extends Controller with Logging with SecureSocial {
 
@@ -47,6 +48,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
     CX.withConnection { implicit conn =>
       val bookmark = Bookmark.get(id)
       bookmark.delete()
+      inject[URIGraphPlugin].update(bookmark.userId)
       Redirect(com.keepit.controllers.routes.BookmarksController.bookmarksView(0))
     }
   }  
@@ -82,6 +84,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
     val user = CX.withConnection { implicit conn => User.get(keepitExternalId) }
     log.info("adding bookmarks of user %s".format(user))
     internBookmarks(json \ "bookmarks", user, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN"))) 
+    inject[URIGraphPlugin].update(user.id.get)
     Ok(JsObject(("status" -> JsString("success")) :: 
         ("userId" -> JsString(user.id.map(id => id.id.toString()).getOrElse(""))) :: Nil))//todo: need to send external id
   }
