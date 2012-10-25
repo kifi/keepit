@@ -69,7 +69,7 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: S
       val id = Id[NormalizedURI](h.id)
       val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet - userId
       h.users = sharingUsers
-      h.score = score(h.score / myHits.highScore, myBookmarkBoost, sharingUsers.size.toFloat, sharingBoost)
+      h.score = score(h.score / myHits.highScore, myBookmarkBoost, (sharingUsers.size + 1).toFloat, sharingBoost)
       hits.insert(h)
     }
     
