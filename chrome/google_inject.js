@@ -150,12 +150,14 @@ console.log("starting keepit google_inject.js");
           socialBarText.append(
             "<span class='social_bar_message_highlighted'>" + numOfUsers + " other friends</span>" + 
             "<span class='social_bar_message'>choose to keep this</span>");
-        } else if (e.count > 1) { //no friends but there are people outside my network
-          if (e.isMyBookmark) { //no friends, only me
-            socialBarText.append(
-              "<span class='social_bar_message_highlighted'>and " + (e.count - 1) + " others</span>" + 
-              "<span class='social_bar_message'>choose to keep this</span>");
-          } else { //no friends, not even only me
+        } else { //no friends
+          if (e.isMyBookmark) { // I kept it
+            if (e.count > 1) { //there are people outside my network
+              socialBarText.append(
+                "<span class='social_bar_message_highlighted'>and " + (e.count - 1) + " others</span>" + 
+                "<span class='social_bar_message'>choose to keep this</span>");
+            }
+          } else { //all out of my network
             socialBarText.append(
               "<span class='social_bar_message_highlighted'>" + e.count + " others</span>" + 
               "<span class='social_bar_message'>choose to keep this</span>");
