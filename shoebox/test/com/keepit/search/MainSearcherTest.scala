@@ -65,7 +65,8 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === users.size
         indexer.run() === uris.size
         
-        val mainSearcher= new MainSearcher(indexer, graph)
+        val config = SearchConfig.getDefaultConfig
+        val mainSearcher= new MainSearcher(indexer, graph, config)
         val graphSearcher = mainSearcher.uriGraphSearcher
         
         val numHitsPerCategory = 1000
@@ -135,9 +136,9 @@ class MainSearcherTest extends SpecificationWithJUnit {
           graph.load() === users.size
           indexer.run() === uris.size
           
-          val mainSearcher= new MainSearcher(indexer, graph)
+          val config = SearchConfig.getDefaultConfig
+          val mainSearcher= new MainSearcher(indexer, graph, config)
           val graphSearcher = mainSearcher.uriGraphSearcher
-          val config = SearchConfig.default
           
           val numHitsToReturn = 7
           users.foreach{ user =>
@@ -152,14 +153,14 @@ class MainSearcherTest extends SpecificationWithJUnit {
               } -- myUriIds
               val othersUriIds = (uris.map(_.id.get).toSet) -- friendsUriIds -- myUriIds
 
-              val hits = mainSearcher.search("alldocs", userId, friendIds, Set.empty[Long], numHitsToReturn, config)
+              val hits = mainSearcher.search("alldocs", userId, friendIds, Set.empty[Long], numHitsToReturn)
               
               var mCnt = 0
               var fCnt = 0
               var oCnt = 0
               hits.foreach{ h => 
                 if (h.isMyBookmark) mCnt += 1
-                else if (! h.friends.isEmpty) fCnt += 1
+                else if (! h.users.isEmpty) fCnt += 1
                 else oCnt += 1
               }
               //println(hits)
@@ -203,9 +204,9 @@ class MainSearcherTest extends SpecificationWithJUnit {
           graph.load() === users.size
           indexer.run() === uris.size
           
-          val mainSearcher= new MainSearcher(indexer, graph)
+          val config = SearchConfig.getDefaultConfig
+          val mainSearcher= new MainSearcher(indexer, graph, config)
           val graphSearcher = mainSearcher.uriGraphSearcher
-          val config = SearchConfig.default
           
           val numHitsToReturn = 3
           val userId = Id[User](8)
@@ -214,7 +215,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           var uriSeen = Set.empty[Long]
           while(uriSeen.size < uris.size) {
             println("---")
-            val hits = mainSearcher.search("alldocs", userId, friendIds, uriSeen, numHitsToReturn, config)
+            val hits = mainSearcher.search("alldocs", userId, friendIds, uriSeen, numHitsToReturn)
             hits.foreach{ h => 
               println(h)
               uriSeen.contains(h.uriId.id) === false

@@ -119,7 +119,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     Map() ++ mutableMap
   }
   
-  def parse(queryText: String): Query
+  def parse(queryText: String): Option[Query]
   
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
   
