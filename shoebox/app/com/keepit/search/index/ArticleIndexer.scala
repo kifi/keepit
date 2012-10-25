@@ -4,8 +4,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.graph.UserToUserEdgeSet
+import com.keepit.search.SearchConfig
 import com.keepit.model._
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.db.CX
@@ -19,7 +18,6 @@ import org.apache.lucene.queryParser.QueryParser
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause._
-import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import org.apache.lucene.util.PriorityQueue
@@ -28,16 +26,16 @@ import java.io.File
 import java.io.IOException
 
 object ArticleIndexer {
-  def apply(indexDirectory: Directory, articleStore: ArticleStore, uriGraph: URIGraph): ArticleIndexer = {
+  def apply(indexDirectory: Directory, articleStore: ArticleStore): ArticleIndexer = {
     val analyzer = new StandardAnalyzer(Version.LUCENE_36)
     analyzer.setMaxTokenLength(256)
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
 
-    new ArticleIndexer(indexDirectory, config, articleStore, uriGraph)
+    new ArticleIndexer(indexDirectory, config, articleStore)
   }
 }
 
-class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, articleStore: ArticleStore, uriGraph: URIGraph)
+class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, articleStore: ArticleStore)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
   val commitBatchSize = 100
@@ -81,57 +79,9 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     parser.parse(queryText)
   }
   
-  def search(queryString: String): Seq[Hit] = searcher.search(parse(queryString))
+  def getArticleSearcher() = searcher
   
-  def search(queryString: String, userId: Id[User], friends: Set[Id[User]],
-             maxMyBookmark: Int, maxFriendsBookmark: Int, maxOthersBookmark: Int): ArticleSearchResult = {
-    
-    // get searchers. subsequent operations should use these for consistency since indexing may refresh them
-    val articleSearcher = searcher
-    val graphSearcher = uriGraph.getURIGraphSearcher
-
-    val myUris = graphSearcher.getUserToUriEdgeSet(userId).destIdLongSet
-    val friendlyUris = myUris ++ friends.flatMap(graphSearcher.getUserToUriEdgeSet(_).destIdLongSet)
-    val friendEdgeSet = new UserToUserEdgeSet(userId, friends)
-
-    val mapper = articleSearcher.idMapper
-    val myHits = articleSearcher.getHitQueue(maxMyBookmark)
-    val friendsHits = articleSearcher.getHitQueue(maxFriendsBookmark)
-    val othersHits = articleSearcher.getHitQueue(maxOthersBookmark)
-    
-    articleSearcher.doSearch(parse(queryString)){ scorer =>
-      var doc = scorer.nextDoc()
-      var score = scorer.score()
-      while (doc != NO_MORE_DOCS) {
-        val id = mapper.getId(doc)
-        if (friendlyUris.contains(id)) {
-          if (myUris.contains(id)) {
-            myHits.insert(id, score)
-          } else {
-            friendsHits.insert(id, score)
-          }
-        } else {
-          othersHits.insert(id, score)
-        }
-        doc = scorer.nextDoc()
-      }
-    }
-    
-    ArticleSearchResult(
-      myHits.toList.map{ h =>
-        val id = Id[NormalizedURI](h.id)
-        ArticleHit(id, graphSearcher.intersect(friendEdgeSet, graphSearcher.getUriToUserEdgeSet(id)).destIdSet, h.score)
-      }.toSeq,
-      friendsHits.toList.map{ h =>
-        val id = Id[NormalizedURI](h.id)
-        ArticleHit(id, graphSearcher.intersect(friendEdgeSet, graphSearcher.getUriToUserEdgeSet(id)).destIdSet, h.score)
-      }.toSeq,
-      othersHits.toList.map{ h =>
-        val id = Id[NormalizedURI](h.id)
-        ArticleHit(id, Set.empty[Id[User]], h.score)
-      }.toSeq
-    )
-  }
+  def search(queryString: String): Seq[Hit] = searcher.search(parse(queryString))
   
   def buildIndexable(uri: NormalizedURI) = {
     new ArticleIndexable(uri.id.get, uri, articleStore)
@@ -168,6 +118,3 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   }
 }
 
-case class ArticleSearchResult(myHits: Seq[ArticleHit], friendsHits: Seq[ArticleHit], othersHits: Seq[ArticleHit])
-
-case class ArticleHit(uriId: Id[NormalizedURI], friends: Set[Id[User]], score: Float)

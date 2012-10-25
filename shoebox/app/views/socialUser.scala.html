@@ -21,6 +21,9 @@
           function refreshSociaUserInfo() {
             location.href="@com.keepit.controllers.routes.SocialUserController.refreshSocialInfo(socialUserInfo.id.get)"
           }
+          function resetSociaUserInfo() {
+            location.href="@com.keepit.controllers.routes.SocialUserController.resetSocialUser(socialUserInfo.id.get)"
+          }
         </script>
         <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/admin_main.css")">
     </head>
@@ -59,8 +62,7 @@
 	      
 	      <br/>
 	      <button onclick="refreshSociaUserInfo()">Refresh Social User Info!</button>
-      
-      
+	      <button onclick="resetSociaUserInfo()">Reset Social User Info credentials!</button>
       
     </body>
 </html>
