@@ -23,14 +23,14 @@ class FacebookSocialGraph @Inject() (httpClient: HttpClient) {
         json)
   }
   
-  def getAccessToken(socialUserInfo: SocialUserInfo): String = {
-    val credentials = socialUserInfo.credentials.get
-    val oAuth2Info = credentials.oAuth2Info.get
+  private def getAccessToken(socialUserInfo: SocialUserInfo): String = {
+    val credentials = socialUserInfo.credentials.getOrElse(throw new Exception("Can't find credentials for %s".format(socialUserInfo)))
+    val oAuth2Info = credentials.oAuth2Info.getOrElse(throw new Exception("Can't find oAuth2Info for %s".format(socialUserInfo)))
     oAuth2Info.accessToken
   }
   
-  def fetchJson(socialUserInfo: SocialUserInfo): JsValue = httpClient.longTimeout.get(url(socialUserInfo.socialId, getAccessToken(socialUserInfo))).json
+  private def fetchJson(socialUserInfo: SocialUserInfo): JsValue = httpClient.longTimeout.get(url(socialUserInfo.socialId, getAccessToken(socialUserInfo))).json
   
-  def url(id: SocialId, accessToken: String) = "https://graph.facebook.com/%s?access_token=%s&fields=%s,friends.fields(%s)".format(
+  private def url(id: SocialId, accessToken: String) = "https://graph.facebook.com/%s?access_token=%s&fields=%s,friends.fields(%s)".format(
       id.id, accessToken, FacebookSocialGraph.FULL_PROFILE, FacebookSocialGraph.FULL_PROFILE)
 }
