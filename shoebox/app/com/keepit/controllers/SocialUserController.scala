@@ -52,15 +52,11 @@ object SocialUserController extends Controller with Logging with SecureSocial {
     Ok(views.html.socialUsers(socialUsers))
   }
   
-  def refreshSocialInfo(userId: Id[User]) = SecuredAction(false) { implicit request => 
-    val socialUserInfos = CX.withConnection { implicit c => 
-      val user = User.get(userId)
-      SocialUserInfo.getByUser(user.id.get)
-    }
+  def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = SecuredAction(false) { implicit request => 
     val graph = inject[SocialGraphPlugin]
-    socialUserInfos foreach { info =>
-      graph.asyncFetch(info)
-    }
-    Redirect(com.keepit.controllers.routes.UserController.userView(userId))
+    CX.withConnection { implicit conn =>
+      graph.asyncFetch(SocialUserInfo.get(socialUserInfoId)) 
+    }    
+    Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfoId))
   }
 }
