@@ -19,8 +19,9 @@ GET     /users                      com.keepit.controllers.UserController.usersV
 GET     /user                       com.keepit.controllers.UserController.userView(userId: Id[User])
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
 
-GET     /socialUsers                com.keepit.controllers.SocialUserController.socialUsersView
-GET     /socialUser                       com.keepit.controllers.SocialUserController.socialUserView(socialUserId: Id[SocialUserInfo])
+GET     /social_users               com.keepit.controllers.SocialUserController.socialUsersView
+GET     /social_user                com.keepit.controllers.SocialUserController.socialUserView(socialUserId: Id[SocialUserInfo])
+GET     /reset_social_users         com.keepit.controllers.SocialUserController.resetSocialUser(socialUserId: Id[SocialUserInfo])
 
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
 GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
