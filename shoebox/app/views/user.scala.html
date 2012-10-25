@@ -18,17 +18,11 @@
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
         <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
         <script type="text/javascript">
-          function refreshSociaUserInfo() {
-            location.href="@com.keepit.controllers.routes.UserController.refreshSocialInfo(userWithSocial.user.id.get)"
+          function refreshAllSociaUserInfo() {
+            location.href="@com.keepit.controllers.routes.UserController.refreshAllSocialInfo(userWithSocial.user.id.get)"
           }
         </script>
-        <style>
-          .scrollArea {
-            max-height: 400px;
-            width: 400px;
-            overflow: auto;
-          }
-        </style>
+        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/admin_main.css")">
     </head>
     <body>
       [<a href="@com.keepit.controllers.routes.UserController.usersView">All Users</a>]<br/><br/>
@@ -44,7 +38,7 @@
         <h3>Social User: @for(socialUserInfo <-socialUserInfos) {
           @adminHelper.socialUserDisplay(socialUserInfo, true) &nbsp; 
         }</h3>
-	      <button onclick="refreshSociaUserInfo()">Refresh Social User Info!</button>
+	      <button onclick="refreshAllSociaUserInfo()">Refresh Social User Info!</button>
       
       <h2>User kept @bookmarks.size Bookmarks</h2>
       
