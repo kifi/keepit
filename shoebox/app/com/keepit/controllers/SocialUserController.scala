@@ -34,23 +34,10 @@ import com.keepit.common.social.SocialUserRawInfoStore
 object SocialUserController extends Controller with Logging with SecureSocial {
 
   def socialUserView(socialUserId: Id[SocialUserInfo]) = SecuredAction(false) { implicit request => 
-    /*val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections) = CX.withConnection { implicit c =>
-      val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId)) 
-      val bookmarks = Bookmark.ofUser(userWithSocial.user)
-      val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
-      val socialConnections = SocialConnection.getUserConnections(userId)
-      val fortyTwoConnections = SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial
-
-      
-      (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections)
-    }
-    val rawInfos = socialUserInfos map {info =>
-      inject[SocialUserRawInfoStore].get(info.id.get)
-    } */
     
     val (socialUserInfo, socialConnections) = CX.withConnection { implicit conn =>
       val socialUserInfo = SocialUserInfo.get(socialUserId)
-      val socialConnections = SocialConnection.getSocialUserConnections(socialUserId)
+      val socialConnections = SocialConnection.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName)
       
       (socialUserInfo, socialConnections)
     }
@@ -61,8 +48,8 @@ object SocialUserController extends Controller with Logging with SecureSocial {
   }
 
   def socialUsersView = SecuredAction(false) { implicit request => 
-    val users = CX.withConnection { implicit c => User.all map UserWithSocial.toUserWithSocial}
-    Ok(views.html.users(users))
+    val socialUsers = CX.withConnection { implicit c => SocialUserInfo.all }
+    Ok(views.html.socialUsers(socialUsers))
   }
   
   def refreshSocialInfo(userId: Id[User]) = SecuredAction(false) { implicit request => 

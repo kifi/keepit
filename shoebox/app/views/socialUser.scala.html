@@ -30,16 +30,16 @@
         </style>
     </head>
     <body>
-      [<a href="@com.keepit.controllers.routes.UserController.usersView">All Social Users</a>]<br/><br/>
+      [<a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView">All Social Users</a>]<br/><br/>
       <h2>Social User details</h2>
 	      Name: @socialUserInfo.fullName<br/>
 	      Id: @socialUserInfo.id.get<br/>
 	      Facebook Account: @userWithFacebookDisplay(socialUserInfo)<br/>
 	      State: @socialUserInfo.state<br/>
 	      Credentials:<br/><textarea rows="3" cols="80">@socialUserInfo.credentials</textarea><br/>
-	      Account created at: @adminHelper.dateDisplay(socialUserInfo.createdAt) @adminHelper.timeDisplay(socialUserInfo.createdAt)<br/>
-	      Last updated: @adminHelper.dateDisplay(socialUserInfo.updatedAt) @adminHelper.timeDisplay(socialUserInfo.updatedAt)<br/>
-	      Social Raw info: <br/><textarea rows="7" cols="80">@rawInfo</textarea>
+	      Social Raw info: <br/><textarea rows="7" cols="80">@rawInfo</textarea><br/>
+        Account created at: @adminHelper.dateDisplay(socialUserInfo.createdAt) @adminHelper.timeDisplay(socialUserInfo.createdAt)<br/>
+        Last updated: @adminHelper.dateDisplay(socialUserInfo.updatedAt) @adminHelper.timeDisplay(socialUserInfo.updatedAt)
 
         @if(socialUserInfo.userId.isDefined) {
           <h3>Forty Two User: @adminHelper.socialUserDisplay(socialUserInfo)</h3>
