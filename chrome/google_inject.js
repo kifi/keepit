@@ -114,6 +114,12 @@ console.log("starting keepit google_inject.js");
         var missingId = 1;
         console.log(e.users);
         console.log("there are " + e.users.length + " users who kept this bookmark:");
+        if (e.isMyBookmark) {
+          var myView = $('<a data-hover="tooltip" title="Me - I look good!" class="name_tooltip_link" href="http://www.facebook.com/' + userInfo.facebook_id + '" target="_blank">' + 
+                '<img class="keep_face" src="https://graph.facebook.com/' + userInfo.facebook_id + '/picture?type=square" alt="Me - I look good!">' + 
+              '</a>');
+          socialBar.append(myView);
+        }
         $(e.users).each(function(j, user){
           var userView;
           if(user.facebookId) {
@@ -144,10 +150,16 @@ console.log("starting keepit google_inject.js");
           socialBarText.append(
             "<span class='social_bar_message_highlighted'>" + numOfUsers + " other friends</span>" + 
             "<span class='social_bar_message'>choose to keep this</span>");
-        } else { //no users
-          socialBarText.append(
-            "<span class='social_bar_message_highlighted'>" + e.count + " others</span>" + 
-            "<span class='social_bar_message'>choose to keep this</span>");
+        } else if (e.count > 1) { //no friends but there are people outside my network
+          if (e.isMyBookmark) { //no friends, only me
+            socialBarText.append(
+              "<span class='social_bar_message_highlighted'>and " + (e.count - 1) + " others</span>" + 
+              "<span class='social_bar_message'>choose to keep this</span>");
+          } else { //no friends, not even only me
+            socialBarText.append(
+              "<span class='social_bar_message_highlighted'>" + e.count + " others</span>" + 
+              "<span class='social_bar_message'>choose to keep this</span>");
+          }
         }
         socialBar.append(socialBarText);
         addActionToSocialBar(socialBar);
