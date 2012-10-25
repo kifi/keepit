@@ -32,13 +32,12 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
 
   def save(socialUser: SocialUser): Unit = CX.withConnection { implicit conn => 
     //todo(eishay) take the network type from the socialUser
-    log.debug("` %s".format(socialUser))
+    log.debug("persisting social user %s".format(socialUser))
     val socialUserInfo = internUser(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK, socialUser)
     if (socialUserInfo.state != SocialUserInfo.States.FETCHED_USING_SELF) {
       inject[SocialGraphPlugin].asyncFetch(socialUserInfo)
     }
     log.debug("persisting %s into %s".format(socialUser, socialUserInfo))
-    socialUserInfo.withCredentials(socialUser).save 
   }
   
   private def createUser(displayName: String) = {
@@ -56,12 +55,13 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
         val user = createUser(socialUserInfo.fullName).save
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request 
-        socialUserInfo.withUser(user).save
+        socialUserInfo.withUser(user).withCredentials(socialUser).save
       case None =>
         val user = createUser(socialUser.displayName).save
         log.debug("creating new SocialUserInfo for %s".format(user))
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved 
-            socialId = socialId, networkType = SocialNetworks.FACEBOOK, fullName = socialUser.displayName, credentials = Some(socialUser)).save
+            socialId = socialId, networkType = SocialNetworks.FACEBOOK, 
+            fullName = socialUser.displayName, credentials = Some(socialUser)).save
         log.debug("SocialUserInfo created is %s".format(userInfo))
         userInfo
     }

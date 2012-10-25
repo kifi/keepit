@@ -46,6 +46,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
       
     case FetchUserInfo(user) => 
       try {
+        log.info("fetching raw info for %s".format(user))
         val rawInfo = graph.fetchSocialUserRawInfo(user)
         log.info("fetched raw info %s for %s".format(rawInfo, user))
         CX.withConnection { implicit c =>
@@ -100,7 +101,10 @@ class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: Faceboo
     Await.result(future, 1 minutes)
   } 
   
-  override def asyncFetch(socialUserInfo: SocialUserInfo): Unit = actor ! FetchUserInfo(socialUserInfo)
+  override def asyncFetch(socialUserInfo: SocialUserInfo): Unit = {
+    if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))
+    actor ! FetchUserInfo(socialUserInfo)
+  }
 }
 
 
