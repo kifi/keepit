@@ -84,7 +84,7 @@ object SocialConnection extends Logging {
         ((sc.socialUser1 EQ u2) AND (sc.socialUser2 EQ u1))) unique } map ( _.view )
   }
   
-  def getUserConnections(id: Id[User])(implicit conn: Connection) = {
+  def getUserConnections(id: Id[User])(implicit conn: Connection): Seq[SocialUserInfo] = {
     
     val suis = SocialUserInfo.getByUser(id).map(_.id.get)
     
@@ -96,6 +96,18 @@ object SocialConnection extends Logging {
       SELECT (sui.*) FROM sui WHERE (sui.id IN(conns)) list
     } map (_.view)
     
+    
+  }
+  
+  def getSocialUserConnections(id: Id[SocialUserInfo])(implicit conn: Connection): Seq[SocialUserInfo] = {
+    
+    val conns = (SocialConnectionEntity AS "sc").map { sc =>
+      SELECT (sc.*) FROM sc WHERE ((sc.socialUser1 EQ id) OR (sc.socialUser2 EQ id)) list
+    } map (_.view) map (s => if(id == s.socialUser1) s.socialUser2 else s.socialUser1 ) toList
+    
+    (SocialUserInfoEntity AS "sui").map { sui =>
+      SELECT (sui.*) FROM sui WHERE (sui.id IN(conns)) list
+    } map (_.view)
     
   }
 

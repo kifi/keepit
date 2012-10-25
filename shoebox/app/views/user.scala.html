@@ -22,6 +22,13 @@
             location.href="@com.keepit.controllers.routes.UserController.refreshSocialInfo(userWithSocial.user.id.get)"
           }
         </script>
+        <style>
+          .scrollArea {
+            max-height: 400px;
+            width: 400px;
+            overflow: auto;
+          }
+        </style>
     </head>
     <body>
       [<a href="@com.keepit.controllers.routes.UserController.usersView">All Users</a>]<br/><br/>
@@ -29,7 +36,7 @@
 	      Name: @userWithSocial.user.firstName @userWithSocial.user.lastName<br/>
 	      Id: @userWithSocial.user.id<br/>
 	      Facebook Account: @userWithFacebookDisplay(userWithSocial)<br/>
-	      OAuth: @socialUserInfos<br/>
+	      OAuth: <br/><textarea rows="3" cols="80">@socialUserInfos</textarea><br/>
 	      Social Raw info: <br/><textarea rows="7" cols="80">@rawInfos</textarea><br/>
 	      Account created at: @adminHelper.dateDisplay(userWithSocial.user.createdAt) @adminHelper.timeDisplay(userWithSocial.user.createdAt)<br/>
 	      <br/>
@@ -61,17 +68,22 @@
           <td>@userWithSocial.user.createdAt</td>
         </tr>
       }
-      
-      
-		  <h2>User connected to @socialConnections.size Social Users</h2>
-		  <span>
-        @for(socialConnection <- socialConnections) {
-          <a href="http://facebook.com/@socialConnection.socialId.id">@socialConnection.fullName</a>
-          @if(socialConnection.userId.isDefined) {
-            (<a href="@com.keepit.controllers.routes.UserController.userView(socialConnection.userId.get)">fortytwo account</a>)
-          }
+      <div class="scrollArea">
+        @for(userWithSocial <- fortyTwoConnections) {
+            @adminHelper.userDisplay(userWithSocial)<br/>
         }
-		  </span>
+      </div>
+      
+      
+      <h2>User connected to @socialConnections.size Social Users</h2>
+      <div class="scrollArea">
+        @for(socialConnection <- socialConnections) {
+          @adminHelper.socialUserDisplay(socialConnection)<br/>
+        }
+      </div>
+		  
+		  
+		  
       
       
     </body>
