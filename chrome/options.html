@@ -17,9 +17,15 @@
   }
 
   function resetUser() {
-    localStorage.removeItem("user");
-    localStorage.removeItem("user_info"); //to delete old user storgae
-    restoreConfigs();
+    chrome.extension.sendRequest({type: "remove_conf", key: "user"}, function(response) {
+      chrome.extension.sendRequest({type: "remove_conf", key: "user_info"}, function(response) {
+        restoreConfigs();
+      });  
+    });
+  }
+
+  function sendSaveConfig(key, value) {
+    chrome.extension.sendRequest({type: "set_conf", key: key, value: value}, function(response) {});
   }
 
   function saveConfigs() {
@@ -29,8 +35,8 @@
     else {
       localStorage["env"] = "development";
     }
-    localStorage["max_search_results"] = $("#max_search_results").val();
-    localStorage["hover_timeout"] = $("#hover_timeout").val();
+    sendSaveConfig("max_search_results", $("#max_search_results").val());
+    sendSaveConfig("hover_timeout", $("#hover_timeout").val());
   }
 
   function getuserinfo(callback) {
@@ -51,43 +57,39 @@
 
   function renderUserInfo(userInfo) {
     if (userInfo && userInfo.status && userInfo.status=="loggedin") {
-      localStorage["user"]  = JSON.stringify(userInfo);
+      setConfigs("user", JSON.stringify(userInfo));
       $("#user_info_data").show();
       $("#connect_to_server").hide();
       $("#user_name").html(userInfo.name);
       $("#user_avatar").attr("src", userInfo.avatar_url);
     } else {
-      localStorage.removeItem("user");
+      removeFromConfigs("user");
       $("#connect_to_server").show();
       $("#user_info_data").hide();
     }     
   }
 
   function restoreConfigs() {
-    var env = localStorage["env"];
+    chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
+      var env = config.env;
+      if (env=="development") {
+        $("#env_dev").attr("checked","checked");
+      }
+      if (env=="production") {
+        $("#env_prod").attr("checked","checked");
+      }
+      $("#max_search_results").val(config.max_search_results);
+      $("#hover_timeout").val(config.hover_timeout);
 
-    if (!env) {
-      env = "production";
-      localStorage["env"]=env;
-    }
-
-    if (env=="development") {
-      $("#env_dev").attr("checked","checked");
-    }
-    if (env=="production") {
-      $("#env_prod").attr("checked","checked");
-    }
-    $("#max_search_results").val(localStorage["max_search_results"]);
-    $("#hover_timeout").val(localStorage["hover_timeout"]);
-
-    $("#facebook_connect_link").click(function() {
-      chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
-        var url = "http://" + config.server + "/authenticate/facebook";
-        log("openning facebook window from " + url, "connect", "width=500,height=400");
-        window.open(url);
-        return false;
-      });
-    });  
+      $("#facebook_connect_link").click(function() {
+        chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
+          var url = "http://" + config.server + "/authenticate/facebook";
+          log("openning facebook window from " + url, "connect", "width=500,height=400");
+          window.open(url);
+          return false;
+        });
+      });  
+    });
     getuserinfo(renderUserInfo);
   }
   </script>
