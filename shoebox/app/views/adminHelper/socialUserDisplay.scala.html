@@ -1,0 +1,19 @@
+@(socialUserInfo: SocialUserInfo, socialOnly: Boolean = false)
+
+@userWithFacebookDisplay(socialUserInfo: SocialUserInfo, socialOnly: Boolean) = {
+  <span style="margin:2px">
+    @if(socialUserInfo.userId.isDefined && !socialOnly) {
+      <a data-hover="tooltip" title="@socialUserInfo.fullName+" 
+         class="name_tooltip_link" href="@com.keepit.controllers.routes.UserController.userView(socialUserInfo.userId.get)">
+        <img src="https://graph.facebook.com/@socialUserInfo.socialId.id/picture?type=square" width="30" height="30" alt=""/><b>@socialUserInfo.fullName</b>
+      </a>
+    } else {
+      <a data-hover="tooltip" title="@socialUserInfo.fullName+" 
+         class="name_tooltip_link" href="@com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfo.id.get)">
+        <img src="https://graph.facebook.com/@socialUserInfo.socialId.id/picture?type=square" width="30" height="30" alt=""/>@socialUserInfo.fullName
+      </a>
+    }
+  </span>
+}
+
+@userWithFacebookDisplay(socialUserInfo, socialOnly) 

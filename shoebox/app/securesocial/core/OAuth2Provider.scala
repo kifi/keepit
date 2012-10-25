@@ -60,7 +60,7 @@ abstract class OAuth2Provider(application: Application) extends IdentityProvider
     )
     WS.url(settings.accessTokenUrl).post(params).await(10000).fold( onError =>
       {
-        Logger.error("Timed out trying to get an access token for provider " + providerId)
+        log.error("Timed out trying to get an access token for provider " + providerId)
         throw new AuthenticationException()
       },
       response =>  buildInfo(response)
@@ -69,7 +69,7 @@ abstract class OAuth2Provider(application: Application) extends IdentityProvider
 
   protected def buildInfo(response: Response): OAuth2Info = {
       val json = response.json
-      Logger.debug("Got json back [" + json + "]")
+      log.debug("Got json back [" + json + "]")
       OAuth2Info(
         (json \ OAuth2Constants.AccessToken).as[String],
         (json \ OAuth2Constants.TokenType).asOpt[String],
@@ -80,11 +80,11 @@ abstract class OAuth2Provider(application: Application) extends IdentityProvider
 
   def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
     request.queryString.get(OAuth2Constants.Error).flatMap(_.headOption).map( error => {
-      Logger.error(providerId + " error = [" + error + "]")
+      log.error(providerId + " error = [" + error + "]")
       error match {
         case OAuth2Constants.AccessDenied => throw new AccessDeniedException()
         case _ =>
-          Logger.error("Error '" + error + "' returned by the authorization server. Provider type is " + providerId)
+          log.error("Error '" + error + "' returned by the authorization server. Provider type is " + providerId)
           throw new AuthenticationException()
       }
       throw new AuthenticationException()
@@ -94,6 +94,7 @@ abstract class OAuth2Provider(application: Application) extends IdentityProvider
       case Some(code) =>
         // we're being redirected back from the authorization server with the access code.
         
+        log.info("code = %s".format(code))
         val sessionId = request.session.get(IdentityProvider.SessionId)
         log.info("session id = %s".format(sessionId))
         val originalState = request.session.get(IdentityProvider.SessionId)
@@ -113,9 +114,7 @@ abstract class OAuth2Provider(application: Application) extends IdentityProvider
           )
           SocialUser(UserId("", providerId), "", None, None, authMethod, oAuth2Info = oauth2Info)
         }
-        if ( Logger.isDebugEnabled ) {
-          Logger.debug("user = " + user)
-        }
+        log.info("user = " + user)
         user match  {
           case Some(u) => Right(u)
           case _ => 
@@ -129,9 +128,11 @@ abstract class OAuth2Provider(application: Application) extends IdentityProvider
             throw new AuthenticationException()
         }
       case None =>
-        // There's no code in the request, this is the first step in the oauth flow
+        log.info("There's no code in the request, this is the first step in the oauth flow")
         val state = UUID.randomUUID().toString
+        log.info("state = %s".format(state))
         val sessionId = request.session.get(IdentityProvider.SessionId).getOrElse(UUID.randomUUID().toString)
+        log.info("sessionId = %s".format(sessionId))
         Cache.set(sessionId, state)
         var params = List(
           (OAuth2Constants.ClientId, settings.clientId),
@@ -141,10 +142,9 @@ abstract class OAuth2Provider(application: Application) extends IdentityProvider
         settings.scope.foreach( s => { params = (OAuth2Constants.Scope, s) :: params })
         val url = settings.authorizationUrl +
           params.map( p => p._1 + "=" + URLEncoder.encode(p._2, "UTF-8")).mkString("?", "&", "")
-        if ( Logger.isDebugEnabled ) {
-          Logger.debug("authorizationUrl = " + settings.authorizationUrl)
-          Logger.debug("Redirecting to : [" + url + "]")
-        }
+        log.info("url = %s".format(url))
+        log.info("authorizationUrl = " + settings.authorizationUrl)
+        log.info("Redirecting to : [" + url + "]")
         Left(Results.Redirect( url ).withSession(request.session + (IdentityProvider.SessionId, sessionId)))
     }
   }

@@ -30,6 +30,7 @@ case class SocialUserInfo(
   credentials: Option[SocialUser] = None
 ) {
   
+  def reset() = copy(state = SocialUserInfo.States.CREATED, credentials = None)
   def withUser(user: User) = copy(userId = Some(user.id.get))//want to make sure the user has an id, fail hard if not!
   def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials))//want to make sure the user has an id, fail hard if not!
   def withState(state: State[SocialUserInfo]) = copy(state = state)

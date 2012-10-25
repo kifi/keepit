@@ -3,6 +3,7 @@ console.log("injecting keep it hover div");
 (function() {
   $ = jQuery.noConflict()
   var config;
+  var hover;
 
   function showBookmarkHover(user) {
     var existingElements = $('#keepit_hover').length;
@@ -10,7 +11,7 @@ console.log("injecting keep it hover div");
       console.warn("hover is already injected. There are " + existingElements + " existing elements")
       return;
     }
-    var hover = $("<div id='keepit_hover' class='keepit_hover'></div>");
+    hover = $("<div id='keepit_hover' class='keepit_hover'></div>");
 
     var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
     var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
@@ -55,8 +56,6 @@ console.log("injecting keep it hover div");
       slideOut();
     });
 
-    $("body").after(hover);
-
     setTimeout(function() {
       slideIn();
     }, 1000);//1 seconds
@@ -66,10 +65,13 @@ console.log("injecting keep it hover div");
     $('.keepit_hover').animate({
         right: '-=230'
       },
-      300);
+      300, function() {
+        $('.keepit_hover').detach();
+      });
   }
 
   function slideIn() {
+    $("body").after(hover);
     $('.keepit_hover').animate({
         right: '+=230'
       },
