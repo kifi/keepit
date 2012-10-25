@@ -58,14 +58,6 @@
 		  </table>
 		  
 		  <h2>User connected to @fortyTwoConnections.size FortyTwo Users</h2>
-      @for(userWithSocial <- fortyTwoConnections) {
-        <tr>
-          <td>@userWithSocial.user.id.get.id</td>
-          <td>@userWithSocial.user.externalId</td>
-          <td>@adminHelper.userDisplay(userWithSocial)</td>
-          <td>@userWithSocial.user.createdAt</td>
-        </tr>
-      }
       <div class="scrollArea">
         @for(userWithSocial <- fortyTwoConnections) {
             @adminHelper.userDisplay(userWithSocial)<br/>
