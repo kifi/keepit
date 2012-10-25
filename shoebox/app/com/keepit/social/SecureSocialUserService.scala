@@ -58,7 +58,7 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
         val user = createUser(socialUserInfo.fullName).save
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request 
-        socialUserInfo.withUser(user).save
+        socialUserInfo.withUser(user)
       case None =>
         val user = createUser(socialUser.displayName).save
         log.debug("creating new SocialUserInfo for %s".format(user))
