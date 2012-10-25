@@ -83,9 +83,8 @@ object UserController extends Controller with Logging with SecureSocial {
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId)) 
       val bookmarks = Bookmark.ofUser(userWithSocial.user)
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
-      val socialConnections = SocialConnection.getUserConnections(userId)
-      val fortyTwoConnections = SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial
-
+      val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
+      val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
       
       (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections)
     }
