@@ -28,12 +28,13 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
         log.debug("User found: %s for %s".format(user, id))
         user.credentials
     }
-  
 
   def save(socialUser: SocialUser): Unit = CX.withConnection { implicit conn => 
     //todo(eishay) take the network type from the socialUser
     log.debug("persisting social user %s".format(socialUser))
     val socialUserInfo = internUser(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK, socialUser)
+    require(socialUserInfo.credentials.isDefined, "social user info's credentias is not defined: %s".format(socialUserInfo))
+    require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
     if (socialUserInfo.state != SocialUserInfo.States.FETCHED_USING_SELF) {
       inject[SocialGraphPlugin].asyncFetch(socialUserInfo)
     }
