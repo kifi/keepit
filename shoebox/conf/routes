@@ -13,6 +13,8 @@ GET     /bookmarks/all              com.keepit.controllers.BookmarksController.a
 GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
 
+GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
+
 GET     /search                     com.keepit.controllers.SearchController.search(term: String, externalId: ExternalId[User])
 
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
@@ -37,7 +39,6 @@ GET     /admin/article/refreshSearcher  com.keepit.controllers.admin.ArticleInde
 GET     /admin/uriGraph/load        com.keepit.controllers.admin.URIGraphController.load
 GET     /admin/uriGraph/update/:userId com.keepit.controllers.admin.URIGraphController.update(userId: Id[User])
 GET     /admin/users                      com.keepit.controllers.UserController.usersView
-GET     /admin/users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
 GET     /admin/user                       com.keepit.controllers.UserController.userView(userId: Id[User])
 GET     /admin/social_users                com.keepit.controllers.SocialUserController.socialUsersView
 GET     /admin/social_user                 com.keepit.controllers.SocialUserController.socialUserView(socialUserId: Id[SocialUserInfo])
