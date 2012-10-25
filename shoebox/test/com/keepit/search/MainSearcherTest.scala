@@ -214,10 +214,10 @@ class MainSearcherTest extends SpecificationWithJUnit {
           val friendIds = Set(Id[User](6))
           var uriSeen = Set.empty[Long]
           while(uriSeen.size < uris.size) {
-            println("---")
+            //println("---")
             val res = mainSearcher.search("alldocs", userId, friendIds, uriSeen, numHitsToReturn)
             res.hits.foreach{ h => 
-              println(h)
+              //println(h)
               uriSeen.contains(h.uriId.id) === false
               uriSeen += h.uriId.id
             }
