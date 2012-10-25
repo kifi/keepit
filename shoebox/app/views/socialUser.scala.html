@@ -1,0 +1,70 @@
+@(socialUserInfo: SocialUserInfo, socialConnections: Seq[SocialUserInfo], rawInfo: Option[SocialUserRawInfo])
+
+@userWithFacebookDisplay(socialUserInfo: SocialUserInfo) = {
+  <span style="margin:2px">
+    <a data-hover="tooltip" title="@socialUserInfo.fullName+" class="name_tooltip_link" href="http://www.facebook.com/@socialUserInfo.socialId.id" target="_blank">
+      <img src="https://graph.facebook.com/@socialUserInfo.socialId.id/picture?type=square" width="30" height="30" alt=""/>
+      @socialUserInfo.fullName (@socialUserInfo.socialId.id)
+    </a>
+  </span>
+}
+
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Social User: @socialUserInfo.fullName</title>
+        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+        <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
+        <script type="text/javascript">
+          function refreshSociaUserInfo() {
+          }
+        </script>
+        <style>
+          .scrollArea {
+            max-height: 400px;
+            width: 400px;
+            overflow: auto;
+          }
+        </style>
+    </head>
+    <body>
+      [<a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView">All Social Users</a>]<br/><br/>
+      <h2>Social User details</h2>
+	      Name: @socialUserInfo.fullName<br/>
+	      Id: @socialUserInfo.id.get<br/>
+	      Facebook Account: @userWithFacebookDisplay(socialUserInfo)<br/>
+	      State: @socialUserInfo.state<br/>
+	      Credentials:<br/><textarea rows="3" cols="80">@socialUserInfo.credentials</textarea><br/>
+	      Social Raw info: <br/><textarea rows="7" cols="80">@rawInfo</textarea><br/>
+        Account created at: @adminHelper.dateDisplay(socialUserInfo.createdAt) @adminHelper.timeDisplay(socialUserInfo.createdAt)<br/>
+        Last updated: @adminHelper.dateDisplay(socialUserInfo.updatedAt) @adminHelper.timeDisplay(socialUserInfo.updatedAt)
+
+        @if(socialUserInfo.userId.isDefined) {
+          <h3>Forty Two User: @adminHelper.socialUserDisplay(socialUserInfo)</h3>
+        }
+
+	      <h2>FortyTwo User Connections</h2>
+	      <div class="scrollArea">
+          @for(socialConnection <- socialConnections) {
+            @if(socialConnection.userId.isDefined) {
+              @adminHelper.socialUserDisplay(socialConnection)<br/>
+            }
+          }
+        </div>
+        
+        <h2>User connected to @socialConnections.size Social Users</h2>
+	      <div class="scrollArea">
+  	      @for(socialConnection <- socialConnections) {
+  	        @adminHelper.socialUserDisplay(socialConnection, true)<br/>
+  	      }
+	      </div>
+	      
+	      <br/>
+	      <button onclick="refreshSociaUserInfo()">Refresh Social User Info!</button>
+      
+      
+      
+    </body>
+</html>
