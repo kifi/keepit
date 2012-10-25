@@ -100,7 +100,7 @@ object UserController extends Controller with Logging with SecureSocial {
     Ok(views.html.users(users))
   }
   
-  def refreshSocialInfo(userId: Id[User]) = SecuredAction(false) { implicit request => 
+  def refreshAllSocialInfo(userId: Id[User]) = SecuredAction(false) { implicit request => 
     val socialUserInfos = CX.withConnection { implicit c => 
       val user = User.get(userId)
       SocialUserInfo.getByUser(user.id.get)
