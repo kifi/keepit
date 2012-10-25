@@ -58,11 +58,12 @@ object SocialUserController extends Controller with Logging with SecureSocial {
     val socialUsers = CX.withConnection { implicit c => SocialUserInfo.all.sortWith((a,b) => a.fullName < b.fullName) }
     Ok(views.html.socialUsers(socialUsers))
   }
+  
   def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = SecuredAction(false) { implicit request => 
     val graph = inject[SocialGraphPlugin]
-    CX.withConnection { implicit conn =>
-      graph.asyncFetch(SocialUserInfo.get(socialUserInfoId)) 
-    }    
+    val socialUserInfo = CX.withConnection { implicit conn => SocialUserInfo.get(socialUserInfoId) }
+    if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))
+    graph.asyncFetch(socialUserInfo)    
     Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfoId))
   }
 }
