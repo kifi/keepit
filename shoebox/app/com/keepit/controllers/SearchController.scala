@@ -59,7 +59,7 @@ object SearchController extends Controller with Logging {
     val searcher = new MainSearcher(articleIndexer, uriGraph, config)
     val searchRes = searcher.search(term, userId, friendIds, filterOut, numHitsToReturn)
     val res = CX.withConnection { implicit conn =>
-      searchRes map { r => toPersonalSearchResult(r) }
+      searchRes.hits map toPersonalSearchResult
     }
     println(res mkString "\n")
     Ok(BPSRS.resSerializer.writes(res)).as(ContentTypes.JSON)

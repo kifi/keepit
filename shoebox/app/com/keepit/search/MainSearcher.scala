@@ -56,9 +56,10 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: S
     (myHits, friendsHits, othersHits)
   }
   
-  def search(queryString: String, userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], numHitsToReturn: Int): Seq[ArticleHit] = {
+  def search(queryString: String, userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], numHitsToReturn: Int): ArticleSearchResult = {
     
     val (myHits, friendsHits, othersHits) = searchText(queryString, userId, friendIds, filterOut, maxTextHitsPerCategory = maxTextHitsPerCategory)
+    val totalHits = myHits.totalHits + friendsHits.totalHits + othersHits.totalHits
     
     val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds ++ Set(userId))
     
@@ -95,7 +96,7 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: S
       }
     }
     
-    hits.toList.map(_.toArticleHit)
+    ArticleSearchResult(hits.toList.map(_.toArticleHit), totalHits - hits.size)
   }
   
   def createQueue(sz: Int) = new ArticleHitQueue(sz)
@@ -109,6 +110,7 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
   initialize(sz)
   
   var highScore = -1.0f
+  var totalHits = 0
   
   override def lessThan(a: MutableArticleHit, b: MutableArticleHit) = (a.score < b.score || (a.score == b.score && a.id < b.id))
 
@@ -121,11 +123,13 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
     if (score > highScore) highScore = score
     
     overflow = insertWithOverflow(overflow)
+    totalHits += 1
   }
   
   def insert(hit: MutableArticleHit) {
     if (hit.score > highScore) highScore = hit.score
     insertWithOverflow(hit)
+    totalHits += 1
   }
   
   // the following method is destructive. after the call ArticleHitQueue is unusable
@@ -164,6 +168,7 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
 }
 
 case class ArticleHit(uriId: Id[NormalizedURI], isMyBookmark: Boolean, isPrivate: Boolean, users: Set[Id[User]], score: Float)
+case class ArticleSearchResult(hits: Seq[ArticleHit], numMoreHits: Int)
 
 // mutable hit object for efficiency
 class MutableArticleHit(var id: Long, var isMyBookmark: Boolean, var isPrivate: Boolean, var score: Float, var users: Set[Id[User]]) {
