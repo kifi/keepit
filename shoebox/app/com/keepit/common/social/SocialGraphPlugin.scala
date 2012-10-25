@@ -44,26 +44,27 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
       }
       sender ! unprocessedUsers.size
       
-    case FetchUserInfo(user) => 
+    case FetchUserInfo(socialUserInfo) => 
       try {
-        log.info("fetching raw info for %s".format(user))
-        val rawInfo = graph.fetchSocialUserRawInfo(user)
-        log.info("fetched raw info %s for %s".format(rawInfo, user))
+        require(socialUserInfo.credentials.isDefined, "social user info's credentias is not defined: %s".format(socialUserInfo))
+        log.info("fetching raw info for %s".format(socialUserInfo))
+        val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo)
+        log.info("fetched raw info %s for %s".format(rawInfo, socialUserInfo))
         CX.withConnection { implicit c =>
-          user.withState(SocialUserInfo.States.FETCHED_USING_SELF).save
+          socialUserInfo.withState(SocialUserInfo.States.FETCHED_USING_SELF).save
         }
         val store = inject[SocialUserRawInfoStore]
-        store += (user.id.get -> rawInfo)
+        store += (socialUserInfo.id.get -> rawInfo)
         inject[SocialUserImportFriends].importFriends(rawInfo.json)
         
-        inject[SocialUserCreateConnections].createConnections(user, rawInfo.json)
+        inject[SocialUserCreateConnections].createConnections(socialUserInfo, rawInfo.json)
       }
       catch {
         case ex => 
           CX.withConnection { implicit c =>
-            user.withState(SocialUserInfo.States.FETCHE_FAIL).save
+            socialUserInfo.withState(SocialUserInfo.States.FETCHE_FAIL).save
           }
-          log.error("Problem Fetching User Info for %s".format(user), ex)
+          log.error("Problem Fetching User Info for %s".format(socialUserInfo), ex)
       }
 
       
@@ -102,7 +103,7 @@ class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: Faceboo
   } 
   
   override def asyncFetch(socialUserInfo: SocialUserInfo): Unit = {
-    if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))
+    require(socialUserInfo.credentials.isDefined, "social user info's credentias is not defined: %s".format(socialUserInfo))
     actor ! FetchUserInfo(socialUserInfo)
   }
 }
