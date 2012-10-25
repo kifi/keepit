@@ -112,13 +112,9 @@ console.log("starting keepit google_inject.js");
         resultCount++;
         var socialBar = $("<div class='keep_social_bar'/>");
         var missingId = 1;
-        var selfKeptIt = false;
         console.log(e.users);
         console.log("there are " + e.users.length + " users who kept this bookmark:");
         $(e.users).each(function(j, user){
-          if (userInfo.externalId == user.externalId) {
-            selfKeptIt = true;
-          }
           var userView;
           if(user.facebookId) {
             userView = $(
@@ -133,22 +129,25 @@ console.log("starting keepit google_inject.js");
         });
         var socialBarText = $("<div class='social_bar_text'/>")
         var numOfUsers = e.users.length;
-        if (selfKeptIt) {
-          if (numOfUsers === 1) {
+        if (e.isMyBookmark) {
+          if (numOfUsers === 0) {
             socialBarText.append("<span class='social_bar_message'>You Kept it</span>");
           } else {
             socialBarText.append("<span class='social_bar_message'>You and</span>");
           }
-        } else if (numOfUsers === 1) {
+        } 
+        if (numOfUsers === 1) {
           socialBarText.append(
-            "<span class='social_bar_message_highlighted'> one other friend</span>" +
+            "<span class='social_bar_message_highlighted'>one other friend</span>" +
             "<span class='social_bar_message'>choose to keep this</span>");
         } else if (numOfUsers > 1) {
           socialBarText.append(
             "<span class='social_bar_message_highlighted'>" + numOfUsers + " other friends</span>" + 
             "<span class='social_bar_message'>choose to keep this</span>");
         } else { //no users
-          throw Error("not implemented yet");
+          socialBarText.append(
+            "<span class='social_bar_message_highlighted'>" + e.count + " others</span>" + 
+            "<span class='social_bar_message'>choose to keep this</span>");
         }
         socialBar.append(socialBarText);
         addActionToSocialBar(socialBar);
