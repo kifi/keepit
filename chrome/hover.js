@@ -6,15 +6,52 @@ console.log("injecting keep it hover div");
   var hover;
 
   function showBookmarkHover(user) {
-    var existingElements = $('#keepit_hover').length;
+
+
+    var existingElements = $('.kifi_hover').length;
     if (existingElements > 0) {
       console.warn("hover is already injected. There are " + existingElements + " existing elements")
       return;
     }
-    hover = $("<div id='keepit_hover' class='keepit_hover'></div>");
 
-    var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
-    var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
+    var req = new XMLHttpRequest();
+    req.open("GET", chrome.extension.getURL('hover.html'), true);
+    req.onreadystatechange = function() {
+        if (req.readyState == 4 && req.status == 200) {
+            //var image = chrome.extension.getURL('logo.jpg');
+            var logo = chrome.extension.getURL('kifilogo.png');
+            var arrow = chrome.extension.getURL('arrow.png');
+            var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
+            var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
+
+            console.log('Rendering Mustache.js hover template...');
+
+            var tmpl = {
+              "logo": logo,
+              "arrow": arrow,
+              "profilepic": facebookImageLink
+            }
+            
+            tmpl.socialConnections = "Yo!"
+
+
+            var tb = Mustache.to_html(
+                req.responseText,
+                tmpl
+            );
+            $('body').append(tb);
+            $('.close').click(function() {
+              slideOut();
+            });
+            $('.profilepic').click(function() { location=facebookProfileLink; });
+        }
+    };
+    req.send(null);
+    
+
+
+
+/*
     var bar = $("<div class='keep_hover_bar'>" + 
       "<a data-hover='tooltip' class='name_tooltip_link' href='" + facebookProfileLink + "' " + 
         "target='_blank'>" + 
@@ -23,8 +60,8 @@ console.log("injecting keep it hover div");
       "</div>");
     hover.append(bar);
     var othersKeptThisPage = $("<div id='keep_hover_others'  class='keep_hover_others'></div>");
-    var othersFaces = $("<div id='keep_face'</div>");
-    var othersSummary = $("<div id='keep_summary'</div>");
+    var othersFaces = $("<div id='keep_face'></div>");
+    var othersSummary = $("<div id='keep_summary'></div>");
 
     othersKeptThisPage.append(othersFaces);
     othersKeptThisPage.append(othersSummary);
@@ -50,32 +87,35 @@ console.log("injecting keep it hover div");
         console.log("bookmark added! -> " + JSON.stringify(response));
         slideOut();
      });
-    });
-
-    close.click(function() {
-      slideOut();
-    });
+    });*/
 
     setTimeout(function() {
       slideIn();
-    }, 1000);//1 seconds
+    }, 500);//1 seconds // CHANGE ME
   }
 
   function slideOut() {
-    $('.keepit_hover').animate({
-        right: '-=230'
+    var position = $('.kifi_hover').position().top;
+    console.log(position);
+    $('.kifi_hover').animate({
+        bottom: '+=' + position,
+        opacity: 0,
+        right: '-=100'
       },
-      300, function() {
-        $('.keepit_hover').detach();
+      500, function() {
+        $('.kifi_hover').detach();
       });
   }
 
   function slideIn() {
     $("body").after(hover);
-    $('.keepit_hover').animate({
-        right: '+=230'
+    $('.kifi_hover').animate({
+        right: '+=330',
+        bottom: '+=75',
+        opacity: 1
       },
       300);
+
   }
 
   function getUserInfo(callback) {
