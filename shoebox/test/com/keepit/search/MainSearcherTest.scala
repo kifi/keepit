@@ -161,7 +161,10 @@ class MainSearcherTest extends SpecificationWithJUnit {
               res.hits.foreach{ h => 
                 if (h.isMyBookmark) mCnt += 1
                 else if (! h.users.isEmpty) fCnt += 1
-                else oCnt += 1
+                else {
+                  oCnt += 1
+                  h.bookmarkCount === graphSearcher.getUriToUserEdgeSet(h.uriId).size
+                }
               }
               //println(hits)
               //println(List(mCnt, fCnt, oCnt))
