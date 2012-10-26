@@ -48,7 +48,7 @@
           },
           "json"
       ).error(function(error) {
-        console.log(error.responseText);
+        log(error.responseText);
         alert("user is not logged in: " + error.responseText);
         callback(null);
       });
@@ -84,7 +84,7 @@
       $("#facebook_connect_link").click(function() {
         chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
           var url = "http://" + config.server + "/authenticate/facebook";
-          console.log("openning facebook window from " + url, "connect", "width=500,height=400");
+          log("openning facebook window from " + url, "connect", "width=500,height=400");
           window.open(url);
           return false;
         });
