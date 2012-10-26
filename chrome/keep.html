@@ -7,7 +7,7 @@
     // wants to show the page action.
 
     function log(message) {
-      console.log("[" + new Date().getTime() + "] " + message);
+      console.log("[" + new Date().getTime() + "] ", message);
     }
 
     function error(exception, message) {
@@ -369,34 +369,39 @@
       }
       setConfigs('version', currVersion);
     }
-    var popup=null;
+    var popup = null;
 
     function openFacebookConnect() {    
-      chrome.windows.onRemoved.addListener(function(windowId) {
-        if (windowId === popup) {
-        popup = undefined;
-        startHandShake(function(data) {
-          if (data) {
-            log("got handshake data ");
-            log(data);
-            userInfo.facebook_id = data.facebookId;
-            userInfo.keepit_external_id = data.externalId;
-            userInfo.avatar_url = data.avatarUrl;
-            log("updating userInfo ");
-            log(userInfo);
-            setConfigs("user", JSON.stringify(userInfo));
-            postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");//posting bookmarks
-            log("handshake done");
+
+
+      chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+        if(changeInfo.status == "loading") {
+          if (tabId === popup && tab.url === "http://" + getConfigs().server + "/#_=_") {
+            popup = undefined;
+            startHandShake(function(data) {
+              if (data) {
+                log("got handshake data ");
+                log(data);
+                userInfo.facebook_id = data.facebookId;
+                userInfo.keepit_external_id = data.externalId;
+                userInfo.avatar_url = data.avatarUrl;
+                log("updating userInfo ");
+                log(userInfo);
+                setConfigs("user", JSON.stringify(userInfo));
+                postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");//posting bookmarks
+                log("handshake done");
+              }
+              else{
+                log("handshake failes");
+              }
+              chrome.tabs.remove(tabId);
+            });
           }
-          else{
-            log("handshake failes");
-          }
-        });
-       }
+        }
       });
 
-      chrome.windows.create({'url': 'http://' + getConfigs().server + '/authenticate/facebook', 'type': 'popup', 'width' : 300, 'height' : 300}, function(window) {
-        popup = window.id
+      chrome.windows.create({'url': 'http://' + getConfigs().server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(window) {
+        popup = window.tabs[0].id
       });
     }
 
