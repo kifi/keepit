@@ -7,11 +7,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
   var config = null;
 
   function log(message) {
-    if(typeof message === "string") {
-      console.log("[" + new Date().getTime() + "] " + message);
-    } else {
-      console.log(message);
-    }
+    console.log("[" + new Date().getTime() + "] ", message);
   }
 
   function error(exception, message) {

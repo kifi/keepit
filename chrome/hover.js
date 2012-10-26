@@ -5,8 +5,11 @@ console.log("injecting keep it hover div");
   var config;
   var hover;
 
-  function showBookmarkHover(user) {
+  function log(message) {
+    console.log("[" + new Date().getTime() + "] ", message);
+  }
 
+  function showBookmarkHover(user) {
 
     var existingElements = $('.kifi_hover').length;
     if (existingElements > 0) {
@@ -24,7 +27,7 @@ console.log("injecting keep it hover div");
             var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
             var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
 
-            console.log('Rendering Mustache.js hover template...');
+            log('Rendering Mustache.js hover template...');
 
             $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href),
                 null,
@@ -36,8 +39,8 @@ console.log("injecting keep it hover div");
                     "profilepic": facebookImageLink
                   }
 
-                  console.log("got "+users.length+" result from /users/keepUrl");
-                  console.log(users);
+                  log("got "+users.length+" result from /users/keepUrl");
+                  log(users);
 
                   if (users.length>0) {
                     var summary = "";
@@ -65,7 +68,7 @@ console.log("injecting keep it hover div");
                   $('.profilepic').click(function() { location=facebookProfileLink; });
 
                   $('.keepitbtn').click(function() {
-                    console.log("bookmarking page: " + document.location.href);
+                    log("bookmarking page: " + document.location.href);
                     var request = {
                       type: "add_bookmarks", 
                       url: document.location.href, 
@@ -73,7 +76,7 @@ console.log("injecting keep it hover div");
                       private: $("#keepit_private").is(":checked")
                     }
                     chrome.extension.sendRequest(request, function(response) {
-                      console.log("bookmark added! -> " + JSON.stringify(response));
+                      log("bookmark added! -> " + JSON.stringify(response));
                       slideOut();
                    });
                   });
@@ -96,7 +99,6 @@ console.log("injecting keep it hover div");
 
   function slideOut() {
     var position = $('.kifi_hover').position().top;
-    console.log(position);
     $('.kifi_hover').animate({
         bottom: '+=' + position,
         opacity: 0,
@@ -123,39 +125,6 @@ console.log("injecting keep it hover div");
       callback(userInfo);
     });
   }
-
-  function getUsersKeptThisUrl() {
-    $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href),
-        null,
-        function(users) {         
-          console.log("got "+users.length+" result from /users/keepUrl");
-          console.log(users);          
-          if (users.length==0) return;
-          var summary="";
-          if (users.length == 1) {
-            summary="one of your friends";
-          } else {
-            summary = users.length+" other friends";
-          }
-          $("#keep_summary").html("<span class='keep_summary_friends'>"+summary+"</span></br>choose to keep this bookmark");
-          var faces = $("#keep_face");
-          $(users).each(function(index, user){
-            if(user.facebookId) {
-              var img =  $("<a href='#'><img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square'></a>");
-              faces.append(img);
-              img.click(function() {
-                chatWith(user);
-              });
-            } else { //facebook id is missing for some reason!
-              var img =  $("<img class='keep_face' src='/assets/images/missing_user.jpg'");
-              faces.append(img);
-            }
-          });
-        },
-        "json"
-    )//.error(callback);
-  }
-
 
   function chatWith(user) {
     console.log("Im here");
