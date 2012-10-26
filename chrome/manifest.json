@@ -4,7 +4,7 @@
   "manifest_version": 1,
   "description": "The Keep It Plugin",
   "options_page": "options.html",
-  "page_action": {
+  "browser_action": {
     "default_icon": "keep_19.png", // optional
     "default_title": "Keep It!",    // optional; shown in tooltip
     "default_popup": "keep.html"    // optional
@@ -13,11 +13,23 @@
   "content_scripts" : [
     {
       "matches" : [
+        "http://www.google.com/*",
+        "https://www.google.com/*",
+        "http://www.google.co.il/*",
+        "https://www.google.co.il/*"
+      ],
+      "js" : ["jquery-1.7.2.min.js", "google_inject.js"],
+      "css": ["keepit.css"],
+      "run_at" : "document_end",//document_start
+      "all_frames" : false
+    },
+    {
+      "matches" : [
         "http://*/*",
         "https://*/*"
       ],
-      "js" : ["contentscript.js", "jquery-1.7.2.min.js"],
-      "css": ["keepit.css"],
+      "js" : ["contentscript.js", "jquery-1.7.2.min.js", "mustache.js"],
+      "css": ["keepit.css", "hover.css"],
       "run_at" : "document_end",
       "all_frames" : false
     }

@@ -6,11 +6,8 @@
     // Called when a message is passed.  We assume that the content script
     // wants to show the page action.
 
-    function log(message, tab) {
-      if(tab) {
-        message = "[" + tab.id + "] " + message
-      }
-      console.log(message);
+    function log(message) {
+      console.log("[" + new Date().getTime() + "] " + message);
     }
 
     function error(exception, message) {
@@ -187,7 +184,7 @@
                 } else {
                   log("injecting hover: " + request, tab);
                   setTimeout(function() {
-                    chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit:hover] tab: " + tab.id + "')"}, 
+                    chrome.tabs.executeScript(tab.id, {code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:hover] tab: " + tab.id + "')"}, 
                       function(vars){
                         log("[callback] executed hover remote logging", tab);
                     });
@@ -226,7 +223,7 @@
     function injectGoogleDiv(tab) {
       log("injecting google_inject.js into tab", tab)
       try {
-        chrome.tabs.executeScript(tab.id, {code:"console.log('[keepit:google] tab: " + tab.id + "')"}, 
+        chrome.tabs.executeScript(tab.id, {code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:google] tab: " + tab.id + "')"}, 
           function(vars){
             log("[callback] executed logging", tab);
         });
@@ -265,13 +262,18 @@
           env = "production";
           localStorage["env"]=env;
         }
-        var maxResStr = localStorage[getFullyQualifiedKey("max_search_results")]
+        var maxResStr = localStorage[getFullyQualifiedKey("max_search_results")];
         if (!isNumber(maxResStr)) {
           maxResStr = 5;
         }
         var maxRes = Number(maxResStr);
 
-        var hoverTimeout = localStorage[getFullyQualifiedKey("hover_timeout")]
+        var showScore = localStorage[getFullyQualifiedKey("showScore")];
+        if (showScore === "yes") {
+          showScore = true;
+        }
+
+        var hoverTimeout = localStorage[getFullyQualifiedKey("hover_timeout")];
         if (!hoverTimeout) {
           hoverTimeout = 10;
         }
@@ -292,6 +294,7 @@
         var config = {
           "env": env, 
           "hoverTimeout": hoverTimeout, 
+          "showScore": showScore, 
           "maxRes": maxRes,
           "server": server,
           "user": userInfoString
@@ -335,7 +338,7 @@
         },
         "json"
       ).error(function(error) {
-        console.log(error.responseText);
+        log(error.responseText);
         alert("got error resposne" + error.responseText);
         callback(null);
       });

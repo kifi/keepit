@@ -5,77 +5,119 @@ console.log("injecting keep it hover div");
   var config;
   var hover;
 
+  function log(message) {
+    console.log("[" + new Date().getTime() + "] ", message);
+  }
+
   function showBookmarkHover(user) {
-    var existingElements = $('#keepit_hover').length;
+
+    var existingElements = $('.kifi_hover').length;
     if (existingElements > 0) {
       console.warn("hover is already injected. There are " + existingElements + " existing elements")
       return;
     }
-    hover = $("<div id='keepit_hover' class='keepit_hover'></div>");
 
-    var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
-    var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
-    var bar = $("<div class='keep_hover_bar'>" + 
-      "<a data-hover='tooltip' class='name_tooltip_link' href='" + facebookProfileLink + "' " + 
-        "target='_blank'>" + 
-        "<img src='" + facebookImageLink + "' width='24' height='24' alt=''></a>" +
-      "<span class='keep_hover_bar_title'>Keepit</span>" + 
-      "</div>");
-    hover.append(bar);
-    var othersKeptThisPage = $("<div id='keep_hover_others'  class='keep_hover_others'></div>");
-    var othersFaces = $("<div id='keep_face'</div>");
-    var othersSummary = $("<div id='keep_summary'</div>");
+    var req = new XMLHttpRequest();
+    req.open("GET", chrome.extension.getURL('hover.html'), true);
+    req.onreadystatechange = function() {
+        if (req.readyState == 4 && req.status == 200) {
+            //var image = chrome.extension.getURL('logo.jpg');
+            var logo = chrome.extension.getURL('kifilogo.png');
+            var arrow = chrome.extension.getURL('arrow.png');
+            var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
+            var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
 
-    othersKeptThisPage.append(othersFaces);
-    othersKeptThisPage.append(othersSummary);
-    hover.append(othersKeptThisPage);
+            log('Rendering Mustache.js hover template...');
 
-    var buttons = $("<div id='keep_hover_buttons' class='keep_hover_buttons'></div>")
-    var button = $("<div id='keep_action' class='keep_action' type='button'>Keep Bookmark</button>")
-    buttons.append(button);
-    buttons.append("<input type='checkbox' id='keepit_private' class='keepit_private' value='private'> Private</input>");
-    hover.append(buttons);
-    var close = $("<div class='hover_close'>Close</div>")
-    hover.append(close);
+            $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href),
+                null,
+                function(users) {
 
-    button.click(function() {
-      console.log("bookmarking page: " + document.location.href);
-      var request = {
-        type: "add_bookmarks", 
-        url: document.location.href, 
-        title: document.title, 
-        private: $("#keepit_private").is(":checked")
-      }
-      chrome.extension.sendRequest(request, function(response) {
-        console.log("bookmark added! -> " + JSON.stringify(response));
-        slideOut();
-     });
-    });
+                  var tmpl = {
+                    "logo": logo,
+                    "arrow": arrow,
+                    "profilepic": facebookImageLink
+                  }
 
-    close.click(function() {
-      slideOut();
-    });
+                  log("got "+users.length+" result from /users/keepUrl");
+                  log(users);
+
+                  if (users.length>0) {
+                    var summary = "";
+                    if (users.length == 1) {
+                      summary="One of your friends";
+                    } else {
+                      summary = users.length+" other friends";
+                    }
+                    tmpl.socialConnections = {
+                      countText: summary,
+                      friends: users
+                    }
+                  }
+
+                  var tb = Mustache.to_html(
+                      req.responseText,
+                      tmpl
+                  );
+
+                  // Binders
+                  $('body').prepend(tb);
+                  $('.close').click(function() {
+                    slideOut();
+                  });
+                  $('.profilepic').click(function() { location=facebookProfileLink; });
+
+                  $('.keepitbtn').click(function() {
+                    log("bookmarking page: " + document.location.href);
+                    var request = {
+                      type: "add_bookmarks", 
+                      url: document.location.href, 
+                      title: document.title, 
+                      private: $("#keepit_private").is(":checked")
+                    }
+                    chrome.extension.sendRequest(request, function(response) {
+                      log("bookmark added! -> " + JSON.stringify(response));
+                      slideOut();
+                   });
+                  });
+
+                  $('.dropdownbtn').click(function() {
+                    $('.moreinnerbox').slideToggle(150);
+                  });
+                },
+                "json"
+            );
+        }
+    };
+    req.send(null);
+    
 
     setTimeout(function() {
       slideIn();
-    }, 1000);//1 seconds
+    }, 500);//1 seconds // CHANGE ME
   }
 
   function slideOut() {
-    $('.keepit_hover').animate({
-        right: '-=230'
+    var position = $('.kifi_hover').position().top;
+    $('.kifi_hover').animate({
+        bottom: '+=' + position,
+        opacity: 0,
+        right: '-=100'
       },
       300, function() {
-        $('.keepit_hover').detach();
+        $('.kifi_hover').detach();
       });
   }
 
   function slideIn() {
     $("body").after(hover);
-    $('.keepit_hover').animate({
-        right: '+=230'
+    $('.kifi_hover').animate({
+        right: '+=330',
+        bottom: '+=75',
+        opacity: 1
       },
       300);
+
   }
 
   function getUserInfo(callback) {
@@ -83,39 +125,6 @@ console.log("injecting keep it hover div");
       callback(userInfo);
     });
   }
-
-  function getUsersKeptThisUrl() {
-    $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href),
-        null,
-        function(users) {         
-          console.log("got "+users.length+" result from /users/keepUrl");
-          console.log(users);          
-          if (users.length==0) return;
-          var summary="";
-          if (users.length == 1) {
-            summary="one of your friends";
-          } else {
-            summary = users.length+" other friends";
-          }
-          $("#keep_summary").html("<span class='keep_summary_friends'>"+summary+"</span></br>choose to keep this bookmark");
-          var faces = $("#keep_face");
-          $(users).each(function(index, user){
-            if(user.facebookId) {
-              var img =  $("<a href='#'><img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square'></a>");
-              faces.append(img);
-              img.click(function() {
-                chatWith(user);
-              });
-            } else { //facebook id is missing for some reason!
-              var img =  $("<img class='keep_face' src='/assets/images/missing_user.jpg'");
-              faces.append(img);
-            }
-          });
-        },
-        "json"
-    )//.error(callback);
-  }
-
 
   function chatWith(user) {
     console.log("Im here");
@@ -154,8 +163,9 @@ console.log("injecting keep it hover div");
 
   chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
     config = response;
+    console.log("user config",response);
     getUserInfo(showBookmarkHover);
-    getUsersKeptThisUrl();
+
   });
 
 })();
