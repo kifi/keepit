@@ -35,8 +35,8 @@
     else {
       localStorage["env"] = "development";
     }
-    sendSaveConfig("max_search_results", $("#max_search_results").val());
-    sendSaveConfig("hover_timeout", $("#hover_timeout").val());
+    sendSaveConfig("maxRes", $("#max_search_results").val());
+    sendSaveConfig("hoverTimeout", $("#hover_timeout").val());
   }
 
   function getuserinfo(callback) {
@@ -78,8 +78,8 @@
       if (env=="production") {
         $("#env_prod").attr("checked","checked");
       }
-      $("#max_search_results").val(config.max_search_results);
-      $("#hover_timeout").val(config.hover_timeout);
+      $("#max_search_results").val(config.maxRes);
+      $("#hover_timeout").val(config.hoverTimeout);
 
       $("#facebook_connect_link").click(function() {
         chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
