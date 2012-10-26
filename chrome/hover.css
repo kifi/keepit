@@ -1,11 +1,18 @@
+
+/* An attempt to normalize CSS */
+.kifi_hover * {
+  width:auto;
+  line-height: 1;
+}
+
 .kifi_hover {
   position: fixed;
   bottom:-40px;
   right:-350px;
   z-index:9999;
   opacity:0;
+  width:auto;
 }
-
 
 /*Rounded corner with shadow*/
 .roundedbox {
@@ -131,6 +138,13 @@ text-align:right;
   color: #414b52;
 }
 
+
+.social_friend {
+  width:36px;
+  height:36px;
+  border-radius: 2px;
+}
+
 .innerbox {
   padding:7px 10px;
   margin:10px;
@@ -138,6 +152,8 @@ text-align:right;
   color: #414b52;
   text-align: center;
 }
+
+
 
 
 .testenclosure {
@@ -222,4 +238,16 @@ text-align:right;
 
 .profilepic {
   cursor: pointer;
+}
+
+.moreinnerbox {
+  padding:7px 10px;
+  background-color:white;
+  margin:10px;
+  margin-top:0px;
+  border-radius: 0px 0px 3px 3px;
+  box-shadow: #dddddd 0px 1px ;
+  font-size:14px;
+  color: #414b52;
+  display: none;
 }
