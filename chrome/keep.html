@@ -262,13 +262,18 @@
           env = "production";
           localStorage["env"]=env;
         }
-        var maxResStr = localStorage[getFullyQualifiedKey("max_search_results")]
+        var maxResStr = localStorage[getFullyQualifiedKey("max_search_results")];
         if (!isNumber(maxResStr)) {
           maxResStr = 5;
         }
         var maxRes = Number(maxResStr);
 
-        var hoverTimeout = localStorage[getFullyQualifiedKey("hover_timeout")]
+        var showScore = localStorage[getFullyQualifiedKey("showScore")];
+        if (showScore === "yes") {
+          showScore = true;
+        }
+
+        var hoverTimeout = localStorage[getFullyQualifiedKey("hover_timeout")];
         if (!hoverTimeout) {
           hoverTimeout = 10;
         }
@@ -289,6 +294,7 @@
         var config = {
           "env": env, 
           "hoverTimeout": hoverTimeout, 
+          "showScore": showScore, 
           "maxRes": maxRes,
           "server": server,
           "user": userInfoString
