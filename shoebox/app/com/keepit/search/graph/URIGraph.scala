@@ -72,7 +72,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   }
 
   def update(userId: Id[User]): Int = {
-    log.info("updating a URIGraph for user=%d".format(userId))
+    log.info("updating a URIGraph for user=%d".format(userId.id))
     try {
       val user = CX.withConnection { implicit c => User.get(userId) }
       var cnt = 0
@@ -89,11 +89,14 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
 
   private val parser = new QueryParser(Version.LUCENE_36, "b", indexWriterConfig.getAnalyzer())
 
-  def parse(queryText: String): Query = {
-    parser.parse(queryText)
-  }
+  def parse(queryText: String): Option[Query] = Option(parser.parse(queryText))
   
-  def search(queryString: String): Seq[Hit] = searcher.search(parse(queryString))
+  def search(queryText: String): Seq[Hit] = {
+    parse(queryText) match {
+      case Some(query) => searcher.search(query)
+      case None => Seq.empty[Hit]
+    }
+  }
 
   def getURIGraphSearcher() = new URIGraphSearcher(searcher)
   

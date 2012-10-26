@@ -1,4 +1,4 @@
-console.log("starting keepit google_inject.js");
+console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
 (function () { try {
   $ = jQuery.noConflict()
@@ -7,7 +7,11 @@ console.log("starting keepit google_inject.js");
   var config = null;
 
   function log(message) {
-    console.log(message);
+    if(typeof message === "string") {
+      console.log("[" + new Date().getTime() + "] " + message);
+    } else {
+      console.log(message);
+    }
   }
 
   function error(exception, message) {
@@ -25,6 +29,11 @@ console.log("starting keepit google_inject.js");
   log("injecting keep it to google search result page");
   
   function updateQuery() { 
+    if ($("body").length === 0) {
+      log("no body yet...");
+      setTimeout(function(){ updateQuery(); }, 10);
+      return;
+    }
     var queryInput = $("input[name='q']");
     var query = queryInput.val();
     if (!query) {
@@ -112,13 +121,15 @@ console.log("starting keepit google_inject.js");
         resultCount++;
         var socialBar = $("<div class='keep_social_bar'/>");
         var missingId = 1;
-        var selfKeptIt = false;
-        console.log(e.users);
-        console.log("there are " + e.users.length + " users who kept this bookmark:");
+        log(e.users);
+        log("there are " + e.users.length + " users who kept this bookmark:");
+        if (e.isMyBookmark) {
+          var myView = $('<a data-hover="tooltip" title="Me - I look good!" class="name_tooltip_link" href="http://www.facebook.com/' + userInfo.facebook_id + '" target="_blank">' + 
+                '<img class="keep_face" src="https://graph.facebook.com/' + userInfo.facebook_id + '/picture?type=square" alt="Me - I look good!">' + 
+              '</a>');
+          socialBar.append(myView);
+        }
         $(e.users).each(function(j, user){
-          if (userInfo.externalId == user.externalId) {
-            selfKeptIt = true;
-          }
           var userView;
           if(user.facebookId) {
             userView = $(
@@ -133,56 +144,72 @@ console.log("starting keepit google_inject.js");
         });
         var socialBarText = $("<div class='social_bar_text'/>")
         var numOfUsers = e.users.length;
-        if (selfKeptIt) {
-          if (numOfUsers === 1) {
+        if (e.isMyBookmark) {
+          if (numOfUsers === 0) {
             socialBarText.append("<span class='social_bar_message'>You Kept it</span>");
           } else {
             socialBarText.append("<span class='social_bar_message'>You and</span>");
           }
-        } else if (numOfUsers === 1) {
+        } 
+        if (numOfUsers === 1) {
           socialBarText.append(
-            "<span class='social_bar_message_highlighted'> one other friend</span>" +
+            "<span class='social_bar_message_highlighted'>one other friend</span>" +
             "<span class='social_bar_message'>choose to keep this</span>");
         } else if (numOfUsers > 1) {
           socialBarText.append(
             "<span class='social_bar_message_highlighted'>" + numOfUsers + " other friends</span>" + 
             "<span class='social_bar_message'>choose to keep this</span>");
-        } else { //no users
-          throw Error("not implemented yet");
+        } else { //no friends
+          if (e.isMyBookmark) { // I kept it
+            if (e.count > 1) { //there are people outside my network
+              socialBarText.append(
+                "<span class='social_bar_message_highlighted'>and " + (e.count - 1) + " others</span>" + 
+                "<span class='social_bar_message'>choose to keep this</span>");
+            }
+          } else { //all out of my network
+            socialBarText.append(
+              "<span class='social_bar_message_highlighted'>" + e.count + " others</span>" + 
+              "<span class='social_bar_message'>choose to keep this</span>");
+          }
         }
         socialBar.append(socialBarText);
         addActionToSocialBar(socialBar);
         link.append(socialBar);
         tail.before(link);
+        log("created bookmark rep:");
+        log(link);
       });
       ol.hide();
       var toExpend = (80 + 100 * resultCount);
       ol.css("height", toExpend + "px");
-      console.log(ol);
+      log(ol);
       if ($('#keepit').length > 0) {
         return;
       }
       if ($('#ires').length == 0) {
         return;
       }
-      var iterations = 10;
+      var iterations = 100;
+      var timeout = 1;
       function showResults() {
         if (ol.head !== lastInjected) {
           return;
         }
         if (iterations > 0) {
-          console.log("test show results, iterations = " + iterations);
+          log("test show results, iterations = " + iterations);
           iterations = iterations - 1;
           var element = $("#keepit");
           if (element.length > 0 && element.head !== ol.head) {
             element.remove();
           }
           if (element.length == 0) {
+            log("calling showResults once again since the element length is 0");
             $('#ires').prepend(ol);
-            setTimeout(function(){ showResults(); }, 1000);
+            setTimeout(function(){ showResults(); }, timeout++);
           } else if (!element.is(":visible")) {
             injectDiv(ol, resultCount, function(){
-              setTimeout(function(){ showResults(); }, 1000);
+              log("calling showResults once again since the element is not visible");
+              setTimeout(function(){ showResults(); }, timeout++);
             });
           }
         }
@@ -202,9 +229,9 @@ console.log("starting keepit google_inject.js");
       return;
     }
     //neight needs to be proportional to num of elements with max = 3
-    console.log("result count is " + resultCount + ", expending...");
-    ol.slideDown(1000, function() {
-      console.log("done expanding. now at " + ol.css("height"));
+    log("result count is " + resultCount + ", expending...");
+    ol.slideDown(500, function() {
+      log("done expanding. now at " + ol.css("height"));
       callback();
     });
   }
@@ -214,4 +241,4 @@ console.log("starting keepit google_inject.js");
     alert("exception: " + exception.message);
     console.error(exception);
     console.error(exception.stack);
-}})()
+}})();

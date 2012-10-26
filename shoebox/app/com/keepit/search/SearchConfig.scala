@@ -1,15 +1,23 @@
 package com.keepit.search
 
 object SearchConfig {
-  private val defaultParams =
+  private var defaultParams =
     Map[String, String](
       "maxMyBookmarks" -> "5",
       "maxTextHitsPerCategory" -> "1000",
       "myBookmarkBoost" -> "2",
       "sharingBoost" -> "0.5",
       "othersBookmarkWeight" -> "0.1")
+  
+  var defaultConfig = new SearchConfig(defaultParams)
 
-  val default = new SearchConfig(defaultParams)
+  def setDefault(binding: (String, String)) = {
+    defaultParams += binding
+    defaultConfig = new SearchConfig(defaultParams)
+    defaultConfig
+  }
+  
+  def getDefaultConfig = defaultConfig
   
   def apply(params: Map[String, String]) = {
     new SearchConfig(defaultParams ++ params)
@@ -19,5 +27,6 @@ object SearchConfig {
 class SearchConfig(params: Map[String, String]) {
   def asInt(name: String) = params(name).toInt
   def asFloat(name: String) = params(name).toFloat
+  def asBoolean(name: String) = params(name).toBoolean
   def asString(name: String) = params(name)
 }
