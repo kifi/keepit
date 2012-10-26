@@ -167,8 +167,8 @@ class MainSearcherTest extends SpecificationWithJUnit {
                 }
               }
               //println(hits)
-              //println(List(mCnt, fCnt, oCnt))
-              mCnt === min(myUriIds.size, config.asInt("maxMyBookmarks"))
+              //println(List(mCnt, fCnt, oCnt)+ " <-- " + List(myUriIds.size, friendsUriIds.size, othersUriIds.size))
+              (mCnt >= min(myUriIds.size, config.asInt("minMyBookmarks"))) === true
               fCnt === min(friendsUriIds.size, numHitsToReturn - mCnt)
               oCnt === (res.hits.size - mCnt - fCnt)
             }
@@ -211,13 +211,15 @@ class MainSearcherTest extends SpecificationWithJUnit {
           val mainSearcher= new MainSearcher(indexer, graph, config)
           val graphSearcher = mainSearcher.uriGraphSearcher
           
+          val reachableUris = users.foldLeft(Set.empty[Long])((s, u) => s ++ graphSearcher.getUserToUriEdgeSet(u.id.get, publicOnly = true).destIdLongSet)
+          
           val numHitsToReturn = 3
           val userId = Id[User](8)
           
           val friendIds = Set(Id[User](6))
           var uriSeen = Set.empty[Long]
-          while(uriSeen.size < uris.size) {
-            //println("---")
+          while(uriSeen.size < reachableUris.size) {
+            //println("---" + uriSeen + ":" + reachableUris)
             val res = mainSearcher.search("alldocs", userId, friendIds, uriSeen, numHitsToReturn)
             res.hits.foreach{ h => 
               //println(h)
