@@ -89,46 +89,6 @@ console.log("injecting keep it hover div");
     req.send(null);
     
 
-
-
-/*
-    var bar = $("<div class='keep_hover_bar'>" + 
-      "<a data-hover='tooltip' class='name_tooltip_link' href='" + facebookProfileLink + "' " + 
-        "target='_blank'>" + 
-        "<img src='" + facebookImageLink + "' width='24' height='24' alt=''></a>" +
-      "<span class='keep_hover_bar_title'>Keepit</span>" + 
-      "</div>");
-    hover.append(bar);
-    var othersKeptThisPage = $("<div id='keep_hover_others'  class='keep_hover_others'></div>");
-    var othersFaces = $("<div id='keep_face'></div>");
-    var othersSummary = $("<div id='keep_summary'></div>");
-
-    othersKeptThisPage.append(othersFaces);
-    othersKeptThisPage.append(othersSummary);
-    hover.append(othersKeptThisPage);
-
-    var buttons = $("<div id='keep_hover_buttons' class='keep_hover_buttons'></div>")
-    var button = $("<div id='keep_action' class='keep_action' type='button'>Keep Bookmark</button>")
-    buttons.append(button);
-    buttons.append("<input type='checkbox' id='keepit_private' class='keepit_private' value='private'> Private</input>");
-    hover.append(buttons);
-    var close = $("<div class='hover_close'>Close</div>")
-    hover.append(close);
-
-    button.click(function() {
-      console.log("bookmarking page: " + document.location.href);
-      var request = {
-        type: "add_bookmarks", 
-        url: document.location.href, 
-        title: document.title, 
-        private: $("#keepit_private").is(":checked")
-      }
-      chrome.extension.sendRequest(request, function(response) {
-        console.log("bookmark added! -> " + JSON.stringify(response));
-        slideOut();
-     });
-    });*/
-
     setTimeout(function() {
       slideIn();
     }, 500);//1 seconds // CHANGE ME
