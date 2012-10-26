@@ -11,13 +11,17 @@ import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Payload
 import org.apache.lucene.index.Term
+import org.apache.lucene.queryParser.{QueryParser => LuceneQueryParser}
 import org.apache.lucene.store.Directory
+import org.apache.lucene.search.BooleanClause
+import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.util.Version
 import java.io.File
 import java.io.IOException
 import java.lang.OutOfMemoryError
 import scala.collection.JavaConversions._
+import scala.math._
 
 case class IndexError(msg: String)
 
@@ -119,7 +123,8 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     Map() ++ mutableMap
   }
   
-  def parse(queryText: String): Option[Query]
+  def getQueryParser: QueryParser
+  def parseQuery(queryText: String) = getQueryParser.parseQuery(queryText)
   
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
   
@@ -129,3 +134,24 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   }
 }
 
+class QueryParser(indexWriterConfig: IndexWriterConfig) extends LuceneQueryParser(Version.LUCENE_36, "b", indexWriterConfig.getAnalyzer()) {
+  
+  def parseQuery(queryText: String) = Option(super.parse(queryText))
+  
+  private var percentMatch: Double = 0.0d
+  def setPercentMatch(value: Double) { percentMatch = value }
+  
+  override def getBooleanQuery(clauses: java.util.List[BooleanClause], disableCoord: Boolean): Query = {
+    super.getBooleanQuery(clauses, disableCoord) match {
+      case null => null
+      case booleanQuery: BooleanQuery =>
+        if (clauses != null) {
+          val numClausesShouldMatch = ceil(clauses.size() * percentMatch / 100).toInt
+          if (numClausesShouldMatch > 1)
+            booleanQuery.setMinimumNumberShouldMatch(numClausesShouldMatch)
+        }
+        booleanQuery
+      case query: Query => query
+    }
+  }
+}

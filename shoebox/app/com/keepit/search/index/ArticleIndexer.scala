@@ -14,7 +14,6 @@ import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.queryParser.QueryParser
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause._
@@ -24,6 +23,7 @@ import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.Version
 import java.io.File
 import java.io.IOException
+import scala.math._
 
 object ArticleIndexer {
   def apply(indexDirectory: Directory, articleStore: ArticleStore): ArticleIndexer = {
@@ -73,14 +73,12 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
   }
   
-  private val parser = new ArticleQueryParser
-
-  def parse(queryText: String): Option[Query] = Option(parser.parse(queryText))
+  def getQueryParser: QueryParser = new ArticleQueryParser
   
   def getArticleSearcher() = searcher
   
   def search(queryText: String): Seq[Hit] = {
-    parse(queryText) match {
+    parseQuery(queryText) match {
       case Some(query) => searcher.search(query)
       case None => Seq.empty[Hit]
     }
@@ -105,7 +103,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
   }
   
-  class ArticleQueryParser extends QueryParser(Version.LUCENE_36, "b", indexWriterConfig.getAnalyzer()) {
+  class ArticleQueryParser extends QueryParser(indexWriterConfig) {
     
     super.setAutoGeneratePhraseQueries(true)
     
@@ -123,4 +121,3 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
   }
 }
-

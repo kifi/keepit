@@ -143,5 +143,30 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
       res.size === 3
       res.head.id === uriIdArray(2)
     }
+    
+    "limit the result by percentMatch" in {
+      val indexer = ArticleIndexer(ramDir, store)
+      
+      val parser = indexer.getQueryParser
+
+      var res = indexer.search("title1 alldocs")
+      res.size === 3
+      
+      parser.setPercentMatch(50)
+      res = indexer.getArticleSearcher.search(parser.parseQuery("title1 alldocs").get)
+      res.size === 3
+      
+      parser.setPercentMatch(60)
+      res = indexer.getArticleSearcher.search(parser.parseQuery("title1 alldocs").get)
+      res.size === 1
+      
+      parser.setPercentMatch(60)
+      res = indexer.getArticleSearcher.search(parser.parseQuery("title1 title2 alldocs").get)
+      res.size === 2
+      
+      parser.setPercentMatch(75)
+      res = indexer.getArticleSearcher.search(parser.parseQuery("title1 title2 alldocs").get)
+      res.size === 0
+    }
   }
 }

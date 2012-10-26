@@ -6,7 +6,8 @@ object SearchConfig {
       "minMyBookmarks" -> "3",
       "maxTextHitsPerCategory" -> "1000",
       "myBookmarkBoost" -> "2",
-      "sharingBoost" -> "0.5")
+      "sharingBoost" -> "0.5",
+      "percentMatch" -> "50")
   
   var defaultConfig = new SearchConfig(defaultParams)
 
@@ -26,6 +27,7 @@ object SearchConfig {
 class SearchConfig(params: Map[String, String]) {
   def asInt(name: String) = params(name).toInt
   def asFloat(name: String) = params(name).toFloat
+  def asDouble(name: String) = params(name).toDouble
   def asBoolean(name: String) = params(name).toBoolean
   def asString(name: String) = params(name)
 }
