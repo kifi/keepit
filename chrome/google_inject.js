@@ -1,5 +1,11 @@
 console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
+var mngb = document.getElementById("mngb");
+if (!mngb) {
+  console.log("google mngb is not there, forget it!");
+  return;
+}
+
 (function () { try {
   $ = jQuery.noConflict()
 
