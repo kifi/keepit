@@ -66,6 +66,6 @@ object AuthController extends Controller with securesocial.core.SecureSocial wit
   
   def welcome = SecuredAction() { implicit request =>
     log.debug("in welcome. with user : [ %s ]".format(request.user ))
-    Ok(securesocial.views.html.protectedAction(request.user))
+    Redirect(com.keepit.controllers.routes.HomeController.home())
   }
 }
