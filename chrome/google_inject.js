@@ -86,7 +86,68 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
   function addResults(userInfo, searchResults) {
     try {
-      var old = $('#keepit');
+      log(":: addResults parameters ::");
+      log(userInfo);
+      log(searchResults);
+
+
+
+      var req = new XMLHttpRequest();
+      req.open("GET", chrome.extension.getURL('google_inject.html'), true);
+      req.onreadystatechange = function() {
+        if (req.readyState == 4 && req.status == 200) {
+          
+          log('Rendering Mustache.js Google template...');
+
+          var results = new Array();
+
+          $(searchResults).each(function(i, result){
+            var formattedResult = result;
+
+            formattedResult.displayUrl = formattedResult.bookmark.url;
+            if (formattedResult.bookmark.url.length > 75) {
+              formattedResult.displayUrl = formattedResult.displayUrl.substring(0, 75) + "..."
+            }
+
+            if (config.showScore) {
+              formattedResult.displayUrl = "<b>[" + result.score + "]</b>" + formattedResult.displayUrl;
+            }
+
+            formattedResult.countText = "";
+            var countTextResults = new Array();
+
+            var numFriends = formattedResult.users.length;
+            if(formattedResult.isMyBookmark) {
+              countTextResults.push("<b>You</b>");
+            }
+            if(numFriends > 0) {
+              if(numFriends == 1) {
+                countTextResults.push("one friend");
+              }
+              else {
+                countTextResults.push(numFriends + " friends")
+              }
+            }
+
+            results.push(formattedResult);
+          });
+
+
+          var tb = Mustache.to_html(
+              req.responseText,
+              {"results": results}
+          );
+
+          console.log(results)
+
+          // Binders
+          $('#ires').prepend(tb);
+
+        }
+      };
+      req.send(null);
+
+      /*var old = $('#keepit');
       if (old.length > 0) {
         throw Error("Old keepit is still around: " + old);
       }
@@ -213,7 +274,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
           }
         }
       }
-      showResults();
+      showResults();*/
     } catch (e) {
       error(e);
     }

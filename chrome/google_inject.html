@@ -1,0 +1,39 @@
+<ol id="keepit" class="kpt-results">
+  <li class="g keepit">
+    <div class="vsc">
+      <h3 class="r">Kifi Trusted Results</h3>
+    </div>
+    <!--n-->
+  </li>
+  {{#results}}
+  <li class="g">
+    <div class="vsc">
+      <h3 class="r"><a href="{{bookmark.url}}">{{bookmark.title}}</a></h3>
+      <div class="vspib" aria-label="Result details" role="button" tabindex="0"></div>
+      <div class="s">
+        <div class="f kv"><cite>{{displayUrl}}</cite>
+        </div>
+      </div>
+    </div>
+    <!--n-->
+    <div class="keep_social_bar">
+      {{#users}}
+      <a data-hover="tooltip" title="{{firstName}} {{lastName}}" class="name_tooltip_link" href="http://www.facebook.com/{{facebookId}}" target="_blank"><img class="keep_face" src="https://graph.facebook.com/{{facebookId}}/picture?type=square" alt="{{firstName}} {{lastName}}"></a>
+      {{/users}}
+      <div
+      class="social_bar_text"><span class="social_bar_message_highlighted">{{countText}}</span>
+        <span
+        class="social_bar_message">choose to keep this</span>
+    </div>
+    <div class="social_bar_action">Share It</div>
+    </div>
+  </li>
+  {{/results}}
+
+  <li class="g keepit">
+    <div class="vsc">
+       <h3 class="r">Google Results</h3>
+    </div>
+    <!--n-->
+  </li>
+</ol>
