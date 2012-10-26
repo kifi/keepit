@@ -33,6 +33,7 @@ object EdgeSetUtil {
 class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destIdSet: Set[Id[D]]) extends EdgeSet[S, D] {
   
   def destIdLongSet = destIdSet.map(_.id)
+  def size = destIdSet.size
   
   def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = getDestDocIdSetIterator(searcher.idMapper)
   
@@ -68,6 +69,8 @@ abstract class LuceneBackedEdgeSet[S, D](override val sourceId: Id[S], searcher:
 
   override def destIdLongSet = lazyDestIdLongSet
   override def destIdSet = lazyDestIdSet
+  
+  def size = getDestDocIdSetIterator(searcher).size
   
   def getDestDocIdSetIterator(searcher: Searcher) = {
     val termDocs = searcher.indexReader.termDocs(createSourceTerm)
