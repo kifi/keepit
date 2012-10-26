@@ -20,7 +20,7 @@
       ],
       "js" : ["jquery-1.7.2.min.js", "google_inject.js"],
       "css": ["keepit.css"],
-      "run_at" : "document_end",
+      "run_at" : "document_end",//document_start
       "all_frames" : false
     },
     {

@@ -1,11 +1,5 @@
 console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
-var mngb = document.getElementById("mngb");
-if (!mngb) {
-  console.log("google mngb is not there, forget it!");
-  return;
-}
-
 (function () { try {
   $ = jQuery.noConflict()
 
@@ -35,6 +29,11 @@ if (!mngb) {
   log("injecting keep it to google search result page");
   
   function updateQuery() { 
+    if ($("body").length === 0) {
+      log("no body yet...");
+      setTimeout(function(){ updateQuery(); }, 10);
+      return;
+    }
     var queryInput = $("input[name='q']");
     var query = queryInput.val();
     if (!query) {
@@ -177,6 +176,8 @@ if (!mngb) {
         addActionToSocialBar(socialBar);
         link.append(socialBar);
         tail.before(link);
+        log("created bookmark rep:");
+        log(link);
       });
       ol.hide();
       var toExpend = (80 + 100 * resultCount);
@@ -226,7 +227,7 @@ if (!mngb) {
     }
     //neight needs to be proportional to num of elements with max = 3
     log("result count is " + resultCount + ", expending...");
-    ol.slideDown(1000, function() {
+    ol.slideDown(500, function() {
       log("done expanding. now at " + ol.css("height"));
       callback();
     });
@@ -237,4 +238,4 @@ if (!mngb) {
     alert("exception: " + exception.message);
     console.error(exception);
     console.error(exception.stack);
-}})()
+}})();
