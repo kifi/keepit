@@ -3,7 +3,7 @@ package com.keepit.search.graph
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.model.{Bookmark, NormalizedURI, User}
-import com.keepit.search.index.{Hit, Indexable, Indexer, IndexError, Searcher}
+import com.keepit.search.index.{Hit, Indexable, Indexer, IndexError, Searcher, QueryParser}
 import com.keepit.common.db.CX
 import play.api.Play.current
 import org.apache.lucene.analysis.KeywordAnalyzer
@@ -12,7 +12,6 @@ import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
-import org.apache.lucene.queryParser.QueryParser
 import org.apache.lucene.search.Query
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
@@ -87,12 +86,10 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     }
   }
 
-  private val parser = new QueryParser(Version.LUCENE_36, "b", indexWriterConfig.getAnalyzer())
-
-  def parse(queryText: String): Option[Query] = Option(parser.parse(queryText))
+  def getQueryParser = new QueryParser(indexWriterConfig)
   
   def search(queryText: String): Seq[Hit] = {
-    parse(queryText) match {
+    parseQuery(queryText) match {
       case Some(query) => searcher.search(query)
       case None => Seq.empty[Hit]
     }
