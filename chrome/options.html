@@ -35,9 +35,9 @@
     else {
       localStorage["env"] = "development";
     }
-    sendSaveConfig("max_search_results", $("#max_search_results").val());
-    sendSaveConfig("hover_timeout", $("#hover_timeout").val());
-    sendSaveConfig("show_score", $("#show_score").val());
+    sendSaveConfig("maxRes", $("#max_search_results").val());
+    sendSaveConfig("hoverTimeout", $("#hover_timeout").val());
+    sendSaveConfig("showScore", $("#show_score").val());
   }
 
   function getuserinfo(callback) {
@@ -79,10 +79,9 @@
       if (env=="production") {
         $("#env_prod").attr("checked","checked");
       }
-      $("#max_search_results").val(config.max_search_results);
-      $("#hover_timeout").val(config.hover_timeout);
-      $("#show_score").val(config.show_score);
-
+      $("#max_search_results").val(config.maxRes);
+      $("#hover_timeout").val(config.hoverTimeout);
+      $("#show_score").val(config.shoScore);
       $("#facebook_connect_link").click(function() {
         chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
           var url = "http://" + config.server + "/authenticate/facebook";
