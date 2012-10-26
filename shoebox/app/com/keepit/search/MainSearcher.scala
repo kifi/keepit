@@ -14,6 +14,7 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: S
   val maxTextHitsPerCategory = config.asInt("maxTextHitsPerCategory")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   val sharingBoost = config.asFloat("sharingBoost")
+  val percentMatch = config.asDouble("percentMatch")
     
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
   val articleSearcher = articleIndexer.getArticleSearcher
@@ -31,7 +32,9 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: S
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
     
-    articleIndexer.parse(queryString).map{ articleQuery =>
+    val parser = articleIndexer.getQueryParser
+    parser.setPercentMatch(percentMatch)
+    parser.parseQuery(queryString).map{ articleQuery =>
       articleSearcher.doSearch(articleQuery){ scorer =>
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
