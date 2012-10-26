@@ -189,7 +189,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       if ($('#ires').length == 0) {
         return;
       }
-      var iterations = 10;
+      var iterations = 100;
+      var timeout = 1;
       function showResults() {
         if (ol.head !== lastInjected) {
           return;
@@ -202,11 +203,13 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             element.remove();
           }
           if (element.length == 0) {
+            log("calling showResults once again since the element length is 0");
             $('#ires').prepend(ol);
-            setTimeout(function(){ showResults(); }, 1000);
+            setTimeout(function(){ showResults(); }, timeout++);
           } else if (!element.is(":visible")) {
             injectDiv(ol, resultCount, function(){
-              setTimeout(function(){ showResults(); }, 1000);
+              log("calling showResults once again since the element is not visible");
+              setTimeout(function(){ showResults(); }, timeout++);
             });
           }
         }
