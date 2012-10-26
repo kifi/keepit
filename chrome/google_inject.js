@@ -1,4 +1,10 @@
-console.log("starting keepit google_inject.js");
+console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
+
+var mngb = document.getElementById("mngb");
+if (!mngb) {
+  console.log("google mngb is not there, forget it!");
+  return;
+}
 
 (function () { try {
   $ = jQuery.noConflict()
@@ -7,7 +13,11 @@ console.log("starting keepit google_inject.js");
   var config = null;
 
   function log(message) {
-    console.log(message);
+    if(typeof message === "string") {
+      console.log("[" + new Date().getTime() + "] " + message);
+    } else {
+      console.log(message);
+    }
   }
 
   function error(exception, message) {
@@ -112,8 +122,8 @@ console.log("starting keepit google_inject.js");
         resultCount++;
         var socialBar = $("<div class='keep_social_bar'/>");
         var missingId = 1;
-        console.log(e.users);
-        console.log("there are " + e.users.length + " users who kept this bookmark:");
+        log(e.users);
+        log("there are " + e.users.length + " users who kept this bookmark:");
         if (e.isMyBookmark) {
           var myView = $('<a data-hover="tooltip" title="Me - I look good!" class="name_tooltip_link" href="http://www.facebook.com/' + userInfo.facebook_id + '" target="_blank">' + 
                 '<img class="keep_face" src="https://graph.facebook.com/' + userInfo.facebook_id + '/picture?type=square" alt="Me - I look good!">' + 
@@ -171,7 +181,7 @@ console.log("starting keepit google_inject.js");
       ol.hide();
       var toExpend = (80 + 100 * resultCount);
       ol.css("height", toExpend + "px");
-      console.log(ol);
+      log(ol);
       if ($('#keepit').length > 0) {
         return;
       }
@@ -184,7 +194,7 @@ console.log("starting keepit google_inject.js");
           return;
         }
         if (iterations > 0) {
-          console.log("test show results, iterations = " + iterations);
+          log("test show results, iterations = " + iterations);
           iterations = iterations - 1;
           var element = $("#keepit");
           if (element.length > 0 && element.head !== ol.head) {
@@ -215,9 +225,9 @@ console.log("starting keepit google_inject.js");
       return;
     }
     //neight needs to be proportional to num of elements with max = 3
-    console.log("result count is " + resultCount + ", expending...");
+    log("result count is " + resultCount + ", expending...");
     ol.slideDown(1000, function() {
-      console.log("done expanding. now at " + ol.css("height"));
+      log("done expanding. now at " + ol.css("height"));
       callback();
     });
   }
