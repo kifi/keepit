@@ -81,21 +81,6 @@ console.log("injecting keep it hover div");
                   $('.dropdownbtn').click(function() {
                     $('.moreinnerbox').slideToggle(150);
                   });
-
-                  /*$("#keep_summary").html("<span class='keep_summary_friends'>"+summary+"</span></br>choose to keep this bookmark");
-                  var faces = $("#keep_face");
-                  $(users).each(function(index, user){
-                    if(user.facebookId) {
-                      var img =  $("<a href='#'><img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square'></a>");
-                      faces.append(img);
-                      img.click(function() {
-                        chatWith(user);
-                      });
-                    } else { //facebook id is missing for some reason!
-                      var img =  $("<img class='keep_face' src='/assets/images/missing_user.jpg'");
-                      faces.append(img);
-                    }
-                  });*/
                 },
                 "json"
             );
