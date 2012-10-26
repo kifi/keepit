@@ -96,8 +96,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       }
       var ol = $('<ol id="keepit" class="kpt-results"></ol>');
       lastInjected = ol.head;
-      var head = $('<li class="g keepit"><div class="vsc"><h3 class="r">KIFI Validated Results</h3></div><!--n--></li>')
-      var tail = $('<li class="g keepit"><div class="vsc"><h3 class="r">Google Results</h3></div><!--n--></li>')
+      var head = $('<li class="g keepit"><div class="vsc"><h3 class="r">KIFI Validated Results</h3></div><!--n--></li>');
+      var tail = $('<li class="g keepit"><div class="vsc"><h3 class="r">Google Results</h3></div><!--n--></li>');
       ol.append(head);
       head.after(tail);
       var resultCount = 0;
@@ -112,6 +112,9 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             bookmarkUrl = bookmarkUrl.substring(0, 75) + "..."
           }
           greenUrl = "<cite>" + bookmarkUrl + "</cite>";
+        }
+        if (config.showScore) {
+          greenUrl = "<b>[" + e.score + "]</b>" + greenUrl;
         }
         link.append(
           '<div class="vsc"><h3 class="r"><a href="' + e.bookmark.url + '">' + e.bookmark.title + 
