@@ -189,7 +189,7 @@
                         log("[callback] executed hover remote logging", tab);
                     });
                     chrome.tabs.executeScript(tab.id, {file:"hover.js"});
-                  }, 0);
+                  }, hoverTimeout * 1000);
                 }
               });
             });
