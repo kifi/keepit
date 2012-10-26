@@ -1,0 +1,253 @@
+
+/* An attempt to normalize CSS */
+.kifi_hover * {
+  width:auto;
+  line-height: 1;
+}
+
+.kifi_hover {
+  position: fixed;
+  bottom:-40px;
+  right:-350px;
+  z-index:9999;
+  opacity:0;
+  width:auto;
+}
+
+/*Rounded corner with shadow*/
+.roundedbox {
+  background-color: #faf9f9;  
+  border: 2px solid #414b52;
+  border-right:0px;
+  border-radius: 12px 0px 0px 12px;
+  box-shadow: #cccccc 0.2em 0.2em 0.2em;
+
+  width: 300px;
+  position:relative;
+}
+/*Header*/
+.roundedbox .hdr {                        
+  margin:0; 
+  padding:5px 5px 5px 10px;          
+  padding-left:40px;
+  padding-right:25px;
+}
+/*footer*/
+.roundedbox .ftr {                        
+  margin:0; 
+  bottom: 0px;      
+  border-bottom-left-radius: 0.35em;
+  border-bottom-right-radius: 0.35em;
+}
+/*content*/
+.roundedbox .cnt {
+  padding: 5px 5px 5px 10px;    
+  font-family: Calibri, Helvetica, sans-serif;
+  font-size: 12px;
+  padding-right:20px;
+}
+/*Color scheme*/
+.color_a {
+  font-family: Calibri, Helvetica, sans-serif;
+  background-color: #414b52;
+  color: #faf9f9;
+  font-size:14px;
+  font-weight:lighter;
+}
+
+.ftr {
+text-align:right;
+}
+
+.logo {
+  margin-right: 20px;
+  padding:5px 25px;
+  background-position: top;
+  background-size: 25px;
+}
+
+.kept {
+  color: #a0a5a9;
+}
+
+.friendlist {
+  padding:5px;
+  padding-left:0px;
+}
+
+.close {
+  position:relative;
+  float:right;
+  margin-top:-2px;
+}
+
+.xlink {
+  padding:1px;
+  padding-right:5px;
+  padding-left:5px;
+  background-color: #414b52;  
+  border: 0px;
+  border-radius: 12px 12px 12px 12px;
+  font-size:12px;
+  color: #faf9f9;
+  font-weight: 800;
+  cursor: pointer;
+    text-align: center;
+
+}
+
+.xlink:hover {
+    background-color: #faf9f9;
+    color: #414b52;
+}
+
+.xlink:active {
+    background-color: #e0e0e0;
+    color: #414b52;
+}
+
+
+
+.circular {
+  border: 2px solid white;
+  width: 45px;
+  height: 45px;
+  border-radius: 50px;
+  background-color:#ff0000;
+  position:relative;
+  top:-2px;
+  left:-2px;
+}
+.imageborder {
+  border: 5px solid #414b52;
+  width: 45px;
+  height: 45px;
+  border-radius: 50px;
+  position:absolute;
+  top:-20px;
+  left:-20px;
+}
+
+.socialinnerbox {
+  padding:7px 10px;
+  background-color:white;
+  margin:10px;
+  border-radius: 3px;
+  box-shadow: #dddddd 0px 1px ;
+  font-size:14px;
+  color: #414b52;
+}
+
+
+.social_friend {
+  width:36px;
+  height:36px;
+  border-radius: 2px;
+}
+
+.innerbox {
+  padding:7px 10px;
+  margin:10px;
+  font-size:14px;
+  color: #414b52;
+  text-align: center;
+}
+
+
+
+
+.testenclosure {
+  padding:50px;
+}
+
+
+.kbutton {
+  zoom: 1;
+  outline: none;
+  cursor: pointer;
+  vertical-align: baseline;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .4);
+  font-size: 13px;
+  text-align: center;
+  text-decoration: none;
+  border: solid 1px #B8B8B8;
+  color: #4F4F4F;
+  border-color: #E0E0E0 #D7D7D7 #CCC;
+  background: -webkit-gradient(linear, left top, left bottom, from(white), to(#E9E9E9));
+  background: -moz-linear-gradient(top, white, #E9E9E9);
+  background: linear-gradient(white, #E9E9E9);
+  -webkit-border-radius: 2px;
+  -moz-border-radius: 2px;
+  border-radius: 2px;
+  -webkit-box-shadow: 0 1px 2px rgba(0, 0, 0, .08), inset 0 1px 0 rgba(255, 255, 255, .3);
+  -moz-box-shadow: 0 1px 2px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .08), inset 0 1px 0 rgba(255, 255, 255, .3);
+  background-clip: padding-box;
+  padding:5px 5px;
+
+}
+
+.kbutton:hover, .kbutton:active { 
+  -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2); 
+  -moz-box-shadow:  0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2); 
+  box-shadow:     0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2);
+  border-color: #d5d5d5 #cccccc #c2c2c2;
+  background: #f7f7f7;
+  background: -webkit-gradient(linear, left top, left bottom, from(#ffffff), to(#ededed));
+  background: -moz-linear-gradient(top, #ffffff,  #ededed);
+  background: linear-gradient(#ffffff, #ededed);
+}
+
+.kbutton:active {
+  background: #f7f7f7;
+
+}
+
+.keepitbtn {
+  padding:5px;
+  padding-left:30px;
+  padding-right:30px;
+  border-radius: 2px 0px 0px 2px;
+  border-right: 0px;
+}
+
+
+.buttonwrapper {
+  text-align: center;
+  padding:10px;
+}
+
+.dropdownbtn {
+  border-radius: 0px 2px 2px 0px;
+}
+
+.toggle,.toggle:hover {
+  width: 100%;
+  height: 100%;
+  padding:10px 5px;
+}
+
+.noselect {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.profilepic {
+  cursor: pointer;
+}
+
+.moreinnerbox {
+  padding:7px 10px;
+  background-color:white;
+  margin:10px;
+  margin-top:0px;
+  border-radius: 0px 0px 3px 3px;
+  box-shadow: #dddddd 0px 1px ;
+  font-size:14px;
+  color: #414b52;
+  display: none;
+}
