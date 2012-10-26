@@ -106,6 +106,9 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   }
   
   class ArticleQueryParser extends QueryParser(Version.LUCENE_36, "b", indexWriterConfig.getAnalyzer()) {
+    
+    super.setAutoGeneratePhraseQueries(true)
+    
     override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
       (super.getFieldQuery("t", queryText, quoted), super.getFieldQuery("c", queryText, quoted)) match {
         case (null, null) => null
