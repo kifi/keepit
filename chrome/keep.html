@@ -271,6 +271,8 @@
         var showScore = localStorage[getFullyQualifiedKey("showScore")];
         if (showScore === "yes") {
           showScore = true;
+        } else {
+          showScore = false;
         }
 
         var hoverTimeout = localStorage[getFullyQualifiedKey("hover_timeout")];
