@@ -351,7 +351,8 @@
       if (!user) return false;
       try {
         userInfo = JSON.parse(user);
-        if (userInfo.keepit_external_id) return true
+        if (userInfo.keepit_external_id && userInfo.facebook_id) return true
+        else return false
       } catch (e) {
         log("could not parse JSON "+user);
       }
