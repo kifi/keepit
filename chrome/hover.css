@@ -10,6 +10,28 @@
   font-weight:normal;
   font-family: Calibri, Helvetica, sans-serif;
   font-size: 14px;
+  background-position: 0% 0%;
+  background-size: auto;
+  background-origin: padding-box;
+  background-clip: border-box;
+  background-attachment: scroll;
+  background-image: none;
+  border: 0px;
+  border-top: 0px;
+  margin: 0px;
+  padding: 0px;
+  box-shadow: none;
+  border-radius: 0px;
+  background: transparent;
+  min-width: 0px;
+}
+
+.kifi_hover div {
+  display: block;
+}
+
+.kifi_hover span {
+  display: inline;
 }
 
 .kifi_hover {
@@ -19,6 +41,13 @@
   z-index:9999;
   opacity:0;
   width:auto;
+  border:0px;
+  margin: 0px;
+  padding: 0px;
+  box-shadow: none;
+  border-radius: 0px;
+  background: transparent;
+  min-width: 0px;
 }
 
 /*Rounded corner with shadow*/
