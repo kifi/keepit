@@ -16,7 +16,7 @@ console.log("injecting keep it hover div");
       console.warn("hover is already injected. There are " + existingElements + " existing elements")
       return;
     }
-
+    console.log(user);
     var req = new XMLHttpRequest();
     req.open("GET", chrome.extension.getURL('hover.html'), true);
     req.onreadystatechange = function() {
@@ -36,7 +36,8 @@ console.log("injecting keep it hover div");
                   var tmpl = {
                     "logo": logo,
                     "arrow": arrow,
-                    "profilepic": facebookImageLink
+                    "profilepic": facebookImageLink,
+                    "name": user.name
                   }
 
                   log("got "+users.length+" result from /users/keepUrl");

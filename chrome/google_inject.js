@@ -110,22 +110,48 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             }
 
             if (config.showScore) {
-              formattedResult.displayUrl = "<b>[" + result.score + "]</b>" + formattedResult.displayUrl;
+              formattedResult.score = "<b>[" + Math.round(result.score*100)/100 + "]</b> ";
             }
 
             formattedResult.countText = "";
-            var countTextResults = new Array();
 
             var numFriends = formattedResult.users.length;
-            if(formattedResult.isMyBookmark) {
-              countTextResults.push("<b>You</b>");
-            }
-            if(numFriends > 0) {
-              if(numFriends == 1) {
-                countTextResults.push("one friend");
+
+            // Awful decision tree for clean text. Come up with a better way.
+            if(formattedResult.isMyBookmark) { // you
+              if(numFriends == 0) { // no friends
+                if(formattedResult.count > 0) { // others
+                  formattedResult.countText = "<b>You</b> and " + count + " others";
+                }
+                else { // no others
+                  formattedResult.countText = "<b>You</b>";
+                }
               }
-              else {
-                countTextResults.push(numFriends + " friends")
+              else { // numFriends > 0
+                if(formattedResult.count > 0) { // others
+                  formattedResult.countText = "<b>You</b>, " + numFriends + " friends, and " + count + " others";
+                }
+                else { // no others
+                  formattedResult.countText = "<b>You</b> and " + numFriends + " friends";
+                }
+              }
+            }
+            else { // not you
+              if(numFriends == 0) { // no friends
+                if(formattedResult.count > 0) { // others
+                  formattedResult.countText =  count + " others";
+                }
+                else { // no others
+                  formattedResult.countText = "No one"; // ???
+                }
+              }
+              else { // numFriends > 0
+                if(formattedResult.count > 0) { // others
+                  formattedResult.countText = numFriends + " friends, and " + count + " others";
+                }
+                else { // no others
+                  formattedResult.countText = numFriends + " friends";
+                }
               }
             }
 
@@ -135,13 +161,23 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
           var tb = Mustache.to_html(
               req.responseText,
-              {"results": results}
+              {"results": results, "userInfo": userInfo}
           );
 
-          console.log(results)
-
           // Binders
-          $('#ires').prepend(tb);
+          log("Preparing to inject!",$('#ires'));
+
+          function injectResults() {
+            if($("#keepit").length == 0) {
+              log("Hm. Injecting again...");
+              $('#ires').prepend(tb);
+              setTimeout(injectResults, 50)
+            }
+          }
+
+          injectResults();
+
+          log("Done");
 
         }
       };
