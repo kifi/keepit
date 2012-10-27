@@ -21,6 +21,7 @@ import securesocial.controllers.routes
 import play.api.i18n.Messages
 import play.api.Logger
 import play.api.libs.json.Json
+import com.keepit.common.logging.Logging
 
 
 /**
@@ -32,7 +33,7 @@ import play.api.libs.json.Json
  *      Ok("Hello %s".format(request.user.displayName))
  *    }
  */
-trait SecureSocial extends Controller {
+trait SecureSocial extends Controller with Logging {
 
   /**
    * A request that adds the User for the current call
@@ -63,6 +64,7 @@ trait SecureSocial extends Controller {
    */
   def SecuredAction[A](apiClient: Boolean, p: BodyParser[A])(f: SecuredRequest[A] => Result) = Action(p) {
     implicit request => {
+      log.info("in a secured action with api client = %s".format(apiClient))
       SecureSocial.userFromSession(request).map { userId =>
         UserService.find(userId).map { user =>
           f(SecuredRequest(user, request))
@@ -70,18 +72,25 @@ trait SecureSocial extends Controller {
           // there is no user in the backing store matching the credentials sent by the client.
           // we need to remove the credentials from the session
           if ( apiClient ) {
+            log.info("apiClientForbidden")
             apiClientForbidden(request)
           } else {
-            Redirect(routes.LoginPage.logout())
+            log.info("redirect to login")
+//            Redirect(routes.LoginPage.logout())
+            log.info("request.uri = %s".format(request.uri))
+            //the following line is a FortyTwo update replacing the logout
+            Redirect(routes.LoginPage.login()).flashing("error" -> Messages("securesocial.loginRequired")).withSession(
+              session + (SecureSocial.OriginalUrlKey -> request.uri)
+            )
           }
         }
       }.getOrElse {
-        if ( Logger.isDebugEnabled ) {
-          Logger.debug("Anonymous user trying to access : '%s'".format(request.uri))
-        }
+        log.debug("Anonymous user trying to access : '%s'".format(request.uri))
         if ( apiClient ) {
+          log.info("apiClientForbidden")
           apiClientForbidden(request)
         } else {
+          log.info("request.uri = %s".format(request.uri))
           Redirect(routes.LoginPage.login()).flashing("error" -> Messages("securesocial.loginRequired")).withSession(
             session + (SecureSocial.OriginalUrlKey -> request.uri)
           )
