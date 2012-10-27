@@ -1,7 +1,7 @@
 
 (function() {
   function log(message) {
-    console.log("[" + new Date().getTime() + "] " + message);
+    console.log("[" + new Date().getTime() + "] ", message);
   }
 
   log("FT content script starting");
@@ -15,7 +15,7 @@
   var isGoogle = (host == "www.google.com") ||  (host == "www.google.co.il");
   log("keepit: location is " + host + " isGoogle = " + isGoogle);
   if (isGoogle) {
-    log.info("this script should not run in a google page!");
+    log("this script should not run in a google page!");
     return;
   } else {
     chrome.extension.sendRequest({
