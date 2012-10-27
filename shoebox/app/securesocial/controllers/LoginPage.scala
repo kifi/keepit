@@ -25,12 +25,13 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import providers.FacebookProvider
+import com.keepit.common.logging.Logging
 
 
 /**
  * The Login page controller
  */
-object LoginPage extends Controller
+object LoginPage extends Controller with Logging
 {
   /**
    * The property that specifies the page the user is redirected to if there is no original URL saved in
@@ -85,12 +86,13 @@ object LoginPage extends Controller
         try {
           p.authenticate().fold( result => result , {
             user =>
-              if ( Logger.isDebugEnabled ) {
-                Logger.debug("User logged in : [" + user + "]")
-              }
+              log.info("User logged in : [" + user + "]")
               val toUrl = session.get(SecureSocial.OriginalUrlKey).getOrElse(
                 Play.configuration.getString(onLoginGoTo).getOrElse(Root)
               )
+              log.info("toUrl redirect = %s".format(toUrl))
+              log.info("toUrl from session = %s".format(session.get(SecureSocial.OriginalUrlKey)))
+              log.info("session data = %s".format(session.data))
               Redirect(toUrl).withSession { session +
                 (SecureSocial.UserKey -> user.id.id) +
                 (SecureSocial.ProviderKey -> user.id.providerId) -
