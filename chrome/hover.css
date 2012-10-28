@@ -3,51 +3,92 @@
 .kifi_hover * {
   width:auto;
   line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  position: static;
+  background-color: transparent;
+  font-weight:normal;
+  font-family: Calibri, Helvetica, sans-serif;
+  font-size: 14px;
+  background-position: 0% 0%;
+  background-size: auto;
+  background-origin: padding-box;
+  background-clip: border-box;
+  background-attachment: scroll;
+  background-image: none;
+  border: 0px;
+  border-top: 0px;
+  margin: 0px;
+  padding: 0px;
+  box-shadow: none;
+  border-radius: 0px;
+  background: transparent;
+  min-width: 0px;
+  box-sizing:content-box;
+}
+
+.kifi_hover div {
+  display: block;
+}
+
+.kifi_hover span {
+  display: inline;
 }
 
 .kifi_hover {
   position: fixed;
   bottom:-40px;
   right:-350px;
-  z-index:9999;
+  z-index:99100;
   opacity:0;
   width:auto;
+  border:0px;
+  margin: 0px;
+  padding: 0px;
+  box-shadow: none;
+  border-radius: 0px;
+  background: transparent;
+  min-width: 0px;
+  font-size: 14px;
 }
 
 /*Rounded corner with shadow*/
-.roundedbox {
+.kifi_hover .roundedbox {
   background-color: #faf9f9;  
   border: 2px solid #414b52;
   border-right:0px;
   border-radius: 12px 0px 0px 12px;
   box-shadow: #cccccc 0.2em 0.2em 0.2em;
+  -moz-box-shadow: 2px 2px 2px rgba(50,50,50,0.5);
+  -webkit-box-shadow: 2px 2px 2px rgba(50,50,50,0.5);
+  box-shadow: 2px 2px 2px rgba(50,50,50,0.5);
 
   width: 300px;
   position:relative;
 }
 /*Header*/
-.roundedbox .hdr {                        
+.kifi_hover .roundedbox .kifihdr {                        
   margin:0; 
   padding:5px 5px 5px 10px;          
   padding-left:40px;
   padding-right:25px;
 }
 /*footer*/
-.roundedbox .ftr {                        
+.kifi_hover .roundedbox .kififtr {                        
   margin:0; 
   bottom: 0px;      
   border-bottom-left-radius: 0.35em;
   border-bottom-right-radius: 0.35em;
 }
 /*content*/
-.roundedbox .cnt {
+.kifi_hover .roundedbox .kificnt {
   padding: 5px 5px 5px 10px;    
   font-family: Calibri, Helvetica, sans-serif;
   font-size: 12px;
   padding-right:20px;
 }
 /*Color scheme*/
-.color_a {
+.kifi_hover .color_a {
   font-family: Calibri, Helvetica, sans-serif;
   background-color: #414b52;
   color: #faf9f9;
@@ -55,33 +96,33 @@
   font-weight:lighter;
 }
 
-.ftr {
+.kifi_hover .kififtr {
 text-align:right;
 }
 
-.logo {
+.kifi_hover .kifilogo {
   margin-right: 20px;
   padding:5px 25px;
   background-position: top;
   background-size: 25px;
 }
 
-.kept {
+.kifi_hover .kept {
   color: #a0a5a9;
 }
 
-.friendlist {
+.kifi_hover .friendlist {
   padding:5px;
   padding-left:0px;
 }
 
-.close {
+.kifi_hover .kificlose {
   position:relative;
   float:right;
   margin-top:-2px;
 }
 
-.xlink {
+.kifi_hover .xlink {
   padding:1px;
   padding-right:5px;
   padding-left:5px;
@@ -96,19 +137,19 @@ text-align:right;
 
 }
 
-.xlink:hover {
+.kifi_hover .xlink:hover {
     background-color: #faf9f9;
     color: #414b52;
 }
 
-.xlink:active {
+.kifi_hover .xlink:active {
     background-color: #e0e0e0;
     color: #414b52;
 }
 
 
 
-.circular {
+.kifi_hover .circular {
   border: 2px solid white;
   width: 45px;
   height: 45px;
@@ -118,7 +159,7 @@ text-align:right;
   top:-2px;
   left:-2px;
 }
-.imageborder {
+.kifi_hover .imageborder {
   border: 5px solid #414b52;
   width: 45px;
   height: 45px;
@@ -128,7 +169,7 @@ text-align:right;
   left:-20px;
 }
 
-.socialinnerbox {
+.kifi_hover .socialinnerbox {
   padding:7px 10px;
   background-color:white;
   margin:10px;
@@ -139,13 +180,13 @@ text-align:right;
 }
 
 
-.social_friend {
+.kifi_hover .social_friend {
   width:36px;
   height:36px;
   border-radius: 2px;
 }
 
-.innerbox {
+.kifi_hover .innerbox {
   padding:7px 10px;
   margin:10px;
   font-size:14px;
@@ -154,14 +195,7 @@ text-align:right;
 }
 
 
-
-
-.testenclosure {
-  padding:50px;
-}
-
-
-.kbutton {
+.kifi_hover .kbutton {
   zoom: 1;
   outline: none;
   cursor: pointer;
@@ -187,7 +221,7 @@ text-align:right;
 
 }
 
-.kbutton:hover, .kbutton:active { 
+.kifi_hover .kbutton:hover, .kbutton:active { 
   -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2); 
   -moz-box-shadow:  0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2); 
   box-shadow:     0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2);
@@ -198,12 +232,12 @@ text-align:right;
   background: linear-gradient(#ffffff, #ededed);
 }
 
-.kbutton:active {
+.kifi_hover .kbutton:active {
   background: #f7f7f7;
 
 }
 
-.keepitbtn {
+.kifi_hover .keepitbtn {
   padding:5px;
   padding-left:30px;
   padding-right:30px;
@@ -212,22 +246,22 @@ text-align:right;
 }
 
 
-.buttonwrapper {
+.kifi_hover .buttonwrapper {
   text-align: center;
   padding:10px;
 }
 
-.dropdownbtn {
+.kifi_hover .dropdownbtn {
   border-radius: 0px 2px 2px 0px;
 }
 
-.toggle,.toggle:hover {
+.kifi_hover .toggle,.toggle:hover {
   width: 100%;
   height: 100%;
   padding:10px 5px;
 }
 
-.noselect {
+.kifi_hover .noselect {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
@@ -236,11 +270,11 @@ text-align:right;
   user-select: none;
 }
 
-.profilepic {
+.kifi_hover .profilepic {
   cursor: pointer;
 }
 
-.moreinnerbox {
+.kifi_hover .moreinnerbox {
   padding:7px 10px;
   background-color:white;
   margin:10px;
