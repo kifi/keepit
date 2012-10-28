@@ -38,7 +38,7 @@
   position: fixed;
   bottom:-40px;
   right:-350px;
-  z-index:19999;
+  z-index:99100;
   opacity:0;
   width:auto;
   border:0px;
@@ -48,6 +48,7 @@
   border-radius: 0px;
   background: transparent;
   min-width: 0px;
+  font-size: 14px;
 }
 
 /*Rounded corner with shadow*/
@@ -65,21 +66,21 @@
   position:relative;
 }
 /*Header*/
-.kifi_hover .roundedbox .hdr {                        
+.kifi_hover .roundedbox .kifihdr {                        
   margin:0; 
   padding:5px 5px 5px 10px;          
   padding-left:40px;
   padding-right:25px;
 }
 /*footer*/
-.kifi_hover .roundedbox .ftr {                        
+.kifi_hover .roundedbox .kififtr {                        
   margin:0; 
   bottom: 0px;      
   border-bottom-left-radius: 0.35em;
   border-bottom-right-radius: 0.35em;
 }
 /*content*/
-.kifi_hover .roundedbox .cnt {
+.kifi_hover .roundedbox .kificnt {
   padding: 5px 5px 5px 10px;    
   font-family: Calibri, Helvetica, sans-serif;
   font-size: 12px;
@@ -114,7 +115,7 @@ text-align:right;
   padding-left:0px;
 }
 
-.kifi_hover .close {
+.kifi_hover .kificlose {
   position:relative;
   float:right;
   margin-top:-2px;
