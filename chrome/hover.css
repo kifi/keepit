@@ -24,6 +24,7 @@
   border-radius: 0px;
   background: transparent;
   min-width: 0px;
+  box-sizing:content-box;
 }
 
 .kifi_hover div {
