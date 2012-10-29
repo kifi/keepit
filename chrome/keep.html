@@ -128,7 +128,7 @@
           if (searchResults.length === 0) {
             return;
           }
-          var maxRes = getConfigs().maxRes;
+          var maxRes = getConfigs()["max_res"];
           if (searchResults.length > maxRes) {
             searchResults = searchResults.slice(0, maxRes);
           }
@@ -168,7 +168,7 @@
         } else if (request.isGoogle === false) {
           var pageLocation = request.location;
           log("injecting hover: " + request, tab);
-          var hoverTimeout = getConfigs().hoverTimeout;
+          var hoverTimeout = getConfigs()["hover_timeout"];
           var restrictedElements = $.grep(restrictedUrlPatternsForHover, function(e, i){
             return pageLocation.indexOf(e) >= 0;
           });
@@ -244,7 +244,9 @@
       if (!env) {
         env = "production";
       }
-      return env+"_"+key;
+      var fullyQualifiedKey = env + "_" + key;
+      log("fullyQualifiedKey for key is " + fullyQualifiedKey);
+      return fullyQualifiedKey;
     }
 
     function removeFromConfigs(key) {
@@ -252,6 +254,7 @@
     }
 
     function setConfigs(key, value) {
+      log("setting config key " + key + " with " + value + ", prev value is ", localStorage[getFullyQualifiedKey(key)]);
       localStorage[getFullyQualifiedKey(key)] = value;
     }
 
@@ -268,19 +271,20 @@
         }
         var maxRes = Number(maxResStr);
 
-        var showScore = localStorage[getFullyQualifiedKey("showScore")];
-        if (showScore === "yes") {
+        var showScore = localStorage[getFullyQualifiedKey("show_score")];
+        if (showScore === "yes" || showScore === true) {
           showScore = true;
         } else {
           showScore = false;
         }
 
         var hoverTimeout = localStorage[getFullyQualifiedKey("hover_timeout")];
-        if (!hoverTimeout) {
+        if (typeof hoverTimeout === 'undefined' || hoverTimeout === null) {
+          log("setting a hoverTimeout default to 10, prev vaule is: " + hoverTimeout);
           hoverTimeout = 10;
         }
         if (!isNumber(hoverTimeout)) {
-          hoverTimeout = 0;
+          throw Error("hover timeout is not a number: " + hoverTimeout);
         }
         hoverTimeout = Number(hoverTimeout);
 
@@ -295,9 +299,9 @@
         }
         var config = {
           "env": env, 
-          "hoverTimeout": hoverTimeout, 
-          "showScore": showScore, 
-          "maxRes": maxRes,
+          "hover_timeout": hoverTimeout, 
+          "show_score": showScore, 
+          "max_res": maxRes,
           "server": server,
           "user": userInfoString
         }
@@ -411,8 +415,8 @@
 
     function resetUserObjectIfInDevMode() {
       var config = getConfigs();
-      if(config.env == "development") {
-        log("dev mode detected, removing user " + JSON.stringify(config.user));
+      if(config["env"] == "development") {
+        log("dev mode detected, removing user " + JSON.stringify(config["user"]));
         removeFromConfigs("user");
         log("user removed");
       }

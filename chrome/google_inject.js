@@ -109,8 +109,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
               formattedResult.displayUrl = formattedResult.displayUrl.substring(0, 75) + "..."
             }
 
-            if (config.showScore === true) {
-              formattedResult.score = "<b>[" + Math.round(result.score*100)/100 + "]</b> ";
+            if (config["show_score"] === true) {
+              formattedResult.displayScore = "[" + Math.round(result.score*100)/100 + "] ";
             }
 
             formattedResult.countText = "";

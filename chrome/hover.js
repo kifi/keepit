@@ -29,7 +29,7 @@ console.log("injecting keep it hover div");
 
             log('Rendering Mustache.js hover template...');
 
-            $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href),
+            $.get("http://" + config["server"] + "/users/keepurl?url=" + encodeURIComponent(document.location.href),
                 null,
                 function(users) {
 
@@ -155,7 +155,7 @@ console.log("injecting keep it hover div");
           console.log(result);
         }
       }
-      xhr.open("POST", 'http://' + config.server + '/chat/' + user.externalId, true);
+      xhr.open("POST", 'http://' + config["server"] + '/chat/' + user.externalId, true);
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send(JSON.stringify(  {"url": document.location.href, "message":message.val() } ));
       console.log("sent");
