@@ -109,8 +109,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
               formattedResult.displayUrl = formattedResult.displayUrl.substring(0, 75) + "..."
             }
 
-            if (config.showScore) {
-              formattedResult.score = "<b>[" + Math.round(result.score*100)/100 + "]</b> ";
+            if (config["show_score"] === true) {
+              formattedResult.displayScore = "[" + Math.round(result.score*100)/100 + "] ";
             }
 
             formattedResult.countText = "";
@@ -171,7 +171,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             if(times<=0) {
               return;
             }
-            if($("#keepit").length == 0) {
+            if($("#keepit:visible").length == 0) {
               log("Google isn't ready. Trying to injecting again... ("+times+")");
               $('#ires').prepend(tb);
               setTimeout(function() { injectResults(--times) }, 50);
