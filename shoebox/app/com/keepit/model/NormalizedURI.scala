@@ -15,6 +15,7 @@ import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URINormalizer
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
@@ -74,19 +75,11 @@ object NormalizedURI {
     NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized), state = state) 
   }
   
-  private def normalize(url: String) = url //new URI(url).normalize().toString()
+  private def normalize(url: String) = URINormalizer.normalize(url)
   
   private def hashUrl(normalizedUrl: String): String = {
     val binaryHash = MessageDigest.getInstance("MD5").digest(normalizedUrl.getBytes("UTF-8"))
     new String(new Base64().encode(binaryHash), "UTF-8") 
-  }
-  
-  private def tokenize(term: String): Seq[String] = term.split("\\s") map {_.toLowerCase()}
-  
-  private def score(term: String, uri: NormalizedURI) = 1F + { uri.url.toLowerCase.contains(term) match {
-      case true => 1F
-      case false => 0F
-    }
   }
   
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit conn: Connection): Seq[NormalizedURI] = {

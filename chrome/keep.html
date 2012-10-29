@@ -91,6 +91,15 @@
         } else if (request.type == "upload_all_bookmarks") {
           upload_all_bookmarks();
         }
+        else if (request.type === "check_hover_existed") {
+          if(request.kifi_hover === false) { addHover(request.tabid); }
+        }
+        else if (request.type === "set_page_icon") {
+          setPageIcon(tab.id, request.is_kept);
+        }
+        else if(request.type === "is_already_kept") {
+          remoteIsAlreadyKept(request.location, sendResponse);
+        }
         // Return nothing to let the connection be cleaned up.
       } catch (e) {
         error(e);
@@ -128,7 +137,7 @@
           if (searchResults.length === 0) {
             return;
           }
-          var maxRes = getConfigs().maxRes;
+          var maxRes = getConfigs()["max_res"];
           if (searchResults.length > maxRes) {
             searchResults = searchResults.slice(0, maxRes);
           }
@@ -166,9 +175,11 @@
             log("injecting to google result page: done!", tab);
           }, 5000);
         } else if (request.isGoogle === false) {
+
           var pageLocation = request.location;
           log("injecting hover: " + request, tab);
-          var hoverTimeout = getConfigs().hoverTimeout;
+          var userConf =  getConfigs();
+          var hoverTimeout = userConf["hover_timeout"];
           var restrictedElements = $.grep(restrictedUrlPatternsForHover, function(e, i){
             return pageLocation.indexOf(e) >= 0;
           });
@@ -176,19 +187,29 @@
             log("restricted hover page: " + restrictedElements);
             return;
           }
+
+
+          if(typeof userConf.user === "undefined" || typeof userConf.user.keepit_external_id === "undefined" || typeof userConf.user.facebook_id === "undefined") {
+            // User does not have facebook configured.
+            log("User does not have facebook configured.");
+            openFacebookConnect();
+            return;
+          }
+
           if (hoverTimeout > 0) {
             getBookMarks(function(bookmarks) {
               chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
                 if(isAlreadyKept(bm, pageLocation)) {
+                  setPageIcon(tab.id, true);
                   log("hiding hover cause URL " + pageLocation + " already kept", tab);
                 } else {
                   log("injecting hover: " + request, tab);
+                  setPageIcon(tab.id, false);
                   setTimeout(function() {
-                    chrome.tabs.executeScript(tab.id, {code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:hover] tab: " + tab.id + "')"}, 
-                      function(vars){
-                        log("[callback] executed hover remote logging", tab);
+                    // For the auto-slide in, we check to see if the hover has existed on this page before.
+                    chrome.tabs.executeScript(tab.id, {
+                      code: "chrome.extension.sendRequest({'type': 'check_hover_existed', 'kifi_hover': typeof window.kifi_hover !== 'undefined', 'tabid': " + tab.id +"});"
                     });
-                    chrome.tabs.executeScript(tab.id, {file:"hover.js"});
                   }, hoverTimeout * 1000);
                 }
               });
@@ -201,6 +222,23 @@
         error(e);
       }
     }
+
+
+    function addHover(tabid) {
+      chrome.tabs.executeScript(tabid, {
+        code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:hover] tab: " + tabid + "')"
+        }, 
+        function(vars){
+          log("[callback] executed hover remote logging", tabid);
+      });
+      chrome.tabs.executeScript(tabid, {file:"hover.js"});
+    }
+
+    function addHoverToTab(tab) {
+      addHover(tab.id);
+    }
+
+    chrome.pageAction.onClicked.addListener(addHoverToTab);
 
     function isAlreadyKept(bms, location) {
       try {
@@ -218,6 +256,29 @@
       } catch (e) {
         error(e);
       }
+    }
+
+    function remoteIsAlreadyKept(location, callback) {
+      getBookMarks(function(bookmarks) {
+        chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
+          if(isAlreadyKept(bm, location)) {
+            callback(true);
+          }
+          else {
+            callback(false);
+          }
+        });
+      });
+    }
+
+    function setPageIcon(tabId, is_kept) {
+      if(is_kept) {
+        chrome.pageAction.setIcon({"tabId":tabId, "path":"kept.png"});
+      }
+      else {
+        chrome.pageAction.setIcon({"tabId":tabId, "path":"keepit.png"});
+      }
+      chrome.pageAction.show(tabId);
     }
     
     function injectGoogleDiv(tab) {
@@ -244,7 +305,9 @@
       if (!env) {
         env = "production";
       }
-      return env+"_"+key;
+      var fullyQualifiedKey = env + "_" + key;
+      log("fullyQualifiedKey for key is " + fullyQualifiedKey);
+      return fullyQualifiedKey;
     }
 
     function removeFromConfigs(key) {
@@ -252,6 +315,7 @@
     }
 
     function setConfigs(key, value) {
+      log("setting config key " + key + " with " + value + ", prev value is ", localStorage[getFullyQualifiedKey(key)]);
       localStorage[getFullyQualifiedKey(key)] = value;
     }
 
@@ -268,17 +332,20 @@
         }
         var maxRes = Number(maxResStr);
 
-        var showScore = localStorage[getFullyQualifiedKey("showScore")];
-        if (showScore === "yes") {
+        var showScore = localStorage[getFullyQualifiedKey("show_score")];
+        if (showScore === "yes" || showScore === true) {
           showScore = true;
+        } else {
+          showScore = false;
         }
 
         var hoverTimeout = localStorage[getFullyQualifiedKey("hover_timeout")];
-        if (!hoverTimeout) {
+        if (typeof hoverTimeout === 'undefined' || hoverTimeout === null) {
+          log("setting a hoverTimeout default to 10, prev vaule is: " + hoverTimeout);
           hoverTimeout = 10;
         }
         if (!isNumber(hoverTimeout)) {
-          hoverTimeout = 0;
+          throw Error("hover timeout is not a number: " + hoverTimeout);
         }
         hoverTimeout = Number(hoverTimeout);
 
@@ -293,9 +360,9 @@
         }
         var config = {
           "env": env, 
-          "hoverTimeout": hoverTimeout, 
-          "showScore": showScore, 
-          "maxRes": maxRes,
+          "hover_timeout": hoverTimeout, 
+          "show_score": showScore, 
+          "max_res": maxRes,
           "server": server,
           "user": userInfoString
         }
@@ -351,8 +418,8 @@
       if (!user) return false;
       try {
         userInfo = JSON.parse(user);
-        if (userInfo.keepit_external_id && userInfo.facebook_id) return true
-        else return false
+        if (userInfo.keepit_external_id && userInfo.facebook_id)
+          return true
       } catch (e) {
         log("could not parse JSON "+user);
       }
@@ -372,8 +439,7 @@
     }
     var popup = null;
 
-    function openFacebookConnect() {    
-
+    function openFacebookConnect() {
 
       chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
         if(changeInfo.status == "loading") {
@@ -409,8 +475,8 @@
 
     function resetUserObjectIfInDevMode() {
       var config = getConfigs();
-      if(config.env == "development") {
-        log("dev mode detected, removing user " + JSON.stringify(config.user));
+      if(config["env"] == "development") {
+        log("dev mode detected, removing user " + JSON.stringify(config["user"]));
         removeFromConfigs("user");
         log("user removed");
       }
