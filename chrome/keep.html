@@ -189,7 +189,7 @@
           }
 
 
-          if(userConf.user === undefined || userConf.user.keepit_external_id === undefined || userConf.user.facebook_id === undefined) {
+          if(typeof userConf.user === "undefined" || typeof userConf.user.keepit_external_id === "undefined" || typeof userConf.user.facebook_id === "undefined") {
             // User does not have facebook configured.
             log("User does not have facebook configured.");
             openFacebookConnect();
@@ -208,7 +208,7 @@
                   setTimeout(function() {
                     // For the auto-slide in, we check to see if the hover has existed on this page before.
                     chrome.tabs.executeScript(tab.id, {
-                      code: "chrome.extension.sendRequest({'type': 'check_hover_existed', 'kifi_hover': window.kifi_hover !== undefined, 'tabid': " + tab.id +"});"
+                      code: "chrome.extension.sendRequest({'type': 'check_hover_existed', 'kifi_hover': typeof window.kifi_hover !== 'undefined', 'tabid': " + tab.id +"});"
                     });
                   }, hoverTimeout * 1000);
                 }
