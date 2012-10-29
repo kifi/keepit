@@ -153,7 +153,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
               } -- myUriIds
               val othersUriIds = (uris.map(_.id.get).toSet) -- friendsUriIds -- myUriIds
 
-              val res = mainSearcher.search("alldocs", userId, friendIds, Set.empty[Long], numHitsToReturn)
+              val res = mainSearcher.search("alldocs", userId, friendIds, Set.empty[Long], numHitsToReturn, None)
               
               var mCnt = 0
               var fCnt = 0
@@ -218,14 +218,16 @@ class MainSearcherTest extends SpecificationWithJUnit {
           
           val friendIds = Set(Id[User](6))
           var uriSeen = Set.empty[Long]
+          var uuid : Option[String] = None
           while(uriSeen.size < reachableUris.size) {
             //println("---" + uriSeen + ":" + reachableUris)
-            val res = mainSearcher.search("alldocs", userId, friendIds, uriSeen, numHitsToReturn)
+            val res = mainSearcher.search("alldocs", userId, friendIds, uriSeen, numHitsToReturn, uuid)
             res.hits.foreach{ h => 
               //println(h)
               uriSeen.contains(h.uriId.id) === false
               uriSeen += h.uriId.id
             }
+            uuid = Some(res.uuid)
           }
           indexer.numDocs === uris.size
         }
