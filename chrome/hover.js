@@ -9,9 +9,13 @@ console.log("injecting keep it hover div");
     console.log("[" + new Date().getTime() + "] ", message);
   }
 
-  function showBookmarkHover(user) {
+  function showKeptItHover(user) {
 
-    var existingElements = $('.kifi_hover').length;
+  }
+
+  function showBookmarkHover(user) {
+    window.kifi_hover = true; // set global variable, so hover will not automatically slide out again.
+    var existingElements = $('.kifi_hover:visible').length;
     if (existingElements > 0) {
       console.warn("hover is already injected. There are " + existingElements + " existing elements")
       return;
@@ -63,42 +67,45 @@ console.log("injecting keep it hover div");
 
                   // Binders
                   $('body').prepend(tb);
-                  $('.close').click(function() {
+                  $('.kificlose').click(function() {
                     slideOut();
                   });
                   $('.profilepic').click(function() { location=facebookProfileLink; });
 
                   $('.keepitbtn').click(function() {
                     log("bookmarking page: " + document.location.href);
+
+                    chrome.extension.sendRequest({
+                      "type": "set_page_icon",
+                      "is_kept": "true"
+                    });
+
                     var request = {
-                      type: "add_bookmarks", 
-                      url: document.location.href, 
-                      title: document.title, 
-                      private: $("#keepit_private").is(":checked")
+                      "type": "add_bookmarks", 
+                      "url": document.location.href, 
+                      "title": document.title, 
+                      "private": $("#keepit_private").is(":checked")
                     }
                     chrome.extension.sendRequest(request, function(response) {
                       log("bookmark added! -> " + JSON.stringify(response));
-                      slideOut();
+                      keptItslideOut();
                    });
                   });
 
                   $('.dropdownbtn').click(function() {
                     $('.moreinnerbox').slideToggle(150);
                   });
+
+                  slideIn();
                 },
                 "json"
             );
         }
     };
     req.send(null);
-    
-
-    setTimeout(function() {
-      slideIn();
-    }, 500);//1 seconds // CHANGE ME
   }
 
-  function slideOut() {
+  function keptItslideOut() {
     var position = $('.kifi_hover').position().top;
     $('.kifi_hover').animate({
         bottom: '+=' + position,
@@ -110,8 +117,19 @@ console.log("injecting keep it hover div");
       });
   }
 
+  function slideOut() {
+    $('.kifi_hover').animate({
+        opacity: 0,
+        right: '-=330',
+        bottom: '-=75'
+      },
+      300, function() {
+        $('.kifi_hover').detach();
+      });
+  }
+
   function slideIn() {
-    $("body").after(hover);
+    //$("body").after(hover);
     $('.kifi_hover').animate({
         right: '+=330',
         bottom: '+=75',

@@ -24,7 +24,8 @@
   border-radius: 0px;
   background: transparent;
   min-width: 0px;
-  box-sizing:content-box;
+  box-sizing: content-box;
+  text-align: left;
 }
 
 .kifi_hover div {
