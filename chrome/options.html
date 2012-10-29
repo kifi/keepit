@@ -8,10 +8,6 @@
 
   // Saves configs to localStorage.
 
-  $("#user_info_data").hide();
-  $("#connect_to_server").hide();
-
-  
   function upload() {
     chrome.extension.sendRequest({type: "upload_all_bookmarks"}, function(response) {});
   }
@@ -35,74 +31,69 @@
     else {
       localStorage["env"] = "development";
     }
-    sendSaveConfig("maxRes", $("#max_search_results").val());
-    sendSaveConfig("hoverTimeout", $("#hover_timeout").val());
-    sendSaveConfig("showScore", $("#show_score").val());
-  }
-
-  function getuserinfo(callback) {
-    chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
-      $.get("http://" + config.server + "/isLoggedIn",
-          null,
-          function(data) {         
-            callback(data) 
-          },
-          "json"
-      ).error(function(error) {
-        log(error.responseText);
-        alert("user is not logged in: " + error.responseText);
-        callback(null);
-      });
-    });
+    sendSaveConfig("max_res", $("#max_search_results").val());
+    sendSaveConfig("hover_timeout", $("#hover_timeout").val());
+    var showScore = $("#show_score").val();
+      if (showScore === "yes" || showScore === true) {
+        showScore = true;
+      } else {
+        showScore = false;
+      }
+    sendSaveConfig("show_score", showScore);
+    window.close();
   }
 
   function renderUserInfo(userInfo) {
-    if (userInfo && userInfo.status && userInfo.status=="loggedin") {
-      setConfigs("user", JSON.stringify(userInfo));
-      $("#user_info_data").show();
-      $("#connect_to_server").hide();
-      $("#user_name").html(userInfo.name);
-      $("#user_avatar").attr("src", userInfo.avatar_url);
-    } else {
-      removeFromConfigs("user");
-      $("#connect_to_server").show();
-      $("#user_info_data").hide();
-    }     
+    console.log(userInfo);
+    $("#user_info_data").show();
+    $("#user_name").html(userInfo.name);
+    $("#user_avatar").attr("src", userInfo.avatar_url);
   }
 
-  function restoreConfigs() {
+  function restoreConfigs(callback) {
     chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
-      var env = config.env;
-      if (env=="development") {
+      var env = config["env"];
+      if (env === "development") {
         $("#env_dev").attr("checked","checked");
       }
-      if (env=="production") {
+      if (env === "production") {
         $("#env_prod").attr("checked","checked");
       }
-      $("#max_search_results").val(config.maxRes);
-      $("#hover_timeout").val(config.hoverTimeout);
-      $("#show_score").val(config.shoScore);
+      $("#max_search_results").val(config["max_res"]);
+      $("#hover_timeout").val(config["hover_timeout"]);
+      var showScore = config["show_score"];
+      if (showScore === "yes" || showScore === true) {
+        showScore = "yes";
+      } else {
+        showScore = "no";
+      }
+      $("#show_score").val(showScore);
       $("#facebook_connect_link").click(function() {
         chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
-          var url = "http://" + config.server + "/authenticate/facebook";
+          var url = "http://" + config["server"] + "/authenticate/facebook";
           log("openning facebook window from " + url, "connect", "width=500,height=400");
           window.open(url);
           return false;
         });
       });  
+      if (callback) {
+        callback(config);
+      }
     });
-    getuserinfo(renderUserInfo);
   }
+  setTimeout(function() {
+    restoreConfigs(function(config) {
+      renderUserInfo(config["user"]);
+    });
+    
+  }, 1);
   </script>
 
-  <body onload="restoreConfigs()">
+  <body>
       
       <div id="user_info">
         <div id="user_info_data">
           Hello: <span id="user_name"></span><img id="user_avatar" src="#"></img>
-        </div>
-        <div id="connect_to_server">
-          <a id="facebook_connect_link" target="_" href="#"><img src="facebookConnect.png"></img></a>
         </div>
       </div> 
 
