@@ -1,0 +1,32 @@
+
+
+<div class="kifi_hover">
+  <div class="roundedbox noselect">
+    <span class="cntrk">
+      <div class="imageborder"><div class="circular profilepic" style="background: url({{profilepic}}) no-repeat; background-position:center; "></div></div>
+      <div class="kifihdr color_a">{{name}}<span class="kificlose"><span class="xlink">x</span></span></div>
+        <div class="kificnt">
+        {{#socialConnections}}
+        <div class="socialinnerbox">
+          <span class="keepitmessage"><b>You kept this, with </b> {{countText}}.</span>
+          <div class="friendlist">
+          {{#friends}}
+            <a href='#'><img class="social_friend" src='https://graph.facebook.com/{{facebookId}}/picture?type=square'></a>
+          {{/friends}}
+          </div>
+        </div>
+        {{/socialConnections}}
+        {{^socialConnections}}
+          <div class="innerbox">
+          <span class="keepitmessage"><b>You kept this!</b></span>
+          </div>
+        {{/socialConnections}}
+          <div class="buttonwrapper">
+            <span class="kbutton unkeepitbtn">Nevermind, un-Keep it</span><span class="kbutton dropdownbtn"><span class="toggle" style="background: url({{arrow}}) no-repeat; background-size: 8px; background-position:center; "></span></span>
+          </div>
+          <div class="moreinnerbox"><label for="keepit_private"><input type='checkbox' id='keepit_private' class='keepit_private' value='private'> Keep this link private</label></div>
+        </div>
+    <div class="kififtr"><span class="kifilogo" style="background: url({{logo}}) no-repeat; background-position: top; background-size: 25px;"></span></div>
+    </span>
+  </div>
+</div>
