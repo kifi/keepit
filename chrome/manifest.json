@@ -5,7 +5,7 @@
   "description": "The Keep It Plugin",
   "options_page": "options.html",
   "page_action": {
-    "default_icon": "keep_19.png", // optional
+    "default_icon": "kept.png", // optional
     "default_title": "Keep It!"//,    // optional; shown in tooltip
     //"default_popup": "keep.html"    // optional
   },  

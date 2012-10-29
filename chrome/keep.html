@@ -92,17 +92,15 @@
           upload_all_bookmarks();
         }
         else if (request.type === "check_hover_existed") {
-        // Return nothing to let the connection be cleaned up.
           if(request.kifi_hover === false) { addHover(request.tabid); }
         }
         else if (request.type === "set_page_icon") {
-          if(request.is_kept === true) {
-            setPageIcon(tab.id, true);
-          }
-          else {
-            setPageIcon(tab.id, true);
-          }
+          setPageIcon(tab.id, request.is_kept);
         }
+        else if(request.type === "is_already_kept") {
+          remoteIsAlreadyKept(request.location, sendResponse);
+        }
+        // Return nothing to let the connection be cleaned up.
       } catch (e) {
         error(e);
       }
@@ -180,7 +178,10 @@
 
           var pageLocation = request.location;
           log("injecting hover: " + request, tab);
-          var hoverTimeout = getConfigs().hoverTimeout;
+          var userConf =  getConfigs();
+
+          var hoverTimeout = userConf.hoverTimeout;
+
           var restrictedElements = $.grep(restrictedUrlPatternsForHover, function(e, i){
             return pageLocation.indexOf(e) >= 0;
           });
@@ -188,6 +189,15 @@
             log("restricted hover page: " + restrictedElements);
             return;
           }
+
+
+          if(userConf.user === undefined || userConf.user.keepit_external_id === undefined || userConf.user.facebook_id === undefined) {
+            // User does not have facebook configured.
+            log("User does not have facebook configured.");
+            openFacebookConnect();
+            return;
+          }
+
           if (hoverTimeout > 0) {
             getBookMarks(function(bookmarks) {
               chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
@@ -250,12 +260,25 @@
       }
     }
 
+    function remoteIsAlreadyKept(location, callback) {
+      getBookMarks(function(bookmarks) {
+        chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
+          if(isAlreadyKept(bm, location)) {
+            callback(true);
+          }
+          else {
+            callback(false);
+          }
+        });
+      });
+    }
+
     function setPageIcon(tabId, is_kept) {
-      if(is_kept === true) {
-        chrome.pageAction.setIcon({"tabId":tabId, "path":"kept_128.png"});
+      if(is_kept) {
+        chrome.pageAction.setIcon({"tabId":tabId, "path":"kept.png"});
       }
       else {
-        chrome.pageAction.setIcon({"tabId":tabId, "path":"keep_128.png"});
+        chrome.pageAction.setIcon({"tabId":tabId, "path":"keepit.png"});
       }
       chrome.pageAction.show(tabId);
     }
@@ -391,8 +414,8 @@
       if (!user) return false;
       try {
         userInfo = JSON.parse(user);
-        if (userInfo.keepit_external_id && userInfo.facebook_id) return true
-        else return false
+        if (userInfo.keepit_external_id && userInfo.facebook_id)
+          return true
       } catch (e) {
         log("could not parse JSON "+user);
       }
@@ -412,8 +435,7 @@
     }
     var popup = null;
 
-    function openFacebookConnect() {    
-
+    function openFacebookConnect() {
 
       chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
         if(changeInfo.status == "loading") {
