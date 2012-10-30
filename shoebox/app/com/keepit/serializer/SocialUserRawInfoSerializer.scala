@@ -23,7 +23,12 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
       )
     )
     
-  def reads(json: JsValue): SocialUserRawInfo = SocialUserRawInfo(
+  def reads(json: JsValue): SocialUserRawInfo = {
+    val jsons = (json \ "jsons") match {
+      case array: JsArray => array.value
+      case _ => Seq()
+    }
+    SocialUserRawInfo(
       userId = (json \ "userId").asOpt[Long].map(Id(_)), 
       socialUserInfoId = Some(Id[SocialUserInfo]((json \ "socialUserInfoId").as[Int])), 
       socialId = SocialId((json \ "socialId").as[String]), 
@@ -31,8 +36,9 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
         case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK 
       },
       fullName = (json \ "fullName").as[String],
-      jsons = (json \ "jsons").asInstanceOf[JsArray].value
-   )
+      jsons = jsons
+    )
+  }
 }
 
 object SocialUserRawInfoSerializer {
