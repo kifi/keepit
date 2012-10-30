@@ -9,68 +9,74 @@
   </span>
 }
 
-<!DOCTYPE html>
+@admin("User: " + userWithSocial.user.firstName + " " + userWithSocial.user.lastName) {
+  <h2>User details </h2>
+   <button onclick="refreshAllSociaUserInfo()">Refresh Social User Info!</button>
+  <table class="table table-bordered">
+      <tr>
+        <th>Name</th><td>@userWithSocial.user.firstName @userWithSocial.user.lastName</td>
+      </tr>
+      <tr>
+        <th>Id</th><td>@userWithSocial.user.id</td>
+      </tr>
+      <tr>
+        <th>Facebook Account</th><td>@userWithFacebookDisplay(userWithSocial)</td>
+      </tr>
+      <tr>
+        <th>Created At</th><td>@adminHelper.dateDisplay(userWithSocial.user.createdAt) @adminHelper.timeDisplay(userWithSocial.user.createdAt)</td>
+      </tr>
+      <tr>
+        <th>Last Update</th><td>@adminHelper.dateDisplay(userWithSocial.user.updatedAt) @adminHelper.timeDisplay(userWithSocial.user.updatedAt)</td>
+      </tr>
+      <tr>
+        <th>OAuth</th><td><textarea rows="3">@socialUserInfos</textarea></td>
+      </tr>
+      <tr>
+        <th>Social Raw info</th><td><textarea rows="3">@rawInfos</textarea></td>
+      </tr>
+      <tr>
+        <th>Social User</th>
+        <td>@for(socialUserInfo <-socialUserInfos) {
+            @adminHelper.socialUserDisplay(socialUserInfo, true) &nbsp; 
+        }</td>
+      </tr>
+  </table>
+    
+  
+  <h2>User kept @bookmarks.size Bookmarks</h2>
+  
+	<table class="table table-bordered">
+	    <tr>
+	      <th>BID</th>
+	      <th>Bookmark</th>
+	      <th>Source</th>
+	    </tr>
+	 @for(bookmark <- bookmarks) {
+	   <tr>
+	        <td>#@bookmark.id.get.id</td>
+	        <td>@adminHelper.bookmarkDisplay(bookmark)</td>
+	        <td>@bookmark.source</td>
+	   </tr>
+	 }
+	</table>
 
-<html>
-    <head>
-        <title>User: @{userWithSocial.user.firstName} @{userWithSocial.user.lastName}</title>
-        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
-        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-        <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
-        <script type="text/javascript">
-          function refreshAllSociaUserInfo() {
-            location.href="@com.keepit.controllers.routes.UserController.refreshAllSocialInfo(userWithSocial.user.id.get)"
-          }
-        </script>
-        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/admin_main.css")">
-    </head>
-    <body>
-      [<a href="@com.keepit.controllers.routes.UserController.usersView">All Users</a>]<br/><br/>
-      <h2>User details</h2>
-	      Name: @userWithSocial.user.firstName @userWithSocial.user.lastName<br/>
-	      Id: @userWithSocial.user.id<br/>
-	      Facebook Account: @userWithFacebookDisplay(userWithSocial)<br/>
-	      OAuth: <br/><textarea rows="3" cols="80">@socialUserInfos</textarea><br/>
-	      Social Raw info: <br/><textarea rows="7" cols="80">@rawInfos</textarea><br/>
-	      Account created at: @adminHelper.dateDisplay(userWithSocial.user.createdAt) @adminHelper.timeDisplay(userWithSocial.user.createdAt)<br/>
-	      Last updated: @adminHelper.dateDisplay(userWithSocial.user.updatedAt) @adminHelper.timeDisplay(userWithSocial.user.updatedAt)
-        
-        <h3>Social User: @for(socialUserInfo <-socialUserInfos) {
-          @adminHelper.socialUserDisplay(socialUserInfo, true) &nbsp; 
-        }</h3>
-	      <button onclick="refreshAllSociaUserInfo()">Refresh Social User Info!</button>
-      
-      <h2>User kept @bookmarks.size Bookmarks</h2>
-      
-		  <table>
-        <tr>
-          <th>BID</th>
-          <th>Bookmark</th>
-          <th>Source</th>
-        </tr>
-			  @for(bookmark <- bookmarks) {
-			    <tr>
-            <td>#@bookmark.id.get.id</td>
-            <td>@adminHelper.bookmarkDisplay(bookmark)</td>
-            <td>@bookmark.source</td>
-			    </tr>
-			  }
-		  </table>
-		  
-		  <h2>User connected to @fortyTwoConnections.size FortyTwo Users</h2>
-      <div class="scrollArea">
-        @for(userWithSocial <- fortyTwoConnections) {
-            @adminHelper.userDisplay(userWithSocial)<br/>
-        }
-      </div>
-      
-      
-      <h2>User connected to @socialConnections.size Social Users</h2>
-      <div class="scrollArea">
-        @for(socialConnection <- socialConnections) {
-          @adminHelper.socialUserDisplay(socialConnection)<br/>
-        }
-      </div>
-      
-    </body>
-</html>
+  <h2>User connected to @fortyTwoConnections.size FortyTwo Users</h2>
+  <div class="scrollArea">
+    @for(userWithSocial <- fortyTwoConnections) {
+        @adminHelper.userDisplay(userWithSocial)<br/>
+    }
+  </div>
+  
+  
+  <h2>User connected to @socialConnections.size Social Users</h2>
+  <div class="scrollArea">
+    @for(socialConnection <- socialConnections) {
+      @adminHelper.socialUserDisplay(socialConnection)<br/>
+    }
+  </div>
+  <script type="text/javascript">
+    function refreshAllSociaUserInfo() {
+      location.href="@com.keepit.controllers.routes.UserController.refreshAllSocialInfo(userWithSocial.user.id.get)"
+    }
+  </script>
+}

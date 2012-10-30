@@ -1,23 +1,12 @@
 @(bookmark: Bookmark, userWithSocial: UserWithSocial)
 
-<!DOCTYPE html>
-
-<html>
-    <head>
-        <title>Bookmark: @bookmark.title</title>
-        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
-        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-        <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
-    </head>
-    <body>
-       [<a href="@com.keepit.controllers.routes.BookmarksController.bookmarksFirstPageView">All Bookmarks</a>]<br/><br/>
-       <h2>Bookmark details</h2>
-	     Title: <a href="@bookmark.url">@bookmark.title</a><br/>
-	     Bookmark ID: <td>@bookmark.id.get.id<br/><br/>
-	     Saved by @adminHelper.userDisplay(userWithSocial)
-	         on @adminHelper.dateDisplay(bookmark.createdAt) - @adminHelper.timeDisplay(bookmark.createdAt)<br/>
-				@helper.form(action = com.keepit.controllers.routes.BookmarksController.delete(bookmark.id.get)) {
-				    <input type="submit" value="Delete"></input>
-				}	      
-    </body>
-</html>
+@admin("Bookmark: " + bookmark.title) {
+   <h2>Bookmark details</h2>
+   Title: <a href="@bookmark.url">@bookmark.title</a><br/>
+   Bookmark ID: <td>@bookmark.id.get.id<br/><br/>
+   Saved by @adminHelper.userDisplay(userWithSocial)
+       on @adminHelper.dateDisplay(bookmark.createdAt) - @adminHelper.timeDisplay(bookmark.createdAt)<br/>
+ 	 @helper.form(action = com.keepit.controllers.routes.BookmarksController.delete(bookmark.id.get)) {
+	    <input type="submit" value="Delete"></input>
+	 }	      
+}

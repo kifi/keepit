@@ -68,6 +68,23 @@ class ScraperTest extends SpecificationWithJUnit {
         uri2.state === NormalizedURI.States.SCRAPE_FAILED
       }
     }
+    
+    "Scraper WebURL.setURL" in {
+      val url = "http://convertpdftoword.net/"
+        
+      val domainStartIdx = url.indexOf("//") + 2
+      val domainEndIdx = url.indexOf('/', domainStartIdx)
+      
+      domainStartIdx === 7
+      domainEndIdx === 27
+      
+      url.substring(domainStartIdx, domainEndIdx) === "convertpdftoword.net"
+
+      val webURL = new WebURL
+      webURL.setURL(url)
+      webURL.getPath() === "/"
+      webURL.getDomain() === "convertpdftoword.net"
+    }
   }
 
   def getMockScraper(articleStore: ArticleStore) = {

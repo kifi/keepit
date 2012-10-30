@@ -427,7 +427,8 @@
         var maxRes = Number(maxResStr);
 
         var showScore = localStorage[getFullyQualifiedKey("show_score")];
-        if (showScore === "yes" || showScore === true) {
+        log("raw showScore is: " + showScore);
+        if (showScore === "yes" || showScore === true || showScore === "true") {
           showScore = true;
         } else {
           showScore = false;
@@ -460,6 +461,8 @@
           "server": server,
           "user": userInfoString
         }
+        log("loaded config:");
+        log(config);
         return config;
       } catch (e) {
         error(e);

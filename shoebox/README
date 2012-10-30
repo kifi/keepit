@@ -2,9 +2,10 @@ What's new
 ============
 
 October 30, 2012
-- New slider animations :)
-- Per browser session (200 links max), slider will not show again once user has visited page.
-- Now checks for remote keeps, not local
-- Misc slider bug fixes
-- Removed from Google Images
-- Hover does not show when printing page
+* Fixing a scraping bug. Caused by our scraping lib that needs a trailing slash at the end of a domain name
+* New slider animations :)
+* Per browser session (200 links max), slider will not show again once user has visited page.
+* Now checks for remote keeps, not local
+* Misc slider bug fixes
+* Removed from Google Images
+* Hover does not show when printing page

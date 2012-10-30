@@ -1,32 +1,23 @@
 @(socialUserInfos: Seq[SocialUserInfo])
 
-<!DOCTYPE html>
-
-<html>
-    <head>
-        <title>All @socialUserInfos.size Social Users</title>
-        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
-        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-    </head>
-    <body>
-      <h2>All @socialUserInfos.size Social Users</h2>
-		  <table>
-		    <tr>
-          <th>Id</th>
-          <th>Social User</th>
-		      <th>FortyTwo User</th>
-		      <th>creation</th>
-		    </tr>
-		  @for(socialUserInfo <- socialUserInfos) {
-		    <tr>
-          <td>@socialUserInfo.id.get</td>
-		      <td>@adminHelper.socialUserDisplay(socialUserInfo, true)</td>
-		      <td>@if(socialUserInfo.userId.isDefined) {
-		        @adminHelper.socialUserDisplay(socialUserInfo)
-		      }</td>
-		      <td>@socialUserInfo.createdAt</td>
-		    </tr>
-		  }
-		  </table>
-    </body>
-</html>
+@admin("All " + socialUserInfos.size + " Social Users") {
+    <h2>All @socialUserInfos.size Social Users</h2>
+  <table class="table table-bordered">
+    <tr>
+        <th>Id</th>
+        <th>Social User</th>
+      <th>FortyTwo User</th>
+      <th>creation</th>
+    </tr>
+  @for(socialUserInfo <- socialUserInfos) {
+    <tr>
+        <td>@socialUserInfo.id.get</td>
+      <td>@adminHelper.socialUserDisplay(socialUserInfo, true)</td>
+      <td>@if(socialUserInfo.userId.isDefined) {
+        @adminHelper.socialUserDisplay(socialUserInfo)
+      }</td>
+      <td>@socialUserInfo.createdAt</td>
+    </tr>
+  }
+  </table>
+}
