@@ -34,7 +34,7 @@
     sendSaveConfig("max_res", $("#max_search_results").val());
     sendSaveConfig("hover_timeout", $("#hover_timeout").val());
     var showScore = $("#show_score").val();
-      if (showScore === "yes" || showScore === true) {
+      if (showScore === "yes" || showScore === true || showScore === "true") {
         showScore = true;
       } else {
         showScore = false;
@@ -52,6 +52,7 @@
 
   function restoreConfigs(callback) {
     chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
+      console.log("loaded config", config);
       var env = config["env"];
       if (env === "development") {
         $("#env_dev").attr("checked","checked");

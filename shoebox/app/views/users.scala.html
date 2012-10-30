@@ -1,29 +1,20 @@
 @(userWithSocials: Seq[UserWithSocial])
 
-<!DOCTYPE html>
-
-<html>
-    <head>
-        <title>All Users</title>
-        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
-        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-    </head>
-    <body>
-		  <table>
-		    <tr>
-          <th>Id</th>
-          <th>ExternalId</th>
-		      <th>User</th>
-		      <th>creation</th>
-		    </tr>
-		  @for(userWithSocial <- userWithSocials) {
-		    <tr>
-          <td>@userWithSocial.user.id.get.id</td>
-          <td>@userWithSocial.user.externalId</td>
-		      <td>@adminHelper.userDisplay(userWithSocial)</td>
-		      <td>@userWithSocial.user.createdAt</td>
-		    </tr>
-		  }
-		  </table>
-    </body>
-</html>
+@admin("All " + userWithSocials.size + " Users") {
+  <table class="table table-bordered">
+    <tr>
+        <th>Id</th>
+        <th>ExternalId</th>
+      <th>User</th>
+      <th>creation</th>
+    </tr>
+  @for(userWithSocial <- userWithSocials) {
+    <tr>
+      <td>@userWithSocial.user.id.get.id</td>
+      <td>@userWithSocial.user.externalId</td>
+      <td>@adminHelper.userDisplay(userWithSocial)</td>
+      <td>@userWithSocial.user.createdAt</td>
+    </tr>
+  }
+  </table>
+}

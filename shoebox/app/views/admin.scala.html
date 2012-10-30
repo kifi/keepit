@@ -1,0 +1,28 @@
+@(title: String)(content: Html)
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>@title</title>
+    <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+    <link rel="stylesheet" media="screen" href="@routes.Assets.at("bootstrap/css/bootstrap.min.css")" />
+    <link rel="stylesheet" media="screen" href="@routes.Assets.at("bootstrap/css/bootstrap-responsive.min.css")" />         
+    <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/admin_main.css")">
+  </head>
+  <body>
+		<div class="navbar navbar-static-top">
+		  <div class="navbar-inner">
+		    <ul class="nav">
+		      <li><a href="@com.keepit.controllers.routes.BookmarksController.bookmarksFirstPageView">All Bookmarks</a></li>
+		      <li><a href="@com.keepit.controllers.routes.UserController.usersView">All KiFi Users</a></li>
+		      <li><a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView">All Social Users</a></li>
+		    </ul>
+		  </div>		
+		</div>
+		<div class="hero-unit">
+      <h1>@title</h1>
+      @content
+		</div>
+  </body>
+</html>
+
