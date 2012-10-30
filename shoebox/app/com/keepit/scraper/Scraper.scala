@@ -98,8 +98,11 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
     if (scrapeUrl.indexOf('/', domainStartIdx) < 0) {
       scrapeUrl = scrapeUrl + '/'
     }
-
-    webURL.setURL(scrapeUrl)
+    try {
+      webURL.setURL(scrapeUrl)
+    } catch {
+      case e => throw new Exception("could not set url for scrape url %s".format(scrapeUrl), e)
+    }
     try {
       val result = pageFetcher.fetchHeader(webURL)
       fetchResult = Some(result)
