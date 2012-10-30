@@ -27,7 +27,8 @@ class URINormalizerTest extends Specification {
     }
     
     "remove fragment" in {
-      URINormalizer.normalize("http://keepitfindit.com/index.html#abc") === "http://keepitfindit.com/index.html"
+      URINormalizer.normalize("http://keepitfindit.com/path#abc") === "http://keepitfindit.com/path"
+      URINormalizer.normalize("http://keepitfindit.com/index.html#abc") === "http://keepitfindit.com"
       URINormalizer.normalize("http://keepitfindit.com/page?xyz=123#abc") === "http://keepitfindit.com/page?xyz=123"
     }
     
@@ -38,7 +39,9 @@ class URINormalizerTest extends Specification {
       URINormalizer.normalize("http://keepitfindit.com/a?") === "http://keepitfindit.com/a"
       URINormalizer.normalize("http://keepitfindit.com/a?&") === "http://keepitfindit.com/a"
       URINormalizer.normalize("http://www.example.com/%7Eusername/") === "http://www.example.com/~username/"
-      URINormalizer.normalize("http://www.example.com//A//B/index.html") === "http://www.example.com/A/B/index.html"
+      URINormalizer.normalize("http://www.example.com/index.html") === "http://www.example.com"
+      URINormalizer.normalize("http://www.example.com/A/index.html") === "http://www.example.com/A/"
+      URINormalizer.normalize("http://www.example.com/A/B/index.html") === "http://www.example.com/A/B/"
       URINormalizer.normalize("http://ACME.com/./foo") === "http://acme.com/foo"
       URINormalizer.normalize("http://ACME.com/foo%26bar") === "http://acme.com/foo&bar"
       URINormalizer.normalize("http://www.example.com/../../a.html") === "http://www.example.com/a.html"
@@ -66,7 +69,7 @@ class URINormalizerTest extends Specification {
       URINormalizer.normalize("http://www.example.com/?q=a+b") === "http://www.example.com/?q=a+b"
       URINormalizer.normalize("http://www.example.com/display?category=foo/bar+baz") === "http://www.example.com/display?category=foo%2Fbar+baz"
       URINormalizer.normalize("http://www.example.com/display?category=foo%2Fbar%20baz") === "http://www.example.com/display?category=foo%2Fbar+baz"
-      URINormalizer.normalize("http://www.example.com/index.html?q=a b") === "http://www.example.com/index.html?q=a+b"
+      URINormalizer.normalize("http://www.example.com/p?q=a b") === "http://www.example.com/p?q=a+b"
       
       URINormalizer.normalize("http://www.example.com/search?width=100%&height=100%") === "http://www.example.com/search?height=100%25&width=100%25"
       URINormalizer.normalize("http://www.example.com/search?zoom=50%x50%") === "http://www.example.com/search?zoom=50%25x50%25"
