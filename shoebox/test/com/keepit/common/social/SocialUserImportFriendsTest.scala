@@ -44,7 +44,7 @@ class SocialUserImportFriendsTest extends SpecificationWithJUnit {
   
   def testFacebookGraph(jsonFilename: String, numOfFriends: Int, firstFriend: String) = {
     val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(jsonFilename))).mkString)
-    val rawFriends = inject[SocialUserImportFriends].importFriends(json)
+    val rawFriends = inject[SocialUserImportFriends].importFriends(Seq(json))
     val store = inject[SocialUserRawInfoStore].asInstanceOf[Map[Id[SocialUserInfo], SocialUserRawInfo]]
     store.size === numOfFriends
     store.clear

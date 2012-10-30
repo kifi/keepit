@@ -13,14 +13,14 @@ object FacebookSocialGraph {
 class FacebookSocialGraph @Inject() (httpClient: HttpClient) {
   
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): SocialUserRawInfo = {
-    val json = fetchJson(socialUserInfo)
+    val jsons = fetchJsons(socialUserInfo)
     SocialUserRawInfo(
         socialUserInfo.userId, 
         socialUserInfo.id, 
-        SocialId((json \ "username").as[String]), 
+        SocialId((jsons.head \ "username").as[String]), 
         SocialNetworks.FACEBOOK, 
-        (json \ "name").asOpt[String].getOrElse(socialUserInfo.fullName), 
-        json)
+        (jsons.head \ "name").asOpt[String].getOrElse(socialUserInfo.fullName), 
+        jsons)
   }
   
   private def getAccessToken(socialUserInfo: SocialUserInfo): String = {
@@ -29,7 +29,13 @@ class FacebookSocialGraph @Inject() (httpClient: HttpClient) {
     oAuth2Info.accessToken
   }
   
-  private def fetchJson(socialUserInfo: SocialUserInfo): JsValue = httpClient.longTimeout.get(url(socialUserInfo.socialId, getAccessToken(socialUserInfo))).json
+  private def fetchJsons(socialUserInfo: SocialUserInfo): Seq[JsValue] = {
+    Seq(fetchJson(socialUserInfo))
+  }
+  
+  private def fetchJson(socialUserInfo: SocialUserInfo): JsValue = {
+    httpClient.longTimeout.get(url(socialUserInfo.socialId, getAccessToken(socialUserInfo))).json
+  }
   
   private def url(id: SocialId, accessToken: String) = "https://graph.facebook.com/%s?access_token=%s&fields=%s,friends.fields(%s)".format(
       id.id, accessToken, FacebookSocialGraph.FULL_PROFILE, FacebookSocialGraph.FULL_PROFILE)
