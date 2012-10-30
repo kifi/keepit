@@ -10,6 +10,9 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     console.log("[" + new Date().getTime() + "] ", message);
   }
 
+  var searchQuery = '';
+  var cachedResults = {};
+
   function error(exception, message) {
     debugger;
     var errMessage = exception.message;
@@ -25,6 +28,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
   log("injecting keep it to google search result page");
   
   function updateQuery() { 
+    log("UPDATE QUERY CALLED!!!!");
+
     if ($("body").length === 0) {
       log("no body yet...");
       setTimeout(function(){ updateQuery(); }, 10);
@@ -34,36 +39,53 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     var query = queryInput.val();
     if (!query) {
       log("query is undefined");
+      setTimeout(function(){ updateQuery(); }, 200);
       return;
     }
     log("search term: " + query);
+
+    if(query === searchQuery) {
+      log("Nothing new. Disregarding " + query);
+      drawResults(cachedResults);
+      return;
+    }
+
     var request = {
       type: "get_keeps", 
-      query: queryInput.val()
+      query: query
     };
     chrome.extension.sendRequest(request, function(results) {
-      var searchResults = results.searchResults;
-      var userInfo = results.userInfo;
-      try {
-        if (!(searchResults) || searchResults.length == 0) {
-          log("No search results!");
-          return;
-        }
-        log("got " + searchResults.length + " keeps:");
-        $(searchResults).each(function(i, e){log(e)});
-        var old = $('#keepit');
-        if (old && old.length > 0) {
-          old.slideUp(function(){
-            old.remove();
-            addResults(userInfo, searchResults, query);
-          });
-        } else {
-          addResults(userInfo, searchResults, query);
-        }
-      } catch (e) {
-        error(e);
-      }
+      searchQuery = query;
+      cachedResults = results;
+      log("kifi results recieved for " + query);
+      log(results);
+
+      drawResults(results);
     });
+  }
+
+  function drawResults(results) {
+    var searchResults = results.searchResults;
+    var userInfo = results.userInfo;
+    try {
+      if (!(searchResults) || searchResults.length == 0) {
+        log("No search results!");
+        return;
+      }
+      log("got " + searchResults.length + " keeps:");
+      $(searchResults).each(function(i, e){log(e)});
+      var old = $('#keepit');
+      if (old && old.length > 0) {
+        log("Old keepit exists on page. Removing, and redrawing.")
+        old.remove();
+        addResults(userInfo, searchResults, searchQuery);
+      } else {
+        log("Drawing results");
+        addResults(userInfo, searchResults, searchQuery);
+      }
+    } catch (e) {
+      error(e);
+    }
   }
 
   chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
@@ -73,13 +95,30 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
   updateQuery();
 
   $('#main').change(function() {
-    if ($('#keepit').length === 0) {
-      updateQuery();
-    }
+    log("Search results changed! Updating kifi results...");
+    updateQuery();
   });
 
-  $("input[name='q']").change(function(){
+
+  $("input[name='q']").blur(function(){
+    log("Input box changed (blur)! Updating kifi results...");
     updateQuery();
+  });
+
+  $("#main").blur(function() {
+    log("main blur");
+  });
+
+  $("#main").ready(function() {
+    log("main ready");
+  });
+
+  $("#main").unload(function() {
+    log("main unload");
+  });
+
+  $("#main").load(function() {
+    log("main load");
   });
 
   /*******************************************************/
@@ -179,11 +218,11 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             }
             if($("#keepit:visible").length == 0) {
               log("Google isn't ready. Trying to injecting again... ("+times+")");
-              $('#ires').prepend(tb);
-              setTimeout(function() { injectResults(--times) }, 50);
+              $('#ires').before(tb);
+              setTimeout(function() { injectResults(--times) }, 30);
             }
             else {
-              log("Done!");
+              setTimeout(function() { injectResults(times > 10 ? 10 : --times) }, 1000/times);
             }
           }
 

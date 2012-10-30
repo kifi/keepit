@@ -2,6 +2,10 @@
   margin: 20px 200px 40px 200px;
 }
 
+li.keepit {
+  margin-bottom: 10px !important;
+}
+
 .keepit_hover {
   position: fixed;
   top: 180px;

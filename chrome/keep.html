@@ -91,6 +91,12 @@
     function onRequest(request, sender, sendResponse) {
       log("new request...");
       try {
+        if(typeof request === 'undefined' || typeof request.type === 'undefined' ) {
+          log("Recieved an unknown message. Discarding.");
+          log(request);
+          log(tab);
+          return;
+        }
         var tab = sender.tab;
         log("on request with " + JSON.stringify(request), tab);
         // Show the page action for the tab that the sender (content script) was on.
@@ -297,6 +303,13 @@
 
 
     function addHover(tabid) {
+      /*var restrictedElements = $.grep(restrictedUrlPatternsForHover, function(e, i){
+        return pageLocation.indexOf(e) >= 0;
+      });
+      if (restrictedElements.length > 0) {
+        log("[addHover] restricted hover page: " + restrictedElements);
+        return;
+      }*/
       safeExecuteScript(tabid, {
         code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:hover] tab: " + tabid + "')"
         },
@@ -345,6 +358,9 @@
 
     function setPageIcon(tabId, is_kept) {
       try {
+        if(typeof tabId === 'undefined') {
+          return;
+        }
         chrome.tabs.get(tabId, function(tab) {
           if(!tab)
             return;
