@@ -78,6 +78,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
             content = "",
             scrapedAt = currentDateTime,
             httpContentType = None,
+            httpOriginalContentCharset = None,
             NormalizedURI.States.SCRAPE_FAILED,
             Option(error.msg))
         articleStore += (uri.id.get -> article)
@@ -104,12 +105,15 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         if (result.fetchContent(page) && parser.parse(page, normalizedUri.url)) {
           page.getParseData() match {
             case htmlData: HtmlParseData =>
+              log.info("page of url %s parsed with charset %s and title %s".format(
+                  normalizedUri, page.getContentCharset(), htmlData.getTitle()))
               Left(Article(
                   id = normalizedUri.id.get,
                   title = Option(htmlData.getTitle()).getOrElse(""),
                   content = Option(htmlData.getText()).getOrElse(""),
                   scrapedAt = currentDateTime,
                   httpContentType = Option(page.getContentType()),
+                  httpOriginalContentCharset = Option(page.getContentCharset()),
                   state = SCRAPED,
                   message = None))
             case _ => Right(ScraperError(normalizedUri, statusCode, "not html"))

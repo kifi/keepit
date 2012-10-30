@@ -80,6 +80,7 @@ class ScraperTest extends SpecificationWithJUnit {
   	          content = "bar",
   	          scrapedAt = currentDateTime,
   	          httpContentType = Option("text/html"),
+  	          httpOriginalContentCharset = Option("UTF-8"),
   	          state = SCRAPED,
   	          message = None))
   	      case "http://www.keepit.com/missing" => Right(ScraperError(uri, HttpStatus.SC_NOT_FOUND, "not found"))

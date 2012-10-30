@@ -52,6 +52,7 @@ class URIGraphTest extends SpecificationWithJUnit {
         content = content,
         scrapedAt = currentDateTime,
         httpContentType = Some("text/html"),
+        httpOriginalContentCharset = Option("UTF-8"),
         state = SCRAPED,
         message = None)
   }
