@@ -27,8 +27,58 @@ class URINormalizerTest extends Specification {
     }
     
     "remove fragment" in {
-      URINormalizer.normalize("http://keepitfindit.com/index.html#abc") === "http://keepitfindit.com/index.html"
+      URINormalizer.normalize("http://keepitfindit.com/path#abc") === "http://keepitfindit.com/path"
       URINormalizer.normalize("http://keepitfindit.com/page?xyz=123#abc") === "http://keepitfindit.com/page?xyz=123"
+      //URINormalizer.normalize("http://www.foo.com/foo.html#something?x=y") === "http://www.foo.com/foo.html?x=y"
+    }
+    
+    "remove default pages (index.html, etc.)" in {
+      URINormalizer.normalize("http://www.example.com/index.html") === "http://www.example.com"      
+      URINormalizer.normalize("http://www.example.com/A/index.html") === "http://www.example.com/A/"
+      URINormalizer.normalize("http://www.example.com/A/B/index.html") === "http://www.example.com/A/B/"
+      URINormalizer.normalize("http://keepitfindit.com/index.html#abc") === "http://keepitfindit.com"
+      URINormalizer.normalize("http://keepitfindit.com/index.html?a=b") === "http://keepitfindit.com/?a=b"
+      
+      // taken from https://svn.apache.org/repos/asf/nutch/trunk/src/plugin/urlnormalizer-regex/sample/regex-normalize-default.test
+      // and modified 
+      URINormalizer.normalize("http://www.foo.com/index.htm") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.asp") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.aspx") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.php") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.php3") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/default.html") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/default.htm") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/default.asp") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/default.aspx") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/default.php") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/default.php3") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/something.php3") === "http://www.foo.com/something.php3"
+      URINormalizer.normalize("http://www.foo.com/something.html") === "http://www.foo.com/something.html"
+      URINormalizer.normalize("http://www.foo.com/something.asp") === "http://www.foo.com/something.asp"
+      URINormalizer.normalize("http://www.foo.com/index.phtml") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.cfm") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.cgi") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.HTML") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.Htm") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.ASP") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.jsp") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.jsf") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.jspx") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.jspfx") === "http://www.foo.com/index.jspfx"
+      URINormalizer.normalize("http://www.foo.com/index.jspa") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.jsps") === "http://www.foo.com/index.jsps"
+      URINormalizer.normalize("http://www.foo.com/index.aspX") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.PhP") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.PhP4") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/default.HTml") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/default.HTm") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/default.ASp") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/default.AspX") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/default.PHP") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/default.PHP3") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.phtml") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.cfm") === "http://www.foo.com"
+      URINormalizer.normalize("http://www.foo.com/index.cgi") === "http://www.foo.com"
     }
     
     "normalize path" in {
@@ -38,7 +88,6 @@ class URINormalizerTest extends Specification {
       URINormalizer.normalize("http://keepitfindit.com/a?") === "http://keepitfindit.com/a"
       URINormalizer.normalize("http://keepitfindit.com/a?&") === "http://keepitfindit.com/a"
       URINormalizer.normalize("http://www.example.com/%7Eusername/") === "http://www.example.com/~username/"
-      URINormalizer.normalize("http://www.example.com//A//B/index.html") === "http://www.example.com/A/B/index.html"
       URINormalizer.normalize("http://ACME.com/./foo") === "http://acme.com/foo"
       URINormalizer.normalize("http://ACME.com/foo%26bar") === "http://acme.com/foo&bar"
       URINormalizer.normalize("http://www.example.com/../../a.html") === "http://www.example.com/a.html"
@@ -66,7 +115,7 @@ class URINormalizerTest extends Specification {
       URINormalizer.normalize("http://www.example.com/?q=a+b") === "http://www.example.com/?q=a+b"
       URINormalizer.normalize("http://www.example.com/display?category=foo/bar+baz") === "http://www.example.com/display?category=foo%2Fbar+baz"
       URINormalizer.normalize("http://www.example.com/display?category=foo%2Fbar%20baz") === "http://www.example.com/display?category=foo%2Fbar+baz"
-      URINormalizer.normalize("http://www.example.com/index.html?q=a b") === "http://www.example.com/index.html?q=a+b"
+      URINormalizer.normalize("http://www.example.com/p?q=a b") === "http://www.example.com/p?q=a+b"
       
       URINormalizer.normalize("http://www.example.com/search?width=100%&height=100%") === "http://www.example.com/search?height=100%25&width=100%25"
       URINormalizer.normalize("http://www.example.com/search?zoom=50%x50%") === "http://www.example.com/search?zoom=50%25x50%25"
