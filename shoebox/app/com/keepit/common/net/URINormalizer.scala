@@ -6,7 +6,10 @@ import scala.collection.immutable.SortedSet
 
 object URINormalizer extends Logging {
   
-  val stopParams = Set("jsessionid", "phpsessid", "aspsessionid", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content")
+  val stopParams = Set(
+    "jsessionid", "phpsessid", "aspsessionid",
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+    "zenid")
   
   def normalize(uriString: String) = {
     uriString.replace(" ", "%20") match {
@@ -72,10 +75,17 @@ object URINormalizer extends Logging {
     }
     
     val slashDotDot = """^(/\.\.)+""".r
+
+    val defaultPage = """/(index|default)\.(html|htm|asp|aspx|php|php3|php4|phtml|cfm|cgi|jsp|jsf|jspx|jspa)$""".r
     
     def normalizePath(path: Option[String]) = {
       path.flatMap{ path =>
-        slashDotDot.replaceFirstIn(path.trim, "") match {
+        var path2 = slashDotDot.replaceFirstIn(path.trim, "")
+        defaultPage.findFirstMatchIn(path2.toLowerCase).foreach{ m =>
+          val delta = path2.length - path2.toLowerCase.length // in case the case conversion changed the length
+          path2 = path2.substring(0, m.start + delta) + "/"
+        }
+        path2 match {
           case "" => None
           case path => Some(path.replace("%7E", "~").replace(" ", "%20"))
         }
