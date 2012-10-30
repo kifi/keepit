@@ -38,6 +38,7 @@ import com.keepit.search.ArticleHit
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchResult(uri: NormalizedURI, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[UserWithSocial], score: Float)
+case class PersonalSearchResultPacket(uuid: String, hits: Seq[PersonalSearchResult])
 
 object SearchController extends Controller with Logging {
  
@@ -57,7 +58,7 @@ object SearchController extends Controller with Logging {
     val articleIndexer = inject[ArticleIndexer]
     val uriGraph = inject[URIGraph]
     val searcher = new MainSearcher(articleIndexer, uriGraph, config)
-    val searchRes = searcher.search(term, userId, friendIds, filterOut, numHitsToReturn)
+    val searchRes = searcher.search(term, userId, friendIds, filterOut, numHitsToReturn, None) // the last param should be the uuid of the last search
     val res = CX.withConnection { implicit conn =>
       searchRes.hits map toPersonalSearchResult
     }
