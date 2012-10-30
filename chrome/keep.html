@@ -10,6 +10,32 @@
       console.log("[" + new Date().getTime() + "] ", message);
     }
 
+    function UserHistory() {
+      var HISTORY_SIZE = 200;
+      this.history = new Array();
+      this.add = function(uri) {
+        log("adding " + uri + " to user history.");
+        this.history.unshift(uri);
+        if(history.length > HISTORY_SIZE) {
+          history.pop();
+        }
+      }
+      this.exists = function(uri) {
+        log("current history:");
+        log(this.history);
+
+        for(var i=0;i<this.history.length;i++) {
+          if(this.history[i] === uri) {
+            log(uri + " already has been visited");
+            return true;
+          }
+        }
+        return false;
+      }
+    }
+
+    var userHistory = new UserHistory();
+
     function error(exception, message) {
       debugger;
       var errMessage = exception.message;
@@ -92,13 +118,16 @@
           upload_all_bookmarks();
         }
         else if (request.type === "check_hover_existed") {
-          if(request.kifi_hover === false) { addHover(request.tabid); }
+          if(request.kifi_hover === false) { addHover(tab.id); }
         }
         else if (request.type === "set_page_icon") {
           setPageIcon(tab.id, request.is_kept);
         }
-        else if(request.type === "is_already_kept") {
+        else if (request.type === "is_already_kept") {
           remoteIsAlreadyKept(request.location, sendResponse);
+        }
+        else if (request.type === "open_slider") {
+          addHover(tab.id);
         }
         // Return nothing to let the connection be cleaned up.
       } catch (e) {
@@ -163,11 +192,13 @@
       "keepitfindit.com",
       "ezkeep.com",
       "localhost:",
-      "maps.google.com"
+      "maps.google.com",
+      "google.com*tbm=isch"
     ]
 
     function initPage(request, sendResponse, tab) {
       try {
+
         if (request.isGoogle === true) {
           log("injecting to google result page: starting...", tab);
           setTimeout(function() {
@@ -176,7 +207,22 @@
           }, 5000);
         } else if (request.isGoogle === false) {
 
+          setPageIcon(tab.id, false);
+
+          log("Injecting shortcut key");
+
+          chrome.tabs.executeScript(tab.id, {
+            code: "$(window).keydown(function(e) { if(e.metaKey && e.keyCode == 75) { chrome.extension.sendRequest({'type':'open_slider'}); } });"
+          });
+
           var pageLocation = request.location;
+
+          if(userHistory.exists(pageLocation) === true) {
+            return;
+          }
+
+          userHistory.add(pageLocation);
+
           log("injecting hover: " + request, tab);
           var userConf =  getConfigs();
           var hoverTimeout = userConf["hover_timeout"];
@@ -196,25 +242,23 @@
             return;
           }
 
-          if (hoverTimeout > 0) {
-            getBookMarks(function(bookmarks) {
-              chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
-                if(isAlreadyKept(bm, pageLocation)) {
-                  setPageIcon(tab.id, true);
-                  log("hiding hover cause URL " + pageLocation + " already kept", tab);
-                } else {
-                  log("injecting hover: " + request, tab);
-                  setPageIcon(tab.id, false);
-                  setTimeout(function() {
-                    // For the auto-slide in, we check to see if the hover has existed on this page before.
-                    chrome.tabs.executeScript(tab.id, {
-                      code: "chrome.extension.sendRequest({'type': 'check_hover_existed', 'kifi_hover': typeof window.kifi_hover !== 'undefined', 'tabid': " + tab.id +"});"
-                    });
-                  }, hoverTimeout * 1000);
-                }
-              });
-            });
-          }
+          remoteIsAlreadyKept(pageLocation, function(isKept) {
+            if(isKept) {
+              setPageIcon(tab.id, true);
+              log("hiding hover cause URL " + pageLocation + " already kept", tab);
+            }
+            else {
+              setPageIcon(tab.id, false);
+              if (hoverTimeout > 0) {
+                setTimeout(function() {
+                  // For the auto-slide in, we check to see if the hover has existed on this page before.
+                  chrome.tabs.executeScript(tab.id, {
+                    code: "chrome.extension.sendRequest({'type': 'check_hover_existed', 'kifi_hover': typeof window.kifi_hover !== 'undefined'});"
+                  });
+                }, hoverTimeout * 1000);
+              }
+            }
+          });
         } else {
           throw Error("request isGoogle is not well defined: " + request.isGoogle);
         }
@@ -259,15 +303,16 @@
     }
 
     function remoteIsAlreadyKept(location, callback) {
-      getBookMarks(function(bookmarks) {
-        chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
-          if(isAlreadyKept(bm, location)) {
-            callback(true);
-          }
-          else {
-            callback(false);
-          }
-        });
+      log("checking if user has already bookmarked page: " + location)
+      $.get("http://" + getConfigs().server + "/bookmarks/check?externalId=" + userInfo["keepit_external_id"] + "&uri=" + encodeURIComponent(location), null,
+        function(data) {
+          callback(data["user_has_bookmark"]) 
+        },
+        "json"
+      ).error(function(error) {
+        log(error.responseText);
+        alert("got error resposne" + error.responseText);
+        callback(null);
       });
     }
 

@@ -5,11 +5,33 @@ console.log("injecting keep it hover div");
   var config;
   var hover;
 
+
+  $.extend(jQuery.easing,{
+    easeQuickSnapBounce:function(x,t,b,c,d) { 
+      if (typeof s === 'undefined') s = 1.3;
+      return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
+    },
+    easeCircle: function (x, t, b, c, d) {
+      if ((t/=d/2) < 1) return -c/2 * (Math.sqrt(1 - t*t) - 1) + b;
+      return c/2 * (Math.sqrt(1 - (t-=2)*t) + 1) + b;
+    }
+  });
+
+
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
   }
 
   function showHover(user) {
+    window.kifi_hover = true; // set global variable, so hover will not automatically slide out again.
+    var existingElements = $('.kifi_hover').length;
+    if (existingElements > 0) {
+      console.warn("hover is already injected. There are " + existingElements + " existing elements");
+      // close slider
+      slideOut();
+      return;
+    }
+
     log("checking location: " + document.location.href)
     chrome.extension.sendRequest({
       "type": "is_already_kept",
@@ -27,12 +49,6 @@ console.log("injecting keep it hover div");
   }
 
   function showKeptItHover(user) {
-    window.kifi_hover = true; // set global variable, so hover will not automatically slide out again.
-    var existingElements = $('.kifi_hover:visible').length;
-    if (existingElements > 0) {
-      console.warn("hover is already injected. There are " + existingElements + " existing elements")
-      return;
-    }
     var req = new XMLHttpRequest();
     req.open("GET", chrome.extension.getURL('kept_hover.html'), true);
     req.onreadystatechange = function() {
@@ -120,12 +136,6 @@ console.log("injecting keep it hover div");
   }
 
   function showBookmarkHover(user) {
-    window.kifi_hover = true; // set global variable, so hover will not automatically slide out again.
-    var existingElements = $('.kifi_hover:visible').length;
-    if (existingElements > 0) {
-      console.warn("hover is already injected. There are " + existingElements + " existing elements")
-      return;
-    }
     var req = new XMLHttpRequest();
     req.open("GET", chrome.extension.getURL('keepit_hover.html'), true);
     req.onreadystatechange = function() {
@@ -217,7 +227,9 @@ console.log("injecting keep it hover div");
         opacity: 0,
         right: '-=100'
       },
-      300, function() {
+      600,
+      'easeCircle',
+      function() {
         $('.kifi_hover').detach();
       });
   }
@@ -225,10 +237,11 @@ console.log("injecting keep it hover div");
   function slideOut() {
     $('.kifi_hover').animate({
         opacity: 0,
-        right: '-=330',
-        bottom: '-=75'
+        right: '-=330'
       },
-      300, function() {
+      300, 
+      'easeQuickSnapBounce',
+      function() {
         $('.kifi_hover').detach();
       });
   }
@@ -237,10 +250,10 @@ console.log("injecting keep it hover div");
     //$("body").after(hover);
     $('.kifi_hover').animate({
         right: '+=330',
-        bottom: '+=75',
         opacity: 1
       },
-      300);
+      400,
+      'easeQuickSnapBounce');
 
   }
 
