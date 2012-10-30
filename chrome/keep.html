@@ -217,12 +217,6 @@
 
           var pageLocation = request.location;
 
-          if(userHistory.exists(pageLocation) === true) {
-            return;
-          }
-
-          userHistory.add(pageLocation);
-
           log("injecting hover: " + request, tab);
           var userConf =  getConfigs();
           var hoverTimeout = userConf["hover_timeout"];
@@ -246,9 +240,19 @@
             if(isKept) {
               setPageIcon(tab.id, true);
               log("hiding hover cause URL " + pageLocation + " already kept", tab);
+              if(userHistory.exists(pageLocation) === true) {
+                return;
+              }
+
+              userHistory.add(pageLocation);
             }
             else {
               setPageIcon(tab.id, false);
+              if(userHistory.exists(pageLocation) === true) {
+                return;
+              }
+
+              userHistory.add(pageLocation);
               if (hoverTimeout > 0) {
                 setTimeout(function() {
                   // For the auto-slide in, we check to see if the hover has existed on this page before.
@@ -311,8 +315,7 @@
         "json"
       ).error(function(error) {
         log(error.responseText);
-        alert("got error resposne" + error.responseText);
-        callback(null);
+        callback(false);
       });
     }
 

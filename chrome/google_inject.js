@@ -105,7 +105,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             var formattedResult = result;
 
             formattedResult.displayUrl = formattedResult.bookmark.url;
-            if (formattedResult.bookmark.url.length > 75) {
+            if (formattedResult.bookmark.url.length > 60) {
               formattedResult.displayUrl = formattedResult.displayUrl.substring(0, 75) + "..."
             }
 
