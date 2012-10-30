@@ -6,6 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.model._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.PriorityQueue
+import java.util.UUID
 import scala.math._
 
 class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: SearchConfig) {
@@ -58,11 +59,10 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: S
     (myHits, friendsHits, othersHits)
   }
   
-  def search(queryString: String, userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], numHitsToReturn: Int): ArticleSearchResult = {
+  def search(queryString: String, userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], numHitsToReturn: Int, lastUUID: Option[String]): ArticleSearchResult = {
     
     val (myHits, friendsHits, othersHits) = searchText(queryString, userId, friendIds, filterOut, maxTextHitsPerCategory = maxTextHitsPerCategory)
     
-    val highScore = max(max(myHits.highScore, friendsHits.highScore), othersHits.highScore)
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
     
@@ -70,29 +70,29 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: S
     
     val hits = createQueue(numHitsToReturn)
     
+    var highScore = myHits.highScore
     myHits.foreach{ h =>
       val id = Id[NormalizedURI](h.id)
       val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet - userId
+      
       h.users = sharingUsers
-      h.score = score(textScore = h.score / highScore,
-                      textBoost = myBookmarkBoost,
-                      bookmarkCount = (sharingUsers.size + 1),
-                      bookmarkBoost = sharingBoost)
+      h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(sharingUsers.size + 3))
+      h.score = h.scoring.score(myBookmarkBoost, sharingBoost)
       hits.insert(h)
     }
     
     if (friendsHits.size > 0) {
+      highScore = max(highScore, friendsHits.highScore)
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
       
       friendsHits.foreach{ h =>
         val id = Id[NormalizedURI](h.id)
         val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
+        
         h.users = sharingUsers
-        h.score = score(textScore = h.score / highScore,
-                        textBoost = 1.0f,
-                        bookmarkCount = sharingUsers.size,
-                        bookmarkBoost= sharingBoost)
+        h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(sharingUsers.size))
+        h.score = h.scoring.score(1.0f, sharingBoost)
         queue.insert(h)
       }
       queue.foreach{ h => hits.insert(h) }
@@ -100,21 +100,19 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: S
     
     // if we don't have enough hits, backfill the result with hits in the "others" category
     val moreOthers = if (hits.size < numHitsToReturn && othersHits.size > 0) {
-      // reorder by boosting
+      highScore = max(highScore, othersHits.highScore)
       val queue = createQueue(numHitsToReturn - hits.size)
       othersHits.foreach{ h =>
         h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
         if (h.bookmarkCount > 0) {
-          h.score = score(textScore = h.score / highScore,
-                          textBoost = 1.0f,
-                          bookmarkCount = h.bookmarkCount,
-                          bookmarkBoost = sharingBoost)
+          h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(h.bookmarkCount))
+          h.score = h.scoring.score(1.0f, sharingBoost)
           queue.insert(h)
         }
       }
-      // append others
+      // append others. always score lower than the current min
       val lowest = hits.top()
-      val currentLowestScore = if (lowest != null) lowest.score - 0.01f else 1.0f
+      val currentLowestScore = if (lowest != null) lowest.score * 0.9999f else 1.0f
       val normalizer = currentLowestScore / queue.highScore
       queue.foreach{ h =>
         h.score = h.score * normalizer
@@ -127,7 +125,9 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: S
     
     val mayHaveMore = hits.overflowed || moreOthers // true if we _may_ have more hits
     
-    ArticleSearchResult(hits.toList.map(_.toArticleHit), myTotal, friendsTotal, mayHaveMore)
+    val uuid = UUID.randomUUID().toString()
+    val hitList = hits.toList
+    ArticleSearchResult(uuid, lastUUID, queryString, hitList.map(_.toArticleHit), myTotal, friendsTotal, mayHaveMore, hitList.map(_.scoring))
   }
   
   private def getPublicBookmarkCount(id: Long) = {
@@ -136,9 +136,8 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: S
   
   def createQueue(sz: Int) = new ArticleHitQueue(sz)
   
-  private def score(textScore: Float, textBoost: Float, bookmarkCount: Int, bookmarkBoost: Float) = {
-    textScore * textBoost + (1.0f - (1.0f/(bookmarkCount.toFloat))) * bookmarkBoost
-  }
+  private def bookmarkScore(bookmarkCount: Int) = (1.0f - (1.0f/(bookmarkCount.toFloat)))
+  
 }
 
 class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
@@ -155,7 +154,7 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
   def overflowed = (overflow != null)
   
   def insert(id: Long, score: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]], bookmarkCount: Int) {
-    if (overflow == null) overflow = new MutableArticleHit(id, score, isMyBookmark, isPrivate, friends, bookmarkCount)
+    if (overflow == null) overflow = new MutableArticleHit(id, score, isMyBookmark, isPrivate, friends, bookmarkCount, null)
     else overflow(id, score, isMyBookmark, isPrivate, friends, bookmarkCount)
     
     if (score > highScore) highScore = score
@@ -208,10 +207,35 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
 }
 
 case class ArticleHit(uriId: Id[NormalizedURI], score: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Set[Id[User]], bookmarkCount: Int)
-case class ArticleSearchResult(hits: Seq[ArticleHit], myTotal: Int, friendsTotal: Int, mayHaveMoreHits: Boolean)
+
+case class ArticleSearchResult(
+  uuid: String,
+  last: Option[String], // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
+  query: String,
+  hits: Seq[ArticleHit],
+  myTotal: Int,
+  friendsTotal: Int,
+  mayHaveMoreHits: Boolean,
+  scorings: Seq[Scoring])
+
+class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float) {
+  var boostedTextScore: Float = Float.NaN
+  var boostedBookmarkScore: Float = Float.NaN
+  
+  def score(textBoost: Float, bookmarkBoost: Float) = {
+    boostedTextScore = textScore * textBoost
+    boostedBookmarkScore = bookmarkScore * bookmarkBoost
+    
+    boostedTextScore + boostedBookmarkScore
+  }
+  
+  override def toString() = {
+    "Scoring(%f, %f, %f, %f, %f)".format(textScore, normalizedTextScore, bookmarkScore, boostedTextScore, boostedBookmarkScore)
+  }
+}
 
 // mutable hit object for efficiency
-class MutableArticleHit(var id: Long, var score: Float, var isMyBookmark: Boolean, var isPrivate: Boolean, var users: Set[Id[User]], var bookmarkCount: Int) {
+class MutableArticleHit(var id: Long, var score: Float, var isMyBookmark: Boolean, var isPrivate: Boolean, var users: Set[Id[User]], var bookmarkCount: Int, var scoring: Scoring) {
   def apply(newId: Long, newScore: Float, newIsMyBookmark: Boolean, newIsPrivate: Boolean, newUsers: Set[Id[User]], newBookmarkCount: Int) = {
     id = newId
     score = newScore
