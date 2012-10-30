@@ -1,6 +1,7 @@
 What's new
 ============
 
+October 30, 2012
 - New slider animations :)
 - Per browser session (200 links max), slider will not show again once user has visited page.
 - Now checks for remote keeps, not local
