@@ -66,7 +66,7 @@ class SocialUserImportFriends() extends Logging {
     SocialUserInfo.getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here    
   }
   
-  private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \ "friends" \ "data").asInstanceOf[JsArray].value
+  private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
   
   private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) = (SocialUserInfo(fullName = (friend \ "name").as[String], socialId = SocialId((friend \ "id").as[String]), 
                                                 networkType = SocialNetworks.FACEBOOK, state = SocialUserInfo.States.FETCHED_USING_FRIEND), friend)

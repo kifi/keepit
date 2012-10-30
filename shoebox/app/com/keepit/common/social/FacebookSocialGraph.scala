@@ -30,11 +30,13 @@ class FacebookSocialGraph @Inject() (httpClient: HttpClient) {
   
   private def fetchJsons(url: String): List[JsValue] = {
     val json = get(url)
-    (json \ "paging\next").asOpt[String] match {
+    nextPageUrl(json) match {
       case None => List(json)
       case Some(nextUrl) => json :: fetchJsons(nextUrl) 
     }
   }
+  
+  def nextPageUrl(json: JsValue): Option[String] = (json \ "friends" \ "paging" \ "next").asOpt[String]
   
   private def get(url: String): JsValue = httpClient.longTimeout.get(url).json
   

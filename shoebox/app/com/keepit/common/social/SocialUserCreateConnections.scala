@@ -29,6 +29,6 @@ class SocialUserCreateConnections() extends Logging {
       }
     }
   
-  private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \ "friends" \ "data").asInstanceOf[JsArray].value
+  private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
     
 }
