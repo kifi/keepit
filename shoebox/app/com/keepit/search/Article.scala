@@ -10,6 +10,7 @@ case class Article(
     content: String,
     scrapedAt: DateTime,
     httpContentType: Option[String], // from http header
+    httpOriginalContentCharset: Option[String], // from EntityUtils.getContentCharSet
     state: State[NormalizedURI],
     message: Option[String])
 

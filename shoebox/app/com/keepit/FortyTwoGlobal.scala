@@ -20,6 +20,7 @@ import play.api.mvc._
 import play.api.mvc.Action
 import play.api.mvc.Results.InternalServerError
 import play.utils.Threads
+import java.nio.charset.Charset
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with Logging {
 
@@ -28,13 +29,15 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
   private lazy val scope = injector.inject[AppScope]
   
   override def beforeStart (app: Application): Unit = {
+    println("using default charset %s".format(Charset.defaultCharset()))
+    
     val appName = app.configuration.getString("application.name").get
-    log.info("starting the %s using %s".format(appName, getClass()))
+    println("starting the %s using %s".format(appName, getClass()))
     
     val dbs = app.configuration.getConfig("db").get.subKeys
-    log.info("loading with dbs: %s".format(dbs.mkString(", ")))
+    println("loading with dbs: %s".format(dbs.mkString(", ")))
     
-    log.info("evolutionplugin: %s".format(app.configuration.getString("evolutionplugin")))
+    println("evolutionplugin: %s".format(app.configuration.getString("evolutionplugin")))
   }
   
   override def onBadRequest (request: RequestHeader, error: String): Result = {
@@ -53,14 +56,14 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
     if (app.mode != Mode.Test) {
       require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
     }
-    log.info("Starting %s".format(this))
+    println("Starting %s".format(this))
     val baseUrl: String = current.configuration.getString("application.baseUrl").get
     var startMessage = "FortyTwo %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
         FortyTwoServices.currentService, FortyTwoServices.currentVersion, FortyTwoServices.compilationTime, baseUrl)
     log.info(startMessage)
     println(startMessage)
     scope.onStart(app)
-    log.info("%s started".format(this))
+    println("%s started".format(this))
 //    if (app.mode != Mode.Test) healthcheck.reportStart()
   }
   

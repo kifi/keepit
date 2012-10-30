@@ -17,6 +17,7 @@ class ArticleSerializer extends Format[Article] {
         "content" -> JsString(article.content),
         "scrapedAt" -> JsString(article.scrapedAt.toStandardTimeString),
         "httpContentType" -> (article.httpContentType map { t => JsString(t) } getOrElse(JsNull)),
+        "httpOriginalContentCharset" -> (article.httpOriginalContentCharset map { t => JsString(t) } getOrElse(JsNull)),
         "state" -> JsString(article.state.toString),
         "message" -> (article.message map { m => JsString(m) } getOrElse(JsNull))
       )
@@ -28,6 +29,7 @@ class ArticleSerializer extends Format[Article] {
       (json \ "content").as[String],
       parseStandardTime((json \ "scrapedAt").as[String]),
       (json \ "httpContentType").asOpt[String],
+      (json \ "httpOriginalContentCharset").asOpt[String],
       State[NormalizedURI]((json \ "state").as[String]),
       (json \ "message").asOpt[String])
 }
