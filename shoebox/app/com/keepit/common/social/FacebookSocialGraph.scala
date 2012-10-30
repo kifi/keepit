@@ -3,7 +3,6 @@ package com.keepit.common.social
 import com.keepit.common.net.HttpClient
 import com.keepit.model.{User, SocialUserInfo}
 import com.google.inject.Inject
-import securesocial.core.java.SocialUser
 import play.api.libs.json._
 
 object FacebookSocialGraph {
@@ -13,7 +12,7 @@ object FacebookSocialGraph {
 class FacebookSocialGraph @Inject() (httpClient: HttpClient) {
   
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): SocialUserRawInfo = {
-    val jsons = fetchJsons(socialUserInfo)
+    val jsons = fetchJsons(url(socialUserInfo.socialId, getAccessToken(socialUserInfo)))
     SocialUserRawInfo(
         socialUserInfo.userId, 
         socialUserInfo.id, 
@@ -29,13 +28,17 @@ class FacebookSocialGraph @Inject() (httpClient: HttpClient) {
     oAuth2Info.accessToken
   }
   
-  private def fetchJsons(socialUserInfo: SocialUserInfo): Seq[JsValue] = {
-    Seq(fetchJson(socialUserInfo))
+  private def fetchJsons(url: String): List[JsValue] = {
+    val json = get(url)
+    nextPageUrl(json) match {
+      case None => List(json)
+      case Some(nextUrl) => json :: fetchJsons(nextUrl) 
+    }
   }
   
-  private def fetchJson(socialUserInfo: SocialUserInfo): JsValue = {
-    httpClient.longTimeout.get(url(socialUserInfo.socialId, getAccessToken(socialUserInfo))).json
-  }
+  def nextPageUrl(json: JsValue): Option[String] = (json \ "friends" \ "paging" \ "next").asOpt[String]
+  
+  private def get(url: String): JsValue = httpClient.longTimeout.get(url).json
   
   private def url(id: SocialId, accessToken: String) = "https://graph.facebook.com/%s?access_token=%s&fields=%s,friends.fields(%s)".format(
       id.id, accessToken, FacebookSocialGraph.FULL_PROFILE, FacebookSocialGraph.FULL_PROFILE)

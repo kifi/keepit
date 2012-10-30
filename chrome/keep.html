@@ -173,7 +173,7 @@
           sendResponse({"userInfo": userInfo, "searchResults": searchResults});
         }
       }
-      term = request.query;
+      term = encodeURIComponent(request.query);
       var externalId = userInfo["keepit_external_id"];
       xhr.open("GET", 'http://' + getConfigs().server + '/search?term=' + term + '&externalId=' + externalId, true);
       xhr.send();
