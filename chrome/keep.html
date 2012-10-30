@@ -211,9 +211,6 @@
 
           log("Injecting shortcut key");
 
-          chrome.tabs.executeScript(tab.id, {
-            code: "$(window).keydown(function(e) { if(e.metaKey && e.keyCode == 75) { chrome.extension.sendRequest({'type':'open_slider'}); } });"
-          });
 
           var pageLocation = request.location;
 
@@ -239,6 +236,7 @@
           remoteIsAlreadyKept(pageLocation, function(isKept) {
             if(isKept) {
               setPageIcon(tab.id, true);
+              attachShortcut();
               log("hiding hover cause URL " + pageLocation + " already kept", tab);
               if(userHistory.exists(pageLocation) === true) {
                 return;
@@ -248,6 +246,7 @@
             }
             else {
               setPageIcon(tab.id, false);
+              attachShortcut();
               if(userHistory.exists(pageLocation) === true) {
                 return;
               }
@@ -256,9 +255,7 @@
               if (hoverTimeout > 0) {
                 setTimeout(function() {
                   // For the auto-slide in, we check to see if the hover has existed on this page before.
-                  chrome.tabs.executeScript(tab.id, {
-                    code: "chrome.extension.sendRequest({'type': 'check_hover_existed', 'kifi_hover': typeof window.kifi_hover !== 'undefined'});"
-                  });
+                  checkHoverExisted(tabid);
                 }, hoverTimeout * 1000);
               }
             }
@@ -271,15 +268,42 @@
       }
     }
 
+    function attachShortcut(tabid) {
+      safeExecuteScript(tabid, {
+        code: "$(window).keydown(function(e) { if(e.metaKey && e.keyCode == 75) { chrome.extension.sendRequest({'type':'open_slider'}); } });"
+      });
+    }
+
+    function checkHoverExisted(tabid) {
+      safeExecuteScript(tabid, {
+        code: "chrome.extension.sendRequest({'type': 'check_hover_existed', 'kifi_hover': typeof window.kifi_hover !== 'undefined'});"
+      });
+    }
+
+    function safeExecuteScript(tabid, data, callback) {
+      if(typeof tabid === 'undefined')
+        return;
+      chrome.tabs.get(tabid, function(tab) {
+        if(!tab) {
+          log("tab " + tabid + " is already closed.")
+          callback(null);
+          return;
+        }
+        else {
+          chrome.tabs.executeScript(tabid, data, callback);
+        }
+      });
+    }
+
 
     function addHover(tabid) {
-      chrome.tabs.executeScript(tabid, {
+      safeExecuteScript(tabid, {
         code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:hover] tab: " + tabid + "')"
-        }, 
+        },
         function(vars){
           log("[callback] executed hover remote logging", tabid);
       });
-      chrome.tabs.executeScript(tabid, {file:"hover.js"});
+      safeExecuteScript(tabid, {file:"hover.js"});
     }
 
     function addHoverToTab(tab) {
@@ -320,23 +344,29 @@
     }
 
     function setPageIcon(tabId, is_kept) {
-      if(is_kept) {
-        chrome.pageAction.setIcon({"tabId":tabId, "path":"kept.png"});
-      }
-      else {
-        chrome.pageAction.setIcon({"tabId":tabId, "path":"keepit.png"});
-      }
-      chrome.pageAction.show(tabId);
+      try {
+        chrome.tabs.get(tabId, function(tab) {
+          if(!tab)
+            return;
+          if(is_kept) {
+            chrome.pageAction.setIcon({"tabId":tabId, "path":"kept.png"});
+          }
+          else {
+            chrome.pageAction.setIcon({"tabId":tabId, "path":"keepit.png"});
+          }
+          chrome.pageAction.show(tabId);
+        });
+      }  catch (e) { }
     }
     
     function injectGoogleDiv(tab) {
       log("injecting google_inject.js into tab", tab)
       try {
-        chrome.tabs.executeScript(tab.id, {code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:google] tab: " + tab.id + "')"}, 
+        safeExecuteScript(tab.id, {code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:google] tab: " + tab.id + "')"}, 
           function(vars){
             log("[callback] executed logging", tab);
         });
-        chrome.tabs.executeScript(tab.id, {file:"google_inject.js"}, function(vars){
+        safeExecuteScript(tab.id, {file:"google_inject.js"}, function(vars){
           log("[callback] executed google_inject.js", tab);
         });
         log("injected google_inject.js into tab", tab)
