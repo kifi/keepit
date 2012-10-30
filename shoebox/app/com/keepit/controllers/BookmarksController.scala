@@ -32,6 +32,7 @@ import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.net.HttpClient
 import com.keepit.search.graph.URIGraphPlugin
+import play.api.libs.json.JsBoolean
 
 object BookmarksController extends Controller with Logging with SecureSocial {
 
@@ -73,7 +74,26 @@ object BookmarksController extends Controller with Logging with SecureSocial {
       (count, (bookmarks, uris, users).zipped.toList.seq)
     }
     Ok(views.html.bookmarks(bookmarksAndUsers, page, count))
-  }  
+  }
+  
+  def checkIfExists(externalId: ExternalId[User], uri: String) = SecuredAction(true) { request =>
+    val (normalizedURIOpt, bookmarksOpt) = CX.withConnection { implicit conn =>
+      val normalizedURI = NormalizedURI.getByNormalizedUrl(uri)
+      val user = User.getOpt(externalId)
+      val bookmarks = user match { case Some(u) => Some(Bookmark.ofUser(u)) case None => None }
+      
+      (normalizedURI, bookmarks)
+    }
+    
+    val userHasBookmark = 
+      (for {
+        normalizedURI <- normalizedURIOpt
+        bookmarks <- bookmarksOpt
+      } yield bookmarks.map(b => b.uriId).contains(normalizedURI.id.get)
+      ) getOrElse(false)
+    
+    Ok(JsObject(("user_has_bookmark" -> JsBoolean(userHasBookmark)) :: Nil))
+  }
   
   def addBookmarks() = JsonAction { request =>
     val json = request.body
@@ -92,7 +112,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   private def internBookmarks(value: JsValue, user: User, source: BookmarkSource): List[Bookmark] = value match {
     case JsArray(elements) => (elements map {e => internBookmarks(e, user, source)} flatten).toList  
     case json: JsObject if(json.keys.contains("children")) => internBookmarks( json \ "children" , user, source)  
-    case json: JsObject => List(internBookmark(json, user, source))  
+    case json: JsObject => List(internBookmark(json, user, source)).flatten
     case e => throw new Exception("can't figure what to do with %s".format(e))  
   }
   
@@ -100,19 +120,25 @@ object BookmarksController extends Controller with Logging with SecureSocial {
 
   private def parseKeepitExternalId(value: JsValue): ExternalId[User] = ExternalId[User](((value \ "keepit_external_id").as[String]))
   
-  private def internBookmark(json: JsObject, user: User, source: BookmarkSource): Bookmark = {
+  private def internBookmark(json: JsObject, user: User, source: BookmarkSource): Option[Bookmark] = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
-    log.debug("interning bookmark %s with title [%s]".format(json, title))
-    CX.withConnection { implicit conn =>
-      val normalizedUri = NormalizedURI.getByNormalizedUrl(url) match {
-        case Some(uri) => uri
-        case None => createNewURI(title, url)
-      }
-      Bookmark.load(normalizedUri, user) match {
-        case Some(bookmark) => bookmark
-        case None => Bookmark(normalizedUri, user, title, url, source).save
-      }
+
+    url.toLowerCase.startsWith("javascript:") match {
+      case false =>
+        log.debug("interning bookmark %s with title [%s]".format(json, title))
+        CX.withConnection { implicit conn =>
+          val normalizedUri = NormalizedURI.getByNormalizedUrl(url) match {
+            case Some(uri) => uri
+            case None => createNewURI(title, url)
+          }
+          Bookmark.load(normalizedUri, user) match {
+            case Some(bookmark) => Some(bookmark)
+            case None => Some(Bookmark(normalizedUri, user, title, url, source).save)
+          }
+        }
+      case true =>
+        None
     }
   }
   

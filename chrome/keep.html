@@ -118,7 +118,7 @@
           upload_all_bookmarks();
         }
         else if (request.type === "check_hover_existed") {
-          if(request.kifi_hover === false) { addHover(request.tabid); }
+          if(request.kifi_hover === false) { addHover(tab.id); }
         }
         else if (request.type === "set_page_icon") {
           setPageIcon(tab.id, request.is_kept);
@@ -192,11 +192,13 @@
       "keepitfindit.com",
       "ezkeep.com",
       "localhost:",
-      "maps.google.com"
+      "maps.google.com",
+      "google.com*tbm=isch"
     ]
 
     function initPage(request, sendResponse, tab) {
       try {
+
         if (request.isGoogle === true) {
           log("injecting to google result page: starting...", tab);
           setTimeout(function() {
@@ -204,6 +206,8 @@
             log("injecting to google result page: done!", tab);
           }, 5000);
         } else if (request.isGoogle === false) {
+
+          setPageIcon(tab.id, false);
 
           log("Injecting shortcut key");
 
@@ -238,25 +242,23 @@
             return;
           }
 
-          if (hoverTimeout > 0) {
-            getBookMarks(function(bookmarks) {
-              chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
-                if(isAlreadyKept(bm, pageLocation)) {
-                  setPageIcon(tab.id, true);
-                  log("hiding hover cause URL " + pageLocation + " already kept", tab);
-                } else {
-                  log("injecting hover: " + request, tab);
-                  setPageIcon(tab.id, false);
-                  setTimeout(function() {
-                    // For the auto-slide in, we check to see if the hover has existed on this page before.
-                    chrome.tabs.executeScript(tab.id, {
-                      code: "chrome.extension.sendRequest({'type': 'check_hover_existed', 'kifi_hover': typeof window.kifi_hover !== 'undefined', 'tabid': " + tab.id +"});"
-                    });
-                  }, hoverTimeout * 1000);
-                }
-              });
-            });
-          }
+          remoteIsAlreadyKept(pageLocation, function(isKept) {
+            if(isKept) {
+              setPageIcon(tab.id, true);
+              log("hiding hover cause URL " + pageLocation + " already kept", tab);
+            }
+            else {
+              setPageIcon(tab.id, false);
+              if (hoverTimeout > 0) {
+                setTimeout(function() {
+                  // For the auto-slide in, we check to see if the hover has existed on this page before.
+                  chrome.tabs.executeScript(tab.id, {
+                    code: "chrome.extension.sendRequest({'type': 'check_hover_existed', 'kifi_hover': typeof window.kifi_hover !== 'undefined'});"
+                  });
+                }, hoverTimeout * 1000);
+              }
+            }
+          });
         } else {
           throw Error("request isGoogle is not well defined: " + request.isGoogle);
         }
@@ -301,15 +303,16 @@
     }
 
     function remoteIsAlreadyKept(location, callback) {
-      getBookMarks(function(bookmarks) {
-        chrome.bookmarks.getSubTree(bookmarks.keepIt.id, function(bm) {
-          if(isAlreadyKept(bm, location)) {
-            callback(true);
-          }
-          else {
-            callback(false);
-          }
-        });
+      log("checking if user has already bookmarked page: " + location)
+      $.get("http://" + getConfigs().server + "/bookmarks/check?externalId=" + userInfo["keepit_external_id"] + "&uri=" + encodeURIComponent(location), null,
+        function(data) {
+          callback(data["user_has_bookmark"]) 
+        },
+        "json"
+      ).error(function(error) {
+        log(error.responseText);
+        alert("got error resposne" + error.responseText);
+        callback(null);
       });
     }
 

@@ -12,6 +12,7 @@ POST    /bookmarks/add              com.keepit.controllers.BookmarksController.a
 GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all
 GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
+GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(externalId: ExternalId[User], uri: String)
 
 #POST    /download/extension         com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
 
