@@ -38,7 +38,7 @@
 
 .kifi_hover {
   position: fixed;
-  bottom:-40px;
+  bottom:35px;
   right:-350px;
   z-index:99100;
   opacity:0;

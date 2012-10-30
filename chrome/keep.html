@@ -10,6 +10,32 @@
       console.log("[" + new Date().getTime() + "] ", message);
     }
 
+    function UserHistory() {
+      var HISTORY_SIZE = 200;
+      this.history = new Array();
+      this.add = function(uri) {
+        log("adding " + uri + " to user history.");
+        this.history.unshift(uri);
+        if(history.length > HISTORY_SIZE) {
+          history.pop();
+        }
+      }
+      this.exists = function(uri) {
+        log("current history:");
+        log(this.history);
+
+        for(var i=0;i<this.history.length;i++) {
+          if(this.history[i] === uri) {
+            log(uri + " already has been visited");
+            return true;
+          }
+        }
+        return false;
+      }
+    }
+
+    var userHistory = new UserHistory();
+
     function error(exception, message) {
       debugger;
       var errMessage = exception.message;
@@ -97,8 +123,11 @@
         else if (request.type === "set_page_icon") {
           setPageIcon(tab.id, request.is_kept);
         }
-        else if(request.type === "is_already_kept") {
+        else if (request.type === "is_already_kept") {
           remoteIsAlreadyKept(request.location, sendResponse);
+        }
+        else if (request.type === "open_slider") {
+          addHover(tab.id);
         }
         // Return nothing to let the connection be cleaned up.
       } catch (e) {
@@ -176,7 +205,20 @@
           }, 5000);
         } else if (request.isGoogle === false) {
 
+          log("Injecting shortcut key");
+
+          chrome.tabs.executeScript(tab.id, {
+            code: "$(window).keydown(function(e) { if(e.metaKey && e.keyCode == 75) { chrome.extension.sendRequest({'type':'open_slider'}); } });"
+          });
+
           var pageLocation = request.location;
+
+          if(userHistory.exists(pageLocation) === true) {
+            return;
+          }
+
+          userHistory.add(pageLocation);
+
           log("injecting hover: " + request, tab);
           var userConf =  getConfigs();
           var hoverTimeout = userConf["hover_timeout"];
