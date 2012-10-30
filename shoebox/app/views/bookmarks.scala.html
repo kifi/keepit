@@ -1,54 +1,51 @@
 @(bookmarksAndUsers: Seq[(Bookmark, NormalizedURIStats, UserWithSocial)], page: Int, count: Long)
 
-<!DOCTYPE html>
-
-<html>
-    <head>
-        <title>@bookmarksAndUsers.size Bookmarks of @count page @page</title>
-        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
-        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-    </head>
-    <body>
-      @if(page > 0) {
-        <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(page - 1)">
-      }
-      Prev
-      @if(page > 0) {
+@admin("There are " + bookmarksAndUsers.size + " Bookmarks. Page #" + page + " of " + count) {
+    <h2>Showing @bookmarksAndUsers.size Bookmarks of total @count (Page @page)</h2>
+  <table class="table table-bordered">
+    <tr>
+      <th>Id</th>
+      <th>User</th>
+      <th>Title</th>
+      <th>Source</th>
+      <th>Shares</th>
+      <th>URI Hash</th>
+      <th>Creation</th>
+      <th>URI State</th>
+    </tr>
+  @for((bookmark, uriStat, user) <- bookmarksAndUsers) {
+    <tr>
+      <td>@bookmark.id.get.id</td>
+      <td>@adminHelper.userDisplay(user)</td>
+      <td>@adminHelper.bookmarkDisplay(bookmark)</td>
+      <td>@bookmark.source</td>
+      <td>@uriStat.bookmarks.size</td>
+      <td>@uriStat.uri.urlHash</td>
+      <td>@bookmark.createdAt</td>
+      <td>@uriStat.uri.state.value</td>
+    </tr>
+  }
+  </table>
+  <div class="pagination">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(page - 1)">
+        } else {
+         <a href="#">
+        }
+        Prev
         </a>
-      }
-      &nbsp;&nbsp;&nbsp;
-      @if(bookmarksAndUsers.size > 0) {
-        <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(page + 1)">
-      }
-      Next
-      @if(bookmarksAndUsers.size > 0) {
+      </li>
+      <li>
+        @if(bookmarksAndUsers.size > 0) {
+          <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(page + 1)">
+        } else {
+         <a href="#">
+        }
+        Next
         </a>
-      }
-      <br/><br/>
-      <h2>Showing @bookmarksAndUsers.size Bookmarks of total @count (Page @page)</h2>
-		  <table>
-		    <tr>
-          <th>Id</th>
-		      <th>User</th>
-		      <th>Title</th>
-		      <th>Source</th>
-		      <th>Shares</th>
-		      <th>URI Hash</th>
-		      <th>Creation</th>
-		      <th>URI State</th>
-		    </tr>
-		  @for((bookmark, uriStat, user) <- bookmarksAndUsers) {
-		    <tr>
-          <td>@bookmark.id.get.id</td>
-		      <td>@adminHelper.userDisplay(user)</td>
-		      <td>@adminHelper.bookmarkDisplay(bookmark)</td>
-		      <td>@bookmark.source</td>
-		      <td>@uriStat.bookmarks.size</td>
-		      <td>@uriStat.uri.urlHash</td>
-		      <td>@bookmark.createdAt</td>
-		      <td>@uriStat.uri.state.value</td>
-		    </tr>
-		  }
-		  </table>
-    </body>
-</html>
+      </li>
+    </ul>
+  </div>
+}
