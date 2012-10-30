@@ -35,6 +35,7 @@ import com.keepit.search.MainSearcher
 import com.keepit.search.SearchConfig
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.ArticleHit
+import org.apache.commons.lang3.StringEscapeUtils
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchResult(uri: NormalizedURI, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[UserWithSocial], score: Float)
@@ -42,7 +43,8 @@ case class PersonalSearchResultPacket(uuid: String, hits: Seq[PersonalSearchResu
 
 object SearchController extends Controller with Logging {
  
-  def search(term: String, externalId: ExternalId[User]) = Action { request =>
+  def search(escapedTerm: String, externalId: ExternalId[User]) = Action { request =>
+    val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
     println("searching with %s using externalId id %s".format(term, externalId))
     val (userId, friendIds) = CX.withConnection { implicit conn =>
       val userId = User.getOpt(externalId).getOrElse(
