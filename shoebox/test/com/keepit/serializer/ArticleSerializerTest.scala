@@ -25,6 +25,7 @@ class ArticleSerializerTest extends SpecificationWithJUnit {
           content = "my content",
           scrapedAt = currentDateTime,
           httpContentType = Some("text/html"),
+          httpOriginalContentCharset = Option("UTF-8"),
           state = SCRAPED,
           message = Some("everything is good"))
       val serializer = new ArticleSerializer()
@@ -45,6 +46,7 @@ class ArticleSerializerTest extends SpecificationWithJUnit {
           """,
           scrapedAt = currentDateTime,
           httpContentType = None,
+          httpOriginalContentCharset = None,
           state = SCRAPED,
           message = None)
       val serializer = new ArticleSerializer()

@@ -55,10 +55,10 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
         if (old && old.length > 0) {
           old.slideUp(function(){
             old.remove();
-            addResults(userInfo, searchResults);
+            addResults(userInfo, searchResults, query);
           });
         } else {
-          addResults(userInfo, searchResults);
+          addResults(userInfo, searchResults, query);
         }
       } catch (e) {
         error(e);
@@ -84,7 +84,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
   /*******************************************************/
 
-  function addResults(userInfo, searchResults) {
+  function addResults(userInfo, searchResults, query) {
     try {
       log(":: addResults parameters ::");
       log(userInfo);
@@ -109,6 +109,14 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
               formattedResult.displayUrl = formattedResult.displayUrl.substring(0, 75) + "..."
             }
 
+            var displayUrl = formattedResult.displayUrl;
+            $.each(query.split(" "), function(i, term) { displayUrl = boldSearchTerms(displayUrl,term); });
+            formattedResult.displayUrl = displayUrl;
+
+            var title = formattedResult.bookmark.title;
+            $.each(query.split(" "), function(i, term) { title = boldSearchTerms(title,term); });
+            formattedResult.bookmark.title = title;
+
             if (config["show_score"] === true) {
               formattedResult.displayScore = "[" + Math.round(result.score*100)/100 + "] ";
             }
@@ -117,29 +125,31 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
             var numFriends = formattedResult.users.length;
 
+
+
             // Awful decision tree for clean text. Come up with a better way.
             if(formattedResult.isMyBookmark) { // you
               if(numFriends == 0) { // no friends
                 if(formattedResult.count > 0) { // others
-                  formattedResult.countText = "<b>You</b> and " + count + " others";
+                  formattedResult.countText = "You and " + formattedResult.count + " others";
                 }
                 else { // no others
-                  formattedResult.countText = "<b>You</b>";
+                  formattedResult.countText = "You";
                 }
               }
               else { // numFriends > 0
                 if(formattedResult.count > 0) { // others
-                  formattedResult.countText = "<b>You</b>, " + numFriends + " friends, and " + count + " others";
+                  formattedResult.countText = "You, <b>" + numFriends + " friends</b>, and " + formattedResult.count + " others";
                 }
                 else { // no others
-                  formattedResult.countText = "<b>You</b> and " + numFriends + " friends";
+                  formattedResult.countText = "You and <b>" + numFriends + " friends</b>";
                 }
               }
             }
             else { // not you
               if(numFriends == 0) { // no friends
                 if(formattedResult.count > 0) { // others
-                  formattedResult.countText =  count + " others";
+                  formattedResult.countText =  formattedResult.count + " others";
                 }
                 else { // no others
                   formattedResult.countText = "No one"; // ???
@@ -147,10 +157,10 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
               }
               else { // numFriends > 0
                 if(formattedResult.count > 0) { // others
-                  formattedResult.countText = numFriends + " friends, and " + count + " others";
+                  formattedResult.countText = "<b>" + numFriends + " friends</b>, and " + formattedResult.count + " others";
                 }
                 else { // no others
-                  formattedResult.countText = numFriends + " friends";
+                  formattedResult.countText = "<b>" + numFriends + " friends</b>";
                 }
               }
             }
@@ -206,6 +216,10 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       log("done expanding. now at " + ol.css("height"));
       callback();
     });
+  }
+
+  function boldSearchTerms(input, needle) {
+      return input.replace(new RegExp('(^|\\.?)(' + needle + ')(\\.?|$)','ig'), '$1<b>$2</b>$3');
   }
 
 } catch(exception) {

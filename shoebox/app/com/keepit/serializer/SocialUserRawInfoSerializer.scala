@@ -19,7 +19,7 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
         "socialId" -> JsString(info.socialId.id),
         "networkType" -> JsString(info.networkType.name),
         "fullName" -> JsString(info.fullName),
-        "json" -> info.json 
+        "jsons" -> JsArray(info.jsons)
       )
     )
     
@@ -31,7 +31,7 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
         case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK 
       },
       fullName = (json \ "fullName").as[String],
-      json = (json \ "json")
+      jsons = (json \ "jsons").asInstanceOf[JsArray].value
    )
 }
 

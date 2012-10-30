@@ -34,8 +34,10 @@ import com.keepit.common.logging.Logging
 
 
 class SocialUserImportFriends() extends Logging {
+
+  def importFriends(parentJsons: Seq[JsValue]): Seq[SocialUserRawInfo] = parentJsons map importFriendsFromJson flatten
   
-  def importFriends(parentJson: JsValue): Seq[SocialUserRawInfo] = {
+  private def importFriendsFromJson(parentJson: JsValue): Seq[SocialUserRawInfo] = {
     val socialUserInfos = CX.withConnection { implicit conn =>
       extractFriends(parentJson) filter infoNotInDb map createSocialUserInfo map {t => (t._1.save, t._2)}
     }
@@ -64,11 +66,11 @@ class SocialUserImportFriends() extends Logging {
     SocialUserInfo.getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here    
   }
   
-  private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \ "friends" \ "data").asInstanceOf[JsArray].value
+  private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
   
   private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) = (SocialUserInfo(fullName = (friend \ "name").as[String], socialId = SocialId((friend \ "id").as[String]), 
                                                 networkType = SocialNetworks.FACEBOOK, state = SocialUserInfo.States.FETCHED_USING_FRIEND), friend)
                                                 
   private def createSocialUserRawInfo(socialUserInfo: SocialUserInfo, friend: JsValue) = SocialUserRawInfo(socialUserInfo = socialUserInfo, json = friend)
-  
+
 }

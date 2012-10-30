@@ -26,6 +26,7 @@
   min-width: 0px;
   box-sizing: content-box;
   text-align: left;
+  direction: ltr;
 }
 
 .kifi_hover div {

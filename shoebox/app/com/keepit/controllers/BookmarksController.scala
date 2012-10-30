@@ -103,6 +103,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   private def internBookmark(json: JsObject, user: User, source: BookmarkSource): Bookmark = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
+    log.debug("interning bookmark %s with title [%s]".format(json, title))
     CX.withConnection { implicit conn =>
       val normalizedUri = NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) => uri

@@ -42,14 +42,14 @@ class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
          */
         val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay.json")).mkString)
         
-        val result = inject[SocialUserImportFriends].importFriends(json)
+        val result = inject[SocialUserImportFriends].importFriends(Seq(json))
         
         val socialUserInfo = CX.withConnection { implicit conn =>
           SocialUserInfo(fullName = "Bob Smith", socialId = SocialId("bsmith"), networkType = SocialNetworks.FACEBOOK).withUser(User(firstName = "fn1", lastName = "ln1").save).save
         }
         
         
-        val connections = inject[SocialUserCreateConnections].createConnections(socialUserInfo, json)
+        val connections = inject[SocialUserCreateConnections].createConnections(socialUserInfo, Seq(json))
 
         connections.size === 199    
       }

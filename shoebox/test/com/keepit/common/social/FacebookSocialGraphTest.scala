@@ -27,6 +27,19 @@ import java.io.File
 class FacebookSocialGraphTest extends SpecificationWithJUnit {
 
   "FacebookSocialGraph" should {
+    
+    "find pagination url" in {
+      val graph = new FacebookSocialGraph(new FakeHttpClient())
+      val eishay1Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_min_page1.json")).mkString)
+      graph.nextPageUrl(eishay1Json) === Some("https://graph.facebook.com/646386018/friends?fields=link,name,first_name,middle_name,last_name,location,locale,gender,username,languages,third_party_id,installed,timezone,updated_time,verified,bio,birthday,devices,education,email,picture,significant_other,website,work&access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&limit=5000&offset=5000&__after_id=100004067535411")
+    }
+    
+    "not find pagination url" in {
+      val graph = new FacebookSocialGraph(new FakeHttpClient())
+      val eishay2Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_min_page2.json")).mkString)
+      graph.nextPageUrl(eishay2Json) === None
+    }
+
     "fetch from facebook" in {
       running(new EmptyApplication()) {
         //val httpClient = HttpClientImpl(timeout = 1, timeoutUnit = TimeUnit.MINUTES)
