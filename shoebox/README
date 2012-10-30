@@ -1,4 +1,9 @@
 What's new
 ============
 
-
+- New slider animations :)
+- Per browser session (200 links max), slider will not show again once user has visited page.
+- Now checks for remote keeps, not local
+- Misc slider bug fixes
+- Removed from Google Images
+- Hover does not show when printing page

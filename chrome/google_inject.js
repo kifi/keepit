@@ -90,8 +90,6 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       log(userInfo);
       log(searchResults);
 
-
-
       var req = new XMLHttpRequest();
       req.open("GET", chrome.extension.getURL('google_inject.html'), true);
       req.onreadystatechange = function() {
@@ -124,8 +122,6 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             formattedResult.countText = "";
 
             var numFriends = formattedResult.users.length;
-
-
 
             // Awful decision tree for clean text. Come up with a better way.
             if(formattedResult.isMyBookmark) { // you

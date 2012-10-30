@@ -287,3 +287,9 @@ text-align:right;
   color: #414b52;
   display: none;
 }
+
+@media print {
+  .kifi_hover {
+      display:none;
+  }
+}
