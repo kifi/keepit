@@ -75,11 +75,14 @@ object URINormalizer extends Logging {
     }
     
     val slashDotDot = """^(/\.\.)+""".r
-    val indexDotHtml = """/index.html$""".r
+
+    val defaultPage = """/(index|default)\.(html|htm|asp|aspx|php|php3|php4|phtml|cfm|cgi|jsp|jsf|jspx|jspa)$""".r
     
     def normalizePath(path: Option[String]) = {
       path.flatMap{ path =>
-        indexDotHtml.replaceFirstIn(slashDotDot.replaceFirstIn(path.trim, ""), "/") match {
+        var path2 = slashDotDot.replaceFirstIn(path.trim, "")
+        defaultPage.findFirstMatchIn(path2.toLowerCase).foreach{ m => path2 = path2.substring(0, m.start) + "/" }
+        path2 match {
           case "" => None
           case path => Some(path.replace("%7E", "~").replace(" ", "%20"))
         }
