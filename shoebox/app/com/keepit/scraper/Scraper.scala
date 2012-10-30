@@ -93,7 +93,13 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
   def fetchArticle(normalizedUri: NormalizedURI): Either[Article, ScraperError] = {
     var fetchResult: Option[PageFetchResult] = None
     val webURL = new WebURL
-    webURL.setURL(normalizedUri.url)
+    var scrapeUrl = normalizedUri.url
+    val domainStartIdx = scrapeUrl.indexOf("//") + 2
+    if (scrapeUrl.indexOf('/', domainStartIdx) < 0) {
+      scrapeUrl = scrapeUrl + '/'
+    }
+
+    webURL.setURL(scrapeUrl)
     try {
       val result = pageFetcher.fetchHeader(webURL)
       fetchResult = Some(result)
