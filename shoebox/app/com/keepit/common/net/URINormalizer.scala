@@ -81,7 +81,10 @@ object URINormalizer extends Logging {
     def normalizePath(path: Option[String]) = {
       path.flatMap{ path =>
         var path2 = slashDotDot.replaceFirstIn(path.trim, "")
-        defaultPage.findFirstMatchIn(path2.toLowerCase).foreach{ m => path2 = path2.substring(0, m.start) + "/" }
+        defaultPage.findFirstMatchIn(path2.toLowerCase).foreach{ m =>
+          val delta = path2.length - path2.toLowerCase.length // in case the case conversion changed the length
+          path2 = path2.substring(0, m.start + delta) + "/"
+        }
         path2 match {
           case "" => None
           case path => Some(path.replace("%7E", "~").replace(" ", "%20"))
