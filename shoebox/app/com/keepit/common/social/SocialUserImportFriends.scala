@@ -34,8 +34,10 @@ import com.keepit.common.logging.Logging
 
 
 class SocialUserImportFriends() extends Logging {
+
+  def importFriends(parentJsons: Seq[JsValue]): Seq[SocialUserRawInfo] = parentJsons map importFriendsFromJson flatten
   
-  def importFriends(parentJson: JsValue): Seq[SocialUserRawInfo] = {
+  private def importFriendsFromJson(parentJson: JsValue): Seq[SocialUserRawInfo] = {
     val socialUserInfos = CX.withConnection { implicit conn =>
       extractFriends(parentJson) filter infoNotInDb map createSocialUserInfo map {t => (t._1.save, t._2)}
     }
@@ -70,5 +72,5 @@ class SocialUserImportFriends() extends Logging {
                                                 networkType = SocialNetworks.FACEBOOK, state = SocialUserInfo.States.FETCHED_USING_FRIEND), friend)
                                                 
   private def createSocialUserRawInfo(socialUserInfo: SocialUserInfo, friend: JsValue) = SocialUserRawInfo(socialUserInfo = socialUserInfo, json = friend)
-  
+
 }

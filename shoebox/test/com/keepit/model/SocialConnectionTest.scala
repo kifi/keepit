@@ -29,7 +29,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(filename))).mkString)
-          println(inject[SocialUserImportFriends].importFriends(json).size)
+          println(inject[SocialUserImportFriends].importFriends(Seq(json)).size)
         }
         
         loadJsonImportFriends("facebook_graph_andrew_min.json")
@@ -66,8 +66,8 @@ class SocialConnectionTest extends SpecificationWithJUnit {
           SocialUserInfo.get(SocialId("113102"), SocialNetworks.FACEBOOK).withUser(users(2)).save
         }
         
-        inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, eishayJson)
-        inject[SocialUserCreateConnections].createConnections(andrewSocialUserInfo, andrewJson)
+        inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, Seq(eishayJson))
+        inject[SocialUserCreateConnections].createConnections(andrewSocialUserInfo, Seq(andrewJson))
         
         val (eishayFortyTwoConnection, andrewFortyTwoConnection) = CX.withConnection { implicit conn =>
           SocialConnection.all.size === 18
@@ -93,7 +93,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(filename))).mkString)
-          println(inject[SocialUserImportFriends].importFriends(json).size)
+          println(inject[SocialUserImportFriends].importFriends(Seq(json)).size)
         }
         
         loadJsonImportFriends("facebook_graph_andrew.json")
@@ -130,8 +130,8 @@ class SocialConnectionTest extends SpecificationWithJUnit {
           SocialUserInfo.get(SocialId("113102"), SocialNetworks.FACEBOOK).withUser(users(2)).save
         }
         
-        inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, eishayJson)
-        inject[SocialUserCreateConnections].createConnections(andrewSocialUserInfo, andrewJson)
+        inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, Seq(eishayJson))
+        inject[SocialUserCreateConnections].createConnections(andrewSocialUserInfo, Seq(andrewJson))
         
         val (eishayFortyTwoConnection, andrewFortyTwoConnection) = CX.withConnection { implicit conn =>
           SocialConnection.all.size === 612
