@@ -28,7 +28,7 @@
         "http://*/*",
         "https://*/*"
       ],
-      "js" : ["contentscript.js", "jquery-1.7.2.min.js", "mustache.js"],
+      "js" : ["jquery-1.7.2.min.js", "contentscript.js", "mustache.js"],
       "css": ["keepit.css", "hover.css"],
       "run_at" : "document_end",
       "all_frames" : false

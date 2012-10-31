@@ -14,18 +14,22 @@
   var host = document.location.host;
   var isGoogle = (host == "www.google.com") ||  (host == "www.google.co.il");
   log("keepit: location is " + host + " isGoogle = " + isGoogle);
-  if (isGoogle) {
-    log("this script should not run in a google page!");
-    return;
-  } else {
+
+
+  $(document).ready(function() {
     chrome.extension.sendRequest({
-      type: "init_page", 
-      location: document.location.href,
-      isGoogle: false
-      }, function(response) {
-        log("[" + new Date().getTime() + "] init page response");
-        log(response);      
-      }
-    );
-  }
+      "type": "set_page_icon",
+      "is_kept": false
+    });
+  });
+
+  chrome.extension.sendRequest({
+    type: "init_page", 
+    location: document.location.href,
+    isGoogle: false
+    }, function(response) {
+      log("[" + new Date().getTime() + "] init page response");
+      log(response);      
+    }
+  );
 })();

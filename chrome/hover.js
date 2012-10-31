@@ -14,6 +14,11 @@ console.log("injecting keep it hover div");
     easeCircle: function (x, t, b, c, d) {
       if ((t/=d/2) < 1) return -c/2 * (Math.sqrt(1 - t*t) - 1) + b;
       return c/2 * (Math.sqrt(1 - (t-=2)*t) + 1) + b;
+    },
+    easeInOutBack: function (x, t, b, c, d, s) {
+      if (s == undefined) s = 1.3; 
+      if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s)) + b;
+      return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
     }
   });
 
@@ -105,7 +110,7 @@ console.log("injecting keep it hover div");
 
                     chrome.extension.sendRequest({
                       "type": "set_page_icon",
-                      "is_kept": "false"
+                      "is_kept": false
                     });
 
                     alert("Not implemented.");
@@ -224,11 +229,10 @@ console.log("injecting keep it hover div");
     var position = $('.kifi_hover').position().top;
     $('.kifi_hover').animate({
         bottom: '+=' + position,
-        opacity: 0,
-        right: '-=100'
+        opacity: 0
       },
       600,
-      'easeCircle',
+      'easeInOutBack',
       function() {
         $('.kifi_hover').detach();
       });
