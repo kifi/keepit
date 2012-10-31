@@ -60,7 +60,7 @@ private[search] class ArticleSearchResultRefEntity extends Entity[ArticleSearchR
 }
 
 private[search] object ArticleSearchResultRefEntity extends ArticleSearchResultRefEntity with EntityTable[ArticleSearchResultRef, ArticleSearchResultRefEntity] {
-  override def relationName = "email_address"
+  override def relationName = "article_search_result"
   
   def apply(view: ArticleSearchResultRef): ArticleSearchResultRefEntity = {
     val entity = new ArticleSearchResultRefEntity
