@@ -29,7 +29,7 @@ object ArticleSearchResultRef {
   }
   
   def apply(res: ArticleSearchResult): ArticleSearchResultRef = 
-    ArticleSearchResultRef(externalId = res.uuid, userId = res.userId)
+    ArticleSearchResultRef(externalId = res.uuid, userId = res.userId, createdAt = res.time, updatedAt = res.time)
   
   def get(id: Id[ArticleSearchResultRef])(implicit conn: Connection): ArticleSearchResultRef = ArticleSearchResultRefEntity.get(id).get.view
   
@@ -60,7 +60,7 @@ private[search] class ArticleSearchResultRefEntity extends Entity[ArticleSearchR
 }
 
 private[search] object ArticleSearchResultRefEntity extends ArticleSearchResultRefEntity with EntityTable[ArticleSearchResultRef, ArticleSearchResultRefEntity] {
-  override def relationName = "email_address"
+  override def relationName = "article_search_result"
   
   def apply(view: ArticleSearchResultRef): ArticleSearchResultRefEntity = {
     val entity = new ArticleSearchResultRefEntity
