@@ -1,6 +1,7 @@
 package com.keepit.common.social
 
 import com.keepit.common.net.HttpClient
+import com.keepit.common.logging.Logging
 import com.keepit.model.{User, SocialUserInfo}
 import com.google.inject.Inject
 import play.api.libs.json._
@@ -9,10 +10,11 @@ object FacebookSocialGraph {
   val FULL_PROFILE = "link,name,first_name,middle_name,last_name,location,locale,gender,username,languages,third_party_id,installed,timezone,updated_time,verified,bio,birthday,devices,education,email,picture,significant_other,website,work" 
 }
 
-class FacebookSocialGraph @Inject() (httpClient: HttpClient) {
+class FacebookSocialGraph @Inject() (httpClient: HttpClient) extends Logging {
   
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): SocialUserRawInfo = {
     val jsons = fetchJsons(url(socialUserInfo.socialId, getAccessToken(socialUserInfo)))
+    log.info("fetched json of %s:\n%s".format(socialUserInfo, jsons mkString "\n"))
     SocialUserRawInfo(
         socialUserInfo.userId, 
         socialUserInfo.id, 
@@ -29,10 +31,10 @@ class FacebookSocialGraph @Inject() (httpClient: HttpClient) {
   }
   
   private def fetchJsons(url: String): List[JsValue] = {
-    val json = get(url)
-    nextPageUrl(json) match {
-      case None => List(json)
-      case Some(nextUrl) => json :: fetchJsons(nextUrl) 
+    val jsons = get(url)
+    nextPageUrl(jsons) match {
+      case None => List(jsons)
+      case Some(nextUrl) => jsons :: fetchJsons(nextUrl) 
     }
   }
   
