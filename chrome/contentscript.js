@@ -16,12 +16,12 @@
   log("keepit: location is " + host + " isGoogle = " + isGoogle);
 
 
-  $(document).ready(function() {
+  /*$(document).ready(function() {
     chrome.extension.sendRequest({
       "type": "set_page_icon",
       "is_kept": false
     });
-  });
+  });*/ // edge case bug. Will fix.
 
   chrome.extension.sendRequest({
     type: "init_page", 
