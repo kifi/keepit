@@ -98,8 +98,16 @@ console.log("injecting keep it hover div");
                       tmpl
                   );
 
-                  // Binders
+                  if($('.kifi_hover').length > 0) {
+                    // nevermind!
+                    log("No need to inject, it's already here!");
+                    return;
+                  }
+
+                  // Inject the slider!
                   $('body').prepend(tb);
+                  // Binders
+
                   $('.kificlose').click(function() {
                     slideOut();
                   });
