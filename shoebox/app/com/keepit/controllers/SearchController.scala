@@ -59,8 +59,8 @@ object SearchController extends Controller with Logging {
     
     val articleIndexer = inject[ArticleIndexer]
     val uriGraph = inject[URIGraph]
-    val searcher = new MainSearcher(articleIndexer, uriGraph, config)
-    val searchRes = searcher.search(term, userId, friendIds, filterOut, numHitsToReturn, None) // the last param should be the uuid of the last search
+    val searcher = new MainSearcher(userId, friendIds, filterOut, articleIndexer, uriGraph, config)
+    val searchRes = searcher.search(term, numHitsToReturn, None) // the last param should be the uuid of the last search
     val res = CX.withConnection { implicit conn =>
       searchRes.hits map toPersonalSearchResult
     }
