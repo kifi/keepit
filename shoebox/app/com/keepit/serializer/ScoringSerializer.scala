@@ -15,8 +15,10 @@ class ScoringSerializer extends Format[Scoring] with Logging {
         "textScore" -> JsNumber(res.textScore),
         "normalizedTextScore" -> JsNumber(res.normalizedTextScore),
         "bookmarkScore" -> JsNumber(res.bookmarkScore),
+        "recencyScore" -> JsNumber(res.recencyScore),
         "boostedTextScore" -> (if (res.boostedTextScore.isNaN()) JsNull else JsNumber(res.boostedTextScore)),
-        "boostedBookmarkScore" -> (if (res.boostedBookmarkScore.isNaN()) JsNull else JsNumber(res.boostedBookmarkScore))
+        "boostedBookmarkScore" -> (if (res.boostedBookmarkScore.isNaN()) JsNull else JsNumber(res.boostedBookmarkScore)),
+        "boostedRecencyScore" -> (if (res.boostedRecencyScore.isNaN()) JsNull else JsNumber(res.boostedRecencyScore))
       ))
     } catch {
       case e =>
@@ -28,10 +30,12 @@ class ScoringSerializer extends Format[Scoring] with Logging {
     val score = new Scoring(
       textScore  = (json \ "textScore").as[Float],
       normalizedTextScore  = (json \ "normalizedTextScore").as[Float],
-      bookmarkScore  = (json \ "bookmarkScore").as[Float]
+      bookmarkScore  = (json \ "bookmarkScore").as[Float],
+      recencyScore  = (json \ "recencyScore").as[Float]
     )
     score.boostedTextScore = (json \ "boostedTextScore").asOpt[Float].getOrElse(Float.NaN)
     score.boostedBookmarkScore  = (json \ "boostedBookmarkScore").asOpt[Float].getOrElse(Float.NaN)
+    score.boostedRecencyScore  = (json \ "boostedRecencyScore").asOpt[Float].getOrElse(Float.NaN)
     score
   }
 }
