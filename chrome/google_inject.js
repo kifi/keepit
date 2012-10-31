@@ -6,6 +6,10 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
   var lastInjected = null;
   var config = null;
 
+    var restrictedGoogleInject = [
+      "tbm=isch"
+    ]
+
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
   }
@@ -27,8 +31,17 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
   log("injecting keep it to google search result page");
   
-  function updateQuery(calledTimes) { 
+  function updateQuery(calledTimes) {
     log("updating query...");
+
+
+    var restrictedElements = $.grep(restrictedGoogleInject, function(e, i){
+      return document.location.toString().indexOf(e) >= 0;
+    });
+    if (restrictedElements.length > 0) {
+      log("restricted hover page: " + restrictedElements);
+      return;
+    }
 
     if ($("body").length === 0) {
       log("no body yet...");
@@ -37,9 +50,9 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     }
     var queryInput = $("input[name='q']");
     var query = queryInput.val();
-    if (!query) {
+    if (typeof query === 'undefined') {
       log("query is undefined");
-      if(typeof calledBefore !== 'undefined' && calledTimes > 3)
+      if(typeof calledTimes !== 'undefined' && calledTimes > 3)
         setTimeout(function(){ updateQuery(++calledTimes); }, 200);
       return;
     }
@@ -54,12 +67,16 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
     var request = {
       type: "get_keeps", 
-      query: query
+      query: $("input[name='q']").val() // it may have changed since last checked
     };
     chrome.extension.sendRequest(request, function(results) {
+      if($("input[name='q']").val() !== query ) { // query changed
+        updateQuery(0);
+        return;
+      }
       searchQuery = query;
       cachedResults = results;
-      log("kifi results recieved for " + query);
+      log("kifi results recieved for " + searchQuery);
       log(results);
 
       drawResults(results, 0);
@@ -108,12 +125,18 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     updateQuery();
   });
 
+  // The only reliable way to detect spelling clicks.
+  // For some reason, spelling doesn't fire a blur()
+  $(window).bind('hashchange', function() {
+    updateQuery();
+  });
+
 
   /*******************************************************/
 
   function addResults(userInfo, searchResults, query) {
     try {
-      log(":: addResults parameters ::");
+      log("addResults parameters:");
       log(userInfo);
       log(searchResults);
 
@@ -135,11 +158,11 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             }
 
             var displayUrl = formattedResult.displayUrl;
-            $.each(query.split(" "), function(i, term) { displayUrl = boldSearchTerms(displayUrl,term); });
+            $.each(query.split(" "), function(i, term) { displayUrl = boldSearchTerms(displayUrl,term,false); });
             formattedResult.displayUrl = displayUrl;
 
             var title = formattedResult.bookmark.title;
-            $.each(query.split(" "), function(i, term) { title = boldSearchTerms(title,term); });
+            $.each(query.split(" "), function(i, term) { title = boldSearchTerms(title,term,true); });
             formattedResult.bookmark.title = title;
 
             if (config["show_score"] === true) {
@@ -213,8 +236,13 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
               setTimeout(function() { injectResults(times > 10 ? 10 : --times) }, 1000/times);
             }
           }
-
-          injectResults(100);
+          if(searchQuery !== $("input[name='q']").val()) { // the query changed!
+            updateQuery(0);
+          }
+          else {
+            injectResults(100);
+          }
+          //updateQuery(0);
 
         }
       };
@@ -241,7 +269,10 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     });
   }
 
-  function boldSearchTerms(input, needle) {
+  function boldSearchTerms(input, needle, useSpaces) {
+    if(useSpaces === true)
+      return input.replace(new RegExp('(^|\\s)(' + needle + ')(\\s|$)','ig'), '$1<b>$2</b>$3');
+    else
       return input.replace(new RegExp('(^|\\.?)(' + needle + ')(\\.?|$)','ig'), '$1<b>$2</b>$3');
   }
 
