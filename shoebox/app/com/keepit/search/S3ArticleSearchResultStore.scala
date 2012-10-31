@@ -25,5 +25,5 @@ import com.keepit.serializer.ArticleSearchResultSerializer
 
 trait ArticleSearchResultStore extends ObjectStore[ArticleSearchResultRef, ArticleSearchResult]
 
-class S3ArticleStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[ArticleSearchResult] = new ArticleSearchResultSerializer()) 
+class ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[ArticleSearchResult] = new ArticleSearchResultSerializer()) 
   extends S3ObjectStore[ArticleSearchResultRef, ArticleSearchResult] with ArticleSearchResultStore
