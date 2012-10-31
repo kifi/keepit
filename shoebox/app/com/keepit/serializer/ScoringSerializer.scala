@@ -6,22 +6,38 @@ import com.keepit.common.time._
 import com.keepit.controllers._
 import play.api.libs.json._
 import com.keepit.search.Scoring
+import scala.math._
 
-class ScoringSerializer extends Writes[Scoring] with Logging {
+class ScoringSerializer extends Format[Scoring] with Logging {
   def writes(res: Scoring): JsValue =
     try {
       JsObject(List(
-        "textScore" -> JsString(res.textScore.toString()),
-        "normalizedTextScore" -> JsString(res.normalizedTextScore.toString()),
-        "bookmarkScore" -> JsString(res.bookmarkScore.toString()),
-        "boostedTextScore" -> JsString(res.boostedTextScore.toString()),
-        "boostedBookmarkScore" -> JsString(res.boostedBookmarkScore.toString())
+        "textScore" -> JsNumber(res.textScore),
+        "normalizedTextScore" -> JsNumber(res.normalizedTextScore),
+        "bookmarkScore" -> JsNumber(res.bookmarkScore),
+        "recencyScore" -> JsNumber(res.recencyScore),
+        "boostedTextScore" -> (if (res.boostedTextScore.isNaN()) JsNull else JsNumber(res.boostedTextScore)),
+        "boostedBookmarkScore" -> (if (res.boostedBookmarkScore.isNaN()) JsNull else JsNumber(res.boostedBookmarkScore)),
+        "boostedRecencyScore" -> (if (res.boostedRecencyScore.isNaN()) JsNull else JsNumber(res.boostedRecencyScore))
       ))
     } catch {
       case e =>
         log.error("can't serialize %s".format(res))
         throw e
     }
+    
+  def reads(json: JsValue): Scoring = {
+    val score = new Scoring(
+      textScore  = (json \ "textScore").as[Float],
+      normalizedTextScore  = (json \ "normalizedTextScore").as[Float],
+      bookmarkScore  = (json \ "bookmarkScore").as[Float],
+      recencyScore  = (json \ "recencyScore").as[Float]
+    )
+    score.boostedTextScore = (json \ "boostedTextScore").asOpt[Float].getOrElse(Float.NaN)
+    score.boostedBookmarkScore  = (json \ "boostedBookmarkScore").asOpt[Float].getOrElse(Float.NaN)
+    score.boostedRecencyScore  = (json \ "boostedRecencyScore").asOpt[Float].getOrElse(Float.NaN)
+    score
+  }
 }
 
 object ScoringSerializer {

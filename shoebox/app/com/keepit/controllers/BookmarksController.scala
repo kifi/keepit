@@ -66,14 +66,16 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   }
     
   def bookmarksView(page: Int = 0) = SecuredAction(false) { request =>
+    val pageSize = 100
     val (count, bookmarksAndUsers) = CX.withConnection { implicit conn =>
-      val bookmarks = Bookmark.page(page)
+      val bookmarks = Bookmark.page(page, pageSize)
       val users = bookmarks map (_.userId) map User.get map UserWithSocial.toUserWithSocial
       val uris = bookmarks map (_.uriId) map NormalizedURI.get map {u => u.stats()}
       val count = Bookmark.count
       (count, (bookmarks, uris, users).zipped.toList.seq)
     }
-    Ok(views.html.bookmarks(bookmarksAndUsers, page, count))
+    val pageCount: Int = (count / pageSize + 1).toInt
+    Ok(views.html.bookmarks(bookmarksAndUsers, page, count, pageCount))
   }
   
   def checkIfExists(externalId: ExternalId[User], uri: String) = SecuredAction(true) { request =>

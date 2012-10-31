@@ -1,7 +1,44 @@
-@(bookmarksAndUsers: Seq[(Bookmark, NormalizedURIStats, UserWithSocial)], page: Int, count: Long)
+@(bookmarksAndUsers: Seq[(Bookmark, NormalizedURIStats, UserWithSocial)], page: Int, count: Long, pageCount: Int)
 
-@admin("There are " + bookmarksAndUsers.size + " Bookmarks. Page #" + page + " of " + count) {
-    <h2>Showing @bookmarksAndUsers.size Bookmarks of total @count (Page @page)</h2>
+@pagination(page: Int, pageCount: Int) = {
+  <div class="pagination pagination-centered">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(page - 1)">
+        } else {
+         <a href="#">
+        }
+        Prev
+        </a>
+      </li>
+      @for(i <- 0 to (pageCount - 2)) {
+        @if(i == page) {
+	        <li class="disabled">
+	          <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(i)">@{i + 1}</a>
+	        </li>
+        } else {
+	        <li class="active">
+	          <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(i)">@{i + 1}</a>
+	        </li>
+	      }
+      }
+      <li>
+        @if(bookmarksAndUsers.size > 0) {
+          <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(page + 1)">
+        } else {
+         <a href="#">
+        }
+        Next
+        </a>
+      </li>
+    </ul>
+  </div>
+}
+
+@admin("There are " + count + " bookmarks (displaying " + bookmarksAndUsers.size + ")") {
+  <h2>Showing @bookmarksAndUsers.size Bookmarks of total @count (Page @{page + 1})</h2>
+  @pagination(page, pageCount)
   <table class="table table-bordered">
     <tr>
       <th>Id</th>
@@ -9,7 +46,6 @@
       <th>Title</th>
       <th>Source</th>
       <th>Shares</th>
-      <th>URI Hash</th>
       <th>Creation</th>
       <th>URI State</th>
     </tr>
@@ -20,8 +56,7 @@
       <td>@adminHelper.bookmarkDisplay(bookmark)</td>
       <td>@bookmark.source</td>
       <td>@uriStat.bookmarks.size</td>
-      <td>@uriStat.uri.urlHash</td>
-      <td>@bookmark.createdAt</td>
+      <td>@adminHelper.dateDisplay(bookmark.createdAt)</td>
       <td>
         @{uriStat.uri.state.value match {
           case "indexed" => {
@@ -47,26 +82,5 @@
     </tr>
   }
   </table>
-  <div class="pagination">
-    <ul>
-      <li>
-        @if(page > 0) {
-          <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(page - 1)">
-        } else {
-         <a href="#">
-        }
-        Prev
-        </a>
-      </li>
-      <li>
-        @if(bookmarksAndUsers.size > 0) {
-          <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(page + 1)">
-        } else {
-         <a href="#">
-        }
-        Next
-        </a>
-      </li>
-    </ul>
-  </div>
+  @pagination(page, pageCount)    
 }
