@@ -96,15 +96,16 @@ trait IdFields[R <: Record[_, R]] { self: R =>
 
 
 case class ExternalId[T](id: String) {
-  if (!ExternalId.uuidPattern.pattern.matcher(id).matches()) {
-    throw new Exception("external id %s does not match uuid pattern".format(id))
+  val uuid = id.substring(id.lastIndexOf("/").max(0)) 
+  if (!ExternalId.UUID_PATTERN.pattern.matcher(uuid).matches()) {
+    throw new Exception("external id %s (uuid=%s) does not match uuid pattern".format(id, uuid))
   }
   override def toString = id
 }
 
 object ExternalId {
 
-  val uuidPattern = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$".r
+  val UUID_PATTERN = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$".r
   
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[ExternalId[T]] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ExternalId[T]]] = {
