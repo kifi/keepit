@@ -14,8 +14,10 @@ class ScoringSerializer extends Writes[Scoring] with Logging {
         "textScore" -> JsString(res.textScore.toString()),
         "normalizedTextScore" -> JsString(res.normalizedTextScore.toString()),
         "bookmarkScore" -> JsString(res.bookmarkScore.toString()),
+        "recencyScore" -> JsString(res.recencyScore.toString()),
         "boostedTextScore" -> JsString(res.boostedTextScore.toString()),
-        "boostedBookmarkScore" -> JsString(res.boostedBookmarkScore.toString())
+        "boostedBookmarkScore" -> JsString(res.boostedBookmarkScore.toString()),
+        "boostedRecencyScore" -> JsString(res.boostedRecencyScore.toString())
       ))
     } catch {
       case e =>

@@ -23,6 +23,23 @@ class URIGraphSearcher(searcher: Searcher) {
     new UserToUriEdgeSet(sourceId, uriIdSet)
   }
   
+  def getUserToUriEdgeSetWithCreatedAt(sourceId: Id[User], publicOnly: Boolean = true) = {
+    val uriIdMap = getURIList(sourceId) match {
+      case Some(uriList) =>
+        var m = uriList.publicList.zip(uriList.publicCreatedAt).foldLeft(Map.empty[Id[NormalizedURI], Long]) {
+          case (m, (id, createdAt)) => m + (Id[NormalizedURI](id) -> createdAt)
+        }
+        if (publicOnly) m 
+        else {
+          uriList.privateList.zip(uriList.privateCreatedAt).foldLeft(m) {
+            case (m, (id, createdAt)) => m + (Id[NormalizedURI](id) -> createdAt)
+          }
+        }
+      case None => Map.empty[Id[NormalizedURI], Long]
+    }
+    new UserToUriEdgeSetWithCreatedAt(sourceId, uriIdMap)
+  }
+  
   def intersect(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): UserToUserEdgeSet = {
     val iter = intersect(friends.getDestDocIdSetIterator(searcher), bookmarkUsers.getDestDocIdSetIterator(searcher))
     val destIdSet = iter.map{ searcher.idMapper.getId(_) }.map{ new Id[User](_) }.toSet
@@ -78,6 +95,12 @@ class URIGraphSearcher(searcher: Searcher) {
 class UserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) extends MaterializedEdgeSet[User, User](sourceId, destIdSet)
 
 class UserToUriEdgeSet(sourceId: Id[User], destIdSet: Set[Id[NormalizedURI]]) extends MaterializedEdgeSet[User, NormalizedURI](sourceId, destIdSet)
+
+class UserToUriEdgeSetWithCreatedAt(sourceId: Id[User], destIdMap: Map[Id[NormalizedURI], Long]) 
+  extends MaterializedEdgeSet[User, NormalizedURI](sourceId, destIdMap.keySet) {
+  
+  def getCreatedAt(id: Id[NormalizedURI]): Long = destIdMap.get(id).getOrElse(0L) * URIList.HOUR
+}
 
 class UriToUserEdgeSet(sourceId: Id[NormalizedURI], searcher: Searcher) extends LuceneBackedEdgeSet[NormalizedURI, User](sourceId, searcher) {
   def toId(id: Long) = new Id[User](id)
