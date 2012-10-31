@@ -322,20 +322,10 @@
 
 
     function addHover(tabid) {
-      /*var restrictedElements = $.grep(restrictedUrlPatternsForHover, function(e, i){
-        return pageLocation.indexOf(e) >= 0;
+      chrome.tabs.sendRequest(tabid,{type:"show_hover"}, function(response) {
+        log("Hover shown");
       });
-      if (restrictedElements.length > 0) {
-        log("[addHover] restricted hover page: " + restrictedElements);
-        return;
-      }*/
-      safeExecuteScript(tabid, {
-        code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:hover] tab: " + tabid + "')"
-        },
-        function(vars){
-          log("[callback] executed hover remote logging", tabid);
-      });
-      safeExecuteScript(tabid, {file:"hover.js"});
+
     }
 
     function addHoverToTab(tab) {

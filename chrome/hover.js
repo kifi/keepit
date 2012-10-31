@@ -5,6 +5,24 @@ console.log("injecting keep it hover div");
   var config;
   var hover;
 
+  function log(message) {
+    console.log("[" + new Date().getTime() + "] ", message);
+  }
+
+  chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
+    if (request.type === "show_hover") {
+      var existingElements = $('.kifi_hover').length;
+      if (existingElements > 0) {
+        slideOut();
+        return;
+      }
+      chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
+        config = response;
+        console.log("user config",response);
+        getUserInfo(showHover);
+      });
+    }
+  });
 
   $.extend(jQuery.easing,{
     easeQuickSnapBounce:function(x,t,b,c,d) { 
@@ -22,215 +40,177 @@ console.log("injecting keep it hover div");
     }
   });
 
-
-  function log(message) {
-    console.log("[" + new Date().getTime() + "] ", message);
+  function getUserInfo(callback) {
+    chrome.extension.sendRequest({"type": "get_user_info"}, function(userInfo) {
+      callback(userInfo);
+    });
   }
 
   function showHover(user) {
     window.kifi_hover = true; // set global variable, so hover will not automatically slide out again.
-    var existingElements = $('.kifi_hover').length;
-    if (existingElements > 0) {
-      console.warn("hover is already injected. There are " + existingElements + " existing elements");
-      // close slider
-      slideOut();
-      return;
-    }
 
     log("checking location: " + document.location.href)
     chrome.extension.sendRequest({
       "type": "is_already_kept",
       "location": document.location.href
     }, function(is_kept) {
-      if(is_kept === true) {
-        log("YES! It's kept!");
-        showKeptItHover(user);
-      }
-      else {
-        log("NOPE! Not kept!");
-        showBookmarkHover(user);
-      }
+      user.is_kept = is_kept;
+      showKeepItHover(user);
     });
   }
 
-  function showKeptItHover(user) {
+  function getTemplate(name, params, callback) {
     var req = new XMLHttpRequest();
-    req.open("GET", chrome.extension.getURL('kept_hover.html'), true);
+    req.open("GET", chrome.extension.getURL(name), true);
     req.onreadystatechange = function() {
         if (req.readyState == 4 && req.status == 200) {
-            //var image = chrome.extension.getURL('logo.jpg');
-            var logo = chrome.extension.getURL('kifilogo.png');
-            var arrow = chrome.extension.getURL('arrow.png');
-            var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
-            var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
-
-            log('Rendering Mustache.js hover template...');
-
-            $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href),
-                null,
-                function(users) {
-
-                  var tmpl = {
-                    "logo": logo,
-                    "arrow": arrow,
-                    "profilepic": facebookImageLink,
-                    "name": user.name
-                  }
-
-                  log("got "+users.length+" result from /users/keepUrl");
-                  log(users);
-
-                  if (users.length>0) {
-                    var summary = "";
-                    if (users.length == 1) {
-                      summary="one of your friends";
-                    } else {
-                      summary = users.length+" other friends";
-                    }
-                    tmpl.socialConnections = {
-                      countText: summary,
-                      friends: users
-                    }
-                  }
-
-                  var tb = Mustache.to_html(
-                      req.responseText,
-                      tmpl
-                  );
-
-                  if($('.kifi_hover').length > 0) {
-                    // nevermind!
-                    log("No need to inject, it's already here!");
-                    return;
-                  }
-
-                  // Inject the slider!
-                  $('body').prepend(tb);
-                  // Binders
-
-                  $('.kificlose').click(function() {
-                    slideOut();
-                  });
-                  $('.profilepic').click(function() { location=facebookProfileLink; });
-
-                  $('.unkeepitbtn').click(function() {
-                    log("bookmarking page: " + document.location.href);
-
-                    chrome.extension.sendRequest({
-                      "type": "set_page_icon",
-                      "is_kept": false
-                    });
-
-                    alert("Not implemented.");
-                    /*
-                    var request = {
-                      "type": "add_bookmarks", 
-                      "url": document.location.href, 
-                      "title": document.title, 
-                      "private": $("#keepit_private").is(":checked")
-                    }
-                    chrome.extension.sendRequest(request, function(response) {
-                      log("bookmark added! -> " + JSON.stringify(response));
-                      keptItslideOut();
-                   });*/
-                  });
-
-                  $('.dropdownbtn').click(function() {
-                    $('.moreinnerbox').slideToggle(150);
-                  });
-
-                  slideIn();
-                },
-                "json"
+            var tb = Mustache.to_html(
+                req.responseText,
+                params
             );
+            callback(tb);
         }
     };
     req.send(null);
   }
 
-  function showBookmarkHover(user) {
-    var req = new XMLHttpRequest();
-    req.open("GET", chrome.extension.getURL('keepit_hover.html'), true);
-    req.onreadystatechange = function() {
-        if (req.readyState == 4 && req.status == 200) {
-            //var image = chrome.extension.getURL('logo.jpg');
-            var logo = chrome.extension.getURL('kifilogo.png');
-            var arrow = chrome.extension.getURL('arrow.png');
-            var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
-            var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
+  function summaryText(numberOfFriends) {
+    var summary = "";
+    if (numberOfFriends>0) {
+      if (numberOfFriends == 1) {
+        summary="one of your friends";
+      } else {
+        summary = numberOfFriends+" other friends";
+      }
+    }
+    return summary;
+  }
 
-            log('Rendering Mustache.js hover template...');
+  function socialTooltip(friend, element) {
+    var timeout;
+    var timein;
 
-            $.get("http://" + config["server"] + "/users/keepurl?url=" + encodeURIComponent(document.location.href),
-                null,
-                function(users) {
+    var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').text(friend.firstName);;
 
-                  var tmpl = {
-                    "logo": logo,
-                    "arrow": arrow,
-                    "profilepic": facebookImageLink,
-                    "name": user.name
-                  }
-
-                  log("got "+users.length+" result from /users/keepUrl");
-                  log(users);
-
-                  if (users.length>0) {
-                    var summary = "";
-                    if (users.length == 1) {
-                      summary="One of your friends";
-                    } else {
-                      summary = users.length+" other friends";
-                    }
-                    tmpl.socialConnections = {
-                      countText: summary,
-                      friends: users
-                    }
-                  }
-
-                  var tb = Mustache.to_html(
-                      req.responseText,
-                      tmpl
-                  );
-
-                  // Binders
-                  $('body').prepend(tb);
-                  $('.kificlose').click(function() {
-                    slideOut();
-                  });
-                  $('.profilepic').click(function() { location=facebookProfileLink; });
-
-                  $('.keepitbtn').click(function() {
-                    log("bookmarking page: " + document.location.href);
-
-                    chrome.extension.sendRequest({
-                      "type": "set_page_icon",
-                      "is_kept": true
-                    });
-
-                    var request = {
-                      "type": "add_bookmarks", 
-                      "url": document.location.href, 
-                      "title": document.title, 
-                      "private": $("#keepit_private").is(":checked")
-                    }
-                    chrome.extension.sendRequest(request, function(response) {
-                      log("bookmark added! -> " + JSON.stringify(response));
-                      keptItslideOut();
-                   });
-                  });
-
-                  $('.dropdownbtn').click(function() {
-                    $('.moreinnerbox').slideToggle(150);
-                  });
-
-                  slideIn();
-                },
-                "json"
-            );
-        }
+    function hide() {
+        timeout = setTimeout(function () {
+            $(friendTooltip).hide();
+        }, 500);
+        clearTimeout(timein);
     };
-    req.send(null);
+
+    function show() {
+      timein = setTimeout(function() {
+        $(friendTooltip).stop().show();
+      }, 500)
+    }
+
+    $(element).mouseover(function () {
+        clearTimeout(timeout);
+        show();
+    }).mouseout(hide);
+
+    $(friendTooltip).mouseover(function () {
+        clearTimeout(timeout);
+    }).mouseout(hide);
+  }
+
+
+  function showKeepItHover(user) {
+    var logo = chrome.extension.getURL('kifilogo.png');
+    var arrow = chrome.extension.getURL('arrow.png');
+    var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
+    var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
+
+    $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href),
+      null,
+      function(friends) {
+
+        var tmpl = {
+          "logo": logo,
+          "arrow": arrow,
+          "profilepic": facebookImageLink,
+          "name": user.name,
+          "is_kept": user.is_kept
+        }
+
+        log("got "+friends.length+" result from /users/keepUrl");
+        log(friends);
+
+        if (friends.length>0) {
+          tmpl.socialConnections = {
+            countText: summaryText(friends.length),
+            friends: friends
+          }
+        }
+
+        console.log(tmpl);
+
+        getTemplate('kept_hover.html', tmpl, function(template) {
+          drawKeepItHover(user, friends, template);
+        });
+
+      }
+    );
+  }
+
+
+  function drawKeepItHover(user, friends, renderedTemplate) {
+    if($('.kifi_hover').length > 0) {
+      // nevermind!
+      log("No need to inject, it's already here!");
+      return;
+    }
+
+    // Inject the slider!
+    $('body').prepend(renderedTemplate);
+
+    $('.social_friend').each(function(i,e) {
+      socialTooltip(friends[i],e);
+    });
+
+    // Binders
+    $('.kificlose').click(function() {
+      slideOut();
+    });
+    //$('.profilepic').click(function() { location=facebookProfileLink; });
+
+    $('.unkeepitbtn').click(function() {
+      log("un-bookmarking page: " + document.location.href);
+      chrome.extension.sendRequest({
+        "type": "set_page_icon",
+        "is_kept": false
+      });
+
+      slideOut();
+
+    });
+
+    $('.keepitbtn').click(function() {
+      log("bookmarking page: " + document.location.href);
+
+      chrome.extension.sendRequest({
+        "type": "set_page_icon",
+        "is_kept": true
+      });
+
+      var request = {
+        "type": "add_bookmarks", 
+        "url": document.location.href, 
+        "title": document.title, 
+        "private": $("#keepit_private").is(":checked")
+      }
+      chrome.extension.sendRequest(request, function(response) {
+        log("bookmark added! -> " + JSON.stringify(response));
+        keptItslideOut();
+     });
+    });
+
+    $('.dropdownbtn').click(function() {
+      $('.moreinnerbox').slideToggle(150);
+    });
+
+    slideIn();
   }
 
   function keptItslideOut() {
@@ -266,14 +246,8 @@ console.log("injecting keep it hover div");
       },
       400,
       'easeQuickSnapBounce');
-
   }
 
-  function getUserInfo(callback) {
-    chrome.extension.sendRequest({"type": "get_user_info"}, function(userInfo) {
-      callback(userInfo);
-    });
-  }
 
   function chatWith(user) {
     console.log("Im here");
@@ -309,12 +283,5 @@ console.log("injecting keep it hover div");
       console.log("sent");
     });
   }
-
-  chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
-    config = response;
-    console.log("user config",response);
-    getUserInfo(showHover);
-
-  });
 
 })();

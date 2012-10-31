@@ -41,7 +41,7 @@
   top: 50%;
   left: 50%;
   position: fixed;
-  z-index:99100;
+  z-index:99110;
   opacity:100;
   width:auto;
   border:0px;
@@ -162,5 +162,34 @@
 }
 
 .close_button {
-  
+  width: 70px;
+  height: 30px;
+  background-color: #2d2d2d;
+  text-align: center;
+  font-size: 12px;
+  border-radius: 2px;
+  position: relative;
+  float: right;
+  color: #ffffff;
+  margin-top: 8px;
+  margin-right: 5px;
+  line-height:30px;
+  cursor: pointer;
+}
+
+.close_button:hover {
+  background-color: #404040;
+}
+
+.close_button:active {
+  background-color: #2d2d2d;
+}
+
+.noselect {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }

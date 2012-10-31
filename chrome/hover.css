@@ -287,6 +287,15 @@ text-align:right;
   display: none;
 }
 
+.kifi_hover .friend_tooltip {
+  display:none;
+  position:absolute;
+  top:0px;
+  height:50px;
+  width:100px;
+  background-color: #faf9f9;
+}
+
 @media print {
   .kifi_hover {
       display:none;
