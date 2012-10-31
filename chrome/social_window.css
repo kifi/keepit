@@ -52,8 +52,9 @@
   background: transparent;
   min-width: 0px;
   font-size: 14px;
-
   width: 480px;
+  margin-left: -240px;
+  margin-top: -230px;
 }
 
 /*Rounded corner with shadow*/
@@ -93,9 +94,73 @@
 
 .kifi_social_window .kifi_friends_list {
   overflow: auto;
-  width:100%;
+  width:465px;
   height:360px;
   background-color: #fff;
   margin: 0 auto;
   color: #2d2d2d;
+}
+
+.kifi_social_window .friend {
+  padding: 5px;
+  border-top: 1px solid #c2c2c2;
+  clear: both;
+  height: 69px;
+  position:relative;
+}
+
+.kifi_social_window .friend_picture {
+  position:relative;
+  float:left;
+}
+
+.kifi_social_window .friend_description {
+  position:relative;
+  float:left;
+  padding:10px;
+}
+
+.kifi_social_window .friend_view_keeps {
+  position:relative;
+  float:right;
+  color: #3b5998;
+  font-size: 12px;
+  margin: 0px 15px 0px 0px;
+  margin-top:30px;
+  width: 80px;
+  text-align: left;
+  background: url(arrow.png) no-repeat; background-size: 8px; background-position:right;
+}
+
+.kifi_social_window .picture_frame {
+  border: 1px solid #c2c2c2;
+  border-radius: 4px;
+}
+
+.kifi_social_window .picture_frame img {
+  margin: 3px;
+  height: 60px;
+  width: 60px;
+  background-color: #ccc;
+}
+
+.friend_name {
+  font-size: 16px;
+  color: #2d2d2d;
+}
+
+.connected_message {
+  font-size: 12px;
+  color: #808080;
+  margin:6px 0px 4px 0px;
+}
+
+.connected_networks {
+  background: url(connected_networks.png);
+  height: 16px;
+  width: 70px;
+}
+
+.close_button {
+  
 }
