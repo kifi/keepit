@@ -18,6 +18,8 @@ class NormalizedURITest extends SpecificationWithJUnit {
 
   def setup() = {
     CX.withConnection { implicit c =>
+      NormalizedURI.all.size === 0 //making sure the db is clean, we had some strange failures
+      User.all.size === 0 //making sure the db is clean
       val user1 = User(firstName = "Joe", lastName = "Smith").save
       val user2 = User(firstName = "Moo", lastName = "Brown").save
       val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/short").save
@@ -27,7 +29,6 @@ class NormalizedURITest extends SpecificationWithJUnit {
       Bookmark(userId = user2.id.get, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
     }
   }
-
 
   "bookmark pagination" should {
     "get all" in {

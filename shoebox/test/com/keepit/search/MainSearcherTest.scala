@@ -7,7 +7,7 @@ import com.keepit.search.graph.URIList
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
-import com.keepit.common.db.{Id, CX}
+import com.keepit.common.db.{Id, CX, ExternalId}
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.test.EmptyApplication
@@ -224,7 +224,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           val graphSearcher = mainSearcher.uriGraphSearcher
           val reachableUris = users.foldLeft(Set.empty[Long])((s, u) => s ++ graphSearcher.getUserToUriEdgeSet(u.id.get, publicOnly = true).destIdLongSet)
           
-          var uuid : Option[String] = None
+          var uuid : Option[ExternalId[ArticleSearchResultRef]] = None
           while(uriSeen.size < reachableUris.size) {
             val mainSearcher= new MainSearcher(userId, friendIds, uriSeen, indexer, graph, config)
             //println("---" + uriSeen + ":" + reachableUris)
