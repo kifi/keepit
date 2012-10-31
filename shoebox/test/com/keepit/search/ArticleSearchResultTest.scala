@@ -46,6 +46,9 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
     
     "persisting to db" in {
       running(new EmptyApplication()) {
+         val user = CX.withConnection { implicit conn =>
+           User(firstName = "Shachaf", lastName = "Smith").save
+         }
          val res = ArticleSearchResult(
               last = Some(ExternalId[ArticleSearchResultRef]()),
               query = "scala query",
@@ -54,7 +57,7 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
               friendsTotal = 3232,
               mayHaveMoreHits = true,
               scorings = Seq(new Scoring(.2F, .3F, .4F)),
-              userId = Id[User](55),
+              userId = user.id.get,
               uuid = ExternalId[ArticleSearchResultRef]())
          val model = CX.withConnection { implicit conn =>
            ArticleSearchResultRef(res).save

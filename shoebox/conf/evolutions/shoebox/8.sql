@@ -11,7 +11,7 @@ CREATE TABLE article_search_result (
     PRIMARY KEY (id),
     
     UNIQUE INDEX(external_id),
-    CREATE INDEX article_search_result_i_created_at(created_at),
+    INDEX article_search_result_i_created_at(created_at),
     
     CONSTRAINT article_search_result_f_user FOREIGN KEY (user_id) REFERENCES user(id) 
 );
