@@ -52,7 +52,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     var query = queryInput.val();
     if (typeof query === 'undefined') {
       log("query is undefined");
-      if(typeof calledTimes !== 'undefined' && calledTimes > 3)
+      if(typeof calledTimes !== 'undefined' && calledTimes <= 3)
         setTimeout(function(){ updateQuery(++calledTimes); }, 200);
       return;
     }
