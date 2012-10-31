@@ -13,7 +13,7 @@ import scala.math._
 import org.joda.time.DateTime
 
 class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: SearchConfig) {
-  val currentTime = System.currentTimeMillis()
+  val currentTime = currentDateTime.getMillis()
   
   // get config params
   val minMyBookmarks = config.asInt("minMyBookmarks")
@@ -23,6 +23,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   val percentMatch = config.asDouble("percentMatch")
   val recencyBoost = config.asFloat("recencyBoost")
   val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
+  val tailCutting = config.asFloat("tailCutting")
   
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
   val articleSearcher = articleIndexer.getArticleSearcher
@@ -80,7 +81,8 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     val hits = createQueue(numHitsToReturn)
     
     var highScore = myHits.highScore
-    myHits.foreach{ h =>
+    var threshold = highScore * tailCutting
+    myHits.iterator.filter(_.score > threshold).foreach{ h =>
       val id = Id[NormalizedURI](h.id)
       val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet - userId
       
@@ -92,10 +94,12 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     
     if (friendsHits.size > 0) {
       highScore = max(highScore, friendsHits.highScore)
+      threshold = highScore * tailCutting
+      
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
       
-      friendsHits.foreach{ h =>
+      friendsHits.iterator.filter(_.score > threshold).foreach{ h =>
         val id = Id[NormalizedURI](h.id)
         val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
         
@@ -106,12 +110,15 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
       }
       queue.foreach{ h => hits.insert(h) }
     }
+    var mayHaveMore = hits.overflowed // true if we _may_ have more hits
     
     // if we don't have enough hits, backfill the result with hits in the "others" category
-    val moreOthers = if (hits.size < numHitsToReturn && othersHits.size > 0) {
+    if (hits.size < numHitsToReturn && othersHits.size > 0) {
       highScore = max(highScore, othersHits.highScore)
+      threshold = highScore * tailCutting
+      
       val queue = createQueue(numHitsToReturn - hits.size)
-      othersHits.foreach{ h =>
+      othersHits.iterator.filter(_.score > threshold).foreach{ h =>
         h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
         if (h.bookmarkCount > 0) {
           h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(h.bookmarkCount), 0.0f)
@@ -127,12 +134,8 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
         h.score = h.score * normalizer
         hits.insert(h)
       }
-      queue.overflowed
-    } else {
-      othersHits.size > 0 // we may have more hits
+      if (queue.overflowed) mayHaveMore = true
     }
-    
-    val mayHaveMore = hits.overflowed || moreOthers // true if we _may_ have more hits
     
     val hitList = hits.toList
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit), myTotal, friendsTotal, mayHaveMore, hitList.map(_.scoring), userId)
@@ -198,6 +201,20 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
     otherQueue.foreach{ h => thisQueue.insert(h) }
   }
   
+  def iterator = {
+    val arr = getHeapArray()
+    val sz = size()
+    
+    new Iterator[MutableArticleHit] {
+      var i = 0
+      def hasNext() = (i < sz)
+      def next() = {
+        i += 1
+        arr(i).asInstanceOf[MutableArticleHit]
+      }
+    }
+  }
+  
   def foreach(f: MutableArticleHit => Unit) {
     val arr = getHeapArray()
     val sz = size()
@@ -239,7 +256,7 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
   var boostedRecencyScore: Float = Float.NaN
   
   def score(textBoost: Float, bookmarkBoost: Float, recencyBoost: Float) = {
-    boostedTextScore = textScore * textBoost
+    boostedTextScore = normalizedTextScore * textBoost
     boostedBookmarkScore = bookmarkScore * bookmarkBoost
     boostedRecencyScore = recencyScore * recencyBoost
     

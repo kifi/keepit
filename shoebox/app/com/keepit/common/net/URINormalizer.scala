@@ -37,7 +37,7 @@ object URINormalizer extends Logging {
         Some((scheme, userInfo, host, port, path, query))
       } catch {
         case e: Exception =>
-          log.error("uri normalization failed: [%s]".format(uriString), e)
+          log.error("uri normalization failed: [%s]".format(uriString))
           None
       }
     }
@@ -141,7 +141,7 @@ object URINormalizer extends Logging {
         java.net.URLEncoder.encode(decoded, "UTF-8")
       } catch {
         case e: Exception =>
-          log.error("parameter normalization failed: [%s]".format(string), e)
+          log.error("parameter normalization failed: [%s]".format(string))
           string
       }
     }
