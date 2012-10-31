@@ -3,11 +3,13 @@ package com.keepit.search
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.time._
 import com.keepit.model._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.PriorityQueue
 import java.util.UUID
 import scala.math._
+import org.joda.time.DateTime
 
 class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: SearchConfig) {
   // get config params
@@ -216,7 +218,8 @@ case class ArticleSearchResult(
   mayHaveMoreHits: Boolean,
   scorings: Seq[Scoring],
   userId: Id[User],
-  uuid: ExternalId[ArticleSearchResultRef] = ExternalId())
+  uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
+  time: DateTime = currentDateTime)
 
 class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float) extends Equals {
   var boostedTextScore: Float = Float.NaN

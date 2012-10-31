@@ -29,7 +29,7 @@ object ArticleSearchResultRef {
   }
   
   def apply(res: ArticleSearchResult): ArticleSearchResultRef = 
-    ArticleSearchResultRef(externalId = res.uuid, userId = res.userId)
+    ArticleSearchResultRef(externalId = res.uuid, userId = res.userId, createdAt = res.time, updatedAt = res.time)
   
   def get(id: Id[ArticleSearchResultRef])(implicit conn: Connection): ArticleSearchResultRef = ArticleSearchResultRefEntity.get(id).get.view
   

@@ -24,18 +24,6 @@ import com.keepit.serializer.ArticleSearchResultSerializer
 @RunWith(classOf[JUnitRunner])
 class ArticleSearchResultTest extends SpecificationWithJUnit {
 
-  def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
-    Article(
-        id = normalizedUriId,
-        title = title,
-        content = content,
-        scrapedAt = currentDateTime,
-        httpContentType = Some("text/html"),
-        httpOriginalContentCharset = Option("UTF-8"),
-        state = SCRAPED,
-        message = None)
-  }
-  
   "ArticleSearchResult" should {
     "be serialized" in {
       running(new EmptyApplication()) {
