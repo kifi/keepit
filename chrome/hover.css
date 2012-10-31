@@ -296,6 +296,56 @@ text-align:right;
   background-color: #faf9f9;
 }
 
+/*.kifi_hover .friend_tooltip {
+  display:none;
+  position:absolute;
+  top:0px;
+  height:50px;
+  width:100px;
+  background-color: #faf9f9;
+}*/
+
+.kifi_hover .friend_tooltip {
+  display:none;
+  position:absolute;
+  top:-100px;
+  left:-100px;
+  height:80px;
+  width:450px;
+  background-color: #414b52;
+  color: #faf9f9;
+  border-radius: 4px 4px 4px 4px;
+  -moz-box-shadow: 2px 2px 2px rgba(50,50,50,0.5);
+  -webkit-box-shadow: 2px 2px 2px rgba(50,50,50,0.5);
+  box-shadow: 5px 5px 15px rgba(50,50,50,0.5);
+  border: 1px solid #2d2d2d;
+}
+.kifi_hover .friend_tooltip:after {
+  top: 100%;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+
+.kifi_hover .friend_tooltip:after {
+  border-color: rgba(136, 183, 213, 0);
+  border-top-color: #414b52;
+  border-width: 8px;
+  left: 50%;
+  margin-left: -8px;
+}
+
+.kifi_hover .friend_tooltip:before {
+  border-color: rgba(45, 45, 45, 0);
+  border-top-color: #2d2d2d;
+  border-width: 9px;
+  left: 50%;
+  margin-left: -9px;
+}
+
 @media print {
   .kifi_hover {
       display:none;

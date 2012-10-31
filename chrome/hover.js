@@ -87,32 +87,42 @@ console.log("injecting keep it hover div");
   }
 
   function socialTooltip(friend, element) {
-    var timeout;
-    var timein;
+    /* // disabled for now
+    getTemplate("social_friend.html",{}, function(tmpl) {
+      var timeout;
+      var timein;
 
-    var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').text(friend.firstName);;
+      var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').html(tmpl);;
 
-    function hide() {
-        timeout = setTimeout(function () {
-            $(friendTooltip).hide();
-        }, 500);
-        clearTimeout(timein);
-    };
+      function hide() {
+          timeout = setTimeout(function () {
+              $(friendTooltip).hide();
+          }, 500);
+          clearTimeout(timein);
+      };
 
-    function show() {
-      timein = setTimeout(function() {
-        $(friendTooltip).stop().show();
-      }, 500)
-    }
+      function show() {
+        timein = setTimeout(function() {
+          $(friendTooltip).stop().show();
+        }, 500)
+      }
 
-    $(element).mouseover(function () {
-        clearTimeout(timeout);
-        show();
-    }).mouseout(hide);
+      $(element).mouseover(function () {
+          clearTimeout(timeout);
+          show();
+      }).mouseout(hide);
 
-    $(friendTooltip).mouseover(function () {
-        clearTimeout(timeout);
-    }).mouseout(hide);
+      $(friendTooltip).mouseover(function () {
+          clearTimeout(timeout);
+      }).mouseout(hide);
+
+    }); */
+  }
+
+  function showPageIcon() {
+    chrome.extension.sendRequest({
+      "type": "show_page_icon"
+    });
   }
 
 
@@ -143,7 +153,6 @@ console.log("injecting keep it hover div");
             friends: friends
           }
         }
-
         console.log(tmpl);
 
         getTemplate('kept_hover.html', tmpl, function(template) {
@@ -283,5 +292,18 @@ console.log("injecting keep it hover div");
       console.log("sent");
     });
   }
+
+  function keepIconShowing(times) {
+    showPageIcon();
+    if(times <= 0)
+      return;
+    setTimeout(function() { keepIconShowing(--times); }, Math.round(15000/times));
+  }
+  keepIconShowing(20);
+
+  $(document).ready(function() {
+    showPageIcon();
+  });
+
 
 })();

@@ -102,6 +102,10 @@
     }
 
     function onRequest(request, sender, sendResponse) {
+      if (typeof sender !== 'undefined' && typeof sender.tab !== 'undefined' && request.type === "show_page_icon") {
+        showPageIcon(sender.tab.id);
+        return;
+      }
       log("new request...");
       try {
         if(typeof request === 'undefined' || typeof request.type === 'undefined' ) {
@@ -379,9 +383,24 @@
           else {
             chrome.pageAction.setIcon({"tabId":tabId, "path":"keepit.png"});
           }
-          chrome.pageAction.show(tabId);
+          showPageIcon(tabId);
         });
       }  catch (e) { }
+    }
+
+    function showPageIcon(tabId) {
+      chrome.tabs.get(tabId, function(tab) {
+        if (chrome.extension.lastError) {
+          //Possibly do some tidy-up so you don't try again
+          return;
+        }
+        if(typeof tab === 'undefined' || !tab) {
+          return;
+        }
+        else {
+          chrome.pageAction.show(tabId);
+        }
+      });
     }
     
     function injectGoogleDiv(tab) {
