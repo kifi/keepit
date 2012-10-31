@@ -2,6 +2,10 @@
   margin: 20px 200px 40px 200px;
 }
 
+li.keepit {
+  margin-bottom: 10px !important;
+}
+
 .keepit_hover {
   position: fixed;
   top: 180px;
@@ -115,7 +119,7 @@
   height: 24px;
   padding: 0px 0px 0px 0px;
   margin: 0px 0px 0px 1px;
-  border-radius: 1px 1px 1px 1px;
+  border-radius: 2px 2px 2px 2px;
 }
 
 .keep_summary_friends {
