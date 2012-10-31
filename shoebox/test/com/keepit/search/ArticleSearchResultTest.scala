@@ -43,5 +43,30 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
          deserialized === res
       }
     }
+    
+    "persisting to db" in {
+      running(new EmptyApplication()) {
+         val res = ArticleSearchResult(
+              last = Some(ExternalId[ArticleSearchResultRef]()),
+              query = "scala query",
+              hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, true, false, Set(Id[User](33)), 42)),
+              myTotal = 4242,
+              friendsTotal = 3232,
+              mayHaveMoreHits = true,
+              scorings = Seq(new Scoring(.2F, .3F, .4F)),
+              userId = Id[User](55),
+              uuid = ExternalId[ArticleSearchResultRef]())
+         val model = CX.withConnection { implicit conn =>
+           ArticleSearchResultRef(res).save
+         }
+         model.externalId === res.uuid
+         val loaded = CX.withConnection { implicit conn =>
+           ArticleSearchResultRef.get(model.id.get)
+         }
+         loaded === model
+         loaded.createdAt === res.time
+         loaded.userId === res.userId
+      }
+    }
   }
 }
