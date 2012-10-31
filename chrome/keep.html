@@ -199,37 +199,32 @@
       "ezkeep.com",
       "localhost:",
       "maps.google.com",
-      "google.com*tbm=isch"
+      "google.com*tbm=isch",
+      "google.com"
     ]
 
     function initPage(request, sendResponse, tab) {
       try {
+        log("init page!!!!!!!!");
+        setPageIcon(tab.id, false);
+
+        var restrictedElements = $.grep(restrictedUrlPatternsForHover, function(e, i){
+          return request.location.indexOf(e) >= 0;
+        });
+        if (restrictedElements.length > 0) {
+          log("restricted hover page: " + restrictedElements);
+          return;
+        }
 
         if (request.isGoogle === true) {
-          log("injecting to google result page: starting...", tab);
-          setTimeout(function() {
-            injectGoogleDiv(tab);
-            log("injecting to google result page: done!", tab);
-          }, 5000);
+          log("init_page for Google pages");
         } else if (request.isGoogle === false) {
-
-          setPageIcon(tab.id, false);
-
-          log("Injecting shortcut key");
-
 
           var pageLocation = request.location;
 
           log("injecting hover: " + request, tab);
           var userConf =  getConfigs();
           var hoverTimeout = userConf["hover_timeout"];
-          var restrictedElements = $.grep(restrictedUrlPatternsForHover, function(e, i){
-            return pageLocation.indexOf(e) >= 0;
-          });
-          if (restrictedElements.length > 0) {
-            log("restricted hover page: " + restrictedElements);
-            return;
-          }
 
 
           if(typeof userConf.user === "undefined" || typeof userConf.user.keepit_external_id === "undefined" || typeof userConf.user.facebook_id === "undefined") {
@@ -290,7 +285,7 @@
       if(typeof tabid === 'undefined')
         return;
       chrome.tabs.get(tabid, function(tab) {
-        if(!tab) {
+        if(typeof tab === 'undefined' || !tab) {
           log("tab " + tabid + " is already closed.")
           callback(null);
           return;
@@ -362,9 +357,9 @@
           return;
         }
         chrome.tabs.get(tabId, function(tab) {
-          if(!tab)
+          if(typeof tab === 'undefined' || !tab)
             return;
-          if(is_kept) {
+          if(is_kept === true) {
             chrome.pageAction.setIcon({"tabId":tabId, "path":"kept.png"});
           }
           else {

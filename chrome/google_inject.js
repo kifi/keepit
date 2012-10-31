@@ -27,8 +27,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
   log("injecting keep it to google search result page");
   
-  function updateQuery() { 
-    log("UPDATE QUERY CALLED!!!!");
+  function updateQuery(calledTimes) { 
+    log("updating query...");
 
     if ($("body").length === 0) {
       log("no body yet...");
@@ -39,16 +39,18 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     var query = queryInput.val();
     if (!query) {
       log("query is undefined");
-      setTimeout(function(){ updateQuery(); }, 200);
+      if(typeof calledBefore !== 'undefined' && calledTimes > 3)
+        setTimeout(function(){ updateQuery(++calledTimes); }, 200);
       return;
     }
-    log("search term: " + query);
 
     if(query === searchQuery) {
       log("Nothing new. Disregarding " + query);
-      drawResults(cachedResults);
+      drawResults(cachedResults, 0);
       return;
     }
+
+    log("New query! New: " + query + ", old: " + searchQuery);
 
     var request = {
       type: "get_keeps", 
@@ -60,11 +62,14 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       log("kifi results recieved for " + query);
       log(results);
 
-      drawResults(results);
+      drawResults(results, 0);
     });
   }
 
-  function drawResults(results) {
+  function drawResults(results, times) {
+    if(times > 30) {
+      return;
+    }
     var searchResults = results.searchResults;
     var userInfo = results.userInfo;
     try {
@@ -72,13 +77,11 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
         log("No search results!");
         return;
       }
-      log("got " + searchResults.length + " keeps:");
-      $(searchResults).each(function(i, e){log(e)});
+
       var old = $('#keepit');
       if (old && old.length > 0) {
-        log("Old keepit exists on page. Removing, and redrawing.")
-        old.remove();
-        addResults(userInfo, searchResults, searchQuery);
+        console.log("Old keepit exists.");
+        setTimeout(function(){ drawResults(results, ++times); }, 50);
       } else {
         log("Drawing results");
         addResults(userInfo, searchResults, searchQuery);
@@ -105,21 +108,6 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     updateQuery();
   });
 
-  $("#main").blur(function() {
-    log("main blur");
-  });
-
-  $("#main").ready(function() {
-    log("main ready");
-  });
-
-  $("#main").unload(function() {
-    log("main unload");
-  });
-
-  $("#main").load(function() {
-    log("main load");
-  });
 
   /*******************************************************/
 

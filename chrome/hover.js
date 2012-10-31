@@ -110,7 +110,7 @@ console.log("injecting keep it hover div");
 
                     chrome.extension.sendRequest({
                       "type": "set_page_icon",
-                      "is_kept": "false"
+                      "is_kept": false
                     });
 
                     alert("Not implemented.");
