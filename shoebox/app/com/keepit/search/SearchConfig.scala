@@ -9,7 +9,8 @@ object SearchConfig {
       "sharingBoost" -> "0.5",
       "percentMatch" -> "50",
       "halfDecayHours" -> "24",
-      "recencyBoost" -> "1.0")
+      "recencyBoost" -> "1.0",
+      "tailCutting" -> "0.1")
   
   var defaultConfig = new SearchConfig(defaultParams)
 
