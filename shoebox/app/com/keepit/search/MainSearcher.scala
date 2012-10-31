@@ -13,7 +13,7 @@ import scala.math._
 import org.joda.time.DateTime
 
 class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: SearchConfig) {
-  val currentTime = System.currentTimeMillis()
+  val currentTime = currentDateTime.getMillis()
   
   // get config params
   val minMyBookmarks = config.asInt("minMyBookmarks")
