@@ -34,7 +34,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
     case false => ""
   }
   
-  private def idToBJsonKey(id: Id[A]): String = "%s%s.json".format(keyPrefix, id.id)
+  protected def idToBJsonKey(id: Id[A]): String = "%s%s.json".format(keyPrefix, id.id)
   
   def += (kv: (Id[A], B)) = {
     kv match {
