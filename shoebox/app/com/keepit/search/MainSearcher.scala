@@ -20,7 +20,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   val sharingBoost = config.asFloat("sharingBoost")
   val percentMatch = config.asDouble("percentMatch")
   val recencyBoost = config.asFloat("recencyBoost")
-  val halfDecayPeriod = (config.asLong("halfDecayHours") * URIList.HOUR).toFloat
+  val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
   
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
   val articleSearcher = articleIndexer.getArticleSearcher
@@ -146,9 +146,9 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   private def bookmarkScore(bookmarkCount: Int) = (1.0f - (1.0f/(bookmarkCount.toFloat)))
   
   private def recencyScore(createdAt: Long): Float = {
-    val t = max(currentTime - createdAt, 0).toFloat / halfDecayPeriod
+    val t = max(currentTime - createdAt, 0).toFloat / halfDecayMillis
     val t2 = t * t
-    (1.0f/(1.0f + t2 * t2))
+    (1.0f/(1.0f + t2))
   }
 }
 
@@ -244,7 +244,7 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
   }
   
   override def toString() = {
-    "Scoring(%f, %f, %f, %f, %f)".format(textScore, normalizedTextScore, bookmarkScore, boostedTextScore, boostedBookmarkScore)
+    "Scoring(%f, %f, %f, %f, %f, %f, %f)".format(textScore, normalizedTextScore, bookmarkScore, recencyScore, boostedTextScore, boostedBookmarkScore, boostedRecencyScore)
   }
 }
 

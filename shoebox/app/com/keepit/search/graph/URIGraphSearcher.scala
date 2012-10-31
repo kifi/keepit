@@ -99,7 +99,7 @@ class UserToUriEdgeSet(sourceId: Id[User], destIdSet: Set[Id[NormalizedURI]]) ex
 class UserToUriEdgeSetWithCreatedAt(sourceId: Id[User], destIdMap: Map[Id[NormalizedURI], Long]) 
   extends MaterializedEdgeSet[User, NormalizedURI](sourceId, destIdMap.keySet) {
   
-  def getCreatedAt(id: Id[NormalizedURI]): Long = destIdMap.get(id).getOrElse(0L) * URIList.HOUR
+  def getCreatedAt(id: Id[NormalizedURI]): Long = URIList.unitToMillis(destIdMap.get(id).getOrElse(0L))
 }
 
 class UriToUserEdgeSet(sourceId: Id[NormalizedURI], searcher: Searcher) extends LuceneBackedEdgeSet[NormalizedURI, User](sourceId, searcher) {

@@ -33,15 +33,18 @@ object URIList {
       current = b.uriId.id
     }
     // encode createAt (public) 
-    sortedPublicBookmarks.foreach{ b => out.writeVLong(b.createdAt.getMillis / HOUR) }
+    sortedPublicBookmarks.foreach{ b => out.writeVLong(b.createdAt.getMillis / TIME_UNIT) }
     // encode createAt (private) 
-    sortedPrivateBookmarks.foreach{ b => out.writeVLong(b.createdAt.getMillis / HOUR) }
+    sortedPrivateBookmarks.foreach{ b => out.writeVLong(b.createdAt.getMillis / TIME_UNIT) }
     
     baos.flush()
     baos.toByteArray()
   }
   
-  val HOUR = 1000L * 60L * 60L // hour
+  val TIME_UNIT = 1000L * 60L // minute
+  val UNIT_PER_HOUR = (1000L * 60L * 60L).toDouble / TIME_UNIT.toDouble
+  
+  def unitToMillis(units: Long) = units * TIME_UNIT
 }
 
 class URIList(bytes: Array[Byte]) {
