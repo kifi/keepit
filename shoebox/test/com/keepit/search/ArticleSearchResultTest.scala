@@ -24,18 +24,6 @@ import com.keepit.serializer.ArticleSearchResultSerializer
 @RunWith(classOf[JUnitRunner])
 class ArticleSearchResultTest extends SpecificationWithJUnit {
 
-  def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
-    Article(
-        id = normalizedUriId,
-        title = title,
-        content = content,
-        scrapedAt = currentDateTime,
-        httpContentType = Some("text/html"),
-        httpOriginalContentCharset = Option("UTF-8"),
-        state = SCRAPED,
-        message = None)
-  }
-  
   "ArticleSearchResult" should {
     "be serialized" in {
       running(new EmptyApplication()) {
@@ -53,6 +41,34 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
          val deserialized = new ArticleSearchResultSerializer().reads(json)
          deserialized.uuid === res.uuid
          deserialized === res
+      }
+    }
+    
+    "persisting to db" in {
+      running(new EmptyApplication()) {
+         val user = CX.withConnection { implicit conn =>
+           User(firstName = "Shachaf", lastName = "Smith").save
+         }
+         val res = ArticleSearchResult(
+              last = Some(ExternalId[ArticleSearchResultRef]()),
+              query = "scala query",
+              hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, true, false, Set(Id[User](33)), 42)),
+              myTotal = 4242,
+              friendsTotal = 3232,
+              mayHaveMoreHits = true,
+              scorings = Seq(new Scoring(.2F, .3F, .4F)),
+              userId = user.id.get,
+              uuid = ExternalId[ArticleSearchResultRef]())
+         val model = CX.withConnection { implicit conn =>
+           ArticleSearchResultRef(res).save
+         }
+         model.externalId === res.uuid
+         val loaded = CX.withConnection { implicit conn =>
+           ArticleSearchResultRef.get(model.id.get)
+         }
+         loaded === model
+         loaded.createdAt === res.time
+         loaded.userId === res.userId
       }
     }
   }
