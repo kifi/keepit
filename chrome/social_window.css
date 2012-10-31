@@ -94,7 +94,6 @@
 .kifi_social_window .kifi_friends_list {
   overflow: auto;
   width:100%;
-  margin: 5px 5px 5px 5px;
   height:360px;
   background-color: #fff;
   margin: 0 auto;
