@@ -2,7 +2,7 @@ package com.keepit.search
 
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
-import com.keepit.common.db.Id
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.model._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.PriorityQueue
@@ -59,7 +59,7 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: S
     (myHits, friendsHits, othersHits)
   }
   
-  def search(queryString: String, userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], numHitsToReturn: Int, lastUUID: Option[String]): ArticleSearchResult = {
+  def search(queryString: String, userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]]): ArticleSearchResult = {
     
     val (myHits, friendsHits, othersHits) = searchText(queryString, userId, friendIds, filterOut, maxTextHitsPerCategory = maxTextHitsPerCategory)
     
@@ -125,9 +125,8 @@ class MainSearcher(articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: S
     
     val mayHaveMore = hits.overflowed || moreOthers // true if we _may_ have more hits
     
-    val uuid = UUID.randomUUID().toString()
     val hitList = hits.toList
-    ArticleSearchResult(uuid, lastUUID, queryString, hitList.map(_.toArticleHit), myTotal, friendsTotal, mayHaveMore, hitList.map(_.scoring))
+    ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit), myTotal, friendsTotal, mayHaveMore, hitList.map(_.scoring), userId)
   }
   
   private def getPublicBookmarkCount(id: Long) = {
@@ -209,16 +208,17 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
 case class ArticleHit(uriId: Id[NormalizedURI], score: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Set[Id[User]], bookmarkCount: Int)
 
 case class ArticleSearchResult(
-  uuid: String,
-  last: Option[String], // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
+  last: Option[ExternalId[ArticleSearchResultRef]], // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
   query: String,
   hits: Seq[ArticleHit],
   myTotal: Int,
   friendsTotal: Int,
   mayHaveMoreHits: Boolean,
-  scorings: Seq[Scoring])
+  scorings: Seq[Scoring],
+  userId: Id[User],
+  uuid: ExternalId[ArticleSearchResultRef] = ExternalId())
 
-class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float) {
+class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float) extends Equals {
   var boostedTextScore: Float = Float.NaN
   var boostedBookmarkScore: Float = Float.NaN
   
@@ -232,6 +232,24 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
   override def toString() = {
     "Scoring(%f, %f, %f, %f, %f)".format(textScore, normalizedTextScore, bookmarkScore, boostedTextScore, boostedBookmarkScore)
   }
+  
+  def canEqual(other: Any) = {
+    other.isInstanceOf[com.keepit.search.Scoring]
+  }
+  
+  override def equals(other: Any) = {
+    other match {
+      case that: com.keepit.search.Scoring => that.canEqual(Scoring.this) && textScore == that.textScore && normalizedTextScore == that.normalizedTextScore && bookmarkScore == that.bookmarkScore
+      case _ => false
+    }
+  }
+  
+  override def hashCode() = {
+    val prime = 41
+    prime * (prime * (prime + textScore.hashCode) + normalizedTextScore.hashCode) + bookmarkScore.hashCode
+  }
+  
+  
 }
 
 // mutable hit object for efficiency
