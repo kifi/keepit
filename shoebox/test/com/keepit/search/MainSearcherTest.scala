@@ -297,5 +297,71 @@ class MainSearcherTest extends SpecificationWithJUnit {
         res.hits.map(h => h.score).reduce((s1, s2) => min(s1, s2)) >= medianScore === true
       }
     }
+    
+    "show own private bookmarks" in {
+      running(new EmptyApplication()) {
+        val (users, uris) = initData(numUsers = 2, numUris = 20)
+        val user1 = users(0)
+        val user2 = users(1)
+        val (privateUris, publicUris) = uris.partition(_.id.get.id % 3 == 0)
+        CX.withConnection { implicit c =>
+          privateUris.foreach{ uri =>
+            Bookmark(title = uri.title, url = uri.url, uriId = uri.id.get, userId = user1.id.get, source = source, isPrivate = true).save
+          }
+          publicUris.foreach{ uri =>
+            Bookmark(title = uri.title, url = uri.url, uriId = uri.id.get, userId = user1.id.get, source = source, isPrivate = false).save
+          }
+        }
+
+        val store = mkStore(uris)
+        val (graph, indexer) = initIndexes(store)
+        
+        graph.load() === users.size
+        indexer.run() === uris.size
+        
+        var mainSearcher= new MainSearcher(user1.id.get, Set(user2.id.get), Set.empty[Long], indexer, graph, SearchConfig.getDefaultConfig)
+        var res = mainSearcher.search("alldocs", uris.size, None)
+        
+        val publicSet = publicUris.map(u => u.id.get).toSet
+        val privateSet = privateUris.map(u => u.id.get).toSet
+        
+        res.hits.size === uris.size
+      }
+    }
+    
+    "not show friends private bookmarks" in {
+      running(new EmptyApplication()) {
+        val (users, uris) = initData(numUsers = 2, numUris = 20)
+        val user1 = users(0)
+        val user2 = users(1)
+        val (privateUris, publicUris) = uris.partition(_.id.get.id % 3 == 0)
+        CX.withConnection { implicit c =>
+          privateUris.foreach{ uri =>
+            Bookmark(title = uri.title, url = uri.url, uriId = uri.id.get, userId = user2.id.get, source = source, isPrivate = true).save
+          }
+          publicUris.foreach{ uri =>
+            Bookmark(title = uri.title, url = uri.url, uriId = uri.id.get, userId = user2.id.get, source = source, isPrivate = false).save
+          }
+        }
+
+        val store = mkStore(uris)
+        val (graph, indexer) = initIndexes(store)
+        
+        graph.load() === users.size
+        indexer.run() === uris.size
+        
+        var mainSearcher= new MainSearcher(user1.id.get, Set(user2.id.get), Set.empty[Long], indexer, graph, SearchConfig.getDefaultConfig)
+        var res = mainSearcher.search("alldocs", uris.size, None)
+        
+        val publicSet = publicUris.map(u => u.id.get).toSet
+        val privateSet = privateUris.map(u => u.id.get).toSet
+        
+        res.hits.foreach{ h =>
+          publicSet.contains(h.uriId) === true
+          privateSet.contains(h.uriId) === false
+        }
+        res.hits.size === publicUris.size
+      }
+    }
   }
 }
