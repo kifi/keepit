@@ -1,6 +1,9 @@
 What's new
 ============
 
+October 31, 2012
+* new search api and endpoint for pagination support
+
 October 30, 2012
 * Fixing a scraping bug. Caused by our scraping lib that needs a trailing slash at the end of a domain name
 * New slider animations :)
