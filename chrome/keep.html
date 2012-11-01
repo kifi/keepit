@@ -58,6 +58,48 @@
     }
 
     var userHistory = new UserHistory();
+    var _eventLog = new Array();
+
+    function logEvent(payload) {
+      _eventLog.push({
+        "time": (new Date()).getTime(),
+        "event": payload
+      });
+    }
+
+    function sendEventLog() {
+      var userConfig = getConfigs();
+      var json = {
+        "client_time": (new Date()).getTime(),
+        "user_config": userConfig,
+        "event_log": _eventLog
+      }
+      var tosend = JSON.stringify(json);
+      console.log("Sending event log!", tosend);
+
+      // var xhr = new XMLHttpRequest();
+      // xhr.open("POST", 'http://' + userConfig.server + '/bookmarks/add', true);
+      // xhr.send(tosend);
+
+      _eventLog = new Array();
+    }
+
+    var eventLogDelay = 2000;
+    function eventLogTimer() {
+      if(_eventLog.length > 0) {
+        eventLogDelay = Math.round(Math.max(Math.sqrt(eventLogDelay), 2000));
+        sendEventLog();
+      }
+      else {
+        // Nothing to send...
+        eventLogDelay = Math.min(eventLogDelay * 2, 20000);
+      }
+      setTimeout(eventLogTimer, eventLogDelay);
+    }
+
+    setTimeout(function() {
+      eventLogTimer();
+    }, 4000);
 
     function error(exception, message) {
       debugger;
@@ -161,6 +203,9 @@
         }
         else if (request.type === "open_slider") {
           addHover(tab.id);
+        }
+        else if (request.type === "log_event") {
+          logEvent(request.event);
         }
         // Return nothing to let the connection be cleaned up.
       } catch (e) {
@@ -634,6 +679,8 @@
       postBookmarks(chrome.bookmarks.getTree, "PLUGIN_START");//posting bookmarks even when keepit id is found
       getBookMarks();
     }
+
+    logEvent("Plugin started!");
 
   </script>
   <body>
