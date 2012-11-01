@@ -191,6 +191,10 @@
       }
       // Dummy results injection
 
+      if(request.query === '') {
+        return;
+      }
+
       var xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
