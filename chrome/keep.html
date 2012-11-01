@@ -154,10 +154,6 @@
     }
 
     function onRequest(request, sender, sendResponse) {
-      if (typeof sender !== 'undefined' && typeof sender.tab !== 'undefined' && request.type === "show_page_icon") {
-        showPageIcon(sender.tab.id);
-        return;
-      }
       log("new request...");
       try {
         if(typeof request === 'undefined' || typeof request.type === 'undefined' ) {
@@ -461,7 +457,23 @@
         }
       });
     }
-    
+
+    chrome.tabs.onActivated.addListener(function(activeInfo) {
+      chrome.tabs.query({active: true}, function(tabs) {
+        var tab = tabs[0];
+        if(tab.url.indexOf("http") === 0)
+          chrome.pageAction.show(tab.id);
+      });
+    });
+
+    chrome.tabs.onUpdated.addListener(function(tabId, change) {
+      chrome.tabs.query({active: true}, function(tabs) {
+        var tab = tabs[0];
+        if(tab.url.indexOf("http") === 0)
+          chrome.pageAction.show(tab.id);
+      });
+    });
+
     function injectGoogleDiv(tab) {
       log("injecting google_inject.js into tab", tab)
       try {
