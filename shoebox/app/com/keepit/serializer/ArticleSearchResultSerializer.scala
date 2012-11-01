@@ -22,6 +22,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
         "friendsTotal" -> JsNumber(res.friendsTotal),
         "mayHaveMoreHits" -> JsBoolean(res.mayHaveMoreHits),
         "scorings" -> JsArray(res.scorings map ScoringSerializer.scoringSerializer.writes),
+        "filter" -> JsArray(res.filter.map(id => JsNumber(id)).toSeq),
         "userId" -> JsNumber(res.userId.id),
         "uuid" -> JsString(res.uuid.id),
         "time" -> JsString(res.time.toStandardTimeString)
@@ -49,7 +50,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       (json \ "bookmarkCount").as[Int]      
     )
   }
-      
+  
   def reads(json: JsValue): ArticleSearchResult = ArticleSearchResult(
       last = (json \ "last").asOpt[String] map (j => ExternalId[ArticleSearchResultRef](j)), 
       query = (json \ "query").as[String], 
@@ -58,6 +59,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       friendsTotal = (json \ "friendsTotal").as[Int],
       mayHaveMoreHits = (json \ "mayHaveMoreHits").as[Boolean],
       scorings = (json \ "scorings").asInstanceOf[JsArray].value map ScoringSerializer.scoringSerializer.reads,
+      filter = (json \ "filter").asOpt[Seq[Long]].map(_.toSet).getOrElse(Set.empty[Long]),
       userId = Id[User]((json \ "userId").as[Int]),
       uuid = ExternalId[ArticleSearchResultRef]((json \ "uuid").as[String]),
       time = parseStandardTime((json \ "time").as[String])
