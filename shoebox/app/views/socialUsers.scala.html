@@ -9,9 +9,10 @@
       <th>FortyTwo User</th>
       <th>creation</th>
     </tr>
-  @for(socialUserInfo <- socialUserInfos) {
+  @for((socialUserInfo, i) <- socialUserInfos.zipWithIndex) {
     <tr>
-        <td>@socialUserInfo.id.get</td>
+      <td>@{i+1}</td>
+      <td><span class="badge">@socialUserInfo.id.get</span></td>
       <td>@adminHelper.socialUserDisplay(socialUserInfo, true)</td>
       <td>@if(socialUserInfo.userId.isDefined) {
         @adminHelper.socialUserDisplay(socialUserInfo)
