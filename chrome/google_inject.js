@@ -202,7 +202,6 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
         if (req.readyState == 4 && req.status == 200) {
           
           log('Rendering Mustache.js Google template...');
-
           var results = new Array();
 
           $(searchResults).each(function(i, result){
