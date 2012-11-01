@@ -219,10 +219,12 @@
     function addKeep(bookmarks, request, sendResponse, tab) {
       log("creating bookmark. private: " + request.private + " tile " + request.title, tab);
       var parent = (request.private) ? bookmarks.private : bookmarks.public;
+      var isPrivate = request.private ? true : false; // Forcing actual `true' and `false'
       var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
       chrome.bookmarks.create(bookmark, function(created) {
         try {
           sendResponse(created);
+          bookmark.isPrivate = isPrivate;
           postBookmarks(function (poster) {poster([bookmark]);}, "HOVER_KEEP");
         } catch (e) {
           error(e);
