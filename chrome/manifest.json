@@ -5,7 +5,7 @@
   "description": "The Keep It Plugin",
   "options_page": "options.html",
   "page_action": {
-    "default_icon": "kept.png", // optional
+    "default_icon": "keepit.png", // optional
     "default_title": "Keep It!"//,    // optional; shown in tooltip
     //"default_popup": "keep.html"    // optional
   },  
@@ -28,8 +28,8 @@
         "http://*/*",
         "https://*/*"
       ],
-      "js" : ["jquery-1.7.2.min.js", "contentscript.js", "mustache.js"],
-      "css": ["keepit.css", "hover.css"],
+      "js" : ["jquery-1.7.2.min.js", "contentscript.js", "mustache.js", "hover.js"],
+      "css": ["keepit.css", "hover.css", "social_window.css"],
       "run_at" : "document_end",
       "all_frames" : false
     }
