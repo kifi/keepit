@@ -125,6 +125,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   private def internBookmark(json: JsObject, user: User, source: BookmarkSource): Option[Bookmark] = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
+    val isPrivate = try { (json \ "isPrivate").as[Boolean] } catch { case e => false }
 
     url.toLowerCase.startsWith("javascript:") match {
       case false =>
@@ -136,7 +137,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
           }
           Bookmark.load(normalizedUri, user) match {
             case Some(bookmark) => Some(bookmark)
-            case None => Some(Bookmark(normalizedUri, user, title, url, source).save)
+            case None => Some(Bookmark(normalizedUri, user, title, url, source, isPrivate).save)
           }
         }
       case true =>
