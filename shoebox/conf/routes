@@ -9,6 +9,7 @@ GET     /bookmarks                  com.keepit.controllers.BookmarksController.b
 GET     /bookmarks/page/:page       com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
 
 POST    /bookmarks/add              com.keepit.controllers.BookmarksController.addBookmarks
+POST    /bookmarks/update           com.keepit.controllers.BookmarksController.updateBookmarks
 GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all
 GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])

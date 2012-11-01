@@ -43,6 +43,42 @@ object BookmarksController extends Controller with Logging with SecureSocial {
       Ok(views.html.editBookmark(bookmark, user))
     }
   }
+
+  //post request with a list of private/public and active/inactive
+  def updateBookmarks() = SecuredAction(false) { request =>
+    val uniqueUsers = CX.withConnection { implicit conn =>
+      val modifiedUserIds = request.body.asFormUrlEncoded.get map { case (key, values) =>
+        key.split("_") match {
+          case Array("private", id) => privateBookmark(Id[Bookmark](id.toInt), toBoolean(values.last))
+          case Array("active", id) => activeBookmark(Id[Bookmark](id.toInt), toBoolean(values.last))
+        }
+      }
+      Set(modifiedUserIds.toSeq: _*)
+    }
+    uniqueUsers foreach { userId =>
+      log.info("updating user %s".format(userId))
+      inject[URIGraphPlugin].update(userId)
+    }
+    Redirect(request.request.headers("referer"))
+  }
+  
+  private def toBoolean(str: String) = {println(str.trim); str.trim.toInt == 1}
+  
+  private def privateBookmark(id: Id[Bookmark], isPrivate: Boolean)(implicit conn: Connection): Id[User] = { 
+    val bookmark = Bookmark.get(id)
+    log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate)) 
+    bookmark.withPrivate(isPrivate).save
+    log.info("updated bookmark %s".format(bookmark))
+    bookmark.userId
+  }
+  
+  private def activeBookmark(id: Id[Bookmark], isActive: Boolean)(implicit conn: Connection): Id[User] = { 
+    val bookmark = Bookmark.get(id)
+    log.info("updating bookmark %s with active = %s".format(bookmark, isActive)) 
+    bookmark.withActive(isActive).save
+    log.info("updated bookmark %s".format(bookmark))
+    bookmark.userId
+  }  
   
   //this is an admin only task!!!
   def delete(id: Id[Bookmark]) = SecuredAction(false) { request =>

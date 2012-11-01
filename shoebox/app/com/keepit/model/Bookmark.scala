@@ -39,6 +39,13 @@ case class Bookmark(
   source: BookmarkSource
 ) {
   
+  def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
+  
+  def withActive(isActive: Boolean) = copy(state = isActive match {
+    case true => Bookmark.States.ACTIVE
+    case false => Bookmark.States.INACTIVE
+  })
+  
   def save(implicit conn: Connection): Bookmark = {
     val entity = BookmarkEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
