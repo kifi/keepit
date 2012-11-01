@@ -78,7 +78,7 @@ object SearchController extends Controller with Logging {
     Ok(BPSRS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
   
-  def search2(escapedTerm: String, externalId: ExternalId[User], lastUUIDStr: Option[String], context: Option[String]) = Action { request =>
+  def search2(escapedTerm: String, externalId: ExternalId[User], maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = Action { request =>
     val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
     val lastUUID = lastUUIDStr.flatMap{
         case "" => None
@@ -93,13 +93,12 @@ object SearchController extends Controller with Logging {
     }
     
     val filterOut = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-    val numHitsToReturn = 6
     val config = SearchConfig.getDefaultConfig 
     
     val articleIndexer = inject[ArticleIndexer]
     val uriGraph = inject[URIGraph]
     val searcher = new MainSearcher(userId, friendIds, filterOut, articleIndexer, uriGraph, config)
-    val searchRes = searcher.search(term, numHitsToReturn, lastUUID)
+    val searchRes = searcher.search(term, maxHits, lastUUID)
     val res = toPersonalSearchResultPacket(searchRes)
     Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
