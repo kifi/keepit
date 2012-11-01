@@ -11,7 +11,7 @@
 
 @admin("User: " + userWithSocial.user.firstName + " " + userWithSocial.user.lastName) {
   <h2>User details </h2>
-   <button onclick="refreshAllSociaUserInfo()">Refresh Social User Info!</button>
+   <button class="btn" onclick="refreshAllSociaUserInfo()">Refresh Social User Info!</button>
   <table class="table table-bordered">
       <tr>
         <th>Name</th><td>@userWithSocial.user.firstName @userWithSocial.user.lastName</td>
@@ -29,10 +29,10 @@
         <th>Last Update</th><td>@adminHelper.dateDisplay(userWithSocial.user.updatedAt) @adminHelper.timeDisplay(userWithSocial.user.updatedAt)</td>
       </tr>
       <tr>
-        <th>OAuth</th><td><textarea rows="3">@socialUserInfos</textarea></td>
+        <th>OAuth</th><td><textarea rows="3" width="100%">@socialUserInfos</textarea></td>
       </tr>
       <tr>
-        <th>Social Raw info</th><td><textarea rows="3">@rawInfos</textarea></td>
+        <th>Social Raw info</th><td><textarea rows="3" width="100%">@rawInfos</textarea></td>
       </tr>
       <tr>
         <th>Social User</th>
@@ -59,20 +59,36 @@
   <h2>User kept @bookmarks.size Bookmarks</h2>
 
   <div class="scrollArea">
-		<table class="table table-bordered">
-		    <tr>
-		      <th>BID</th>
-		      <th>Bookmark</th>
-		      <th>Source</th>
-		    </tr>
-		 @for(bookmark <- bookmarks) {
-		   <tr>
-		        <td>#@bookmark.id.get.id</td>
+    <form class="navbar-form pull-left" action="/bookmarks/update" method="POST">
+      <button type="submit" class="btn">Update</button><br/><br/>
+			<table class="table table-bordered">
+			    <tr>
+			      <th>#</th>
+			      <th>BID</th>
+			      <th>Private</th>
+			      <th>Active</th>
+			      <th>Bookmark</th>
+			      <th>Source</th>
+			    </tr>
+			 @for((bookmark, i) <- bookmarks.zipWithIndex) {
+			   <tr>
+		        <td>@{i+1}</td>
+		        <td><span class="badge">@bookmark.id.get.id</span></td>
+		        <td>
+		          <input type="hidden" name="private_@{bookmark.id.get.id}" value="0" />
+  					  <center><input type="checkbox" id="private_@bookmark.id.get.id" name="private_@{bookmark.id.get.id}" value="1" @if(bookmark.isPrivate) {checked="checked"}"></input></center>
+		        </td>
+		        <td>
+              <input type="hidden" name="active_@{bookmark.id.get.id}" value="0" />
+							<center><input type="checkbox" id="active_@bookmark.id.get.id" name="active_@{bookmark.id.get.id}" value="1" @if(bookmark.state.value == "active") {checked="checked"}"></input></center>
+		        </td>
 		        <td>@adminHelper.bookmarkDisplay(bookmark)</td>
 		        <td>@bookmark.source</td>
-		   </tr>
-		 }
-		</table>
+			   </tr>
+			 }
+			</table>
+      <button type="submit" class="btn">Update</button>
+	  </form>
   </div>
 
   <script type="text/javascript">
