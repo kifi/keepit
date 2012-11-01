@@ -184,7 +184,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       googleSearch = document.title.substr(0,pos).replace(/\s+/g, '');
       if(currentQuery !== googleSearch) {
         console.log("Title difference...");
-        updateQuery(0);
+        //updateQuery(0);
       }
     }
   }
