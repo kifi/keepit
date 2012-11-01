@@ -11,7 +11,7 @@
 
 @admin("User: " + userWithSocial.user.firstName + " " + userWithSocial.user.lastName) {
   <h2>User details </h2>
-   <button onclick="refreshAllSociaUserInfo()">Refresh Social User Info!</button>
+   <button class="btn" onclick="refreshAllSociaUserInfo()">Refresh Social User Info!</button>
   <table class="table table-bordered">
       <tr>
         <th>Name</th><td>@userWithSocial.user.firstName @userWithSocial.user.lastName</td>
