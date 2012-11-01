@@ -35,6 +35,7 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
               friendsTotal = 3232,
               mayHaveMoreHits = true,
               scorings = Seq(new Scoring(.2F, .3F, .4F, .5F)),
+              filter = Set(100L, 200L, 300L),
               userId = Id[User](55),
               uuid = ExternalId[ArticleSearchResultRef]())
          val json = new ArticleSearchResultSerializer().writes(res)
@@ -57,6 +58,7 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
               friendsTotal = 3232,
               mayHaveMoreHits = true,
               scorings = Seq(new Scoring(.2F, .3F, .4F, .5F)),
+              filter = Set(100L, 200L, 300L),
               userId = user.id.get,
               uuid = ExternalId[ArticleSearchResultRef]())
          val model = CX.withConnection { implicit conn =>

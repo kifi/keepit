@@ -22,6 +22,7 @@ import com.keepit.model._
 import com.keepit.inject._
 import com.keepit.serializer.BookmarkSerializer
 import com.keepit.serializer.{URIPersonalSearchResultSerializer => BPSRS}
+import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import com.keepit.common.db.ExternalId
 import java.util.concurrent.TimeUnit
 import java.sql.Connection
@@ -35,11 +36,20 @@ import com.keepit.search.MainSearcher
 import com.keepit.search.SearchConfig
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.ArticleHit
+import com.keepit.search.ArticleSearchResult
+import com.keepit.search.ArticleSearchResultRef
 import org.apache.commons.lang3.StringEscapeUtils
+import com.keepit.search.IdFilterCompressor
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchResult(uri: NormalizedURI, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[UserWithSocial], score: Float)
-case class PersonalSearchResultPacket(uuid: String, hits: Seq[PersonalSearchResult])
+
+case class PersonalSearchResultPacket(
+  uuid: ExternalId[ArticleSearchResultRef],
+  query: String,
+  hits: Seq[PersonalSearchResult],
+  mayHaveMoreHits: Boolean,
+  context: String)
 
 object SearchController extends Controller with Logging {
  
@@ -68,6 +78,41 @@ object SearchController extends Controller with Logging {
     Ok(BPSRS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
   
+  def search2(escapedTerm: String, externalId: ExternalId[User], lastUUIDStr: Option[String], context: Option[String]) = Action { request =>
+    val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
+    val lastUUID = lastUUIDStr.flatMap{
+        case "" => None
+        case str => Some(ExternalId[ArticleSearchResultRef](str))
+    }
+
+    println("searching with %s using externalId id %s".format(term, externalId))
+    val (userId, friendIds) = CX.withConnection { implicit conn =>
+      val userId = User.getOpt(externalId).getOrElse(
+          throw new Exception("externalId %s not found for term %s".format(externalId, term))).id.get
+      (userId, SocialConnection.getFortyTwoUserConnections(userId))
+    }
+    
+    val filterOut = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
+    val numHitsToReturn = 6
+    val config = SearchConfig.getDefaultConfig 
+    
+    val articleIndexer = inject[ArticleIndexer]
+    val uriGraph = inject[URIGraph]
+    val searcher = new MainSearcher(userId, friendIds, filterOut, articleIndexer, uriGraph, config)
+    val searchRes = searcher.search(term, numHitsToReturn, lastUUID)
+    val res = toPersonalSearchResultPacket(searchRes)
+    Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
+  }
+  
+  private[controllers] def toPersonalSearchResultPacket(res: ArticleSearchResult) = {
+    val hits = CX.withConnection { implicit conn =>
+      res.hits map toPersonalSearchResult
+    }
+    println(hits mkString "\n")
+    
+    val filter = IdFilterCompressor.fromSetToBase64(res.filter)
+    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, filter)
+  }
   private[controllers] def toPersonalSearchResult(res: ArticleHit)(implicit conn: Connection): PersonalSearchResult = {
     val uri = NormalizedURI.get(res.uriId)
     val users = res.users.toSeq.map{ userId =>
