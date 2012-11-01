@@ -119,11 +119,6 @@ console.log("injecting keep it hover div");
     }); */
   }
 
-  function showPageIcon() {
-    chrome.extension.sendRequest({
-      "type": "show_page_icon"
-    });
-  }
 
 
   function showKeepItHover(user) {
@@ -292,18 +287,6 @@ console.log("injecting keep it hover div");
       console.log("sent");
     });
   }
-
-  function keepIconShowing(times) {
-    showPageIcon();
-    if(times <= 0)
-      return;
-    setTimeout(function() { keepIconShowing(--times); }, Math.round(15000/times));
-  }
-  keepIconShowing(20);
-
-  $(document).ready(function() {
-    showPageIcon();
-  });
 
 
 })();
