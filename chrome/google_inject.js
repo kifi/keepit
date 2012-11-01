@@ -14,8 +14,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     console.log("[" + new Date().getTime() + "] ", message);
   }
 
-  var searchQuery = '';
-  var cachedResults = {};
+  var resultsStore = {};
+  var inprogressSearchQuery = '';
 
   function error(exception, message) {
     debugger;
@@ -43,6 +43,13 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       return;
     }
 
+    if(inprogressSearchQuery !== '') {
+      // something else is running it.
+      log("Another search is in progress. Ignoring query " + inprogressSearchQuery);
+
+      return;
+    }
+
     if ($("body").length === 0) {
       log("no body yet...");
       setTimeout(function(){ updateQuery(); }, 10);
@@ -50,64 +57,70 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     }
     var queryInput = $("input[name='q']");
     var query = queryInput.val();
-    if (typeof query === 'undefined') {
-      log("query is undefined");
-      if(typeof calledTimes !== 'undefined' && calledTimes <= 3)
+    if (typeof query === 'undefined' || query == '') {
+      if(typeof calledTimes !== 'undefined' && calledTimes <= 10) {
         setTimeout(function(){ updateQuery(++calledTimes); }, 200);
+      }
+      else if (typeof calledTimes === 'undefined')
+        setTimeout(function(){ updateQuery(0); }, 200);
       return;
     }
 
-    if(query === searchQuery) {
+    if(query === resultsStore.query) {
       log("Nothing new. Disregarding " + query);
-      drawResults(cachedResults, 0);
+      drawResults(0);
       return;
     }
 
-    log("New query! New: " + query + ", old: " + searchQuery);
-
-    searchQuery = query;
+    log("New query! New: " + query + ", old: " + resultsStore.query);
 
     var request = {
       type: "get_keeps", 
       query: $("input[name='q']").val() // it may have changed since last checked
     };
+    inprogressSearchQuery = query;
     chrome.extension.sendRequest(request, function(results) {
-      if($("input[name='q']").val() !== query ) { // query changed
+      inprogressSearchQuery = '';
+      if($("input[name='q']").val() !== request.query ) { // query changed
         updateQuery(0);
         return;
       }
-      if(query === '') {
+      $("#keepit").detach(); // get rid of old results
+      resultsStore = {
+        "results": results,
+        "query": request.query
+      };
+      if(request.query === '') {
         return;
       }
-      searchQuery = query;
-      cachedResults = results;
-      window.kifi_cachedResults = results;
-      log("kifi results recieved for " + searchQuery);
-      log(results);
+      window.kifi_resultsStore = resultsStore;
+      log("kifi results recieved for " + resultsStore.query);
+      log(resultsStore);
 
-      drawResults(results, 0);
+      drawResults(0);
     });
   }
 
-  function drawResults(results, times) {
+  function drawResults(times) {
     if(times > 30) {
       return;
     }
-    var searchResults = results.searchResults;
-    var userInfo = results.userInfo;
+    var searchResults = resultsStore.results.searchResults;
+    var userInfo = resultsStore.results.userInfo;
     try {
       if (!(searchResults) || searchResults.length == 0) {
         log("No search results!");
+        cleanupKifiResults();
         return;
       }
 
       var old = $('#keepit');
       if (old && old.length > 0) {
         console.log("Old keepit exists.");
-        setTimeout(function(){ drawResults(results, ++times); }, 50);
+        setTimeout(function(){ drawResults(++times); }, 100);
       } else {
-        log("Drawing results");
-        addResults(userInfo, searchResults, searchQuery);
+        console.log("Drawing results", resultsStore, $("input[name='q']").val());
+        addResults();
       }
     } catch (e) {
       error(e);
@@ -120,32 +133,68 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
   updateQuery();
 
-  $('#main').change(function() {
+  /*$('#main').change(function() {
     log("Search results changed! Updating kifi results...");
     updateQuery();
-  });
+  });*/
 
-
-  $("input[name='q']").blur(function(){
-    log("Input box changed (blur)! Updating kifi results...");
-    updateQuery();
-  });
+  setTimeout(function() {
+    $("input[name='q']").parents("form").submit(function(){
+      log("Input box changed (submit)! Updating kifi results...");
+      updateQuery();
+    });
+    //updateQuery();
+  },500);
 
   // The only reliable way to detect spelling clicks.
   // For some reason, spelling doesn't fire a blur()
   $(window).bind('hashchange', function() {
     log("URL has changed! Updating kifi results...");
     updateQuery();
+    setTimeout(function(){ updateQuery(0); }, 300); // sanity check
   });
+
+  function cleanupKifiResults() {
+    var currentQuery = '';
+    if(typeof resultsStore.query === 'undefined' || resultsStore.query == '' || resultsStore.results.searchResults.length == 0) {
+      $('#keepit').detach();
+      if(typeof resultsStore.query !== 'undefined')
+        currentQuery = resultsStore.query;
+    }
+    else {
+      currentQuery = resultsStore.query.replace(/\s+/g, '');
+    }
+    var googleSearch = '';
+    var pos = document.title.indexOf(" - Google Search");
+    if(pos > 0) {
+      googleSearch = document.title.substr(0,pos).replace(/\s+/g, '');
+      if(currentQuery !== googleSearch) {
+        console.log("Title difference...");
+        updateQuery(0);
+      }
+    }
+  }
+
+  function cleanupCron() {
+    cleanupKifiResults();
+    setTimeout(cleanupCron, 1000);
+  }
+
+  cleanupCron();
+
+  
 
 
   /*******************************************************/
 
-  function addResults(userInfo, searchResults, query) {
+  function addResults() {
     try {
       log("addResults parameters:");
-      log(userInfo);
-      log(searchResults);
+      console.log(resultsStore);
+      console.log(resultsStore.results.userInfo);
+      console.log(resultsStore.results.searchResults);
+      var userInfo = resultsStore.results.userInfo;
+      var searchResults = resultsStore.results.searchResults;
 
       var req = new XMLHttpRequest();
       req.open("GET", chrome.extension.getURL('google_inject.html'), true);
@@ -165,11 +214,11 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             }
 
             var displayUrl = formattedResult.displayUrl;
-            $.each(query.split(" "), function(i, term) { displayUrl = boldSearchTerms(displayUrl,term,false); });
+            $.each(resultsStore.query.split(" "), function(i, term) { displayUrl = boldSearchTerms(displayUrl,term,false); });
             formattedResult.displayUrl = displayUrl;
 
             var title = formattedResult.bookmark.title;
-            $.each(query.split(" "), function(i, term) { title = boldSearchTerms(title,term,true); });
+            $.each(resultsStore.query.split(" "), function(i, term) { title = boldSearchTerms(title,term,true); });
             formattedResult.bookmark.title = title;
 
             if (config["show_score"] === true) {
@@ -234,7 +283,15 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             if(times<=0) {
               return;
             }
-            if($("#keepit:visible").length == 0) {
+            if(resultsStore.query === '' || 
+              typeof resultsStore.results === 'undefined' || 
+              typeof resultsStore.results.searchResults === 'undefined' || 
+              resultsStore.results.searchResults.length == 0) {
+              // Catch bogus injections
+              log("Injection not relevant. Stopping.");
+              return;
+            }
+            else if($("#keepit:visible").length == 0) {
               console.log("Google isn't ready. Trying to injecting again...");
               if($('#ires').length > 0)
                 $('#ires').before(tb);
@@ -244,7 +301,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
               setTimeout(function() { injectResults(times > 10 ? 10 : --times) }, 1000/times);
             }
           }
-          if(searchQuery !== $("input[name='q']").val()) { // the query changed!
+          if(resultsStore.query !== $("input[name='q']").val()) { // the query changed!
             updateQuery(0);
           }
           else {
@@ -263,18 +320,6 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
   function addActionToSocialBar(socialBar) {
     socialBar.append("<div class='social_bar_action'>Share It</div>");
-  }
-
-  function injectDiv(ol, resultCount, callback) {
-    if (ol.head !== lastInjected) {
-      return;
-    }
-    //neight needs to be proportional to num of elements with max = 3
-    log("result count is " + resultCount + ", expending...");
-    ol.slideDown(500, function() {
-      log("done expanding. now at " + ol.css("height"));
-      callback();
-    });
   }
 
   function boldSearchTerms(input, needle, useSpaces) {
