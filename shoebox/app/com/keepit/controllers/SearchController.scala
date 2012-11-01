@@ -55,7 +55,7 @@ object SearchController extends Controller with Logging {
  
   def search(escapedTerm: String, externalId: ExternalId[User]) = Action { request =>
     val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
-    println("searching with %s using externalId id %s".format(term, externalId))
+    log.info("searching with %s using externalId id %s".format(term, externalId))
     val (userId, friendIds) = CX.withConnection { implicit conn =>
       val userId = User.getOpt(externalId).getOrElse(
           throw new Exception("externalId %s not found for term %s".format(externalId, term))).id.get
@@ -74,7 +74,7 @@ object SearchController extends Controller with Logging {
     val res = CX.withConnection { implicit conn =>
       searchRes.hits map toPersonalSearchResult
     }
-    println(res mkString "\n")
+    log.info(res mkString "\n")
     Ok(BPSRS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
   
@@ -85,7 +85,7 @@ object SearchController extends Controller with Logging {
         case str => Some(ExternalId[ArticleSearchResultRef](str))
     }
 
-    println("searching with %s using externalId id %s".format(term, externalId))
+    log.info("searching with %s using externalId id %s".format(term, externalId))
     val (userId, friendIds) = CX.withConnection { implicit conn =>
       val userId = User.getOpt(externalId).getOrElse(
           throw new Exception("externalId %s not found for term %s".format(externalId, term))).id.get
@@ -107,7 +107,7 @@ object SearchController extends Controller with Logging {
     val hits = CX.withConnection { implicit conn =>
       res.hits map toPersonalSearchResult
     }
-    println(hits mkString "\n")
+    log.info(hits mkString "\n")
     
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, filter)

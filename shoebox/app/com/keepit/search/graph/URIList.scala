@@ -62,9 +62,9 @@ class URIList(bytes: Array[Byte]) {
   val privateListSize = in.readVInt()
   
   val publicList: Array[Long] = readList(publicListSize)
-  lazy val publicCreatedAt = loadRawListAfter(publicList, publicListSize, 2)
-  lazy val privateList = loadListAfter(publicCreatedAt, privateListSize, 1)
-  lazy val privateCreatedAt = loadRawListAfter(privateList, privateListSize, 2)
+  lazy val privateList = loadListAfter(publicList, privateListSize, 1)
+  lazy val publicCreatedAt = loadRawListAfter(privateList, publicListSize, 2)
+  lazy val privateCreatedAt = loadRawListAfter(publicCreatedAt, privateListSize, 2)
   
   private def loadListAfter(after: Any, length: Int, minVersion: Int) = {
     if (version < minVersion) new Array[Long](length)

@@ -54,7 +54,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
             val score = scorer.score()
             if (friendlyUris.contains(id)) {
               if (myUris.contains(id)) {
-                myHits.insert(id, score, true, myPublicUris.contains(id), NO_FRIEND_IDS, 0)
+                myHits.insert(id, score, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
               } else {
                 friendsHits.insert(id, score, false, false, NO_FRIEND_IDS, 0)
               }
@@ -91,6 +91,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
       h.score = h.scoring.score(myBookmarkBoost, sharingBoost, recencyBoost)
       hits.insert(h)
     }
+    var mayHaveMore = hits.overflowed // true if we _may_ have more hits
     
     if (friendsHits.size > 0) {
       highScore = max(highScore, friendsHits.highScore)
@@ -109,8 +110,8 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
         queue.insert(h)
       }
       queue.foreach{ h => hits.insert(h) }
+      if (queue.overflowed) mayHaveMore = true // true if we _may_ have more hits
     }
-    var mayHaveMore = hits.overflowed // true if we _may_ have more hits
     
     // if we don't have enough hits, backfill the result with hits in the "others" category
     if (hits.size < numHitsToReturn && othersHits.size > 0) {
@@ -135,6 +136,8 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
         hits.insert(h)
       }
       if (queue.overflowed) mayHaveMore = true
+    } else if (hits.size == numHitsToReturn && othersHits.size > 0) {
+      mayHaveMore = true
     }
     
     val hitList = hits.toList
