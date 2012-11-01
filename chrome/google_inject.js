@@ -8,7 +8,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
     var restrictedGoogleInject = [
       "tbm=isch"
-    ]
+    ];
 
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
@@ -80,6 +80,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     };
     inprogressSearchQuery = query;
     chrome.extension.sendRequest(request, function(results) {
+      console.log("RESULTS FROM SERVER", results);
+      
       inprogressSearchQuery = '';
       if($("input[name='q']").val() !== request.query ) { // query changed
         updateQuery(0);
@@ -99,6 +101,18 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
       drawResults(0);
     });
+  }
+
+  function fetchMoreResults(results) {
+    var request = {
+      "type": "get_keeps",
+      "query": resultsStore.query
+    };
+
+    ///search2?term=<term>&externalId=<user external ID>&lastUUID=<uuid>&context=<context string>
+    /*chrome.extension.sendRequest(request, function(results) {
+
+    });*/
   }
 
   function drawResults(times) {
@@ -170,7 +184,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       googleSearch = document.title.substr(0,pos).replace(/\s+/g, '');
       if(currentQuery !== googleSearch) {
         console.log("Title difference...");
-        updateQuery(0);
+        //updateQuery(0);
       }
     }
   }
