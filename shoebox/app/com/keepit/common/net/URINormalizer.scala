@@ -2,7 +2,6 @@ package com.keepit.common.net
 
 import com.keepit.common.logging.Logging
 import scala.collection.immutable.SortedMap
-import scala.collection.immutable.SortedSet
 
 object URINormalizer extends Logging {
   
@@ -22,7 +21,10 @@ object URINormalizer extends Logging {
     def unapply(uriString: String): Option[(Option[String], Option[String], Option[String], Int, Option[String], Option[String])] = {
       try {
         val uri = try {
-          new java.net.URI(uriString).normalize()
+          // preprocess illegal chars
+          val preprocessed = uriString.replace("|", "%7C")
+          
+          new java.net.URI(preprocessed).normalize()
         } catch {
           case e: java.net.URISyntaxException =>
             // there may be malformed escape
@@ -113,7 +115,7 @@ object URINormalizer extends Logging {
         case NameValuePair(name, value) => pairs += (name -> value)
       }
       pairs = pairs.filter{ case (name, value) => !stopParams.contains(name) }
-      Some(pairs.keys.map{ k => NameValuePair(k, pairs(k)) }.toSeq)
+      Some(pairs.iterator.map{ case (k, v) =>  NameValuePair(k, v) }.toSeq)
     }
     
     def apply(params: Seq[String]): Option[String] = {
