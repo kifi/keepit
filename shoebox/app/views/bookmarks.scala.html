@@ -12,7 +12,7 @@
         Prev
         </a>
       </li>
-      @for(i <- 0 to (pageCount - 2)) {
+      @for(i <- 0 to (pageCount - 1)) {
         @if(i == page) {
 	        <li class="disabled">
 	          <a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(i)">@{i + 1}</a>
