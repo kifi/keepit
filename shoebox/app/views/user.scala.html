@@ -42,24 +42,6 @@
       </tr>
   </table>
     
-  
-  <h2>User kept @bookmarks.size Bookmarks</h2>
-  
-	<table class="table table-bordered">
-	    <tr>
-	      <th>BID</th>
-	      <th>Bookmark</th>
-	      <th>Source</th>
-	    </tr>
-	 @for(bookmark <- bookmarks) {
-	   <tr>
-	        <td>#@bookmark.id.get.id</td>
-	        <td>@adminHelper.bookmarkDisplay(bookmark)</td>
-	        <td>@bookmark.source</td>
-	   </tr>
-	 }
-	</table>
-
   <h2>User connected to @fortyTwoConnections.size FortyTwo Users</h2>
   <div class="scrollArea">
     @for(userWithSocial <- fortyTwoConnections) {
@@ -67,13 +49,32 @@
     }
   </div>
   
-  
   <h2>User connected to @socialConnections.size Social Users</h2>
   <div class="scrollArea">
     @for(socialConnection <- socialConnections) {
       @adminHelper.socialUserDisplay(socialConnection)<br/>
     }
   </div>
+  
+  <h2>User kept @bookmarks.size Bookmarks</h2>
+
+  <div class="scrollArea">
+		<table class="table table-bordered">
+		    <tr>
+		      <th>BID</th>
+		      <th>Bookmark</th>
+		      <th>Source</th>
+		    </tr>
+		 @for(bookmark <- bookmarks) {
+		   <tr>
+		        <td>#@bookmark.id.get.id</td>
+		        <td>@adminHelper.bookmarkDisplay(bookmark)</td>
+		        <td>@bookmark.source</td>
+		   </tr>
+		 }
+		</table>
+  </div>
+
   <script type="text/javascript">
     function refreshAllSociaUserInfo() {
       location.href="@com.keepit.controllers.routes.UserController.refreshAllSocialInfo(userWithSocial.user.id.get)"

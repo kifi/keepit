@@ -17,15 +17,17 @@
    State: @socialUserInfo.state<br/>
    Credentials:<br/><textarea rows="3" cols="400">@socialUserInfo.credentials</textarea><br/>
    Social Raw info: <br/><textarea rows="7" cols="400">@rawInfo</textarea><br/>
-    Account created at: @adminHelper.dateDisplay(socialUserInfo.createdAt) @adminHelper.timeDisplay(socialUserInfo.createdAt)<br/>
-    Last updated: @adminHelper.dateDisplay(socialUserInfo.updatedAt) @adminHelper.timeDisplay(socialUserInfo.updatedAt)
+   Account created at: @adminHelper.dateDisplay(socialUserInfo.createdAt) @adminHelper.timeDisplay(socialUserInfo.createdAt)<br/>
+   Last updated: @adminHelper.dateDisplay(socialUserInfo.updatedAt) @adminHelper.timeDisplay(socialUserInfo.updatedAt)
 
-    @if(socialUserInfo.userId.isDefined) {
-      <h3>Forty Two User: @adminHelper.socialUserDisplay(socialUserInfo)</h3>
-    }
-    <button onclick="refreshSociaUserInfo()">Refresh Social User Info!</button>
-    <button onclick="resetSociaUserInfo()">Reset Social User Info credentials!</button>
-
+   @if(socialUserInfo.userId.isDefined) {
+     <h3>Forty Two User: @adminHelper.socialUserDisplay(socialUserInfo)</h3>
+   }
+   <p>
+	    <button onclick="refreshSociaUserInfo()">Refresh Social User Info!</button>
+	    
+	    <button onclick="resetSociaUserInfo()">Reset Social User Info credentials!</button>
+   </p>
    <h2>FortyTwo User Connections</h2>
    <div class="scrollArea">
       @for(socialConnection <- socialConnections) {
@@ -35,14 +37,13 @@
       }
     </div>
     
-    <h2>User connected to @socialConnections.size Social Users</h2>
+   <h2>User connected to @socialConnections.size Social Users</h2>
    <div class="scrollArea">
      @for(socialConnection <- socialConnections) {
        @adminHelper.socialUserDisplay(socialConnection, true)<br/>
      }
    </div>
    
-   <br/>
     <script type="text/javascript">
       function refreshSociaUserInfo() {
         location.href="@com.keepit.controllers.routes.SocialUserController.refreshSocialInfo(socialUserInfo.id.get)"
