@@ -96,7 +96,7 @@ trait IdFields[R <: Record[_, R]] { self: R =>
 
 
 case class ExternalId[T](id: String) {
-  val uuid = id.substring(id.lastIndexOf("/").max(0)) 
+  val uuid = id.substring(id.lastIndexOf("/") + 1) 
   if (!ExternalId.UUID_PATTERN.pattern.matcher(uuid).matches()) {
     throw new Exception("external id %s (uuid=%s) does not match uuid pattern".format(id, uuid))
   }

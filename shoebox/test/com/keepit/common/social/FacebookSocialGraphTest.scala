@@ -74,6 +74,23 @@ class FacebookSocialGraphTest extends SpecificationWithJUnit {
         rawInfo.socialId.id === "eishay"
       }
     }
+
+    "fetch from facebook using jennifer_hirsch" in {
+      running(new EmptyApplication()) {
+        //val httpClient = HttpClientImpl(timeout = 1, timeoutUnit = TimeUnit.MINUTES)
+        val httpClient = new FakeHttpClient(
+            expectedResponse = Some(io.Source.fromFile(new File("test/com/keepit/common/social/jennifer_hirsch.min.json")).mkString)
+        )
+        val info = SocialUserInfo(userId = None, fullName = "", socialId = SocialId(""), networkType = SocialNetworks.FACEBOOK, credentials = None)
+          
+        val graph = new FacebookSocialGraph(httpClient) {
+          override def getAccessToken(socialUserInfo: SocialUserInfo): String = ""
+        }
+        val rawInfo = graph.fetchSocialUserRawInfo(info)
+        rawInfo.socialId.id === "627689"
+      }
+    }
+  
   }  
   
 }
