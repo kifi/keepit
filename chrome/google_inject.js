@@ -157,7 +157,6 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
   function cleanupKifiResults() {
     var currentQuery = '';
     if(typeof resultsStore.query === 'undefined' || resultsStore.query == '' || resultsStore.results.searchResults.length == 0) {
-      console.log("clean up!");
       $('#keepit').detach();
       if(typeof resultsStore.query !== 'undefined')
         currentQuery = resultsStore.query;
