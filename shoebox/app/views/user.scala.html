@@ -44,16 +44,20 @@
     
   <h2>User connected to @fortyTwoConnections.size FortyTwo Users</h2>
   <div class="scrollArea">
+    <ol>
     @for(userWithSocial <- fortyTwoConnections) {
-        @adminHelper.userDisplay(userWithSocial)<br/>
+      <li>@adminHelper.userDisplay(userWithSocial)</li>
     }
+    </ol>
   </div>
   
   <h2>User connected to @socialConnections.size Social Users</h2>
   <div class="scrollArea">
+    <ol>
     @for(socialConnection <- socialConnections) {
-      @adminHelper.socialUserDisplay(socialConnection)<br/>
+      <li>@adminHelper.socialUserDisplay(socialConnection)</li>
     }
+    </ol>
   </div>
   
   <h2>User kept @bookmarks.size Bookmarks</h2>
