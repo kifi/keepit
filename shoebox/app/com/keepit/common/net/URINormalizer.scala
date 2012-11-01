@@ -1,7 +1,6 @@
 package com.keepit.common.net
 
 import com.keepit.common.logging.Logging
-import scala.collection.immutable.SortedMap
 
 object URINormalizer extends Logging {
   
@@ -109,13 +108,13 @@ object URINormalizer extends Logging {
   
   object Query {
     def unapplySeq(query: String): Option[Seq[String]] = {
-      var pairs = SortedMap.empty[String, Option[String]]
+      var pairs = Map.empty[String, Option[String]]
       query.split("&").foreach{
         case "" =>
         case NameValuePair(name, value) => pairs += (name -> value)
       }
       pairs = pairs.filter{ case (name, value) => !stopParams.contains(name) }
-      Some(pairs.iterator.map{ case (k, v) =>  NameValuePair(k, v) }.toSeq)
+      Some(pairs.toSeq.sortBy(_._1).map{ case (k, v) =>  NameValuePair(k, v) }.toSeq)
     }
     
     def apply(params: Seq[String]): Option[String] = {
