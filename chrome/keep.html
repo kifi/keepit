@@ -243,6 +243,7 @@
       // Dummy results injection
 
       if(request.query === '') {
+        sendResponse({"userInfo": userInfo, "searchResults": []});
         return;
       }
 
@@ -253,12 +254,13 @@
           log(xhr.response, tab);
           var searchResults = $.parseJSON(xhr.response);
           if (searchResults.length === 0) {
+            sendResponse({"userInfo": userInfo, "searchResults": []});
             return;
           }
-          var maxRes = getConfigs()["max_res"];
+          /*var maxRes = getConfigs()["max_res"];
           if (searchResults.length > maxRes) {
             searchResults = searchResults.slice(0, maxRes);
-          }
+          }*/
           sendResponse({"userInfo": userInfo, "searchResults": searchResults});
         }
       }
