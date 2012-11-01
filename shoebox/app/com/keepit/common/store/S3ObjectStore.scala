@@ -34,9 +34,9 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
     case false => ""
   }
   
-  private def idToBJsonKey(id: Id[A]): String = "%s%s.json".format(keyPrefix, id.id)
+  protected def idToBJsonKey(id: A): String = "%s%s.json".format(keyPrefix, id.toString)
   
-  def += (kv: (Id[A], B)) = {
+  def += (kv: (A, B)) = {
     kv match {
       case (key, value) =>
         doWithS3Client("adding an item to S3Store"){ s3Client =>
@@ -58,14 +58,14 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
     this
   }
   
-  def -= (key: Id[A]) = {
+  def -= (key: A) = {
     doWithS3Client("removing an item from S3BStore"){ s3Client =>
       Some(s3Client.deleteObject(bucketName, idToBJsonKey(key)))
     }
     this
   }
   
-  def get(id: Id[A]): Option[B] = {
+  def get(id: A): Option[B] = {
     doWithS3Client("getting an item from S3BStore"){ s3Client =>
       val key = idToBJsonKey(id)
       val s3obj = try {

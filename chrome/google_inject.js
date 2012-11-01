@@ -76,6 +76,9 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
         updateQuery(0);
         return;
       }
+      if(query === '') {
+        return;
+      }
       searchQuery = query;
       cachedResults = results;
       window.kifi_cachedResults = results;

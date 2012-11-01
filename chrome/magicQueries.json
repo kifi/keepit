@@ -1,0 +1,234 @@
+[
+  {
+    "query": "skydiving",
+    "results": [
+      {
+        "count": "0",
+        "bookmark": {
+          "externalId": "9201f549-5959-4389-8bd8-98739405b5e7",
+          "title": "The Scala Programming Language",
+          "url": "http:\/\/www.scala-lang.org"
+        },
+        "users": [
+          {
+            "externalId": "3ad31932-f3f9-4fe3-855c-3359051212e5",
+            "firstName": "Danny",
+            "lastName": "Blumenfeld",
+            "facebookId": "636721190"
+          },
+          {
+            "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+            "firstName": "Eishay",
+            "lastName": "Smith",
+            "facebookId": "646386018"
+          }
+        ],
+        "score": 9.2403116226196,
+        "isMyBookmark": true,
+        "isPrivate": false
+      },
+      {
+        "count": "0",
+        "bookmark": {
+          "externalId": "e4929eee-c4c1-4f50-b19f-7d1aad92f461",
+          "title": "Scala",
+          "url": "http:\/\/www.reddit.com\/r\/scala"
+        },
+        "users": [
+          
+        ],
+        "score": 7.6500954627991,
+        "isMyBookmark": true,
+        "isPrivate": false
+      },
+      {
+        "count": "0",
+        "bookmark": {
+          "externalId": "25cb0d32-c654-4e78-85ca-e38f91d3fc33",
+          "title": "Scala (programming language) - Wikipedia, the free encyclopedia",
+          "url": "http:\/\/en.wikipedia.org\/wiki\/Scala_(programming_language)"
+        },
+        "users": [
+          {
+            "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+            "firstName": "Eishay",
+            "lastName": "Smith",
+            "facebookId": "646386018"
+          }
+        ],
+        "score": 7.0501918792725,
+        "isMyBookmark": true,
+        "isPrivate": false
+      },
+      {
+        "count": "0",
+        "bookmark": {
+          "externalId": "0c6bf447-15f2-4527-91bb-11657fb11ab6",
+          "title": "Scala School",
+          "url": "http:\/\/twitter.github.com\/scala_school\/"
+        },
+        "users": [
+          {
+            "externalId": "3ad31932-f3f9-4fe3-855c-3359051212e5",
+            "firstName": "Danny",
+            "lastName": "Blumenfeld",
+            "facebookId": "636721190"
+          },
+          {
+            "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+            "firstName": "Eishay",
+            "lastName": "Smith",
+            "facebookId": "646386018"
+          }
+        ],
+        "score": 5.7965426445007,
+        "isMyBookmark": true,
+        "isPrivate": false
+      },
+      {
+        "count": "0",
+        "bookmark": {
+          "externalId": "dd13fed4-520d-4135-a77b-922821b09a72",
+          "title": "Manning: Scala in Depth",
+          "url": "http:\/\/www.manning.com\/suereth\/"
+        },
+        "users": [
+          
+        ],
+        "score": 4.9080357551575,
+        "isMyBookmark": true,
+        "isPrivate": false
+      },
+      {
+        "count": "0",
+        "bookmark": {
+          "externalId": "31419d48-26fc-4882-9f77-6a884dddbf73",
+          "title": "Scalex | Scala documentation search engine",
+          "url": "http:\/\/scalex.org"
+        },
+        "users": [
+          
+        ],
+        "score": 2.3757371902466,
+        "isMyBookmark": true,
+        "isPrivate": false
+      }
+    ]
+  },
+  {
+    "query": "roast chicken",
+    "results": [
+      {
+        "count": "0",
+        "bookmark": {
+          "externalId": "9201f549-5959-4389-8bd8-98739405b5e7",
+          "title": "The Scala Programming Language",
+          "url": "http:\/\/www.scala-lang.org"
+        },
+        "users": [
+          {
+            "externalId": "3ad31932-f3f9-4fe3-855c-3359051212e5",
+            "firstName": "Danny",
+            "lastName": "Blumenfeld",
+            "facebookId": "636721190"
+          },
+          {
+            "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+            "firstName": "Eishay",
+            "lastName": "Smith",
+            "facebookId": "646386018"
+          }
+        ],
+        "score": 9.2403116226196,
+        "isMyBookmark": true,
+        "isPrivate": false
+      },
+      {
+        "count": "0",
+        "bookmark": {
+          "externalId": "e4929eee-c4c1-4f50-b19f-7d1aad92f461",
+          "title": "Scala",
+          "url": "http:\/\/www.reddit.com\/r\/scala"
+        },
+        "users": [
+          
+        ],
+        "score": 7.6500954627991,
+        "isMyBookmark": true,
+        "isPrivate": false
+      },
+      {
+        "count": "0",
+        "bookmark": {
+          "externalId": "25cb0d32-c654-4e78-85ca-e38f91d3fc33",
+          "title": "Scala (programming language) - Wikipedia, the free encyclopedia",
+          "url": "http:\/\/en.wikipedia.org\/wiki\/Scala_(programming_language)"
+        },
+        "users": [
+          {
+            "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+            "firstName": "Eishay",
+            "lastName": "Smith",
+            "facebookId": "646386018"
+          }
+        ],
+        "score": 7.0501918792725,
+        "isMyBookmark": true,
+        "isPrivate": false
+      },
+      {
+        "count": "0",
+        "bookmark": {
+          "externalId": "0c6bf447-15f2-4527-91bb-11657fb11ab6",
+          "title": "Scala School",
+          "url": "http:\/\/twitter.github.com\/scala_school\/"
+        },
+        "users": [
+          {
+            "externalId": "3ad31932-f3f9-4fe3-855c-3359051212e5",
+            "firstName": "Danny",
+            "lastName": "Blumenfeld",
+            "facebookId": "636721190"
+          },
+          {
+            "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+            "firstName": "Eishay",
+            "lastName": "Smith",
+            "facebookId": "646386018"
+          }
+        ],
+        "score": 5.7965426445007,
+        "isMyBookmark": true,
+        "isPrivate": false
+      },
+      {
+        "count": "0",
+        "bookmark": {
+          "externalId": "dd13fed4-520d-4135-a77b-922821b09a72",
+          "title": "Manning: Scala in Depth",
+          "url": "http:\/\/www.manning.com\/suereth\/"
+        },
+        "users": [
+          
+        ],
+        "score": 4.9080357551575,
+        "isMyBookmark": true,
+        "isPrivate": false
+      },
+      {
+        "count": "0",
+        "bookmark": {
+          "externalId": "31419d48-26fc-4882-9f77-6a884dddbf73",
+          "title": "Scalex | Scala documentation search engine",
+          "url": "http:\/\/scalex.org"
+        },
+        "users": [
+          
+        ],
+        "score": 2.3757371902466,
+        "isMyBookmark": true,
+        "isPrivate": false
+      }
+    ]
+  }
+]
