@@ -44,23 +44,26 @@
     
   <h2>User connected to @fortyTwoConnections.size FortyTwo Users</h2>
   <div class="scrollArea">
+    <ol>
     @for(userWithSocial <- fortyTwoConnections) {
-        @adminHelper.userDisplay(userWithSocial)<br/>
+      <li>@adminHelper.userDisplay(userWithSocial)</li>
     }
+    </ol>
   </div>
   
   <h2>User connected to @socialConnections.size Social Users</h2>
   <div class="scrollArea">
+    <ol>
     @for(socialConnection <- socialConnections) {
-      @adminHelper.socialUserDisplay(socialConnection)<br/>
+      <li>@adminHelper.socialUserDisplay(socialConnection)</li>
     }
+    </ol>
   </div>
   
   <h2>User kept @bookmarks.size Bookmarks</h2>
 
-  <div class="scrollArea">
-    <form class="navbar-form pull-left" action="/bookmarks/update" method="POST">
-      <button type="submit" class="btn">Update</button><br/><br/>
+  <form class="navbar-form pull-left" action="/bookmarks/update" method="POST">
+    <button type="submit" class="btn">Update</button><br/><br/>
 			<table class="table table-bordered">
 			    <tr>
 			      <th>#</th>
@@ -87,9 +90,8 @@
 			   </tr>
 			 }
 			</table>
-      <button type="submit" class="btn">Update</button>
-	  </form>
-  </div>
+    <button type="submit" class="btn">Update</button>
+  </form>
 
   <script type="text/javascript">
     function refreshAllSociaUserInfo() {
