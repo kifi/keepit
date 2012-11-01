@@ -63,15 +63,17 @@
       <button type="submit" class="btn">Update</button><br/><br/>
 			<table class="table table-bordered">
 			    <tr>
+			      <th>#</th>
 			      <th>BID</th>
 			      <th>Private</th>
 			      <th>Active</th>
 			      <th>Bookmark</th>
 			      <th>Source</th>
 			    </tr>
-			 @for(bookmark <- bookmarks) {
+			 @for((bookmark, i) <- bookmarks.zipWithIndex) {
 			   <tr>
-		        <td>#@bookmark.id.get.id</td>
+		        <td>@{i+1}</td>
+		        <td><span class="badge">@bookmark.id.get.id</span></td>
 		        <td>
 		          <input type="hidden" name="private_@{bookmark.id.get.id}" value="0" />
   					  <center><input type="checkbox" id="private_@bookmark.id.get.id" name="private_@{bookmark.id.get.id}" value="1" @if(bookmark.isPrivate) {checked="checked"}"></input></center>

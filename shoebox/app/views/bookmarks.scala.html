@@ -41,6 +41,7 @@
   @pagination(page, pageCount)
   <table class="table table-bordered">
     <tr>
+      <th>#</th>
       <th>Id</th>
       <th>User</th>
       <th>Title</th>
@@ -49,9 +50,10 @@
       <th>Creation</th>
       <th>URI State</th>
     </tr>
-  @for((bookmark, uriStat, user) <- bookmarksAndUsers) {
+  @for(((bookmark, uriStat, user), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
-      <td>@bookmark.id.get.id</td>
+      <td>@{i+1}</td>
+      <td><span class="badge">@bookmark.id.get.id</span></td>
       <td>@adminHelper.userDisplay(user)</td>
       <td>@adminHelper.bookmarkDisplay(bookmark)</td>
       <td>@bookmark.source</td>
