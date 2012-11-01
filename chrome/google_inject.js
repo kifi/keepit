@@ -65,6 +65,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
     log("New query! New: " + query + ", old: " + searchQuery);
 
+    searchQuery = query;
+
     var request = {
       type: "get_keeps", 
       query: $("input[name='q']").val() // it may have changed since last checked
@@ -76,6 +78,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       }
       searchQuery = query;
       cachedResults = results;
+      window.kifi_cachedResults = results;
       log("kifi results recieved for " + searchQuery);
       log(results);
 
@@ -128,6 +131,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
   // The only reliable way to detect spelling clicks.
   // For some reason, spelling doesn't fire a blur()
   $(window).bind('hashchange', function() {
+    log("URL has changed! Updating kifi results...");
     updateQuery();
   });
 
@@ -228,8 +232,9 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
               return;
             }
             if($("#keepit:visible").length == 0) {
-              log("Google isn't ready. Trying to injecting again... ("+times+")");
-              $('#ires').before(tb);
+              console.log("Google isn't ready. Trying to injecting again...");
+              if($('#ires').length > 0)
+                $('#ires').before(tb);
               setTimeout(function() { injectResults(--times) }, 30);
             }
             else {
