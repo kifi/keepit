@@ -21,9 +21,10 @@ import com.keepit.common.store.S3ObjectStore
 import com.keepit.common.store.S3Bucket
 import play.api.libs.json.Format
 import com.keepit.serializer.ArticleSearchResultSerializer
+import com.keepit.common.db.ExternalId
 
 
-trait ArticleSearchResultStore extends ObjectStore[ArticleSearchResultRef, ArticleSearchResult]
+trait ArticleSearchResultStore extends ObjectStore[ExternalId[ArticleSearchResult], ArticleSearchResult]
 
 class ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[ArticleSearchResult] = new ArticleSearchResultSerializer()) 
-  extends S3ObjectStore[ArticleSearchResultRef, ArticleSearchResult] with ArticleSearchResultStore
+  extends S3ObjectStore[ExternalId[ArticleSearchResult], ArticleSearchResult] with ArticleSearchResultStore

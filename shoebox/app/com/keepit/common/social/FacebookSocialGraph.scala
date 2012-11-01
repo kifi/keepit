@@ -15,16 +15,17 @@ class FacebookSocialGraph @Inject() (httpClient: HttpClient) extends Logging {
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): SocialUserRawInfo = {
     val jsons = fetchJsons(url(socialUserInfo.socialId, getAccessToken(socialUserInfo)))
     log.info("fetched json of %s:\n%s".format(socialUserInfo, jsons mkString "\n---------------------------------------\n"))
+    val json = jsons.head
     SocialUserRawInfo(
         socialUserInfo.userId, 
         socialUserInfo.id, 
-        SocialId((jsons.head \ "username").as[String]), 
+        SocialId((json \ "username").asOpt[String].getOrElse((json \ "id").as[String])), 
         SocialNetworks.FACEBOOK, 
-        (jsons.head \ "name").asOpt[String].getOrElse(socialUserInfo.fullName), 
+        (json \ "name").asOpt[String].getOrElse(socialUserInfo.fullName), 
         jsons)
   }
   
-  private def getAccessToken(socialUserInfo: SocialUserInfo): String = {
+  def getAccessToken(socialUserInfo: SocialUserInfo): String = {
     val credentials = socialUserInfo.credentials.getOrElse(throw new Exception("Can't find credentials for %s".format(socialUserInfo)))
     val oAuth2Info = credentials.oAuth2Info.getOrElse(throw new Exception("Can't find oAuth2Info for %s".format(socialUserInfo)))
     oAuth2Info.accessToken
