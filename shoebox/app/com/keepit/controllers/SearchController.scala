@@ -117,7 +117,7 @@ object SearchController extends Controller with Logging {
     val users = res.users.toSeq.map{ userId =>
       val user = User.get(userId) 
       val info = SocialUserInfo.getByUser(user.id.get).head
-      UserWithSocial(user, info)
+      UserWithSocial(user, info, Bookmark.count(user))
     }
     PersonalSearchResult(uri, res.bookmarkCount, res.isMyBookmark, false, users, res.score)
   }
