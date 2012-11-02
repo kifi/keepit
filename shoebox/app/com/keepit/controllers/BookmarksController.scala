@@ -102,7 +102,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   }
     
   def bookmarksView(page: Int = 0) = SecuredAction(false) { request =>
-    val pageSize = 200
+    val pageSize = 100
     val (count, bookmarksAndUsers) = CX.withConnection { implicit conn =>
       val bookmarks = Bookmark.page(page, pageSize)
       val users = bookmarks map (_.userId) map User.get map UserWithSocial.toUserWithSocial
