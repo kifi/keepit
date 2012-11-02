@@ -223,7 +223,7 @@ console.log("injecting keep it hover div");
         bottom: '+=' + position,
         opacity: 0
       },
-      600,
+      900,
       'easeInOutBack',
       function() {
         $('.kifi_hover').detach();

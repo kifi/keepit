@@ -14,7 +14,9 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     console.log("[" + new Date().getTime() + "] ", message);
   }
 
-  var resultsStore = {};
+  var resultsStore = {
+    "showDefault": 5
+  };
   var inprogressSearchQuery = '';
 
   function error(exception, message) {
@@ -79,48 +81,82 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       query: $("input[name='q']").val() // it may have changed since last checked
     };
     inprogressSearchQuery = query;
+    var t1 = new Date().getTime();
     chrome.extension.sendRequest(request, function(results) {
+      console.log(new Date().getTime() - t1);
       console.log("RESULTS FROM SERVER", results);
-      
+
       inprogressSearchQuery = '';
-      if($("input[name='q']").val() !== request.query ) { // query changed
+      if($("input[name='q']").val() !== request.query || request.query !== results.searchResults.query) { // query changed
+        log("Query changed. Re-loading...");
         updateQuery(0);
         return;
       }
       $("#keepit").detach(); // get rid of old results
       resultsStore = {
-        "results": results,
-        "query": request.query
+        "lastRemoteResults": results.searchResults,
+        "results": results.searchResults.hits,
+        "query": request.query,
+        "userInfo": results.userInfo,
+        "currentlyShowing": 0,
+        "show": results.userConfig.max_res,
+        "mayShowMore": results.searchResults.mayHaveMore,
+        "userConfig": results.userConfig,
+        "showDefault": results.userConfig.max_res
       };
       if(request.query === '') {
         return;
       }
-      window.kifi_resultsStore = resultsStore;
+
       log("kifi results recieved for " + resultsStore.query);
       log(resultsStore);
 
       drawResults(0);
+
+      //fetchMoreResults();
     });
   }
 
-  function fetchMoreResults(results) {
-    var request = {
-      "type": "get_keeps",
-      "query": resultsStore.query
-    };
+  function fetchMoreResults() {
+    if(resultsStore.mayShowMore === true) {
+      var request = {
+        "type": "get_keeps",
+        "query": resultsStore.query,
+        "lastUUID": resultsStore.lastRemoteResults.uuid,
+        "context": resultsStore.lastRemoteResults.context
+      };
 
-    ///search2?term=<term>&externalId=<user external ID>&lastUUID=<uuid>&context=<context string>
-    /*chrome.extension.sendRequest(request, function(results) {
+      ///search2?term=<term>&externalId=<user external ID>&lastUUID=<uuid>&context=<context string>
+      chrome.extension.sendRequest(request, function(results) {
+        console.log("fetched more!",results);
+        resultsStore.lastRemoteResults = results.searchResults;
+        resultsStore.results = resultsStore.results.concat(results.searchResults.hits);
+        console.log(resultsStore.results);
+        resultsStore.mayShowMore = results.searchResults.mayHaveMore;
+        //drawResults(0);
+      });
+    }
+    else {
+      $('.kifi_more').hide();
+    }
 
-    });*/
+  }
+
+  function showMoreResults() {
+    var numberMore = resultsStore.userConfig.max_res;
+    resultsStore.show = resultsStore.results.length >= resultsStore.show + numberMore ? resultsStore.show + numberMore : resultsStore.results.length;
+    console.log("Showing more results",numberMore,resultsStore.results.length, resultsStore.currentlyShowing, resultsStore.show);
+    drawResults(0);
+    if(resultsStore.results.length < resultsStore.show + numberMore)
+      fetchMoreResults();
   }
 
   function drawResults(times) {
     if(times > 30) {
       return;
     }
-    var searchResults = resultsStore.results.searchResults;
-    var userInfo = resultsStore.results.userInfo;
+    var searchResults = resultsStore.results;
+    var userInfo = resultsStore.userInfo;
     try {
       if (!(searchResults) || searchResults.length == 0) {
         log("No search results!");
@@ -129,7 +165,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       }
 
       var old = $('#keepit');
-      if (old && old.length > 0) {
+      if ((old && old.length > 0) && (resultsStore.currentlyShowing === resultsStore.show)) {
         console.log("Old keepit exists.");
         setTimeout(function(){ drawResults(++times); }, 100);
       } else {
@@ -164,13 +200,14 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
   // For some reason, spelling doesn't fire a blur()
   $(window).bind('hashchange', function() {
     log("URL has changed! Updating kifi results...");
+    resultsStore.show = resultsStore.showDefault;
     updateQuery();
     setTimeout(function(){ updateQuery(0); }, 300); // sanity check
   });
 
   function cleanupKifiResults() {
     var currentQuery = '';
-    if(typeof resultsStore.query === 'undefined' || resultsStore.query == '' || resultsStore.results.searchResults.length == 0) {
+    if(typeof resultsStore.query === 'undefined' || resultsStore.query == '' || resultsStore.results.length == 0) {
       $('#keepit').detach();
       if(typeof resultsStore.query !== 'undefined')
         currentQuery = resultsStore.query;
@@ -196,8 +233,6 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
   cleanupCron();
 
-  
-
 
   /*******************************************************/
 
@@ -205,10 +240,9 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     try {
       log("addResults parameters:");
       console.log(resultsStore);
-      console.log(resultsStore.results.userInfo);
-      console.log(resultsStore.results.searchResults);
-      var userInfo = resultsStore.results.userInfo;
-      var searchResults = resultsStore.results.searchResults;
+      var userInfo = resultsStore.userInfo;
+      var searchResults = resultsStore.results.slice(0,resultsStore.show);
+      resultsStore.currentlyShowing = resultsStore.show;
 
       var req = new XMLHttpRequest();
       req.open("GET", chrome.extension.getURL('google_inject.html'), true);
@@ -290,7 +324,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
           );
 
           // Binders
-          log("Preparing to inject!",$('#ires'));
+          log("Preparing to inject!");
+          $("#keepit").detach();
 
           function injectResults(times) {
             if(times<=0) {
@@ -298,22 +333,34 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             }
             if(resultsStore.query === '' || 
               typeof resultsStore.results === 'undefined' || 
-              typeof resultsStore.results.searchResults === 'undefined' || 
-              resultsStore.results.searchResults.length == 0) {
+              typeof resultsStore.results === 'undefined' || 
+              resultsStore.results.length == 0) {
               // Catch bogus injections
               log("Injection not relevant. Stopping.");
               return;
             }
             else if($("#keepit:visible").length == 0) {
               console.log("Google isn't ready. Trying to injecting again...");
-              if($('#ires').length > 0)
+              if($('#ires').length > 0) {
                 $('#ires').before(tb);
+                $('.kifi_more_button').click(function() {
+                  showMoreResults();
+                });
+                $('#kifi_trusted').click(function() {
+                  $('#kifi_reslist').toggle('fast');
+                  /*$('#kifi_trusted').click(function() {
+                    resultsStore.show = resultsStore.showDefault;
+                    updateQuery(0);
+                  });*/
+                });
+              }
               setTimeout(function() { injectResults(--times) }, 30);
             }
             else {
               setTimeout(function() { injectResults(times > 10 ? 10 : --times) }, 1000/times);
             }
           }
+
           if(resultsStore.query !== $("input[name='q']").val()) { // the query changed!
             updateQuery(0);
           }
