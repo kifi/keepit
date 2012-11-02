@@ -42,21 +42,31 @@
   <table class="table table-bordered">
     <tr>
       <th>#</th>
-      <th>Id</th>
       <th>User</th>
       <th>Title</th>
       <th>Source</th>
       <th>Shares</th>
       <th>Creation</th>
-      <th>URI State</th>
+      <th>State</th>
     </tr>
   @for(((bookmark, uriStat, user), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
-      <td><span class="badge">@bookmark.id.get.id</span></td>
       <td>@adminHelper.userDisplay(user)</td>
       <td>@adminHelper.bookmarkDisplay(bookmark)</td>
-      <td>@bookmark.source</td>
+      <td>
+        @{bookmark.source.value match {
+          case "INIT_LOAD" => {
+            <span class="label">Init Load</span>
+          } 
+          case "HOVER_KEEP" => {
+            <span class="label label-success">Slider</span>
+          } 
+          case "PLUGIN_START" => {
+            <span class="label label-info">Plugin Restart</span>
+          } 
+        }}
+      </td>
       <td>@uriStat.bookmarks.size</td>
       <td>@adminHelper.dateDisplay(bookmark.createdAt)</td>
       <td>
