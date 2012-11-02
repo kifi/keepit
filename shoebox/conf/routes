@@ -50,6 +50,7 @@ GET     /admin/social_user          com.keepit.controllers.SocialUserController.
 GET     /admin/social_user/refresh  com.keepit.controllers.SocialUserController.refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo])
 GET     /admin/social_user/refresh_all com.keepit.controllers.UserController.refreshAllSocialInfo(userId: Id[User])
 GET     /admin/social_user/reset    com.keepit.controllers.SocialUserController.resetSocialUser(socialUserId: Id[SocialUserInfo])
+GET     /admin/server               com.keepit.common.healthcheck.HealthController.serviceView()
 
 
 ##########################################
