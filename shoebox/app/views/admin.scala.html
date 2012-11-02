@@ -8,8 +8,30 @@
     <link rel="stylesheet" media="screen" href="@routes.Assets.at("bootstrap/css/bootstrap.min.css")" />
     <link rel="stylesheet" media="screen" href="@routes.Assets.at("bootstrap/css/bootstrap-responsive.min.css")" />         
     <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/admin_main.css")">
+    <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
+    <script type="text/javascript" language="javascript">
+       $(function () {
+           $('#scrlBotm').click(function () {
+               $('html, body').animate({
+                   scrollTop: $(document).height()
+               },
+               1500);
+               return false;
+           });
+
+           $('#scrlTop').click(function () {
+               $('html, body').animate({
+                   scrollTop: '0px'
+               },
+               1500);
+               return false;
+           });
+       });
+    </script>
   </head>
   <body>
+		<a id="scrlTop" title="Top" href="#" style="position: fixed; bottom: 377px; right: 2px;"><i class="icon-chevron-up"></i></a>
+		<a id="scrlBotm" title="Bottom" href="#" style="position: fixed; bottom: 300px; right: 2px;"><i class="icon-chevron-down"></i></a>
 		<div class="navbar navbar-fixed-top">
 		  <div class="navbar-inner">
 		    <ul class="nav">
