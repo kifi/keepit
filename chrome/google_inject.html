@@ -1,10 +1,11 @@
 <ol id="keepit" class="kpt-results">
   <li class="g keepit">
     <div class="vsc">
-      <h3 class="r">Kifi Trusted Results</h3>
+      <h3 class="r" id="kifi_trusted">Kifi Trusted Results</h3>
     </div>
     <!--n-->
   </li>
+  <span id="kifi_reslist">
   {{#results}}
   <li class="g">
     <div class="vsc">
@@ -31,12 +32,8 @@
   </li>
   {{/results}}
   
-  <div class="kifi_more">More</div>
-
-  <li class="g keepit">
-    <div class="vsc">
-       <h3 class="r">Google Results</h3>
+    <div class="kifi_more">
+      <div class="kifi_more_button"></div>
     </div>
-    <!--n-->
-  </li>
+  </span>
 </ol>
