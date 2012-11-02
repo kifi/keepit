@@ -27,6 +27,8 @@ object FortyTwoServices {
     ServiceType.DEV_MODE.name -> ServiceType.DEV_MODE
   )
   
+  val started: DateTime = currentDateTime
+  
   lazy val currentService: ServiceType = current.mode match {
     case Mode.Test => ServiceType.TEST_MODE
     case Mode.Dev => ServiceType.DEV_MODE
