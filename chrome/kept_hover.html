@@ -8,12 +8,13 @@
         <div class="kificnt">
         {{#socialConnections}}
         <div class="socialinnerbox">
-          <span class="keepitmessage">{{#is_kept}}You kept this, with {{/is_kept}} {{countText}}{{^is_kept}} have kept this{{/is_kept}}.</span>
+          <span class="keepitmessage">{{countText}}</span>
           <div class="friendlist">
           {{#friends}}
             <a href='#'><img class="social_friend" src='https://graph.facebook.com/{{facebookId}}/picture?type=square'></a>
           {{/friends}}
             <div class="friend_tooltip"></div>
+            <div class="friendlist_fade"></div>
           </div>
         </div>
         {{/socialConnections}}
@@ -31,10 +32,10 @@
         {{/socialConnections}}
           <div class="buttonwrapper">
           {{#is_kept}}
-            <span class="kbutton unkeepitbtn">Nevermind, un-Keep it</span><span class="kbutton dropdownbtn"><span class="kifi_toggle" style="background: url({{arrow}}) no-repeat; background-size: 8px; background-position:center; "></span></span>
+            <span class="kbutton unkeepitbtn">Un-Keep it</span> <span class="kbutton makeprivatebtn">Make it Private</span></span>
           {{/is_kept}}
           {{^is_kept}}
-            <span class="kbutton keepitbtn">Keep it</span><span class="kbutton dropdownbtn"><span class="toggle">&#9662;</span></span>
+            <span class="kbutton keepitbtn">Keep it</span><span class="kbutton dropdownbtn"><span class="kifi_toggle">&#9662;</span></span>
           {{/is_kept}}
           </div>
           <div class="moreinnerbox"><label for="keepit_private"><input type='checkbox' id='keepit_private' class='keepit_private' value='private'> Keep this link private</label></div>
