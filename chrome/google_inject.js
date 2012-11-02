@@ -14,7 +14,9 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     console.log("[" + new Date().getTime() + "] ", message);
   }
 
-  var resultsStore = {};
+  var resultsStore = {
+    "showDefault": 5
+  };
   var inprogressSearchQuery = '';
 
   function error(exception, message) {
@@ -99,7 +101,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
         "currentlyShowing": 0,
         "show": results.userConfig.max_res,
         "mayShowMore": results.searchResults.mayHaveMore,
-        "userConfig": results.userConfig
+        "userConfig": results.userConfig,
+        "showDefault": results.userConfig.max_res
       };
       if(request.query === '') {
         return;
@@ -142,7 +145,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
   function showMoreResults() {
     var numberMore = resultsStore.userConfig.max_res;
     resultsStore.show = resultsStore.results.length >= resultsStore.show + numberMore ? resultsStore.show + numberMore : resultsStore.results.length;
-    console.log("Showing more results",resultsStore.results.length, resultsStore.currentlyShowing, resultsStore.show);
+    console.log("Showing more results",numberMore,resultsStore.results.length, resultsStore.currentlyShowing, resultsStore.show);
     drawResults(0);
     if(resultsStore.results.length < resultsStore.show + numberMore)
       fetchMoreResults();
@@ -197,6 +200,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
   // For some reason, spelling doesn't fire a blur()
   $(window).bind('hashchange', function() {
     log("URL has changed! Updating kifi results...");
+    resultsStore.show = resultsStore.showDefault;
     updateQuery();
     setTimeout(function(){ updateQuery(0); }, 300); // sanity check
   });
@@ -339,8 +343,15 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
               console.log("Google isn't ready. Trying to injecting again...");
               if($('#ires').length > 0) {
                 $('#ires').before(tb);
-                $('.kifi_more').click(function() {
+                $('.kifi_more_button').click(function() {
                   showMoreResults();
+                });
+                $('#kifi_trusted').click(function() {
+                  $('#kifi_reslist').toggle('fast');
+                  /*$('#kifi_trusted').click(function() {
+                    resultsStore.show = resultsStore.showDefault;
+                    updateQuery(0);
+                  });*/
                 });
               }
               setTimeout(function() { injectResults(--times) }, 30);
