@@ -28,7 +28,6 @@ case class User(
     assert(1 == entity.save())
     entity.view
   }
-  
 }
 
 object User {
