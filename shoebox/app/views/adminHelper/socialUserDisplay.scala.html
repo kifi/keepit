@@ -5,12 +5,12 @@
     @if(socialUserInfo.userId.isDefined && !socialOnly) {
       <a data-hover="tooltip" title="@socialUserInfo.fullName+" 
          class="name_tooltip_link" href="@com.keepit.controllers.routes.UserController.userView(socialUserInfo.userId.get)">
-        <img class="img-polaroid user-avatar" src="https://graph.facebook.com/@socialUserInfo.socialId.id/picture?type=square"/><b> @socialUserInfo.fullName</b>
+        <img class="user-avatar" src="https://graph.facebook.com/@socialUserInfo.socialId.id/picture?type=square"/><b> @socialUserInfo.fullName</b>
       </a>
     } else {
       <a data-hover="tooltip" title="@socialUserInfo.fullName+" 
          class="name_tooltip_link" href="@com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfo.id.get)">
-        <img class="img-polaroid user-avatar" src="https://graph.facebook.com/@socialUserInfo.socialId.id/picture?type=square"/> @socialUserInfo.fullName
+        <img class="user-avatar" src="https://graph.facebook.com/@socialUserInfo.socialId.id/picture?type=square"/> @socialUserInfo.fullName
       </a>
     }
   </span>
