@@ -10,8 +10,8 @@
 }
 
 .user-avatar {
-  height: 25px;
-  width: 25px;
+  height: 30px;
+  width: 30px;
   margin: 1px 1px 1px 1px;
 }
 
@@ -24,4 +24,8 @@
 
 .admin-head {
   margin-top: 50px;
+}
+
+body {
+	background-color: #F5F5F7;
 }
