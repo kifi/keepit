@@ -3,7 +3,7 @@
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
     <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId.id" target="_blank">
-      <img src="https://graph.facebook.com/@userWithSocial.socialUserInfo.socialId.id/picture?type=square" width="30" height="30" alt=""/>
+      <img class="img-polaroid user-avatar" src="https://graph.facebook.com/@userWithSocial.socialUserInfo.socialId.id/picture?type=square"/>
       @userWithSocial.socialUserInfo.socialId.id
     </a>
   </span>
@@ -29,10 +29,10 @@
         <th>Last Update</th><td>@adminHelper.dateDisplay(userWithSocial.user.updatedAt) @adminHelper.timeDisplay(userWithSocial.user.updatedAt)</td>
       </tr>
       <tr>
-        <th>OAuth</th><td><textarea rows="3" width="100%">@socialUserInfos</textarea></td>
+        <th>OAuth</th><td><textarea class="json-textArea">@socialUserInfos</textarea></td>
       </tr>
       <tr>
-        <th>Social Raw info</th><td><textarea rows="3" width="100%">@rawInfos</textarea></td>
+        <th>Social Raw info</th><td><textarea class="json-textArea">@rawInfos</textarea></td>
       </tr>
       <tr>
         <th>Social User</th>
@@ -44,22 +44,22 @@
 
 	<div class="row-fluid">
 	  <ul class="thumbnails">
-	    <li class="span6">
-	      <h2>User connected to @fortyTwoConnections.size FortyTwo Users</h2>
+      <li class="span6 well">
+        <h2>@socialConnections.size Social Users</h2>
+        <div class="scrollArea">
+          <ol>
+          @for(socialConnection <- socialConnections) {
+            <li>@adminHelper.socialUserDisplay(socialConnection)</li>
+          }
+          </ol>
+        </div>
+      </li>
+	    <li class="span6 well">
+	      <h2>@fortyTwoConnections.size FortyTwo Users</h2>
 	      <div class="scrollArea">
 	        <ol>
 	        @for(userWithSocial <- fortyTwoConnections) {
 	          <li>@adminHelper.userDisplay(userWithSocial)</li>
-	        }
-	        </ol>
-	      </div>
-	    </li>
-	    <li class="span6">
-	      <h2>User connected to @socialConnections.size Social Users</h2>
-	      <div class="scrollArea">
-	        <ol>
-	        @for(socialConnection <- socialConnections) {
-	          <li>@adminHelper.socialUserDisplay(socialConnection)</li>
 	        }
 	        </ol>
 	      </div>

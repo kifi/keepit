@@ -1,0 +1,32 @@
+@(currentService: com.keepit.common.controller.ServiceType, currentVersion: com.keepit.common.controller.ServiceVersion, compilationTime: String, started: String)
+
+@admin(currentService + " service") {
+   <table class="table table-bordered">
+      <tr>
+        <th>Version</th><td>@currentVersion</td>
+      </tr>
+      <tr>
+        <th>Compiled at</th><td>@compilationTime</td>
+      </tr>
+      <tr>
+        <th>Started at</th><td>@started</td>
+      </tr>
+  </table>
+  
+  <div id="video"/>
+  <script type="text/javascript">
+	  var videos = [
+	                's6KWnVh-JDs',
+	                'MbGNcoB2Y4I',
+	                'sdUwlSwifHw',
+	                'KUQGYMvI5sk',
+	                'kyYS-GzBSIg',
+	                'ojydNb3Lrrs'
+	              ];
+	              
+    var index=Math.floor(Math.random() * videos.length);
+    var html='<center><iframe width="600px" height="400px" src="http://www.youtube.com/embed/' + videos[index] + '" frameborder="0" allowfullscreen></iframe></center>';
+    $('#video').append(html);
+  
+  </script>
+}
