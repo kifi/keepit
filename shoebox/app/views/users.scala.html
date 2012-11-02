@@ -6,14 +6,16 @@
       <th>#</th>
       <th>Id</th>
       <th>User</th>
-      <th>creation</th>
+      <th># of bookmarks</th>
+      <th>Date joined</th>
     </tr>
   @for((userWithSocial, i) <- userWithSocials.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
       <td><span class="badge">@userWithSocial.user.id.get.id</span></td>
       <td>@adminHelper.userDisplay(userWithSocial)</td>
-      <td>@userWithSocial.user.createdAt</td>
+      <td>@userWithSocial.bookmarksCount</td>
+      <td>@adminHelper.dateDisplay(userWithSocial.user.createdAt)</td>
     </tr>
   }
   </table>
