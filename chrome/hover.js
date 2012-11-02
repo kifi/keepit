@@ -74,13 +74,32 @@ console.log("injecting keep it hover div");
     req.send(null);
   }
 
-  function summaryText(numberOfFriends) {
+  function summaryText(numberOfFriends, is_kept) {
     var summary = "";
-    if (numberOfFriends>0) {
-      if (numberOfFriends == 1) {
-        summary="one of your friends";
-      } else {
-        summary = numberOfFriends+" other friends";
+    if(is_kept) {
+      summary = "You "
+      if(numberOfFriends>0) {
+        summary += "and "
+        if(numberOfFriends == 1) summary += "another friend kept this."
+        else summary += numberOfFriends + " of your friends kept this."
+      }
+      else {
+        summary += "kept this!"
+      }
+    }
+    else {
+      if(numberOfFriends>0) {
+        if(numberOfFriends == 1) summary += "One"
+        else if(numberOfFriends == 1) summary += "Two"
+        else if(numberOfFriends == 1) summary += "Three"
+        else if(numberOfFriends == 1) summary += "Four"
+        else summary += numberOfFriends
+        summary += " of your friends "
+        if(numberOfFriends == 1) summary += "kept this."
+        else summary += "kept this."
+      }
+      else {
+        summary += "To quickly find this page later..."
       }
     }
     return summary;
@@ -144,7 +163,7 @@ console.log("injecting keep it hover div");
 
         if (friends.length>0) {
           tmpl.socialConnections = {
-            countText: summaryText(friends.length),
+            countText: summaryText(friends.length, user.is_kept),
             friends: friends
           }
         }
