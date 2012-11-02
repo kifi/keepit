@@ -238,7 +238,7 @@
       for(i=0;i<magicQueries.length;i++) {
         if(magicQueries[i].query === request.query) {
           log("Intercepting query: " + request.query);
-          sendResponse({"userInfo": userInfo, "searchResults": magicQueries[i].results});
+          sendResponse({"userInfo": userInfo, "searchResults": magicQueries[i].results, "userConfig": getConfigs()});
           return;
         }
       }
@@ -256,19 +256,22 @@
           log(xhr.response, tab);
           var searchResults = $.parseJSON(xhr.response);
           if (searchResults.length === 0) {
-            sendResponse({"userInfo": userInfo, "searchResults": []});
+            sendResponse({"userInfo": userInfo, "searchResults": [], "userConfig": getConfigs()});
             return;
           }
           /*var maxRes = getConfigs()["max_res"];
           if (searchResults.length > maxRes) {
             searchResults = searchResults.slice(0, maxRes);
           }*/
-          sendResponse({"userInfo": userInfo, "searchResults": searchResults});
+          sendResponse({"userInfo": userInfo, "searchResults": searchResults, "userConfig": getConfigs()});
         }
       }
-      term = encodeURIComponent(request.query);
+      var term = encodeURIComponent(request.query);
       var externalId = userInfo["keepit_external_id"];
-      xhr.open("GET", 'http://' + getConfigs().server + '/search?term=' + term + '&externalId=' + externalId, true);
+      var lastUUID = typeof request.lastUUID === 'undefined' ? '' : request.lastUUID;
+      var context = typeof request.context === 'undefined' ? '' : request.context;
+      var userConfig = getConfigs();
+      xhr.open("GET", 'http://' + userConfig.server + '/search2?term=' + term + '&externalId=' + externalId + '&maxHits=' + userConfig["max_res"]*2 + '&lastUUI=' + lastUUID + '&context=' + context, true);
       xhr.send();
     }
 
@@ -503,7 +506,7 @@
         env = "production";
       }
       var fullyQualifiedKey = env + "_" + key;
-      log("fullyQualifiedKey for key is " + fullyQualifiedKey);
+      //log("fullyQualifiedKey for key is " + fullyQualifiedKey);
       return fullyQualifiedKey;
     }
 
@@ -523,14 +526,14 @@
           env = "production";
           localStorage["env"]=env;
         }
-        var maxResStr = localStorage[getFullyQualifiedKey("max_search_results")];
+        var maxResStr = localStorage[getFullyQualifiedKey("max_res")];
         if (!isNumber(maxResStr)) {
-          maxResStr = 5;
+          maxResStr = 3;
         }
         var maxRes = Number(maxResStr);
 
         var showScore = localStorage[getFullyQualifiedKey("show_score")];
-        log("raw showScore is: " + showScore);
+        //log("raw showScore is: " + showScore);
         if (showScore === "yes" || showScore === true || showScore === "true") {
           showScore = true;
         } else {
@@ -564,8 +567,8 @@
           "server": server,
           "user": userInfoString
         }
-        log("loaded config:");
-        log(config);
+        //log("loaded config:");
+        //log(config);
         return config;
       } catch (e) {
         error(e);
