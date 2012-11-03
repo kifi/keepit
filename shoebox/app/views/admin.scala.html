@@ -1,5 +1,16 @@
 @(title: String)(content: Html)
 
+@quote(daQuote: com.keepit.common.admin.DouglasAdamsQuote) = {
+  </br>
+  </br>
+  <blockquote>
+    @daQuote.quote.map{ line =>
+      <p>@line</p>
+    }
+    <small>Douglas Adams <cite title="Source Title">"@daQuote.cite"</cite></small>
+  </blockquote>     
+}
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -50,6 +61,7 @@
 		</header>
 		<div class="container">
 	    @content
+	    @quote(com.keepit.common.admin.DouglasAdamsQuotes.random)
 		</div>
   </body>
 </html>
