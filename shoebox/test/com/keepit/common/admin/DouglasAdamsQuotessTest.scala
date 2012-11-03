@@ -19,7 +19,7 @@ class DouglasAdamsQuotesTest extends SpecificationWithJUnit {
   "DouglasAdamsQuotes" should {
     "load" in {
       running(new EmptyApplication()) {
-        DouglasAdamsQuotes.qoutes.size === 503
+        DouglasAdamsQuotes.qoutes.size === 490
         DouglasAdamsQuotes.random.quote.size !== 0
       }
     }
