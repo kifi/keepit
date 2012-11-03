@@ -1,0 +1,24 @@
+@(bookmark: Bookmark, normalizedUri: NormalizedURI, userWithSocial: UserWithSocial)
+
+@admin("Bookmark: " + bookmark.title) {
+   <table class="table table-bordered">
+      <tr>
+        <th>Title</th><td><a href="@bookmark.url">@bookmark.title</a></td>
+      </tr>
+      <tr>
+        <th>Content</th><td>@adminHelper.articleDisplay(normalizedUri)</td>
+      </tr>
+      <tr>
+        <th>Bookmark ID</th><td>@bookmark.id.get.id</td>
+      </tr>
+      <tr>
+        <th>Saved by</th><td>@adminHelper.userDisplay(userWithSocial)</td>
+      </tr>
+      <tr>
+        <th>Creation time</th><td>@adminHelper.dateDisplay(bookmark.createdAt) - @adminHelper.timeDisplay(bookmark.createdAt)</td>
+      </tr>
+   </table>
+ 	 @helper.form(action = com.keepit.controllers.routes.BookmarksController.delete(bookmark.id.get)) {
+	   <input type="submit" value="Delete"></input>
+	 }
+}
