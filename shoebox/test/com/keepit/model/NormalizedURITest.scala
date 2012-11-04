@@ -122,7 +122,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
       	  val user1 = User(firstName = "Joe", lastName = "Smith").save
       	  val user2 = User(firstName = "Moo", lastName = "Brown").save
       	  val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURI.States.INACTIVE).save
-            val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURI.States.SCRAPED).save
+          val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURI.States.SCRAPED).save
       	}
         CX.withConnection { implicit c =>
           NormalizedURI.getByState(NormalizedURI.States.ACTIVE).isEmpty === true
