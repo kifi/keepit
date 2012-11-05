@@ -228,3 +228,12 @@ li.keepit {
   white-space: nowrap;
   overflow-x: hidden;
 }
+
+.formatted_site {
+  height: 15px;
+  width: 15px;
+  display: inline-block;
+  top: 2px;
+  position: relative;
+  margin-right: 5px;
+}

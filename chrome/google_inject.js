@@ -236,6 +236,63 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
   /*******************************************************/
 
+  var urlAutoFormatters = [
+    {
+      "match": "docs\\.google\\.com",
+      "template": "A file in Google Docs",
+      "icon": "gdocs.gif"
+    }, {
+      "match": "drive\\.google\\.com",
+      "template": "A folder in your Google Drive",
+      "icon": "gdrive.png"
+    }, {
+      "match": "dropbox\\.com/home",
+      "template": "A folder in your Dropbox",
+      "icon": "dropbox.png"
+    }, {
+      "match": "dl-web\\.dropbox\\.com",
+      "template": "A file from Dropbox",
+      "icon": "dropbox.png"
+    }, {
+      "match": "dropbox\\.com/sh/",
+      "template": "A shared file on Dropbox",
+      "icon": "dropbox.png"
+    }, {
+      "match": "mail\\.google\\.com/mail/.*/[\\w]{0,}",
+      "template": "An email on Gmail",
+      "icon": "gmail.png"
+    }, {
+      "match": "facebook\\.com/messages/[\\w\\-\\.]{4,}",
+      "template": "A conversation on Facebook",
+      "icon": "facebook.png"
+    }
+  ];
+
+  function displayURLFormatter(url) {
+    var prefix = "^https?://w{0,3}\\.?";
+    for(i=0;i<urlAutoFormatters.length;i++) {
+      var regex = new RegExp(prefix + urlAutoFormatters[i].match, "ig");
+      if(regex.test(url) === true) {
+        var result = ""
+        if(typeof urlAutoFormatters[i].icon !== 'undefined') {
+          var icon = chrome.extension.getURL('icons/'+urlAutoFormatters[i].icon);
+          result += "<span class=\"formatted_site\" style=\"background: url(" + icon + ") no-repeat;background-size: 15px;\"></span>"
+        }
+        result += urlAutoFormatters[i].template;
+        return result;
+      }
+    }
+    var body = url.split(/^https?:\/\//);
+    if(body.length >= 1) {
+      url = body[body.length-1];
+    }
+    if (url.length > 60) {
+      url = url.substring(0, 60) + "...";
+    }
+    $.each(resultsStore.query.split(" "), function(i, term) { url = boldSearchTerms(url,term,false); });
+    return url;
+  }
+
   function addResults() {
     try {
       log("addResults parameters:");
@@ -255,17 +312,11 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
           $(searchResults).each(function(i, result){
             var formattedResult = result;
 
-            formattedResult.displayUrl = formattedResult.bookmark.url;
-            if (formattedResult.bookmark.url.length > 60) {
-              formattedResult.displayUrl = formattedResult.displayUrl.substring(0, 75) + "..."
-            }
-
-            var displayUrl = formattedResult.displayUrl;
-            $.each(resultsStore.query.split(" "), function(i, term) { displayUrl = boldSearchTerms(displayUrl,term,false); });
-            formattedResult.displayUrl = displayUrl;
+            formattedResult.displayUrl = displayURLFormatter(formattedResult.bookmark.url);
+            console.log(formattedResult.bookmark.url, formattedResult.displayUrl);
 
             var title = formattedResult.bookmark.title;
-            $.each(resultsStore.query.split(" "), function(i, term) { title = boldSearchTerms(title,term,true); });
+            $.each(resultsStore.query.split(/[\s\W]/), function(i, term) { title = boldSearchTerms(title,term,true); });
             formattedResult.bookmark.title = title;
 
             if (config["show_score"] === true) {
@@ -275,6 +326,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             formattedResult.countText = "";
 
             var numFriends = formattedResult.users.length;
+
+            formattedResult.count = formattedResult.count - formattedResult.users.length - (formattedResult.isMyBookmark ? 1 : 0);
 
             // Awful decision tree for clean text. Come up with a better way.
             if(formattedResult.isMyBookmark) { // you
