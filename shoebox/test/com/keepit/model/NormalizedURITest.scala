@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import java.sql.Connection
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
@@ -9,7 +10,7 @@ import play.api.test._
 import play.api.test.Helpers._
 import ru.circumflex.orm._
 import com.keepit.controllers._
-import com.keepit.common.db.CX
+import com.keepit.common.db.{CX, State}
 import com.keepit.common.db.CX._
 import com.keepit.test.EmptyApplication
 
@@ -22,8 +23,8 @@ class NormalizedURITest extends SpecificationWithJUnit {
       User.all.size === 0 //making sure the db is clean
       val user1 = User(firstName = "Joe", lastName = "Smith").save
       val user2 = User(firstName = "Moo", lastName = "Brown").save
-      val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/short").save
-      val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/long").save
+      val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short")
+      val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long")
       Bookmark(userId = user1.id.get, title = "my title is short", url = "http://www.keepit.com/short?track=foo", uriId = uri1.id.get, source = BookmarkSource("NA")).save
       Bookmark(userId = user1.id.get, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
       Bookmark(userId = user2.id.get, title = "my title is long", url = "http://www.keepit.com/long?track=bar", uriId = uri2.id.get, source = BookmarkSource("NA")).save
@@ -118,12 +119,12 @@ class NormalizedURITest extends SpecificationWithJUnit {
   "NormalizedURIs get created url" should {
     "search gets nothing" in {
       running(new EmptyApplication()) {
-    	CX.withConnection { implicit c =>
-    	  val user1 = User(firstName = "Joe", lastName = "Smith").save
-    	  val user2 = User(firstName = "Moo", lastName = "Brown").save
-    	  val uri1 = NormalizedURI(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURI.States.INACTIVE).save
-          val uri2 = NormalizedURI(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURI.States.SCRAPED).save
-    	}
+      	CX.withConnection { implicit c =>
+      	  val user1 = User(firstName = "Joe", lastName = "Smith").save
+      	  val user2 = User(firstName = "Moo", lastName = "Brown").save
+      	  val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURI.States.INACTIVE)
+          val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURI.States.SCRAPED)
+      	}
         CX.withConnection { implicit c =>
           NormalizedURI.getByState(NormalizedURI.States.ACTIVE).isEmpty === true
         }
@@ -131,13 +132,13 @@ class NormalizedURITest extends SpecificationWithJUnit {
     }
     "search gets short" in {
       running(new EmptyApplication()) {
-    	CX.withConnection { implicit c =>
-    	  val user1 = User(firstName = "Joe", lastName = "Smith").save
-    	  val user2 = User(firstName = "Moo", lastName = "Brown").save
-    	  val uri1 = NormalizedURI(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURI.States.ACTIVE).save
-          val uri2 = NormalizedURI(title = "two title", url = "http://www.keepit.com/two", state = NormalizedURI.States.SCRAPED).save
-          val uri3 = NormalizedURI(title = "three title", url = "http://www.keepit.com/three", state = NormalizedURI.States.ACTIVE).save
-    	}
+      	CX.withConnection { implicit c =>
+      	  val user1 = User(firstName = "Joe", lastName = "Smith").save
+      	  val user2 = User(firstName = "Moo", lastName = "Brown").save
+      	  val uri1 = createUri(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURI.States.ACTIVE)
+          val uri2 = createUri(title = "two title", url = "http://www.keepit.com/two", state = NormalizedURI.States.SCRAPED)
+          val uri3 = createUri(title = "three title", url = "http://www.keepit.com/three", state = NormalizedURI.States.ACTIVE)
+      	}
         CX.withConnection { implicit c =>
           var all = NormalizedURI.getByState(NormalizedURI.States.ACTIVE)
           println(all.mkString("\n"))
@@ -146,5 +147,17 @@ class NormalizedURITest extends SpecificationWithJUnit {
       }
     }
   }  
+  
+  def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURI.States.ACTIVE)(implicit conn: Connection) = {
+    val uri = NormalizedURI(title = title, url = url, state = state)
+    try {
+      uri.save
+    } catch {
+      case e => 
+        println("fail to persist uri %s. Existing URIs in the db are: %s".
+            format(uri, NormalizedURI.all.map(_.toString).mkString("\n")))
+        throw e
+    }
+  }
   
 }
