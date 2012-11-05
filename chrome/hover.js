@@ -106,8 +106,8 @@ console.log("injecting keep it hover div");
   }
 
   function socialTooltip(friend, element) {
-    /* // disabled for now
-    getTemplate("social_friend.html",{}, function(tmpl) {
+     // disabled for now
+    getTemplate("social_hover.html",{"friend": friend}, function(tmpl) {
       var timeout;
       var timein;
 
@@ -115,14 +115,14 @@ console.log("injecting keep it hover div");
 
       function hide() {
           timeout = setTimeout(function () {
-              $(friendTooltip).hide();
-          }, 500);
+              $(friendTooltip).fadeOut(100);
+          }, 600);
           clearTimeout(timein);
       };
 
       function show() {
         timein = setTimeout(function() {
-          $(friendTooltip).stop().show();
+          $(friendTooltip).stop().fadeIn(100);
         }, 500)
       }
 
@@ -135,18 +135,20 @@ console.log("injecting keep it hover div");
           clearTimeout(timeout);
       }).mouseout(hide);
 
-    }); */
+    }); 
   }
 
 
 
   function showKeepItHover(user) {
+    console.log("xxxx",user);
     var logo = chrome.extension.getURL('kifilogo.png');
     var arrow = chrome.extension.getURL('arrow.png');
     var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
     var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
+    var userExternalId = user.keepit_external_id;
 
-    $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href),
+    $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
       null,
       function(friends) {
 
