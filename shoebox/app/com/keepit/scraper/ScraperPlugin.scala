@@ -46,13 +46,14 @@ class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extend
   private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
   override def onStart(): Unit = {
-    log.info("starting ArticleIndexerPluginImpl")
+    log.info("starting ScraperPluginImpl")
     _cancellables = Seq(
       system.scheduler.schedule(0 seconds, 1 minutes, actor, Scrape)
     )
   }
   override def onStop(): Unit = {
-    log.info("stopping ArticleIndexerPluginImpl")
+    log.info("stopping ScraperPluginImpl")
+    scraper.close()
     _cancellables.map(_.cancel)
   }
   
