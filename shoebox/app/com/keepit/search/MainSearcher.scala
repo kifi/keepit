@@ -144,7 +144,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
     
     val newFilter = filterOut ++ hitList.map(_.id)
-    ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit), myTotal, friendsTotal, mayHaveMore, hitList.map(_.scoring), newFilter, userId)
+    ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit), myTotal, friendsTotal, mayHaveMore, hitList.map(_.scoring), newFilter)
   }
   
   private def getPublicBookmarkCount(id: Long) = {
@@ -253,7 +253,6 @@ case class ArticleSearchResult(
   mayHaveMoreHits: Boolean,
   scorings: Seq[Scoring],
   filter: Set[Long],
-  userId: Id[User],
   uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
   time: DateTime = currentDateTime)
 
