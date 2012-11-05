@@ -16,6 +16,7 @@
     }
 
     function loadMagicQueries() {
+      log("Loading magic!");
       try {
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
@@ -236,6 +237,7 @@
 
       // Dummy results injection
       for(i=0;i<magicQueries.length;i++) {
+        console.log("checking: ", magicQueries[i])
         if(magicQueries[i].query === request.query) {
           log("Intercepting query: " + request.query);
           sendResponse({"userInfo": userInfo, "searchResults": magicQueries[i].results, "userConfig": getConfigs()});

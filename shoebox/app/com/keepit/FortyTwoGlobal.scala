@@ -29,15 +29,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
   private lazy val scope = injector.inject[AppScope]
   
   override def beforeStart (app: Application): Unit = {
-    println("using default charset %s".format(Charset.defaultCharset()))
-    
     val appName = app.configuration.getString("application.name").get
-    println("starting the %s using %s".format(appName, getClass()))
     
     val dbs = app.configuration.getConfig("db").get.subKeys
-    println("loading with dbs: %s".format(dbs.mkString(", ")))
-    
-    println("evolutionplugin: %s".format(app.configuration.getString("evolutionplugin")))
   }
   
   override def onBadRequest (request: RequestHeader, error: String): Result = {

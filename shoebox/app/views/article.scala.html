@@ -1,8 +1,30 @@
 @(article: com.keepit.search.Article, uri: NormalizedURI)
 
 @admin("Article: " + article.title) {
-   <b>URI first introduced on:</b> @{uri.createdAt}<br/>
-   <b>URI title (may differ from article's) is:</b> @{uri.title}<br/>
-   <h2><a href="@uri.url">@{article.title}</a></h2>
-   @{article.content}
+   <table class="table table-bordered">
+      <tr>
+        <th>First introduced</th><td>@{uri.createdAt}</td>
+      </tr>
+      <tr>
+        <th>URI title</th><td><a href="@uri.url">@{uri.title}</a></td>
+      </tr>
+      <tr>
+        <th>Article title</th><td>@{article.title}</td>
+      </tr>
+      <tr>
+        <th>Http ContentType</th><td>@{article.httpContentType}</td>
+      </tr>
+      <tr>
+        <th>Http Original ContentCharset</th><td>@{article.httpOriginalContentCharset}</td>
+      </tr>
+      <tr>
+        <th>State</th><td>@{article.state}</td>
+      </tr>
+      <tr>
+        <th>Error message</th><td>@{article.message}</td>
+      </tr>
+      <tr>
+        <th>Article content</th><td>@{article.content}</td>
+      </tr>
+  </table>
 }

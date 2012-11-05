@@ -58,6 +58,7 @@ case class Bookmark(
       throw new Exception("[%s] did not delete %s".format(res, this))
     }
   }
+  
 }
 
 object Bookmark {
