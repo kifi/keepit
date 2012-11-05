@@ -2,11 +2,11 @@
   "name": "Keep It",
   "version": "1.0",
   "manifest_version": 1,
-  "description": "The Keep It Plugin",
+  "description": "Keep it, Find it!",
   "options_page": "options.html",
   "page_action": {
     "default_icon": "keepit.png", // optional
-    "default_title": "Keep It!"//,    // optional; shown in tooltip
+    "default_title": "Kifi"//,    // optional; shown in tooltip
     //"default_popup": "keep.html"    // optional
   },  
   "background_page" : "keep.html",
@@ -45,7 +45,6 @@
     "unlimitedStorage"
   ],
   "icons" : {
-    "48" : "keep_48.png",
-    "128" : "keep_128.png"
+    "256" : "kifi.png"
   }
 }
