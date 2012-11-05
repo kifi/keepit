@@ -30,6 +30,8 @@ import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social.{SocialGraphPlugin, UserWithSocial}
 import com.keepit.common.social.SocialUserRawInfoStore
+import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.graph.URIGraph
 
 object UserController extends Controller with Logging with SecureSocial {
 
@@ -37,14 +39,31 @@ object UserController extends Controller with Logging with SecureSocial {
    * Call me using:
    * curl localhost:9000/users/keepurl?url=http://www.ynet.co.il/;echo
    */
-  def usersKeptUrl(url: String) = Action { request =>    
-    val users = CX.withConnection { implicit c =>
-      log.info("looking for users who kept [%s]".format(url))
-      val nuri = NormalizedURI("title", url)
-      log.info("userWhoKeptUrl %s (hash=%s)".format(url, nuri.urlHash))
-      User.getbyUrlHash(nuri.urlHash) map UserWithSocial.toUserWithSocial
+  def usersKeptUrl(url: String, externalId: ExternalId[User]) = Action { request =>
+    
+    val socialUsers = CX.withConnection { implicit c => 
+      NormalizedURI.getByNormalizedUrl(url) match {
+        case Some(uri) =>
+          val userId = User.getOpt(externalId).getOrElse(
+                throw new Exception("externalId %s not found".format(externalId))).id.get
+          val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
+              
+          val articleIndexer = inject[ArticleIndexer]
+          val uriGraph = inject[URIGraph]
+          
+          val uriGraphSearcher = uriGraph.getURIGraphSearcher
+          val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
+          
+          val sharingUserIds = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
+          
+          sharingUserIds map (u => UserWithSocial.toUserWithSocial(User.get(u))) toSeq
+          
+        case None =>
+          Seq[UserWithSocial]()
+      }
     }
-    Ok(userWithSocialSerializer.writes(users)).as(ContentTypes.JSON)
+
+    Ok(userWithSocialSerializer.writes(socialUsers)).as(ContentTypes.JSON)
   }
   
   /**

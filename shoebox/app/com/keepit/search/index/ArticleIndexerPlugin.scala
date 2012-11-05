@@ -27,7 +27,7 @@ private[index] class ArticleIndexerActor(articleIndexer: ArticleIndexer) extends
     case Index => 
       var articlesIndexed = articleIndexer.run()
       if (articlesIndexed >= articleIndexer.commitBatchSize) {
-        self ! Index
+        self.forward(Index)
       }
       sender ! articlesIndexed
     case m => throw new Exception("unknown message %s".format(m))
