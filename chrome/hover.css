@@ -317,7 +317,7 @@ text-align:right;
   position:absolute;
   top:-50px;
   left:-100px;
-  height:80px;
+  height:100px;
   width:350px;
   background-color: #fff;
   color: #faf9f9;
@@ -375,7 +375,6 @@ text-align:right;
 .kifi_social_hover .hover_friend {
   padding: 5px;
   clear: both;
-  height: 69px;
   position:relative;
 }
 
@@ -394,7 +393,7 @@ text-align:right;
   position:relative;
   float:right;
 
-  margin-top:20px;
+  margin-top:30px;
   width: 80px;
 }
 
@@ -405,8 +404,8 @@ text-align:right;
 
 .kifi_social_hover .hover_picture_frame img {
   margin: 3px;
-  height: 60px;
-  width: 60px;
+  height: 70px;
+  width: 70px;
   background-color: #ccc;
 }
 
@@ -422,12 +421,29 @@ text-align:right;
 }
 
 .hover_connected_networks {
-  background: url(connected_networks.png);
-  height: 16px;
-  width: 70px;
+  /*background: url(connected_networks.png);*/
 }
 
+.kn_facebook {
+  background-position: 0px 0px;
+}
 
+.kn_linkedin {
+  background-position: -34px 34px;
+}
+.kn_twitter {
+  background-position: -68px 34px;
+}
+.kn_pinterest {
+  background-position: -102px 34px;
+}
+
+span.kn_social {
+  width: 34px;
+  height: 34px;
+  display: inline-block;
+  background-size: 136px;
+}
 
 
 
