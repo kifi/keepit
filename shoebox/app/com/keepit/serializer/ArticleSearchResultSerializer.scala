@@ -23,7 +23,6 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
         "mayHaveMoreHits" -> JsBoolean(res.mayHaveMoreHits),
         "scorings" -> JsArray(res.scorings map ScoringSerializer.scoringSerializer.writes),
         "filter" -> JsArray(res.filter.map(id => JsNumber(id)).toSeq),
-        "userId" -> JsNumber(res.userId.id),
         "uuid" -> JsString(res.uuid.id),
         "time" -> JsString(res.time.toStandardTimeString)
       )
@@ -60,7 +59,6 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       mayHaveMoreHits = (json \ "mayHaveMoreHits").as[Boolean],
       scorings = (json \ "scorings").asInstanceOf[JsArray].value map ScoringSerializer.scoringSerializer.reads,
       filter = (json \ "filter").asOpt[Seq[Long]].map(_.toSet).getOrElse(Set.empty[Long]),
-      userId = Id[User]((json \ "userId").as[Int]),
       uuid = ExternalId[ArticleSearchResultRef]((json \ "uuid").as[String]),
       time = parseStandardTime((json \ "time").as[String])
     )
