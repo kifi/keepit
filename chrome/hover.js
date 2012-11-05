@@ -111,7 +111,10 @@ console.log("injecting keep it hover div");
       var timeout;
       var timein;
 
-      var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').html(tmpl);;
+      var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').html(tmpl);
+
+      var socialNetworks = chrome.extension.getURL("social-icons.png");
+      $(friendTooltip).find('.kn_social').css('background-image','url(' + socialNetworks + ')');
 
       function hide() {
           timeout = setTimeout(function () {
@@ -141,7 +144,6 @@ console.log("injecting keep it hover div");
 
 
   function showKeepItHover(user) {
-    console.log("xxxx",user);
     var logo = chrome.extension.getURL('kifilogo.png');
     var arrow = chrome.extension.getURL('arrow.png');
     var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
