@@ -302,14 +302,6 @@ text-align:right;
   display: none;
 }
 
-.kifi_hover .friend_tooltip {
-  display:none;
-  position:absolute;
-  top:0px;
-  height:50px;
-  width:100px;
-  background-color: #faf9f9;
-}
 
 /*.kifi_hover .friend_tooltip {
   display:none;
@@ -323,11 +315,11 @@ text-align:right;
 .kifi_hover .friend_tooltip {
   display:none;
   position:absolute;
-  top:-100px;
+  top:-50px;
   left:-100px;
   height:80px;
-  width:450px;
-  background-color: #414b52;
+  width:350px;
+  background-color: #fff;
   color: #faf9f9;
   border-radius: 4px 4px 4px 4px;
   -moz-box-shadow: 2px 2px 2px rgba(50,50,50,0.5);
@@ -335,7 +327,7 @@ text-align:right;
   box-shadow: 5px 5px 15px rgba(50,50,50,0.5);
   border: 1px solid #2d2d2d;
 }
-.kifi_hover .friend_tooltip:after {
+.kifi_hover .friend_tooltip:before, .kifi_hover .friend_tooltip:after {
   top: 100%;
   border: solid transparent;
   content: " ";
@@ -346,8 +338,8 @@ text-align:right;
 }
 
 .kifi_hover .friend_tooltip:after {
-  border-color: rgba(136, 183, 213, 0);
-  border-top-color: #414b52;
+  border-color: rgba(255, 255, 255, 0);
+  border-top-color: #fff;
   border-width: 8px;
   left: 50%;
   margin-left: -8px;
@@ -364,6 +356,82 @@ text-align:right;
 .kifi_hover .keepit_private {
   display: inline;
 }
+
+
+
+.kifi_social_hover div {
+  display: block;
+}
+
+.kifi_social_hover span {
+  display: inline;
+}
+
+.kifi_social_hover {
+
+}
+
+
+.kifi_social_hover .hover_friend {
+  padding: 5px;
+  clear: both;
+  height: 69px;
+  position:relative;
+}
+
+.kifi_social_hover .hover_friend_picture {
+  position:relative;
+  float:left;
+}
+
+.kifi_social_hover .hover_friend_description {
+  position:relative;
+  float:left;
+  padding:10px;
+}
+
+.kifi_social_hover .hover_friend_view_keeps {
+  position:relative;
+  float:right;
+
+  margin-top:20px;
+  width: 80px;
+}
+
+.kifi_social_hover .hover_picture_frame {
+  border: 1px solid #c2c2c2;
+  border-radius: 4px;
+}
+
+.kifi_social_hover .hover_picture_frame img {
+  margin: 3px;
+  height: 60px;
+  width: 60px;
+  background-color: #ccc;
+}
+
+.hover_friend_name {
+  font-size: 16px;
+  color: #2d2d2d;
+}
+
+.hover_connected_message {
+  font-size: 12px;
+  color: #808080;
+  margin:6px 0px 4px 0px;
+}
+
+.hover_connected_networks {
+  background: url(connected_networks.png);
+  height: 16px;
+  width: 70px;
+}
+
+
+
+
+
+
 
 @media print {
   .kifi_hover {
