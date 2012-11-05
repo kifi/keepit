@@ -12,7 +12,6 @@ case class ArticleSearchResultRef (
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[ArticleSearchResultRef],
-  userId: Id[User],
   state: State[ArticleSearchResultRef] = ArticleSearchResultRef.States.ACTIVE
 ) {
   def save(implicit conn: Connection): ArticleSearchResultRef = {
@@ -29,7 +28,7 @@ object ArticleSearchResultRef {
   }
   
   def apply(res: ArticleSearchResult): ArticleSearchResultRef = 
-    ArticleSearchResultRef(externalId = res.uuid, userId = res.userId, createdAt = res.time, updatedAt = res.time)
+    ArticleSearchResultRef(externalId = res.uuid, createdAt = res.time, updatedAt = res.time)
   
   def get(id: Id[ArticleSearchResultRef])(implicit conn: Connection): ArticleSearchResultRef = ArticleSearchResultRefEntity.get(id).get.view
   
@@ -44,7 +43,6 @@ private[search] class ArticleSearchResultRefEntity extends Entity[ArticleSearchR
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val externalId = "external_id".EXTERNAL_ID[ArticleSearchResultRef].NOT_NULL(ExternalId())
-  val userId = "user_id".ID[User]
   val state = "state".STATE.NOT_NULL(ArticleSearchResultRef.States.ACTIVE)
   
   def relation = ArticleSearchResultRefEntity
@@ -54,7 +52,6 @@ private[search] class ArticleSearchResultRefEntity extends Entity[ArticleSearchR
     createdAt = createdAt(),
     updatedAt = updatedAt(),
     externalId = externalId(),
-    userId = userId(),
     state = state()
   )
 }
@@ -68,7 +65,6 @@ private[search] object ArticleSearchResultRefEntity extends ArticleSearchResultR
     entity.createdAt := view.createdAt
     entity.updatedAt := view.updatedAt
     entity.externalId := view.externalId
-    entity.userId := view.userId
     entity.state := view.state
     entity
   }
