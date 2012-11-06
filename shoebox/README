@@ -1,6 +1,11 @@
 What's new
 ============
 
+November 5, 2012
+* Slider improvements. Fixed several issues dealing with the hover not showing.
+* Added ability to remove or set private a Keep from the slider.
+* Many Google injection enhancements, new design.
+
 October 31, 2012
 * new search api and endpoint for pagination support
 
