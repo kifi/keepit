@@ -16,6 +16,7 @@ case class Comment(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[Comment] = ExternalId(),
+  normalizedURI: Id[NormalizedURI],
   userId: Id[User],
   text: String,
   permissions: State[Comment.Permission] = Comment.Permissions.PUBLIC,
@@ -24,6 +25,7 @@ case class Comment(
   def withState(state: State[Comment]) = copy(state = state)
   def withPermissions(permissions: State[Comment.Permission]) = copy(permissions = permissions)
   def withExternalId(externalId: ExternalId[Comment]) = copy(externalId = externalId)
+  def withNormalizedURI(normalizedURI: Id[NormalizedURI]) = copy(normalizedURI = normalizedURI)
   
   def save(implicit conn: Connection): Comment = {
     val entity = CommentEntity(this.copy(updatedAt = currentDateTime))
@@ -55,6 +57,18 @@ object Comment {
 
   def getRecipients(commentId: Id[Comment])(implicit conn: Connection) = CommentRecipient.getByComment(commentId)
     
+  def getByNormalizedUri(normalizedURI: Id[NormalizedURI])(implicit conn: Connection): Seq[Comment] =
+    (CommentEntity AS "c").map { c => SELECT (c.*) FROM c WHERE (c.normalizedURI EQ normalizedURI) list }.map(_.view)
+
+  def getByUrl(url: String)(implicit conn: Connection): Seq[Comment] = {
+    NormalizedURI.getByNormalizedUrl(url) match {
+      case Some(u) => 
+        getByNormalizedUri(u)
+      case None =>
+        Seq[Comment]()
+    }
+  }
+
   object States {
     val ACTIVE = State[Comment]("active")
     val INACTIVE = State[Comment]("inactive")
@@ -73,6 +87,7 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val externalId = "external_id".EXTERNAL_ID[Comment].NOT_NULL(ExternalId())
+  val normalizedURI = "normalized_uri_id".ID[NormalizedURI].NOT_NULL
   val userId = "user_id".ID[User]
   val text = "text".CLOB.NOT_NULL
   val permissions = "permissions".STATE[Comment.Permission].NOT_NULL(Comment.Permissions.PUBLIC)
@@ -85,6 +100,7 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
     createdAt = createdAt(),
     updatedAt = updatedAt(),
     externalId = externalId(),
+    normalizedURI = normalizedURI(),
     userId = userId(),
     text = text(),
     permissions = permissions(),
@@ -101,6 +117,7 @@ private[model] object CommentEntity extends CommentEntity with EntityTable[Comme
     comment.createdAt := view.createdAt
     comment.updatedAt := view.updatedAt
     comment.externalId := view.externalId
+    comment.normalizedURI := view.normalizedURI
     comment.userId := view.userId
     comment.text := view.text
     comment.permissions := view.permissions

@@ -5,6 +5,7 @@ CREATE TABLE comment (
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
     external_id varchar(36) NOT NULL,
+    normalized_uri_id bigint(20) NOT NULL,
     user_id bigint(20) NOT NULL,
     text text NOT NULL,
     permissions varchar(20) NOT NULL,
