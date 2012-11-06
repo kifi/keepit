@@ -18,6 +18,7 @@ import play.api.http.ContentTypes
 import com.keepit.controllers.CommonActions._
 import com.keepit.common.db.CX
 import com.keepit.common.db._
+import com.keepit.common.async._
 import com.keepit.model._
 import com.keepit.inject._
 import com.keepit.serializer.BookmarkSerializer
@@ -84,16 +85,14 @@ object SearchController extends Controller with Logging {
     Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
   
-  private def reportArticleSearchResult(res: ArticleSearchResult) = try { 
-      inject[ActorPlugin].system.dispatcher.execute(new Runnable {
+  private def reportArticleSearchResult(res: ArticleSearchResult) = dispatch ({ 
         CX.withConnection { implicit c =>
           ArticleSearchResultRef(res).save
         }
         inject[ArticleSearchResultStore] += (res.uuid -> res)
+      }, { e =>
+         log.error("Could not persist article search result %s".format(res), e) 
       })
-    } catch {
-      case e => log.error("Could not report ArticleSearchResult %s".format(res))
-    }
   
   private[controllers] def toPersonalSearchResultPacket(res: ArticleSearchResult) = {
     val hits = CX.withConnection { implicit conn =>

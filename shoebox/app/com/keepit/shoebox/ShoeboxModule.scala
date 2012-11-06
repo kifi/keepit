@@ -48,6 +48,13 @@ case class ShoeboxModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
+  def articleSearchResultStore(amazonS3Client: AmazonS3): ArticleSearchResultStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.articleSearch.bucket").get)
+    new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client)
+  }
+  
+  @Singleton
+  @Provides
   def articleStore(amazonS3Client: AmazonS3): ArticleStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.article.bucket").get)
     new S3ArticleStoreImpl(bucketName, amazonS3Client)
