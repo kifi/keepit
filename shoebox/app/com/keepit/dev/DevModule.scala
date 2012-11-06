@@ -56,12 +56,13 @@ case class DevModule() extends ScalaModule with Logging {
   def amazonS3Client(): AmazonS3 = { 
     val conf = current.configuration.getConfig("amazon.s3").get
     val awsCredentials = new BasicAWSCredentials(conf.getString("accessKey").get, conf.getString("secretKey").get)
+    println("using awsCredentials: %s -> %s".format(awsCredentials.getAWSAccessKeyId(), awsCredentials.getAWSSecretKey()))
     new AmazonS3Client(awsCredentials)
   }
 
   @Singleton
   @Provides
-  def articleSearchResultStore(client: AmazonS3Client): ArticleSearchResultStore = 
+  def articleSearchResultStore(client: AmazonS3): ArticleSearchResultStore = 
     current.configuration.getString("amazon.s3.articleSearch.bucket") match {
       case None => new HashMap[ExternalId[ArticleSearchResultRef], ArticleSearchResult] with ArticleSearchResultStore
       case Some(bucketName) => new S3ArticleSearchResultStoreImpl(S3Bucket(bucketName), client)
@@ -69,7 +70,7 @@ case class DevModule() extends ScalaModule with Logging {
   
   @Singleton
   @Provides
-  def articleStore(client: AmazonS3Client): ArticleStore = 
+  def articleStore(client: AmazonS3): ArticleStore = 
     current.configuration.getString("amazon.s3.article.bucket") match {
       case None => new HashMap[Id[NormalizedURI], Article] with ArticleStore
       case Some(bucketName) => new S3ArticleStoreImpl(S3Bucket(bucketName), client)
@@ -78,7 +79,7 @@ case class DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def socialUserRawInfoStore(client: AmazonS3Client): SocialUserRawInfoStore = 
+  def socialUserRawInfoStore(client: AmazonS3): SocialUserRawInfoStore = 
     current.configuration.getString("amazon.s3.social.bucket") match {
       case None => new HashMap[Id[SocialUserInfo], SocialUserRawInfo] with SocialUserRawInfoStore
       case Some(bucketName) => new S3SocialUserRawInfoStoreImpl(S3Bucket(bucketName), client)
