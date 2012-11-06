@@ -23,9 +23,9 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
         "ShoeboxGlobal can only be run on a shoebox service")
     log.info("starting the shoebox")
     super.onStart(app)
-    inject[ScraperPlugin].scrape()
-    inject[ArticleIndexerPlugin].index()
-    inject[SocialGraphPlugin].fetchAll()
+    require(inject[ScraperPlugin].enabled)
+    require(inject[ArticleIndexerPlugin].enabled)
+    require(inject[SocialGraphPlugin].enabled)
     log.info("shoebox started")
   }
 
