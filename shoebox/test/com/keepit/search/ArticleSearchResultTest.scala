@@ -36,7 +36,9 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
               mayHaveMoreHits = true,
               scorings = Seq(new Scoring(.2F, .3F, .4F, .5F)),
               filter = Set(100L, 200L, 300L),
-              uuid = ExternalId[ArticleSearchResultRef]())
+              uuid = ExternalId[ArticleSearchResultRef](),
+              pageNumber = 3,
+              millisPassed = 23)
          val json = new ArticleSearchResultSerializer().writes(res)
          val deserialized = new ArticleSearchResultSerializer().reads(json)
          deserialized.uuid === res.uuid
@@ -58,7 +60,9 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
               mayHaveMoreHits = true,
               scorings = Seq(new Scoring(.2F, .3F, .4F, .5F)),
               filter = Set(100L, 200L, 300L),
-              uuid = ExternalId[ArticleSearchResultRef]())
+              uuid = ExternalId[ArticleSearchResultRef](),
+              pageNumber = 4,
+              millisPassed = 24)
          val model = CX.withConnection { implicit conn =>
            ArticleSearchResultRef(res).save
          }
@@ -69,6 +73,8 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
          loaded === model
          loaded.createdAt === res.time
          loaded.externalId === res.uuid
+         loaded.millisPassed === res.millisPassed
+         loaded.pageNumber === res.pageNumber
       }
     }
   }
