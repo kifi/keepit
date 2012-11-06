@@ -233,6 +233,22 @@
       });
     }
 
+    function removeKeep(bookmarks, request, sendResponse, tab) {
+      log("removing bookmark. " + request.externalId, tab);
+      sendResponse(created);
+
+      var xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4) {
+          log("removed bookmark. " + xhr.response);
+        }
+      }
+
+      xhr.open("POST", 'http://' + userConfig.server + '/bookmarks/remove/?externalId=' + userInfo["keepit_external_id"] + "&externalBookmarkId=" + request.externalId, true);
+      xhr.send();
+
+    }
+
     function searchOnServer(request, sendResponse, tab) {
 
       // Dummy results injection
