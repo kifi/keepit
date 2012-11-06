@@ -37,6 +37,17 @@ case class Comment(
 
 object Comment {
 
+  def apply(url: String, userId: Id[User], text: String, title: String, permissions: State[Comment.Permission])(implicit conn: Connection): Comment = {
+    val nuri = NormalizedURI.getByNormalizedUrl(url) match {
+      case Some(nuri) =>
+        nuri
+      case None =>
+        NormalizedURI(title, url)
+    }
+    Comment(normalizedURI = nuri.id.get, userId = userId, text = text, permissions = permissions)
+  }
+ 
+
   def all(implicit conn: Connection): Seq[Comment] =
     CommentEntity.all.map(_.view)
   
@@ -63,7 +74,7 @@ object Comment {
   def getByUrl(url: String)(implicit conn: Connection): Seq[Comment] = {
     NormalizedURI.getByNormalizedUrl(url) match {
       case Some(u) => 
-        getByNormalizedUri(u)
+        getByNormalizedUri(u.id.get)
       case None =>
         Seq[Comment]()
     }
