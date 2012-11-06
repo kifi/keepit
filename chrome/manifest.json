@@ -28,7 +28,7 @@
         "http://*/*",
         "https://*/*"
       ],
-      "js" : ["jquery-1.7.2.min.js", "jquery-ui-1.9.1.custom.js", "contentscript.js", "mustache.js", "hover.js"],
+      "js" : ["jquery-1.7.2.min.js", "jquery-ui-1.9.1.custom.min.js", "contentscript.js", "mustache.js", "hover.js"],
       "css": ["keepit.css", "hover.css", "social_window.css"],
       "run_at" : "document_end",
       "all_frames" : false
