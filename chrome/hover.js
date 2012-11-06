@@ -197,6 +197,9 @@ console.log("injecting keep it hover div");
     });
 
     // Binders
+
+    $(".kifi_hover").draggable({ cursor: "move", axis: "y", distance: 20, handle: "div.kifihdr" });
+
     $('.kificlose').click(function() {
       slideOut();
     });
