@@ -431,6 +431,42 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     }
   }
 
+  function socialTooltip(friend, element) {
+     // disabled for now
+    getTemplate("social_hover.html",{"friend": friend}, function(tmpl) {
+      var timeout;
+      var timein;
+
+      var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').html(tmpl);
+
+      var socialNetworks = chrome.extension.getURL("social-icons.png");
+      $(friendTooltip).find('.kn_social').css('background-image','url(' + socialNetworks + ')');
+
+      function hide() {
+          timeout = setTimeout(function () {
+              $(friendTooltip).fadeOut(100);
+          }, 600);
+          clearTimeout(timein);
+      };
+
+      function show() {
+        timein = setTimeout(function() {
+          $(friendTooltip).stop().fadeIn(100);
+        }, 500)
+      }
+
+      $(element).mouseover(function () {
+          clearTimeout(timeout);
+          show();
+      }).mouseout(hide);
+
+      $(friendTooltip).mouseover(function () {
+          clearTimeout(timeout);
+      }).mouseout(hide);
+
+    }); 
+  }
+
   function addActionToSocialBar(socialBar) {
     socialBar.append("<div class='social_bar_action'>Share It</div>");
   }

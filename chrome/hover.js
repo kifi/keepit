@@ -209,6 +209,7 @@ console.log("injecting keep it hover div");
         "is_kept": false
       });
 
+
       slideOut();
 
     });
