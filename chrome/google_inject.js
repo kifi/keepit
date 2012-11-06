@@ -369,11 +369,12 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
             results.push(formattedResult);
           });
-
+          
+          var adminMode = config["show_score"] === true;
 
           var tb = Mustache.to_html(
               req.responseText,
-              {"results": results, "userInfo": userInfo}
+              {"results": results, "userInfo": userInfo, "adminMode": adminMode}
           );
 
           // Binders
@@ -406,6 +407,15 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
                     updateQuery(0);
                   });*/
                 });
+                if(config["show_score"] === true) {
+                  $('#admin-mode').show().click(function() {
+                    $('#kifi_reslist').before('<div id="adminresults">' + resultsStore.lastRemoteResults.uuid + '<br><textarea>' + JSON.stringify(resultsStore.lastRemoteResults) + '</textarea></div>');
+                    $(this).click(function() {
+                      $("#adminresults").detach();
+                    });
+                    return false;
+                  });
+                }
               }
               setTimeout(function() { injectResults(--times) }, 30);
             }
