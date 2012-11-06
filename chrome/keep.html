@@ -289,7 +289,7 @@
       var lastUUID = typeof request.lastUUID === 'undefined' ? '' : request.lastUUID;
       var context = typeof request.context === 'undefined' ? '' : request.context;
       var userConfig = getConfigs();
-      xhr.open("GET", 'http://' + userConfig.server + '/search2?term=' + term + '&externalId=' + externalId + '&maxHits=' + userConfig["max_res"]*2 + '&lastUUI=' + lastUUID + '&context=' + context, true);
+      xhr.open("GET", 'http://' + userConfig.server + '/search?term=' + term + '&externalId=' + externalId + '&maxHits=' + userConfig["max_res"]*2 + '&lastUUI=' + lastUUID + '&context=' + context, true);
       xhr.send();
     }
 
