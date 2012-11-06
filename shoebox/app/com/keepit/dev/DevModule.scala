@@ -20,7 +20,7 @@ import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.PostOfficeImpl
 import com.keepit.common.net.HttpClient
 import com.keepit.common.net.HttpClientImpl
-import com.keepit.common.db.Id
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.inject._
 import com.keepit.scraper._
 import com.keepit.common.logging.Logging
@@ -53,38 +53,37 @@ case class DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def articleStore: ArticleStore = {
-    var conf = current.configuration.getConfig("amazon.s3").get
-    conf.getString("article.bucket") match {
-      case None => 
-        new HashMap[Id[NormalizedURI], Article] with ArticleStore
-      case Some(bucketName) =>
-        val bucket = S3Bucket(bucketName)
-        val awsCredentials = new BasicAWSCredentials(
-            conf.getString("accessKey").get, 
-            conf.getString("secretKey").get)
-        val client = new AmazonS3Client(awsCredentials)
-        new S3ArticleStoreImpl(bucket, client)
-    }
+  def amazonS3Client(): AmazonS3 = { 
+    val conf = current.configuration.getConfig("amazon.s3").get
+    val awsCredentials = new BasicAWSCredentials(conf.getString("accessKey").get, conf.getString("secretKey").get)
+    println("using awsCredentials: %s -> %s".format(awsCredentials.getAWSAccessKeyId(), awsCredentials.getAWSSecretKey()))
+    new AmazonS3Client(awsCredentials)
   }
+
+  @Singleton
+  @Provides
+  def articleSearchResultStore(client: AmazonS3): ArticleSearchResultStore = 
+    current.configuration.getString("amazon.s3.articleSearch.bucket") match {
+      case None => new HashMap[ExternalId[ArticleSearchResultRef], ArticleSearchResult] with ArticleSearchResultStore
+      case Some(bucketName) => new S3ArticleSearchResultStoreImpl(S3Bucket(bucketName), client)
+    }
+  
+  @Singleton
+  @Provides
+  def articleStore(client: AmazonS3): ArticleStore = 
+    current.configuration.getString("amazon.s3.article.bucket") match {
+      case None => new HashMap[Id[NormalizedURI], Article] with ArticleStore
+      case Some(bucketName) => new S3ArticleStoreImpl(S3Bucket(bucketName), client)
+    }
   
 
   @Singleton
   @Provides
-  def socialUserRawInfoStore: SocialUserRawInfoStore = {
-    var conf = current.configuration.getConfig("amazon.s3").get
-    conf.getString("social.bucket") match {
-      case None => 
-        new HashMap[Id[SocialUserInfo], SocialUserRawInfo] with SocialUserRawInfoStore
-      case Some(bucketName) =>
-        val bucket = S3Bucket(bucketName)
-        val awsCredentials = new BasicAWSCredentials(
-            conf.getString("accessKey").get, 
-            conf.getString("secretKey").get)
-        val client = new AmazonS3Client(awsCredentials)
-        new S3SocialUserRawInfoStoreImpl(bucket, client)
+  def socialUserRawInfoStore(client: AmazonS3): SocialUserRawInfoStore = 
+    current.configuration.getString("amazon.s3.social.bucket") match {
+      case None => new HashMap[Id[SocialUserInfo], SocialUserRawInfo] with SocialUserRawInfoStore
+      case Some(bucketName) => new S3SocialUserRawInfoStoreImpl(S3Bucket(bucketName), client)
     }
-  }
 
   @Singleton
   @Provides
