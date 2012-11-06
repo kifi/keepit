@@ -13,6 +13,7 @@ import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.impl.conn.PoolingClientConnectionManager
 import org.apache.http.params.HttpParams
 import org.apache.http.params.BasicHttpParams
+import org.apache.http.params.HttpConnectionParams
 import org.apache.http.protocol.HttpContext
 import org.apache.http.util.EntityUtils
 import java.io.InputStream
@@ -24,6 +25,8 @@ class HttpFetcher extends Logging {
   cm.setMaxTotal(100);
   
   val httpParams = new BasicHttpParams
+  HttpConnectionParams.setConnectionTimeout(httpParams, 30000);
+  HttpConnectionParams.setSoTimeout(httpParams, 30000);
   val httpclient = new DefaultHttpClient(cm, httpParams)
   
   // add interceptors
