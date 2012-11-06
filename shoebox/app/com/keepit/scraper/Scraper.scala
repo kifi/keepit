@@ -9,26 +9,40 @@ import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.db.CX
 import edu.uci.ics.crawler4j.crawler.{CrawlConfig, Page }
 import edu.uci.ics.crawler4j.fetcher.{CustomFetchStatus, PageFetcher, PageFetchResult}
-import edu.uci.ics.crawler4j.parser.{HtmlParseData, Parser}
+import edu.uci.ics.crawler4j.parser.{HtmlParseData, Parser => C4JParser}
 import edu.uci.ics.crawler4j.url.WebURL
 import org.apache.http.HttpStatus
+import org.apache.tika.detect.DefaultDetector
+import org.apache.tika.metadata.Metadata
+import org.apache.tika.parser.html.BoilerpipeContentHandler
+import org.apache.tika.parser.AutoDetectParser
+import org.apache.tika.parser.ParseContext
+import org.apache.tika.parser.Parser
+import org.apache.tika.sax.ContentHandlerDecorator
+import org.apache.tika.sax.WriteOutContentHandler
+import org.xml.sax.Attributes
+import org.xml.sax.ContentHandler
+import org.xml.sax.SAXException
 import com.google.inject.Inject
 import play.api.Play.current
 import org.joda.time.Seconds
 
 object Scraper {
-  val BATCH_SIZE = 10
+  val BATCH_SIZE = 100
 }
 
 class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
-  val config = {
-    val conf = new CrawlConfig()
-    conf.setIncludeHttpsPages(true)
-    conf
-  }
   
+  val httpFetcher = new HttpFetcher
+  val maxContentChars = 100000 // 100K chars
+  
+  val config = {
+      val conf = new CrawlConfig()
+      conf.setIncludeHttpsPages(true)
+      conf
+  }
   val pageFetcher = new PageFetcher(config)
-  val parser = new Parser(config);
+  val parser = new C4JParser(config);
   
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
@@ -90,7 +104,60 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
     }
   }
   
+  private def getContentHandler(url: String, output: ContentHandler): ContentHandler = {
+    new BoilerSafeContentHandler(new BoilerpipeContentHandler(output))
+  }
+  
   def fetchArticle(normalizedUri: NormalizedURI): Either[Article, ScraperError] = {
+    fetchArticle(normalizedUri, httpFetcher)
+  }
+  
+  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher): Either[Article, ScraperError] = {
+    var url = normalizedUri.url
+    val output = new WriteOutContentHandler(maxContentChars)
+    val contentHandler = getContentHandler(url, output)
+    val metadata = new Metadata()
+    
+    val context = new ParseContext();
+    val detector = new DefaultDetector();
+    val parser = new AutoDetectParser(detector);
+    context.set(classOf[Parser], parser);
+    
+    try {
+      val fetchStatus = httpFetcher.fetch(url){ input =>
+        try {
+          parser.parse(input, contentHandler, metadata, context)
+        } catch {
+          case e =>
+            // check if we hit our content size limit (maxContentChars)
+            if (output.isWriteLimitReached(e))
+              log.warn("max number of characters reached: " + url)
+            else
+              throw e
+        }
+      }
+      
+      fetchStatus.statusCode match {
+        case HttpStatus.SC_OK =>
+          val title = Option(metadata.get("title")).getOrElse("")
+          val content = output.toString
+          Left(Article(id = normalizedUri.id.get,
+                       title = title,
+                       content = content,
+                       scrapedAt = currentDateTime,
+                       httpContentType = Option(metadata.get("Content-Type")),
+                       httpOriginalContentCharset = Option(metadata.get("Content-Encoding")),
+                       state = SCRAPED,
+                       message = None))
+        case _ =>
+          Right(ScraperError(normalizedUri, fetchStatus.statusCode, fetchStatus.message.getOrElse("fetch failed")))
+      }
+    } catch {
+      case e => Right(ScraperError(normalizedUri, -1, "fetch failed: %s".format(e.toString)))
+    }
+  }
+  
+  private def fetchArticle(normalizedUri: NormalizedURI, pageFetcher: PageFetcher): Either[Article, ScraperError] = {
     var fetchResult: Option[PageFetchResult] = None
     val webURL = new WebURL
     var scrapeUrl = normalizedUri.url
@@ -141,6 +208,37 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
       }
     } finally {
       fetchResult.foreach(_.discardContentIfNotConsumed())
+    }
+  }
+  
+  def close() {
+    httpFetcher.close()
+  }
+}
+
+
+// To prevent Boilerpipe blowing up we need this
+class BoilerSafeContentHandler(handler: ContentHandler) extends ContentHandlerDecorator(handler) {
+  
+  var inAnchor = false
+  
+  override def startElement(uri: String, localName: String, qName: String, atts: Attributes) {
+    localName.toLowerCase() match {
+      case "a" => //nested anchor tags blow up Boilerpipe. so we close it if one is already open
+        if (inAnchor) endElement(uri, localName, qName)
+        super.startElement(uri, localName, qName, atts)
+        inAnchor = true
+      case _ => super.startElement(uri, localName, qName, atts)
+    }
+  }
+  
+  override def endElement(uri: String, localName: String, qName: String) {
+    localName.toLowerCase() match {
+      case "a" => if (inAnchor) {
+        super.endElement(uri, localName, qName)
+        inAnchor = false
+      }
+      case _ => super.endElement(uri, localName, qName)
     }
   }
 }

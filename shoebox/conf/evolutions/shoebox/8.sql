@@ -5,15 +5,12 @@ CREATE TABLE article_search_result (
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
     external_id varchar(36) NOT NULL,
-    user_id bigint(20) NOT NULL,
     state varchar(20) NOT NULL,
     
     PRIMARY KEY (id),
     
     UNIQUE INDEX(external_id),
-    INDEX article_search_result_i_created_at(created_at),
-    
-    CONSTRAINT article_search_result_f_user FOREIGN KEY (user_id) REFERENCES user(id) 
+    INDEX article_search_result_i_created_at(created_at) 
 );
 
 insert into evolutions (name, description) values('8.sql', 'adding ArticleSearchResult table');
