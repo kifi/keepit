@@ -28,7 +28,7 @@ import play.api.Play.current
 import org.joda.time.Seconds
 
 object Scraper {
-  val BATCH_SIZE = 10
+  val BATCH_SIZE = 100
 }
 
 class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
