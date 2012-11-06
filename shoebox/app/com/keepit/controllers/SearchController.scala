@@ -53,32 +53,10 @@ case class PersonalSearchResultPacket(
 
 object SearchController extends Controller with Logging {
  
-  def search(escapedTerm: String, externalId: ExternalId[User]) = Action { request =>
-    val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
-    log.info("searching with %s using externalId id %s".format(term, externalId))
-    val (userId, friendIds) = CX.withConnection { implicit conn =>
-      val userId = User.getOpt(externalId).getOrElse(
-          throw new Exception("externalId %s not found for term %s".format(externalId, term))).id.get
-      (userId, SocialConnection.getFortyTwoUserConnections(userId))
-    }
-    
-    // TODO turn these into a parameter
-    val filterOut = Set.empty[Long]
-    val numHitsToReturn = 6
-    val config = SearchConfig.getDefaultConfig 
-    
-    val articleIndexer = inject[ArticleIndexer]
-    val uriGraph = inject[URIGraph]
-    val searcher = new MainSearcher(userId, friendIds, filterOut, articleIndexer, uriGraph, config)
-    val searchRes = searcher.search(term, numHitsToReturn, None) // the last param should be the uuid of the last search
-    val res = CX.withConnection { implicit conn =>
-      searchRes.hits map toPersonalSearchResult
-    }
-    log.info(res mkString "\n")
-    Ok(BPSRS.resSerializer.writes(res)).as(ContentTypes.JSON)
-  }
+  // Remove after a few days from Nov 6 (and from routes)
+  def search2(escapedTerm: String, externalId: ExternalId[User], maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = search(escapedTerm, externalId, maxHits, lastUUIDStr, context)
   
-  def search2(escapedTerm: String, externalId: ExternalId[User], maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = Action { request =>
+  def search(escapedTerm: String, externalId: ExternalId[User], maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = Action { request =>
     val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
     val lastUUID = lastUUIDStr.flatMap{
         case "" => None
