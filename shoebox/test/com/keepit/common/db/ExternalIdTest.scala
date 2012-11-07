@@ -16,18 +16,13 @@ class ExternalIdTest extends SpecificationWithJUnit {
   "ExternalId" should {
     "be created" in {
       val id = ExternalId()
-      id.id === id.uuid
+      id.id.length() === "f1e227e4-4b1b-4bfd-91e2-85acf464a148".length()
     }
     
     "be created with uuid" in {
-      val id = ExternalId(UUID.randomUUID.toString)
-      id.id === id.uuid
-    }
-    
-    "be created with uuid and path" in {
       val uuid = UUID.randomUUID.toString
-      val id = ExternalId("foo/bar/" + uuid)
-      uuid === id.uuid
+      val id = ExternalId(uuid)
+      id.id === uuid
     }
     
     "fail with no uuid" in {

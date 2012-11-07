@@ -22,7 +22,7 @@ POST    /bookmarks/private          com.keepit.controllers.BookmarksController.u
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String, externalId: ExternalId[User])
 
 GET     /search2                    com.keepit.controllers.SearchController.search2(term: String, externalId: ExternalId[User], maxHits:Int, lastUUID: Option[String], context: Option[String])
-GET     /search                    com.keepit.controllers.SearchController.search(term: String, externalId: ExternalId[User], maxHits:Int, lastUUID: Option[String], context: Option[String])
+GET     /search                     com.keepit.controllers.SearchController.search(term: String, externalId: ExternalId[User], maxHits:Int, lastUUID: Option[String], context: Option[String])
 
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
 GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
@@ -53,6 +53,7 @@ GET     /admin/social_user/refresh  com.keepit.controllers.SocialUserController.
 GET     /admin/social_user/refresh_all com.keepit.controllers.UserController.refreshAllSocialInfo(userId: Id[User])
 GET     /admin/social_user/reset    com.keepit.controllers.SocialUserController.resetSocialUser(socialUserId: Id[SocialUserInfo])
 GET     /admin/server               com.keepit.common.healthcheck.HealthController.serviceView()
+GET     /admin/search/results/:id   com.keepit.controllers.SearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
 
 
 ##########################################
