@@ -109,12 +109,14 @@ object SearchController extends Controller with Logging with SecureSocial {
     PersonalSearchResult(uri, res.bookmarkCount, res.isMyBookmark, false, users, res.score)
   }
   
+  case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring)
+  
   def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = SecuredAction(false) { implicit request =>
     val ref = CX.withConnection { implicit conn =>
       ArticleSearchResultRef.getOpt(id).get
     }
     val result = inject[ArticleSearchResultStore].get(ref.externalId).get
-    val meta: Seq[(NormalizedURI, Seq[User], Scoring)] = CX.withConnection { implicit conn =>
+    val metas: Seq[ArticleSearchResultHitMeta] = CX.withConnection { implicit conn =>
       result.hits.zip(result.scorings) map { tuple =>
         val hit = tuple._1
         val scoring = tuple._2
@@ -122,10 +124,10 @@ object SearchController extends Controller with Logging with SecureSocial {
         val users = hit.users.map { userId =>
           User.get(userId)
         }
-        (uri, users.toSeq, scoring)
+        ArticleSearchResultHitMeta(uri, users.toSeq, scoring)
       }
     }
-    Ok(views.html.articleSearchResult(result))
+    Ok(views.html.articleSearchResult(result, metas))
   }
   
 }

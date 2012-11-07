@@ -1,4 +1,4 @@
-@(result: com.keepit.search.ArticleSearchResult)
+@(result: ArticleSearchResult, metas: Seq[com.keepit.controllers.SearchController.ArticleSearchResultHitMeta])
 
 @admin("Article Search Result: " + result.uuid) {
    <table class="table table-bordered">
