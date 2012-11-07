@@ -1,6 +1,13 @@
 @(result: ArticleSearchResult, metas: Seq[com.keepit.controllers.SearchController.ArticleSearchResultHitMeta])
 
 @admin("Article Search Result: " + result.uuid) {
+
+		<div class="alert">
+		  <h4>Privacy Notice!</h4> 
+		   We don't know who did that search. We don't store this information for privacy reasons!
+		   If you wish to share this page you may want to share the user its related to.
+		</div>
+
    <table class="table table-bordered">
       <tr>
         <th>Query</th><td>@result.query</td>
@@ -26,6 +33,37 @@
       <tr>
         <th>Creation time</th><td>@adminHelper.dateDisplay(result.time) - @adminHelper.timeDisplay(result.time)</td>
       </tr>
+   </table>
+ 
+   <table class="table table-bordered">
+     <tr>
+       <th>URI</th>
+       <th>Score</th>
+       <th>Friends</th>
+       <th>Hit Score</th>
+       <th>Text Score / Boosted</th>
+       <th>Normalized Text Score</th>
+       <th>Bookmark Text Score / Boosted</th>
+       <th>Recency Score / Boosted</th>
+       <th>My bookmark</th>
+       <th>Private</th>
+       <th>Count</th>
+     </tr>
+     @for(meta <- metas) {
+      <tr>
+        <td><a href="@meta.uri.url">@{if(meta.uri.title.length > 50) meta.uri.title.substring(0, 50) else meta.uri.title }</a></td>
+        <td>@meta.hit.score</td>
+        <td>@meta.users.size</td>
+        <td>@{meta.hit.score}</td>
+        <td>@{meta.scoring.textScore} / @{meta.scoring.boostedTextScore}</td>
+        <td>@{meta.scoring.normalizedTextScore}</td>
+        <td>@{meta.scoring.bookmarkScore} / @{meta.scoring.boostedBookmarkScore}</td>
+        <td>@{meta.scoring.recencyScore} / @{meta.scoring.boostedRecencyScore}</td>
+        <td>@{meta.hit.isMyBookmark}</td>
+        <td>@{meta.hit.isPrivate}</td>
+        <td>@{meta.hit.bookmarkCount}</td>
+      </tr>
+     }
    </table>
 
  
