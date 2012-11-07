@@ -237,3 +237,10 @@ li.keepit {
   position: relative;
   margin-right: 5px;
 }
+
+#admin-mode {
+  display: none;
+  position: relative;
+  float: left;
+  padding-left: 10px;
+}
