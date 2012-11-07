@@ -25,7 +25,7 @@ CREATE TABLE comment_recipient (
     comment_id bigint(20),
     user_id bigint(20),
     social_user_id bigint(20),
-    email varchar(512) NOT NULL,
+    email varchar(512),
     state varchar(20) NOT NULL,
     
     PRIMARY KEY (id),
