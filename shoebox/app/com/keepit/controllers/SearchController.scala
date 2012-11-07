@@ -109,7 +109,7 @@ object SearchController extends Controller with Logging with SecureSocial {
     PersonalSearchResult(uri, res.bookmarkCount, res.isMyBookmark, false, users, res.score)
   }
   
-  case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring)
+  case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
   
   def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = SecuredAction(false) { implicit request =>
     val ref = CX.withConnection { implicit conn =>
@@ -124,7 +124,7 @@ object SearchController extends Controller with Logging with SecureSocial {
         val users = hit.users.map { userId =>
           User.get(userId)
         }
-        ArticleSearchResultHitMeta(uri, users.toSeq, scoring)
+        ArticleSearchResultHitMeta(uri, users.toSeq, scoring, hit)
       }
     }
     Ok(views.html.articleSearchResult(result, metas))

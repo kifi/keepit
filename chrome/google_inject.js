@@ -409,7 +409,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
                 });
                 if(config["show_score"] === true) {
                   $('#admin-mode').show().click(function() {
-                    $('#kifi_reslist').before('<div id="adminresults">' + resultsStore.lastRemoteResults.uuid + '<br><textarea>' + JSON.stringify(resultsStore.lastRemoteResults) + '</textarea></div>');
+                    $('#kifi_reslist').before('<div id="adminresults"><a href="http://' + config.server + '/admin/search/results/' + resultsStore.lastRemoteResults.uuid + '" target="_blank">Search result info<br/><br/></div>');
                     $(this).click(function() {
                       $("#adminresults").detach();
                     });
