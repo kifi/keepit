@@ -61,7 +61,8 @@ object ApplicationBuild extends Build {
       routesImport ++= Seq(
         "com.keepit.common.db.{ExternalId, Id, State}",
         "com.keepit.model._",
-        "com.keepit.common.social._"
+        "com.keepit.common.social._",
+        "com.keepit.search._"
       ),
 
       resolvers ++= Seq(
@@ -75,7 +76,8 @@ object ApplicationBuild extends Build {
       templatesImport ++= Seq(
         "com.keepit.common.db.{ExternalId, Id, State}",
         "com.keepit.model._",
-        "com.keepit.common.social._"
+        "com.keepit.common.social._",
+        "com.keepit.search._"
       ),
       
       libraryDependencies ++= Seq(

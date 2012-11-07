@@ -1,0 +1,32 @@
+@(result: ArticleSearchResult, metas: Seq[com.keepit.controllers.SearchController.ArticleSearchResultHitMeta])
+
+@admin("Article Search Result: " + result.uuid) {
+   <table class="table table-bordered">
+      <tr>
+        <th>Query</th><td>@result.query</td>
+      </tr>
+      <tr>
+        <th>Hit Count</th><td>@result.hits.size</td>
+      </tr>
+      <tr>
+        <th>My Links</th><td>@result.myTotal</td>
+      </tr>
+      <tr>
+        <th>Friends Links</th><td>@result.friendsTotal</td>
+      </tr>
+      <tr>
+        <th>Got More</th><td>@result.mayHaveMoreHits</td>
+      </tr>
+      <tr>
+        <th>Processing Time</th><td>@result.millisPassed Millis</td>
+      </tr>
+      <tr>
+        <th>Page Number</th><td>@{result.pageNumber + 1}</td>
+      </tr>
+      <tr>
+        <th>Creation time</th><td>@adminHelper.dateDisplay(result.time) - @adminHelper.timeDisplay(result.time)</td>
+      </tr>
+   </table>
+
+ 
+}
