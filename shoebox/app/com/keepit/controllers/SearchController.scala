@@ -32,15 +32,10 @@ import play.api.libs.json.JsString
 import com.keepit.common.logging.Logging
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.Hit
+import com.keepit.search.graph._
+import com.keepit.search._
 import com.keepit.common.social.UserWithSocial
-import com.keepit.search.MainSearcher
-import com.keepit.search.SearchConfig
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.ArticleHit
-import com.keepit.search.ArticleSearchResult
-import com.keepit.search.ArticleSearchResultRef
 import org.apache.commons.lang3.StringEscapeUtils
-import com.keepit.search.IdFilterCompressor
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.search.ArticleSearchResultStore
 import securesocial.core._
@@ -119,6 +114,17 @@ object SearchController extends Controller with Logging with SecureSocial {
       ArticleSearchResultRef.getOpt(id).get
     }
     val result = inject[ArticleSearchResultStore].get(ref.externalId).get
+    val meta: Seq[(NormalizedURI, Seq[User], Scoring)] = CX.withConnection { implicit conn =>
+      result.hits.zip(result.scorings) map { tuple =>
+        val hit = tuple._1
+        val scoring = tuple._2
+        val uri = NormalizedURI.get(hit.uriId)
+        val users = hit.users.map { userId =>
+          User.get(userId)
+        }
+        (uri, users.toSeq, scoring)
+      }
+    }
     Ok(views.html.articleSearchResult(result))
   }
   
