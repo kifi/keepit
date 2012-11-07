@@ -18,13 +18,13 @@ import play.api.http.ContentTypes
 import com.keepit.controllers.CommonActions._
 import com.keepit.common.db.CX
 import com.keepit.common.db._
+import com.keepit.common.db.ExternalId
 import com.keepit.common.async._
 import com.keepit.model._
 import com.keepit.inject._
 import com.keepit.serializer.BookmarkSerializer
 import com.keepit.serializer.{URIPersonalSearchResultSerializer => BPSRS}
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
-import com.keepit.common.db.ExternalId
 import java.util.concurrent.TimeUnit
 import java.sql.Connection
 import play.api.http.ContentTypes
@@ -43,6 +43,7 @@ import org.apache.commons.lang3.StringEscapeUtils
 import com.keepit.search.IdFilterCompressor
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.search.ArticleSearchResultStore
+import securesocial.core._
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchResult(uri: NormalizedURI, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[UserWithSocial], score: Float)
@@ -54,7 +55,7 @@ case class PersonalSearchResultPacket(
   mayHaveMoreHits: Boolean,
   context: String)
 
-object SearchController extends Controller with Logging {
+object SearchController extends Controller with Logging with SecureSocial {
  
   // Remove after a few days from Nov 6 (and from routes)
   def search2(escapedTerm: String, externalId: ExternalId[User], maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = search(escapedTerm, externalId, maxHits, lastUUIDStr, context)
@@ -111,6 +112,14 @@ object SearchController extends Controller with Logging {
       UserWithSocial(user, info, Bookmark.count(user))
     }
     PersonalSearchResult(uri, res.bookmarkCount, res.isMyBookmark, false, users, res.score)
+  }
+  
+  def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = SecuredAction(false) { implicit request =>
+    val ref = CX.withConnection { implicit conn =>
+      ArticleSearchResultRef.getOpt(id).get
+    }
+    val result = inject[ArticleSearchResultStore].get(ref.externalId).get
+    Ok(views.html.articleSearchResult(result))
   }
   
 }

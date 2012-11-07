@@ -1,7 +1,7 @@
 # --- !Ups
 
 alter TABLE article_search_result
-    add column last varchar(36) NOT NULL;
+    add column last varchar(36);
     
 alter TABLE article_search_result
     add column my_total INTEGER NOT NULL;
