@@ -20,7 +20,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   val maxTextHitsPerCategory = config.asInt("maxTextHitsPerCategory")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   val sharingBoost = config.asFloat("sharingBoost")
-  val percentMatch = config.asDouble("percentMatch")
+  val percentMatch = config.asFloat("percentMatch")
   val recencyBoost = config.asFloat("recencyBoost")
   val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
   val tailCutting = config.asFloat("tailCutting")
@@ -36,16 +36,25 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
   val friendlyUris = friendIds.foldLeft(myUris){ (s, f) => s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet }
   
-  def searchText(queryString: String, maxTextHitsPerCategory: Int) = {
+  def searchBookmarkTitle(queryString: String) = {
+    val bookmarkTitleSearchParser = uriGraph.getQueryParser
+    bookmarkTitleSearchParser.setPercentMatch(percentMatch)
+    bookmarkTitleSearchParser.parseQuery(queryString).map{ bookmarkQuery =>
+      uriGraphSearcher.search(userId, bookmarkQuery, percentMatch)
+    }.getOrElse(Map.empty[Long, Float])
+  }
   
+  def searchText(queryString: String, maxTextHitsPerCategory: Int) = {
+    var bookmarkTitleHits = searchBookmarkTitle(queryString)
+    
     val mapper = articleSearcher.idMapper
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
     
-    val parser = articleIndexer.getQueryParser
-    parser.setPercentMatch(percentMatch)
-    parser.parseQuery(queryString).map{ articleQuery =>
+    val articleParser = articleIndexer.getQueryParser
+    articleParser.setPercentMatch(percentMatch)
+    articleParser.parseQuery(queryString).map{ articleQuery =>
       articleSearcher.doSearch(articleQuery){ scorer =>
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
@@ -54,7 +63,10 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
             val score = scorer.score()
             if (friendlyUris.contains(id)) {
               if (myUris.contains(id)) {
-                myHits.insert(id, score, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
+                // blend with personal bookmark title score
+                val blendedScore = score + bookmarkTitleHits.getOrElse(id, 0.0f)
+                bookmarkTitleHits -= id
+                myHits.insert(id, blendedScore, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
               } else {
                 friendsHits.insert(id, score, false, false, NO_FRIEND_IDS, 0)
               }
@@ -65,6 +77,9 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
           doc = scorer.nextDoc()
         }
       }
+    }
+    bookmarkTitleHits.foreach{ case (id, score) =>
+      myHits.insert(id, score, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
     }
     (myHits, friendsHits, othersHits)
   }

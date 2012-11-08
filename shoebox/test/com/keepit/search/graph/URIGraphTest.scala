@@ -17,6 +17,7 @@ import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import org.apache.lucene.store.RAMDirectory
+import org.apache.lucene.search.TermQuery
 
 @RunWith(classOf[JUnitRunner])
 class URIGraphTest extends SpecificationWithJUnit {
@@ -184,6 +185,38 @@ class URIGraphTest extends SpecificationWithJUnit {
           val userToUserEdgeSet = new UserToUserEdgeSet(Id[User](10000), users.map(_.id.get).toSet)
           searcher.intersect(userToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
         }
+      }
+    }
+    
+    "search personal bookmark titles" in {
+      running(new EmptyApplication()) {
+        val (users, uris) = setupDB
+        val store = setupArticleStore(uris)
+        
+        CX.withConnection { implicit c =>
+          uris.foreach{ uri =>
+            val uriId =  uri.id.get
+            Bookmark(title = ("personaltitle bmt"+uriId), url = uri.url,  uriId = uriId, userId = users((uriId.id % 2L).toInt).id.get, source = BookmarkSource("test")).save
+          }
+        }
+        
+        val graphDir = new RAMDirectory
+        val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
+        graph.load() === users.size
+        
+        val searcher = graph.getURIGraphSearcher()
+        val personaltitle = new TermQuery(URIGraph.titleTerm.createTerm("personaltitle"))
+        val bmt1 = new TermQuery(URIGraph.titleTerm.createTerm("bmt1"))
+        val bmt2 = new TermQuery(URIGraph.titleTerm.createTerm("bmt2"))
+        
+        searcher.search(users(0).id.get, personaltitle, 0.0f).keySet === Set(2L, 4L, 6L)
+        searcher.search(users(1).id.get, personaltitle, 0.0f).keySet === Set(1L, 3L, 5L)
+        
+        searcher.search(users(0).id.get, bmt1, 0.0f).keySet === Set.empty[Long]
+        searcher.search(users(1).id.get, bmt1, 0.0f).keySet === Set(1L)
+        
+        searcher.search(users(0).id.get, bmt2, 0.0f).keySet === Set(2L)
+        searcher.search(users(1).id.get, bmt2, 0.0f).keySet === Set.empty[Long]
       }
     }
   }
