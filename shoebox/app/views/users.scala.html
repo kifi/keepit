@@ -22,6 +22,13 @@
   }
   </table>
 
-  <h3>All user's emails:</h3>
-  <a href='mailto:@{userWithSocials.map(_.emails.map(_.address)).flatten.mkString(",")}'>@{userWithSocials.map(_.emails.map(_.address)).flatten.mkString(",")}</a>
+  <h3>
+    User's emails
+  </h3>
+  <a href='mailto:@{userWithSocials.map(_.emails.map(_.address)).flatten.mkString(",")}'>All Mails</a>
+  <ol>
+    @for(emailString <- userWithSocials.map(_.emails.map(_.address)).flatten.toSeq) { 
+      <li><a href='mailto:@emailString'>@emailString</a></li>
+    }
+  </ol>
 }
