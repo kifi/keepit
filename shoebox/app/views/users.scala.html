@@ -8,6 +8,7 @@
       <th>User</th>
       <th># of bookmarks</th>
       <th>Date joined</th>
+      <th>Emails</th>
     </tr>
   @for((userWithSocial, i) <- userWithSocials.zipWithIndex) {
     <tr>
@@ -16,7 +17,18 @@
       <td>@adminHelper.userDisplay(userWithSocial)</td>
       <td>@userWithSocial.bookmarksCount</td>
       <td>@adminHelper.dateDisplay(userWithSocial.user.createdAt)</td>
+      <td><a href='mailto:@{userWithSocial.emails.map(_.address).mkString(",")}'>@{userWithSocial.emails.map(_.address).mkString(",")}</a></td>
     </tr>
   }
   </table>
+
+  <h3>
+    User's emails
+  </h3>
+  <a href='mailto:@{userWithSocials.map(_.emails.map(_.address)).flatten.mkString(",")}'>All Mails</a>
+  <ol>
+    @for(emailString <- userWithSocials.map(_.emails.map(_.address)).flatten.toSeq) { 
+      <li><a href='mailto:@emailString'>@emailString</a></li>
+    }
+  </ol>
 }

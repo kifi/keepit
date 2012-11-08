@@ -55,9 +55,10 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
         }
         val store = inject[SocialUserRawInfoStore]
         store += (socialUserInfo.id.get -> rawInfo)
-        inject[SocialUserImportFriends].importFriends(rawInfo.jsons)
         
+        inject[SocialUserImportFriends].importFriends(rawInfo.jsons)
         inject[SocialUserCreateConnections].createConnections(socialUserInfo, rawInfo.jsons)
+        inject[SocialUserImportEmail].importEmail(socialUserInfo.userId.get, rawInfo.jsons)
       }
       catch {
         case ex => 

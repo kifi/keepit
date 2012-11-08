@@ -106,23 +106,26 @@ console.log("injecting keep it hover div");
   }
 
   function socialTooltip(friend, element) {
-    /* // disabled for now
-    getTemplate("social_friend.html",{}, function(tmpl) {
+     // disabled for now
+    getTemplate("social_hover.html",{"friend": friend}, function(tmpl) {
       var timeout;
       var timein;
 
-      var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').html(tmpl);;
+      var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').html(tmpl);
+
+      var socialNetworks = chrome.extension.getURL("social-icons.png");
+      $(friendTooltip).find('.kn_social').css('background-image','url(' + socialNetworks + ')');
 
       function hide() {
           timeout = setTimeout(function () {
-              $(friendTooltip).hide();
-          }, 500);
+              $(friendTooltip).fadeOut(100);
+          }, 600);
           clearTimeout(timein);
       };
 
       function show() {
         timein = setTimeout(function() {
-          $(friendTooltip).stop().show();
+          $(friendTooltip).stop().fadeIn(100);
         }, 500)
       }
 
@@ -135,7 +138,7 @@ console.log("injecting keep it hover div");
           clearTimeout(timeout);
       }).mouseout(hide);
 
-    }); */
+    }); 
   }
 
 
@@ -145,8 +148,9 @@ console.log("injecting keep it hover div");
     var arrow = chrome.extension.getURL('arrow.png');
     var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
     var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
+    var userExternalId = user.keepit_external_id;
 
-    $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href),
+    $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
       null,
       function(friends) {
 
@@ -193,6 +197,9 @@ console.log("injecting keep it hover div");
     });
 
     // Binders
+
+    $(".kifi_hover").draggable({ cursor: "move", axis: "y", distance: 20, handle: "div.kifihdr", containment: "body", scroll: false});
+
     $('.kificlose').click(function() {
       slideOut();
     });
@@ -204,6 +211,7 @@ console.log("injecting keep it hover div");
         "type": "set_page_icon",
         "is_kept": false
       });
+
 
       slideOut();
 

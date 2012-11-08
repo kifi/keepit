@@ -1,15 +1,20 @@
 {
-  "name": "Keep It",
+  "name": "Kifi",
   "version": "1.0",
-  "manifest_version": 1,
-  "description": "The Keep It Plugin",
+  "manifest_version": 2,
+  "description": "Keep it, Find it!",
+  "icons" : {
+    "256" : "kifi.png"
+  },
   "options_page": "options.html",
   "page_action": {
     "default_icon": "keepit.png", // optional
-    "default_title": "Keep It!"//,    // optional; shown in tooltip
+    "default_title": "Kifi"//,    // optional; shown in tooltip
     //"default_popup": "keep.html"    // optional
   },  
-  "background_page" : "keep.html",
+  "background" : {
+    "page": "keep.html"
+  },
   "content_scripts" : [
     {
       "matches" : [
@@ -28,7 +33,7 @@
         "http://*/*",
         "https://*/*"
       ],
-      "js" : ["jquery-1.7.2.min.js", "contentscript.js", "mustache.js", "hover.js"],
+      "js" : ["jquery-1.7.2.min.js", "jquery-ui-1.9.1.custom.min.js", "contentscript.js", "mustache.js", "hover.js"],
       "css": ["keepit.css", "hover.css", "social_window.css"],
       "run_at" : "document_end",
       "all_frames" : false
@@ -44,8 +49,39 @@
     "http://www.netwallet.com/",
     "unlimitedStorage"
   ],
-  "icons" : {
-    "48" : "keep_48.png",
-    "128" : "keep_128.png"
-  }
+  "web_accessible_resources": [
+    "arrow.png",
+    "bookmarks.js",
+    "contentscript.js",
+    "downarrow_hover.png",
+    "downarrow.png",
+    "google_inject.html",
+    "hover.css",
+    "hover.js",
+    "jquery-1.7.2.min.js",
+    "jquery-ui-1.9.1.custom.min.js",
+    "keep.html",
+    "keepit.css",
+    "keepit.png",
+    "kept_hover.html",
+    "kept.png",
+    "kifi.png",
+    "kifilogo.png",
+    "magicQueries.json",
+    "mustache.js",
+    "options.html",
+    "social_hover.html",
+    "social_window.css",
+    "social_window.html",
+    "social_window.js",
+    "social-icons.png",
+    "uparrow_hover.png",
+    "uparrow.png",
+    "URI.js",
+    "icons/dropbox.png",
+    "icons/facebook.png",
+    "icons/gdocs.gif",
+    "icons/gdrive.png",
+    "icons/gmail.png"
+  ] 
 }

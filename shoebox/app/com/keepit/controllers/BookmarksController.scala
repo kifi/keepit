@@ -103,7 +103,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   }
     
   def bookmarksView(page: Int = 0) = SecuredAction(false) { request =>
-    val pageSize = 100
+    val pageSize = 200
     val (count, bookmarksAndUsers) = CX.withConnection { implicit conn =>
       val bookmarks = Bookmark.page(page, pageSize)
       val users = bookmarks map (_.userId) map User.get map UserWithSocial.toUserWithSocial
@@ -132,6 +132,26 @@ object BookmarksController extends Controller with Logging with SecureSocial {
       ) getOrElse(false)
     
     Ok(JsObject(("user_has_bookmark" -> JsBoolean(userHasBookmark)) :: Nil))
+  }
+
+  def removeBookmark(externalId: ExternalId[User], externalBookmarkId: ExternalId[Bookmark]) = JsonAction { request =>
+    val (user,bookmark) = CX.withConnection{ implicit conn =>
+      val user = User.getOpt(externalId).getOrElse(throw new Exception("user externalId %s not found".format(externalId)))
+      val bookmark = Bookmark.getOpt(externalBookmarkId).getOrElse(
+                throw new Exception("bookmark externalId %s not found".format(externalId))).withActive(false).save
+      (user, bookmark)
+    }
+    inject[URIGraphPlugin].update(user.id.get)
+    
+    Ok(JsObject(("status" -> JsString("success")) :: Nil))
+  }
+  
+  def updatePrivacy(externalId: ExternalId[Bookmark], isPrivate: Boolean) = JsonAction { request =>
+    val bookmark = CX.withConnection{ implicit conn =>
+      Bookmark.getOpt(externalId).getOrElse(
+                throw new Exception("externalId %s not found".format(externalId))).withPrivate(isPrivate).save
+    }
+    Ok(JsObject(("status" -> JsString("success")) :: ("isPrivate" -> JsBoolean(isPrivate))  :: Nil))
   }
   
   def addBookmarks() = JsonAction { request =>
