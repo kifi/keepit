@@ -32,8 +32,7 @@ class SocialUserImportEmailTest extends SpecificationWithJUnit {
     "import email" in {
       running(new EmptyApplication().withFakeStore) {
         val graphs = List(
-            ("facebook_graph_andrew.json", "fb@andrew.com"),
-            ("facebook_graph_eishay.json", "eishay@gmail.com")
+            ("facebook_graph_andrew.json", "fb@andrewconner.org")
         )
         graphs map { case (filename, email) => testSocialUserImportEmail(filename, email) }
         
@@ -46,7 +45,8 @@ class SocialUserImportEmailTest extends SpecificationWithJUnit {
       User(firstName = "Eishay", lastName = "Smith").save
     }
     val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(jsonFilename))).mkString)
-    val email = inject[SocialUserImportEmail].importEmail(user.id.get, Seq(json)).get
+    val email = inject[SocialUserImportEmail].importEmail(user.id.get, Seq(json)).getOrElse(
+        throw new Exception("fail getting email %s of %s".format(emailString, json.toString)))
     email.address === emailString
     CX.withConnection { implicit c =>
       EmailAddress.get(email.id.get) === email
