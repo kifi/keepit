@@ -136,7 +136,14 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
 
 class QueryParser(indexWriterConfig: IndexWriterConfig) extends LuceneQueryParser(Version.LUCENE_36, "b", indexWriterConfig.getAnalyzer()) {
   
-  def parseQuery(queryText: String) = Option(super.parse(queryText))
+  def parseQuery(queryText: String) = {
+    val query = try {
+      super.parse(queryText)
+    } catch {
+      case e => super.parse(LuceneQueryParser.escape(queryText))
+    }
+    Option(query)
+  }
   
   private var percentMatch: Float = 0.0f
   def setPercentMatch(value: Float) { percentMatch = value }
