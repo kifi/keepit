@@ -446,7 +446,9 @@ span.kn_social {
   background-size: 136px;
 }
 
-
+.kifi_selection {
+  background: rgba(50,100,150,.3) !important;
+}
 
 
 
