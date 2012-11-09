@@ -4,7 +4,11 @@ import com.keepit.common.db.Id
 import com.keepit.model.{NormalizedURI, User}
 import com.keepit.search.graph.EdgeSetUtil._
 import com.keepit.search.index.Searcher
+import com.keepit.search.line.LineQuery
+import com.keepit.search.line.LineQueryBuilder
 import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.Query
+import scala.collection.immutable.LongMap
 
 class URIGraphSearcher(searcher: Searcher) {
   
@@ -89,6 +93,42 @@ class URIGraphSearcher(searcher: Searcher) {
       tp.close()
     }
     uriList
+  }
+  
+  def search(user: Id[User], query: Query, percentMatch: Float): Map[Long, Float] = {
+    var result = LongMap.empty[Float]
+    getURIList(user).foreach{ uriList =>
+      val publicList = uriList.publicList 
+      val privateList = uriList.privateList
+      
+      val term = URIGraph.userTerm.createTerm(user.toString)
+      val td = searcher.indexReader.termDocs(term)
+      val docid = try {
+        if (td.next()) td.doc else LineQuery.NO_MORE_DOCS
+      } finally {
+        td.close()
+      }
+      
+      val rewrittenQuery = query.rewrite(searcher.indexReader)
+      val queryBuilder = new LineQueryBuilder(searcher.getSimilarity, percentMatch)
+      val plan = queryBuilder.build(query)(searcher.indexReader)
+      
+      
+      if (plan.fetchDoc(docid) == docid) {
+        var line = plan.fetchLine(0)
+        while (line < LineQuery.NO_MORE_LINES) {
+          if (line < publicList.length) {
+            val id = publicList(line)
+            result += (id -> plan.score)
+          } else if (line < publicList.length + privateList.length) {
+            val id = privateList(line - publicList.length)
+            result += (id -> plan.score)
+          }
+          line = plan.fetchLine(0)
+        }
+      }
+    }
+    result
   }
 }
 

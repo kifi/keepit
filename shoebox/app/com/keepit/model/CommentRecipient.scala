@@ -73,7 +73,7 @@ private[model] class CommentRecipientEntity extends Entity[CommentRecipient, Com
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val commentId = "comment_id".ID[Comment]
   val userId = "user_id".ID[User]
-  val socialUserId = "social_user_info_id".ID[SocialUserInfo]
+  val socialUserId = "social_user_id".ID[SocialUserInfo]
   val email = "email".VARCHAR(512)
   val state = "state".STATE[CommentRecipient].NOT_NULL(CommentRecipient.States.ACTIVE)
   
