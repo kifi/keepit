@@ -22,11 +22,12 @@ case class UserExperiment (
 }
 
 object UserExperiment {
-
+  
   case class ExperimentType(val value: String)
   
   object ExperimentTypes {
     val ADMIN = State[ExperimentType]("admin")
+    val FAKE = State[ExperimentType]("fake")
   }
   
   object States {
@@ -39,7 +40,10 @@ object UserExperiment {
   def get(id: Id[UserExperiment])(implicit conn: Connection): UserExperiment = UserExperimentEntity.get(id).get.view
   
   def getByUser(userId: Id[User])(implicit conn: Connection): Seq[UserExperiment] = 
-    (UserExperimentEntity AS "e").map { e => SELECT (e.*) FROM e WHERE (e.userId EQ userId)}.list.map(_.view)
+    (UserExperimentEntity AS "e").map { e => SELECT (e.*) FROM e WHERE ((e.userId EQ userId) AND (e.state EQ UserExperiment.States.ACTIVE))}.list.map(_.view)
+    
+  def getByType(experimentType: State[UserExperiment.ExperimentType])(implicit conn: Connection): Seq[UserExperiment] = 
+    (UserExperimentEntity AS "e").map { e => SELECT (e.*) FROM e WHERE ((e.experimentType EQ experimentType) AND (e.state EQ UserExperiment.States.ACTIVE))}.list.map(_.view)
 }
 
 private[model] class UserExperimentEntity extends Entity[UserExperiment, UserExperimentEntity] {

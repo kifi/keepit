@@ -10,8 +10,7 @@ CREATE TABLE user_experiment (
     
     PRIMARY KEY (id),
     
-    UNIQUE INDEX(external_id),
-    INDEX user_experiment_user_id_state_experiment_type (user_id, state, experiment_type),
+    UNIQUE INDEX user_experiment_u_user_id_state_experiment_type (user_id, state, experiment_type),
     
     CONSTRAINT user_experiment_user_id FOREIGN KEY (user_id) REFERENCES user(id)
 );
