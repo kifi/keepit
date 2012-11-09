@@ -29,13 +29,12 @@ import play.api.mvc.Controller
 import securesocial.core.SecureSocial
 import play.api.libs.json.JsBoolean
 import com.keepit.model.Comment
+import java.sql.Connection
+import com.keepit.common.social.CommentWithSocialUser
+import com.keepit.serializer.CommentWithSocialUserSerializer._
 
 object CommentController extends Controller with Logging with SecureSocial {
 
-    /**
-   * Call me using:
-   * curl localhost:9000/users/keepurl?url=http://www.ynet.co.il/;echo
-   */
   def createComment(url: String, 
                     externalId: ExternalId[User], 
                     title: String = "",
@@ -62,5 +61,36 @@ object CommentController extends Controller with Logging with SecureSocial {
     Ok(JsObject(("commentId" -> JsString(comment.externalId.id)) :: Nil))
 
   }
+  def getComments(url: String, 
+                  externalId: ExternalId[User], 
+                  permission: String = "") = SecuredAction(false) { request =>
+    val comments = CX.withConnection { implicit conn => 
+      val user = User.get(externalId)
+      NormalizedURI.getByNormalizedUrl(url) match {
+        case Some(normalizedURI) =>
+          allComments(user.id.get, normalizedURI) map { commentGroup =>
+            (commentGroup._1, commentGroup._2 map(CommentWithSocialUser(_)))
+          }
+        case None =>
+          List[(Comment.Permission,Seq[CommentWithSocialUser])]()
+      }
+    }
+    
+    Ok(commentWithSocialUserSerializer.writes(comments)).as(ContentTypes.JSON)
+  }
   
+  private def allComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection): List[(Comment.Permission,Seq[Comment])] =
+    (Comment.Permissions.PUBLIC -> publicComments(normalizedURI)) :: 
+    (Comment.Permissions.CONVERSATION -> conversationComments(userId, normalizedURI)) :: 
+    (Comment.Permissions.PRIVATE -> privateComments(userId, normalizedURI)) :: Nil
+  
+  private def publicComments(normalizedURI: NormalizedURI)(implicit conn: Connection) =
+    Comment.getPublicByNormalizedUri(normalizedURI.id.get)
+    
+  private def privateComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection) =
+    Comment.getPrivateByNormalizedUri(normalizedURI.id.get, userId)
+
+  private def conversationComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection) =
+    Comment.getConversationsByNormalizedUri(normalizedURI.id.get, userId)
+
 }
