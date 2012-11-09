@@ -4,7 +4,7 @@ import org.apache.lucene.index.IndexReader
 
 class BooleanOrNode[P <: LineQuery](optional: Array[P], percentMatch: Float, reader: IndexReader) extends LineQuery(1.0f) {
   
-  val threshold = optional.foldLeft(0.0f){ (w, n) => w + n.weight } * percentMatch
+  val threshold = if (percentMatch <= 0.0f) 0.0f else optional.foldLeft(0.0f){ (w, n) => w + n.weight } * percentMatch / 100.0f
  
   val pq = new NodeQueue(optional.length)
   optional.foreach{ node => pq.insertWithOverflow(node) }
@@ -40,7 +40,7 @@ class BooleanOrNode[P <: LineQuery](optional: Array[P], percentMatch: Float, rea
       curLine = top.curLine // current min line
       
       var runningWeight = 0.0f
-      while (curLine < LineQuery.NO_MORE_LINES && runningWeight < threshold) {
+      while (curLine < LineQuery.NO_MORE_LINES && runningWeight <= threshold) {
         curLine = top.curLine
         runningWeight = 0.0f
         runningScore = 0.0f
