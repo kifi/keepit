@@ -38,8 +38,8 @@ class MainSearcherTest extends SpecificationWithJUnit {
   
   def mkStore(uris: Seq[NormalizedURI]) = {
     uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
-    store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs".format(idx)))
-    store
+      store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs".format(idx)))
+      store
     }
   }
   
@@ -174,6 +174,94 @@ class MainSearcherTest extends SpecificationWithJUnit {
           }
         }
         indexer.numDocs === uris.size
+      }
+    }
+    
+    "search personal bookmark titles" in {
+      running(new EmptyApplication()) {
+        val (users, uris) = initData(numUsers = 9, numUris = 9)
+        val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
+        val bookmarks = CX.withConnection { implicit c =>
+          expectedUriToUserEdges.flatMap{ case (uri, users) =>
+            users.map{ user =>
+              Bookmark(title = "personaltitle", url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
+            }
+          }
+        }
+
+        val store = mkStore(uris)
+        val (graph, indexer) = initIndexes(store)
+        
+        graph.load() === users.size
+        indexer.run() === uris.size
+        
+        val config = SearchConfig(Map("tailCutting" -> "0"))
+        
+        val numHitsToReturn = 100
+        users.foreach{ user =>
+          val userId = user.id.get
+          //println("user:" + userId)
+          val friendIds = users.map(_.id.get).toSet - userId
+          val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, config)
+          val graphSearcher = mainSearcher.uriGraphSearcher
+          val res = mainSearcher.search("personaltitle", numHitsToReturn, None)
+          
+          val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
+          var mCnt = 0
+          var fCnt = 0
+          var oCnt = 0
+          res.hits.foreach{ h => 
+            if (h.isMyBookmark) mCnt += 1
+            else if (! h.users.isEmpty) fCnt += 1
+            else {
+              oCnt += 1
+              h.bookmarkCount === graphSearcher.getUriToUserEdgeSet(h.uriId).size
+            }
+          }
+          //println(res.hits)
+          res.hits.map(h => h.uriId).toSet === myUriIds
+          mCnt === myUriIds.size
+          fCnt === 0
+          oCnt === 0
+        }
+        indexer.numDocs === uris.size
+      }
+    }
+    
+    "blend a bookmark title score and an article score" in {
+      running(new EmptyApplication()) {
+        val (users, uris) = initData(numUsers = 9, numUris = 9)
+        val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
+        val bookmarks = CX.withConnection { implicit c =>
+          expectedUriToUserEdges.flatMap{ case (uri, users) =>
+            users.map{ user =>
+              Bookmark(title = "personaltitle", url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
+            }
+          }
+        }
+
+        val store = mkStore(uris)
+        val (graph, indexer) = initIndexes(store)
+        
+        graph.load() === users.size
+        indexer.run() === uris.size
+        
+        val config = SearchConfig(Map("tailCutting" -> "0", "percentMatch" -> "0"))
+        
+        val numHitsToReturn = 100
+        val userId = users(0).id.get
+        //println("user:" + userId)
+        val friendIds = users.map(_.id.get).toSet - userId
+        val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, config)
+        val graphSearcher = mainSearcher.uriGraphSearcher
+        
+        val expected = (uris(3) :: ((uris diff List(uris(3))).reverse)).map(_.id.get).toList
+        val res = mainSearcher.search("personaltitle title3 content3", numHitsToReturn, None)
+        
+        val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
+        
+        println(res.hits)
+        res.hits.map(h => h.uriId).toList === expected
       }
     }
     

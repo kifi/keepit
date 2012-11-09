@@ -138,8 +138,8 @@ class QueryParser(indexWriterConfig: IndexWriterConfig) extends LuceneQueryParse
   
   def parseQuery(queryText: String) = Option(super.parse(queryText))
   
-  private var percentMatch: Double = 0.0d
-  def setPercentMatch(value: Double) { percentMatch = value }
+  private var percentMatch: Float = 0.0f
+  def setPercentMatch(value: Float) { percentMatch = value }
   
   override def getBooleanQuery(clauses: java.util.List[BooleanClause], disableCoord: Boolean): Query = {
     super.getBooleanQuery(clauses, disableCoord) match {
