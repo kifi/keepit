@@ -1,15 +1,25 @@
 package com.keepit.model
 
-import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
-import com.keepit.common.db.NotFoundException
-import com.keepit.common.time._
-import com.keepit.common.crypto._
-import java.security.SecureRandom
 import java.sql.Connection
+
+import scala.annotation.elidable
+
 import org.joda.time.DateTime
-import play.api._
-import ru.circumflex.orm._
-import play.api.libs.json._
+
+import com.keepit.common.db.Entity
+import com.keepit.common.db.EntityTable
+import com.keepit.common.db.ExternalId
+import com.keepit.common.db.Id
+import com.keepit.common.db.NotFoundException
+import com.keepit.common.db.State
+import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
+import com.keepit.common.time.currentDateTime
+
+import annotation.elidable.ASSERTION
+import ru.circumflex.orm.Predicate.toAggregateHelper
+import ru.circumflex.orm.RelationNode.toRelation
+import ru.circumflex.orm.SELECT
+import ru.circumflex.orm.str2expr
 
 case class Comment(
   id: Option[Id[Comment]] = None,
@@ -23,9 +33,6 @@ case class Comment(
   state: State[Comment] = Comment.States.ACTIVE
 ) {
   def withState(state: State[Comment]) = copy(state = state)
-  def withPermissions(permissions: State[Comment.Permission]) = copy(permissions = permissions)
-  def withExternalId(externalId: ExternalId[Comment]) = copy(externalId = externalId)
-  def withNormalizedURI(normalizedURI: Id[NormalizedURI]) = copy(normalizedURI = normalizedURI)
   
   def save(implicit conn: Connection): Comment = {
     val entity = CommentEntity(this.copy(updatedAt = currentDateTime))
@@ -36,16 +43,6 @@ case class Comment(
 }
 
 object Comment {
-
-  def apply(url: String, userId: Id[User], text: String, title: String, permissions: State[Comment.Permission])(implicit conn: Connection): Comment = {
-    val nuri = NormalizedURI.getByNormalizedUrl(url) match {
-      case Some(nuri) =>
-        nuri
-      case None =>
-        NormalizedURI(title, url)
-    }
-    Comment(normalizedURI = nuri.id.get, userId = userId, text = text, permissions = permissions)
-  }
  
 
   def all(implicit conn: Connection): Seq[Comment] =
@@ -64,20 +61,48 @@ object Comment {
     (CommentEntity AS "c").map { c => SELECT (c.*) FROM c WHERE (c.externalId EQ externalId) unique }.map(_.view)
 
   def getByUser(userId: Id[User])(implicit conn: Connection): Seq[Comment] = 
-    (CommentEntity AS "c").map { c => SELECT (c.*) FROM c WHERE (c.userId EQ userId) list }.map(_.view)
+    (CommentEntity AS "c").map { c => 
+      SELECT (c.*) FROM c WHERE (
+        (c.userId EQ userId) AND 
+        (c.permissions EQ Comment.Permissions.PUBLIC) AND 
+        (c.state EQ States.ACTIVE)
+      ) list
+    }.map(_.view)
 
   def getRecipients(commentId: Id[Comment])(implicit conn: Connection) = CommentRecipient.getByComment(commentId)
-    
-  def getByNormalizedUri(normalizedURI: Id[NormalizedURI])(implicit conn: Connection): Seq[Comment] =
-    (CommentEntity AS "c").map { c => SELECT (c.*) FROM c WHERE (c.normalizedURI EQ normalizedURI) list }.map(_.view)
+  
+  def getPublicByNormalizedUri(normalizedURI: Id[NormalizedURI])(implicit conn: Connection): Seq[Comment] =
+    (CommentEntity AS "c").map { c =>
+      SELECT (c.*) FROM c WHERE (
+        (c.normalizedURI EQ normalizedURI) AND 
+        (c.permissions EQ Comment.Permissions.PUBLIC) AND
+        (c.state EQ States.ACTIVE)
+      ) list
+    }.map(_.view)
 
-  def getByUrl(url: String)(implicit conn: Connection): Seq[Comment] = {
-    NormalizedURI.getByNormalizedUrl(url) match {
-      case Some(u) => 
-        getByNormalizedUri(u.id.get)
-      case None =>
-        Seq[Comment]()
-    }
+  def getPrivateByNormalizedUri(normalizedURI: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] =
+    (CommentEntity AS "c").map { c =>
+      SELECT (c.*) FROM c WHERE (
+        (c.normalizedURI EQ normalizedURI) AND 
+        (c.permissions EQ Comment.Permissions.PRIVATE) AND 
+        (c.userId EQ userId)
+      ) list
+    }.map(_.view)
+    
+  def getConversationsByNormalizedUri(normalizedURI: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] = {
+      val c = CommentEntity AS "c"
+      val cr = CommentRecipientEntity AS "cr"
+      ((SELECT (c.*) FROM ((cr JOIN c).ON("c.id = cr.comment_id")) WHERE (
+        (c.normalizedURI EQ normalizedURI) AND 
+        (cr.userId EQ userId) AND
+        (c.permissions EQ Comment.Permissions.CONVERSATION))
+        UNION
+       (SELECT (c.*) FROM c WHERE (
+        (c.normalizedURI EQ normalizedURI) AND 
+        (c.userId EQ userId) AND
+        (c.permissions EQ Comment.Permissions.CONVERSATION))
+       )
+      ) list) map (_.view) distinct
   }
 
   object States {
