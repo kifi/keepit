@@ -91,7 +91,7 @@ object NormalizedURI {
   }
   
   def getByNormalizedUrl(url: String)(implicit conn: Connection): Option[NormalizedURI] = {
-    var hash = hashUrl(normalize(url))
+    val hash = hashUrl(normalize(url))
     (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlHash EQ hash) unique }.map( _.view )    
   }
   

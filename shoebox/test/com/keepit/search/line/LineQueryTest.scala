@@ -14,15 +14,16 @@ import org.apache.lucene.document.Document
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexReader
+import org.apache.lucene.index.Term
+import org.apache.lucene.index.TermEnum
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.BooleanClause
+import org.apache.lucene.search.DefaultSimilarity
+import org.apache.lucene.search.PhraseQuery
+import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
-import org.apache.lucene.index.Term
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.BooleanClause
-import org.apache.lucene.search.Query
-import org.apache.lucene.index.TermEnum
-import org.apache.lucene.search.DefaultSimilarity
 
 @RunWith(classOf[JUnitRunner])
 class LineQueryTest extends SpecificationWithJUnit {
@@ -42,7 +43,7 @@ class LineQueryTest extends SpecificationWithJUnit {
       val lines = new ArrayBuffer[(Int, String)]
       (0 until 3).foreach{ l =>
         val line = (l, "d%d l%d t%d%d %s %s %s".format(d, l, d, l, " x"*d, " y"*l, " z"*(min(l + 1, 3 - d))))
-        println(line)
+        //println(line)
         lines += line
       }
       val doc = new Document()
@@ -66,6 +67,23 @@ class LineQueryTest extends SpecificationWithJUnit {
       q = new TermQuery(new Term("B", "l1"))
       plan = builder.build(q)
       plan.fetch(0) === 0
+      plan.fetch(0) === 1
+      plan.fetch(0) === 2
+      plan.fetch(0) === LineQuery.NO_MORE_DOCS
+    }
+    
+    "find docs using phrase query" in {
+      var q = new PhraseQuery()
+      q.add(new Term("B", "d1"))
+      q.add(new Term("B", "l1"))
+      var plan = builder.build(q)
+      plan.fetch(0) === 1
+      plan.fetch(0) === LineQuery.NO_MORE_DOCS
+
+      q = new PhraseQuery()
+      q.add(new Term("B", "x"))
+      q.add(new Term("B", "y"))
+      plan = builder.build(q)
       plan.fetch(0) === 1
       plan.fetch(0) === 2
       plan.fetch(0) === LineQuery.NO_MORE_DOCS
@@ -257,6 +275,72 @@ class LineQueryTest extends SpecificationWithJUnit {
       }
       hits.sortWith((a, b) => (a._3 < b._3)).map(h => (h._1, h._2)) === 
         ArrayBuffer((1, 0), (2, 0), (0, 2), (0, 0), (0, 1))
+    }
+    
+    "honor percentMatch in BooleanNode" in {
+      val builderWithPctMatch = new LineQueryBuilder(new DefaultSimilarity, 99.0f)
+      var q = new BooleanQuery
+      q.add(new TermQuery(new Term("B", "d2")), BooleanClause.Occur.MUST)
+      q.add(new TermQuery(new Term("B", "l2")), BooleanClause.Occur.SHOULD)
+      q.add(new TermQuery(new Term("B", "x")), BooleanClause.Occur.SHOULD)
+      var hits = ArrayBuffer.empty[(Int, Int)]
+      var plan = builder.build(q) // no percentMatch
+      var doc = plan.fetchDoc(0)
+      while (doc < LineQuery.NO_MORE_DOCS) {
+        var line = plan.fetchLine(0)
+        while (line < LineQuery.NO_MORE_LINES) {
+          hits += ((doc, line))
+          line = plan.fetchLine(0)
+        }
+        doc = plan.fetchDoc(0)
+      }
+      hits === ArrayBuffer((2, 0), (2, 1), (2, 2))
+      
+      hits = ArrayBuffer.empty[(Int, Int)]
+      plan = builderWithPctMatch.build(q)
+      doc = plan.fetchDoc(0)
+      while (doc < LineQuery.NO_MORE_DOCS) {
+        var line = plan.fetchLine(0)
+        while (line < LineQuery.NO_MORE_LINES) {
+          hits += ((doc, line))
+          line = plan.fetchLine(0)
+        }
+        doc = plan.fetchDoc(0)
+      }
+      hits === ArrayBuffer((2, 2))
+    }
+    
+    "honor percentMatch in BooleanOrNode" in {
+      val builderWithPctMatch = new LineQueryBuilder(new DefaultSimilarity, 99.0f)
+      var q = new BooleanQuery
+      q.add(new TermQuery(new Term("B", "d2")), BooleanClause.Occur.SHOULD)
+      q.add(new TermQuery(new Term("B", "l2")), BooleanClause.Occur.SHOULD)
+      q.add(new TermQuery(new Term("B", "x")), BooleanClause.Occur.SHOULD)
+      var hits = ArrayBuffer.empty[(Int, Int)]
+      var plan = builder.build(q) // no percentMatch
+      var doc = plan.fetchDoc(0)
+      while (doc < LineQuery.NO_MORE_DOCS) {
+        var line = plan.fetchLine(0)
+        while (line < LineQuery.NO_MORE_LINES) {
+          hits += ((doc, line))
+          line = plan.fetchLine(0)
+        }
+        doc = plan.fetchDoc(0)
+      }
+      hits === ArrayBuffer((0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2))
+      
+      hits = ArrayBuffer.empty[(Int, Int)]
+      plan = builderWithPctMatch.build(q)
+      doc = plan.fetchDoc(0)
+      while (doc < LineQuery.NO_MORE_DOCS) {
+        var line = plan.fetchLine(0)
+        while (line < LineQuery.NO_MORE_LINES) {
+          hits += ((doc, line))
+          line = plan.fetchLine(0)
+        }
+        doc = plan.fetchDoc(0)
+      }
+      hits === ArrayBuffer((2, 2))
     }
   }
 }

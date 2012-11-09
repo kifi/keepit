@@ -133,9 +133,14 @@ function postBookmarks(bookmarksSupplier, bookmarkSource) {
 function bookmarksPoster(bookmarks, bookmarkSource, xhr) {
   log("bookmarks:");
   log(bookmarks);
+  if(!hasKeepitIdAndFacebookId()) {
+    log("Can't post bookmark, no user info!");
+    return;
+  }
+  var userConfigs = getConfigs();
   var json = {
     "bookmarks": bookmarks,
-    "user_info": userInfo,
+    "user_info": userConfigs.user,
     "bookmark_source": bookmarkSource
   }
   var tosend = JSON.stringify(json);
@@ -162,7 +167,7 @@ function onRequest(request, sender, sendResponse) {
     } else if(request.type === "get_keeps") {
       searchOnServer(request, sendResponse, tab);
     } else if(request.type === "get_user_info") {
-      sendResponse(userInfo);
+      sendResponse(getConfigs().user);
     } else if(request.type === "add_bookmarks") {
       getBookMarks(function(bookmarks) {
         addKeep(bookmarks, request, sendResponse, tab);
@@ -203,8 +208,13 @@ function onRequest(request, sender, sendResponse) {
 
 function upload_all_bookmarks() {
   log("going to upload all my bookamrks to server");
-  getPicture(userInfo);
-  getKeepitId(userInfo)
+  if(!hasKeepitIdAndFacebookId()) {
+    log("Can't upload bookmarks, no user info!");
+    return;
+  }
+  var userConfigs = getConfigs();
+  getPicture(userConfigs.user);
+  getKeepitId(userConfigs.user)
 }
 
 function addKeep(bookmarks, request, sendResponse, tab) {
@@ -233,6 +243,11 @@ function removeKeep(bookmarks, request, sendResponse, tab) {
       log("removed bookmark. " + xhr.response);
     }
   }
+  var userInfo = getConfigs().user;
+  if(!userInfo) {
+    log("No userinfo! Can't remove keep!");
+    return;
+  }
 
   xhr.open("POST", 'http://' + userConfig.server + '/bookmarks/remove/?externalId=' + userInfo["keepit_external_id"] + "&externalBookmarkId=" + request.externalId, true);
   xhr.send();
@@ -241,19 +256,26 @@ function removeKeep(bookmarks, request, sendResponse, tab) {
 
 function searchOnServer(request, sendResponse, tab) {
 
+  var userConfigs = getConfigs();
+
+  if(!userConfigs || !userConfigs.user || !userConfigs.user["keepit_external_id"] || !hasKeepitIdAndFacebookId()) {
+    log("No facebook, can't search!");
+    sendResponse({"userInfo": null, "searchResults": [], "userConfig": userConfigs});
+    return;
+  }
   // Dummy results injection
   for(i=0;i<magicQueries.length;i++) {
     console.log("checking: ", magicQueries[i])
     if(magicQueries[i].query === request.query) {
       log("Intercepting query: " + request.query);
-      sendResponse({"userInfo": userInfo, "searchResults": magicQueries[i].results, "userConfig": getConfigs()});
+      sendResponse({"userInfo": userConfigs.user, "searchResults": magicQueries[i].results, "userConfig": userConfigs});
       return;
     }
   }
   // Dummy results injection
 
   if(request.query === '') {
-    sendResponse({"userInfo": userInfo, "searchResults": []});
+    sendResponse({"userInfo": userConfigs.user, "searchResults": [], "userConfig": userConfigs});
     return;
   }
 
@@ -264,22 +286,21 @@ function searchOnServer(request, sendResponse, tab) {
       log(xhr.response, tab);
       var searchResults = $.parseJSON(xhr.response);
       if (searchResults.length === 0) {
-        sendResponse({"userInfo": userInfo, "searchResults": [], "userConfig": getConfigs()});
+        sendResponse({"userInfo": userConfigs.user, "searchResults": [], "userConfig": userConfigs});
         return;
       }
       /*var maxRes = getConfigs()["max_res"];
       if (searchResults.length > maxRes) {
         searchResults = searchResults.slice(0, maxRes);
       }*/
-      sendResponse({"userInfo": userInfo, "searchResults": searchResults, "userConfig": getConfigs()});
+      sendResponse({"userInfo": userConfigs.user, "searchResults": searchResults, "userConfig": userConfigs});
     }
   }
   var term = encodeURIComponent(request.query);
-  var externalId = userInfo["keepit_external_id"];
+  var externalId = userConfigs.user["keepit_external_id"];
   var lastUUID = typeof request.lastUUID === 'undefined' ? '' : request.lastUUID;
   var context = typeof request.context === 'undefined' ? '' : request.context;
-  var userConfig = getConfigs();
-  xhr.open("GET", 'http://' + userConfig.server + '/search2?term=' + term + '&externalId=' + externalId + '&maxHits=' + userConfig["max_res"]*2 + '&lastUUI=' + lastUUID + '&context=' + context, true);
+  xhr.open("GET", 'http://' + userConfigs.server + '/search2?term=' + term + '&externalId=' + externalId + '&maxHits=' + userConfigs["max_res"]*2 + '&lastUUI=' + lastUUID + '&context=' + context, true);
   xhr.send();
 }
 
@@ -304,6 +325,10 @@ var restrictedUrlPatternsForHover = [
 function initPage(request, sendResponse, tab) {
   try {
     log("init page!!!!!!!!");
+    if(!hasKeepitIdAndFacebookId()) {
+      log("No facebook configured!")
+      return;
+    }
     setPageIcon(tab.id, false);
 
     var restrictedElements = $.grep(restrictedUrlPatternsForHover, function(e, i){
@@ -428,7 +453,13 @@ function isAlreadyKept(bms, location) {
 
 function remoteIsAlreadyKept(location, callback) {
   log("checking if user has already bookmarked page: " + location)
-  $.get("http://" + getConfigs().server + "/bookmarks/check?externalId=" + userInfo["keepit_external_id"] + "&uri=" + encodeURIComponent(location), null,
+  var userConfig = getConfigs();
+  if(!userConfig || !userConfig.user || !userConfig.user["keepit_external_id"]) {
+    log("Can't check if already kept, no user info!");
+    return;
+  }
+
+  $.get("http://" + getConfigs().server + "/bookmarks/check?externalId=" + userConfig.user["keepit_external_id"] + "&uri=" + encodeURIComponent(location), null,
     function(data) {
       callback(data["user_has_bookmark"]) 
     },
@@ -556,7 +587,6 @@ function getConfigs() {
 
     var hoverTimeout = localStorage[getFullyQualifiedKey("hover_timeout")];
     if (typeof hoverTimeout === 'undefined' || hoverTimeout === null) {
-      log("setting a hoverTimeout default to 10, prev vaule is: " + hoverTimeout);
       hoverTimeout = 10;
     }
     if (!isNumber(hoverTimeout)) {
@@ -568,7 +598,7 @@ function getConfigs() {
     if (env === "development") {
       server = "dev.ezkeep.com:9000";
     }
-    debugger;
+    //debugger;
     var userInfo = localStorage[getFullyQualifiedKey("user")];
     var userInfoString;
     if (userInfo) {
@@ -612,7 +642,6 @@ function getVersion() {
   return details.version;
 }
 
-var userInfo = {keepit_external_id: null}
 
 function startHandShake(callback){
   log("starting handShake");
@@ -635,7 +664,7 @@ function startHandShake(callback){
 function hasKeepitIdAndFacebookId() {
   var user = getConfigs().user;
   if (!user) return false;
-  return user.keepit_external_id && user.facebook_id
+  return user.keepit_external_id && user.facebook_id && user.name && user.avatar_url;
 }
 
 // Check if the version has changed.
@@ -661,6 +690,7 @@ function openFacebookConnect() {
           if (data) {
             log("got handshake data ");
             log(data);
+            var userInfo = {};
             userInfo.facebook_id = data.facebookId;
             userInfo.keepit_external_id = data.externalId;
             userInfo.avatar_url = data.avatarUrl;
@@ -697,13 +727,14 @@ function resetUserObjectIfInDevMode() {
 resetUserObjectIfInDevMode();
 
 if (!hasKeepitIdAndFacebookId()) {
-  userInfo = {keepit_external_id:null};
+  var userInfo = {};
   setConfigs("user", JSON.stringify(userInfo)); // initialzie user info
   log("open facebook connect - till it is closed keepit is (suppose) to be disabled");
   openFacebookConnect();
 } else {
   log("find user info in local storage");
-  log(userInfo);
+  var userConfigs = getConfigs();
+  log(userConfigs);
   var config = getConfigs();
   if(config["upload_on_start"] === true) {
     log("loading bookmarks to the server");
