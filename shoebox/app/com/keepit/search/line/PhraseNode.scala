@@ -29,7 +29,7 @@ class PhraseNode(termNodes: Array[TermNode], positions: Array[Int], weight: Floa
   override private[line] def fetchPos() = {
     var pos = curPos + 1
     var i = 0
-    while (pos < LineQuery.NO_MORE_POSITIONS && positions(i) < termNodes.length) {
+    while (pos < LineQuery.NO_MORE_POSITIONS && i < termNodes.length) {
       var node = termNodes(i)
       
       if (pos < LineQuery.NO_MORE_POSITIONS - positions(i)) { 
@@ -47,8 +47,11 @@ class PhraseNode(termNodes: Array[TermNode], positions: Array[Int], weight: Floa
         } else {
           i += 1
           if (i == termNodes.length) {
-            val limit = (pos / LineQuery.MAX_POSITION_PER_LINE) + LineQuery.MAX_POSITION_PER_LINE
-            if (! termNodes.forall( _.curPos < limit )) i = 0
+            val limit = (pos / LineQuery.MAX_POSITION_PER_LINE) * LineQuery.MAX_POSITION_PER_LINE + LineQuery.MAX_POSITION_PER_LINE
+            if (! termNodes.forall( _.curPos < limit )) {
+              pos += 1
+              i = 0
+            }
           }
         }
       } else {

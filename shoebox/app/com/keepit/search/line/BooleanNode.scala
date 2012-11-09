@@ -5,7 +5,7 @@ import org.apache.lucene.index.IndexReader
 class BooleanNode[P <: LineQuery](required: Array[P], optional: Array[P], percentMatch: Float, reader: IndexReader) extends LineQuery(1.0f) {
   
   val weightOnRequiredNodes = required.foldLeft(0.0f){ (w, n) => w + n.weight }
-  val threshold = optional.foldLeft(weightOnRequiredNodes){ (w, n) => w + n.weight } * percentMatch
+  val threshold = if (percentMatch <= 0.0f) 0.0f else optional.foldLeft(weightOnRequiredNodes){ (w, n) => w + n.weight } * percentMatch / 100.0f
   
   override def fetchDoc(targetDoc: Int) = {
     curDoc = if (targetDoc <= curDoc) curDoc + 1 else targetDoc
@@ -24,7 +24,7 @@ class BooleanNode[P <: LineQuery](required: Array[P], optional: Array[P], percen
             if (node.curDoc < curDoc) node.fetchDoc(curDoc)
             if (node.curDoc == curDoc) runningWeight += node.weight
           }
-          if (runningWeight < threshold) {
+          if (runningWeight <= threshold) {
             curDoc += 1 // try next doc
             i = 0
           }
