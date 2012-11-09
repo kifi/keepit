@@ -33,6 +33,13 @@ function saveConfigs() {
       showScore = false;
     }
   sendSaveConfig("show_score", showScore);
+  var uploadOnStart = $("#upload_on_start").val();
+    if (uploadOnStart === "yes" || uploadOnStart === true || uploadOnStart === "true") {
+      uploadOnStart = true;
+    } else {
+      uploadOnStart = false;
+    }
+  sendSaveConfig("upload_on_start", uploadOnStart);
   window.close();
 }
 
