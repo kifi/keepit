@@ -279,6 +279,16 @@ console.log("injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
+  function showComments(user) {
+    var userExternalId = user.keepit_external_id;
+    $.get("http://" + config.server + "/comments/?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
+      null,
+      function(comments) {
+        // public, conversation, private
+        $('.kifi_chat_wrapper').show();
+      });
+  }
+
 
   function chatWith(user) {
     console.log("Im here");
