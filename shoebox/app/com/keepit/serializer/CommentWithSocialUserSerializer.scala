@@ -5,6 +5,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import play.api.libs.json._
 import com.keepit.common.social.CommentWithSocialUser
+import com.keepit.common.db.State
 
 class CommentWithSocialUserSerializer extends Writes[CommentWithSocialUser] {
   
@@ -12,7 +13,8 @@ class CommentWithSocialUserSerializer extends Writes[CommentWithSocialUser] {
     JsObject(List(
       "createdAt" -> JsString(commentWithSocialUser.comment.createdAt.toString),
       "text" -> JsString(commentWithSocialUser.comment.text),
-      "user" -> UserWithSocialSerializer.userWithSocialSerializer.writes(commentWithSocialUser.user)
+      "user" -> UserWithSocialSerializer.userWithSocialSerializer.writes(commentWithSocialUser.user),
+      "permissions" -> JsString(commentWithSocialUser.comment.permissions.value)
     ))
     
   def writes (comments: Seq[CommentWithSocialUser]): JsValue = 
@@ -20,9 +22,9 @@ class CommentWithSocialUserSerializer extends Writes[CommentWithSocialUser] {
       CommentWithSocialUserSerializer.commentWithSocialUserSerializer.writes(comment)
     })
     
-  def writes(commentsGroups: List[(Comment.Permission,Seq[CommentWithSocialUser])]): JsValue =
+  def writes(commentsGroups: List[(State[Comment.Permission],Seq[CommentWithSocialUser])]): JsValue =
     JsObject(commentsGroups map { commentsGroup =>
-      commentsGroup._1.toString -> writes(commentsGroup._2)
+      commentsGroup._1.value -> writes(commentsGroup._2)
     })   
 }
 

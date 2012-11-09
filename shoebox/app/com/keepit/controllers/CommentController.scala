@@ -32,6 +32,7 @@ import com.keepit.model.Comment
 import java.sql.Connection
 import com.keepit.common.social.CommentWithSocialUser
 import com.keepit.serializer.CommentWithSocialUserSerializer._
+import com.keepit.common.db.State
 
 object CommentController extends Controller with Logging with SecureSocial {
 
@@ -72,14 +73,14 @@ object CommentController extends Controller with Logging with SecureSocial {
             (commentGroup._1, commentGroup._2 map(CommentWithSocialUser(_)))
           }
         case None =>
-          List[(Comment.Permission,Seq[CommentWithSocialUser])]()
+          List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
       }
     }
     
     Ok(commentWithSocialUserSerializer.writes(comments)).as(ContentTypes.JSON)
   }
   
-  private def allComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection): List[(Comment.Permission,Seq[Comment])] =
+  private def allComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection): List[(State[Comment.Permission],Seq[Comment])] =
     (Comment.Permissions.PUBLIC -> publicComments(normalizedURI)) :: 
     (Comment.Permissions.CONVERSATION -> conversationComments(userId, normalizedURI)) :: 
     (Comment.Permissions.PRIVATE -> privateComments(userId, normalizedURI)) :: Nil
