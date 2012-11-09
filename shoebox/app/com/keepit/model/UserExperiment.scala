@@ -38,22 +38,16 @@ object UserExperiment {
   
   def get(id: Id[UserExperiment])(implicit conn: Connection): UserExperiment = UserExperimentEntity.get(id).get.view
   
-  def getByAddressOpt(address: String)(implicit conn: Connection): Option[UserExperiment] = 
-    (UserExperimentEntity AS "e").map { e => SELECT (e.*) FROM e WHERE (e.address EQ address)}.unique.map(_.view)
-
   def getByUser(userId: Id[User])(implicit conn: Connection): Seq[UserExperiment] = 
     (UserExperimentEntity AS "e").map { e => SELECT (e.*) FROM e WHERE (e.userId EQ userId)}.list.map(_.view)
-    
 }
 
 private[model] class UserExperimentEntity extends Entity[UserExperiment, UserExperimentEntity] {
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val address = "address".VARCHAR(512).NOT_NULL
+  val experimentType = "experiment_Type".STATE[UserExperiment.ExperimentType].NOT_NULL
   val userId = "user_id".ID[User]
-  val state = "state".STATE.NOT_NULL(UserExperiment.States.UNVERIFIED)
-  val verifiedAt = "verified_at".JODA_TIMESTAMP
-  val lastVerificationSent = "last_verification_sent".JODA_TIMESTAMP
+  val state = "state".STATE.NOT_NULL(UserExperiment.States.ACTIVE)
   
   def relation = UserExperimentEntity
   
@@ -61,25 +55,23 @@ private[model] class UserExperimentEntity extends Entity[UserExperiment, UserExp
     id = id.value,
     createdAt = createdAt(),
     updatedAt = updatedAt(),
-    address = address(),
     userId = userId(),
-    verifiedAt = verifiedAt.value,
-    lastVerificationSent = lastVerificationSent.value
+    experimentType = experimentType(),
+    state = state()
   )
 }
 
 private[model] object UserExperimentEntity extends UserExperimentEntity with EntityTable[UserExperiment, UserExperimentEntity] {
-  override def relationName = "email_address"
+  override def relationName = "user_experiment"
   
   def apply(view: UserExperiment): UserExperimentEntity = {
     val entity = new UserExperimentEntity
     entity.id.set(view.id)
     entity.createdAt := view.createdAt
     entity.updatedAt := view.updatedAt
-    entity.address := view.address
     entity.userId := view.userId
-    entity.verifiedAt.set(view.verifiedAt)
-    entity.lastVerificationSent.set(view.lastVerificationSent)
+    entity.experimentType := view.experimentType
+    entity.state := view.state
     entity
   }
 }
