@@ -49,6 +49,11 @@ console.log("injecting keep it hover div");
   function showHover(user) {
     window.kifi_hover = true; // set global variable, so hover will not automatically slide out again.
 
+    if(!user || !user.keepit_external_id) {
+      log("No user info! Can't search.")
+      return;
+    }
+
     log("checking location: " + document.location.href)
     chrome.extension.sendRequest({
       "type": "is_already_kept",
