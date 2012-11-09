@@ -37,20 +37,20 @@ import com.keepit.common.db.State
 object CommentController extends Controller with Logging with SecureSocial {
 
   def createComment(url: String, 
-                    externalId: ExternalId[User], 
-                    title: String = "",
+                    externalId: ExternalId[User],
                     text: String, 
-                    permission: String = "", 
+                    permission: String, 
                     recipients: String = "") = SecuredAction(false) { request =>
     val comment = CX.withConnection { implicit conn => 
       val userId = User.getOpt(externalId).getOrElse(throw new Exception("Invalid userid"))
       val uri = NormalizedURI.getByNormalizedUrl(url) match {
         case Some(nuri) => nuri
-        case None => NormalizedURI(title = title, url = url)
+        case None => NormalizedURI(title = "title", url = url).save
       }
-      permission match {
+      permission.toLowerCase match {
         case "private" =>
-          Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PRIVATE).save
+          Comment(normalizedURI = uri.id.get, 
+              userId = userId.id.get, text = text, permissions = Comment.Permissions.PRIVATE).save
         case "conversation" =>
           //TODO
           Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.CONVERSATION).save
@@ -69,7 +69,14 @@ object CommentController extends Controller with Logging with SecureSocial {
       val user = User.get(externalId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
-          allComments(user.id.get, normalizedURI) map { commentGroup =>
+          val comments = permission match {
+            case "private" => (Comment.Permissions.PRIVATE -> privateComments(user.id.get, normalizedURI)) :: Nil
+            case "public" =>  (Comment.Permissions.PUBLIC -> publicComments(normalizedURI)) :: Nil
+            case "conversation" => (Comment.Permissions.CONVERSATION -> conversationComments(user.id.get, normalizedURI)) :: Nil
+            case _ => allComments(user.id.get, normalizedURI) 
+          }
+
+          comments map { commentGroup =>
             (commentGroup._1, commentGroup._2 map(CommentWithSocialUser(_)))
           }
         case None =>
