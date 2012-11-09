@@ -87,6 +87,10 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       console.log("RESULTS FROM SERVER", results);
 
       inprogressSearchQuery = '';
+      if(!results.userConfig || !results.userInfo) {
+        log("No user info. Stopping search.")
+        return;
+      }
       if($("input[name='q']").val() !== request.query || request.query !== results.searchResults.query) { // query changed
         log("Query changed. Re-loading...");
         updateQuery(0);
