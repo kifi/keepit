@@ -450,6 +450,15 @@ span.kn_social {
   background: rgba(50,100,150,.3) !important;
 }
 
+.kifi_chat_wrapper {
+  max-height: 400px;
+  min-height:100px;
+  background-color: #336699;
+  color: #2d2d2d;
+  font-size: 11px;
+  display:none !important;
+}
+
 
 
 @media print {
