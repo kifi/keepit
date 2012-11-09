@@ -121,7 +121,7 @@ class URIGraphSearcher(searcher: Searcher) {
             val id = publicList(line)
             result += (id -> plan.score)
           } else if (line < publicList.length + privateList.length) {
-            val id = privateList(line + publicList.length)
+            val id = privateList(line - publicList.length)
             result += (id -> plan.score)
           }
           line = plan.fetchLine(0)
