@@ -541,11 +541,17 @@ function getConfigs() {
     var maxRes = Number(maxResStr);
 
     var showScore = localStorage[getFullyQualifiedKey("show_score")];
-    //log("raw showScore is: " + showScore);
     if (showScore === "yes" || showScore === true || showScore === "true") {
       showScore = true;
     } else {
       showScore = false;
+    }
+
+    var uploadOnStart = localStorage[getFullyQualifiedKey("upload_on_start")];
+    if (uploadOnStart === "yes" || uploadOnStart === true || uploadOnStart === "true") {
+      uploadOnStart = true;
+    } else {
+      uploadOnStart = false;
     }
 
     var hoverTimeout = localStorage[getFullyQualifiedKey("hover_timeout")];
@@ -562,6 +568,7 @@ function getConfigs() {
     if (env === "development") {
       server = "dev.ezkeep.com:9000";
     }
+    debugger;
     var userInfo = localStorage[getFullyQualifiedKey("user")];
     var userInfoString;
     if (userInfo) {
@@ -571,6 +578,7 @@ function getConfigs() {
       "env": env, 
       "hover_timeout": hoverTimeout, 
       "show_score": showScore, 
+      "upload_on_start": uploadOnStart, 
       "max_res": maxRes,
       "server": server,
       "user": userInfoString
@@ -627,14 +635,7 @@ function startHandShake(callback){
 function hasKeepitIdAndFacebookId() {
   var user = getConfigs().user;
   if (!user) return false;
-  try {
-    userInfo = JSON.parse(user);
-    if (userInfo.keepit_external_id && userInfo.facebook_id)
-      return true
-  } catch (e) {
-    log("could not parse JSON "+user);
-  }
-  return false
+  return user.keepit_external_id && user.facebook_id
 }
 
 // Check if the version has changed.
@@ -703,7 +704,13 @@ if (!hasKeepitIdAndFacebookId()) {
 } else {
   log("find user info in local storage");
   log(userInfo);
-  postBookmarks(chrome.bookmarks.getTree, "PLUGIN_START");//posting bookmarks even when keepit id is found
+  var config = getConfigs();
+  if(config["upload_on_start"] === true) {
+    log("loading bookmarks to the server");
+    postBookmarks(chrome.bookmarks.getTree, "PLUGIN_START");//posting bookmarks even when keepit id is found
+  } else {
+    log("NOT loading bookmarks to the server");
+  }
   getBookMarks();
 }
 
