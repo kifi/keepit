@@ -23,11 +23,16 @@ case class UserExperiment (
 
 object UserExperiment {
   
-  case class ExperimentType(val value: String)
+  sealed case class ExperimentType(val value: String)
   
   object ExperimentTypes {
     val ADMIN = State[ExperimentType]("admin")
     val FAKE = State[ExperimentType]("fake")
+    
+    def apply(str: String) = str.toLowerCase.trim match {
+      case ADMIN.value => ADMIN
+      case FAKE.value => FAKE
+    }
   }
   
   object States {

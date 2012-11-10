@@ -16,11 +16,11 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 import com.keepit.inject._
+import com.keepit.common.net._
 import com.keepit.common.db.Id
 import com.keepit.common.db.CX
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
-import com.keepit.model.User
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
 import com.keepit.serializer.UserWithSocialSerializer
@@ -28,10 +28,10 @@ import com.keepit.controllers.CommonActions._
 import play.api.http.ContentTypes
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
-import com.keepit.common.social.{SocialGraphPlugin, UserWithSocial}
-import com.keepit.common.social.SocialUserRawInfoStore
+import com.keepit.common.social._
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.graph.URIGraph
+import views.html.defaultpages.unauthorized
 
 object UserController extends Controller with Logging with SecureSocial {
 
@@ -114,9 +114,34 @@ object UserController extends Controller with Logging with SecureSocial {
     Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections))
   }
 
-  def usersView = SecuredAction(false) { implicit request => 
+  def usersView = AdminAction { implicit request => 
     val users = CX.withConnection { implicit c => User.all map UserWithSocial.toUserWithSocial}
     Ok(views.html.users(users))
+  }
+
+  def addExperiment(userId: Id[User], experimantType: String) = Action { request =>
+    CX.withConnection { implicit c =>
+      val existing = UserExperiment.getByUser(userId)
+      val experiment = UserExperiment.ExperimentTypes(experimantType)
+      if (existing contains(experimantType)) throw new Exception("user %s already has an experiment %s".format(experimantType))
+      UserExperiment(userId = userId, experimentType = experiment).save
+    }
+    Redirect(request.referer)
+  }
+  
+  def AdminAction(action: SecuredRequest[AnyContent] => Result): Action[AnyContent] = {
+    SecuredAction(false, parse.anyContent) { implicit request =>
+      val (socialUser, experiments) = CX.withConnection { implicit conn =>
+        val socialUser = SocialUserInfo.get(SocialId(request.user.id.id), SocialNetworks.FACEBOOK)
+        val experiments = UserExperiment.getByUser(socialUser.userId.get)
+        (socialUser, experiments.map(_.experimentType))
+      }
+      if (!experiments.contains(UserExperiment.ExperimentTypes.ADMIN)) {
+        Unauthorized("Social user %s does not have an admin auth".format(socialUser.socialId.id))
+      } else {
+        action(request)
+      }
+    }
   }
   
   def refreshAllSocialInfo(userId: Id[User]) = SecuredAction(false) { implicit request => 

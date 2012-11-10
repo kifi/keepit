@@ -9,6 +9,7 @@
       <th># of bookmarks</th>
       <th>Date joined</th>
       <th>Emails</th>
+      <th>Experiments</th>
     </tr>
   @for((userWithSocial, i) <- userWithSocials.zipWithIndex) {
     <tr>
@@ -18,6 +19,7 @@
       <td>@userWithSocial.bookmarksCount</td>
       <td>@adminHelper.dateDisplay(userWithSocial.user.createdAt)</td>
       <td><a href='mailto:@{userWithSocial.emails.map(_.address).mkString(",")}'>@{userWithSocial.emails.map(_.address).mkString(",")}</a></td>
+      <td>@userWithSocial.experimants.mkString(",")</td>
     </tr>
   }
   </table>

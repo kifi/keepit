@@ -104,7 +104,7 @@ object SearchController extends Controller with Logging with SecureSocial {
     val users = res.users.toSeq.map{ userId =>
       val user = User.get(userId) 
       val info = SocialUserInfo.getByUser(user.id.get).head
-      UserWithSocial(user, info, Bookmark.count(user), Seq())
+      UserWithSocial(user, info, Bookmark.count(user), Seq(), Seq())
     }
     PersonalSearchResult(uri, res.bookmarkCount, res.isMyBookmark, false, users, res.score)
   }
