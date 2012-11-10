@@ -690,7 +690,7 @@ function startHandShake(callback){
 function hasKeepitIdAndFacebookId() {
   var user = getConfigs().user;
   if (!user) return false;
-  return user.keepit_external_id && user.facebook_id && user.name && user.avatar_url
+  return user.keepit_external_id && user.facebook_id && user.name && user.avatar_url;
 }
 
 // Check if the version has changed.
