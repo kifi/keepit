@@ -29,13 +29,14 @@ import play.api.http.ContentTypes
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social._
+import com.keepit.common.controller.FortyTwoController
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.graph.URIGraph
 import views.html.defaultpages.unauthorized
 
-object UserController extends Controller with Logging with SecureSocial {
+object UserController extends FortyTwoController {
 
-    /**
+  /**
    * Call me using:
    * curl localhost:9000/users/keepurl?url=http://www.ynet.co.il/;echo
    */
@@ -97,7 +98,7 @@ object UserController extends Controller with Logging with SecureSocial {
     Ok(userWithSocialSerializer.writes(user))
   }
 
-  def userView(userId: Id[User]) = SecuredAction(false) { implicit request => 
+  def userView(userId: Id[User]) = AdminAction { implicit request => 
     val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections) = CX.withConnection { implicit c =>
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId)) 
       val bookmarks = Bookmark.ofUser(userWithSocial.user)
@@ -129,22 +130,7 @@ object UserController extends Controller with Logging with SecureSocial {
     Redirect(request.referer)
   }
   
-  def AdminAction(action: SecuredRequest[AnyContent] => Result): Action[AnyContent] = {
-    SecuredAction(false, parse.anyContent) { implicit request =>
-      val (socialUser, experiments) = CX.withConnection { implicit conn =>
-        val socialUser = SocialUserInfo.get(SocialId(request.user.id.id), SocialNetworks.FACEBOOK)
-        val experiments = UserExperiment.getByUser(socialUser.userId.get)
-        (socialUser, experiments.map(_.experimentType))
-      }
-      if (!experiments.contains(UserExperiment.ExperimentTypes.ADMIN)) {
-        Unauthorized("Social user %s does not have an admin auth".format(socialUser.socialId.id))
-      } else {
-        action(request)
-      }
-    }
-  }
-  
-  def refreshAllSocialInfo(userId: Id[User]) = SecuredAction(false) { implicit request => 
+  def refreshAllSocialInfo(userId: Id[User]) = AdminAction { implicit request => 
     val socialUserInfos = CX.withConnection { implicit c => 
       val user = User.get(userId)
       SocialUserInfo.getByUser(user.id.get)
