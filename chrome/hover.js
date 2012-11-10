@@ -314,8 +314,10 @@ console.log("injecting keep it hover div");
   function drawComments(user, comments) {
     if(comments && comments.length)
       $('.comments_label').text(comments.length + " Comments");
-    else
+    else {
       $('.comments_label').text("0 Comments");
+      comments = [];
+    }
     getTemplate("comments.html", {"comments":comments}, function(renderedTemplate) {
       console.log("comment feed",comments);
       $('.kifi_comment_wrapper').html(renderedTemplate);
@@ -355,17 +357,25 @@ console.log("injecting keep it hover div");
     });
   }
 
-$(document).keydown(function(event) {
 
-    //19 for Mac Command+S
-    if (!( String.fromCharCode(event.which).toLowerCase() == 'k' && event.ctrlKey) && !(event.which == 19)) return true;
-
-
-    getUserInfo(showComments)
-
-    event.preventDefault();
-    return false;
-});
+  /*$(document).keypress(function(event) {
+    console.log(event);
+    if ((event.which == 115 && (event.ctrlKey||event.metaKey)|| (event.which == 19))) {
+      event.preventDefault();
+      var existingElements = $('.kifi_hover').length;
+      if (existingElements > 0) {
+        slideOut();
+        return;
+      }
+      chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
+        config = response;
+        console.log("user config",response);
+        getUserInfo(showHover);
+      });
+      return false;
+    }
+    return true;
+  });*/
 
 
   function chatWith(user) {

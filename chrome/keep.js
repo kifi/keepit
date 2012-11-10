@@ -419,9 +419,9 @@ function initPage(request, sendResponse, tab) {
 }
 
 function attachShortcut(tabid) {
-  safeExecuteScript(tabid, {
+  /*safeExecuteScript(tabid, {
     code: "$(window).keydown(function(e) { if(e.metaKey && e.keyCode == 75) { chrome.extension.sendRequest({'type':'open_slider'}); } });"
-  });
+  });*/
 }
 
 function checkHoverExisted(tabid) {
