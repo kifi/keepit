@@ -71,7 +71,8 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
       val experiments = CX.withConnection { implicit conn =>
         UserExperiment.getByUser(request.userId)
       }
-      if (!experiments.contains(UserExperiment.ExperimentTypes.ADMIN)) {
+      val authorizedDevUser = current.mode == Mode.Dev && request.userId.id == 1L
+      if (!authorizedDevUser && !experiments.contains(UserExperiment.ExperimentTypes.ADMIN)) {
         Unauthorized("User %s does not have an admin auth, flushing session... If you think you should see this page, please contact FortyTwo Engineering.".format(request.userId)).withNewSession
       } else {
         action(request)
