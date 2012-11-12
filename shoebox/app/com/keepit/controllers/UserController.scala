@@ -120,7 +120,7 @@ object UserController extends FortyTwoController {
     Ok(views.html.users(users))
   }
 
-  def addExperiment(userId: Id[User], experimantType: String) = Action { request =>
+  def addExperiment(userId: Id[User], experimantType: String) = AdminAction { request =>
     CX.withConnection { implicit c =>
       val existing = UserExperiment.getByUser(userId)
       val experiment = UserExperiment.ExperimentTypes(experimantType)
