@@ -32,9 +32,17 @@ import views.html.defaultpages.unauthorized
 trait FortyTwoController extends Controller with Logging with SecureSocial {
 
   private val FORTYTWO_USER_ID = "fortytwo_user_id"
+    
+  case class AuthenticatedRequest(socialUser: SocialUser, userId: Id[User], request: Request[AnyContent]) extends WrappedRequest(request)    
+
+  def AuthenticatedJsonAction(action: AuthenticatedRequest => PlainResult): Action[AnyContent] = 
+    AuthenticatedAction(true, action)
   
-  def AdminAction(action: SecuredRequest[AnyContent] => PlainResult): Action[AnyContent] = {
-    SecuredAction(false, parse.anyContent) { implicit request =>
+  def AuthenticatedHtmlAction(action: AuthenticatedRequest => PlainResult): Action[AnyContent] = 
+    AuthenticatedAction(true, action)
+    
+  private[controller] def AuthenticatedAction(isApi: Boolean, action: AuthenticatedRequest => PlainResult): Action[AnyContent] = {
+    SecuredAction(isApi, parse.anyContent) { implicit request =>
       val userIdOpt = request.session.get(FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
       val (userId, experiments, newSession) = CX.withConnection { implicit conn =>
         val (userId, newSession) = userIdOpt match {
@@ -48,12 +56,27 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
         val experiments = UserExperiment.getByUser(userId)
         (userId, experiments.map(_.experimentType), newSession)
       }
-      if (!experiments.contains(UserExperiment.ExperimentTypes.ADMIN)) {
-        Unauthorized("User %s does not have an admin auth, flushing session... If you think you should see this page, please contact FortyTwo Engineering.".format(userId)).withNewSession
-      } else {
-        action(request).withSession(newSession)
-      }
+      action(AuthenticatedRequest(request.user, userId, request.request)).withSession(newSession)
     }
+  }
+ 
+  def AdminJsonAction(action: AuthenticatedRequest => PlainResult): Action[AnyContent] = 
+    AdminAction(true, action)
+  
+  def AdminHtmlAction(action: AuthenticatedRequest => PlainResult): Action[AnyContent] = 
+    AdminAction(true, action)
+      
+  private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest => PlainResult): Action[AnyContent] = {
+    AuthenticatedAction(isApi, { implicit request =>
+      val experiments = CX.withConnection { implicit conn =>
+        UserExperiment.getByUser(request.userId)
+      }
+      if (!experiments.contains(UserExperiment.ExperimentTypes.ADMIN)) {
+        Unauthorized("User %s does not have an admin auth, flushing session... If you think you should see this page, please contact FortyTwo Engineering.".format(request.userId)).withNewSession
+      } else {
+        action(request)
+      }
+    })
   }
   
 }
