@@ -104,15 +104,15 @@ object BookmarksController extends FortyTwoController {
   }
     
   def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
-    val pageSize = 200
+    val PAGE_SIZE = 200
     val (count, bookmarksAndUsers) = CX.withConnection { implicit conn =>
-      val bookmarks = Bookmark.page(page, pageSize)
+      val bookmarks = Bookmark.page(page, PAGE_SIZE)
       val users = bookmarks map (_.userId) map User.get map UserWithSocial.toUserWithSocial
-      val uris = bookmarks map (_.uriId) map NormalizedURI.get map {u => u.stats()}
+      val uris = bookmarks map (_.uriId) map NormalizedURI.get map (_.stats)
       val count = Bookmark.count
       (count, (bookmarks, uris, users).zipped.toList.seq)
     }
-    val pageCount: Int = (count / pageSize + 1).toInt
+    val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.bookmarks(bookmarksAndUsers, page, count, pageCount))
   }
   
