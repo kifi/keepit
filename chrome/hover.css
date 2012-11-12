@@ -450,13 +450,81 @@ span.kn_social {
   background: rgba(50,100,150,.3) !important;
 }
 
-.kifi_chat_wrapper {
-  max-height: 400px;
-  min-height:100px;
-  background-color: #336699;
+.kifi_hover .kifi_comment_wrapper {
+  background-color: #faf9f9;
   color: #2d2d2d;
   font-size: 11px;
-  display:none !important;
+  display:none;
+  margin-top: 5px;
+}
+
+.kifi_comment_wrapper .kifi_comment {
+  border-bottom:1px solid #B8B8B8;
+  display: block;
+  clear: both;
+  min-height: 35px;
+  margin: 5px 0px 5px 0px;
+}
+
+.kifi_comment_wrapper #comment_text {
+  width:250px;
+  margin: 0;
+  height:35px;
+  display: block;
+  background-color: #fff;
+  border: 1px solid rgb(190, 190, 190);
+  font-size: 12px;
+  resize:none;
+  max-height: 40px;
+  padding:5px;
+}
+
+
+
+.kifi_comment_wrapper .comment_user img {
+  width:30px;
+  height:30px;
+  border-radius: 2px;
+  float:left;
+  position: relative;
+  margin-right: 5px;
+}
+
+.kifi_comment_wrapper .kifi_comment * {
+  font-size: 11px;
+  font-family: 'helvetica neue', arial, sans-serif;
+}
+
+.kifi_comment_wrapper .comment_body {
+
+}
+
+.kifi_comment_wrapper .comment_body b {
+  font-weight: 800;
+}
+
+.kifi_comment_wrapper .postbtn {
+  padding:5px;
+  padding-left:30px;
+  padding-right:30px;
+  border-radius: 2px 0px 0px 2px;
+}
+
+.kifi_comment_wrapper #comment_list {
+  max-height: 270px;
+  overflow:auto;
+}
+
+.kificnt .comments_label {
+  margin-top: 6px;
+  font-size: 12px;
+  text-decoration: none;
+  color: #7E7E7E;
+}
+.kificnt .comments_label:hover {
+  text-decoration: underline;
+  color: #666;
+  cursor: pointer;
 }
 
 
