@@ -98,7 +98,7 @@ object UserController extends FortyTwoController {
     Ok(userWithSocialSerializer.writes(user))
   }
 
-  def userView(userId: Id[User]) = AdminAction { implicit request => 
+  def userView(userId: Id[User]) = AdminHtmlAction { implicit request => 
     val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections) = CX.withConnection { implicit c =>
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId)) 
       val bookmarks = Bookmark.ofUser(userWithSocial.user)
@@ -115,12 +115,12 @@ object UserController extends FortyTwoController {
     Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections))
   }
 
-  def usersView = AdminAction { implicit request => 
+  def usersView = AdminHtmlAction { implicit request => 
     val users = CX.withConnection { implicit c => User.all map UserWithSocial.toUserWithSocial}
     Ok(views.html.users(users))
   }
 
-  def addExperiment(userId: Id[User], experimantType: String) = AdminAction { request =>
+  def addExperiment(userId: Id[User], experimantType: String) = AdminHtmlAction { request =>
     CX.withConnection { implicit c =>
       val existing = UserExperiment.getByUser(userId)
       val experiment = UserExperiment.ExperimentTypes(experimantType)
@@ -130,7 +130,7 @@ object UserController extends FortyTwoController {
     Redirect(request.referer)
   }
   
-  def refreshAllSocialInfo(userId: Id[User]) = AdminAction { implicit request => 
+  def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction { implicit request => 
     val socialUserInfos = CX.withConnection { implicit c => 
       val user = User.get(userId)
       SocialUserInfo.getByUser(user.id.get)
