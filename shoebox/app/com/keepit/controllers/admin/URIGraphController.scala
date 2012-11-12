@@ -21,13 +21,13 @@ import com.keepit.common.controller.FortyTwoController
 
 object URIGraphController extends FortyTwoController {
 
-  def load = AdminAction { implicit request => 
+  def load = AdminHtmlAction { implicit request => 
     val uriGraphPlugin = inject[URIGraphPlugin]
     val cnt = uriGraphPlugin.load()
     Ok("indexed %d users".format(cnt))
   }
   
-  def update(userId: Id[User]) = AdminAction { implicit request =>
+  def update(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val uriGraphPlugin = inject[URIGraphPlugin]
     val cnt = uriGraphPlugin.update(userId)
     Ok("indexed %d users".format(cnt))

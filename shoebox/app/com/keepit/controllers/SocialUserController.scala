@@ -34,14 +34,14 @@ import com.keepit.common.controller.FortyTwoController
 
 object SocialUserController extends FortyTwoController {
 
-  def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminAction { implicit request =>
+  def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
     val socialUserInfo = CX.withConnection { implicit conn =>
       SocialUserInfo.get(socialUserId).reset().save
     }
     Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfo.id.get))
   }
   
-  def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminAction { implicit request => 
+  def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request => 
     
     val (socialUserInfo, socialConnections) = CX.withConnection { implicit conn =>
       val socialUserInfo = SocialUserInfo.get(socialUserId)
@@ -55,12 +55,16 @@ object SocialUserController extends FortyTwoController {
     Ok(views.html.socialUser(socialUserInfo, socialConnections, rawInfo))
   }
 
-  def socialUsersView = AdminAction { implicit request => 
-    val socialUsers = CX.withConnection { implicit c => SocialUserInfo.all.sortWith((a,b) => a.fullName < b.fullName) }
-    Ok(views.html.socialUsers(socialUsers))
+  def socialUsersView(page: Int) = AdminHtmlAction { implicit request =>
+    val PAGE_SIZE = 2
+    val (socialUsers, count) = CX.withConnection { implicit c => 
+      (SocialUserInfo.page(page, PAGE_SIZE), SocialUserInfo.count)
+    }
+    val pageCount = (count / PAGE_SIZE + 1).toInt
+    Ok(views.html.socialUsers(socialUsers, page, count, pageCount))
   }
   
-  def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminAction { implicit request => 
+  def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request => 
     val graph = inject[SocialGraphPlugin]
     val socialUserInfo = CX.withConnection { implicit conn => SocialUserInfo.get(socialUserInfoId) }
     if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))
