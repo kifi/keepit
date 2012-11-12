@@ -112,7 +112,7 @@ object SearchController extends FortyTwoController {
   
   case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
   
-  def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = AdminAction { implicit request =>
+  def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = AdminHtmlAction { implicit request =>
     val ref = CX.withConnection { implicit conn =>
       ArticleSearchResultRef.getOpt(id).get
     }

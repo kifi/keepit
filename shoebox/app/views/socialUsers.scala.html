@@ -1,14 +1,53 @@
-@(socialUserInfos: Seq[SocialUserInfo])
+@(socialUserInfos: Seq[SocialUserInfo], page: Int, count: Long, pageCount: Int)
 
-@admin("All " + socialUserInfos.size + " Social Users") {
-    <h2>All @socialUserInfos.size Social Users</h2>
+@pagination(page: Int, pageCount: Int) = {
+  <div class="pagination pagination-centered pagination-mini">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(page - 1)">
+        } else {
+         <a href="#">
+        }
+        Prev
+        </a>
+      </li>
+      @for(i <- 0 to (pageCount - 1)) {
+        @if(i == page) {
+          <li class="disabled">
+            <a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(i)">@{i + 1}</a>
+          </li>
+        } else {
+          <li class="active">
+            <a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(i)">@{i + 1}</a>
+          </li>
+        }
+      }
+      <li>
+        @if(socialUserInfos.size > 0) {
+          <a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(page + 1)">
+        } else {
+         <a href="#">
+        }
+        Next
+        </a>
+      </li>
+    </ul>
+  </div>
+}
+
+@admin("There are " + count + " social users (displaying " + socialUserInfos.size + ")") {
+  <h2>Showing @socialUserInfos.size social users of @count total (Page @{page + 1})</h2>
+
+  @pagination(page, pageCount)
+
   <table class="table table-bordered">
     <tr>
         <th>#</th>
         <th>Id</th>
         <th>Social User</th>
       <th>FortyTwo User</th>
-      <th>creation</th>
+      <th>Created</th>
     </tr>
   @for((socialUserInfo, i) <- socialUserInfos.zipWithIndex) {
     <tr>
@@ -18,8 +57,10 @@
       <td>@if(socialUserInfo.userId.isDefined) {
         @adminHelper.socialUserDisplay(socialUserInfo)
       }</td>
-      <td>@socialUserInfo.createdAt</td>
+      <td>@adminHelper.dateDisplay(socialUserInfo.createdAt)</td>
     </tr>
   }
   </table>
+
+  @pagination(page, pageCount)
 }
