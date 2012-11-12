@@ -27,8 +27,9 @@ import java.sql.Connection
 import play.api.http.ContentTypes
 import play.api.libs.json.JsString
 import com.keepit.common.logging.Logging
+import com.keepit.common.controller.FortyTwoController
 
-object HomeController extends Controller with Logging {
+object HomeController extends FortyTwoController {
 
   def home = Action{ request =>
     log.info("yet another homepage access!")

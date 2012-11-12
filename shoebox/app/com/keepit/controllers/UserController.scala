@@ -16,11 +16,11 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 import com.keepit.inject._
+import com.keepit.common.net._
 import com.keepit.common.db.Id
 import com.keepit.common.db.CX
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
-import com.keepit.model.User
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
 import com.keepit.serializer.UserWithSocialSerializer
@@ -28,14 +28,15 @@ import com.keepit.controllers.CommonActions._
 import play.api.http.ContentTypes
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
-import com.keepit.common.social.{SocialGraphPlugin, UserWithSocial}
-import com.keepit.common.social.SocialUserRawInfoStore
+import com.keepit.common.social._
+import com.keepit.common.controller.FortyTwoController
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.graph.URIGraph
+import views.html.defaultpages.unauthorized
 
-object UserController extends Controller with Logging with SecureSocial {
+object UserController extends FortyTwoController {
 
-    /**
+  /**
    * Call me using:
    * curl localhost:9000/users/keepurl?url=http://www.ynet.co.il/;echo
    */
@@ -97,7 +98,7 @@ object UserController extends Controller with Logging with SecureSocial {
     Ok(userWithSocialSerializer.writes(user))
   }
 
-  def userView(userId: Id[User]) = SecuredAction(false) { implicit request => 
+  def userView(userId: Id[User]) = AdminAction { implicit request => 
     val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections) = CX.withConnection { implicit c =>
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId)) 
       val bookmarks = Bookmark.ofUser(userWithSocial.user)
@@ -114,12 +115,22 @@ object UserController extends Controller with Logging with SecureSocial {
     Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections))
   }
 
-  def usersView = SecuredAction(false) { implicit request => 
+  def usersView = AdminAction { implicit request => 
     val users = CX.withConnection { implicit c => User.all map UserWithSocial.toUserWithSocial}
     Ok(views.html.users(users))
   }
+
+  def addExperiment(userId: Id[User], experimantType: String) = Action { request =>
+    CX.withConnection { implicit c =>
+      val existing = UserExperiment.getByUser(userId)
+      val experiment = UserExperiment.ExperimentTypes(experimantType)
+      if (existing contains(experimantType)) throw new Exception("user %s already has an experiment %s".format(experimantType))
+      UserExperiment(userId = userId, experimentType = experiment).save
+    }
+    Redirect(request.referer)
+  }
   
-  def refreshAllSocialInfo(userId: Id[User]) = SecuredAction(false) { implicit request => 
+  def refreshAllSocialInfo(userId: Id[User]) = AdminAction { implicit request => 
     val socialUserInfos = CX.withConnection { implicit c => 
       val user = User.get(userId)
       SocialUserInfo.getByUser(user.id.get)

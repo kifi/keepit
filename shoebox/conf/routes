@@ -50,6 +50,7 @@ GET     /admin/uriGraph/load        com.keepit.controllers.admin.URIGraphControl
 GET     /admin/uriGraph/update/:userId com.keepit.controllers.admin.URIGraphController.update(userId: Id[User])
 GET     /admin/users                com.keepit.controllers.UserController.usersView
 GET     /admin/user                 com.keepit.controllers.UserController.userView(userId: Id[User])
+GET     /admin/user/experimant/:userId/add/:experimantType  com.keepit.controllers.UserController.addExperiment(userId: Id[User], experimantType: String)
 GET     /admin/social_users         com.keepit.controllers.SocialUserController.socialUsersView
 GET     /admin/social_user          com.keepit.controllers.SocialUserController.socialUserView(socialUserId: Id[SocialUserInfo])
 GET     /admin/social_user/refresh  com.keepit.controllers.SocialUserController.refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo])
