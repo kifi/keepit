@@ -30,31 +30,34 @@ class HttpFetcher extends Logging {
   val httpclient = new DefaultHttpClient(cm, httpParams)
   
   // add interceptors
-  httpclient.addRequestInterceptor(new HttpRequestInterceptor() {
-    def process(request: HttpRequest, context: HttpContext) {
-      if (!request.containsHeader("Accept-Encoding")) {
-        request.addHeader("Accept-Encoding", "gzip");
-      }
-    }
-  })
-  httpclient.addResponseInterceptor(new HttpResponseInterceptor() {
-    def process(response: HttpResponse, context: HttpContext) {
-      val entity = response.getEntity
-      if (entity != null) {
-        val ce = entity.getContentEncoding
-        if (ce != null) {
-          ce.getElements.find{ codec =>
-            codec.getName.toLowerCase match {
-              case "gzip" =>
-                response.setEntity(new GzipDecompressingEntity(response.getEntity()))
-                true
-              case _ => false
-            }
-          }
-        }
-      }
-    }
-  })
+//
+// DISABLED gzip encoding: we sometimes get "java.io.EOFException: Unexpected end of ZLIB input stream"
+//
+//  httpclient.addRequestInterceptor(new HttpRequestInterceptor() {
+//    def process(request: HttpRequest, context: HttpContext) {
+//      if (!request.containsHeader("Accept-Encoding")) {
+//        request.addHeader("Accept-Encoding", "gzip");
+//      }
+//    }
+//  })
+//  httpclient.addResponseInterceptor(new HttpResponseInterceptor() {
+//    def process(response: HttpResponse, context: HttpContext) {
+//      val entity = response.getEntity
+//      if (entity != null) {
+//        val ce = entity.getContentEncoding
+//        if (ce != null) {
+//          ce.getElements.find{ codec =>
+//            codec.getName.toLowerCase match {
+//              case "gzip" =>
+//                response.setEntity(new GzipDecompressingEntity(response.getEntity()))
+//                true
+//              case _ => false
+//            }
+//          }
+//        }
+//      }
+//    }
+//  })
 
   def fetch(url: String)(f: InputStream => Unit): HttpFetchStatus = {
     val httpget = new HttpGet(url)

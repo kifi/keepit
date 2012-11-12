@@ -1,29 +1,30 @@
 package com.keepit.scraper
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.Id
+import com.keepit.common.db.{Id, CX}
 import com.keepit.common.time._
+import com.keepit.common.net.URI
 import com.keepit.search.{Article, ArticleStore}
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
-import com.keepit.common.db.CX
-import org.apache.http.HttpStatus
-import com.google.inject.Inject
-import play.api.Play.current
-import org.joda.time.Seconds
 import com.keepit.scraper.extractor.DefaultExtractor
+import com.keepit.scraper.extractor.DefaultExtractorFactory
 import com.keepit.scraper.extractor.Extractor
-import java.net.URI
-import com.keepit.scraper.extractor.YoutubeExtractor
+import com.keepit.scraper.extractor.YoutubeExtractorFactory
+import com.google.inject.Inject
+import org.apache.http.HttpStatus
+import org.joda.time.Seconds
+import play.api.Play.current
 
 object Scraper {
   val BATCH_SIZE = 100
+  
+  val maxContentChars = 100000 // 100K chars
 }
 
 class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
   
   val httpFetcher = new HttpFetcher
-  val maxContentChars = 100000 // 100K chars
   
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
@@ -87,11 +88,19 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
   
   private def getExtractor(url: String): Extractor = {
     try {
-      val uri = new URI(url)
-      if (uri.getHost == "www.youtube.com" && uri.getPath.endsWith("watch")) new YoutubeExtractor(url, maxContentChars)
-      else new DefaultExtractor(url, maxContentChars)
+      URI.parse(url) match {
+        case Some(uri) =>
+          Extractor.factories.find(_.isDefinedAt(uri)).map{ f =>
+            f.apply(uri)
+          }.getOrElse(throw new Exception("failed to find a extractor factory"))
+        case None =>
+          log.warn("uri parsing failed: [%s]".format(url))
+          new DefaultExtractor(url, Scraper.maxContentChars)
+      }
     } catch {
-      case _ => new DefaultExtractor(url, maxContentChars)
+      case e => 
+          log.warn("uri parsing failed: [%s][%s]".format(url, e.toString))
+          new DefaultExtractor(url, Scraper.maxContentChars)
     }
   }
   
