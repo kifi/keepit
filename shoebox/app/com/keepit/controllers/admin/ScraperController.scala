@@ -19,16 +19,17 @@ import com.keepit.scraper.ScraperPlugin
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.search.ArticleStore
+import com.keepit.common.controller.FortyTwoController
 
-object ScraperController extends Controller with Logging {
+object ScraperController extends FortyTwoController {
 
-  def scrape = Action { implicit request => 
+  def scrape = AdminAction { implicit request => 
     val scraper = inject[ScraperPlugin]
     val articles = scraper.scrape()
     Ok(views.html.scrape(articles))
   }
   
-  def scrapeByState(state: State[NormalizedURI]) = Action { implicit request =>
+  def scrapeByState(state: State[NormalizedURI]) = AdminAction { implicit request =>
     transitionByAdmin(state -> Set(ACTIVE)) { newState =>
       CX.withConnection { implicit c =>
         NormalizedURI.getByState(state).foreach{ uri => uri.withState(newState).save }
@@ -39,7 +40,7 @@ object ScraperController extends Controller with Logging {
     }
   }
 
-  def getScraped(id: Id[NormalizedURI]) = Action { implicit request => 
+  def getScraped(id: Id[NormalizedURI]) = AdminAction { implicit request => 
     val store = inject[ArticleStore]
     val article = store.get(id).get
     val uri = CX.withConnection { implicit c =>

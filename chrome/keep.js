@@ -199,6 +199,9 @@ function onRequest(request, sender, sendResponse) {
     else if (request.type === "log_event") {
       logEvent(request.event);
     }
+    else if (request.type === "post_comment") {
+      postComment(request, sendResponse);
+    }
     // Return nothing to let the connection be cleaned up.
   } catch (e) {
     error(e);
@@ -250,6 +253,29 @@ function removeKeep(bookmarks, request, sendResponse, tab) {
   }
 
   xhr.open("POST", 'http://' + userConfig.server + '/bookmarks/remove/?externalId=' + userInfo["keepit_external_id"] + "&externalBookmarkId=" + request.externalId, true);
+  xhr.send();
+
+}
+
+function postComment(request, sendResponse) {
+  log("posting comment:");
+  console.log(request);
+
+  sendResponse({});
+
+  var xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState == 4) {
+      log("POSTED!" + xhr.response);
+    }
+  }
+  var userConfigs = getConfigs();
+  if(!userConfigs || !userConfigs.user) {
+    log("No userinfo! Can't post comment!");
+    return;
+  }
+
+  xhr.open("POST", 'http://' + userConfigs.server + '/comments/add?externalId=' + userConfigs.user["keepit_external_id"] + "&url=" + encodeURIComponent(request.url) + "&text=" + encodeURIComponent(request.text) + "&permissions=" + request.permissions, true);
   xhr.send();
 
 }
@@ -393,9 +419,9 @@ function initPage(request, sendResponse, tab) {
 }
 
 function attachShortcut(tabid) {
-  safeExecuteScript(tabid, {
+  /*safeExecuteScript(tabid, {
     code: "$(window).keydown(function(e) { if(e.metaKey && e.keyCode == 75) { chrome.extension.sendRequest({'type':'open_slider'}); } });"
-  });
+  });*/
 }
 
 function checkHoverExisted(tabid) {

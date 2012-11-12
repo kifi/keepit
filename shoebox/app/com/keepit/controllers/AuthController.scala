@@ -39,8 +39,7 @@ import com.keepit.common.logging.Logging
 /**
  * The Login page controller
  */
-object AuthController extends Controller with securesocial.core.SecureSocial with Logging
-{
+object AuthController extends Controller with securesocial.core.SecureSocial with Logging {
   def isLoggedIn = SecuredAction(true) { implicit request => {
 	  UserService.find(request.user.id) match {
 	    case None =>
