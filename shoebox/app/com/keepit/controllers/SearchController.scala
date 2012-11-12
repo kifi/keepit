@@ -39,6 +39,7 @@ import org.apache.commons.lang3.StringEscapeUtils
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.search.ArticleSearchResultStore
 import securesocial.core._
+import com.keepit.common.controller.FortyTwoController
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchResult(uri: NormalizedURI, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[UserWithSocial], score: Float)
@@ -50,7 +51,7 @@ case class PersonalSearchResultPacket(
   mayHaveMoreHits: Boolean,
   context: String)
 
-object SearchController extends Controller with Logging with SecureSocial {
+object SearchController extends FortyTwoController {
  
   // Remove after a few days from Nov 6 (and from routes)
   def search2(escapedTerm: String, externalId: ExternalId[User], maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = search(escapedTerm, externalId, maxHits, lastUUIDStr, context)
@@ -104,14 +105,14 @@ object SearchController extends Controller with Logging with SecureSocial {
     val users = res.users.toSeq.map{ userId =>
       val user = User.get(userId) 
       val info = SocialUserInfo.getByUser(user.id.get).head
-      UserWithSocial(user, info, Bookmark.count(user), Seq())
+      UserWithSocial(user, info, Bookmark.count(user), Seq(), Seq())
     }
     PersonalSearchResult(uri, res.bookmarkCount, res.isMyBookmark, false, users, res.score)
   }
   
   case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
   
-  def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = SecuredAction(false) { implicit request =>
+  def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = AdminAction { implicit request =>
     val ref = CX.withConnection { implicit conn =>
       ArticleSearchResultRef.getOpt(id).get
     }

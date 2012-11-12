@@ -33,10 +33,11 @@ import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.net.HttpClient
 import com.keepit.search.graph.URIGraphPlugin
 import play.api.libs.json.JsBoolean
+import com.keepit.common.controller.FortyTwoController
 
-object BookmarksController extends Controller with Logging with SecureSocial {
+object BookmarksController extends FortyTwoController {
 
-  def edit(id: Id[Bookmark]) = Action{ request =>
+  def edit(id: Id[Bookmark]) = AdminAction { request =>
     CX.withConnection { implicit conn =>
       val bookmark = Bookmark.get(id)
       val uri = NormalizedURI.get(bookmark.uriId)
@@ -46,7 +47,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   }
 
   //post request with a list of private/public and active/inactive
-  def updateBookmarks() = SecuredAction(false) { request =>
+  def updateBookmarks() = AdminAction { request =>
     val uniqueUsers = CX.withConnection { implicit conn =>
       val modifiedUserIds = request.body.asFormUrlEncoded.get map { case (key, values) =>
         key.split("_") match {
@@ -102,7 +103,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
     Redirect(com.keepit.controllers.routes.BookmarksController.bookmarksView(0))
   }
     
-  def bookmarksView(page: Int = 0) = SecuredAction(false) { request =>
+  def bookmarksView(page: Int = 0) = AdminAction { request =>
     val pageSize = 200
     val (count, bookmarksAndUsers) = CX.withConnection { implicit conn =>
       val bookmarks = Bookmark.page(page, pageSize)

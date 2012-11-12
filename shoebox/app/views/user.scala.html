@@ -32,6 +32,9 @@
         <th>Email</th><td><a href='mailto:@{userWithSocial.emails.map(_.address).mkString(",")}'>@{userWithSocial.emails.map(_.address).mkString(",")}</a></td>
       </tr>
       <tr>
+        <th>Experimants</th><td>@userWithSocial.experimants.mkString(",")</td>
+      </tr>
+      <tr>
         <th>OAuth</th><td><textarea class="json-textArea">@socialUserInfos</textarea></td>
       </tr>
       <tr>

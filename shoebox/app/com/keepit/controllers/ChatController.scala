@@ -32,9 +32,9 @@ import com.keepit.common.db.ExternalId
 import securesocial.core.providers.FacebookProvider
 import com.keepit.model.SocialUserInfo
 import com.keepit.common.social.SocialId
-//import scala.collection.immutable.Map
+import com.keepit.common.controller.FortyTwoController
 
-object ChatController extends Controller with SecureSocial with Logging {
+object ChatController extends FortyTwoController {
 
   def createConnection() = {
     val config = new ConnectionConfiguration("chat.facebook.com", 5222)
