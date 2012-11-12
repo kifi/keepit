@@ -31,17 +31,27 @@ import views.html.defaultpages.unauthorized
 
 trait FortyTwoController extends Controller with Logging with SecureSocial {
 
-  def AdminAction(action: SecuredRequest[AnyContent] => Result): Action[AnyContent] = {
+  private val FORTYTWO_USER_ID = "fortytwo_user_id"
+  
+  def AdminAction(action: SecuredRequest[AnyContent] => PlainResult): Action[AnyContent] = {
     SecuredAction(false, parse.anyContent) { implicit request =>
-      val (socialUser, experiments) = CX.withConnection { implicit conn =>
-        val socialUser = SocialUserInfo.get(SocialId(request.user.id.id), SocialNetworks.FACEBOOK)
-        val experiments = UserExperiment.getByUser(socialUser.userId.get)
-        (socialUser, experiments.map(_.experimentType))
+      val userIdOpt = request.session.get(FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
+      val (userId, experiments, newSession) = CX.withConnection { implicit conn =>
+        val (userId, newSession) = userIdOpt match {
+          case None =>
+            val socialUser = SocialUserInfo.get(SocialId(request.user.id.id), SocialNetworks.FACEBOOK)
+            val userId = socialUser.userId.get
+            (userId, session + (FORTYTWO_USER_ID -> userId.id.toString))
+          case Some(userId) => 
+            (userId, session)
+        }
+        val experiments = UserExperiment.getByUser(userId)
+        (userId, experiments.map(_.experimentType), newSession)
       }
       if (!experiments.contains(UserExperiment.ExperimentTypes.ADMIN)) {
-        Unauthorized("Social user %s does not have an admin auth".format(socialUser.socialId.id))
+        Unauthorized("User %s does not have an admin auth, flushing session... If you think you should see this page, please contact FortyTwo Engineering.".format(userId)).withNewSession
       } else {
-        action(request)
+        action(request).withSession(newSession)
       }
     }
   }
