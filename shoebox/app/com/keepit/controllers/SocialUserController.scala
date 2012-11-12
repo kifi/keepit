@@ -55,9 +55,13 @@ object SocialUserController extends FortyTwoController {
     Ok(views.html.socialUser(socialUserInfo, socialConnections, rawInfo))
   }
 
-  def socialUsersView = AdminHtmlAction { implicit request => 
-    val socialUsers = CX.withConnection { implicit c => SocialUserInfo.all.sortWith((a,b) => a.fullName < b.fullName) }
-    Ok(views.html.socialUsers(socialUsers))
+  def socialUsersView(page: Int) = AdminHtmlAction { implicit request =>
+    val PAGE_SIZE = 2
+    val (socialUsers, count) = CX.withConnection { implicit c => 
+      (SocialUserInfo.page(page, PAGE_SIZE), SocialUserInfo.count)
+    }
+    val pageCount = (count / PAGE_SIZE + 1).toInt
+    Ok(views.html.socialUsers(socialUsers, page, count, pageCount))
   }
   
   def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request => 
