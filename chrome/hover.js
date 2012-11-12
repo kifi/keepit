@@ -246,6 +246,12 @@ console.log("injecting keep it hover div");
       $('.moreinnerbox').slideToggle(150);
     });
 
+    $('.comments_label').click(function() {
+      showComments(user, true);
+    });
+
+    showComments(user,false); // prefetch comments, do not show.
+
     slideIn();
   }
 
@@ -284,15 +290,92 @@ console.log("injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
-  function showComments(user) {
+  function showComments(user, openComments) {
+    // trick to make it appear faster: render empty template, start opening
+    /*getTemplate("comments.html", {}, function(renderedTemplate) {
+      $('.kifi_comment_wrapper').html(renderedTemplate);
+      if(openComments)
+        $('.kifi_comment_wrapper').slideToggle(300);
+    });*/
+    if($('.kifi_comment_wrapper:visible').length > 0) {
+      $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
+      return;
+    }
     var userExternalId = user.keepit_external_id;
-    $.get("http://" + config.server + "/comments/?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
+    $.get("http://" + config.server + "/comments/all?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
       null,
       function(comments) {
-        // public, conversation, private
-        $('.kifi_chat_wrapper').show();
+        drawComments(user, comments["public"]);
+        if(openComments)
+          $('.kifi_comment_wrapper').slideDown(600,'easeInOutBack');
       });
   }
+
+  function drawComments(user, comments) {
+    if(comments && comments.length)
+      $('.comments_label').text(comments.length + " Comments");
+    else {
+      $('.comments_label').text("0 Comments");
+      comments = [];
+    }
+    getTemplate("comments.html", {"comments":comments}, function(renderedTemplate) {
+      console.log("comment feed",comments);
+      $('.kifi_comment_wrapper').html(renderedTemplate);
+
+      var commentList = document.getElementById("comment_list");
+      commentList.scrollTop = commentList.scrollHeight;
+
+      $('.kifi_comment_wrapper #comment_form').submit(function() {
+        console.log("BAM!!!");
+        var text = $('#comment_text').val();
+        var request = {
+          "type": "post_comment",
+          "url": document.location.href,
+          "text": text,
+          "permissions": "public"
+        };
+        chrome.extension.sendRequest(request, function() {
+          $('#comment_text').val("");
+          console.log(user);
+          var newComment = {
+            "createdAt": "",
+            "text": request.text,
+            "user": {
+              "externalId": user.keepit_external_id,
+              "firstName": user.name,
+              "lastName": "",
+              "facebookId": user.facebook_id
+            },
+            "permissions": "public"
+          }
+          comments.push(newComment);
+          console.log("new thread", comments)
+          drawComments(user, comments);
+        });
+        return false;
+      });
+    });
+  }
+
+
+  /*$(document).keypress(function(event) {
+    console.log(event);
+    if ((event.which == 115 && (event.ctrlKey||event.metaKey)|| (event.which == 19))) {
+      event.preventDefault();
+      var existingElements = $('.kifi_hover').length;
+      if (existingElements > 0) {
+        slideOut();
+        return;
+      }
+      chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
+        config = response;
+        console.log("user config",response);
+        getUserInfo(showHover);
+      });
+      return false;
+    }
+    return true;
+  });*/
 
 
   function chatWith(user) {
@@ -329,6 +412,11 @@ console.log("injecting keep it hover div");
       console.log("sent");
     });
   }
+
+  chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
+    config = response;
+    console.log("user config",response);
+  });
 
 
   // Selection libs

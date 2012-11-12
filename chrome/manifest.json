@@ -82,6 +82,8 @@
     "icons/facebook.png",
     "icons/gdocs.gif",
     "icons/gdrive.png",
-    "icons/gmail.png"
+    "icons/gmail.png",
+    "facebookConnect.png",
+    "comments.html"
   ] 
 }
