@@ -9,7 +9,6 @@ import com.keepit.model._
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.db.CX
 import play.api.Play.current
-import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriter
@@ -27,8 +26,7 @@ import scala.math._
 
 object ArticleIndexer {
   def apply(indexDirectory: Directory, articleStore: ArticleStore): ArticleIndexer = {
-    val analyzer = new StandardAnalyzer(Version.LUCENE_36)
-    analyzer.setMaxTokenLength(256)
+    val analyzer = new DefaultAnalyzer
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
 
     new ArticleIndexer(indexDirectory, config, articleStore)
