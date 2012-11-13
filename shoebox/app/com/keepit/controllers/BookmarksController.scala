@@ -33,10 +33,11 @@ import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.net.HttpClient
 import com.keepit.search.graph.URIGraphPlugin
 import play.api.libs.json.JsBoolean
+import com.keepit.common.controller.FortyTwoController
 
-object BookmarksController extends Controller with Logging with SecureSocial {
+object BookmarksController extends FortyTwoController {
 
-  def edit(id: Id[Bookmark]) = Action{ request =>
+  def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
     CX.withConnection { implicit conn =>
       val bookmark = Bookmark.get(id)
       val uri = NormalizedURI.get(bookmark.uriId)
@@ -46,7 +47,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   }
 
   //post request with a list of private/public and active/inactive
-  def updateBookmarks() = SecuredAction(false) { request =>
+  def updateBookmarks() = AdminHtmlAction { request =>
     val uniqueUsers = CX.withConnection { implicit conn =>
       val modifiedUserIds = request.body.asFormUrlEncoded.get map { case (key, values) =>
         key.split("_") match {
@@ -82,7 +83,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
   }  
   
   //this is an admin only task!!!
-  def delete(id: Id[Bookmark]) = SecuredAction(false) { request =>
+  def delete(id: Id[Bookmark]) = AdminHtmlAction { request =>
     CX.withConnection { implicit conn =>
       val bookmark = Bookmark.get(id)
       bookmark.delete()
@@ -91,7 +92,7 @@ object BookmarksController extends Controller with Logging with SecureSocial {
     }
   }  
   
-  def all = SecuredAction(true) { request =>
+  def all = AdminHtmlAction { request =>
     val bookmarks = CX.withConnection { implicit conn =>
       Bookmark.all
     }
@@ -102,20 +103,20 @@ object BookmarksController extends Controller with Logging with SecureSocial {
     Redirect(com.keepit.controllers.routes.BookmarksController.bookmarksView(0))
   }
     
-  def bookmarksView(page: Int = 0) = SecuredAction(false) { request =>
-    val pageSize = 200
+  def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
+    val PAGE_SIZE = 200
     val (count, bookmarksAndUsers) = CX.withConnection { implicit conn =>
-      val bookmarks = Bookmark.page(page, pageSize)
+      val bookmarks = Bookmark.page(page, PAGE_SIZE)
       val users = bookmarks map (_.userId) map User.get map UserWithSocial.toUserWithSocial
-      val uris = bookmarks map (_.uriId) map NormalizedURI.get map {u => u.stats()}
+      val uris = bookmarks map (_.uriId) map NormalizedURI.get map (_.stats)
       val count = Bookmark.count
       (count, (bookmarks, uris, users).zipped.toList.seq)
     }
-    val pageCount: Int = (count / pageSize + 1).toInt
+    val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.bookmarks(bookmarksAndUsers, page, count, pageCount))
   }
   
-  def checkIfExists(externalId: ExternalId[User], uri: String) = SecuredAction(true) { request =>
+  def checkIfExists(externalId: ExternalId[User], uri: String) = AuthenticatedJsonAction { request =>
     val (normalizedURIOpt, bookmarksOpt) = CX.withConnection { implicit conn =>
       val normalizedURI = NormalizedURI.getByNormalizedUrl(uri)
       val user = User.getOpt(externalId)

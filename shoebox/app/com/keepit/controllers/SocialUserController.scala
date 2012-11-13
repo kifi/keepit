@@ -30,17 +30,18 @@ import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social.{SocialGraphPlugin, UserWithSocial}
 import com.keepit.common.social.SocialUserRawInfoStore
+import com.keepit.common.controller.FortyTwoController
 
-object SocialUserController extends Controller with Logging with SecureSocial {
+object SocialUserController extends FortyTwoController {
 
-  def resetSocialUser(socialUserId: Id[SocialUserInfo]) = SecuredAction(false) { implicit request =>
+  def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
     val socialUserInfo = CX.withConnection { implicit conn =>
       SocialUserInfo.get(socialUserId).reset().save
     }
     Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfo.id.get))
   }
   
-  def socialUserView(socialUserId: Id[SocialUserInfo]) = SecuredAction(false) { implicit request => 
+  def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request => 
     
     val (socialUserInfo, socialConnections) = CX.withConnection { implicit conn =>
       val socialUserInfo = SocialUserInfo.get(socialUserId)
@@ -54,12 +55,16 @@ object SocialUserController extends Controller with Logging with SecureSocial {
     Ok(views.html.socialUser(socialUserInfo, socialConnections, rawInfo))
   }
 
-  def socialUsersView = SecuredAction(false) { implicit request => 
-    val socialUsers = CX.withConnection { implicit c => SocialUserInfo.all.sortWith((a,b) => a.fullName < b.fullName) }
-    Ok(views.html.socialUsers(socialUsers))
+  def socialUsersView(page: Int) = AdminHtmlAction { implicit request =>
+    val PAGE_SIZE = 300
+    val (socialUsers, count) = CX.withConnection { implicit c => 
+      (SocialUserInfo.page(page, PAGE_SIZE), SocialUserInfo.count)
+    }
+    val pageCount = (count / PAGE_SIZE + 1).toInt
+    Ok(views.html.socialUsers(socialUsers, page, count, pageCount))
   }
   
-  def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = SecuredAction(false) { implicit request => 
+  def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request => 
     val graph = inject[SocialGraphPlugin]
     val socialUserInfo = CX.withConnection { implicit conn => SocialUserInfo.get(socialUserInfoId) }
     if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))

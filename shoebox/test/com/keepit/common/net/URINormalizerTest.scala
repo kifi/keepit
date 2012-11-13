@@ -131,5 +131,14 @@ class URINormalizerTest extends Specification {
       URINormalizer.normalize("http://www1.bloomingdales.com/search/results.ognc?sortOption=*&Keyword=juicy%20couture&resultsPerPage=24&Action=sd&attrs=Department%3ADepartment%3ADresses|Color:Color:Black") ===
         "http://www1.bloomingdales.com/search/results.ognc?Action=sd&Keyword=juicy+couture&attrs=Department%3ADepartment%3ADresses%7CColor%3AColor%3ABlack&resultsPerPage=24&sortOption=*"
     }
+    
+    "use custom normalizer when applicable" in {
+      // gmail
+      URINormalizer.normalize("https://mail.google.com/mail/ca/u/0/#inbox/13ae709b43798f58") ===
+        "https://mail.google.com/mail/ca/u/0/#inbox/13ae709b43798f58"
+      // google drive
+      URINormalizer.normalize("https://docs.google.com/a/42go.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit") ===
+        "https://docs.google.com/a/42go.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit"
+    }
   }
 }

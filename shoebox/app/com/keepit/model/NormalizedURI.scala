@@ -56,7 +56,7 @@ case class NormalizedURI  (
   }
   
   def stats()(implicit conn: Connection): NormalizedURIStats = {
-    var uriBookmarks = bookmarks()
+    val uriBookmarks = bookmarks()
     NormalizedURIStats(this, uriBookmarks)
   }
 }

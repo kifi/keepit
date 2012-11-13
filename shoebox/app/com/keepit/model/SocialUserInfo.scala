@@ -61,7 +61,13 @@ object SocialUserInfo {
     
   def getOpt(id: Id[SocialUserInfo])(implicit conn: Connection): Option[SocialUserInfo] =
     SocialUserInfoEntity.get(id).map(_.view)
-    
+
+  def page(page: Int = 0, size: Int = 20)(implicit conn: Connection): Seq[SocialUserInfo] =
+    (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u ORDER_BY (u.id DESC) OFFSET (page * size) LIMIT size list }.map(_.view)
+      
+  def count(implicit conn: Connection): Long =
+    (SocialUserInfoEntity AS "u").map(u => SELECT(COUNT(u.id)).FROM(u).unique).get
+
   def getUnprocessed()(implicit conn: Connection): Seq[SocialUserInfo] = {
     val UNPROCESSED_STATE = States.CREATED::States.FETCHED_USING_FRIEND::Nil
     (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ((u.state IN(UNPROCESSED_STATE)) AND (u.credentials IS_NOT_NULL)) list }.map(_.view)

@@ -5,7 +5,7 @@ import org.apache.lucene.index.IndexReader
 class PhraseNode(termNodes: Array[TermNode], positions: Array[Int], weight: Float, reader: IndexReader) extends LineQuery(weight) {
   
   override def fetchDoc(targetDoc: Int) = {
-    var doc = if (targetDoc <= curDoc) curDoc + 1 else targetDoc
+    var doc = if (targetDoc <= curDoc && curDoc < LineQuery.NO_MORE_DOCS) curDoc + 1 else targetDoc
     
     var i = 0
     while (doc < LineQuery.NO_MORE_DOCS && i < termNodes.length) {

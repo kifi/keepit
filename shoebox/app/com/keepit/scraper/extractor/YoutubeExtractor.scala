@@ -1,10 +1,24 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.Host
+import com.keepit.common.net.URI
+import com.keepit.scraper.Scraper
 import org.apache.tika.sax.ContentHandlerDecorator
 import org.apache.tika.parser.html.DefaultHtmlMapper
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
+
+object YoutubeExtractorFactory extends ExtractorFactory {
+  def isDefinedAt(uri: URI) = {
+    uri match {
+      case URI(_, _, Some(Host("com", "youtube", _*)), _, Some(path), Some(query), _) =>
+        path.endsWith("/watch") && query.containsParam("v")
+      case _ => false
+    }
+  }
+  def apply(uri: URI) = new YoutubeExtractor(uri.toString, Scraper.maxContentChars)
+}
 
 class YoutubeExtractor(url: String, maxContentChars: Int) extends TikaBasedExtractor(url, maxContentChars) with Logging {
   protected def getContentHandler = new YoutubeHandler(output)
@@ -26,7 +40,6 @@ class YoutubeHandler(handler: ContentHandler) extends ContentHandlerDecorator(ha
   
   override def startElement(uri: String, localName: String, qName: String, atts: Attributes) {
     nestLevel += 1
-    println(localName+":"+qName)
     localName match {
       case "div" =>
         val classIdx = atts.getIndex("class")
@@ -55,8 +68,6 @@ class YoutubeHandler(handler: ContentHandler) extends ContentHandlerDecorator(ha
   override def characters(ch: Array[Char], start: Int, length: Int) {
     if (inCommentText <= nestLevel) {
       handler.characters(ch, start, length)
-//      val str = new String(ch, start, length)
-//      println(str)
     }
   }
 }
