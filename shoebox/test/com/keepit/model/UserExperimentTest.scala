@@ -20,6 +20,28 @@ import play.api.test.Helpers._
 class UserExperimentTest extends SpecificationWithJUnit {
   
   "UserExperiment" should {
+    
+    "load by user and experimant type" in {
+      running(new EmptyApplication()) {
+        
+        val (shanee, santa) = CX.withConnection { implicit c =>
+          (User(firstName = "Shanee", lastName = "Smith").save, 
+           User(firstName = "Santa", lastName = "Claus").save)
+        }
+        
+        CX.withConnection { implicit c =>
+          UserExperiment(userId = shanee.id.get, experimentType = UserExperiment.ExperimentTypes.ADMIN).save 
+        }
+        
+        CX.withConnection { implicit c =>
+          UserExperiment.getExperiment(shanee.id.get, UserExperiment.ExperimentTypes.ADMIN).isDefined === true
+          UserExperiment.getExperiment(shanee.id.get, UserExperiment.ExperimentTypes.FAKE).isDefined === false
+          UserExperiment.getExperiment(santa.id.get, UserExperiment.ExperimentTypes.ADMIN).isDefined === false
+          UserExperiment.getExperiment(santa.id.get, UserExperiment.ExperimentTypes.FAKE).isDefined === false
+        }
+      }      
+    }
+    
     "persist" in {
       running(new EmptyApplication()) {
         

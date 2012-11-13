@@ -56,7 +56,7 @@ object SocialUserController extends FortyTwoController {
   }
 
   def socialUsersView(page: Int) = AdminHtmlAction { implicit request =>
-    val PAGE_SIZE = 2
+    val PAGE_SIZE = 300
     val (socialUsers, count) = CX.withConnection { implicit c => 
       (SocialUserInfo.page(page, PAGE_SIZE), SocialUserInfo.count)
     }

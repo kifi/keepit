@@ -68,14 +68,15 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
       
   private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest => PlainResult): Action[AnyContent] = {
     AuthenticatedAction(isApi, { implicit request =>
-      val experiments = CX.withConnection { implicit conn =>
-        UserExperiment.getByUser(request.userId)
+      val isAdmin = CX.withConnection { implicit conn =>
+        UserExperiment.getExperiment(request.userId, UserExperiment.ExperimentTypes.ADMIN).isDefined
       }
-      val authorizedDevUser = current.mode == Mode.Dev && request.userId.id == 1L
-      if (!authorizedDevUser && !experiments.contains(UserExperiment.ExperimentTypes.ADMIN)) {
-        Unauthorized("User %s does not have an admin auth, flushing session... If you think you should see this page, please contact FortyTwo Engineering.".format(request.userId)).withNewSession
-      } else {
+      val authorizedDevUser = Play.isDev && request.userId.id == 1L
+      if (authorizedDevUser || isAdmin) {
         action(request)
+      } else {
+        Unauthorized("""User %s does not have admin auth in %s mode, flushing session... 
+            If you think you should see this page, please contact FortyTwo Engineering.""".format(request.userId, current.mode)).withNewSession
       }
     })
   }
