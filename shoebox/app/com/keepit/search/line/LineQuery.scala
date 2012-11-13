@@ -1,6 +1,5 @@
 package com.keepit.search.line
 
-import com.keepit.common.logging.Logging
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator
@@ -14,11 +13,11 @@ import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 
-object LineQuery extends Logging {
+object LineQuery  {
   val MAX_POSITION_PER_LINE = 2048
   val LINE_GAP = 3
   val NO_MORE_POSITIONS = Integer.MAX_VALUE
-  val NO_MORE_LINES = Integer.MAX_VALUE/MAX_POSITION_PER_LINE
+  val NO_MORE_LINES = NO_MORE_POSITIONS/MAX_POSITION_PER_LINE
   val NO_MORE_DOCS = DocIdSetIterator.NO_MORE_DOCS
   
   val emptyQueryNode = new LineQuery(0) {

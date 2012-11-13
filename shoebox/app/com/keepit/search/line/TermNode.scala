@@ -8,16 +8,15 @@ class TermNode(term: Term, weight: Float, reader: IndexReader) extends LineQuery
   var posLeft = 0
   
   override def fetchDoc(targetDoc: Int) = {
-    val doc = if (targetDoc <= curDoc) curDoc + 1 else targetDoc
+    val doc = if (targetDoc <= curDoc && curDoc < LineQuery.NO_MORE_DOCS) curDoc + 1 else targetDoc
     
-    if (tp.skipTo(doc)) {
+    if (doc < LineQuery.NO_MORE_DOCS && tp.skipTo(doc)) {
       curDoc = tp.doc()
       posLeft = tp.freq()
-      curLine = -1
-      curPos = -1
     } else {
-      curDoc = LineQuery.NO_MORE_DOCS;
       tp.close()
+      curDoc = LineQuery.NO_MORE_DOCS
+      posLeft = 0
     }
     curPos = -1
     curLine = -1
