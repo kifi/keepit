@@ -3,14 +3,14 @@ package com.keepit.search
 object SearchConfig {
   private var defaultParams =
     Map[String, String](
-      "minMyBookmarks" -> "3",
+      "minMyBookmarks" -> "2",
       "maxTextHitsPerCategory" -> "1000",
-      "myBookmarkBoost" -> "2",
+      "myBookmarkBoost" -> "1.5",
       "sharingBoost" -> "0.5",
-      "percentMatch" -> "50",
+      "percentMatch" -> "66",
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
-      "tailCutting" -> "0.1")
+      "tailCutting" -> "0.3")
   
   var defaultConfig = new SearchConfig(defaultParams)
 
