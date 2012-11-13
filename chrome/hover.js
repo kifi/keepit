@@ -4,6 +4,7 @@ console.log("injecting keep it hover div");
   $ = jQuery.noConflict()
   var config;
   var hover;
+  var commentsType;
 
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
@@ -247,7 +248,7 @@ console.log("injecting keep it hover div");
     });
 
     $('.comments_label').click(function() {
-      showComments(user, true);
+      showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "public");
     });
 
     showComments(user,false); // prefetch comments, do not show.
@@ -290,14 +291,8 @@ console.log("injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
-  function showComments(user, openComments) {
-    // trick to make it appear faster: render empty template, start opening
-    /*getTemplate("comments.html", {}, function(renderedTemplate) {
-      $('.kifi_comment_wrapper').html(renderedTemplate);
-      if(openComments)
-        $('.kifi_comment_wrapper').slideToggle(300);
-    });*/
-    if($('.kifi_comment_wrapper:visible').length > 0) {
+  function showComments(user, openComments, type) {
+    if($('.kifi_comment_wrapper:visible').length > 0 && !openComments) {
       $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
       return;
     }
@@ -305,34 +300,90 @@ console.log("injecting keep it hover div");
     $.get("http://" + config.server + "/comments/all?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
       null,
       function(comments) {
-        drawComments(user, comments["public"]);
-        if(openComments)
+        drawComments(user, comments, type || "public");
+        if(openComments) {
           $('.kifi_comment_wrapper').slideDown(600,'easeInOutBack');
+        }
       });
   }
 
-  function drawComments(user, comments) {
-    if(comments && comments.length)
-      $('.comments_label').text(comments.length + " Comments");
-    else {
-      $('.comments_label').text("0 Comments");
-      comments = [];
-    }
-    getTemplate("comments.html", {"comments":comments}, function(renderedTemplate) {
-      console.log("comment feed",comments);
+  function drawComments(user, comments, type) {
+    comments = comments || {};
+    comments["public"] = comments["public"] || [];
+    comments["conversation"] = comments["conversation"] || [];
+    comments["private"] = comments["private"] || [];
+
+    var visibleComments = comments[type] || [];
+
+    $('.comments_label').text(comments["public"].length + " Comments, " + comments["conversation"].length + " Messages, " + comments["private"].length + " Notes");
+    
+
+    getTemplate("comments.html", {"comments":visibleComments, "public": type=="public", "conversation": type=="conversation", "private": type=="private"}, function(renderedTemplate) {
+      
       $('.kifi_comment_wrapper').html(renderedTemplate);
 
-      var commentList = document.getElementById("comment_list");
-      commentList.scrollTop = commentList.scrollHeight;
+      var $tabs = $('ul.tabs');
+      var $active, $content, $links = $tabs.find('span');
+      $links.each(function() {
+        if($(this).attr('data-target') == type) {
+          $(this).addClass('active');
 
-      $('.kifi_comment_wrapper #comment_form').submit(function() {
-        console.log("BAM!!!");
+          $("#to_list").tokenInput([
+                {id: 7, name: "Ruby"},
+                {id: 'dd11', name: "Python"},
+                {id: 13, name: "JavaScript"},
+                {id: 17, name: "ActionScript"},
+                {id: 19, name: "Scheme"},
+                {id: 23, name: "Lisp"},
+                {id: 29, name: "C#"},
+                {id: 31, name: "Fortran"},
+                {id: 37, name: "Visual Basic"},
+                {id: 41, name: "C"},
+                {id: 43, name: "C++"},
+                {id: 47, name: "Java"}
+            ], {
+            theme: "facebook"
+          });
+          $("#token-input-to_list").keypress(function(e) {
+            return e.which !== 13;
+          });
+        }
+        else {
+          $(this).removeClass('active');
+        }
+        $(this).click(function (e) {
+          showComments(user, true, $(this).data('target'))
+        });
+      });
+
+
+      var commentList = document.getElementById("comment_list");
+      commentList.scrollTop = commentList.scrollHeight || 0;
+
+      /*$('textarea.mention').mentionsInput({
+        onDataRequest:function (mode, query, callback) {
+          var data = [
+            { id:1, name:'Danny Blumenfeld', 'avatar':'http://profile.ak.fbcdn.net/hprofile-ak-ash3/48980_636721190_1266_n.jpg', 'type':'contact' },
+            { id:2, name:'Jon Froda', 'avatar':'http://cdn0.4dots.com/i/customavatars/avatar7112_1.gif', 'type':'contact' },
+            { id:3, name:'Anders Pollas', 'avatar':'http://cdn0.4dots.com/i/customavatars/avatar7112_1.gif', 'type':'contact' },
+            { id:4, name:'Kasper Hulthin', 'avatar':'http://cdn0.4dots.com/i/customavatars/avatar7112_1.gif', 'type':'contact' },
+            { id:5, name:'Andreas Haugstrup', 'avatar':'http://cdn0.4dots.com/i/customavatars/avatar7112_1.gif', 'type':'contact' },
+            { id:6, name:'Pete Lacey', 'avatar':'http://cdn0.4dots.com/i/customavatars/avatar7112_1.gif', 'type':'contact' }
+          ];
+
+          data = _.filter(data, function(item) { return item.name.toLowerCase().indexOf(query.toLowerCase()) > -1 });
+
+          callback.call(this, data);
+        }
+      });*/
+
+      $('.kifi_comment_wrapper .comment_form').submit(function() {
         var text = $('#comment_text').val();
         var request = {
           "type": "post_comment",
           "url": document.location.href,
           "text": text,
-          "permissions": "public"
+          "permissions": type
         };
         chrome.extension.sendRequest(request, function() {
           $('#comment_text').val("");
@@ -346,36 +397,36 @@ console.log("injecting keep it hover div");
               "lastName": "",
               "facebookId": user.facebook_id
             },
-            "permissions": "public"
+            "permissions": type
           }
-          comments.push(newComment);
+          comments[type].push(newComment);
           console.log("new thread", comments)
-          drawComments(user, comments);
+          drawComments(user, comments, type);
         });
         return false;
       });
     });
   }
 
+  key('command+shift+k, ctrl+shift+k', function(){
+    console.log('Opening kifi slider!');
 
-  /*$(document).keypress(function(event) {
-    console.log(event);
-    if ((event.which == 115 && (event.ctrlKey||event.metaKey)|| (event.which == 19))) {
-      event.preventDefault();
-      var existingElements = $('.kifi_hover').length;
-      if (existingElements > 0) {
-        slideOut();
-        return;
-      }
-      chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
-        config = response;
-        console.log("user config",response);
-        getUserInfo(showHover);
-      });
-      return false;
+    var existingElements = $('.kifi_hover').length;
+    if (existingElements > 0) {
+      slideOut();
+      return;
     }
-    return true;
-  });*/
+    chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
+      config = response;
+      console.log("user config",response);
+      getUserInfo(showHover);
+    });
+
+    key.setScope('kifi_open');
+
+    return false;
+  });
+
 
 
   function chatWith(user) {
@@ -417,143 +468,6 @@ console.log("injecting keep it hover div");
     config = response;
     console.log("user config",response);
   });
-
-
-  // Selection libs
-/*
-  jQuery.fn.getNodePath = function () {
-    if (this.length != 1) throw 'Requires one element.';
-
-    var path = [], node = this;
-    while (node.length) {
-      var realNode = node[0], name = realNode.localName;
-      if (!name) break;
-      name = name.toLowerCase();
-      if(name === "body") break;
-      var nodeDescriptor = { "tag": "", "classes": [], "id": "", "append": ""};
-
-      nodeDescriptor["tag"] = name;
-
-      if(realNode.className && realNode.className.indexOf('.') === -1) {
-        $.each(realNode.className.split(/ /g),function(i,c) {
-          nodeDescriptor["classes"].push(c);
-        });
-        //name += "." + realNode.className.replace(/ /g,'.');
-      }
-      if(realNode.id) {
-        nodeDescriptor["id"] = realNode.id;
-        //name += "#" + realNode.id.replace(/ /g, '#');
-      }
-
-      var parent = node.parent();
-      var currentSelector = name + (realNode.id ? '#'+realNode.id : '') + (realNode.className ? "."+realNode.className.replace(/ /g,".") : '')
-      var siblings = parent.children(currentSelector);
-      if (siblings.length > 1) {
-        nodeDescriptor["append"] = ':eq(' + siblings.index(node) + ')';
-        //name += ':eq(' + siblings.index(realNode) + ')';
-      }
-      path.push(nodeDescriptor);
-      //path = name + (path ? '>' + path : '');
-      node = parent;
-    }
-    return path.reverse();
-  };
-
-  var nodePathToSelector = function(nodePath) {
-    var path = [];
-    $(nodePath).each(function(i,e) {
-      var classes="",id=e.id,append=e.append;
-      if(e.classes.length > 0) {
-        classes = "." + e.classes.join(".");
-      }
-      if(id.length > 0) {
-        id = "#" + id;
-      }
-      var selector = $.trim(e.tag + classes + id + append);
-      if(selector.length > 0)
-        path.push(selector);
-    });
-    return path.join(" ");
-  }
-
-  var leastCommonSelector = function(nodePath) {
-    var $originalNode = $(nodePathToSelector(nodePath));
-    if($originalNode.length === 0) {
-      throw 'Node path did not return any elements! Oops?';
-    }
-    // The approach:
-    //  - Starting with the least specific (html), remove whole selectors
-    console.log($originalNode);
-    for(i=0;i<nodePath.length;i++) {
-      if(nodePath[i]["classes"].length > 0 || nodePath[i]["id"] !== '')
-        nodePath[i]["tag"] = "";
-      else {
-        nodePath[i]["tag"] = "";
-        nodePath[i]["append"] = "";
-      }
-      $newNode = $(nodePathToSelector(nodePath));
-      if($originalNode.is($newNode)) {
-        console.log($newNode.selector,"is the same!!!");
-      }
-      else {
-        console.log($newNode.selector,"is NOT the same!!!");
-        break;
-      }
-    }
-  }
-
-  $("body").delegate("*","mouseup",function() {
-    var range = $.Range.current();
-    var selection = {};
-    var start = range.start();
-    var end = range.end();
-    if(start.container == end.container && start.offset === end.offset ) {
-      console.log("click!",start, this, $(this))
-      selection['node'] = $(start.container.parentNode).getNodePath();
-      selection['parent'] = $(range.parent().parentNode).getNodePath();
-      selection['nodeSelector'] = nodePathToSelector(selection['node']);
-    }
-    else {
-      console.log("drag!",$(start.container.parentNode),$(end.container.parentNode))
-      selection['startNode'] = $(start.container.parentNode).getNodePath();
-      selection['endNode'] = $(end.container.parentNode).getNodePath();
-      selection['startOffset'] = start.offset;
-      selection['endOffset'] = end.offset;
-    }
-    console.log(selection);
-
-    if(selection.node) {
-      $(nodePathToSelector(selection.parent)).addClass('kifi_selection');
-    }
-    else if(selection.startNode && selection.endNode) {
-      var $start = $(nodePathToSelector(selection.startNode)).addClass('kifi_selection');
-      var $end = $(nodePathToSelector(selection.endNode)).addClass('kifi_selection');
-      var commonParent = $start.parents().has($end).first().addClass('kifi_selection');
-      console.log(commonParent)
-    }
-    //var path = $(element).getNodePath();
-
-    //console.log(range, element, path, nodePathToSelector(path));
-    //leastCommonSelector(path);
-    //$(nodePathToSelector(path)).css({"background-color":"#ff0000"})
-    return false;
-  });
-*/
-/*
-  $(document).ready(function(){
-     $("body *").mouseover(function(){
-        $(this).addClass('kifi_selection');
-        $(this).find("*").addClass('kifi_selection');
-        return false;
-     });
-          
-     $('body *').mouseout(function(){
-        $(this).removeClass('kifi_selection');
-        $(this).find("*").removeClass('kifi_selection');
-        return false;
-     });
-  });
-*/
 
 
 })();

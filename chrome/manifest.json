@@ -33,8 +33,8 @@
         "http://*/*",
         "https://*/*"
       ],
-      "js" : ["jquery-1.7.2.min.js", "jquery-ui-1.9.1.custom.min.js", "jquery.range.js", "contentscript.js", "mustache.js", "hover.js"],
-      "css": ["keepit.css", "hover.css", "social_window.css"],
+      "js" : ["jquery-1.7.2.min.js", "jquery-ui-1.9.1.custom.min.js", "keymaster.min.js", "jquery.range.js", "lodash.min.js", "jquery.mentionsInput.min.js", "jquery.tokeninput.js", "contentscript.js", "mustache.js", "hover.js"],
+      "css": ["keepit.css", "hover.css", "social_window.css", "comments.css"],
       "run_at" : "document_end",
       "all_frames" : false
     }
@@ -63,6 +63,7 @@
     "keep.html",
     "keepit.css",
     "keepit.png",
+    "keymaster.min.js",
     "kept_hover.html",
     "kept.png",
     "kifi.png",
