@@ -8,7 +8,7 @@ class BooleanNode[P <: LineQuery](required: Array[P], optional: Array[P], percen
   val threshold = if (percentMatch <= 0.0f) 0.0f else optional.foldLeft(weightOnRequiredNodes){ (w, n) => w + n.weight } * percentMatch / 100.0f
   
   override def fetchDoc(targetDoc: Int) = {
-    curDoc = if (targetDoc <= curDoc) curDoc + 1 else targetDoc
+    curDoc = if (targetDoc <= curDoc && curDoc < LineQuery.NO_MORE_DOCS) curDoc + 1 else targetDoc
     
     var i = 0
     while (curDoc < LineQuery.NO_MORE_DOCS && i < required.length) {
