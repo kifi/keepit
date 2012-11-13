@@ -139,6 +139,10 @@ class URINormalizerTest extends Specification {
       // google drive
       URINormalizer.normalize("https://docs.google.com/a/42go.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit") ===
         "https://docs.google.com/a/42go.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit"
+      
+      // techcrunch
+      URINormalizer.normalize("http://www.techcrunch.com") === "http://techcrunch.com"
+      URINormalizer.normalize("http://techcrunch.com") === "http://techcrunch.com"
     }
   }
 }

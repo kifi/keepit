@@ -4,7 +4,7 @@ import com.keepit.common.logging.Logging
 
 object URINormalizer extends Logging {
   
-  val normalizers = Seq(GoogleNormalizer, DefaultNormalizer)
+  val normalizers = Seq(GoogleNormalizer, RemoveWWWNormalizer, DefaultNormalizer)
   
   def normalize(uriString: String) = {
     URI.parse(uriString) match {
@@ -43,8 +43,8 @@ object URINormalizer extends Logging {
   
   object GoogleNormalizer extends Normalizer {
     def isDefinedAt(uri: URI) = {
-      uri.host.get match {
-        case Host("com", "google", name) =>
+      uri.host match {
+        case Some(Host("com", "google", name)) =>
           name match {
             case "mail" => true
             case "drive" => true
@@ -69,6 +69,22 @@ object URINormalizer extends Logging {
         case URI(scheme, _, host, port, path, Some(query), _) =>
           val newQuery = Query(query.params.filter{ _.name == "v" })
           URI(scheme, None, host, port, path, Some(newQuery), None).toString
+        case _ => throw new Exception("illegal invocation")
+      }
+    }
+  }
+  
+  object RemoveWWWNormalizer extends Normalizer {
+    def isDefinedAt(uri: URI) = {
+      uri.host match {
+        case Some(Host("com", "techcrunch", "www")) => true
+        case _ => false
+      }
+    }
+    def apply(uri: URI) = {
+      uri match {
+        case URI(scheme, userInfo, Some(Host(domain @ _*)), port, path, query, fragment) =>
+          DefaultNormalizer(URI(scheme, userInfo, Some(Host(domain.take(domain.size - 1): _*)), port, path, query, fragment))
         case _ => throw new Exception("illegal invocation")
       }
     }

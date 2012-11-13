@@ -59,10 +59,14 @@ object URI extends Logging {
   
   def normalizeScheme(scheme: Option[String]) = scheme.map(_.toLowerCase)
   
-  def normalizeHost(host: Option[String]) = host.flatMap{ host =>
-    host match {
-      case "" => None
-      case host => Some(Host(host))
+  def normalizeHost(host: Option[String]) = {
+    host.flatMap{ host => 
+      host match {
+        case Host(domain @ _*) => Some(Host(domain: _*))
+        case host =>
+          log.error("host normalization failed: [%s]".format(host))
+          Some(Host(Seq(host): _*))
+      }
     }
   }
   
@@ -137,14 +141,17 @@ class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Opt
 }
 
 object Host {
-  def apply(host: String) = new Host(host.toLowerCase)
+  def apply(host: String*) = new Host(host.toSeq)
 
+  def unapplySeq(host: String) = {
+    val domain = host.toLowerCase.split("""\.""").toSeq.reverse
+    if (domain.size > 0) Some(domain)
+    else None
+  }
   def unapplySeq(host: Host) = Some(host.domain)
 }
-class Host(val host: String) extends Logging {
-  lazy val domain: Seq[String] = host.split("""\.""").toSeq.reverse
-  
-  override def toString = host
+class Host(val domain: Seq[String]) {
+  override def toString = domain.reverse.mkString(".")
 }
 
 object Query {
