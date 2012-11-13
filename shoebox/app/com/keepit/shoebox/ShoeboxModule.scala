@@ -35,7 +35,7 @@ import com.keepit.common.social._
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
     
-    var appScope = new AppScope
+    val appScope = new AppScope
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
     
@@ -70,7 +70,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def amazonS3Client(): AmazonS3 = { 
-    var conf = current.configuration.getConfig("amazon.s3").get
+    val conf = current.configuration.getConfig("amazon.s3").get
     val awsCredentials = new BasicAWSCredentials(
         conf.getString("accessKey").get, 
         conf.getString("secretKey").get)
@@ -80,7 +80,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph): ArticleIndexer = {
-    var dirPath = current.configuration.getString("index.article.directory").get
+    val dirPath = current.configuration.getString("index.article.directory").get
     val dir = new File(dirPath).getCanonicalFile()
     if (!dir.exists()) {
       if (!dir.mkdirs()) {
@@ -94,7 +94,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def uriGraph: URIGraph = {
-    var dirPath = current.configuration.getString("index.urigraph.directory").get
+    val dirPath = current.configuration.getString("index.urigraph.directory").get
     val dir = new File(dirPath).getCanonicalFile()
     if (!dir.exists()) {
       if (!dir.mkdirs()) {

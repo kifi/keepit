@@ -32,7 +32,7 @@ class EmptyApplication() extends TestApplication(new TestGlobal(EmptyModule()))
 
 case class EmptyModule() extends ScalaModule {
   def configure(): Unit = {
-    var appScope = new AppScope
+    val appScope = new AppScope
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
   }
