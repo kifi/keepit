@@ -59,7 +59,7 @@ class HttpFetcher extends Logging {
 //    }
 //  })
 
-  def fetch(url: String)(f: InputStream => Unit): HttpFetchStatus = {
+  def fetch(url: String)(f: HttpInputStream => Unit): HttpFetchStatus = {
     val httpget = new HttpGet(url)
     log.info("executing request " + httpget.getURI())
     
@@ -70,7 +70,14 @@ class HttpFetcher extends Logging {
     
     // If the response does not enclose an entity, there is no need to bother about connection release
     if (entity != null) {
-      val input = entity.getContent
+      
+      
+      val input = new HttpInputStream(entity.getContent)
+      
+      Option(response.getHeaders("Content-Type")).foreach{ headers =>
+        if (headers.length > 0) input.setContentType(headers(headers.length - 1).getValue())
+      }
+      
       try {
         val statusCode = response.getStatusLine.getStatusCode
         statusCode match {
