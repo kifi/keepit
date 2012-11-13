@@ -3,11 +3,10 @@ package com.keepit.search.graph
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.model.{Bookmark, NormalizedURI, User}
-import com.keepit.search.index.{Hit, Indexable, Indexer, IndexError, Searcher, QueryParser}
+import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher, QueryParser}
 import com.keepit.common.db.CX
 import play.api.Play.current
 import org.apache.lucene.analysis.Analyzer
-import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriter
@@ -25,8 +24,7 @@ object URIGraph {
   val titleTerm = new Term("title", "")
 
   def apply(indexDirectory: Directory): URIGraph = {
-    val analyzer = new StandardAnalyzer(Version.LUCENE_36)
-    analyzer.setMaxTokenLength(256)
+    val analyzer = new DefaultAnalyzer
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
     
     new URIGraphImpl(indexDirectory, config)

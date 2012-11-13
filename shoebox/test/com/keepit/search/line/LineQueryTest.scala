@@ -9,7 +9,6 @@ import play.api.test._
 import play.api.test.Helpers._
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
-import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.IndexWriter
@@ -24,12 +23,12 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
+import com.keepit.search.index.DefaultAnalyzer
 
 @RunWith(classOf[JUnitRunner])
 class LineQueryTest extends SpecificationWithJUnit {
 
-  val analyzer = new StandardAnalyzer(Version.LUCENE_36)
-  analyzer.setMaxTokenLength(256)
+  val analyzer = new DefaultAnalyzer
   val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
 
   val ramDir = new RAMDirectory
