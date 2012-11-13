@@ -2,10 +2,12 @@ package com.keepit.scraper.extractor
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
+import com.keepit.scraper.HttpInputStream
 import com.keepit.scraper.Scraper
 import org.apache.tika.detect.DefaultDetector
 import org.apache.tika.metadata.Metadata
 import org.apache.tika.parser.html.HtmlMapper
+import org.apache.tika.parser.html.HtmlParser
 import org.apache.tika.parser.AutoDetectParser
 import org.apache.tika.parser.ParseContext
 import org.apache.tika.parser.Parser
@@ -14,7 +16,6 @@ import org.apache.tika.sax.WriteOutContentHandler
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 import org.xml.sax.SAXException
-import java.io.InputStream
 
 abstract class TikaBasedExtractor(url: String, maxContentChars: Int) extends Extractor with Logging {
   
@@ -22,12 +23,21 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int) extends Ext
   protected val metadata = new Metadata()
   
   protected def getContentHandler: ContentHandler
-  protected def getParser: Parser = new AutoDetectParser(new DefaultDetector())
+  
+  protected def getParser(contentType: Option[String]): Parser = {
+    contentType.flatMap{ contentType =>
+      if (contentType startsWith "text/html") Some(new HtmlParser())
+      else None
+    }.getOrElse{
+      new AutoDetectParser(new DefaultDetector())
+    }
+  }
+  
   protected def getHtmlMapper: Option[HtmlMapper] = None
   
-  def process(input: InputStream){
+  def process(input: HttpInputStream){
     val context = new ParseContext()
-    var parser = getParser
+    var parser = getParser(input.getContentType)
     val contentHandler = getContentHandler
     context.set(classOf[Parser], parser)
     getHtmlMapper.foreach(mapper => context.set(classOf[HtmlMapper], mapper))
