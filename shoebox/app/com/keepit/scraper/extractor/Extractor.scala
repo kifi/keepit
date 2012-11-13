@@ -1,7 +1,7 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.common.net.URI
-import java.io.InputStream
+import com.keepit.scraper.HttpInputStream
 
 object Extractor {
   val factories = Seq(
@@ -10,7 +10,7 @@ object Extractor {
   )
 }
 trait Extractor {
-  def process(input: InputStream): Unit
+  def process(input: HttpInputStream): Unit
   def getContent(): String
   def getMetadata(name: String): Option[String]
 }
