@@ -9,7 +9,6 @@ import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import com.keepit.search.graph.UserToUserEdgeSet
-import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import org.apache.lucene.search.Query
@@ -17,8 +16,7 @@ import org.apache.lucene.search.Query
 @RunWith(classOf[JUnitRunner])
 class QueryParserTest extends SpecificationWithJUnit {
   
-  val analyzer = new StandardAnalyzer(Version.LUCENE_36)
-  analyzer.setMaxTokenLength(256)
+  val analyzer = new DefaultAnalyzer
   val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
   val parser = new QueryParser(config) {
     override def parseQuery(queryText: String) = {
