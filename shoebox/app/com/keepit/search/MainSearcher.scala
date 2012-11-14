@@ -95,8 +95,11 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     
     val hits = createQueue(numHitsToReturn)
     
-    var highScore = myHits.highScore
+    // global high score
+    val highScore = max(max(myHits.highScore, friendsHits.highScore), othersHits.highScore)
+        
     var threshold = highScore * tailCutting
+    
     myHits.iterator.filter(_.score > threshold).foreach{ h =>
       val id = Id[NormalizedURI](h.id)
       val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet - userId
@@ -109,9 +112,6 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     var mayHaveMore = hits.overflowed // true if we _may_ have more hits
     
     if (friendsHits.size > 0) {
-      highScore = max(highScore, friendsHits.highScore)
-      threshold = highScore * tailCutting
-      
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
       
@@ -130,9 +130,6 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     
     // if we don't have enough hits, backfill the result with hits in the "others" category
     if (hits.size < numHitsToReturn && othersHits.size > 0) {
-      highScore = max(highScore, othersHits.highScore)
-      threshold = highScore * tailCutting
-      
       val queue = createQueue(numHitsToReturn - hits.size)
       othersHits.iterator.filter(_.score > threshold).foreach{ h =>
         h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
