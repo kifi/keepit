@@ -345,6 +345,7 @@ var restrictedUrlPatternsForHover = [
   "localhost:",
   "maps.google.com",
   "google.com*tbm=isch",
+  "www.google.com",
   "google.com"
 ]
 
