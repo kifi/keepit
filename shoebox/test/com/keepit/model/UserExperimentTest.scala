@@ -21,7 +21,7 @@ class UserExperimentTest extends SpecificationWithJUnit {
   
   "UserExperiment" should {
     
-    "load by user and experimant type" in {
+    "load by user and experiment type" in {
       running(new EmptyApplication()) {
         
         val (shanee, santa) = CX.withConnection { implicit c =>

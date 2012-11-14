@@ -19,7 +19,7 @@
       <td>@userWithSocial.bookmarksCount</td>
       <td>@adminHelper.dateDisplay(userWithSocial.user.createdAt)</td>
       <td><a href='mailto:@{userWithSocial.emails.map(_.address).mkString(",")}'>@{userWithSocial.emails.map(_.address).mkString(",")}</a></td>
-      <td>@userWithSocial.experimants.mkString(",")</td>
+      <td>@userWithSocial.experiments.mkString(",")</td>
     </tr>
   }
   </table>
