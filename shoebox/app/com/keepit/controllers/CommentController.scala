@@ -64,7 +64,7 @@ object CommentController extends Controller with Logging with SecureSocial {
   }
   def getComments(url: String, 
                   externalId: ExternalId[User], 
-                  permission: String = "") = SecuredAction(false) { request =>
+                  permission: String = "") = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn => 
       val user = User.get(externalId)
       NormalizedURI.getByNormalizedUrl(url) match {

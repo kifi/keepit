@@ -33,6 +33,7 @@ import com.keepit.common.controller.FortyTwoController
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.graph.URIGraph
 import views.html.defaultpages.unauthorized
+import com.keepit.serializer.SocialUserSerializer
 
 object UserController extends FortyTwoController {
 
@@ -65,6 +66,15 @@ object UserController extends FortyTwoController {
     }
 
     Ok(userWithSocialSerializer.writes(socialUsers)).as(ContentTypes.JSON)
+  }
+  
+  def getSocialConnections(externalId: ExternalId[User]) = AuthenticatedJsonAction { authRequest =>
+    val socialConnections = CX.withConnection { implicit c =>
+      SocialConnection.getUserConnections(authRequest.userId).map(su => su.credentials).flatten
+    }
+
+    Ok(JsArray(socialConnections.map(sc => SocialUserSerializer.userSerializer.writes(sc))))
+    
   }
   
   /**

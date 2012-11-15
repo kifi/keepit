@@ -1,0 +1,234 @@
+<html>
+  <head>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+<script src="selectionlib.js"></script>
+
+<script src="mustache.js"></script>
+    <style>
+      .content {
+        width:330px;
+        border:1px solid #ccc;
+        padding:0px;
+        margin:0px;
+        box-sizing: border-box;
+
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+
+
+ul.kifi_social_tabs {
+  margin:0px;
+  padding:0px;
+}
+
+.kifi_social_tabs li {
+  list-style:none;
+  display:inline;
+  padding:0px;
+  margin:0px;
+  background-color: #FAF9F9;
+}
+
+.kifi_social_tabs span {
+  padding:5px 10px;
+  display:inline-block;
+  border: 1px solid rgb(190, 190, 190);
+  text-decoration:none;
+  top:1px;
+  position:relative;
+  border-radius: 5px 5px 0px 0px;
+  background-color: #FAF9F9;
+}
+
+.kifi_social_tabs .active {
+    border-bottom: 1px solid #FAF9F9;
+}
+
+.comment_body_view {
+  background-color: #FAF9F9;
+  border: 1px solid #BEBEBE;
+  min-height: 200px;
+  overflow: auto;
+  max-height:310px;
+}
+
+.comment_post_view {
+  background-color: #FAF9F9;
+  height: 100px;
+  overflow: hidden;
+  position: absolute;
+  bottom:0;
+}
+
+img.comment-avatar {
+  width:30px;
+  height:30px;
+  position:relative;
+  float:left;
+}
+
+.flexcontainer {
+  height:410px;
+  position: relative;
+  width:300px;
+  margin:0 auto;
+}
+
+.heart {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    float:right;
+    left:-40px;
+}
+.heart span {
+  position: relative;
+  z-index: 2;
+  font-size:24px;
+  text-align: center;
+  width:100%;
+}
+.heart:before,
+.heart:after {
+    z-index:1;
+    position: absolute;
+    content: "";
+    left: 20px;
+    top: 0;
+    width: 20px;
+    height: 32px;
+    background: #F2C0C1;
+    -moz-border-radius: 100px 100px 0 0;
+    border-radius: 100px 100px 0 0;
+    -webkit-transform: rotate(-45deg);
+       -moz-transform: rotate(-45deg);
+        -ms-transform: rotate(-45deg);
+         -o-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+    -webkit-transform-origin: 0 100%;
+       -moz-transform-origin: 0 100%;
+        -ms-transform-origin: 0 100%;
+         -o-transform-origin: 0 100%;
+            transform-origin: 0 100%;
+}
+
+.heart:hover:after,.heart:hover:before {
+  background: #F23030;
+}
+.heart:after {
+    left: 0;
+    -webkit-transform: rotate(45deg);
+       -moz-transform: rotate(45deg);
+        -ms-transform: rotate(45deg);
+         -o-transform: rotate(45deg);
+            transform: rotate(45deg);
+    -webkit-transform-origin: 100% 100%;
+       -moz-transform-origin: 100% 100%;
+        -ms-transform-origin: 100% 100%;
+         -o-transform-origin: 100% 100%;
+            transform-origin :100% 100%;
+}
+
+.hearts {
+  position:relative;
+  float:right;
+}
+div#image-crop-overlay {
+  background-color : #ffffff;
+  overflow : hidden;
+}
+
+div#image-crop-outline {
+  background : #ffffff url('outline.gif');
+  overflow : hidden;
+}
+
+    </style>
+    <script>
+function loadFile(name, callback) {
+  var req = new XMLHttpRequest();
+  req.open("GET",name, true);
+  req.onreadystatechange = function() {
+      if (req.readyState == 4 && req.status == 200) {
+          callback(req.responseText);
+      }
+  };
+  req.send(null);
+}
+
+
+function getTemplate(name, params, callback, partials) {
+  loadFile(name, function(contents) {
+    var tb = Mustache.render(
+        contents,
+        params,
+        partials
+    );
+    callback(tb);
+  });
+}
+
+loadFile("comments_list.html", function(comment_list) {
+  var partials = {
+    "comment_body_view": comment_list
+  };
+
+  var params = {
+    view: "comments_list",
+    comments: [
+      {
+        "name": "Andrew Conner",
+        "avatar": "https://fbcdn-profile-a.akamaihd.net/hprofile-ak-snc6/275024_71105121_451954280_n.jpg",
+        "timestamp": 1352921580212,
+        "text": "This is a sample comment",
+        "replies": 3,
+        "hearts": 5
+      },
+      {
+        "name": "Andrew Conner",
+        "avatar": "https://fbcdn-profile-a.akamaihd.net/hprofile-ak-snc6/275024_71105121_451954280_n.jpg",
+        "timestamp": 1352921580212,
+        "text": "This is a sample comment",
+        "replies": 3,
+        "hearts": 5
+      }
+    ]
+  }
+
+  getTemplate("comments_view.html", params, function(tmpl) {
+    $('.content').append(tmpl);
+  }, partials);
+});
+
+    </script>
+
+
+
+  </head>
+  <body>
+  
+  <div class="content">
+    
+  </div>
+  
+  
+<h1><span>Lorem Ipsum</span></h1>
+
+<h4>"Neque porro quisquam est qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit..."</h4>
+<h5>"There is no one who loves pain itself, who seeks after it and wants to have it, simply because it is pain..."</h5>
+<p>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla at arcu dolor. Praesent posuere tempor lorem. Praesent orci nunc, mollis ac laoreet at, sagittis eu nulla. Aliquam erat volutpat. Duis eget euismod justo. Duis pharetra hendrerit lectus, in convallis erat aliquam sit amet. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Maecenas pellentesque sem neque. Aliquam erat volutpat.
+</p>
+<span>
+<p>
+Nunc non metus at dolor hendrerit tincidunt convallis iaculis elit. Cras accumsan congue purus vitae commodo. Curabitur consequat magna nec magna mollis at blandit tortor fringilla. Mauris euismod interdum scelerisque. Nullam tristique tempor molestie. Fusce enim diam, lobortis ullamcorper tempor in, facilisis in nunc. In hac habitasse platea dictumst. Praesent ac nunc sem, eget porttitor sapien. Vestibulum non lectus in leo posuere sodales. Vivamus adipiscing, lorem vel venenatis vehicula, enim ante molestie tortor, ac pretium turpis lorem ac ipsum. Nulla nulla augue, lacinia sit amet porttitor a, porta a arcu. Sed consequat mi non ante vestibulum non mattis dui porttitor. Aliquam non lorem a erat cursus cursus ut vitae arcu. Ut pulvinar velit at urna malesuada vel semper elit feugiat. Aliquam quis purus libero.
+</p>
+<p>
+<b>Mauris tempor urna et augue lobortis suscipit. Integer aliquam, eros in euismod consequat, tortor dui congue orci, ut rhoncus sem turpis eu ipsum. Nullam orci elit, ultrices ac adipiscing adipiscing, luctus quis nisl. Hey</b><i>Aliquam non turpis id massa congue consectetur. Vestibulum urna quam, sagittis ac pharetra a, commodo eu justo. In viverra auctor mi eu pretium. Praesent eu pellentesque diam. Vivamus semper sodales metus et tempus. Proin pretium vulputate tortor et pretium. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Integer vitae rhoncus dui. Vivamus in diam vitae nulla pharetra mollis. Nunc vitae convallis diam. Nulla pharetra, urna ac semper condimentum, arcu est tincidunt tellus, quis commodo dui elit in mi.</i>
+</p></span>
+  </body>
+</html>
