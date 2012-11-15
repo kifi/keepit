@@ -1,9 +1,13 @@
 package com.keepit.search.query
 
+import com.keepit.common.logging.Logging
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.TermPositions
 import org.apache.lucene.search.Query
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.PhraseQuery
+import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
 import org.apache.lucene.search.Searcher
@@ -13,21 +17,44 @@ import org.apache.lucene.search.Similarity
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
+import java.util.{Set => JSet, HashSet => JHashSet}
 import scala.collection.JavaConversions._
 import scala.math._
 
-object ProximityQuery {
-  def apply(fieldName: String, query: Query): ProximityQuery = {
-    val terms: Set[Term] = {
-      val termSet: java.util.Set[Term] = new java.util.HashSet[Term]
-      query.extractTerms(termSet)
-      termSet.toSet.filter{ _.field() == fieldName }
-    }
-    
-    apply(terms)
+object ProximityQuery extends Logging {
+  
+  def apply(fieldName: String, query: Query): ProximityQuery = apply(getTerms(fieldName, query))
+  def apply(terms: Set[Term]): ProximityQuery = new ProximityQuery(terms)
+  
+  def getTerms(fieldName: String, query: Query): Set[Term] = {
+    getTerms(query).filter{ _.field() == fieldName }
   }
   
-  def apply(terms: Set[Term]): ProximityQuery = new ProximityQuery(terms)
+  def getTerms(query: Query): Set[Term] = {
+    query match {
+      case q: TermQuery => fromTermQuery(q)
+      case q: PhraseQuery => fromPhraseQuery(q)
+      case q: BooleanQuery => fromBooleanQuery(q)
+      case q: Query => fromOtherQuery(q)
+    }
+  }
+  
+  private def fromTermQuery(query: TermQuery) = Set(query.getTerm)
+  private def fromPhraseQuery(query: PhraseQuery) = query.getTerms().toSet
+  private def fromBooleanQuery(query: BooleanQuery) = {
+    query.getClauses.map{ cl => if (!cl.isProhibited) getTerms(cl.getQuery) else Set.empty[Term] }.reduce{ _ union _ }
+  }
+  private def fromOtherQuery(query: Query) = {
+    try {
+      val terms = new JHashSet[Term]()
+      query.extractTerms(terms)
+      terms.toSet
+    } catch {
+      case _ =>
+        log.warn("term extraction failed: %s".format(query.getClass.toString))
+        Set.empty[Term]
+    }
+  }
   
   val scoreFactorHalfDecay = 5
   val scoreFactorTable = {
@@ -106,7 +133,7 @@ class ProximityWeight(query: ProximityQuery, similarity: Similarity) extends Wei
   override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
     if (query.terms.size > 1) {
       val tps = query.terms.map{
-        term => new PositionAndWeight(reader.termPositions(term), similarity.idf(reader.docFreq(term), reader.numDocs))
+        term => new PositionAndWeight(reader.termPositions(term), similarity.idf(reader.docFreq(term), reader.numDocs) * value)
       }
       new ProximityScorer(this, tps)
     } else {

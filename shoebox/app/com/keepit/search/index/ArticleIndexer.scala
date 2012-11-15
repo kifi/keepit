@@ -23,6 +23,7 @@ import org.apache.lucene.util.Version
 import java.io.File
 import java.io.IOException
 import scala.math._
+import com.keepit.search.query.ProximityQuery
 
 object ArticleIndexer {
   def apply(indexDirectory: Directory, articleStore: ArticleStore): ArticleIndexer = {
@@ -106,7 +107,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     super.setAutoGeneratePhraseQueries(true)
     
     override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
-      (super.getFieldQuery("t", queryText, quoted), super.getFieldQuery("c", queryText, quoted)) match {
+      (getFieldQueryWithProximity("t", queryText, quoted), getFieldQueryWithProximity("c", queryText, quoted)) match {
         case (null, null) => null
         case (query, null) => query
         case (null, query) => query
@@ -116,6 +117,21 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           booleanQuery.add(q1, Occur.SHOULD)
           booleanQuery.add(q2, Occur.SHOULD)
           booleanQuery
+      }
+    }
+    
+    private def getFieldQueryWithProximity(fieldName: String, queryText: String, quoted: Boolean): Query = {
+      val query = super.getFieldQuery(fieldName, queryText, quoted)
+      val terms = ProximityQuery.getTerms(fieldName, query)
+      if (terms.size <= 1) query
+      else {
+        val booleanQuery = new BooleanQuery
+        val proximityQuery = ProximityQuery(terms)
+        proximityQuery.setBoost(2.0f) // proximity boost
+        
+        booleanQuery.add(query, Occur.MUST)
+        booleanQuery.add(proximityQuery, Occur.SHOULD)
+        booleanQuery
       }
     }
   }
