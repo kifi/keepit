@@ -24,6 +24,7 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
+import org.apache.lucene.search.WildcardQuery
 
 @RunWith(classOf[JUnitRunner])
 class LineQueryTest extends SpecificationWithJUnit {
@@ -142,7 +143,15 @@ class LineQueryTest extends SpecificationWithJUnit {
       plan.fetchLine(0) === 2
       plan.fetchDoc(0) === LineQuery.NO_MORE_DOCS
     }
-
+    
+    "ignore wildcard query" in {
+      val q = new BooleanQuery
+      q.add(new TermQuery(new Term("B", "d2")), BooleanClause.Occur.SHOULD)
+      q.add(new WildcardQuery(new Term("B", "wild*")), BooleanClause.Occur.SHOULD)
+      val plan = builder.build(q)
+      plan.fetchDoc(2) === 2
+    }
+    
     "find lines with boolean query" in {
       var q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "l1")), BooleanClause.Occur.MUST)

@@ -8,7 +8,7 @@ import com.keepit.model.UserExperiment.ExperimentType
 import com.keepit.common.db.State
 import com.keepit.model.UserExperiment
 
-case class UserWithSocial(user: User, socialUserInfo: SocialUserInfo, bookmarksCount: Long, emails: Seq[EmailAddress], experimants: Seq[State[ExperimentType]])
+case class UserWithSocial(user: User, socialUserInfo: SocialUserInfo, bookmarksCount: Long, emails: Seq[EmailAddress], experiments: Seq[State[ExperimentType]])
 
 object UserWithSocial {
   def toUserWithSocial(user: User)(implicit conn: Connection) = {
@@ -17,7 +17,7 @@ object UserWithSocial {
         format(user, socialInfos, SocialUserInfo.all))
     val bookmarksCount = Bookmark.count(user)
     val emails = EmailAddress.getByUser(user.id.get)
-    val experimants = UserExperiment.getByUser(user.id.get).map(_.experimentType)
-    UserWithSocial(user, socialInfos.head, bookmarksCount, emails, experimants)
+    val experiments = UserExperiment.getByUser(user.id.get).map(_.experimentType)
+    UserWithSocial(user, socialInfos.head, bookmarksCount, emails, experiments)
   }
 }

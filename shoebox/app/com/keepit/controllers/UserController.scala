@@ -130,11 +130,11 @@ object UserController extends FortyTwoController {
     Ok(views.html.users(users))
   }
 
-  def addExperiment(userId: Id[User], experimantType: String) = AdminHtmlAction { request =>
+  def addExperiment(userId: Id[User], experimentType: String) = AdminHtmlAction { request =>
     CX.withConnection { implicit c =>
       val existing = UserExperiment.getByUser(userId)
-      val experiment = UserExperiment.ExperimentTypes(experimantType)
-      if (existing contains(experimantType)) throw new Exception("user %s already has an experiment %s".format(experimantType))
+      val experiment = UserExperiment.ExperimentTypes(experimentType)
+      if (existing contains(experimentType)) throw new Exception("user %s already has an experiment %s".format(experimentType))
       UserExperiment(userId = userId, experimentType = experiment).save
     }
     Redirect(request.referer)

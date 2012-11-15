@@ -111,8 +111,7 @@ class URIGraphSearcher(searcher: Searcher) {
       
       val rewrittenQuery = query.rewrite(searcher.indexReader)
       val queryBuilder = new LineQueryBuilder(searcher.getSimilarity, percentMatch)
-      val plan = queryBuilder.build(query)(searcher.indexReader)
-      
+      val plan = queryBuilder.build(rewrittenQuery)(searcher.indexReader)
       
       if (plan.fetchDoc(docid) == docid) {
         var line = plan.fetchLine(0)
