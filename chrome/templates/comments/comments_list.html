@@ -8,11 +8,11 @@
     </div>
     <div class="comment-meta">
       <abbr class="timestamp timeago" title="{{timestamp}}">{{timestamp}}</abbr>
-      <span class="meta-links"><span class="replies">{{replyCount}} Replies</span> · <span class="hearts"><span class="hearts-thank">Thank {{firstName}}</span> · <span class="hearts-glyph">♥ {{#hearts}}{{hearts}}{{/hearts}}</span></span></span>
+      <span class="meta-links"><span class="replies"><span class="reply-arrow"></span> {{#replyCount}}{{replyCount}} Replies{{/replyCount}}{{^replyCount}}Reply{{/replyCount}}</span> · <span class="hearts">{{>hearts}}</span></span>
     </div>
   </div>
-  {{#replies.length}}
   <div class="comment-replies">
+  {{#replies.length}}
     {{#replies}}
     <div class="reply">
       <div class="comment reply-comment">
@@ -27,8 +27,9 @@
       </div>
     </div>
     {{/replies}}
+  {{/replies.length}}
     <div class="reply">
-      <div class="comment reply-comment">
+      <div class="comment reply-comment compose-comment">
         <div class="comment-text">
           <form action="">
             <div class="reply-comment-box">
@@ -40,6 +41,5 @@
       </div>
     </div>
   </div>
-  {{/replies.length}}
 </div>
 {{/comments}}
