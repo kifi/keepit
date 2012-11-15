@@ -5,9 +5,6 @@
 # Home page
 GET     /                           com.keepit.controllers.HomeController.home
 
-GET     /bookmarks                  com.keepit.controllers.BookmarksController.bookmarksFirstPageView
-GET     /bookmarks/page/:page       com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
-
 POST    /bookmarks/add              com.keepit.controllers.BookmarksController.addBookmarks
 POST    /bookmarks/update           com.keepit.controllers.BookmarksController.updateBookmarks
 GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all
@@ -39,6 +36,9 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 # Admin
 ##########################################
 
+GET     /bookmarks                  com.keepit.controllers.BookmarksController.bookmarksFirstPageView
+GET     /admin/bookmarks            com.keepit.controllers.BookmarksController.bookmarksFirstPageView
+GET     /admin/bookmarks/page/:page com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
 GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scrape/:state        com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
 GET     /admin/scraped/:uriId       com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
