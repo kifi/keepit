@@ -22,7 +22,7 @@ import play.api.i18n.Messages
 import play.api.Logger
 import play.api.libs.json.Json
 import com.keepit.common.logging.Logging
-
+import com.keepit.common.net._
 
 /**
  * Provides the actions that can be used to protect controllers and retrieve the current user
@@ -64,7 +64,7 @@ trait SecureSocial extends Controller with Logging {
    */
   def SecuredAction[A](apiClient: Boolean, p: BodyParser[A])(f: SecuredRequest[A] => Result) = Action(p) {
     implicit request => {
-      log.info("in a secured action with api client = %s".format(apiClient))
+      log.info("secured access (api=%s) to %s by %s".format(apiClient, request.path, request.agent))
       SecureSocial.userFromSession(request).map { userId =>
         UserService.find(userId).map { user =>
           f(SecuredRequest(user, request))
@@ -72,11 +72,10 @@ trait SecureSocial extends Controller with Logging {
           // there is no user in the backing store matching the credentials sent by the client.
           // we need to remove the credentials from the session
           if ( apiClient ) {
-            log.info("apiClientForbidden")
+            log.info("apiClientForbidden from %s to %s".format(request.agent, request.path))
             apiClientForbidden(request)
           } else {
             log.info("redirect to login")
-//            Redirect(routes.LoginPage.logout())
             log.info("request.uri = %s".format(request.uri))
             //the following line is a FortyTwo update replacing the logout
             Redirect(routes.LoginPage.login()).flashing("error" -> Messages("securesocial.loginRequired")).withSession(
@@ -85,9 +84,9 @@ trait SecureSocial extends Controller with Logging {
           }
         }
       }.getOrElse {
-        log.debug("Anonymous user trying to access : '%s'".format(request.uri))
+        log.info("Anonymous user trying to access : '%s'".format(request.uri))
         if ( apiClient ) {
-          log.info("apiClientForbidden")
+          log.info("apiClientForbidden - anonymous user from %s to %s".format(request.agent, request.path))
           apiClientForbidden(request)
         } else {
           log.info("request.uri = %s".format(request.uri))
