@@ -1,11 +1,45 @@
 {{#comments}}
+<div class="comment-wrapper">
   <div class="comment">
     <img src="{{avatar}}" class="comment-avatar">
-    <div class="heart"><!--<span>{{hearts}}</span>--></div>
-    <strong>{{name}}</strong>
     <div class="comment-text">
-      {{text}}
+      <strong>{{firstName}} {{lastName}}</strong>
+      {{#formatComments}}{{text}}{{/formatComments}}
     </div>
-    <div class="replies">{{replies}} Replies</div>
+    <div class="comment-meta">
+      <abbr class="timestamp timeago" title="{{timestamp}}">{{timestamp}}</abbr>
+      <span class="meta-links"><span class="replies">{{replyCount}} Replies</span> · <span class="hearts"><span class="hearts-thank">Thank {{firstName}}</span> · <span class="hearts-glyph">♥ {{#hearts}}{{hearts}}{{/hearts}}</span></span></span>
+    </div>
   </div>
+  {{#replies.length}}
+  <div class="comment-replies">
+    {{#replies}}
+    <div class="reply">
+      <div class="comment reply-comment">
+        <img src="{{avatar}}" class="comment-avatar reply-avatar">
+        <div class="comment-text">
+          <strong>{{firstName}} {{lastName}}</strong>
+          {{#formatComments}}{{text}}{{/formatComments}}
+        </div>
+        <div class="comment-meta">
+          <abbr class="reply-timestamp timeago" title="{{timestamp}}">{{timestamp}}</abbr>
+        </div>
+      </div>
+    </div>
+    {{/replies}}
+    <div class="reply">
+      <div class="comment reply-comment">
+        <div class="comment-text">
+          <form action="">
+            <div class="reply-comment-box">
+                <img src="{{user.avatar}}" class="comment-avatar reply-avatar">
+                <textarea class="reply-comment-textarea" placeholder="Reply to {{firstName}}'s comment..."></textarea>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{/replies.length}}
+</div>
 {{/comments}}

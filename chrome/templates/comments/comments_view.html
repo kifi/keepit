@@ -8,7 +8,14 @@
     {{> comment_body_view}}
   </div>
   <div class="comment_post_view">
-    comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here! comment here!
+    <form action="">
+      <div class="comment-box">
+          <img src="{{user.avatar}}" class="user-avatar comment-avatar">
+          <textarea class="main-comment-textarea" id="main-comment-textarea" placeholder="Hey {{user.firstName}}, add a comment about this page!"></textarea>
+          <div class="crosshair"></div>
+      </div>
+      <input type="submit" class="submit-comment" value="Comment!">
+    </form>
   </div>
 
 </div>

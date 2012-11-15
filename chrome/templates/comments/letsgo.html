@@ -2,6 +2,7 @@
   <head>
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
 <script src="selectionlib.js"></script>
+<script src="jquery.timeago.js" type="text/javascript"></script>
 
 <script src="mustache.js"></script>
     <style>
@@ -11,7 +12,7 @@
         padding:0px;
         margin:0px;
         box-sizing: border-box;
-
+        background-color: #FAF9F9;
       }
 
       * {
@@ -50,25 +51,29 @@ ul.kifi_social_tabs {
 
 .comment_body_view {
   background-color: #FAF9F9;
-  border: 1px solid #BEBEBE;
   min-height: 200px;
   overflow: auto;
-  max-height:310px;
+  max-height:345px;
+  font-size:11px;
+  line-height: 14px;
+  padding-right:5px;
 }
 
 .comment_post_view {
   background-color: #FAF9F9;
-  height: 100px;
   overflow: hidden;
   position: absolute;
-  bottom:0;
+  bottom:5px;
 }
 
 img.comment-avatar {
-  width:30px;
-  height:30px;
+  width:35px;
+  height:35px;
   position:relative;
   float:left;
+  margin:5px;
+  margin-left:0px;
+  border-radius: 2px;
 }
 
 .flexcontainer {
@@ -76,75 +81,205 @@ img.comment-avatar {
   position: relative;
   width:300px;
   margin:0 auto;
+  font-family: Calibri, Helvetica, sans-serif;
+  background-color: #FAF9F9;
 }
 
-.heart {
-    position: relative;
-    width: 20px;
-    height: 20px;
-    float:right;
-    left:-40px;
-}
-.heart span {
-  position: relative;
-  z-index: 2;
-  font-size:24px;
-  text-align: center;
-  width:100%;
-}
-.heart:before,
-.heart:after {
-    z-index:1;
-    position: absolute;
-    content: "";
-    left: 20px;
-    top: 0;
-    width: 20px;
-    height: 32px;
-    background: #F2C0C1;
-    -moz-border-radius: 100px 100px 0 0;
-    border-radius: 100px 100px 0 0;
-    -webkit-transform: rotate(-45deg);
-       -moz-transform: rotate(-45deg);
-        -ms-transform: rotate(-45deg);
-         -o-transform: rotate(-45deg);
-            transform: rotate(-45deg);
-    -webkit-transform-origin: 0 100%;
-       -moz-transform-origin: 0 100%;
-        -ms-transform-origin: 0 100%;
-         -o-transform-origin: 0 100%;
-            transform-origin: 0 100%;
+.comment {
+  background-color: #fff;
+  margin:5px 0px 5px 0px;
+  clear:both;
+  padding:5px;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  box-shadow: 1px 1px 1px rgba(50,50,50,0.2);
 }
 
-.heart:hover:after,.heart:hover:before {
-  background: #F23030;
-}
-.heart:after {
-    left: 0;
-    -webkit-transform: rotate(45deg);
-       -moz-transform: rotate(45deg);
-        -ms-transform: rotate(45deg);
-         -o-transform: rotate(45deg);
-            transform: rotate(45deg);
-    -webkit-transform-origin: 100% 100%;
-       -moz-transform-origin: 100% 100%;
-        -ms-transform-origin: 100% 100%;
-         -o-transform-origin: 100% 100%;
-            transform-origin :100% 100%;
-}
-
-.hearts {
-  position:relative;
+.meta-links {
   float:right;
 }
-div#image-crop-overlay {
-  background-color : #ffffff;
-  overflow : hidden;
+
+.timestamp {
+  float: left;
+  color: #ccc;
 }
 
-div#image-crop-outline {
-  background : #ffffff url('outline.gif');
-  overflow : hidden;
+.comment-meta {
+  position: relative;
+  height:10px;
+  font-size: 10px;
+  line-height: 10px;
+  color: #aaa;
+  clear:both;
+}
+
+.meta-links:hover {
+  cursor: pointer;
+}
+
+.comment-text {
+  margin: 3px 0px 0px 0px;
+}
+
+.replies:hover, .hearts-thank:hover {
+  color: #666;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hearts-glyph:hover {
+  color: #D26464;
+}
+
+
+
+.comment-text .first-line {
+  display: inline;
+}
+
+.comment-text p {
+  margin: 0px;
+  margin-top:5px;
+}
+.comment_post_view form {
+  margin: 0;
+}
+.comment-box {
+  width: 280px;
+  margin: 0px;
+  height: 55px;
+  display: block;
+  background-color: #fff;
+  font-size: 12px;
+  padding: 5px;
+  border: 1px solid #EEE;
+  border-radius: 3px;
+  box-shadow: 1px 1px 1px rgba(50, 50, 50, 0.2);
+  outline: none;
+  min-height: 45px;
+}
+.comment-box .main-comment-textarea {
+  border:0px;
+  margin:0;
+  padding:0;
+  resize: none;
+  background-color: #fff;
+  font-size: 11px;
+  outline: none;
+  width:210px;
+  height:100%;
+}
+
+.comment_post_view .submit-comment {
+  display:none;
+  outline: none;
+  cursor: pointer;
+  vertical-align: baseline;
+  text-shadow: rgba(255, 255, 255, 0.4) 0px 1px 0px;
+  font-size: 13px;
+  text-align: center;
+  text-decoration: initial;
+  border: 1px solid;
+
+  color: #4F4F4F;
+  -webkit-box-shadow: rgba(0, 0, 0, 0.14902) 0px 1px 2px, rgba(255, 255, 255, 0.2) 0px 1px 0px inset;
+  box-shadow: rgba(0, 0, 0, 0.14902) 0px 1px 2px, rgba(255, 255, 255, 0.2) 0px 1px 0px inset;
+  border-color: #D5D5D5 #CCC #C2C2C2;
+  background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(white), to(#EDEDED));
+  float:right;
+  padding: 2px 10px;
+  border-radius: 3px;
+  margin:3px;
+}
+
+.comment-box .main-comment-textarea:focus::-webkit-input-placeholder { color:transparent; }
+.comment-box .main-comment-textarea:focus:-moz-placeholder { color:transparent; }
+
+.comment-box .crosshair {
+  display:none;
+  position:relative;
+  width:18px;
+  height:18px;
+  left:0px;
+  bottom:15px;
+  background: url(crosshair-grayed.png) no-repeat;
+  background-size: 18px;
+  background-position:center;
+}
+.comment-box .crosshair:hover {
+  position:relative;
+  width:18px;
+  height:18px;
+  left:0px;
+  bottom:15px;
+  background: url(crosshair.png) no-repeat;
+  background-size: 18px;
+  background-position:center;
+  cursor: pointer;
+}
+
+.comment-replies {
+  border-left:4px solid #ddd;
+  border-bottom:4px solid #ddd;
+  border-radius: 0px 0px 0px 4px;
+  margin-left: 7px;
+  margin-right:4px;
+  margin-top: -4px;
+}
+.reply-comment-box {
+  margin: 0px;
+  display: block;
+  background-color: #fff;
+  font-size: 12px;
+  outline: none;
+  min-height: 25px;
+}
+.reply-comment {
+  box-shadow: none;
+  background-color: #fff;
+  padding-top:1px;
+  margin: 1px 0px 0px 0px;
+  border-radius: 0px;
+  min-height: 40px;
+}
+.reply .reply-comment-textarea {
+  border:0px;
+  margin:0;
+  padding:0;
+  resize: none;
+  background-color: #fff;
+  font-size: 11px;
+  outline: none;
+  height: 30px;
+  width:210px;
+}
+
+.reply form {
+  margin: 0;
+}
+
+.reply-timestamp {
+  float: right;
+  color: #ccc;
+}
+
+img.reply-avatar {
+  width:25px;
+  height:25px;
+  margin:3px;
+  margin-bottom:0px;
+}
+
+.reply {
+  min-height: 40px;
+}
+
+
+
+
+
+img.user-avatar {
+  float:left;
 }
 
     </style>
@@ -179,30 +314,146 @@ loadFile("comments_list.html", function(comment_list) {
 
   var params = {
     view: "comments_list",
+    user: {
+      "firstName": "Andrew",
+      "lastName": "Conner",
+      "avatar": "https://fbcdn-profile-a.akamaihd.net/hprofile-ak-snc6/275024_71105121_451954280_q.jpg"
+    },
+    formatComments: function() {
+      return function(text, render) {
+        text = $.trim(render(text));
+        text = "<p class=\"first-line\">" + text + "</p>";
+        text = text.replace(/\n\n/g,"\n")
+        text = text.replace(/\n/g, "</p><p>");
+        return text;
+      }
+    },
     comments: [
       {
-        "name": "Andrew Conner",
-        "avatar": "https://fbcdn-profile-a.akamaihd.net/hprofile-ak-snc6/275024_71105121_451954280_n.jpg",
-        "timestamp": 1352921580212,
-        "text": "This is a sample comment",
-        "replies": 3,
+        "firstName": "Andrew",
+        "lastName": "Conner",
+        "avatar": "https://graph.facebook.com/71105121/picture?type=square",
+        "timestamp": "2012-07-17T09:24:17Z",
+        "text": "This is a sample comment. It is quite long. But that's okay, because it's a comment. Blah blah blah, this site is on The Internet, which is a place just south of San Fransisco.",
+        "replyCount": 3,
+        "hearts": 0,
+        "replies": [
+          {
+            "firstName": "Eishay",
+            "lastName": "Smith",
+            "avatar": "https://graph.facebook.com/646386018/picture?type=square",
+            "timestamp": "2012-07-17T09:26:17Z",
+            "text": "Sometimes, Andrew, you make no sense."
+          },
+          {
+            "firstName": "Danny",
+            "lastName": "Blumenfeld",
+            "avatar": "https://graph.facebook.com/636721190/picture?type=square",
+            "timestamp": "2012-07-17T09:29:17Z",
+            "text": "Guys, this is INSANE."
+          },
+        ]
+      },
+      {
+        "firstName": "Andrew",
+        "lastName": "Conner",
+        "avatar": "https://graph.facebook.com/71105121/picture?type=square",
+        "timestamp": "2012-08-17T09:24:17Z",
+        "text": "Here's your chance to design our next t-shirt. We've teamed up with Threadless and your challenge is to design the winning shirt inspired by our music. 25\% of the proceeds \nwill go to Partners In Health. Have fun. Can't wait to see what you come up with. For more info or what is it goss: http://beta.thssssreadl Love, AF.",
+        "replyCount": 3,
         "hearts": 5
       },
       {
-        "name": "Andrew Conner",
-        "avatar": "https://fbcdn-profile-a.akamaihd.net/hprofile-ak-snc6/275024_71105121_451954280_n.jpg",
-        "timestamp": 1352921580212,
+        "firstName": "Andrew",
+        "lastName": "Conner",
+        "avatar": "https://graph.facebook.com/71105121/picture?type=square",
+        "timestamp": "2012-09-17T09:24:17Z",
+        "text": "This is a sample comment okay okay one two sdf",
+        "replyCount": 3,
+        "hearts": 5
+      },
+      {
+        "firstName": "Andrew",
+        "lastName": "Conner",
+        "avatar": "https://graph.facebook.com/71105121/picture?type=square",
+        "timestamp": "2012-10-17T09:24:17Z",
         "text": "This is a sample comment",
-        "replies": 3,
+        "replyCount": 3,
+        "hearts": 5
+      },
+      {
+        "firstName": "Andrew",
+        "lastName": "Conner",
+        "avatar": "https://graph.facebook.com/71105121/picture?type=square",
+        "timestamp": "2012-11-10T09:24:17Z",
+        "text": "This is a sample comment",
+        "replyCount": 3,
+        "hearts": 5
+      },
+      {
+        "firstName": "Andrew",
+        "lastName": "Conner",
+        "avatar": "https://graph.facebook.com/71105121/picture?type=square",
+        "timestamp": (new Date()).toISOString(),
+        "text": "This is a sample comment",
+        "replyCount": 3,
         "hearts": 5
       }
     ]
   }
 
+
   getTemplate("comments_view.html", params, function(tmpl) {
     $('.content').append(tmpl);
+    // Binders
+    $("abbr.timeago").timeago();
+    $(".comment-box").click(function() {
+      $('#main-comment-textarea').focus();
+    });
+    $(".comment-box .crosshair").click(function() {
+      console.log("Hit");
+      return false;
+    });
+    $('.hearts-thank').hover(function() {
+      $(this).parent().find('.hearts-glyph').css('color','#D26464');
+    }, function() {
+      $(this).parent().find('.hearts-glyph').css('color','');
+    });
+    $('#main-comment-textarea').focus(function() {
+      $('.crosshair').fadeIn(100);
+      $('.submit-comment').fadeIn(100);
+      $('.comment_body_view').animate({
+        'max-height': '290'
+      },100);
+      $('.comment-box').animate({
+        'height': '85'
+      },100);
+    });
+    $('#main-comment-textarea').blur(function() {
+      $('.comment_body_view').animate({
+        'max-height': '345'
+      },100);
+      $('.comment-box').animate({
+        'height': '55'
+      },100);
+
+      $('.crosshair').fadeOut(20);
+      $('.submit-comment').fadeOut(20);
+    });
+    $('.reply-comment-textarea').focus(function() {
+      $(this).animate({
+        'height': '+=30'
+      },100);
+    });
+    $('.reply-comment-textarea').blur(function() {
+      $(this).animate({
+        'height': '30'
+      },100);
+    });
   }, partials);
+
 });
+
 
     </script>
 
