@@ -1,8 +1,8 @@
 @(title: String, scripts: String*)(content: Html)
 
 @quote(daQuote: com.keepit.common.admin.DouglasAdamsQuote) = {
-  </br>
-  </br>
+  <br>
+  <br>
   <blockquote>
     @daQuote.quote.map{ line =>
       <p>@line</p>
@@ -19,23 +19,24 @@
     <link rel="stylesheet" media="screen" href="@routes.Assets.at("bootstrap/css/bootstrap.min.css")" />
     <link rel="stylesheet" media="screen" href="@routes.Assets.at("bootstrap/css/bootstrap-responsive.min.css")" />         
     <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/admin_main.css")">
-    <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")"></script>
-    @scripts.map { script =>
-    <script src="@routes.Assets.at("javascripts/" + script + ".min.js")"></script>
+    @defining(if (play.api.Play.isDev(play.api.Play.current)) ".js" else ".min.js") { ext =>
+      @for(script <- "jquery-1.7.1" :: scripts.toList) {
+        <script src="@routes.Assets.at("javascripts/" + script + ext)"></script>
+      }
     }
     <script>
        $(function () {
-           $('#scrlBotm').click(function () {
-               $('html, body').animate({
+           $("#scrlBotm").click(function() {
+               $("html, body").animate({
                    scrollTop: $(document).height()
                },
                500);
                return false;
            });
 
-           $('#scrlTop').click(function () {
-               $('html, body').animate({
-                   scrollTop: '0px'
+           $("#scrlTop").click(function() {
+               $("html, body").animate({
+                   scrollTop: "0px"
                },
                500);
                return false;
@@ -69,4 +70,3 @@
 		</div>
   </body>
 </html>
-
