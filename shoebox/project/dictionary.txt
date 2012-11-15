@@ -1,3 +1,5 @@
 admin
 bookmarks
 routes
+uri
+val
