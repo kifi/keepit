@@ -21,9 +21,12 @@ object LineQuery  {
   val NO_MORE_DOCS = DocIdSetIterator.NO_MORE_DOCS
   
   val emptyQueryNode = new LineQuery(0) {
-    override def fetch(targetDoc: Int) = NO_MORE_DOCS
-    override def fetchDoc(targetDoc: Int) = NO_MORE_DOCS
-    override def fetchLine(targetDoc: Int) = NO_MORE_LINES
+    curDoc = NO_MORE_DOCS
+    curLine = NO_MORE_LINES
+    
+    override def fetch(targetDoc: Int) = curDoc
+    override def fetchDoc(targetDoc: Int) = curDoc
+    override def fetchLine(targetDoc: Int) = curLine
     override def score = 0.0f
   }
 }
