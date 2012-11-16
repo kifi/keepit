@@ -26,7 +26,7 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
         None
       case Some(user) => 
         log.debug("User found: %s for %s".format(user, id))
-        user.credentials
+        Some(user.credentials.getOrElse(throw new Exception("user [%s] does not have credentials".format(user))))
     }
 
   def save(socialUser: SocialUser): Unit = CX.withConnection { implicit conn => 
