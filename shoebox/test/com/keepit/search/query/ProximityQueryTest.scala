@@ -64,7 +64,6 @@ class ProximityQueryTest extends SpecificationWithJUnit {
       var doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
         buf += ((doc, scorer.score()))
-        println(buf)
         doc = scorer.nextDoc()
       }
       indexReader.numDocs() === 10
@@ -82,7 +81,6 @@ class ProximityQueryTest extends SpecificationWithJUnit {
       doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
         buf += ((doc, scorer.score()))
-        println(buf)
         doc = scorer.nextDoc()
       }
       buf.size === 10

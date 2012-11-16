@@ -154,6 +154,7 @@ class PositionAndWeight(val tp: TermPositions, val weight: Float) {
       posLeft = tp.freq()
     } else {
       doc = DocIdSetIterator.NO_MORE_DOCS
+      posLeft = 0
     }
     doc
   }
@@ -184,6 +185,7 @@ class PositionAndWeight(val tp: TermPositions, val weight: Float) {
 
 class ProximityScorer(weight: ProximityWeight, tps: Set[PositionAndWeight]) extends Scorer(weight) {
   var proximityScore = 0.0f
+  var scoredDoc = -1
   
   val pq = new PriorityQueue[PositionAndWeight] {
     super.initialize(tps.size)
@@ -204,54 +206,47 @@ class ProximityScorer(weight: ProximityWeight, tps: Set[PositionAndWeight]) exte
   tps.foreach{ tp => pq.insertWithOverflow(tp)}
   
   override def score(): Float = {
-    var sum = 0.0f
     var top = pq.top
-    val doc = top.doc
-    if (top.pos < Int.MaxValue) {
-      // start fetching position for all terms
-      while (top.doc == doc && top.pos == -1) {
-        top.nextPos()
-        top = pq.updateTop()
-      }
-      
-      var prev = top
-      var prevPos = top.pos
-      var prevWeight = top.weight
-      while (top.doc == doc && top.pos < Int.MaxValue) {
-        top.nextPos()
-        top = pq.updateTop()
-        if (prev eq top) {
-          prev = top
-          prevPos = top.pos
-          prevWeight = top.weight
-        } else {
-          if (prevPos < top.pos) {
-            sum += (prevWeight + top.weight) * ProximityQuery.scoreFactor(top.pos - prevPos)
+    var doc = top.doc
+    if (scoredDoc != doc) {
+      var sum = 0.0f
+      if (top.pos < Int.MaxValue) {
+        // start fetching position for all terms
+        while (top.doc == doc && top.pos == -1) {
+          top.nextPos()
+          top = pq.updateTop()
+        }
+        
+        var prev = top
+        var prevPos = top.pos
+        var prevWeight = top.weight
+        while (top.doc == doc && top.pos < Int.MaxValue) {
+          top.nextPos()
+          top = pq.updateTop()
+          if (prev eq top) {
+            prev = top
             prevPos = top.pos
             prevWeight = top.weight
+          } else {
+            if (prevPos < top.pos) {
+              sum += (prevWeight + top.weight) * ProximityQuery.scoreFactor(top.pos - prevPos)
+              prevPos = top.pos
+              prevWeight = top.weight
+            }
           }
         }
       }
+      proximityScore = sqrt(sum.toDouble).toFloat
+      scoredDoc = doc
     }
-    proximityScore = sqrt(sum.toDouble).toFloat
     proximityScore
   }
   
   override def docID(): Int = pq.top.doc
   
-  override def nextDoc(): Int = {
-    proximityScore = 0.0f
-    var top = pq.top
-    val doc = if (top.doc < DocIdSetIterator.NO_MORE_DOCS) top.doc + 1 else DocIdSetIterator.NO_MORE_DOCS
-    while (top.doc < doc) {
-      top.nextDoc()
-      top = pq.updateTop()
-    }
-    top.doc
-  }
+  override def nextDoc(): Int = advance(0)
   
   override def advance(target: Int): Int = {
-    proximityScore = 0.0f
     var top = pq.top
     val doc = if (target <= top.doc && top.doc < DocIdSetIterator.NO_MORE_DOCS) top.doc + 1 else target
     while (top.doc < doc) {

@@ -57,8 +57,10 @@ class LineQueryBuilder(similarity: Similarity, percentMatch: Float) extends Logg
     }
     val positiveExpr = if (required.size > 0) {
       new BooleanNode(translate(required), translate(optional), pctMatch, indexReader)
-    } else {
+    } else if (optional.size > 0){
       new BooleanOrNode(translate(optional), pctMatch, indexReader)
+    } else {
+      LineQuery.emptyQueryNode
     }
     
     if (prohibited.size > 0) new BooleanNot(positiveExpr, translate(prohibited), indexReader)
@@ -73,7 +75,8 @@ class LineQueryBuilder(similarity: Similarity, percentMatch: Float) extends Logg
         val idf = similarity.idf(indexReader.docFreq(term), indexReader.numDocs)
         new TermNode(term, idf, indexReader)
       }.toArray
-      new BooleanOrNode(termNodes, pctMatch, indexReader)
+      if (termNodes.length > 0) new BooleanOrNode(termNodes, pctMatch, indexReader)
+      else LineQuery.emptyQueryNode
     } catch {
       case _ =>
         log.warn("query translation failed: %s".format(query.getClass.toString))
