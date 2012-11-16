@@ -11,7 +11,7 @@ package object time {
      * Eastern Standard/Daylight Time.
      */
     val ET = DateTimeZone.forID("America/New_York")
-  
+
     /**
      * Pacific Standard/Daylight Time.
      */
@@ -22,9 +22,9 @@ package object time {
      */
     val UTC = DateTimeZone.UTC
   }
-  
+
   implicit val DEFAULT_DATE_TIME_ZONE = zones.PT
-  
+
   // intentionally labeling UTC as "GMT" (see RFCs 2616, 2822)
   // http://stackoverflow.com/questions/1638932/timezone-for-expires-and-last-modified-http-headers
   val HTTP_HEADER_DATETIME_FORMAT = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss 'GMT'")
@@ -47,52 +47,52 @@ package object time {
   implicit val dateTimeOrdering = new Ordering[DateTime] {
     def compare(a: DateTime, b: DateTime) = a.compareTo(b)
   }
-  
+
   class DateTimeConverter(time: Long, zone: DateTimeZone) {
     def toDateTime: DateTime = new DateTime(time, zone)
   }
-  
+
   implicit def dateToDateTimeConverter(date: java.util.Date)(implicit zone: DateTimeZone) =
     new DateTimeConverter(date.getTime, zone)
-  
+
   implicit def sqlDateToDateTimeConverter(date: java.sql.Date)(implicit zone: DateTimeZone) =
     new DateTimeConverter(date.getTime, zone)
-  
+
   implicit def sqlTimeToDateTimeConverter(time: java.sql.Time)(implicit zone: DateTimeZone) =
     new DateTimeConverter(time.getTime, zone)
-  
+
   implicit def sqlTimestampToDateTimeConverter(timestamp: java.sql.Timestamp)(implicit zone: DateTimeZone) =
     new DateTime(timestamp.getTime, zone)
-  
+
   def parseStandardTime(timeString: String) = STANDARD_DATETIME_FORMAT.parseDateTime(timeString)
-  
+
   class RichDateTime(date: DateTime) {
     def toLocalDateInZone(implicit zone: DateTimeZone): LocalDate = date.withZone(zone).toLocalDate
     def toLocalTimeInZone(implicit zone: DateTimeZone): LocalTime = date.withZone(zone).toLocalTime
     def toHttpHeaderString: String = HTTP_HEADER_DATETIME_FORMAT.print(date)
     def toStandardTimeString: String = STANDARD_DATETIME_FORMAT.print(date)
-    
+
     def isSameDay(otherDate: DateTime)(implicit zone: DateTimeZone): Boolean = {
       val z = date.withZone(zone)
       val z2 = otherDate.withZone(zone)
       z.getDayOfYear == z2.getDayOfYear && z.getYear == z2.getYear
     }
-    
+
     def isSameDay(ld: LocalDate)(implicit zone: DateTimeZone): Boolean = ld == date.withZone(zone).toLocalDate
-    
+
     lazy val format = HTTP_HEADER_DATETIME_FORMAT.print(date)
   }
-  
+
   implicit def dateTimeToRichDateTime(d: DateTime) = new RichDateTime(d)
-  
-  
+
+
   class RichTimeZone(zone: DateTimeZone) {
     def localDateFor(d: DateTime): LocalDate = d.withZone(zone).toLocalDate
     def localTimeFor(d: DateTime): LocalTime = d.withZone(zone).toLocalTime
   }
   implicit def dateTimeZoneToRichTimeZone(zone: DateTimeZone) = new RichTimeZone(zone)
-  
-  
+
+
   class RichLocalDate(ld: LocalDate) {
     def isSameDay(d: DateTime)(implicit zone: DateTimeZone) = ld == d.withZone(zone).toLocalDate
     def toJson: JsString = JsString(STANDARD_DATE_FORMAT.print(ld))
