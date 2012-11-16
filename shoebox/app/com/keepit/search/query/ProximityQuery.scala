@@ -36,6 +36,7 @@ object ProximityQuery extends Logging {
       case q: PhraseQuery => fromPhraseQuery(q)
       case q: BooleanQuery => fromBooleanQuery(q)
       case q: Query => fromOtherQuery(q)
+      case null => Set.empty[Term]
     }
   }
   

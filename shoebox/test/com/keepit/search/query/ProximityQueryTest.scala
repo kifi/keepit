@@ -35,7 +35,7 @@ class ProximityQueryTest extends SpecificationWithJUnit {
   val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
 
   val ramDir = new RAMDirectory
-  implicit val indexReader = {
+  val indexReader = {
     val writer = new IndexWriter(ramDir, config)
     (0 until 10).foreach{ d =>
       val text = ("abc %s def %s ghi".format("xyz "*d, "xyz "*(5 - d)))
@@ -55,8 +55,7 @@ class ProximityQueryTest extends SpecificationWithJUnit {
     
     "score using proximity" in {
       var q = ProximityQuery(Set(new Term("B", "abc"), new Term("B", "def")))
-      var rewrittenQuery = searcher.rewrite(q)
-      var weight = searcher.createNormalizedWeight(rewrittenQuery)
+      var weight = searcher.createNormalizedWeight(q)
       (weight != null) === true
       
       var scorer = weight.scorer(indexReader, true, true)
@@ -71,8 +70,7 @@ class ProximityQueryTest extends SpecificationWithJUnit {
       buf.sortBy(_._2).map(_._1) === Seq(9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
 
       q = ProximityQuery(Set(new Term("B", "def"), new Term("B", "ghi")))
-      rewrittenQuery = searcher.rewrite(q)
-      weight = searcher.createNormalizedWeight(rewrittenQuery)
+      weight = searcher.createNormalizedWeight(q)
       
       (weight != null) === true
       
@@ -89,16 +87,14 @@ class ProximityQueryTest extends SpecificationWithJUnit {
     
     "not return hits when the number of terms is 1 or less" in {
       var q = ProximityQuery(Set(new Term("B", "abc")))
-      var rewrittenQuery = searcher.rewrite(q)
-      var weight = searcher.createNormalizedWeight(rewrittenQuery)
+      var weight = searcher.createNormalizedWeight(q)
       (weight != null) === true
       
       var scorer = weight.scorer(indexReader, true, true)
       scorer.nextDoc() === DocIdSetIterator.NO_MORE_DOCS
 
       q = ProximityQuery(Set.empty[Term])
-      rewrittenQuery = searcher.rewrite(q)
-      weight = searcher.createNormalizedWeight(rewrittenQuery)
+      weight = searcher.createNormalizedWeight(q)
       (weight != null) === true
       
       scorer = weight.scorer(indexReader, true, true)

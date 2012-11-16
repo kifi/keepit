@@ -23,7 +23,11 @@ class QueryParser(indexWriterConfig: IndexWriterConfig) extends LuceneQueryParse
   private var percentMatch: Float = 0.0f
   def setPercentMatch(value: Float) { percentMatch = value }
 
-  override def newBooleanQuery(disableCoord: Boolean) = new BooleanQueryWithPercentMatch(percentMatch, disableCoord)
+  override def newBooleanQuery(disableCoord: Boolean) = {
+    val query = new BooleanQueryWithPercentMatch(disableCoord)
+    query.setPercentMatch(percentMatch)
+    query
+  }
   
   def getFieldQueryWithProximity(fieldName: String, queryText: String, quoted: Boolean): Query = {
     val query = super.getFieldQuery(fieldName, queryText, quoted)
