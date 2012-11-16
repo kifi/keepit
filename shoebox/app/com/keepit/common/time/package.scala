@@ -3,37 +3,50 @@ package com.keepit.common
 import java.util.Locale
 import org.joda.time.{DateTime, DateTimeZone, LocalDate, LocalTime}
 import org.joda.time.format.DateTimeFormat
+import play.api.libs.json.JsString
 
 package object time {
   object zones {
     /**
-     * Eastern Standard Time.
+     * Eastern Standard/Daylight Time.
      */
     val ET = DateTimeZone.forID("America/New_York")
   
     /**
-     * Pacific Standard Time.
+     * Pacific Standard/Daylight Time.
      */
     val PT = DateTimeZone.forID("America/Los_Angeles")
-  
+
     /**
-     * Greenwich Mean Time. TODO: Is this supposed to be UTC? GMT is so last century.
+     * Coordinated Universal Time.
      */
-    val GMT = DateTimeZone.forID("GMT")
+    val UTC = DateTimeZone.UTC
   }
   
   implicit val DEFAULT_DATE_TIME_ZONE = zones.PT
   
-  // rfc2822-compatible format for representing times in http headers
-  val HEADER_DATETIME_FORMAT = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z")
+  // intentionally labeling UTC as "GMT" (see RFCs 2616, 2822)
+  // http://stackoverflow.com/questions/1638932/timezone-for-expires-and-last-modified-http-headers
+  val HTTP_HEADER_DATETIME_FORMAT = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss 'GMT'")
                                              .withLocale(Locale.ENGLISH)
-                                             .withZone(zones.GMT)
+                                             .withZone(zones.UTC)
   val STANDARD_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS Z")
                                              .withLocale(Locale.ENGLISH)
                                              .withZone(zones.PT)
-  
-                                             
+  val STANDARD_DATE_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd")
+                                             .withLocale(Locale.ENGLISH)
+                                             .withZone(zones.PT)
+
+  def currentDate(implicit zone: DateTimeZone) = new LocalDate(zone)
   def currentDateTime(implicit zone: DateTimeZone) = new DateTime(zone)
+
+  implicit val localDateOrdering = new Ordering[LocalDate] {
+    def compare(a: LocalDate, b: LocalDate) = a.compareTo(b)
+  }
+
+  implicit val dateTimeOrdering = new Ordering[DateTime] {
+    def compare(a: DateTime, b: DateTime) = a.compareTo(b)
+  }
   
   class DateTimeConverter(time: Long, zone: DateTimeZone) {
     def toDateTime: DateTime = new DateTime(time, zone)
@@ -53,12 +66,10 @@ package object time {
   
   def parseStandardTime(timeString: String) = STANDARD_DATETIME_FORMAT.parseDateTime(timeString)
   
-  def parseHttpHeaderTime(timeString: String) = HEADER_DATETIME_FORMAT.parseDateTime(timeString)
-  
   class RichDateTime(date: DateTime) {
     def toLocalDateInZone(implicit zone: DateTimeZone): LocalDate = date.withZone(zone).toLocalDate
     def toLocalTimeInZone(implicit zone: DateTimeZone): LocalTime = date.withZone(zone).toLocalTime
-    def toHttpHeaderString: String = HEADER_DATETIME_FORMAT.print(date)
+    def toHttpHeaderString: String = HTTP_HEADER_DATETIME_FORMAT.print(date)
     def toStandardTimeString: String = STANDARD_DATETIME_FORMAT.print(date)
     
     def isSameDay(otherDate: DateTime)(implicit zone: DateTimeZone): Boolean = {
@@ -69,7 +80,7 @@ package object time {
     
     def isSameDay(ld: LocalDate)(implicit zone: DateTimeZone): Boolean = ld == date.withZone(zone).toLocalDate
     
-    lazy val format = HEADER_DATETIME_FORMAT.print(date)
+    lazy val format = HTTP_HEADER_DATETIME_FORMAT.print(date)
   }
   
   implicit def dateTimeToRichDateTime(d: DateTime) = new RichDateTime(d)
@@ -84,6 +95,7 @@ package object time {
   
   class RichLocalDate(ld: LocalDate) {
     def isSameDay(d: DateTime)(implicit zone: DateTimeZone) = ld == d.withZone(zone).toLocalDate
+    def toJson: JsString = JsString(STANDARD_DATE_FORMAT.print(ld))
   }
   implicit def localDateToRichLocalDate(ld: LocalDate) = new RichLocalDate(ld)
 }
