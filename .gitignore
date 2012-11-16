@@ -57,3 +57,4 @@ shoebox/conf/app_compilation_date.txt
 shoebox/conf/app_version.txt
 shoebox/bin/*
 shoebox/bin
+nohup.out

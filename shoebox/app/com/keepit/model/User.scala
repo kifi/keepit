@@ -60,7 +60,7 @@ object User {
     val nuri = NormalizedURIEntity AS "nuri"
     user.map { user => SELECT(user.*) FROM (((user JOIN bookmark).ON("b.user_id = u.id")) JOIN nuri).ON("b.uri_id = nuri.id") WHERE (nuri.urlHash EQ hashUrl) list }.map(_.view)
   }
-    
+  
   object States {
     val ACTIVE = State[User]("active")
     val INACTIVE = State[User]("inactive")

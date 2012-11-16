@@ -34,6 +34,7 @@ package object time {
   
                                              
   def currentDateTime(implicit zone: DateTimeZone) = new DateTime(zone)
+  def currentDate(implicit zone: DateTimeZone) = new LocalDate(zone)
   
   class DateTimeConverter(time: Long, zone: DateTimeZone) {
     def toDateTime: DateTime = new DateTime(time, zone)
