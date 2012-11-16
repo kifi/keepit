@@ -37,6 +37,7 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 ##########################################
 
 GET     /admin                      com.keepit.controllers.admin.AdminDashboardController.index
+GET     /admin/graphs/users.json    com.keepit.controllers.admin.AdminDashboardController.usersByDate
 GET     /bookmarks                  com.keepit.controllers.BookmarksController.bookmarksFirstPageView
 GET     /admin/bookmarks            com.keepit.controllers.BookmarksController.bookmarksFirstPageView
 GET     /admin/bookmarks/page/:page com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
