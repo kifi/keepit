@@ -10,10 +10,12 @@ class BooleanOrNode[P <: LineQuery](optional: Array[P], percentMatch: Float, rea
   optional.foreach{ node => pq.insertWithOverflow(node) }
   
   override def fetchDoc(targetDoc: Int) = {
-    curDoc = if (targetDoc <= curDoc && curDoc < LineQuery.NO_MORE_DOCS) curDoc + 1 else targetDoc
+    if (curDoc < LineQuery.NO_MORE_DOCS) {
+      curDoc = if (targetDoc <= curDoc) curDoc + 1 else targetDoc
+    }
     
     var top = pq.top
-    if (curDoc < LineQuery.NO_MORE_DOCS && pq.size > 0) {
+    if (curDoc < LineQuery.NO_MORE_DOCS) {
       while (top.curDoc < curDoc) {
         top.fetchDoc(curDoc)
         top = pq.updateTop()
