@@ -34,11 +34,7 @@ import com.keepit.common.social._
 
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
-    
-    val appScope = new AppScope
-    bindScope(classOf[AppScoped], appScope)
-    bind[AppScope].toInstance(appScope)
-    
+    install(FortyTwoModule())
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
@@ -52,7 +48,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.articleSearch.bucket").get)
     new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client)
   }
-  
+
   @Singleton
   @Provides
   def articleStore(amazonS3Client: AmazonS3): ArticleStore = {
@@ -69,14 +65,14 @@ case class ShoeboxModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def amazonS3Client(): AmazonS3 = { 
+  def amazonS3Client(): AmazonS3 = {
     val conf = current.configuration.getConfig("amazon.s3").get
     val awsCredentials = new BasicAWSCredentials(
-        conf.getString("accessKey").get, 
+        conf.getString("accessKey").get,
         conf.getString("secretKey").get)
     new AmazonS3Client(awsCredentials)
   }
-  
+
   @Singleton
   @Provides
   def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph): ArticleIndexer = {
@@ -90,7 +86,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     log.info("storing search index in %s".format(dir.getAbsolutePath()))
     ArticleIndexer(new MMapDirectory(dir), articleStore)
   }
-  
+
   @Singleton
   @Provides
   def uriGraph: URIGraph = {
@@ -108,10 +104,10 @@ case class ShoeboxModule() extends ScalaModule with Logging {
   @Provides
   @AppScoped
   def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-actor-system")
-  
+
   @Provides
   def httpClientProvider: HttpClient = new HttpClientImpl()
-  
+
   @Provides
   @AppScoped
   def healthcheckProvider(system: ActorSystem, postOffice: PostOffice): Healthcheck = {
