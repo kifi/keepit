@@ -98,7 +98,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
           }
         }
         
-        if (required.size() == 0 && optional.size() == 0) {
+        if (required.isEmpty && optional.isEmpty) {
           // no required and optional clauses.
           null
         } else if (optional.size() < minNrShouldMatch) {
