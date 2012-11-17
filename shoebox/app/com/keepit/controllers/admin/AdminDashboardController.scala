@@ -39,7 +39,7 @@ object AdminDashboardController extends FortyTwoController {
     val dates = CX.withConnection { implicit conn => User.all }.map(_.createdAt.toLocalDateInZone)
     val day0 = dates.min
     val dayCounts = dates.foldLeft(Map[LocalDate,Int]().withDefaultValue(0)){(m, d) => m + (d -> (1 + m(d)))}
-    val userCounts = (0 to Days.daysBetween(day0, currentDate).getDays()) map {i => dayCounts(day0.plusDays(i))}
+    val userCounts = (0 to Days.daysBetween(day0, inject[LocalDate]).getDays()) map {i => dayCounts(day0.plusDays(i))}
     JsObject(List(
         "day0" -> day0.toJson,
         "userCounts" -> JsArray(userCounts map {i => JsNumber(i)})
