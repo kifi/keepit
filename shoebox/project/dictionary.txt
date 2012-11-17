@@ -4,6 +4,8 @@ eishay
 facebook
 greenwich
 http
+plugin
+plugins
 routes
 todo
 uri
