@@ -33,8 +33,10 @@ import java.sql.Connection
 import com.keepit.common.social.CommentWithSocialUser
 import com.keepit.serializer.CommentWithSocialUserSerializer._
 import com.keepit.common.db.State
+import securesocial.core.java.SecureSocial.SecuredAction
+import com.keepit.common.controller.FortyTwoController
 
-object CommentController extends Controller with Logging with SecureSocial {
+object CommentController extends FortyTwoController {
 
   def createComment(url: String, 
                     externalId: ExternalId[User],
