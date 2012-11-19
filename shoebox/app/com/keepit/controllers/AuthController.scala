@@ -28,6 +28,7 @@ import play.api.data.validation.Constraints._
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json._
+import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.logging.Logging
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.User
@@ -39,12 +40,12 @@ import com.keepit.common.logging.Logging
 /**
  * The Login page controller
  */
-object AuthController extends Controller with securesocial.core.SecureSocial with Logging {
-  def isLoggedIn = SecuredAction(true) { implicit request => {
-	  UserService.find(request.user.id) match {
+object AuthController extends FortyTwoController {
+  def isLoggedIn = AuthenticatedJsonAction { implicit request => {
+	  UserService.find(request.socialUser.id) match {
 	    case None =>
-		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)) 
-	    case Some(socialUser) => 
+		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil))
+	    case Some(socialUser) =>
 	      log.info("facebook id %s".format(socialUser.id.id))
 	      val user = CX.withConnection { implicit c =>
   	    	val userId = SocialUserInfo.get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).userId.get
@@ -53,7 +54,7 @@ object AuthController extends Controller with securesocial.core.SecureSocial wit
   			Ok(JsObject(
   			  ("status" -> JsString("loggedin")) ::
   			  ("avatarUrl" -> JsString(socialUser.avatarUrl.get)) ::
-  			  ("name" -> JsString(socialUser.displayName)) :: 
+  			  ("name" -> JsString(socialUser.displayName)) ::
   			  ("facebookId" -> JsString(socialUser.id.id)) ::
   			  ("provider" -> JsString(socialUser.id.providerId)) ::
   			  ("externalId" -> JsString(user.externalId.id)) ::
@@ -62,7 +63,7 @@ object AuthController extends Controller with securesocial.core.SecureSocial wit
 	    }
 	  }
   }
-  
+
   def welcome = SecuredAction() { implicit request =>
     log.debug("in welcome. with user : [ %s ]".format(request.user ))
     Redirect(com.keepit.controllers.routes.HomeController.home())
