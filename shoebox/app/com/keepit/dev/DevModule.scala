@@ -40,10 +40,7 @@ import com.keepit.common.social._
 
 case class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
-    var appScope = new AppScope
-    bindScope(classOf[AppScoped], appScope)
-    bind[AppScope].toInstance(appScope)
-    
+    install(FortyTwoModule())
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
@@ -53,7 +50,7 @@ case class DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def amazonS3Client(): AmazonS3 = { 
+  def amazonS3Client(): AmazonS3 = {
     val conf = current.configuration.getConfig("amazon.s3").get
     val awsCredentials = new BasicAWSCredentials(conf.getString("accessKey").get, conf.getString("secretKey").get)
     println("using awsCredentials: %s -> %s".format(awsCredentials.getAWSAccessKeyId(), awsCredentials.getAWSSecretKey()))
@@ -62,24 +59,24 @@ case class DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def articleSearchResultStore(client: AmazonS3): ArticleSearchResultStore = 
+  def articleSearchResultStore(client: AmazonS3): ArticleSearchResultStore =
     current.configuration.getString("amazon.s3.articleSearch.bucket") match {
       case None => new HashMap[ExternalId[ArticleSearchResultRef], ArticleSearchResult] with ArticleSearchResultStore
       case Some(bucketName) => new S3ArticleSearchResultStoreImpl(S3Bucket(bucketName), client)
     }
-  
+
   @Singleton
   @Provides
-  def articleStore(client: AmazonS3): ArticleStore = 
+  def articleStore(client: AmazonS3): ArticleStore =
     current.configuration.getString("amazon.s3.article.bucket") match {
       case None => new HashMap[Id[NormalizedURI], Article] with ArticleStore
       case Some(bucketName) => new S3ArticleStoreImpl(S3Bucket(bucketName), client)
     }
-  
+
 
   @Singleton
   @Provides
-  def socialUserRawInfoStore(client: AmazonS3): SocialUserRawInfoStore = 
+  def socialUserRawInfoStore(client: AmazonS3): SocialUserRawInfoStore =
     current.configuration.getString("amazon.s3.social.bucket") match {
       case None => new HashMap[Id[SocialUserInfo], SocialUserRawInfo] with SocialUserRawInfoStore
       case Some(bucketName) => new S3SocialUserRawInfoStoreImpl(S3Bucket(bucketName), client)
@@ -89,7 +86,7 @@ case class DevModule() extends ScalaModule with Logging {
   @Provides
   def articleIndexer(articleStore: ArticleStore): ArticleIndexer = {
     val indexDir = current.configuration.getString("index.article.directory") match {
-      case None => 
+      case None =>
         new RAMDirectory()
       case Some(dirPath) =>
         val dir = new File(dirPath).getCanonicalFile()
@@ -102,15 +99,15 @@ case class DevModule() extends ScalaModule with Logging {
     }
     ArticleIndexer(indexDir, articleStore)
   }
-  
+
   @Provides
   def httpClientProvider: HttpClient = new HttpClientImpl()
-  
+
   @Singleton
   @Provides
   def uriGraph: URIGraph = {
     val indexDir = current.configuration.getString("index.urigraph.directory") match {
-      case None => 
+      case None =>
         new RAMDirectory()
       case Some(dirPath) =>
         val dir = new File(dirPath).getCanonicalFile()
@@ -123,7 +120,7 @@ case class DevModule() extends ScalaModule with Logging {
     }
     URIGraph(indexDir)
   }
-  
+
   @Provides
   @AppScoped
   def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-dev-actor-system")

@@ -99,7 +99,7 @@ object BookmarksController extends FortyTwoController {
     Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
   }
   
-  def bookmarksFirstPageView = Action {
+  def bookmarksFirstPageView = Action { // TODO: make admin only
     Redirect(com.keepit.controllers.routes.BookmarksController.bookmarksView(0))
   }
     
