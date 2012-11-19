@@ -4,6 +4,7 @@ eishay
 facebook
 greenwich
 http
+lifecycle
 plugin
 plugins
 routes
