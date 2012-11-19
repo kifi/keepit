@@ -311,6 +311,7 @@ function searchOnServer(request, sendResponse, tab) {
       log("[searchOnServer] xhr response:", tab);
       log(xhr.response, tab);
       var searchResults = $.parseJSON(xhr.response);
+      log("sending res")
       if (searchResults.length === 0) {
         sendResponse({"userInfo": userConfigs.user, "searchResults": [], "userConfig": userConfigs});
         return;
@@ -319,6 +320,7 @@ function searchOnServer(request, sendResponse, tab) {
       if (searchResults.length > maxRes) {
         searchResults = searchResults.slice(0, maxRes);
       }*/
+      log("Sending response!")
       sendResponse({"userInfo": userConfigs.user, "searchResults": searchResults, "userConfig": userConfigs});
     }
   }
@@ -532,6 +534,7 @@ function showPageIcon(tabId) {
 }
 
 chrome.tabs.onActivated.addListener(function(activeInfo) {
+  console.log("Active");
   chrome.tabs.query({active: true}, function(tabs) {
     var tab = tabs[0];
     if(tab.url.indexOf("http") === 0)
@@ -540,7 +543,9 @@ chrome.tabs.onActivated.addListener(function(activeInfo) {
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId, change) {
+  log("Updated");
   chrome.tabs.query({active: true}, function(tabs) {
+    log("Two")
     var tab = tabs[0];
     if(tab.url.indexOf("http") === 0)
       chrome.pageAction.show(tab.id);

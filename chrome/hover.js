@@ -1,4 +1,4 @@
-console.log("injecting keep it hover div");
+console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
 (function() {
   $ = jQuery.noConflict()
@@ -65,19 +65,40 @@ console.log("injecting keep it hover div");
     });
   }
 
-  function getTemplate(name, params, callback) {
+  function loadFile(name, callback) {
     var req = new XMLHttpRequest();
-    req.open("GET", chrome.extension.getURL(name), true);
+    req.open("GET",chrome.extension.getURL(name), true);
     req.onreadystatechange = function() {
         if (req.readyState == 4 && req.status == 200) {
-            var tb = Mustache.to_html(
-                req.responseText,
-                params
-            );
-            callback(tb);
+            callback(req.responseText);
         }
     };
     req.send(null);
+  }
+
+  var templateCache = {};
+
+  function getTemplate(name, params, callback, partials) {
+    //var tmpl = templateCache[name];
+    if(false && tmpl) {
+      var tb = Mustache.render(
+          tmpl,
+          params,
+          partials
+      );
+      callback(tb);
+    }
+    else {
+      loadFile(name, function(contents) {
+        var tb = Mustache.render(
+            contents,
+            params,
+            partials
+        );
+        callback(tb);
+        //templateCache[name] = contents;
+      });
+    }
   }
 
   function summaryText(numberOfFriends, is_kept) {
@@ -251,6 +272,10 @@ console.log("injecting keep it hover div");
       showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "public");
     });
 
+    $('.messages_label').click(function() {
+      showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "conversation");
+    });
+
     showComments(user,false); // prefetch comments, do not show.
 
     slideIn();
@@ -300,14 +325,16 @@ console.log("injecting keep it hover div");
     $.get("http://" + config.server + "/comments/all?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
       null,
       function(comments) {
-        drawComments(user, comments, type || "public");
+        renderComments(user, comments, type || "public");
         if(openComments) {
           $('.kifi_comment_wrapper').slideDown(600,'easeInOutBack');
         }
       });
   }
 
-  function drawComments(user, comments, type) {
+  function renderComments(user, comments, type) {
+    console.log("Drawing comments!")
+    log("tick1")
     comments = comments || {};
     comments["public"] = comments["public"] || [];
     comments["conversation"] = comments["conversation"] || [];
@@ -315,9 +342,197 @@ console.log("injecting keep it hover div");
 
     var visibleComments = comments[type] || [];
 
-    $('.comments_label').text(comments["public"].length + " Comments, " + comments["conversation"].length + " Messages, " + comments["private"].length + " Notes");
+    $('.comments_label').text(comments["public"].length + " Comments ");
     
 
+
+    loadFile("templates/comments/hearts.html", function(hearts) {
+      loadFile("templates/comments/comments_list.html", function(comment_list) {
+        var partials = {
+          "comment_body_view": comment_list,
+          "hearts": hearts
+        };
+
+        var params = {
+          view: "comments_list",
+          user: {
+            "firstName": "Andrew",
+            "lastName": "Conner",
+            "avatar": "https://fbcdn-profile-a.akamaihd.net/hprofile-ak-snc6/275024_71105121_451954280_q.jpg"
+          },
+          formatComments: function() {
+            return function(text, render) {
+              text = $.trim(render(text));
+              text = "<p class=\"first-line\">" + text + "</p>";
+              text = text.replace(/\n\n/g,"\n")
+              text = text.replace(/\n/g, "</p><p>");
+              return text;
+            }
+          },
+          formatDate: function() {
+            return function(text, render) {
+              try {
+                var date = (new Date(render(text))).toISOString();
+                return date;
+              }
+              catch(e) {
+                return "";
+              }
+            }
+          },
+          comments: visibleComments
+        }
+
+        getTemplate("templates/comments/comments_view.html",params, function(renderedTemplate) {
+          //console.log(renderedTemplate);
+          $('.kifi_comment_wrapper').html(renderedTemplate);
+          resizeCommentBodyView(true);
+          log("tick2")
+
+          var commentBodyView = $(".comment_body_view")[0];
+          commentBodyView.scrollTop = commentBodyView.scrollHeight;
+
+
+          // Binders
+
+          $("abbr.timeago").timeago();
+          $(".comment-box .crosshair").click(function() {
+            console.log("Hit");
+            return false;
+          });
+
+          $('#main-comment-textarea').focus(function() {
+            //$('.crosshair').slideDown(150);
+            $('.submit-comment').slideDown(150);
+            $('.comment_body_view').animate({
+              'max-height': '-=45'
+            },150,'easeQuickSnapBounce');
+            $('.comment-box').animate({
+              'height': '85'
+            },150,'easeQuickSnapBounce');
+            $(".kififtr").animate({
+              'margin-top': '-10'
+            });
+          });
+
+          $('#main-comment-textarea').blur(function() {
+            $('.comment_body_view').animate({
+              'max-height': '+=45'
+            },150,'easeQuickSnapBounce');
+            $('.comment-box').animate({
+              'height': '40'
+            },150,'easeQuickSnapBounce');
+
+            //$('.crosshair').slideUp(20);
+            //$('.submit-comment').slideUp(20);
+          });
+
+          $('.reply-comment-textarea').focus(function() {
+            $(this).animate({
+              'height': '+=30'
+            },200,'easeQuickSnapBounce');
+          });
+          $('.reply-comment-textarea').blur(function() {
+            $(this).animate({
+              'height': '-=30'
+            },100,'easeQuickSnapBounce');
+          });
+
+          $('.replies').click(function() {
+            var link = $(this);
+            var list = link.parents('.comment-wrapper').children('.comment-replies');
+            var comment = link.parents('.comment-wrapper');
+            if(list.is(":visible")) {
+              $(list).slideUp(200);
+              link.children('.reply-arrow').html('');
+            }
+            else {
+              $(list).slideDown(300,'easeQuickSnapBounce');
+              link.children('.reply-arrow').html('&uarr;');
+              var scrollTo = $('.comment_body_view').scrollTop() + comment.position().top - 20;
+              $('.comment_body_view').animate({
+                scrollTop: scrollTo
+              });
+            }
+          });
+
+          $('.hearts').hover(function() {
+            var hearts = $(this);
+            var glyph = hearts.find('.hearts-glyph');
+            var text = hearts.find('.hearts-thank');
+            if($(this).is('.thanked')) {
+              // Nothing yet...
+            } else {
+              glyph.addClass('hearts-glyph-thanked');
+              text.addClass('hearts-thank-hover');
+            }
+          }, function() {
+            var hearts = $(this);
+            var glyph = hearts.find('.hearts-glyph');
+            var text = hearts.find('.hearts-thank');
+            if($(this).is('.thanked')) {
+              // Nothing yet...
+            } else {
+              glyph.removeClass('hearts-glyph-thanked');
+              text.removeClass('hearts-thank-hover');
+            }
+          });
+
+          $('.hearts').click(function() {
+            if($(this).is('.thanked')) {
+              // Nothing to do...
+            }
+            else {
+              var hearts = $(this);
+              var glyph = hearts.find('.hearts-glyph');
+              var text = hearts.find('.hearts-thank');
+              glyph.addClass('hearts-glyph-thanked');
+              text.removeClass('hearts-thank hearts-thank-hover');
+              hearts.addClass('thanked');
+            }
+          });
+
+          $('.kifi_comment_wrapper .comment_form').submit(function() {
+            var text = $('#main-comment-textarea').val();
+            var request = {
+              "type": "post_comment",
+              "url": document.location.href,
+              "text": text,
+              "permissions": type
+            };
+            chrome.extension.sendRequest(request, function() {
+              $('#main-comment-textarea').val("");
+              var newComment = {
+                "createdAt": (new Date()),
+                "text": request.text,
+                "user": {
+                  "externalId": user.keepit_external_id,
+                  "firstName": user.name,
+                  "lastName": "",
+                  "facebookId": user.facebook_id
+                },
+                "permissions": type
+              }
+              comments[type].push(newComment);
+              console.log("new thread", comments);
+              // Clean up CSS
+              $(".kififtr").animate({
+                'margin-top': '0'
+              },100);
+              $('.submit-comment').slideUp(100, function() {
+                // Done cleaning up CSS. Redraw.
+
+                renderComments(user, comments, type);
+              });
+            });
+            return false;
+          });
+
+        }, partials);
+
+      });
+    });
+return;
     getTemplate("comments.html", {"comments":visibleComments, "public": type=="public", "conversation": type=="conversation", "private": type=="private"}, function(renderedTemplate) {
       
       $('.kifi_comment_wrapper').html(renderedTemplate);
@@ -355,10 +570,6 @@ console.log("injecting keep it hover div");
           showComments(user, true, $(this).data('target'))
         });
       });
-
-
-      var commentList = document.getElementById("comment_list");
-      commentList.scrollTop = commentList.scrollHeight || 0;
 
       /*$('textarea.mention').mentionsInput({
         onDataRequest:function (mode, query, callback) {
@@ -401,7 +612,7 @@ console.log("injecting keep it hover div");
           }
           comments[type].push(newComment);
           console.log("new thread", comments)
-          drawComments(user, comments, type);
+          //renderComments(user, comments, type);
         });
         return false;
       });
@@ -425,6 +636,23 @@ console.log("injecting keep it hover div");
     key.setScope('kifi_open');
 
     return false;
+  });
+
+  function resizeCommentBodyView(resizeQuickly) {
+    if(resizeQuickly === true) {
+      $('.comment_body_view').stop().css({'max-height':$(window).height()-350});
+    }
+    else {
+      var kifiheader = $('.kifihdr');
+      if(kifiheader.length > 0) {
+        var offset = kifiheader.offset().top - 30;
+        $('.comment_body_view').stop().animate({'max-height':'+='+offset},20);
+      }
+    }
+  }
+
+  $(window).resize(function() {
+    resizeCommentBodyView();
   });
 
 
