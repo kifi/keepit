@@ -33,7 +33,7 @@ import play.api.http.ContentTypes
  */
 object AdminDashboardController extends FortyTwoController {
 
-  private val userCountByDate = calcUserCountByDate
+  private lazy val userCountByDate = calcUserCountByDate
 
   private def calcUserCountByDate = {
     val dates = CX.withConnection { implicit conn => User.all }.map(_.createdAt.toLocalDateInZone)
