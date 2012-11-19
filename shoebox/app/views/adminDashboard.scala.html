@@ -1,3 +1,4 @@
-@admin("Dashboard", "d3-2.10.3") {
+@admin("Dashboard", scripts = List("d3-2.10.3", "admin_dashboard"), stylesheets = List("admin_dashboard")) {
   <h2>User Growth</h2>
+  <div id="chart-user-growth" data-uri="@com.keepit.controllers.admin.routes.AdminDashboardController.usersByDate()"></div>
 }
