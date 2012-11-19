@@ -86,7 +86,10 @@ trait SecureSocial extends Controller with Logging {
       }.getOrElse {
         log.info("Anonymous user trying to access : '%s'".format(request.uri))
         if ( apiClient ) {
-          log.info("apiClientForbidden - anonymous user from %s to %s".format(request.agent, request.path))
+          log.info("apiClientForbidden - anonymous user from %s to %s. user [%s], profider [%s]".format(
+              request.agent, request.path,
+              request.session.get(SecureSocial.UserKey).getOrElse("NO USER ID"),
+              request.session.get(SecureSocial.ProviderKey).getOrElse("NO PROVIDER ID")))
           apiClientForbidden(request)
         } else {
           log.info("request.uri = %s".format(request.uri))
