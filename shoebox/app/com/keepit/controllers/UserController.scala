@@ -37,7 +37,7 @@ import views.html.defaultpages.unauthorized
 import org.joda.time.LocalDate
 import scala.collection.immutable.Map
 
-case class UserStatistics(user: User, userWithSocial: UserWithSocial, bookmarksByDate: Map[LocalDate, Seq[Bookmark]], socialConnectionCount: Long)
+case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConnectionCount: Long)
 
 object UserController extends FortyTwoController {
 
@@ -46,24 +46,24 @@ object UserController extends FortyTwoController {
    * curl localhost:9000/users/keepurl?url=http://www.ynet.co.il/;echo
    */
   def usersKeptUrl(url: String, externalId: ExternalId[User]) = Action { request =>
-    
-    val socialUsers = CX.withConnection { implicit c => 
+
+    val socialUsers = CX.withConnection { implicit c =>
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = User.getOpt(externalId).getOrElse(
                 throw new Exception("externalId %s not found".format(externalId))).id.get
           val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
-              
+
           val articleIndexer = inject[ArticleIndexer]
           val uriGraph = inject[URIGraph]
-          
+
           val uriGraphSearcher = uriGraph.getURIGraphSearcher
           val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
-          
+
           val sharingUserIds = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
-          
+
           sharingUserIds map (u => UserWithSocial.toUserWithSocial(User.get(u))) toSeq
-          
+
         case None =>
           Seq[UserWithSocial]()
       }
@@ -71,7 +71,7 @@ object UserController extends FortyTwoController {
 
     Ok(userWithSocialSerializer.writes(socialUsers)).as(ContentTypes.JSON)
   }
-  
+
   /**
    * Call me using:
    * $ curl localhost:9000/admin/user/get/all | python -mjson.tool
@@ -80,7 +80,7 @@ object UserController extends FortyTwoController {
     val users = CX.withConnection { implicit c =>
       User.all map UserWithSocial.toUserWithSocial
     }
-    Ok(JsArray(users map { user => 
+    Ok(JsArray(users map { user =>
       JsObject(List(
         "userId" -> JsNumber(user.user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
         "externalId" -> JsString(user.user.externalId.id),
@@ -102,17 +102,15 @@ object UserController extends FortyTwoController {
     }
     Ok(userWithSocialSerializer.writes(user))
   }
-  
-  def userStatistics(user: User)(implicit conn: Connection): UserStatistics = {
-    val bookmarks = Bookmark.ofUser(user)
-    val byDate = bookmarks map {b => (b.createdAt.toLocalDateInZone -> b)} groupBy(_._1) mapValues(_.map(_._2))
-    val socialConnectionCount = SocialConnection.getUserConnectionsCount(user.id.get)
-    UserStatistics(user, UserWithSocial.toUserWithSocial(user), byDate, socialConnectionCount)
-  } 
 
-  def userView(userId: Id[User]) = AdminHtmlAction { implicit request => 
+  def userStatistics(user: User)(implicit conn: Connection): UserStatistics = {
+    val socialConnectionCount = SocialConnection.getUserConnectionsCount(user.id.get)
+    UserStatistics(user, UserWithSocial.toUserWithSocial(user), socialConnectionCount)
+  }
+
+  def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections) = CX.withConnection { implicit c =>
-      val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId)) 
+      val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
       val bookmarks = Bookmark.ofUser(userWithSocial.user)
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
       val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
@@ -121,12 +119,12 @@ object UserController extends FortyTwoController {
     }
     val rawInfos = socialUserInfos map {info =>
       inject[SocialUserRawInfoStore].get(info.id.get)
-    } 
+    }
     Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections))
   }
 
-  def usersView = AdminHtmlAction { implicit request => 
-    val users = CX.withConnection { implicit c => 
+  def usersView = AdminHtmlAction { implicit request =>
+    val users = CX.withConnection { implicit c =>
       User.all map userStatistics
     }
     Ok(views.html.users(users))
@@ -141,9 +139,9 @@ object UserController extends FortyTwoController {
     }
     Redirect(request.referer)
   }
-  
-  def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction { implicit request => 
-    val socialUserInfos = CX.withConnection { implicit c => 
+
+  def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction { implicit request =>
+    val socialUserInfos = CX.withConnection { implicit c =>
       val user = User.get(userId)
       SocialUserInfo.getByUser(user.id.get)
     }
