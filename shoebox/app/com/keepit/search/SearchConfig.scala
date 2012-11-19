@@ -7,10 +7,10 @@ object SearchConfig {
       "maxTextHitsPerCategory" -> "1000",
       "myBookmarkBoost" -> "1.5",
       "sharingBoost" -> "0.5",
-      "percentMatch" -> "66",
+      "percentMatch" -> "75",
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
-      "tailCutting" -> "0.3")
+      "tailCutting" -> "0.5")
   
   var defaultConfig = new SearchConfig(defaultParams)
 
