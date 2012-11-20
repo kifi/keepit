@@ -8,7 +8,7 @@ import securesocial.core.AuthenticationMethod._
 import play.api.libs.json._
 
 class SocialUserSerializer extends Format[SocialUser] {
-  
+
   def writes(user: SocialUser): JsValue =
     JsObject(List(
       "id"  -> JsObject(List(
@@ -24,7 +24,7 @@ class SocialUserSerializer extends Format[SocialUser] {
       "oAuth2Info" -> writesOAuth2Info(user.oAuth2Info.get)
       )
     )
-    
+
   def writesOAuth2Info(info: OAuth2Info): JsValue =
     JsObject(List(
       "accessToken" -> JsString(info.accessToken),
@@ -32,10 +32,10 @@ class SocialUserSerializer extends Format[SocialUser] {
       "expiresIn" -> (info.expiresIn map { e => JsNumber(e) } getOrElse(JsNull)),
       "refreshToken" -> (info.refreshToken map { e => JsString(e) } getOrElse(JsNull))
     ))
-    
-  def reads(json: JsValue): SocialUser = 
+
+  def reads(json: JsValue): SocialUser =
     SocialUser(
-        UserId((json \ "id" \ "id").as[String], 
+        UserId((json \ "id" \ "id").as[String],
                (json \ "id" \ "providerId").as[String]),
         (json \ "displayName").as[String],
         (json \ "email").asOpt[String],
@@ -53,13 +53,13 @@ class SocialUserSerializer extends Format[SocialUser] {
         Some(readsOAuth2Info(json \ "oAuth2Info")),
         None
     )
-  
-  def readsOAuth2Info(json: JsValue): OAuth2Info = 
+
+  def readsOAuth2Info(json: JsValue): OAuth2Info =
     OAuth2Info(
-      (json \ "accessToken").as[String],  
-      (json \ "tokenType").asOpt[String],  
+      (json \ "accessToken").as[String],
+      (json \ "tokenType").asOpt[String],
       (json \ "expiresIn").asOpt[Int],
-      (json \ "refreshToken").asOpt[String]  
+      (json \ "refreshToken").asOpt[String]
     )
 }
 

@@ -8,7 +8,7 @@ import com.keepit.common.social.CommentWithSocialUser
 import com.keepit.common.db.State
 
 class CommentWithSocialUserSerializer extends Writes[CommentWithSocialUser] {
-  
+
   def writes(commentWithSocialUser: CommentWithSocialUser): JsValue =
     JsObject(List(
       "createdAt" -> JsString(commentWithSocialUser.comment.createdAt.toString),
@@ -16,16 +16,16 @@ class CommentWithSocialUserSerializer extends Writes[CommentWithSocialUser] {
       "user" -> UserWithSocialSerializer.userWithSocialSerializer.writes(commentWithSocialUser.user),
       "permissions" -> JsString(commentWithSocialUser.comment.permissions.value)
     ))
-    
-  def writes (comments: Seq[CommentWithSocialUser]): JsValue = 
-    JsArray(comments map { comment => 
+
+  def writes (comments: Seq[CommentWithSocialUser]): JsValue =
+    JsArray(comments map { comment =>
       CommentWithSocialUserSerializer.commentWithSocialUserSerializer.writes(comment)
     })
-    
+
   def writes(commentsGroups: List[(State[Comment.Permission],Seq[CommentWithSocialUser])]): JsValue =
     JsObject(commentsGroups map { commentsGroup =>
       commentsGroup._1.value -> writes(commentsGroup._2)
-    })   
+    })
 }
 
 object CommentWithSocialUserSerializer {

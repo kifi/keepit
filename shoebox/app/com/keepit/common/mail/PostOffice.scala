@@ -29,12 +29,12 @@ import com.google.inject.ImplementedBy
 
 @ImplementedBy(classOf[PostOfficeImpl])
 trait PostOffice {
-  def sendMail(mail: ElectronicMail): ElectronicMail 
+  def sendMail(mail: ElectronicMail): ElectronicMail
 }
 
 class PostOfficeImpl extends PostOffice with Logging {
 
-  def sendMail(mail: ElectronicMail): ElectronicMail = 
+  def sendMail(mail: ElectronicMail): ElectronicMail =
     CX.withConnection { implicit c =>
       mail.prepareToSend().save
     }

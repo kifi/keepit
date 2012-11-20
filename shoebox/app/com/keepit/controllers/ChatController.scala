@@ -137,4 +137,4 @@ class SASLXFacebookPlatformMechanism(saslAuthentication: SASLAuthentication) ext
   def getQueryMap(query: String) = Map(query.split("\\&").map(pair => pair.split("=", 2)).filter(pairs => pairs.length == 2).map(fields => fields(0) -> fields(1)): _*)
 
 }
- 
+

@@ -19,11 +19,11 @@ object LineQuery  {
   val NO_MORE_POSITIONS = Integer.MAX_VALUE
   val NO_MORE_LINES = NO_MORE_POSITIONS/MAX_POSITION_PER_LINE
   val NO_MORE_DOCS = DocIdSetIterator.NO_MORE_DOCS
-  
+
   val emptyQueryNode = new LineQuery(0) {
     curDoc = NO_MORE_DOCS
     curLine = NO_MORE_LINES
-    
+
     override def fetch(targetDoc: Int) = curDoc
     override def fetchDoc(targetDoc: Int) = curDoc
     override def fetchLine(targetDoc: Int) = curLine
@@ -32,17 +32,17 @@ object LineQuery  {
 }
 
 abstract class LineQuery(val weight: Float) {
-  
+
   private[line] var curDoc = -1
   private[line] var curLine = -1
   private[line] var curPos = -1
   private[line] var curScore = 0.0f
   private[line] var isScored = false
-  
+
   def fetch(targetDoc: Int) = {
     var done = false
     while (!done) {
-      if (fetchDoc(targetDoc) < LineQuery.NO_MORE_DOCS){ 
+      if (fetchDoc(targetDoc) < LineQuery.NO_MORE_DOCS){
         if (fetchLine(0) < LineQuery.NO_MORE_LINES) {
           done = true
         }
@@ -54,11 +54,11 @@ abstract class LineQuery(val weight: Float) {
   }
 
   def fetchDoc(targetDoc: Int): Int
-  
+
   def fetchLine(targetLine: Int) = {
     val line = if (targetLine <= curLine) curLine + 1 else targetLine
     isScored = false
-    
+
     if (curPos >= 0) curLine = curPos / LineQuery.MAX_POSITION_PER_LINE
     while (curLine < line && curLine < LineQuery.NO_MORE_LINES) {
       fetchPos()
@@ -66,7 +66,7 @@ abstract class LineQuery(val weight: Float) {
     }
     curLine
   }
-  
+
   def score = {
     if (!isScored) {
       curScore = computeScore
@@ -74,7 +74,7 @@ abstract class LineQuery(val weight: Float) {
     }
     curScore
   }
-  
+
   def computeScore = {
     var freq = 0
     var sc = 0.0f
@@ -87,13 +87,13 @@ abstract class LineQuery(val weight: Float) {
     }
     sc
   }
-  
+
   private[line] def fetchPos() = LineQuery.NO_MORE_POSITIONS
 }
 
 class NodeQueue(size: Int) extends PriorityQueue[LineQuery] {
   super.initialize(size);
-  
+
   override def lessThan(nodeA: LineQuery, nodeB: LineQuery) = {
     if (nodeA.curDoc == nodeB.curDoc) (nodeA.curLine < nodeB.curLine)
     else (nodeA.curDoc < nodeB.curDoc)

@@ -9,15 +9,15 @@ object URI extends Logging {
       case _ => None // parse failed
     }
   }
-    
+
   def apply(scheme: Option[String], userInfo: Option[String], host: Option[Host], port: Int, path: Option[String], query: Option[Query], fragment: Option[String]): URI = {
     apply(None, scheme, userInfo, host, port, path, query, fragment)
   }
-  
+
   def apply(raw: Option[String], scheme: Option[String], userInfo: Option[String], host: Option[Host], port: Int, path: Option[String], query: Option[Query], fragment: Option[String]): URI = {
     new URI(raw, scheme, userInfo, host, port, path, query, fragment)
   }
-  
+
   def unapply(uri: URI): Option[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] = {
     Some((uri.scheme, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment))
   }
@@ -26,7 +26,7 @@ object URI extends Logging {
       val uri = try {
         // preprocess illegal chars
         val preprocessed = uriString.replace("|", "%7C")
-        
+
         new java.net.URI(preprocessed).normalize()
       } catch {
         case e: java.net.URISyntaxException =>
@@ -46,21 +46,21 @@ object URI extends Logging {
       case _ => None
     }
   }
-    
+
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
   val encodedPercent = java.net.URLEncoder.encode("%", "UTF-8")
-    
+
   def fixMalformedEscape(uriString: String) = {
     uriString.split("%", -1) match {
-      case Array(first, rest @ _*) => 
+      case Array(first, rest @ _*) =>
         rest.foldLeft(first){ (str, piece) => str + twoHexDigits.findPrefixOf(piece).map(_ => "%").getOrElse(encodedPercent) + piece }
     }
   }
-  
+
   def normalizeScheme(scheme: Option[String]) = scheme.map(_.toLowerCase)
-  
+
   def normalizeHost(host: Option[String]) = {
-    host.flatMap{ host => 
+    host.flatMap{ host =>
       host match {
         case Host(domain @ _*) => Some(Host(domain: _*))
         case host =>
@@ -69,17 +69,17 @@ object URI extends Logging {
       }
     }
   }
-  
+
   def normalizePort(scheme: Option[String], port: Int) = (scheme, port) match {
     case (Some("http"), 80) => -1
     case (Some("https"), 443) => -1
     case _ => port
   }
-  
+
   val slashDotDot = """^(/\.\.)+""".r
-  
+
   val defaultPage = """/(index|default)\.(html|htm|asp|aspx|php|php3|php4|phtml|cfm|cgi|jsp|jsf|jspx|jspa)$""".r
-    
+
   def normalizePath(path: Option[String]) = {
     path.flatMap{ path =>
       var path2 = slashDotDot.replaceFirstIn(path.trim, "")
@@ -92,8 +92,8 @@ object URI extends Logging {
         case path => Some(path.replace("%7E", "~").replace(" ", "%20"))
       }
     }
-  } 
-  
+  }
+
   def normalizeQuery(query: Option[String]) = {
     query.flatMap{ query =>
       query.trim match {
@@ -104,7 +104,7 @@ object URI extends Logging {
       }
     }
   }
-  
+
   def normalizeFragment(fragment: Option[String]) = {
     fragment.flatMap{ fragment =>
       fragment.trim match {
@@ -113,7 +113,7 @@ object URI extends Logging {
       }
     }
   }
-  
+
   def normalizeString(string: String, what: String) = {
     try {
       val decoded = java.net.URLDecoder.decode(string.replace("+", "%20"), "UTF-8") // java URLDecoder does not replace "+" with a space
@@ -157,7 +157,7 @@ class Host(val domain: Seq[String]) {
 object Query {
   def apply(params: Seq[Param]) = new Query(params)
   def apply(query: String) = new Query(Seq(new Param(query, None)))
-  
+
   def unapplySeq(query: Query): Option[Seq[Param]] = Some(query.params)
   def unapplySeq(query: String): Option[Seq[Param]] = {
     var pairs = Map.empty[String, Option[String]]
@@ -167,7 +167,7 @@ object Query {
     }
     Some(pairs.toSeq.sortBy(_._1).map{ case (k, v) => Param(k, v) }.toSeq)
   }
-  
+
   object NameValuePair {
     def unapply(param: String): Option[(String, Option[String])] = {
       param.split("=", 2) match {
@@ -182,7 +182,7 @@ class Query(val params: Seq[Param]) {
   override def toString() = {
     if (params.size > 0) params.mkString("&") else ""
   }
-  
+
   def containsParam(name: String) = params.exists(_.name == name)
 }
 
