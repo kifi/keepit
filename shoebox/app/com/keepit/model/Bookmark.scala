@@ -67,13 +67,13 @@ object Bookmark {
     Bookmark(title = title, url = url, userId = user.id.get, uriId = uri.id.get, source = source, isPrivate = isPrivate)
 
   def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] =
-    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE ((b.uriId EQ uri.id.get) AND (b.userId EQ user.id.get)) unique }.map( _.view )
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE ((b.uriId EQ uri.id.get) AND (b.userId EQ user.id.get)) unique }.map(_.view)
 
   def ofUri(uri: NormalizedURI)(implicit conn: Connection): Seq[Bookmark] =
-    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.uriId EQ uri.id.get) list }.map( _.view )
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.uriId EQ uri.id.get) list }.map(_.view)
 
   def ofUser(user: User)(implicit conn: Connection): Seq[Bookmark] =
-    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.userId EQ user.id.get) list }.map( _.view )
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.userId EQ user.id.get) list }.map(_.view)
 
   def count(user: User)(implicit conn: Connection): Long =
     (BookmarkEntity AS "b").map(b => SELECT(COUNT(b.id)).FROM(b).WHERE(b.userId EQ user.id.get).unique).get
@@ -85,7 +85,7 @@ object Bookmark {
     (BookmarkEntity AS "b").map(b => SELECT(COUNT(b.id)).FROM(b).unique).get
 
   def page(page: Int = 0, size: Int = 20)(implicit conn: Connection): Seq[Bookmark] =
-    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b LIMIT size OFFSET (page * size) ORDER_BY (b.id DESC) list }.map( _.view )
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b LIMIT size OFFSET (page * size) ORDER_BY (b.id DESC) list }.map(_.view)
 
   def get(id: Id[Bookmark])(implicit conn: Connection): Bookmark =
     getOpt(id).getOrElse(throw NotFoundException(id))
@@ -98,6 +98,17 @@ object Bookmark {
 
   def getOpt(externalId: ExternalId[Bookmark])(implicit conn: Connection): Option[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.externalId EQ externalId) unique }.map(_.view)
+
+  def getDailyKeeps(implicit conn: Connection) = {
+    val u = UserEntity AS "u"
+    val b = BookmarkEntity AS "b"
+    val days = expr[Int]("datediff(date(b.created_at), date(u.created_at))")
+    SELECT (u.id, days, COUNT(b.*))
+      .FROM (u JOIN b ON "b.user_id = u.id")
+      .WHERE (b.source EQ "HOVER_KEEP")
+      .GROUP_BY (u.id, days)
+      .list
+  }
 
   object States {
     val ACTIVE = State[Bookmark]("active")
