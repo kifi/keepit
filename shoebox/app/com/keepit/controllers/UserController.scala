@@ -46,7 +46,7 @@ object UserController extends FortyTwoController {
    * Call me using:
    * curl localhost:9000/users/keepurl?url=http://www.ynet.co.il/;echo
    */
-  def usersKeptUrl(url: String, externalId: ExternalId[User]) = Action { request =>
+  def usersKeptUrl(url: String, externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
 
     val socialUsers = CX.withConnection { implicit c =>
       NormalizedURI.getByNormalizedUrl(url) match {
@@ -73,31 +73,7 @@ object UserController extends FortyTwoController {
     Ok(userWithSocialSerializer.writes(socialUsers)).as(ContentTypes.JSON)
   }
 
-  /**
-   * Call me using:
-   * $ curl localhost:9000/admin/user/get/all | python -mjson.tool
-   */
-  def getUsers = Action { request =>
-    val users = CX.withConnection { implicit c =>
-      User.all map UserWithSocial.toUserWithSocial
-    }
-    Ok(JsArray(users map { user =>
-      JsObject(List(
-        "userId" -> JsNumber(user.user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
-        "externalId" -> JsString(user.user.externalId.id),
-        "userObject" -> userWithSocialSerializer.writes(user)
-      ))
-    }))
-  }
-
-  def getUser(id: Id[User]) = Action { request =>
-    val user = CX.withConnection { implicit c =>
-      UserWithSocial.toUserWithSocial(User.get(id))
-    }
-    Ok(userWithSocialSerializer.writes(user))
-  }
-
-  def getUserByExternal(id: ExternalId[User]) = Action { request =>
+  def getUser(id: Id[User]) = AdminJsonAction { request =>
     val user = CX.withConnection { implicit c =>
       UserWithSocial.toUserWithSocial(User.get(id))
     }
