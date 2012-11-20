@@ -70,11 +70,11 @@ trait Indexable[T] {
   def buildIteratorField[A](fieldName: String, iterator: Iterator[A])(toToken: (A=>String)) = {
     new Field(fieldName, new IteratorTokenStream(iterator, toToken))
   }
-  
+
   class IteratorTokenStream[A](iterator: Iterator[A], toToken: (A=>String)) extends TokenStream {
     val termAttr = addAttribute(classOf[CharTermAttribute])
     val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute]);
-    
+
     @throws(classOf[IOException])
     override def incrementToken(): Boolean = {
       clearAttributes()

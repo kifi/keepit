@@ -25,7 +25,7 @@ class ScoringSerializer extends Format[Scoring] with Logging {
         log.error("can't serialize %s".format(res))
         throw e
     }
-    
+
   def reads(json: JsValue): Scoring = {
     val score = new Scoring(
       textScore  = (json \ "textScore").as[Float],

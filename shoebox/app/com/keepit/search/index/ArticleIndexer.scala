@@ -39,7 +39,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
 
   val commitBatchSize = 100
   val fetchSize = commitBatchSize * 3
-  
+
   def run(): Int = {
     log.info("starting a new indexing round")
     try {
@@ -54,9 +54,9 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           CX.withConnection { implicit c =>
             val articleIndexable = indexable.asInstanceOf[ArticleIndexable]
             val state = indexError match {
-              case Some(error) => 
+              case Some(error) =>
                 findNextState(articleIndexable.uri.state -> Set(INDEX_FAILED, FALLBACK_FAILED))
-              case None => 
+              case None =>
                 cnt += 1
                 findNextState(articleIndexable.uri.state -> Set(INDEXED, FALLBACKED))
             }
@@ -66,27 +66,27 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       }
       cnt
     } catch {
-      case ex: Throwable => 
+      case ex: Throwable =>
         log.error("error in indexing run", ex)
         throw ex
     }
   }
-  
+
   def getQueryParser: QueryParser = new ArticleQueryParser
-  
+
   def getArticleSearcher() = searcher
-  
+
   def search(queryText: String): Seq[Hit] = {
     parseQuery(queryText) match {
       case Some(query) => searcher.search(query)
       case None => Seq.empty[Hit]
     }
   }
-  
+
   def buildIndexable(uri: NormalizedURI) = {
     new ArticleIndexable(uri.id.get, uri, articleStore)
   }
-  
+
   class ArticleIndexable(override val id: Id[NormalizedURI], val uri: NormalizedURI, articleStore: ArticleStore) extends Indexable[NormalizedURI] {
     override def buildDocument = {
       val doc = super.buildDocument
@@ -101,11 +101,11 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       }
     }
   }
-  
+
   class ArticleQueryParser extends QueryParser(indexWriterConfig) {
-    
+
     super.setAutoGeneratePhraseQueries(true)
-    
+
     override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
       (getFieldQueryWithProximity("t", queryText, quoted), getFieldQueryWithProximity("c", queryText, quoted)) match {
         case (null, null) => null

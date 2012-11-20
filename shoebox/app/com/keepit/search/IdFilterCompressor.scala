@@ -13,7 +13,7 @@ object IdFilterCompressor {
     Arrays.sort(arr)
     val baos = new ByteArrayOutputStream(arr.length * 4)
     val out = new OutputStreamDataOutput(baos)
-    
+
     // version
     out.writeVInt(1)
     // size
@@ -27,11 +27,11 @@ object IdFilterCompressor {
     baos.flush()
     baos.toByteArray()
   }
-  
+
   def toSet(bytes: Array[Byte]): Set[Long]= {
     val in = new InputStreamDataInput(new ByteArrayInputStream(bytes))
     var idSet = Set.empty[Long]
-    
+
     val version = in.readVInt()
     val size = in.readVInt()
     var current = 0L;
@@ -44,9 +44,9 @@ object IdFilterCompressor {
     }
     idSet
   }
-  
+
   def fromSetToBase64(ids: Set[Long]):String = printBase64Binary(toByteArray(ids))
-  
+
   def fromBase64ToSet(base64: String) = {
     if (base64.length == 0) Set.empty[Long] else toSet(parseBase64Binary(base64))
   }

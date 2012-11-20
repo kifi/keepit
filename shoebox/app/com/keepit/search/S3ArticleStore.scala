@@ -24,5 +24,5 @@ import play.api.libs.json.Format
 
 trait ArticleStore extends ObjectStore[Id[NormalizedURI], Article]
 
-class S3ArticleStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[Article] = new ArticleSerializer()) 
+class S3ArticleStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[Article] = new ArticleSerializer())
   extends S3ObjectStore[Id[NormalizedURI], Article] with ArticleStore

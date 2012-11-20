@@ -11,7 +11,7 @@ trait ObjectStore[A, B] {
    *  @return   the map itself
    */
   def += (kv: (A, B)): this.type
-  
+
   /** Removes a key from this map.
    *  @param    key the key to be removed
    *  @return   the map itself.
@@ -25,5 +25,5 @@ trait ObjectStore[A, B] {
    *          or `None` if none exists.
    */
   def get(key: A): Option[B]
-  
+
 }

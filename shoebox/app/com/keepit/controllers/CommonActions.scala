@@ -7,9 +7,9 @@ import play.api.http.ContentTypes
 
 
 object CommonActions {
-  
+
   val TEN_MB = 1024 * 1024 * 10
-  
+
   /**
    * An action that requires valid machine and user cookies
    */
@@ -18,5 +18,5 @@ object CommonActions {
       block(request).as(ContentTypes.JSON)
     }
   }
-  
+
 }

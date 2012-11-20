@@ -25,11 +25,11 @@ import com.keepit.common.net.HttpClient
 import play.api.libs.concurrent.Promise
 import com.keepit.common.net.ClientResponse
 
-class MailSender(system: ActorSystem, postmarkUrl: String, postmarkToken: String, healthcheck: Healthcheck, httpClient: HttpClient) 
+class MailSender(system: ActorSystem, postmarkUrl: String, postmarkToken: String, healthcheck: Healthcheck, httpClient: HttpClient)
   extends Logging with Plugin {
-  
+
   private def processMail(mail: ElectronicMail) = actor ! ProcessMail(mail, this)
-  
+
   private val actor = system.actorOf(Props { new MailSenderActor(httpClient) })
   // plugin lifecycle methods
   private var _cancellables: Seq[Cancellable] = Nil
@@ -39,7 +39,7 @@ class MailSender(system: ActorSystem, postmarkUrl: String, postmarkToken: String
       system.scheduler.schedule(5 seconds, 5 seconds, actor, ProcessOutbox(this))
     )
   }
-  
+
   override def onStop(): Unit = {
     _cancellables.map(_.cancel)
   }
@@ -51,7 +51,7 @@ class MailSender(system: ActorSystem, postmarkUrl: String, postmarkToken: String
       processMail(mail)
     }
   }
-  
+
   /**
    * To test send from curl use the following command:
    * $ curl -iv -H "Accept:application/json" -H "Content-Type:application/json" -H "X-Postmark-Server-Token:61311d22-d1cc-400b-865e-ffb95027251f" -d '{"From":"eng@keepit.com", "To":"eishay@gmail.com", "Subject": "Test from curl", "HtmlBody": "Some body here"}' https://api.postmarkapp.com/email; echo
@@ -72,8 +72,8 @@ class MailSender(system: ActorSystem, postmarkUrl: String, postmarkToken: String
         }
     future.await(1, TimeUnit.MINUTES).get
   } catch {
-    case e => 
-      val error = healthcheck.addError(HealthcheckError(error = Some(e), callType = Healthcheck.EMAIL, 
+    case e =>
+      val error = healthcheck.addError(HealthcheckError(error = Some(e), callType = Healthcheck.EMAIL,
         errorMessage = Some("Can't send email from %s to %s: %s".format(mail.from, mail.to, mail.subject))))
       CX.withConnection { implicit c =>
         mail.errorSending("Error: %s".format(error)).save
@@ -92,14 +92,14 @@ class MailSender(system: ActorSystem, postmarkUrl: String, postmarkToken: String
     CX.withConnection { implicit c =>
       val body = response.json
       if (response.status != 200 || (body \ "Message").as[String] != "OK") {
-        val error = healthcheck.addError(HealthcheckError(callType = Healthcheck.EMAIL, 
+        val error = healthcheck.addError(HealthcheckError(callType = Healthcheck.EMAIL,
             errorMessage = Some("Postmark can't send email from %s to %s: %s. postmark status/message: %s/%s".format(
                 mail.from, mail.to, mail.subject, response.status, body))))
         mail.errorSending("Status: %s, Body: %s, Error: %s".format(response.status, body.toString(), error.id)).save
       } else {
         mail.sent(body.toString()).save
       }
-    }    
+    }
   }
 }
 
@@ -107,7 +107,7 @@ private[mail] case class ProcessOutbox(sender: MailSender)
 private[mail] case class ProcessMail(mail: ElectronicMail, sender: MailSender)
 
 private[mail] class MailSenderActor(httpClient: HttpClient) extends Actor with Logging {
-  
+
   def receive() = {
     case ProcessOutbox(sender) => sender.processOutbox()
     case ProcessMail(mail, sender) => sender.sendMailToPostmark(mail, httpClient)

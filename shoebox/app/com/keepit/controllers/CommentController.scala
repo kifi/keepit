@@ -36,12 +36,12 @@ import com.keepit.common.db.State
 
 object CommentController extends Controller with Logging with SecureSocial {
 
-  def createComment(url: String, 
+  def createComment(url: String,
                     externalId: ExternalId[User],
-                    text: String, 
-                    permission: String, 
+                    text: String,
+                    permission: String,
                     recipients: String = "") = SecuredAction(false) { request =>
-    val comment = CX.withConnection { implicit conn => 
+    val comment = CX.withConnection { implicit conn =>
       val userId = User.getOpt(externalId).getOrElse(throw new Exception("Invalid userid"))
       val uri = NormalizedURI.getByNormalizedUrl(url) match {
         case Some(nuri) => nuri
@@ -49,7 +49,7 @@ object CommentController extends Controller with Logging with SecureSocial {
       }
       permission.toLowerCase match {
         case "private" =>
-          Comment(normalizedURI = uri.id.get, 
+          Comment(normalizedURI = uri.id.get,
               userId = userId.id.get, text = text, permissions = Comment.Permissions.PRIVATE).save
         case "conversation" =>
           //TODO
@@ -62,10 +62,10 @@ object CommentController extends Controller with Logging with SecureSocial {
     Ok(JsObject(("commentId" -> JsString(comment.externalId.id)) :: Nil))
 
   }
-  def getComments(url: String, 
-                  externalId: ExternalId[User], 
+  def getComments(url: String,
+                  externalId: ExternalId[User],
                   permission: String = "") = SecuredAction(false) { request =>
-    val comments = CX.withConnection { implicit conn => 
+    val comments = CX.withConnection { implicit conn =>
       val user = User.get(externalId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
@@ -73,7 +73,7 @@ object CommentController extends Controller with Logging with SecureSocial {
             case "private" => (Comment.Permissions.PRIVATE -> privateComments(user.id.get, normalizedURI)) :: Nil
             case "public" =>  (Comment.Permissions.PUBLIC -> publicComments(normalizedURI)) :: Nil
             case "conversation" => (Comment.Permissions.CONVERSATION -> conversationComments(user.id.get, normalizedURI)) :: Nil
-            case _ => allComments(user.id.get, normalizedURI) 
+            case _ => allComments(user.id.get, normalizedURI)
           }
 
           comments map { commentGroup =>
@@ -83,18 +83,18 @@ object CommentController extends Controller with Logging with SecureSocial {
           List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
       }
     }
-    
+
     Ok(commentWithSocialUserSerializer.writes(comments)).as(ContentTypes.JSON)
   }
-  
+
   private def allComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection): List[(State[Comment.Permission],Seq[Comment])] =
-    (Comment.Permissions.PUBLIC -> publicComments(normalizedURI)) :: 
-    (Comment.Permissions.CONVERSATION -> conversationComments(userId, normalizedURI)) :: 
+    (Comment.Permissions.PUBLIC -> publicComments(normalizedURI)) ::
+    (Comment.Permissions.CONVERSATION -> conversationComments(userId, normalizedURI)) ::
     (Comment.Permissions.PRIVATE -> privateComments(userId, normalizedURI)) :: Nil
-  
+
   private def publicComments(normalizedURI: NormalizedURI)(implicit conn: Connection) =
     Comment.getPublicByNormalizedUri(normalizedURI.id.get)
-    
+
   private def privateComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection) =
     Comment.getPrivateByNormalizedUri(normalizedURI.id.get, userId)
 

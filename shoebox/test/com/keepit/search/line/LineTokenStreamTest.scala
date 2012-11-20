@@ -31,7 +31,7 @@ class LineTokenStreamTest extends SpecificationWithJUnit {
       }
       buf.toArray === expected
     }
-    
+
     "cap the position" in {
       val longText = (1 to 3000).map(_.toString).mkString(" ")
       val ts = new LineTokenStream("B", Seq((0, longText)), analyzer)
@@ -45,7 +45,7 @@ class LineTokenStreamTest extends SpecificationWithJUnit {
       count === 3000
       curPos === LineQuery.MAX_POSITION_PER_LINE - LineQuery.LINE_GAP - 1
     }
-    
+
     "maintain gaps between lines" in {
       val longText = (1 to 5000).map(_.toString).mkString(" ")
       val ts = new LineTokenStream("B", Seq((0, longText), (1, longText), (2, longText)), analyzer)

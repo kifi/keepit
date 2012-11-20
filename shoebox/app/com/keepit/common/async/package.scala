@@ -9,10 +9,10 @@ import play.api.Play.current
 
 package object async {
 
-  def dispatch(block: => Unit, onFail: Exception => Unit): Unit = 
+  def dispatch(block: => Unit, onFail: Exception => Unit): Unit =
     try {
       inject[ActorPlugin].system.dispatcher.execute(new Runnable {
-        def run(): Unit = 
+        def run(): Unit =
           try {
             block
           } catch {
@@ -22,5 +22,5 @@ package object async {
     } catch {
       case e: Exception => onFail(e)
     }
-  
+
 }
