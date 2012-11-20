@@ -123,7 +123,7 @@ object UserController extends FortyTwoController {
     }
 
     // We want to throw an exception (.get) if `emails' was not passed in. As we expand this, we should add Play! form validation
-    val emailList = form.get("emails").get.split(",").map(_.trim()).toList.distinct.map(em => em match {
+    val emailList = form.get("emails").get.split(",").map(_.toLowerCase().trim()).toList.distinct.map(em => em match {
       case s if s.length > 5 => Some(s)
       case _ => None
     }).flatten
