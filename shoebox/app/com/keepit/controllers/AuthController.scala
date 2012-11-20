@@ -41,7 +41,7 @@ import com.keepit.common.logging.Logging
  * The Login page controller
  */
 object AuthController extends FortyTwoController {
-  def isLoggedIn = AuthenticatedJsonAction { implicit request => {
+  def isLoggedIn = AuthenticatedHtmlAction { implicit request => {
 	  UserService.find(request.socialUser.id) match {
 	    case None =>
 		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil))

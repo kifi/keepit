@@ -36,7 +36,7 @@ import com.keepit.search.graph.URIGraph
 import views.html.defaultpages.unauthorized
 import org.joda.time.LocalDate
 import scala.collection.immutable.Map
-import com.keepit.serializer.SocialUserSerializer
+import play.api.libs.json.JsArray
 
 case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConnectionCount: Long)
 
@@ -46,7 +46,7 @@ object UserController extends FortyTwoController {
    * Call me using:
    * curl localhost:9000/users/keepurl?url=http://www.ynet.co.il/;echo
    */
-  def usersKeptUrl(url: String, externalId: ExternalId[User]) = Action { request =>
+  def usersKeptUrl(url: String, externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
 
     val socialUsers = CX.withConnection { implicit c =>
       NormalizedURI.getByNormalizedUrl(url) match {
@@ -80,32 +80,8 @@ object UserController extends FortyTwoController {
 
     Ok(JsArray(socialConnections.map(sc => UserWithSocialSerializer.userWithSocialSerializer.writes(sc))))
   }
-  
-  /**
-   * Call me using:
-   * $ curl localhost:9000/admin/user/get/all | python -mjson.tool
-   */
-  def getUsers = Action { request =>
-    val users = CX.withConnection { implicit c =>
-      User.all map UserWithSocial.toUserWithSocial
-    }
-    Ok(JsArray(users map { user =>
-      JsObject(List(
-        "userId" -> JsNumber(user.user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
-        "externalId" -> JsString(user.user.externalId.id),
-        "userObject" -> userWithSocialSerializer.writes(user)
-      ))
-    }))
-  }
 
-  def getUser(id: Id[User]) = Action { request =>
-    val user = CX.withConnection { implicit c =>
-      UserWithSocial.toUserWithSocial(User.get(id))
-    }
-    Ok(userWithSocialSerializer.writes(user))
-  }
-
-  def getUserByExternal(id: ExternalId[User]) = Action { request =>
+  def getUser(id: Id[User]) = AdminJsonAction { request =>
     val user = CX.withConnection { implicit c =>
       UserWithSocial.toUserWithSocial(User.get(id))
     }
@@ -139,14 +115,15 @@ object UserController extends FortyTwoController {
     Ok(views.html.users(users))
   }
 
-  def addExperiment(userId: Id[User], experimentType: String) = AdminHtmlAction { request =>
-    CX.withConnection { implicit c =>
+  def addExperiment(userId: Id[User], experimentType: String) = AdminJsonAction { request =>
+    val experimants = CX.withConnection { implicit c =>
       val existing = UserExperiment.getByUser(userId)
       val experiment = UserExperiment.ExperimentTypes(experimentType)
       if (existing contains(experimentType)) throw new Exception("user %s already has an experiment %s".format(experimentType))
       UserExperiment(userId = userId, experimentType = experiment).save
+      UserExperiment.getByUser(userId)
     }
-    Redirect(request.referer)
+    Ok(JsArray(experimants map {e => JsString(e.experimentType.value) }))
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction { implicit request =>

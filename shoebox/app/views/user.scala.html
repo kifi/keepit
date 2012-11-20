@@ -11,7 +11,9 @@
 
 @admin("User: " + userWithSocial.user.firstName + " " + userWithSocial.user.lastName) {
   <h2>User details </h2>
-   <button class="btn" onclick="refreshAllSociaUserInfo()">Refresh Social User Info!</button>
+   <button class="btn" onclick="refreshAllSociaUserInfo()">Refresh Social User Info!</button>&nbsp
+   <button class="btn" onclick="blockUser()">Block User</button>
+   <br/>
    <table class="table table-bordered">
       <tr>
         <th>Name</th><td>@userWithSocial.user.firstName @userWithSocial.user.lastName</td>
@@ -32,7 +34,7 @@
         <th>Email</th><td><a href='mailto:@{userWithSocial.emails.map(_.address).mkString(",")}'>@{userWithSocial.emails.map(_.address).mkString(",")}</a></td>
       </tr>
       <tr>
-        <th>Experiments</th><td>@userWithSocial.experiments.mkString(",")</td>
+        <th>Experiments</th><td id="experiments">@userWithSocial.experiments.mkString(",")</td>
       </tr>
       <tr>
         <th>OAuth</th><td><textarea class="json-textArea">@socialUserInfos</textarea></td>
@@ -85,6 +87,7 @@
 			      <th>Active</th>
 			      <th>Bookmark</th>
 			      <th>Source</th>
+			      <th>Created At</th>
 			    </tr>
 			 @for((bookmark, i) <- bookmarks.zipWithIndex) {
 			   <tr>
@@ -100,6 +103,7 @@
 		        </td>
 		        <td>@adminHelper.bookmarkDisplay(bookmark)</td>
 		        <td>@bookmark.source</td>
+            <td>@adminHelper.dateDisplay(bookmark.createdAt) @adminHelper.timeDisplay(bookmark.createdAt)</td>
 			   </tr>
 			 }
 			</table>
@@ -109,6 +113,13 @@
   <script type="text/javascript">
     function refreshAllSociaUserInfo() {
       location.href="@com.keepit.controllers.routes.UserController.refreshAllSocialInfo(userWithSocial.user.id.get)"
+    }
+    function blockUser() {
+      $.post('@com.keepit.controllers.routes.UserController.addExperiment(userWithSocial.user.id.get, "block")', function(data) {
+        var list = $("<ul/>")
+        $(data).each(function(i, e){list.append($("<li>" + e + "</li>"));})
+        $('#experiments').html(list);
+      });
     }
   </script>
 }

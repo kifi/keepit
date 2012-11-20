@@ -686,13 +686,11 @@ function startHandShake(callback){
     "json"
   ).error(function(error) {
     log(error.responseText);
-    alert("got error resposne" + error.responseText);
+    //alert("got error resposne" + error.responseText);
     callback(null);
   });
-
-
-
 }
+
 function hasKeepitIdAndFacebookId() {
   var user = getConfigs().user;
   if (!user) return false;
@@ -765,16 +763,30 @@ if (!hasKeepitIdAndFacebookId()) {
   openFacebookConnect();
 } else {
   log("find user info in local storage");
-  var userConfigs = getConfigs();
-  log(userConfigs);
-  var config = getConfigs();
-  if(config["upload_on_start"] === true) {
-    log("loading bookmarks to the server");
-    postBookmarks(chrome.bookmarks.getTree, "PLUGIN_START");//posting bookmarks even when keepit id is found
-  } else {
-    log("NOT loading bookmarks to the server");
-  }
-  getBookMarks();
+
+  startHandShake(function(data) {
+    if(data == null) {
+      // Need to refresh Facebook info
+      log("User does not appear to be logged in remote. Refreshing data...");
+      var userInfo = {};
+      setConfigs("user", JSON.stringify(userInfo));
+      openFacebookConnect();
+    }
+    else {
+      log("User logged in, loading bookmarks");
+      var userConfigs = getConfigs();
+      log(userConfigs);
+      var config = getConfigs();
+      if(config["upload_on_start"] === true) {
+        log("loading bookmarks to the server");
+        postBookmarks(chrome.bookmarks.getTree, "PLUGIN_START");//posting bookmarks even when keepit id is found
+      } else {
+        log("NOT loading bookmarks to the server");
+      }
+      getBookMarks();
+    }
+  });
+
 }
 
 logEvent("Plugin started!");
