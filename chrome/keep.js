@@ -326,7 +326,7 @@ function searchOnServer(request, sendResponse, tab) {
   var externalId = userConfigs.user["keepit_external_id"];
   var lastUUID = typeof request.lastUUID === 'undefined' ? '' : request.lastUUID;
   var context = typeof request.context === 'undefined' ? '' : request.context;
-  xhr.open("GET", 'http://' + userConfigs.server + '/search2?term=' + term + '&externalId=' + externalId + '&maxHits=' + userConfigs["max_res"]*2 + '&lastUUI=' + lastUUID + '&context=' + context, true);
+  xhr.open("GET", 'http://' + userConfigs.server + '/search?term=' + term + '&externalId=' + externalId + '&maxHits=' + userConfigs["max_res"]*2 + '&lastUUI=' + lastUUID + '&context=' + context, true);
   xhr.send();
 }
 
@@ -681,7 +681,6 @@ function startHandShake(callback){
     "json"
   ).error(function(error) {
     log(error.responseText);
-    //alert("got error resposne" + error.responseText);
     callback(null);
   });
 }
