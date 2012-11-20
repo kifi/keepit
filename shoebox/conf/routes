@@ -20,8 +20,8 @@ GET     /comments/reply             com.keepit.controllers.CommentController.get
 
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String, externalId: ExternalId[User])
 
-GET     /search2                    com.keepit.controllers.SearchController.search2(term: String, externalId: ExternalId[User], maxHits:Int, lastUUID: Option[String], context: Option[String])
-GET     /search                     com.keepit.controllers.SearchController.search(term: String, externalId: ExternalId[User], maxHits:Int, lastUUID: Option[String], context: Option[String])
+GET     /search2                    com.keepit.controllers.SearchController.search2(term: String, maxHits:Int, lastUUID: Option[String], context: Option[String])
+GET     /search                     com.keepit.controllers.SearchController.search(term: String, maxHits:Int, lastUUID: Option[String], context: Option[String])
 
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
 GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
@@ -52,6 +52,7 @@ GET     /admin/uriGraph/update/:userId com.keepit.controllers.admin.URIGraphCont
 GET     /admin/users                com.keepit.controllers.UserController.usersView
 GET     /admin/user/:id             com.keepit.controllers.UserController.userView(id: Id[User])
 POST    /admin/user/:id/experiment/add/:exp  com.keepit.controllers.UserController.addExperiment(id: Id[User], exp: String)
+POST    /admin/user/:id/update      com.keepit.controllers.UserController.updateUser(id: Id[User])
 GET     /admin/user/:id/social_users/refresh com.keepit.controllers.UserController.refreshAllSocialInfo(id: Id[User])
 GET     /admin/social_users/:page   com.keepit.controllers.SocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      com.keepit.controllers.SocialUserController.socialUserView(id: Id[SocialUserInfo])

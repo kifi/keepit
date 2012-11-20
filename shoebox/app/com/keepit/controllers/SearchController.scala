@@ -53,20 +53,19 @@ case class PersonalSearchResultPacket(
 
 object SearchController extends FortyTwoController {
 
-  def search2(escapedTerm: String, externalId: ExternalId[User], maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = search(escapedTerm, externalId, maxHits, lastUUIDStr, context)
+  def search2(escapedTerm: String, maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = search(escapedTerm, maxHits, lastUUIDStr, context)
 
-  def search(escapedTerm: String, externalId: ExternalId[User], maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = AuthenticatedJsonAction { request =>
+  def search(escapedTerm: String, maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = AuthenticatedJsonAction { request =>
     val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
     val lastUUID = lastUUIDStr.flatMap{
         case "" => None
         case str => Some(ExternalId[ArticleSearchResultRef](str))
     }
 
-    log.info("searching with %s using externalId id %s".format(term, externalId))
-    val (userId, friendIds) = CX.withConnection { implicit conn =>
-      val userId = User.getOpt(externalId).getOrElse(
-          throw new Exception("externalId %s not found for term %s".format(externalId, term))).id.get
-      (userId, SocialConnection.getFortyTwoUserConnections(userId))
+    val userId = request.userId
+    log.info("searching with %s using userId id %s".format(term, userId))
+    val friendIds = CX.withConnection { implicit conn =>
+      SocialConnection.getFortyTwoUserConnections(userId)
     }
 
     val filterOut = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
