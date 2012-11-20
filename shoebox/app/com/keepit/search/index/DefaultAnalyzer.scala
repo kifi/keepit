@@ -16,7 +16,7 @@ class DefaultAnalyzer extends Analyzer {
 
   val baseAnalyzer = new StandardAnalyzer(Version.LUCENE_36)
   baseAnalyzer.setMaxTokenLength(256)
-  
+
   def tokenStream(fieldName: String, reader: Reader): TokenStream = {
     new DotDecompounder(baseAnalyzer.tokenStream(fieldName, reader))
   }
@@ -27,13 +27,13 @@ class DotDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStream)
   val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
   val typeAttr = tokenStream.getAttribute(classOf[TypeAttribute]).asInstanceOf[TypeAttributeImpl]
   val tokenType = new TypeAttributeAccessor
-  
+
   var tokenStart = 0
   var buffer = Array.empty[Char]
   var bufLen = 0
-  
+
   val alphanum = "<ALPHANUM>"
-  
+
   override def incrementToken() = {
     if (bufLen - tokenStart > 0) { // has more chars in buffer
       getConstituent
@@ -49,22 +49,22 @@ class DotDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStream)
       }
     }
   }
-  
+
   private def getConstituent {
     var i = tokenStart
     while (i < bufLen && buffer(i) != '.') i += 1
     termAttr.copyBuffer(buffer, tokenStart, i - tokenStart)
     tokenStart = (i + 1) // skip dot
   }
-  
+
   private def findDotCompound(): Boolean = {
     tokenStart = 0
     val src = termAttr.buffer
     val len = termAttr.length
-    
+
     var i = 0
     while (i < len && src(i) != '.') i += 1
-    
+
     if (i < len && tokenType(typeAttr) == alphanum) {
       if (buffer.length < src.length) buffer = new Array[Char](src.length) // resize buffer
       Array.copy(src, 0, buffer, 0, len)
@@ -80,7 +80,7 @@ class DotDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStream)
 class TypeAttributeAccessor extends TypeAttributeImpl {
   var tokenType: String = TypeAttribute.DEFAULT_TYPE
   override def setType(tt: String) { tokenType = tt }
-  
+
   def apply(ta: TypeAttributeImpl) = {
     ta.copyTo(this)
     tokenType

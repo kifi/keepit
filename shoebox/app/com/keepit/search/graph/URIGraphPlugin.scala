@@ -23,9 +23,9 @@ case object Load
 case class Update(userId: Id[User])
 
 private[graph] class URIGraphActor(uriGraph: URIGraph) extends Actor with Logging {
-  
+
   def receive() = {
-    case Load => 
+    case Load =>
       var userLoaded = sender ! uriGraph.load()
     case Update(u) => sender ! uriGraph.update(u)
     case m => throw new Exception("unknown message %s".format(m))
@@ -38,11 +38,11 @@ trait URIGraphPlugin extends Plugin {
 }
 
 class URIGraphPluginImpl @Inject() (system: ActorSystem, uriGraph: URIGraph) extends URIGraphPlugin with Logging {
-  
+
   implicit val actorTimeout = Timeout(5 seconds)
-  
+
   private val actor = system.actorOf(Props { new URIGraphActor(uriGraph) })
-  
+
   // plugin lifecycle methods
   private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
@@ -54,14 +54,14 @@ class URIGraphPluginImpl @Inject() (system: ActorSystem, uriGraph: URIGraph) ext
     _cancellables.map(_.cancel)
     uriGraph.close()
   }
-  
+
   override def load(): Int = {
     val future = actor.ask(Load)(1 minutes).mapTo[Int]
     Await.result(future, 1 minutes)
   }
-  
+
   override def update(userId: Id[User]) = {
     val future = actor.ask(Update(userId))(1 minutes).mapTo[Int]
-    Await.result(future, 1 minutes)    
+    Await.result(future, 1 minutes)
   }
 }

@@ -18,10 +18,10 @@ import java.io.StringReader
 
 @RunWith(classOf[JUnitRunner])
 class DefaultAnalyzerTest extends SpecificationWithJUnit {
-  
+
   implicit def toReader(str: String): Reader = new StringReader(str)
   val analyzer = new DefaultAnalyzer
-  
+
   "DefaultAnalyzer" should {
     "tokenize a string nicely" in {
       toTokenList(analyzer.tokenStream("b", "DefaultAnalyzer should tokenize a string nicely")) ===
@@ -31,11 +31,11 @@ class DefaultAnalyzerTest extends SpecificationWithJUnit {
              Token("<ALPHANUM>", "string", 2),
              Token("<ALPHANUM>", "nicely", 1))
     }
-    
+
     "break up a dot compound" in {
       toTokenList(analyzer.tokenStream("b", "file.ext")) ===
         List(Token("<ALPHANUM>", "file", 1), Token("<ALPHANUM>", "ext", 1))
-      
+
       toTokenList(analyzer.tokenStream("b", "a.longer.dot.compound.name")) ===
         List(Token("<ALPHANUM>", "a", 1),
              Token("<ALPHANUM>", "longer", 1),
@@ -43,25 +43,25 @@ class DefaultAnalyzerTest extends SpecificationWithJUnit {
              Token("<ALPHANUM>", "compound", 1),
              Token("<ALPHANUM>", "name", 1))
     }
-    
+
     "not tokenize a number" in {
       toTokenList(analyzer.tokenStream("b", "1.2")) === List(Token("<NUM>", "1.2", 1))
       toTokenList(analyzer.tokenStream("b", "1.2.3")) === List(Token("<NUM>", "1.2.3", 1))
     }
   }
-  
+
   def toTokenList(ts: TokenStream) = {
     val typeAttr = ts.getAttribute(classOf[TypeAttribute]).asInstanceOf[TypeAttributeImpl]
     val termAttr = ts.getAttribute(classOf[CharTermAttribute])
     val posIncrAttr = ts.getAttribute(classOf[PositionIncrementAttribute])
     val typeAcc = new TypeAttributeAccessor
-    
+
     var ret: List[Token] = Nil
     while (ts.incrementToken) {
       ret = Token(typeAcc(typeAttr), new String(termAttr.buffer, 0, termAttr.length), posIncrAttr.getPositionIncrement) :: ret
     }
     ret.reverse
   }
-  
+
   case class Token(tokenText: String, tokenType: String, positionIncrement: Int)
 }

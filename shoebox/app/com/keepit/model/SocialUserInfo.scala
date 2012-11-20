@@ -29,12 +29,12 @@ case class SocialUserInfo(
   networkType: SocialNetworkType,
   credentials: Option[SocialUser] = None
 ) {
-  
+
   def reset() = copy(state = SocialUserInfo.States.CREATED, credentials = None)
   def withUser(user: User) = copy(userId = Some(user.id.get))//want to make sure the user has an id, fail hard if not!
   def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials))//want to make sure the user has an id, fail hard if not!
   def withState(state: State[SocialUserInfo]) = copy(state = state)
-  
+
   def save(implicit conn: Connection): SocialUserInfo = {
     val entity = SocialUserInfoEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
@@ -46,25 +46,25 @@ object SocialUserInfo {
 
   def all(implicit conn: Connection): Seq[SocialUserInfo] =
     SocialUserInfoEntity.all.map(_.view)
-  
+
   def get(id: Id[SocialUserInfo])(implicit conn: Connection): SocialUserInfo =
     getOpt(id).getOrElse(throw NotFoundException(id))
-    
+
   def get(id: SocialId, networkType: SocialNetworkType)(implicit conn: Connection): SocialUserInfo =
     getOpt(id, networkType).getOrElse(throw new Exception("not found %s:%s".format(id, networkType)))
-    
+
   def getByUser(userId: Id[User])(implicit conn: Connection): Seq[SocialUserInfo] =
     (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.userId EQ userId) list }.map(_.view)
-    
+
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit conn: Connection): Option[SocialUserInfo] =
     (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ((u.socialId EQ id.id) AND (u.networkType EQ networkType.name)) unique }.map(_.view)
-    
+
   def getOpt(id: Id[SocialUserInfo])(implicit conn: Connection): Option[SocialUserInfo] =
     SocialUserInfoEntity.get(id).map(_.view)
 
   def page(page: Int = 0, size: Int = 20)(implicit conn: Connection): Seq[SocialUserInfo] =
     (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u ORDER_BY (u.id DESC) OFFSET (page * size) LIMIT size list }.map(_.view)
-      
+
   def count(implicit conn: Connection): Long =
     (SocialUserInfoEntity AS "u").map(u => SELECT(COUNT(u.id)).FROM(u).unique).get
 
@@ -72,7 +72,7 @@ object SocialUserInfo {
     val UNPROCESSED_STATE = States.CREATED::States.FETCHED_USING_FRIEND::Nil
     (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ((u.state IN(UNPROCESSED_STATE)) AND (u.credentials IS_NOT_NULL)) list }.map(_.view)
   }
-    
+
   object States {
     val CREATED = State[SocialUserInfo]("created")
     val FETCHED_USING_FRIEND = State[SocialUserInfo]("fetched_using_friend")
@@ -80,7 +80,7 @@ object SocialUserInfo {
     val FETCHE_FAIL = State[SocialUserInfo]("fetch_fail")
     val INACTIVE = State[SocialUserInfo]("inactive")
   }
-} 
+}
 
 private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialUserInfoEntity] {
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
@@ -93,7 +93,7 @@ private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialU
   val credentials = "credentials".VARCHAR(2048)
 
   def relation = SocialUserInfoEntity
-  
+
   def view(implicit conn: Connection): SocialUserInfo = SocialUserInfo(
     id = id.value,
     createdAt = createdAt(),
@@ -112,7 +112,7 @@ private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialU
 
 private[model] object SocialUserInfoEntity extends SocialUserInfoEntity with EntityTable[SocialUserInfo, SocialUserInfoEntity] {
   override def relationName = "social_user_info"
-  
+
   def apply(view: SocialUserInfo): SocialUserInfoEntity = {
     val user = new SocialUserInfoEntity
     user.id.set(view.id)

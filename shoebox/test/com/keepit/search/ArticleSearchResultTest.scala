@@ -45,7 +45,7 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
          deserialized === res
       }
     }
-    
+
     "persisting to db" in {
       running(new EmptyApplication()) {
          val user = CX.withConnection { implicit conn =>

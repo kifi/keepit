@@ -27,25 +27,25 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
   def injector: Injector
 //  protected lazy val healthcheck = injector.inject[Healthcheck]
   private lazy val scope = injector.inject[AppScope]
-  
+
   override def beforeStart (app: Application): Unit = {
     val appName = app.configuration.getString("application.name").get
-    
+
     val dbs = app.configuration.getConfig("db").get.subKeys
   }
-  
+
   override def onBadRequest (request: RequestHeader, error: String): Result = {
     val errorId = ExternalId[Exception]()
     log.warn("bad request %s: %s on %s".format(errorId, error, request.path))
     InternalServerError("BAD REQUEST: %s: %s".format(errorId, error))
   }
-  
+
   override def onHandlerNotFound (request: RequestHeader): Result = {
     val errorId = ExternalId[Exception]()
     log.warn("Handler Not Found %s: on %s".format(errorId, request.path))
     InternalServerError("NO HANDLER: %s".format(errorId))
   }
-  
+
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
     if (app.mode != Mode.Test) {
       require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
@@ -60,7 +60,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
     println("%s started".format(this))
 //    if (app.mode != Mode.Test) healthcheck.reportStart()
   }
-  
+
   override def onError(request: RequestHeader, ex: Throwable): Result = {
     //should we persist errors for later check?
 //    val globalError = healthcheck.addError(HealthcheckError(error = Some(ex), method = Some(request.method.toUpperCase()), path = Some(request.path), callType = Healthcheck.API))
@@ -68,7 +68,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
 //    val message = ("error [%s] on %s at path [%s] with query string %s".format(globalError.id, globalError.method, globalError.path, request.queryString.toString()), ex)
     ex.printStackTrace()
 //    log.error(message, ex)
-    
+
     //should we json/structure the error message
 //    InternalServerError("error [%s] processing request %s on %s: %s".format(globalError.id, globalError.method, globalError.path, error))
     InternalServerError("error: %s".format(error))
@@ -83,5 +83,5 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
       case e => log.error("====================== error during onStop ===============================", e)
     }
   }
-  
+
 }

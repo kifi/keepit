@@ -8,13 +8,13 @@ import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
 
 object PBKDF2 extends CryptoSupport {
-  
+
   val ITERATION_COUNT = 10000
   val HASH_SIZE = 32 // in bytes
   val SALT_SIZE = 8 // in bytes
-  
+
   val HMAC_ALGORITHM = "HmacSHA256"
-    
+
   /**
    * Compute a hash of the specified password, using the PBKDF2 algorithm
    * as defined in RFC 2898 (http://www.ietf.org/rfc/rfc2898.txt).
@@ -25,16 +25,16 @@ object PBKDF2 extends CryptoSupport {
     val key = pbkdf2(password.getBytes("UTF-8"), salt, ITERATION_COUNT, HASH_SIZE, HMAC_ALGORITHM)
     toBase64(salt ++ key)
   }
-  
+
   /**
    * Check if the given password matches a previously-computed password hash.
    */
   def check(password: String, hash: String): Boolean = {
-    val (salt, key) = fromBase64(hash).splitAt(SALT_SIZE)    
+    val (salt, key) = fromBase64(hash).splitAt(SALT_SIZE)
     val passwordKey = pbkdf2(password.getBytes("UTF-8"), salt, ITERATION_COUNT, HASH_SIZE, HMAC_ALGORITHM)
     (passwordKey.toSeq == key.toSeq)
   }
-  
+
   /**
    * Compute the PBKDF2 key for the given password, salt, iteration count and key length,
    * using the specified HMAC algorithm for the hashing steps.
@@ -43,7 +43,7 @@ object PBKDF2 extends CryptoSupport {
     val hmac = Mac.getInstance(algorithm)
     val keySpec = new SecretKeySpec(password, algorithm)
     hmac.init(keySpec)
-    
+
     var bytes = Array.empty[Byte]
     var block = 1
     while (bytes.length < keyLen) {
@@ -52,13 +52,13 @@ object PBKDF2 extends CryptoSupport {
     }
     bytes.take(keyLen)
   }
-    
+
   private def hashBlock(hmac: Mac, password: Array[Byte], salt: Array[Byte], count: Int, block: Int): Array[Byte] = {
     val blockBytes = Array((block >>> 24).toByte, (block >>> 16).toByte, (block >>> 8).toByte, block.toByte)
-    
-    var temp = hmac.doFinal(salt ++ blockBytes)    
+
+    var temp = hmac.doFinal(salt ++ blockBytes)
     var hash = temp
-    
+
     var i = 0
     while (i < count - 1) {
       temp = hmac.doFinal(temp)
@@ -71,5 +71,5 @@ object PBKDF2 extends CryptoSupport {
     }
     hash
   }
-  
+
 }

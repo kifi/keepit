@@ -8,5 +8,5 @@ trait TestAkkaSystem {
   implicit val system = ActorSystem("testsystem", ConfigFactory.parseString("""
       akka.event-handlers = ["akka.testkit.TestEventListener"]
       """))
-  
+
 }

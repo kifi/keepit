@@ -6,12 +6,12 @@ import org.apache.lucene.index.Term
 class TermNode(term: Term, weight: Float, reader: IndexReader) extends LineQuery(weight) {
   val tp = reader.termPositions(term)
   var posLeft = 0
-  
+
   override def fetchDoc(targetDoc: Int) = {
     if (curDoc < LineQuery.NO_MORE_DOCS) {
       curDoc = if (targetDoc <= curDoc) curDoc + 1 else targetDoc
     }
-    
+
     if (curDoc < LineQuery.NO_MORE_DOCS && tp.skipTo(curDoc)) {
       curDoc = tp.doc()
       posLeft = tp.freq()
@@ -24,7 +24,7 @@ class TermNode(term: Term, weight: Float, reader: IndexReader) extends LineQuery
     curLine = -1
     curDoc
   }
-  
+
   override private[line] def fetchPos() = {
     if (posLeft > 0) {
       posLeft -= 1

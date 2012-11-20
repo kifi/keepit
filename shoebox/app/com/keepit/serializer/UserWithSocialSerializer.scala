@@ -7,7 +7,7 @@ import play.api.libs.json._
 import com.keepit.common.social.UserWithSocial
 
 class UserWithSocialSerializer extends Writes[UserWithSocial] {
-  
+
   def writes(userWithSocial: UserWithSocial): JsValue =
     JsObject(List(
       "externalId"  -> JsString(userWithSocial.user.externalId.toString),
@@ -17,8 +17,8 @@ class UserWithSocialSerializer extends Writes[UserWithSocial] {
       )
     )
 
-  def writes (users: Seq[UserWithSocial]): JsValue = 
-    JsArray(users map { user => 
+  def writes (users: Seq[UserWithSocial]): JsValue =
+    JsArray(users map { user =>
       UserWithSocialSerializer.userWithSocialSerializer.writes(user)
     })
 }

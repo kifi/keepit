@@ -45,19 +45,19 @@ class ProximityQueryTest extends SpecificationWithJUnit {
     }
     writer.commit()
     writer.close()
-    
+
     IndexReader.open(ramDir)
   }
-  
+
   val searcher = new IndexSearcher(indexReader)
-  
+
   "ProximityQuery" should {
-    
+
     "score using proximity" in {
       var q = ProximityQuery(Set(new Term("B", "abc"), new Term("B", "def")))
       var weight = searcher.createNormalizedWeight(q)
       (weight != null) === true
-      
+
       var scorer = weight.scorer(indexReader, true, true)
       val buf = new ArrayBuffer[(Int, Float)]()
       var doc = scorer.nextDoc()
@@ -71,9 +71,9 @@ class ProximityQueryTest extends SpecificationWithJUnit {
 
       q = ProximityQuery(Set(new Term("B", "def"), new Term("B", "ghi")))
       weight = searcher.createNormalizedWeight(q)
-      
+
       (weight != null) === true
-      
+
       scorer = weight.scorer(indexReader, true, true)
       buf.clear
       doc = scorer.nextDoc()
@@ -84,19 +84,19 @@ class ProximityQueryTest extends SpecificationWithJUnit {
       buf.size === 10
       buf.sortBy(_._2).map(_._1) === Seq(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
     }
-    
+
     "not return hits when the number of terms is 1 or less" in {
       var q = ProximityQuery(Set(new Term("B", "abc")))
       var weight = searcher.createNormalizedWeight(q)
       (weight != null) === true
-      
+
       var scorer = weight.scorer(indexReader, true, true)
       scorer.nextDoc() === DocIdSetIterator.NO_MORE_DOCS
 
       q = ProximityQuery(Set.empty[Term])
       weight = searcher.createNormalizedWeight(q)
       (weight != null) === true
-      
+
       scorer = weight.scorer(indexReader, true, true)
       scorer.nextDoc() === DocIdSetIterator.NO_MORE_DOCS
     }
