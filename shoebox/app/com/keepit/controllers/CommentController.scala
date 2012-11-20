@@ -43,7 +43,7 @@ object CommentController extends FortyTwoController {
                     text: String,
                     permission: String,
                     recipients: String = "",
-                    replyTo: String = "") = SecuredAction(false) { request =>
+                    parent: String = "") = SecuredAction(false) { request =>
     val comment = CX.withConnection { implicit conn =>
       val userId = User.getOpt(externalId).getOrElse(throw new Exception("Invalid userid"))
       val uri = NormalizedURI.getByNormalizedUrl(url) match {
@@ -64,10 +64,11 @@ object CommentController extends FortyTwoController {
     Ok(JsObject(("commentId" -> JsString(comment.externalId.id)) :: Nil))
 
   }
-  def getComments(url: String, 
-                  externalId: ExternalId[User], 
+
+  def getComments(url: String,
+                  externalId: ExternalId[User],
                   permission: String = "") = AuthenticatedJsonAction { request =>
-    val comments = CX.withConnection { implicit conn => 
+    val comments = CX.withConnection { implicit conn =>
       val user = User.get(externalId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
@@ -87,6 +88,13 @@ object CommentController extends FortyTwoController {
     }
 
     Ok(commentWithSocialUserSerializer.writes(comments)).as(ContentTypes.JSON)
+  }
+
+  def getReplies(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
+    val replies = CX.withConnection { implicit conn =>
+      Comment.getChildren(Comment.get(commentId).id.get) map { child => CommentWithSocialUser(child) }
+    }
+    Ok(commentWithSocialUserSerializer.writes(replies)).as(ContentTypes.JSON)
   }
 
   private def allComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection): List[(State[Comment.Permission],Seq[Comment])] =
