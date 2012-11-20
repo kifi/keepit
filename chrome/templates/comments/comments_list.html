@@ -9,10 +9,11 @@
       </div>
       <div class="comment-meta">
         <abbr class="timestamp timeago" title="{{#formatDate}}{{createdAt}}{{/formatDate}}">{{#formatDate}}{{createdAt}}{{/formatDate}}</abbr>
-        <span class="meta-links"><span class="replies"><span class="reply-arrow"></span> {{#replyCount}}{{replyCount}} Replies{{/replyCount}}{{^replyCount}}Reply{{/replyCount}}</span> · <span class="hearts">{{>hearts}}</span></span>
+        <span class="meta-links"><span class="replies"><span class="reply-arrow"></span> {{#replyCount}}{{replyCount}} Replies{{/replyCount}}{{^replyCount}}Reply{{/replyCount}}</span><!-- · <span class="hearts">{{>hearts}}</span>--></span>
       </div>
     </div>
     <div class="comment-replies">
+    
     {{#replies.length}}
       {{#replies}}
       <div class="reply">

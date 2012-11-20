@@ -334,7 +334,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
   function renderComments(user, comments, type) {
     console.log("Drawing comments!")
-    log("tick1")
     comments = comments || {};
     comments["public"] = comments["public"] || [];
     comments["conversation"] = comments["conversation"] || [];
@@ -342,7 +341,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     var visibleComments = comments[type] || [];
 
-    $('.comments_label').text(comments["public"].length + " Comments ");
+    $('.comments_label').text(comments["public"].length + " Comments");
     
 
 
@@ -387,7 +386,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           //console.log(renderedTemplate);
           $('.kifi_comment_wrapper').html(renderedTemplate);
           resizeCommentBodyView(true);
-          log("tick2")
 
           var commentBodyView = $(".comment_body_view")[0];
           commentBodyView.scrollTop = commentBodyView.scrollHeight;
@@ -427,15 +425,28 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             //$('.submit-comment').slideUp(20);
           });
 
-          $('.reply-comment-textarea').focus(function() {
+          var replyTextarea = $('.reply-comment-textarea')
+          replyTextarea.focus(function() {
             $(this).animate({
-              'height': '+=30'
+              'height': '+=20'
             },200,'easeQuickSnapBounce');
           });
-          $('.reply-comment-textarea').blur(function() {
+          replyTextarea.blur(function() {
             $(this).animate({
-              'height': '-=30'
+              'height': '-=20'
             },100,'easeQuickSnapBounce');
+          });
+          replyTextarea.keyup(function(e) {
+            if(e.keyCode === 13 && !e.ctrlKey) {
+              $(this).parents('form').first().submit();
+              return false;
+            }
+            return true;
+          });
+          $('.reply-comment form').submit(function() {
+            $(this).find('textarea').blur();
+            console.log(this,"submitted!");
+            return false;
           });
 
           $('.replies').click(function() {
@@ -453,42 +464,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
               $('.comment_body_view').animate({
                 scrollTop: scrollTo
               });
-            }
-          });
-
-          $('.hearts').hover(function() {
-            var hearts = $(this);
-            var glyph = hearts.find('.hearts-glyph');
-            var text = hearts.find('.hearts-thank');
-            if($(this).is('.thanked')) {
-              // Nothing yet...
-            } else {
-              glyph.addClass('hearts-glyph-thanked');
-              text.addClass('hearts-thank-hover');
-            }
-          }, function() {
-            var hearts = $(this);
-            var glyph = hearts.find('.hearts-glyph');
-            var text = hearts.find('.hearts-thank');
-            if($(this).is('.thanked')) {
-              // Nothing yet...
-            } else {
-              glyph.removeClass('hearts-glyph-thanked');
-              text.removeClass('hearts-thank-hover');
-            }
-          });
-
-          $('.hearts').click(function() {
-            if($(this).is('.thanked')) {
-              // Nothing to do...
-            }
-            else {
-              var hearts = $(this);
-              var glyph = hearts.find('.hearts-glyph');
-              var text = hearts.find('.hearts-thank');
-              glyph.addClass('hearts-glyph-thanked');
-              text.removeClass('hearts-thank hearts-thank-hover');
-              hearts.addClass('thanked');
             }
           });
 
@@ -532,91 +507,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
       });
     });
-return;
-    getTemplate("comments.html", {"comments":visibleComments, "public": type=="public", "conversation": type=="conversation", "private": type=="private"}, function(renderedTemplate) {
-      
-      $('.kifi_comment_wrapper').html(renderedTemplate);
-
-      var $tabs = $('ul.tabs');
-      var $active, $content, $links = $tabs.find('span');
-      $links.each(function() {
-        if($(this).attr('data-target') == type) {
-          $(this).addClass('active');
-
-          $("#to_list").tokenInput([
-                {id: 7, name: "Ruby"},
-                {id: 'dd11', name: "Python"},
-                {id: 13, name: "JavaScript"},
-                {id: 17, name: "ActionScript"},
-                {id: 19, name: "Scheme"},
-                {id: 23, name: "Lisp"},
-                {id: 29, name: "C#"},
-                {id: 31, name: "Fortran"},
-                {id: 37, name: "Visual Basic"},
-                {id: 41, name: "C"},
-                {id: 43, name: "C++"},
-                {id: 47, name: "Java"}
-            ], {
-            theme: "facebook"
-          });
-          $("#token-input-to_list").keypress(function(e) {
-            return e.which !== 13;
-          });
-        }
-        else {
-          $(this).removeClass('active');
-        }
-        $(this).click(function (e) {
-          showComments(user, true, $(this).data('target'))
-        });
-      });
-
-      /*$('textarea.mention').mentionsInput({
-        onDataRequest:function (mode, query, callback) {
-          var data = [
-            { id:1, name:'Danny Blumenfeld', 'avatar':'http://profile.ak.fbcdn.net/hprofile-ak-ash3/48980_636721190_1266_n.jpg', 'type':'contact' },
-            { id:2, name:'Jon Froda', 'avatar':'http://cdn0.4dots.com/i/customavatars/avatar7112_1.gif', 'type':'contact' },
-            { id:3, name:'Anders Pollas', 'avatar':'http://cdn0.4dots.com/i/customavatars/avatar7112_1.gif', 'type':'contact' },
-            { id:4, name:'Kasper Hulthin', 'avatar':'http://cdn0.4dots.com/i/customavatars/avatar7112_1.gif', 'type':'contact' },
-            { id:5, name:'Andreas Haugstrup', 'avatar':'http://cdn0.4dots.com/i/customavatars/avatar7112_1.gif', 'type':'contact' },
-            { id:6, name:'Pete Lacey', 'avatar':'http://cdn0.4dots.com/i/customavatars/avatar7112_1.gif', 'type':'contact' }
-          ];
-
-          data = _.filter(data, function(item) { return item.name.toLowerCase().indexOf(query.toLowerCase()) > -1 });
-
-          callback.call(this, data);
-        }
-      });*/
-
-      $('.kifi_comment_wrapper .comment_form').submit(function() {
-        var text = $('#comment_text').val();
-        var request = {
-          "type": "post_comment",
-          "url": document.location.href,
-          "text": text,
-          "permissions": type
-        };
-        chrome.extension.sendRequest(request, function() {
-          $('#comment_text').val("");
-          console.log(user);
-          var newComment = {
-            "createdAt": "",
-            "text": request.text,
-            "user": {
-              "externalId": user.keepit_external_id,
-              "firstName": user.name,
-              "lastName": "",
-              "facebookId": user.facebook_id
-            },
-            "permissions": type
-          }
-          comments[type].push(newComment);
-          console.log("new thread", comments)
-          //renderComments(user, comments, type);
-        });
-        return false;
-      });
-    });
   }
 
   key('command+shift+k, ctrl+shift+k', function(){
@@ -654,43 +544,6 @@ return;
   $(window).resize(function() {
     resizeCommentBodyView();
   });
-
-
-
-  function chatWith(user) {
-    console.log("Im here");
-    
-    var chatBox = $("<div class='keepit_chat_box'>  </div>");
-    $('#keepit_hover').append(chatBox);
-
-    var img = $("<img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square' width='24' height='24' alt=''>");
-    chatBox.append(img);
-    var message = $("<input type='text' class='keepit_text_message'/>");
-    var button = $("<button class='keepit_chat_button'>send</button>");
-    chatBox.append(message);
-    chatBox.append(button);
-    var closeForm= $("<a href='#' class='keepit_close_form'>X</a>");
-    chatBox.append(closeForm);
-    
-    closeForm.click(function() {
-      chatBox.remove();
-    });
-    button.click(function(){
-      console.log("going to send chat: " + document.location.href);
-      var xhr = new XMLHttpRequest();
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-          console.log("[chat response] xhr response:");
-          var result = $.parseJSON(xhr.response);
-          console.log(result);
-        }
-      }
-      xhr.open("POST", 'http://' + config["server"] + '/chat/' + user.externalId, true);
-      xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.send(JSON.stringify(  {"url": document.location.href, "message":message.val() } ));
-      console.log("sent");
-    });
-  }
 
   chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
     config = response;
