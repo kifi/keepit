@@ -37,11 +37,11 @@ trait ScraperPlugin extends Plugin {
 }
 
 class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extends ScraperPlugin with Logging {
-  
+
   implicit val actorTimeout = Timeout(5 seconds)
-  
+
   private val actor = system.actorOf(Props { new ScraperActor(scraper) })
-  
+
   // plugin lifecycle methods
   private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
@@ -56,11 +56,11 @@ class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extend
     scraper.close()
     _cancellables.map(_.cancel)
   }
-  
+
   override def scrape(): Seq[(NormalizedURI, Option[Article])] = {
     val future = actor.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
     Await.result(future, 1 minutes)
   }
-  
+
   override def asyncScrape(uri: NormalizedURI): Unit = actor ! ScrapeInstance(uri)
 }

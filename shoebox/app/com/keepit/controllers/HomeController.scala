@@ -36,5 +36,5 @@ object HomeController extends FortyTwoController {
     val html = io.Source.fromURL(Play.resource("/public/html/index.html").get).mkString
     Ok(html).as(ContentTypes.HTML)
   }
- 
+
 }

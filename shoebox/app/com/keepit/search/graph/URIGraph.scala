@@ -26,7 +26,7 @@ object URIGraph {
   def apply(indexDirectory: Directory): URIGraph = {
     val analyzer = new DefaultAnalyzer
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
-    
+
     new URIGraphImpl(indexDirectory, config)
   }
 }
@@ -49,7 +49,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     var cnt = 0
     commitBatch.foreach{ case (indexable, indexError) =>
       indexError match {
-        case Some(error) => 
+        case Some(error) =>
           log.error("indexing failed for user=%s error=%s".format(indexable.id, error.msg))
         case None =>
           cnt += 1
@@ -68,7 +68,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       }
       cnt
     } catch {
-      case ex: Throwable => 
+      case ex: Throwable =>
         log.error("error in loading", ex)
         throw ex
     }
@@ -84,14 +84,14 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       }
       cnt
     } catch {
-      case ex: Throwable => 
+      case ex: Throwable =>
         log.error("error in URIGraph update", ex)
         throw ex
     }
   }
 
   def getQueryParser = new URIGraphQueryParser(indexWriterConfig)
-  
+
   def search(queryText: String): Seq[Hit] = {
     parseQuery(queryText) match {
       case Some(query) => searcher.search(query)
@@ -100,14 +100,14 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   }
 
   def getURIGraphSearcher() = new URIGraphSearcher(searcher)
-  
+
   def buildIndexable(user: User) = {
     val bookmarks = CX.withConnection { implicit c =>
         Bookmark.ofUser(user).filter{ b => b.state == Bookmark.States.ACTIVE }
     }
     new URIListIndexable(user.id.get, bookmarks)
   }
-  
+
   class URIListIndexable(override val id: Id[User], val bookmarks: Seq[Bookmark]) extends Indexable[User] with LineFieldBuilder {
     override def buildDocument = {
       val doc = super.buildDocument
@@ -120,24 +120,24 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       doc.add(title)
       doc
     }
-    
+
     def buildURIListPayloadField(payload: Array[Byte]) = {
       buildDataPayloadField(URIGraph.userTerm.createTerm(id.toString), payload)
     }
-    
+
     def buildURIIdField(bookmarks: Seq[Bookmark]) = {
       val fld = buildIteratorField(URIGraph.uriTerm.field(), bookmarks.iterator.filter(bm => !bm.isPrivate)){ bm => bm.uriId.toString }
       fld.setOmitNorms(true)
       fld
     }
-    
+
     def buildBookmarkTitleField(doc: Document, payload: Array[Byte], bookmarks: Seq[Bookmark], analyzer: Analyzer) = {
       val titleMap = bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.title) }
-      
+
       val list = new URIList(payload)
       val publicList = list.publicList
       val privateList =  list.privateList
-      
+
       var lineNo = 0
       var lines = new ArrayBuffer[(Int, String)]
       publicList.foreach{ uriId =>
@@ -148,15 +148,15 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
         titleMap.get(uriId).foreach{ title => lines += ((lineNo, title)) }
         lineNo += 1
       }
-      
+
       buildLineField(URIGraph.titleTerm.field(), lines, analyzer)
     }
   }
-  
+
   class URIGraphQueryParser(indexWriterConfig: IndexWriterConfig) extends QueryParser(indexWriterConfig) {
-    
+
     super.setAutoGeneratePhraseQueries(true)
-    
+
     override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
       super.getFieldQuery("title", queryText, quoted)
     }

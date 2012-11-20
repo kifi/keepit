@@ -59,7 +59,7 @@ object LoginPage extends Controller with Logging
 //    Ok(securesocial.views.html.login(ProviderRegistry.all().values, securesocial.core.providers.UsernamePasswordProvider.loginForm))
     Ok(securesocial.views.html.facebookLogin(ProviderRegistry.get(FacebookProvider.Facebook).get))
   }
-  
+
   /**
    * Logs out the user by clearing the credentials from the session.
    * The browser is redirected either to the login page or to the page specified in the onLogoutGoTo property.

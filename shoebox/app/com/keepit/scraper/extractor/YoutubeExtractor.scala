@@ -23,27 +23,27 @@ object YoutubeExtractorFactory extends ExtractorFactory {
 class YoutubeExtractor(url: String, maxContentChars: Int) extends TikaBasedExtractor(url, maxContentChars) with Logging {
   protected def getContentHandler = new YoutubeHandler(output)
   override protected def getHtmlMapper = Some(YoutubeHtmlMapper)
-  
+
   override def getContent() = {
     val buf = new StringBuilder
     buf.append(getMetadata("title").getOrElse(""))
     buf.append(getMetadata("description").getOrElse(""))
     buf.append(output.toString)
     buf.toString
-  } 
+  }
 }
 
 class YoutubeHandler(handler: ContentHandler) extends ContentHandlerDecorator(handler) {
-  
+
   var inCommentText = Int.MaxValue
   var nestLevel = 0
-  
+
   override def startElement(uri: String, localName: String, qName: String, atts: Attributes) {
     nestLevel += 1
     localName match {
       case "div" =>
         val classIdx = atts.getIndex("class")
-        if (classIdx >= 0) { 
+        if (classIdx >= 0) {
           atts.getValue(classIdx) match {
             case "comment-text" =>
               if (inCommentText == Int.MaxValue) inCommentText = nestLevel
@@ -54,7 +54,7 @@ class YoutubeHandler(handler: ContentHandler) extends ContentHandlerDecorator(ha
       case _ => super.startElement(uri, localName, qName, atts)
     }
   }
-  
+
   override def endElement(uri: String, localName: String, qName: String) {
     nestLevel -= 1
     localName match {
@@ -79,7 +79,7 @@ object YoutubeHtmlMapper extends DefaultHtmlMapper {
       case _ =>super.mapSafeElement(name)
     }
   }
-  
+
   override def mapSafeAttribute(elementName: String, attributeName: String) = {
     (elementName.toLowerCase, attributeName.toLowerCase) match {
       case ("div", "class") => "class"

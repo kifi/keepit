@@ -12,7 +12,7 @@ import com.keepit.model.User
 import com.keepit.search.ArticleSearchResultRef
 
 class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
-  
+
   def writes(res: ArticleSearchResult): JsValue =
     JsObject(List(
         "last" -> (res.last map { t => JsString(t.id) } getOrElse(JsNull)),
@@ -40,7 +40,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       ))
 
   def writeUserId(users: Seq[Id[User]]): Seq[JsValue] = users map {u => JsNumber(u.id)}
-  
+
   def readHits(jsonArray: JsArray): Seq[ArticleHit] = jsonArray.value map { json =>
     ArticleHit(
       Id((json \ "uriId").as[Long]),
@@ -48,13 +48,13 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       (json \ "isMyBookmark").as[Boolean],
       (json \ "isPrivate").as[Boolean],
       Set((json \ "users").asInstanceOf[JsArray].value map {j => Id[User](j.as[Int])}: _*),
-      (json \ "bookmarkCount").as[Int]      
+      (json \ "bookmarkCount").as[Int]
     )
   }
-  
+
   def reads(json: JsValue): ArticleSearchResult = ArticleSearchResult(
-      last = (json \ "last").asOpt[String] map (j => ExternalId[ArticleSearchResultRef](j)), 
-      query = (json \ "query").as[String], 
+      last = (json \ "last").asOpt[String] map (j => ExternalId[ArticleSearchResultRef](j)),
+      query = (json \ "query").as[String],
       hits = readHits((json \ "hits").asInstanceOf[JsArray]),
       myTotal = (json \ "myTotal").as[Int],
       friendsTotal = (json \ "friendsTotal").as[Int],

@@ -35,5 +35,5 @@ import com.keepit.model.SocialUserInfo
 
 trait ArticleSearchResultStore extends ObjectStore[ExternalId[ArticleSearchResultRef], ArticleSearchResult]
 
-class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[ArticleSearchResult] = new ArticleSearchResultSerializer()) 
+class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[ArticleSearchResult] = new ArticleSearchResultSerializer())
   extends S3ObjectStore[ExternalId[ArticleSearchResultRef], ArticleSearchResult] with ArticleSearchResultStore

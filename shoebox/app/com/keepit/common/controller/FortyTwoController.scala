@@ -31,7 +31,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
 
   private val FORTYTWO_USER_ID = "fortytwo_user_id"
 
-  case class AuthenticatedRequest(socialUser: SocialUser, userId: Id[User], request: Request[AnyContent], experimants: Seq[State[UserExperiment.ExperimentType]])
+  case class AuthenticatedRequest(socialUser: SocialUser, userId: Id[User], request: Request[AnyContent], experimants: Seq[State[UserExperiment.ExperimentType]] = Nil)
     extends WrappedRequest(request)
 
   def AuthenticatedJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>

@@ -45,28 +45,28 @@ class BooleanQueryWithPercentMatchTest extends SpecificationWithJUnit {
     }
     writer.commit()
     writer.close()
-    
+
     IndexReader.open(ramDir)
   }
-  
+
   val searcher = new IndexSearcher(indexReader)
   searcher.setSimilarity(new DefaultSimilarity {
     override def queryNorm(sumOfSquaredWeights: Float) = 1.0f
   })
-  
+
   val aaa = new Term("B", "aaa")
   val bbb = new Term("B", "bbb")
   val ccc = new Term("B", "ccc")
   val aaaIdf = searcher.getSimilarity.idf(indexReader.docFreq(aaa), indexReader.numDocs())
   val bbbIdf = searcher.getSimilarity.idf(indexReader.docFreq(bbb), indexReader.numDocs())
   val cccIdf = searcher.getSimilarity.idf(indexReader.docFreq(ccc), indexReader.numDocs())
-  
+
   println("%f %f %f".format(aaaIdf, bbbIdf, cccIdf))
-  
+
   def doQuery(query: Query) = {
     var weight = searcher.createNormalizedWeight(query)
     (weight != null) === true
-    
+
     var scorer = weight.scorer(indexReader, true, true)
     val buf = new ArrayBuffer[(Int, Float)]()
     var doc = scorer.nextDoc()
@@ -76,20 +76,20 @@ class BooleanQueryWithPercentMatchTest extends SpecificationWithJUnit {
     }
     buf
   }
-  
+
   "BooleanQueryWithPercentMatch" should {
-    
+
     "filter result according to importance of terms (two term cases)" in {
       indexReader.numDocs() === 10
-      
+
       var q = new BooleanQueryWithPercentMatch(false)
       q.add(new TermQuery(aaa), Occur.SHOULD)
       q.add(new TermQuery(bbb), Occur.SHOULD)
       doQuery(q).map(_._1) === Seq(1, 2, 3, 4, 5, 6, 7, 8, 9)
-      
+
       q setPercentMatch(50.0f)
       doQuery(q).map(_._1) === Seq(1, 2, 4, 5, 7, 8) // docs with bbb
-      
+
       q = new BooleanQueryWithPercentMatch(false)
       q.add(new TermQuery(bbb), Occur.SHOULD)
       q.add(new TermQuery(ccc), Occur.SHOULD)
@@ -98,17 +98,17 @@ class BooleanQueryWithPercentMatchTest extends SpecificationWithJUnit {
       q.setPercentMatch(50.0f)
       doQuery(q).map(_._1) === Seq(1, 3, 5, 7, 9) // docs with ccc
     }
-    
+
     "filter result according to importance of terms (three term cases)" in {
       indexReader.numDocs() === 10
-      
-      
+
+
       var q = new BooleanQueryWithPercentMatch(false)
       q.add(new TermQuery(aaa), Occur.SHOULD)
       q.add(new TermQuery(bbb), Occur.SHOULD)
       q.add(new TermQuery(ccc), Occur.SHOULD)
       doQuery(q).map(_._1) === Seq(1, 2, 3, 4, 5, 6, 7, 8, 9)
-      
+
       var pct = (bbbIdf + cccIdf) / (aaaIdf + bbbIdf + cccIdf) * 100.0f
       q.setPercentMatch(pct)
       doQuery(q).map(_._1) === Seq(1, 5, 7) // docs with bbb and ccc

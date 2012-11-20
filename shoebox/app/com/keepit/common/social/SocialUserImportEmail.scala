@@ -34,7 +34,7 @@ import com.keepit.common.logging.Logging
 class SocialUserImportEmail() extends Logging {
 
   def importEmail(userId: Id[User], parentJsons: Seq[JsValue]): Option[EmailAddress] = importEmailFromJson(userId, parentJsons.head)
-  
+
   private def importEmailFromJson(userId: Id[User], json: JsValue): Option[EmailAddress] = {
     (json \ "email").asOpt[String].map {emailString =>
       CX.withConnection { implicit conn =>
@@ -50,5 +50,5 @@ class SocialUserImportEmail() extends Logging {
       }
     }
   }
-  
+
 }

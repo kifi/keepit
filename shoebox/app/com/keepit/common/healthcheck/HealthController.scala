@@ -34,7 +34,7 @@ import com.keepit.common.controller.FortyTwoServices
 
 object HealthController extends Controller with Logging with SecureSocial {
 
-  def serviceView = SecuredAction(false) { implicit request => 
+  def serviceView = SecuredAction(false) { implicit request =>
     Ok(views.html.serverInfo(currentService, currentVersion, compilationTime.toStandardTimeString, started.toStandardTimeString))
   }
 }

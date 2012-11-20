@@ -23,6 +23,6 @@ class DouglasAdamsQuotesTest extends SpecificationWithJUnit {
         DouglasAdamsQuotes.random.quote.size !== 0
       }
     }
-    
+
   }
 }

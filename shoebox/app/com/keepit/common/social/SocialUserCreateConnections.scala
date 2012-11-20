@@ -11,14 +11,14 @@ import com.keepit.model.User
 
 
 class SocialUserCreateConnections() extends Logging {
-  
+
   def createConnections(socialUserInfo: SocialUserInfo, parentJsons: Seq[JsValue]): Seq[SocialConnection] =
-    parentJsons map {json => 
+    parentJsons map {json =>
       createConnectionsFromJson(socialUserInfo, json)
     } flatten
-    
+
   def createConnectionsFromJson(socialUserInfo: SocialUserInfo, parentJson: JsValue): Seq[SocialConnection] =
-    CX.withConnection { implicit conn => 
+    CX.withConnection { implicit conn =>
       extractFriends(parentJson) map { friend =>
         SocialUserInfo.get(SocialId((friend \ "id").as[String]), SocialNetworks.FACEBOOK)
       } map { friend =>
@@ -28,7 +28,7 @@ class SocialUserCreateConnections() extends Logging {
         }
       }
     }
-  
+
   private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
-    
+
 }

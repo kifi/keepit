@@ -15,7 +15,7 @@ import org.apache.lucene.search.Query
 
 @RunWith(classOf[JUnitRunner])
 class QueryParserTest extends SpecificationWithJUnit {
-  
+
   val analyzer = new DefaultAnalyzer
   val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
   val parser = new QueryParser(config) {

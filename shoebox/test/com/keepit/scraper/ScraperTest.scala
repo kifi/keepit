@@ -35,7 +35,7 @@ class ScraperTest extends SpecificationWithJUnit {
       result.left.get.title === "foo"
       result.left.get.content === "bar"
     }
-    
+
     "throw an error from a non-existing website" in {
       val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
@@ -45,39 +45,39 @@ class ScraperTest extends SpecificationWithJUnit {
       result.isRight === true // Right is ScraperError
       result.right.get.httpStatusCode === HttpStatus.SC_NOT_FOUND
     }
-    
+
     "fetch ACTIVE uris and scrape them" in {
       running(new EmptyApplication()) {
         var (uri1, uri2) = CX.withConnection { implicit c =>
           val user1 = User(firstName = "Joe", lastName = "Smith").save
           val user2 = User(firstName = "Moo", lastName = "Brown").save
-          (NormalizedURI(title = "existing", url = "http://www.keepit.com/existing").save, 
+          (NormalizedURI(title = "existing", url = "http://www.keepit.com/existing").save,
            NormalizedURI(title = "missing", url = "http://www.keepit.com/missing").save)
         }
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         scraper.run
         store.size === 2
-      
+
         // get URIs from db
         CX.withConnection { implicit c =>
-          uri1 = NormalizedURI.get(uri1.id.get) 
+          uri1 = NormalizedURI.get(uri1.id.get)
           uri2 = NormalizedURI.get(uri2.id.get)
         }
-        uri1.state === NormalizedURI.States.SCRAPED 
+        uri1.state === NormalizedURI.States.SCRAPED
         uri2.state === NormalizedURI.States.SCRAPE_FAILED
       }
     }
-    
+
     "Scraper WebURL.setURL" in {
       val url = "http://convertpdftoword.net/"
-        
+
       val domainStartIdx = url.indexOf("//") + 2
       val domainEndIdx = url.indexOf('/', domainStartIdx)
-      
+
       domainStartIdx === 7
       domainEndIdx === 27
-      
+
       url.substring(domainStartIdx, domainEndIdx) === "convertpdftoword.net"
 
       val webURL = new WebURL
@@ -102,7 +102,7 @@ class ScraperTest extends SpecificationWithJUnit {
   	          message = None))
   	      case "http://www.keepit.com/missing" => Right(ScraperError(uri, HttpStatus.SC_NOT_FOUND, "not found"))
   	    }
-  	  } 
+  	  }
   	}
   }
 }

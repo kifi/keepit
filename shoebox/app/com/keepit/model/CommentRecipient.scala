@@ -29,7 +29,7 @@ case class CommentRecipient(
   def withEmail(email: String) = copy(email = Some(email), userId = None, socialUserId = None)
 
   def get = userId.getOrElse(socialUserId.getOrElse(email.getOrElse(throw new Exception("No recipient specified!"))))
-  
+
   def save(implicit conn: Connection): CommentRecipient = {
     val entity = CommentRecipientEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
@@ -42,31 +42,31 @@ object CommentRecipient {
 
   def all(implicit conn: Connection): Seq[CommentRecipient] =
     CommentRecipientEntity.all.map(_.view)
-  
+
   def get(id: Id[CommentRecipient])(implicit conn: Connection): CommentRecipient =
     getOpt(id).getOrElse(throw NotFoundException(id))
-    
+
   def getOpt(id: Id[CommentRecipient])(implicit conn: Connection): Option[CommentRecipient] =
     CommentRecipientEntity.get(id).map(_.view)
-    
+
   def getByComment(commentId: Id[Comment])(implicit conn: Connection): Seq[CommentRecipient] =
     (CommentRecipientEntity AS "cr").map { cr => SELECT (cr.*) FROM cr WHERE (cr.commentId EQ commentId) list }.map(_.view)
 
-  def getByUser(userId: Id[User])(implicit conn: Connection): Seq[CommentRecipient] = 
+  def getByUser(userId: Id[User])(implicit conn: Connection): Seq[CommentRecipient] =
     (CommentRecipientEntity AS "cr").map { cr => SELECT (cr.*) FROM cr WHERE (cr.userId EQ userId) list }.map(_.view)
 
-  def getBySocialUser(socialUserId: Id[SocialUserInfo])(implicit conn: Connection): Seq[CommentRecipient] = 
+  def getBySocialUser(socialUserId: Id[SocialUserInfo])(implicit conn: Connection): Seq[CommentRecipient] =
     (CommentRecipientEntity AS "cr").map { cr => SELECT (cr.*) FROM cr WHERE (cr.socialUserId EQ socialUserId) list }.map(_.view)
 
-  def getByEmail(email: String)(implicit conn: Connection): Seq[CommentRecipient] = 
+  def getByEmail(email: String)(implicit conn: Connection): Seq[CommentRecipient] =
     (CommentRecipientEntity AS "cr").map { cr => SELECT (cr.*) FROM cr WHERE (cr.email EQ email) list }.map(_.view)
 
-    
+
   object States {
     val ACTIVE = State[CommentRecipient]("active")
     val INACTIVE = State[CommentRecipient]("inactive")
   }
-} 
+}
 
 private[model] class CommentRecipientEntity extends Entity[CommentRecipient, CommentRecipientEntity] {
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
@@ -76,9 +76,9 @@ private[model] class CommentRecipientEntity extends Entity[CommentRecipient, Com
   val socialUserId = "social_user_id".ID[SocialUserInfo]
   val email = "email".VARCHAR(512)
   val state = "state".STATE[CommentRecipient].NOT_NULL(CommentRecipient.States.ACTIVE)
-  
+
   def relation = CommentRecipientEntity
-  
+
   def view(implicit conn: Connection): CommentRecipient = CommentRecipient(
     id = id.value,
     createdAt = createdAt(),
@@ -93,7 +93,7 @@ private[model] class CommentRecipientEntity extends Entity[CommentRecipient, Com
 
 private[model] object CommentRecipientEntity extends CommentRecipientEntity with EntityTable[CommentRecipient, CommentRecipientEntity] {
   override def relationName = "comment_recipient"
-  
+
   def apply(view: CommentRecipient): CommentRecipientEntity = {
     val commentRecipient = new CommentRecipientEntity
     commentRecipient.id.set(view.id)

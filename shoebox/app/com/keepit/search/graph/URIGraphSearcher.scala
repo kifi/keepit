@@ -11,9 +11,9 @@ import org.apache.lucene.search.Query
 import scala.collection.immutable.LongMap
 
 class URIGraphSearcher(searcher: Searcher) {
-  
+
   def getUserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) = new UserToUserEdgeSet(sourceId, destIdSet)
-  
+
   def getUriToUserEdgeSet(sourceId: Id[NormalizedURI]) = new UriToUserEdgeSet(sourceId, searcher)
 
   def getUserToUriEdgeSet(sourceId: Id[User], publicOnly: Boolean = true) = {
@@ -26,14 +26,14 @@ class URIGraphSearcher(searcher: Searcher) {
     }
     new UserToUriEdgeSet(sourceId, uriIdSet)
   }
-  
+
   def getUserToUriEdgeSetWithCreatedAt(sourceId: Id[User], publicOnly: Boolean = true) = {
     val uriIdMap = getURIList(sourceId) match {
       case Some(uriList) =>
         var m = uriList.publicList.zip(uriList.publicCreatedAt).foldLeft(Map.empty[Id[NormalizedURI], Long]) {
           case (m, (id, createdAt)) => m + (Id[NormalizedURI](id) -> createdAt)
         }
-        if (publicOnly) m 
+        if (publicOnly) m
         else {
           uriList.privateList.zip(uriList.privateCreatedAt).foldLeft(m) {
             case (m, (id, createdAt)) => m + (Id[NormalizedURI](id) -> createdAt)
@@ -43,13 +43,13 @@ class URIGraphSearcher(searcher: Searcher) {
     }
     new UserToUriEdgeSetWithCreatedAt(sourceId, uriIdMap)
   }
-  
+
   def intersect(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): UserToUserEdgeSet = {
     val iter = intersect(friends.getDestDocIdSetIterator(searcher), bookmarkUsers.getDestDocIdSetIterator(searcher))
     val destIdSet = iter.map{ searcher.idMapper.getId(_) }.map{ new Id[User](_) }.toSet
     new UserToUserEdgeSet(friends.sourceId, destIdSet)
   }
-  
+
   def intersect(i: DocIdSetIterator, j: DocIdSetIterator): DocIdSetIterator = {
     new DocIdSetIterator() {
       var curDoc = i.docID()
@@ -74,7 +74,7 @@ class URIGraphSearcher(searcher: Searcher) {
       }
     }
   }
-  
+
   def getURIList(user: Id[User]): Option[URIList] = {
     val term = URIGraph.userTerm.createTerm(user.toString)
     var uriList: Option[URIList] = None
@@ -94,13 +94,13 @@ class URIGraphSearcher(searcher: Searcher) {
     }
     uriList
   }
-  
+
   def search(user: Id[User], query: Query, percentMatch: Float): Map[Long, Float] = {
     var result = LongMap.empty[Float]
     getURIList(user).foreach{ uriList =>
-      val publicList = uriList.publicList 
+      val publicList = uriList.publicList
       val privateList = uriList.privateList
-      
+
       val term = URIGraph.userTerm.createTerm(user.toString)
       val td = searcher.indexReader.termDocs(term)
       val docid = try {
@@ -108,11 +108,11 @@ class URIGraphSearcher(searcher: Searcher) {
       } finally {
         td.close()
       }
-      
+
       val rewrittenQuery = query.rewrite(searcher.indexReader)
       val queryBuilder = new LineQueryBuilder(searcher.getSimilarity, percentMatch)
       val plan = queryBuilder.build(rewrittenQuery)(searcher.indexReader)
-      
+
       if (plan.fetchDoc(docid) == docid) {
         var line = plan.fetchLine(0)
         while (line < LineQuery.NO_MORE_LINES) {
@@ -135,13 +135,13 @@ class UserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) extends Ma
 
 class UserToUriEdgeSet(sourceId: Id[User], destIdSet: Set[Id[NormalizedURI]]) extends MaterializedEdgeSet[User, NormalizedURI](sourceId, destIdSet)
 
-class UserToUriEdgeSetWithCreatedAt(sourceId: Id[User], destIdMap: Map[Id[NormalizedURI], Long]) 
+class UserToUriEdgeSetWithCreatedAt(sourceId: Id[User], destIdMap: Map[Id[NormalizedURI], Long])
   extends MaterializedEdgeSet[User, NormalizedURI](sourceId, destIdMap.keySet) {
-  
+
   def getCreatedAt(id: Id[NormalizedURI]): Long = URIList.unitToMillis(destIdMap.get(id).getOrElse(0L))
 }
 
 class UriToUserEdgeSet(sourceId: Id[NormalizedURI], searcher: Searcher) extends LuceneBackedEdgeSet[NormalizedURI, User](sourceId, searcher) {
   def toId(id: Long) = new Id[User](id)
-  def createSourceTerm = URIGraph.uriTerm.createTerm(sourceId.toString)  
+  def createSourceTerm = URIGraph.uriTerm.createTerm(sourceId.toString)
 }

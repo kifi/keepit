@@ -22,14 +22,14 @@ import scala.collection.JavaConversions._
 import scala.math._
 
 object ProximityQuery extends Logging {
-  
+
   def apply(fieldName: String, query: Query): ProximityQuery = apply(getTerms(fieldName, query))
   def apply(terms: Set[Term]): ProximityQuery = new ProximityQuery(terms)
-  
+
   def getTerms(fieldName: String, query: Query): Set[Term] = {
     getTerms(query).filter{ _.field() == fieldName }
   }
-  
+
   def getTerms(query: Query): Set[Term] = {
     query match {
       case q: TermQuery => fromTermQuery(q)
@@ -39,7 +39,7 @@ object ProximityQuery extends Logging {
       case null => Set.empty[Term]
     }
   }
-  
+
   private def fromTermQuery(query: TermQuery) = Set(query.getTerm)
   private def fromPhraseQuery(query: PhraseQuery) = query.getTerms().toSet
   private def fromBooleanQuery(query: BooleanQuery) = {
@@ -56,7 +56,7 @@ object ProximityQuery extends Logging {
         Set.empty[Term]
     }
   }
-  
+
   val scoreFactorHalfDecay = 5
   val scoreFactorTable = {
     val arr = new Array[Float](2000)
@@ -71,11 +71,11 @@ object ProximityQuery extends Logging {
 }
 
 class ProximityQuery(val terms: Set[Term]) extends Query {
-    
+
   override def createWeight(searcher: Searcher): Weight = new ProximityWeight(this, searcher.getSimilarity)
-  
+
   override def rewrite(reader: IndexReader): Query = this
-  
+
   override def extractTerms(out: java.util.Set[Term]): Unit = out.addAll(terms)
 
   override def toString(s: String) = {
@@ -97,21 +97,21 @@ class ProximityQuery(val terms: Set[Term]) extends Query {
 
 class ProximityWeight(query: ProximityQuery, similarity: Similarity) extends Weight {
   var value = 0.0f
-  
+
   override def getValue() = value
   override def scoresDocsOutOfOrder() = false
-  
+
   override def sumOfSquaredWeights() = {
     value = query.getBoost()
     value * value
   }
-  
+
   override def normalize(norm: Float) { value *= norm }
-  
+
   override def explain(reader: IndexReader, doc: Int) = {
     val sc = scorer(reader, true, false);
     val exists = (sc != null && sc.advance(doc) == doc);
-    
+
     val result = new ComplexExplanation()
     if (exists) {
       result.setDescription("proximity(%), product of:".format(query.terms.mkString(",")))
@@ -128,7 +128,7 @@ class ProximityWeight(query: ProximityQuery, similarity: Similarity) extends Wei
     }
     result
   }
-  
+
   def getQuery() = query
 
   override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
@@ -147,7 +147,7 @@ class PositionAndWeight(val tp: TermPositions, val weight: Float) {
   var doc = -1
   var pos = -1
   var posLeft = 0
-  
+
   def fetchDoc(target: Int): Int = {
     pos = -1
     if (tp.skipTo(target)) {
@@ -159,7 +159,7 @@ class PositionAndWeight(val tp: TermPositions, val weight: Float) {
     }
     doc
   }
-  
+
   def nextDoc(): Int = {
     pos = -1
     if (tp.next()) {
@@ -171,7 +171,7 @@ class PositionAndWeight(val tp: TermPositions, val weight: Float) {
     }
     doc
   }
-  
+
   def nextPos(): Int = {
     if (posLeft > 0) {
       pos = tp.nextPosition()
@@ -187,10 +187,10 @@ class PositionAndWeight(val tp: TermPositions, val weight: Float) {
 class ProximityScorer(weight: ProximityWeight, tps: Set[PositionAndWeight]) extends Scorer(weight) {
   var proximityScore = 0.0f
   var scoredDoc = -1
-  
+
   val pq = new PriorityQueue[PositionAndWeight] {
     super.initialize(tps.size)
-    
+
     override def lessThan(nodeA: PositionAndWeight, nodeB: PositionAndWeight) = {
       if (nodeA.doc == nodeB.doc) {
         if (nodeA.pos == nodeB.pos) {
@@ -205,7 +205,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Set[PositionAndWeight]) exte
     }
   }
   tps.foreach{ tp => pq.insertWithOverflow(tp)}
-  
+
   override def score(): Float = {
     var top = pq.top
     var doc = top.doc
@@ -217,7 +217,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Set[PositionAndWeight]) exte
           top.nextPos()
           top = pq.updateTop()
         }
-        
+
         var prev = top
         var prevPos = top.pos
         var prevWeight = top.weight
@@ -242,11 +242,11 @@ class ProximityScorer(weight: ProximityWeight, tps: Set[PositionAndWeight]) exte
     }
     proximityScore
   }
-  
+
   override def docID(): Int = pq.top.doc
-  
+
   override def nextDoc(): Int = advance(0)
-  
+
   override def advance(target: Int): Int = {
     var top = pq.top
     val doc = if (target <= top.doc && top.doc < DocIdSetIterator.NO_MORE_DOCS) top.doc + 1 else target

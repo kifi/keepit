@@ -22,15 +22,15 @@ class FakeOutbox(var mails: MutableList[ElectronicMail] = MutableList()) {
 }
 
 case class FakeMailModule() extends ScalaModule {
-  
-  override def configure(): Unit = { 
+
+  override def configure(): Unit = {
     bind[FakeOutbox].toInstance(new FakeOutbox())
   }
-  
+
   @Provides
   def postOfficeProvider(emails: FakeOutbox): PostOffice = {
     new PostOffice() {
       def sendMail(mail: ElectronicMail): ElectronicMail = emails.add(mail)
     }
   }
-} 
+}
