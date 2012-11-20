@@ -35,12 +35,12 @@ class CommentTest extends SpecificationWithJUnit {
       Comment(normalizedURI = uri1.id.get, userId = user1.id.get, text = "Private Comment on Google1", permissions = Comment.Permissions.PRIVATE).save
       Comment(normalizedURI = uri1.id.get, userId = user1.id.get, text = "Private Comment on Google2", permissions = Comment.Permissions.PRIVATE).save
 
-      // Conversation
-      val convo = Comment(normalizedURI = uri1.id.get, userId = user1.id.get, text = "Conversation on Google1", permissions = Comment.Permissions.CONVERSATION).save
+      // Message
+      val convo = Comment(normalizedURI = uri1.id.get, userId = user1.id.get, text = "Conversation on Google1", permissions = Comment.Permissions.MESSAGE).save
       CommentRecipient(commentId = convo.id.get, userId = Some(user2.id.get)).save
-      val convo2 = Comment(normalizedURI = uri1.id.get, userId = user2.id.get, text = "Conversation on Google2", permissions = Comment.Permissions.CONVERSATION).save
+      val convo2 = Comment(normalizedURI = uri1.id.get, userId = user2.id.get, text = "Conversation on Google2", permissions = Comment.Permissions.MESSAGE).save
       CommentRecipient(commentId = convo2.id.get, userId = Some(user1.id.get)).save
-      val convo3 = Comment(normalizedURI = uri1.id.get, userId = user2.id.get, text = "Conversation on Google3", permissions = Comment.Permissions.CONVERSATION).save
+      val convo3 = Comment(normalizedURI = uri1.id.get, userId = user2.id.get, text = "Conversation on Google3", permissions = Comment.Permissions.MESSAGE).save
 
 
       (user1, user2, uri1, uri2)
@@ -82,13 +82,13 @@ class CommentTest extends SpecificationWithJUnit {
         }
       }
     }
-    "show conversations by URI and UserId" in {
+    "show messages by URI and UserId" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         CX.withConnection { implicit conn =>
-          val uri1Conversation1 = Comment.getConversationsByNormalizedUri(uri1.id.get, user1.id.get)
-          val uri1Conversation2 = Comment.getConversationsByNormalizedUri(uri1.id.get, user2.id.get)
-          val uri2Conversation1 = Comment.getConversationsByNormalizedUri(uri2.id.get, user1.id.get)
+          val uri1Conversation1 = Comment.getMessagesByNormalizedUri(uri1.id.get, user1.id.get)
+          val uri1Conversation2 = Comment.getMessagesByNormalizedUri(uri1.id.get, user2.id.get)
+          val uri2Conversation1 = Comment.getMessagesByNormalizedUri(uri2.id.get, user1.id.get)
 
           uri1Conversation1.length === 2
           uri1Conversation2.length === 3
