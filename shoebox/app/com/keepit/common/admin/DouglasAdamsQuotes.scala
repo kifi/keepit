@@ -8,14 +8,14 @@ import play.api.Play.current
 case class DouglasAdamsQuote(quote: List[String], cite: String)
 
 object DouglasAdamsQuotes {
-  
+
   lazy val qoutes: List[DouglasAdamsQuote] = {
     val lines = io.Source.fromURL(Play.resource("/public/html/quotes.txt").get).getLines.toList
     var lastQuote: Option[DouglasAdamsQuote] = None
-    val quotes = MList[DouglasAdamsQuote]() 
+    val quotes = MList[DouglasAdamsQuote]()
     lines.foreach { line =>
       lastQuote = lastQuote match {
-        case Some(quote) if(line.startsWith("<a")) => 
+        case Some(quote) if(line.startsWith("<a")) =>
           quotes += quote.copy(cite = line.replaceAll("""<a href="/work/quotes/[0-9]*">""", "").replaceAll("</a>", ""))
           None
         case _ => Some(DouglasAdamsQuote(List(""""%s"""".format(line).split("<br />"): _*), "Unknown"))
@@ -23,7 +23,7 @@ object DouglasAdamsQuotes {
     }
     quotes.toList
   }
-  
+
   def random: DouglasAdamsQuote = qoutes(new Random().nextInt(qoutes.size))
 
 }

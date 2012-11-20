@@ -35,7 +35,7 @@ class LineQueryTest extends SpecificationWithJUnit {
   val ramDir = new RAMDirectory
   implicit val indexReader = populateIndex
   val builder = new LineQueryBuilder(new DefaultSimilarity, 0.0f)
-  
+
   def populateIndex: IndexReader = {
     val lineFieldBuilder = new LineFieldBuilder {}
     val writer = new IndexWriter(ramDir, config)
@@ -52,12 +52,12 @@ class LineQueryTest extends SpecificationWithJUnit {
     }
     writer.commit()
     writer.close()
-    
+
     IndexReader.open(ramDir)
   }
-  
+
   "LineQuery" should {
-    
+
     "find docs using term query" in {
       var q = new TermQuery(new Term("B", "d1"))
       var plan = builder.build(q)
@@ -71,7 +71,7 @@ class LineQueryTest extends SpecificationWithJUnit {
       plan.fetch(0) === 2
       plan.fetch(0) === LineQuery.NO_MORE_DOCS
     }
-    
+
     "find docs using phrase query" in {
       var q = new PhraseQuery()
       q.add(new Term("B", "d1"))
@@ -88,7 +88,7 @@ class LineQueryTest extends SpecificationWithJUnit {
       plan.fetch(0) === 2
       plan.fetch(0) === LineQuery.NO_MORE_DOCS
     }
-    
+
     "find docs using boolean query" in {
       var q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "d1")), BooleanClause.Occur.SHOULD)
@@ -97,20 +97,20 @@ class LineQueryTest extends SpecificationWithJUnit {
       plan.fetch(0) === 1
       plan.fetch(0) === 2
       plan.fetch(0) === LineQuery.NO_MORE_DOCS
-      
+
       q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "d1")), BooleanClause.Occur.SHOULD)
       q.add(new TermQuery(new Term("B", "d2")), BooleanClause.Occur.MUST)
       plan = builder.build(q)
       plan.fetch(0) === 2
       plan.fetch(0) === LineQuery.NO_MORE_DOCS
-      
+
       q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "d1")), BooleanClause.Occur.MUST)
       q.add(new TermQuery(new Term("B", "d2")), BooleanClause.Occur.MUST)
       plan = builder.build(q)
       plan.fetch(0) === LineQuery.NO_MORE_DOCS
-      
+
       q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "l0")), BooleanClause.Occur.MUST)
       q.add(new TermQuery(new Term("B", "l1")), BooleanClause.Occur.MUST)
@@ -118,7 +118,7 @@ class LineQueryTest extends SpecificationWithJUnit {
       q.add(new TermQuery(new Term("B", "d1")), BooleanClause.Occur.MUST_NOT)
       plan = builder.build(q)
       plan.fetch(0) === LineQuery.NO_MORE_DOCS
-      
+
       q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "l0")), BooleanClause.Occur.SHOULD)
       q.add(new TermQuery(new Term("B", "l1")), BooleanClause.Occur.SHOULD)
@@ -129,7 +129,7 @@ class LineQueryTest extends SpecificationWithJUnit {
       plan.fetch(0) === 2
       plan.fetch(0) === LineQuery.NO_MORE_DOCS
     }
-    
+
     "find lines using term query" in {
       var q = new TermQuery(new Term("B", "t10"))
       var plan = builder.build(q)
@@ -143,7 +143,7 @@ class LineQueryTest extends SpecificationWithJUnit {
       plan.fetchLine(0) === 2
       plan.fetchDoc(0) === LineQuery.NO_MORE_DOCS
     }
-    
+
     "ignore wildcard query" in {
       val q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "d2")), BooleanClause.Occur.SHOULD)
@@ -151,7 +151,7 @@ class LineQueryTest extends SpecificationWithJUnit {
       val plan = builder.build(q)
       plan.fetchDoc(2) === 2
     }
-    
+
     "find lines with boolean query" in {
       var q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "l1")), BooleanClause.Occur.MUST)
@@ -160,7 +160,7 @@ class LineQueryTest extends SpecificationWithJUnit {
       plan.fetchDoc(0) === 1
       plan.fetchLine(0) === LineQuery.NO_MORE_LINES
       plan.fetchDoc(0) === LineQuery.NO_MORE_DOCS
-      
+
       q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "l2")), BooleanClause.Occur.MUST)
       q.add(new TermQuery(new Term("B", "t12")), BooleanClause.Occur.MUST)
@@ -169,7 +169,7 @@ class LineQueryTest extends SpecificationWithJUnit {
       plan.fetchLine(0) === 2
       plan.fetchDoc(0) === LineQuery.NO_MORE_DOCS
     }
-    
+
     "score term query" in {
       var q = new TermQuery(new Term("B", "x"))
       var hits = ArrayBuffer.empty[(Int, Int, Float)]
@@ -184,7 +184,7 @@ class LineQueryTest extends SpecificationWithJUnit {
         doc = plan.fetchDoc(0)
       }
       hits.sortWith((a, b) => (a._3 < b._3)).map(h => (h._1, h._2)) === ArrayBuffer((1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2))
-      
+
       q = new TermQuery(new Term("B", "y"))
       hits = ArrayBuffer.empty[(Int, Int, Float)]
       plan = builder.build(q)
@@ -198,7 +198,7 @@ class LineQueryTest extends SpecificationWithJUnit {
         doc = plan.fetchDoc(0)
       }
       hits.sortWith((a, b) => (a._3 < b._3)).map(h => (h._1, h._2)) === ArrayBuffer((0, 1), (1, 1), (2, 1), (0, 2), (1, 2), (2, 2))
-      
+
       q = new TermQuery(new Term("B", "z"))
       hits = ArrayBuffer.empty[(Int, Int, Float)]
       plan = builder.build(q)
@@ -214,7 +214,7 @@ class LineQueryTest extends SpecificationWithJUnit {
       hits.sortWith((a, b) => (a._3 < b._3)).map(h => (h._1, h._2)) ===
         ArrayBuffer((0, 0), (1, 0), (2, 0), (2, 1), (2, 2), (0, 1), (1, 1), (1, 2), (0, 2))
     }
-    
+
     "score boolean query" in {
       var q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "l0")), BooleanClause.Occur.SHOULD)
@@ -231,7 +231,7 @@ class LineQueryTest extends SpecificationWithJUnit {
         doc = plan.fetchDoc(0)
       }
       hits.sortWith((a, b) => (a._3 < b._3)).map(h => (h._1, h._2)) === ArrayBuffer((1, 0), (2, 0), (0, 0))
-      
+
       q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "l0")), BooleanClause.Occur.MUST)
       q.add(new TermQuery(new Term("B", "t00")), BooleanClause.Occur.SHOULD)
@@ -247,7 +247,7 @@ class LineQueryTest extends SpecificationWithJUnit {
         doc = plan.fetchDoc(0)
       }
       hits.sortWith((a, b) => (a._3 < b._3)).map(h => (h._1, h._2)) === ArrayBuffer((1, 0), (2, 0), (0, 0))
-      
+
       q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "d0")), BooleanClause.Occur.MUST)
       q.add(new TermQuery(new Term("B", "l0")), BooleanClause.Occur.SHOULD)
@@ -265,7 +265,7 @@ class LineQueryTest extends SpecificationWithJUnit {
         doc = plan.fetchDoc(0)
       }
       hits.sortWith((a, b) => (a._3 < b._3)).map(h => (h._1, h._2)) === ArrayBuffer((0, 2), (0, 1), (0, 0))
-      
+
       q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "d0")), BooleanClause.Occur.SHOULD)
       q.add(new TermQuery(new Term("B", "l0")), BooleanClause.Occur.SHOULD)
@@ -281,10 +281,10 @@ class LineQueryTest extends SpecificationWithJUnit {
         }
         doc = plan.fetchDoc(0)
       }
-      hits.sortWith((a, b) => (a._3 < b._3)).map(h => (h._1, h._2)) === 
+      hits.sortWith((a, b) => (a._3 < b._3)).map(h => (h._1, h._2)) ===
         ArrayBuffer((1, 0), (2, 0), (0, 2), (0, 0), (0, 1))
     }
-    
+
     "honor percentMatch in BooleanNode" in {
       val builderWithPctMatch = new LineQueryBuilder(new DefaultSimilarity, 99.0f)
       var q = new BooleanQuery
@@ -303,7 +303,7 @@ class LineQueryTest extends SpecificationWithJUnit {
         doc = plan.fetchDoc(0)
       }
       hits === ArrayBuffer((2, 0), (2, 1), (2, 2))
-      
+
       hits = ArrayBuffer.empty[(Int, Int)]
       plan = builderWithPctMatch.build(q)
       doc = plan.fetchDoc(0)
@@ -317,7 +317,7 @@ class LineQueryTest extends SpecificationWithJUnit {
       }
       hits === ArrayBuffer((2, 2))
     }
-    
+
     "honor percentMatch in BooleanOrNode" in {
       val builderWithPctMatch = new LineQueryBuilder(new DefaultSimilarity, 99.0f)
       var q = new BooleanQuery
@@ -336,7 +336,7 @@ class LineQueryTest extends SpecificationWithJUnit {
         doc = plan.fetchDoc(0)
       }
       hits === ArrayBuffer((0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2))
-      
+
       hits = ArrayBuffer.empty[(Int, Int)]
       plan = builderWithPctMatch.build(q)
       doc = plan.fetchDoc(0)

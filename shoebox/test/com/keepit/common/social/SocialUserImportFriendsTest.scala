@@ -37,11 +37,11 @@ class SocialUserImportFriendsTest extends SpecificationWithJUnit {
             ("facebook_graph_eishay.json", 198, "Igor Perisic")
         )
         graphs map { case (filename, numOfFriends, firstFriend) => testFacebookGraph(filename, numOfFriends, firstFriend) }
-        
+
       }
     }
   }
-  
+
   def testFacebookGraph(jsonFilename: String, numOfFriends: Int, firstFriend: String) = {
     val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(jsonFilename))).mkString)
     val rawFriends = inject[SocialUserImportFriends].importFriends(Seq(json))
@@ -50,5 +50,5 @@ class SocialUserImportFriendsTest extends SpecificationWithJUnit {
     store.clear
     rawFriends.size === numOfFriends
   }
-  
+
 }

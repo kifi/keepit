@@ -24,7 +24,7 @@ class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends Ind
     }
     hitBuf.sortWith((a, b) => a.score >= b.score).toSeq
   }
-  
+
   def doSearch[R](query: Query)(f: Scorer => Unit) = {
     val rewrittenQuery = rewrite(query)
     if (rewrittenQuery != null) {
@@ -37,7 +37,7 @@ class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends Ind
       }
     }
   }
-  
+
   def getHitQueue(size: Int) = new HitQueue(size)
 }
 
@@ -53,11 +53,11 @@ class HitQueue(sz: Int) extends PriorityQueue[MutableHit] {
   override def lessThan(a: MutableHit, b: MutableHit) = (a.score < b.score || (a.score == b.score && a.id < b.id))
 
   var overflow: MutableHit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
-  
+
   def insert(id: Long, score: Float) {
     if (overflow == null) overflow = new MutableHit(id, score)
     else overflow(id, score)
-    
+
     overflow = insertWithOverflow(overflow)
   }
 

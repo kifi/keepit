@@ -18,14 +18,14 @@ import play.api.Play.current
 
 object Scraper {
   val BATCH_SIZE = 100
-  
+
   val maxContentChars = 100000 // 100K chars
 }
 
 class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
-  
+
   val httpFetcher = new HttpFetcher
-  
+
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
     log.info("starting a new scrape round")
@@ -39,21 +39,21 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         scrapedArticles.size, uris.size, jobTime, scrapedArticles map {a => a._1} mkString "\n"))
     scrapedArticles
   }
-  
+
   def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris map safeProcessURI
-  
+
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
       processURI(uri)
     } catch {
-      case e => 
+      case e =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
         val errorURI = CX.withConnection { implicit c =>
           uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
         }
         (errorURI, None)
     }
-  
-  
+
+
   private def processURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
     fetchArticle(uri) match {
@@ -85,7 +85,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         (errorURI, None)
     }
   }
-  
+
   private def getExtractor(url: String): Extractor = {
     try {
       URI.parse(url) match {
@@ -98,23 +98,23 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
           new DefaultExtractor(url, Scraper.maxContentChars)
       }
     } catch {
-      case e => 
+      case e =>
           log.warn("uri parsing failed: [%s][%s]".format(url, e.toString))
           new DefaultExtractor(url, Scraper.maxContentChars)
     }
   }
-  
+
   def fetchArticle(normalizedUri: NormalizedURI): Either[Article, ScraperError] = {
     fetchArticle(normalizedUri, httpFetcher)
   }
-  
+
   private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher): Either[Article, ScraperError] = {
     var url = normalizedUri.url
     val extractor = getExtractor(url)
-    
+
     try {
       val fetchStatus = httpFetcher.fetch(url){ input => extractor.process(input) }
-      
+
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
           val title = extractor.getMetadata("title").getOrElse("")
@@ -134,7 +134,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
       case e => Right(ScraperError(normalizedUri, -1, "fetch failed: %s".format(e.toString)))
     }
   }
-  
+
   def close() {
     httpFetcher.close()
   }

@@ -17,19 +17,19 @@ class HealthcheckModuleTest extends Specification {
   "HealthcheckModule" should {
     "load" in {
       running(new ShoeboxApplication().withFakeMail()) {
-        
+
         val mail1 = inject[Healthcheck].reportStart()
         val outbox1 = inject[FakeOutbox]
         outbox1.size === 1
         outbox1(0).externalId === mail1.externalId
         mail1.subject.endsWith("started") === true
-        
+
         val mail2 = inject[Healthcheck].reportStop()
         val outbox2 = inject[FakeOutbox]
         outbox2.size === 2
         outbox2(1).externalId === mail2.externalId
         mail2.subject.endsWith("stopped") === true
-      } 
+      }
     }
   }
 }

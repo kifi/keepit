@@ -17,7 +17,7 @@ import scala.collection.JavaConversions._
 class LineQueryBuilder(similarity: Similarity, percentMatch: Float) extends Logging {
 
   val pctMatch = (if (percentMatch > 0.0f) percentMatch else Float.MinPositiveValue)
-  
+
   def build(query: Query)(implicit indexReader: IndexReader): LineQuery = {
     query match {
       case q: TermQuery => translateTermQuery(q)
@@ -26,7 +26,7 @@ class LineQueryBuilder(similarity: Similarity, percentMatch: Float) extends Logg
       case q: Query => translateOtherQuery(q)
     }
   }
-  
+
   def translateTermQuery(query: TermQuery)(implicit indexReader: IndexReader) = {
     val term = query.getTerm
     val idf = similarity.idf(indexReader.docFreq(term), indexReader.numDocs)
@@ -41,7 +41,7 @@ class LineQueryBuilder(similarity: Similarity, percentMatch: Float) extends Logg
     val nodes = terms.map{ term => new TermNode(term, 1, indexReader) }.toArray
     new PhraseNode(nodes, positions, idf, indexReader);
   }
-  
+
   def translateBooleanQuery(query: BooleanQuery)(implicit indexReader: IndexReader) = {
     var required = new ArrayBuffer[Query]
     var prohibited = new ArrayBuffer[Query]
@@ -62,11 +62,11 @@ class LineQueryBuilder(similarity: Similarity, percentMatch: Float) extends Logg
     } else {
       LineQuery.emptyQueryNode
     }
-    
+
     if (prohibited.size > 0) new BooleanNot(positiveExpr, translate(prohibited), indexReader)
     else positiveExpr
   }
-  
+
   def translateOtherQuery(query: Query)(implicit indexReader: IndexReader) = {
     try {
       val terms = new java.util.HashSet[Term]()

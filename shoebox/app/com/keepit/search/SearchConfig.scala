@@ -11,7 +11,7 @@ object SearchConfig {
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
       "tailCutting" -> "0.5")
-  
+
   var defaultConfig = new SearchConfig(defaultParams)
 
   def setDefault(binding: (String, String)) = {
@@ -19,9 +19,9 @@ object SearchConfig {
     defaultConfig = new SearchConfig(defaultParams)
     defaultConfig
   }
-  
+
   def getDefaultConfig = defaultConfig
-  
+
   def apply(params: Map[String, String]) = {
     new SearchConfig(defaultParams ++ params)
   }

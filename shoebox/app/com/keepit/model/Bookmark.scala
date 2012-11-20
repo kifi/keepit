@@ -38,67 +38,67 @@ case class Bookmark(
   state: State[Bookmark] = Bookmark.States.ACTIVE,
   source: BookmarkSource
 ) {
-  
+
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
-  
+
   def withActive(isActive: Boolean) = copy(state = isActive match {
     case true => Bookmark.States.ACTIVE
     case false => Bookmark.States.INACTIVE
   })
-  
+
   def save(implicit conn: Connection): Bookmark = {
     val entity = BookmarkEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
     entity.view
   }
-  
+
   def delete()(implicit conn: Connection): Unit = {
     val res = (BookmarkEntity AS "b").map { b => DELETE (b) WHERE (b.id EQ this.id.get) execute }
     if (res != 1) {
       throw new Exception("[%s] did not delete %s".format(res, this))
     }
   }
-  
+
 }
 
 object Bookmark {
-  
-  def apply(uri: NormalizedURI, user: User, title: String, url: String, source: BookmarkSource, isPrivate: Boolean): Bookmark = 
+
+  def apply(uri: NormalizedURI, user: User, title: String, url: String, source: BookmarkSource, isPrivate: Boolean): Bookmark =
     Bookmark(title = title, url = url, userId = user.id.get, uriId = uri.id.get, source = source, isPrivate = isPrivate)
-  
-  def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = 
+
+  def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE ((b.uriId EQ uri.id.get) AND (b.userId EQ user.id.get)) unique }.map( _.view )
-  
-  def ofUri(uri: NormalizedURI)(implicit conn: Connection): Seq[Bookmark] = 
+
+  def ofUri(uri: NormalizedURI)(implicit conn: Connection): Seq[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.uriId EQ uri.id.get) list }.map( _.view )
-  
-  def ofUser(user: User)(implicit conn: Connection): Seq[Bookmark] = 
+
+  def ofUser(user: User)(implicit conn: Connection): Seq[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.userId EQ user.id.get) list }.map( _.view )
-  
-  def count(user: User)(implicit conn: Connection): Long = 
+
+  def count(user: User)(implicit conn: Connection): Long =
     (BookmarkEntity AS "b").map(b => SELECT(COUNT(b.id)).FROM(b).WHERE(b.userId EQ user.id.get).unique).get
-  
+
   def all(implicit conn: Connection): Seq[Bookmark] =
     BookmarkEntity.all.map(_.view)
-    
+
   def count(implicit conn: Connection): Long =
     (BookmarkEntity AS "b").map(b => SELECT(COUNT(b.id)).FROM(b).unique).get
-    
+
   def page(page: Int = 0, size: Int = 20)(implicit conn: Connection): Seq[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b LIMIT size OFFSET (page * size) ORDER_BY (b.id DESC) list }.map( _.view )
-  
+
   def get(id: Id[Bookmark])(implicit conn: Connection): Bookmark =
     getOpt(id).getOrElse(throw NotFoundException(id))
-    
+
   def getOpt(id: Id[Bookmark])(implicit conn: Connection): Option[Bookmark] =
     BookmarkEntity.get(id).map(_.view)
-    
+
   def get(externalId: ExternalId[Bookmark])(implicit conn: Connection): Bookmark =
     getOpt(externalId).getOrElse(throw NotFoundException(externalId))
-  
+
   def getOpt(externalId: ExternalId[Bookmark])(implicit conn: Connection): Option[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.externalId EQ externalId) unique }.map(_.view)
-    
+
   object States {
     val ACTIVE = State[Bookmark]("active")
     val INACTIVE = State[Bookmark]("inactive")
@@ -117,9 +117,9 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
   val userId = "user_id".ID[User]
   val isPrivate = "is_private".BOOLEAN.NOT_NULL
   val source = "source".VARCHAR(256).NOT_NULL
-  
+
   def relation = BookmarkEntity
-  
+
   def view(implicit conn: Connection): Bookmark = Bookmark(
     id = id.value,
     createdAt = createdAt(),
@@ -138,7 +138,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
 
 private[model] object BookmarkEntity extends BookmarkEntity with EntityTable[Bookmark, BookmarkEntity] {
   override def relationName = "bookmark"
-  
+
   def apply(view: Bookmark): BookmarkEntity = {
     val bookmark = new BookmarkEntity
     bookmark.id.set(view.id)

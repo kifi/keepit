@@ -32,7 +32,7 @@ class PostOfficeTest extends Specification with TestAkkaSystem {
         outbox2(1).externalId === mail2.externalId
         outbox2(0).htmlBody === mail1.htmlBody
         outbox2(1).htmlBody === mail2.htmlBody
-      } 
+      }
     }
   }
 }

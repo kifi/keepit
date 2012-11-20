@@ -9,7 +9,7 @@ import play.api.libs.json._
 import com.keepit.search.Article
 
 class ArticleSerializer extends Format[Article] {
-  
+
   def writes(article: Article): JsValue =
     JsObject(List(
         "normalizedUriId" -> JsNumber(article.id.id),
@@ -22,10 +22,10 @@ class ArticleSerializer extends Format[Article] {
         "message" -> (article.message map { m => JsString(m) } getOrElse(JsNull))
       )
     )
-    
+
   def reads(json: JsValue): Article = Article(
-      Id((json \ "normalizedUriId").as[Long]), 
-      (json \ "title").as[String], 
+      Id((json \ "normalizedUriId").as[Long]),
+      (json \ "title").as[String],
       (json \ "content").as[String],
       parseStandardTime((json \ "scrapedAt").as[String]),
       (json \ "httpContentType").asOpt[String],

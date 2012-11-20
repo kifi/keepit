@@ -19,7 +19,7 @@ object URIList {
     // public list size and private list size
     out.writeVInt(publicBookmarks.size)
     out.writeVInt(privateBookmarks.size)
-    
+
     // encode public list
     var current = 0L
     sortedPublicBookmarks.foreach{ b =>
@@ -32,18 +32,18 @@ object URIList {
       out.writeVLong(b.uriId.id - current)
       current = b.uriId.id
     }
-    // encode createAt (public) 
+    // encode createAt (public)
     sortedPublicBookmarks.foreach{ b => out.writeVLong(b.createdAt.getMillis / TIME_UNIT) }
-    // encode createAt (private) 
+    // encode createAt (private)
     sortedPrivateBookmarks.foreach{ b => out.writeVLong(b.createdAt.getMillis / TIME_UNIT) }
-    
+
     baos.flush()
     baos.toByteArray()
   }
-  
+
   val TIME_UNIT = 1000L * 60L // minute
   val UNIT_PER_HOUR = (1000L * 60L * 60L).toDouble / TIME_UNIT.toDouble
-  
+
   def unitToMillis(units: Long) = units * TIME_UNIT
 }
 
@@ -60,12 +60,12 @@ class URIList(bytes: Array[Byte]) {
 
   val publicListSize = in.readVInt()
   val privateListSize = in.readVInt()
-  
+
   val publicList: Array[Long] = readList(publicListSize)
   lazy val privateList = loadListAfter(publicList, privateListSize, 1)
   lazy val publicCreatedAt = loadRawListAfter(privateList, publicListSize, 2)
   lazy val privateCreatedAt = loadRawListAfter(publicCreatedAt, privateListSize, 2)
-  
+
   private def loadListAfter(after: Any, length: Int, minVersion: Int) = {
     if (version < minVersion) new Array[Long](length)
     else readList(length)
@@ -74,7 +74,7 @@ class URIList(bytes: Array[Byte]) {
     if (version < minVersion) new Array[Long](length)
     else readRawList(length)
   }
-  
+
   private def readList(length: Int) = {
     val arr = new Array[Long](length)
     var current = 0L;
@@ -87,7 +87,7 @@ class URIList(bytes: Array[Byte]) {
     }
     arr
   }
-  
+
   private def readRawList(length: Int) = {
     val arr = new Array[Long](length)
     var i = 0

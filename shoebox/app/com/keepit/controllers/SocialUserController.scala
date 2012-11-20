@@ -40,16 +40,16 @@ object SocialUserController extends FortyTwoController {
     }
     Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfo.id.get))
   }
-  
-  def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request => 
-    
+
+  def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
+
     val (socialUserInfo, socialConnections) = CX.withConnection { implicit conn =>
       val socialUserInfo = SocialUserInfo.get(socialUserId)
       val socialConnections = SocialConnection.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName)
-      
+
       (socialUserInfo, socialConnections)
     }
-    
+
     val rawInfo = inject[SocialUserRawInfoStore].get(socialUserInfo.id.get)
 
     Ok(views.html.socialUser(socialUserInfo, socialConnections, rawInfo))
@@ -57,18 +57,18 @@ object SocialUserController extends FortyTwoController {
 
   def socialUsersView(page: Int) = AdminHtmlAction { implicit request =>
     val PAGE_SIZE = 300
-    val (socialUsers, count) = CX.withConnection { implicit c => 
+    val (socialUsers, count) = CX.withConnection { implicit c =>
       (SocialUserInfo.page(page, PAGE_SIZE), SocialUserInfo.count)
     }
     val pageCount = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.socialUsers(socialUsers, page, count, pageCount))
   }
-  
-  def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request => 
+
+  def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
     val graph = inject[SocialGraphPlugin]
     val socialUserInfo = CX.withConnection { implicit conn => SocialUserInfo.get(socialUserInfoId) }
     if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))
-    graph.asyncFetch(socialUserInfo)    
+    graph.asyncFetch(socialUserInfo)
     Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfoId))
   }
 }

@@ -19,9 +19,9 @@ class DefaultExtractor(url: String, maxContentChars: Int) extends TikaBasedExtra
 
 // To prevent Boilerpipe blowing up we need this
 class BoilerSafeContentHandler(handler: ContentHandler) extends ContentHandlerDecorator(handler) {
-  
+
   var inAnchor = false
-  
+
   override def startElement(uri: String, localName: String, qName: String, atts: Attributes) {
     localName.toLowerCase() match {
       case "a" => //nested anchor tags blow up Boilerpipe. so we close it if one is already open
@@ -31,7 +31,7 @@ class BoilerSafeContentHandler(handler: ContentHandler) extends ContentHandlerDe
       case _ => super.startElement(uri, localName, qName, atts)
     }
   }
-  
+
   override def endElement(uri: String, localName: String, qName: String) {
     localName.toLowerCase() match {
       case "a" => if (inAnchor) {

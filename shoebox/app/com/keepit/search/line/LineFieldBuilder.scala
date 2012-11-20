@@ -16,7 +16,7 @@ class LineTokenStream[A](fieldName: String, lines: Seq[(Int, String)], analyzer:
   val termAttr = addAttribute(classOf[CharTermAttribute])
   val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
   val lineIter = lines.sortBy(_._1).iterator
-  
+
   var baseTokenStream = new TokenStream {
     override def incrementToken() = false
   }
@@ -25,13 +25,13 @@ class LineTokenStream[A](fieldName: String, lines: Seq[(Int, String)], analyzer:
   var curPos = 0
   var posLimit = 0
   var baseHasPosIncrAttr = false
-  
+
   private def lineRange(lineNo: Int) = (lineNo * LineQuery.MAX_POSITION_PER_LINE,
                                         (lineNo + 1) * LineQuery.MAX_POSITION_PER_LINE - LineQuery.LINE_GAP)
-  
+
   override def incrementToken(): Boolean = {
     clearAttributes()
-    
+
     var incr = 0
     var moreToken = baseTokenStream.incrementToken()
     while (!moreToken && lineIter.hasNext) {

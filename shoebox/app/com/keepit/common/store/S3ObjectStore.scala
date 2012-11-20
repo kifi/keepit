@@ -17,25 +17,25 @@ import play.api.Play.current
 import java.io.InputStream
 import java.io.ByteArrayInputStream
 
-case class S3Bucket(name: String) 
+case class S3Bucket(name: String)
 
 trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
 
   val bucketName: S3Bucket
   val amazonS3Client: AmazonS3
   val formatter: Format[B]
-  
+
   private val ENCODING = "UTF-8"
-  
+
   implicit def bucketName(bucket: S3Bucket): String = bucket.name
-  
+
   private def keyPrefix: String = Play.isDev match {
     case true => System.getProperty("user.name") + "_"
     case false => ""
   }
-  
+
   protected def idToBJsonKey(id: A): String = "%s%s.json".format(keyPrefix, id.toString)
-  
+
   def += (kv: (A, B)) = {
     kv match {
       case (key, value) =>
@@ -44,9 +44,9 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
           metadata.setContentEncoding(ENCODING)
           metadata.setContentType("application/json")
           try {
-            Some(s3Client.putObject(bucketName, 
-              idToBJsonKey(key), 
-              toInputStream(value), 
+            Some(s3Client.putObject(bucketName,
+              idToBJsonKey(key),
+              toInputStream(value),
               metadata))
           } catch {
             case e =>
@@ -57,26 +57,26 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
     }
     this
   }
-  
+
   def -= (key: A) = {
     doWithS3Client("removing an item from S3BStore"){ s3Client =>
       Some(s3Client.deleteObject(bucketName, idToBJsonKey(key)))
     }
     this
   }
-  
+
   def get(id: A): Option[B] = {
     doWithS3Client("getting an item from S3BStore"){ s3Client =>
       val key = idToBJsonKey(id)
       val s3obj = try {
-        Some(s3Client.getObject(bucketName, key)) 
+        Some(s3Client.getObject(bucketName, key))
       } catch {
         case e: AmazonS3Exception if (e.getMessage().contains("The specified key does not exist")) => None
-      } 
+      }
       s3obj map extractValue
     }
   }
-  
+
   private def extractValue(s3obj: S3Object) = {
     val is = s3obj.getObjectContent
     try {
@@ -86,16 +86,16 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
     } finally {
       is.close
     }
-  } 
-  
+  }
+
   private def doWithS3Client[T](what: =>String)(body: AmazonS3 => Option[T]): Option[T] = try {
-    body(amazonS3Client) 
+    body(amazonS3Client)
   } catch {
     case ex: Exception =>
       log.error("failed: " + what , ex)
       throw ex
   }
-  
+
   private def toInputStream(B: B): InputStream = new ByteArrayInputStream(formatter.writes(B).toString().getBytes(ENCODING))
-  
+
 }

@@ -10,7 +10,7 @@ import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause._
 
 class QueryParser(indexWriterConfig: IndexWriterConfig) extends LuceneQueryParser(Version.LUCENE_36, "b", indexWriterConfig.getAnalyzer()) {
-  
+
   def parseQuery(queryText: String) = {
     val query = try {
       super.parse(queryText)
@@ -19,7 +19,7 @@ class QueryParser(indexWriterConfig: IndexWriterConfig) extends LuceneQueryParse
     }
     Option(query)
   }
-  
+
   private var percentMatch: Float = 0.0f
   def setPercentMatch(value: Float) { percentMatch = value }
 
@@ -28,7 +28,7 @@ class QueryParser(indexWriterConfig: IndexWriterConfig) extends LuceneQueryParse
     query.setPercentMatch(percentMatch)
     query
   }
-  
+
   def getFieldQueryWithProximity(fieldName: String, queryText: String, quoted: Boolean): Query = {
     val query = super.getFieldQuery(fieldName, queryText, quoted)
     val terms = ProximityQuery.getTerms(fieldName, query)
@@ -37,7 +37,7 @@ class QueryParser(indexWriterConfig: IndexWriterConfig) extends LuceneQueryParse
       val booleanQuery = new BooleanQuery
       val proximityQuery = ProximityQuery(terms)
       proximityQuery.setBoost(2.0f) // proximity boost
-      
+
       booleanQuery.add(query, Occur.MUST)
       booleanQuery.add(proximityQuery, Occur.SHOULD)
       booleanQuery

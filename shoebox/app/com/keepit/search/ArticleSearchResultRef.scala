@@ -33,14 +33,14 @@ object ArticleSearchResultRef {
     val ACTIVE = State[ArticleSearchResultRef]("active")
     val INACTIVE = State[ArticleSearchResultRef]("inactive")
   }
-  
-  def apply(res: ArticleSearchResult): ArticleSearchResultRef = 
-    ArticleSearchResultRef(externalId = res.uuid, createdAt = res.time, updatedAt = res.time, 
+
+  def apply(res: ArticleSearchResult): ArticleSearchResultRef =
+    ArticleSearchResultRef(externalId = res.uuid, createdAt = res.time, updatedAt = res.time,
         last = res.last, myTotal = res.myTotal, friendsTotal = res.friendsTotal, mayHaveMoreHits = res.mayHaveMoreHits, millisPassed = res.millisPassed,
         hitCount = res.hits.size, pageNumber = res.pageNumber)
-  
+
   def get(id: Id[ArticleSearchResultRef])(implicit conn: Connection): ArticleSearchResultRef = ArticleSearchResultRefEntity.get(id).get.view
-  
+
   def get(externalId: ExternalId[ArticleSearchResultRef])(implicit conn: Connection): ArticleSearchResultRef = getOpt(externalId).getOrElse(throw NotFoundException(externalId))
 
   def getOpt(externalId: ExternalId[ArticleSearchResultRef])(implicit conn: Connection): Option[ArticleSearchResultRef] =
@@ -57,12 +57,12 @@ private[search] class ArticleSearchResultRefEntity extends Entity[ArticleSearchR
   val myTotal = "my_total".INTEGER.NOT_NULL
   val friendsTotal = "friends_total".INTEGER.NOT_NULL
   val mayHaveMoreHits = "may_have_more_hits".BOOLEAN.NOT_NULL
-  val millisPassed = "millis_passed".INTEGER.NOT_NULL 
+  val millisPassed = "millis_passed".INTEGER.NOT_NULL
   val hitCount = "hit_count".INTEGER.NOT_NULL
   val pageNumber = "page_number".INTEGER.NOT_NULL
-  
+
   def relation = ArticleSearchResultRefEntity
-  
+
   def view = ArticleSearchResultRef(
     id = id.value,
     createdAt = createdAt(),
@@ -81,7 +81,7 @@ private[search] class ArticleSearchResultRefEntity extends Entity[ArticleSearchR
 
 private[search] object ArticleSearchResultRefEntity extends ArticleSearchResultRefEntity with EntityTable[ArticleSearchResultRef, ArticleSearchResultRefEntity] {
   override def relationName = "article_search_result"
-  
+
   def apply(view: ArticleSearchResultRef): ArticleSearchResultRefEntity = {
     val entity = new ArticleSearchResultRefEntity
     entity.id.set(view.id)

@@ -18,12 +18,12 @@ import org.xml.sax.ContentHandler
 import org.xml.sax.SAXException
 
 abstract class TikaBasedExtractor(url: String, maxContentChars: Int) extends Extractor with Logging {
-  
+
   protected val output = new WriteOutContentHandler(maxContentChars)
   protected val metadata = new Metadata()
-  
+
   protected def getContentHandler: ContentHandler
-  
+
   protected def getParser(contentType: Option[String]): Parser = {
     contentType.flatMap{ contentType =>
       if (contentType startsWith "text/html") Some(new HtmlParser())
@@ -32,16 +32,16 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int) extends Ext
       new AutoDetectParser(new DefaultDetector())
     }
   }
-  
+
   protected def getHtmlMapper: Option[HtmlMapper] = None
-  
+
   def process(input: HttpInputStream){
     val context = new ParseContext()
     var parser = getParser(input.getContentType)
     val contentHandler = getContentHandler
     context.set(classOf[Parser], parser)
     getHtmlMapper.foreach(mapper => context.set(classOf[HtmlMapper], mapper))
-    
+
     try {
       parser.parse(input, contentHandler, metadata, context)
     } catch {
@@ -53,8 +53,8 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int) extends Ext
           log.error("extraction failed: ", e)
     }
   }
-  
+
   def getContent() = output.toString
-  
+
   def getMetadata(name: String) = Option(metadata.get(name))
 }
