@@ -36,7 +36,7 @@ import com.keepit.search.graph.URIGraph
 import views.html.defaultpages.unauthorized
 import org.joda.time.LocalDate
 import scala.collection.immutable.Map
-import com.keepit.serializer.SocialUserSerializer
+import play.api.libs.json.JsArray
 
 case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConnectionCount: Long)
 
@@ -139,14 +139,15 @@ object UserController extends FortyTwoController {
     Ok(views.html.users(users))
   }
 
-  def addExperiment(userId: Id[User], experimentType: String) = AdminHtmlAction { request =>
-    CX.withConnection { implicit c =>
+  def addExperiment(userId: Id[User], experimentType: String) = AdminJsonAction { request =>
+    val experimants = CX.withConnection { implicit c =>
       val existing = UserExperiment.getByUser(userId)
       val experiment = UserExperiment.ExperimentTypes(experimentType)
       if (existing contains(experimentType)) throw new Exception("user %s already has an experiment %s".format(experimentType))
       UserExperiment(userId = userId, experimentType = experiment).save
+      UserExperiment.getByUser(userId)
     }
-    Redirect(request.referer)
+    Ok(JsArray(experimants map {e => JsString(e.experimentType.value) }))
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction { implicit request =>
