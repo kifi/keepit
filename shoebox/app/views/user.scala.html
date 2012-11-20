@@ -31,7 +31,13 @@
         <th>Last Update</th><td>@adminHelper.dateDisplay(userWithSocial.user.updatedAt) @adminHelper.timeDisplay(userWithSocial.user.updatedAt)</td>
       </tr>
       <tr>
-        <th>Email</th><td><a href='mailto:@{userWithSocial.emails.map(_.address).mkString(",")}'>@{userWithSocial.emails.map(_.address).mkString(",")}</a></td>
+        <th>Email</th>
+        <td>
+          <form action="@com.keepit.controllers.routes.UserController.updateUser(userWithSocial.user.id.get)" method="POST" class="form-inline">
+            <input type="text" name="emails" value="@{userWithSocial.emails.map(_.address).mkString(",")}">
+            <input type="submit" value="Change emails">
+          </form>
+        </td>
       </tr>
       <tr>
         <th>Experiments</th><td id="experiments">@userWithSocial.experiments.mkString(",")</td>
