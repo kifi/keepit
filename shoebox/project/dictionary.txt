@@ -1,9 +1,12 @@
 admin
+avatar
 bookmarks
 eishay
 facebook
 greenwich
 http
+json
+lifecycle
 plugin
 plugins
 routes

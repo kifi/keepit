@@ -38,12 +38,13 @@ import com.keepit.common.controller.FortyTwoController
 
 object CommentController extends FortyTwoController {
 
-  def createComment(url: String, 
+  def createComment(url: String,
                     externalId: ExternalId[User],
-                    text: String, 
-                    permission: String, 
-                    recipients: String = "") = SecuredAction(false) { request =>
-    val comment = CX.withConnection { implicit conn => 
+                    text: String,
+                    permission: String,
+                    recipients: String = "",
+                    replyTo: String = "") = SecuredAction(false) { request =>
+    val comment = CX.withConnection { implicit conn =>
       val userId = User.getOpt(externalId).getOrElse(throw new Exception("Invalid userid"))
       val uri = NormalizedURI.getByNormalizedUrl(url) match {
         case Some(nuri) => nuri
@@ -51,11 +52,10 @@ object CommentController extends FortyTwoController {
       }
       permission.toLowerCase match {
         case "private" =>
-          Comment(normalizedURI = uri.id.get, 
-              userId = userId.id.get, text = text, permissions = Comment.Permissions.PRIVATE).save
-        case "conversation" =>
+          Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PRIVATE).save
+        case "message" =>
           //TODO
-          Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.CONVERSATION).save
+          Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.MESSAGE).save
         case "public" | "" =>
           Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PUBLIC).save
       }
@@ -74,8 +74,8 @@ object CommentController extends FortyTwoController {
           val comments = permission match {
             case "private" => (Comment.Permissions.PRIVATE -> privateComments(user.id.get, normalizedURI)) :: Nil
             case "public" =>  (Comment.Permissions.PUBLIC -> publicComments(normalizedURI)) :: Nil
-            case "conversation" => (Comment.Permissions.CONVERSATION -> conversationComments(user.id.get, normalizedURI)) :: Nil
-            case _ => allComments(user.id.get, normalizedURI) 
+            case "message" => (Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI)) :: Nil
+            case _ => allComments(user.id.get, normalizedURI)
           }
 
           comments map { commentGroup =>
@@ -85,22 +85,22 @@ object CommentController extends FortyTwoController {
           List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
       }
     }
-    
+
     Ok(commentWithSocialUserSerializer.writes(comments)).as(ContentTypes.JSON)
   }
-  
+
   private def allComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection): List[(State[Comment.Permission],Seq[Comment])] =
-    (Comment.Permissions.PUBLIC -> publicComments(normalizedURI)) :: 
-    (Comment.Permissions.CONVERSATION -> conversationComments(userId, normalizedURI)) :: 
+    (Comment.Permissions.PUBLIC -> publicComments(normalizedURI)) ::
+    (Comment.Permissions.MESSAGE -> messageComments(userId, normalizedURI)) ::
     (Comment.Permissions.PRIVATE -> privateComments(userId, normalizedURI)) :: Nil
-  
+
   private def publicComments(normalizedURI: NormalizedURI)(implicit conn: Connection) =
     Comment.getPublicByNormalizedUri(normalizedURI.id.get)
-    
+
   private def privateComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection) =
     Comment.getPrivateByNormalizedUri(normalizedURI.id.get, userId)
 
-  private def conversationComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection) =
-    Comment.getConversationsByNormalizedUri(normalizedURI.id.get, userId)
+  private def messageComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection) =
+    Comment.getMessagesByNormalizedUri(normalizedURI.id.get, userId)
 
 }
