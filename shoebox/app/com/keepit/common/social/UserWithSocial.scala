@@ -13,7 +13,7 @@ case class UserWithSocial(user: User, socialUserInfo: SocialUserInfo, bookmarksC
 object UserWithSocial {
   def toUserWithSocial(user: User)(implicit conn: Connection) = {
     val socialInfos = SocialUserInfo.getByUser(user.id.get)
-    if (socialInfos.size != 1) throw new Exception("Expected to have exactly one social info for user %s, got %s. All social infos are:".
+    if (socialInfos.size != 1) throw new Exception("Expected to have exactly one social info for user %s, got %s. All social infos are: %s".
         format(user, socialInfos, SocialUserInfo.all))
     val bookmarksCount = Bookmark.count(user)
     val emails = EmailAddress.getByUser(user.id.get)
