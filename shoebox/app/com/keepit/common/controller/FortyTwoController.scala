@@ -17,9 +17,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 import com.keepit.inject._
 import com.keepit.common.net._
-import com.keepit.common.db.Id
-import com.keepit.common.db.CX
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{Id, CX, ExternalId, State}
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.controllers.CommonActions._
@@ -33,15 +31,20 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
 
   private val FORTYTWO_USER_ID = "fortytwo_user_id"
 
-  case class AuthenticatedRequest(socialUser: SocialUser, userId: Id[User], request: Request[AnyContent]) extends WrappedRequest(request)
+  case class AuthenticatedRequest(socialUser: SocialUser, userId: Id[User], request: Request[AnyContent], experimants: Seq[State[UserExperiment.ExperimentType]] = Nil)
+    extends WrappedRequest(request)
 
-  def AuthenticatedJsonAction(action: AuthenticatedRequest => PlainResult): Action[AnyContent] =
-    AuthenticatedAction(true, action)
+  def AuthenticatedJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
+    AuthenticatedAction(true, action)(request) match {
+      case r: PlainResult => r.as(ContentTypes.JSON)
+      case any => any
+    }
+  }
 
-  def AuthenticatedHtmlAction(action: AuthenticatedRequest => PlainResult): Action[AnyContent] =
+  def AuthenticatedHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
     AuthenticatedAction(false, action)
 
-  private[controller] def AuthenticatedAction(isApi: Boolean, action: AuthenticatedRequest => PlainResult): Action[AnyContent] = {
+  private[controller] def AuthenticatedAction[A](isApi: Boolean, action: AuthenticatedRequest => Result) = {
     SecuredAction(isApi, parse.anyContent) { implicit request =>
       val userIdOpt = request.session.get(FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
       val (userId, experiments, newSession) = CX.withConnection { implicit conn =>
@@ -56,17 +59,30 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
         val experiments = UserExperiment.getByUser(userId)
         (userId, experiments.map(_.experimentType), newSession)
       }
-      action(AuthenticatedRequest(request.user, userId, request.request)).withSession(newSession)
+      if (experiments.contains(UserExperiment.ExperimentTypes.BLOCK)) {
+        val message = "user %s access is forbidden".format(userId)
+        log.warn(message)
+        Forbidden(message)
+      } else {
+        action(AuthenticatedRequest(request.user, userId, request.request, experiments)) match {
+          case r: PlainResult => r.withSession(newSession)
+          case any => any
+        }
+      }
     }
   }
 
-  def AdminJsonAction(action: AuthenticatedRequest => PlainResult): Action[AnyContent] =
-    AdminAction(true, action)
+  def AdminJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
+    AdminAction(true, action)(request) match {
+      case r: PlainResult => r.as(ContentTypes.JSON)
+      case any => any
+    }
+  }
 
-  def AdminHtmlAction(action: AuthenticatedRequest => PlainResult): Action[AnyContent] =
+  def AdminHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
     AdminAction(false, action)
 
-  private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest => PlainResult): Action[AnyContent] = {
+  private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest => Result): Action[AnyContent] = {
     AuthenticatedAction(isApi, { implicit request =>
       val isAdmin = CX.withConnection { implicit conn =>
         UserExperiment.getExperiment(request.userId, UserExperiment.ExperimentTypes.ADMIN).isDefined

@@ -28,9 +28,11 @@ object UserExperiment {
   object ExperimentTypes {
     val ADMIN = State[ExperimentType]("admin")
     val FAKE = State[ExperimentType]("fake")
+    val BLOCK = State[ExperimentType]("block")
 
-    def apply(str: String) = str.toLowerCase.trim match {
+    def apply(str: String): State[ExperimentType] = str.toLowerCase.trim match {
       case ADMIN.value => ADMIN
+      case BLOCK.value => BLOCK
       case FAKE.value => FAKE
     }
   }
