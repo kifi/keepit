@@ -84,8 +84,8 @@ class NormalizedURITest extends SpecificationWithJUnit {
         }
       }
     }
-  }  
-  
+  }
+
   "NormalizedURIs search by url" should {
     "search gets nothing" in {
       running(new EmptyApplication()) {
@@ -102,7 +102,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
           val all = NormalizedURI.all
           all.size === 2
           println(all.mkString("\n"))
-          NormalizedURI.getByNormalizedUrl("http://www.keepit.com/short").get.url === "http://www.keepit.com/short" 
+          NormalizedURI.getByNormalizedUrl("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
         }
       }
     }
@@ -110,12 +110,12 @@ class NormalizedURITest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         setup()
         CX.withConnection { implicit c =>
-          NormalizedURI.getByNormalizedUrl("http://www.keepit.com/long").get.url === "http://www.keepit.com/long" 
+          NormalizedURI.getByNormalizedUrl("http://www.keepit.com/long").get.url === "http://www.keepit.com/long"
         }
       }
     }
-  }  
-  
+  }
+
   "NormalizedURIs get created url" should {
     "search gets nothing" in {
       running(new EmptyApplication()) {
@@ -146,18 +146,18 @@ class NormalizedURITest extends SpecificationWithJUnit {
         }
       }
     }
-  }  
-  
+  }
+
   def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURI.States.ACTIVE)(implicit conn: Connection) = {
     val uri = NormalizedURI(title = title, url = url, state = state)
     try {
       uri.save
     } catch {
-      case e => 
+      case e =>
         println("fail to persist uri %s. Existing URIs in the db are: %s".
             format(uri, NormalizedURI.all.map(_.toString).mkString("\n")))
         throw e
     }
   }
-  
+
 }

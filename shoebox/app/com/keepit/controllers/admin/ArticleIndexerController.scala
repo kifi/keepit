@@ -17,7 +17,7 @@ import com.keepit.common.controller.FortyTwoController
 
 object ArticleIndexerController extends FortyTwoController {
 
-  def index = AdminHtmlAction { implicit request => 
+  def index = AdminHtmlAction { implicit request =>
     val indexer = inject[ArticleIndexerPlugin]
     val cnt = indexer.index()
     Ok("indexed %d articles".format(cnt))
@@ -34,12 +34,12 @@ object ArticleIndexerController extends FortyTwoController {
     }
   }
 
-  def indexInfo = AdminHtmlAction { implicit request => 
+  def indexInfo = AdminHtmlAction { implicit request =>
     val indexer = inject[ArticleIndexer]
     Ok(views.html.indexer(indexer))
   }
-  
-  def refreshSearcher = AdminHtmlAction { implicit request => 
+
+  def refreshSearcher = AdminHtmlAction { implicit request =>
     val indexer = inject[ArticleIndexer]
     indexer.refreshSearcher
     Ok("searcher refreshed")

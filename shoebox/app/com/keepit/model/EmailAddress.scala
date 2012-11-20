@@ -29,17 +29,17 @@ object EmailAddress {
     val VERIFIED = State[EmailAddress]("verified")
     val UNVERIFIED = State[EmailAddress]("unverified")
   }
-  
+
   def apply(addr: String, userId: Id[User]): EmailAddress = EmailAddress(address = addr, userId = userId)
-  
+
   def get(id: Id[EmailAddress])(implicit conn: Connection): EmailAddress = EmailAddressEntity.get(id).get.view
-  
-  def getByAddressOpt(address: String)(implicit conn: Connection): Option[EmailAddress] = 
+
+  def getByAddressOpt(address: String)(implicit conn: Connection): Option[EmailAddress] =
     (EmailAddressEntity AS "e").map { e => SELECT (e.*) FROM e WHERE (e.address EQ address)}.unique.map(_.view)
 
-  def getByUser(userId: Id[User])(implicit conn: Connection): Seq[EmailAddress] = 
+  def getByUser(userId: Id[User])(implicit conn: Connection): Seq[EmailAddress] =
     (EmailAddressEntity AS "e").map { e => SELECT (e.*) FROM e WHERE (e.userId EQ userId)}.list.map(_.view)
-    
+
 }
 
 private[model] class EmailAddressEntity extends Entity[EmailAddress, EmailAddressEntity] {
@@ -50,9 +50,9 @@ private[model] class EmailAddressEntity extends Entity[EmailAddress, EmailAddres
   val state = "state".STATE.NOT_NULL(EmailAddress.States.UNVERIFIED)
   val verifiedAt = "verified_at".JODA_TIMESTAMP
   val lastVerificationSent = "last_verification_sent".JODA_TIMESTAMP
-  
+
   def relation = EmailAddressEntity
-  
+
   def view = EmailAddress(
     id = id.value,
     createdAt = createdAt(),
@@ -66,7 +66,7 @@ private[model] class EmailAddressEntity extends Entity[EmailAddress, EmailAddres
 
 private[model] object EmailAddressEntity extends EmailAddressEntity with EntityTable[EmailAddress, EmailAddressEntity] {
   override def relationName = "email_address"
-  
+
   def apply(view: EmailAddress): EmailAddressEntity = {
     val entity = new EmailAddressEntity
     entity.id.set(view.id)

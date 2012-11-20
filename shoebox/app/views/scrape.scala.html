@@ -25,11 +25,11 @@
        <td>@uri.createdAt</td>
        <td>@uri.state.value</td>
         <td>@{articleOpt match {
-          case Some(article) => { 
+          case Some(article) => {
             scrapedArticle(uri)
           }
-          case None => { 
-            unscrapedArticle()                
+          case None => {
+            unscrapedArticle()
           }
         }}
         </td>

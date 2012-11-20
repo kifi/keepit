@@ -13,11 +13,11 @@ class AppScope extends Scope with Logging {
 
   private var started = false
   private var stopped = false
-  
+
   private var app: Application = _
   private var plugins: List[Plugin] = Nil
   private var instances: Map[Key[_], Any] = Map.empty
-  
+
   def onStart(app: Application): Unit = synchronized {
     println("scope starting...")
     require(!started, "AppScope has already been started")

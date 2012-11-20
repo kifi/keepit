@@ -27,32 +27,32 @@ import akka.dispatch.Future
 import com.google.inject.Inject
 import com.google.inject.Provider
 
-case class HealthcheckError(error: Option[Throwable] = None, method: Option[String] = None, 
+case class HealthcheckError(error: Option[Throwable] = None, method: Option[String] = None,
     path: Option[String] = None, callType: CallType, errorMessage: Option[String] = None,
     id: ExternalId[HealthcheckError] = ExternalId(), createdAt: DateTime = currentDateTime) {
   def toHtml: String = {
     val message = new StringBuilder("%s: [%s] Error during call of type %s".format(createdAt, id, callType))
     method.map { m =>
-      message ++= "<br/>http method [%s]".format(m) 
-    } 
+      message ++= "<br/>http method [%s]".format(m)
+    }
     path.map { p =>
-      message ++= "<br/>path [%s]v".format(p) 
-    } 
+      message ++= "<br/>path [%s]v".format(p)
+    }
     errorMessage.map { em =>
-      message ++= "<br/>error message: %s".format(em.replaceAll("\n", "\n<br/>")) 
-    } 
+      message ++= "<br/>error message: %s".format(em.replaceAll("\n", "\n<br/>"))
+    }
     error.map { e =>
-      message ++= "<br/>Exception %s stack trace: \n<br/>".format(e.toString()) 
-      message ++= (e.getStackTrace() mkString "\n<br/>") 
-    } 
+      message ++= "<br/>Exception %s stack trace: \n<br/>".format(e.toString())
+      message ++= (e.getStackTrace() mkString "\n<br/>")
+    }
     message.toString()
   }
-} 
+}
 
 object Healthcheck {
 
   sealed trait CallType
-  
+
   case object API extends CallType
   case object EMAIL extends CallType
   case object FACEBOOK extends CallType
@@ -64,12 +64,12 @@ case object ErrorCountSinceLastCheck
 case object Heartbeat
 
 private[healthcheck] class HealthcheckActor(postOffice: PostOffice) extends Actor with Logging {
-  
+
   private var errors: List[HealthcheckError] = Nil
   private var errorCount = 0
   private var lastError: Option[DateTime] = None
   private val startupTime = currentDateTime
-  
+
   def receive() = {
     case ReportErrorsAction =>
       if (errors.nonEmpty) {
@@ -81,7 +81,7 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice) extends Acto
       }
     case Heartbeat =>
       val now = currentDateTime
-      val partOfDay = if (now.getHourOfDay() < 12) "morning" else "afternoon" 
+      val partOfDay = if (now.getHourOfDay() < 12) "morning" else "afternoon"
       val message = Html("Good %s!<br/>Time is %s, service %s version %s compiled at %s started on %s is happily running. Last error time was %s".
           format(partOfDay, now, FortyTwoServices.currentService, FortyTwoServices.currentVersion, FortyTwoServices.compilationTime, startupTime, lastError.map(_.format).getOrElse("Never!")))
       val subject = "Heartbeat message from %s version %s".format(FortyTwoServices.currentService, FortyTwoServices.currentVersion)
@@ -90,7 +90,7 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice) extends Acto
       val errorCountSinceLastCheck = errorCount
       errorCount = 0
       sender ! errorCountSinceLastCheck
-    case error: HealthcheckError => 
+    case error: HealthcheckError =>
       errors = error :: errors
       errorCount = errorCount + 1
       lastError = Some(currentDateTime)
@@ -100,17 +100,17 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice) extends Acto
 
 trait Healthcheck extends Plugin {
   def errorCountFuture(): Future[Int]
-  def addError(error: HealthcheckError): HealthcheckError 
+  def addError(error: HealthcheckError): HealthcheckError
   def reportStart(): ElectronicMail
   def reportStop(): ElectronicMail
 }
 
 class HealthcheckImpl(system: ActorSystem, host: String, postOffice: PostOffice) extends Healthcheck {
-  
+
   implicit val actorTimeout = Timeout(5 seconds)
-  
+
   private val actor = system.actorOf(Props { new HealthcheckActor(postOffice) })
-  
+
   // plugin lifecycle methods
   private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
@@ -123,9 +123,9 @@ class HealthcheckImpl(system: ActorSystem, host: String, postOffice: PostOffice)
   override def onStop(): Unit = {
     _cancellables.map(_.cancel)
   }
-  
+
   def errorCountFuture(): Future[Int] = (actor ? ErrorCountSinceLastCheck).mapTo[Int]
-  
+
   def addError(error: HealthcheckError): HealthcheckError = {
     actor ! error
     error
@@ -136,7 +136,7 @@ class HealthcheckImpl(system: ActorSystem, host: String, postOffice: PostOffice)
     var message = Html("Started at %s on %s. Service compiled at %s".format(currentDateTime, host, FortyTwoServices.compilationTime))
     postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = message.body))
   }
-  
+
   override def reportStop() = {
     var subject = "Service %s [%s] stopped".format(FortyTwoServices.currentService, FortyTwoServices.currentVersion)
     var message = Html("Stopped at %s on %s. Service compiled at %s".format(currentDateTime, host, FortyTwoServices.compilationTime))

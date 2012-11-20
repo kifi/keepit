@@ -36,25 +36,25 @@ import com.keepit.common.logging.Logging
 class SocialUserImportFriends() extends Logging {
 
   def importFriends(parentJsons: Seq[JsValue]): Seq[SocialUserRawInfo] = parentJsons map importFriendsFromJson flatten
-  
+
   private def importFriendsFromJson(parentJson: JsValue): Seq[SocialUserRawInfo] = {
     val socialUserInfos = CX.withConnection { implicit conn =>
       extractFriends(parentJson) filter infoNotInDb map createSocialUserInfo map {t => (t._1.save, t._2)}
     }
-    
+
     val socialUserRawInfos = socialUserInfos map { case (info, friend) => createSocialUserRawInfo(info, friend) }
-    
+
     val store = inject[SocialUserRawInfoStore]
     socialUserRawInfos map { info =>
       log.info("Adding user %s (%s) to S3".format(info.fullName, info.socialUserInfoId.get))
       store += (info.socialUserInfoId.get -> info)
     }
-    
+
     log.info("Imported %s friends".format(socialUserRawInfos.size))
-    
+
     socialUserRawInfos
   }
-  
+
   private[social] def infoNotInDb(friend: JsValue)(implicit conn: Connection): Boolean = {
     val socialId = try {
       SocialId((friend \ "id").as[String])
@@ -63,14 +63,14 @@ class SocialUserImportFriends() extends Logging {
         log.error("Can't parse username from friend json %s".format(friend))
         throw e
     }
-    SocialUserInfo.getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here    
+    SocialUserInfo.getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here
   }
-  
+
   private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
-  
-  private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) = (SocialUserInfo(fullName = (friend \ "name").as[String], socialId = SocialId((friend \ "id").as[String]), 
+
+  private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) = (SocialUserInfo(fullName = (friend \ "name").as[String], socialId = SocialId((friend \ "id").as[String]),
                                                 networkType = SocialNetworks.FACEBOOK, state = SocialUserInfo.States.FETCHED_USING_FRIEND), friend)
-                                                
+
   private def createSocialUserRawInfo(socialUserInfo: SocialUserInfo, friend: JsValue) = SocialUserRawInfo(socialUserInfo = socialUserInfo, json = friend)
 
 }

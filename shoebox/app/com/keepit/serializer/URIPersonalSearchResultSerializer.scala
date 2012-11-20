@@ -24,8 +24,8 @@ class URIPersonalSearchResultSerializer extends Writes[PersonalSearchResult] wit
         throw e
     }
 
-  def writes (ress: Seq[PersonalSearchResult]): JsValue = 
-    JsArray(ress map { res => 
+  def writes (ress: Seq[PersonalSearchResult]): JsValue =
+    JsArray(ress map { res =>
       URIPersonalSearchResultSerializer.resSerializer.writes(res)
     })
 }

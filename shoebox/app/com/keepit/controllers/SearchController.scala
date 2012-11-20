@@ -52,10 +52,10 @@ case class PersonalSearchResultPacket(
   context: String)
 
 object SearchController extends FortyTwoController {
- 
+
   // Remove after a few days from Nov 6 (and from routes)
   def search2(escapedTerm: String, externalId: ExternalId[User], maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = search(escapedTerm, externalId, maxHits, lastUUIDStr, context)
-  
+
   def search(escapedTerm: String, externalId: ExternalId[User], maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = Action { request =>
     val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
     val lastUUID = lastUUIDStr.flatMap{
@@ -69,10 +69,10 @@ object SearchController extends FortyTwoController {
           throw new Exception("externalId %s not found for term %s".format(externalId, term))).id.get
       (userId, SocialConnection.getFortyTwoUserConnections(userId))
     }
-    
+
     val filterOut = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-    val config = SearchConfig.getDefaultConfig 
-    
+    val config = SearchConfig.getDefaultConfig
+
     val articleIndexer = inject[ArticleIndexer]
     val uriGraph = inject[URIGraph]
     val searcher = new MainSearcher(userId, friendIds, filterOut, articleIndexer, uriGraph, config)
@@ -81,37 +81,37 @@ object SearchController extends FortyTwoController {
     reportArticleSearchResult(searchRes)
     Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
-  
-  private def reportArticleSearchResult(res: ArticleSearchResult) = dispatch ({ 
+
+  private def reportArticleSearchResult(res: ArticleSearchResult) = dispatch ({
         CX.withConnection { implicit c =>
           ArticleSearchResultRef(res).save
         }
         inject[ArticleSearchResultStore] += (res.uuid -> res)
       }, { e =>
-         log.error("Could not persist article search result %s".format(res), e) 
+         log.error("Could not persist article search result %s".format(res), e)
       })
-  
+
   private[controllers] def toPersonalSearchResultPacket(res: ArticleSearchResult) = {
     val hits = CX.withConnection { implicit conn =>
       res.hits map toPersonalSearchResult
     }
     log.info(hits mkString "\n")
-    
+
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, filter)
   }
   private[controllers] def toPersonalSearchResult(res: ArticleHit)(implicit conn: Connection): PersonalSearchResult = {
     val uri = NormalizedURI.get(res.uriId)
     val users = res.users.toSeq.map{ userId =>
-      val user = User.get(userId) 
+      val user = User.get(userId)
       val info = SocialUserInfo.getByUser(user.id.get).head
       UserWithSocial(user, info, Bookmark.count(user), Seq(), Seq())
     }
     PersonalSearchResult(uri, res.bookmarkCount, res.isMyBookmark, false, users, res.score)
   }
-  
+
   case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
-  
+
   def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = AdminHtmlAction { implicit request =>
     val ref = CX.withConnection { implicit conn =>
       ArticleSearchResultRef.getOpt(id).get
@@ -130,5 +130,5 @@ object SearchController extends FortyTwoController {
     }
     Ok(views.html.articleSearchResult(result, metas))
   }
-  
+
 }

@@ -21,7 +21,7 @@ class HttpClientTest extends Specification {
         val client = inject[HttpClient]
         client !== null
         client.longTimeout() !== null
-      } 
+      }
     }
   }
 }

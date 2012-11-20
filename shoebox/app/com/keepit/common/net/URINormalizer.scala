@@ -3,9 +3,9 @@ package com.keepit.common.net
 import com.keepit.common.logging.Logging
 
 object URINormalizer extends Logging {
-  
+
   val normalizers = Seq(GoogleNormalizer, RemoveWWWNormalizer, DefaultNormalizer)
-  
+
   def normalize(uriString: String) = {
     URI.parse(uriString) match {
       case Some(uri) =>
@@ -17,16 +17,16 @@ object URINormalizer extends Logging {
         uriString // parsing/normalization failed
     }
   }
-  
+
   trait Normalizer extends PartialFunction[URI, String]
-  
+
   object DefaultNormalizer extends Normalizer {
-    
+
     val stopParams = Set(
       "jsessionid", "phpsessid", "aspsessionid",
       "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
       "zenid")
-    
+
     def isDefinedAt(uri: URI) = true // default normalizer should always be applicable
     def apply(uri: URI) = {
       uri match {
@@ -40,7 +40,7 @@ object URINormalizer extends Logging {
       }
     }
   }
-  
+
   object GoogleNormalizer extends Normalizer {
     def isDefinedAt(uri: URI) = {
       uri.host match {
@@ -55,7 +55,7 @@ object URINormalizer extends Logging {
     }
     def apply(uri: URI) = uri.raw.get // expects the raw uri string is always there
   }
-  
+
   object YoutubeNormalizer extends Normalizer {
     def isDefinedAt(uri: URI) = {
       uri match {
@@ -73,7 +73,7 @@ object URINormalizer extends Logging {
       }
     }
   }
-  
+
   object RemoveWWWNormalizer extends Normalizer {
     def isDefinedAt(uri: URI) = {
       uri.host match {

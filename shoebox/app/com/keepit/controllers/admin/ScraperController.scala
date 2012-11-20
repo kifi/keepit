@@ -23,12 +23,12 @@ import com.keepit.common.controller.FortyTwoController
 
 object ScraperController extends FortyTwoController {
 
-  def scrape = AdminHtmlAction { implicit request => 
+  def scrape = AdminHtmlAction { implicit request =>
     val scraper = inject[ScraperPlugin]
     val articles = scraper.scrape()
     Ok(views.html.scrape(articles))
   }
-  
+
   def scrapeByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
     transitionByAdmin(state -> Set(ACTIVE)) { newState =>
       CX.withConnection { implicit c =>
@@ -40,7 +40,7 @@ object ScraperController extends FortyTwoController {
     }
   }
 
-  def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction { implicit request => 
+  def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction { implicit request =>
     val store = inject[ArticleStore]
     val article = store.get(id).get
     val uri = CX.withConnection { implicit c =>

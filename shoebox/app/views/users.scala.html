@@ -27,11 +27,11 @@
   </table>
 
   <h3>
-    User's emails
+    User's email
   </h3>
   <a href='mailto:@{userStatisticsList.map(_.userWithSocial.emails.map(_.address)).flatten.mkString(",")}'>All Mails</a>
   <ol>
-    @for(emailString <- userStatisticsList.map(_.userWithSocial.emails.map(_.address)).flatten.toSeq) { 
+    @for(emailString <- userStatisticsList.map(_.userWithSocial.emails.map(_.address)).flatten.toSeq) {
       <li><a href='mailto:@emailString'>@emailString</a></li>
     }
   </ol>

@@ -6,7 +6,7 @@ import play.api.http.ContentTypes
 
 
 object CommonActions {
-  
+
   /**
    * Apply a function that expects a synchronous PlainResult to any Result, synchronous or asynchronous.
    */
@@ -16,7 +16,7 @@ object CommonActions {
       case result: PlainResult => f(result)
     }
   }
-  
+
   /**
    * An action that requires valid machine and user cookies
    */
@@ -25,7 +25,7 @@ object CommonActions {
       mapResult(block(request)) { _.as(ContentTypes.JSON) }
     }
   }
-  
+
   def JsOK() = Results.Ok(JsString("ok")).as(ContentTypes.JSON)
-  
+
 }

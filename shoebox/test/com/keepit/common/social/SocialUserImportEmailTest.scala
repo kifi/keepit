@@ -35,11 +35,11 @@ class SocialUserImportEmailTest extends SpecificationWithJUnit {
             ("facebook_graph_andrew.json", "fb@andrewconner.org")
         )
         graphs map { case (filename, email) => testSocialUserImportEmail(filename, email) }
-        
+
       }
     }
   }
-  
+
   def testSocialUserImportEmail(jsonFilename: String, emailString: String) = {
     val user = CX.withConnection { implicit c =>
       User(firstName = "Eishay", lastName = "Smith").save
@@ -51,7 +51,7 @@ class SocialUserImportEmailTest extends SpecificationWithJUnit {
     CX.withConnection { implicit c =>
       EmailAddress.get(email.id.get) === email
     }
-    
+
   }
-  
+
 }
