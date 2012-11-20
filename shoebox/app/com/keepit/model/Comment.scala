@@ -29,11 +29,12 @@ case class Comment(
   normalizedURI: Id[NormalizedURI],
   userId: Id[User],
   text: String,
+  parent: Option[Id[Comment]] = None,
   permissions: State[Comment.Permission] = Comment.Permissions.PUBLIC,
   state: State[Comment] = Comment.States.ACTIVE
 ) {
   def withState(state: State[Comment]) = copy(state = state)
-  
+
   def save(implicit conn: Connection): Comment = {
     val entity = CommentEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
@@ -43,38 +44,38 @@ case class Comment(
 }
 
 object Comment {
- 
+
 
   def all(implicit conn: Connection): Seq[Comment] =
     CommentEntity.all.map(_.view)
-  
+
   def get(id: Id[Comment])(implicit conn: Connection): Comment =
     getOpt(id).getOrElse(throw NotFoundException(id))
-    
+
   def getOpt(id: Id[Comment])(implicit conn: Connection): Option[Comment] =
     CommentEntity.get(id).map(_.view)
-    
+
   def get(externalId: ExternalId[Comment])(implicit conn: Connection): Comment =
     getOpt(externalId).getOrElse(throw NotFoundException(externalId))
-  
+
   def getOpt(externalId: ExternalId[Comment])(implicit conn: Connection): Option[Comment] =
     (CommentEntity AS "c").map { c => SELECT (c.*) FROM c WHERE (c.externalId EQ externalId) unique }.map(_.view)
 
-  def getByUser(userId: Id[User])(implicit conn: Connection): Seq[Comment] = 
-    (CommentEntity AS "c").map { c => 
+  def getByUser(userId: Id[User])(implicit conn: Connection): Seq[Comment] =
+    (CommentEntity AS "c").map { c =>
       SELECT (c.*) FROM c WHERE (
-        (c.userId EQ userId) AND 
-        (c.permissions EQ Comment.Permissions.PUBLIC) AND 
+        (c.userId EQ userId) AND
+        (c.permissions EQ Comment.Permissions.PUBLIC) AND
         (c.state EQ States.ACTIVE)
       ) list
     }.map(_.view)
 
   def getRecipients(commentId: Id[Comment])(implicit conn: Connection) = CommentRecipient.getByComment(commentId)
-  
+
   def getPublicByNormalizedUri(normalizedURI: Id[NormalizedURI])(implicit conn: Connection): Seq[Comment] =
     (CommentEntity AS "c").map { c =>
       SELECT (c.*) FROM c WHERE (
-        (c.normalizedURI EQ normalizedURI) AND 
+        (c.normalizedURI EQ normalizedURI) AND
         (c.permissions EQ Comment.Permissions.PUBLIC) AND
         (c.state EQ States.ACTIVE)
       ) list
@@ -83,26 +84,34 @@ object Comment {
   def getPrivateByNormalizedUri(normalizedURI: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] =
     (CommentEntity AS "c").map { c =>
       SELECT (c.*) FROM c WHERE (
-        (c.normalizedURI EQ normalizedURI) AND 
-        (c.permissions EQ Comment.Permissions.PRIVATE) AND 
+        (c.normalizedURI EQ normalizedURI) AND
+        (c.permissions EQ Comment.Permissions.PRIVATE) AND
         (c.userId EQ userId)
       ) list
     }.map(_.view)
-    
-  def getConversationsByNormalizedUri(normalizedURI: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] = {
+
+  def getMessagesByNormalizedUri(normalizedURI: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] = {
       val c = CommentEntity AS "c"
       val cr = CommentRecipientEntity AS "cr"
+
+      // Get all messages by the user, and where the user is listed as a recipient (side effect: User cannot be removed from own messages)
       ((SELECT (c.*) FROM ((cr JOIN c).ON("c.id = cr.comment_id")) WHERE (
-        (c.normalizedURI EQ normalizedURI) AND 
+        (c.normalizedURI EQ normalizedURI) AND
         (cr.userId EQ userId) AND
-        (c.permissions EQ Comment.Permissions.CONVERSATION))
+        (c.permissions EQ Comment.Permissions.MESSAGE))
         UNION
        (SELECT (c.*) FROM c WHERE (
-        (c.normalizedURI EQ normalizedURI) AND 
+        (c.normalizedURI EQ normalizedURI) AND
         (c.userId EQ userId) AND
-        (c.permissions EQ Comment.Permissions.CONVERSATION))
+        (c.permissions EQ Comment.Permissions.MESSAGE))
        )
       ) list) map (_.view) distinct
+  }
+
+  def getChildren(commentId: Id[Comment])(implicit conn: Connection): Seq[Comment] = {
+    (CommentEntity AS "c").map { c =>
+      SELECT (c.*) FROM c WHERE (c.parent EQ commentId) list
+    }.map(_.view)
   }
 
   object States {
@@ -114,10 +123,10 @@ object Comment {
 
   object Permissions {
     val PRIVATE = State[Permission]("private")
-    val CONVERSATION = State[Permission]("conversation")
+    val MESSAGE = State[Permission]("message")
     val PUBLIC = State[Permission]("public")
   }
-} 
+}
 
 private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
@@ -126,11 +135,12 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
   val normalizedURI = "normalized_uri_id".ID[NormalizedURI].NOT_NULL
   val userId = "user_id".ID[User]
   val text = "text".CLOB.NOT_NULL
+  val parent = "parent".ID[Comment]
   val permissions = "permissions".STATE[Comment.Permission].NOT_NULL(Comment.Permissions.PUBLIC)
   val state = "state".STATE[Comment].NOT_NULL(Comment.States.ACTIVE)
-  
+
   def relation = CommentEntity
-  
+
   def view(implicit conn: Connection): Comment = Comment(
     id = id.value,
     createdAt = createdAt(),
@@ -139,6 +149,7 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
     normalizedURI = normalizedURI(),
     userId = userId(),
     text = text(),
+    parent = parent.value,
     permissions = permissions(),
     state = state()
   )
@@ -146,7 +157,7 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
 
 private[model] object CommentEntity extends CommentEntity with EntityTable[Comment, CommentEntity] {
   override def relationName = "comment"
-  
+
   def apply(view: Comment): CommentEntity = {
     val comment = new CommentEntity
     comment.id.set(view.id)
@@ -156,6 +167,7 @@ private[model] object CommentEntity extends CommentEntity with EntityTable[Comme
     comment.normalizedURI := view.normalizedURI
     comment.userId := view.userId
     comment.text := view.text
+    comment.parent.set(view.parent)
     comment.permissions := view.permissions
     comment.state := view.state
     comment
