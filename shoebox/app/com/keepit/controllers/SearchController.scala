@@ -53,6 +53,8 @@ case class PersonalSearchResultPacket(
 
 object SearchController extends FortyTwoController {
 
+  def search2(escapedTerm: String, externalId: ExternalId[User], maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = search(escapedTerm, externalId, maxHits, lastUUIDStr, context)
+
   def search(escapedTerm: String, externalId: ExternalId[User], maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = AuthenticatedJsonAction { request =>
     val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
     val lastUUID = lastUUIDStr.flatMap{
