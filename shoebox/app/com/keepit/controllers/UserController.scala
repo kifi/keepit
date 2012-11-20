@@ -36,6 +36,7 @@ import com.keepit.search.graph.URIGraph
 import views.html.defaultpages.unauthorized
 import org.joda.time.LocalDate
 import scala.collection.immutable.Map
+import com.keepit.serializer.SocialUserSerializer
 
 case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConnectionCount: Long)
 
@@ -71,7 +72,15 @@ object UserController extends FortyTwoController {
 
     Ok(userWithSocialSerializer.writes(socialUsers)).as(ContentTypes.JSON)
   }
+  
+  def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
+    val socialConnections = CX.withConnection { implicit c =>
+      SocialConnection.getFortyTwoUserConnections(authRequest.userId).map(uid => User.get(uid)).map(UserWithSocial.toUserWithSocial).toSeq
+    }
 
+    Ok(JsArray(socialConnections.map(sc => UserWithSocialSerializer.userWithSocialSerializer.writes(sc))))
+  }
+  
   /**
    * Call me using:
    * $ curl localhost:9000/admin/user/get/all | python -mjson.tool
