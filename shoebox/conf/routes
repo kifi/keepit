@@ -19,7 +19,6 @@ GET     /comments/all               com.keepit.controllers.CommentController.get
 
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String, externalId: ExternalId[User])
 
-GET     /search2                    com.keepit.controllers.SearchController.search2(term: String, externalId: ExternalId[User], maxHits:Int, lastUUID: Option[String], context: Option[String])
 GET     /search                     com.keepit.controllers.SearchController.search(term: String, externalId: ExternalId[User], maxHits:Int, lastUUID: Option[String], context: Option[String])
 
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
