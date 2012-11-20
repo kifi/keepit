@@ -72,7 +72,7 @@ object UserController extends FortyTwoController {
 
     Ok(userWithSocialSerializer.writes(socialUsers)).as(ContentTypes.JSON)
   }
-  
+
   def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
     val socialConnections = CX.withConnection { implicit c =>
       SocialConnection.getFortyTwoUserConnections(authRequest.userId).map(uid => User.get(uid)).map(UserWithSocial.toUserWithSocial).toSeq
@@ -113,6 +113,41 @@ object UserController extends FortyTwoController {
       User.all map userStatistics
     }
     Ok(views.html.users(users))
+  }
+
+  def updateUser(userId: Id[User]) = AdminHtmlAction { implicit request =>
+    val form = request.request.body.asFormUrlEncoded match {
+      case Some(req) => req.map(r => (r._1 -> r._2.head))
+      case None => throw new Exception("whoops")
+
+    }
+
+    // We want to throw an exception (.get) if `emails' was not passed in. As we expand this, we should add Play! form validation
+    val emailList = form.get("emails").get.split(",").map(_.toLowerCase().trim()).toList.distinct.map(em => em match {
+      case s if s.length > 5 => Some(s)
+      case _ => None
+    }).flatten
+
+    CX.withConnection { implicit conn =>
+      val oldEmails = EmailAddress.getByUser(userId).toSet
+      val newEmails = (emailList map { address =>
+        val email = EmailAddress.getByAddressOpt(address)
+        email match {
+          case Some(addr) => addr // We're good! It already exists
+          case None => // Create a new one
+            log.info("Adding email address %s to userId %s".format(address, userId.toString))
+            EmailAddress(address,userId).save
+        }
+      }).toSet
+
+      // Set state of removed email addresses to INACTIVE
+      (oldEmails -- newEmails) map { removedEmail =>
+        log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
+        removedEmail.withState(EmailAddress.States.INACTIVE).save
+      }
+    }
+
+    Redirect(com.keepit.controllers.routes.UserController.userView(userId))
   }
 
   def addExperiment(userId: Id[User], experimentType: String) = AdminJsonAction { request =>
