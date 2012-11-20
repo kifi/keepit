@@ -85,6 +85,7 @@
 			      <th>Active</th>
 			      <th>Bookmark</th>
 			      <th>Source</th>
+			      <th>Created At</th>
 			    </tr>
 			 @for((bookmark, i) <- bookmarks.zipWithIndex) {
 			   <tr>
@@ -100,6 +101,7 @@
 		        </td>
 		        <td>@adminHelper.bookmarkDisplay(bookmark)</td>
 		        <td>@bookmark.source</td>
+            <td>@adminHelper.dateDisplay(bookmark.createdAt) @adminHelper.timeDisplay(bookmark.createdAt)</td>
 			   </tr>
 			 }
 			</table>
