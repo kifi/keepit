@@ -11,6 +11,7 @@ class CommentWithSocialUserSerializer extends Writes[CommentWithSocialUser] {
 
   def writes(commentWithSocialUser: CommentWithSocialUser): JsValue =
     JsObject(List(
+      "externalId" -> JsString(commentWithSocialUser.comment.externalId.toString),
       "createdAt" -> JsString(commentWithSocialUser.comment.createdAt.toString),
       "text" -> JsString(commentWithSocialUser.comment.text),
       "user" -> UserWithSocialSerializer.userWithSocialSerializer.writes(commentWithSocialUser.user),

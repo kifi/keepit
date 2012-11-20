@@ -72,6 +72,14 @@ object UserController extends FortyTwoController {
 
     Ok(userWithSocialSerializer.writes(socialUsers)).as(ContentTypes.JSON)
   }
+  
+  def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
+    val socialConnections = CX.withConnection { implicit c =>
+      SocialConnection.getFortyTwoUserConnections(authRequest.userId).map(uid => User.get(uid)).map(UserWithSocial.toUserWithSocial).toSeq
+    }
+
+    Ok(JsArray(socialConnections.map(sc => UserWithSocialSerializer.userWithSocialSerializer.writes(sc))))
+  }
 
   def getUser(id: Id[User]) = AdminJsonAction { request =>
     val user = CX.withConnection { implicit c =>
