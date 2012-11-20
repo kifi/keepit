@@ -46,7 +46,7 @@ object UserController extends FortyTwoController {
    * Call me using:
    * curl localhost:9000/users/keepurl?url=http://www.ynet.co.il/;echo
    */
-  def usersKeptUrl(url: String, externalId: ExternalId[User]) = Action { request =>
+  def usersKeptUrl(url: String, externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
 
     val socialUsers = CX.withConnection { implicit c =>
       NormalizedURI.getByNormalizedUrl(url) match {
@@ -72,15 +72,7 @@ object UserController extends FortyTwoController {
 
     Ok(userWithSocialSerializer.writes(socialUsers)).as(ContentTypes.JSON)
   }
-  
-  def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
-    val socialConnections = CX.withConnection { implicit c =>
-      SocialConnection.getFortyTwoUserConnections(authRequest.userId).map(uid => User.get(uid)).map(UserWithSocial.toUserWithSocial).toSeq
-    }
 
-    Ok(JsArray(socialConnections.map(sc => UserWithSocialSerializer.userWithSocialSerializer.writes(sc))))
-  }
-  
   /**
    * Call me using:
    * $ curl localhost:9000/admin/user/get/all | python -mjson.tool
@@ -98,7 +90,7 @@ object UserController extends FortyTwoController {
     }))
   }
 
-  def getUser(id: Id[User]) = Action { request =>
+  def getUser(id: Id[User]) = AdminJsonAction { request =>
     val user = CX.withConnection { implicit c =>
       UserWithSocial.toUserWithSocial(User.get(id))
     }
