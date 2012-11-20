@@ -22,10 +22,10 @@ import com.keepit.common.social.SocialUserRawInfo
 
 
 case class FakeStoreModule() extends ScalaModule {
-  
-  override def configure(): Unit = { 
+
+  override def configure(): Unit = {
     bind[ArticleStore].toInstance(new HashMap[Id[NormalizedURI], Article] with ArticleStore)
     bind[SocialUserRawInfoStore].toInstance(new HashMap[Id[SocialUserInfo], SocialUserRawInfo] with SocialUserRawInfoStore)
   }
-  
-} 
+
+}
