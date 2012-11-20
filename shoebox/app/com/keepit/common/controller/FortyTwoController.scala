@@ -31,17 +31,21 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
 
   private val FORTYTWO_USER_ID = "fortytwo_user_id"
 
-  case class AuthenticatedRequest(socialUser: SocialUser, userId: Id[User], request: Request[AnyContent], experimants: Seq[State[UserExperiment.ExperimentType]])
+  case class AuthenticatedRequest[A](socialUser: SocialUser, userId: Id[User], request: Request[A], experimants: Seq[State[UserExperiment.ExperimentType]])
     extends WrappedRequest(request)
 
-  def AuthenticatedJsonAction(action: AuthenticatedRequest => PlainResult): Action[AnyContent] =
-    AuthenticatedAction(true, action)
+  def AuthenticatedJsonAction(action: AuthenticatedRequest[JsValue] => Result): Action[JsValue] = Action(parse.json) {implicit request =>
+    AuthenticatedAction[JsValue](true, action, parse.json)(request) match {
+      case p: PlainResult => p.as(ContentTypes.JSON)
+      case any => any
+    }
+  }
 
-  def AuthenticatedHtmlAction(action: AuthenticatedRequest => PlainResult): Action[AnyContent] =
-    AuthenticatedAction(false, action)
+  def AuthenticatedHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
+    AuthenticatedAction(false, action, parse.anyContent)
 
-  private[controller] def AuthenticatedAction(isApi: Boolean, action: AuthenticatedRequest => PlainResult): Action[AnyContent] = {
-    SecuredAction(isApi, parse.anyContent) { implicit request =>
+  private[controller] def AuthenticatedAction[A](isApi: Boolean, action: AuthenticatedRequest[A] => Result, parser: BodyParser[A]) = {
+    SecuredAction(isApi, parser) { implicit request =>
       val userIdOpt = request.session.get(FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
       val (userId, experiments, newSession) = CX.withConnection { implicit conn =>
         val (userId, newSession) = userIdOpt match {
@@ -60,18 +64,25 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
         log.warn(message)
         Forbidden(message)
       } else {
-        action(AuthenticatedRequest(request.user, userId, request.request, experiments)).withSession(newSession)
+        action(AuthenticatedRequest(request.user, userId, request.request, experiments)) match {
+          case r: PlainResult => r.withSession(newSession)
+          case any => any
+        }
       }
     }
   }
 
-  def AdminJsonAction(action: AuthenticatedRequest => PlainResult): Action[AnyContent] =
-    AdminAction(true, action)
+  def AdminJsonAction(action: AuthenticatedRequest[JsValue] => Result): Action[JsValue] = Action(parse.json) {implicit request =>
+    AdminAction[JsValue](true, action, parse.json)(request) match {
+      case p: PlainResult => p.as(ContentTypes.JSON)
+      case any => any
+    }
+  }
 
-  def AdminHtmlAction(action: AuthenticatedRequest => PlainResult): Action[AnyContent] =
-    AdminAction(false, action)
+  def AdminHtmlAction(action: AuthenticatedRequest[AnyContent] => PlainResult): Action[AnyContent] =
+    AdminAction(false, action, parse.anyContent)
 
-  private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest => PlainResult): Action[AnyContent] = {
+  private[controller] def AdminAction[A](isApi: Boolean, action: AuthenticatedRequest[A] => Result, parser: BodyParser[A]): Action[A] = {
     AuthenticatedAction(isApi, { implicit request =>
       val isAdmin = CX.withConnection { implicit conn =>
         UserExperiment.getExperiment(request.userId, UserExperiment.ExperimentTypes.ADMIN).isDefined
@@ -83,7 +94,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
         Unauthorized("""User %s does not have admin auth in %s mode, flushing session...
             If you think you should see this page, please contact FortyTwo Engineering.""".format(request.userId, current.mode)).withNewSession
       }
-    })
+    }, parser)
   }
 
 }
