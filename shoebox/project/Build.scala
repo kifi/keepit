@@ -53,7 +53,8 @@ object ApplicationBuild extends Build {
       "com.typesafe" %% "play-plugins-util" % "2.0.1",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "edu.uci.ics" % "crawler4j" % "3.4",
-      "com.amazonaws" % "aws-java-sdk" % "1.3.20"
+      "com.amazonaws" % "aws-java-sdk" % "1.3.20",
+      "javax.mail" % "mail" % "1.4.5"      
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
