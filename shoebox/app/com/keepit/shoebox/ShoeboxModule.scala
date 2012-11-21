@@ -117,9 +117,5 @@ case class ShoeboxModule() extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def mailSenderProvider(system: ActorSystem, healthcheck: Healthcheck, httpClient: HttpClient): MailSender = {
-    val url = "https://api.postmarkapp.com/email"
-    val postmarkToken = "61311d22-d1cc-400b-865e-ffb95027251f"
-    new MailSender(system, url, postmarkToken, healthcheck, httpClient)
-  }
+  def mailSenderProvider(system: ActorSystem): MailSender = new MailSender(system)
 }
