@@ -23,11 +23,13 @@ object URIGraph {
   val uriTerm = new Term("uri", "")
   val titleTerm = new Term("title", "")
 
-  def apply(indexDirectory: Directory): URIGraph = {
-    val analyzer = new DefaultAnalyzer
-    val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
+  val indexingAnalyzer = DefaultAnalyzer.forIndexing
+  val parsingAnalyzer = DefaultAnalyzer.forParsing
 
-    new URIGraphImpl(indexDirectory, config)
+  def apply(indexDirectory: Directory): URIGraph = {
+    val config = new IndexWriterConfig(Version.LUCENE_36, indexingAnalyzer)
+
+    new URIGraphImpl(indexDirectory, config, parsingAnalyzer)
   }
 }
 
@@ -39,7 +41,7 @@ trait URIGraph {
   def close(): Unit
 }
 
-class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig)
+class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, parsingAnalyzer: Analyzer)
   extends Indexer[User](indexDirectory, indexWriterConfig) with URIGraph {
 
   val commitBatchSize = 100
@@ -90,7 +92,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     }
   }
 
-  def getQueryParser = new URIGraphQueryParser(indexWriterConfig)
+  def getQueryParser = new URIGraphQueryParser
 
   def search(queryText: String): Seq[Hit] = {
     parseQuery(queryText) match {
@@ -153,7 +155,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     }
   }
 
-  class URIGraphQueryParser(indexWriterConfig: IndexWriterConfig) extends QueryParser(indexWriterConfig) {
+  class URIGraphQueryParser extends QueryParser(parsingAnalyzer) {
 
     super.setAutoGeneratePhraseQueries(true)
 

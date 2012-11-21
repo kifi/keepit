@@ -9,6 +9,7 @@ import com.keepit.model._
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.db.CX
 import play.api.Play.current
+import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriter
@@ -26,15 +27,18 @@ import scala.math._
 import com.keepit.search.query.ProximityQuery
 
 object ArticleIndexer {
+  val indexingAnalyzer = DefaultAnalyzer.forIndexing
+  val parsingAnalyzer = DefaultAnalyzer.forParsing
+
   def apply(indexDirectory: Directory, articleStore: ArticleStore): ArticleIndexer = {
-    val analyzer = new DefaultAnalyzer
+    val analyzer = indexingAnalyzer
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
 
-    new ArticleIndexer(indexDirectory, config, articleStore)
+    new ArticleIndexer(indexDirectory, config, articleStore, parsingAnalyzer)
   }
 }
 
-class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, articleStore: ArticleStore)
+class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, articleStore: ArticleStore, parsingAnalyzer: Analyzer)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
   val commitBatchSize = 100
@@ -102,7 +106,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
   }
 
-  class ArticleQueryParser extends QueryParser(indexWriterConfig) {
+  class ArticleQueryParser extends QueryParser(parsingAnalyzer) {
 
     super.setAutoGeneratePhraseQueries(true)
 

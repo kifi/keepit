@@ -29,8 +29,8 @@ import org.apache.lucene.search.WildcardQuery
 @RunWith(classOf[JUnitRunner])
 class LineQueryTest extends SpecificationWithJUnit {
 
-  val analyzer = new DefaultAnalyzer
-  val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
+  val indexingAnalyzer = DefaultAnalyzer.forIndexing
+  val config = new IndexWriterConfig(Version.LUCENE_36, indexingAnalyzer)
 
   val ramDir = new RAMDirectory
   implicit val indexReader = populateIndex
@@ -47,7 +47,7 @@ class LineQueryTest extends SpecificationWithJUnit {
         lines += line
       }
       val doc = new Document()
-      doc.add(lineFieldBuilder.buildLineField("B", lines, analyzer))
+      doc.add(lineFieldBuilder.buildLineField("B", lines, indexingAnalyzer))
       writer.addDocument(doc)
     }
     writer.commit()
