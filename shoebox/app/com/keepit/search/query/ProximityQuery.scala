@@ -57,9 +57,9 @@ object ProximityQuery extends Logging {
     }
   }
 
-  val scoreFactorHalfDecay = 5
+  val scoreFactorHalfDecay = 4
   val scoreFactorTable = {
-    val arr = new Array[Float](2000)
+    val arr = new Array[Float](500)
     for (i <- 1 until arr.length) {
       arr(i) = 1.0f/(1.0f + (i.toFloat/scoreFactorHalfDecay))
     }
@@ -237,7 +237,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Set[PositionAndWeight]) exte
           }
         }
       }
-      proximityScore = sqrt(sum.toDouble).toFloat
+      proximityScore = (sqrt(sum.toDouble + 1.0d) - 1.0d).toFloat
       scoredDoc = doc
     }
     proximityScore

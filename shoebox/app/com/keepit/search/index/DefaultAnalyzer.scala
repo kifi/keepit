@@ -59,20 +59,31 @@ class DotDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStream)
 
   private def findDotCompound(): Boolean = {
     tokenStart = 0
+    bufLen = 0
     val src = termAttr.buffer
     val len = termAttr.length
 
+    var dotCnt = 0
     var i = 0
-    while (i < len && src(i) != '.') i += 1
+    while (i < len) {
+      if (src(i) == '.') dotCnt += 1
+      i += 1
+    }
 
-    if (i < len && tokenType(typeAttr) == alphanum) {
-      if (buffer.length < src.length) buffer = new Array[Char](src.length) // resize buffer
-      Array.copy(src, 0, buffer, 0, len)
-      bufLen = len
-      true
+    if (dotCnt == 0 || dotCnt == len/2) {
+      false // regular word or acronym
     } else {
-      bufLen = 0
-      false
+      if (tokenType(typeAttr) == alphanum) {
+        i = 0
+        while (i < len && src(i) != '.') i += 1
+
+        if (buffer.length < src.length) buffer = new Array[Char](src.length) // resize buffer
+        Array.copy(src, 0, buffer, 0, len)
+        bufLen = len
+        true  // something like a file name
+      } else {
+        false // probably a number
+      }
     }
   }
 }

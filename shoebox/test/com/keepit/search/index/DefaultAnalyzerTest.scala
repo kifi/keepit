@@ -44,6 +44,13 @@ class DefaultAnalyzerTest extends SpecificationWithJUnit {
              Token("<ALPHANUM>", "name", 1))
     }
 
+    "preserve dots in acronyms" in { // lucene drops the last . in a token
+      toTokenList(analyzer.tokenStream("b", "u.s. u.s.a. i.b.m.")) ===
+        List(Token("<ALPHANUM>", "u.s", 1),
+             Token("<ALPHANUM>", "u.s.a", 1),
+             Token("<ALPHANUM>", "i.b.m", 1))
+    }
+
     "not tokenize a number" in {
       toTokenList(analyzer.tokenStream("b", "1.2")) === List(Token("<NUM>", "1.2", 1))
       toTokenList(analyzer.tokenStream("b", "1.2.3")) === List(Token("<NUM>", "1.2.3", 1))
