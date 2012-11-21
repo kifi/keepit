@@ -273,6 +273,7 @@
     "templates/comments/comments_list.html",
     "templates/comments/comments_view.html",
     "templates/comments/comments.css",
-    "templates/comments/reply.html"
+    "templates/comments/reply.html",
+    "templates/comments/comment.html"
   ] 
 }

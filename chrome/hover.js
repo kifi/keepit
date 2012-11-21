@@ -373,16 +373,18 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     loadFile("templates/comments/reply.html", function(reply) {
       loadFile("templates/comments/hearts.html", function(hearts) {
         loadFile("templates/comments/comments_list.html", function(comment_list) {
-          var partials = {
-            "comment_body_view": comment_list,
-            "hearts": hearts,
-            "reply": reply
-          };
+          loadFile("templates/comments/comment.html", function(comment) {
+            var partials = {
+              "comment_body_view": comment_list,
+              "hearts": hearts,
+              "reply": reply,
+              "comment": comment
+            };
 
-          renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
-            drawCommentView(renderedTemplate, user, type, partials);
-          }, partials);
-
+            renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
+              drawCommentView(renderedTemplate, user, type, partials);
+            }, partials);
+            });
         });
       });
     });
@@ -453,9 +455,20 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         $('.submit-comment').slideUp(100, function() {
           // Done cleaning up CSS. Redraw.
           //renderComments(user, comments, type);
-
-          renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
-            drawCommentView(renderedTemplate, user, type, partials);
+          var params = {
+            user: {
+              "firstName": user.name,
+              "lastName": "",
+              "avatar": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square",
+              "facebookId": user.facebook_id
+            },
+            formatComments: commentTextFormatter,
+            formatDate: commentDateFormatter,
+            text: newComment.text
+          }
+          renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
+            //drawCommentView(renderedTemplate, user, type, partials);
+            $('.comment_body_view').append(renderedComment);
           });
         });
       });
