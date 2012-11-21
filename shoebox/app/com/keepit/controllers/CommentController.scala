@@ -74,39 +74,54 @@ object CommentController extends FortyTwoController {
 
   }
 
-  def getComments(url: String,
-                  permission: String = "",
-                  parent: Option[ExternalId[Comment]] = None) = AuthenticatedJsonAction { request =>
+  def getComments(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
       val user = User.get(request.userId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
-          val comments = permission match {
-            case "private" => (Comment.Permissions.PRIVATE -> privateComments(user.id.get, normalizedURI)) :: Nil
-            case "public" =>  (Comment.Permissions.PUBLIC -> publicComments(normalizedURI)) :: Nil
-            case "message" => (Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI)) :: Nil
-            case _ => allComments(user.id.get, normalizedURI)
-          }
-
-          comments map { commentGroup =>
-            (commentGroup._1, commentGroup._2 map(CommentWithSocialUser(_)))
-          }
+          (Comment.Permissions.PUBLIC -> publicComments(normalizedURI).map(CommentWithSocialUser(_))) :: Nil
         case None =>
           List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
       }
     }
-
     Ok(commentWithSocialUserSerializer.writes(comments)).as(ContentTypes.JSON)
   }
 
+  def getMessages(url: String) = AuthenticatedJsonAction { request =>
+    val comments = CX.withConnection { implicit conn =>
+      val user = User.get(request.userId)
+      NormalizedURI.getByNormalizedUrl(url) match {
+        case Some(normalizedURI) =>
+          (Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(CommentWithSocialUser(_))) :: Nil
+        case None =>
+          List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
+      }
+    }
+    Ok(commentWithSocialUserSerializer.writes(comments)).as(ContentTypes.JSON)
+  }
+
+  // TODO: getNotes()
+
   def getReplies(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     val replies = CX.withConnection { implicit conn =>
-      Comment.getChildren(Comment.get(commentId).id.get) map { child => CommentWithSocialUser(child) }
+      val comment = Comment.get(commentId)
+      val user = User.get(request.userId)
+      if(hasPermission(user.id.get, comment.id.get))
+        Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }
+      else
+        Seq[CommentWithSocialUser]()
     }
     Ok(commentWithSocialUserSerializer.writes(replies)).as(ContentTypes.JSON)
   }
 
+  def hasPermission(userId: Id[User], commentId: Id[Comment])(implicit conn: Connection): Boolean = {
+    // TODO: write this
+    true
+  }
 
+
+  // Given a list of comma separated external user ids, side effects and creates all the necessary recipients
+  // For comments with a parent comment, adds recipients to parent comment instead.
   def createRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit conn: Connection) = {
     recipients.split(",").map(_.trim()) map { recipientId =>
       // Split incoming list of externalIds
