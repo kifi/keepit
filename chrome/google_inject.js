@@ -83,7 +83,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     inprogressSearchQuery = query;
     var t1 = new Date().getTime();
     chrome.extension.sendRequest(request, function(results) {
-      console.log(new Date().getTime() - t1);
+      log("query response after: " + (new Date().getTime() - t1));
       console.log("RESULTS FROM SERVER", results);
 
       inprogressSearchQuery = '';

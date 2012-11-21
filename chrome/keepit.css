@@ -224,6 +224,18 @@ li.keepit {
   width:100%;
 }
 
+#kifi_reslist a:link {
+  color: #12C;
+}
+
+#kifi_reslist a:visited {
+  color: #12C !important;
+}
+
+#kifi_reslist a:active {
+  color: #12C;
+}
+
 .kifi_resurl {
   white-space: nowrap;
   overflow-x: hidden;

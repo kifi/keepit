@@ -20,6 +20,7 @@ import ru.circumflex.orm.Predicate.toAggregateHelper
 import ru.circumflex.orm.RelationNode.toRelation
 import ru.circumflex.orm.SELECT
 import ru.circumflex.orm.str2expr
+import ru.circumflex.orm.COUNT
 
 case class Comment(
   id: Option[Id[Comment]] = None,
@@ -112,6 +113,20 @@ object Comment {
     (CommentEntity AS "c").map { c =>
       SELECT (c.*) FROM c WHERE (c.parent EQ commentId) list
     }.map(_.view)
+  }
+
+  def userHasPermission(userId: Id[User], commentId: Id[Comment])(implicit conn: Connection) = {
+    // TODO: write this
+    true
+  }
+
+  def getChildrenCount(commentId: Id[Comment])(implicit conn: Connection): Long = {
+    (CommentEntity AS "c").map { c =>
+      SELECT(COUNT(c.id)) FROM c WHERE (c.parent EQ commentId) unique
+    } match {
+      case Some(cnt) => cnt
+      case None => 0L
+    }
   }
 
   object States {

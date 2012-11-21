@@ -1,21 +1,75 @@
+<ul class="tabs">
+  <li><span data-target="public">Comments</span></li>
+  <li><span data-target="conversation">Messages</span></li>
+  <li><span data-target="private">Notes</span></li>
+</ul>
+
+{{#public}}
 <div id="comment_list">
-{{#comments}}
+  {{#comments}}
   <div class="kifi_comment">
     <div class="comment_user"><img src='https://graph.facebook.com/{{user.facebookId}}/picture?type=square'></a></div>
     <div class="comment_body"><b>{{user.firstName}} {{user.lastName}}</b> {{text}}</div>
   </div>
-{{/comments}}
-{{^comments}}
+  {{/comments}}
+  {{^comments}}
   <div class="kifi_comment">
-    <div class="comment_body">Be the first to leave a comment!</div>
+    Be the first to leave a comment!
   </div>
-{{/comments}}
+  {{/comments}}
 </div>
-
-<form id="comment_form">
+<form class="comment_form">
   <div class="commentbox">
-    <textarea id="comment_text" placeholder="Talk about it!"></textarea>
+    <textarea id="comment_text" placeholder="Talk about it!" class="mention"></textarea>
   </div>
-
   <input value="Post" type="submit" id="comment_submit" class="kbutton postbtn">
 </form>
+{{/public}}
+
+
+{{#conversation}}
+<div id="comment_list">
+  {{#comments}}
+  <div class="kifi_comment">
+    <div class="comment_user"><img src='https://graph.facebook.com/{{user.facebookId}}/picture?type=square'></a></div>
+    <div class="comment_body"><b>{{user.firstName}} {{user.lastName}}</b> {{text}}</div>
+  </div>
+  {{/comments}}
+  {{^comments}}
+  <div class="kifi_comment">
+    Be the first to leave a comment!
+  </div>
+  {{/comments}}
+</div>
+<form class="comment_form">
+  <div class="commentbox">
+    <input type="text" id="to_list">
+    <textarea id="comment_text" placeholder="Message your friends!" class="mention"></textarea>
+  </div>
+  <input value="Post" type="submit" id="comment_submit" class="kbutton postbtn">
+</form>
+{{/conversation}}
+
+
+{{#private}}
+<div id="comment_list">
+  {{#comments}}
+  <div class="kifi_comment">
+    <div class="comment_user"><img src='https://graph.facebook.com/{{user.facebookId}}/picture?type=square'></a></div>
+    <div class="comment_body"><b>{{user.firstName}} {{user.lastName}}</b> {{text}}</div>
+  </div>
+  {{/comments}}
+  {{^comments}}
+  <div class="kifi_comment">
+    Be the first to leave a comment!
+  </div>
+  {{/comments}}
+</div>
+<form class="comment_form">
+  <div class="commentbox">
+    <textarea id="comment_text" placeholder="Write notes to yourself!" class="mention"></textarea>
+  </div>
+  <input value="Post" type="submit" id="comment_submit" class="kbutton postbtn">
+</form>
+{{/private}}
+
