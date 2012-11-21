@@ -1,0 +1,16 @@
+
+<div class="flexcontainer">
+  {{> comment_body_view}}
+  
+  <div class="comment_post_view">
+    <form action="" class="comment_form">
+      <div class="comment-box compose-comment">
+          <img src="{{user.avatar}}" class="user-avatar comment-avatar">
+          <textarea class="main-comment-textarea" id="main-comment-textarea" placeholder="Hey, add a new comment about this page!"></textarea>
+          <div class="crosshair"></div>
+      </div>
+      <input type="submit" class="submit-comment" value="Comment!">
+    </form>
+  </div>
+
+</div>
