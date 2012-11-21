@@ -65,40 +65,37 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
   }
 
-  function loadFile(name, callback) {
-    var req = new XMLHttpRequest();
-    req.open("GET",chrome.extension.getURL(name), true);
-    req.onreadystatechange = function() {
-        if (req.readyState == 4 && req.status == 200) {
-            callback(req.responseText);
-        }
-    };
-    req.send(null);
-  }
-
   var templateCache = {};
 
-  function getTemplate(name, params, callback, partials) {
-    //var tmpl = templateCache[name];
-    if(false && tmpl) {
+  function loadFile(name, callback) {
+    var tmpl = templateCache[name];
+    if(tmpl) {
+      callback(tmpl);
+    }
+    else {
+      var req = new XMLHttpRequest();
+      req.open("GET",chrome.extension.getURL(name), true);
+      req.onreadystatechange = function() {
+          if (req.readyState == 4 && req.status == 200) {
+            var response = req.responseText
+            callback(response);
+            templateCache[name] = response;
+          }
+      };
+      req.send(null);
+    }
+  }
+
+
+  function renderTemplate(name, params, callback, partials) {
+    loadFile(name, function(contents) {
       var tb = Mustache.render(
-          tmpl,
+          contents,
           params,
           partials
       );
       callback(tb);
-    }
-    else {
-      loadFile(name, function(contents) {
-        var tb = Mustache.render(
-            contents,
-            params,
-            partials
-        );
-        callback(tb);
-        //templateCache[name] = contents;
-      });
-    }
+    });
   }
 
   function summaryText(numberOfFriends, is_kept) {
@@ -134,7 +131,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
   function socialTooltip(friend, element) {
      // disabled for now
-    getTemplate("social_hover.html",{"friend": friend}, function(tmpl) {
+    renderTemplate("social_hover.html",{"friend": friend}, function(tmpl) {
       var timeout;
       var timein;
 
@@ -200,7 +197,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         }
         console.log(tmpl);
 
-        getTemplate('kept_hover.html', tmpl, function(template) {
+        renderTemplate('kept_hover.html', tmpl, function(template) {
           drawKeepItHover(user, friends, template);
         });
 
@@ -238,10 +235,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         "type": "set_page_icon",
         "is_kept": false
       });
-
-
       slideOut();
-
     });
 
     $('.keepitbtn').click(function() {
@@ -273,7 +267,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     $('.messages_label').click(function() {
-      showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "conversation");
+      showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "message");
     });
 
     showComments(user,false); // prefetch comments, do not show.
@@ -336,7 +330,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     console.log("Drawing comments!")
     comments = comments || {};
     comments["public"] = comments["public"] || [];
-    comments["conversation"] = comments["conversation"] || [];
+    comments["message"] = comments["message"] || [];
     comments["private"] = comments["private"] || [];
 
     var visibleComments = comments[type] || [];
@@ -355,9 +349,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         var params = {
           view: "comments_list",
           user: {
-            "firstName": "Andrew",
-            "lastName": "Conner",
-            "avatar": "https://fbcdn-profile-a.akamaihd.net/hprofile-ak-snc6/275024_71105121_451954280_q.jpg"
+            "name": user.name,
+            "avatar": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square"
           },
           formatComments: function() {
             return function(text, render) {
@@ -382,7 +375,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           comments: visibleComments
         }
 
-        getTemplate("templates/comments/comments_view.html",params, function(renderedTemplate) {
+        renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
           //console.log(renderedTemplate);
           $('.kifi_comment_wrapper').html(renderedTemplate);
           resizeCommentBodyView(true);
@@ -468,43 +461,52 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           });
 
           $('.kifi_comment_wrapper .comment_form').submit(function() {
-            var text = $('#main-comment-textarea').val();
-            var request = {
-              "type": "post_comment",
-              "url": document.location.href,
-              "text": text,
-              "permissions": type
-            };
-            chrome.extension.sendRequest(request, function() {
+            submitComment($('#main-comment-textarea').val(), type, user, null, function(newComment) {
               $('#main-comment-textarea').val("");
-              var newComment = {
-                "createdAt": (new Date()),
-                "text": request.text,
-                "user": {
-                  "externalId": user.keepit_external_id,
-                  "firstName": user.name,
-                  "lastName": "",
-                  "facebookId": user.facebook_id
-                },
-                "permissions": type
-              }
-              comments[type].push(newComment);
-              console.log("new thread", comments);
-              // Clean up CSS
-              $(".kififtr").animate({
-                'margin-top': '0'
-              },100);
-              $('.submit-comment').slideUp(100, function() {
-                // Done cleaning up CSS. Redraw.
-
-                renderComments(user, comments, type);
-              });
             });
             return false;
           });
 
+
         }, partials);
 
+      });
+    });
+  }
+
+  function submitComment(text, type, user, parent, callback) {
+    /* Because we're using very simple templating now, re-rendering has to be done carefully.
+     * 
+     */
+    var request = {
+      "type": "post_comment",
+      "url": document.location.href,
+      "text": text,
+      "permissions": type,
+      "parent": parent
+    };
+    chrome.extension.sendRequest(request, function() {
+      var newComment = {
+        "createdAt": (new Date()),
+        "text": request.text,
+        "user": {
+          "externalId": user.keepit_external_id,
+          "firstName": user.name,
+          "lastName": "",
+          "facebookId": user.facebook_id
+        },
+        "permissions": type
+      }
+      comments[type].push(newComment);
+      console.log("new thread", comments);
+      // Clean up CSS
+      $(".kififtr").animate({
+        'margin-top': '0'
+      },100);
+      $('.submit-comment').slideUp(100, function() {
+        // Done cleaning up CSS. Redraw.
+
+        renderComments(user, comments, type);
       });
     });
   }

@@ -35,6 +35,7 @@ import com.keepit.serializer.CommentWithSocialUserSerializer._
 import com.keepit.common.db.State
 import securesocial.core.java.SecureSocial.SecuredAction
 import com.keepit.common.controller.FortyTwoController
+import com.keepit.model.CommentRecipient
 
 object CommentController extends FortyTwoController {
 
@@ -43,21 +44,48 @@ object CommentController extends FortyTwoController {
                     text: String,
                     permission: String,
                     recipients: String = "",
-                    parent: String = "") = SecuredAction(false) { request =>
+                    parent: Option[ExternalId[Comment]] = None) = SecuredAction(false) { request =>
     val comment = CX.withConnection { implicit conn =>
       val userId = User.getOpt(externalId).getOrElse(throw new Exception("Invalid userid"))
       val uri = NormalizedURI.getByNormalizedUrl(url) match {
         case Some(nuri) => nuri
         case None => NormalizedURI(title = "title", url = url).save
       }
+      val parentIdOpt = parent match {
+        case Some(p) => Comment.getOpt(p) match {
+          case Some(p) => p.id
+          case None => throw new Exception("Invalid parent provided!")
+        }
+        case None => None
+      }
       permission.toLowerCase match {
         case "private" =>
-          Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PRIVATE).save
+          Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
         case "message" =>
-          //TODO
-          Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.MESSAGE).save
+          val newComment = Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
+
+          recipients.split(",").map(_.trim()) map { recipientId =>
+            // Split incoming list of externalIds
+            User.getOpt(ExternalId[User](recipientId)) match {
+              case Some(recipientUser) =>
+                log.info("Adding recipient %s to comment %s, requested by %s".format(recipientUser.id.get, newComment.id.get, userId.id.get))
+
+                // When comment is a reply (has a parent), add recipient to parent if does not exist. Else, add to comment.
+                parentIdOpt match {
+                  case Some(parentId) =>
+                    CommentRecipient(commentId = parentId, userId = recipientUser.id)
+                  case None =>
+                    CommentRecipient(commentId = newComment.id.get, userId = recipientUser.id)
+                }
+
+              case None =>
+                // TODO: Add social User and email recipients as well
+                log.info("Ignoring recipient %s for comment %s. User does not exist.".format(recipientId, newComment.id.get))
+            }
+          }
+          newComment
         case "public" | "" =>
-          Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PUBLIC).save
+          Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
       }
     }
 
@@ -67,7 +95,8 @@ object CommentController extends FortyTwoController {
 
   def getComments(url: String,
                   externalId: ExternalId[User],
-                  permission: String = "") = AuthenticatedJsonAction { request =>
+                  permission: String = "",
+                  parent: Option[ExternalId[Comment]] = None) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
       val user = User.get(externalId)
       NormalizedURI.getByNormalizedUrl(url) match {
