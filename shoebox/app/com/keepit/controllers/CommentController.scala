@@ -75,11 +75,10 @@ object CommentController extends FortyTwoController {
   }
 
   def getComments(url: String,
-                  externalId: ExternalId[User],
                   permission: String = "",
                   parent: Option[ExternalId[Comment]] = None) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
-      val user = User.get(externalId)
+      val user = User.get(request.userId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
           val comments = permission match {
@@ -134,13 +133,13 @@ object CommentController extends FortyTwoController {
     (Comment.Permissions.MESSAGE -> messageComments(userId, normalizedURI)) ::
     (Comment.Permissions.PRIVATE -> privateComments(userId, normalizedURI)) :: Nil
 
-  private def publicComments(normalizedURI: NormalizedURI)(implicit conn: Connection) =
+  private def publicComments(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
     Comment.getPublicByNormalizedUri(normalizedURI.id.get)
 
-  private def privateComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection) =
+  private def privateComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
     Comment.getPrivateByNormalizedUri(normalizedURI.id.get, userId)
 
-  private def messageComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection) =
+  private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
     Comment.getMessagesByNormalizedUri(normalizedURI.id.get, userId)
 
 }
