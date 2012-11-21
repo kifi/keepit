@@ -27,6 +27,9 @@ class SendgridMailProvider @Inject() () extends Logging {
     }
   }
 
+  /**
+   * Please see http://sendgrid.com/docs/API%20Reference/SMTP%20API/index.html for docs
+   */
   def sendMailToSendgrid(mail: ElectronicMail): Unit = {
     val props = new Properties()
     props.put("mail.transport.protocol", "smtp")
