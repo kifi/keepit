@@ -110,7 +110,7 @@ object Bookmark {
       .list.foldLeft(Map[Id[User], Map[Long, Long]]()) {(result, row) =>
         val userId = Id[User](row("user_id").asInstanceOf[Long])
         val dayCount = row("day").asInstanceOf[Long] -> row("count").asInstanceOf[Long]
-        result + (userId -> (r.getOrElse(userId, Map[Long, Long]()) + dayCount))
+        result + (userId -> (result.getOrElse(userId, Map[Long, Long]()) + dayCount))
       }
   }
 
