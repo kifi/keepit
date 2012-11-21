@@ -14,6 +14,8 @@ import javax.mail.{Authenticator, PasswordAuthentication}
 
 import com.google.inject.Inject
 
+import play.api.libs.json._
+
 import play.api.Play.current
 import play.api.http.ContentTypes
 
@@ -55,6 +57,8 @@ class SendgridMailProvider @Inject() () extends Logging {
     multipart.addBodyPart(part1)
     multipart.addBodyPart(part2)
 
+    message.setHeader("X-SMTPAPI", JsObject(List("category" -> JsString("test-category"))).toString)
+
     message.setContent(multipart)
     message.setFrom(new InternetAddress(mail.from.address))
     message.setSubject(mail.subject)
@@ -86,12 +90,16 @@ class SendgridMailProvider @Inject() () extends Logging {
     transport.connect()
     try {
       transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
+      CX.withConnection { implicit c =>
+        mail.sent("message sent").save
+      }
     } catch {
       case e =>
         log.error(e)
         mailError(mail, e.toString())
     } finally {
       transport.close()
+      log.info("mail %s sent".format(mail.externalId))
     }
 
   }
