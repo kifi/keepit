@@ -36,7 +36,7 @@ class QueryParser(indexWriterConfig: IndexWriterConfig) extends LuceneQueryParse
     else {
       val booleanQuery = new BooleanQuery
       val proximityQuery = ProximityQuery(terms)
-      proximityQuery.setBoost(2.0f) // proximity boost
+      proximityQuery.setBoost(1.0f) // proximity boost
 
       booleanQuery.add(query, Occur.MUST)
       booleanQuery.add(proximityQuery, Occur.SHOULD)
