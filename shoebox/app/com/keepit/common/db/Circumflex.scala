@@ -386,6 +386,10 @@ trait EntityTable[T, R <: Record[Id[T], R]] extends Table[Id[T], R] { this: R =>
   //def apply(view: T): R
 }
 
+trait FortyTwoDialect {
+  def DATEDIFF(ex1: String, ex2: String) : String
+}
+
 object CX extends Logging {
 
   //The following makes sure the underlying ORMConfiguration won't burf on us when its looking for these params.
@@ -424,13 +428,15 @@ object CX extends Logging {
     override lazy val typeConverter = new CustomTypeConverter
 
     override lazy val dialect = cx.instantiate[Dialect]("orm.dialect", url match {
-      case u if (u.startsWith("jdbc:mysql:")) => new MySQLDialect() {
+      case u if (u.startsWith("jdbc:mysql:")) => new MySQLDialect() with FortyTwoDialect {
         override def ILIKE(ex1: String, ex2: String = "?") = "%s LIKE %s".format(ex1, ex2)
+        def DATEDIFF(ex1: String, ex2: String) = "DATEDIFF(%s, %s)".format(ex1, ex2)
       }
-      case u if (u.startsWith("jdbc:h2:")) => new H2Dialect() {
+      case u if (u.startsWith("jdbc:h2:")) => new H2Dialect() with FortyTwoDialect {
         override def ILIKE(ex1: String, ex2: String = "?") = "LOWER(%s) LIKE %s".format(ex1, ex2)
+        def DATEDIFF(ex1: String, ex2: String) = "DATEDIFF('DAY', %s, %s)".format(ex1, ex2)
       }
-      case _ => throw new Exception("unknowd dialect " + url)
+      case _ => throw new Exception("unknown dialect " + url)
     })
   }
 

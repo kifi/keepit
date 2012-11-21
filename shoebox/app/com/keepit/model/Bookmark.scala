@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
+import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, FortyTwoDialect, State}
 import com.keepit.common.db.NotFoundException
 import com.keepit.common.time._
 import com.keepit.common.crypto._
@@ -99,15 +99,24 @@ object Bookmark {
   def getOpt(externalId: ExternalId[Bookmark])(implicit conn: Connection): Option[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.externalId EQ externalId) unique }.map(_.view)
 
-  def getDailyKeeps(implicit conn: Connection) = {
+  def getDailyKeeps(implicit conn: Connection) : mutable.HashMap[Id[User], mutable.HashMap[Long, Long]] = {
     val u = UserEntity AS "u"
     val b = BookmarkEntity AS "b"
-    val days = expr[Int]("datediff(date(b.created_at), date(u.created_at))")
-    SELECT (u.id, days, COUNT(b.*))
+    val days = expr[Int](ormConf.dialect.asInstanceOf[FortyTwoDialect].DATEDIFF("u.created_at", "b.created_at"))
+    val result = new mutable.HashMap[Id[User], mutable.HashMap[Long, Long]]() {
+      override def default(key: Id[User]) = mutable.HashMap[Long, Long]()
+    }
+    SELECT (u.id AS "user_id", days AS "days", COUNT(b.id) AS "count")
       .FROM (u JOIN b ON "b.user_id = u.id")
       .WHERE (b.source EQ "HOVER_KEEP")
       .GROUP_BY (u.id, days)
-      .list
+      .list.foreach {m =>
+        val userId = Id[User](m("user_id").asInstanceOf[Long])
+        val dayCounts = result(userId)
+        dayCounts(m("days").asInstanceOf[Long]) = m("count").asInstanceOf[Long]
+        result(userId) = dayCounts
+      }
+    result
   }
 
   object States {
