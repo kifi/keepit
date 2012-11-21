@@ -270,7 +270,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "message");
     });
 
-    showComments(user,false); // prefetch comments, do not show.
+    showComments(user,false, "public"); // prefetch comments, do not show.
 
     slideIn();
   }
@@ -316,7 +316,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       return;
     }
     var userExternalId = user.keepit_external_id;
-    $.get("http://" + config.server + "/comments/all?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
+    $.get("http://" + config.server + "/comments/" + type + "?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
       null,
       function(comments) {
         renderComments(user, comments, type || "public");
@@ -326,157 +326,194 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       });
   }
 
+  function commentTextFormatter() {
+    return function(text, render) {
+      text = $.trim(render(text));
+      text = "<p class=\"first-line\">" + text + "</p>";
+      text = text.replace(/\n\n/g,"\n")
+      text = text.replace(/\n/g, "</p><p>");
+      return text;
+    }
+  }
+
+  function commentDateFormatter() {
+    return function(text, render) {
+      try {
+        var date = (new Date(render(text))).toISOString();
+        return date;
+      }
+      catch(e) {
+        return "";
+      }
+    }
+  }
+
   function renderComments(user, comments, type) {
     console.log("Drawing comments!")
     comments = comments || {};
     comments["public"] = comments["public"] || [];
     comments["message"] = comments["message"] || [];
-    comments["private"] = comments["private"] || [];
+    //comments["private"] = comments["private"] || []; // Removed, not for MVP
 
     var visibleComments = comments[type] || [];
 
     $('.comments_label').text(comments["public"].length + " Comments");
     
+    var params = {
+      user: {
+        "firstName": user.name,
+        "lastName": "",
+        "avatar": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square"
+      },
+      formatComments: commentTextFormatter,
+      formatDate: commentDateFormatter,
+      comments: visibleComments
+    }
 
+    loadFile("templates/comments/reply.html", function(reply) {
+      loadFile("templates/comments/hearts.html", function(hearts) {
+        loadFile("templates/comments/comments_list.html", function(comment_list) {
+          var partials = {
+            "comment_body_view": comment_list,
+            "hearts": hearts,
+            "reply": reply
+          };
 
-    loadFile("templates/comments/hearts.html", function(hearts) {
-      loadFile("templates/comments/comments_list.html", function(comment_list) {
-        var partials = {
-          "comment_body_view": comment_list,
-          "hearts": hearts
-        };
+          renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
+            drawCommentView(renderedTemplate, user, type, partials);
+          }, partials);
 
-        var params = {
-          view: "comments_list",
-          user: {
-            "name": user.name,
-            "avatar": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square"
-          },
-          formatComments: function() {
-            return function(text, render) {
-              text = $.trim(render(text));
-              text = "<p class=\"first-line\">" + text + "</p>";
-              text = text.replace(/\n\n/g,"\n")
-              text = text.replace(/\n/g, "</p><p>");
-              return text;
-            }
-          },
-          formatDate: function() {
-            return function(text, render) {
-              try {
-                var date = (new Date(render(text))).toISOString();
-                return date;
-              }
-              catch(e) {
-                return "";
-              }
-            }
-          },
-          comments: visibleComments
-        }
-
-        renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
-          //console.log(renderedTemplate);
-          $('.kifi_comment_wrapper').html(renderedTemplate);
-          resizeCommentBodyView(true);
-
-          var commentBodyView = $(".comment_body_view")[0];
-          commentBodyView.scrollTop = commentBodyView.scrollHeight;
-
-
-          // Binders
-
-          $("abbr.timeago").timeago();
-          $(".comment-box .crosshair").click(function() {
-            console.log("Hit");
-            return false;
-          });
-
-          $('#main-comment-textarea').focus(function() {
-            //$('.crosshair').slideDown(150);
-            $('.submit-comment').slideDown(150);
-            $('.comment_body_view').animate({
-              'max-height': '-=45'
-            },150,'easeQuickSnapBounce');
-            $('.comment-box').animate({
-              'height': '85'
-            },150,'easeQuickSnapBounce');
-            $(".kififtr").animate({
-              'margin-top': '-10'
-            });
-          });
-
-          $('#main-comment-textarea').blur(function() {
-            $('.comment_body_view').animate({
-              'max-height': '+=45'
-            },150,'easeQuickSnapBounce');
-            $('.comment-box').animate({
-              'height': '40'
-            },150,'easeQuickSnapBounce');
-
-            //$('.crosshair').slideUp(20);
-            //$('.submit-comment').slideUp(20);
-          });
-
-          var replyTextarea = $('.reply-comment-textarea')
-          replyTextarea.focus(function() {
-            $(this).animate({
-              'height': '+=20'
-            },200,'easeQuickSnapBounce');
-          });
-          replyTextarea.blur(function() {
-            $(this).animate({
-              'height': '-=20'
-            },100,'easeQuickSnapBounce');
-          });
-          replyTextarea.keyup(function(e) {
-            if(e.keyCode === 13 && !e.ctrlKey) {
-              $(this).parents('form').first().submit();
-              return false;
-            }
-            return true;
-          });
-          $('.reply-comment form').submit(function() {
-            $(this).find('textarea').blur();
-            console.log(this,"submitted!");
-            return false;
-          });
-
-          $('.replies').click(function() {
-            var link = $(this);
-            var list = link.parents('.comment-wrapper').children('.comment-replies');
-            var comment = link.parents('.comment-wrapper');
-            if(list.is(":visible")) {
-              $(list).slideUp(200);
-              link.children('.reply-arrow').html('');
-            }
-            else {
-              $(list).slideDown(300,'easeQuickSnapBounce');
-              link.children('.reply-arrow').html('&uarr;');
-              var scrollTo = $('.comment_body_view').scrollTop() + comment.position().top - 20;
-              $('.comment_body_view').animate({
-                scrollTop: scrollTo
-              });
-            }
-          });
-
-          $('.kifi_comment_wrapper .comment_form').submit(function() {
-            submitComment($('#main-comment-textarea').val(), type, user, null, function(newComment) {
-              $('#main-comment-textarea').val("");
-            });
-            return false;
-          });
-
-
-        }, partials);
-
+        });
       });
+    });
+
+  }
+
+  function drawCommentView(renderedTemplate, user, type, partials) {
+    //console.log(renderedTemplate);
+    $('.kifi_comment_wrapper').html(renderedTemplate);
+    resizeCommentBodyView(true);
+
+    var commentBodyView = $(".comment_body_view")[0];
+    commentBodyView.scrollTop = commentBodyView.scrollHeight;
+
+    createMainBinders(type, user);
+    createReplyBinders(); // better way -- delegate?
+
+  }
+
+  function createMainBinders(type, user) {
+    $("abbr.timeago").timeago();
+    /*
+    // Not in MVP
+    $(".comment_post_view").on('click','.comment_box .crosshair', function() {
+      console.log("Hit");
+      return false;
+    });
+    */
+
+    // Main comment textarea 
+    $('.comment_post_view').on('focus','#main-comment-textarea',function() {
+      //$('.crosshair').slideDown(150); // Not in mvp
+      $('.submit-comment').slideDown(150);
+      $('.comment_body_view').animate({
+        'max-height': '-=45'
+      },150,'easeQuickSnapBounce');
+      $('.comment-box').animate({
+        'height': '85'
+      },150,'easeQuickSnapBounce');
+      $(".kififtr").animate({
+        'margin-top': '-10'
+      });
+    });
+    $('.comment_post_view').on('blur','#main-comment-textarea',function() {
+      $('.comment_body_view').animate({
+        'max-height': '+=45'
+      },150,'easeQuickSnapBounce');
+      $('.comment-box').animate({
+        'height': '40'
+      },150,'easeQuickSnapBounce');
+
+      //$('.crosshair').slideUp(20);
+      //$('.submit-comment').slideUp(20);
+    });
+
+    // Submit handlers
+    $('.comment_post_view').on('submit','.comment_form', function(e) {
+      e.preventDefault();
+      //debugger;
+      submitComment($('#main-comment-textarea').val(), type, user, null, function(newComment) {
+        $('#main-comment-textarea').val("");
+
+        console.log("new thread", newComment);
+        // Clean up CSS
+        $(".kififtr").animate({
+          'margin-top': '0'
+        },100);
+        $('.submit-comment').slideUp(100, function() {
+          // Done cleaning up CSS. Redraw.
+          //renderComments(user, comments, type);
+
+          renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
+            drawCommentView(renderedTemplate, user, type, partials);
+          });
+        });
+      });
+      return false;
+    });
+  }
+
+  function createReplyBinders() {
+    $('.comment_body_view').on('click', '.replies', function() {
+      var link = $(this);
+      var comment = link.parents('.comment-wrapper');
+      var list = comment.children('.comment-replies');
+      if(list.is(":visible")) {
+        $(list).slideUp(200);
+        link.children('.reply-arrow').html('');
+      }
+      else {
+        $(list).slideDown(300,'easeQuickSnapBounce');
+        link.children('.reply-arrow').html('&uarr;');
+        var scrollTo = $('.comment_body_view').scrollTop() + comment.position().top - 20;
+        $('.comment_body_view').animate({
+          scrollTop: scrollTo
+        });
+      }
+    });
+
+    $('.comment_body_view').on('focus', '.reply-comment-textarea', function() {
+      $(this).animate({
+        'height': '+=20'
+      },200,'easeQuickSnapBounce');
+    });
+    $('.comment_body_view').on('blur', '.reply-comment-textarea', function() {
+      $(this).animate({
+        'height': '-=20'
+      },100,'easeQuickSnapBounce');
+    });
+    $('.comment_body_view').on('keyup', '.reply-comment-textarea', function(e) {
+      if(e.keyCode === 13 && !e.ctrlKey) {
+        $(this).parents('form').first().submit();
+        return false;
+      }
+      return true;
+    });
+
+    // Reply submit handler
+    $('.comment_body_view').on('submit', '.reply-comment form', function() {
+      var replyTextarea = $(this).find('textarea');
+      
+      var text = replyTextarea.val().trim();
+      replyTextarea.val("");
+      replyTextarea.blur();
+      console.log(this,"submitted!",text);
+      return false;
     });
   }
 
   function submitComment(text, type, user, parent, callback) {
     /* Because we're using very simple templating now, re-rendering has to be done carefully.
-     * 
      */
     var request = {
       "type": "post_comment",
@@ -495,19 +532,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           "lastName": "",
           "facebookId": user.facebook_id
         },
-        "permissions": type
+        "permissions": type,
+        "replyCount": 0
       }
-      comments[type].push(newComment);
-      console.log("new thread", comments);
-      // Clean up CSS
-      $(".kififtr").animate({
-        'margin-top': '0'
-      },100);
-      $('.submit-comment').slideUp(100, function() {
-        // Done cleaning up CSS. Redraw.
-
-        renderComments(user, comments, type);
-      });
+      callback(newComment);
     });
   }
 

@@ -40,13 +40,12 @@ import com.keepit.model.CommentRecipient
 object CommentController extends FortyTwoController {
 
   def createComment(url: String,
-                    externalId: ExternalId[User],
                     text: String,
                     permission: String,
                     recipients: String = "",
-                    parent: String = "") = SecuredAction(false) { request =>
+                    parent: String = "") = AuthenticatedJsonAction { request =>
     val comment = CX.withConnection { implicit conn =>
-      val userId = User.getOpt(externalId).getOrElse(throw new Exception("Invalid userid"))
+      val userId = User.getOpt(request.userId).getOrElse(throw new Exception("Invalid userid"))
       val uri = NormalizedURI.getByNormalizedUrl(url) match {
         case Some(nuri) => nuri
         case None => NormalizedURI(title = "title", url = url).save
