@@ -270,7 +270,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "message");
     });
 
-    showComments(user,false, "public"); // prefetch comments, do not show.
+    //showComments(user,false, "public"); // prefetch comments, do not show.
 
     slideIn();
   }
@@ -319,10 +319,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     $.get("http://" + config.server + "/comments/" + type + "?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
       null,
       function(comments) {
-        renderComments(user, comments, type || "public");
-        if(openComments) {
-          $('.kifi_comment_wrapper').slideDown(600,'easeInOutBack');
-        }
+        renderComments(user, comments, type || "public", function() {
+          if(openComments) {
+            repositionScroll(true);
+            $('.kifi_comment_wrapper').slideDown(600,'easeInOutBack', function () {
+              repositionScroll(false);
+            });
+          }
+        });
       });
   }
 
@@ -348,7 +352,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
   }
 
-  function renderComments(user, comments, type) {
+  function renderComments(user, comments, type, onComplete) {
     console.log("Drawing comments!")
     comments = comments || {};
     comments["public"] = comments["public"] || [];
@@ -374,33 +378,35 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       loadFile("templates/comments/hearts.html", function(hearts) {
         loadFile("templates/comments/comments_list.html", function(comment_list) {
           loadFile("templates/comments/comment.html", function(comment) {
-            var partials = {
-              "comment_body_view": comment_list,
-              "hearts": hearts,
-              "reply": reply,
-              "comment": comment
-            };
+            loadFile("templates/comments/reply_list.html", function(reply_list) {
 
-            renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
-              drawCommentView(renderedTemplate, user, type, partials);
-            }, partials);
+              var partials = {
+                "comment_body_view": comment_list,
+                "hearts": hearts,
+                "reply": reply,
+                "comment": comment,
+                "reply_list": reply_list
+              };
+
+              renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
+                drawCommentView(renderedTemplate, comments, user, type, partials);
+                onComplete();
+              }, partials);
+
             });
+          });
         });
       });
     });
 
   }
 
-  function drawCommentView(renderedTemplate, user, type, partials) {
+  function drawCommentView(renderedTemplate, comments, user, type, partials) {
     //console.log(renderedTemplate);
     $('.kifi_comment_wrapper').html(renderedTemplate);
-    resizeCommentBodyView(true);
-
-    var commentBodyView = $(".comment_body_view")[0];
-    commentBodyView.scrollTop = commentBodyView.scrollHeight;
 
     createMainBinders(type, user);
-    createReplyBinders(); // better way -- delegate?
+    createReplyBinders(type, user);
 
   }
 
@@ -455,20 +461,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         $('.submit-comment').slideUp(100, function() {
           // Done cleaning up CSS. Redraw.
           //renderComments(user, comments, type);
-          var params = {
-            user: {
-              "firstName": user.name,
-              "lastName": "",
-              "avatar": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square",
-              "facebookId": user.facebook_id
-            },
-            formatComments: commentTextFormatter,
-            formatDate: commentDateFormatter,
-            text: newComment.text
-          }
+          var params = newComment;
+          params["formatComments"] = commentTextFormatter;
+          params["formatDate"] = commentDateFormatter;
+
           renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
             //drawCommentView(renderedTemplate, user, type, partials);
-            $('.comment_body_view').append(renderedComment);
+            $('.comment_body_view').append(renderedComment).find("abbr.timeago").timeago();
+            repositionScroll(false);
           });
         });
       });
@@ -476,7 +476,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
   }
 
-  function createReplyBinders() {
+  function createReplyBinders(type, user) {
     $('.comment_body_view').on('click', '.replies', function() {
       var link = $(this);
       var comment = link.parents('.comment-wrapper');
@@ -486,12 +486,27 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         link.children('.reply-arrow').html('');
       }
       else {
-        $(list).slideDown(300,'easeQuickSnapBounce');
         link.children('.reply-arrow').html('&uarr;');
         var scrollTo = $('.comment_body_view').scrollTop() + comment.position().top - 20;
         $('.comment_body_view').animate({
           scrollTop: scrollTo
         });
+        var parent = $(this).parents('.comment-wrapper').data("externalid");
+        $.get("http://" + config.server + "/comments/reply?commentId=" + parent,
+          null,
+          function(replies) {
+            var params = {
+              replies: replies,
+              formatComments: commentTextFormatter,
+              formatDate: commentDateFormatter
+            };
+            renderTemplate("templates/comments/reply_list.html", params, function(renderedReplyList) {
+              list.find('.existing-replies').html(renderedReplyList).find("abbr.timeago").timeago();
+              list.slideDown(300,'easeQuickSnapBounce');
+            });
+            console.log(replies);
+          }
+        );
       }
     });
 
@@ -519,8 +534,13 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       
       var text = replyTextarea.val().trim();
       replyTextarea.val("");
+      var parent = $(this).parents('.comment-wrapper').data("externalid");
       replyTextarea.blur();
-      console.log(this,"submitted!",text);
+      submitComment(text, type, user, parent, function(newReply) {
+        console.log("server response: ",newReply);
+      });
+      
+      console.log(this,"submitted!",text,"to parent", parent);
       return false;
     });
   }
@@ -535,7 +555,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       "permissions": type,
       "parent": parent
     };
-    chrome.extension.sendRequest(request, function() {
+    chrome.extension.sendRequest(request, function(response) {
       var newComment = {
         "createdAt": (new Date()),
         "text": request.text,
@@ -546,7 +566,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           "facebookId": user.facebook_id
         },
         "permissions": type,
-        "replyCount": 0
+        "replyCount": 0,
+        "externalId": response.commentId
       }
       callback(newComment);
     });
@@ -571,12 +592,19 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     return false;
   });
 
+  function repositionScroll(resizeQuickly) {
+    resizeCommentBodyView(resizeQuickly);
+
+    var commentBodyView = $(".comment_body_view")[0];
+    commentBodyView.scrollTop = commentBodyView.scrollHeight;
+  }
+
   function resizeCommentBodyView(resizeQuickly) {
+    var kifiheader = $('.kifihdr');
     if(resizeQuickly === true) {
-      $('.comment_body_view').stop().css({'max-height':$(window).height()-350});
+      $('.comment_body_view').stop().css({'max-height':$(window).height()-280});
     }
     else {
-      var kifiheader = $('.kifihdr');
       if(kifiheader.length > 0) {
         var offset = kifiheader.offset().top - 30;
         $('.comment_body_view').stop().animate({'max-height':'+='+offset},20);

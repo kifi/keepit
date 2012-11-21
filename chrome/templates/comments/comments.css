@@ -231,7 +231,7 @@ ul.kifi_social_tabs {
 
 .kifi_comment_wrapper .reply-comment {
   box-shadow: none;
-  background-color: #fff;
+  background-color: #f5f5fa;
   padding-top:1px;
   margin: 1px 0px 0px 0px;
   border-radius: 0px;
@@ -273,6 +273,7 @@ ul.kifi_social_tabs {
 .kifi_comment_wrapper .compose-comment {
   border: 1px solid #888;
   border-radius: 0px 0px 5px 5px;
+  background-color: #fff;
 }
 
 

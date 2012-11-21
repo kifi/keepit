@@ -43,7 +43,7 @@ object CommentController extends FortyTwoController {
                     text: String,
                     permission: String,
                     recipients: String = "",
-                    parent: String = "") = AuthenticatedJsonAction { request =>
+                    parent: String) = AuthenticatedJsonAction { request =>
     val comment = CX.withConnection { implicit conn =>
       val userId = User.getOpt(request.userId).getOrElse(throw new Exception("Invalid userid"))
       val uri = NormalizedURI.getByNormalizedUrl(url) match {
@@ -57,6 +57,8 @@ object CommentController extends FortyTwoController {
           case None => throw new Exception("Invalid parent provided!")
         }
       }
+      log.warn(parent)
+      log.warn(request)
       permission.toLowerCase match {
         case "private" =>
           Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save

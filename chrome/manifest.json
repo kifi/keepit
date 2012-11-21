@@ -274,6 +274,7 @@
     "templates/comments/comments_view.html",
     "templates/comments/comments.css",
     "templates/comments/reply.html",
-    "templates/comments/comment.html"
+    "templates/comments/comment.html",
+    "templates/comments/reply_list.html"
   ] 
 }

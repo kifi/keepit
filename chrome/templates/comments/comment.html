@@ -11,12 +11,9 @@
     </div>
   </div>
   <div class="comment-replies">
-  
-  {{#replies.length}}
-    {{#replies}}
-      {{> reply}}
-    {{/replies}}
-  {{/replies.length}}
+    <div class="existing-replies">
+      {{> reply_list}}
+    </div>
     <div class="reply">
       <div class="comment reply-comment compose-comment">
         <div class="comment-text">
