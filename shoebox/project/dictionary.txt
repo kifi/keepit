@@ -1,5 +1,6 @@
 admin
 avatar
+bookmark
 bookmarks
 eishay
 facebook
