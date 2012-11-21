@@ -44,7 +44,7 @@ object CommentController extends FortyTwoController {
                     text: String,
                     permission: String,
                     recipients: String = "",
-                    parent: Option[ExternalId[Comment]] = None) = SecuredAction(false) { request =>
+                    parent: String = "") = SecuredAction(false) { request =>
     val comment = CX.withConnection { implicit conn =>
       val userId = User.getOpt(externalId).getOrElse(throw new Exception("Invalid userid"))
       val uri = NormalizedURI.getByNormalizedUrl(url) match {
@@ -52,37 +52,18 @@ object CommentController extends FortyTwoController {
         case None => NormalizedURI(title = "title", url = url).save
       }
       val parentIdOpt = parent match {
-        case Some(p) => Comment.getOpt(p) match {
+        case "" => None
+        case p => Comment.getOpt(ExternalId[Comment](p)) match {
           case Some(p) => p.id
           case None => throw new Exception("Invalid parent provided!")
         }
-        case None => None
       }
       permission.toLowerCase match {
         case "private" =>
           Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
         case "message" =>
           val newComment = Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
-
-          recipients.split(",").map(_.trim()) map { recipientId =>
-            // Split incoming list of externalIds
-            User.getOpt(ExternalId[User](recipientId)) match {
-              case Some(recipientUser) =>
-                log.info("Adding recipient %s to comment %s, requested by %s".format(recipientUser.id.get, newComment.id.get, userId.id.get))
-
-                // When comment is a reply (has a parent), add recipient to parent if does not exist. Else, add to comment.
-                parentIdOpt match {
-                  case Some(parentId) =>
-                    CommentRecipient(commentId = parentId, userId = recipientUser.id)
-                  case None =>
-                    CommentRecipient(commentId = newComment.id.get, userId = recipientUser.id)
-                }
-
-              case None =>
-                // TODO: Add social User and email recipients as well
-                log.info("Ignoring recipient %s for comment %s. User does not exist.".format(recipientId, newComment.id.get))
-            }
-          }
+          createRecipients(newComment.id.get, recipients, parentIdOpt)
           newComment
         case "public" | "" =>
           Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
@@ -124,6 +105,28 @@ object CommentController extends FortyTwoController {
       Comment.getChildren(Comment.get(commentId).id.get) map { child => CommentWithSocialUser(child) }
     }
     Ok(commentWithSocialUserSerializer.writes(replies)).as(ContentTypes.JSON)
+  }
+
+
+  def createRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit conn: Connection) = {
+    recipients.split(",").map(_.trim()) map { recipientId =>
+      // Split incoming list of externalIds
+      User.getOpt(ExternalId[User](recipientId)) match {
+        case Some(recipientUser) =>
+          log.info("Adding recipient %s to new comment %s".format(recipientUser.id.get, commentId))
+          // When comment is a reply (has a parent), add recipient to parent if does not exist. Else, add to comment.
+          parentIdOpt match {
+            case Some(parentId) =>
+              Some(CommentRecipient(commentId = parentId, userId = recipientUser.id).save)
+            case None =>
+              Some(CommentRecipient(commentId = commentId, userId = recipientUser.id).save)
+          }
+        case None =>
+          // TODO: Add social User and email recipients as well
+          log.info("Ignoring recipient %s for comment %s. User does not exist.".format(recipientId, commentId))
+          None
+      }
+    } flatten
   }
 
   private def allComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection): List[(State[Comment.Permission],Seq[Comment])] =
