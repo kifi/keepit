@@ -250,6 +250,10 @@ ul.kifi_social_tabs {
   width:210px;
 }
 
+.kifi_comment_wrapper img.self-avatar {
+  border-radius: 100px 100px !important;
+}
+
 .kifi_comment_wrapper .reply form {
   margin: 0;
 }

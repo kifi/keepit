@@ -266,7 +266,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $('.moreinnerbox').slideToggle(150);
     });
 
-    $('.comments_label').click(function() {
+    $('.comments_notification').click(function() {
       showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "public");
     });
 
@@ -325,7 +325,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       function(comments) {
         renderComments(user, comments, type || "public", function() {
           if(openComments) {
-            repositionScroll(true);
+            repositionScroll(false);
             $('.kifi_comment_wrapper').slideDown(600,'easeInOutBack', function () {
               repositionScroll(false);
             });
@@ -356,16 +356,30 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
   }
 
+  function updateCommentCount() {
+    var commentCount = $(".real-comment").length;
+    if(commentCount == 0) {
+      $('.comments_label').addClass("zero_comments").text("+");
+    }
+    else {
+      $('.comments_label').removeClass("zero_comments").text(commentCount);
+    }
+  }
+
   function renderComments(user, comments, type, onComplete) {
-    console.log("Drawing comments!")
+    console.log("Drawing comments!");
     comments = comments || {};
     comments["public"] = comments["public"] || [];
     comments["message"] = comments["message"] || [];
     //comments["private"] = comments["private"] || []; // Removed, not for MVP
 
     var visibleComments = comments[type] || [];
-
-    $('.comments_label').text(comments["public"].length + " Comments");
+    if(comments["public"].length == 0) {
+      $('.comments_label').addClass("zero_comments").text("+");
+    }
+    else {
+      $('.comments_label').text(comments["public"].length);
+    }
     
     var params = {
       kifiuser: {
@@ -379,33 +393,48 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
 
     loadFile("templates/comments/reply.html", function(reply) {
-      loadFile("templates/comments/hearts.html", function(hearts) {
-        loadFile("templates/comments/comments_list.html", function(comments_list) {
-          loadFile("templates/comments/comment.html", function(comment) {
-            loadFile("templates/comments/reply_list.html", function(reply_list) {
+    loadFile("templates/comments/hearts.html", function(hearts) {
+    loadFile("templates/comments/comments_list.html", function(comment_list) {
+    loadFile("templates/comments/comment.html", function(comment) {
+    loadFile("templates/comments/reply_list.html", function(reply_list) {
+    loadFile("templates/comments/message.html", function(message) {
+    loadFile("templates/comments/message_list.html", function(message_list) {
+    loadFile("templates/comments/comment_post.html", function(comment_post) {
+    loadFile("templates/comments/message_post.html", function(message_post) {
 
-              var partials = {
-                "comment_body_view": comments_list,
-                "hearts": hearts,
-                "reply": reply,
-                "comment": comment,
-                "reply_list": reply_list
-              };
+      var partials = {
+        "comment_body_view": comment_list,
+        "hearts": hearts,
+        "reply": reply,
+        "comment": comment,
+        "reply_list": reply_list,
+        "comment_post_view": comment_post
+      };
 
-              renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
-                drawCommentView(renderedTemplate, comments, user, type, partials);
-                onComplete();
-              }, partials);
+      if(type == 'message') {
+        partials.comment = message;
+        partials.comment_body_view = message_list;
+        partials.comment_post_view = message_post;
+      }
 
-            });
-          });
-        });
-      });
+      renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
+        drawCommentView(renderedTemplate, user, type, partials);
+        onComplete();
+      }, partials);
+
+    });
+    });
+    });
+    });
+    });
+    });
+    });
+    });
     });
 
   }
 
-  function drawCommentView(renderedTemplate, comments, user, type, partials) {
+  function drawCommentView(renderedTemplate, user, type, partials) {
     //console.log(renderedTemplate);
     repositionScroll(false);
     $('.kifi_comment_wrapper').html(renderedTemplate);
@@ -473,7 +502,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
           renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
             //drawCommentView(renderedTemplate, user, type, partials);
+            $('.comment_body_view').find('.no-comment').parent().detach();
             $('.comment_body_view').append(renderedComment).find("abbr.timeago").timeago();
+            updateCommentCount();
             repositionScroll(false);
           });
         });
@@ -514,17 +545,19 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         $(list).slideUp(200);
         link.children('.reply-arrow').html('');
         destroyTimeout(parent);
+        resizeCommentBodyView(false);
       }
       else { // opening list
         link.children('.reply-arrow').html('&uarr;');
+        refreshReplies(comment, true);
+        createTimeout(parent, function() {
+          refreshReplies(comment, false);
+        }, TIMEOUTS.REPLY_REFRESH);
+
         var scrollTo = $('.comment_body_view').scrollTop() + comment.position().top - 20;
         $('.comment_body_view').animate({
           scrollTop: scrollTo
         });
-        refreshReplies(comment, true);
-        createTimeout(parent, function() {
-          refreshReplies(comment, true);
-        }, TIMEOUTS.REPLY_REFRESH);
       }
     });
 
@@ -558,6 +591,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       submitComment(text, type, user, parent, function(newReply) {
         console.log("server response: ",newReply,user);
         refreshReplies(comment, false);
+        resizeCommentBodyView(false);
       });
       
       console.log(this,"submitted!",text,"to parent", parent);
@@ -579,8 +613,12 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         };
         renderTemplate("templates/comments/reply_list.html", params, function(renderedReplyList) {
           list.find('.existing-replies').html(renderedReplyList).find("abbr.timeago").timeago();
-          if(openList)
-            list.slideDown(300,'easeQuickSnapBounce');
+          if(openList) {
+            list.slideDown(300,'easeQuickSnapBounce', function() {
+              resizeCommentBodyView(false);
+            });
+          }
+          resizeCommentBodyView(true);
         });
       }
     );
@@ -649,7 +687,12 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     else {
       if(kifiheader.length > 0) {
         var offset = kifiheader.offset().top - 30;
-        $('.comment_body_view').stop().animate({'max-height':'+='+offset},20);
+        $('.comment_body_view').stop().animate({'max-height':'+='+offset},20, function() {
+          var newOffset = kifiheader.offset().top - 30;
+          if(newOffset < 0) {
+            resizeCommentBodyView(false);
+          }
+        });
       }
     }
   }
