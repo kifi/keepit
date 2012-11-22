@@ -187,6 +187,8 @@ object CommentController extends FortyTwoController {
             }
           }
         }
+      case _ =>
+
     }
   }, {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
 

@@ -1,5 +1,5 @@
 <div class="comment-wrapper" data-externalId="{{externalId}}">
-  <div class="comment">
+  <div class="comment real-comment">
     <img src="https://graph.facebook.com/{{user.facebookId}}/picture?type=square" class="comment-avatar">
     <div class="comment-text">
       <strong>{{user.firstName}} {{user.lastName}}</strong>
@@ -19,7 +19,7 @@
         <div class="comment-text">
           <form action="">
             <div class="reply-comment-box">
-                <img src="{{kifiuser.avatar}}" class="comment-avatar reply-avatar">
+                <img src="{{kifiuser.avatar}}" class="comment-avatar reply-avatar self-avatar">
                 <textarea class="reply-comment-textarea" placeholder="Reply to {{user.firstName}}'s comment..."></textarea>
             </div>
           </form>

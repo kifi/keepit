@@ -22,8 +22,9 @@ import com.google.inject.Provider
 import play.api.libs.concurrent.Promise
 import com.keepit.common.net.ClientResponse
 import java.util.concurrent.TimeUnit
+import com.google.inject.Inject
 
-class MailSender(system: ActorSystem)
+class MailSender @Inject() (system: ActorSystem)
   extends Logging with Plugin {
 
   def processMail(mail: ElectronicMail) = actor ! ProcessMail(mail, this)
