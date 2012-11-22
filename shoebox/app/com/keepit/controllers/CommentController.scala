@@ -1,41 +1,31 @@
 package com.keepit.controllers
 
+import java.sql.Connection
 import scala.Option.option2Iterable
 import scala.math.BigDecimal.long2bigDecimal
-import com.keepit.common.db.CX
-import com.keepit.common.db.ExternalId
-import com.keepit.common.db.Id
+import com.keepit.common.async.dispatch
+import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.db.{CX, ExternalId, Id, State}
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
+import com.keepit.common.social.CommentWithSocialUser
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.social.UserWithSocial
 import com.keepit.inject.inject
-import com.keepit.model.Bookmark
-import com.keepit.model.NormalizedURI
-import com.keepit.model.SocialConnection
-import com.keepit.model.SocialUserInfo
-import com.keepit.model.User
+import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, NormalizedURI, SocialConnection, SocialUserInfo, User}
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
+import com.keepit.serializer.CommentWithSocialUserSerializer._
 import play.api.Play.current
 import play.api.http.ContentTypes
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsNumber
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
+import play.api.libs.concurrent.Akka
+import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
 import play.api.mvc.Action
 import play.api.mvc.Controller
 import securesocial.core.SecureSocial
-import play.api.libs.json.JsBoolean
-import com.keepit.model.Comment
-import java.sql.Connection
-import com.keepit.common.social.CommentWithSocialUser
-import com.keepit.serializer.CommentWithSocialUserSerializer._
-import com.keepit.common.db.State
 import securesocial.core.java.SecureSocial.SecuredAction
-import com.keepit.common.controller.FortyTwoController
-import com.keepit.model.CommentRecipient
 
 object CommentController extends FortyTwoController {
 
@@ -70,8 +60,9 @@ object CommentController extends FortyTwoController {
       }
     }
 
-    Ok(JsObject(("commentId" -> JsString(comment.externalId.id)) :: Nil))
+    notifyAnyRecipientsAsync(comment)
 
+    Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
   }
 
   def getComments(url: String) = AuthenticatedJsonAction { request =>
@@ -79,7 +70,7 @@ object CommentController extends FortyTwoController {
       val user = User.get(request.userId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
-          (Comment.Permissions.PUBLIC -> publicComments(normalizedURI).map(CommentWithSocialUser(_))) :: Nil
+          List(Comment.Permissions.PUBLIC -> publicComments(normalizedURI).map(CommentWithSocialUser(_)))
         case None =>
           List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
       }
@@ -92,7 +83,7 @@ object CommentController extends FortyTwoController {
       val user = User.get(request.userId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
-          (Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(CommentWithSocialUser(_))) :: Nil
+          List(Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(CommentWithSocialUser(_)))
         case None =>
           List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
       }
@@ -161,5 +152,42 @@ object CommentController extends FortyTwoController {
 
   private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
     Comment.getMessagesByNormalizedUri(normalizedURI.id.get, userId)
+
+  private def notifyAnyRecipientsAsync(comment: Comment) = dispatch({
+    comment.permissions match {
+      case Comment.Permissions.PUBLIC if comment.parent.isDefined =>
+        CX.withConnection { implicit c =>
+          val sender = User.get(comment.userId)
+          val parent = Comment.get(comment.parent.get)
+          val comments = parent :: Comment.getChildren(comment.parent.get).toList
+          val uri = NormalizedURI.get(comment.normalizedURI)
+          for (userId <- comments.map(_.userId).toSet - comment.userId) {
+            val recipient = User.get(userId)
+            val addrs = EmailAddress.getByUser(userId)
+            for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
+              inject[PostOffice].sendMail(ElectronicMail(
+                  from = EmailAddresses.SUPPORT, to = addr, subject = "[new reply] " + uri.title,
+                  htmlBody = views.html.email.newCommentReply(sender, recipient, uri, parent, comment).body))
+            }
+          }
+        }
+      case Comment.Permissions.MESSAGE =>
+        CX.withConnection { implicit c =>
+          val sender = User.get(comment.userId)
+          val uri = NormalizedURI.get(comment.normalizedURI)
+          val subjectPrefix = if (comment.parent.isDefined) "[new reply] " else "[new message] "
+          val recipients = Comment.getRecipients(comment.parent.getOrElse(comment.id.get))
+          for (userId <- recipients.map(_.userId.get).toSet - comment.userId) {
+            val recipient = User.get(userId)
+            val addrs = EmailAddress.getByUser(userId)
+            for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
+              inject[PostOffice].sendMail(ElectronicMail(
+                  from = EmailAddresses.SUPPORT, to = addr, subject = subjectPrefix + uri.title,
+                  htmlBody = views.html.email.newMessage(sender, recipient, uri, comment).body))
+            }
+          }
+        }
+    }
+  }, {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
 
 }
