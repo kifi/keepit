@@ -228,7 +228,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     $(".kifi_hover").draggable({ cursor: "move", axis: "y", distance: 20, handle: "div.kifihdr", containment: "body", scroll: false});
 
-    $('.kificlose').click(function() {
+    $('.xlink').click(function() {
       slideOut();
     });
     //$('.profilepic').click(function() { location=facebookProfileLink; });
@@ -379,6 +379,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
     else {
       $('.comments_label').text(comments["public"].length);
+      $('.comments_label').removeClass("zero_comments");
     }
     
     var params = {
@@ -550,9 +551,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       else { // opening list
         link.children('.reply-arrow').html('&uarr;');
         refreshReplies(comment, true);
-        createTimeout(parent, function() {
+        /*createTimeout(parent, function() {
           refreshReplies(comment, false);
-        }, TIMEOUTS.REPLY_REFRESH);
+        }, TIMEOUTS.REPLY_REFRESH);*/
 
         var scrollTo = $('.comment_body_view').scrollTop() + comment.position().top - 20;
         $('.comment_body_view').animate({
@@ -618,7 +619,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
               resizeCommentBodyView(false);
             });
           }
-          resizeCommentBodyView(true);
         });
       }
     );
