@@ -379,33 +379,48 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
 
     loadFile("templates/comments/reply.html", function(reply) {
-      loadFile("templates/comments/hearts.html", function(hearts) {
-        loadFile("templates/comments/comments_list.html", function(comments_list) {
-          loadFile("templates/comments/comment.html", function(comment) {
-            loadFile("templates/comments/reply_list.html", function(reply_list) {
+    loadFile("templates/comments/hearts.html", function(hearts) {
+    loadFile("templates/comments/comments_list.html", function(comment_list) {
+    loadFile("templates/comments/comment.html", function(comment) {
+    loadFile("templates/comments/reply_list.html", function(reply_list) {
+    loadFile("templates/comments/message.html", function(message) {
+    loadFile("templates/comments/message_list.html", function(message_list) {
+    loadFile("templates/comments/comment_post.html", function(comment_post) {
+    loadFile("templates/comments/message_post.html", function(message_post) {
 
-              var partials = {
-                "comment_body_view": comments_list,
-                "hearts": hearts,
-                "reply": reply,
-                "comment": comment,
-                "reply_list": reply_list
-              };
+      var partials = {
+        "comment_body_view": comment_list,
+        "hearts": hearts,
+        "reply": reply,
+        "comment": comment,
+        "reply_list": reply_list,
+        "comment_post_view": comment_post
+      };
 
-              renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
-                drawCommentView(renderedTemplate, comments, user, type, partials);
-                onComplete();
-              }, partials);
+      if(type == 'message') {
+        partials.comment = message;
+        partials.comment_body_view = message_list;
+        partials.comment_post_view = message_post;
+      }
 
-            });
-          });
-        });
-      });
+      renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
+        drawCommentView(renderedTemplate, user, type, partials);
+        onComplete();
+      }, partials);
+
+    });
+    });
+    });
+    });
+    });
+    });
+    });
+    });
     });
 
   }
 
-  function drawCommentView(renderedTemplate, comments, user, type, partials) {
+  function drawCommentView(renderedTemplate, user, type, partials) {
     //console.log(renderedTemplate);
     repositionScroll(false);
     $('.kifi_comment_wrapper').html(renderedTemplate);
