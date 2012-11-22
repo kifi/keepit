@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
 class MailSender(system: ActorSystem)
   extends Logging with Plugin {
 
-  private def processMail(mail: ElectronicMail) = actor ! ProcessMail(mail, this)
+  def processMail(mail: ElectronicMail) = actor ! ProcessMail(mail, this)
 
   private val actor = system.actorOf(Props { new MailSenderActor() })
   // plugin lifecycle methods
