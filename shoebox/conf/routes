@@ -16,7 +16,7 @@ POST    /bookmarks/private          com.keepit.controllers.BookmarksController.u
 
 POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: String, text: String, permissions: String, recipients: String ?= "", parent: String ?= "")
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
-GET     /comments/messages          com.keepit.controllers.CommentController.getMessages(url: String)
+GET     /comments/message           com.keepit.controllers.CommentController.getMessages(url: String)
 GET     /comments/reply             com.keepit.controllers.CommentController.getReplies(commentId: ExternalId[Comment])
 
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String, externalId: ExternalId[User])

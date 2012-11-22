@@ -57,8 +57,7 @@ object CommentController extends FortyTwoController {
           case None => throw new Exception("Invalid parent provided!")
         }
       }
-      log.warn(parent)
-      log.warn(request)
+
       permission.toLowerCase match {
         case "private" =>
           Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
@@ -126,20 +125,25 @@ object CommentController extends FortyTwoController {
   def createRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit conn: Connection) = {
     recipients.split(",").map(_.trim()) map { recipientId =>
       // Split incoming list of externalIds
-      User.getOpt(ExternalId[User](recipientId)) match {
-        case Some(recipientUser) =>
-          log.info("Adding recipient %s to new comment %s".format(recipientUser.id.get, commentId))
-          // When comment is a reply (has a parent), add recipient to parent if does not exist. Else, add to comment.
-          parentIdOpt match {
-            case Some(parentId) =>
-              Some(CommentRecipient(commentId = parentId, userId = recipientUser.id).save)
-            case None =>
-              Some(CommentRecipient(commentId = commentId, userId = recipientUser.id).save)
-          }
-        case None =>
-          // TODO: Add social User and email recipients as well
-          log.info("Ignoring recipient %s for comment %s. User does not exist.".format(recipientId, commentId))
-          None
+      try {
+        User.getOpt(ExternalId[User](recipientId)) match {
+          case Some(recipientUser) =>
+            log.info("Adding recipient %s to new comment %s".format(recipientUser.id.get, commentId))
+            // When comment is a reply (has a parent), add recipient to parent if does not exist. Else, add to comment.
+            parentIdOpt match {
+              case Some(parentId) =>
+                Some(CommentRecipient(commentId = parentId, userId = recipientUser.id).save)
+              case None =>
+                Some(CommentRecipient(commentId = commentId, userId = recipientUser.id).save)
+            }
+          case None =>
+            // TODO: Add social User and email recipients as well
+            log.info("Ignoring recipient %s for comment %s. User does not exist.".format(recipientId, commentId))
+            None
+        }
+      }
+      catch {
+        case _ => None // It throws an exception if it fails ExternalId[User]. Just return None.
       }
     } flatten
   }
