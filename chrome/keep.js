@@ -261,12 +261,13 @@ function postComment(request, sendResponse) {
   log("posting comment:");
   console.log(request);
 
-  sendResponse({});
-
   var xhr = new XMLHttpRequest();
   xhr.onreadystatechange = function() {
     if (xhr.readyState == 4) {
-      log("POSTED!" + xhr.response);
+      var response = JSON.parse(xhr.response);
+      log("POSTED!" + response);
+      console.log(response);
+      sendResponse(response);
     }
   }
   var userConfigs = getConfigs();
@@ -274,8 +275,9 @@ function postComment(request, sendResponse) {
     log("No userinfo! Can't post comment!");
     return;
   }
+  var parent = request.parent || "";
 
-  xhr.open("POST", 'http://' + userConfigs.server + '/comments/add?externalId=' + userConfigs.user["keepit_external_id"] + "&url=" + encodeURIComponent(request.url) + "&text=" + encodeURIComponent(request.text) + "&permissions=" + request.permissions, true);
+  xhr.open("POST", 'http://' + userConfigs.server + '/comments/add?&url=' + encodeURIComponent(request.url) + "&text=" + encodeURIComponent(request.text) + "&permissions=" + request.permissions + "&parent=" + parent, true);
   xhr.send();
 
 }

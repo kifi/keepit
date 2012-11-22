@@ -11,18 +11,15 @@
     </div>
   </div>
   <div class="comment-replies">
-  
-  {{#replies.length}}
-    {{#replies}}
-      {{> reply}}
-    {{/replies}}
-  {{/replies.length}}
+    <div class="existing-replies">
+      {{> reply_list}}
+    </div>
     <div class="reply">
       <div class="comment reply-comment compose-comment">
         <div class="comment-text">
           <form action="">
             <div class="reply-comment-box">
-                <img src="{{user.avatar}}" class="comment-avatar reply-avatar">
+                <img src="{{kifiuser.avatar}}" class="comment-avatar reply-avatar">
                 <textarea class="reply-comment-textarea" placeholder="Reply to {{user.firstName}}'s comment..."></textarea>
             </div>
           </form>

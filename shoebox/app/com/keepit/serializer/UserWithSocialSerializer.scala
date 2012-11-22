@@ -13,7 +13,8 @@ class UserWithSocialSerializer extends Writes[UserWithSocial] {
       "externalId"  -> JsString(userWithSocial.user.externalId.toString),
       "firstName" -> JsString(userWithSocial.user.firstName),
       "lastName"  -> JsString(userWithSocial.user.lastName),
-      "facebookId"  -> JsString(userWithSocial.socialUserInfo.socialId.id)
+      "facebookId"  -> JsString(userWithSocial.socialUserInfo.socialId.id),
+      "avatar" -> JsString("https://graph.facebook.com/" + userWithSocial.socialUserInfo.socialId.id + "/picture?type=square")
       )
     )
 
