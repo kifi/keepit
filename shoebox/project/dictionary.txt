@@ -4,9 +4,11 @@ bookmark
 bookmarks
 clob
 eishay
+emails
 facebook
 greenwich
 http
+ids
 jared
 json
 lifecycle
@@ -17,6 +19,7 @@ params
 plugin
 plugins
 routes
+signup
 todo
 uri
 val
