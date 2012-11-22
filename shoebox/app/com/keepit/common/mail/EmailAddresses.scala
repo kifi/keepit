@@ -1,5 +1,4 @@
 package com.keepit.common.mail
-import com.keepit.model.EmailAddress
 
 trait EmailAddressHolder {
   val address: String
@@ -14,6 +13,7 @@ object EmailAddresses {
   case object EISHAY extends SystemEmailAddress("eishay@42go.com")
   case object YASUHIRO extends SystemEmailAddress("yasuhiro@42go.com")
   case object ANDREW extends SystemEmailAddress("andrew@42go.com")
+  case object JARED extends SystemEmailAddress("jared@42go.com")
 
   def apply(email: String): SystemEmailAddress = email match {
     case TEAM.address => TEAM
@@ -22,5 +22,6 @@ object EmailAddresses {
     case EISHAY.address => EISHAY
     case YASUHIRO.address => YASUHIRO
     case ANDREW.address => ANDREW
+    case JARED.address => JARED
   }
 }
