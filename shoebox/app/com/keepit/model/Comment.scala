@@ -46,7 +46,6 @@ case class Comment(
 
 object Comment {
 
-
   def all(implicit conn: Connection): Seq[Comment] =
     CommentEntity.all.map(_.view)
 

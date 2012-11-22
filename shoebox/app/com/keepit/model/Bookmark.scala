@@ -99,24 +99,19 @@ object Bookmark {
   def getOpt(externalId: ExternalId[Bookmark])(implicit conn: Connection): Option[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.externalId EQ externalId) unique }.map(_.view)
 
-  def getDailyKeeps(implicit conn: Connection) : mutable.HashMap[Id[User], mutable.HashMap[Long, Long]] = {
+  def getDailyKeeps(implicit conn: Connection): Map[Id[User], Map[Long, Long]] = {
     val u = UserEntity AS "u"
     val b = BookmarkEntity AS "b"
-    val days = expr[Int](ormConf.dialect.asInstanceOf[FortyTwoDialect].DATEDIFF("u.created_at", "b.created_at"))
-    val result = new mutable.HashMap[Id[User], mutable.HashMap[Long, Long]]() {
-      override def default(key: Id[User]) = mutable.HashMap[Long, Long]()
-    }
-    SELECT (u.id AS "user_id", days AS "days", COUNT(b.id) AS "count")
+    val day = expr[Int](ormConf.dialect.asInstanceOf[FortyTwoDialect].DATEDIFF("u.created_at", "b.created_at"))
+    SELECT (u.id AS "user_id", day AS "day", COUNT(b.id) AS "count")
       .FROM (u JOIN b ON "b.user_id = u.id")
       .WHERE (b.source EQ "HOVER_KEEP")
-      .GROUP_BY (u.id, days)
-      .list.foreach {m =>
-        val userId = Id[User](m("user_id").asInstanceOf[Long])
-        val dayCounts = result(userId)
-        dayCounts(m("days").asInstanceOf[Long]) = m("count").asInstanceOf[Long]
-        result(userId) = dayCounts
+      .GROUP_BY (u.id, day)
+      .list.foldLeft(Map[Id[User], Map[Long, Long]]()) {(result, row) =>
+        val userId = Id[User](row("user_id").asInstanceOf[Long])
+        val dayCount = row("day").asInstanceOf[Long] -> row("count").asInstanceOf[Long]
+        result + (userId -> (result.getOrElse(userId, Map[Long, Long]()) + dayCount))
       }
-    result
   }
 
   object States {
