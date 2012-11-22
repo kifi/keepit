@@ -77,7 +77,8 @@ object Comment {
       SELECT (c.*) FROM c WHERE (
         (c.normalizedURI EQ normalizedURI) AND
         (c.permissions EQ Comment.Permissions.PUBLIC) AND
-        (c.state EQ States.ACTIVE)
+        (c.state EQ States.ACTIVE) AND
+        (c.parent IS_NULL)
       ) list
     }.map(_.view)
 
@@ -98,12 +99,14 @@ object Comment {
       ((SELECT (c.*) FROM ((cr JOIN c).ON("c.id = cr.comment_id")) WHERE (
         (c.normalizedURI EQ normalizedURI) AND
         (cr.userId EQ userId) AND
-        (c.permissions EQ Comment.Permissions.MESSAGE))
+        (c.permissions EQ Comment.Permissions.MESSAGE) AND
+        (c.parent IS_NULL))
         UNION
        (SELECT (c.*) FROM c WHERE (
         (c.normalizedURI EQ normalizedURI) AND
         (c.userId EQ userId) AND
-        (c.permissions EQ Comment.Permissions.MESSAGE))
+        (c.permissions EQ Comment.Permissions.MESSAGE) AND
+        (c.parent IS_NULL))
        )
       ) list) map (_.view) distinct
   }

@@ -6,12 +6,13 @@ Hi @recipient.firstName,
 <p>
 @sender.firstName @sender.lastName
 @if(parent.userId == recipient.id.get) {
-  replied to your comment at
+  replied to your comment at:
 } else {
-  replied in a public conversation you&rsquo;re participating in at
+  replied in a public conversation you&rsquo;re participating in at:
 }
-at <a href="@uri.url">@uri.title</a>.
 </p>
+
+<p><a href="@uri.url">@uri.title</a></p>
 
 <p style="margin:0;box-sizing:border-box;max-width:500px;padding:6px 20px;background-color:#eee;color:#333;font-size:11px">
 @sender.firstName wrote:

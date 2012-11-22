@@ -1,8 +1,8 @@
 <div class="reply">
   <div class="comment reply-comment">
-    <img src="{{avatar}}" class="comment-avatar reply-avatar">
+    <img src="{{user.avatar}}" class="comment-avatar reply-avatar">
     <div class="comment-text">
-      <strong>{{firstName}} {{lastName}}</strong>
+      <strong>{{user.firstName}} {{user.lastName}}</strong>
       {{#formatComments}}{{text}}{{/formatComments}}
     </div>
     <div class="comment-meta">

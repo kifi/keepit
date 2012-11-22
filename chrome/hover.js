@@ -4,7 +4,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   $ = jQuery.noConflict()
   var config;
   var hover;
-  var commentsType;
+  var timeoutCollection = {};
+  var TIMEOUTS = {
+    REPLY_REFRESH: 4000
+  };
+  var openedCommentsType = "";
 
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
@@ -224,7 +228,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     $(".kifi_hover").draggable({ cursor: "move", axis: "y", distance: 20, handle: "div.kifihdr", containment: "body", scroll: false});
 
-    $('.kificlose').click(function() {
+    $('.xlink').click(function() {
       slideOut();
     });
     //$('.profilepic').click(function() { location=facebookProfileLink; });
@@ -262,7 +266,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $('.moreinnerbox').slideToggle(150);
     });
 
-    $('.comments_label').click(function() {
+    $('.comments_notification').click(function() {
       showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "public");
     });
 
@@ -319,10 +323,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     $.get("http://" + config.server + "/comments/" + type + "?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
       null,
       function(comments) {
-        renderComments(user, comments, type || "public");
-        if(openComments) {
-          $('.kifi_comment_wrapper').slideDown(600,'easeInOutBack');
-        }
+        renderComments(user, comments, type || "public", function() {
+          if(openComments) {
+            repositionScroll(false);
+            $('.kifi_comment_wrapper').slideDown(600,'easeInOutBack', function () {
+              repositionScroll(false);
+            });
+          }
+        });
       });
   }
 
@@ -348,19 +356,34 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
   }
 
-  function renderComments(user, comments, type) {
-    console.log("Drawing comments!")
+  function updateCommentCount() {
+    var commentCount = $(".real-comment").length;
+    if(commentCount == 0) {
+      $('.comments_label').addClass("zero_comments").text("+");
+    }
+    else {
+      $('.comments_label').removeClass("zero_comments").text(commentCount);
+    }
+  }
+
+  function renderComments(user, comments, type, onComplete) {
+    console.log("Drawing comments!");
     comments = comments || {};
     comments["public"] = comments["public"] || [];
     comments["message"] = comments["message"] || [];
     //comments["private"] = comments["private"] || []; // Removed, not for MVP
 
     var visibleComments = comments[type] || [];
-
-    $('.comments_label').text(comments["public"].length + " Comments");
+    if(comments["public"].length == 0) {
+      $('.comments_label').addClass("zero_comments").text("+");
+    }
+    else {
+      $('.comments_label').text(comments["public"].length);
+      $('.comments_label').removeClass("zero_comments");
+    }
     
     var params = {
-      user: {
+      kifiuser: {
         "firstName": user.name,
         "lastName": "",
         "avatar": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square"
@@ -371,36 +394,55 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
 
     loadFile("templates/comments/reply.html", function(reply) {
-      loadFile("templates/comments/hearts.html", function(hearts) {
-        loadFile("templates/comments/comments_list.html", function(comment_list) {
-          loadFile("templates/comments/comment.html", function(comment) {
-            var partials = {
-              "comment_body_view": comment_list,
-              "hearts": hearts,
-              "reply": reply,
-              "comment": comment
-            };
+    loadFile("templates/comments/hearts.html", function(hearts) {
+    loadFile("templates/comments/comments_list.html", function(comment_list) {
+    loadFile("templates/comments/comment.html", function(comment) {
+    loadFile("templates/comments/reply_list.html", function(reply_list) {
+    loadFile("templates/comments/message.html", function(message) {
+    loadFile("templates/comments/message_list.html", function(message_list) {
+    loadFile("templates/comments/comment_post.html", function(comment_post) {
+    loadFile("templates/comments/message_post.html", function(message_post) {
 
-            renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
-              drawCommentView(renderedTemplate, user, type, partials);
-            }, partials);
-            });
-        });
-      });
+      var partials = {
+        "comment_body_view": comment_list,
+        "hearts": hearts,
+        "reply": reply,
+        "comment": comment,
+        "reply_list": reply_list,
+        "comment_post_view": comment_post
+      };
+
+      if(type == 'message') {
+        partials.comment = message;
+        partials.comment_body_view = message_list;
+        partials.comment_post_view = message_post;
+      }
+
+      renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
+        drawCommentView(renderedTemplate, user, type, partials);
+        onComplete();
+      }, partials);
+
+    });
+    });
+    });
+    });
+    });
+    });
+    });
+    });
     });
 
   }
 
   function drawCommentView(renderedTemplate, user, type, partials) {
     //console.log(renderedTemplate);
+    repositionScroll(false);
     $('.kifi_comment_wrapper').html(renderedTemplate);
-    resizeCommentBodyView(true);
-
-    var commentBodyView = $(".comment_body_view")[0];
-    commentBodyView.scrollTop = commentBodyView.scrollHeight;
+    repositionScroll(false);
 
     createMainBinders(type, user);
-    createReplyBinders(); // better way -- delegate?
+    createReplyBinders(type, user);
 
   }
 
@@ -455,20 +497,16 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         $('.submit-comment').slideUp(100, function() {
           // Done cleaning up CSS. Redraw.
           //renderComments(user, comments, type);
-          var params = {
-            user: {
-              "firstName": user.name,
-              "lastName": "",
-              "avatar": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square",
-              "facebookId": user.facebook_id
-            },
-            formatComments: commentTextFormatter,
-            formatDate: commentDateFormatter,
-            text: newComment.text
-          }
+          var params = newComment;
+          params["formatComments"] = commentTextFormatter;
+          params["formatDate"] = commentDateFormatter;
+
           renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
             //drawCommentView(renderedTemplate, user, type, partials);
-            $('.comment_body_view').append(renderedComment);
+            $('.comment_body_view').find('.no-comment').parent().detach();
+            $('.comment_body_view').append(renderedComment).find("abbr.timeago").timeago();
+            updateCommentCount();
+            repositionScroll(false);
           });
         });
       });
@@ -476,18 +514,47 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
   }
 
-  function createReplyBinders() {
+  function createTimeout(id, callback, timeout) {
+    timeoutCollection[id] = setTimeout(function() {
+        log("Executing timeout: " + id);
+        callback();
+        createTimeout(id, callback,timeout);
+      }, timeout);
+  }
+
+  function destroyTimeout(id) {
+    if(timeoutCollection[id]) {
+      clearTimeout(timeoutCollection[id]);
+      timeoutCollection[id] = undefined;
+      log("Destroyed timeout: " + id);
+    }
+  }
+
+  function destroyAllTimeouts() {
+    for (var id in timeoutCollection) {
+      destroyTimeout(id);
+    }
+  }
+
+  function createReplyBinders(type, user) {
     $('.comment_body_view').on('click', '.replies', function() {
       var link = $(this);
       var comment = link.parents('.comment-wrapper');
       var list = comment.children('.comment-replies');
-      if(list.is(":visible")) {
+      var parent = comment.data("externalid");
+      if(list.is(":visible")) { // closing list
         $(list).slideUp(200);
         link.children('.reply-arrow').html('');
+        destroyTimeout(parent);
+        resizeCommentBodyView(false);
       }
-      else {
-        $(list).slideDown(300,'easeQuickSnapBounce');
+      else { // opening list
         link.children('.reply-arrow').html('&uarr;');
+        refreshReplies(comment, true);
+        /*createTimeout(parent, function() {
+          refreshReplies(comment, false);
+        }, TIMEOUTS.REPLY_REFRESH);*/
+
         var scrollTo = $('.comment_body_view').scrollTop() + comment.position().top - 20;
         $('.comment_body_view').animate({
           scrollTop: scrollTo
@@ -516,13 +583,45 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     // Reply submit handler
     $('.comment_body_view').on('submit', '.reply-comment form', function() {
       var replyTextarea = $(this).find('textarea');
-      
+      var comment = replyTextarea.parents('.comment-wrapper');
+
       var text = replyTextarea.val().trim();
       replyTextarea.val("");
+      var parent = comment.data("externalid");
       replyTextarea.blur();
-      console.log(this,"submitted!",text);
+      submitComment(text, type, user, parent, function(newReply) {
+        console.log("server response: ",newReply,user);
+        refreshReplies(comment, false);
+        resizeCommentBodyView(false);
+      });
+      
+      console.log(this,"submitted!",text,"to parent", parent);
       return false;
     });
+  }
+
+  function refreshReplies(comment, openList) {
+    var parent = comment.data("externalid");
+    var list = comment.children('.comment-replies');
+
+    $.get("http://" + config.server + "/comments/reply?commentId=" + parent,
+      null,
+      function(replies) {
+        var params = {
+          replies: replies,
+          formatComments: commentTextFormatter,
+          formatDate: commentDateFormatter
+        };
+        renderTemplate("templates/comments/reply_list.html", params, function(renderedReplyList) {
+          list.find('.existing-replies').html(renderedReplyList).find("abbr.timeago").timeago();
+          if(openList) {
+            list.slideDown(300,'easeQuickSnapBounce', function() {
+              resizeCommentBodyView(false);
+            });
+          }
+        });
+      }
+    );
   }
 
   function submitComment(text, type, user, parent, callback) {
@@ -535,7 +634,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       "permissions": type,
       "parent": parent
     };
-    chrome.extension.sendRequest(request, function() {
+    chrome.extension.sendRequest(request, function(response) {
       var newComment = {
         "createdAt": (new Date()),
         "text": request.text,
@@ -546,7 +645,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           "facebookId": user.facebook_id
         },
         "permissions": type,
-        "replyCount": 0
+        "replyCount": 0,
+        "externalId": response.commentId
       }
       callback(newComment);
     });
@@ -571,15 +671,28 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     return false;
   });
 
+  function repositionScroll(resizeQuickly) {
+    resizeCommentBodyView(resizeQuickly);
+
+    var commentBodyView = $(".comment_body_view")[0];
+    if(commentBodyView)
+      commentBodyView.scrollTop = 99999;
+  }
+
   function resizeCommentBodyView(resizeQuickly) {
+    var kifiheader = $('.kifihdr');
     if(resizeQuickly === true) {
-      $('.comment_body_view').stop().css({'max-height':$(window).height()-350});
+      $('.comment_body_view').stop().css({'max-height':$(window).height()-280});
     }
     else {
-      var kifiheader = $('.kifihdr');
       if(kifiheader.length > 0) {
         var offset = kifiheader.offset().top - 30;
-        $('.comment_body_view').stop().animate({'max-height':'+='+offset},20);
+        $('.comment_body_view').stop().animate({'max-height':'+='+offset},20, function() {
+          var newOffset = kifiheader.offset().top - 30;
+          if(newOffset < 0) {
+            resizeCommentBodyView(false);
+          }
+        });
       }
     }
   }
