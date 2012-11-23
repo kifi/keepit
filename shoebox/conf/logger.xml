@@ -12,7 +12,10 @@
   <logger name="com.mysql" level="ERROR"/>
   <logger name="com.ning.http" level="INFO"/>
   <logger name="com.keepit" level="DEBUG"/>
-  <logger name="securesocial.core" level="DEBUG"/>
+  <logger name="com.keepit.common.social" level="INFO"/>
+  <logger name="com.keepit.scraper" level="WARN"/>
+  <logger name="com.keepit.search" level="WARN"/>
+  <logger name="securesocial.core" level="WARN"/>
                  
   <root level="INFO">          
     <appender-ref ref="STDOUT" />

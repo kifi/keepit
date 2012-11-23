@@ -25,6 +25,7 @@ import java.net.URL
 import java.io.File
 import play.core.TestApplication
 import scala.collection.mutable.Map
+import com.keepit.model.SocialConnection
 
 @RunWith(classOf[JUnitRunner])
 class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
@@ -48,12 +49,40 @@ class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
           SocialUserInfo(fullName = "Bob Smith", socialId = SocialId("bsmith"), networkType = SocialNetworks.FACEBOOK).withUser(User(firstName = "fn1", lastName = "ln1").save).save
         }
         
-        
         val connections = inject[SocialUserCreateConnections].createConnections(socialUserInfo, Seq(json))
-
+        
         connections.size === 199    
       }
-    }
+    } 
+    "existing connection in DB is not part of the graph - this connection should be disabled" in {
+      running(new EmptyApplication().withFakeStore) {
+        
+        /*
+         * grab json
+         * import friends (create SocialUserInfo records)
+         * using json and one socialuserinfo, create connections
+         * 
+         */
+        val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay.json")).mkString)
+        
+        val result = inject[SocialUserImportFriends].importFriends(Seq(json))
+        
+        val socialUserInfo = CX.withConnection { implicit conn =>
+          SocialUserInfo(fullName = "Bob Smith", socialId = SocialId("bsmith"), networkType = SocialNetworks.FACEBOOK).withUser(User(firstName = "fn1", lastName = "ln1").save).save
+        }
+        val bobToBonConnection = CX.withConnection { implicit conn =>
+          val bb2 = SocialUserInfo(fullName = "Bob Smith2", socialId = SocialId("bsmith2"), networkType = SocialNetworks.FACEBOOK).withUser(User(firstName = "fn2", lastName = "ln2").save).save
+          println("bb2 userId is %s".format(bb2.userId.get.id))
+          SocialConnection(socialUser1=socialUserInfo.id.get, socialUser2=bb2.id.get).save
+        }
+        val connections = inject[SocialUserCreateConnections].createConnections(socialUserInfo, Seq(json))
+
+        val friendsIds = CX.withConnection { implicit conn =>
+          SocialConnection.getFortyTwoUserConnections(socialUserInfo.userId.get)
+        }
+        true === true
+      }
+    }   
   }
 
   

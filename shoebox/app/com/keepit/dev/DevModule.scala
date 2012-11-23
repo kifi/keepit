@@ -49,6 +49,7 @@ case class DevModule() extends ScalaModule with Logging {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
+    bind[SocialTokenRefresher].to[SocialTokenRefresherImpl].in[AppScoped]
   }
 
   @Singleton

@@ -51,7 +51,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
         val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo)
         log.info("fetched raw info %s for %s".format(rawInfo, socialUserInfo))
         CX.withConnection { implicit c =>
-          socialUserInfo.withState(SocialUserInfo.States.FETCHED_USING_SELF).save
+          socialUserInfo.withState(SocialUserInfo.States.FETCHED_USING_SELF).withLastGraphRefresh(new DateTime()) save
         }
         val store = inject[SocialUserRawInfoStore]
         store += (socialUserInfo.id.get -> rawInfo)
