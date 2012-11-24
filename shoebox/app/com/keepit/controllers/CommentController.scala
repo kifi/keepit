@@ -167,7 +167,8 @@ object CommentController extends FortyTwoController {
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
                   from = EmailAddresses.SUPPORT, to = addr, subject = "[new reply] " + uri.title,
-                  htmlBody = views.html.email.newCommentReply(sender, recipient, uri, parent, comment).body))
+                  htmlBody = views.html.email.newCommentReply(sender, recipient, uri, parent, comment).body,
+                  category = PostOffice.Categories.COMMENT))
             }
           }
         }
@@ -183,7 +184,8 @@ object CommentController extends FortyTwoController {
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
                   from = EmailAddresses.SUPPORT, to = addr, subject = subjectPrefix + uri.title,
-                  htmlBody = views.html.email.newMessage(sender, recipient, uri, comment).body))
+                  htmlBody = views.html.email.newMessage(sender, recipient, uri, comment).body,
+                  category = PostOffice.Categories.COMMENT))
             }
           }
         }

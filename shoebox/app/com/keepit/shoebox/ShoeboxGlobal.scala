@@ -13,6 +13,7 @@ import com.google.inject.Guice
 import com.google.inject.Injector
 import com.google.inject.Stage
 import com.keepit.common.social.SocialGraphPlugin
+import com.keepit.common.mail.MailSenderPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
 
@@ -26,6 +27,8 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
     require(inject[ScraperPlugin].enabled)
     require(inject[ArticleIndexerPlugin].enabled)
     require(inject[SocialGraphPlugin].enabled)
+    require(inject[MailSenderPlugin].enabled)
+    inject[MailSenderPlugin].processOutbox()
     log.info("shoebox started")
   }
 

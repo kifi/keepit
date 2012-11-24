@@ -24,10 +24,15 @@ import com.keepit.common.net.ClientResponse
 import java.util.concurrent.TimeUnit
 import com.google.inject.Inject
 
-class MailSender @Inject() (system: ActorSystem)
-  extends Logging with Plugin {
+trait MailSenderPlugin extends Plugin {
+  def processMail(mail: ElectronicMail) : Unit
+  def processOutbox(): Unit
+}
 
-  def processMail(mail: ElectronicMail) = actor ! ProcessMail(mail, this)
+class MailSenderPluginImpl @Inject() (system: ActorSystem)
+  extends Logging with MailSenderPlugin {
+
+  override def processMail(mail: ElectronicMail): Unit = actor ! ProcessMail(mail, this)
 
   private val actor = system.actorOf(Props { new MailSenderActor() })
   // plugin lifecycle methods
@@ -43,7 +48,7 @@ class MailSender @Inject() (system: ActorSystem)
     _cancellables.map(_.cancel)
   }
 
-  private[mail] def processOutbox(): Unit = {
+  override def processOutbox(): Unit = {
     CX.withConnection { implicit c =>
       ElectronicMail.outbox()
     } foreach { mail =>
@@ -52,8 +57,8 @@ class MailSender @Inject() (system: ActorSystem)
   }
 }
 
-private[mail] case class ProcessOutbox(sender: MailSender)
-private[mail] case class ProcessMail(mail: ElectronicMail, sender: MailSender)
+private[mail] case class ProcessOutbox(sender: MailSenderPlugin)
+private[mail] case class ProcessMail(mail: ElectronicMail, sender: MailSenderPlugin)
 
 private[mail] class MailSenderActor() extends Actor with Logging {
 
