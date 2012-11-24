@@ -33,6 +33,13 @@ trait PostOffice {
   def sendMail(mail: ElectronicMail): ElectronicMail
 }
 
+object PostOffice {
+  object Categories {
+    val HEALTHCHECK = ElectronicMailCategory("HEALTHCHECK")
+    val COMMENT = ElectronicMailCategory("COMMENT")
+  }
+}
+
 class PostOfficeImpl extends PostOffice with Logging {
 
   def sendMail(mail: ElectronicMail): ElectronicMail = {

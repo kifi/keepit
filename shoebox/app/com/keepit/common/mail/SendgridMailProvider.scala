@@ -64,9 +64,6 @@ class SendgridMailProvider @Inject() () extends Logging {
     transport.addTransportListener(new TransportListener() {
       def messageDelivered(e: TransportEvent): Unit = {
         log.info("messageDelivered: %s".format(e))
-        CX.withConnection { implicit c =>
-          ElectronicMail.get(externalIdFromTransportEvent(e)).sent("transport.messageDelivered").save
-        }
       }
       def messageNotDelivered(e: TransportEvent): Unit = {
         mailError(externalIdFromTransportEvent(e), "transport.messageNotDelivered", transport)
@@ -115,10 +112,10 @@ class SendgridMailProvider @Inject() () extends Logging {
     val transport = getLiveTransport()
     try {
       transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
-      val messageId = message.getHeader(SendgridMailProvider.MESSAGE_ID)(0)
+      val messageId = message.getHeader(SendgridMailProvider.MESSAGE_ID)(0).trim
       log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
       CX.withConnection { implicit c =>
-        mail.sent("message sent").save
+        mail.sent("message sent", ElectronicMailMessageId(messageId.substring(1, messageId.length - 1))).save
       }
     } catch {
       case e =>
@@ -141,7 +138,7 @@ class SendgridMailProvider @Inject() () extends Logging {
     multipart.addBodyPart(part1)
     multipart.addBodyPart(part2)
 
-    message.setHeader("X-SMTPAPI", JsObject(List("category" -> JsString("test-category"))).toString)
+    message.setHeader("X-SMTPAPI", JsObject(List("category" -> JsString(mail.category.category))).toString)
 
     message.setContent(multipart)
     message.setFrom(new InternetAddress(mail.from.address))

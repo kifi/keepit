@@ -27,7 +27,8 @@ class SendgridMailProviderTest extends Specification with TestAkkaSystem {
               from = EmailAddresses.ENG,
               to = EmailAddresses.ENG,
               subject = "Email from test case",
-              htmlBody = views.html.main("KiFi")(Html("<b>thanks</b>")).body).save
+              htmlBody = views.html.main("KiFi")(Html("<b>thanks</b>")).body,
+              category = PostOffice.Categories.HEALTHCHECK).save
         }
         mail.htmlBody.trim === """<!DOCTYPE html>
 
