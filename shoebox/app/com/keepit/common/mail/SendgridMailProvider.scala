@@ -22,6 +22,7 @@ import play.api.http.ContentTypes
 
 object SendgridMailProvider {
   val KIFI_MAIL_ID = "kifi-mail-id"
+  val MESSAGE_ID = "Message-ID"
 }
 
 @Singleton
@@ -114,10 +115,11 @@ class SendgridMailProvider @Inject() () extends Logging {
     val transport = getLiveTransport()
     try {
       transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
+      val messageId = message.getHeader(SendgridMailProvider.MESSAGE_ID)(0)
+      log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
       CX.withConnection { implicit c =>
         mail.sent("message sent").save
       }
-      log.info("mail %s sent".format(mail.externalId))
     } catch {
       case e =>
         log.error(e)
@@ -127,6 +129,7 @@ class SendgridMailProvider @Inject() () extends Logging {
 
   private def createMessage(mail: ElectronicMail) = {
     val message = new MimeMessage(mailSession)
+    message.setHeader(SendgridMailProvider.KIFI_MAIL_ID, mail.externalId.id)
     val multipart = new MimeMultipart("alternative")
 
     val part1 = new MimeBodyPart()

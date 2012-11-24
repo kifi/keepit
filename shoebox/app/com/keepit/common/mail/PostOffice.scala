@@ -39,7 +39,7 @@ class PostOfficeImpl extends PostOffice with Logging {
     val prepared = CX.withConnection { implicit c =>
       mail.prepareToSend().save
     }
-    inject[MailSender].processMail(prepared)
+    inject[MailSenderPlugin].processMail(prepared)
     prepared
   }
 }

@@ -1,9 +1,9 @@
 package com.keepit.common.mail
 
+import com.keepit.common.logging.Logging
 import com.keepit.common.db.{Id, Entity, EntityTable, ExternalId, State}
 import com.keepit.common.db.NotFoundException
 import com.keepit.common.time._
-import com.keepit.common.mail.ElectronicMail.States._
 import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
@@ -20,20 +20,23 @@ case class ElectronicMail (
   from: SystemEmailAddress,
   to: EmailAddressHolder,
   subject: String,
-  state: State[ElectronicMail] = PREPARING,
+  state: State[ElectronicMail] = ElectronicMail.States.PREPARING,
   htmlBody: String,
   textBody: Option[String] = None,
   responseMessage: Option[String] = None,
   timeSubmitted: Option[DateTime] = None
-) {
+) extends Logging {
 
   def prepareToSend(): ElectronicMail = state match {
-    case PREPARING => copy(state = ElectronicMail.States.READY_TO_SEND)
+    case ElectronicMail.States.PREPARING => copy(state = ElectronicMail.States.READY_TO_SEND)
     case _ => throw new Exception("mail %s in bad state, can't prepare to send".format(this))
   }
 
   def sent(message: String): ElectronicMail = state match {
-    case READY_TO_SEND => copy(state = ElectronicMail.States.SENT, responseMessage = Some(message), timeSubmitted = Some(currentDateTime))
+    case ElectronicMail.States.READY_TO_SEND => copy(state = ElectronicMail.States.SENT, responseMessage = Some(message), timeSubmitted = Some(currentDateTime))
+    case ElectronicMail.States.SENT =>
+      log.info("mail already sent. new message is: %s".format(message))
+      this
     case _ => throw new Exception("mail %s in bad state, can't prepare to send".format(this))
   }
 
