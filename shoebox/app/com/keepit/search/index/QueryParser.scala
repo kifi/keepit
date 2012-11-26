@@ -1,15 +1,15 @@
 package com.keepit.search.index
 
 import com.keepit.search.query.BooleanQueryWithPercentMatch
-import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.queryParser.{QueryParser => LuceneQueryParser}
 import org.apache.lucene.search.Query
 import org.apache.lucene.util.Version
 import com.keepit.search.query.ProximityQuery
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause._
+import org.apache.lucene.analysis.Analyzer
 
-class QueryParser(indexWriterConfig: IndexWriterConfig) extends LuceneQueryParser(Version.LUCENE_36, "b", indexWriterConfig.getAnalyzer()) {
+class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_36, "b", analyzer) {
 
   def parseQuery(queryText: String) = {
     val query = try {
