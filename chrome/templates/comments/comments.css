@@ -186,7 +186,7 @@ ul.kifi_social_tabs {
   height:18px;
   left:0px;
   bottom:15px;
-  background: url(crosshair-grayed.png) no-repeat;
+  /* DEPRICATED! Jared, this is for look here background: url(crosshair-grayed.png) no-repeat;*/
   background-size: 18px;
   background-position:center;
 }
@@ -197,7 +197,7 @@ ul.kifi_social_tabs {
   height:18px;
   left:0px;
   bottom:15px;
-  background: url(crosshair.png) no-repeat;
+  /* DEPRICATED! Jared, this is for look here background: url(crosshair.png) no-repeat;*/
   background-size: 18px;
   background-position:center;
   cursor: pointer;

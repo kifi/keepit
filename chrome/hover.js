@@ -5,9 +5,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   var config;
   var hover;
   var timeoutCollection = {};
-  var TIMEOUTS = {
-    REPLY_REFRESH: 4000
-  };
+
   var openedCommentsType = "";
 
   function log(message) {
@@ -393,11 +391,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       comments: visibleComments
     }
 
-    loadFile("templates/comments/reply.html", function(reply) {
     loadFile("templates/comments/hearts.html", function(hearts) {
     loadFile("templates/comments/comments_list.html", function(comment_list) {
     loadFile("templates/comments/comment.html", function(comment) {
-    loadFile("templates/comments/reply_list.html", function(reply_list) {
     loadFile("templates/comments/message.html", function(message) {
     loadFile("templates/comments/message_list.html", function(message_list) {
     loadFile("templates/comments/comment_post.html", function(comment_post) {
@@ -406,9 +402,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       var partials = {
         "comment_body_view": comment_list,
         "hearts": hearts,
-        "reply": reply,
         "comment": comment,
-        "reply_list": reply_list,
         "comment_post_view": comment_post
       };
 
@@ -430,8 +424,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
     });
     });
-    });
-    });
 
   }
 
@@ -442,7 +434,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     repositionScroll(false);
 
     createMainBinders(type, user);
-    createReplyBinders(type, user);
 
   }
 
@@ -514,115 +505,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
   }
 
-  function createTimeout(id, callback, timeout) {
-    timeoutCollection[id] = setTimeout(function() {
-        log("Executing timeout: " + id);
-        callback();
-        createTimeout(id, callback,timeout);
-      }, timeout);
-  }
-
-  function destroyTimeout(id) {
-    if(timeoutCollection[id]) {
-      clearTimeout(timeoutCollection[id]);
-      timeoutCollection[id] = undefined;
-      log("Destroyed timeout: " + id);
-    }
-  }
-
-  function destroyAllTimeouts() {
-    for (var id in timeoutCollection) {
-      destroyTimeout(id);
-    }
-  }
-
-  function createReplyBinders(type, user) {
-    $('.comment_body_view').on('click', '.replies', function() {
-      var link = $(this);
-      var comment = link.parents('.comment-wrapper');
-      var list = comment.children('.comment-replies');
-      var parent = comment.data("externalid");
-      if(list.is(":visible")) { // closing list
-        $(list).slideUp(200);
-        link.children('.reply-arrow').html('');
-        destroyTimeout(parent);
-        resizeCommentBodyView(false);
-      }
-      else { // opening list
-        link.children('.reply-arrow').html('&uarr;');
-        refreshReplies(comment, true);
-        /*createTimeout(parent, function() {
-          refreshReplies(comment, false);
-        }, TIMEOUTS.REPLY_REFRESH);*/
-
-        var scrollTo = $('.comment_body_view').scrollTop() + comment.position().top - 20;
-        $('.comment_body_view').animate({
-          scrollTop: scrollTo
-        });
-      }
-    });
-
-    $('.comment_body_view').on('focus', '.reply-comment-textarea', function() {
-      $(this).animate({
-        'height': '+=20'
-      },200,'easeQuickSnapBounce');
-    });
-    $('.comment_body_view').on('blur', '.reply-comment-textarea', function() {
-      $(this).animate({
-        'height': '-=20'
-      },100,'easeQuickSnapBounce');
-    });
-    $('.comment_body_view').on('keyup', '.reply-comment-textarea', function(e) {
-      if(e.keyCode === 13 && !e.ctrlKey) {
-        $(this).parents('form').first().submit();
-        return false;
-      }
-      return true;
-    });
-
-    // Reply submit handler
-    $('.comment_body_view').on('submit', '.reply-comment form', function() {
-      var replyTextarea = $(this).find('textarea');
-      var comment = replyTextarea.parents('.comment-wrapper');
-
-      var text = replyTextarea.val().trim();
-      replyTextarea.val("");
-      var parent = comment.data("externalid");
-      replyTextarea.blur();
-      submitComment(text, type, user, parent, function(newReply) {
-        console.log("server response: ",newReply,user);
-        refreshReplies(comment, false);
-        resizeCommentBodyView(false);
-      });
-      
-      console.log(this,"submitted!",text,"to parent", parent);
-      return false;
-    });
-  }
-
-  function refreshReplies(comment, openList) {
-    var parent = comment.data("externalid");
-    var list = comment.children('.comment-replies');
-
-    $.get("http://" + config.server + "/comments/reply?commentId=" + parent,
-      null,
-      function(replies) {
-        var params = {
-          replies: replies,
-          formatComments: commentTextFormatter,
-          formatDate: commentDateFormatter
-        };
-        renderTemplate("templates/comments/reply_list.html", params, function(renderedReplyList) {
-          list.find('.existing-replies').html(renderedReplyList).find("abbr.timeago").timeago();
-          if(openList) {
-            list.slideDown(300,'easeQuickSnapBounce', function() {
-              resizeCommentBodyView(false);
-            });
-          }
-        });
-      }
-    );
-  }
 
   function submitComment(text, type, user, parent, callback) {
     /* Because we're using very simple templating now, re-rendering has to be done carefully.
@@ -645,7 +527,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           "facebookId": user.facebook_id
         },
         "permissions": type,
-        "replyCount": 0,
         "externalId": response.commentId
       }
       callback(newComment);
