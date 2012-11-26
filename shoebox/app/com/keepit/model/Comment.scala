@@ -20,6 +20,7 @@ import ru.circumflex.orm.Predicate.toAggregateHelper
 import ru.circumflex.orm.RelationNode.toRelation
 import ru.circumflex.orm.SELECT
 import ru.circumflex.orm.str2expr
+import ru.circumflex.orm.COUNT
 
 case class Comment(
   id: Option[Id[Comment]] = None,
@@ -44,7 +45,6 @@ case class Comment(
 }
 
 object Comment {
-
 
   def all(implicit conn: Connection): Seq[Comment] =
     CommentEntity.all.map(_.view)
@@ -77,7 +77,8 @@ object Comment {
       SELECT (c.*) FROM c WHERE (
         (c.normalizedURI EQ normalizedURI) AND
         (c.permissions EQ Comment.Permissions.PUBLIC) AND
-        (c.state EQ States.ACTIVE)
+        (c.state EQ States.ACTIVE) AND
+        (c.parent IS_NULL)
       ) list
     }.map(_.view)
 
@@ -98,12 +99,14 @@ object Comment {
       ((SELECT (c.*) FROM ((cr JOIN c).ON("c.id = cr.comment_id")) WHERE (
         (c.normalizedURI EQ normalizedURI) AND
         (cr.userId EQ userId) AND
-        (c.permissions EQ Comment.Permissions.MESSAGE))
+        (c.permissions EQ Comment.Permissions.MESSAGE) AND
+        (c.parent IS_NULL))
         UNION
        (SELECT (c.*) FROM c WHERE (
         (c.normalizedURI EQ normalizedURI) AND
         (c.userId EQ userId) AND
-        (c.permissions EQ Comment.Permissions.MESSAGE))
+        (c.permissions EQ Comment.Permissions.MESSAGE) AND
+        (c.parent IS_NULL))
        )
       ) list) map (_.view) distinct
   }
@@ -112,6 +115,20 @@ object Comment {
     (CommentEntity AS "c").map { c =>
       SELECT (c.*) FROM c WHERE (c.parent EQ commentId) list
     }.map(_.view)
+  }
+
+  def userHasPermission(userId: Id[User], commentId: Id[Comment])(implicit conn: Connection) = {
+    // TODO: write this
+    true
+  }
+
+  def getChildrenCount(commentId: Id[Comment])(implicit conn: Connection): Long = {
+    (CommentEntity AS "c").map { c =>
+      SELECT(COUNT(c.id)) FROM c WHERE (c.parent EQ commentId) unique
+    } match {
+      case Some(cnt) => cnt
+      case None => 0L
+    }
   }
 
   object States {

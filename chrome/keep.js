@@ -261,12 +261,13 @@ function postComment(request, sendResponse) {
   log("posting comment:");
   console.log(request);
 
-  sendResponse({});
-
   var xhr = new XMLHttpRequest();
   xhr.onreadystatechange = function() {
     if (xhr.readyState == 4) {
-      log("POSTED!" + xhr.response);
+      var response = JSON.parse(xhr.response);
+      log("POSTED!" + response);
+      console.log(response);
+      sendResponse(response);
     }
   }
   var userConfigs = getConfigs();
@@ -274,8 +275,9 @@ function postComment(request, sendResponse) {
     log("No userinfo! Can't post comment!");
     return;
   }
+  var parent = request.parent || "";
 
-  xhr.open("POST", 'http://' + userConfigs.server + '/comments/add?externalId=' + userConfigs.user["keepit_external_id"] + "&url=" + encodeURIComponent(request.url) + "&text=" + encodeURIComponent(request.text) + "&permissions=" + request.permissions, true);
+  xhr.open("POST", 'http://' + userConfigs.server + '/comments/add?&url=' + encodeURIComponent(request.url) + "&text=" + encodeURIComponent(request.text) + "&permissions=" + request.permissions + "&parent=" + parent, true);
   xhr.send();
 
 }
@@ -311,6 +313,7 @@ function searchOnServer(request, sendResponse, tab) {
       log("[searchOnServer] xhr response:", tab);
       log(xhr.response, tab);
       var searchResults = $.parseJSON(xhr.response);
+      log("sending res")
       if (searchResults.length === 0) {
         sendResponse({"userInfo": userConfigs.user, "searchResults": [], "userConfig": userConfigs});
         return;
@@ -319,6 +322,7 @@ function searchOnServer(request, sendResponse, tab) {
       if (searchResults.length > maxRes) {
         searchResults = searchResults.slice(0, maxRes);
       }*/
+      log("Sending response!")
       sendResponse({"userInfo": userConfigs.user, "searchResults": searchResults, "userConfig": userConfigs});
     }
   }
@@ -532,6 +536,7 @@ function showPageIcon(tabId) {
 }
 
 chrome.tabs.onActivated.addListener(function(activeInfo) {
+  console.log("Active");
   chrome.tabs.query({active: true}, function(tabs) {
     var tab = tabs[0];
     if(tab.url.indexOf("http") === 0)
@@ -540,7 +545,9 @@ chrome.tabs.onActivated.addListener(function(activeInfo) {
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId, change) {
+  log("Updated");
   chrome.tabs.query({active: true}, function(tabs) {
+    log("Two")
     var tab = tabs[0];
     if(tab.url.indexOf("http") === 0)
       chrome.pageAction.show(tab.id);

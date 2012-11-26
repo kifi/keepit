@@ -208,7 +208,7 @@
         "*://www.google.co.zm/*",
         "*://www.google.co.zw/*"
       ],
-      "js" : ["jquery-1.7.2.min.js", "google_inject.js"],
+      "js" : ["lib/jquery-1.8.2.min.js", "google_inject.js"],
       "css": ["keepit.css"],
       "run_at" : "document_end",//document_start
       "all_frames" : false
@@ -218,8 +218,8 @@
         "http://*/*",
         "https://*/*"
       ],
-      "js" : ["jquery-1.7.2.min.js", "jquery-ui-1.9.1.custom.min.js", "jquery.range.js", "contentscript.js", "mustache.js", "hover.js"],
-      "css": ["keepit.css", "hover.css", "social_window.css"],
+      "js" : ["lib/jquery-1.8.2.min.js", "jquery-ui-1.9.1.custom.min.js", "keymaster.min.js", "lodash.min.js", "jquery.tokeninput.js", "contentscript.js", "mustache.js", "lib/jquery.timeago.js", "hover.js"],
+      "css": ["keepit.css", "hover.css", "social_window.css", "templates/comments/comments.css"],
       "run_at" : "document_end",
       "all_frames" : false
     }
@@ -241,11 +241,11 @@
     "google_inject.html",
     "hover.css",
     "hover.js",
-    "jquery-1.7.2.min.js",
     "jquery-ui-1.9.1.custom.min.js",
     "keep.html",
     "keepit.css",
     "keepit.png",
+    "keymaster.min.js",
     "kept_hover.html",
     "kept.png",
     "kifi.png",
@@ -267,6 +267,18 @@
     "icons/gdrive.png",
     "icons/gmail.png",
     "facebookConnect.png",
-    "comments.html"
+    "comments.html",
+    "lib/jquery-1.8.2.min.js",
+    "templates/comments/hearts.html",
+    "templates/comments/comments_list.html",
+    "templates/comments/comments_view.html",
+    "templates/comments/comments.css",
+    "templates/comments/reply.html",
+    "templates/comments/comment.html",
+    "templates/comments/reply_list.html",
+    "templates/comments/message.html",
+    "templates/comments/message_list.html",
+    "templates/comments/comment_post.html",
+    "templates/comments/message_post.html"
   ] 
 }

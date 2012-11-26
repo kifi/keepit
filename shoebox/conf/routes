@@ -14,8 +14,9 @@ GET     /bookmarks/check            com.keepit.controllers.BookmarksController.c
 POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.removeBookmark(externalId: ExternalId[User], externalBookmarkId: ExternalId[Bookmark])
 POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy(externalId: ExternalId[Bookmark], isPrivate: Boolean = true)
 
-POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: String, externalId: ExternalId[User], text: String, permissions: String, recipients: String = "", parent: String = "")
-GET     /comments/all               com.keepit.controllers.CommentController.getComments(url: String, externalId: ExternalId[User])
+POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: String, text: String, permissions: String, recipients: String ?= "", parent: String ?= "")
+GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
+GET     /comments/message           com.keepit.controllers.CommentController.getMessages(url: String)
 GET     /comments/reply             com.keepit.controllers.CommentController.getReplies(commentId: ExternalId[Comment])
 
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String, externalId: ExternalId[User])
@@ -60,7 +61,10 @@ GET     /admin/social_user/:id/refresh com.keepit.controllers.SocialUserControll
 GET     /admin/social_user/:id/reset com.keepit.controllers.SocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 GET     /admin/server               com.keepit.common.healthcheck.HealthController.serviceView()
 GET     /admin/search/results/:id   com.keepit.controllers.SearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
-
+GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
+GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
+GET     /admin/emails/comment-reply com.keepit.controllers.admin.AdminEmailPreviewController.newCommentReply
+GET     /admin/emails/comment-reply2 com.keepit.controllers.admin.AdminEmailPreviewController.newCommentReply2
 
 ##########################################
 # Secure social routes

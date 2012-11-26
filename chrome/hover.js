@@ -1,9 +1,14 @@
-console.log("injecting keep it hover div");
+console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
 (function() {
   $ = jQuery.noConflict()
   var config;
   var hover;
+  var timeoutCollection = {};
+  var TIMEOUTS = {
+    REPLY_REFRESH: 4000
+  };
+  var openedCommentsType = "";
 
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
@@ -64,19 +69,37 @@ console.log("injecting keep it hover div");
     });
   }
 
-  function getTemplate(name, params, callback) {
-    var req = new XMLHttpRequest();
-    req.open("GET", chrome.extension.getURL(name), true);
-    req.onreadystatechange = function() {
-        if (req.readyState == 4 && req.status == 200) {
-            var tb = Mustache.to_html(
-                req.responseText,
-                params
-            );
-            callback(tb);
-        }
-    };
-    req.send(null);
+  var templateCache = {};
+
+  function loadFile(name, callback) {
+    var tmpl = templateCache[name];
+    if(tmpl) {
+      callback(tmpl);
+    }
+    else {
+      var req = new XMLHttpRequest();
+      req.open("GET",chrome.extension.getURL(name), true);
+      req.onreadystatechange = function() {
+          if (req.readyState == 4 && req.status == 200) {
+            var response = req.responseText
+            callback(response);
+            templateCache[name] = response;
+          }
+      };
+      req.send(null);
+    }
+  }
+
+
+  function renderTemplate(name, params, callback, partials) {
+    loadFile(name, function(contents) {
+      var tb = Mustache.render(
+          contents,
+          params,
+          partials
+      );
+      callback(tb);
+    });
   }
 
   function summaryText(numberOfFriends, is_kept) {
@@ -112,7 +135,7 @@ console.log("injecting keep it hover div");
 
   function socialTooltip(friend, element) {
      // disabled for now
-    getTemplate("social_hover.html",{"friend": friend}, function(tmpl) {
+    renderTemplate("social_hover.html",{"friend": friend}, function(tmpl) {
       var timeout;
       var timein;
 
@@ -178,7 +201,7 @@ console.log("injecting keep it hover div");
         }
         console.log(tmpl);
 
-        getTemplate('kept_hover.html', tmpl, function(template) {
+        renderTemplate('kept_hover.html', tmpl, function(template) {
           drawKeepItHover(user, friends, template);
         });
 
@@ -205,7 +228,7 @@ console.log("injecting keep it hover div");
 
     $(".kifi_hover").draggable({ cursor: "move", axis: "y", distance: 20, handle: "div.kifihdr", containment: "body", scroll: false});
 
-    $('.kificlose').click(function() {
+    $('.xlink').click(function() {
       slideOut();
     });
     //$('.profilepic').click(function() { location=facebookProfileLink; });
@@ -216,10 +239,7 @@ console.log("injecting keep it hover div");
         "type": "set_page_icon",
         "is_kept": false
       });
-
-
       slideOut();
-
     });
 
     $('.keepitbtn').click(function() {
@@ -246,11 +266,15 @@ console.log("injecting keep it hover div");
       $('.moreinnerbox').slideToggle(150);
     });
 
-    $('.comments_label').click(function() {
-      showComments(user, true);
+    $('.comments_notification').click(function() {
+      showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "public");
     });
 
-    showComments(user,false); // prefetch comments, do not show.
+    $('.messages_label').click(function() {
+      showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "message");
+    });
+
+    showComments(user,false, "public"); // prefetch comments, do not show.
 
     slideIn();
   }
@@ -290,270 +314,397 @@ console.log("injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
-  function showComments(user, openComments) {
-    // trick to make it appear faster: render empty template, start opening
-    /*getTemplate("comments.html", {}, function(renderedTemplate) {
-      $('.kifi_comment_wrapper').html(renderedTemplate);
-      if(openComments)
-        $('.kifi_comment_wrapper').slideToggle(300);
-    });*/
-    if($('.kifi_comment_wrapper:visible').length > 0) {
+  function showComments(user, openComments, type) {
+    if($('.kifi_comment_wrapper:visible').length > 0 && !openComments) {
       $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
       return;
     }
     var userExternalId = user.keepit_external_id;
-    $.get("http://" + config.server + "/comments/all?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
+    $.get("http://" + config.server + "/comments/" + type + "?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
       null,
       function(comments) {
-        drawComments(user, comments["public"]);
-        if(openComments)
-          $('.kifi_comment_wrapper').slideDown(600,'easeInOutBack');
+        renderComments(user, comments, type || "public", function() {
+          if(openComments) {
+            repositionScroll(false);
+            $('.kifi_comment_wrapper').slideDown(600,'easeInOutBack', function () {
+              repositionScroll(false);
+            });
+          }
+        });
       });
   }
 
-  function drawComments(user, comments) {
-    if(comments && comments.length)
-      $('.comments_label').text(comments.length + " Comments");
-    else {
-      $('.comments_label').text("0 Comments");
-      comments = [];
+  function commentTextFormatter() {
+    return function(text, render) {
+      text = $.trim(render(text));
+      text = "<p class=\"first-line\">" + text + "</p>";
+      text = text.replace(/\n\n/g,"\n")
+      text = text.replace(/\n/g, "</p><p>");
+      return text;
     }
-    getTemplate("comments.html", {"comments":comments}, function(renderedTemplate) {
-      console.log("comment feed",comments);
-      $('.kifi_comment_wrapper').html(renderedTemplate);
+  }
 
-      var commentList = document.getElementById("comment_list");
-      commentList.scrollTop = commentList.scrollHeight;
+  function commentDateFormatter() {
+    return function(text, render) {
+      try {
+        var date = (new Date(render(text))).toISOString();
+        return date;
+      }
+      catch(e) {
+        return "";
+      }
+    }
+  }
 
-      $('.kifi_comment_wrapper #comment_form').submit(function() {
-        console.log("BAM!!!");
-        var text = $('#comment_text').val();
-        var request = {
-          "type": "post_comment",
-          "url": document.location.href,
-          "text": text,
-          "permissions": "public"
-        };
-        chrome.extension.sendRequest(request, function() {
-          $('#comment_text').val("");
-          console.log(user);
-          var newComment = {
-            "createdAt": "",
-            "text": request.text,
-            "user": {
-              "externalId": user.keepit_external_id,
-              "firstName": user.name,
-              "lastName": "",
-              "facebookId": user.facebook_id
-            },
-            "permissions": "public"
-          }
-          comments.push(newComment);
-          console.log("new thread", comments)
-          drawComments(user, comments);
-        });
-        return false;
+  function updateCommentCount() {
+    var commentCount = $(".real-comment").length;
+    if(commentCount == 0) {
+      $('.comments_label').addClass("zero_comments").text("+");
+    }
+    else {
+      $('.comments_label').removeClass("zero_comments").text(commentCount);
+    }
+  }
+
+  function renderComments(user, comments, type, onComplete) {
+    console.log("Drawing comments!");
+    comments = comments || {};
+    comments["public"] = comments["public"] || [];
+    comments["message"] = comments["message"] || [];
+    //comments["private"] = comments["private"] || []; // Removed, not for MVP
+
+    var visibleComments = comments[type] || [];
+    if(comments["public"].length == 0) {
+      $('.comments_label').addClass("zero_comments").text("+");
+    }
+    else {
+      $('.comments_label').text(comments["public"].length);
+      $('.comments_label').removeClass("zero_comments");
+    }
+    
+    var params = {
+      kifiuser: {
+        "firstName": user.name,
+        "lastName": "",
+        "avatar": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square"
+      },
+      formatComments: commentTextFormatter,
+      formatDate: commentDateFormatter,
+      comments: visibleComments
+    }
+
+    loadFile("templates/comments/reply.html", function(reply) {
+    loadFile("templates/comments/hearts.html", function(hearts) {
+    loadFile("templates/comments/comments_list.html", function(comment_list) {
+    loadFile("templates/comments/comment.html", function(comment) {
+    loadFile("templates/comments/reply_list.html", function(reply_list) {
+    loadFile("templates/comments/message.html", function(message) {
+    loadFile("templates/comments/message_list.html", function(message_list) {
+    loadFile("templates/comments/comment_post.html", function(comment_post) {
+    loadFile("templates/comments/message_post.html", function(message_post) {
+
+      var partials = {
+        "comment_body_view": comment_list,
+        "hearts": hearts,
+        "reply": reply,
+        "comment": comment,
+        "reply_list": reply_list,
+        "comment_post_view": comment_post
+      };
+
+      if(type == 'message') {
+        partials.comment = message;
+        partials.comment_body_view = message_list;
+        partials.comment_post_view = message_post;
+      }
+
+      renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
+        drawCommentView(renderedTemplate, user, type, partials);
+        onComplete();
+      }, partials);
+
+    });
+    });
+    });
+    });
+    });
+    });
+    });
+    });
+    });
+
+  }
+
+  function drawCommentView(renderedTemplate, user, type, partials) {
+    //console.log(renderedTemplate);
+    repositionScroll(false);
+    $('.kifi_comment_wrapper').html(renderedTemplate);
+    repositionScroll(false);
+
+    createMainBinders(type, user);
+    createReplyBinders(type, user);
+
+  }
+
+  function createMainBinders(type, user) {
+    $("abbr.timeago").timeago();
+    /*
+    // Not in MVP
+    $(".comment_post_view").on('click','.comment_box .crosshair', function() {
+      console.log("Hit");
+      return false;
+    });
+    */
+
+    // Main comment textarea 
+    $('.comment_post_view').on('focus','#main-comment-textarea',function() {
+      //$('.crosshair').slideDown(150); // Not in mvp
+      $('.submit-comment').slideDown(150);
+      $('.comment_body_view').animate({
+        'max-height': '-=45'
+      },150,'easeQuickSnapBounce');
+      $('.comment-box').animate({
+        'height': '85'
+      },150,'easeQuickSnapBounce');
+      $(".kififtr").animate({
+        'margin-top': '-10'
       });
     });
-  }
+    $('.comment_post_view').on('blur','#main-comment-textarea',function() {
+      $('.comment_body_view').animate({
+        'max-height': '+=45'
+      },150,'easeQuickSnapBounce');
+      $('.comment-box').animate({
+        'height': '40'
+      },150,'easeQuickSnapBounce');
 
+      //$('.crosshair').slideUp(20);
+      //$('.submit-comment').slideUp(20);
+    });
 
-  /*$(document).keypress(function(event) {
-    console.log(event);
-    if ((event.which == 115 && (event.ctrlKey||event.metaKey)|| (event.which == 19))) {
-      event.preventDefault();
-      var existingElements = $('.kifi_hover').length;
-      if (existingElements > 0) {
-        slideOut();
-        return;
-      }
-      chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
-        config = response;
-        console.log("user config",response);
-        getUserInfo(showHover);
+    // Submit handlers
+    $('.comment_post_view').on('submit','.comment_form', function(e) {
+      e.preventDefault();
+      //debugger;
+      submitComment($('#main-comment-textarea').val(), type, user, null, function(newComment) {
+        $('#main-comment-textarea').val("");
+
+        console.log("new thread", newComment);
+        // Clean up CSS
+        $(".kififtr").animate({
+          'margin-top': '0'
+        },100);
+        $('.submit-comment').slideUp(100, function() {
+          // Done cleaning up CSS. Redraw.
+          //renderComments(user, comments, type);
+          var params = newComment;
+          params["formatComments"] = commentTextFormatter;
+          params["formatDate"] = commentDateFormatter;
+
+          renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
+            //drawCommentView(renderedTemplate, user, type, partials);
+            $('.comment_body_view').find('.no-comment').parent().detach();
+            $('.comment_body_view').append(renderedComment).find("abbr.timeago").timeago();
+            updateCommentCount();
+            repositionScroll(false);
+          });
+        });
       });
       return false;
-    }
-    return true;
-  });*/
-
-
-  function chatWith(user) {
-    console.log("Im here");
-    
-    var chatBox = $("<div class='keepit_chat_box'>  </div>");
-    $('#keepit_hover').append(chatBox);
-
-    var img = $("<img class='keep_face' src='https://graph.facebook.com/" + user.facebookId + "/picture?type=square' width='24' height='24' alt=''>");
-    chatBox.append(img);
-    var message = $("<input type='text' class='keepit_text_message'/>");
-    var button = $("<button class='keepit_chat_button'>send</button>");
-    chatBox.append(message);
-    chatBox.append(button);
-    var closeForm= $("<a href='#' class='keepit_close_form'>X</a>");
-    chatBox.append(closeForm);
-    
-    closeForm.click(function() {
-      chatBox.remove();
-    });
-    button.click(function(){
-      console.log("going to send chat: " + document.location.href);
-      var xhr = new XMLHttpRequest();
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-          console.log("[chat response] xhr response:");
-          var result = $.parseJSON(xhr.response);
-          console.log(result);
-        }
-      }
-      xhr.open("POST", 'http://' + config["server"] + '/chat/' + user.externalId, true);
-      xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.send(JSON.stringify(  {"url": document.location.href, "message":message.val() } ));
-      console.log("sent");
     });
   }
+
+  function createTimeout(id, callback, timeout) {
+    timeoutCollection[id] = setTimeout(function() {
+        log("Executing timeout: " + id);
+        callback();
+        createTimeout(id, callback,timeout);
+      }, timeout);
+  }
+
+  function destroyTimeout(id) {
+    if(timeoutCollection[id]) {
+      clearTimeout(timeoutCollection[id]);
+      timeoutCollection[id] = undefined;
+      log("Destroyed timeout: " + id);
+    }
+  }
+
+  function destroyAllTimeouts() {
+    for (var id in timeoutCollection) {
+      destroyTimeout(id);
+    }
+  }
+
+  function createReplyBinders(type, user) {
+    $('.comment_body_view').on('click', '.replies', function() {
+      var link = $(this);
+      var comment = link.parents('.comment-wrapper');
+      var list = comment.children('.comment-replies');
+      var parent = comment.data("externalid");
+      if(list.is(":visible")) { // closing list
+        $(list).slideUp(200);
+        link.children('.reply-arrow').html('');
+        destroyTimeout(parent);
+        resizeCommentBodyView(false);
+      }
+      else { // opening list
+        link.children('.reply-arrow').html('&uarr;');
+        refreshReplies(comment, true);
+        /*createTimeout(parent, function() {
+          refreshReplies(comment, false);
+        }, TIMEOUTS.REPLY_REFRESH);*/
+
+        var scrollTo = $('.comment_body_view').scrollTop() + comment.position().top - 20;
+        $('.comment_body_view').animate({
+          scrollTop: scrollTo
+        });
+      }
+    });
+
+    $('.comment_body_view').on('focus', '.reply-comment-textarea', function() {
+      $(this).animate({
+        'height': '+=20'
+      },200,'easeQuickSnapBounce');
+    });
+    $('.comment_body_view').on('blur', '.reply-comment-textarea', function() {
+      $(this).animate({
+        'height': '-=20'
+      },100,'easeQuickSnapBounce');
+    });
+    $('.comment_body_view').on('keyup', '.reply-comment-textarea', function(e) {
+      if(e.keyCode === 13 && !e.ctrlKey) {
+        $(this).parents('form').first().submit();
+        return false;
+      }
+      return true;
+    });
+
+    // Reply submit handler
+    $('.comment_body_view').on('submit', '.reply-comment form', function() {
+      var replyTextarea = $(this).find('textarea');
+      var comment = replyTextarea.parents('.comment-wrapper');
+
+      var text = replyTextarea.val().trim();
+      replyTextarea.val("");
+      var parent = comment.data("externalid");
+      replyTextarea.blur();
+      submitComment(text, type, user, parent, function(newReply) {
+        console.log("server response: ",newReply,user);
+        refreshReplies(comment, false);
+        resizeCommentBodyView(false);
+      });
+      
+      console.log(this,"submitted!",text,"to parent", parent);
+      return false;
+    });
+  }
+
+  function refreshReplies(comment, openList) {
+    var parent = comment.data("externalid");
+    var list = comment.children('.comment-replies');
+
+    $.get("http://" + config.server + "/comments/reply?commentId=" + parent,
+      null,
+      function(replies) {
+        var params = {
+          replies: replies,
+          formatComments: commentTextFormatter,
+          formatDate: commentDateFormatter
+        };
+        renderTemplate("templates/comments/reply_list.html", params, function(renderedReplyList) {
+          list.find('.existing-replies').html(renderedReplyList).find("abbr.timeago").timeago();
+          if(openList) {
+            list.slideDown(300,'easeQuickSnapBounce', function() {
+              resizeCommentBodyView(false);
+            });
+          }
+        });
+      }
+    );
+  }
+
+  function submitComment(text, type, user, parent, callback) {
+    /* Because we're using very simple templating now, re-rendering has to be done carefully.
+     */
+    var request = {
+      "type": "post_comment",
+      "url": document.location.href,
+      "text": text,
+      "permissions": type,
+      "parent": parent
+    };
+    chrome.extension.sendRequest(request, function(response) {
+      var newComment = {
+        "createdAt": (new Date()),
+        "text": request.text,
+        "user": {
+          "externalId": user.keepit_external_id,
+          "firstName": user.name,
+          "lastName": "",
+          "facebookId": user.facebook_id
+        },
+        "permissions": type,
+        "replyCount": 0,
+        "externalId": response.commentId
+      }
+      callback(newComment);
+    });
+  }
+
+  key('command+shift+k, ctrl+shift+k', function(){
+    console.log('Opening kifi slider!');
+
+    var existingElements = $('.kifi_hover').length;
+    if (existingElements > 0) {
+      slideOut();
+      return;
+    }
+    chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
+      config = response;
+      console.log("user config",response);
+      getUserInfo(showHover);
+    });
+
+    key.setScope('kifi_open');
+
+    return false;
+  });
+
+  function repositionScroll(resizeQuickly) {
+    resizeCommentBodyView(resizeQuickly);
+
+    var commentBodyView = $(".comment_body_view")[0];
+    if(commentBodyView)
+      commentBodyView.scrollTop = 99999;
+  }
+
+  function resizeCommentBodyView(resizeQuickly) {
+    var kifiheader = $('.kifihdr');
+    if(resizeQuickly === true) {
+      $('.comment_body_view').stop().css({'max-height':$(window).height()-280});
+    }
+    else {
+      if(kifiheader.length > 0) {
+        var offset = kifiheader.offset().top - 30;
+        $('.comment_body_view').stop().animate({'max-height':'+='+offset},20, function() {
+          var newOffset = kifiheader.offset().top - 30;
+          if(newOffset < 0) {
+            resizeCommentBodyView(false);
+          }
+        });
+      }
+    }
+  }
+
+  $(window).resize(function() {
+    resizeCommentBodyView();
+  });
 
   chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
     config = response;
     console.log("user config",response);
   });
-
-
-  // Selection libs
-/*
-  jQuery.fn.getNodePath = function () {
-    if (this.length != 1) throw 'Requires one element.';
-
-    var path = [], node = this;
-    while (node.length) {
-      var realNode = node[0], name = realNode.localName;
-      if (!name) break;
-      name = name.toLowerCase();
-      if(name === "body") break;
-      var nodeDescriptor = { "tag": "", "classes": [], "id": "", "append": ""};
-
-      nodeDescriptor["tag"] = name;
-
-      if(realNode.className && realNode.className.indexOf('.') === -1) {
-        $.each(realNode.className.split(/ /g),function(i,c) {
-          nodeDescriptor["classes"].push(c);
-        });
-        //name += "." + realNode.className.replace(/ /g,'.');
-      }
-      if(realNode.id) {
-        nodeDescriptor["id"] = realNode.id;
-        //name += "#" + realNode.id.replace(/ /g, '#');
-      }
-
-      var parent = node.parent();
-      var currentSelector = name + (realNode.id ? '#'+realNode.id : '') + (realNode.className ? "."+realNode.className.replace(/ /g,".") : '')
-      var siblings = parent.children(currentSelector);
-      if (siblings.length > 1) {
-        nodeDescriptor["append"] = ':eq(' + siblings.index(node) + ')';
-        //name += ':eq(' + siblings.index(realNode) + ')';
-      }
-      path.push(nodeDescriptor);
-      //path = name + (path ? '>' + path : '');
-      node = parent;
-    }
-    return path.reverse();
-  };
-
-  var nodePathToSelector = function(nodePath) {
-    var path = [];
-    $(nodePath).each(function(i,e) {
-      var classes="",id=e.id,append=e.append;
-      if(e.classes.length > 0) {
-        classes = "." + e.classes.join(".");
-      }
-      if(id.length > 0) {
-        id = "#" + id;
-      }
-      var selector = $.trim(e.tag + classes + id + append);
-      if(selector.length > 0)
-        path.push(selector);
-    });
-    return path.join(" ");
-  }
-
-  var leastCommonSelector = function(nodePath) {
-    var $originalNode = $(nodePathToSelector(nodePath));
-    if($originalNode.length === 0) {
-      throw 'Node path did not return any elements! Oops?';
-    }
-    // The approach:
-    //  - Starting with the least specific (html), remove whole selectors
-    console.log($originalNode);
-    for(i=0;i<nodePath.length;i++) {
-      if(nodePath[i]["classes"].length > 0 || nodePath[i]["id"] !== '')
-        nodePath[i]["tag"] = "";
-      else {
-        nodePath[i]["tag"] = "";
-        nodePath[i]["append"] = "";
-      }
-      $newNode = $(nodePathToSelector(nodePath));
-      if($originalNode.is($newNode)) {
-        console.log($newNode.selector,"is the same!!!");
-      }
-      else {
-        console.log($newNode.selector,"is NOT the same!!!");
-        break;
-      }
-    }
-  }
-
-  $("body").delegate("*","mouseup",function() {
-    var range = $.Range.current();
-    var selection = {};
-    var start = range.start();
-    var end = range.end();
-    if(start.container == end.container && start.offset === end.offset ) {
-      console.log("click!",start, this, $(this))
-      selection['node'] = $(start.container.parentNode).getNodePath();
-      selection['parent'] = $(range.parent().parentNode).getNodePath();
-      selection['nodeSelector'] = nodePathToSelector(selection['node']);
-    }
-    else {
-      console.log("drag!",$(start.container.parentNode),$(end.container.parentNode))
-      selection['startNode'] = $(start.container.parentNode).getNodePath();
-      selection['endNode'] = $(end.container.parentNode).getNodePath();
-      selection['startOffset'] = start.offset;
-      selection['endOffset'] = end.offset;
-    }
-    console.log(selection);
-
-    if(selection.node) {
-      $(nodePathToSelector(selection.parent)).addClass('kifi_selection');
-    }
-    else if(selection.startNode && selection.endNode) {
-      var $start = $(nodePathToSelector(selection.startNode)).addClass('kifi_selection');
-      var $end = $(nodePathToSelector(selection.endNode)).addClass('kifi_selection');
-      var commonParent = $start.parents().has($end).first().addClass('kifi_selection');
-      console.log(commonParent)
-    }
-    //var path = $(element).getNodePath();
-
-    //console.log(range, element, path, nodePathToSelector(path));
-    //leastCommonSelector(path);
-    //$(nodePathToSelector(path)).css({"background-color":"#ff0000"})
-    return false;
-  });
-*/
-/*
-  $(document).ready(function(){
-     $("body *").mouseover(function(){
-        $(this).addClass('kifi_selection');
-        $(this).find("*").addClass('kifi_selection');
-        return false;
-     });
-          
-     $('body *').mouseout(function(){
-        $(this).removeClass('kifi_selection');
-        $(this).find("*").removeClass('kifi_selection');
-        return false;
-     });
-  });
-*/
 
 
 })();

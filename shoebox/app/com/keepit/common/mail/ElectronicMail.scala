@@ -1,15 +1,18 @@
 package com.keepit.common.mail
 
+import com.keepit.common.logging.Logging
 import com.keepit.common.db.{Id, Entity, EntityTable, ExternalId, State}
 import com.keepit.common.db.NotFoundException
 import com.keepit.common.time._
-import com.keepit.common.mail.ElectronicMail.States._
 import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api.Play.current
 import ru.circumflex.orm._
 import com.keepit.model.User
+
+case class ElectronicMailMessageId(val id: String)
+case class ElectronicMailCategory(val category: String)
 
 case class ElectronicMail (
   id: Option[Id[ElectronicMail]] = None,
@@ -20,20 +23,26 @@ case class ElectronicMail (
   from: SystemEmailAddress,
   to: EmailAddressHolder,
   subject: String,
-  state: State[ElectronicMail] = PREPARING,
+  state: State[ElectronicMail] = ElectronicMail.States.PREPARING,
   htmlBody: String,
   textBody: Option[String] = None,
   responseMessage: Option[String] = None,
-  timeSubmitted: Option[DateTime] = None
-) {
+  timeSubmitted: Option[DateTime] = None,
+  messageId: Option[ElectronicMailMessageId] = None, //of the format 475082848.3.1353745094337.JavaMail.eishay@eishay-mbp.local
+  category: ElectronicMailCategory //type of mail in free form, will be use for tracking
+) extends Logging {
 
   def prepareToSend(): ElectronicMail = state match {
-    case PREPARING => copy(state = ElectronicMail.States.READY_TO_SEND)
+    case ElectronicMail.States.PREPARING => copy(state = ElectronicMail.States.READY_TO_SEND)
     case _ => throw new Exception("mail %s in bad state, can't prepare to send".format(this))
   }
 
-  def sent(message: String): ElectronicMail = state match {
-    case READY_TO_SEND => copy(state = ElectronicMail.States.SENT, responseMessage = Some(message), timeSubmitted = Some(currentDateTime))
+  def sent(message: String, messageId: ElectronicMailMessageId): ElectronicMail = state match {
+    case ElectronicMail.States.READY_TO_SEND =>
+      copy(state = ElectronicMail.States.SENT, responseMessage = Some(message), timeSubmitted = Some(currentDateTime), messageId = Some(messageId))
+    case ElectronicMail.States.SENT =>
+      log.info("mail already sent. new message is: %s".format(message))
+      this
     case _ => throw new Exception("mail %s in bad state, can't prepare to send".format(this))
   }
 
@@ -49,6 +58,7 @@ case class ElectronicMail (
 }
 
 object ElectronicMail {
+
   object States {
     val PREPARING = State[ElectronicMail]("preparing")
     val READY_TO_SEND = State[ElectronicMail]("ready_to_send")
@@ -88,6 +98,8 @@ private[mail] class ElectronicMailEntity extends Entity[ElectronicMail, Electron
   val textBody = "text_body".CLOB
   val responseMessage = "response_message".VARCHAR(1024)
   val timeSubmitted = "time_submitted".JODA_TIMESTAMP
+  val messageId = "message_id".VARCHAR(64)
+  val category = "category".VARCHAR(64)
 
   def relation = ElectronicMailEntity
 
@@ -104,7 +116,9 @@ private[mail] class ElectronicMailEntity extends Entity[ElectronicMail, Electron
     htmlBody = htmlBody(),
     textBody = textBody.value,
     responseMessage = responseMessage.value,
-    timeSubmitted = timeSubmitted.value
+    timeSubmitted = timeSubmitted.value,
+    messageId = messageId.value.map(ElectronicMailMessageId(_)),
+    category = ElectronicMailCategory(category())
   )
 }
 
@@ -126,6 +140,8 @@ private object ElectronicMailEntity extends ElectronicMailEntity with EntityTabl
     entity.textBody.set(view.textBody)
     entity.responseMessage.set(view.responseMessage)
     entity.timeSubmitted.set(view.timeSubmitted)
+    entity.messageId.set(view.messageId.map(_.id))
+    entity.category := view.category.category
     entity
   }
 }

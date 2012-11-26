@@ -15,7 +15,9 @@ class CommentWithSocialUserSerializer extends Writes[CommentWithSocialUser] {
       "createdAt" -> JsString(commentWithSocialUser.comment.createdAt.toString),
       "text" -> JsString(commentWithSocialUser.comment.text),
       "user" -> UserWithSocialSerializer.userWithSocialSerializer.writes(commentWithSocialUser.user),
-      "permissions" -> JsString(commentWithSocialUser.comment.permissions.value)
+      "permissions" -> JsString(commentWithSocialUser.comment.permissions.value),
+      "replyCount" -> JsNumber(commentWithSocialUser.replyCount),
+      "recipients" -> JsArray(commentWithSocialUser.recipients map (r => UserWithSocialSerializer.userWithSocialSerializer.writes(r)))
     ))
 
   def writes (comments: Seq[CommentWithSocialUser]): JsValue =

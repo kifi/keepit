@@ -1,10 +1,20 @@
 
 
 <div class="kifi_hover">
-  <div class="roundedbox noselect">
+  <div class="roundedbox">
     <span class="cntrk">
       <div class="imageborder"><div class="circular profilepic" style="background: url({{profilepic}}) no-repeat; background-position:center; "></div></div>
-      <div class="kifihdr color_a">{{name}}<span class="kificlose"><span class="xlink">x</span></span></div>
+      <div class="kifihdr color_a">
+        {{name}}
+        <span class="kifi-header-actions">
+          <span class="comments_notification">
+            <span class="comments_icon"></span>
+            <span class="comments_label zero_comments">+</span>
+          </span>
+          <span class="xlink">&times;</span>
+        </span>
+      </div>
+      
         <div class="kificnt">
         {{#socialConnections}}
         <div class="socialinnerbox">
@@ -39,7 +49,7 @@
           {{/is_kept}}
           </div>
           <div class="moreinnerbox"><label for="keepit_private"><input type='checkbox' id='keepit_private' class='keepit_private' value='private'> Keep this link private</label></div>
-          <div class="comments_label">Comments</div>
+
           <div class="kifi_comment_wrapper"></div>
         </div>
     <div class="kififtr"><span class="kifilogo" style="background: url({{logo}}) no-repeat; background-position: top; background-size: 25px;"></span></div>
