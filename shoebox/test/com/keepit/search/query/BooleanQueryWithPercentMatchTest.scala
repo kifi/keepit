@@ -31,8 +31,8 @@ import org.apache.lucene.search.DocIdSetIterator
 @RunWith(classOf[JUnitRunner])
 class BooleanQueryWithPercentMatchTest extends SpecificationWithJUnit {
 
-  val analyzer = new DefaultAnalyzer
-  val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
+  val indexingAnalyzer = DefaultAnalyzer.forIndexing
+  val config = new IndexWriterConfig(Version.LUCENE_36, indexingAnalyzer)
 
   val ramDir = new RAMDirectory
   val indexReader = {

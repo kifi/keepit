@@ -16,9 +16,8 @@ import org.apache.lucene.search.Query
 @RunWith(classOf[JUnitRunner])
 class QueryParserTest extends SpecificationWithJUnit {
 
-  val analyzer = new DefaultAnalyzer
-  val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
-  val parser = new QueryParser(config) {
+  val analyzer = DefaultAnalyzer.forParsing
+  val parser = new QueryParser(analyzer) {
     override def parseQuery(queryText: String) = {
       val qopt = super.parseQuery(queryText)
       //println("[%s]=>[%s]".format(queryText, qopt))

@@ -30,7 +30,11 @@ case class FakeMailModule() extends ScalaModule {
   @Provides
   def postOfficeProvider(emails: FakeOutbox): PostOffice = {
     new PostOffice() {
-      def sendMail(mail: ElectronicMail): ElectronicMail = emails.add(mail)
+      def sendMail(mail: ElectronicMail): ElectronicMail = {
+        val sent = mail.prepareToSend().sent("fake sent", ElectronicMailMessageId("475082848.3.1353745094337.JavaMail.eishay@eishay-mbp.local"))
+        emails.add(sent)
+        sent
+      }
     }
   }
 }

@@ -8,12 +8,16 @@ import akka.actor.Props
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckImpl
+import com.keepit.common.mail.MailSenderPlugin
 import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.PostOfficeImpl
 import com.keepit.common.net._
+import com.keepit.common.store.S3Bucket
+import com.keepit.common.social._
 import com.keepit.common.logging.Logging
 import com.keepit.scraper._
 import com.keepit.inject._
+import com.keepit.search._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.graph.URIGraphPluginImpl
@@ -22,15 +26,12 @@ import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexerPluginImpl
 import play.api.Play
 import play.api.Play.current
-import com.keepit.common.mail.MailSender
-import com.keepit.search._
 import com.amazonaws.services.s3._
 import com.amazonaws.auth.BasicAWSCredentials
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import java.io.File
-import com.keepit.common.store.S3Bucket
-import com.keepit.common.social._
+import com.keepit.common.mail.{MailSenderPlugin, MailSenderPluginImpl}
 
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -40,6 +41,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
+    bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
   }
 
   @Singleton
@@ -114,8 +116,4 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     val host = InetAddress.getLocalHost().getCanonicalHostName()
     new HealthcheckImpl(system, host, postOffice)
   }
-
-  @Provides
-  @AppScoped
-  def mailSenderProvider(system: ActorSystem): MailSender = new MailSender(system)
 }

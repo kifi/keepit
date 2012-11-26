@@ -12,6 +12,7 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
+import scala.math._
 
 object LineQuery  {
   val MAX_POSITION_PER_LINE = 2048
@@ -83,7 +84,7 @@ abstract class LineQuery(val weight: Float) {
         freq += 1
         fetchPos()
       }
-      sc = weight * freq
+      sc = weight * sqrt(freq.toDouble).toFloat
     }
     sc
   }

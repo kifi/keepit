@@ -68,7 +68,7 @@
         }}
       </td>
       <td>@uriStat.bookmarks.size</td>
-      <td>@adminHelper.dateDisplay(bookmark.createdAt)</td>
+      <td>@adminHelper.dateDisplay(bookmark.createdAt) @adminHelper.timeDisplay(bookmark.createdAt)</td>
       <td>
         @{uriStat.uri.state.value match {
           case "indexed" => {
