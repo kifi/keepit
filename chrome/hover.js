@@ -406,6 +406,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         "comment_post_view": comment_post
       };
 
+      // By default we use the comment partials.
+      // To override for a specific function, do so here.
       if(type == 'message') {
         partials.comment = message;
         partials.comment_body_view = message_list;

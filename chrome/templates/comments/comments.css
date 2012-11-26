@@ -1,9 +1,9 @@
-ul.kifi_social_tabs {
+ul.interaction_bar {
   margin:0px;
   padding:0px;
 }
 
-.kifi_social_tabs li {
+.interaction_bar li {
   list-style:none;
   display:inline;
   padding:0px;
@@ -11,7 +11,7 @@ ul.kifi_social_tabs {
   background-color: #FAF9F9;
 }
 
-.kifi_social_tabs span {
+.interaction_bar span {
   padding:5px 10px;
   display:inline-block;
   border: 1px solid rgb(190, 190, 190);
@@ -22,7 +22,7 @@ ul.kifi_social_tabs {
   background-color: #FAF9F9;
 }
 
-.kifi_social_tabs .active {
+.interaction_bar .active {
     border-bottom: 1px solid #FAF9F9;
 }
 
