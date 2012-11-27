@@ -60,7 +60,7 @@ class SocialTokenRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin
   override def enabled: Boolean = true
   override def onStart(): Unit = {
     _cancellables = Seq(
-      system.scheduler.schedule(0 seconds, 15 seconds, actor, Validate)
+      system.scheduler.schedule(0 seconds, 40 seconds, actor, Validate)
     )
   }
   override def onStop(): Unit = {
