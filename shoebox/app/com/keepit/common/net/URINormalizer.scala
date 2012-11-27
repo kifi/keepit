@@ -7,6 +7,7 @@ object URINormalizer extends Logging {
   val normalizers = Seq(GoogleNormalizer, RemoveWWWNormalizer, DefaultNormalizer)
 
   def normalize(uriString: String) = {
+    //better: use http://stackoverflow.com/a/4057470/81698
     URI.parse(uriString) match {
       case Some(uri) =>
         normalizers.find(_.isDefinedAt(uri)).map{ n =>
