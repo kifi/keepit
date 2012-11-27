@@ -21,4 +21,9 @@ object AdminEmailPreviewController extends FortyTwoController {
         Comment(normalizedURI = null, userId = null, text = "These are the running shoes I was telling you about.", parent = Some(Id(1)))))
   }
 
+  def newComment = AdminHtmlAction { implicit request =>
+    Ok(views.html.email.newComment(sender, recipient, uri,
+        Comment(normalizedURI = null, userId = null, text = "Best running shoes I've ever tried!")))
+  }
+
 }

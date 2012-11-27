@@ -269,6 +269,7 @@
     "facebookConnect.png",
     "comments.html",
     "lib/jquery-1.8.2.min.js",
+    "templates/main_hover.html",
     "templates/comments/hearts.html",
     "templates/comments/comments_list.html",
     "templates/comments/comments_view.html",
