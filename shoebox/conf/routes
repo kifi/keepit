@@ -64,6 +64,7 @@ GET     /admin/social_user/:id/refresh com.keepit.controllers.SocialUserControll
 GET     /admin/social_user/:id/reset com.keepit.controllers.SocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 GET     /admin/server               com.keepit.common.healthcheck.HealthController.serviceView()
 GET     /admin/search/results/:id   com.keepit.controllers.SearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
+GET     /admin/emails/comment       com.keepit.controllers.admin.AdminEmailPreviewController.newComment
 GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
 GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
 
