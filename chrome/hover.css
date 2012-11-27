@@ -359,15 +359,6 @@
 }
 
 
-/*.kifi_hover .friend_tooltip {
-  display:none;
-  position:absolute;
-  top:0px;
-  height:50px;
-  width:100px;
-  background-color: #faf9f9;
-}*/
-
 .kifi_hover .friend_tooltip {
   display:none;
   position:absolute;
@@ -383,6 +374,7 @@
   box-shadow: 5px 5px 15px rgba(50,50,50,0.5);
   border: 1px solid #2d2d2d;
 }
+
 .kifi_hover .friend_tooltip:before, .kifi_hover .friend_tooltip:after {
   top: 100%;
   border: solid transparent;
@@ -510,7 +502,6 @@ span.kn_social {
   color: #2d2d2d;
   font-size: 12px;
   display:none;
-  margin-top: 5px;
 }
 
 .kifi_comment_wrapper .kifi_comment {
@@ -534,8 +525,6 @@ span.kn_social {
   max-height: 40px;
   padding:5px;
 }
-
-
 
 .kifi_comment_wrapper .comment_user img {
   width:30px;
@@ -588,6 +577,7 @@ span.kn_social {
   color: #666;
   cursor: pointer;
 }
+
 
 
 /* BEGIN MENTIONS
