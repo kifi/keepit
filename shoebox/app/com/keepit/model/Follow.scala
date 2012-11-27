@@ -38,9 +38,6 @@ case class Follow (
 
 object Follow {
 
-  def apply(userId: Id[User], uriId: Id[NormalizedURI]): Follow =
-    Follow(userId = userId, uriId = uriId)
-
   def all(implicit conn: Connection): Seq[Follow] =
     FollowEntity.all.map(_.view)
 
