@@ -496,6 +496,28 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
     */
 
+    if(type == "message") {
+      $("#to-list").tokenInput([
+            {id: 7, name: "Ruby"},
+            {id: 'dd11', name: "Python"},
+            {id: 13, name: "JavaScript"},
+            {id: 17, name: "ActionScript"},
+            {id: 19, name: "Scheme"},
+            {id: 23, name: "Lisp"},
+            {id: 29, name: "C#"},
+            {id: 31, name: "Fortran"},
+            {id: 37, name: "Visual Basic"},
+            {id: 41, name: "C"},
+            {id: 43, name: "C++"},
+            {id: 47, name: "Java"}
+        ], {
+        theme: "facebook"
+      });
+      $("#token-input-to-list").keypress(function(e) {
+        return e.which !== 13;
+      });
+    }
+
     // Main comment textarea
     var placeholder = "<span class=\"placeholder\">Add a comment…</span>";
     $('.comment-compose').html(placeholder);
