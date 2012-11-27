@@ -106,7 +106,7 @@ object CommentController extends FortyTwoController {
       val uriId = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save).id.get
       Follow.get(request.userId, uriId) match {
         case Some(follow) if !follow.isActive => follow.activate.save
-        case None => Follow(request.userId, uriId).save
+        case None => Follow(userId = request.userId, uriId = uriId).save
         case _ => None
       }
     }
