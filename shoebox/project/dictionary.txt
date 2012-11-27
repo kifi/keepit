@@ -3,6 +3,7 @@ avatar
 bookmark
 bookmarks
 clob
+docs
 eishay
 emails
 facebook
@@ -22,4 +23,5 @@ routes
 signup
 todo
 uri
+url
 val
