@@ -17,7 +17,8 @@ import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, Foll
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
-import com.keepit.serializer.CommentWithSocialUserSerializer._
+import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
+import com.keepit.serializer.MessageDigestSerializer.messageDigestSerializer
 import play.api.Play.current
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka
@@ -26,6 +27,7 @@ import play.api.mvc.Action
 import play.api.mvc.Controller
 import securesocial.core.SecureSocial
 import securesocial.core.java.SecureSocial.SecuredAction
+import com.keepit.common.social.MessageDigest
 
 object CommentController extends FortyTwoController {
 
@@ -80,12 +82,12 @@ object CommentController extends FortyTwoController {
       val user = User.get(request.userId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
-          List(Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(CommentWithSocialUser(_)))
+          List(Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(MessageDigest(_)))
         case None =>
-          List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
+          List[(State[Comment.Permission],Seq[MessageDigest])]()
       }
     }
-    Ok(commentWithSocialUserSerializer.writes(comments))
+    Ok(messageDigestSerializer.writes(comments))
   }
 
   @deprecated("comments will soon not have replies", "2012-11-27")

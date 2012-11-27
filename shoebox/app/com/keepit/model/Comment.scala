@@ -113,7 +113,7 @@ object Comment {
 
   def getChildren(commentId: Id[Comment])(implicit conn: Connection): Seq[Comment] = {
     (CommentEntity AS "c").map { c =>
-      SELECT (c.*) FROM c WHERE (c.parent EQ commentId) list
+      SELECT (c.*) FROM c WHERE (c.parent EQ commentId) ORDER_BY(c.id ASC) list
     }.map(_.view)
   }
 
