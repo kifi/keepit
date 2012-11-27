@@ -1,4 +1,14 @@
 
+.kifi_comment_wrapper .control-bar {
+  font-size: 11px;
+  color: #8C7E7E;
+  padding: 10px;
+  clear: both;
+}
+
+.kifi_comment_wrapper .control-bar .filter-by {
+  cursor: pointer;
+}
 
 .kifi_comment_wrapper .comment_body_view {
   background-color: #FAF9F9;
