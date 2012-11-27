@@ -64,7 +64,7 @@ trait SecureSocial extends Controller with Logging {
    */
   def SecuredAction[A](apiClient: Boolean, p: BodyParser[A])(f: SecuredRequest[A] => Result) = Action(p) {
     implicit request => {
-      log.info("secured access (api=%s) to %s by %s".format(apiClient, request.path, request.agent))
+      log.debug("secured access (api=%s) to %s by %s".format(apiClient, request.path, request.agent))
       SecureSocial.userFromSession(request).map { userId =>
         UserService.find(userId).map { user =>
           f(SecuredRequest(user, request))
