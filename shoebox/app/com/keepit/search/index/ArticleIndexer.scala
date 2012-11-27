@@ -23,6 +23,7 @@ import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.Version
 import java.io.File
 import java.io.IOException
+import java.io.StringReader
 import scala.math._
 import com.keepit.search.query.ProximityQuery
 
@@ -80,6 +81,10 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
 
   def getArticleSearcher() = searcher
 
+  def getPersonalizedArticleSearcher(uris: Set[Id[NormalizedURI]]) = {
+    new PersonalizedSearcher(searcher.indexReader, searcher.idMapper, uris.map(id => id.id))
+  }
+
   def search(queryText: String): Seq[Hit] = {
     parseQuery(queryText) match {
       case Some(query) => searcher.search(query)
@@ -92,14 +97,19 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   }
 
   class ArticleIndexable(override val id: Id[NormalizedURI], val uri: NormalizedURI, articleStore: ArticleStore) extends Indexable[NormalizedURI] {
+    implicit def toReader(text: String) = new StringReader(text)
+
     override def buildDocument = {
       val doc = super.buildDocument
       articleStore.get(uri.id.get) match {
         case Some(article) =>
+          val analyzer = indexWriterConfig.getAnalyzer
           val title = buildTextField("t", article.title)
           val content = buildTextField("c", article.content)
+          val semanticVector = buildSemanticVectorField("sv", analyzer.tokenStream("t", article.title), analyzer.tokenStream("c", article.content))
           doc.add(title)
           doc.add(content)
+          doc.add(semanticVector)
           doc
         case None => doc
       }

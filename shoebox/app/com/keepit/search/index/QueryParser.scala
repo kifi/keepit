@@ -5,6 +5,7 @@ import org.apache.lucene.queryParser.{QueryParser => LuceneQueryParser}
 import org.apache.lucene.search.Query
 import org.apache.lucene.util.Version
 import com.keepit.search.query.ProximityQuery
+import com.keepit.search.query.QueryUtil
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.analysis.Analyzer
@@ -31,7 +32,7 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
 
   def getFieldQueryWithProximity(fieldName: String, queryText: String, quoted: Boolean): Query = {
     val query = super.getFieldQuery(fieldName, queryText, quoted)
-    val terms = ProximityQuery.getTerms(fieldName, query)
+    val terms = QueryUtil.getTerms(fieldName, query)
     if (terms.size <= 1) query
     else {
       val booleanQuery = new BooleanQuery
