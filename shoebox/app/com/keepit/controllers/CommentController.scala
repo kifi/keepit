@@ -13,7 +13,7 @@ import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.social.UserWithSocial
 import com.keepit.inject.inject
-import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, NormalizedURI, SocialConnection, SocialUserInfo, User}
+import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, Follow, NormalizedURI, SocialConnection, SocialUserInfo, User}
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
@@ -35,11 +35,8 @@ object CommentController extends FortyTwoController {
                     recipients: String = "",
                     parent: String) = AuthenticatedJsonAction { request =>
     val comment = CX.withConnection { implicit conn =>
-      val userId = User.getOpt(request.userId).getOrElse(throw new Exception("Invalid userid"))
-      val uri = NormalizedURI.getByNormalizedUrl(url) match {
-        case Some(nuri) => nuri
-        case None => NormalizedURI(title = "title", url = url).save
-      }
+      val userId = request.userId
+      val uri = NormalizedURI.getOrCreate(url)
       val parentIdOpt = parent match {
         case "" => None
         case p => Comment.getOpt(ExternalId[Comment](p)) match {
@@ -50,13 +47,13 @@ object CommentController extends FortyTwoController {
 
       permission.toLowerCase match {
         case "private" =>
-          Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
+          Comment(normalizedURI = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
         case "message" =>
-          val newComment = Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
+          val newComment = Comment(normalizedURI = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
           createRecipients(newComment.id.get, recipients, parentIdOpt)
           newComment
         case "public" | "" =>
-          Comment(normalizedURI = uri.id.get, userId = userId.id.get, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
+          Comment(normalizedURI = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
       }
     }
 
@@ -75,7 +72,7 @@ object CommentController extends FortyTwoController {
           List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
       }
     }
-    Ok(commentWithSocialUserSerializer.writes(comments)).as(ContentTypes.JSON)
+    Ok(commentWithSocialUserSerializer.writes(comments))
   }
 
   def getMessages(url: String) = AuthenticatedJsonAction { request =>
@@ -88,32 +85,46 @@ object CommentController extends FortyTwoController {
           List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
       }
     }
-    Ok(commentWithSocialUserSerializer.writes(comments)).as(ContentTypes.JSON)
+    Ok(commentWithSocialUserSerializer.writes(comments))
   }
 
-  // TODO: getNotes()
-
+  @deprecated("comments will soon not have replies", "2012-11-27")
   def getReplies(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     val replies = CX.withConnection { implicit conn =>
       val comment = Comment.get(commentId)
       val user = User.get(request.userId)
-      if(hasPermission(user.id.get, comment.id.get))
+      if (true) // TODO: hasPermission(user.id.get, comment.id.get)
         Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }
       else
         Seq[CommentWithSocialUser]()
     }
-    Ok(commentWithSocialUserSerializer.writes(replies)).as(ContentTypes.JSON)
+    Ok(commentWithSocialUserSerializer.writes(replies))
   }
 
-  def hasPermission(userId: Id[User], commentId: Id[Comment])(implicit conn: Connection): Boolean = {
-    // TODO: write this
-    true
+  def startFollowing(url: String) = AuthenticatedJsonAction { request =>
+    CX.withConnection { implicit conn =>
+      val uri = NormalizedURI.getOrCreate(url)
+      Follow.getOrCreate(request.userId, uri).activate.save
+    }
+    Ok(JsObject(Seq("following" -> JsBoolean(true))))
   }
 
+  def stopFollowing(url: String) = AuthenticatedJsonAction { request =>
+    CX.withConnection { implicit conn =>
+      NormalizedURI.getByNormalizedUrl(url) match {
+        case Some(uri) => Follow.get(request.userId, uri.id.get) match {
+          case Some(follow) => follow.deactivate.save
+          case None => None
+        }
+        case None => None
+      }
+    }
+    Ok(JsObject(Seq("following" -> JsBoolean(false))))
+  }
 
   // Given a list of comma separated external user ids, side effects and creates all the necessary recipients
   // For comments with a parent comment, adds recipients to parent comment instead.
-  def createRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit conn: Connection) = {
+  private def createRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit conn: Connection) = {
     recipients.split(",").map(_.trim()) map { recipientId =>
       // Split incoming list of externalIds
       try {

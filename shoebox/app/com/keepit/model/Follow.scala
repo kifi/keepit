@@ -31,10 +31,15 @@ case class Follow (
     entity.view
   }
 
-  def withState(state: State[Follow]) = copy(state = state)
+  def activate = copy(state = Follow.States.ACTIVE)
+  def deactivate = copy(state = Follow.States.INACTIVE)
+  def isActive = state == Follow.States.ACTIVE
 }
 
 object Follow {
+
+  def apply(userId: Id[User], uriId: Id[NormalizedURI]): Follow =
+    Follow(userId = userId, uriId = uriId)
 
   def all(implicit conn: Connection): Seq[Follow] =
     FollowEntity.all.map(_.view)
@@ -47,6 +52,15 @@ object Follow {
 
   def getOrThrow(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Follow =
     get(userId, uriId).getOrElse(throw NotFoundException(classOf[Follow], userId, uriId))
+
+  def getOrCreate(userId: Id[User], uri: NormalizedURI)(implicit conn: Connection): Follow =
+    getOrCreate(userId, uri.id.get)
+
+  def getOrCreate(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Follow =
+    get(userId, uriId) match {
+      case Some(follow) => follow
+      case None => Follow(userId, uriId).save
+    }
 
   object States {
     val ACTIVE = State[Follow]("active")

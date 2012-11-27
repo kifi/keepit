@@ -39,11 +39,12 @@ object UserController extends FortyTwoController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
 
-    val (kept, socialUsers) = CX.withConnection { implicit c =>
+    val (kept, following, socialUsers) = CX.withConnection { implicit c =>
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
-          val kept = Bookmark.load(uri, userId).isDefined // .state == ACTIVE ?
+          val kept = Bookmark.load(uri, userId).isDefined  // .state == ACTIVE ?
+          val following = Follow.get(userId, uri.id.get).map(_.isActive).getOrElse(false)
 
           val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
           val searcher = inject[URIGraph].getURIGraphSearcher
@@ -51,16 +52,19 @@ object UserController extends FortyTwoController {
           val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
           val socialUsers = sharingUserIds.map(u => UserWithSocial.toUserWithSocial(User.get(u))).toSeq
 
-          (kept, socialUsers)
+          (kept, following, socialUsers)
         case None =>
-          (false, Seq[UserWithSocial]())
+          (false, false, Seq[UserWithSocial]())
       }
     }
 
-    Ok(JsObject(Seq("kept" -> JsBoolean(kept), "friends" -> userWithSocialSerializer.writes(socialUsers))))
+    Ok(JsObject(Seq(
+        "kept" -> JsBoolean(kept),
+        "following" -> JsBoolean(following),
+        "friends" -> userWithSocialSerializer.writes(socialUsers))))
   }
 
-  @deprecated("use getSliderInfo instead")
+  @deprecated("replaced by getSliderInfo, still here for backwards compatibility")
   def usersKeptUrl(url: String) = AuthenticatedJsonAction { request =>
 
     val socialUsers = CX.withConnection { implicit c =>

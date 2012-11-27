@@ -64,13 +64,11 @@ case class NormalizedURI  (
 object NormalizedURI {
 
   def apply(title: String, url: String): NormalizedURI = {
-    //better: use http://stackoverflow.com/a/4057470/81698
     val normalized = normalize(url)
     NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized))
   }
 
   def apply(title: String, url: String, state: State[NormalizedURI]): NormalizedURI = {
-    //better: use http://stackoverflow.com/a/4057470/81698
     val normalized = normalize(url)
     NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized), state = state)
   }
@@ -87,6 +85,13 @@ object NormalizedURI {
       (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.state EQ state) }.list.map( _.view )
     } else {
       (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.state EQ state) LIMIT limit }.list.map( _.view )
+    }
+  }
+
+  def getOrCreate(url: String)(implicit conn: Connection): NormalizedURI = {
+    getByNormalizedUrl(url) match {
+      case Some(uri) => uri
+      case None => NormalizedURI(title = "title", url = url).save
     }
   }
 
