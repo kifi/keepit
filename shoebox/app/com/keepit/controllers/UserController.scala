@@ -60,7 +60,7 @@ object UserController extends FortyTwoController {
     Ok(JsObject(Seq("kept" -> JsBoolean(kept), "friends" -> userWithSocialSerializer.writes(socialUsers))))
   }
 
-  @deprecated("use getSliderInfo instead")
+  @deprecated("use getSliderInfo instead", "2012-26-11")
   def usersKeptUrl(url: String) = AuthenticatedJsonAction { request =>
 
     val socialUsers = CX.withConnection { implicit c =>
