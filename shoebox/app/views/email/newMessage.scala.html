@@ -1,0 +1,39 @@
+@(sender: User, recipient: User, uri: NormalizedURI, comment: Comment)
+
+<div style="color:#333;font:13px 'Helvetica Neue',Helvetica,Arial,sans-serif">
+Hi @recipient.firstName,
+
+<p>
+@sender.firstName @sender.lastName
+@if(comment.parent.isDefined) {
+  replied in a private conversation with you at
+} else {
+  sent you a private message at
+}
+</p>
+
+<p><a href="@uri.url">@uri.title</a></p>
+
+<p style="margin:0;padding:6px 20px;background-color:#eee;color:#333;font-size:11px">
+@sender.firstName wrote:
+</p>
+
+<p style="margin:0;padding:10px 20px;border:1px solid #ddd;border-top:none">
+<i style="font-size:24px;line-height:0;vertical-align:-3px;color:#888">&#8220;</i>
+<span style="font-size:130%;color:#333">@comment.text</span><i style="font-size:24px;line-height:0;vertical-align:-3px;color:#888">&#8221;</i>
+</p>
+
+<a href="@uri.url" style="display:inline-block;margin-top:16px;background:#777;color:#fff;padding:5px 10px;text-decoration:none;font:12px LucidaGrande,tahoma,verdana,arial,sans-serif;border-radius:4px">
+Visit the page
+</a>
+
+<p>
+To see the message in context, <a href="@uri.url">visit the page</a> using a browser
+that has the Kifi plugin installed.
+</p>
+
+<p>
+Thanks,<br>
+The Kifi Team
+</p>
+</div>

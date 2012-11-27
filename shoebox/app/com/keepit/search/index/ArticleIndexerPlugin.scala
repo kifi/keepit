@@ -22,12 +22,12 @@ import scala.collection.mutable.{Map => MutableMap}
 case object Index
 
 private[index] class ArticleIndexerActor(articleIndexer: ArticleIndexer) extends Actor with Logging {
-  
+
   def receive() = {
-    case Index => 
+    case Index =>
       var articlesIndexed = articleIndexer.run()
       if (articlesIndexed >= articleIndexer.commitBatchSize) {
-        self ! Index
+        self.forward(Index)
       }
       sender ! articlesIndexed
     case m => throw new Exception("unknown message %s".format(m))
@@ -39,11 +39,11 @@ trait ArticleIndexerPlugin extends Plugin {
 }
 
 class ArticleIndexerPluginImpl @Inject() (system: ActorSystem, articleIndexer: ArticleIndexer) extends ArticleIndexerPlugin with Logging {
-  
+
   implicit val actorTimeout = Timeout(5 seconds)
-  
+
   private val actor = system.actorOf(Props { new ArticleIndexerActor(articleIndexer) })
-  
+
   // plugin lifecycle methods
   private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
@@ -58,9 +58,9 @@ class ArticleIndexerPluginImpl @Inject() (system: ActorSystem, articleIndexer: A
     _cancellables.map(_.cancel)
     articleIndexer.close()
   }
-  
+
   override def index(): Int = {
     val future = actor.ask(Index)(1 minutes).mapTo[Int]
     Await.result(future, 1 minutes)
-  } 
+  }
 }

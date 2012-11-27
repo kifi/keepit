@@ -16,31 +16,31 @@ import org.specs2.runner.JUnitRunner
 class URINormalizerTest extends Specification {
 
   "URINormalizer" should {
-    
+
     "upcase scheme and host" in {
       URINormalizer.normalize("HTTP://KeepItFindIt.com") === "http://keepitfindit.com"
     }
-    
+
     "remove port 80" in {
       URINormalizer.normalize("HTTP://KeepItFindIt.com:8080") === "http://keepitfindit.com:8080"
       URINormalizer.normalize("HTTP://KeepItFindIt.com:80") === "http://keepitfindit.com"
     }
-    
+
     "remove fragment" in {
       URINormalizer.normalize("http://keepitfindit.com/path#abc") === "http://keepitfindit.com/path"
       URINormalizer.normalize("http://keepitfindit.com/page?xyz=123#abc") === "http://keepitfindit.com/page?xyz=123"
       //URINormalizer.normalize("http://www.foo.com/foo.html#something?x=y") === "http://www.foo.com/foo.html?x=y"
     }
-    
+
     "remove default pages (index.html, etc.)" in {
-      URINormalizer.normalize("http://www.example.com/index.html") === "http://www.example.com"      
+      URINormalizer.normalize("http://www.example.com/index.html") === "http://www.example.com"
       URINormalizer.normalize("http://www.example.com/A/index.html") === "http://www.example.com/A/"
       URINormalizer.normalize("http://www.example.com/A/B/index.html") === "http://www.example.com/A/B/"
       URINormalizer.normalize("http://keepitfindit.com/index.html#abc") === "http://keepitfindit.com"
       URINormalizer.normalize("http://keepitfindit.com/index.html?a=b") === "http://keepitfindit.com/?a=b"
-      
+
       // taken from https://svn.apache.org/repos/asf/nutch/trunk/src/plugin/urlnormalizer-regex/sample/regex-normalize-default.test
-      // and modified 
+      // and modified
       URINormalizer.normalize("http://www.foo.com/index.htm") === "http://www.foo.com"
       URINormalizer.normalize("http://www.foo.com/index.asp") === "http://www.foo.com"
       URINormalizer.normalize("http://www.foo.com/index.aspx") === "http://www.foo.com"
@@ -80,7 +80,7 @@ class URINormalizerTest extends Specification {
       URINormalizer.normalize("http://www.foo.com/index.cfm") === "http://www.foo.com"
       URINormalizer.normalize("http://www.foo.com/index.cgi") === "http://www.foo.com"
     }
-    
+
     "normalize path" in {
       URINormalizer.normalize("http://keepitfindit.com/") === "http://keepitfindit.com"
       URINormalizer.normalize("http://keepitfindit.com/?") === "http://keepitfindit.com"
@@ -96,7 +96,7 @@ class URINormalizerTest extends Specification {
       URINormalizer.normalize("http://somedomain.com/uploads/1/0/2/5/10259653/6199347.jpg?1325154037") ===
         "http://somedomain.com/uploads/1/0/2/5/10259653/6199347.jpg?1325154037"
     }
-    
+
     "normalize query" in {
       URINormalizer.normalize("http://keepitfindit.com/?a&") === "http://keepitfindit.com/?a"
       URINormalizer.normalize("http://keepitfindit.com/?a&b") === "http://keepitfindit.com/?a&b"
@@ -111,25 +111,38 @@ class URINormalizerTest extends Specification {
       URINormalizer.normalize("http://keepitfindit.com/p?a=1"+escapedEqual+"1") === "http://keepitfindit.com/p?a=1%3D1"
       URINormalizer.normalize("http://keepitfindit.com?foo=1") === "http://keepitfindit.com/?foo=1"
       URINormalizer.normalize("http://keepitfindit.com?&foo=1") === "http://keepitfindit.com/?foo=1"
-      
+
       URINormalizer.normalize("http://www.example.com/?q=a+b") === "http://www.example.com/?q=a+b"
       URINormalizer.normalize("http://www.example.com/display?category=foo/bar+baz") === "http://www.example.com/display?category=foo%2Fbar+baz"
       URINormalizer.normalize("http://www.example.com/display?category=foo%2Fbar%20baz") === "http://www.example.com/display?category=foo%2Fbar+baz"
       URINormalizer.normalize("http://www.example.com/p?q=a b") === "http://www.example.com/p?q=a+b"
-      
+
       URINormalizer.normalize("http://www.example.com/search?width=100%&height=100%") === "http://www.example.com/search?height=100%25&width=100%25"
       URINormalizer.normalize("http://www.example.com/search?zoom=50%x50%") === "http://www.example.com/search?zoom=50%25x50%25"
     }
-      
+
     "remove session parameters and tracking parameters" in {
       URINormalizer.normalize("http://keepitfindit.com/p?a=1&jsessionid=1234") === "http://keepitfindit.com/p?a=1"
       URINormalizer.normalize("http://keepitfindit.com/p?jsessionid=1234&a=1") === "http://keepitfindit.com/p?a=1"
       URINormalizer.normalize("http://keepitfindit.com/p?jsessionid=1234&utm_source=5678") === "http://keepitfindit.com/p"
     }
-    
+
     "handle edge cases" in {
       URINormalizer.normalize("http://www1.bloomingdales.com/search/results.ognc?sortOption=*&Keyword=juicy%20couture&resultsPerPage=24&Action=sd&attrs=Department%3ADepartment%3ADresses|Color:Color:Black") ===
         "http://www1.bloomingdales.com/search/results.ognc?Action=sd&Keyword=juicy+couture&attrs=Department%3ADepartment%3ADresses%7CColor%3AColor%3ABlack&resultsPerPage=24&sortOption=*"
+    }
+
+    "use custom normalizer when applicable" in {
+      // gmail
+      URINormalizer.normalize("https://mail.google.com/mail/ca/u/0/#inbox/13ae709b43798f58") ===
+        "https://mail.google.com/mail/ca/u/0/#inbox/13ae709b43798f58"
+      // google drive
+      URINormalizer.normalize("https://docs.google.com/a/42go.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit") ===
+        "https://docs.google.com/a/42go.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit"
+
+      // techcrunch
+      URINormalizer.normalize("http://www.techcrunch.com") === "http://techcrunch.com"
+      URINormalizer.normalize("http://techcrunch.com") === "http://techcrunch.com"
     }
   }
 }

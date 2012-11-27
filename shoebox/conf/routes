@@ -5,22 +5,24 @@
 # Home page
 GET     /                           com.keepit.controllers.HomeController.home
 
-GET     /bookmarks                  com.keepit.controllers.BookmarksController.bookmarksFirstPageView
-GET     /bookmarks/page/:page       com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
-
 POST    /bookmarks/add              com.keepit.controllers.BookmarksController.addBookmarks
 POST    /bookmarks/update           com.keepit.controllers.BookmarksController.updateBookmarks
 GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all
 GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
 GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(externalId: ExternalId[User], uri: String)
+POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.removeBookmark(externalId: ExternalId[User], externalBookmarkId: ExternalId[Bookmark])
+POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy(externalId: ExternalId[Bookmark], isPrivate: Boolean = true)
 
-#POST    /download/extension         com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
+POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: String, text: String, permissions: String, recipients: String ?= "", parent: String ?= "")
+GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
+GET     /comments/message           com.keepit.controllers.CommentController.getMessages(url: String)
+GET     /comments/reply             com.keepit.controllers.CommentController.getReplies(commentId: ExternalId[Comment])
 
-GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
+GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String, externalId: ExternalId[User])
 
-GET     /search                     com.keepit.controllers.SearchController.search(term: String, externalId: ExternalId[User])
-GET     /search2                    com.keepit.controllers.SearchController.search2(term: String, externalId: ExternalId[User], maxHits:Int, lastUUID: Option[String], context: Option[String])
+GET     /search2                    com.keepit.controllers.SearchController.search2(term: String, maxHits:Int, lastUUID: Option[String], context: Option[String])
+GET     /search                     com.keepit.controllers.SearchController.search(term: String, maxHits:Int, lastUUID: Option[String], context: Option[String])
 
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
 GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
@@ -34,6 +36,11 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 # Admin
 ##########################################
 
+GET     /admin                      com.keepit.controllers.admin.AdminDashboardController.index
+GET     /admin/graphs/users.json    com.keepit.controllers.admin.AdminDashboardController.usersByDate
+GET     /bookmarks                  com.keepit.controllers.BookmarksController.bookmarksFirstPageView
+GET     /admin/bookmarks            com.keepit.controllers.BookmarksController.bookmarksFirstPageView
+GET     /admin/bookmarks/page/:page com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
 GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scrape/:state        com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
 GET     /admin/scraped/:uriId       com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
@@ -44,14 +51,20 @@ GET     /admin/article/refreshSearcher com.keepit.controllers.admin.ArticleIndex
 GET     /admin/uriGraph/load        com.keepit.controllers.admin.URIGraphController.load
 GET     /admin/uriGraph/update/:userId com.keepit.controllers.admin.URIGraphController.update(userId: Id[User])
 GET     /admin/users                com.keepit.controllers.UserController.usersView
-GET     /admin/user                 com.keepit.controllers.UserController.userView(userId: Id[User])
-GET     /admin/social_users         com.keepit.controllers.SocialUserController.socialUsersView
-GET     /admin/social_user          com.keepit.controllers.SocialUserController.socialUserView(socialUserId: Id[SocialUserInfo])
-GET     /admin/social_user/refresh  com.keepit.controllers.SocialUserController.refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo])
-GET     /admin/social_user/refresh_all com.keepit.controllers.UserController.refreshAllSocialInfo(userId: Id[User])
-GET     /admin/social_user/reset    com.keepit.controllers.SocialUserController.resetSocialUser(socialUserId: Id[SocialUserInfo])
+GET     /admin/user/:id             com.keepit.controllers.UserController.userView(id: Id[User])
+POST    /admin/user/:id/experiment/add/:exp  com.keepit.controllers.UserController.addExperiment(id: Id[User], exp: String)
+POST    /admin/user/:id/update      com.keepit.controllers.UserController.updateUser(id: Id[User])
+GET     /admin/user/:id/social_users/refresh com.keepit.controllers.UserController.refreshAllSocialInfo(id: Id[User])
+GET     /admin/social_users/:page   com.keepit.controllers.SocialUserController.socialUsersView(page: Int)
+GET     /admin/social_user/:id      com.keepit.controllers.SocialUserController.socialUserView(id: Id[SocialUserInfo])
+GET     /admin/social_user/:id/refresh com.keepit.controllers.SocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
+GET     /admin/social_user/:id/reset com.keepit.controllers.SocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 GET     /admin/server               com.keepit.common.healthcheck.HealthController.serviceView()
-
+GET     /admin/search/results/:id   com.keepit.controllers.SearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
+GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
+GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
+GET     /admin/emails/comment-reply com.keepit.controllers.admin.AdminEmailPreviewController.newCommentReply
+GET     /admin/emails/comment-reply2 com.keepit.controllers.admin.AdminEmailPreviewController.newCommentReply2
 
 ##########################################
 # Secure social routes

@@ -7,7 +7,7 @@ import com.keepit.model._
 import play.api.libs.json._
 
 class NormalizedURISerializer extends Writes[NormalizedURI] {
-  
+
   def writes(normalizedURI: NormalizedURI): JsValue =
     JsObject(List(
       "externalId"  -> JsString(normalizedURI.externalId.toString),
@@ -15,14 +15,14 @@ class NormalizedURISerializer extends Writes[NormalizedURI] {
       "url"  -> JsString(normalizedURI.url)
     ))
 
-  def writes (normalizedURIs: List[NormalizedURI]): JsValue = 
-    JsArray(normalizedURIs map { normalizedURI => 
+  def writes (normalizedURIs: List[NormalizedURI]): JsValue =
+    JsArray(normalizedURIs map { normalizedURI =>
       JsObject(List(
         "normalizedUriId" -> JsNumber(normalizedURI.id.get.id),
         "normalizedUriObject" -> NormalizedURISerializer.normalizedURISerializer.writes(normalizedURI)
       ))
     })
-    
+
 }
 
 object NormalizedURISerializer {

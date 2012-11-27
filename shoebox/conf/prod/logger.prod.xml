@@ -1,6 +1,6 @@
 <configuration>
   <!-- always a good activate OnConsoleStatusListener -->
-  <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener" />  
+  <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener" />
 
   <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
    <file>log/app.log</file>
@@ -16,8 +16,8 @@
   <logger name="com.mysql" level="ERROR"/>
   <logger name="com.ning.http" level="INFO"/>
   <logger name="securesocial.core" level="DEBUG"/>
-                 
-  <root level="INFO">          
+
+  <root level="INFO">
     <appender-ref ref="FILE" />
-  </root>  
+  </root>
 </configuration>

@@ -12,17 +12,17 @@ import akka.dispatch.ExecutionContext
 case class FakeHealthcheck() extends Healthcheck {
 
   val errors = MutableList[HealthcheckError]()
-  
+
   def errorCountFuture(): Future[Int] = Promise.successful(errors.size)(new ExecutionContext() {
     def execute(runnable: Runnable): Unit = {}
     def reportFailure(t: Throwable): Unit = {}
   })
-  
+
   def addError(error: HealthcheckError): HealthcheckError = {
     errors += error
     error
   }
-  
+
   def reportStart(): ElectronicMail = ElectronicMail(from = ENG, to = ENG, subject = "start", htmlBody = "")
   def reportStop(): ElectronicMail = ElectronicMail(from = ENG, to = ENG, subject = "stop", htmlBody = "")
 }

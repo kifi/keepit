@@ -15,16 +15,16 @@ package object inject {
         case _   => injector.getInstance(key(m))
       }
     }
-    
+
     private def key[A](implicit a: Manifest[A]): Key[A] = {
       val targs = a.typeArguments.map(_.erasure)
       Key.get(Types.newParameterizedType(a.erasure, targs:_*)).asInstanceOf[Key[A]]
     }
   }
-  
+
   implicit def richInjector(injector: Injector): RichInjector = new RichInjector(injector)
 
   def inject[A](implicit m: Manifest[A], app: Application): A = app.global.asInstanceOf[FortyTwoGlobal].injector.inject[A]
-  
+
   def provide[T](func: => T): Provider[T] = new Provider[T] { def get = func }
 }

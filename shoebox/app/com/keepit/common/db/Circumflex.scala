@@ -48,7 +48,7 @@ object Id {
       longBinder.unbind(key, id.id)
     }
   }
-  
+
   implicit def pathBinder[T](implicit longBinder: PathBindable[Long]) = new PathBindable[Id[T]] {
     override def bind(key: String, value: String): Either[String, Id[T]] =
       longBinder.bind(key, value) match {
@@ -68,13 +68,13 @@ class DbException(message: String, error: Throwable) extends RuntimeException(me
 class IdField[T, R <: Record[_, R]](name: String, record: R)
     extends XmlSerializable[Id[T], R](name, record, ormConf.dialect.longType)
     with AutoIncrementable[Id[T], R] {
-  
+
   def fromString(str: String): Option[Id[T]] =
     try Some(Id(str.toLong)) catch { case e: Exception => None }
-  
+
   override def toString(value: Option[Id[T]]): String =
     value.map(_.id.toString).getOrElse("")
-  
+
   override def read(rs: java.sql.ResultSet, alias: String): Option[Id[T]] = {
     val o = rs.getObject(alias)
     if (rs.wasNull) None
@@ -96,9 +96,8 @@ trait IdFields[R <: Record[_, R]] { self: R =>
 
 
 case class ExternalId[T](id: String) {
-  val uuid = id.substring(id.lastIndexOf("/") + 1) 
-  if (!ExternalId.UUID_PATTERN.pattern.matcher(uuid).matches()) {
-    throw new Exception("external id %s (uuid=%s) does not match uuid pattern".format(id, uuid))
+  if (!ExternalId.UUID_PATTERN.pattern.matcher(id).matches()) {
+    throw new Exception("external id [%s] does not match uuid pattern".format(id))
   }
   override def toString = id
 }
@@ -106,7 +105,7 @@ case class ExternalId[T](id: String) {
 object ExternalId {
 
   val UUID_PATTERN = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$".r
-  
+
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[ExternalId[T]] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ExternalId[T]]] = {
       stringBinder.bind(key, params) map {
@@ -118,14 +117,14 @@ object ExternalId {
       stringBinder.unbind(key, id.id)
     }
   }
-  
+
   implicit def pathBinder[T] = new PathBindable[ExternalId[T]] {
     override def bind(key: String, value: String): Either[String, ExternalId[T]] =
       Right(ExternalId(value)) // TODO: handle errors if value is malformed
 
     override def unbind(key: String, id: ExternalId[T]): String = id.toString
   }
-  
+
   def apply[T](): ExternalId[T] = ExternalId(UUID.randomUUID.toString)
 }
 
@@ -136,13 +135,13 @@ object ExternalId {
  */
 class ExternalIdField[T, R <: Record[_, R]](name: String, record: R)
     extends XmlSerializable[ExternalId[T], R](name, record, ormConf.dialect.varcharType(36)) {
-  
+
   def fromString(str: String): Option[ExternalId[T]] =
     if (str.isEmpty) None else Some(ExternalId(str))
-  
+
   override def toString(value: Option[ExternalId[T]]): String =
     value.map(_.id).getOrElse("")
-  
+
   override def read(rs: java.sql.ResultSet, alias: String): Option[ExternalId[T]] = {
     val o = rs.getObject(alias)
     if (rs.wasNull) None
@@ -181,7 +180,7 @@ object State {
       stringBinder.unbind(key, state.value)
     }
   }
-  
+
   implicit def pathBinder[T] = new PathBindable[State[T]] {
     override def bind(key: String, value: String): Either[String, State[T]] =
       Right(State(value)) // TODO: handle errors if value is malformed
@@ -195,13 +194,13 @@ object State {
  */
 class StateField[T, R <: Record[_, R]](name: String, record: R, length: Int)
     extends XmlSerializable[State[T], R](name, record, ormConf.dialect.varcharType(length)) {
-  
+
   def fromString(str: String): Option[State[T]] =
     if (str.isEmpty) None else Some(State(str))
-  
+
   override def toString(value: Option[State[T]]): String =
     value.map(_.value).getOrElse("")
-  
+
   override def read(rs: java.sql.ResultSet, alias: String): Option[State[T]] = {
     val o = rs.getObject(alias)
     if (rs.wasNull) None
@@ -224,7 +223,7 @@ trait StateFields[R <: Record[_, R]] { self: R =>
 // field types that use java.sql.Clob
 class ClobField[R <: Record[_, R]](name: String, record: R)
     extends XmlSerializable[String, R](name, record, ormConf.dialect.textType) {
-  
+
   def fromString(str: String): Option[String] = Some(str)
   override def toString(value: Option[String]): String = value.get
 
@@ -236,19 +235,19 @@ class ClobField[R <: Record[_, R]](name: String, record: R)
       Some(resultToString(o))
     }
   }
-  
+
   //depends on the driver, h2 returns a clob and mysql returns a string.
   private def resultToString(result: Any): String = if(result.getClass().isAssignableFrom(classOf[String])) {
     result.asInstanceOf[String]
   } else {
     clobToString(result.asInstanceOf[Clob])
   }
-  
+
   private def clobToString(result: Clob): String = {
     val clob: Clob = try {
       result.asInstanceOf[Clob]
     } catch {
-      //ControlThrowable is used for control flow of scala's closure management. You must throw it up! 
+      //ControlThrowable is used for control flow of scala's closure management. You must throw it up!
       case e: ControlThrowable => throw e
       case e => throw new DbException("error converting instance %s to clob with for name %s. cause: %s\n%s".format(result.toString(), name, e.toString(), e.getStackTrace() mkString "\n"), e)
     }
@@ -281,7 +280,7 @@ class JodaTimestampField[R <: Record[_, R]](name: String, record: R)
     try Some(java.sql.Timestamp.valueOf(str).toDateTime) catch { case e: Exception => None }
   override def toString(value: Option[DateTime]): String =
     value.map(v => new java.sql.Timestamp(v.toDate.getTime).toString).getOrElse("")
-  
+
   override def read(rs: java.sql.ResultSet, alias: String): Option[DateTime] = {
     val o = rs.getObject(alias)
     if (rs.wasNull) {
@@ -291,7 +290,7 @@ class JodaTimestampField[R <: Record[_, R]](name: String, record: R)
       val timestemp: java.sql.Timestamp = try {
         o.asInstanceOf[java.sql.Timestamp]
       } catch {
-        //ControlThrowable is used for control flow of scala's closure management. You must throw it up! 
+        //ControlThrowable is used for control flow of scala's closure management. You must throw it up!
         case e: ControlThrowable => throw e
         case e => throw new DbException("error converting instance %s to timestemp with alias %s for name %s. cause: %s\n%s".format(o.toString(), alias, name, e.toString(), e.getStackTrace() mkString "\n"), e)
       }
@@ -373,13 +372,13 @@ abstract class Entity[T, R <: Record[Id[T], R]]
   with StateFields[R]
   with JodaFields[R]
   with ClobFields[R]
-{ 
+{
   this: R =>
-  
+
   val id = "id".ID[T].NOT_NULL.AUTO_INCREMENT
-  
+
   val PRIMARY_KEY = id
-  
+
   //def view(implicit conn: Connection): T
 }
 
@@ -387,13 +386,17 @@ trait EntityTable[T, R <: Record[Id[T], R]] extends Table[Id[T], R] { this: R =>
   //def apply(view: T): R
 }
 
+trait FortyTwoDialect {
+  def DATEDIFF(ex1: String, ex2: String) : String
+}
+
 object CX extends Logging {
-  
+
   //The following makes sure the underlying ORMConfiguration won't burf on us when its looking for these params.
   ru.circumflex.core.cx("orm.connection.url") = ""
   ru.circumflex.core.cx("orm.connection.username") = ""
   ru.circumflex.core.cx("orm.connection.password") = ""
-  
+
   class BasicConnectionProvider(name: String, readOnly: Boolean)
                                (implicit app: Application) extends ConnectionProvider {
     private var _connection: Option[Connection] = None
@@ -410,33 +413,35 @@ object CX extends Logging {
       _connection = None
     }
   }
-  
+
   private class BasicOrmConf(readOnly: Boolean = false)(implicit app: Application) extends Logging with ORMConfiguration {
-    
+
     override val url = {
       val connection = DB.getConnection("shoebox")
       val url = connection.getMetaData.getURL
       connection.close()
       url
     }
-    
+
     override val name = "shoebox"
     override lazy val connectionProvider = new BasicConnectionProvider(name, readOnly)
     override lazy val typeConverter = new CustomTypeConverter
-    
+
     override lazy val dialect = cx.instantiate[Dialect]("orm.dialect", url match {
-      case u if (u.startsWith("jdbc:mysql:")) => new MySQLDialect() {
+      case u if (u.startsWith("jdbc:mysql:")) => new MySQLDialect() with FortyTwoDialect {
         override def ILIKE(ex1: String, ex2: String = "?") = "%s LIKE %s".format(ex1, ex2)
+        def DATEDIFF(ex1: String, ex2: String) = "DATEDIFF(%s, %s)".format(ex1, ex2)
       }
-      case u if (u.startsWith("jdbc:h2:")) => new H2Dialect() {
+      case u if (u.startsWith("jdbc:h2:")) => new H2Dialect() with FortyTwoDialect {
         override def ILIKE(ex1: String, ex2: String = "?") = "LOWER(%s) LIKE %s".format(ex1, ex2)
+        def DATEDIFF(ex1: String, ex2: String) = "DATEDIFF('DAY', %s, %s)".format(ex1, ex2)
       }
-      case _ => throw new Exception("unknowd dialect " + url)
+      case _ => throw new Exception("unknown dialect " + url)
     })
   }
-  
+
   def withReadOnlyConnection[A](block: Connection => A)(implicit app: Application): A = executeBlockWithConnection(true, block)
-  
+
   def withConnection[A](block: Connection => A)(implicit app: Application): A = executeBlockWithConnection(false, block)
 
   private def executeBlockWithConnection[A](readOnly: Boolean, block: Connection => A)(implicit app: Application): A = {
@@ -447,7 +452,7 @@ object CX extends Logging {
         block(connection)
       }
     } catch {
-      //ControlThrowable is used for control flow of scala's closure management. You must throw it up! 
+      //ControlThrowable is used for control flow of scala's closure management. You must throw it up!
       case e: ControlThrowable => throw e
       case e =>
         log.error(">>Exception while executing block with readonly = %s".format(readOnly), e)

@@ -40,7 +40,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
         state = SCRAPED,
         message = None)
   }
-  
+
   "ArticleIndexer" should {
     "index scraped URIs" in {
       running(new EmptyApplication()) {
@@ -59,112 +59,112 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
         uriIdArray(0) = uri1.id.get.id
         uriIdArray(1) = uri2.id.get.id
         uriIdArray(2) = uri3.id.get.id
-        
+
         val indexer = ArticleIndexer(ramDir, store)
         indexer.run
-        
+
         indexer.numDocs === 1
-        
+
         CX.withConnection { implicit c =>
-          uri1 = NormalizedURI.get(uri1.id.get) 
+          uri1 = NormalizedURI.get(uri1.id.get)
           uri2 = NormalizedURI.get(uri2.id.get)
           uri3 = NormalizedURI.get(uri3.id.get)
         }
-        uri1.state === ACTIVE 
+        uri1.state === ACTIVE
         uri2.state === INDEXED
         uri3.state === INDEXED
-      
+
         CX.withConnection { implicit c =>
           uri1 = uri1.withState(SCRAPED).save
           uri2 = uri2.withState(SCRAPED).save
           uri3 = uri3.withState(SCRAPED).save
         }
-        
+
         indexer.run
-        
+
         indexer.numDocs === 3
-        
+
         CX.withConnection { implicit c =>
-          uri1 = NormalizedURI.get(uri1.id.get) 
+          uri1 = NormalizedURI.get(uri1.id.get)
           uri2 = NormalizedURI.get(uri2.id.get)
           uri3 = NormalizedURI.get(uri3.id.get)
         }
-        uri1.state === INDEXED 
+        uri1.state === INDEXED
         uri2.state === INDEXED
         uri3.state === INDEXED
       }
     }
-    
+
     "search documents (hits in contents)" in {
       val indexer = ArticleIndexer(ramDir, store)
-      
+
       indexer.search("alldocs").size === 3
-      
+
       var res = indexer.search("content1")
       res.size === 1
       res.head.id === uriIdArray(0)
-      
+
       res = indexer.search("content2")
       res.size === 1
       res.head.id === uriIdArray(1)
-      
+
       res = indexer.search("content3")
       res.size === 1
       res.head.id === uriIdArray(2)
     }
-    
+
     "search documents (hits in titles)" in {
       val indexer = ArticleIndexer(ramDir, store)
-      
+
       var res = indexer.search("title1")
       res.size === 1
       res.head.id === uriIdArray(0)
-      
+
       res = indexer.search("title2")
       res.size === 1
       res.head.id === uriIdArray(1)
-      
+
       res = indexer.search("title3")
       res.size === 1
       res.head.id === uriIdArray(2)
     }
-    
+
     "search documents (hits in contents and titles)" in {
       val indexer = ArticleIndexer(ramDir, store)
-      
+
       var res = indexer.search("title1 alldocs")
       res.size === 3
       res.head.id === uriIdArray(0)
-      
+
       res = indexer.search("title2 alldocs")
       res.size === 3
       res.head.id === uriIdArray(1)
-      
+
       res = indexer.search("title3 alldocs")
       res.size === 3
       res.head.id === uriIdArray(2)
     }
-    
+
     "limit the result by percentMatch" in {
       val indexer = ArticleIndexer(ramDir, store)
-      
+
       val parser = indexer.getQueryParser
 
       var res = indexer.search("title1 alldocs")
       res.size === 3
-      
+
       parser.setPercentMatch(50)
       res = indexer.getArticleSearcher.search(parser.parseQuery("title1 alldocs").get)
       res.size === 3
-      
+
       parser.setPercentMatch(60)
       res = indexer.getArticleSearcher.search(parser.parseQuery("title1 alldocs").get)
       res.size === 1
-      
+
       parser.setPercentMatch(60)
       res = indexer.getArticleSearcher.search(parser.parseQuery("title1 title2 alldocs").get)
       res.size === 2
-      
+
       parser.setPercentMatch(75)
       res = indexer.getArticleSearcher.search(parser.parseQuery("title1 title2 alldocs").get)
       res.size === 0

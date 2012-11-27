@@ -34,16 +34,19 @@ import com.keepit.common.social._
 
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
-    
-    var appScope = new AppScope
-    bindScope(classOf[AppScoped], appScope)
-    bind[AppScope].toInstance(appScope)
-    
+    install(FortyTwoModule())
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
+  }
+
+  @Singleton
+  @Provides
+  def articleSearchResultStore(amazonS3Client: AmazonS3): ArticleSearchResultStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.articleSearch.bucket").get)
+    new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client)
   }
 
   @Singleton
@@ -62,18 +65,18 @@ case class ShoeboxModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def amazonS3Client(): AmazonS3 = { 
-    var conf = current.configuration.getConfig("amazon.s3").get
+  def amazonS3Client(): AmazonS3 = {
+    val conf = current.configuration.getConfig("amazon.s3").get
     val awsCredentials = new BasicAWSCredentials(
-        conf.getString("accessKey").get, 
+        conf.getString("accessKey").get,
         conf.getString("secretKey").get)
     new AmazonS3Client(awsCredentials)
   }
-  
+
   @Singleton
   @Provides
   def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph): ArticleIndexer = {
-    var dirPath = current.configuration.getString("index.article.directory").get
+    val dirPath = current.configuration.getString("index.article.directory").get
     val dir = new File(dirPath).getCanonicalFile()
     if (!dir.exists()) {
       if (!dir.mkdirs()) {
@@ -83,11 +86,11 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     log.info("storing search index in %s".format(dir.getAbsolutePath()))
     ArticleIndexer(new MMapDirectory(dir), articleStore)
   }
-  
+
   @Singleton
   @Provides
   def uriGraph: URIGraph = {
-    var dirPath = current.configuration.getString("index.urigraph.directory").get
+    val dirPath = current.configuration.getString("index.urigraph.directory").get
     val dir = new File(dirPath).getCanonicalFile()
     if (!dir.exists()) {
       if (!dir.mkdirs()) {
@@ -101,10 +104,10 @@ case class ShoeboxModule() extends ScalaModule with Logging {
   @Provides
   @AppScoped
   def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-actor-system")
-  
+
   @Provides
   def httpClientProvider: HttpClient = new HttpClientImpl()
-  
+
   @Provides
   @AppScoped
   def healthcheckProvider(system: ActorSystem, postOffice: PostOffice): Healthcheck = {
@@ -114,9 +117,5 @@ case class ShoeboxModule() extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def mailSenderProvider(system: ActorSystem, healthcheck: Healthcheck, httpClient: HttpClient): MailSender = {
-    val url = "https://api.postmarkapp.com/email"
-    val postmarkToken = "61311d22-d1cc-400b-865e-ffb95027251f"
-    new MailSender(system, url, postmarkToken, healthcheck, httpClient)
-  }
+  def mailSenderProvider(system: ActorSystem): MailSender = new MailSender(system)
 }

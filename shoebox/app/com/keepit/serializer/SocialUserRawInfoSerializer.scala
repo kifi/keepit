@@ -11,7 +11,7 @@ import play.api.libs.json._
 import com.keepit.model.SocialUserInfo
 
 class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
-  
+
   def writes(info: SocialUserRawInfo): JsValue =
     JsObject(List(
         "userId" -> (info.userId map { e => JsNumber(e.id) } getOrElse(JsNull)),
@@ -22,18 +22,18 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
         "jsons" -> JsArray(info.jsons)
       )
     )
-    
+
   def reads(json: JsValue): SocialUserRawInfo = {
     val jsons = (json \ "jsons") match {
       case array: JsArray => array.value
       case _ => Seq()
     }
     SocialUserRawInfo(
-      userId = (json \ "userId").asOpt[Long].map(Id(_)), 
-      socialUserInfoId = Some(Id[SocialUserInfo]((json \ "socialUserInfoId").as[Int])), 
-      socialId = SocialId((json \ "socialId").as[String]), 
+      userId = (json \ "userId").asOpt[Long].map(Id(_)),
+      socialUserInfoId = Some(Id[SocialUserInfo]((json \ "socialUserInfoId").as[Int])),
+      socialId = SocialId((json \ "socialId").as[String]),
       networkType = (json \ "networkType").as[String] match {
-        case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK 
+        case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK
       },
       fullName = (json \ "fullName").as[String],
       jsons = jsons

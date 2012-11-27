@@ -3,10 +3,10 @@
 @admin("Bookmark: " + bookmark.title) {
    <table class="table table-bordered">
       <tr>
-        <th>Title</th><td><a href="@bookmark.url">@bookmark.title</a></td>
+        <th>Title</th><td><a href="@bookmark.url">@{if(bookmark.title.isEmpty) "NO TITLE" else bookmark.title}</a></td>
       </tr>
       <tr>
-        <th>Content</th><td>@adminHelper.articleDisplay(normalizedUri)</td>
+        <th>Page Content</th><td>@adminHelper.articleDisplay(normalizedUri)</td>
       </tr>
       <tr>
         <th>Bookmark ID</th><td>@bookmark.id.get.id</td>

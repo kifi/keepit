@@ -1,0 +1,50 @@
+#chart-user-growth {
+	min-width: 400px;
+	max-width: 800px;
+	height: 300px;
+	background: white;
+}
+
+svg {
+  font: 10px sans-serif;
+  margin: 0;
+}
+
+path.line {
+  fill: none;
+  stroke: #666;
+  stroke-width: 1.5px;
+}
+
+path.area {
+  fill: #e7e7e7;
+}
+
+.axis {
+  shape-rendering: crispEdges;
+}
+
+.x.axis line {
+  stroke: #ddd;
+}
+
+.x.axis .minor {
+  stroke: #f8f8f8;
+}
+
+.x.axis path {
+  display: none;
+}
+
+.y.axis line, .y.axis path {
+  fill: none;
+  stroke: #000;
+}
+
+.hover text {
+	text-anchor: middle;
+}
+
+.hover text.count {
+	font-size: 18px;
+}

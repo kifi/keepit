@@ -16,11 +16,12 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 import com.keepit.inject._
+import com.keepit.common.time._
+import com.keepit.common.net._
 import com.keepit.common.db.Id
 import com.keepit.common.db.CX
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
-import com.keepit.model.User
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
 import com.keepit.serializer.UserWithSocialSerializer
@@ -28,80 +29,140 @@ import com.keepit.controllers.CommonActions._
 import play.api.http.ContentTypes
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
-import com.keepit.common.social.{SocialGraphPlugin, UserWithSocial}
-import com.keepit.common.social.SocialUserRawInfoStore
+import com.keepit.common.social._
+import com.keepit.common.controller.FortyTwoController
+import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.graph.URIGraph
+import views.html.defaultpages.unauthorized
+import org.joda.time.LocalDate
+import scala.collection.immutable.Map
+import play.api.libs.json.JsArray
 
-object UserController extends Controller with Logging with SecureSocial {
+case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConnectionCount: Long)
 
-    /**
+object UserController extends FortyTwoController {
+
+  /**
    * Call me using:
    * curl localhost:9000/users/keepurl?url=http://www.ynet.co.il/;echo
    */
-  def usersKeptUrl(url: String) = Action { request =>    
-    val users = CX.withConnection { implicit c =>
-      log.info("looking for users who kept [%s]".format(url))
-      val nuri = NormalizedURI("title", url)
-      log.info("userWhoKeptUrl %s (hash=%s)".format(url, nuri.urlHash))
-      User.getbyUrlHash(nuri.urlHash) map UserWithSocial.toUserWithSocial
+  def usersKeptUrl(url: String, externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
+
+    val socialUsers = CX.withConnection { implicit c =>
+      NormalizedURI.getByNormalizedUrl(url) match {
+        case Some(uri) =>
+          val userId = User.getOpt(externalId).getOrElse(
+                throw new Exception("externalId %s not found".format(externalId))).id.get
+          val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
+
+          val articleIndexer = inject[ArticleIndexer]
+          val uriGraph = inject[URIGraph]
+
+          val uriGraphSearcher = uriGraph.getURIGraphSearcher
+          val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
+
+          val sharingUserIds = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
+
+          sharingUserIds map (u => UserWithSocial.toUserWithSocial(User.get(u))) toSeq
+
+        case None =>
+          Seq[UserWithSocial]()
+      }
     }
-    Ok(userWithSocialSerializer.writes(users)).as(ContentTypes.JSON)
-  }
-  
-  /**
-   * Call me using:
-   * $ curl localhost:9000/admin/user/get/all | python -mjson.tool
-   */
-  def getUsers = Action { request =>
-    val users = CX.withConnection { implicit c =>
-      User.all map UserWithSocial.toUserWithSocial
-    }
-    Ok(JsArray(users map { user => 
-      JsObject(List(
-        "userId" -> JsNumber(user.user.id.get.id),//deprecated, lets stop exposing user id to the outside world. use external id instead.
-        "externalId" -> JsString(user.user.externalId.id),
-        "userObject" -> userWithSocialSerializer.writes(user)
-      ))
-    }))
+
+    Ok(userWithSocialSerializer.writes(socialUsers)).as(ContentTypes.JSON)
   }
 
-  def getUser(id: Id[User]) = Action { request =>
+  def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
+    val socialConnections = CX.withConnection { implicit c =>
+      SocialConnection.getFortyTwoUserConnections(authRequest.userId).map(uid => User.get(uid)).map(UserWithSocial.toUserWithSocial).toSeq
+    }
+
+    Ok(JsArray(socialConnections.map(sc => UserWithSocialSerializer.userWithSocialSerializer.writes(sc))))
+  }
+
+  def getUser(id: Id[User]) = AdminJsonAction { request =>
     val user = CX.withConnection { implicit c =>
       UserWithSocial.toUserWithSocial(User.get(id))
     }
     Ok(userWithSocialSerializer.writes(user))
   }
 
-  def getUserByExternal(id: ExternalId[User]) = Action { request =>
-    val user = CX.withConnection { implicit c =>
-      UserWithSocial.toUserWithSocial(User.get(id))
-    }
-    Ok(userWithSocialSerializer.writes(user))
+  def userStatistics(user: User)(implicit conn: Connection): UserStatistics = {
+    val socialConnectionCount = SocialConnection.getUserConnectionsCount(user.id.get)
+    UserStatistics(user, UserWithSocial.toUserWithSocial(user), socialConnectionCount)
   }
 
-  def userView(userId: Id[User]) = SecuredAction(false) { implicit request => 
+  def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections) = CX.withConnection { implicit c =>
-      val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId)) 
+      val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
       val bookmarks = Bookmark.ofUser(userWithSocial.user)
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
       val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
-      
       (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections)
     }
     val rawInfos = socialUserInfos map {info =>
       inject[SocialUserRawInfoStore].get(info.id.get)
-    } 
-
+    }
     Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections))
   }
 
-  def usersView = SecuredAction(false) { implicit request => 
-    val users = CX.withConnection { implicit c => User.all map UserWithSocial.toUserWithSocial}
+  def usersView = AdminHtmlAction { implicit request =>
+    val users = CX.withConnection { implicit c =>
+      User.all map userStatistics
+    }
     Ok(views.html.users(users))
   }
-  
-  def refreshAllSocialInfo(userId: Id[User]) = SecuredAction(false) { implicit request => 
-    val socialUserInfos = CX.withConnection { implicit c => 
+
+  def updateUser(userId: Id[User]) = AdminHtmlAction { implicit request =>
+    val form = request.request.body.asFormUrlEncoded match {
+      case Some(req) => req.map(r => (r._1 -> r._2.head))
+      case None => throw new Exception("whoops")
+
+    }
+
+    // We want to throw an exception (.get) if `emails' was not passed in. As we expand this, we should add Play! form validation
+    val emailList = form.get("emails").get.split(",").map(_.toLowerCase().trim()).toList.distinct.map(em => em match {
+      case s if s.length > 5 => Some(s)
+      case _ => None
+    }).flatten
+
+    CX.withConnection { implicit conn =>
+      val oldEmails = EmailAddress.getByUser(userId).toSet
+      val newEmails = (emailList map { address =>
+        val email = EmailAddress.getByAddressOpt(address)
+        email match {
+          case Some(addr) => addr // We're good! It already exists
+          case None => // Create a new one
+            log.info("Adding email address %s to userId %s".format(address, userId.toString))
+            EmailAddress(address,userId).save
+        }
+      }).toSet
+
+      // Set state of removed email addresses to INACTIVE
+      (oldEmails -- newEmails) map { removedEmail =>
+        log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
+        removedEmail.withState(EmailAddress.States.INACTIVE).save
+      }
+    }
+
+    Redirect(com.keepit.controllers.routes.UserController.userView(userId))
+  }
+
+  def addExperiment(userId: Id[User], experimentType: String) = AdminJsonAction { request =>
+    val experimants = CX.withConnection { implicit c =>
+      val existing = UserExperiment.getByUser(userId)
+      val experiment = UserExperiment.ExperimentTypes(experimentType)
+      if (existing contains(experimentType)) throw new Exception("user %s already has an experiment %s".format(experimentType))
+      UserExperiment(userId = userId, experimentType = experiment).save
+      UserExperiment.getByUser(userId)
+    }
+    Ok(JsArray(experimants map {e => JsString(e.experimentType.value) }))
+  }
+
+  def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction { implicit request =>
+    val socialUserInfos = CX.withConnection { implicit c =>
       val user = User.get(userId)
       SocialUserInfo.getByUser(user.id.get)
     }

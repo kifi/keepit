@@ -43,8 +43,8 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
         self ! FetchUserInfo(user)
       }
       sender ! unprocessedUsers.size
-      
-    case FetchUserInfo(socialUserInfo) => 
+
+    case FetchUserInfo(socialUserInfo) =>
       try {
         require(socialUserInfo.credentials.isDefined, "social user info's credentias is not defined: %s".format(socialUserInfo))
         log.info("fetching raw info for %s".format(socialUserInfo))
@@ -55,19 +55,20 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
         }
         val store = inject[SocialUserRawInfoStore]
         store += (socialUserInfo.id.get -> rawInfo)
+
         inject[SocialUserImportFriends].importFriends(rawInfo.jsons)
-        
         inject[SocialUserCreateConnections].createConnections(socialUserInfo, rawInfo.jsons)
+        inject[SocialUserImportEmail].importEmail(socialUserInfo.userId.get, rawInfo.jsons)
       }
       catch {
-        case ex => 
+        case ex =>
           CX.withConnection { implicit c =>
             socialUserInfo.withState(SocialUserInfo.States.FETCHE_FAIL).save
           }
           log.error("Problem Fetching User Info for %s".format(socialUserInfo), ex)
       }
 
-      
+
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
@@ -78,11 +79,11 @@ trait SocialGraphPlugin extends Plugin {
 }
 
 class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: FacebookSocialGraph) extends SocialGraphPlugin with Logging {
-  
+
   implicit val actorTimeout = Timeout(5 seconds)
-  
+
   private val actor = system.actorOf(Props { new SocialGraphActor(socialGraph) })
-  
+
   // plugin lifecycle methods
   private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
@@ -96,12 +97,12 @@ class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: Faceboo
     log.info("stopping SocialGraphPluginImpl")
     _cancellables.map(_.cancel)
   }
-  
+
   def fetchAll(): Unit = {
     val future = actor.ask(FetchAll)(1 minutes).mapTo[Int]
     Await.result(future, 1 minutes)
-  } 
-  
+  }
+
   override def asyncFetch(socialUserInfo: SocialUserInfo): Unit = {
     require(socialUserInfo.credentials.isDefined, "social user info's credentias is not defined: %s".format(socialUserInfo))
     actor ! FetchUserInfo(socialUserInfo)

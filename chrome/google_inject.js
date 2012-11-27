@@ -83,10 +83,14 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     inprogressSearchQuery = query;
     var t1 = new Date().getTime();
     chrome.extension.sendRequest(request, function(results) {
-      console.log(new Date().getTime() - t1);
+      log("query response after: " + (new Date().getTime() - t1));
       console.log("RESULTS FROM SERVER", results);
 
       inprogressSearchQuery = '';
+      if(!results.userConfig || !results.userInfo) {
+        log("No user info. Stopping search.")
+        return;
+      }
       if($("input[name='q']").val() !== request.query || request.query !== results.searchResults.query) { // query changed
         log("Query changed. Re-loading...");
         updateQuery(0);
@@ -236,6 +240,63 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
   /*******************************************************/
 
+  var urlAutoFormatters = [
+    {
+      "match": "docs\\.google\\.com",
+      "template": "A file in Google Docs",
+      "icon": "gdocs.gif"
+    }, {
+      "match": "drive\\.google\\.com",
+      "template": "A folder in your Google Drive",
+      "icon": "gdrive.png"
+    }, {
+      "match": "dropbox\\.com/home",
+      "template": "A folder in your Dropbox",
+      "icon": "dropbox.png"
+    }, {
+      "match": "dl-web\\.dropbox\\.com",
+      "template": "A file from Dropbox",
+      "icon": "dropbox.png"
+    }, {
+      "match": "dropbox\\.com/sh/",
+      "template": "A shared file on Dropbox",
+      "icon": "dropbox.png"
+    }, {
+      "match": "mail\\.google\\.com/mail/.*/[\\w]{0,}",
+      "template": "An email on Gmail",
+      "icon": "gmail.png"
+    }, {
+      "match": "facebook\\.com/messages/[\\w\\-\\.]{4,}",
+      "template": "A conversation on Facebook",
+      "icon": "facebook.png"
+    }
+  ];
+
+  function displayURLFormatter(url) {
+    var prefix = "^https?://w{0,3}\\.?";
+    for(i=0;i<urlAutoFormatters.length;i++) {
+      var regex = new RegExp(prefix + urlAutoFormatters[i].match, "ig");
+      if(regex.test(url) === true) {
+        var result = ""
+        if(typeof urlAutoFormatters[i].icon !== 'undefined') {
+          var icon = chrome.extension.getURL('icons/'+urlAutoFormatters[i].icon);
+          result += "<span class=\"formatted_site\" style=\"background: url(" + icon + ") no-repeat;background-size: 15px;\"></span>"
+        }
+        result += urlAutoFormatters[i].template;
+        return result;
+      }
+    }
+    var body = url.split(/^https?:\/\//);
+    if(body.length >= 1) {
+      url = body[body.length-1];
+    }
+    if (url.length > 60) {
+      url = url.substring(0, 60) + "...";
+    }
+    $.each(resultsStore.query.split(" "), function(i, term) { url = boldSearchTerms(url,term,false); });
+    return url;
+  }
+
   function addResults() {
     try {
       log("addResults parameters:");
@@ -255,17 +316,11 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
           $(searchResults).each(function(i, result){
             var formattedResult = result;
 
-            formattedResult.displayUrl = formattedResult.bookmark.url;
-            if (formattedResult.bookmark.url.length > 60) {
-              formattedResult.displayUrl = formattedResult.displayUrl.substring(0, 75) + "..."
-            }
-
-            var displayUrl = formattedResult.displayUrl;
-            $.each(resultsStore.query.split(" "), function(i, term) { displayUrl = boldSearchTerms(displayUrl,term,false); });
-            formattedResult.displayUrl = displayUrl;
+            formattedResult.displayUrl = displayURLFormatter(formattedResult.bookmark.url);
+            console.log(formattedResult.bookmark.url, formattedResult.displayUrl);
 
             var title = formattedResult.bookmark.title;
-            $.each(resultsStore.query.split(" "), function(i, term) { title = boldSearchTerms(title,term,true); });
+            $.each(resultsStore.query.split(/[\s\W]/), function(i, term) { title = boldSearchTerms(title,term,true); });
             formattedResult.bookmark.title = title;
 
             if (config["show_score"] === true) {
@@ -275,6 +330,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             formattedResult.countText = "";
 
             var numFriends = formattedResult.users.length;
+
+            formattedResult.count = formattedResult.count - formattedResult.users.length - (formattedResult.isMyBookmark ? 1 : 0);
 
             // Awful decision tree for clean text. Come up with a better way.
             if(formattedResult.isMyBookmark) { // you
@@ -316,11 +373,12 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
             results.push(formattedResult);
           });
-
+          
+          var adminMode = config["show_score"] === true;
 
           var tb = Mustache.to_html(
               req.responseText,
-              {"results": results, "userInfo": userInfo}
+              {"results": results, "userInfo": userInfo, "adminMode": adminMode}
           );
 
           // Binders
@@ -353,6 +411,15 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
                     updateQuery(0);
                   });*/
                 });
+                if(config["show_score"] === true) {
+                  $('#admin-mode').show().click(function() {
+                    $('#kifi_reslist').before('<div id="adminresults"><a href="http://' + config.server + '/admin/search/results/' + resultsStore.lastRemoteResults.uuid + '" target="_blank">Search result info<br/><br/></div>');
+                    $(this).click(function() {
+                      $("#adminresults").detach();
+                    });
+                    return false;
+                  });
+                }
               }
               setTimeout(function() { injectResults(--times) }, 30);
             }
@@ -376,6 +443,42 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     } catch (e) {
       error(e);
     }
+  }
+
+  function socialTooltip(friend, element) {
+     // disabled for now
+    getTemplate("social_hover.html",{"friend": friend}, function(tmpl) {
+      var timeout;
+      var timein;
+
+      var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').html(tmpl);
+
+      var socialNetworks = chrome.extension.getURL("social-icons.png");
+      $(friendTooltip).find('.kn_social').css('background-image','url(' + socialNetworks + ')');
+
+      function hide() {
+          timeout = setTimeout(function () {
+              $(friendTooltip).fadeOut(100);
+          }, 600);
+          clearTimeout(timein);
+      };
+
+      function show() {
+        timein = setTimeout(function() {
+          $(friendTooltip).stop().fadeIn(100);
+        }, 500)
+      }
+
+      $(element).mouseover(function () {
+          clearTimeout(timeout);
+          show();
+      }).mouseout(hide);
+
+      $(friendTooltip).mouseover(function () {
+          clearTimeout(timeout);
+      }).mouseout(hide);
+
+    }); 
   }
 
   function addActionToSocialBar(socialBar) {

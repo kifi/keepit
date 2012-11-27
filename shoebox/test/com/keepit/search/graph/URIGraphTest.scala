@@ -17,6 +17,7 @@ import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import org.apache.lucene.store.RAMDirectory
+import org.apache.lucene.search.TermQuery
 
 @RunWith(classOf[JUnitRunner])
 class URIGraphTest extends SpecificationWithJUnit {
@@ -37,14 +38,14 @@ class URIGraphTest extends SpecificationWithJUnit {
             NormalizedURI(title = "a6", url = "http://www.keepit.com/article6", state=SCRAPED).save))
     }
   }
-  
+
   private def setupArticleStore(uris: Seq[NormalizedURI]) = {
     uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
       store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs".format(idx)))
       store
     }
   }
-  
+
   private def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
     Article(
         id = normalizedUriId,
@@ -56,13 +57,13 @@ class URIGraphTest extends SpecificationWithJUnit {
         state = SCRAPED,
         message = None)
   }
-  
+
   "URIGraph" should {
     "be able to generate UriToUsrEdgeSet" in {
       running(new EmptyApplication()) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
-        
+
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
 
         val bookmarks = CX.withConnection { implicit c =>
@@ -72,28 +73,28 @@ class URIGraphTest extends SpecificationWithJUnit {
             }
           }
         }
-        
+
         val graphDir = new RAMDirectory
         val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
-        graph.load() === users.size        
-        
+        graph.load() === users.size
+
         val searcher = graph.getURIGraphSearcher()
-        
+
         expectedUriToUserEdges.map{ case (uri, users) =>
           val expected = users.map(_.id.get).toSet
           val answer = searcher.getUriToUserEdgeSet(uri.id.get).destIdSet
           answer === expected
         }
-        
+
         graph.numDocs === users.size
       }
     }
-    
+
     "be able to generate UserToUriEdgeSet" in {
       running(new EmptyApplication()) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
-        
+
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
 
         val bookmarks = CX.withConnection { implicit c =>
@@ -103,29 +104,29 @@ class URIGraphTest extends SpecificationWithJUnit {
             }
           }
         }
-        
+
         val graphDir = new RAMDirectory
         val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
-        graph.load() === users.size        
-        
+        graph.load() === users.size
+
         val searcher = graph.getURIGraphSearcher()
-        
+
         val expectedUserIdToUriIdEdges = bookmarks.groupBy(_.userId).map{ case (userId, bookmarks) => (userId, bookmarks.map(_.uriId)) }
         expectedUserIdToUriIdEdges.map{ case (userId, uriIds) =>
           val expected = uriIds.toSet
           val answer = searcher.getUserToUriEdgeSet(userId).destIdSet
           answer === expected
         }
-        
+
         graph.numDocs === users.size
       }
     }
-    
+
     "be able to intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
       running(new EmptyApplication()) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
-        
+
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
 
         val bookmarks = CX.withConnection { implicit c =>
@@ -135,13 +136,13 @@ class URIGraphTest extends SpecificationWithJUnit {
             }
           }
         }
-        
+
         val graphDir = new RAMDirectory
         val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
-        graph.load() === users.size        
-        
+        graph.load() === users.size
+
         val searcher = graph.getURIGraphSearcher()
-        
+
         users.sliding(3).foreach{ friends =>
           val friendIds = friends.map(_.id.get).toSet
           val userToUserEdgeSet = new UserToUserEdgeSet(Id[User](1000), friendIds)
@@ -157,33 +158,65 @@ class URIGraphTest extends SpecificationWithJUnit {
             answer === expected
           }
         }
-        
+
         graph.numDocs === users.size
       }
-      
+
       "handle empty sets" in {
         running(new EmptyApplication()) {
           val (users, uris) = setupDB
-          
+
           val graphDir = new RAMDirectory
           val graph = URIGraph(graphDir)
           val searcher = graph.getURIGraphSearcher()
-        
+
           searcher.getUserToUriEdgeSet(Id[User](10000)).destIdSet.isEmpty === true
-          
+
           searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000)).destIdSet.isEmpty === true
-          
+
           val emptyUserToUserEdgeSet = new UserToUserEdgeSet(Id[User](10000), Set())
-          
+
           emptyUserToUserEdgeSet.destIdSet.isEmpty === true
-          
+
           searcher.intersect(emptyUserToUserEdgeSet, searcher.getUriToUserEdgeSet(uris.head.id.get)).destIdSet.isEmpty === true
-        
+
           searcher.intersect(emptyUserToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
-          
+
           val userToUserEdgeSet = new UserToUserEdgeSet(Id[User](10000), users.map(_.id.get).toSet)
           searcher.intersect(userToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
         }
+      }
+    }
+
+    "search personal bookmark titles" in {
+      running(new EmptyApplication()) {
+        val (users, uris) = setupDB
+        val store = setupArticleStore(uris)
+
+        CX.withConnection { implicit c =>
+          uris.foreach{ uri =>
+            val uriId =  uri.id.get
+            Bookmark(title = ("personaltitle bmt"+uriId), url = uri.url,  uriId = uriId, userId = users((uriId.id % 2L).toInt).id.get, source = BookmarkSource("test")).save
+          }
+        }
+
+        val graphDir = new RAMDirectory
+        val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
+        graph.load() === users.size
+
+        val searcher = graph.getURIGraphSearcher()
+        val personaltitle = new TermQuery(URIGraph.titleTerm.createTerm("personaltitle"))
+        val bmt1 = new TermQuery(URIGraph.titleTerm.createTerm("bmt1"))
+        val bmt2 = new TermQuery(URIGraph.titleTerm.createTerm("bmt2"))
+
+        searcher.search(users(0).id.get, personaltitle, 0.0f).keySet === Set(2L, 4L, 6L)
+        searcher.search(users(1).id.get, personaltitle, 0.0f).keySet === Set(1L, 3L, 5L)
+
+        searcher.search(users(0).id.get, bmt1, 0.0f).keySet === Set.empty[Long]
+        searcher.search(users(1).id.get, bmt1, 0.0f).keySet === Set(1L)
+
+        searcher.search(users(0).id.get, bmt2, 0.0f).keySet === Set(2L)
+        searcher.search(users(1).id.get, bmt2, 0.0f).keySet === Set.empty[Long]
       }
     }
   }

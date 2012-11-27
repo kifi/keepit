@@ -58,13 +58,13 @@
         @{bookmark.source.value match {
           case "INIT_LOAD" => {
             <span class="label">Init Load</span>
-          } 
+          }
           case "HOVER_KEEP" => {
             <span class="label label-success">Slider</span>
-          } 
+          }
           case "PLUGIN_START" => {
             <span class="label label-info">Plugin Restart</span>
-          } 
+          }
         }}
       </td>
       <td>@uriStat.bookmarks.size</td>
@@ -73,19 +73,19 @@
         @{uriStat.uri.state.value match {
           case "indexed" => {
             <span class="label label-success">{uriStat.uri.state.value}</span>
-          } 
+          }
           case "active" => {
             <span class="label label-important">{uriStat.uri.state.value}</span>
-          } 
+          }
           case "fallbacked" => {
             <span class="label label-warning">{uriStat.uri.state.value}</span>
-          } 
+          }
           case "scraped" => {
             <span class="label label-info">{uriStat.uri.state.value}</span>
-          } 
+          }
           case "fallback_failed" => {
             <span class="label label-inverse">{uriStat.uri.state.value}</span>
-          } 
+          }
           case _ => {
            <span class="label">{uriStat.uri.state.value}</span>
           }
@@ -94,5 +94,5 @@
     </tr>
   }
   </table>
-  @pagination(page, pageCount)    
+  @pagination(page, pageCount)
 }

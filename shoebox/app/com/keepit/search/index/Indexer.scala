@@ -11,10 +11,7 @@ import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Payload
 import org.apache.lucene.index.Term
-import org.apache.lucene.queryParser.{QueryParser => LuceneQueryParser}
 import org.apache.lucene.store.Directory
-import org.apache.lucene.search.BooleanClause
-import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.util.Version
 import java.io.File
@@ -31,9 +28,9 @@ object Indexer {
   val idPayloadFieldName = "_UD_PAYLOAD"
   val idPayloadTermText = "ID"
   val idPayloadTerm = new Term(idPayloadFieldName, idPayloadTermText)
-  
+
   val DELETED_ID = -1
-  
+
   object CommitData {
     val committedAt = "COMMITTED_AT"
   }
@@ -54,7 +51,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     val reader = IndexReader.open(indexDirectory)
     new Searcher(reader, ArrayIdMapper(reader))
   }
-  
+
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
     try {
       indexWriter.synchronized{ f(indexWriter) }
@@ -69,12 +66,12 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
         indexWriter.close // must close the indexWriter upon OutOfMemoryError
         throw outOfMemory
     }
-  }  
-  
+  }
+
   def close(): Unit = {
     indexWriter.close()
   }
-   
+
   def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int)(afterCommit: Seq[(Indexable[T], Option[IndexError])]=>Unit): Unit = {
     doWithIndexWriter{ indexWriter =>
       indexables.grouped(commitBatchSize).foreach{ indexableBatch =>
@@ -86,9 +83,9 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
               val msg = "failed to build document for id=%s".format(indexable.id)
               log.error(msg, e)
               Right(IndexError(msg))
-          } 
+          }
           val error = document match {
-            case Left(doc) => 
+            case Left(doc) =>
               try {
                 indexWriter.updateDocument(indexable.idTerm, doc)
                 log.info("indexed id=%s".format(indexable.id))
@@ -113,7 +110,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     }
     refreshSearcher()
   }
-  
+
   def commitData: Map[String, String] = {
     // get the latest commit
     val indexReader = Option(IndexReader.openIfChanged(searcher.indexReader)).getOrElse(searcher.indexReader)
@@ -122,36 +119,16 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     log.info("commit data =" + mutableMap)
     Map() ++ mutableMap
   }
-  
+
   def getQueryParser: QueryParser
   def parseQuery(queryText: String) = getQueryParser.parseQuery(queryText)
-  
+
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
-  
+
   def refreshSearcher() {
     val reader = IndexReader.openIfChanged(searcher.indexReader) // this may return null
     if (reader != null) searcher = new Searcher(reader, ArrayIdMapper(reader))
   }
 }
 
-class QueryParser(indexWriterConfig: IndexWriterConfig) extends LuceneQueryParser(Version.LUCENE_36, "b", indexWriterConfig.getAnalyzer()) {
-  
-  def parseQuery(queryText: String) = Option(super.parse(queryText))
-  
-  private var percentMatch: Double = 0.0d
-  def setPercentMatch(value: Double) { percentMatch = value }
-  
-  override def getBooleanQuery(clauses: java.util.List[BooleanClause], disableCoord: Boolean): Query = {
-    super.getBooleanQuery(clauses, disableCoord) match {
-      case null => null
-      case booleanQuery: BooleanQuery =>
-        if (clauses != null) {
-          val numClausesShouldMatch = ceil(clauses.size() * percentMatch / 100).toInt
-          if (numClausesShouldMatch > 1)
-            booleanQuery.setMinimumNumberShouldMatch(numClausesShouldMatch)
-        }
-        booleanQuery
-      case query: Query => query
-    }
-  }
-}
+

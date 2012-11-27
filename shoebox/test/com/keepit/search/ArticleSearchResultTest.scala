@@ -36,15 +36,16 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
               mayHaveMoreHits = true,
               scorings = Seq(new Scoring(.2F, .3F, .4F, .5F)),
               filter = Set(100L, 200L, 300L),
-              userId = Id[User](55),
-              uuid = ExternalId[ArticleSearchResultRef]())
+              uuid = ExternalId[ArticleSearchResultRef](),
+              pageNumber = 3,
+              millisPassed = 23)
          val json = new ArticleSearchResultSerializer().writes(res)
          val deserialized = new ArticleSearchResultSerializer().reads(json)
          deserialized.uuid === res.uuid
          deserialized === res
       }
     }
-    
+
     "persisting to db" in {
       running(new EmptyApplication()) {
          val user = CX.withConnection { implicit conn =>
@@ -59,8 +60,9 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
               mayHaveMoreHits = true,
               scorings = Seq(new Scoring(.2F, .3F, .4F, .5F)),
               filter = Set(100L, 200L, 300L),
-              userId = user.id.get,
-              uuid = ExternalId[ArticleSearchResultRef]())
+              uuid = ExternalId[ArticleSearchResultRef](),
+              pageNumber = 4,
+              millisPassed = 24)
          val model = CX.withConnection { implicit conn =>
            ArticleSearchResultRef(res).save
          }
@@ -70,7 +72,9 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
          }
          loaded === model
          loaded.createdAt === res.time
-         loaded.userId === res.userId
+         loaded.externalId === res.uuid
+         loaded.millisPassed === res.millisPassed
+         loaded.pageNumber === res.pageNumber
       }
     }
   }

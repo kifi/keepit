@@ -26,6 +26,6 @@ import com.keepit.serializer.SocialUserRawInfoSerializer
 
 trait SocialUserRawInfoStore extends ObjectStore[Id[SocialUserInfo], SocialUserRawInfo]
 
-class S3SocialUserRawInfoStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, 
-    val formatter: Format[SocialUserRawInfo] = new SocialUserRawInfoSerializer()) 
+class S3SocialUserRawInfoStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3,
+    val formatter: Format[SocialUserRawInfo] = new SocialUserRawInfoSerializer())
   extends S3ObjectStore[Id[SocialUserInfo], SocialUserRawInfo] with SocialUserRawInfoStore

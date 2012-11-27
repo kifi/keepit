@@ -1,14 +1,14 @@
-@(title: String)(content: Html)
+@(title: String, scripts: List[String] = Nil, stylesheets: List[String] = Nil)(content: Html)
 
 @quote(daQuote: com.keepit.common.admin.DouglasAdamsQuote) = {
-  </br>
-  </br>
+  <br>
+  <br>
   <blockquote>
     @daQuote.quote.map{ line =>
       <p>@line</p>
     }
     <small>Douglas Adams <cite title="Source Title">"@daQuote.cite"</cite></small>
-  </blockquote>     
+  </blockquote>
 }
 
 <!DOCTYPE html>
@@ -16,23 +16,29 @@
   <head>
     <title>@title</title>
     <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-    <link rel="stylesheet" media="screen" href="@routes.Assets.at("bootstrap/css/bootstrap.min.css")" />
-    <link rel="stylesheet" media="screen" href="@routes.Assets.at("bootstrap/css/bootstrap-responsive.min.css")" />         
-    <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/admin_main.css")">
-    <script src="@routes.Assets.at("javascripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
-    <script type="text/javascript" language="javascript">
+    <link rel="stylesheet" href="@routes.Assets.at("bootstrap/css/bootstrap.min.css")" />
+    <link rel="stylesheet" href="@routes.Assets.at("bootstrap/css/bootstrap-responsive.min.css")" />
+    @for(stylesheet <- "admin_main" :: stylesheets) {
+      <link rel="stylesheet" href="@routes.Assets.at("stylesheets/" + stylesheet + ".css")">
+    }
+    @defining(if (play.api.Play.isDev(play.api.Play.current)) ".js" else ".min.js") { ext =>
+      @for(script <- "jquery-1.7.1" :: scripts) {
+        <script src="@routes.Assets.at("javascripts/" + script + ext)"></script>
+      }
+    }
+    <script>
        $(function () {
-           $('#scrlBotm').click(function () {
-               $('html, body').animate({
+           $("#scrlBotm").click(function() {
+               $("html, body").animate({
                    scrollTop: $(document).height()
                },
                500);
                return false;
            });
 
-           $('#scrlTop').click(function () {
-               $('html, body').animate({
-                   scrollTop: '0px'
+           $("#scrlTop").click(function() {
+               $("html, body").animate({
+                   scrollTop: "0px"
                },
                500);
                return false;
@@ -48,11 +54,12 @@
 		    <ul class="nav">
 		      <li><a href="@com.keepit.controllers.routes.BookmarksController.bookmarksFirstPageView">All Bookmarks</a></li>
 		      <li><a href="@com.keepit.controllers.routes.UserController.usersView">All KiFi Users</a></li>
-		      <li><a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView">All Social Users</a></li>
+		      <li><a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(0)">All Social Users</a></li>
 		      <li class="divider-vertical"></li>
+		      <li><a href="@com.keepit.controllers.admin.routes.ArticleIndexerController.indexInfo">Index Info</a></li>
 		      <li><a href="@com.keepit.common.healthcheck.routes.HealthController.serviceView">Service</a></li>
 		    </ul>
-		  </div>		
+		  </div>
 		</div>
 		<header class="admin-head" id="overview">
 		  <div class="container">
@@ -65,4 +72,3 @@
 		</div>
   </body>
 </html>
-

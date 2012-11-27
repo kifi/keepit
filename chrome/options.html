@@ -3,92 +3,8 @@
     <title>Keep It Extension Configs</title>
   </head>
 
-  <script type="text/javascript" src="jquery-1.7.2.min.js"></script>
-  <script type="text/javascript">
-
-  // Saves configs to localStorage.
-
-  function upload() {
-    chrome.extension.sendRequest({type: "upload_all_bookmarks"}, function(response) {});
-  }
-
-  function resetUser() {
-    chrome.extension.sendRequest({type: "remove_conf", key: "user"}, function(response) {
-      chrome.extension.sendRequest({type: "remove_conf", key: "user_info"}, function(response) {
-        restoreConfigs();
-      });  
-    });
-  }
-
-  function sendSaveConfig(key, value) {
-    chrome.extension.sendRequest({type: "set_conf", key: key, value: value}, function(response) {});
-  }
-
-  function saveConfigs() {
-    if ($("#env_prod").is(":checked")) {
-      localStorage["env"] = "production";
-    }
-    else {
-      localStorage["env"] = "development";
-    }
-    sendSaveConfig("max_res", $("#max_search_results").val());
-    sendSaveConfig("hover_timeout", $("#hover_timeout").val());
-    var showScore = $("#show_score").val();
-      if (showScore === "yes" || showScore === true || showScore === "true") {
-        showScore = true;
-      } else {
-        showScore = false;
-      }
-    sendSaveConfig("show_score", showScore);
-    window.close();
-  }
-
-  function renderUserInfo(userInfo) {
-    console.log(userInfo);
-    $("#user_info_data").show();
-    $("#user_name").html(userInfo.name);
-    $("#user_avatar").attr("src", userInfo.avatar_url);
-  }
-
-  function restoreConfigs(callback) {
-    chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
-      console.log("loaded config", config);
-      var env = config["env"];
-      if (env === "development") {
-        $("#env_dev").attr("checked","checked");
-      }
-      if (env === "production") {
-        $("#env_prod").attr("checked","checked");
-      }
-      $("#max_search_results").val(config["max_res"]);
-      $("#hover_timeout").val(config["hover_timeout"]);
-      var showScore = config["show_score"];
-      if (showScore === "yes" || showScore === true) {
-        showScore = "yes";
-      } else {
-        showScore = "no";
-      }
-      $("#show_score").val(showScore);
-      $("#facebook_connect_link").click(function() {
-        chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
-          var url = "http://" + config["server"] + "/authenticate/facebook";
-          log("openning facebook window from " + url, "connect", "width=500,height=400");
-          window.open(url);
-          return false;
-        });
-      });  
-      if (callback) {
-        callback(config);
-      }
-    });
-  }
-  setTimeout(function() {
-    restoreConfigs(function(config) {
-      renderUserInfo(config["user"]);
-    });
-    
-  }, 1);
-  </script>
+  <script type="text/javascript" src="lib/jquery-1.8.2.min.js"></script>
+  <script src="options.js"></script>
 
   <body>
       
@@ -106,10 +22,11 @@
         Max Search Results: <input type="text" id="max_search_results" name="max_search_results" value="10"></input><br/> 
         Show Hover timeout in seconds: <input type="text" id="hover_timeout" name="hover_timeout" value="10"></input><br/> 
         Show score (use 'yes' if you want it): <input type="text" id="show_score" name="show_score" value="no"></input><br/> 
+        Upload Bookmarks on start (use 'no' if you dont want it): <input type="text" id="upload_on_start" name="upload_on_start" value="yes"></input><br/> 
         <font size="small">If the value of the timeout is not a positive number (as in '0' or "NA") the hover will not show</font><br/> 
-        <button onclick="saveConfigs()">Save</button><br/> 
-        <button onclick="upload()">Upload all my bookmarks</button><br/> 
-        <button onclick="resetUser()">Reset User Info</button><br/> 
+        <button id="saveConfigs">Save</button><br/> 
+        <button id="upload">Upload all my bookmarks</button><br/> 
+        <button id="resetUser">Reset User Info</button><br/> 
       </fieldset>
     </div>
   </body>

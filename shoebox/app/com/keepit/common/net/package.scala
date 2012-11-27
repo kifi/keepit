@@ -9,13 +9,13 @@ import com.keepit.common.healthcheck.HealthcheckError
 package object net {
 
   class RichRequestHeader(request: RequestHeader) {
-    def agent: String = agentOpt.getOrElse("UNKNOWN AGENT")
-    def agentOpt: Option[String] = request.headers.get(USER_AGENT)
-    
-    def referer: String = refererOpt.getOrElse(throw new Exception("no referer header at: " + (request.headers.toMap mkString "\n")))
-    def refererOpt: Option[String] = request.headers.get(REFERER)
+    lazy val agent: String = agentOpt.getOrElse("UNKNOWN AGENT")
+    lazy val agentOpt: Option[String] = request.headers.get(USER_AGENT)
+
+    lazy val referer: String = refererOpt.getOrElse(throw new Exception("no referer header at: " + (request.headers.toMap mkString "\n")))
+    lazy val refererOpt: Option[String] = request.headers.get(REFERER)
   }
-  
+
   implicit def requestHeaderToRichRequestHeader(request: RequestHeader) = new RichRequestHeader(request)
-  
+
 }

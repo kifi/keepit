@@ -7,18 +7,19 @@ import play.api.libs.json._
 import com.keepit.common.social.UserWithSocial
 
 class UserWithSocialSerializer extends Writes[UserWithSocial] {
-  
+
   def writes(userWithSocial: UserWithSocial): JsValue =
     JsObject(List(
       "externalId"  -> JsString(userWithSocial.user.externalId.toString),
       "firstName" -> JsString(userWithSocial.user.firstName),
       "lastName"  -> JsString(userWithSocial.user.lastName),
-      "facebookId"  -> JsString(userWithSocial.socialUserInfo.socialId.id)
+      "facebookId"  -> JsString(userWithSocial.socialUserInfo.socialId.id),
+      "avatar" -> JsString("https://graph.facebook.com/" + userWithSocial.socialUserInfo.socialId.id + "/picture?type=square")
       )
     )
 
-  def writes (users: Seq[UserWithSocial]): JsValue = 
-    JsArray(users map { user => 
+  def writes (users: Seq[UserWithSocial]): JsValue =
+    JsArray(users map { user =>
       UserWithSocialSerializer.userWithSocialSerializer.writes(user)
     })
 }

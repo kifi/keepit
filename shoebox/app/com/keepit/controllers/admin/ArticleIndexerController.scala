@@ -13,16 +13,17 @@ import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
+import com.keepit.common.controller.FortyTwoController
 
-object ArticleIndexerController extends Controller with Logging {
+object ArticleIndexerController extends FortyTwoController {
 
-  def index = Action { implicit request => 
+  def index = AdminHtmlAction { implicit request =>
     val indexer = inject[ArticleIndexerPlugin]
     val cnt = indexer.index()
     Ok("indexed %d articles".format(cnt))
   }
 
-  def indexByState(state: State[NormalizedURI]) = Action { implicit request =>
+  def indexByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
     transitionByAdmin(state -> Set(SCRAPED, SCRAPE_FAILED)) { newState =>
       CX.withConnection { implicit c =>
         NormalizedURI.getByState(state).foreach{ uri => uri.withState(newState).save }
@@ -33,12 +34,12 @@ object ArticleIndexerController extends Controller with Logging {
     }
   }
 
-  def indexInfo = Action { implicit request => 
+  def indexInfo = AdminHtmlAction { implicit request =>
     val indexer = inject[ArticleIndexer]
     Ok(views.html.indexer(indexer))
   }
-  
-  def refreshSearcher = Action { implicit request => 
+
+  def refreshSearcher = AdminHtmlAction { implicit request =>
     val indexer = inject[ArticleIndexer]
     indexer.refreshSearcher
     Ok("searcher refreshed")

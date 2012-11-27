@@ -9,7 +9,6 @@ import com.keepit.model._
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.db.CX
 import play.api.Play.current
-import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriter
@@ -24,11 +23,11 @@ import org.apache.lucene.util.Version
 import java.io.File
 import java.io.IOException
 import scala.math._
+import com.keepit.search.query.ProximityQuery
 
 object ArticleIndexer {
   def apply(indexDirectory: Directory, articleStore: ArticleStore): ArticleIndexer = {
-    val analyzer = new StandardAnalyzer(Version.LUCENE_36)
-    analyzer.setMaxTokenLength(256)
+    val analyzer = new DefaultAnalyzer
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
 
     new ArticleIndexer(indexDirectory, config, articleStore)
@@ -40,7 +39,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
 
   val commitBatchSize = 100
   val fetchSize = commitBatchSize * 3
-  
+
   def run(): Int = {
     log.info("starting a new indexing round")
     try {
@@ -55,9 +54,9 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           CX.withConnection { implicit c =>
             val articleIndexable = indexable.asInstanceOf[ArticleIndexable]
             val state = indexError match {
-              case Some(error) => 
+              case Some(error) =>
                 findNextState(articleIndexable.uri.state -> Set(INDEX_FAILED, FALLBACK_FAILED))
-              case None => 
+              case None =>
                 cnt += 1
                 findNextState(articleIndexable.uri.state -> Set(INDEXED, FALLBACKED))
             }
@@ -67,27 +66,27 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       }
       cnt
     } catch {
-      case ex: Throwable => 
+      case ex: Throwable =>
         log.error("error in indexing run", ex)
         throw ex
     }
   }
-  
+
   def getQueryParser: QueryParser = new ArticleQueryParser
-  
+
   def getArticleSearcher() = searcher
-  
+
   def search(queryText: String): Seq[Hit] = {
     parseQuery(queryText) match {
       case Some(query) => searcher.search(query)
       case None => Seq.empty[Hit]
     }
   }
-  
+
   def buildIndexable(uri: NormalizedURI) = {
     new ArticleIndexable(uri.id.get, uri, articleStore)
   }
-  
+
   class ArticleIndexable(override val id: Id[NormalizedURI], val uri: NormalizedURI, articleStore: ArticleStore) extends Indexable[NormalizedURI] {
     override def buildDocument = {
       val doc = super.buildDocument
@@ -102,17 +101,18 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       }
     }
   }
-  
+
   class ArticleQueryParser extends QueryParser(indexWriterConfig) {
-    
+
     super.setAutoGeneratePhraseQueries(true)
-    
+
     override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
-      (super.getFieldQuery("t", queryText, quoted), super.getFieldQuery("c", queryText, quoted)) match {
+      (getFieldQueryWithProximity("t", queryText, quoted), getFieldQueryWithProximity("c", queryText, quoted)) match {
         case (null, null) => null
         case (query, null) => query
         case (null, query) => query
         case (q1, q2) =>
+          q1.setBoost(2.0f) // title boost
           val booleanQuery = new BooleanQuery
           booleanQuery.add(q1, Occur.SHOULD)
           booleanQuery.add(q2, Occur.SHOULD)

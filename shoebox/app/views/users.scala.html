@@ -1,6 +1,6 @@
-@(userWithSocials: Seq[UserWithSocial])
+@(userStatisticsList: Seq[com.keepit.controllers.UserStatistics])
 
-@admin("All " + userWithSocials.size + " Users") {
+@admin("All " + userStatisticsList.size + " Users") {
   <table class="table table-bordered">
     <tr>
       <th>#</th>
@@ -8,15 +8,31 @@
       <th>User</th>
       <th># of bookmarks</th>
       <th>Date joined</th>
+      <th>Emails</th>
+      <th>Connections</th>
+      <th>Experiments</th>
     </tr>
-  @for((userWithSocial, i) <- userWithSocials.zipWithIndex) {
+  @for((userStatistics, i) <- userStatisticsList.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
-      <td><span class="badge">@userWithSocial.user.id.get.id</span></td>
-      <td>@adminHelper.userDisplay(userWithSocial)</td>
-      <td>@userWithSocial.bookmarksCount</td>
-      <td>@adminHelper.dateDisplay(userWithSocial.user.createdAt)</td>
+      <td><span class="badge">@userStatistics.user.id.get.id</span></td>
+      <td>@adminHelper.userDisplay(userStatistics.userWithSocial)</td>
+      <td>@userStatistics.userWithSocial.bookmarksCount</td>
+      <td>@adminHelper.dateDisplay(userStatistics.user.createdAt)</td>
+      <td><a href='mailto:@{userStatistics.userWithSocial.emails.map(_.address).mkString(",")}'>@{userStatistics.userWithSocial.emails.map(_.address).mkString(",")}</a></td>
+      <td>@userStatistics.socialConnectionCount</td>
+      <td>@userStatistics.userWithSocial.experiments.mkString(",")</td>
     </tr>
   }
   </table>
+
+  <h3>
+    User's email
+  </h3>
+  <a href='mailto:@{userStatisticsList.map(_.userWithSocial.emails.map(_.address)).flatten.mkString(",")}'>All Mails</a>
+  <ol>
+    @for(emailString <- userStatisticsList.map(_.userWithSocial.emails.map(_.address)).flatten.toSeq) {
+      <li><a href='mailto:@emailString'>@emailString</a></li>
+    }
+  </ol>
 }

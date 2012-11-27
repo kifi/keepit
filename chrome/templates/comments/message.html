@@ -1,0 +1,31 @@
+<div class="comment-wrapper" data-externalId="{{externalId}}">
+  <div class="comment">
+    <img src="https://graph.facebook.com/{{user.facebookId}}/picture?type=square" class="comment-avatar">
+    <div class="comment-text">
+      <strong>{{user.firstName}} {{user.lastName}}</strong>
+      {{#formatComments}}{{text}}{{/formatComments}}
+    </div>
+    <div class="comment-meta">
+      <abbr class="timestamp timeago" title="{{#formatDate}}{{createdAt}}{{/formatDate}}">{{#formatDate}}{{createdAt}}{{/formatDate}}</abbr>
+      <span class="meta-links"><span class="replies"><span class="reply-arrow"></span> {{#replyCount}}{{replyCount}} Replies{{/replyCount}}{{^replyCount}}Reply{{/replyCount}}</span><!-- · <span class="hearts">{{>hearts}}</span>--></span>
+    </div>
+  </div>
+  <div class="comment-replies">
+    <div class="existing-replies">
+      {{> reply_list}}
+    </div>
+    <div class="reply">
+      <div class="comment reply-comment compose-comment">
+        <div class="comment-text">
+          <form action="">
+            <div class="reply-comment-box">
+                <img src="{{kifiuser.avatar}}" class="comment-avatar reply-avatar">
+                <textarea class="reply-comment-textarea" placeholder="Reply to {{user.firstName}}'s comment..."></textarea>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>

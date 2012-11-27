@@ -1,3 +1,4 @@
+
 [{
   "query": "big screen tv",
   "results": {
@@ -7,7 +8,7 @@
       "count": "5",
       "bookmark": {
         "externalId": "e4929eee-c4c1-4f50-b19f-7d1aad92f461",
-        "title": "BEST BIG SCRRENS OF 2012",
+        "title": "Best big-screen TV values under $1,000 | TV and Home Theatre - CNET Reviews",
         "url": "http://reviews.cnet.com/8301-33199_7-57528807-221/best-big-screen-tv-values-under-$1000/"
       },
       "users": [],
@@ -18,7 +19,7 @@
       "count": "0",
       "bookmark": {
         "externalId": "0c6bf447-15f2-4527-91bb-11657fb11ab6",
-        "title": "Panasonic VIERA TC-P60GT50 60-Inch",
+        "title": "Amazon.com:Panasonic VIERA TC-P60GT50 60-Inch 1080p 600Hz Full HD 3D Plasma TV:Televisions & Video",
         "url": "http://www.amazon.com/Panasonic-VIERA-TC-P60GT50-60-Inch-Plasma/dp/B00752VL8G/ref=sr_1_3?s=tv&ie=UTF8&qid=1351877247&sr=1-3"
       },
       "users": [{
@@ -49,7 +50,7 @@
       "count": "0",
       "bookmark": {
         "externalId": "9201f549-5959-4389-8bd8-98739405b5e7",
-        "title": "LG 65LM6200 65-Inch",
+        "title": "Amazon.com:LG 55LM6200 55-Inch Cinema 3D 1080p 120Hz LED-LCD HDTV with Smart TV and Six Pairs of 3D Glasses: Electronics",
         "url": "http://www.amazon.com/LG-55LM6200-55-Inch-LED-LCD-Glasses/dp/B006ZH0LW4/ref=sr_1_13?s=electronics&ie=UTF8&qid=1351878921&sr=1-13"
       },
       "users": [{
@@ -64,6 +65,175 @@
         "facebookId": "636721190"
       }],
       "score": 1.746953010559082,
+      "isMyBookmark": false,
+      "isPrivate": false
+    }]
+  }
+}, {
+  "query": "LG 55LM6200",
+  "results": {
+    "uuid": "f6434ed5-d6db-4925-8b08-e582dea5e719",
+    "query": "LG 55LM6200",
+    "hits": [{
+      "count": "0",
+      "bookmark": {
+        "externalId": "9201f549-5959-4389-8bd8-98739405b5e7",
+        "title": "Amazon.com:LG 55LM6200 55-Inch Cinema 3D 1080p 120Hz LED-LCD HDTV with Smart TV and Six Pairs of 3D Glasses: Electronics",
+        "url": "http://www.amazon.com/LG-55LM6200-55-Inch-LED-LCD-Glasses/dp/B006ZH0LW4/ref=sr_1_13?s=electronics&ie=UTF8&qid=1351878921&sr=1-13"
+      },
+      "users": [{
+        "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+        "firstName": "Eishay",
+        "lastName": "Smith",
+        "facebookId": "646386018"
+      }, {
+        "externalId": "3ad31932-f3f9-4fe3-855c-3359051212e5",
+        "firstName": "Danny",
+        "lastName": "Blumenfeld",
+        "facebookId": "636721190"
+      }],
+      "score": 1.746953010559082,
+      "isMyBookmark": true,
+      "isPrivate": false
+    }, {
+      "count": "0",
+      "bookmark": {
+        "externalId": "0c6bf447-15f2-4527-91bb-11657fb11ab6",
+        "title": "LG Electronics 55LM6200 55 inch Cinema 3D Smart LED TV for $1399 + Shipping",
+        "url": "http://cheapohippo.com/lg-electronics-55lm6200-55-inch-cinema-3d-smart-led-tv-for-1399-shipping/"
+      },
+      "users": [{
+        "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+        "firstName": "Eishay",
+        "lastName": "Smith",
+        "facebookId": "100000022825106"
+      }],
+      "score": 1.963214635848999,
+      "isMyBookmark": false,
+      "isPrivate": false
+    }, {
+      "count": "0",
+      "bookmark": {
+        "externalId": "0c6bf447-15f2-4527-91bb-11657fb11ab6",
+        "title": "LG 55LM6200 55\" 3D LED TV - Compare Prices and Reviews on LG 55LM6200 Plasma and LCD Televisions at PriceGrabber",
+        "url": "http://electronics.pricegrabber.com/plasma-lcd-televisions/m/963461509/"
+      },
+      "users": [{
+        "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+        "firstName": "Eishay",
+        "lastName": "Smith",
+        "facebookId": "100000022825106"
+      }],
+      "score": 1.963214635848999,
+      "isMyBookmark": false,
+      "isPrivate": false
+    }]
+  }
+}, {
+  "query": "Web Developer",
+  "results": {
+    "uuid": "f6434ed5-d6db-4925-8b08-e582dea5e719",
+    "query": "Web Developer",
+    "hits": [{
+      "count": "0",
+      "bookmark": {
+        "externalId": "9201f549-5959-4389-8bd8-98739405b5e7",
+        "title": "Web Developer available for freelance (Rails/html5/css/js/php)",
+        "url": "http://sfbay.craigslist.org/sfc/res/3314274682.html"
+      },
+      "users": [{
+        "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+        "firstName": "Eishay",
+        "lastName": "Smith",
+        "facebookId": "646386018"
+      }],
+      "score": 1.746953010559082,
+      "isMyBookmark": false,
+      "isPrivate": false
+    }, {
+      "count": "0",
+      "bookmark": {
+        "externalId": "0c6bf447-15f2-4527-91bb-11657fb11ab6",
+        "title": "Ent Design Studio | Elance",
+        "url": "https://www.elance.com/s/theentdesignstudio/10183/#backurl=aHR0cHM6Ly93d3cuZWxhbmNlLmNvbS9yL2NvbnRyYWN0b3JzL3Etd2ViJTIwZGV2ZWxvcGVyLw=="
+      },
+      "users": [{
+        "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+        "firstName": "Effi",
+        "lastName": "Fuks-Leichtag",
+        "facebookId": "600320668"
+      }],
+      "score": 1.963214635848999,
+      "isMyBookmark": false,
+      "isPrivate": false
+    }, {
+      "count": "0",
+      "bookmark": {
+        "externalId": "0c6bf447-15f2-4527-91bb-11657fb11ab6",
+        "title": "Alex Zavodnik | LinkedIn",
+        "url": "http://www.linkedin.com/profile/view?id=3529206&authType=OUT_OF_NETWORK&authToken=a7uX&locale=en_US&srchid=a38b787e-89d2-49df-bff6-debdf2d823df-0&srchindex=6&srchtotal=342655&goback=%2Efps_PBCK_*1_*1_*1_*1_web+developer_*1_*1_*2_*1_Y_*1_*1_*1_false_1_R_*1_*51_*1_*51_true_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2&pvs=ps&trk=pp_profile_name_link"
+      },
+      "users": [{
+        "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+        "firstName": "Eishay",
+        "lastName": "Smith",
+        "facebookId": "100000022825106"
+      }],
+      "score": 1.963214635848999,
+      "isMyBookmark": false,
+      "isPrivate": false
+    }]
+  }
+},{"query": "how do solar panels work?",
+  "results": {
+    "uuid": "f6434ed5-d6db-4925-8b08-e582dea5e719",
+    "query": "how do solar panels work?",
+    "hits": [{
+      "count": "0",
+      "bookmark": {
+        "externalId": "9201f549-5959-4389-8bd8-98739405b5e7",
+        "title": "The Power of the Sun - The Science of the Silicon Solar Cell - YouTube",
+        "url": "http://www.youtube.com/watch?v=u0hckM8TKY0"
+      },
+      "users": [{
+        "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+        "firstName": "Mark",
+        "lastName": "Schultz",
+        "facebookId": "1202298956"
+      }],
+      "score": 1.746953010559082,
+      "isMyBookmark": false,
+      "isPrivate": false
+    }, {
+      "count": "0",
+      "bookmark": {
+        "externalId": "0c6bf447-15f2-4527-91bb-11657fb11ab6",
+        "title": "How do solar panels work",
+        "url": "http://howsolarworks.1bog.org/how-solar-panels-work/"
+      },
+      "users": [{
+        "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+        "firstName": "Mark",
+        "lastName": "Schultz",
+        "facebookId": "1202298956"
+      }],
+      "score": 1.963214635848999,
+      "isMyBookmark": false,
+      "isPrivate": false
+    }, {
+      "count": "0",
+      "bookmark": {
+        "externalId": "",
+        "title": "how-big-solar-panels-work.jpg (630x502)",
+        "url": "http://www.oldfortharrod.com/wp-content/uploads/2011/06/how-big-solar-panels-work.jpg"
+      },
+      "users": [{
+        "externalId": "ae5d159c-5935-4ad5-b979-ea280cb6c7ba",
+        "firstName": "Eishay",
+        "lastName": "Smith",
+        "facebookId": "100000022825106"
+      }],
+      "score": 1.963214635848999,
       "isMyBookmark": false,
       "isPrivate": false
     }]
