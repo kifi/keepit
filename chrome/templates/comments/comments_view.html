@@ -1,9 +1,11 @@
 
 <div class="flexcontainer">
-	<div class="control-bar">
-		<a class="follow" href="javascript:">Follow</a>
-		<a class="filter-by" href="javascript:alert('Sorry, not yet implemented.')">Filter Comments &#9662;</a>
-  </div>
+  {{#showControlBar}}
+    <div class="control-bar">
+      <a class="follow" href="javascript:">Follow</a>
+      <a class="filter-by" href="javascript:alert('Sorry, not yet implemented.')">Filter Comments &#9662;</a>
+    </div>
+  {{/showControlBar}}
   <div class="comment_body_view">
     {{> comment_body_view}}
   </div>

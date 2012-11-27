@@ -435,7 +435,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       },
       formatComments: commentTextFormatter,
       formatDate: commentDateFormatter,
-      comments: visibleComments
+      comments: visibleComments,
+      showControlBar: type == "public"
     }
 
     loadFile("templates/comments/hearts.html", function(hearts) {
