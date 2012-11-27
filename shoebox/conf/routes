@@ -18,6 +18,8 @@ POST    /comments/add               com.keepit.controllers.CommentController.cre
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
 GET     /comments/message           com.keepit.controllers.CommentController.getMessages(url: String)
 GET     /comments/reply             com.keepit.controllers.CommentController.getReplies(commentId: ExternalId[Comment])
+POST    /comments/follow            com.keepit.controllers.CommentController.startFollowing(url: String)
+DELETE  /comments/follow            com.keepit.controllers.CommentController.stopFollowing(url: String)
 
 GET     /users/slider               com.keepit.controllers.UserController.getSliderInfo(url: String)
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)

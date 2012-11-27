@@ -31,16 +31,24 @@ case class Follow (
     entity.view
   }
 
-  def withState(state: State[Follow]) = copy(state = state)
+  def activate = copy(state = Follow.States.ACTIVE)
+  def deactivate = copy(state = Follow.States.INACTIVE)
+  def isActive = state == Follow.States.ACTIVE
 }
 
 object Follow {
+
+  def apply(userId: Id[User], uriId: Id[NormalizedURI]): Follow =
+    Follow(userId = userId, uriId = uriId)
 
   def all(implicit conn: Connection): Seq[Follow] =
     FollowEntity.all.map(_.view)
 
   def get(id: Id[Follow])(implicit conn: Connection): Follow =
     FollowEntity.get(id).map(_.view).getOrElse(throw NotFoundException(id))
+
+  def get(userId: Id[User], uri: NormalizedURI)(implicit conn: Connection): Option[Follow] =
+    get(userId, uri.id.get)
 
   def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Option[Follow] =
     (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId AND (f.uriId EQ uriId)) unique }.map(_.view)
