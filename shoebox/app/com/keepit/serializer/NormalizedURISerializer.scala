@@ -11,7 +11,7 @@ class NormalizedURISerializer extends Writes[NormalizedURI] {
   def writes(normalizedURI: NormalizedURI): JsValue =
     JsObject(List(
       "externalId"  -> JsString(normalizedURI.externalId.toString),
-      "title"  -> JsString(normalizedURI.title),
+      "title"  -> (normalizedURI.title map {t => JsString(t) } getOrElse JsNull),
       "url"  -> JsString(normalizedURI.url)
     ))
 

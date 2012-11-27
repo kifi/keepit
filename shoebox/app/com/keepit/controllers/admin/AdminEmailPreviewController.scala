@@ -9,7 +9,7 @@ object AdminEmailPreviewController extends FortyTwoController {
 
   val sender = User(firstName = "Jared", lastName = "Jacobs")
   val recipient = User(firstName = "Eishay", lastName = "Smith")
-  val uri = NormalizedURI(title = "New Balance Minimus", url = "http://www.newbalance.com/NB-Minimus/minimus,default,pg.html", urlHash = "")
+  val uri = NormalizedURI(title = Some("New Balance Minimus"), url = "http://www.newbalance.com/NB-Minimus/minimus,default,pg.html", urlHash = "")
 
   def newMessage = AdminHtmlAction { implicit request =>
     Ok(views.html.email.newMessage(sender, recipient, uri,
