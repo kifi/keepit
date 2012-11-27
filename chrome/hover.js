@@ -455,7 +455,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
       // By default we use the comment partials.
       // To override for a specific function, do so here.
-      if(type == 'message') {
+      if (type == 'message') {
         partials.comment = message;
         partials.comment_body_view = message_list;
         partials.comment_post_view = message_post;
@@ -490,7 +490,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     $("abbr.timeago").timeago();
 
     $(".control-bar").on("click", ".follow", function() {
-      $(this).toggleClass("following");
+      var $a = $(this), following = $a.hasClass("following");
+      $.ajax("http://" + config.server + "/comments/follow?url=" + encodeURIComponent(document.location.href),
+        {"type": following ? "DELETE" : "POST"});
+      $a.toggleClass("following", !following);
     });
 
     // Main comment textarea
