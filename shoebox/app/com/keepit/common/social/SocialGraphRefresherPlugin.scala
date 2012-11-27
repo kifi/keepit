@@ -29,43 +29,47 @@ import play.api.Play.current
 import play.api.libs.json.JsArray
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
 
-private case object Validate
+private case class RefreshUserInfo(socialUserInfo: SocialUserInfo)
+private case object RefreshAll
 
-private[social] class SocialTokenRefresherActor(socialGraphPlugin : SocialGraphPlugin) extends Actor with Logging {
+private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphPlugin) extends Actor with Logging {
   def receive() = {
-    case Validate => {
+    case RefreshAll => {
       log.info("going to check which SocilaUserInfo Was not fetched Lately")
       val needToBeRefreshed = CX.withConnection { implicit conn => SocialUserInfo.getNeedtoBeRefreshed }
       log.info("find %s users that need to be refreshed".format(needToBeRefreshed.size))
-      needToBeRefreshed.foreach(u => {
-        log.info("found socialUserInfo that need to be refreshed %s".format(u))
-        socialGraphPlugin.asyncFetch(u) 
-      })
+      needToBeRefreshed.foreach(self ! RefreshUserInfo(_))
+    }
+    case RefreshUserInfo(userInfo) => {
+      log.info("found socialUserInfo that need to be refreshed %s".format(userInfo))
+      socialGraphPlugin.asyncFetch(userInfo)       
     }
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
 
 
-trait SocialTokenRefresher extends Plugin {
+trait SocialGraphRefresher extends Plugin {
+
 }
 
-class SocialTokenRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin : SocialGraphPlugin) extends SocialTokenRefresher with Logging {
+class SocialGraphRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin : SocialGraphPlugin) extends SocialGraphRefresher with Logging {
   implicit val actorTimeout = Timeout(5 seconds)
   
-  private val actor = system.actorOf(Props { new SocialTokenRefresherActor(socialGraphPlugin) })
+  private val actor = system.actorOf(Props { new SocialGraphRefresherActor(socialGraphPlugin) })
   
   // plugin lifecycle methods
   private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
   override def onStart(): Unit = {
     _cancellables = Seq(
-      system.scheduler.schedule(0 seconds, 40 seconds, actor, Validate)
+      system.scheduler.schedule(0 seconds, 2 hours, actor, RefreshAll)
     )
   }
   override def onStop(): Unit = {
     _cancellables.map(_.cancel)
   }
+ 
 }
 
 

@@ -12,7 +12,7 @@ import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.controller.ServiceType
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.index.ArticleIndexerPlugin
-import com.keepit.common.social.SocialTokenRefresher
+import com.keepit.common.social.SocialGraphRefresher
 import com.keepit.common.mail.MailSenderPlugin
 
 object DevGlobal extends FortyTwoGlobal(Dev) {
@@ -26,7 +26,7 @@ object DevGlobal extends FortyTwoGlobal(Dev) {
     super.onStart(app)
     inject[ScraperPlugin].scrape()
     inject[ArticleIndexerPlugin].index()
-    inject[SocialTokenRefresher]
+    inject[SocialGraphRefresher]
     inject[MailSenderPlugin].processOutbox()
     log.info("shoebox started")
   }
