@@ -5,9 +5,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   var config;
   var hover;
   var timeoutCollection = {};
-  var TIMEOUTS = {
-    REPLY_REFRESH: 4000
-  };
+
   var openedCommentsType = "";
 
   function log(message) {
@@ -190,10 +188,15 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             friends: o.friends
           }
         }
-        console.log(tmpl);
 
-        renderTemplate('kept_hover.html', tmpl, function(template) {
-          drawKeepItHover(user, o.friends, template);
+        loadFile("templates/main_hover.html", function(main_hover) {
+          var partials = {
+            "main_hover": main_hover 
+          }
+
+          renderTemplate('kept_hover.html', tmpl, function(template) {
+            drawKeepItHover(user, o.friends, template);
+          }, partials);
         });
       }
     );
@@ -256,15 +259,15 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $('.moreinnerbox').slideToggle(150);
     });
 
-    $('.comments_notification').click(function() {
-      showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "public");
+    $('.comments-label').click(function() {
+      showComments(user, true, "public");
     });
 
-    $('.messages_label').click(function() {
-      showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "message");
+    $('.messages-label').click(function() {
+      showComments(user, true, "message");
     });
 
-    showComments(user,false, "public"); // prefetch comments, do not show.
+    showComments(user, false, "public"); // prefetch comments, do not show.
 
     slideIn();
   }
@@ -304,19 +307,52 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
-  function showComments(user, openComments, type) {
-    if($('.kifi_comment_wrapper:visible').length > 0 && !openComments) {
-      $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
-      return;
+  function showComments(user, toggleOpenState, type) {
+    var type = type || "public";
+
+    var isVisible = $('.kifi_comment_wrapper:visible').length > 0;
+    var showingType = $('.kifi_comment_wrapper').attr("data-view");
+
+    var needsToOpen = false;
+
+    if(toggleOpenState) {
+      $('.interaction-bar li').removeClass('active');
+
+      if(isVisible) { // already open!
+        if(type == showingType) {
+          $('.kifi-content').slideDown();
+          $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
+          return;
+        }
+        else { // already open, yet showing a different type.
+          // For now, nothing. Eventually, some slick animation for a quick change?
+        }
+      }
+      else { // not visible
+        needsToOpen = true;
+      }
+
+      if(type == 'public') {
+        $('.interaction-bar li.comments-label').addClass('active');
+        $('.kifi_comment_wrapper').attr("data-view", "public");
+      }
+      else if(type == 'message') {
+        $('.interaction-bar li.messages-label').addClass('active');
+        $('.kifi_comment_wrapper').attr("data-view", "message");
+      }
     }
+
+
     var userExternalId = user.keepit_external_id;
     $.get("http://" + config.server + "/comments/" + type + "?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
       null,
       function(comments) {
-        renderComments(user, comments, type || "public", function() {
-          if(openComments) {
+        renderComments(user, comments, type, function() {
+          if(needsToOpen) {
             repositionScroll(false);
-            $('.kifi_comment_wrapper').slideDown(600,'easeInOutBack', function () {
+
+            $('.kifi-content').slideUp(); // hide main hover content
+            $('.kifi_comment_wrapper').slideDown(600, function () {
               repositionScroll(false);
             });
           }
@@ -346,13 +382,37 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
   }
 
-  function updateCommentCount() {
-    var commentCount = $(".real-comment").length;
-    if(commentCount == 0) {
-      $('.comments_label').addClass("zero_comments").text("+");
-    }
-    else {
-      $('.comments_label').removeClass("zero_comments").text(commentCount);
+  function commentSerializer(comment) {
+    var serialized = comment.replace(/<div><br\s*[\/]?><\/div>/gi, '\n').replace(/<br\s*[\/]?>/gi, '\n').replace(/<\/div><div>/gi, '\n').replace(/<\/div>/gi, '').replace(/<div\s*[\/]?>/gi, '\n').replace(/<\/div>/gi, '');
+
+    /*serialized = serialized + "<abbr data-lookhere='adsasd'>[look here]</abbr>"*/
+
+    serializedHTML = $('<div/>').html(serialized);
+    serializedHTML.find('abbr[data-lookhere]').replaceWith(function(a,e) {
+      console.log("Found one!",this,a,e);
+      return "haha";
+    });
+
+    res = serializedHTML.text();
+    return $.trim(res);
+  }
+
+  function updateCommentCount(type, count) {
+
+    var count = count || $(".real-comment").length; // if no count passed in, count DOM nodes
+    var selector;
+    if(type == 'public')
+      selector = $('.comments-count');
+    else if(type == 'message')
+      selector = $('.messages-count');
+
+    if(selector) {
+      if(count == 0) {
+        selector.addClass("zero_comments").text("0"); // zero_comments allows us to style that case separately
+      }
+      else {
+        selector.removeClass("zero_comments").text(count);
+      }
     }
   }
 
@@ -364,13 +424,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     //comments["private"] = comments["private"] || []; // Removed, not for MVP
 
     var visibleComments = comments[type] || [];
-    if(comments["public"].length == 0) {
-      $('.comments_label').addClass("zero_comments").text("+");
-    }
-    else {
-      $('.comments_label').text(comments["public"].length);
-      $('.comments_label').removeClass("zero_comments");
-    }
+    
+    updateCommentCount(type, visibleComments.length);
     
     var params = {
       kifiuser: {
@@ -383,11 +438,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       comments: visibleComments
     }
 
-    loadFile("templates/comments/reply.html", function(reply) {
     loadFile("templates/comments/hearts.html", function(hearts) {
     loadFile("templates/comments/comments_list.html", function(comment_list) {
     loadFile("templates/comments/comment.html", function(comment) {
-    loadFile("templates/comments/reply_list.html", function(reply_list) {
     loadFile("templates/comments/message.html", function(message) {
     loadFile("templates/comments/message_list.html", function(message_list) {
     loadFile("templates/comments/comment_post.html", function(comment_post) {
@@ -396,12 +449,12 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       var partials = {
         "comment_body_view": comment_list,
         "hearts": hearts,
-        "reply": reply,
         "comment": comment,
-        "reply_list": reply_list,
         "comment_post_view": comment_post
       };
 
+      // By default we use the comment partials.
+      // To override for a specific function, do so here.
       if(type == 'message') {
         partials.comment = message;
         partials.comment_body_view = message_list;
@@ -420,8 +473,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
     });
     });
-    });
-    });
 
   }
 
@@ -432,7 +483,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     repositionScroll(false);
 
     createMainBinders(type, user);
-    createReplyBinders(type, user);
 
   }
 
@@ -446,26 +496,28 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
     */
 
-    // Main comment textarea 
-    $('.comment_post_view').on('focus','#main-comment-textarea',function() {
+    // Main comment textarea
+    var placeholder = "<span class=\"placeholder\">Add a comment…</span>";
+    $('.comment-compose').html(placeholder);
+    $('.comment_post_view').on('focus','.comment-compose',function() {
+      console.log($('.comment-compose').html(),placeholder);
+      if($('.comment-compose').html() == placeholder) { // unchanged text!
+        $('.comment-compose').html("");
+      }
       //$('.crosshair').slideDown(150); // Not in mvp
-      $('.submit-comment').slideDown(150);
-      $('.comment_body_view').animate({
-        'max-height': '-=45'
-      },150,'easeQuickSnapBounce');
-      $('.comment-box').animate({
+      $('.comment-compose').animate({
         'height': '85'
       },150,'easeQuickSnapBounce');
-      $(".kififtr").animate({
-        'margin-top': '-10'
-      });
+
     });
-    $('.comment_post_view').on('blur','#main-comment-textarea',function() {
-      $('.comment_body_view').animate({
-        'max-height': '+=45'
-      },150,'easeQuickSnapBounce');
-      $('.comment-box').animate({
-        'height': '40'
+    $('.comment_post_view').on('blur','.comment-compose',function() {
+      var value = $('.comment-compose').html()
+      value = commentSerializer(value);
+      if(value == "") { // unchanged text!
+        $('.comment-compose').html(placeholder);
+      }
+      $('.comment-compose').animate({
+        'height': '35'
       },150,'easeQuickSnapBounce');
 
       //$('.crosshair').slideUp(20);
@@ -476,8 +528,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     $('.comment_post_view').on('submit','.comment_form', function(e) {
       e.preventDefault();
       //debugger;
-      submitComment($('#main-comment-textarea').val(), type, user, null, function(newComment) {
-        $('#main-comment-textarea').val("");
+      submitComment($('.comment-compose').text(), type, user, null, function(newComment) {
+        $('.comment-compose').text("");
 
         console.log("new thread", newComment);
         // Clean up CSS
@@ -504,115 +556,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
   }
 
-  function createTimeout(id, callback, timeout) {
-    timeoutCollection[id] = setTimeout(function() {
-        log("Executing timeout: " + id);
-        callback();
-        createTimeout(id, callback,timeout);
-      }, timeout);
-  }
-
-  function destroyTimeout(id) {
-    if(timeoutCollection[id]) {
-      clearTimeout(timeoutCollection[id]);
-      timeoutCollection[id] = undefined;
-      log("Destroyed timeout: " + id);
-    }
-  }
-
-  function destroyAllTimeouts() {
-    for (var id in timeoutCollection) {
-      destroyTimeout(id);
-    }
-  }
-
-  function createReplyBinders(type, user) {
-    $('.comment_body_view').on('click', '.replies', function() {
-      var link = $(this);
-      var comment = link.parents('.comment-wrapper');
-      var list = comment.children('.comment-replies');
-      var parent = comment.data("externalid");
-      if(list.is(":visible")) { // closing list
-        $(list).slideUp(200);
-        link.children('.reply-arrow').html('');
-        destroyTimeout(parent);
-        resizeCommentBodyView(false);
-      }
-      else { // opening list
-        link.children('.reply-arrow').html('&uarr;');
-        refreshReplies(comment, true);
-        /*createTimeout(parent, function() {
-          refreshReplies(comment, false);
-        }, TIMEOUTS.REPLY_REFRESH);*/
-
-        var scrollTo = $('.comment_body_view').scrollTop() + comment.position().top - 20;
-        $('.comment_body_view').animate({
-          scrollTop: scrollTo
-        });
-      }
-    });
-
-    $('.comment_body_view').on('focus', '.reply-comment-textarea', function() {
-      $(this).animate({
-        'height': '+=20'
-      },200,'easeQuickSnapBounce');
-    });
-    $('.comment_body_view').on('blur', '.reply-comment-textarea', function() {
-      $(this).animate({
-        'height': '-=20'
-      },100,'easeQuickSnapBounce');
-    });
-    $('.comment_body_view').on('keyup', '.reply-comment-textarea', function(e) {
-      if(e.keyCode === 13 && !e.ctrlKey) {
-        $(this).parents('form').first().submit();
-        return false;
-      }
-      return true;
-    });
-
-    // Reply submit handler
-    $('.comment_body_view').on('submit', '.reply-comment form', function() {
-      var replyTextarea = $(this).find('textarea');
-      var comment = replyTextarea.parents('.comment-wrapper');
-
-      var text = replyTextarea.val().trim();
-      replyTextarea.val("");
-      var parent = comment.data("externalid");
-      replyTextarea.blur();
-      submitComment(text, type, user, parent, function(newReply) {
-        console.log("server response: ",newReply,user);
-        refreshReplies(comment, false);
-        resizeCommentBodyView(false);
-      });
-      
-      console.log(this,"submitted!",text,"to parent", parent);
-      return false;
-    });
-  }
-
-  function refreshReplies(comment, openList) {
-    var parent = comment.data("externalid");
-    var list = comment.children('.comment-replies');
-
-    $.get("http://" + config.server + "/comments/reply?commentId=" + parent,
-      null,
-      function(replies) {
-        var params = {
-          replies: replies,
-          formatComments: commentTextFormatter,
-          formatDate: commentDateFormatter
-        };
-        renderTemplate("templates/comments/reply_list.html", params, function(renderedReplyList) {
-          list.find('.existing-replies').html(renderedReplyList).find("abbr.timeago").timeago();
-          if(openList) {
-            list.slideDown(300,'easeQuickSnapBounce', function() {
-              resizeCommentBodyView(false);
-            });
-          }
-        });
-      }
-    );
-  }
 
   function submitComment(text, type, user, parent, callback) {
     /* Because we're using very simple templating now, re-rendering has to be done carefully.
@@ -635,7 +578,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           "facebookId": user.facebook_id
         },
         "permissions": type,
-        "replyCount": 0,
         "externalId": response.commentId
       }
       callback(newComment);

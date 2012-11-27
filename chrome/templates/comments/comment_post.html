@@ -1,8 +1,16 @@
-<form action="" class="comment_form">
+<form class="comment_form">
   <div class="comment-box compose-comment">
       <img src="{{kifiuser.avatar}}" class="user-avatar comment-avatar">
-      <textarea class="main-comment-textarea" id="main-comment-textarea" placeholder="Hey, add a new comment about this page!"></textarea>
+      <div class="compose-wrapper">
+        <div class="comment-compose" contenteditable="true">Leave a comment...</div>
+        <div class="compose-social">Post to: fb ln tw pi</div>
+      </div>
+      
       <div class="crosshair"></div>
   </div>
-  <input type="submit" class="submit-comment" value="Comment!">
+  <div class="submit-bar">
+    <div class="submit-wrapper">
+      <input type="submit" class="submit-comment" value="Comment">
+    </div>
+  </div>
 </form>
