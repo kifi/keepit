@@ -78,33 +78,36 @@
   margin:0; 
   bottom: 0px;
   border-top: 1px solid #E2E2E2;
-  padding-top: 15px;
+  padding-top: 10px;
+  height: 20px;
+  padding-left:20px;
+  font-family: "helvetica neue", Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  color: #8C7E7E;
 }
 /*content*/
 .kifi_hover .roundedbox .kifi-content {
   padding: 5px 5px 5px 10px;    
-  font-family: Calibri, Helvetica, sans-serif;
+  font-family: "helvetica neue", Helvetica, Arial, sans-serif;
   font-size: 12px;
   padding-right:20px;
 }
 /*Color scheme*/
 .kifi_hover .color_a {
-  font-family: Calibri, Helvetica, sans-serif;
+  font-family: "helvetica neue", Helvetica, Arial, sans-serif;
   background-color: #414b52;
   color: #faf9f9;
   font-size:14px;
   font-weight:lighter;
 }
 
-.kifi_hover .kififtr {
-text-align:right;
-}
-
 .kifi_hover .kifilogo {
   margin-right: 20px;
-  padding:5px 25px;
+  padding:10px 25px;
   background-position: top;
   background-size: 25px;
+  position:relative;
+  float:right;
 }
 
 .kifi_hover .kept {
@@ -123,7 +126,7 @@ text-align:right;
   list-style:none;
   display:inline;
   margin:0px;
-  font-family: Calibri, Helvetica, sans-serif;
+  font-family: "helvetica neue", Helvetica, Arial, sans-serif;
   font-size: 11px;
   color:#666;
   padding:10px 10px;
@@ -546,7 +549,7 @@ span.kn_social {
 
 .kifi_comment_wrapper .kifi_comment {
   font-size: 12px;
-  font-family: 'helvetica neue', arial, sans-serif;
+  font-family: "helvetica neue", Helvetica, Arial, sans-serif;
   line-height: 13px;
 }
 
@@ -742,6 +745,6 @@ span.kn_social {
 
 @media print {
   .kifi_hover {
-      display:none;
+      display:none !important;
   }
 }
