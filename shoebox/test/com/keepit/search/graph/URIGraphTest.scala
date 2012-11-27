@@ -69,7 +69,7 @@ class URIGraphTest extends SpecificationWithJUnit {
         val bookmarks = CX.withConnection { implicit c =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+              Bookmark(title = uri.title.get, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
             }
           }
         }
@@ -100,7 +100,7 @@ class URIGraphTest extends SpecificationWithJUnit {
         val bookmarks = CX.withConnection { implicit c =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+              Bookmark(title = uri.title.get, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
             }
           }
         }
@@ -132,7 +132,7 @@ class URIGraphTest extends SpecificationWithJUnit {
         val bookmarks = CX.withConnection { implicit c =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+              Bookmark(title = uri.title.get, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
             }
           }
         }

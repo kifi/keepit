@@ -26,7 +26,7 @@ case class NormalizedURI  (
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[NormalizedURI] = ExternalId(),
-  title: String,
+  title: Option[String] = None,
   url: String,
   urlHash: String,
   state: State[NormalizedURI] = NormalizedURI.States.ACTIVE
@@ -64,12 +64,15 @@ case class NormalizedURI  (
 object NormalizedURI {
 
   def apply(url: String): NormalizedURI =
-    apply(title = "title", url = url)  // TODO: make title an Option[String]
+    apply(title = None, url = url, state = NormalizedURI.States.ACTIVE)  // TODO: make title an Option[String]
 
   def apply(title: String, url: String): NormalizedURI =
-    apply(title = title, url = url, state = NormalizedURI.States.ACTIVE)
+    NormalizedURI(title = Some(title), url = url, state = NormalizedURI.States.ACTIVE)
 
-  def apply(title: String, url: String, state: State[NormalizedURI]): NormalizedURI = {
+  def apply(title: String, url: String, state: State[NormalizedURI]): NormalizedURI =
+    NormalizedURI(title = Some(title), url = url, state = state)
+
+  def apply(title: Option[String], url: String, state: State[NormalizedURI]): NormalizedURI = {
     val normalized = normalize(url)
     NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized), state = state)
   }
@@ -164,7 +167,7 @@ private[model] class NormalizedURIEntity extends Entity[NormalizedURI, Normalize
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val externalId = "external_id".EXTERNAL_ID[NormalizedURI].NOT_NULL(ExternalId())
-  val title = "title".VARCHAR(256).NOT_NULL
+  val title = "title".VARCHAR(2048)
   val url = "url".VARCHAR(256).NOT_NULL
   val state = "state".STATE[NormalizedURI].NOT_NULL(NormalizedURI.States.ACTIVE)
   val urlHash = "url_hash".VARCHAR(512).NOT_NULL
@@ -176,7 +179,7 @@ private[model] class NormalizedURIEntity extends Entity[NormalizedURI, Normalize
     createdAt = createdAt(),
     updatedAt = updatedAt(),
     externalId = externalId(),
-    title = title(),
+    title = title.value,
     url = url(),
     state = state(),
     urlHash = urlHash()
@@ -192,7 +195,7 @@ private[model] object NormalizedURIEntity extends NormalizedURIEntity with Entit
     uri.createdAt := view.createdAt
     uri.updatedAt := view.updatedAt
     uri.externalId := view.externalId
-    uri.title := view.title
+    uri.title.set(view.title)
     uri.url := view.url
     uri.state := view.state
     uri.urlHash := view.urlHash
