@@ -36,7 +36,7 @@ object CommentController extends FortyTwoController {
                     parent: String) = AuthenticatedJsonAction { request =>
     val comment = CX.withConnection { implicit conn =>
       val userId = request.userId
-      val uri = NormalizedURI.getOrCreate(url)
+      val uri = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save)
       val parentIdOpt = parent match {
         case "" => None
         case p => Comment.getOpt(ExternalId[Comment](p)) match {
@@ -103,8 +103,12 @@ object CommentController extends FortyTwoController {
 
   def startFollowing(url: String) = AuthenticatedJsonAction { request =>
     CX.withConnection { implicit conn =>
-      val uri = NormalizedURI.getOrCreate(url)
-      Follow.getOrCreate(request.userId, uri).activate.save
+      val uriId = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save).id.get
+      Follow.get(request.userId, uriId) match {
+        case Some(follow) if !follow.isActive => follow.activate.save
+        case None => Follow(request.userId, uriId).save
+        case _ => None
+      }
     }
     Ok(JsObject(Seq("following" -> JsBoolean(true))))
   }

@@ -47,20 +47,14 @@ object Follow {
   def get(id: Id[Follow])(implicit conn: Connection): Follow =
     FollowEntity.get(id).map(_.view).getOrElse(throw NotFoundException(id))
 
+  def get(userId: Id[User], uri: NormalizedURI)(implicit conn: Connection): Option[Follow] =
+    get(userId, uri.id.get)
+
   def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Option[Follow] =
     (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId AND (f.uriId EQ uriId)) unique }.map(_.view)
 
   def getOrThrow(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Follow =
     get(userId, uriId).getOrElse(throw NotFoundException(classOf[Follow], userId, uriId))
-
-  def getOrCreate(userId: Id[User], uri: NormalizedURI)(implicit conn: Connection): Follow =
-    getOrCreate(userId, uri.id.get)
-
-  def getOrCreate(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Follow =
-    get(userId, uriId) match {
-      case Some(follow) => follow
-      case None => Follow(userId, uriId).save
-    }
 
   object States {
     val ACTIVE = State[Follow]("active")
