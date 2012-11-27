@@ -197,10 +197,15 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             friends: friends
           }
         }
-        console.log(tmpl);
 
-        renderTemplate('kept_hover.html', tmpl, function(template) {
-          drawKeepItHover(user, friends, template);
+        loadFile("templates/main_hover.html", function(main_hover) {
+          var partials = {
+            "main_hover": main_hover 
+          }
+
+          renderTemplate('kept_hover.html', tmpl, function(template) {
+            drawKeepItHover(user, friends, template);
+          }, partials);
         });
 
       }
@@ -264,15 +269,15 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $('.moreinnerbox').slideToggle(150);
     });
 
-    $('.comments_notification').click(function() {
-      showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "public");
+    $('.comments-label').click(function() {
+      showComments(user, true, "public");
     });
 
-    $('.messages_label').click(function() {
-      showComments(user, ($('.kifi_comment_wrapper:visible').length == 0), "message");
+    $('.messages-label').click(function() {
+      showComments(user, true, "message");
     });
 
-    showComments(user,false, "public"); // prefetch comments, do not show.
+    showComments(user, false, "public"); // prefetch comments, do not show.
 
     slideIn();
   }
@@ -312,19 +317,52 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
-  function showComments(user, openComments, type) {
-    if($('.kifi_comment_wrapper:visible').length > 0 && !openComments) {
-      $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
-      return;
+  function showComments(user, toggleOpenState, type) {
+    var type = type || "public";
+
+    var isVisible = $('.kifi_comment_wrapper:visible').length > 0;
+    var showingType = $('.kifi_comment_wrapper').attr("data-view");
+
+    var needsToOpen = false;
+
+    if(toggleOpenState) {
+      $('.interaction-bar li').removeClass('active');
+
+      if(isVisible) { // already open!
+        if(type == showingType) {
+          $('.kifi-content').slideDown();
+          $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
+          return;
+        }
+        else { // already open, yet showing a different type.
+          // For now, nothing. Eventually, some slick animation for a quick change?
+        }
+      }
+      else { // not visible
+        needsToOpen = true;
+      }
+
+      if(type == 'public') {
+        $('.interaction-bar li.comments-label').addClass('active');
+        $('.kifi_comment_wrapper').attr("data-view", "public");
+      }
+      else if(type == 'message') {
+        $('.interaction-bar li.messages-label').addClass('active');
+        $('.kifi_comment_wrapper').attr("data-view", "message");
+      }
     }
+
+
     var userExternalId = user.keepit_external_id;
     $.get("http://" + config.server + "/comments/" + type + "?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
       null,
       function(comments) {
-        renderComments(user, comments, type || "public", function() {
-          if(openComments) {
+        renderComments(user, comments, type, function() {
+          if(needsToOpen) {
             repositionScroll(false);
-            $('.kifi_comment_wrapper').slideDown(600,'easeInOutBack', function () {
+
+            $('.kifi-content').slideUp(); // hide main hover content
+            $('.kifi_comment_wrapper').slideDown(600, function () {
               repositionScroll(false);
             });
           }
@@ -354,13 +392,22 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
   }
 
-  function updateCommentCount() {
-    var commentCount = $(".real-comment").length;
-    if(commentCount == 0) {
-      $('.comments_label').addClass("zero_comments").text("+");
-    }
-    else {
-      $('.comments_label').removeClass("zero_comments").text(commentCount);
+  function updateCommentCount(type, count) {
+
+    var count = count || $(".real-comment").length; // if no count passed in, count DOM nodes
+    var selector;
+    if(type == 'public')
+      selector = $('.comments-count');
+    else if(type == 'message')
+      selector = $('.messages-count');
+
+    if(selector) {
+      if(count == 0) {
+        selector.addClass("zero_comments").text("0"); // zero_comments allows us to style that case separately
+      }
+      else {
+        selector.removeClass("zero_comments").text(count);
+      }
     }
   }
 
@@ -372,13 +419,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     //comments["private"] = comments["private"] || []; // Removed, not for MVP
 
     var visibleComments = comments[type] || [];
-    if(comments["public"].length == 0) {
-      $('.comments_label').addClass("zero_comments").text("+");
-    }
-    else {
-      $('.comments_label').text(comments["public"].length);
-      $('.comments_label').removeClass("zero_comments");
-    }
+    
+    updateCommentCount(type, visibleComments.length);
     
     var params = {
       kifiuser: {
@@ -450,7 +492,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     */
 
     // Main comment textarea 
-    $('.comment_post_view').on('focus','#main-comment-textarea',function() {
+    $('.comment_post_view').on('focus','.comment-compose',function() {
       //$('.crosshair').slideDown(150); // Not in mvp
       $('.submit-comment').slideDown(150);
       $('.comment_body_view').animate({
@@ -463,7 +505,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         'margin-top': '-10'
       });
     });
-    $('.comment_post_view').on('blur','#main-comment-textarea',function() {
+    $('.comment_post_view').on('blur','.comment-compose',function() {
       $('.comment_body_view').animate({
         'max-height': '+=45'
       },150,'easeQuickSnapBounce');
@@ -479,8 +521,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     $('.comment_post_view').on('submit','.comment_form', function(e) {
       e.preventDefault();
       //debugger;
-      submitComment($('#main-comment-textarea').val(), type, user, null, function(newComment) {
-        $('#main-comment-textarea').val("");
+      submitComment($('.comment-compose').text(), type, user, null, function(newComment) {
+        $('.comment-compose').text("");
 
         console.log("new thread", newComment);
         // Clean up CSS

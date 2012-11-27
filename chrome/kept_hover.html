@@ -11,49 +11,19 @@
         </span>
       </div>
       
-        <div class="kificnt">
-          {{#socialConnections}}
-          <div class="socialinnerbox">
-            <span class="keepitmessage">{{countText}}</span>
-            <div class="friendlist">
-            {{#friends}}
-              <a href='#'><img class="social_friend" src='https://graph.facebook.com/{{facebookId}}/picture?type=square'></a>
-            {{/friends}}
-              <div class="friend_tooltip"></div>
-              <div class="friendlist_fade"></div>
-            </div>
-          </div>
-          {{/socialConnections}}
-          {{^socialConnections}}
-          <div class="innerbox">
-            <span class="keepitmessage">
-            {{#is_kept}}
-              You kept this!
-            {{/is_kept}}
-            {{^is_kept}}
-              To quickly find this page later...
-            {{/is_kept}}
-            </span>
-          </div>
-          {{/socialConnections}}
-          <div class="buttonwrapper">
-          {{#is_kept}}
-            <span class="kbutton unkeepitbtn">Un-Keep it</span> <span class="kbutton makeprivatebtn">Make it Private</span></span>
-          {{/is_kept}}
-          {{^is_kept}}
-            <span class="kbutton keepitbtn">Keep it</span><span class="kbutton dropdownbtn"><span class="kifi_toggle">&#9662;</span></span>
-          {{/is_kept}}
-          </div>
-          <div class="moreinnerbox"><label for="keepit_private"><input type='checkbox' id='keepit_private' class='keepit_private' value='private'> Keep this link private</label></div>
-          
-          <span class="comments_notification">
-            <span class="comments_icon"></span>
-            <span class="comments_label zero_comments">+</span>
-          </span>
-          
-          <div class="kifi_comment_wrapper"></div>
-        </div>
-    <div class="kififtr"><span class="kifilogo" style="background: url({{logo}}) no-repeat; background-position: top; background-size: 25px;"></span></div>
+      <ul class="interaction-bar">
+        <li class="comments-label"><span><span class="notify-count comments-count">0</span>Comments</span></li>
+        <li class="messages-label"><span><span class="notify-count messages-count">0</span>Messages</span></li>
+      </ul>
+      
+      <div class="kifi-content">
+        {{> main_hover}}
+      </div>
+      
+      <div class="kifi_comment_wrapper"></div>
+      
+      <div class="kififtr"><span class="kifilogo" style="background: url({{logo}}) no-repeat; background-position: top; background-size: 25px;"></span></div>
+      
     </span>
     
   </div>

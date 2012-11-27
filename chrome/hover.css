@@ -82,7 +82,7 @@
   padding-top:5px;
 }
 /*content*/
-.kifi_hover .roundedbox .kificnt {
+.kifi_hover .roundedbox .kifi-content {
   padding: 5px 5px 5px 10px;    
   font-family: Calibri, Helvetica, sans-serif;
   font-size: 12px;
@@ -110,6 +110,57 @@ text-align:right;
 
 .kifi_hover .kept {
   color: #a0a5a9;
+}
+
+.kifi_hover ul.interaction-bar {
+  margin:0px;
+  padding:0px;
+  padding-right: 20px;
+  text-align:right;
+  background: #E0E0E0;
+}
+
+.kifi_hover .interaction-bar li {
+  list-style:none;
+  display:inline;
+  margin:0px;
+  font-family: Calibri, Helvetica, sans-serif;
+  font-size: 11px;
+  color:#666;
+  padding:10px 10px;
+  display:inline-block;
+  text-decoration:none;
+  background-color: #E0E0E0;
+}
+
+.kifi_hover .interaction-bar li:hover {
+  background: #ECECEC;
+}
+
+.kifi_hover .interaction-bar li:active {
+  background: #FAFAFA;
+}
+
+.kifi_hover .interaction-bar li.active {
+  background-color: #FAFAFA;
+}
+
+.kifi_hover .interaction-bar span {
+
+}
+
+.kifi_hover .interaction-bar .notify-count {
+  background-color: #666;
+  border-radius: 5px;
+  color: #FAFAFA;
+  padding: 2px 6px;
+  margin-right: 3px;
+}
+.kifi_hover .interaction-bar .comments-count {
+  background-color: #6BB4DC;
+}
+.kifi_hover .interaction-bar .messages-count {
+  background-color: #EF8299;
 }
 
 .kifi_hover .friendlist {
@@ -185,16 +236,15 @@ text-align:right;
   height: 45px;
   border-radius: 50px;
   position:absolute;
-  top:-20px;
+  top:-15px;
   left:-20px;
 }
 
 .kifi_hover .socialinnerbox {
   padding:7px 10px;
-  background-color:white;
+  background-color: #FAFAFA;
   margin:10px;
   border-radius: 3px;
-  box-shadow: #dddddd 0px 1px ;
   font-size:14px;
   color: #414b52;
 }
@@ -525,13 +575,13 @@ span.kn_social {
   border-bottom: 0px;
 }
 
-.kificnt .comments_label, .kificnt .messages_label {
+.kifi-content .comments_label, .kifi-content .messages_label {
   margin-top: 6px;
   font-size: 12px;
   text-decoration: none;
   color: #7E7E7E;
 }
-.kificnt .comments_label:hover, .kificnt .messages_label:hover {
+.kifi-content .comments_label:hover, .kifi-content .messages_label:hover {
   text-decoration: underline;
   color: #666;
   cursor: pointer;
