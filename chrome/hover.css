@@ -76,10 +76,9 @@
 /*footer*/
 .kifi_hover .roundedbox .kififtr {                        
   margin:0; 
-  bottom: 0px;      
-  border-bottom-left-radius: 0.35em;
-  border-bottom-right-radius: 0.35em;
-  padding-top:5px;
+  bottom: 0px;
+  border-top: 1px solid #E2E2E2;
+  padding-top: 15px;
 }
 /*content*/
 .kifi_hover .roundedbox .kifi-content {

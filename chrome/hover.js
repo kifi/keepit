@@ -382,6 +382,21 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
   }
 
+  function commentSerializer(comment) {
+    var serialized = comment.replace(/<div><br\s*[\/]?><\/div>/gi, '\n').replace(/<br\s*[\/]?>/gi, '\n').replace(/<\/div><div>/gi, '\n').replace(/<\/div>/gi, '').replace(/<div\s*[\/]?>/gi, '\n').replace(/<\/div>/gi, '');
+
+    /*serialized = serialized + "<abbr data-lookhere='adsasd'>[look here]</abbr>"*/
+
+    serializedHTML = $('<div/>').html(serialized);
+    serializedHTML.find('abbr[data-lookhere]').replaceWith(function(a,e) {
+      console.log("Found one!",this,a,e);
+      return "haha";
+    });
+
+    res = serializedHTML.text();
+    return $.trim(res);
+  }
+
   function updateCommentCount(type, count) {
 
     var count = count || $(".real-comment").length; // if no count passed in, count DOM nodes
@@ -481,26 +496,28 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
     */
 
-    // Main comment textarea 
+    // Main comment textarea
+    var placeholder = "<span class=\"placeholder\">Add a comment…</span>";
+    $('.comment-compose').html(placeholder);
     $('.comment_post_view').on('focus','.comment-compose',function() {
+      console.log($('.comment-compose').html(),placeholder);
+      if($('.comment-compose').html() == placeholder) { // unchanged text!
+        $('.comment-compose').html("");
+      }
       //$('.crosshair').slideDown(150); // Not in mvp
-      $('.submit-comment').slideDown(150);
-      $('.comment_body_view').animate({
-        'max-height': '-=45'
-      },150,'easeQuickSnapBounce');
-      $('.comment-box').animate({
+      $('.comment-compose').animate({
         'height': '85'
       },150,'easeQuickSnapBounce');
-      $(".kififtr").animate({
-        'margin-top': '-10'
-      });
+
     });
     $('.comment_post_view').on('blur','.comment-compose',function() {
-      $('.comment_body_view').animate({
-        'max-height': '+=45'
-      },150,'easeQuickSnapBounce');
-      $('.comment-box').animate({
-        'height': '40'
+      var value = $('.comment-compose').html()
+      value = commentSerializer(value);
+      if(value == "") { // unchanged text!
+        $('.comment-compose').html(placeholder);
+      }
+      $('.comment-compose').animate({
+        'height': '35'
       },150,'easeQuickSnapBounce');
 
       //$('.crosshair').slideUp(20);
