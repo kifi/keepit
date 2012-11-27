@@ -51,7 +51,7 @@
      </tr>
      @for(meta <- metas) {
       <tr>
-        <td><a href="@meta.uri.url">@{if(meta.uri.title.length > 50) meta.uri.title.substring(0, 50) else meta.uri.title }</a></td>
+        <td><a href="@meta.uri.url">@{if(meta.uri.title.getOrElse("NO TITLE").length > 50) meta.uri.title.get.substring(0, 50) else meta.uri.title.getOrElse("NO TITLE") }</a></td>
         <td>@meta.hit.score</td>
         <td>@meta.users.size</td>
         <td>@{meta.hit.score}</td>

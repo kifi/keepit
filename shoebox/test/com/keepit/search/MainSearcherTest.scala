@@ -65,7 +65,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val bookmarks = CX.withConnection { implicit c =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              Bookmark(title = uri.title.get, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
             }
           }
         }
@@ -125,7 +125,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val bookmarks = CX.withConnection { implicit c =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              Bookmark(title = uri.title.get, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
             }
           }
         }
@@ -272,7 +272,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val bookmarks = CX.withConnection { implicit c =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              Bookmark(title = uri.title.get, url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
             }
           }
         }
@@ -322,7 +322,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           uris.foldLeft(Map.empty[Id[NormalizedURI], Bookmark]){ (m, uri) =>
             val createdAt = now.minusHours(rand.nextInt(100))
             val uriId = uri.id.get
-            m + (uriId -> Bookmark(createdAt = createdAt, title = uri.title, url = uri.url,  uriId = uriId, userId = userId, source = source).save)
+            m + (uriId -> Bookmark(createdAt = createdAt, title = uri.title.get, url = uri.url,  uriId = uriId, userId = userId, source = source).save)
           }
         }
 
@@ -353,7 +353,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val userId = users.head.id.get
 
         val bookmarks = CX.withConnection { implicit c =>
-          uris.map{ uri => Bookmark(title = uri.title, url = uri.url,  uriId = uri.id.get, userId = userId, source = source).save }
+          uris.map{ uri => Bookmark(title = uri.title.get, url = uri.url,  uriId = uri.id.get, userId = userId, source = source).save }
         }
 
         val store = {
@@ -394,10 +394,10 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val (privateUris, publicUris) = uris.partition(_.id.get.id % 3 == 0)
         CX.withConnection { implicit c =>
           privateUris.foreach{ uri =>
-            Bookmark(title = uri.title, url = uri.url, uriId = uri.id.get, userId = user1.id.get, source = source, isPrivate = true).save
+            Bookmark(title = uri.title.get, url = uri.url, uriId = uri.id.get, userId = user1.id.get, source = source, isPrivate = true).save
           }
           publicUris.foreach{ uri =>
-            Bookmark(title = uri.title, url = uri.url, uriId = uri.id.get, userId = user1.id.get, source = source, isPrivate = false).save
+            Bookmark(title = uri.title.get, url = uri.url, uriId = uri.id.get, userId = user1.id.get, source = source, isPrivate = false).save
           }
         }
 
@@ -425,10 +425,10 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val (privateUris, publicUris) = uris.partition(_.id.get.id % 3 == 0)
         CX.withConnection { implicit c =>
           privateUris.foreach{ uri =>
-            Bookmark(title = uri.title, url = uri.url, uriId = uri.id.get, userId = user2.id.get, source = source, isPrivate = true).save
+            Bookmark(title = uri.title.get, url = uri.url, uriId = uri.id.get, userId = user2.id.get, source = source, isPrivate = true).save
           }
           publicUris.foreach{ uri =>
-            Bookmark(title = uri.title, url = uri.url, uriId = uri.id.get, userId = user2.id.get, source = source, isPrivate = false).save
+            Bookmark(title = uri.title.get, url = uri.url, uriId = uri.id.get, userId = user2.id.get, source = source, isPrivate = false).save
           }
         }
 
