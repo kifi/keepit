@@ -38,11 +38,11 @@ case class Follow (
 
 object Follow {
 
-  def apply(userId: Id[User], uriId: Id[NormalizedURI]): Follow =
-    Follow(userId = userId, uriId = uriId)
-
   def all(implicit conn: Connection): Seq[Follow] =
     FollowEntity.all.map(_.view)
+
+  def get(uriId: Id[NormalizedURI])(implicit conn: Connection): Seq[Follow] =
+    (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.uriId EQ uriId AND (f.state EQ Follow.States.ACTIVE)) list }.map(_.view)
 
   def get(id: Id[Follow])(implicit conn: Connection): Follow =
     FollowEntity.get(id).map(_.view).getOrElse(throw NotFoundException(id))
