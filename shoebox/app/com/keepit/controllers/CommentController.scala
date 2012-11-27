@@ -155,23 +155,6 @@ object CommentController extends FortyTwoController {
 
   private def notifyAnyRecipientsAsync(comment: Comment) = dispatch({
     comment.permissions match {
-      case Comment.Permissions.PUBLIC if comment.parent.isDefined =>
-        CX.withConnection { implicit c =>
-          val sender = User.get(comment.userId)
-          val parent = Comment.get(comment.parent.get)
-          val comments = parent :: Comment.getChildren(comment.parent.get).toList
-          val uri = NormalizedURI.get(comment.normalizedURI)
-          for (userId <- comments.map(_.userId).toSet - comment.userId) {
-            val recipient = User.get(userId)
-            val addrs = EmailAddress.getByUser(userId)
-            for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
-              inject[PostOffice].sendMail(ElectronicMail(
-                  from = EmailAddresses.SUPPORT, to = addr, subject = "[new reply] " + uri.title,
-                  htmlBody = views.html.email.newCommentReply(sender, recipient, uri, parent, comment).body,
-                  category = PostOffice.Categories.COMMENT))
-            }
-          }
-        }
       case Comment.Permissions.MESSAGE =>
         CX.withConnection { implicit c =>
           val sender = User.get(comment.userId)

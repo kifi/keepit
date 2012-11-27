@@ -63,8 +63,6 @@ GET     /admin/server               com.keepit.common.healthcheck.HealthControll
 GET     /admin/search/results/:id   com.keepit.controllers.SearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
 GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
 GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
-GET     /admin/emails/comment-reply com.keepit.controllers.admin.AdminEmailPreviewController.newCommentReply
-GET     /admin/emails/comment-reply2 com.keepit.controllers.admin.AdminEmailPreviewController.newCommentReply2
 
 ##########################################
 # Secure social routes

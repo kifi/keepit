@@ -3,6 +3,7 @@ avatar
 bookmark
 bookmarks
 clob
+docs
 eishay
 emails
 facebook
