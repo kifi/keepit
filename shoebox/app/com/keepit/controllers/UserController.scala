@@ -9,12 +9,7 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.ws.WS
 import play.api.mvc._
-import play.api.libs.json.JsArray
-import play.api.libs.json.Json
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsNumber
+import play.api.libs.json.{Json, JsArray, JsBoolean, JsNumber, JsObject, JsString, JsValue}
 import com.keepit.inject._
 import com.keepit.common.time._
 import com.keepit.common.net._
@@ -42,35 +37,52 @@ case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConn
 
 object UserController extends FortyTwoController {
 
-  /**
-   * Call me using:
-   * curl localhost:9000/users/keepurl?url=http://www.ynet.co.il/;echo
-   */
-  def usersKeptUrl(url: String, externalId: ExternalId[User]) = AuthenticatedJsonAction { request =>
+  def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
+    val (kept, following, socialUsers) = CX.withConnection { implicit c =>
+      NormalizedURI.getByNormalizedUrl(url) match {
+        case Some(uri) =>
+          val userId = request.userId
+          val kept = Bookmark.load(uri, userId).isDefined  // .state == ACTIVE ?
+          val following = Follow.get(userId, uri.id.get).map(_.isActive).getOrElse(false)
 
+          val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
+          val searcher = inject[URIGraph].getURIGraphSearcher
+          val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
+          val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
+          val socialUsers = sharingUserIds.map(u => UserWithSocial.toUserWithSocial(User.get(u))).toSeq
+
+          (kept, following, socialUsers)
+        case None =>
+          (false, false, Seq[UserWithSocial]())
+      }
+    }
+
+    Ok(JsObject(Seq(
+        "kept" -> JsBoolean(kept),
+        "following" -> JsBoolean(following),
+        "friends" -> userWithSocialSerializer.writes(socialUsers))))
+  }
+
+  @deprecated("replaced by getSliderInfo, still here for backwards compatibility", "2012-11-26")
+  def usersKeptUrl(url: String) = AuthenticatedJsonAction { request =>
     val socialUsers = CX.withConnection { implicit c =>
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) =>
-          val userId = User.getOpt(externalId).getOrElse(
-                throw new Exception("externalId %s not found".format(externalId))).id.get
+          val userId = request.userId
           val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
 
-          val articleIndexer = inject[ArticleIndexer]
-          val uriGraph = inject[URIGraph]
+          val searcher = inject[URIGraph].getURIGraphSearcher
+          val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
+          val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
 
-          val uriGraphSearcher = uriGraph.getURIGraphSearcher
-          val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
-
-          val sharingUserIds = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
-
-          sharingUserIds map (u => UserWithSocial.toUserWithSocial(User.get(u))) toSeq
+          sharingUserIds.map(u => UserWithSocial.toUserWithSocial(User.get(u))).toSeq
 
         case None =>
           Seq[UserWithSocial]()
       }
     }
 
-    Ok(userWithSocialSerializer.writes(socialUsers)).as(ContentTypes.JSON)
+    Ok(userWithSocialSerializer.writes(socialUsers))
   }
 
   def getSocialConnections() = AuthenticatedJsonAction { authRequest =>

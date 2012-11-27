@@ -37,6 +37,7 @@ import org.apache.lucene.store.MMapDirectory
 import java.io.File
 import com.keepit.common.store.S3Bucket
 import com.keepit.common.social._
+import com.keepit.common.mail.{MailSenderPlugin, MailSenderPluginImpl}
 
 case class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -47,6 +48,7 @@ case class DevModule() extends ScalaModule with Logging {
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
     bind[SocialTokenRefresher].to[SocialTokenRefresherImpl].in[AppScoped]
+    bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
   }
 
   @Singleton

@@ -33,13 +33,20 @@ trait PostOffice {
   def sendMail(mail: ElectronicMail): ElectronicMail
 }
 
+object PostOffice {
+  object Categories {
+    val HEALTHCHECK = ElectronicMailCategory("HEALTHCHECK")
+    val COMMENT = ElectronicMailCategory("COMMENT")
+  }
+}
+
 class PostOfficeImpl extends PostOffice with Logging {
 
   def sendMail(mail: ElectronicMail): ElectronicMail = {
     val prepared = CX.withConnection { implicit c =>
       mail.prepareToSend().save
     }
-    inject[MailSender].processMail(prepared)
+    inject[MailSenderPlugin].processMail(prepared)
     prepared
   }
 }

@@ -108,7 +108,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
           null
         }
 
-        val threshold = (totalValueOnRequired + valuesOnOptional.reduce(_ + _)) * percentMatch / 100.0f - totalValueOnRequired
+        val threshold = (totalValueOnRequired + valuesOnOptional.foldLeft(0.0f){ (s, v) => s + v }) * percentMatch / 100.0f - totalValueOnRequired
         BooleanScorer(this, disableCoord, similarity, minNrShouldMatch, required.toArray, prohibited.toArray, optional.toArray, maxCoord,
                       valuesOnOptional.toArray, threshold)
       }

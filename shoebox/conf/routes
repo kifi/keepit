@@ -18,8 +18,11 @@ POST    /comments/add               com.keepit.controllers.CommentController.cre
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
 GET     /comments/message           com.keepit.controllers.CommentController.getMessages(url: String)
 GET     /comments/reply             com.keepit.controllers.CommentController.getReplies(commentId: ExternalId[Comment])
+POST    /comments/follow            com.keepit.controllers.CommentController.startFollowing(url: String)
+DELETE  /comments/follow            com.keepit.controllers.CommentController.stopFollowing(url: String)
 
-GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String, externalId: ExternalId[User])
+GET     /users/slider               com.keepit.controllers.UserController.getSliderInfo(url: String)
+GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
 
 GET     /search2                    com.keepit.controllers.SearchController.search2(term: String, maxHits:Int, lastUUID: Option[String], context: Option[String])
 GET     /search                     com.keepit.controllers.SearchController.search(term: String, maxHits:Int, lastUUID: Option[String], context: Option[String])
@@ -63,8 +66,6 @@ GET     /admin/server               com.keepit.common.healthcheck.HealthControll
 GET     /admin/search/results/:id   com.keepit.controllers.SearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
 GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
 GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
-GET     /admin/emails/comment-reply com.keepit.controllers.admin.AdminEmailPreviewController.newCommentReply
-GET     /admin/emails/comment-reply2 com.keepit.controllers.admin.AdminEmailPreviewController.newCommentReply2
 
 ##########################################
 # Secure social routes
