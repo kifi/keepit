@@ -93,7 +93,7 @@ object SearchController extends FortyTwoController {
     val hits = CX.withConnection { implicit conn =>
       res.hits map toPersonalSearchResult
     }
-    log.info(hits mkString "\n")
+    log.debug(hits mkString "\n")
 
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, filter)

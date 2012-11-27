@@ -38,7 +38,6 @@ case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConn
 object UserController extends FortyTwoController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
-
     val (kept, following, socialUsers) = CX.withConnection { implicit c =>
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) =>
@@ -64,9 +63,8 @@ object UserController extends FortyTwoController {
         "friends" -> userWithSocialSerializer.writes(socialUsers))))
   }
 
-  @deprecated("replaced by getSliderInfo, still here for backwards compatibility")
+  @deprecated("replaced by getSliderInfo, still here for backwards compatibility", "2012-11-26")
   def usersKeptUrl(url: String) = AuthenticatedJsonAction { request =>
-
     val socialUsers = CX.withConnection { implicit c =>
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) =>
