@@ -57,7 +57,7 @@ object CommentController extends FortyTwoController {
       }
     }
 
-    notifyAnyRecipientsAsync(comment)
+    notifyRecipientsAsync(comment)
 
     Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
   }
@@ -168,8 +168,24 @@ object CommentController extends FortyTwoController {
   private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
     Comment.getMessagesByNormalizedUri(normalizedURI.id.get, userId)
 
-  private def notifyAnyRecipientsAsync(comment: Comment) = dispatch({
+  private def notifyRecipientsAsync(comment: Comment) = dispatch({
     comment.permissions match {
+      case Comment.Permissions.PUBLIC =>
+        CX.withConnection { implicit c =>
+          val author = User.get(comment.userId)
+          val uri = NormalizedURI.get(comment.normalizedURI)
+          val follows = Follow.get(uri.id.get)
+          for (userId <- follows.map(_.userId).toSet - comment.userId) {
+            val recipient = User.get(userId)
+            val addrs = EmailAddress.getByUser(userId)
+            for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
+              inject[PostOffice].sendMail(ElectronicMail(
+                  from = EmailAddresses.SUPPORT, to = addr, subject = "[new comment] " + uri.title,
+                  htmlBody = views.html.email.newComment(author, recipient, uri, comment).body,
+                  category = PostOffice.Categories.COMMENT))
+            }
+          }
+        }
       case Comment.Permissions.MESSAGE =>
         CX.withConnection { implicit c =>
           val sender = User.get(comment.userId)
@@ -188,7 +204,6 @@ object CommentController extends FortyTwoController {
           }
         }
       case _ =>
-
     }
   }, {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
 
