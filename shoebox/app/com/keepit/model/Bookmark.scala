@@ -66,8 +66,12 @@ object Bookmark {
   def apply(uri: NormalizedURI, user: User, title: String, url: String, source: BookmarkSource, isPrivate: Boolean): Bookmark =
     Bookmark(title = title, url = url, userId = user.id.get, uriId = uri.id.get, source = source, isPrivate = isPrivate)
 
-  def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] =
-    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE ((b.uriId EQ uri.id.get) AND (b.userId EQ user.id.get)) unique }.map(_.view)
+  def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = load(uri, user.id.get)
+
+  def load(uri: NormalizedURI, userId: Id[User])(implicit conn: Connection): Option[Bookmark] = load(uri.id.get, userId)
+
+  def load(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Option[Bookmark] =
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.userId EQ userId AND (b.uriId EQ uriId)) unique }.map(_.view)
 
   def ofUri(uri: NormalizedURI)(implicit conn: Connection): Seq[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.uriId EQ uri.id.get) list }.map(_.view)
