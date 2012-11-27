@@ -190,9 +190,6 @@ function onRequest(request, sender, sendResponse) {
     else if (request.type === "set_page_icon") {
       setPageIcon(tab.id, request.is_kept);
     }
-    else if (request.type === "is_already_kept") {
-      remoteIsAlreadyKept(request.location, sendResponse);
-    }
     else if (request.type === "open_slider") {
       addHover(tab.id);
     }

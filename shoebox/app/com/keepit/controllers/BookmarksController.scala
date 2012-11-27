@@ -117,20 +117,11 @@ object BookmarksController extends FortyTwoController {
   }
 
   def checkIfExists(externalId: ExternalId[User], uri: String) = AuthenticatedJsonAction { request =>
-    val (normalizedURIOpt, bookmarksOpt) = CX.withConnection { implicit conn =>
-      val normalizedURI = NormalizedURI.getByNormalizedUrl(uri)
-      val user = User.getOpt(externalId)
-      val bookmarks = user match { case Some(u) => Some(Bookmark.ofUser(u)) case None => None }
-
-      (normalizedURI, bookmarks)
+    val userHasBookmark = CX.withConnection { implicit conn =>
+      NormalizedURI.getByNormalizedUrl(uri).map { uri =>
+        Bookmark.load(uri, request.userId).isDefined // .state == ACTIVE ?
+      }.getOrElse(false)
     }
-
-    val userHasBookmark =
-      (for {
-        normalizedURI <- normalizedURIOpt
-        bookmarks <- bookmarksOpt
-      } yield bookmarks.map(b => b.uriId).contains(normalizedURI.id.get)
-      ) getOrElse(false)
 
     Ok(JsObject(("user_has_bookmark" -> JsBoolean(userHasBookmark)) :: Nil))
   }

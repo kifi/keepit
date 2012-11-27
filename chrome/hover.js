@@ -59,14 +59,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       return;
     }
 
-    log("checking location: " + document.location.href)
-    chrome.extension.sendRequest({
-      "type": "is_already_kept",
-      "location": document.location.href
-    }, function(is_kept) {
-      user.is_kept = is_kept;
-      showKeepItHover(user);
-    });
+    showKeepItHover(user);
   }
 
   var templateCache = {};
@@ -178,33 +171,30 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
     var userExternalId = user.keepit_external_id;
 
-    $.get("http://" + config.server + "/users/keepurl?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
+    $.get("http://" + config.server + "/users/slider?url=" + encodeURIComponent(document.location.href),
       null,
-      function(friends) {
+      function(o) {
+        log(o);
 
         var tmpl = {
           "logo": logo,
           "arrow": arrow,
           "profilepic": facebookImageLink,
           "name": user.name,
-          "is_kept": user.is_kept
+          "is_kept": o.kept
         }
 
-        log("got "+friends.length+" result from /users/keepUrl");
-        log(friends);
-
-        if (friends.length>0) {
+        if (o.friends.length) {
           tmpl.socialConnections = {
-            countText: summaryText(friends.length, user.is_kept),
-            friends: friends
+            countText: summaryText(o.friends.length, o.kept),
+            friends: o.friends
           }
         }
         console.log(tmpl);
 
         renderTemplate('kept_hover.html', tmpl, function(template) {
-          drawKeepItHover(user, friends, template);
+          drawKeepItHover(user, o.friends, template);
         });
-
       }
     );
   }
