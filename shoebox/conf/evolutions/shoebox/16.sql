@@ -1,8 +1,8 @@
 # --- !Ups
 
-alter table social_user_info 
-  add column lastGraphRefresh datetime NOT NULL; 
+alter table normalized_uri
+  alter column normalized_uri normalized_uri varchar(2048);
 
-insert into evolutions (name, description) values('16.sql', 'adding social_user_info lastGraphRefresh');
+insert into evolutions (name, description) values('16.sql', 'title may be null in normalized_uri table');
 
 # --- !Downs
