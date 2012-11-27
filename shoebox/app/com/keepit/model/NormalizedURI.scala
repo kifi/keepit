@@ -63,9 +63,13 @@ case class NormalizedURI  (
 
 object NormalizedURI {
 
-  def apply(url: String): NormalizedURI = apply(title = "title", url = url)
+  def apply(url: String): NormalizedURI =
+    apply(title = "title", url = url)  // TODO: make title an Option[String]
 
-  def apply(title: String, url: String, state: State[NormalizedURI] = NormalizedURI.States.ACTIVE): NormalizedURI = {
+  def apply(title: String, url: String): NormalizedURI =
+    apply(title = title, url = url, state = NormalizedURI.States.ACTIVE)
+
+  def apply(title: String, url: String, state: State[NormalizedURI]): NormalizedURI = {
     val normalized = normalize(url)
     NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized), state = state)
   }
