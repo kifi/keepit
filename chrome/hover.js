@@ -581,6 +581,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         var params = newComment;
         params["formatComments"] = commentTextFormatter;
         params["formatDate"] = commentDateFormatter;
+        params["formatIsoDate"] = isoDateFormatter;
 
         renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
           //drawCommentView(renderedTemplate, user, type, partials);
