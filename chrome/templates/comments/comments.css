@@ -104,6 +104,33 @@
   line-height:11px;
 }
 
+.kifi_comment_wrapper .recipient {
+  white-space: nowrap;
+}
+
+.more-recipients {
+  font-weight: bold;
+  color: #68b3de;
+  cursor: pointer;
+}
+
+.more-recipient-list-wrapper {
+  position:relative;
+}
+
+div.more-recipient-list {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: #333;
+  color: #fafafa;
+  display: none;
+}
+
+.kifi_comment_wrapper .thread-info-text {
+  max-height: 50px;
+}
+
 .kifi_comment_wrapper .replies:hover, .hearts-thank:hover {
   color: #666;
   text-decoration: underline;

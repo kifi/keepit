@@ -463,7 +463,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             displayedRecipients.push(user.name);
           else if(l <= 4) {
             displayedRecipients = recipientNames.slice(0,l);
-            storedRecipients = recipientNames.slice(l-1);
           }
           else {
             displayedRecipients = recipientNames.slice(0,3);
@@ -493,7 +492,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
           visibleComments[msg]["recipientText"] = recipientText;
           visibleComments[msg]["storedRecipients"] = storedRecipients;
-          visibleComments[msg]["hasMoreRecipients"] = storedRecipients.length > 0;
+
         }
       }
 
