@@ -61,15 +61,6 @@ object Comment {
   def getOpt(externalId: ExternalId[Comment])(implicit conn: Connection): Option[Comment] =
     (CommentEntity AS "c").map { c => SELECT (c.*) FROM c WHERE (c.externalId EQ externalId) unique }.map(_.view)
 
-  def getByUser(userId: Id[User])(implicit conn: Connection): Seq[Comment] =
-    (CommentEntity AS "c").map { c =>
-      SELECT (c.*) FROM c WHERE (
-        (c.userId EQ userId) AND
-        (c.permissions EQ Comment.Permissions.PUBLIC) AND
-        (c.state EQ States.ACTIVE)
-      ) list
-    }.map(_.view)
-
   def getRecipients(commentId: Id[Comment])(implicit conn: Connection) = CommentRecipient.getByComment(commentId)
 
   def getPublicByNormalizedUri(normalizedURI: Id[NormalizedURI])(implicit conn: Connection): Seq[Comment] =
