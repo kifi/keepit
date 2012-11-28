@@ -93,7 +93,9 @@ object LoginPage extends Controller with Logging
               log.info("toUrl redirect = %s".format(toUrl))
               log.info("toUrl from session = %s".format(session.get(SecureSocial.OriginalUrlKey)))
               log.info("session data = %s".format(session.data))
-              Redirect(toUrl).withSession { session +
+              val redirect = if(toUrl == "/isLoggedIn") "/close.html" else toUrl
+              log.info("redirect to = %s".format(redirect))
+              Redirect(redirect).withSession { session +
                 (SecureSocial.UserKey -> user.id.id) +
                 (SecureSocial.ProviderKey -> user.id.providerId) -
                 SecureSocial.OriginalUrlKey
