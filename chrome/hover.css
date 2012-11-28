@@ -115,6 +115,7 @@
 }
 
 .kifi_hover ul.interaction-bar {
+  margin: 0;
   padding: 0 20px 0 0;
   text-align: right;
   background: #E0E0E0;
@@ -127,14 +128,14 @@
   font: 11px "helvetica neue", Helvetica, Arial, sans-serif;
   color: #666;
   text-decoration: none;
-  background-color: #E0E0E0;
   cursor: pointer;
+  background-color: #E0E0E0;
 }
 .kifi_hover .interaction-bar li:hover {
-  background: #ECECEC;
+  background-color: #ECECEC;
 }
 .kifi_hover .interaction-bar li:active {
-  background: #FAFAFA;
+  background-color: #FAFAFA;
 }
 .kifi_hover .interaction-bar .notify-count {
   background-color: #666;
