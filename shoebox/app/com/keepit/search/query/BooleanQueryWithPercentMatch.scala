@@ -179,7 +179,7 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
 
   override def advance(target: Int): Int = {
     doc = required.advance(target)
-    while (doc < DocIdSetIterator.NO_MORE_DOCS) optional.advance(doc)
+    if (doc < DocIdSetIterator.NO_MORE_DOCS) optional.advance(doc)
     doc
   }
 }
