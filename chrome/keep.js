@@ -782,6 +782,8 @@ if (!hasKeepitIdAndFacebookId()) {
         log("NOT loading bookmarks to the server");
       }
       getBookMarks();
+
+      
     }
   });
 

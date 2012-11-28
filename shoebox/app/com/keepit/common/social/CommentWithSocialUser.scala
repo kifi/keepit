@@ -14,7 +14,7 @@ object CommentWithSocialUser {
     CommentWithSocialUser(
       UserWithSocial.toUserWithSocial(User.get(comment.userId)),
       comment,
-      Comment.getChildrenCount(comment.id.get),
+      Comment.getChildCount(comment.id.get),
       if(comment.permissions != Comment.Permissions.MESSAGE) {
         Seq[UserWithSocial]()
       } else {

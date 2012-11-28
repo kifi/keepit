@@ -19,7 +19,7 @@ object MessageDigest {
     // We want to list recent commenters first, and then general recipients
     val sortedRecipients = (childrenUsers ++ allRecipients).distinct map (u => BasicUser(User.get(u)))
 
-    val lastComment = children.head
+    val lastComment = children.headOption.getOrElse(comment)
     MessageDigest(
       externalId = comment.externalId,
       recipients = sortedRecipients,
