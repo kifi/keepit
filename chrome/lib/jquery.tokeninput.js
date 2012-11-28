@@ -11,42 +11,42 @@
 (function ($) {
 // Default settings
 var DEFAULT_SETTINGS = {
-	// Search settings
+    // Search settings
     method: "GET",
     contentType: "json",
     queryParam: "q",
-    searchDelay: 0,
-    minChars: 2,
+    searchDelay: 300,
+    minChars: 1,
     propertyToSearch: "name",
     jsonContainer: null,
 
-	// Display settings
-    hintText: "",
-    noResultsText: "",
-    searchingText: "",
+    // Display settings
+    hintText: "Type in a search term",
+    noResultsText: "No results",
+    searchingText: "Searching...",
     deleteText: "&times;",
-    animateDropdown: false,
+    animateDropdown: true,
 
-	// Tokenization settings
+    // Tokenization settings
     tokenLimit: null,
     tokenDelimiter: ",",
-    preventDuplicates: true,
+    preventDuplicates: false,
 
-	// Output settings
+    // Output settings
     tokenValue: "id",
 
-	// Prepopulation settings
+    // Prepopulation settings
     prePopulate: null,
     processPrePopulate: false,
 
-	// Manipulation settings
+    // Manipulation settings
     idPrefix: "token-input-",
 
-	// Formatters
+    // Formatters
     resultsFormatter: function(item){ return "<li>" + item[this.propertyToSearch]+ "</li>" },
     tokenFormatter: function(item) { return "<li><p>" + item[this.propertyToSearch] + "</p></li>" },
 
-	// Callbacks
+    // Callbacks
     onResult: null,
     onAdd: null,
     onDelete: null,
@@ -115,8 +115,8 @@ var methods = {
         return this;
     },
     get: function() {
-    	return this.data("tokenInputObject").getTokens();
-   	}
+        return this.data("tokenInputObject").getTokens();
+    }
 }
 
 // Expose the .tokenInput function to jQuery as a plugin
@@ -189,17 +189,10 @@ $.TokenList = function (input, url_or_data, settings) {
         .css({
             outline: "none"
         })
-        .attr("placeholder", "To")
         .attr("id", settings.idPrefix + input.id)
         .focus(function () {
             if (settings.tokenLimit === null || settings.tokenLimit !== token_count) {
                 show_dropdown_hint();
-            }
-            if(token_count > 0) {
-                $(this).attr("placeholder","");
-            }
-            else {
-                $(this).attr("placeholder", "To")
             }
         })
         .blur(function () {
@@ -421,8 +414,8 @@ $.TokenList = function (input, url_or_data, settings) {
     }
     
     this.getTokens = function() {
-   		return saved_tokens;
-   	}
+        return saved_tokens;
+    }
 
     //
     // Private functions
@@ -482,8 +475,6 @@ $.TokenList = function (input, url_or_data, settings) {
         update_hidden_input(saved_tokens, hidden_input);
 
         token_count += 1;
-
-        input_box.attr("placeholder","");
 
         // Check the token limit
         if(settings.tokenLimit !== null && token_count >= settings.tokenLimit) {
@@ -608,13 +599,6 @@ $.TokenList = function (input, url_or_data, settings) {
 
         token_count -= 1;
 
-        if(token_count > 0) {
-          input_box.attr("placeholder","");
-        }
-        else {
-          input_box.attr("placeholder", "To")
-        }
-
         if(settings.tokenLimit !== null) {
             input_box
                 .show()
@@ -716,7 +700,7 @@ $.TokenList = function (input, url_or_data, settings) {
             show_dropdown();
 
             if(settings.animateDropdown) {
-                dropdown_ul.show();
+                dropdown_ul.slideDown("fast");
             } else {
                 dropdown_ul.show();
             }
@@ -724,9 +708,6 @@ $.TokenList = function (input, url_or_data, settings) {
             if(settings.noResultsText) {
                 dropdown.html("<p>"+settings.noResultsText+"</p>");
                 show_dropdown();
-            }
-            else {
-                hide_dropdown();
             }
         }
     }
@@ -776,7 +757,7 @@ $.TokenList = function (input, url_or_data, settings) {
     function run_search(query) {
         var cache_key = query + computeURL();
         var cached_results = cache.get(cache_key);
-        if(cached_results && false) {
+        if(cached_results) {
             populate_dropdown(query, cached_results);
         } else {
             // Are we doing an ajax search or local data search?
@@ -823,17 +804,8 @@ $.TokenList = function (input, url_or_data, settings) {
                 $.ajax(ajax_params);
             } else if(settings.local_data) {
                 // Do the search through local data
-                var q = query.toLowerCase()
                 var results = $.grep(settings.local_data, function (row) {
-                    var prop = row[settings.propertyToSearch].toLowerCase();
-                    var isHit = false;
-                    if(prop.indexOf(q) > -1) {
-                        var hasBeenSelectedBefore = $.grep(saved_tokens, function(token) {
-                            return token[settings.tokenValue] == row[settings.tokenValue];
-                        });
-                        isHit = (hasBeenSelectedBefore.length === 0)
-                    }
-                    return isHit;
+                    return row[settings.propertyToSearch].toLowerCase().indexOf(query.toLowerCase()) > -1;
                 });
 
                 if($.isFunction(settings.onResult)) {
