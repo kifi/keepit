@@ -69,7 +69,7 @@ object UserController extends FortyTwoController {
         "numMessages" -> JsNumber(numMessages))))
   }
 
-  @deprecated("replaced by getSliderInfo, still here for backwards compatibility", "2012-11-26")
+  // TODO: delete once no beta users have old plugin using this (replaced by getSliderInfo)
   def usersKeptUrl(url: String) = AuthenticatedJsonAction { request =>
     val socialUsers = CX.withConnection { implicit c =>
       NormalizedURI.getByNormalizedUrl(url) match {
