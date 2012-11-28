@@ -84,7 +84,7 @@ object CommentController extends FortyTwoController {
     Ok(commentWithSocialUserSerializer.writes(comments))
   }
 
-  def getMessageLists(url: String) = AuthenticatedJsonAction { request =>
+  def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
       val user = User.get(request.userId)
       NormalizedURI.getByNormalizedUrl(url) match {
@@ -97,7 +97,7 @@ object CommentController extends FortyTwoController {
     Ok(ThreadInfoSerializer.writes(comments.reverse))
   }
 
-  def getMessage(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
+  def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     val replies = CX.withConnection { implicit conn =>
       val comment = Comment.get(commentId)
       val user = User.get(request.userId)

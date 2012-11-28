@@ -191,7 +191,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     updateCommentCount("public", numComments);
-    updateCommentCount("messageList", numMessages);
+    updateCommentCount("message", numMessages);
 
     // Event bindings
 
@@ -240,7 +240,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     $('.messages-label').click(function() {
-      showComments(user, true, "messageList");
+      showComments(user, true, "message");
     });
 
     slideIn();
@@ -285,7 +285,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     var type = type || "public";
 
     var isVisible = $('.kifi_comment_wrapper:visible').length > 0;
-    var showingType = $('.kifi_comment_wrapper').attr("data-view");
+    var showingType = $('.kifi_comment_wrapper').attr("data-type");
 
     var needsToOpen = false;
 
@@ -306,10 +306,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
       if (type == 'public') {
         $('.interaction-bar li.comments-label').addClass('active');
-        $('.kifi_comment_wrapper').attr("data-view", "public");
-      } else if (type == "messageList") {
+        $('.kifi_comment_wrapper').attr("data-type", "public");
+      } else if (type == "message") {
         $('.interaction-bar li.messages-label').addClass('active');
-        $('.kifi_comment_wrapper').attr("data-view", "messageList");
+        $('.kifi_comment_wrapper').attr("data-type", "message");
       }
     }
 
@@ -378,7 +378,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function updateCommentCount(type, count) {
     count = count != null ? count : $(".real-comment").length; // if no count passed in, count DOM nodes
 
-    $({"public": ".comments-count", "messageList": ".messages-count"}[type])
+    $({"public": ".comments-count", "message": ".messages-count"}[type])
       .text(count)
       .toggleClass("zero_comments", count == 0);
   }
@@ -387,7 +387,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     console.log("Drawing comments!");
     comments = comments || {};
     comments["public"] = comments["public"] || [];
-    comments["messageList"] = comments["messageList"] || [];
+    comments["message"] = comments["message"] || [];
     //comments["private"] = comments["private"] || []; // Removed, not for MVP
 
     var visibleComments = comments[type] || [];
@@ -426,7 +426,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
       // By default we use the comment partials.
       // To override for a specific function, do so here.
-      if (type == "messageList") {
+      if (type == "message") {
         partials.comment = thread_info;
         partials.comment_body_view = message_list;
         partials.comment_post_view = message_post;
@@ -539,7 +539,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       console.log(externalId)
     });
 
-    if(type == "messageList") {
+    if(type == "message") {
       $.get("http://" + config.server + "/users/friends?url=" + encodeURIComponent(document.location.href),
         null,
         function(data) {

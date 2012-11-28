@@ -16,8 +16,9 @@ POST    /bookmarks/private          com.keepit.controllers.BookmarksController.u
 
 POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: String, text: String, permissions: String, recipients: String ?= "", parent: String ?= "")
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
-GET     /comments/messageList           com.keepit.controllers.CommentController.getMessageLists(url: String)
-GET     /comments/message           com.keepit.controllers.CommentController.getMessage(commentId: ExternalId[Comment])
+GET     /message/thread/:id         com.keepit.controllers.CommentController.getMessageThread(id: ExternalId[Comment])
+GET     /message/list               com.keepit.controllers.CommentController.getMessageThreadList(url: String)
+POST    /message/add                com.keepit.controllers.CommentController.createComment(url: String, text: String, permissions = "message", recipients: String ?= "", parent: String ?= "")
 GET     /comments/reply             com.keepit.controllers.CommentController.getReplies(commentId: ExternalId[Comment])
 POST    /comments/follow            com.keepit.controllers.CommentController.startFollowing(url: String)
 DELETE  /comments/follow            com.keepit.controllers.CommentController.stopFollowing(url: String)
