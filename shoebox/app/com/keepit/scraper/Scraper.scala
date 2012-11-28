@@ -70,7 +70,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         // store a fallback article in a store map
         val article = Article(
             id = uri.id.get,
-            title = uri.title,
+            title = uri.title.getOrElse(""),
             content = "",
             scrapedAt = currentDateTime,
             httpContentType = None,
@@ -109,7 +109,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
   }
 
   private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher): Either[Article, ScraperError] = {
-    var url = normalizedUri.url
+    val url = normalizedUri.url
     val extractor = getExtractor(url)
 
     try {
