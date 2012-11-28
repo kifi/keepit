@@ -17,7 +17,7 @@ object BasicUser {
       externalId = user.externalId,
       firstName = user.firstName,
       lastName = user.lastName,
-      avatar = "https://graph.facebook.com/" + SocialUserInfo.getByUser(user.id.get).head.socialId + "/picture?type=square" // todo: fix?
+      avatar = "https://graph.facebook.com/" + SocialUserInfo.getByUser(user.id.get).head.socialId.id + "/picture?type=square" // todo: fix?
     )
   }
 }
