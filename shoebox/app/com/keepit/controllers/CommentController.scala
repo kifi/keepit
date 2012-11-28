@@ -87,7 +87,7 @@ object CommentController extends FortyTwoController {
     Ok(ThreadInfoSerializer.writes(comments))
   }
 
-  @deprecated("comments will soon not have replies", "2012-11-27")
+  // TODO: delete once no beta users have old plugin supporting replies
   def getReplies(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     val replies = CX.withConnection { implicit conn =>
       val comment = Comment.get(commentId)
