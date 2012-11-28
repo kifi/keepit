@@ -1,12 +1,7 @@
 console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
 (function() {
-  $ = jQuery.noConflict()
-  var config;
-  var hover;
-  var timeoutCollection = {};
-
-  var openedCommentsType = "";
+  var config, following;
 
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
@@ -44,15 +39,15 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   });
 
   function getUserInfo(callback) {
-    chrome.extension.sendRequest({"type": "get_user_info"}, function(userInfo) {
-      callback(userInfo);
+    chrome.extension.sendRequest({"type": "get_user_info"}, function(user) {
+      callback(user);
     });
   }
 
   function showHover(user) {
     window.kifi_hover = true; // set global variable, so hover will not automatically slide out again.
 
-    if(!user || !user.keepit_external_id) {
+    if (!user || !user.keepit_external_id) {
       log("No user info! Can't search.")
       return;
     }
@@ -64,10 +59,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
   function loadFile(name, callback) {
     var tmpl = templateCache[name];
-    if(tmpl) {
+    if (tmpl) {
       callback(tmpl);
-    }
-    else {
+    } else {
       var req = new XMLHttpRequest();
       req.open("GET",chrome.extension.getURL(name), true);
       req.onreadystatechange = function() {
@@ -81,47 +75,27 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
   }
 
-
   function renderTemplate(name, params, callback, partials) {
     loadFile(name, function(contents) {
-      var tb = Mustache.render(
-          contents,
-          params,
-          partials
-      );
+      var tb = Mustache.render(contents, params, partials);
       callback(tb);
     });
   }
 
-  function summaryText(numberOfFriends, is_kept) {
-    var summary = "";
-    if(is_kept) {
-      summary = "You "
-      if(numberOfFriends>0) {
-        summary += "and "
-        if(numberOfFriends == 1) summary += "another friend kept this."
-        else summary += numberOfFriends + " of your friends kept this."
+  function summaryText(numFriends, isKept) {
+    if (isKept) {
+      if (numFriends > 0) {
+        return "You and " +
+          (numFriends == 1 ? "another friend" : (numFriends + " of your friends")) +
+          "kept this.";
       }
-      else {
-        summary += "kept this!"
-      }
+      return "You kept this!";
     }
-    else {
-      if(numberOfFriends>0) {
-        if(numberOfFriends == 1) summary += "One"
-        else if(numberOfFriends == 1) summary += "Two"
-        else if(numberOfFriends == 1) summary += "Three"
-        else if(numberOfFriends == 1) summary += "Four"
-        else summary += numberOfFriends
-        summary += " of your friends "
-        if(numberOfFriends == 1) summary += "kept this."
-        else summary += "kept this."
-      }
-      else {
-        summary += "To quickly find this page later..."
-      }
+    if (numFriends > 0) {
+      return ([,"One","Two","Three","Four"][numFriends] || numFriends) +
+        " of your friends kept this.";
     }
-    return summary;
+    return "To quickly find this page later...";
   }
 
   function socialTooltip(friend, element) {
@@ -136,10 +110,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $(friendTooltip).find('.kn_social').css('background-image','url(' + socialNetworks + ')');
 
       function hide() {
-          timeout = setTimeout(function () {
-              $(friendTooltip).fadeOut(100);
-          }, 600);
-          clearTimeout(timein);
+        timeout = setTimeout(function () {
+          $(friendTooltip).fadeOut(100);
+        }, 600);
+        clearTimeout(timein);
       };
 
       function show() {
@@ -148,19 +122,17 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         }, 500)
       }
 
-      $(element).mouseover(function () {
-          clearTimeout(timeout);
-          show();
+      $(element).mouseover(function() {
+        clearTimeout(timeout);
+        show();
       }).mouseout(hide);
 
-      $(friendTooltip).mouseover(function () {
-          clearTimeout(timeout);
+      $(friendTooltip).mouseover(function() {
+        clearTimeout(timeout);
       }).mouseout(hide);
 
     }); 
   }
-
-
 
   function showKeepItHover(user) {
     var logo = chrome.extension.getURL('kifilogo.png');
@@ -182,6 +154,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           "is_kept": o.kept
         }
 
+        following = o.following;
+
         if (o.friends.length) {
           tmpl.socialConnections = {
             countText: summaryText(o.friends.length, o.kept),
@@ -202,9 +176,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     );
   }
 
-
   function drawKeepItHover(user, friends, renderedTemplate) {
-    if($('.kifi_hover').length > 0) {
+    if ($('.kifi_hover').length > 0) {
       // nevermind!
       log("No need to inject, it's already here!");
       return;
@@ -315,40 +288,36 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     var needsToOpen = false;
 
-    if(toggleOpenState) {
+    if (toggleOpenState) {
       $('.interaction-bar li').removeClass('active');
 
-      if(isVisible) { // already open!
-        if(type == showingType) {
+      if (isVisible) { // already open!
+        if (type == showingType) {
           $('.kifi-content').slideDown();
           $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
           return;
-        }
-        else { // already open, yet showing a different type.
+        } else { // already open, yet showing a different type.
           // For now, nothing. Eventually, some slick animation for a quick change?
         }
-      }
-      else { // not visible
+      } else { // not visible
         needsToOpen = true;
       }
 
-      if(type == 'public') {
+      if (type == 'public') {
         $('.interaction-bar li.comments-label').addClass('active');
         $('.kifi_comment_wrapper').attr("data-view", "public");
-      }
-      else if(type == 'message') {
+      } else if (type == 'message') {
         $('.interaction-bar li.messages-label').addClass('active');
         $('.kifi_comment_wrapper').attr("data-view", "message");
       }
     }
-
 
     var userExternalId = user.keepit_external_id;
     $.get("http://" + config.server + "/comments/" + type + "?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
       null,
       function(comments) {
         renderComments(user, comments, type, function() {
-          if(needsToOpen) {
+          if (needsToOpen) {
             repositionScroll(false);
 
             $('.kifi-content').slideUp(); // hide main hover content
@@ -398,22 +367,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function updateCommentCount(type, count) {
+    count = count != null ? count : $(".real-comment").length; // if no count passed in, count DOM nodes
 
-    var count = count || $(".real-comment").length; // if no count passed in, count DOM nodes
-    var selector;
-    if(type == 'public')
-      selector = $('.comments-count');
-    else if(type == 'message')
-      selector = $('.messages-count');
-
-    if(selector) {
-      if(count == 0) {
-        selector.addClass("zero_comments").text("0"); // zero_comments allows us to style that case separately
-      }
-      else {
-        selector.removeClass("zero_comments").text(count);
-      }
-    }
+    $({"public": ".comments-count", "message": ".messages-count"}[type])
+      .text(count)
+      .toggleClass("zero_comments", count == 0);
   }
 
   function renderComments(user, comments, type, onComplete) {
@@ -424,7 +382,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     //comments["private"] = comments["private"] || []; // Removed, not for MVP
 
     var visibleComments = comments[type] || [];
-    
+
     updateCommentCount(type, visibleComments.length);
     
     var params = {
@@ -436,7 +394,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       formatComments: commentTextFormatter,
       formatDate: commentDateFormatter,
       comments: visibleComments,
-      showControlBar: type == "public"
+      showControlBar: type == "public",
+      following: following
     }
 
     loadFile("templates/comments/hearts.html", function(hearts) {
@@ -474,7 +433,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
     });
     });
-
   }
 
   function drawCommentView(renderedTemplate, user, type, partials) {
@@ -483,18 +441,17 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     $('.kifi_comment_wrapper').html(renderedTemplate);
     repositionScroll(false);
 
-    createMainBinders(type, user);
-
+    createCommentBindings(type, user);
   }
 
-  function createMainBinders(type, user) {
+  function createCommentBindings(type, user) {
     $("abbr.timeago").timeago();
 
     $(".control-bar").on("click", ".follow", function() {
-      var $a = $(this), following = $a.hasClass("following");
+      following = !following;  // TODO: server should return whether following along with the comments
       $.ajax("http://" + config.server + "/comments/follow?url=" + encodeURIComponent(document.location.href),
-        {"type": following ? "DELETE" : "POST"});
-      $a.toggleClass("following", !following);
+        {"type": following ? "POST" : "DELETE"});
+      $(this).toggleClass("following", following);
     });
 
     // Main comment textarea
@@ -546,7 +503,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
   }
 
-
   function submitComment(text, type, user, parent, callback) {
     /* Because we're using very simple templating now, re-rendering has to be done carefully.
      */
@@ -596,22 +552,19 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function repositionScroll(resizeQuickly) {
     resizeCommentBodyView(resizeQuickly);
 
-    var commentBodyView = $(".comment_body_view")[0];
-    if(commentBodyView)
-      commentBodyView.scrollTop = 99999;
+    $(".comment_body_view").prop("scrollTop", 99999);
   }
 
   function resizeCommentBodyView(resizeQuickly) {
     var kifiheader = $('.kifihdr');
-    if(resizeQuickly === true) {
+    if (resizeQuickly === true) {
       $('.comment_body_view').stop().css({'max-height':$(window).height()-280});
-    }
-    else {
-      if(kifiheader.length > 0) {
+    } else {
+      if (kifiheader.length > 0) {
         var offset = kifiheader.offset().top - 30;
         $('.comment_body_view').stop().animate({'max-height':'+='+offset},20, function() {
           var newOffset = kifiheader.offset().top - 30;
-          if(newOffset < 0) {
+          if (newOffset < 0) {
             resizeCommentBodyView(false);
           }
         });
@@ -627,6 +580,5 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     config = response;
     console.log("user config",response);
   });
-
 
 })();
