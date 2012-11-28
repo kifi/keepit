@@ -65,6 +65,7 @@
 
 .kifi_comment_wrapper .comment-wrapper {
   border-top: 1px solid #e2e2e2;
+  position: relative;
 }
 .kifi_comment_wrapper[data-view=message] .comment-wrapper:first-child {
   border-top: none;
@@ -73,19 +74,22 @@
 .kifi_comment_wrapper .comment {
   background-color: #fafafa;
   padding: 10px;
-  position: relative;
-  z-index: 2;
-}
-
-.kifi_comment_wrapper .timestamp {
-  float: left;
-  color: #ccc;
 }
 
 .kifi_comment_wrapper .comment-meta {
-  display: none;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  padding: 6px 10px;
+  background-color: rgba(0,0,0,.5);
+  border-top-right-radius: 10px;
   font-size: 10px;
-  color: #aaa;
+  color: #eee;
+  -webkit-transform: translate(-100%,0);
+  -webkit-transition: all .2s ease-in-out;
+}
+.kifi_comment_wrapper .comment-wrapper:hover .comment-meta {
+  -webkit-transform: none;
 }
 
 .kifi_comment_wrapper .comment-text {
