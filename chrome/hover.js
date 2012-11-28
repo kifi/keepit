@@ -456,13 +456,21 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     if(type == "message") {
-      var friends = []; //TODO!
-      $("#to-list").tokenInput(friends, {
-        theme: "kifi"
-      });
-      $("#token-input-to-list").keypress(function(e) {
-        return e.which !== 13;
-      });
+      $.get("http://" + config.server + "/users/friends?url=" + encodeURIComponent(document.location.href),
+        null,
+        function(data) {
+          var friends = data.friends; //TODO!
+          for(var friend in friends) {
+            friends[friend]["name"] = friends[friend]["firstName"] + " " + friends[friend]["lastName"]
+          }
+          $("#to-list").tokenInput(friends, {
+            theme: "kifi"
+          });
+          $("#token-input-to-list").keypress(function(e) {
+            return e.which !== 13;
+          });
+        }
+      );
     }
 
     // Main comment textarea
@@ -489,14 +497,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       e.preventDefault();
       //debugger;
       submitComment($('.comment-compose').text(), type, user, null, function(newComment) {
-        $('.comment-compose').text("");
+        $('.comment-compose').text("").focus().blur();
 
         console.log("new thread", newComment);
         // Clean up CSS
-        $(".kififtr").animate({'margin-top': '0'}, 100);
         $('.submit-comment').slideUp(100, function() {
-          // Done cleaning up CSS. Redraw.
-          //renderComments(user, comments, type);
           var params = newComment;
           params["formatComments"] = commentTextFormatter;
           params["formatDate"] = commentDateFormatter;
