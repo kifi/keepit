@@ -152,7 +152,7 @@ object BooleanScorer {
         conjunction()
       } else if (optional.length > 0) {
         disjunction()
-      } else new EmptyScorer(weight)
+      } else QueryUtil.emptyScorer(weight)
 
     if (prohibited.length > 0) prohibit(mainScorer) else mainScorer
   }
@@ -160,9 +160,9 @@ object BooleanScorer {
 
 class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer) extends Scorer(weight) {
 
-  var doc = -1
-  var scoredDoc = -1
-  var scoreValue = 0.0f
+  private var doc = -1
+  private var scoredDoc = -1
+  private var scoreValue = 0.0f
 
   override def docID() = doc
 
@@ -287,7 +287,7 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
 
 class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]) extends Scorer(weight) {
 
-  var doc = -1
+  private var doc = -1
 
   override def docID() = doc
 
@@ -309,11 +309,4 @@ class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]
       (n.docID == doc)
     }
   }
-}
-
-class EmptyScorer(weight: Weight) extends Scorer(weight) {
-  override def docID() = DocIdSetIterator.NO_MORE_DOCS
-  override def score(): Float = 0.0f
-  override def nextDoc(): Int = DocIdSetIterator.NO_MORE_DOCS
-  override def advance(target: Int): Int = DocIdSetIterator.NO_MORE_DOCS
 }

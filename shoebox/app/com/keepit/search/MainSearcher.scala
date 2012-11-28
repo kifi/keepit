@@ -24,6 +24,8 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   val recencyBoost = config.asFloat("recencyBoost")
   val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
   val tailCutting = config.asFloat("tailCutting")
+  val proximityBoost = config.asFloat("proximityBoost")
+  val semanticBoost = config.asFloat("semanticBoost")
 
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
   val articleSearcher = articleIndexer.getArticleSearcher
@@ -52,7 +54,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
-    val articleParser = articleIndexer.getQueryParser
+    val articleParser = articleIndexer.getQueryParser(proximityBoost, semanticBoost)
     articleParser.setPercentMatch(percentMatch)
     articleParser.parseQuery(queryString).map{ articleQuery =>
       articleSearcher.doSearch(articleQuery){ scorer =>

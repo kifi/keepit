@@ -54,7 +54,7 @@ class ProximityQueryTest extends SpecificationWithJUnit {
   "ProximityQuery" should {
 
     "score using proximity" in {
-      var q = ProximityQuery(Set(new Term("B", "abc"), new Term("B", "def")))
+      var q = ProximityQuery("B", Set(new Term("B", "abc"), new Term("B", "def")))
       var weight = searcher.createNormalizedWeight(q)
       (weight != null) === true
 
@@ -69,7 +69,7 @@ class ProximityQueryTest extends SpecificationWithJUnit {
       buf.size === 10
       buf.sortBy(_._2).map(_._1) === Seq(9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
 
-      q = ProximityQuery(Set(new Term("B", "def"), new Term("B", "ghi")))
+      q = ProximityQuery("B", Set(new Term("B", "def"), new Term("B", "ghi")))
       weight = searcher.createNormalizedWeight(q)
 
       (weight != null) === true
@@ -86,14 +86,14 @@ class ProximityQueryTest extends SpecificationWithJUnit {
     }
 
     "not return hits when the number of terms is 1 or less" in {
-      var q = ProximityQuery(Set(new Term("B", "abc")))
+      var q = ProximityQuery("B", Set(new Term("B", "abc")))
       var weight = searcher.createNormalizedWeight(q)
       (weight != null) === true
 
       var scorer = weight.scorer(indexReader, true, true)
       scorer.nextDoc() === DocIdSetIterator.NO_MORE_DOCS
 
-      q = ProximityQuery(Set.empty[Term])
+      q = ProximityQuery("B", Set.empty[Term])
       weight = searcher.createNormalizedWeight(q)
       (weight != null) === true
 

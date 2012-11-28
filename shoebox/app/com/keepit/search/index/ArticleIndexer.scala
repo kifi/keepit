@@ -23,8 +23,11 @@ import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.Version
 import java.io.File
 import java.io.IOException
+import java.io.StringReader
 import scala.math._
 import com.keepit.search.query.ProximityQuery
+import com.keepit.search.query.QueryUtil
+import com.keepit.search.query.SemanticVectorQuery
 
 object ArticleIndexer {
   val indexingAnalyzer = DefaultAnalyzer.forIndexing
@@ -76,9 +79,18 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
   }
 
-  def getQueryParser: QueryParser = new ArticleQueryParser
+  def getQueryParser: QueryParser = getQueryParser(0.0f, 0.0f)
+
+  def getQueryParser(proximityBoost: Float, semanticBoost: Float): QueryParser = {
+    val total = 1.0f + proximityBoost + semanticBoost
+    new ArticleQueryParser(1.0f/total, proximityBoost/total, semanticBoost/total)
+  }
 
   def getArticleSearcher() = searcher
+
+  def getPersonalizedArticleSearcher(uris: Set[Id[NormalizedURI]]) = {
+    new PersonalizedSearcher(searcher.indexReader, searcher.idMapper, uris.map(id => id.id))
+  }
 
   def search(queryText: String): Seq[Hit] = {
     parseQuery(queryText) match {
@@ -92,26 +104,31 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   }
 
   class ArticleIndexable(override val id: Id[NormalizedURI], val uri: NormalizedURI, articleStore: ArticleStore) extends Indexable[NormalizedURI] {
+    implicit def toReader(text: String) = new StringReader(text)
+
     override def buildDocument = {
       val doc = super.buildDocument
       articleStore.get(uri.id.get) match {
         case Some(article) =>
+          val analyzer = indexWriterConfig.getAnalyzer
           val title = buildTextField("t", article.title)
           val content = buildTextField("c", article.content)
+          val semanticVector = buildSemanticVectorField("sv", analyzer.tokenStream("t", article.title), analyzer.tokenStream("c", article.content))
           doc.add(title)
           doc.add(content)
+          doc.add(semanticVector)
           doc
         case None => doc
       }
     }
   }
 
-  class ArticleQueryParser extends QueryParser(parsingAnalyzer) {
+  class ArticleQueryParser(baseBoost: Float, proximityBoost: Float, semanticBoost: Float) extends QueryParser(parsingAnalyzer) {
 
     super.setAutoGeneratePhraseQueries(true)
 
     override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
-      (getFieldQueryWithProximity("t", queryText, quoted), getFieldQueryWithProximity("c", queryText, quoted)) match {
+      (super.getFieldQuery("t", queryText, quoted), super.getFieldQuery("c", queryText, quoted)) match {
         case (null, null) => null
         case (query, null) => query
         case (null, query) => query
@@ -121,6 +138,29 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           booleanQuery.add(q1, Occur.SHOULD)
           booleanQuery.add(q2, Occur.SHOULD)
           booleanQuery
+      }
+    }
+
+    override def parseQuery(queryText: String) = {
+      super.parseQuery(queryText).map{ query =>
+        val terms = QueryUtil.getTerms(query)
+        if (terms.size <= 0) query
+        else {
+          val booleanQuery = new BooleanQuery
+          query.setBoost(baseBoost)
+          booleanQuery.add(query, Occur.MUST)
+          val svq = SemanticVectorQuery("sv", terms)
+          svq.setBoost(semanticBoost)
+          booleanQuery.add(svq, Occur.SHOULD)
+          if (terms.size > 1) {
+            val proxQ = new BooleanQuery
+            proxQ.add(ProximityQuery("c", terms), Occur.SHOULD)
+            proxQ.add(ProximityQuery("t", terms), Occur.SHOULD)
+            proxQ.setBoost(proximityBoost)
+            booleanQuery.add(proxQ, Occur.SHOULD)
+          }
+          booleanQuery
+        }
       }
     }
   }

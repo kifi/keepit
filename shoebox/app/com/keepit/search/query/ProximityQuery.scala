@@ -1,13 +1,9 @@
 package com.keepit.search.query
 
-import com.keepit.common.logging.Logging
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.TermPositions
 import org.apache.lucene.search.Query
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.PhraseQuery
-import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
 import org.apache.lucene.search.Searcher
@@ -17,47 +13,15 @@ import org.apache.lucene.search.Similarity
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
-import java.util.{Set => JSet, HashSet => JHashSet}
+import java.lang.{Float => JFloat}
+import java.util.{Set => JSet}
 import scala.collection.JavaConversions._
 import scala.math._
 
-object ProximityQuery extends Logging {
+object ProximityQuery {
+  def apply(fieldName: String, terms: Set[Term]) = new ProximityQuery(terms.map{ term => new Term(fieldName, term.text) })
 
-  def apply(fieldName: String, query: Query): ProximityQuery = apply(getTerms(fieldName, query))
-  def apply(terms: Set[Term]): ProximityQuery = new ProximityQuery(terms)
-
-  def getTerms(fieldName: String, query: Query): Set[Term] = {
-    getTerms(query).filter{ _.field() == fieldName }
-  }
-
-  def getTerms(query: Query): Set[Term] = {
-    query match {
-      case q: TermQuery => fromTermQuery(q)
-      case q: PhraseQuery => fromPhraseQuery(q)
-      case q: BooleanQuery => fromBooleanQuery(q)
-      case q: Query => fromOtherQuery(q)
-      case null => Set.empty[Term]
-    }
-  }
-
-  private def fromTermQuery(query: TermQuery) = Set(query.getTerm)
-  private def fromPhraseQuery(query: PhraseQuery) = query.getTerms().toSet
-  private def fromBooleanQuery(query: BooleanQuery) = {
-    query.getClauses.map{ cl => if (!cl.isProhibited) getTerms(cl.getQuery) else Set.empty[Term] }.reduce{ _ union _ }
-  }
-  private def fromOtherQuery(query: Query) = {
-    try {
-      val terms = new JHashSet[Term]()
-      query.extractTerms(terms)
-      terms.toSet
-    } catch {
-      case _ =>
-        log.warn("term extraction failed: %s".format(query.getClass.toString))
-        Set.empty[Term]
-    }
-  }
-
-  val scoreFactorHalfDecay = 4
+  val scoreFactorHalfDecay = 4.0f
   val scoreFactorTable = {
     val arr = new Array[Float](500)
     for (i <- 1 until arr.length) {
@@ -72,11 +36,16 @@ object ProximityQuery extends Logging {
 
 class ProximityQuery(val terms: Set[Term]) extends Query {
 
-  override def createWeight(searcher: Searcher): Weight = new ProximityWeight(this, searcher.getSimilarity)
+  override def createWeight(searcher: Searcher): Weight = {
+    val similarity = searcher.getSimilarity
+    val numDocs = searcher.maxDoc()
+    val idfMap = terms.foldLeft(Map.empty[Term, Float]){ (m, term) => m + (term -> similarity.idf(searcher.docFreq(term), numDocs)) }
+    new ProximityWeight(this, idfMap)
+  }
 
   override def rewrite(reader: IndexReader): Query = this
 
-  override def extractTerms(out: java.util.Set[Term]): Unit = out.addAll(terms)
+  override def extractTerms(out: JSet[Term]): Unit = out.addAll(terms)
 
   override def toString(s: String) = {
     val buffer = new StringBuilder()
@@ -92,10 +61,10 @@ class ProximityQuery(val terms: Set[Term]) extends Query {
     case _ => false
   }
 
-  override def hashCode(): Int = terms.hashCode() + java.lang.Float.floatToRawIntBits(getBoost())
+  override def hashCode(): Int = terms.hashCode() + JFloat.floatToRawIntBits(getBoost())
 }
 
-class ProximityWeight(query: ProximityQuery, similarity: Similarity) extends Weight {
+class ProximityWeight(query: ProximityQuery, idfMap: Map[Term, Float]) extends Weight {
   var value = 0.0f
 
   override def getValue() = value
@@ -133,12 +102,10 @@ class ProximityWeight(query: ProximityQuery, similarity: Similarity) extends Wei
 
   override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
     if (query.terms.size > 1) {
-      val tps = query.terms.map{
-        term => new PositionAndWeight(reader.termPositions(term), similarity.idf(reader.docFreq(term), reader.numDocs) * value)
-      }
+      val tps = query.terms.map{ term => new PositionAndWeight(reader.termPositions(term), idfMap(term) * value) }
       new ProximityScorer(this, tps)
     } else {
-      new EmptyProximityScorer(this)
+      QueryUtil.emptyScorer(this)
     }
   }
 }
@@ -185,8 +152,9 @@ class PositionAndWeight(val tp: TermPositions, val weight: Float) {
 }
 
 class ProximityScorer(weight: ProximityWeight, tps: Set[PositionAndWeight]) extends Scorer(weight) {
-  var proximityScore = 0.0f
-  var scoredDoc = -1
+  private var curDoc = -1
+  private var proximityScore = 0.0f
+  private var scoredDoc = -1
 
   val pq = new PriorityQueue[PositionAndWeight] {
     super.initialize(tps.size)
@@ -243,24 +211,19 @@ class ProximityScorer(weight: ProximityWeight, tps: Set[PositionAndWeight]) exte
     proximityScore
   }
 
-  override def docID(): Int = pq.top.doc
+  override def docID(): Int = curDoc
 
   override def nextDoc(): Int = advance(0)
 
   override def advance(target: Int): Int = {
     var top = pq.top
-    val doc = if (target <= top.doc && top.doc < DocIdSetIterator.NO_MORE_DOCS) top.doc + 1 else target
+    val doc = if (target <= curDoc && curDoc < DocIdSetIterator.NO_MORE_DOCS) curDoc + 1 else target
     while (top.doc < doc) {
-      top.fetchDoc(target)
+      top.fetchDoc(doc)
       top = pq.updateTop()
     }
-    top.doc
+    curDoc = top.doc
+    curDoc
   }
 }
 
-class EmptyProximityScorer(weight: ProximityWeight) extends Scorer(weight) {
-  override def score() = 0.0f
-  override def docID() = DocIdSetIterator.NO_MORE_DOCS
-  override def nextDoc()= DocIdSetIterator.NO_MORE_DOCS
-  override def advance(target: Int) = DocIdSetIterator.NO_MORE_DOCS
-}
