@@ -12,6 +12,7 @@ import com.keepit.common.social.CommentWithSocialUser
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.social.UserWithSocial
+import com.keepit.common.social.UserWithSocial.toUserWithSocial
 import com.keepit.inject.inject
 import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, Follow, NormalizedURI, SocialConnection, SocialUserInfo, User}
 import com.keepit.search.graph.URIGraph
@@ -208,21 +209,23 @@ object CommentController extends FortyTwoController {
 
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = CX.withConnection { implicit c =>
-      Follow.all map {f => (UserWithSocial.toUserWithSocial(User.get(f.userId)), f, NormalizedURI.get(f.uriId))}
+      Follow.all map {f => (toUserWithSocial(User.get(f.userId)), f, NormalizedURI.get(f.uriId))}
     }
     Ok(views.html.follows(uriAndUsers))
   }
 
   def commentsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = CX.withConnection { implicit c =>
-      Comment.all(Comment.Permissions.PUBLIC) map {co => (UserWithSocial.toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId))}
+      Comment.all(Comment.Permissions.PUBLIC) map {co => (toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId))}
     }
     Ok(views.html.comments(uriAndUsers))
   }
 
   def messagesView = AdminHtmlAction { implicit request =>
     val uriAndUsers = CX.withConnection { implicit c =>
-      Comment.all(Comment.Permissions.MESSAGE) map {co => (UserWithSocial.toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId))}
+      Comment.all(Comment.Permissions.MESSAGE) map {co =>
+        (toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId), CommentRecipient.getByComment(co.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) })
+      }
     }
     Ok(views.html.messages(uriAndUsers))
   }
