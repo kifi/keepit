@@ -28,14 +28,14 @@ case class SocialUserInfo(
   socialId: SocialId,
   networkType: SocialNetworkType,
   credentials: Option[SocialUser] = None,
-  lastGraphRefresh : DateTime = currentDateTime
+  lastGraphRefresh : Option[DateTime] = Some(currentDateTime)
 ) {
 
   def reset() = copy(state = SocialUserInfo.States.CREATED, credentials = None)
   def withUser(user: User) = copy(userId = Some(user.id.get))//want to make sure the user has an id, fail hard if not!
   def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials))//want to make sure the user has an id, fail hard if not!
   def withState(state: State[SocialUserInfo]) = copy(state = state)
-  def withLastGraphRefresh(lastGraphRefresh : DateTime) = copy(lastGraphRefresh =lastGraphRefresh); 
+  def withLastGraphRefresh(lastGraphRefresh : Option[DateTime] = Some(new DateTime())) = copy(lastGraphRefresh =lastGraphRefresh); 
   def save(implicit conn: Connection): SocialUserInfo = {
     val entity = SocialUserInfoEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
@@ -96,7 +96,7 @@ private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialU
   val socialId = "social_id".VARCHAR(32).NOT_NULL
   val networkType = "network_type".VARCHAR(32).NOT_NULL
   val credentials = "credentials".VARCHAR(2048)
-  val lastGraphRefresh = "lastGraphRefresh".JODA_TIMESTAMP.NOT_NULL
+  val lastGraphRefresh = "lastGraphRefresh".JODA_TIMESTAMP
 
   def relation = SocialUserInfoEntity
 
@@ -130,7 +130,7 @@ private[model] object SocialUserInfoEntity extends SocialUserInfoEntity with Ent
     user.socialId := view.socialId.id
     user.networkType := view.networkType.name
     user.credentials.set(view.credentials.map{ s => new SocialUserSerializer().writes(s).toString() })
-    user.lastGraphRefresh := view.lastGraphRefresh
+    user.lastGraphRefresh.set(view.lastGraphRefresh)
     
     user
   }
