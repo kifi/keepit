@@ -38,15 +38,15 @@ object SemanticVector {
 
   private val popCount = {
     val arr = new Array[Byte](256)
-        var i = 0
-        while (i < 256) {
-          arr(i) = Integer.bitCount(i).toByte
-              i += 1
-        }
+    var i = 0
+    while (i < 256) {
+      arr(i) = Integer.bitCount(i).toByte
+      i += 1
+    }
     arr
   }
 
-  private val MASK = 0x7FFFFFFFFFFFFFFFL // 61 bits
+  private val MASK = 0x7FFFFFFFFFFFFFFFL // 63 bits
 
   def getSeed(term: String): Array[Float] = {
     var seed = (term.hashCode.toLong + (term.charAt(0).toLong << 31)) & MASK
