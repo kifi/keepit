@@ -1,6 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.common.db.Id
+import com.keepit.search.SemanticVectorBuilder
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
@@ -87,6 +88,12 @@ trait Indexable[T] {
         case false => false
       }
     }
+  }
+
+  def buildSemanticVectorField(fieldName: String, tokenStreams: TokenStream*) = {
+    val builder = new SemanticVectorBuilder(60)
+    tokenStreams.foreach{ builder.load(_) }
+    new Field(fieldName, builder.tokenStream)
   }
 }
 

@@ -1,5 +1,7 @@
 package com.keepit.search.index
 
+import com.keepit.search.SemanticVector
+import com.keepit.search.SemanticVectorComposer
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.IndexSearcher
@@ -7,7 +9,8 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
-
+import org.apache.lucene.index.Term
+import org.apache.lucene.index.Payload
 
 class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends IndexSearcher(indexReader) {
 
@@ -36,6 +39,27 @@ class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends Ind
         }
       }
     }
+  }
+
+  def getSemanticVector(term: Term) = {
+    val composer = new SemanticVectorComposer
+    val tp = indexReader.termPositions(term)
+    var vector = new Array[Byte](SemanticVector.arraySize)
+    try {
+      while (tp.next) {
+        var freq = tp.freq()
+        while (freq > 0) {
+          freq -= 1
+          tp.nextPosition()
+          vector = tp.getPayload(vector, 0)
+          composer.add(vector)
+        }
+      }
+    } finally {
+      tp.close()
+    }
+    if (composer.numInputs > 0) composer.get
+    else SemanticVector.vectorize(SemanticVector.getSeed(term.text))
   }
 
   def getHitQueue(size: Int) = new HitQueue(size)
