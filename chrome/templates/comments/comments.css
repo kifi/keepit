@@ -89,7 +89,7 @@
 }
 
 .kifi_comment_wrapper .comment-text {
-  overflow: hidden;
+  margin-left: 43px;
   min-height: 35px;
   line-height: 14px;
   color: #524D4D;
