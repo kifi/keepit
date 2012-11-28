@@ -100,7 +100,6 @@
 }
 
 .kifi_comment_wrapper .comment-text strong {
-  display: block;
   padding-bottom:2px;
   line-height:11px;
 }
@@ -145,6 +144,10 @@
   min-height: 45px;
   padding-left: 10px;
   clear:both;
+}
+
+.kifi_comment_wrapper .recipient-list {
+  display: block;
 }
 
 .kifi_comment_wrapper .compose-wrapper {

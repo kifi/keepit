@@ -18,7 +18,7 @@ import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
-import com.keepit.serializer.MessageDigestSerializer.messageDigestSerializer
+import com.keepit.serializer.ThreadInfoSerializer.ThreadInfoSerializer
 import play.api.Play.current
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka
@@ -27,7 +27,7 @@ import play.api.mvc.Action
 import play.api.mvc.Controller
 import securesocial.core.SecureSocial
 import securesocial.core.java.SecureSocial.SecuredAction
-import com.keepit.common.social.MessageDigest
+import com.keepit.common.social.ThreadInfo
 
 object CommentController extends FortyTwoController {
 
@@ -79,12 +79,12 @@ object CommentController extends FortyTwoController {
       val user = User.get(request.userId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
-          List(Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(MessageDigest(_)))
+          List(Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(ThreadInfo(_)))
         case None =>
-          List[(State[Comment.Permission],Seq[MessageDigest])]()
+          List[(State[Comment.Permission],Seq[ThreadInfo])]()
       }
     }
-    Ok(messageDigestSerializer.writes(comments))
+    Ok(ThreadInfoSerializer.writes(comments))
   }
 
   @deprecated("comments will soon not have replies", "2012-11-27")
