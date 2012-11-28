@@ -169,14 +169,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           }
 
           renderTemplate('kept_hover.html', tmpl, function(template) {
-            drawKeepItHover(user, o.friends, template);
+            drawKeepItHover(user, o.friends, o.numComments, o.numMessages, template);
           }, partials);
         });
       }
     );
   }
 
-  function drawKeepItHover(user, friends, renderedTemplate) {
+  function drawKeepItHover(user, friends, numComments, numMessages, renderedTemplate) {
     if ($('.kifi_hover').length > 0) {
       // nevermind!
       log("No need to inject, it's already here!");
@@ -190,7 +190,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       socialTooltip(friends[i],e);
     });
 
-    // Binders
+    updateCommentCount("public", numComments);
+    updateCommentCount("message", numMessages);
+
+    // Event bindings
 
     $(".kifi_hover").draggable({ cursor: "move", axis: "y", distance: 20, handle: "div.kifihdr", containment: "body", scroll: false});
 
@@ -239,8 +242,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     $('.messages-label').click(function() {
       showComments(user, true, "message");
     });
-
-    showComments(user, false, "public"); // prefetch comments, do not show.
 
     slideIn();
   }
