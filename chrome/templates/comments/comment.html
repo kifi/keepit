@@ -6,8 +6,8 @@
       <span class="recipient-list"><strong>{{user.firstName}} {{user.lastName}}</strong></span>
       {{#formatComments}}{{text}}{{/formatComments}}
     </div>
-    <div class="comment-meta">
-      <time class="timestamp timeago" datetime="{{#formatIsoDate}}{{createdAt}}{{/formatIsoDate}}">{{#formatDate}}{{createdAt}}{{/formatDate}}</time>
-    </div>
+  </div>
+  <div class="comment-meta">
+    <time class="timestamp timeago" datetime="{{#formatIsoDate}}{{createdAt}}{{/formatIsoDate}}">{{#formatDate}}{{createdAt}}{{/formatDate}}</time>
   </div>
 </div>
