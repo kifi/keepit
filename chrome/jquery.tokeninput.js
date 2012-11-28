@@ -25,7 +25,7 @@ var DEFAULT_SETTINGS = {
     noResultsText: "",
     searchingText: "",
     deleteText: "&times;",
-    animateDropdown: true,
+    animateDropdown: false,
 
 	// Tokenization settings
     tokenLimit: null,
@@ -194,6 +194,13 @@ $.TokenList = function (input, url_or_data, settings) {
         .focus(function () {
             if (settings.tokenLimit === null || settings.tokenLimit !== token_count) {
                 show_dropdown_hint();
+            }
+            console.log("hit")
+            if(token_count > 0) {
+                $(this).attr("placeholder","");
+            }
+            else {
+                $(this).attr("placeholder", "To")
             }
         })
         .blur(function () {
@@ -701,7 +708,7 @@ $.TokenList = function (input, url_or_data, settings) {
             show_dropdown();
 
             if(settings.animateDropdown) {
-                dropdown_ul.slideDown("fast");
+                dropdown_ul.show();
             } else {
                 dropdown_ul.show();
             }

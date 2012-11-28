@@ -25,7 +25,7 @@ var DEFAULT_SETTINGS = {
     noResultsText: "",
     searchingText: "",
     deleteText: "&times;",
-    animateDropdown: true,
+    animateDropdown: false,
 
 	// Tokenization settings
     tokenLimit: null,
@@ -194,6 +194,12 @@ $.TokenList = function (input, url_or_data, settings) {
         .focus(function () {
             if (settings.tokenLimit === null || settings.tokenLimit !== token_count) {
                 show_dropdown_hint();
+            }
+            if(token_count > 0) {
+                $(this).attr("placeholder","");
+            }
+            else {
+                $(this).attr("placeholder", "To")
             }
         })
         .blur(function () {
@@ -477,6 +483,8 @@ $.TokenList = function (input, url_or_data, settings) {
 
         token_count += 1;
 
+        input_box.attr("placeholder","");
+
         // Check the token limit
         if(settings.tokenLimit !== null && token_count >= settings.tokenLimit) {
             input_box.hide();
@@ -600,6 +608,13 @@ $.TokenList = function (input, url_or_data, settings) {
 
         token_count -= 1;
 
+        if(token_count > 0) {
+          input_box.attr("placeholder","");
+        }
+        else {
+          input_box.attr("placeholder", "To")
+        }
+
         if(settings.tokenLimit !== null) {
             input_box
                 .show()
@@ -701,7 +716,7 @@ $.TokenList = function (input, url_or_data, settings) {
             show_dropdown();
 
             if(settings.animateDropdown) {
-                dropdown_ul.slideDown("fast");
+                dropdown_ul.show();
             } else {
                 dropdown_ul.show();
             }
@@ -761,7 +776,7 @@ $.TokenList = function (input, url_or_data, settings) {
     function run_search(query) {
         var cache_key = query + computeURL();
         var cached_results = cache.get(cache_key);
-        if(cached_results) {
+        if(cached_results && false) {
             populate_dropdown(query, cached_results);
         } else {
             // Are we doing an ajax search or local data search?
@@ -808,8 +823,17 @@ $.TokenList = function (input, url_or_data, settings) {
                 $.ajax(ajax_params);
             } else if(settings.local_data) {
                 // Do the search through local data
+                var q = query.toLowerCase()
                 var results = $.grep(settings.local_data, function (row) {
-                    return row[settings.propertyToSearch].toLowerCase().indexOf(query.toLowerCase()) > -1;
+                    var prop = row[settings.propertyToSearch].toLowerCase();
+                    var isHit = false;
+                    if(prop.indexOf(q) > -1) {
+                        var hasBeenSelectedBefore = $.grep(saved_tokens, function(token) {
+                            return token[settings.tokenValue] == row[settings.tokenValue];
+                        });
+                        isHit = (hasBeenSelectedBefore.length === 0)
+                    }
+                    return isHit;
                 });
 
                 if($.isFunction(settings.onResult)) {
