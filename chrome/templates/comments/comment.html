@@ -3,7 +3,7 @@
     <img class="comment-avatar" src="https://graph.facebook.com/{{user.facebookId}}/picture?type=square">
     
     <div class="comment-text">
-      <strong>{{user.firstName}} {{user.lastName}}</strong>
+      <span class="recipient-list"><strong>{{user.firstName}} {{user.lastName}}</strong></span>
       {{#formatComments}}{{text}}{{/formatComments}}
     </div>
     <div class="comment-meta">

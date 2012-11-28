@@ -137,6 +137,9 @@
 .kifi_hover .interaction-bar li:active {
   background-color: #FAFAFA;
 }
+.kifi_hover .interaction-bar li.active {
+  background-color: #FAFAFA;
+}
 .kifi_hover .interaction-bar .notify-count {
   background-color: #666;
   border-radius: 5px;
