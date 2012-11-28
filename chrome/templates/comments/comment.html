@@ -9,7 +9,7 @@
       {{#formatComments}}{{text}}{{/formatComments}}
     </div>
     <div class="comment-meta">
-      <abbr class="timestamp timeago" title="{{#formatDate}}{{createdAt}}{{/formatDate}}">{{#formatDate}}{{createdAt}}{{/formatDate}}</abbr>
+      <time class="timestamp timeago" datetime="{{#formatIsoDate}}{{createdAt}}{{/formatIsoDate}}">{{#formatDate}}{{createdAt}}{{/formatDate}}</time>
     </div>
   </div>
 </div>
