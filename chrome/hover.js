@@ -39,8 +39,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   });
 
   function getUserInfo(callback) {
-    chrome.extension.sendRequest({"type": "get_user_info"}, function(userInfo) {
-      callback(userInfo);
+    chrome.extension.sendRequest({"type": "get_user_info"}, function(user) {
+      callback(user);
     });
   }
 
@@ -110,10 +110,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $(friendTooltip).find('.kn_social').css('background-image','url(' + socialNetworks + ')');
 
       function hide() {
-          timeout = setTimeout(function () {
-              $(friendTooltip).fadeOut(100);
-          }, 600);
-          clearTimeout(timein);
+        timeout = setTimeout(function () {
+          $(friendTooltip).fadeOut(100);
+        }, 600);
+        clearTimeout(timein);
       };
 
       function show() {
@@ -122,19 +122,17 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         }, 500)
       }
 
-      $(element).mouseover(function () {
-          clearTimeout(timeout);
-          show();
+      $(element).mouseover(function() {
+        clearTimeout(timeout);
+        show();
       }).mouseout(hide);
 
-      $(friendTooltip).mouseover(function () {
-          clearTimeout(timeout);
+      $(friendTooltip).mouseover(function() {
+        clearTimeout(timeout);
       }).mouseout(hide);
 
     }); 
   }
-
-
 
   function showKeepItHover(user) {
     var logo = chrome.extension.getURL('kifilogo.png');
@@ -369,21 +367,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function updateCommentCount(type, count) {
+    count = count != null ? count : $(".real-comment").length; // if no count passed in, count DOM nodes
 
-    var count = count || $(".real-comment").length; // if no count passed in, count DOM nodes
-    var selector;
-    if (type == 'public')
-      selector = $('.comments-count');
-    else if (type == 'message')
-      selector = $('.messages-count');
-
-    if (selector) {
-      if (count == 0) {
-        selector.addClass("zero_comments").text("0"); // zero_comments allows us to style that case separately
-      } else {
-        selector.removeClass("zero_comments").text(count);
-      }
-    }
+    $({"public": ".comments-count", "message": ".messages-count"}[type])
+      .text(count)
+      .toggleClass("zero_comments", count == 0);
   }
 
   function renderComments(user, comments, type, onComplete) {
@@ -394,7 +382,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     //comments["private"] = comments["private"] || []; // Removed, not for MVP
 
     var visibleComments = comments[type] || [];
-    
+
     updateCommentCount(type, visibleComments.length);
     
     var params = {
@@ -564,9 +552,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function repositionScroll(resizeQuickly) {
     resizeCommentBodyView(resizeQuickly);
 
-    var commentBodyView = $(".comment_body_view")[0];
-    if (commentBodyView)
-      commentBodyView.scrollTop = 99999;
+    $(".comment_body_view").prop("scrollTop", 99999);
   }
 
   function resizeCommentBodyView(resizeQuickly) {
