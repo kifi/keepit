@@ -53,6 +53,9 @@ object Follow {
   def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Option[Follow] =
     (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId AND (f.uriId EQ uriId)) unique }.map(_.view)
 
+  def getAll(userId: Id[User])(implicit conn: Connection): Seq[Follow] =
+    (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId) list }.map(_.view)
+
   def getOrThrow(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Follow =
     get(userId, uriId).getOrElse(throw NotFoundException(classOf[Follow], userId, uriId))
 
