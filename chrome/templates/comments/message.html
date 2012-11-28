@@ -2,8 +2,15 @@
   <div class="comment real-comment">
     <img class="comment-avatar" src="{{threadAvatar}}">
     
-    <div class="comment-text">
-      <span class="recipient-list">{{{recipientText}}}{{#hasMoreRecipients}} and more!{{/hasMoreRecipients}}</span>
+    <div class="comment-text thread-info-text">
+      <span class="recipient-list">{{{recipientText}}}{{#storedRecipients.length}} and <span class="more-recipients">{{storedRecipients.length}} others</span>
+      <span class="more-recipient-list-wrapper">
+        <div class="more-recipient-list">
+          {{#storedRecipients}}
+            <div>{{.}}</div>
+          {{/storedRecipients}}
+        </div>
+      </span>{{/storedRecipients.length}}</span>
       {{#formatComments}}{{digest}}{{/formatComments}}
     </div>
     <div class="comment-meta">
