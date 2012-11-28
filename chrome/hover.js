@@ -586,7 +586,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
           //drawCommentView(renderedTemplate, user, type, partials);
           $('.comment_body_view').find('.no-comment').parent().detach();
-          $('.comment_body_view').append(renderedComment).find("abbr.timeago").timeago();
+          $('.comment_body_view').append(renderedComment).find("time.timeago").timeago();
           updateCommentCount();
           repositionScroll(false);
         });
@@ -619,7 +619,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
           //drawCommentView(renderedTemplate, user, type, partials);
           $('.comment_body_view').find('.no-comment').parent().detach();
-          $('.comment_body_view').append(renderedComment).find("abbr.timeago").timeago();
+          $('.comment_body_view').append(renderedComment).find("time.timeago").timeago();
           updateCommentCount();
           repositionScroll(false);
         });
