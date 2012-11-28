@@ -114,18 +114,19 @@ object UserController extends FortyTwoController {
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections) = CX.withConnection { implicit c =>
+    val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows) = CX.withConnection { implicit c =>
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
       val bookmarks = Bookmark.ofUser(userWithSocial.user)
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
       val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
-      (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections)
+      val follows = Follow.getAll(userId) map {u => NormalizedURI.get(u.uriId)}
+      (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows)
     }
     val rawInfos = socialUserInfos map {info =>
       inject[SocialUserRawInfoStore].get(info.id.get)
     }
-    Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections))
+    Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections, follows))
   }
 
   def usersView = AdminHtmlAction { implicit request =>
