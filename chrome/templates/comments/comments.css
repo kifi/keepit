@@ -85,10 +85,6 @@
   z-index:2;
 }
 
-.kifi_comment_wrapper .meta-links {
-  float:right;
-}
-
 .kifi_comment_wrapper .timestamp {
   float: left;
   color: #ccc;
@@ -101,10 +97,6 @@
   line-height: 10px;
   color: #aaa;
   clear:both;
-}
-
-.kifi_comment_wrapper .meta-links:hover {
-  cursor: pointer;
 }
 
 .kifi_comment_wrapper .comment-text {
