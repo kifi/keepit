@@ -2,12 +2,37 @@
 .kifi_comment_wrapper .control-bar {
   font-size: 11px;
   color: #8C7E7E;
-  padding: 10px;
+  padding: 4px;
   clear: both;
 }
-
+.kifi_comment_wrapper .control-bar a {
+  display: inline-block;
+  padding: 6px;
+  color: inherit;
+  text-decoration: none !important;
+}
+.kifi_comment_wrapper .control-bar a:hover {
+  background-color: #eee;
+}
+.kifi_comment_wrapper .control-bar .follow:before {
+  content: ".";
+  display: inline-block;
+  color: transparent;
+  font: 8px/8px serif;
+  width: 8px;
+  border-radius: 4px;
+  vertical-align: 2px;
+  margin-right: 4px;
+  background-color: #ccc;
+}
+.kifi_comment_wrapper .control-bar .following:before {
+  background-color: #0c0;
+}
+.kifi_comment_wrapper .control-bar .following:after {
+  content: "ing";
+}
 .kifi_comment_wrapper .control-bar .filter-by {
-  cursor: pointer;
+  float: right;
 }
 
 .kifi_comment_wrapper .comment_body_view {
@@ -31,7 +56,6 @@
   margin:5px;
   margin-left:0px;
   margin-top: 0px;
-
 }
 
 .kifi_comment_wrapper .comment-avatar img {

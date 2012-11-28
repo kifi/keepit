@@ -435,7 +435,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       },
       formatComments: commentTextFormatter,
       formatDate: commentDateFormatter,
-      comments: visibleComments
+      comments: visibleComments,
+      showControlBar: type == "public"
     }
 
     loadFile("templates/comments/hearts.html", function(hearts) {
@@ -455,7 +456,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
       // By default we use the comment partials.
       // To override for a specific function, do so here.
-      if(type == 'message') {
+      if (type == 'message') {
         partials.comment = message;
         partials.comment_body_view = message_list;
         partials.comment_post_view = message_post;
@@ -488,44 +489,35 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
   function createMainBinders(type, user) {
     $("abbr.timeago").timeago();
-    /*
-    // Not in MVP
-    $(".comment_post_view").on('click','.comment_box .crosshair', function() {
-      console.log("Hit");
-      return false;
+
+    $(".control-bar").on("click", ".follow", function() {
+      var $a = $(this), following = $a.hasClass("following");
+      $.ajax("http://" + config.server + "/comments/follow?url=" + encodeURIComponent(document.location.href),
+        {"type": following ? "DELETE" : "POST"});
+      $a.toggleClass("following", !following);
     });
-    */
 
     // Main comment textarea
     var placeholder = "<span class=\"placeholder\">Add a comment…</span>";
     $('.comment-compose').html(placeholder);
     $('.comment_post_view').on('focus','.comment-compose',function() {
       console.log($('.comment-compose').html(),placeholder);
-      if($('.comment-compose').html() == placeholder) { // unchanged text!
+      if ($('.comment-compose').html() == placeholder) { // unchanged text!
         $('.comment-compose').html("");
       }
       //$('.crosshair').slideDown(150); // Not in mvp
-      $('.comment-compose').animate({
-        'height': '85'
-      },150,'easeQuickSnapBounce');
-
-    });
-    $('.comment_post_view').on('blur','.comment-compose',function() {
+      $('.comment-compose').animate({'height': '85'}, 150, 'easeQuickSnapBounce');
+    }).on('blur','.comment-compose',function() {
       var value = $('.comment-compose').html()
       value = commentSerializer(value);
-      if(value == "") { // unchanged text!
+      if (value == "") { // unchanged text!
         $('.comment-compose').html(placeholder);
       }
-      $('.comment-compose').animate({
-        'height': '35'
-      },150,'easeQuickSnapBounce');
+      $('.comment-compose').animate({'height': '35'}, 150, 'easeQuickSnapBounce');
 
       //$('.crosshair').slideUp(20);
       //$('.submit-comment').slideUp(20);
-    });
-
-    // Submit handlers
-    $('.comment_post_view').on('submit','.comment_form', function(e) {
+    }).on('submit','.comment_form', function(e) {
       e.preventDefault();
       //debugger;
       submitComment($('.comment-compose').text(), type, user, null, function(newComment) {
@@ -533,9 +525,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
         console.log("new thread", newComment);
         // Clean up CSS
-        $(".kififtr").animate({
-          'margin-top': '0'
-        },100);
+        $(".kififtr").animate({'margin-top': '0'}, 100);
         $('.submit-comment').slideUp(100, function() {
           // Done cleaning up CSS. Redraw.
           //renderComments(user, comments, type);
