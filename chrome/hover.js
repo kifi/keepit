@@ -1,12 +1,7 @@
 console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
 (function() {
-  $ = jQuery.noConflict()
-  var config;
-  var hover;
-  var timeoutCollection = {};
-
-  var openedCommentsType = "";
+  var config, following;
 
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
@@ -160,6 +155,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           "name": user.name,
           "is_kept": o.kept
         }
+
+        following = o.following;
 
         if (o.friends.length) {
           tmpl.socialConnections = {
@@ -409,7 +406,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       formatComments: commentTextFormatter,
       formatDate: commentDateFormatter,
       comments: visibleComments,
-      showControlBar: type == "public"
+      showControlBar: type == "public",
+      following: following
     }
 
     loadFile("templates/comments/hearts.html", function(hearts) {
@@ -462,10 +460,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     $("abbr.timeago").timeago();
 
     $(".control-bar").on("click", ".follow", function() {
-      var $a = $(this), following = $a.hasClass("following");
+      following = !following;  // TODO: server should return whether following along with the comments
       $.ajax("http://" + config.server + "/comments/follow?url=" + encodeURIComponent(document.location.href),
-        {"type": following ? "DELETE" : "POST"});
-      $a.toggleClass("following", !following);
+        {"type": following ? "POST" : "DELETE"});
+      $(this).toggleClass("following", following);
     });
 
     // Main comment textarea
