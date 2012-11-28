@@ -10,7 +10,9 @@ object SearchConfig {
       "percentMatch" -> "75",
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
-      "tailCutting" -> "0.2")
+      "tailCutting" -> "0.2",
+      "proximityBoost" -> "0.5",
+      "semanticBoost" -> "0.5")
 
   var defaultConfig = new SearchConfig(defaultParams)
 
