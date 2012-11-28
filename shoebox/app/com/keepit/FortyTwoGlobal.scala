@@ -29,9 +29,13 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
   private lazy val scope = injector.inject[AppScope]
 
   override def beforeStart (app: Application): Unit = {
-    val appName = app.configuration.getString("application.name").get
+    val conf = app.configuration
+    val appName = conf.getString("application.name").get
+    val dbs = conf.getConfig("db").get.subKeys
 
-    val dbs = app.configuration.getConfig("db").get.subKeys
+    println("starting app %s with dbs %s".format(
+        appName, dbs.mkString(",")))
+
   }
 
   override def onBadRequest (request: RequestHeader, error: String): Result = {
@@ -47,6 +51,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
   }
 
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
+    println("Session cookie info: name [%s], http only [%s], signed [%s], max-age [%s], secure [%s]".format(
+        Session.COOKIE_NAME, Session.httpOnly, Session.isSigned, Session.maxAge, Session.secure))
     if (app.mode != Mode.Test) {
       require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
     }

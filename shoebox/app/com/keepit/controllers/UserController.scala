@@ -20,6 +20,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
 import com.keepit.serializer.UserWithSocialSerializer
+import com.keepit.serializer.BasicUserSerializer
 import com.keepit.controllers.CommonActions._
 import play.api.http.ContentTypes
 import securesocial.core._
@@ -38,7 +39,7 @@ case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConn
 object UserController extends FortyTwoController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
-    val (kept, following, socialUsers) = CX.withConnection { implicit c =>
+    val (kept, following, socialUsers, numComments, numMessages) = CX.withConnection { implicit c =>
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
@@ -51,16 +52,21 @@ object UserController extends FortyTwoController {
           val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
           val socialUsers = sharingUserIds.map(u => UserWithSocial.toUserWithSocial(User.get(u))).toSeq
 
-          (kept, following, socialUsers)
+          val numComments = Comment.getPublicCount(uri.id.get)
+          val numMessages = Comment.getMessageCount(uri.id.get, userId)
+
+          (kept, following, socialUsers, numComments, numMessages)
         case None =>
-          (false, false, Seq[UserWithSocial]())
+          (false, false, Nil, 0L, 0L)
       }
     }
 
     Ok(JsObject(Seq(
         "kept" -> JsBoolean(kept),
         "following" -> JsBoolean(following),
-        "friends" -> userWithSocialSerializer.writes(socialUsers))))
+        "friends" -> userWithSocialSerializer.writes(socialUsers),
+        "numComments" -> JsNumber(numComments),
+        "numMessages" -> JsNumber(numMessages))))
   }
 
   @deprecated("replaced by getSliderInfo, still here for backwards compatibility", "2012-11-26")
@@ -87,10 +93,12 @@ object UserController extends FortyTwoController {
 
   def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
     val socialConnections = CX.withConnection { implicit c =>
-      SocialConnection.getFortyTwoUserConnections(authRequest.userId).map(uid => User.get(uid)).map(UserWithSocial.toUserWithSocial).toSeq
+      SocialConnection.getFortyTwoUserConnections(authRequest.userId).map(uid => BasicUser(User.get(uid))).toSeq
     }
 
-    Ok(JsArray(socialConnections.map(sc => UserWithSocialSerializer.userWithSocialSerializer.writes(sc))))
+    Ok(JsObject(Seq(
+      ("friends" -> JsArray(socialConnections.map(sc => BasicUserSerializer.basicUserSerializer.writes(sc))))
+    )))
   }
 
   def getUser(id: Id[User]) = AdminJsonAction { request =>
@@ -106,18 +114,19 @@ object UserController extends FortyTwoController {
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections) = CX.withConnection { implicit c =>
+    val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows) = CX.withConnection { implicit c =>
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
       val bookmarks = Bookmark.ofUser(userWithSocial.user)
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
       val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
-      (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections)
+      val follows = Follow.getAll(userId) map {u => NormalizedURI.get(u.uriId)}
+      (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows)
     }
     val rawInfos = socialUserInfos map {info =>
       inject[SocialUserRawInfoStore].get(info.id.get)
     }
-    Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections))
+    Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections, follows))
   }
 
   def usersView = AdminHtmlAction { implicit request =>

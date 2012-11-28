@@ -1,4 +1,4 @@
-@(userWithSocial: UserWithSocial, bookmarks: Seq[Bookmark], socialUserInfos: Seq[SocialUserInfo], rawInfos: Seq[SocialUserRawInfo], socialConnections: Seq[SocialUserInfo], fortyTwoConnections: Seq[UserWithSocial])
+@(userWithSocial: UserWithSocial, bookmarks: Seq[Bookmark], socialUserInfos: Seq[SocialUserInfo], rawInfos: Seq[SocialUserRawInfo], socialConnections: Seq[SocialUserInfo], fortyTwoConnections: Seq[UserWithSocial], follows: Seq[NormalizedURI])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
@@ -81,20 +81,34 @@
 	  </ul>
 	</div>
 
+  <h2>User follows @follows.size pages</h2>
+  <table class="table table-bordered">
+   <tr>
+     <th>#</th>
+     <th>Following</th>
+   </tr>
+   @for((uri, i) <- follows.zipWithIndex) {
+     <tr>
+        <td>@{i+1}</td>
+        <td>@adminHelper.articleDisplay(uri)</td>
+     </tr>
+   }
+  </table>
+  
   <h2>User kept @bookmarks.size Bookmarks</h2>
 
   <form class="navbar-form" action="/bookmarks/update" method="POST">
     <button type="submit" class="btn">Update</button><br/><br/>
 			<table class="table table-bordered">
-			    <tr>
-			      <th>#</th>
-			      <th>BID</th>
-			      <th>Private</th>
-			      <th>Active</th>
-			      <th>Bookmark</th>
-			      <th>Source</th>
-			      <th>Created At</th>
-			    </tr>
+		    <tr>
+		      <th>#</th>
+		      <th>BID</th>
+		      <th>Private</th>
+		      <th>Active</th>
+		      <th>Bookmark</th>
+		      <th>Source</th>
+		      <th>Created At</th>
+		    </tr>
 			 @for((bookmark, i) <- bookmarks.zipWithIndex) {
 			   <tr>
 		        <td>@{i+1}</td>

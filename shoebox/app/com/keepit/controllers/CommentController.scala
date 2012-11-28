@@ -17,7 +17,8 @@ import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, Foll
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
-import com.keepit.serializer.CommentWithSocialUserSerializer._
+import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
+import com.keepit.serializer.MessageDigestSerializer.messageDigestSerializer
 import play.api.Play.current
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka
@@ -26,6 +27,7 @@ import play.api.mvc.Action
 import play.api.mvc.Controller
 import securesocial.core.SecureSocial
 import securesocial.core.java.SecureSocial.SecuredAction
+import com.keepit.common.social.MessageDigest
 
 object CommentController extends FortyTwoController {
 
@@ -39,21 +41,18 @@ object CommentController extends FortyTwoController {
       val uri = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save)
       val parentIdOpt = parent match {
         case "" => None
-        case p => Comment.getOpt(ExternalId[Comment](p)) match {
-          case Some(p) => p.id
-          case None => throw new Exception("Invalid parent provided!")
-        }
+        case id => Comment.get(ExternalId[Comment](id)).id
       }
 
       permission.toLowerCase match {
         case "private" =>
-          Comment(normalizedURI = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
         case "message" =>
-          val newComment = Comment(normalizedURI = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
+          val newComment = Comment(uriId = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
           createRecipients(newComment.id.get, recipients, parentIdOpt)
           newComment
         case "public" | "" =>
-          Comment(normalizedURI = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
       }
     }
 
@@ -80,12 +79,12 @@ object CommentController extends FortyTwoController {
       val user = User.get(request.userId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
-          List(Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(CommentWithSocialUser(_)))
+          List(Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(MessageDigest(_)))
         case None =>
-          List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
+          List[(State[Comment.Permission],Seq[MessageDigest])]()
       }
     }
-    Ok(commentWithSocialUserSerializer.writes(comments))
+    Ok(messageDigestSerializer.writes(comments))
   }
 
   @deprecated("comments will soon not have replies", "2012-11-27")
@@ -160,20 +159,20 @@ object CommentController extends FortyTwoController {
     (Comment.Permissions.PRIVATE -> privateComments(userId, normalizedURI)) :: Nil
 
   private def publicComments(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
-    Comment.getPublicByNormalizedUri(normalizedURI.id.get)
+    Comment.getPublic(normalizedURI.id.get)
 
   private def privateComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
-    Comment.getPrivateByNormalizedUri(normalizedURI.id.get, userId)
+    Comment.getPrivate(normalizedURI.id.get, userId)
 
   private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
-    Comment.getMessagesByNormalizedUri(normalizedURI.id.get, userId)
+    Comment.getMessages(normalizedURI.id.get, userId)
 
   private def notifyRecipientsAsync(comment: Comment) = dispatch({
     comment.permissions match {
       case Comment.Permissions.PUBLIC =>
         CX.withConnection { implicit c =>
           val author = User.get(comment.userId)
-          val uri = NormalizedURI.get(comment.normalizedURI)
+          val uri = NormalizedURI.get(comment.uriId)
           val follows = Follow.get(uri.id.get)
           for (userId <- follows.map(_.userId).toSet - comment.userId) {
             val recipient = User.get(userId)
@@ -189,7 +188,7 @@ object CommentController extends FortyTwoController {
       case Comment.Permissions.MESSAGE =>
         CX.withConnection { implicit c =>
           val sender = User.get(comment.userId)
-          val uri = NormalizedURI.get(comment.normalizedURI)
+          val uri = NormalizedURI.get(comment.uriId)
           val subjectPrefix = if (comment.parent.isDefined) "[new reply] " else "[new message] "
           val recipients = Comment.getRecipients(comment.parent.getOrElse(comment.id.get))
           for (userId <- recipients.map(_.userId.get).toSet - comment.userId) {
