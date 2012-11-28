@@ -246,7 +246,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === users.size
         indexer.run() === uris.size
 
-        val config = SearchConfig(Map("tailCutting" -> "0", "percentMatch" -> "0"))
+        val config = SearchConfig(Map("tailCutting" -> "0", "percentMatch" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0"))
 
         val numHitsToReturn = 100
         val userId = users(0).id.get
@@ -332,7 +332,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === 1
         indexer.run() === uris.size
 
-        val config = SearchConfig(Map("tailCutting" -> "0"))
+        val config = SearchConfig(Map("tailCutting" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0"))
 
         val mainSearcher= new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, config)
         val res = mainSearcher.search("alldocs", uris.size, None)
@@ -368,7 +368,8 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === 1
         indexer.run() === uris.size
 
-        var config = SearchConfig(Map("myBookmarkBoost" -> "1", "sharingBoost" -> "0", "recencyBoost" -> "0", "tailCutting" -> "0"))
+        var config = SearchConfig(Map("myBookmarkBoost" -> "1", "sharingBoost" -> "0", "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
+                                      "tailCutting" -> "0"))
         var mainSearcher= new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, config)
         var res = mainSearcher.search("alldocs", uris.size, None)
         //println("Scores: " + res.hits.map(_.score))
@@ -378,7 +379,8 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val medianScore = res.hits(sz/2).score
         (minScore < medianScore && medianScore < maxScore) === true // this is a sanity check of test data
 
-        config = SearchConfig(Map("myBookmarkBoost" -> "1", "sharingBoost" -> "0", "recencyBoost" -> "0", "tailCutting" -> medianScore.toString))
+        config = SearchConfig(Map("myBookmarkBoost" -> "1", "sharingBoost" -> "0", "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
+                                  "tailCutting" -> medianScore.toString))
         mainSearcher= new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, config)
         res = mainSearcher.search("alldocs", uris.size, None)
         //println("Scores: " + res.hits.map(_.score))

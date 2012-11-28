@@ -19,9 +19,7 @@ import scala.collection.JavaConversions._
 import scala.math._
 
 object ProximityQuery {
-
-  def apply(fieldName: String, query: Query): ProximityQuery = apply(QueryUtil.getTerms(fieldName, query))
-  def apply(terms: Set[Term]): ProximityQuery = new ProximityQuery(terms)
+  def apply(fieldName: String, terms: Set[Term]) = new ProximityQuery(terms.map{ term => new Term(fieldName, term.text) })
 
   val scoreFactorHalfDecay = 4.0f
   val scoreFactorTable = {
