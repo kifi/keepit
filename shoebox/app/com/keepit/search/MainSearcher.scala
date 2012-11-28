@@ -81,7 +81,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
       }
     }
     bookmarkTitleHits.foreach{ case (id, score) =>
-      myHits.insert(id, score, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
+      if (!filterOut.contains(id)) myHits.insert(id, score, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
     }
     (myHits, friendsHits, othersHits)
   }
