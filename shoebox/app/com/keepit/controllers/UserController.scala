@@ -114,19 +114,21 @@ object UserController extends FortyTwoController {
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows) = CX.withConnection { implicit c =>
+    val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows, comments, messages) = CX.withConnection { implicit conn =>
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
       val bookmarks = Bookmark.ofUser(userWithSocial.user)
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
       val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
-      val follows = Follow.getAll(userId) map {u => NormalizedURI.get(u.uriId)}
-      (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows)
+      val follows = Follow.all(userId) map {f => NormalizedURI.get(f.uriId)}
+      val comments = Comment.all(Comment.Permissions.PUBLIC, userId) map {c => (NormalizedURI.get(c.uriId), c)}
+      val messages = Comment.all(Comment.Permissions.MESSAGE, userId) map {c => (NormalizedURI.get(c.uriId), c)}
+      (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows, comments, messages)
     }
     val rawInfos = socialUserInfos map {info =>
       inject[SocialUserRawInfoStore].get(info.id.get)
     }
-    Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections, follows))
+    Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections, follows, comments, messages))
   }
 
   def usersView = AdminHtmlAction { implicit request =>
