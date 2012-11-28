@@ -115,42 +115,28 @@
 }
 
 .kifi_hover ul.interaction-bar {
-  margin:0px;
-  padding:0px;
-  padding-right: 20px;
-  text-align:right;
+  margin: 0;
+  padding: 0 20px 0 0;
+  text-align: right;
   background: #E0E0E0;
 }
-
 .kifi_hover .interaction-bar li {
-  list-style:none;
-  display:inline;
-  margin:0px;
-  font-family: "helvetica neue", Helvetica, Arial, sans-serif;
-  font-size: 11px;
-  color:#666;
-  padding:10px 10px;
-  display:inline-block;
-  text-decoration:none;
+  list-style: none;
+  display: inline-block;
+  margin: 0;
+  padding: 10px;
+  font: 11px "helvetica neue", Helvetica, Arial, sans-serif;
+  color: #666;
+  text-decoration: none;
+  cursor: pointer;
   background-color: #E0E0E0;
 }
-
 .kifi_hover .interaction-bar li:hover {
-  background: #ECECEC;
+  background-color: #ECECEC;
 }
-
 .kifi_hover .interaction-bar li:active {
-  background: #FAFAFA;
-}
-
-.kifi_hover .interaction-bar li.active {
   background-color: #FAFAFA;
 }
-
-.kifi_hover .interaction-bar span {
-
-}
-
 .kifi_hover .interaction-bar .notify-count {
   background-color: #666;
   border-radius: 5px;

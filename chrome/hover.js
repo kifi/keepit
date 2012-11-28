@@ -343,10 +343,18 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function commentDateFormatter() {
     return function(text, render) {
       try {
-        var date = (new Date(render(text))).toISOString();
-        return date;
+        return new Date(render(text)).toString();
+      } catch (e) {
+        return "";
       }
-      catch(e) {
+    }
+  }
+
+  function isoDateFormatter() {
+    return function(text, render) {
+      try {
+        return new Date(render(text)).toISOString();
+      } catch (e) {
         return "";
       }
     }
@@ -394,6 +402,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       },
       formatComments: commentTextFormatter,
       formatDate: commentDateFormatter,
+      formatIsoDate: isoDateFormatter,
       comments: visibleComments,
       showControlBar: type == "public",
       following: following
@@ -512,7 +521,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function createCommentBindings(type, user) {
-    $("abbr.timeago").timeago();
+    $("time.timeago").timeago();
 
     $(".control-bar").on("click", ".follow", function() {
       following = !following;  // TODO: server should return whether following along with the comments
@@ -632,7 +641,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     };
     chrome.extension.sendRequest(request, function(response) {
       var newComment = {
-        "createdAt": (new Date()),
+        "createdAt": new Date,
         "text": request.text,
         "user": {
           "externalId": user.keepit_external_id,
