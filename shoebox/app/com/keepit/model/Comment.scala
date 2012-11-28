@@ -117,11 +117,6 @@ object Comment {
     }.map(_.view)
   }
 
-  def userHasPermission(userId: Id[User], commentId: Id[Comment])(implicit conn: Connection) = {
-    // TODO: write this
-    true
-  }
-
   def getChildrenCount(commentId: Id[Comment])(implicit conn: Connection): Long = {
     (CommentEntity AS "c").map { c =>
       SELECT(COUNT(c.id)) FROM c WHERE (c.parent EQ commentId) unique
