@@ -496,14 +496,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       e.preventDefault();
       //debugger;
       submitComment($('.comment-compose').text(), type, user, null, function(newComment) {
-        $('.comment-compose').text("");
+        $('.comment-compose').text("").focus().blur();
 
         console.log("new thread", newComment);
         // Clean up CSS
-        $(".kififtr").animate({'margin-top': '0'}, 100);
         $('.submit-comment').slideUp(100, function() {
-          // Done cleaning up CSS. Redraw.
-          //renderComments(user, comments, type);
           var params = newComment;
           params["formatComments"] = commentTextFormatter;
           params["formatDate"] = commentDateFormatter;
