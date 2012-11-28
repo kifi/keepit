@@ -79,6 +79,7 @@ GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPrevi
 
 GET     /admin/followings           com.keepit.controllers.CommentController.followsView
 GET     /admin/comments             com.keepit.controllers.CommentController.commentsView
+GET     /admin/messages             com.keepit.controllers.CommentController.messagesView
 
 ##########################################
 # Secure social routes
