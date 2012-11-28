@@ -1,11 +1,11 @@
 <div class="comment-wrapper" data-externalId="{{externalId}}">
   <div class="comment real-comment">
     <div class="comment-avatar">
-      <img src="https://graph.facebook.com/{{user.facebookId}}/picture?type=square">
+      <img src="{{threadAvatar}}">
     </div>
     
     <div class="comment-text">
-      <strong>{{#recipients}}{{firstName}} {{lastName}}, {{/recipients}}</strong>
+      <span class="recipient-list">{{{recipientText}}}{{#hasMoreRecipients}} and more!{{/hasMoreRecipients}}</span>
       {{#formatComments}}{{digest}}{{/formatComments}}
     </div>
     <div class="comment-meta">
