@@ -343,10 +343,18 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function commentDateFormatter() {
     return function(text, render) {
       try {
-        var date = (new Date(render(text))).toISOString();
-        return date;
+        return new Date(render(text)).toString();
+      } catch (e) {
+        return "";
       }
-      catch(e) {
+    }
+  }
+
+  function isoDateFormatter() {
+    return function(text, render) {
+      try {
+        return new Date(render(text)).toISOString();
+      } catch (e) {
         return "";
       }
     }
@@ -394,6 +402,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       },
       formatComments: commentTextFormatter,
       formatDate: commentDateFormatter,
+      formatIsoDate: isoDateFormatter,
       comments: visibleComments,
       showControlBar: type == "public",
       following: following
@@ -420,6 +429,71 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         partials.comment = message;
         partials.comment_body_view = message_list;
         partials.comment_post_view = message_post;
+
+        // Blarghhh...
+        var threadAvatar = "";
+        for(msg in visibleComments) {
+          var recipients = visibleComments[msg]["recipients"];
+          var l = recipients.length;
+          if(l == 0) {
+            // No recipients!
+            threadAvatar = params.kifiuser.avatar;
+          }
+          else if(l == 1) {
+            threadAvatar = visibleComments[msg]["recipients"][0]["avatar"];
+          }
+          else {
+            threadAvatar = chrome.extension.getURL("icons/convo.png");
+          }
+          visibleComments[msg]["threadAvatar"] = threadAvatar;
+
+          var recipientNames = [];
+          for(r in recipients) {
+            recipientNames.push(recipients[r].firstName + " " + recipients[r].lastName)
+          }
+
+          // handled separately because this will need to be refactored to be cleaner
+          function formatRecipient(name) {
+            return "<strong class=\"recipient\">" + name + "</strong>";
+          }
+
+          var displayedRecipients = [];
+          var storedRecipients = [];
+          if(l == 0)
+            displayedRecipients.push(user.name);
+          else if(l <= 4) {
+            displayedRecipients = recipientNames.slice(0,l);
+          }
+          else {
+            displayedRecipients = recipientNames.slice(0,3);
+            storedRecipients = recipientNames.slice(3);
+          }
+
+          for(d in displayedRecipients) {
+            displayedRecipients[d] = formatRecipient(displayedRecipients[d]);
+          }
+
+          if(l == 0) {
+            recipientText = displayedRecipients[0];
+          } else if(l <= 4) {
+            if(l == 1)
+              recipientText = displayedRecipients[0];
+            else if(l == 2)
+              recipientText = displayedRecipients[0] + " and " + displayedRecipients[1];
+            else if(l == 3 || l == 4)
+              recipientText = displayedRecipients.slice(0,l-1).join(", ") + " and " + displayedRecipients[l-1];
+          } else {
+            recipientText = displayedRecipients.slice(0,3).join(", ");
+            storedRecipients = recipientNames.slice(3);
+            console.log(recipientText, storedRecipients)
+          }
+
+          // todo "You wrote to "
+
+          visibleComments[msg]["recipientText"] = recipientText;
+          visibleComments[msg]["storedRecipients"] = storedRecipients;
+
+        }
       }
 
       renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
@@ -446,7 +520,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function createCommentBindings(type, user) {
-    $("abbr.timeago").timeago();
+    $("time.timeago").timeago();
 
     $(".control-bar").on("click", ".follow", function() {
       following = !following;  // TODO: server should return whether following along with the comments
@@ -495,31 +569,66 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       //$('.submit-comment').slideUp(20);
     }).on('submit','.comment_form', function(e) {
       e.preventDefault();
-      //debugger;
-      submitComment($('.comment-compose').text(), type, user, null, function(newComment) {
-        $('.comment-compose').text("").focus().blur();
+      var text = commentSerializer($('.comment-compose').html());
 
-        console.log("new thread", newComment);
+      submitComment(text, type, user, null, null, function(newComment) {
+        $('.comment-compose').text("").html(placeholder);
+
+        console.log("new comment", newComment);
         // Clean up CSS
-        $('.submit-comment').slideUp(100, function() {
-          var params = newComment;
-          params["formatComments"] = commentTextFormatter;
-          params["formatDate"] = commentDateFormatter;
 
-          renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
-            //drawCommentView(renderedTemplate, user, type, partials);
-            $('.comment_body_view').find('.no-comment').parent().detach();
-            $('.comment_body_view').append(renderedComment).find("abbr.timeago").timeago();
-            updateCommentCount();
-            repositionScroll(false);
-          });
+        var params = newComment;
+        params["formatComments"] = commentTextFormatter;
+        params["formatDate"] = commentDateFormatter;
+        params["formatIsoDate"] = isoDateFormatter;
+
+        renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
+          //drawCommentView(renderedTemplate, user, type, partials);
+          $('.comment_body_view').find('.no-comment').parent().detach();
+          $('.comment_body_view').append(renderedComment).find("time.timeago").timeago();
+          updateCommentCount();
+          repositionScroll(false);
         });
+
+      });
+      return false;
+    }).on('submit','.message_form', function(e) {
+      e.preventDefault();
+      var text = commentSerializer($('.comment-compose').html());
+      var recipientJson = $("#to-list").tokenInput("get");
+      $("#to-list").tokenInput("clear");
+
+      var recipientArr = [];
+      for(r in recipientJson) {
+        recipientArr.push(recipientJson[r]["externalId"]);
+      }
+      var recipients = recipientArr.join(",");
+      console.log("to: ", recipients);
+
+      submitComment(text, type, user, null, recipients, function(newComment) {
+        $('.comment-compose').text("").html(placeholder);
+
+        console.log("new message", newComment);
+        // Clean up CSS
+
+        var params = newComment;
+        params["formatComments"] = commentTextFormatter;
+        params["formatDate"] = commentDateFormatter;
+
+        renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
+          //drawCommentView(renderedTemplate, user, type, partials);
+          $('.comment_body_view').find('.no-comment').parent().detach();
+          $('.comment_body_view').append(renderedComment).find("time.timeago").timeago();
+          updateCommentCount();
+          repositionScroll(false);
+        });
+
       });
       return false;
     });
   }
 
-  function submitComment(text, type, user, parent, callback) {
+  function submitComment(text, type, user, parent, recipients, callback) {
     /* Because we're using very simple templating now, re-rendering has to be done carefully.
      */
     var request = {
@@ -527,11 +636,12 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       "url": document.location.href,
       "text": text,
       "permissions": type,
-      "parent": parent
+      "parent": parent,
+      "recipients": recipients
     };
     chrome.extension.sendRequest(request, function(response) {
       var newComment = {
-        "createdAt": (new Date()),
+        "createdAt": new Date,
         "text": request.text,
         "user": {
           "externalId": user.keepit_external_id,
