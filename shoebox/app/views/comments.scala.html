@@ -1,0 +1,26 @@
+@(uriAndUsers: Seq[(UserWithSocial, Comment, NormalizedURI)])
+
+@admin("Comments") {
+  <h2>Showing @uriAndUsers.size comments</h2>
+  <table class="table table-bordered">
+    <tr>
+      <th>#</th>
+      <th>User</th>
+      <th>Page</th>
+      <th>Type</th>
+      <th>Creation</th>
+    </tr>
+  @for(((user, comment, article), i) <- uriAndUsers.zipWithIndex) {
+    <tr>
+      <td rowspan="2">@{i+1}</td>
+      <td>@adminHelper.userDisplay(user)</td>
+      <td>@adminHelper.articleDisplay(article)</td>
+      <td>@comment.permissions.value</td>
+      <td>@adminHelper.dateDisplay(comment.createdAt) @adminHelper.timeDisplay(comment.createdAt)</td>
+    </tr>
+    <tr>
+      <td colspan="4">@comment.text</td>
+    </tr>
+  }
+  </table>
+}
