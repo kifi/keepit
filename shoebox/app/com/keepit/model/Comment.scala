@@ -27,7 +27,7 @@ case class Comment(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[Comment] = ExternalId(),
-  normalizedURI: Id[NormalizedURI],
+  uriId: Id[NormalizedURI],
   userId: Id[User],
   text: String,
   parent: Option[Id[Comment]] = None,
@@ -75,7 +75,7 @@ object Comment {
   def getPublicByNormalizedUri(normalizedURI: Id[NormalizedURI])(implicit conn: Connection): Seq[Comment] =
     (CommentEntity AS "c").map { c =>
       SELECT (c.*) FROM c WHERE (
-        (c.normalizedURI EQ normalizedURI) AND
+        (c.uriId EQ normalizedURI) AND
         (c.permissions EQ Comment.Permissions.PUBLIC) AND
         (c.state EQ States.ACTIVE) AND
         (c.parent IS_NULL)
@@ -85,7 +85,7 @@ object Comment {
   def getPrivateByNormalizedUri(normalizedURI: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] =
     (CommentEntity AS "c").map { c =>
       SELECT (c.*) FROM c WHERE (
-        (c.normalizedURI EQ normalizedURI) AND
+        (c.uriId EQ normalizedURI) AND
         (c.permissions EQ Comment.Permissions.PRIVATE) AND
         (c.userId EQ userId)
       ) list
@@ -97,13 +97,13 @@ object Comment {
 
       // Get all messages by the user, and where the user is listed as a recipient (side effect: User cannot be removed from own messages)
       ((SELECT (c.*) FROM ((cr JOIN c).ON("c.id = cr.comment_id")) WHERE (
-        (c.normalizedURI EQ normalizedURI) AND
+        (c.uriId EQ normalizedURI) AND
         (cr.userId EQ userId) AND
         (c.permissions EQ Comment.Permissions.MESSAGE) AND
         (c.parent IS_NULL))
         UNION
        (SELECT (c.*) FROM c WHERE (
-        (c.normalizedURI EQ normalizedURI) AND
+        (c.uriId EQ normalizedURI) AND
         (c.userId EQ userId) AND
         (c.permissions EQ Comment.Permissions.MESSAGE) AND
         (c.parent IS_NULL))
@@ -149,7 +149,7 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val externalId = "external_id".EXTERNAL_ID[Comment].NOT_NULL(ExternalId())
-  val normalizedURI = "normalized_uri_id".ID[NormalizedURI].NOT_NULL
+  val uriId = "normalized_uri_id".ID[NormalizedURI].NOT_NULL
   val userId = "user_id".ID[User]
   val text = "text".CLOB.NOT_NULL
   val parent = "parent".ID[Comment]
@@ -163,7 +163,7 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
     createdAt = createdAt(),
     updatedAt = updatedAt(),
     externalId = externalId(),
-    normalizedURI = normalizedURI(),
+    uriId = uriId(),
     userId = userId(),
     text = text(),
     parent = parent.value,
@@ -181,7 +181,7 @@ private[model] object CommentEntity extends CommentEntity with EntityTable[Comme
     comment.createdAt := view.createdAt
     comment.updatedAt := view.updatedAt
     comment.externalId := view.externalId
-    comment.normalizedURI := view.normalizedURI
+    comment.uriId := view.uriId
     comment.userId := view.userId
     comment.text := view.text
     comment.parent.set(view.parent)

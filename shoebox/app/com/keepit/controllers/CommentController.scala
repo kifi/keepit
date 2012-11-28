@@ -47,13 +47,13 @@ object CommentController extends FortyTwoController {
 
       permission.toLowerCase match {
         case "private" =>
-          Comment(normalizedURI = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
         case "message" =>
-          val newComment = Comment(normalizedURI = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
+          val newComment = Comment(uriId = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
           createRecipients(newComment.id.get, recipients, parentIdOpt)
           newComment
         case "public" | "" =>
-          Comment(normalizedURI = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
       }
     }
 
@@ -173,7 +173,7 @@ object CommentController extends FortyTwoController {
       case Comment.Permissions.PUBLIC =>
         CX.withConnection { implicit c =>
           val author = User.get(comment.userId)
-          val uri = NormalizedURI.get(comment.normalizedURI)
+          val uri = NormalizedURI.get(comment.uriId)
           val follows = Follow.get(uri.id.get)
           for (userId <- follows.map(_.userId).toSet - comment.userId) {
             val recipient = User.get(userId)
@@ -189,7 +189,7 @@ object CommentController extends FortyTwoController {
       case Comment.Permissions.MESSAGE =>
         CX.withConnection { implicit c =>
           val sender = User.get(comment.userId)
-          val uri = NormalizedURI.get(comment.normalizedURI)
+          val uri = NormalizedURI.get(comment.uriId)
           val subjectPrefix = if (comment.parent.isDefined) "[new reply] " else "[new message] "
           val recipients = Comment.getRecipients(comment.parent.getOrElse(comment.id.get))
           for (userId <- recipients.map(_.userId.get).toSet - comment.userId) {
