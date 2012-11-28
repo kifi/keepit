@@ -112,18 +112,17 @@ object SemanticVector {
 class SemanticVectorBuilder(windowSize: Int) {
   import SemanticVector._
 
-  var termSeeds = Map.empty[String, Array[Float]]
   var termSketches = Map.empty[String, Array[Float]]
+  private var termSeeds = Map.empty[String, Array[Float]]
 
-  val termQueue = new Array[String](windowSize)
-  val seedQueue = new Array[Array[Float]](windowSize)
-  val posIncrQueue = new Array[Int](windowSize)
+  private val termQueue = new Array[String](windowSize)
+  private val seedQueue = new Array[Array[Float]](windowSize)
 
-  var headPos = 0
-  var tailPos = - windowSize
-  var midPos = - (windowSize / 2)
-  var headSketch = emptySketch
-  var tailSketch = emptySketch
+  private var headPos = 0
+  private var tailPos = - windowSize
+  private var midPos = - (windowSize / 2)
+  private var headSketch = emptySketch
+  private var tailSketch = emptySketch
 
   def load(tokenStream: TokenStream) {
     val termAttr = tokenStream.getAttribute(classOf[CharTermAttribute])
@@ -198,8 +197,6 @@ class SemanticVectorBuilder(windowSize: Int) {
     updateSketch(sketch, localSketch)
   }
 
-  def composeVector(vectors: Iterator[Array[Byte]]): Array[Byte] = vectors.foldLeft(new SemanticVectorComposer){ (composer, v) => composer.add(v) }.get
-
   def aggregatedVector = vectorize(headSketch)
 
   def tokenStream() = {
@@ -229,7 +226,7 @@ class SemanticVectorComposer {
   import SemanticVector._
 
   var cnt = 0
-  val sketch = new Array[Int](vectorSize)
+  val counters = new Array[Int](vectorSize)
 
   def add(vector: Array[Byte]) = {
     var i = 0
@@ -237,20 +234,31 @@ class SemanticVectorComposer {
     while (i < vector.length) {
       val b = vector(i)
       val j = i * 8
-      sketch(j    ) += (b >> 7) & 0x1
-      sketch(j + 1) += (b >> 6) & 0x1
-      sketch(j + 2) += (b >> 5) & 0x1
-      sketch(j + 3) += (b >> 4) & 0x1
-      sketch(j + 4) += (b >> 3) & 0x1
-      sketch(j + 5) += (b >> 2) & 0x1
-      sketch(j + 6) += (b >> 1) & 0x1
-      sketch(j + 7) += (b     ) & 0x1
+      counters(j    ) += (b >> 7) & 0x1
+      counters(j + 1) += (b >> 6) & 0x1
+      counters(j + 2) += (b >> 5) & 0x1
+      counters(j + 3) += (b >> 4) & 0x1
+      counters(j + 4) += (b >> 3) & 0x1
+      counters(j + 5) += (b >> 2) & 0x1
+      counters(j + 6) += (b >> 1) & 0x1
+      counters(j + 7) += (b     ) & 0x1
       i += 1
     }
     cnt += 1
     this
   }
 
-  def get() = vectorize(sketch, cnt / 2)
+  def getSemanticVector() = vectorize(counters, cnt / 2)
+
+  def getQuasiSketch() = {
+    val sketch = emptySketch
+    var i = 0
+    while (i < vectorSize) {
+      sketch(i) = ((counters(i).toFloat/cnt.toFloat) - 0.5f)
+      i += 1
+    }
+    sketch
+  }
+
   def numInputs = cnt
 }
