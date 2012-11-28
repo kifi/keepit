@@ -133,8 +133,10 @@ object Comment {
 
   private def selectChildren[T](
       project: RelationNode[Id[Comment],CommentEntity] => Projection[T],
-      commentId: Id[Comment])(implicit conn: Connection) =
-    (CommentEntity AS "c").map {c => SELECT (project(c)) FROM c WHERE (c.parent EQ commentId)}
+      commentId: Id[Comment])(implicit conn: Connection) = {
+    val c = CommentEntity AS "c"
+    SELECT (project(c)) FROM c WHERE (c.parent EQ commentId) ORDER_BY (c.id ASC)
+  }
 
   object States {
     val ACTIVE = State[Comment]("active")

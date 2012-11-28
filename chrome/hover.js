@@ -454,6 +454,16 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $(this).toggleClass("following", following);
     });
 
+    if(type == "message") {
+      var friends = []; //TODO!
+      $("#to-list").tokenInput(friends, {
+        theme: "kifi"
+      });
+      $("#token-input-to-list").keypress(function(e) {
+        return e.which !== 13;
+      });
+    }
+
     // Main comment textarea
     var placeholder = "<span class=\"placeholder\">Add a comment…</span>";
     $('.comment-compose').html(placeholder);

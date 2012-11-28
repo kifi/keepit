@@ -20,6 +20,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
 import com.keepit.serializer.UserWithSocialSerializer
+import com.keepit.serializer.BasicUserSerializer
 import com.keepit.controllers.CommonActions._
 import play.api.http.ContentTypes
 import securesocial.core._
@@ -92,10 +93,12 @@ object UserController extends FortyTwoController {
 
   def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
     val socialConnections = CX.withConnection { implicit c =>
-      SocialConnection.getFortyTwoUserConnections(authRequest.userId).map(uid => User.get(uid)).map(UserWithSocial.toUserWithSocial).toSeq
+      SocialConnection.getFortyTwoUserConnections(authRequest.userId).map(uid => BasicUser(User.get(uid))).toSeq
     }
 
-    Ok(JsArray(socialConnections.map(sc => UserWithSocialSerializer.userWithSocialSerializer.writes(sc))))
+    Ok(JsObject(Seq(
+      ("friends" -> JsArray(socialConnections.map(sc => BasicUserSerializer.basicUserSerializer.writes(sc))))
+    )))
   }
 
   def getUser(id: Id[User]) = AdminJsonAction { request =>
