@@ -386,8 +386,8 @@ div.token-input-dropdown ul li.token-input-selected-dropdown-item {
     background-color: #d0efa0;
 }
 
-/* Example tokeninput style #2: Facebook style */
-ul.token-input-list-facebook {
+/* Example tokeninput style #2: kifi style */
+ul.token-input-list-kifi {
     overflow: hidden; 
     height: auto !important; 
     height: 1%;
@@ -408,7 +408,7 @@ ul.token-input-list-facebook {
     color: #524d4d;
 }
 
-ul.token-input-list-facebook li input {
+ul.token-input-list-kifi li input {
     border: 0;
     width: 100px;
     padding: 3px 8px;
@@ -417,7 +417,7 @@ ul.token-input-list-facebook li input {
     -webkit-appearance: caret;
 }
 
-li.token-input-token-facebook {
+li.token-input-token-kifi {
     overflow: hidden; 
     height: auto !important; 
     height: 15px;
@@ -433,39 +433,39 @@ li.token-input-token-facebook {
     white-space: nowrap;
 }
 
-li.token-input-token-facebook p {
+li.token-input-token-kifi p {
     display: inline;
     padding: 0;
     margin: 0;
 }
 
-li.token-input-token-facebook span {
+li.token-input-token-kifi span {
     color: #524d4d;
     margin-left: 5px;
     font-weight: normal;
     cursor: pointer;
 }
 
-li.token-input-selected-token-facebook {
+li.token-input-selected-token-kifi {
     background-color: #fafafa;
     border: 1px solid #e2e2e2;
     color: #414B52;
 }
 
-li.token-input-selected-token-facebook span {
+li.token-input-selected-token-kifi span {
     color: #414B52;
     margin-left: 5px;
     cursor: pointer;
 }
 
-li.token-input-input-token-facebook {
+li.token-input-input-token-kifi {
     float: left;
     margin: 0;
     padding: 0;
     list-style-type: none;
 }
 
-div.token-input-dropdown-facebook {
+div.token-input-dropdown-kifi {
     position: absolute;
     width: 240px;
     background-color: #fff;
@@ -479,39 +479,39 @@ div.token-input-dropdown-facebook {
     z-index: 2147483641;
 }
 
-div.token-input-dropdown-facebook p {
+div.token-input-dropdown-kifi p {
     margin: 0;
     padding: 5px;
     font-weight: bold;
     color: #777;
 }
 
-div.token-input-dropdown-facebook ul {
+div.token-input-dropdown-kifi ul {
     margin: 0;
     padding: 0;
 }
 
-div.token-input-dropdown-facebook ul li {
+div.token-input-dropdown-kifi ul li {
     background-color: #fff;
     padding: 3px;
     margin: 0;
     list-style-type: none;
 }
 
-div.token-input-dropdown-facebook ul li.token-input-dropdown-item-facebook {
+div.token-input-dropdown-kifi ul li.token-input-dropdown-item-kifi {
     background-color: #fff;
 }
 
-div.token-input-dropdown-facebook ul li.token-input-dropdown-item2-facebook {
+div.token-input-dropdown-kifi ul li.token-input-dropdown-item2-kifi {
     background-color: #fff;
 }
 
-div.token-input-dropdown-facebook ul li em {
+div.token-input-dropdown-kifi ul li em {
     font-weight: bold;
     font-style: normal;
 }
 
-div.token-input-dropdown-facebook ul li.token-input-selected-dropdown-item-facebook {
+div.token-input-dropdown-kifi ul li.token-input-selected-dropdown-item-kifi {
     background-color: #FAF9F9;
     color: #414B52;
 }
