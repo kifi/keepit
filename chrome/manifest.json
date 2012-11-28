@@ -218,7 +218,7 @@
         "http://*/*",
         "https://*/*"
       ],
-      "js" : ["lib/jquery-1.8.2.min.js", "jquery-ui-1.9.1.custom.min.js", "keymaster.min.js", "lodash.min.js", "jquery.tokeninput.js", "contentscript.js", "mustache.js", "lib/jquery.timeago.js", "hover.js"],
+      "js" : ["lib/jquery-1.8.2.min.js", "jquery-ui-1.9.1.custom.min.js", "keymaster.min.js", "lodash.min.js", "jquery.tokeninput.js", "contentscript.js", "mustache.js", "lib/jquery.timeago.js", "lib/jquery.tokeninput.js", "hover.js"],
       "css": ["keepit.css", "hover.css", "social_window.css", "templates/comments/comments.css"],
       "run_at" : "document_end",
       "all_frames" : false
