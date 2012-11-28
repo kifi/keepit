@@ -191,7 +191,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     updateCommentCount("public", numComments);
-    updateCommentCount("message", numMessages);
+    updateCommentCount("messageList", numMessages);
 
     // Event bindings
 
@@ -240,7 +240,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     $('.messages-label').click(function() {
-      showComments(user, true, "message");
+      showComments(user, true, "messageList");
     });
 
     slideIn();
@@ -307,14 +307,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       if (type == 'public') {
         $('.interaction-bar li.comments-label').addClass('active');
         $('.kifi_comment_wrapper').attr("data-view", "public");
-      } else if (type == 'message') {
+      } else if (type == "messageList") {
         $('.interaction-bar li.messages-label').addClass('active');
-        $('.kifi_comment_wrapper').attr("data-view", "message");
+        $('.kifi_comment_wrapper').attr("data-view", "messageList");
       }
     }
 
     var userExternalId = user.keepit_external_id;
-    $.get("http://" + config.server + "/comments/" + type + "?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
+    $.get("http://" + config.server + "/comments/" + type + "?url=" + encodeURIComponent(document.location.href),
       null,
       function(comments) {
         renderComments(user, comments, type, function() {
@@ -378,7 +378,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function updateCommentCount(type, count) {
     count = count != null ? count : $(".real-comment").length; // if no count passed in, count DOM nodes
 
-    $({"public": ".comments-count", "message": ".messages-count"}[type])
+    $({"public": ".comments-count", "messageList": ".messages-count"}[type])
       .text(count)
       .toggleClass("zero_comments", count == 0);
   }
@@ -387,7 +387,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     console.log("Drawing comments!");
     comments = comments || {};
     comments["public"] = comments["public"] || [];
-    comments["message"] = comments["message"] || [];
+    comments["messageList"] = comments["messageList"] || [];
     //comments["private"] = comments["private"] || []; // Removed, not for MVP
 
     var visibleComments = comments[type] || [];
@@ -411,7 +411,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     loadFile("templates/comments/hearts.html", function(hearts) {
     loadFile("templates/comments/comments_list.html", function(comment_list) {
     loadFile("templates/comments/comment.html", function(comment) {
-    loadFile("templates/comments/message.html", function(message) {
+    loadFile("templates/comments/thread_info.html", function(thread_info) {
+    loadFile("templates/comments/thread.html", function(thread) {
     loadFile("templates/comments/message_list.html", function(message_list) {
     loadFile("templates/comments/comment_post.html", function(comment_post) {
     loadFile("templates/comments/message_post.html", function(message_post) {
@@ -425,18 +426,16 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
       // By default we use the comment partials.
       // To override for a specific function, do so here.
-      if (type == 'message') {
-        partials.comment = message;
+      if (type == "messageList") {
+        partials.comment = thread_info;
         partials.comment_body_view = message_list;
         partials.comment_post_view = message_post;
 
-        // Blarghhh...
         var threadAvatar = "";
         for(msg in visibleComments) {
           var recipients = visibleComments[msg]["recipients"];
           var l = recipients.length;
-          if(l == 0) {
-            // No recipients!
+          if(l == 0) { // No recipients!
             threadAvatar = params.kifiuser.avatar;
           }
           else if(l == 1) {
@@ -485,14 +484,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           } else {
             recipientText = displayedRecipients.slice(0,3).join(", ");
             storedRecipients = recipientNames.slice(3);
-            console.log(recipientText, storedRecipients)
           }
-
           // todo "You wrote to "
 
           visibleComments[msg]["recipientText"] = recipientText;
           visibleComments[msg]["storedRecipients"] = storedRecipients;
-
         }
       }
 
@@ -501,6 +497,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         onComplete();
       }, partials);
 
+    });
     });
     });
     });
@@ -529,7 +526,20 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $(this).toggleClass("following", following);
     });
 
-    if(type == "message") {
+    $('.comment_body_view').on("hover", ".more-recipients", function(event) {
+      console.log("hey",this, event,event.type)
+      if(event.type == 'mouseenter') {
+        //$(this).parent().find('.more-recipient-list').show();
+      }
+      else {
+        //$(this).parent().find('.more-recipient-list').hide();
+      }
+    }).on('click','.thread-info', function() {
+      var externalId = $(this).parent().attr("data-externalid");
+      console.log(externalId)
+    });
+
+    if(type == "messageList") {
       $.get("http://" + config.server + "/users/friends?url=" + encodeURIComponent(document.location.href),
         null,
         function(data) {
@@ -545,6 +555,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           });
         }
       );
+
     }
 
     // Main comment textarea
@@ -631,6 +642,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function submitComment(text, type, user, parent, recipients, callback) {
     /* Because we're using very simple templating now, re-rendering has to be done carefully.
      */
+    var permissions = type;
+    if(type == 'messageList')
+      permissions = 'message';
+
     var request = {
       "type": "post_comment",
       "url": document.location.href,
