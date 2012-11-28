@@ -206,12 +206,18 @@ object CommentController extends FortyTwoController {
     }
   }, {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
 
-
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = CX.withConnection { implicit c =>
       Follow.all map {f => (UserWithSocial.toUserWithSocial(User.get(f.userId)), f, NormalizedURI.get(f.uriId))}
     }
     Ok(views.html.follows(uriAndUsers))
+  }
+
+  def commentsView = AdminHtmlAction { implicit request =>
+    val uriAndUsers = CX.withConnection { implicit c =>
+      Comment.all map {co => (UserWithSocial.toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId))}
+    }
+    Ok(views.html.comments(uriAndUsers))
   }
 
 }
