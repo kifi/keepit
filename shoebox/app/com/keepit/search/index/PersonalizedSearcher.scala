@@ -7,7 +7,7 @@ import org.apache.lucene.index.Term
 
 class PersonalizedSearcher(override val indexReader: IndexReader, override val idMapper: IdMapper, ids: Set[Long]) extends Searcher(indexReader, idMapper) {
 
-  override def getSemanticVector(term: Term) = {
+  override protected def getSemanticVectorComposer(term: Term) = {
     val composer = new SemanticVectorComposer
     val tp = indexReader.termPositions(term)
     var vector = new Array[Byte](SemanticVector.arraySize)
@@ -26,7 +26,6 @@ class PersonalizedSearcher(override val indexReader: IndexReader, override val i
     } finally {
       tp.close()
     }
-    if (composer.numInputs > 0) composer.get
-    else SemanticVector.vectorize(SemanticVector.getSeed(term.text))
+    composer
   }
 }
