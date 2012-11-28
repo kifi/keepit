@@ -343,7 +343,7 @@
 }
 
 .kifi_hover .profilepic {
-  cursor: pointer;
+  background-color: #fff;
 }
 
 .kifi_hover .moreinnerbox {

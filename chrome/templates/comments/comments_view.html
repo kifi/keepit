@@ -1,14 +1,15 @@
 
 <div class="flexcontainer">
-  <div class="control-bar">
-    <span class="filter-by">Filter Comments&#9662;</span>
-  </div>
+  {{#showControlBar}}
+    <div class="control-bar">
+      <a class="follow{{#following}} following{{/following}}" href="javascript:">Follow</a>
+      <a class="filter-by" href="javascript:alert('Sorry, not yet implemented.')">Filter Comments &#9662;</a>
+    </div>
+  {{/showControlBar}}
   <div class="comment_body_view">
-  {{> comment_body_view}}
+    {{> comment_body_view}}
   </div>
-  
   <div class="comment_post_view">
     {{> comment_post_view}}
   </div>
-
 </div>
