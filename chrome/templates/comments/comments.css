@@ -45,7 +45,6 @@
 }
 
 .kifi_comment_wrapper .comment_post_view {
-  padding-top:5px;
   border-top: 1px solid #e2e2e2;
 }
 
@@ -66,14 +65,14 @@
 
 .kifi_comment_wrapper .comment-wrapper {
   border-top: 1px solid #e2e2e2;
-  padding-left: 5px;
+}
+.kifi_comment_wrapper[data-view=message] .comment-wrapper:first-child {
+  border-top: none;
 }
 
 .kifi_comment_wrapper .comment {
   background-color: #fafafa;
-  margin: 5px 0px
-  clear: both;
-  padding: 5px;
+  padding: 10px 10px 5px;
   position: relative;
   z-index: 2;
 }
@@ -135,15 +134,11 @@
 }
 
 .kifi_comment_wrapper .comment-box {
-  width: 300px;
-  margin: 0px;
-  display: block;
-  font-size: 12px;
-  padding: 5px;
-  outline: none;
   min-height: 45px;
-  padding-left: 10px;
-  clear:both;
+  padding: 10px;
+  font-size: 12px;
+  outline: none;
+  clear: both;
 }
 
 .kifi_comment_wrapper .recipient-list {
@@ -152,7 +147,6 @@
 
 .kifi_comment_wrapper .compose-wrapper {
   overflow: hidden;
-  margin: 0 10px 0 -2px;
 }
 
 .kifi_comment_wrapper .comment-box .comment-compose {
@@ -183,14 +177,8 @@
 }
 
 .kifi_comment_wrapper .submit-bar {
-  height: 30px;
-  clear: both;
-  padding: 0 10px;
-}
-
-.kifi_comment_wrapper .submit-wrapper {
-  position: relative;
-  float: right;
+  margin-top: 5px;
+  text-align: right;
 }
 
 .kifi_comment_wrapper .comment_post_view .submit-comment {
@@ -204,7 +192,6 @@
   background: #414b52;
   padding: 4px 6px;
   border-radius: 3px;
-  margin: 3px 0;
 }
 
 .kifi_comment_wrapper .comment_post_view .submit-comment:hover {
