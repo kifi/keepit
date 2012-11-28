@@ -35,13 +35,12 @@ class CommentTest extends SpecificationWithJUnit {
       Comment(uriId = uri1.id.get, userId = user1.id.get, text = "Private Comment on Google1", permissions = Comment.Permissions.PRIVATE).save
       Comment(uriId = uri1.id.get, userId = user1.id.get, text = "Private Comment on Google2", permissions = Comment.Permissions.PRIVATE).save
 
-      // Message
-      val convo = Comment(uriId = uri1.id.get, userId = user1.id.get, text = "Conversation on Google1", permissions = Comment.Permissions.MESSAGE).save
-      CommentRecipient(commentId = convo.id.get, userId = Some(user2.id.get)).save
-      val convo2 = Comment(uriId = uri1.id.get, userId = user2.id.get, text = "Conversation on Google2", permissions = Comment.Permissions.MESSAGE).save
-      CommentRecipient(commentId = convo2.id.get, userId = Some(user1.id.get)).save
-      val convo3 = Comment(uriId = uri1.id.get, userId = user2.id.get, text = "Conversation on Google3", permissions = Comment.Permissions.MESSAGE).save
-
+      // Messages
+      val msg1 = Comment(uriId = uri1.id.get, userId = user1.id.get, text = "Conversation on Google1", permissions = Comment.Permissions.MESSAGE).save
+      CommentRecipient(commentId = msg1.id.get, userId = Some(user2.id.get)).save
+      val msg2 = Comment(uriId = uri1.id.get, userId = user2.id.get, text = "Conversation on Google2", permissions = Comment.Permissions.MESSAGE).save
+      CommentRecipient(commentId = msg2.id.get, userId = Some(user1.id.get)).save
+      val msg3 = Comment(uriId = uri1.id.get, userId = user2.id.get, text = "Conversation on Google3", permissions = Comment.Permissions.MESSAGE).save
 
       (user1, user2, uri1, uri2)
     }
@@ -55,45 +54,44 @@ class CommentTest extends SpecificationWithJUnit {
         }
       }
     }
-    "show public comments by URI" in {
+    "count and load public comments by URI" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         CX.withConnection { implicit conn =>
-          val uri1PublicComments = Comment.getPublicByNormalizedUri(uri1.id.get)
-          val uri2PublicComments = Comment.getPublicByNormalizedUri(uri2.id.get)
-          uri1PublicComments.length === 2
+          Comment.getPublicCount(uri1.id.get) === 2
+          Comment.getPublicCount(uri2.id.get) === 1
+          Comment.getPublic(uri1.id.get).length === 2
+          Comment.getPublic(uri2.id.get).length === 1
         }
       }
     }
-    "show private comments by URI and UserId" in {
+    "count and load private comments by URI and UserId" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         CX.withConnection { implicit conn =>
-          val uri1PrivateComments1 = Comment.getPrivateByNormalizedUri(uri1.id.get, user1.id.get)
-          val uri1PrivateComments2 = Comment.getPrivateByNormalizedUri(uri1.id.get, user2.id.get)
-          val uri2PrivateComments1 = Comment.getPrivateByNormalizedUri(uri2.id.get, user1.id.get)
-          val uri2PrivateComments2 = Comment.getPrivateByNormalizedUri(uri2.id.get, user2.id.get)
-
-          uri1PrivateComments1.length === 2
-          uri1PrivateComments2.length === 0
-          uri2PrivateComments1.length === 0
-          uri1PrivateComments2.length === 0
-
+          Comment.getPrivateCount(uri1.id.get, user1.id.get) === 2
+          Comment.getPrivateCount(uri1.id.get, user2.id.get) === 0
+          Comment.getPrivateCount(uri2.id.get, user1.id.get) === 0
+          Comment.getPrivateCount(uri2.id.get, user2.id.get) === 0
+          Comment.getPrivate(uri1.id.get, user1.id.get).length === 2
+          Comment.getPrivate(uri1.id.get, user2.id.get).length === 0
+          Comment.getPrivate(uri2.id.get, user1.id.get).length === 0
+          Comment.getPrivate(uri2.id.get, user2.id.get).length === 0
         }
       }
     }
-    "show messages by URI and UserId" in {
+    "count and load messages by URI and UserId" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         CX.withConnection { implicit conn =>
-          val uri1Conversation1 = Comment.getMessagesByNormalizedUri(uri1.id.get, user1.id.get)
-          val uri1Conversation2 = Comment.getMessagesByNormalizedUri(uri1.id.get, user2.id.get)
-          val uri2Conversation1 = Comment.getMessagesByNormalizedUri(uri2.id.get, user1.id.get)
-
-          uri1Conversation1.length === 2
-          uri1Conversation2.length === 3
-          uri2Conversation1.length === 0
-
+          Comment.getMessageCount(uri1.id.get, user1.id.get) === 2
+          Comment.getMessageCount(uri1.id.get, user2.id.get) === 3
+          Comment.getMessageCount(uri2.id.get, user1.id.get) === 0
+          Comment.getMessageCount(uri2.id.get, user2.id.get) === 0
+          Comment.getMessages(uri1.id.get, user1.id.get).length === 2
+          Comment.getMessages(uri1.id.get, user2.id.get).length === 3
+          Comment.getMessages(uri2.id.get, user1.id.get).length === 0
+          Comment.getMessages(uri2.id.get, user2.id.get).length === 0
         }
       }
     }

@@ -17,6 +17,8 @@ import com.keepit.common.time.currentDateTime
 
 import annotation.elidable.ASSERTION
 import ru.circumflex.orm.Predicate.toAggregateHelper
+import ru.circumflex.orm.Projection
+import ru.circumflex.orm.RelationNode
 import ru.circumflex.orm.RelationNode.toRelation
 import ru.circumflex.orm.SELECT
 import ru.circumflex.orm.str2expr
@@ -32,8 +34,8 @@ case class Comment(
   text: String,
   parent: Option[Id[Comment]] = None,
   permissions: State[Comment.Permission] = Comment.Permissions.PUBLIC,
-  state: State[Comment] = Comment.States.ACTIVE
-) {
+  state: State[Comment] = Comment.States.ACTIVE) {
+
   def withState(state: State[Comment]) = copy(state = state)
 
   def save(implicit conn: Connection): Comment = {
@@ -55,67 +57,84 @@ object Comment {
   def getOpt(id: Id[Comment])(implicit conn: Connection): Option[Comment] =
     CommentEntity.get(id).map(_.view)
 
-  def get(externalId: ExternalId[Comment])(implicit conn: Connection): Comment =
-    getOpt(externalId).getOrElse(throw NotFoundException(externalId))
+  def get(id: ExternalId[Comment])(implicit conn: Connection): Comment =
+    (CommentEntity AS "c").map {c => SELECT (c.*) FROM c WHERE (c.externalId EQ id) unique}
+      .map(_.view).getOrElse(throw NotFoundException(id))
 
-  def getOpt(externalId: ExternalId[Comment])(implicit conn: Connection): Option[Comment] =
-    (CommentEntity AS "c").map { c => SELECT (c.*) FROM c WHERE (c.externalId EQ externalId) unique }.map(_.view)
+  def getRecipients(commentId: Id[Comment])(implicit conn: Connection) =
+    CommentRecipient.getByComment(commentId)
 
-  def getRecipients(commentId: Id[Comment])(implicit conn: Connection) = CommentRecipient.getByComment(commentId)
+  def getPublic(uriId: Id[NormalizedURI])(implicit conn: Connection): Seq[Comment] =
+    selectPublic({c => c.*}, uriId).list.map(_.view)
 
-  def getPublicByNormalizedUri(normalizedURI: Id[NormalizedURI])(implicit conn: Connection): Seq[Comment] =
-    (CommentEntity AS "c").map { c =>
-      SELECT (c.*) FROM c WHERE (
-        (c.uriId EQ normalizedURI) AND
+  def getPublicCount(uriId: Id[NormalizedURI])(implicit conn: Connection): Long =
+    selectPublic({c => COUNT(c.id)}, uriId).unique.get
+
+  private def selectPublic[T](
+      project: RelationNode[Id[Comment],CommentEntity] => Projection[T],
+      uriId: Id[NormalizedURI])(implicit conn: Connection) = {
+    val c = CommentEntity AS "c"
+    SELECT (project(c)) FROM c WHERE (
+        (c.uriId EQ uriId) AND
         (c.permissions EQ Comment.Permissions.PUBLIC) AND
         (c.state EQ States.ACTIVE) AND
-        (c.parent IS_NULL)
-      ) list
-    }.map(_.view)
+        (c.parent IS_NULL))
+  }
 
-  def getPrivateByNormalizedUri(normalizedURI: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] =
-    (CommentEntity AS "c").map { c =>
-      SELECT (c.*) FROM c WHERE (
-        (c.uriId EQ normalizedURI) AND
-        (c.permissions EQ Comment.Permissions.PRIVATE) AND
-        (c.userId EQ userId)
-      ) list
-    }.map(_.view)
+  def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] =
+    selectPrivate({c => c.*}, uriId, userId).list.map(_.view)
 
-  def getMessagesByNormalizedUri(normalizedURI: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] = {
-      val c = CommentEntity AS "c"
-      val cr = CommentRecipientEntity AS "cr"
+  def getPrivateCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Long =
+    selectPrivate({c => COUNT(c.id)}, uriId, userId).unique.get
 
-      // Get all messages by the user, and where the user is listed as a recipient (side effect: User cannot be removed from own messages)
-      ((SELECT (c.*) FROM ((cr JOIN c).ON("c.id = cr.comment_id")) WHERE (
-        (c.uriId EQ normalizedURI) AND
+  private def selectPrivate[T](
+      project: RelationNode[Id[Comment],CommentEntity] => Projection[T],
+      uriId: Id[NormalizedURI],
+      userId: Id[User])(implicit conn: Connection) = {
+    val c = CommentEntity AS "c"
+    SELECT (project(c)) FROM c WHERE (
+        (c.uriId EQ uriId) AND
+        (c.userId EQ userId) AND
+        (c.permissions EQ Comment.Permissions.PRIVATE))
+  }
+
+  def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] =
+    selectMessages({c => c.*}, uriId, userId).list.map(_.view)
+
+  def getMessageCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Long =
+    selectMessages({c => c.id}, uriId, userId).list.size
+
+  private def selectMessages[T](
+      project: RelationNode[Id[Comment],CommentEntity] => Projection[T],
+      uriId: Id[NormalizedURI],
+      userId: Id[User])(implicit conn: Connection) = {
+    val c = CommentEntity AS "c"
+    val cr = CommentRecipientEntity AS "cr"
+
+    // Get all messages *from* and/or *to* the user
+    // (side effect: User cannot be removed from own messages)
+    (SELECT (project(c)) FROM (c JOIN cr).ON("c.id = cr.comment_id") WHERE (
+        (c.uriId EQ uriId) AND
         (cr.userId EQ userId) AND
         (c.permissions EQ Comment.Permissions.MESSAGE) AND
-        (c.parent IS_NULL))
-        UNION
-       (SELECT (c.*) FROM c WHERE (
-        (c.uriId EQ normalizedURI) AND
+        (c.parent IS_NULL)))
+    .UNION (SELECT (project(c)) FROM c WHERE (
+        (c.uriId EQ uriId) AND
         (c.userId EQ userId) AND
         (c.permissions EQ Comment.Permissions.MESSAGE) AND
-        (c.parent IS_NULL))
-       )
-      ) list) map (_.view) distinct
+        (c.parent IS_NULL)))
   }
 
-  def getChildren(commentId: Id[Comment])(implicit conn: Connection): Seq[Comment] = {
-    (CommentEntity AS "c").map { c =>
-      SELECT (c.*) FROM c WHERE (c.parent EQ commentId) list
-    }.map(_.view)
-  }
+  def getChildren(commentId: Id[Comment])(implicit conn: Connection): Seq[Comment] =
+    selectChildren({c => c.*}, commentId).list.map(_.view)
 
-  def getChildrenCount(commentId: Id[Comment])(implicit conn: Connection): Long = {
-    (CommentEntity AS "c").map { c =>
-      SELECT(COUNT(c.id)) FROM c WHERE (c.parent EQ commentId) unique
-    } match {
-      case Some(cnt) => cnt
-      case None => 0L
-    }
-  }
+  def getChildCount(commentId: Id[Comment])(implicit conn: Connection): Long =
+    selectChildren({c => COUNT(c.id)}, commentId).unique.get
+
+  private def selectChildren[T](
+      project: RelationNode[Id[Comment],CommentEntity] => Projection[T],
+      commentId: Id[Comment])(implicit conn: Connection) =
+    (CommentEntity AS "c").map {c => SELECT (project(c)) FROM c WHERE (c.parent EQ commentId)}
 
   object States {
     val ACTIVE = State[Comment]("active")

@@ -39,10 +39,7 @@ object CommentController extends FortyTwoController {
       val uri = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save)
       val parentIdOpt = parent match {
         case "" => None
-        case p => Comment.getOpt(ExternalId[Comment](p)) match {
-          case Some(p) => p.id
-          case None => throw new Exception("Invalid parent provided!")
-        }
+        case id => Comment.get(ExternalId[Comment](id)).id
       }
 
       permission.toLowerCase match {
@@ -160,13 +157,13 @@ object CommentController extends FortyTwoController {
     (Comment.Permissions.PRIVATE -> privateComments(userId, normalizedURI)) :: Nil
 
   private def publicComments(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
-    Comment.getPublicByNormalizedUri(normalizedURI.id.get)
+    Comment.getPublic(normalizedURI.id.get)
 
   private def privateComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
-    Comment.getPrivateByNormalizedUri(normalizedURI.id.get, userId)
+    Comment.getPrivate(normalizedURI.id.get, userId)
 
   private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
-    Comment.getMessagesByNormalizedUri(normalizedURI.id.get, userId)
+    Comment.getMessages(normalizedURI.id.get, userId)
 
   private def notifyRecipientsAsync(comment: Comment) = dispatch({
     comment.permissions match {
