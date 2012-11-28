@@ -1,6 +1,6 @@
 @(uriAndUsers: Seq[(UserWithSocial, Follow, NormalizedURI)])
 
-@admin("There are " + count + " follows") {
+@admin("Followed Web Pages") {
   <h2>Showing @uriAndUsers.size follows</h2>
   <table class="table table-bordered">
     <tr>
@@ -9,12 +9,12 @@
       <th>Title</th>
       <th>Creation</th>
     </tr>
-  @for(((userWithSocial, follow, article), i) <- uriAndUsers.zipWithIndex) {
+  @for(((user, follow, article), i) <- uriAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
       <td>@adminHelper.userDisplay(user)</td>
       <td>@adminHelper.articleDisplay(article)</td>
-      <td>@adminHelper.dateDisplay(bookmark.createdAt) @adminHelper.timeDisplay(bookmark.createdAt)</td>
+      <td>@adminHelper.dateDisplay(follow.createdAt) @adminHelper.timeDisplay(follow.createdAt)</td>
     </tr>
   }
   </table>
