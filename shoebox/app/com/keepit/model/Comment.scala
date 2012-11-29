@@ -141,7 +141,7 @@ object Comment {
       project: RelationNode[Id[Comment],CommentEntity] => Projection[T],
       commentId: Id[Comment])(implicit conn: Connection) = {
     val c = CommentEntity AS "c"
-    SELECT (project(c)) FROM c WHERE (c.parent EQ commentId) ORDER_BY (c.id ASC)
+    SELECT (project(c)) FROM c WHERE (c.parent EQ commentId)
   }
 
   object States {
