@@ -107,8 +107,9 @@
   line-height:11px;
 }
 
-.kifi_comment_wrapper .recipient {
+.kifi_comment_wrapper strong.recipient {
   white-space: nowrap;
+  font-weight: bold;
 }
 
 .more-recipients {
