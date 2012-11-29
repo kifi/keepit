@@ -67,7 +67,7 @@
   border-top: 1px solid #e2e2e2;
   position: relative;
 }
-.kifi_comment_wrapper[data-view=message] .comment-wrapper:first-child {
+.kifi_hover.message .comment-wrapper:first-child {
   border-top: none;
 }
 
@@ -277,8 +277,8 @@ div.more-recipient-list {
 /* Token to */
 /* Example tokeninput style #1: Token vertical list*/
 ul.token-input-list {
-    overflow: hidden; 
-    height: auto !important; 
+    overflow: hidden;
+    height: auto !important;
     height: 1%;
     width: 400px;
     border: 1px solid #999;
@@ -306,8 +306,8 @@ ul.token-input-list li input {
 }
 
 li.token-input-token {
-    overflow: hidden; 
-    height: auto !important; 
+    overflow: hidden;
+    height: auto !important;
     height: 1%;
     margin: 3px;
     padding: 3px 5px;
@@ -391,8 +391,8 @@ div.token-input-dropdown ul li.token-input-selected-dropdown-item {
 
 /* Example tokeninput style #2: kifi style */
 ul.token-input-list-kifi {
-    overflow: hidden; 
-    height: auto !important; 
+    overflow: hidden;
+    height: auto !important;
     height: 1%;
     width: 255px;
     border: 1px solid #e2e2e2;
@@ -421,8 +421,8 @@ ul.token-input-list-kifi li input {
 }
 
 li.token-input-token-kifi {
-    overflow: hidden; 
-    height: auto !important; 
+    overflow: hidden;
+    height: auto !important;
     height: 15px;
     margin: 3px;
     padding: 1px 3px;
