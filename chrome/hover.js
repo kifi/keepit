@@ -525,15 +525,13 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function drawCommentView(renderedTemplate, user, type, partials) {
     //console.log(renderedTemplate);
     repositionScroll(false);
-    $('.kifi_comment_wrapper').html(renderedTemplate);
+    $('.kifi_comment_wrapper').html(renderedTemplate).find("time").timeago();
     repositionScroll(false);
 
     createCommentBindings(type, user);
   }
 
   function createCommentBindings(type, user) {
-    $("time.timeago").timeago();
-
     $(".control-bar").on("click", ".follow", function() {
       following = !following;  // TODO: server should return whether following along with the comments
       $.ajax("http://" + config.server + "/comments/follow?url=" + encodeURIComponent(document.location.href),
@@ -610,7 +608,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
           //drawCommentView(renderedTemplate, user, type, partials);
           $('.comment_body_view').find('.no-comment').parent().detach();
-          $('.comment_body_view').append(renderedComment).find("time.timeago").timeago();
+          $('.comment_body_view').append(renderedComment).find("time").timeago();
           updateCommentCount();
           repositionScroll(false);
         });
@@ -639,6 +637,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         var params = newComment;
         params["formatComments"] = commentTextFormatter;
         params["formatDate"] = commentDateFormatter;
+        params["formatIsoDate"] = isoDateFormatter;
 
         renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
           //drawCommentView(renderedTemplate, user, type, partials);

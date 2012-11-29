@@ -109,7 +109,7 @@ object CommentController extends FortyTwoController {
     Ok(commentWithSocialUserSerializer.writes(replies))
   }
 
-  @deprecated("comments will soon not have replies", "2012-11-27")
+  // TODO: delete once no beta users have old plugin supporting replies
   def getReplies(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     val replies = CX.withConnection { implicit conn =>
       val comment = Comment.get(commentId)
@@ -228,4 +228,24 @@ object CommentController extends FortyTwoController {
     }
   }, {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
 
+  def followsView = AdminHtmlAction { implicit request =>
+    val uriAndUsers = CX.withConnection { implicit c =>
+      Follow.all map {f => (UserWithSocial.toUserWithSocial(User.get(f.userId)), f, NormalizedURI.get(f.uriId))}
+    }
+    Ok(views.html.follows(uriAndUsers))
+  }
+
+  def commentsView = AdminHtmlAction { implicit request =>
+    val uriAndUsers = CX.withConnection { implicit c =>
+      Comment.all(Comment.Permissions.PUBLIC) map {co => (UserWithSocial.toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId))}
+    }
+    Ok(views.html.comments(uriAndUsers))
+  }
+
+  def messagesView = AdminHtmlAction { implicit request =>
+    val uriAndUsers = CX.withConnection { implicit c =>
+      Comment.all(Comment.Permissions.MESSAGE) map {co => (UserWithSocial.toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId))}
+    }
+    Ok(views.html.messages(uriAndUsers))
+  }
 }
