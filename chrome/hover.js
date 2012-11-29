@@ -287,7 +287,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     var isVisible = $(".kifi_comment_wrapper").is(":visible");
     var showingType = $(".kifi_hover").data("view");
 
-    if (isVisible) { // already open!
+    if (isVisible && !id) { // already open!
       if (type == showingType) {
         $('.kifi-content').slideDown();
         $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
@@ -304,6 +304,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       (type == "public" ? "/comments/public" : "/messages/threads") +
       (id ? "/" + id : ("?url=" + encodeURIComponent(document.location.href)));
     $.get(url, null, function(comments) {
+      console.log(comments);
       renderComments(user, comments, type, function() {
         if (!isVisible) {
           repositionScroll(false);
@@ -521,7 +522,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       }
     }).on('click','.thread-info', function() {
       var externalId = $(this).parent().attr("data-externalid");
-      console.log(externalId)
+      showComments(user, type, externalId);
     });
 
     if(type == "message") {

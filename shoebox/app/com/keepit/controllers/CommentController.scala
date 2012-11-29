@@ -103,9 +103,9 @@ object CommentController extends FortyTwoController {
       val comment = Comment.get(commentId)
       val user = User.get(request.userId)
       if (true) // TODO: hasPermission(user.id.get, comment.id.get)
-        Seq(comment) ++ Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }
+        List(Comment.Permissions.MESSAGE -> (Seq(comment) ++ Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }))
       else
-        Seq[CommentWithSocialUser]()
+        List(Comment.Permissions.MESSAGE -> Seq[CommentWithSocialUser]())
     }
     Ok(commentWithSocialUserSerializer.writes(replies))
   }
