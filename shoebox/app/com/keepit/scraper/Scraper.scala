@@ -62,7 +62,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
         articleStore += (uri.id.get -> article)
         // succeeded. update the state to SCRAPED and save
         val scrapedURI = CX.withConnection { implicit c =>
-          uri.withState(NormalizedURI.States.SCRAPED).save
+          uri.withTitle(article.title).withState(NormalizedURI.States.SCRAPED).save
         }
         log.info("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
@@ -104,9 +104,7 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
     }
   }
 
-  def fetchArticle(normalizedUri: NormalizedURI): Either[Article, ScraperError] = {
-    fetchArticle(normalizedUri, httpFetcher)
-  }
+  def fetchArticle(normalizedUri: NormalizedURI): Either[Article, ScraperError] = fetchArticle(normalizedUri, httpFetcher)
 
   private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher): Either[Article, ScraperError] = {
     val url = normalizedUri.url
