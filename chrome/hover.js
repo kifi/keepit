@@ -674,17 +674,23 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       "recipients": recipients
     };
     chrome.extension.sendRequest(request, function(response) {
-      var newComment = {
-        "createdAt": new Date,
-        "text": request.text,
-        "user": {
-          "externalId": user.keepit_external_id,
-          "firstName": user.name,
-          "lastName": "",
-          "facebookId": user.facebook_id
-        },
-        "permissions": type,
-        "externalId": response.commentId
+      var newComment = {};
+      if(type == "message") {
+        newComment = response;
+      }
+      else {
+        newComment = {
+          "createdAt": new Date,
+          "text": request.text,
+          "user": {
+            "externalId": user.keepit_external_id,
+            "firstName": user.name,
+            "lastName": "",
+            "facebookId": user.facebook_id
+          },
+          "permissions": type,
+          "externalId": response.commentId
+        }
       }
       callback(newComment);
     });
