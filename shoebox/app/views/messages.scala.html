@@ -15,7 +15,9 @@
     <tr>
       <td rowspan="2">@{i+1}</td>
       <td>@adminHelper.userDisplay(user)</td>
-      <td>@{recipients map adminHelper.userDisplay}</td>
+      <td>@for(recipient <- recipients) { 
+        @adminHelper.userDisplay(recipient)
+      }</td>
       <td>@adminHelper.articleDisplay(article)</td>
       <td>@comment.permissions.value</td>
       <td>@adminHelper.dateDisplay(comment.createdAt) @adminHelper.timeDisplay(comment.createdAt)</td>
