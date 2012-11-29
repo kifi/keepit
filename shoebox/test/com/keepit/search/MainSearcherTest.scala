@@ -296,7 +296,9 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val reachableUris = users.foldLeft(Set.empty[Long])((s, u) => s ++ graphSearcher.getUserToUriEdgeSet(u.id.get, publicOnly = true).destIdLongSet)
 
         var uuid : Option[ExternalId[ArticleSearchResultRef]] = None
-        while(uriSeen.size < reachableUris.size) {
+        var cnt = 0
+        while (cnt < reachableUris.size && uriSeen.size < reachableUris.size) {
+          cnt += 1
           val mainSearcher= new MainSearcher(userId, friendIds, uriSeen, indexer, graph, config)
           //println("---" + uriSeen + ":" + reachableUris)
           val res = mainSearcher.search("alldocs", numHitsToReturn, uuid)
@@ -307,6 +309,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           }
           uuid = Some(res.uuid)
         }
+        uriSeen.size === reachableUris.size
         indexer.numDocs === uris.size
       }
     }

@@ -278,7 +278,8 @@
     "templates/comments/reply.html",
     "templates/comments/comment.html",
     "templates/comments/reply_list.html",
-    "templates/comments/message.html",
+    "templates/comments/thread_info.html",
+    "templates/comments/thread.html",
     "templates/comments/message_list.html",
     "templates/comments/comment_post.html",
     "templates/comments/message_post.html"

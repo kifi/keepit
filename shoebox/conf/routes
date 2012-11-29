@@ -16,7 +16,9 @@ POST    /bookmarks/private          com.keepit.controllers.BookmarksController.u
 
 POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: String, text: String, permissions: String, recipients: String ?= "", parent: String ?= "")
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
-GET     /comments/message           com.keepit.controllers.CommentController.getMessages(url: String)
+GET     /messages/threads/:id       com.keepit.controllers.CommentController.getMessageThread(id: ExternalId[Comment])
+GET     /messages/threads           com.keepit.controllers.CommentController.getMessageThreadList(url: String)
+POST    /messages                com.keepit.controllers.CommentController.createComment(url: String, text: String, permissions = "message", recipients: String ?= "", parent: String ?= "")
 GET     /comments/reply             com.keepit.controllers.CommentController.getReplies(commentId: ExternalId[Comment])
 POST    /comments/follow            com.keepit.controllers.CommentController.startFollowing(url: String)
 DELETE  /comments/follow            com.keepit.controllers.CommentController.stopFollowing(url: String)
@@ -77,7 +79,7 @@ GET     /admin/emails/comment       com.keepit.controllers.admin.AdminEmailPrevi
 GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
 GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
 
-GET     /admin/followings           com.keepit.controllers.CommentController.followsView
+GET     /admin/follows              com.keepit.controllers.CommentController.followsView
 GET     /admin/comments             com.keepit.controllers.CommentController.commentsView
 GET     /admin/messages             com.keepit.controllers.CommentController.messagesView
 
