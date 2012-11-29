@@ -513,12 +513,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     $('.comment_body_view').on("hover", ".more-recipients", function(event) {
       console.log("hey",this, event,event.type)
-      if(event.type == 'mouseenter') {
-        //$(this).parent().find('.more-recipient-list').show();
-      }
-      else {
-        //$(this).parent().find('.more-recipient-list').hide();
-      }
+      //$(this).parent().find('.more-recipient-list')[event.type == 'mouseenter' ? "show" : "hide"]();
     }).on('click','.thread-info', function() {
       var externalId = $(this).parent().attr("data-externalid");
       console.log(externalId)
