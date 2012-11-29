@@ -41,6 +41,8 @@ case class NormalizedURI  (
 
   def withState(state: State[NormalizedURI]) = copy(state = state)
 
+  def withTitle(title: String) = if(title.isEmpty()) this else copy(title = Some(title))
+
   def loadUsingHash(implicit conn: Connection): Option[NormalizedURI] =
     (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlHash EQ urlHash) unique}.map(_.view)
 

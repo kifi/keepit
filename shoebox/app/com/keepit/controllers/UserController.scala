@@ -26,6 +26,7 @@ import play.api.http.ContentTypes
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social._
+import com.keepit.common.social.UserWithSocial.toUserWithSocial
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.graph.URIGraph
@@ -121,8 +122,12 @@ object UserController extends FortyTwoController {
       val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
       val follows = Follow.all(userId) map {f => NormalizedURI.get(f.uriId)}
-      val comments = Comment.all(Comment.Permissions.PUBLIC, userId) map {c => (NormalizedURI.get(c.uriId), c)}
-      val messages = Comment.all(Comment.Permissions.MESSAGE, userId) map {c => (NormalizedURI.get(c.uriId), c)}
+      val comments = Comment.all(Comment.Permissions.PUBLIC, userId) map {c =>
+        (NormalizedURI.get(c.uriId), c)
+      }
+      val messages = Comment.all(Comment.Permissions.MESSAGE, userId) map {c =>
+        (NormalizedURI.get(c.uriId), c, CommentRecipient.getByComment(c.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) })
+      }
       (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows, comments, messages)
     }
     val rawInfos = socialUserInfos map {info =>

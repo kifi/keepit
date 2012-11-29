@@ -1,6 +1,6 @@
 @(userWithSocial: UserWithSocial, bookmarks: Seq[Bookmark], socialUserInfos: Seq[SocialUserInfo], 
   rawInfos: Seq[SocialUserRawInfo], socialConnections: Seq[SocialUserInfo], fortyTwoConnections: Seq[UserWithSocial], 
-  follows: Seq[NormalizedURI], comments: Seq[(NormalizedURI, Comment)], messages: Seq[(NormalizedURI, Comment)])
+  follows: Seq[NormalizedURI], comments: Seq[(NormalizedURI, Comment)], messages: Seq[(NormalizedURI, Comment, Seq[UserWithSocial])])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
@@ -102,18 +102,16 @@
    <tr>
      <th>#</th>
      <th>Page</th>
-     <th>Type</th>
      <th>Creation</th>
    </tr>
    @for(((uri, comment), i) <- comments.zipWithIndex) {
      <tr>
 	     <td rowspan="2">@{i+1}</td>
        <td>@adminHelper.articleDisplay(uri)</td>
-	     <td>@comment.permissions.value</td>
        <td>@adminHelper.dateDisplay(comment.createdAt) @adminHelper.timeDisplay(comment.createdAt)</td>
      </tr>
      <tr>
-	     <td colspan="3">@comment.text</td>
+	     <td colspan="2">@comment.text</td>
 	   </tr>
    }
   </table>
@@ -123,14 +121,16 @@
    <tr>
      <th>#</th>
      <th>Page</th>
-     <th>Type</th>
+     <th>Recipients</th>
      <th>Creation</th>
    </tr>
-   @for(((uri, message), i) <- messages.zipWithIndex) {
+   @for(((uri, message, recipients), i) <- messages.zipWithIndex) {
      <tr>
        <td rowspan="2">@{i+1}</td>
        <td>@adminHelper.articleDisplay(uri)</td>
-       <td>@message.permissions.value</td>
+       <td>@for(recipient <- recipients) { 
+	       @adminHelper.userDisplay(recipient)
+	     }</td>
        <td>@adminHelper.dateDisplay(message.createdAt) @adminHelper.timeDisplay(message.createdAt)</td>
      </tr>
      <tr>
