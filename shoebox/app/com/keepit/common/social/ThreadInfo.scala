@@ -18,15 +18,12 @@ object ThreadInfo {
     val allRecipients = CommentRecipient.getByComment(comment.id.get) map (cu => cu.userId.get)
 
     // We want to list recent commenters first, and then general recipients
-    val sortedRecipients = (childrenUsers ++ allRecipients).filterNot(r => userIdOpt match {
-      case Some(u) => r.id == u.id
-      case None => false
-    }).distinct map (u => BasicUser(User.get(u)))
+    val recipients = sortedRecipients(comment.userId :: (childrenUsers ++ allRecipients).toList, userIdOpt)
 
     val lastComment = children.headOption.getOrElse(comment)
     ThreadInfo(
       externalId = comment.externalId,
-      recipients = sortedRecipients,
+      recipients = recipients,
       digest = lastComment.text, // todo: make smarter
       lastAuthor = User.get(lastComment.userId).externalId,
       messageCount = children.size + 1,
@@ -35,4 +32,7 @@ object ThreadInfo {
       lastCommentedAt = lastComment.createdAt
     )
   }
+
+  def sortedRecipients(userIds: Seq[Id[User]], sessionUser: Option[Id[User]])(implicit conn: Connection): Seq[BasicUser] =
+    userIds.filterNot(recepientUserId => sessionUser map (_ == recepientUserId) getOrElse(false)).distinct map (u => BasicUser(User.get(u)))
 }
