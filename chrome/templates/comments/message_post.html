@@ -2,7 +2,9 @@
   <div class="comment-box compose-comment">
     <img src="{{kifiuser.avatar}}" class="user-avatar comment-avatar">
     <div class="compose-wrapper">
-      <input type="text" id="to-list" name="blah2" />
+      {{^inConversation}}
+      <input type="text" id="to-list">
+      {{/inConversation}}
       <div class="comment-compose" contenteditable="true"></div>
     </div>
     <div class="submit-bar">

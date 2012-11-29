@@ -236,11 +236,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     $('.comments-label').click(function() {
-      showComments(user, true, "public");
+      showComments(user, true, "public", null);
     });
 
     $('.messages-label').click(function() {
-      showComments(user, true, "message");
+      showComments(user, true, "message", null);
     });
 
     slideIn();
@@ -281,11 +281,16 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
-  function showComments(user, toggleOpenState, type) {
+  function showComments(user, toggleOpenState, type, view, id) {
     var type = type || "public";
 
+    if(!view) {
+      if(type == "public") view = ""
+      else if(type == "message") view = "messageThreadList"
+    }
+
     var isVisible = $('.kifi_comment_wrapper:visible').length > 0;
-    var showingType = $('.kifi_comment_wrapper').attr("data-view");
+    var showingType = $('.kifi_comment_wrapper').attr("data-type");
 
     var needsToOpen = false;
 
@@ -306,15 +311,29 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
       if (type == 'public') {
         $('.interaction-bar li.comments-label').addClass('active');
-        $('.kifi_comment_wrapper').attr("data-view", "public");
-      } else if (type == 'message') {
+        $('.kifi_comment_wrapper').attr("data-type", "public");
+      } else if (type == "message") {
         $('.interaction-bar li.messages-label').addClass('active');
-        $('.kifi_comment_wrapper').attr("data-view", "message");
+        $('.kifi_comment_wrapper').attr("data-type", "message");
+      }
+
+      if(view) {
+        $('.kifi_comment_wrapper').attr("data-view", view);
       }
     }
+    var baseURL;
 
+    if(type == "public") {
+      baseURL = "http://" + config.server + "/comments/public";
+    }
+    else if(type == "message") {
+      if(view == "messageThreadList")
+        baseURL = "http://" + config.server + "/messages/threads";
+      else
+        baseURL = "http://" + config.server + "/messages/threads/" + id;
+    }
     var userExternalId = user.keepit_external_id;
-    $.get("http://" + config.server + "/comments/" + type + "?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
+    $.get(baseURL + "?url=" + encodeURIComponent(document.location.href),
       null,
       function(comments) {
         renderComments(user, comments, type, function() {
@@ -411,7 +430,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     loadFile("templates/comments/hearts.html", function(hearts) {
     loadFile("templates/comments/comments_list.html", function(comment_list) {
     loadFile("templates/comments/comment.html", function(comment) {
-    loadFile("templates/comments/message.html", function(message) {
+    loadFile("templates/comments/thread_info.html", function(thread_info) {
+    loadFile("templates/comments/thread.html", function(thread) {
     loadFile("templates/comments/message_list.html", function(message_list) {
     loadFile("templates/comments/comment_post.html", function(comment_post) {
     loadFile("templates/comments/message_post.html", function(message_post) {
@@ -425,18 +445,16 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
       // By default we use the comment partials.
       // To override for a specific function, do so here.
-      if (type == 'message') {
-        partials.comment = message;
+      if (type == "message") {
+        partials.comment = thread_info;
         partials.comment_body_view = message_list;
         partials.comment_post_view = message_post;
 
-        // Blarghhh...
         var threadAvatar = "";
         for(msg in visibleComments) {
           var recipients = visibleComments[msg]["recipients"];
           var l = recipients.length;
-          if(l == 0) {
-            // No recipients!
+          if(l == 0) { // No recipients!
             threadAvatar = params.kifiuser.avatar;
           }
           else if(l == 1) {
@@ -485,14 +503,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           } else {
             recipientText = displayedRecipients.slice(0,3).join(", ");
             storedRecipients = recipientNames.slice(3);
-            console.log(recipientText, storedRecipients)
           }
-
           // todo "You wrote to "
 
           visibleComments[msg]["recipientText"] = recipientText;
           visibleComments[msg]["storedRecipients"] = storedRecipients;
-
         }
       }
 
@@ -501,6 +516,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         onComplete();
       }, partials);
 
+    });
     });
     });
     });
@@ -527,6 +543,19 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $(this).toggleClass("following", following);
     });
 
+    $('.comment_body_view').on("hover", ".more-recipients", function(event) {
+      console.log("hey",this, event,event.type)
+      if(event.type == 'mouseenter') {
+        //$(this).parent().find('.more-recipient-list').show();
+      }
+      else {
+        //$(this).parent().find('.more-recipient-list').hide();
+      }
+    }).on('click','.thread-info', function() {
+      var externalId = $(this).parent().attr("data-externalid");
+      console.log(externalId)
+    });
+
     if(type == "message") {
       $.get("http://" + config.server + "/users/friends?url=" + encodeURIComponent(document.location.href),
         null,
@@ -543,13 +572,13 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           });
         }
       );
+
     }
 
     // Main comment textarea
     var placeholder = "<span class=\"placeholder\">Add a comment…</span>";
     $('.comment-compose').html(placeholder);
     $('.comment_post_view').on('focus','.comment-compose',function() {
-      console.log($('.comment-compose').html(),placeholder);
       if ($('.comment-compose').html() == placeholder) { // unchanged text!
         $('.comment-compose').html("");
       }
@@ -600,6 +629,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       for(r in recipientJson) {
         recipientArr.push(recipientJson[r]["externalId"]);
       }
+      if(recipientArr.length == 0) {
+        alert("Silly you. You need to add some friends!");
+        return false;
+      }
       var recipients = recipientArr.join(",");
       console.log("to: ", recipients);
 
@@ -630,6 +663,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function submitComment(text, type, user, parent, recipients, callback) {
     /* Because we're using very simple templating now, re-rendering has to be done carefully.
      */
+    var permissions = type;
+
     var request = {
       "type": "post_comment",
       "url": document.location.href,
@@ -639,17 +674,23 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       "recipients": recipients
     };
     chrome.extension.sendRequest(request, function(response) {
-      var newComment = {
-        "createdAt": new Date,
-        "text": request.text,
-        "user": {
-          "externalId": user.keepit_external_id,
-          "firstName": user.name,
-          "lastName": "",
-          "facebookId": user.facebook_id
-        },
-        "permissions": type,
-        "externalId": response.commentId
+      var newComment = {};
+      if(type == "message") {
+        newComment = response;
+      }
+      else {
+        newComment = {
+          "createdAt": new Date,
+          "text": request.text,
+          "user": {
+            "externalId": user.keepit_external_id,
+            "firstName": user.name,
+            "lastName": "",
+            "facebookId": user.facebook_id
+          },
+          "permissions": type,
+          "externalId": response.commentId
+        }
       }
       callback(newComment);
     });
