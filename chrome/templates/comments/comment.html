@@ -1,16 +1,13 @@
 <div class="comment-wrapper" data-externalId="{{externalId}}">
   <div class="comment real-comment">
-    <div class="comment-avatar">
-      <img src="https://graph.facebook.com/{{user.facebookId}}/picture?type=square">
-    </div>
+    <img class="comment-avatar" src="https://graph.facebook.com/{{user.facebookId}}/picture?type=square">
     
     <div class="comment-text">
-      <strong>{{user.firstName}} {{user.lastName}}</strong>
+      <span class="recipient-list"><strong>{{user.firstName}} {{user.lastName}}</strong></span>
       {{#formatComments}}{{text}}{{/formatComments}}
     </div>
-    <div class="comment-meta">
-      <abbr class="timestamp timeago" title="{{#formatDate}}{{createdAt}}{{/formatDate}}">{{#formatDate}}{{createdAt}}{{/formatDate}}</abbr>
-      <span class="meta-links">Meta info!</span>
-    </div>
+  </div>
+  <div class="comment-meta">
+    <time datetime="{{#formatIsoDate}}{{createdAt}}{{/formatIsoDate}}">{{#formatDate}}{{createdAt}}{{/formatDate}}</time>
   </div>
 </div>

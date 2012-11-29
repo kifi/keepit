@@ -23,7 +23,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   });
 
   $.extend(jQuery.easing,{
-    easeQuickSnapBounce:function(x,t,b,c,d) { 
+    easeQuickSnapBounce:function(x,t,b,c,d) {
       if (typeof s === 'undefined') s = 1.3;
       return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
     },
@@ -32,7 +32,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       return c/2 * (Math.sqrt(1 - (t-=2)*t) + 1) + b;
     },
     easeInOutBack: function (x, t, b, c, d, s) {
-      if (s == undefined) s = 1.3; 
+      if (s == undefined) s = 1.3;
       if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s)) + b;
       return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
     }
@@ -131,7 +131,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         clearTimeout(timeout);
       }).mouseout(hide);
 
-    }); 
+    });
   }
 
   function showKeepItHover(user) {
@@ -163,14 +163,17 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           }
         }
 
+        loadFile("templates/footer.html", function(footer) {
         loadFile("templates/main_hover.html", function(main_hover) {
           var partials = {
-            "main_hover": main_hover 
+            "main_hover": main_hover,
+            "footer": footer
           }
 
           renderTemplate('kept_hover.html', tmpl, function(template) {
             drawKeepItHover(user, o.friends, o.numComments, o.numMessages, template);
           }, partials);
+        });
         });
       }
     );
@@ -220,9 +223,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       });
 
       var request = {
-        "type": "add_bookmarks", 
-        "url": document.location.href, 
-        "title": document.title, 
+        "type": "add_bookmarks",
+        "url": document.location.href,
+        "title": document.title,
         "private": $("#keepit_private").is(":checked")
       }
       chrome.extension.sendRequest(request, function(response) {
@@ -236,11 +239,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     $('.comments-label').click(function() {
-      showComments(user, true, "public");
+      showComments(user, "public");
     });
 
     $('.messages-label').click(function() {
-      showComments(user, true, "message");
+      showComments(user, "message", null, $('.thread-wrapper').length > 0);
     });
 
     slideIn();
@@ -264,7 +267,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         opacity: 0,
         right: '-=330'
       },
-      300, 
+      300,
       'easeQuickSnapBounce',
       function() {
         $('.kifi_hover').detach();
@@ -281,53 +284,41 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
-  function showComments(user, toggleOpenState, type) {
+  function showComments(user, type, id, keepOpen) {
     var type = type || "public";
 
-    var isVisible = $('.kifi_comment_wrapper:visible').length > 0;
-    var showingType = $('.kifi_comment_wrapper').attr("data-view");
+    var isVisible = $(".kifi_comment_wrapper").is(":visible");
+    var showingType = $(".kifi_hover").data("view");
 
-    var needsToOpen = false;
-
-    if (toggleOpenState) {
-      $('.interaction-bar li').removeClass('active');
-
-      if (isVisible) { // already open!
-        if (type == showingType) {
-          $('.kifi-content').slideDown();
-          $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
-          return;
-        } else { // already open, yet showing a different type.
-          // For now, nothing. Eventually, some slick animation for a quick change?
-        }
-      } else { // not visible
-        needsToOpen = true;
-      }
-
-      if (type == 'public') {
-        $('.interaction-bar li.comments-label').addClass('active');
-        $('.kifi_comment_wrapper').attr("data-view", "public");
-      } else if (type == 'message') {
-        $('.interaction-bar li.messages-label').addClass('active');
-        $('.kifi_comment_wrapper').attr("data-view", "message");
+    if (isVisible && !id && !keepOpen) { // already open!
+      if (type == showingType) {
+        $('.kifi-content').slideDown();
+        $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
+        $(".kifi_hover").removeClass(type);
+        return;
+      } else { // already open, yet showing a different type.
+        // For now, nothing. Eventually, some slick animation for a quick change?
       }
     }
 
-    var userExternalId = user.keepit_external_id;
-    $.get("http://" + config.server + "/comments/" + type + "?url=" + encodeURIComponent(document.location.href) + "&externalId=" + userExternalId,
-      null,
-      function(comments) {
-        renderComments(user, comments, type, function() {
-          if (needsToOpen) {
-            repositionScroll(false);
+    $(".kifi_hover").data("view", type).removeClass("public message").addClass(type);
 
-            $('.kifi-content').slideUp(); // hide main hover content
-            $('.kifi_comment_wrapper').slideDown(600, function () {
-              repositionScroll(false);
-            });
-          }
-        });
+    var url = "http://" + config.server +
+      (type == "public" ? "/comments/public" : "/messages/threads") +
+      (id ? "/" + id : ("?url=" + encodeURIComponent(document.location.href)));
+    $.get(url, null, function(comments) {
+      console.log(comments);
+      renderComments(user, comments, type, id, function() {
+        if (!isVisible) {
+          repositionScroll(false);
+
+          $('.kifi-content').slideUp(); // hide main hover content
+          $('.kifi_comment_wrapper').slideDown(600, function() {
+            repositionScroll(false);
+          });
+        }
       });
+    });
   }
 
   function commentTextFormatter() {
@@ -343,10 +334,18 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function commentDateFormatter() {
     return function(text, render) {
       try {
-        var date = (new Date(render(text))).toISOString();
-        return date;
+        return new Date(render(text)).toString();
+      } catch (e) {
+        return "";
       }
-      catch(e) {
+    }
+  }
+
+  function isoDateFormatter() {
+    return function(text, render) {
+      try {
+        return new Date(render(text)).toISOString();
+      } catch (e) {
         return "";
       }
     }
@@ -375,7 +374,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       .toggleClass("zero_comments", count == 0);
   }
 
-  function renderComments(user, comments, type, onComplete) {
+  function renderComments(user, comments, type, id, onComplete) {
     console.log("Drawing comments!");
     comments = comments || {};
     comments["public"] = comments["public"] || [];
@@ -384,8 +383,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     var visibleComments = comments[type] || [];
 
-    updateCommentCount(type, visibleComments.length);
-    
+    if(!id)
+      updateCommentCount(type, visibleComments.length);
+
     var params = {
       kifiuser: {
         "firstName": user.name,
@@ -394,6 +394,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       },
       formatComments: commentTextFormatter,
       formatDate: commentDateFormatter,
+      formatIsoDate: isoDateFormatter,
       comments: visibleComments,
       showControlBar: type == "public",
       following: following
@@ -402,7 +403,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     loadFile("templates/comments/hearts.html", function(hearts) {
     loadFile("templates/comments/comments_list.html", function(comment_list) {
     loadFile("templates/comments/comment.html", function(comment) {
-    loadFile("templates/comments/message.html", function(message) {
+    loadFile("templates/comments/thread_info.html", function(thread_info) {
+    loadFile("templates/comments/thread.html", function(thread) {
     loadFile("templates/comments/message_list.html", function(message_list) {
     loadFile("templates/comments/comment_post.html", function(comment_post) {
     loadFile("templates/comments/message_post.html", function(message_post) {
@@ -416,10 +418,82 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
       // By default we use the comment partials.
       // To override for a specific function, do so here.
-      if (type == 'message') {
-        partials.comment = message;
-        partials.comment_body_view = message_list;
+      if (type == "message") {
+        partials.comment = (id ? comment : thread_info);
+        partials.comment_body_view = (id ? thread : message_list);
         partials.comment_post_view = message_post;
+
+      // For thread lists, we need to do this for each one. For threads, only the first one
+        var iterMessages = (id ? [visibleComments[0]] : visibleComments )
+        var threadAvatar = "";
+        for(msg in iterMessages) {
+          var recipients = iterMessages[msg]["recipients"];
+          var l = recipients.length;
+          if(l == 0) { // No recipients!
+            threadAvatar = params.kifiuser.avatar;
+          }
+          else if(l == 1) {
+            threadAvatar = iterMessages[msg]["recipients"][0]["avatar"];
+          }
+          else {
+            threadAvatar = chrome.extension.getURL("icons/convo.png");
+          }
+          iterMessages[msg]["threadAvatar"] = threadAvatar;
+
+          var recipientNames = [];
+          for(r in recipients) {
+            recipientNames.push(recipients[r].firstName + " " + recipients[r].lastName)
+          }
+
+          // handled separately because this will need to be refactored to be cleaner
+          function formatRecipient(name) {
+            return "<strong class=\"recipient\">" + name + "</strong>";
+          }
+
+          var displayedRecipients = [];
+          var storedRecipients = [];
+          if(l == 0) {
+            displayedRecipients.push(user.name);
+          }
+          else if(l <= 4) {
+            displayedRecipients = recipientNames.slice(0, l);
+          }
+          else {
+            displayedRecipients = recipientNames.slice(0, 3);
+            storedRecipients = recipientNames.slice(3);
+          }
+
+          for(d in displayedRecipients) {
+            displayedRecipients[d] = formatRecipient(displayedRecipients[d]);
+          }
+
+          var recipientText;
+          if(l == 0) {
+            recipientText = displayedRecipients[0];
+          } else if(l <= 4) {
+            if(l == 1)
+              recipientText = displayedRecipients[0];
+            else if(l == 2)
+              recipientText = displayedRecipients[0] + " and " + displayedRecipients[1];
+            else if(l == 3 || l == 4)
+              recipientText = displayedRecipients.slice(0,l-1).join(", ") + " and " + displayedRecipients[l-1];
+          } else {
+            recipientText = displayedRecipients.slice(0,3).join(", ");
+            storedRecipients = recipientNames.slice(3);
+          }
+          // todo "You wrote to "
+
+          iterMessages[msg]["recipientText"] = recipientText;
+          iterMessages[msg]["storedRecipients"] = storedRecipients;
+          iterMessages[msg]["showMessageCount"] = iterMessages[msg]["messageCount"] > 1
+        }
+
+        if(id) {
+          params.recipientText = visibleComments[0].recipientText;
+          params.storedRecipients = visibleComments[0].storedRecipients;
+          params.externalId = visibleComments[0].externalId;
+          params.hideComposeTo = true;
+        }
       }
 
       renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
@@ -434,25 +508,33 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
     });
     });
+    });
   }
 
   function drawCommentView(renderedTemplate, user, type, partials) {
     //console.log(renderedTemplate);
     repositionScroll(false);
-    $('.kifi_comment_wrapper').html(renderedTemplate);
+    $('.kifi_comment_wrapper').html(renderedTemplate).find("time").timeago();
     repositionScroll(false);
 
     createCommentBindings(type, user);
   }
 
   function createCommentBindings(type, user) {
-    $("abbr.timeago").timeago();
-
     $(".control-bar").on("click", ".follow", function() {
       following = !following;  // TODO: server should return whether following along with the comments
       $.ajax("http://" + config.server + "/comments/follow?url=" + encodeURIComponent(document.location.href),
         {"type": following ? "POST" : "DELETE"});
       $(this).toggleClass("following", following);
+    });
+
+    $('.comment_body_view').on("hover", ".more-recipients", function(event) {
+      //$(this).parent().find('.more-recipient-list')[event.type == 'mouseenter' ? "show" : "hide"]();
+    }).on('click','.thread-info', function() {
+      var externalId = $(this).parent().attr("data-externalid");
+      showComments(user, type, externalId);
+    }).on('click', '.back-button', function() {
+      showComments(user, type, null, true);
     });
 
     if(type == "message") {
@@ -471,13 +553,13 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           });
         }
       );
+
     }
 
     // Main comment textarea
-    var placeholder = "<span class=\"placeholder\">Add a comment…</span>";
+    var placeholder = "<span class=\"placeholder\">Add a " + (type == "public" ? "comment" : "message") + "…</span>";
     $('.comment-compose').html(placeholder);
     $('.comment_post_view').on('focus','.comment-compose',function() {
-      console.log($('.comment-compose').html(),placeholder);
       if ($('.comment-compose').html() == placeholder) { // unchanged text!
         $('.comment-compose').html("");
       }
@@ -495,52 +577,120 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       //$('.submit-comment').slideUp(20);
     }).on('submit','.comment_form', function(e) {
       e.preventDefault();
-      //debugger;
-      submitComment($('.comment-compose').text(), type, user, null, function(newComment) {
-        $('.comment-compose').text("").focus().blur();
+      var text = commentSerializer($('.comment-compose').html());
 
-        console.log("new thread", newComment);
+      submitComment(text, type, user, null, null, function(newComment) {
+        $('.comment-compose').text("").html(placeholder);
+
+        console.log("new comment", newComment);
         // Clean up CSS
-        $('.submit-comment').slideUp(100, function() {
-          var params = newComment;
-          params["formatComments"] = commentTextFormatter;
-          params["formatDate"] = commentDateFormatter;
 
-          renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
-            //drawCommentView(renderedTemplate, user, type, partials);
-            $('.comment_body_view').find('.no-comment').parent().detach();
-            $('.comment_body_view').append(renderedComment).find("abbr.timeago").timeago();
-            updateCommentCount();
-            repositionScroll(false);
-          });
+        var params = newComment;
+        params["formatComments"] = commentTextFormatter;
+        params["formatDate"] = commentDateFormatter;
+        params["formatIsoDate"] = isoDateFormatter;
+
+        renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
+          //drawCommentView(renderedTemplate, user, type, partials);
+          $('.comment_body_view').find('.no-comment').parent().detach();
+          $('.comment_body_view').append(renderedComment).find("time").timeago();
+          updateCommentCount(type);
+          repositionScroll(false);
         });
+
+      });
+      return false;
+    }).on('submit','.message_form', function(e) {
+      e.preventDefault();
+      var text = commentSerializer($('.comment-compose').html());
+
+      var isReply = $(this).is('.message-reply');
+      var recipients;
+      var parent;
+      if(!isReply) {
+        var recipientJson = $("#to-list").tokenInput("get");
+        $("#to-list").tokenInput("clear");
+
+        var recipientArr = [];
+        for(r in recipientJson) {
+          recipientArr.push(recipientJson[r]["externalId"]);
+        }
+        if(recipientArr.length == 0) {
+          alert("Silly you. You need to add some friends!");
+          return false;
+        }
+        recipients = recipientArr.join(",");
+        console.log("to: ", recipients);
+      }
+      else {
+        parent = $(this).parents(".flexcontainer").find(".thread-wrapper").attr("data-externalid");
+        console.log(parent)
+      }
+
+      submitComment(text, type, user, parent, recipients, function(newComment) {
+        $('.comment-compose').text("").html(placeholder);
+
+        console.log("new message", newComment);
+        // Clean up CSS
+
+        if(!isReply) {
+          updateCommentCount(type,parseInt($('.messages-count').text()) + 1)
+          console.log("not a reply. redirecting to new message");
+          showComments(user, type, newComment.message.externalId);
+          return;
+        }
+
+        var params = newComment.message;
+        params["formatComments"] = commentTextFormatter;
+        params["formatDate"] = commentDateFormatter;
+        params["formatIsoDate"] = isoDateFormatter;
+
+        renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
+          //drawCommentView(renderedTemplate, user, type, partials);
+          $('.comment_body_view').find('.no-comment').parent().detach();
+          $('.thread-wrapper').append(renderedComment).find("time.timeago").timeago();
+          repositionScroll(false);
+        });
+
       });
       return false;
     });
   }
 
-  function submitComment(text, type, user, parent, callback) {
+  function submitComment(text, type, user, parent, recipients, callback) {
     /* Because we're using very simple templating now, re-rendering has to be done carefully.
      */
+    var permissions = type;
+
+    console.log(parent);
+
     var request = {
       "type": "post_comment",
       "url": document.location.href,
       "text": text,
       "permissions": type,
-      "parent": parent
+      "parent": parent,
+      "recipients": recipients
     };
     chrome.extension.sendRequest(request, function(response) {
-      var newComment = {
-        "createdAt": (new Date()),
-        "text": request.text,
-        "user": {
-          "externalId": user.keepit_external_id,
-          "firstName": user.name,
-          "lastName": "",
-          "facebookId": user.facebook_id
-        },
-        "permissions": type,
-        "externalId": response.commentId
+      var newComment;
+      if(type == "message") {
+        console.log("fff",response)
+        newComment = response;
+      }
+      else {
+        newComment = {
+          "createdAt": new Date,
+          "text": request.text,
+          "user": {
+            "externalId": user.keepit_external_id,
+            "firstName": user.name,
+            "lastName": "",
+            "facebookId": user.facebook_id
+          },
+          "permissions": type,
+          "externalId": response.commentId
+        }
       }
       callback(newComment);
     });

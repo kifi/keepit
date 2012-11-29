@@ -52,9 +52,13 @@
 		<div class="navbar navbar-inverse navbar-fixed-top">
 		  <div class="navbar-inner">
 		    <ul class="nav">
-		      <li><a href="@com.keepit.controllers.routes.BookmarksController.bookmarksFirstPageView">All Bookmarks</a></li>
-		      <li><a href="@com.keepit.controllers.routes.UserController.usersView">All KiFi Users</a></li>
-		      <li><a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(0)">All Social Users</a></li>
+		      <li><a href="@com.keepit.controllers.admin.routes.AdminDashboardController.index">Dashboard</a></li>
+		      <li><a href="@com.keepit.controllers.routes.BookmarksController.bookmarksFirstPageView">Bookmarks</a></li>
+		      <li><a href="@com.keepit.controllers.routes.UserController.usersView">KiFi Users</a></li>
+		      <li><a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(0)">Social Users</a></li>
+		      <li><a href="@com.keepit.controllers.routes.CommentController.followsView">Followings</a></li>
+		      <li><a href="@com.keepit.controllers.routes.CommentController.commentsView">Comments</a></li>
+		      <li><a href="@com.keepit.controllers.routes.CommentController.messagesView">Messages</a></li>
 		      <li class="divider-vertical"></li>
 		      <li><a href="@com.keepit.controllers.admin.routes.ArticleIndexerController.indexInfo">Index Info</a></li>
 		      <li><a href="@com.keepit.common.healthcheck.routes.HealthController.serviceView">Service</a></li>

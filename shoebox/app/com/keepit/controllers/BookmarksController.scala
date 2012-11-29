@@ -22,7 +22,6 @@ import com.keepit.common.db._
 import com.keepit.model._
 import com.keepit.inject._
 import com.keepit.serializer.BookmarkSerializer
-import com.keepit.serializer.{URIPersonalSearchResultSerializer => BPSRS}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import com.keepit.common.social._

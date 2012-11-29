@@ -1,15 +1,13 @@
-<form class="message_form">
+<form class="message_form{{#hideComposeTo}} message-reply{{/hideComposeTo}}">
   <div class="comment-box compose-comment">
-      <img src="{{kifiuser.avatar}}" class="user-avatar comment-avatar">
-      <div class="compose-wrapper">
-        <input type="text" id="to-list" name="blah2" />
-        <div class="comment-compose" contenteditable="true"></div>
-      </div>
-      
-      <div class="crosshair"></div>
-  </div>
-  <div class="submit-bar">
-    <div class="submit-wrapper">
+    <img src="{{kifiuser.avatar}}" class="user-avatar comment-avatar">
+    <div class="compose-wrapper">
+      {{^hideComposeTo}}
+      <input type="text" id="to-list">
+      {{/hideComposeTo}}
+      <div class="comment-compose" contenteditable="true"></div>
+    </div>
+    <div class="submit-bar">
       <input type="submit" class="submit-comment" value="Comment">
     </div>
   </div>

@@ -12,13 +12,14 @@ import com.keepit.common.social.CommentWithSocialUser
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.social.UserWithSocial
+import com.keepit.common.social.UserWithSocial.toUserWithSocial
 import com.keepit.inject.inject
 import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, Follow, NormalizedURI, SocialConnection, SocialUserInfo, User}
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
-import com.keepit.serializer.MessageDigestSerializer.messageDigestSerializer
+import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import play.api.Play.current
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka
@@ -27,7 +28,7 @@ import play.api.mvc.Action
 import play.api.mvc.Controller
 import securesocial.core.SecureSocial
 import securesocial.core.java.SecureSocial.SecuredAction
-import com.keepit.common.social.MessageDigest
+import com.keepit.common.social.ThreadInfo
 
 object CommentController extends FortyTwoController {
 
@@ -53,49 +54,63 @@ object CommentController extends FortyTwoController {
           newComment
         case "public" | "" =>
           Comment(uriId = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
+        case _ =>
+          throw new Exception("Invalid comment permission")
       }
     }
 
     notifyRecipientsAsync(comment)
 
-    Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
+    comment.permissions match {
+      case Comment.Permissions.PUBLIC =>
+        Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
+      case Comment.Permissions.MESSAGE =>
+        val threadInfo = CX.withConnection{ implicit c => CommentWithSocialUser(comment) }
+        Ok(JsObject(Seq("message" -> commentWithSocialUserSerializer.writes(threadInfo))))
+      case _ =>
+        Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
+    }
   }
 
   def getComments(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
-      val user = User.get(request.userId)
-      NormalizedURI.getByNormalizedUrl(url) match {
-        case Some(normalizedURI) =>
-          List(Comment.Permissions.PUBLIC -> publicComments(normalizedURI).map(CommentWithSocialUser(_)))
-        case None =>
-          List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
-      }
+      NormalizedURI.getByNormalizedUrl(url) map { normalizedURI =>
+          publicComments(normalizedURI).map(CommentWithSocialUser(_))
+        } getOrElse Nil
     }
-    Ok(commentWithSocialUserSerializer.writes(comments))
+    Ok(commentWithSocialUserSerializer.writes(Comment.Permissions.PUBLIC -> comments))
   }
 
-  def getMessages(url: String) = AuthenticatedJsonAction { request =>
+  def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
-      val user = User.get(request.userId)
-      NormalizedURI.getByNormalizedUrl(url) match {
-        case Some(normalizedURI) =>
-          List(Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(MessageDigest(_)))
-        case None =>
-          List[(State[Comment.Permission],Seq[MessageDigest])]()
-      }
+      NormalizedURI.getByNormalizedUrl(url) map { normalizedURI =>
+          messageComments(request.userId, normalizedURI).map(ThreadInfo(_, Some(request.userId))).reverse
+        } getOrElse Nil
     }
-    Ok(messageDigestSerializer.writes(comments))
+    log.info("comments for url %s:\n%s".format(url, comments mkString "\n"))
+    Ok(threadInfoSerializer.writes(Comment.Permissions.MESSAGE -> comments))
   }
 
-  @deprecated("comments will soon not have replies", "2012-11-27")
+  def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
+    val replies = CX.withConnection { implicit conn =>
+      val comment = Comment.get(commentId)
+      if (true) // TODO: hasPermission(user.id.get, comment.id.get) ???????????????
+        (Seq(comment) ++ Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) })
+      else
+          Nil
+    }
+    Ok(commentWithSocialUserSerializer.writes(Comment.Permissions.MESSAGE -> replies))
+  }
+
+  // TODO: delete once no beta users have old plugin supporting replies
   def getReplies(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     val replies = CX.withConnection { implicit conn =>
       val comment = Comment.get(commentId)
       val user = User.get(request.userId)
-      if (true) // TODO: hasPermission(user.id.get, comment.id.get)
+      if (true) // TODO: hasPermission(user.id.get, comment.id.get) ??????????????
         Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }
       else
-        Seq[CommentWithSocialUser]()
+          Nil
     }
     Ok(commentWithSocialUserSerializer.writes(replies))
   }
@@ -196,7 +211,7 @@ object CommentController extends FortyTwoController {
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
-                  from = EmailAddresses.SUPPORT, to = addr, subject = subjectPrefix + uri.title,
+                  from = EmailAddresses.SUPPORT, to = addr, subject = subjectPrefix + uri.title.getOrElse(uri.url),
                   htmlBody = views.html.email.newMessage(sender, recipient, uri, comment).body,
                   category = PostOffice.Categories.COMMENT))
             }
@@ -206,4 +221,27 @@ object CommentController extends FortyTwoController {
     }
   }, {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
 
+  def followsView = AdminHtmlAction { implicit request =>
+    val uriAndUsers = CX.withConnection { implicit c =>
+      Follow.all map {f => (toUserWithSocial(User.get(f.userId)), f, NormalizedURI.get(f.uriId))}
+    }
+    Ok(views.html.follows(uriAndUsers))
+  }
+
+  def commentsView = AdminHtmlAction { implicit request =>
+    val uriAndUsers = CX.withConnection { implicit c =>
+      Comment.all(Comment.Permissions.PUBLIC) map {co => (toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId))}
+    }
+    Ok(views.html.comments(uriAndUsers))
+  }
+
+  def messagesView = AdminHtmlAction { implicit request =>
+    val uriAndUsers = CX.withConnection { implicit c =>
+      Comment.all(Comment.Permissions.MESSAGE) map {co =>
+        (toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId),
+            CommentRecipient.getByComment(co.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) })
+      }
+    }
+    Ok(views.html.messages(uriAndUsers))
+  }
 }

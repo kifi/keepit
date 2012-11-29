@@ -1,0 +1,28 @@
+@(uriAndUsers: Seq[(UserWithSocial, Comment, NormalizedURI, Seq[UserWithSocial])])
+
+@admin("Messages") {
+  <h2>Showing @uriAndUsers.size messages</h2>
+  <table class="table table-bordered">
+    <tr>
+      <th>#</th>
+      <th>User</th>
+      <th>Recipients</th>
+      <th>Page</th>
+      <th>Creation</th>
+    </tr>
+  @for(((user, comment, article, recipients), i) <- uriAndUsers.zipWithIndex) {
+    <tr>
+      <td rowspan="2">@{i+1}</td>
+      <td>@adminHelper.userDisplay(user)</td>
+      <td>@for(recipient <- recipients) { 
+        @adminHelper.userDisplay(recipient)
+      }</td>
+      <td>@adminHelper.articleDisplay(article)</td>
+      <td>@adminHelper.dateDisplay(comment.createdAt) @adminHelper.timeDisplay(comment.createdAt)</td>
+    </tr>
+    <tr>
+      <td colspan="5">@comment.text</td>
+    </tr>
+  }
+  </table>
+}

@@ -3,14 +3,14 @@ package com.keepit.search.index
 import com.keepit.search.SemanticVector
 import com.keepit.search.SemanticVectorComposer
 import org.apache.lucene.index.IndexReader
+import org.apache.lucene.index.Term
+import org.apache.lucene.index.Payload
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
-import org.apache.lucene.index.Term
-import org.apache.lucene.index.Payload
 
 class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends IndexSearcher(indexReader) {
 
@@ -41,7 +41,7 @@ class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends Ind
     }
   }
 
-  def getSemanticVector(term: Term) = {
+  protected def getSemanticVectorComposer(term: Term) = {
     val composer = new SemanticVectorComposer
     val tp = indexReader.termPositions(term)
     var vector = new Array[Byte](SemanticVector.arraySize)
@@ -58,8 +58,24 @@ class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends Ind
     } finally {
       tp.close()
     }
-    if (composer.numInputs > 0) composer.get
+    composer
+  }
+
+  def getSemanticVector(term: Term) = {
+    val composer = getSemanticVectorComposer(term)
+
+    if (composer.numInputs > 0) composer.getSemanticVector
     else SemanticVector.vectorize(SemanticVector.getSeed(term.text))
+  }
+
+  def getSemanticVector(terms: Set[Term]) = {
+    val sketch = terms.foldLeft(SemanticVector.emptySketch){ (sketch, term) =>
+      val composer = getSemanticVectorComposer(term)
+      val termSketch = if (composer.numInputs > 0) composer.getQuasiSketch else SemanticVector.getSeed(term.text)
+      SemanticVector.updateSketch(sketch, termSketch)
+      sketch
+    }
+    SemanticVector.vectorize(sketch)
   }
 
   def getHitQueue(size: Int) = new HitQueue(size)

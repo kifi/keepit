@@ -51,6 +51,12 @@ object Comment {
   def all(implicit conn: Connection): Seq[Comment] =
     CommentEntity.all.map(_.view)
 
+  def all(permissions: State[Comment.Permission])(implicit conn: Connection): Seq[Comment] =
+    (CommentEntity AS "c").map {c => SELECT (c.*) FROM c WHERE (c.permissions EQ permissions) list} map (_.view)
+
+  def all(permissions: State[Comment.Permission], userId: Id[User])(implicit conn: Connection): Seq[Comment] =
+    (CommentEntity AS "c").map {c => SELECT (c.*) FROM c WHERE ((c.userId EQ userId) AND (c.permissions EQ permissions)) list} map (_.view)
+
   def get(id: Id[Comment])(implicit conn: Connection): Comment =
     getOpt(id).getOrElse(throw NotFoundException(id))
 
@@ -135,7 +141,7 @@ object Comment {
       project: RelationNode[Id[Comment],CommentEntity] => Projection[T],
       commentId: Id[Comment])(implicit conn: Connection) = {
     val c = CommentEntity AS "c"
-    SELECT (project(c)) FROM c WHERE (c.parent EQ commentId) ORDER_BY (c.id ASC)
+    SELECT (project(c)) FROM c WHERE (c.parent EQ commentId)
   }
 
   object States {

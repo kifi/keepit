@@ -28,6 +28,7 @@ import scala.math._
 import com.keepit.search.query.ProximityQuery
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.SemanticVectorQuery
+import com.keepit.search.query.BooleanQueryWithPercentMatch
 
 object ArticleIndexer {
   val indexingAnalyzer = DefaultAnalyzer.forIndexing
@@ -133,7 +134,6 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
         case (query, null) => query
         case (null, query) => query
         case (q1, q2) =>
-          q1.setBoost(2.0f) // title boost
           val booleanQuery = new BooleanQuery
           booleanQuery.add(q1, Occur.SHOULD)
           booleanQuery.add(q2, Occur.SHOULD)

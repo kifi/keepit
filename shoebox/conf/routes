@@ -16,7 +16,9 @@ POST    /bookmarks/private          com.keepit.controllers.BookmarksController.u
 
 POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: String, text: String, permissions: String, recipients: String ?= "", parent: String ?= "")
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
-GET     /comments/message           com.keepit.controllers.CommentController.getMessages(url: String)
+GET     /messages/threads/:id       com.keepit.controllers.CommentController.getMessageThread(id: ExternalId[Comment])
+GET     /messages/threads           com.keepit.controllers.CommentController.getMessageThreadList(url: String)
+POST    /messages                   com.keepit.controllers.CommentController.createComment(url: String, text: String, permissions = "message", recipients: String ?= "", parent: String ?= "")
 GET     /comments/reply             com.keepit.controllers.CommentController.getReplies(commentId: ExternalId[Comment])
 POST    /comments/follow            com.keepit.controllers.CommentController.startFollowing(url: String)
 DELETE  /comments/follow            com.keepit.controllers.CommentController.stopFollowing(url: String)
@@ -42,32 +44,44 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 
 GET     /admin                      com.keepit.controllers.admin.AdminDashboardController.index
 GET     /admin/graphs/users.json    com.keepit.controllers.admin.AdminDashboardController.usersByDate
+
 GET     /bookmarks                  com.keepit.controllers.BookmarksController.bookmarksFirstPageView
 GET     /admin/bookmarks            com.keepit.controllers.BookmarksController.bookmarksFirstPageView
 GET     /admin/bookmarks/page/:page com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
+
 GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scrape/:state        com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
 GET     /admin/scraped/:uriId       com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
+
 GET     /admin/article/index        com.keepit.controllers.admin.ArticleIndexerController.index
 GET     /admin/article/index/:state com.keepit.controllers.admin.ArticleIndexerController.indexByState(state: State[NormalizedURI])
 GET     /admin/article/indexInfo    com.keepit.controllers.admin.ArticleIndexerController.indexInfo
 GET     /admin/article/refreshSearcher com.keepit.controllers.admin.ArticleIndexerController.refreshSearcher
+
 GET     /admin/uriGraph/load        com.keepit.controllers.admin.URIGraphController.load
 GET     /admin/uriGraph/update/:userId com.keepit.controllers.admin.URIGraphController.update(userId: Id[User])
+
 GET     /admin/users                com.keepit.controllers.UserController.usersView
 GET     /admin/user/:id             com.keepit.controllers.UserController.userView(id: Id[User])
 POST    /admin/user/:id/experiment/add/:exp  com.keepit.controllers.UserController.addExperiment(id: Id[User], exp: String)
 POST    /admin/user/:id/update      com.keepit.controllers.UserController.updateUser(id: Id[User])
 GET     /admin/user/:id/social_users/refresh com.keepit.controllers.UserController.refreshAllSocialInfo(id: Id[User])
+
 GET     /admin/social_users/:page   com.keepit.controllers.SocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      com.keepit.controllers.SocialUserController.socialUserView(id: Id[SocialUserInfo])
 GET     /admin/social_user/:id/refresh com.keepit.controllers.SocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
 GET     /admin/social_user/:id/reset com.keepit.controllers.SocialUserController.resetSocialUser(id: Id[SocialUserInfo])
+
 GET     /admin/server               com.keepit.common.healthcheck.HealthController.serviceView()
 GET     /admin/search/results/:id   com.keepit.controllers.SearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
+
 GET     /admin/emails/comment       com.keepit.controllers.admin.AdminEmailPreviewController.newComment
 GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
 GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
+
+GET     /admin/follows              com.keepit.controllers.CommentController.followsView
+GET     /admin/comments             com.keepit.controllers.CommentController.commentsView
+GET     /admin/messages             com.keepit.controllers.CommentController.messagesView
 
 ##########################################
 # Secure social routes
