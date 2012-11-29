@@ -23,7 +23,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   });
 
   $.extend(jQuery.easing,{
-    easeQuickSnapBounce:function(x,t,b,c,d) { 
+    easeQuickSnapBounce:function(x,t,b,c,d) {
       if (typeof s === 'undefined') s = 1.3;
       return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
     },
@@ -32,7 +32,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       return c/2 * (Math.sqrt(1 - (t-=2)*t) + 1) + b;
     },
     easeInOutBack: function (x, t, b, c, d, s) {
-      if (s == undefined) s = 1.3; 
+      if (s == undefined) s = 1.3;
       if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s)) + b;
       return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
     }
@@ -131,7 +131,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         clearTimeout(timeout);
       }).mouseout(hide);
 
-    }); 
+    });
   }
 
   function showKeepItHover(user) {
@@ -165,7 +165,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
         loadFile("templates/main_hover.html", function(main_hover) {
           var partials = {
-            "main_hover": main_hover 
+            "main_hover": main_hover
           }
 
           renderTemplate('kept_hover.html', tmpl, function(template) {
@@ -220,9 +220,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       });
 
       var request = {
-        "type": "add_bookmarks", 
-        "url": document.location.href, 
-        "title": document.title, 
+        "type": "add_bookmarks",
+        "url": document.location.href,
+        "title": document.title,
         "private": $("#keepit_private").is(":checked")
       }
       chrome.extension.sendRequest(request, function(response) {
@@ -236,11 +236,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     $('.comments-label').click(function() {
-      showComments(user, true, "public", null);
+      showComments(user, "public");
     });
 
     $('.messages-label').click(function() {
-      showComments(user, true, "message", null);
+      showComments(user, "message");
     });
 
     slideIn();
@@ -264,7 +264,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         opacity: 0,
         right: '-=330'
       },
-      300, 
+      300,
       'easeQuickSnapBounce',
       function() {
         $('.kifi_hover').detach();
@@ -281,72 +281,40 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
-  function showComments(user, toggleOpenState, type, view, id) {
+  function showComments(user, type, id) {
     var type = type || "public";
 
-    if(!view) {
-      if(type == "public") view = ""
-      else if(type == "message") view = "messageThreadList"
-    }
+    var isVisible = $(".kifi_comment_wrapper").is(":visible");
+    var showingType = $(".kifi_hover").data("view");
 
-    var isVisible = $('.kifi_comment_wrapper:visible').length > 0;
-    var showingType = $('.kifi_comment_wrapper').attr("data-type");
-
-    var needsToOpen = false;
-
-    if (toggleOpenState) {
-      $('.interaction-bar li').removeClass('active');
-
-      if (isVisible) { // already open!
-        if (type == showingType) {
-          $('.kifi-content').slideDown();
-          $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
-          return;
-        } else { // already open, yet showing a different type.
-          // For now, nothing. Eventually, some slick animation for a quick change?
-        }
-      } else { // not visible
-        needsToOpen = true;
-      }
-
-      if (type == 'public') {
-        $('.interaction-bar li.comments-label').addClass('active');
-        $('.kifi_comment_wrapper').attr("data-type", "public");
-      } else if (type == "message") {
-        $('.interaction-bar li.messages-label').addClass('active');
-        $('.kifi_comment_wrapper').attr("data-type", "message");
-      }
-
-      if(view) {
-        $('.kifi_comment_wrapper').attr("data-view", view);
+    if (isVisible) { // already open!
+      if (type == showingType) {
+        $('.kifi-content').slideDown();
+        $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
+        $(".kifi_hover").removeClass(type);
+        return;
+      } else { // already open, yet showing a different type.
+        // For now, nothing. Eventually, some slick animation for a quick change?
       }
     }
-    var baseURL;
 
-    if(type == "public") {
-      baseURL = "http://" + config.server + "/comments/public";
-    }
-    else if(type == "message") {
-      if(view == "messageThreadList")
-        baseURL = "http://" + config.server + "/messages/threads";
-      else
-        baseURL = "http://" + config.server + "/messages/threads/" + id;
-    }
-    var userExternalId = user.keepit_external_id;
-    $.get(baseURL + "?url=" + encodeURIComponent(document.location.href),
-      null,
-      function(comments) {
-        renderComments(user, comments, type, function() {
-          if (needsToOpen) {
+    $(".kifi_hover").data("view", type).removeClass("public message").addClass(type);
+
+    var url = "http://" + config.server +
+      (type == "public" ? "/comments/public" : "/messages/threads") +
+      (id ? "/" + id : ("?url=" + encodeURIComponent(document.location.href)));
+    $.get(url, null, function(comments) {
+      renderComments(user, comments, type, function() {
+        if (!isVisible) {
+          repositionScroll(false);
+
+          $('.kifi-content').slideUp(); // hide main hover content
+          $('.kifi_comment_wrapper').slideDown(600, function() {
             repositionScroll(false);
-
-            $('.kifi-content').slideUp(); // hide main hover content
-            $('.kifi_comment_wrapper').slideDown(600, function () {
-              repositionScroll(false);
-            });
-          }
-        });
+          });
+        }
       });
+    });
   }
 
   function commentTextFormatter() {
@@ -412,7 +380,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     var visibleComments = comments[type] || [];
 
     updateCommentCount(type, visibleComments.length);
-    
+
     var params = {
       kifiuser: {
         "firstName": user.name,
