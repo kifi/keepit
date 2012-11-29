@@ -236,11 +236,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     $('.comments-label').click(function() {
-      showComments(user, true, "public");
+      showComments(user, true, "public", null);
     });
 
     $('.messages-label').click(function() {
-      showComments(user, true, "message");
+      showComments(user, true, "message", null);
     });
 
     slideIn();
@@ -281,8 +281,13 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
-  function showComments(user, toggleOpenState, type) {
+  function showComments(user, toggleOpenState, type, view, id) {
     var type = type || "public";
+
+    if(!view) {
+      if(type == "public") view = ""
+      else if(type == "message") view = "messageThreadList"
+    }
 
     var isVisible = $('.kifi_comment_wrapper:visible').length > 0;
     var showingType = $('.kifi_comment_wrapper').attr("data-type");
@@ -312,9 +317,19 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         $('.kifi_comment_wrapper').attr("data-type", "message");
       }
     }
+    var baseURL;
 
+    if(type == "public") {
+      baseURL = "http://" + config.server + "/comments/public";
+    }
+    else if(type == "message") {
+      if(view == "messageThreadList")
+        baseURL = "http://" + config.server + "/messages/threads";
+      else
+        baseURL = "http://" + config.server + "/messages/threads/" + id;
+    }
     var userExternalId = user.keepit_external_id;
-    $.get("http://" + config.server + "/comments/" + type + "?url=" + encodeURIComponent(document.location.href),
+    $.get(baseURL + "?url=" + encodeURIComponent(document.location.href),
       null,
       function(comments) {
         renderComments(user, comments, type, function() {
@@ -562,7 +577,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     var placeholder = "<span class=\"placeholder\">Add a comment…</span>";
     $('.comment-compose').html(placeholder);
     $('.comment_post_view').on('focus','.comment-compose',function() {
-      console.log($('.comment-compose').html(),placeholder);
       if ($('.comment-compose').html() == placeholder) { // unchanged text!
         $('.comment-compose').html("");
       }
