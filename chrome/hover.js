@@ -452,8 +452,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
           var displayedRecipients = [];
           var storedRecipients = [];
-          if(l == 0)
+          if(l == 0) {
             displayedRecipients.push(user.name);
+          }
           else if(l <= 4) {
             displayedRecipients = recipientNames.slice(0,l);
           }
