@@ -28,14 +28,14 @@ case class SocialUserInfo(
   socialId: SocialId,
   networkType: SocialNetworkType,
   credentials: Option[SocialUser] = None,
-  lastGraphRefresh : Option[DateTime] = Some(currentDateTime)
+  lastGraphRefresh: Option[DateTime] = Some(currentDateTime)
 ) {
 
   def reset() = copy(state = SocialUserInfo.States.CREATED, credentials = None)
   def withUser(user: User) = copy(userId = Some(user.id.get))//want to make sure the user has an id, fail hard if not!
   def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials))//want to make sure the user has an id, fail hard if not!
   def withState(state: State[SocialUserInfo]) = copy(state = state)
-  def withLastGraphRefresh(lastGraphRefresh : Option[DateTime] = Some(new DateTime())) = copy(lastGraphRefresh =lastGraphRefresh); 
+  def withLastGraphRefresh(lastGraphRefresh : Option[DateTime] = Some(currentDateTime)) = copy(lastGraphRefresh = lastGraphRefresh)
   def save(implicit conn: Connection): SocialUserInfo = {
     val entity = SocialUserInfoEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
@@ -73,7 +73,7 @@ object SocialUserInfo {
     val UNPROCESSED_STATE = States.CREATED::States.FETCHED_USING_FRIEND::Nil
     (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ((u.state IN(UNPROCESSED_STATE)) AND (u.credentials IS_NOT_NULL)) list }.map(_.view)
   }
- 
+
   def getNeedtoBeRefreshed()(implicit conn: Connection): Seq[SocialUserInfo] = {
     (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ( ((u.lastGraphRefresh IS_NULL) OR u.lastGraphRefresh.LT(new DateTime().minusHours(2)) )  AND (u.userId IS_NOT_NULL) AND (u.credentials IS_NOT_NULL ) ) list }.map(_.view)
   }
@@ -112,7 +112,8 @@ private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialU
       case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK
       case _ => throw new RuntimeException("unknown network type %s".format(networkType()))
     },
-    credentials = credentials.map{ s => new SocialUserSerializer().reads(Json.parse(s)) }
+    credentials = credentials.map{ s => new SocialUserSerializer().reads(Json.parse(s)) },
+    lastGraphRefresh = lastGraphRefresh.value
   )
 }
 
@@ -131,7 +132,6 @@ private[model] object SocialUserInfoEntity extends SocialUserInfoEntity with Ent
     user.networkType := view.networkType.name
     user.credentials.set(view.credentials.map{ s => new SocialUserSerializer().writes(s).toString() })
     user.lastGraphRefresh.set(view.lastGraphRefresh)
-    
     user
   }
 }
