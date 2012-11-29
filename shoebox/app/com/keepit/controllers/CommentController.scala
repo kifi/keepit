@@ -53,12 +53,22 @@ object CommentController extends FortyTwoController {
           newComment
         case "public" | "" =>
           Comment(uriId = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
+        case _ =>
+          throw new Exception("Invalid comment permission")
       }
     }
 
     notifyRecipientsAsync(comment)
 
-    Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
+    comment.permissions match {
+      case Comment.Permissions.PUBLIC =>
+        Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
+      case Comment.Permissions.MESSAGE =>
+        val threadInfo = CX.withConnection{ implicit c => ThreadInfo(comment) }
+        Ok(JsObject(Seq("message" -> ThreadInfoSerializer.writes(threadInfo))))
+      case _ =>
+        Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
+    }
   }
 
   def getComments(url: String) = AuthenticatedJsonAction { request =>
@@ -74,7 +84,7 @@ object CommentController extends FortyTwoController {
     Ok(commentWithSocialUserSerializer.writes(comments))
   }
 
-  def getMessages(url: String) = AuthenticatedJsonAction { request =>
+  def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
       val user = User.get(request.userId)
       NormalizedURI.getByNormalizedUrl(url) match {
@@ -84,7 +94,19 @@ object CommentController extends FortyTwoController {
           List[(State[Comment.Permission],Seq[ThreadInfo])]()
       }
     }
-    Ok(ThreadInfoSerializer.writes(comments))
+    Ok(ThreadInfoSerializer.writes(comments.reverse))
+  }
+
+  def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
+    val replies = CX.withConnection { implicit conn =>
+      val comment = Comment.get(commentId)
+      val user = User.get(request.userId)
+      if (true) // TODO: hasPermission(user.id.get, comment.id.get)
+        Seq(comment) ++ Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }
+      else
+        Seq[CommentWithSocialUser]()
+    }
+    Ok(commentWithSocialUserSerializer.writes(replies))
   }
 
   // TODO: delete once no beta users have old plugin supporting replies
