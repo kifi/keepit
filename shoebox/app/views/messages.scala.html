@@ -8,7 +8,6 @@
       <th>User</th>
       <th>Recipients</th>
       <th>Page</th>
-      <th>Type</th>
       <th>Creation</th>
     </tr>
   @for(((user, comment, article, recipients), i) <- uriAndUsers.zipWithIndex) {
@@ -19,7 +18,6 @@
         @adminHelper.userDisplay(recipient)
       }</td>
       <td>@adminHelper.articleDisplay(article)</td>
-      <td>@comment.permissions.value</td>
       <td>@adminHelper.dateDisplay(comment.createdAt) @adminHelper.timeDisplay(comment.createdAt)</td>
     </tr>
     <tr>

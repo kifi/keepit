@@ -246,7 +246,8 @@ object CommentController extends FortyTwoController {
   def messagesView = AdminHtmlAction { implicit request =>
     val uriAndUsers = CX.withConnection { implicit c =>
       Comment.all(Comment.Permissions.MESSAGE) map {co =>
-        (toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId), CommentRecipient.getByComment(co.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) })
+        (toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId),
+            CommentRecipient.getByComment(co.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) })
       }
     }
     Ok(views.html.messages(uriAndUsers))
