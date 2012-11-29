@@ -17,7 +17,6 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
 
   // get config params
   val minMyBookmarks = config.asInt("minMyBookmarks")
-  val maxTextHitsPerCategory = config.asInt("maxTextHitsPerCategory")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   val sharingBoost = config.asFloat("sharingBoost")
   val percentMatch = config.asFloat("percentMatch")
@@ -26,6 +25,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   val tailCutting = config.asFloat("tailCutting")
   val proximityBoost = config.asFloat("proximityBoost")
   val semanticBoost = config.asFloat("semanticBoost")
+  val dumpingByRank = config.asBoolean("dumpingByRank")
 
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
   val articleSearcher = articleIndexer.getArticleSearcher
@@ -88,7 +88,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]]): ArticleSearchResult = {
     val now = currentDateTime
-    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = maxTextHitsPerCategory)
+    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5)
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
@@ -102,7 +102,12 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
 
     var threshold = highScore * tailCutting
 
-    myHits.iterator.filter(_.score > threshold).foreach{ h =>
+    myHits.toSortedList.iterator.zipWithIndex.map{ case (h, rank) =>
+      if (dumpingByRank) h.score = h.score * dumpFunc(rank, 8.0d) // dumping the scores by rank
+      h
+    }.takeWhile{ h =>
+      h.score > threshold
+    }.foreach{ h =>
       val id = Id[NormalizedURI](h.id)
       val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet - userId
 
@@ -111,13 +116,16 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
       h.score = h.scoring.score(myBookmarkBoost, sharingBoost, recencyBoost)
       hits.insert(h)
     }
-    var mayHaveMore = hits.overflowed // true if we _may_ have more hits
 
     if (friendsHits.size > 0) {
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
-
-      friendsHits.iterator.filter(_.score > threshold).foreach{ h =>
+      friendsHits.toSortedList.iterator.zipWithIndex.map{ case (h, rank) =>
+        if (dumpingByRank) h.score = h.score * dumpFunc(rank, 4.0d) // dumping the scores by rank
+        h
+      }.takeWhile{ h =>
+        h.score > threshold
+      }.foreach{ h =>
         val id = Id[NormalizedURI](h.id)
         val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
 
@@ -127,13 +135,16 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
         queue.insert(h)
       }
       queue.foreach{ h => hits.insert(h) }
-      if (queue.overflowed) mayHaveMore = true // true if we _may_ have more hits
     }
 
-    // if we don't have enough hits, backfill the result with hits in the "others" category
     if (hits.size < numHitsToReturn && othersHits.size > 0) {
       val queue = createQueue(numHitsToReturn - hits.size)
-      othersHits.iterator.filter(_.score > threshold).foreach{ h =>
+      othersHits.toSortedList.iterator.zipWithIndex.map{ case (h, rank) =>
+        if (dumpingByRank) h.score = h.score * dumpFunc(rank, 2.0d) // dumping the scores by rank
+        h
+      }.takeWhile{
+        h => h.score > threshold
+      }.foreach{ h =>
         h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
         if (h.bookmarkCount > 0) {
           h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(h.bookmarkCount), 0.0f)
@@ -141,26 +152,16 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
           queue.insert(h)
         }
       }
-      // append others. always score lower than the current min
-      val lowest = hits.top()
-      val currentLowestScore = if (lowest != null) lowest.score * 0.9999f else 1.0f
-      val normalizer = currentLowestScore / queue.highScore
-      queue.foreach{ h =>
-        h.score = h.score * normalizer
-        hits.insert(h)
-      }
-      if (queue.overflowed) mayHaveMore = true
-    } else if (hits.size == numHitsToReturn && othersHits.size > 0) {
-      mayHaveMore = true
+      queue.foreach{ h => hits.insert(h) }
     }
 
-    val hitList = hits.toList
+    val hitList = hits.toSortedList
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
     val newFilter = filterOut ++ hitList.map(_.id)
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
-        myTotal, friendsTotal, mayHaveMore, hitList.map(_.scoring), newFilter, millisPassed.toInt, (filterOut.size / numHitsToReturn).toInt)
+        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newFilter, millisPassed.toInt, (filterOut.size / numHitsToReturn).toInt)
   }
 
   private def getPublicBookmarkCount(id: Long) = {
@@ -168,6 +169,8 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   }
 
   def createQueue(sz: Int) = new ArticleHitQueue(sz)
+
+  private def dumpFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/2.0d, 3.0d))).toFloat
 
   private def bookmarkScore(bookmarkCount: Int) = (1.0f - (1.0f/(bookmarkCount.toFloat)))
 
@@ -208,7 +211,7 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
   }
 
   // the following method is destructive. after the call ArticleHitQueue is unusable
-  def toList: List[MutableArticleHit] = {
+  def toSortedList: List[MutableArticleHit] = {
     var res: List[MutableArticleHit] = Nil
     var i = size()
     while (i > 0) {
