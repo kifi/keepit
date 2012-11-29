@@ -3,28 +3,31 @@
 @admin("Article: " + article.title) {
    <table class="table table-bordered">
       <tr>
-        <th>First introduced</th><td>@{uri.createdAt}</td>
+        <th>First introduced</th><td>@adminHelper.dateDisplay(uri.updatedAt) @adminHelper.timeDisplay(uri.updatedAt)</td>
       </tr>
       <tr>
-        <th>URI title</th><td><a href="@uri.url">@{uri.title}</a></td>
+        <th>URL</th><td><a href="@uri.url">@uri.url</a></td>
       </tr>
       <tr>
-        <th>Article title</th><td>@{article.title}</td>
+        <th>URI title</th><td><a href="@uri.url">@uri.title</a></td>
       </tr>
       <tr>
-        <th>Http ContentType</th><td>@{article.httpContentType}</td>
+        <th>Article title</th><td>@article.title</td>
       </tr>
       <tr>
-        <th>Http Original ContentCharset</th><td>@{article.httpOriginalContentCharset}</td>
+        <th>Http ContentType</th><td>@article.httpContentType</td>
       </tr>
       <tr>
-        <th>State</th><td>@{article.state}</td>
+        <th>Http Original ContentCharset</th><td>@article.httpOriginalContentCharset</td>
       </tr>
       <tr>
-        <th>Error message</th><td>@{article.message}</td>
+        <th>State</th><td>@article.state</td>
       </tr>
       <tr>
-        <th>Article content</th><td>@{article.content}</td>
+        <th>Error message</th><td>@article.message</td>
+      </tr>
+      <tr>
+        <th>Article content</th><td>@article.content</td>
       </tr>
   </table>
 }
