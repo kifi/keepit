@@ -1,20 +1,20 @@
 <div class="comment-wrapper" data-externalId="{{externalId}}">
-  <div class="comment thread-info">
+  <div class="comment thread-info real-comment">
     <img class="comment-avatar" src="{{threadAvatar}}">
     
     <div class="comment-text thread-info-text">
-      <span class="recipient-list">{{{recipientText}}}{{#storedRecipients.length}} and <span class="more-recipients">{{storedRecipients.length}} others</span>
-      <span class="more-recipient-list-wrapper">
-        <div class="more-recipient-list">
-          {{#storedRecipients}}
-            <div>{{.}}</div>
-          {{/storedRecipients}}
-        </div>
-      </span>{{/storedRecipients.length}}</span>
+      <span class="recipient-list">{{#showMessageCount}}({{messageCount}}){{/showMessageCount}} {{{recipientText}}}{{#storedRecipients.length}} and <span class="more-recipients">{{storedRecipients.length}} others</span>
+        <!--<span class="more-recipient-list-wrapper">
+          <div class="more-recipient-list">
+            {{#storedRecipients}}
+              <div>{{.}}</div>
+            {{/storedRecipients}}
+          </div>
+        </span>-->{{/storedRecipients.length}}</span>
       {{#formatComments}}{{digest}}{{/formatComments}}
     </div>
     <div class="comment-meta">
-      <time class="timestamp timeago" datetime="{{#formatIsoDate}}{{createdAt}}{{/formatIsoDate}}">{{#formatDate}}{{createdAt}}{{/formatDate}}</time>
+      <time class="timestamp timeago" datetime="{{#formatIsoDate}}{{lastCommentedAt}}{{/formatIsoDate}}">{{#formatDate}}{{lastCommentedAt}}{{/formatDate}}</time>
     </div>
   </div>
 </div>
