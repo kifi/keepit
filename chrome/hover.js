@@ -466,6 +466,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             displayedRecipients[d] = formatRecipient(displayedRecipients[d]);
           }
 
+          var recipientText;
           if(l == 0) {
             recipientText = displayedRecipients[0];
           } else if(l <= 4) {
