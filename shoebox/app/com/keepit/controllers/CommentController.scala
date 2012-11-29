@@ -107,7 +107,7 @@ object CommentController extends FortyTwoController {
     val replies = CX.withConnection { implicit conn =>
       val comment = Comment.get(commentId)
       val user = User.get(request.userId)
-      if (true) // TODO: hasPermission(user.id.get, comment.id.get)
+      if (true) // TODO: hasPermission(user.id.get, comment.id.get) ??????????????
         Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }
       else
           Nil
