@@ -1,13 +1,21 @@
-<div class="comment-wrapper" data-externalId="{{externalId}}">
-  <div class="comment thread">
-    <img class="comment-avatar" src="https://graph.facebook.com/{{user.facebookId}}/picture?type=square">
-    
-    <div class="comment-text">
-      <span class="recipient-list"><strong>{{user.firstName}} {{user.lastName}}</strong></span>
-      {{#formatComments}}{{text}}{{/formatComments}}
-    </div>
+<div class="back-button">&#9666; Back</div>
+
+<div class="thread-wrapper" data-externalId="{{externalId}}">
+
+  <div class="thread-recipients">
+    <span class="recipient-list">Conversation with: {{{recipientText}}}{{#storedRecipients.length}} and <span class="more-recipients">{{storedRecipients.length}} others</span>
+      <span class="more-recipient-list-wrapper">
+        <div class="more-recipient-list">
+          {{#storedRecipients}}
+            <div>{{.}}</div>
+          {{/storedRecipients}}
+        </div>
+      </span>{{/storedRecipients.length}}
+    </span>
   </div>
-  <div class="comment-meta">
-    <time class="timestamp timeago" datetime="{{#formatIsoDate}}{{createdAt}}{{/formatIsoDate}}">{{#formatDate}}{{createdAt}}{{/formatDate}}</time>
-  </div>
+
+  {{#comments}}
+    {{> comment}}
+  {{/comments}}
+  
 </div>
