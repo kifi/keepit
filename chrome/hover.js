@@ -316,6 +316,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         $('.interaction-bar li.messages-label').addClass('active');
         $('.kifi_comment_wrapper').attr("data-type", "message");
       }
+
+      if(view) {
+        $('.kifi_comment_wrapper').attr("data-view", view);
+      }
     }
     var baseURL;
 
@@ -625,6 +629,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       for(r in recipientJson) {
         recipientArr.push(recipientJson[r]["externalId"]);
       }
+      if(recipientArr.length == 0) {
+        alert("Silly you. You need to add some friends!");
+        return false;
+      }
       var recipients = recipientArr.join(",");
       console.log("to: ", recipients);
 
@@ -656,8 +664,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     /* Because we're using very simple templating now, re-rendering has to be done carefully.
      */
     var permissions = type;
-    if(type == 'messageList')
-      permissions = 'message';
 
     var request = {
       "type": "post_comment",
