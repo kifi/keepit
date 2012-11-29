@@ -6,7 +6,7 @@
   letter-spacing: normal;
   word-spacing: normal;
   position: static;
-  -font-weight:normal;
+  font-weight:normal;
 
   background-position: 0% 0%;
   background-size: auto;
@@ -20,7 +20,7 @@
   padding: 0px;
   box-shadow: none;
   border-radius: 0px;
-  -background: transparent;
+  background: transparent;
   min-width: 0px;
   box-sizing: content-box;
   text-align: left;
@@ -28,9 +28,8 @@
 }
 
 .kifi_hover div {
-  -display: block;
+  display: block;
 }
-
 .kifi_hover span {
   display: inline;
 }
@@ -54,7 +53,7 @@
 
 /*Rounded corner with shadow*/
 .kifi_hover .roundedbox {
-  background-color: #faf9f9;  
+  background-color: #faf9f9;
   border: 2px solid #414b52;
   border-right:0px;
   border-radius: 12px 0px 0px 12px;
@@ -66,16 +65,16 @@
   position:relative;
 }
 /*Header*/
-.kifi_hover .roundedbox .kifihdr {                        
-  margin:0; 
-  padding:9px 5px 9px 10px;          
+.kifi_hover .roundedbox .kifihdr {
+  margin:0;
+  padding:9px 5px 9px 10px;
   padding-left:40px;
   padding-right:25px;
   cursor: move;
 }
 /*footer*/
-.kifi_hover .roundedbox .kififtr {                        
-  margin:0; 
+.kifi_hover .roundedbox .kififtr {
+  margin:0;
   bottom: 0px;
   border-top: 1px solid #E2E2E2;
   padding-top: 10px;
@@ -87,7 +86,7 @@
 }
 /*content*/
 .kifi_hover .roundedbox .kifi-content {
-  padding: 5px 5px 5px 10px;    
+  padding: 5px 5px 5px 10px;
   font-family: "helvetica neue", Helvetica, Arial, sans-serif;
   font-size: 12px;
   padding-right:20px;
@@ -134,10 +133,9 @@
 .kifi_hover .interaction-bar li:hover {
   background-color: #ECECEC;
 }
-.kifi_hover .interaction-bar li:active {
-  background-color: #FAFAFA;
-}
-.kifi_hover .interaction-bar li.active {
+.kifi_hover .interaction-bar li:active,
+.kifi_hover.public li.comments-label,
+.kifi_hover.message li.messages-label {
   background-color: #FAFAFA;
 }
 .kifi_hover .interaction-bar .notify-count {
@@ -188,7 +186,7 @@
   padding-right:5px;
   padding-left:5px;
   margin-top:3px;
-  background-color: #414b52;  
+  background-color: #414b52;
   border: 0px;
   border-radius: 12px 12px 12px 12px;
   font-size:12px;
@@ -282,9 +280,9 @@
 
 }
 
-.kifi_hover .kbutton:hover, .kbutton:active { 
-  -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2); 
-  -moz-box-shadow:  0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2); 
+.kifi_hover .kbutton:hover, .kbutton:active {
+  -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2);
+  -moz-box-shadow:  0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2);
   box-shadow:     0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2);
   border-color: #d5d5d5 #cccccc #c2c2c2;
   background: #f7f7f7;
