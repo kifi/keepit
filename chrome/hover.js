@@ -163,14 +163,17 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           }
         }
 
+        loadFile("templates/footer.html", function(footer) {
         loadFile("templates/main_hover.html", function(main_hover) {
           var partials = {
-            "main_hover": main_hover
+            "main_hover": main_hover,
+            "footer": footer
           }
 
           renderTemplate('kept_hover.html', tmpl, function(template) {
             drawKeepItHover(user, o.friends, o.numComments, o.numMessages, template);
           }, partials);
+        });
         });
       }
     );
@@ -240,7 +243,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     $('.messages-label').click(function() {
-      showComments(user, "message");
+      showComments(user, "message", null, $('.thread-wrapper').length > 0);
     });
 
     slideIn();
@@ -281,13 +284,13 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
-  function showComments(user, type, id) {
+  function showComments(user, type, id, keepOpen) {
     var type = type || "public";
 
     var isVisible = $(".kifi_comment_wrapper").is(":visible");
     var showingType = $(".kifi_hover").data("view");
 
-    if (isVisible && !id) { // already open!
+    if (isVisible && !id && !keepOpen) { // already open!
       if (type == showingType) {
         $('.kifi-content').slideDown();
         $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
@@ -305,7 +308,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       (id ? "/" + id : ("?url=" + encodeURIComponent(document.location.href)));
     $.get(url, null, function(comments) {
       console.log(comments);
-      renderComments(user, comments, type, function() {
+      renderComments(user, comments, type, id, function() {
         if (!isVisible) {
           repositionScroll(false);
 
@@ -371,7 +374,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       .toggleClass("zero_comments", count == 0);
   }
 
-  function renderComments(user, comments, type, onComplete) {
+  function renderComments(user, comments, type, id, onComplete) {
     console.log("Drawing comments!");
     comments = comments || {};
     comments["public"] = comments["public"] || [];
@@ -380,7 +383,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     var visibleComments = comments[type] || [];
 
-    updateCommentCount(type, visibleComments.length);
+    if(!id)
+      updateCommentCount(type, visibleComments.length);
 
     var params = {
       kifiuser: {
@@ -415,24 +419,26 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       // By default we use the comment partials.
       // To override for a specific function, do so here.
       if (type == "message") {
-        partials.comment = thread_info;
-        partials.comment_body_view = message_list;
+        partials.comment = (id ? comment : thread_info);
+        partials.comment_body_view = (id ? thread : message_list);
         partials.comment_post_view = message_post;
 
+      // For thread lists, we need to do this for each one. For threads, only the first one
+        var iterMessages = (id ? [visibleComments[0]] : visibleComments )
         var threadAvatar = "";
-        for(msg in visibleComments) {
-          var recipients = visibleComments[msg]["recipients"];
+        for(msg in iterMessages) {
+          var recipients = iterMessages[msg]["recipients"];
           var l = recipients.length;
           if(l == 0) { // No recipients!
             threadAvatar = params.kifiuser.avatar;
           }
           else if(l == 1) {
-            threadAvatar = visibleComments[msg]["recipients"][0]["avatar"];
+            threadAvatar = iterMessages[msg]["recipients"][0]["avatar"];
           }
           else {
             threadAvatar = chrome.extension.getURL("icons/convo.png");
           }
-          visibleComments[msg]["threadAvatar"] = threadAvatar;
+          iterMessages[msg]["threadAvatar"] = threadAvatar;
 
           var recipientNames = [];
           for(r in recipients) {
@@ -475,8 +481,16 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           }
           // todo "You wrote to "
 
-          visibleComments[msg]["recipientText"] = recipientText;
-          visibleComments[msg]["storedRecipients"] = storedRecipients;
+          iterMessages[msg]["recipientText"] = recipientText;
+          iterMessages[msg]["storedRecipients"] = storedRecipients;
+          iterMessages[msg]["showMessageCount"] = iterMessages[msg]["messageCount"] > 1
+        }
+
+        if(id) {
+          params.recipientText = visibleComments[0].recipientText;
+          params.storedRecipients = visibleComments[0].storedRecipients;
+          params.externalId = visibleComments[0].externalId;
+          params.hideComposeTo = true;
         }
       }
 
@@ -513,7 +527,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     $('.comment_body_view').on("hover", ".more-recipients", function(event) {
-      console.log("hey",this, event,event.type)
       if(event.type == 'mouseenter') {
         //$(this).parent().find('.more-recipient-list').show();
       }
@@ -523,6 +536,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }).on('click','.thread-info', function() {
       var externalId = $(this).parent().attr("data-externalid");
       showComments(user, type, externalId);
+    }).on('click', '.back-button', function() {
+      showComments(user, type, null, true);
     });
 
     if(type == "message") {
@@ -545,7 +560,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
 
     // Main comment textarea
-    var placeholder = "<span class=\"placeholder\">Add a comment…</span>";
+    var placeholder = "<span class=\"placeholder\">Add a " + (type == "public" ? "comment" : "message") + "…</span>";
     $('.comment-compose').html(placeholder);
     $('.comment_post_view').on('focus','.comment-compose',function() {
       if ($('.comment-compose').html() == placeholder) { // unchanged text!
@@ -582,7 +597,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           //drawCommentView(renderedTemplate, user, type, partials);
           $('.comment_body_view').find('.no-comment').parent().detach();
           $('.comment_body_view').append(renderedComment).find("time").timeago();
-          updateCommentCount();
+          updateCommentCount(type);
           repositionScroll(false);
         });
 
@@ -591,27 +606,44 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }).on('submit','.message_form', function(e) {
       e.preventDefault();
       var text = commentSerializer($('.comment-compose').html());
-      var recipientJson = $("#to-list").tokenInput("get");
-      $("#to-list").tokenInput("clear");
 
-      var recipientArr = [];
-      for(r in recipientJson) {
-        recipientArr.push(recipientJson[r]["externalId"]);
-      }
-      if(recipientArr.length == 0) {
-        alert("Silly you. You need to add some friends!");
-        return false;
-      }
-      var recipients = recipientArr.join(",");
-      console.log("to: ", recipients);
+      var isReply = $(this).is('.message-reply');
+      var recipients;
+      var parent;
+      if(!isReply) {
+        var recipientJson = $("#to-list").tokenInput("get");
+        $("#to-list").tokenInput("clear");
 
-      submitComment(text, type, user, null, recipients, function(newComment) {
+        var recipientArr = [];
+        for(r in recipientJson) {
+          recipientArr.push(recipientJson[r]["externalId"]);
+        }
+        if(recipientArr.length == 0) {
+          alert("Silly you. You need to add some friends!");
+          return false;
+        }
+        recipients = recipientArr.join(",");
+        console.log("to: ", recipients);
+      }
+      else {
+        parent = $(this).parents(".flexcontainer").find(".thread-wrapper").attr("data-externalid");
+        console.log(parent)
+      }
+
+      submitComment(text, type, user, parent, recipients, function(newComment) {
         $('.comment-compose').text("").html(placeholder);
 
         console.log("new message", newComment);
         // Clean up CSS
 
-        var params = newComment;
+        if(!isReply) {
+          updateCommentCount(type,parseInt($('.messages-count').text()) + 1)
+          console.log("not a reply. redirecting to new message");
+          showComments(user, type, newComment.message.externalId);
+          return;
+        }
+
+        var params = newComment.message;
         params["formatComments"] = commentTextFormatter;
         params["formatDate"] = commentDateFormatter;
         params["formatIsoDate"] = isoDateFormatter;
@@ -619,8 +651,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
           //drawCommentView(renderedTemplate, user, type, partials);
           $('.comment_body_view').find('.no-comment').parent().detach();
-          $('.comment_body_view').append(renderedComment).find("time.timeago").timeago();
-          updateCommentCount();
+          $('.thread-wrapper').append(renderedComment).find("time.timeago").timeago();
           repositionScroll(false);
         });
 
@@ -634,6 +665,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
      */
     var permissions = type;
 
+    console.log(parent);
+
     var request = {
       "type": "post_comment",
       "url": document.location.href,
@@ -643,8 +676,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       "recipients": recipients
     };
     chrome.extension.sendRequest(request, function(response) {
-      var newComment = {};
+      var newComment;
       if(type == "message") {
+        console.log("fff",response)
         newComment = response;
       }
       else {

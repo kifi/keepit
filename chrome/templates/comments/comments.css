@@ -105,6 +105,7 @@
 .kifi_comment_wrapper .comment-text strong {
   padding-bottom:2px;
   line-height:11px;
+  font-weight: bold;
 }
 
 .kifi_comment_wrapper strong.recipient {
@@ -116,11 +117,12 @@
   font-weight: bold;
   color: #68b3de;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .more-recipient-list-wrapper {
   position: relative;
-  display: block;
+  display: none;
 }
 
 div.more-recipient-list {
@@ -180,7 +182,24 @@ div.more-recipient-list {
   clear: both;
 }
 
+.kifi_comment_wrapper .back-button {
+    color: #8c8484;
+    font-size: 11px;
+    padding:10px;
+    cursor: pointer;
+    
+}
+
+
 .kifi_comment_wrapper .recipient-list {
+  display: block;
+}
+
+.kifi_comment_wrapper .thread-recipients span.recipient-list {
+  padding: 10px;
+  line-height: 14px;
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
   display: block;
 }
 

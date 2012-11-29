@@ -1,10 +1,10 @@
-<form class="message_form">
+<form class="message_form{{#hideComposeTo}} message-reply{{/hideComposeTo}}">
   <div class="comment-box compose-comment">
     <img src="{{kifiuser.avatar}}" class="user-avatar comment-avatar">
     <div class="compose-wrapper">
-      {{^inConversation}}
+      {{^hideComposeTo}}
       <input type="text" id="to-list">
-      {{/inConversation}}
+      {{/hideComposeTo}}
       <div class="comment-compose" contenteditable="true"></div>
     </div>
     <div class="submit-bar">

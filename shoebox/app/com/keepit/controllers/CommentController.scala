@@ -65,8 +65,8 @@ object CommentController extends FortyTwoController {
       case Comment.Permissions.PUBLIC =>
         Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
       case Comment.Permissions.MESSAGE =>
-        val threadInfo = CX.withConnection{ implicit c => ThreadInfo(comment) }
-        Ok(JsObject(Seq("message" -> ThreadInfoSerializer.writes(threadInfo))))
+        val threadInfo = CX.withConnection{ implicit c => CommentWithSocialUser(comment) }
+        Ok(JsObject(Seq("message" -> commentWithSocialUserSerializer.writes(threadInfo))))
       case _ =>
         Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
     }
@@ -90,11 +90,13 @@ object CommentController extends FortyTwoController {
       val user = User.get(request.userId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
-          List(Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(ThreadInfo(_)))
+          List(Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(ThreadInfo(_, Some(request.userId))))
         case None =>
           List[(State[Comment.Permission],Seq[ThreadInfo])]()
       }
     }
+
+    log.warn(comments)
     Ok(ThreadInfoSerializer.writes(comments.reverse))
   }
 
@@ -219,7 +221,7 @@ object CommentController extends FortyTwoController {
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
-                  from = EmailAddresses.SUPPORT, to = addr, subject = subjectPrefix + uri.title,
+                  from = EmailAddresses.SUPPORT, to = addr, subject = subjectPrefix + uri.title.getOrElse(uri.url),
                   htmlBody = views.html.email.newMessage(sender, recipient, uri, comment).body,
                   category = PostOffice.Categories.COMMENT))
             }
