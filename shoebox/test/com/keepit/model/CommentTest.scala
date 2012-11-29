@@ -45,6 +45,7 @@ class CommentTest extends SpecificationWithJUnit {
       (user1, user2, uri1, uri2)
     }
   }
+
   "Comment" should {
     "add comments" in {
       running(new EmptyApplication()) {

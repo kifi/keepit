@@ -18,7 +18,7 @@ POST    /comments/add               com.keepit.controllers.CommentController.cre
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
 GET     /messages/threads/:id       com.keepit.controllers.CommentController.getMessageThread(id: ExternalId[Comment])
 GET     /messages/threads           com.keepit.controllers.CommentController.getMessageThreadList(url: String)
-POST    /messages                com.keepit.controllers.CommentController.createComment(url: String, text: String, permissions = "message", recipients: String ?= "", parent: String ?= "")
+POST    /messages                   com.keepit.controllers.CommentController.createComment(url: String, text: String, permissions = "message", recipients: String ?= "", parent: String ?= "")
 GET     /comments/reply             com.keepit.controllers.CommentController.getReplies(commentId: ExternalId[Comment])
 POST    /comments/follow            com.keepit.controllers.CommentController.startFollowing(url: String)
 DELETE  /comments/follow            com.keepit.controllers.CommentController.stopFollowing(url: String)

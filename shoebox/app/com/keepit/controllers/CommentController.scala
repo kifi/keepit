@@ -74,12 +74,11 @@ object CommentController extends FortyTwoController {
 
   def getComments(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
-      val user = User.get(request.userId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
           List(Comment.Permissions.PUBLIC -> publicComments(normalizedURI).map(CommentWithSocialUser(_)))
         case None =>
-          List[(State[Comment.Permission],Seq[CommentWithSocialUser])]()
+          Nil
       }
     }
     Ok(commentWithSocialUserSerializer.writes(comments))
@@ -87,27 +86,24 @@ object CommentController extends FortyTwoController {
 
   def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
-      val user = User.get(request.userId)
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(normalizedURI) =>
-          List(Comment.Permissions.MESSAGE -> messageComments(user.id.get, normalizedURI).map(ThreadInfo(_, Some(request.userId))))
+          List(Comment.Permissions.MESSAGE -> messageComments(request.userId, normalizedURI).map(ThreadInfo(_, Some(request.userId))))
         case None =>
-          List[(State[Comment.Permission],Seq[ThreadInfo])]()
+          Nil
       }
     }
-
-    log.warn(comments)
+    log.info("comments for url %s:\n%s".format(url, comments mkString "\n"))
     Ok(ThreadInfoSerializer.writes(comments.reverse))
   }
 
   def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     val replies = CX.withConnection { implicit conn =>
       val comment = Comment.get(commentId)
-      val user = User.get(request.userId)
-      if (true) // TODO: hasPermission(user.id.get, comment.id.get)
+      if (true) // TODO: hasPermission(user.id.get, comment.id.get) ???????????????
         List(Comment.Permissions.MESSAGE -> (Seq(comment) ++ Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }))
       else
-        List(Comment.Permissions.MESSAGE -> Seq[CommentWithSocialUser]())
+          Nil
     }
     Ok(commentWithSocialUserSerializer.writes(replies))
   }
@@ -120,7 +116,7 @@ object CommentController extends FortyTwoController {
       if (true) // TODO: hasPermission(user.id.get, comment.id.get)
         Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }
       else
-        Seq[CommentWithSocialUser]()
+          Nil
     }
     Ok(commentWithSocialUserSerializer.writes(replies))
   }
