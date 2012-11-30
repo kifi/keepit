@@ -141,7 +141,10 @@ class SendgridMailProvider @Inject() () extends Logging {
     message.setHeader("X-SMTPAPI", JsObject(List("category" -> JsString(mail.category.category))).toString)
 
     message.setContent(multipart)
-    message.setFrom(new InternetAddress(mail.from.address))
+
+    val fromName: String = mail.fromName.getOrElse(mail.from.address)
+    message.setFrom(new InternetAddress(mail.from.address, fromName, "UTF-8"))
+
     message.setSubject(mail.subject)
     message.addRecipient(Message.RecipientType.TO, new InternetAddress(mail.to.address))
     message
