@@ -8,14 +8,36 @@ object SearchConfig {
     Map[String, String](
       "minMyBookmarks" -> "2",
       "myBookmarkBoost" -> "1.5",
-      "sharingBoost" -> "0.5",
+      "sharingBoostInNetwork" -> "0.5",
+      "sharingBoostOutOfNetwork" -> "0.1",
       "percentMatch" -> "75",
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
       "tailCutting" -> "0.01",
       "proximityBoost" -> "0.5",
       "semanticBoost" -> "0.5",
-      "dumpingByRank" -> "true")
+      "dumpingByRank" -> "true",
+      "dumpingHalfDecayMine" -> "8.0",
+      "dumpingHalfDecayFriends" -> "6.0",
+      "dumpingHalfDecayOthers" -> "2.0"
+    )
+  private val descriptions =
+    Map[String, String](
+      "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
+      "myBookmarkBoost" -> "importance my bookmark",
+      "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
+      "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
+      "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF)",
+      "halfDecayHours" -> "the time the recency boost becomes half",
+      "recencyBoost" -> "importance of the recent bookmarks",
+      "tailCutting" -> "after dumping a hit with a score below the high score multiplied by this will be removed",
+      "proximityBoost" -> "boosting by proximity",
+      "semanticBoost" -> "boosting by semantic vector",
+      "dumpingByRank" -> "enable score dumping by rank",
+      "dumpingHalfDecayMine" -> "how many top hits in my bookmarks are important",
+      "dumpingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
+      "dumpingHalfDecayOthers" -> "how many top hits in others' bookmark are important"
+    )
 
   var defaultConfig = new SearchConfig(defaultParams)
 
@@ -34,6 +56,8 @@ object SearchConfig {
   def getUserConfig(userId: Id[User]) = userConfig.getOrElse(userId.id, defaultConfig)
   def setUserConfig(userId: Id[User], config: SearchConfig) { userConfig = userConfig + (userId.id -> config) }
   def resetUserConfig(userId: Id[User]) { userConfig = userConfig - userId.id }
+
+  def getDescription(name: String) = descriptions.get(name)
 }
 
 class SearchConfig(params: Map[String, String]) {
