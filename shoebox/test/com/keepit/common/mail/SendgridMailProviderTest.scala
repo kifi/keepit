@@ -25,6 +25,7 @@ class SendgridMailProviderTest extends Specification with TestAkkaSystem {
         val mail = CX.withConnection{ implicit conn =>
           ElectronicMail(
               from = EmailAddresses.ENG,
+              fromName = Some("Marvin"),
               to = EmailAddresses.ENG,
               subject = "Email from test case",
               htmlBody = views.html.main("KiFi")(Html("<b>thanks</b>")).body,
@@ -48,6 +49,8 @@ class SendgridMailProviderTest extends Specification with TestAkkaSystem {
 //        inject[SendgridMailProvider].sendMailToSendgrid(mail)
         CX.withConnection{ implicit conn =>
           val loaded = ElectronicMail.get(mail.id.get)
+          loaded.from === mail.from
+          loaded.fromName === mail.fromName
           loaded.state === ElectronicMail.States.PREPARING
         }
       }

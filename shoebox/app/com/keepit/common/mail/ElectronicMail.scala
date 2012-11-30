@@ -21,6 +21,7 @@ case class ElectronicMail (
   externalId: ExternalId[ElectronicMail] = ExternalId(),
   userId: Option[Id[User]] = None,
   from: SystemEmailAddress,
+  fromName: Option[String] = None,
   to: EmailAddressHolder,
   subject: String,
   state: State[ElectronicMail] = ElectronicMail.States.PREPARING,
@@ -53,7 +54,7 @@ case class ElectronicMail (
     assert(1 == entity.save())
     entity.view
   } catch {
-    case e => throw new Exception("Error saving email from %s to %s with html body size %s: %s".format(from, to, htmlBody.size, subject), e)
+    case e => throw new Exception("Error saving email from [%s] %s to %s with html body size %s: %s".format(fromName, from, to, htmlBody.size, subject), e)
   }
 }
 
@@ -91,6 +92,7 @@ private[mail] class ElectronicMailEntity extends Entity[ElectronicMail, Electron
   val externalId = "external_id".EXTERNAL_ID[ElectronicMail].NOT_NULL(ExternalId())
   val userId = "user_id".ID[User]
   val from = "from_addr".VARCHAR(256).NOT_NULL
+  val fromName = "from_name".VARCHAR(256).NOT_NULL
   val to = "to_addr".VARCHAR(256).NOT_NULL
   val subject = "subject".VARCHAR(1024).NOT_NULL
   val state = "state".STATE[ElectronicMail].NOT_NULL
@@ -110,6 +112,7 @@ private[mail] class ElectronicMailEntity extends Entity[ElectronicMail, Electron
     externalId = externalId(),
     userId = userId.value,
     from = EmailAddresses(from()),
+    fromName = fromName.value,
     to = new EmailAddressHolder(){val address = to()},
     subject = subject(),
     state = state(),
@@ -134,6 +137,7 @@ private object ElectronicMailEntity extends ElectronicMailEntity with EntityTabl
     entity.userId.set(view.userId)
     entity.state := view.state
     entity.from := view.from.address
+    entity.fromName.set(view.fromName)
     entity.to := view.to.address
     entity.subject := view.subject
     entity.htmlBody := view.htmlBody
