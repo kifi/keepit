@@ -3,15 +3,7 @@
 <div class="thread-wrapper" data-externalId="{{externalId}}">
 
   <div class="thread-recipients">
-    <span class="recipient-list">Conversation with: {{{recipientText}}}{{#storedRecipients.length}} and <span class="more-recipients">{{storedRecipients.length}} others</span>
-      <span class="more-recipient-list-wrapper">
-        <div class="more-recipient-list">
-          {{#storedRecipients}}
-            <div>{{.}}</div>
-          {{/storedRecipients}}
-        </div>
-      </span>{{/storedRecipients.length}}
-    </span>
+    <span class="recipient-list">Conversation with: {{{othersInConversationText}}}</span>
   </div>
 
   {{#comments}}

@@ -44,7 +44,7 @@ object AuthController extends FortyTwoController {
   def isLoggedIn = AuthenticatedHtmlAction { implicit request => {
 	  UserService.find(request.socialUser.id) match {
 	    case None =>
-		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil))
+		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)).withNewSession
 	    case Some(socialUser) =>
 	      log.info("facebook id %s".format(socialUser.id.id))
 	      val user = CX.withConnection { implicit c =>

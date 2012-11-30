@@ -33,6 +33,14 @@
 .kifi_hover span {
   display: inline;
 }
+.kifi_hover a:link,
+.kifi_hover a:visited,
+.kifi_hover a:link:hover,
+.kifi_hover a:visited:hover {
+  color: -webkit-link;
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 .kifi_hover {
   position: fixed;

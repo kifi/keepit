@@ -26,7 +26,6 @@ import securesocial.core._
 import com.keepit.common.social._
 import views.html.defaultpages.unauthorized
 
-
 trait FortyTwoController extends Controller with Logging with SecureSocial {
 
   private val FORTYTWO_USER_ID = "fortytwo_user_id"
@@ -54,7 +53,9 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
             val userId = socialUser.userId.get
             (userId, session + (FORTYTWO_USER_ID -> userId.id.toString))
           case Some(userId) =>
-            (userId, session)
+            val socialUser = SocialUserInfo.get(SocialId(request.user.id.id), SocialNetworks.FACEBOOK)
+            if (socialUser.userId.get != userId) log.error("Social user id %s does not match session user id %s".format(socialUser, userId))
+            (userId, session + (FORTYTWO_USER_ID -> socialUser.userId.get.id.toString))
         }
         val experiments = UserExperiment.getByUser(userId)
         (userId, experiments.map(_.experimentType), newSession)
@@ -64,6 +65,9 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
         log.warn(message)
         Forbidden(message)
       } else {
+        val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> FortyTwoServices.currentVersion.value)
+        log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
+
         action(AuthenticatedRequest(request.user, userId, request.request, experiments)) match {
           case r: PlainResult => r.withSession(newSession)
           case any => any

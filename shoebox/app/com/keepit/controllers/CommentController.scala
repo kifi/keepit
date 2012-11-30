@@ -19,7 +19,7 @@ import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
-import com.keepit.serializer.ThreadInfoSerializer.ThreadInfoSerializer
+import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import play.api.Play.current
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka
@@ -74,38 +74,32 @@ object CommentController extends FortyTwoController {
 
   def getComments(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
-      NormalizedURI.getByNormalizedUrl(url) match {
-        case Some(normalizedURI) =>
-          List(Comment.Permissions.PUBLIC -> publicComments(normalizedURI).map(CommentWithSocialUser(_)))
-        case None =>
-          Nil
-      }
+      NormalizedURI.getByNormalizedUrl(url) map { normalizedURI =>
+          publicComments(normalizedURI).map(CommentWithSocialUser(_))
+        } getOrElse Nil
     }
-    Ok(commentWithSocialUserSerializer.writes(comments))
+    Ok(commentWithSocialUserSerializer.writes(Comment.Permissions.PUBLIC -> comments))
   }
 
   def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
-      NormalizedURI.getByNormalizedUrl(url) match {
-        case Some(normalizedURI) =>
-          List(Comment.Permissions.MESSAGE -> messageComments(request.userId, normalizedURI).map(ThreadInfo(_, Some(request.userId))))
-        case None =>
-          Nil
-      }
+      NormalizedURI.getByNormalizedUrl(url) map { normalizedURI =>
+          messageComments(request.userId, normalizedURI).map(ThreadInfo(_, Some(request.userId))).reverse
+        } getOrElse Nil
     }
     log.info("comments for url %s:\n%s".format(url, comments mkString "\n"))
-    Ok(ThreadInfoSerializer.writes(comments.reverse))
+    Ok(threadInfoSerializer.writes(Comment.Permissions.MESSAGE -> comments))
   }
 
   def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     val replies = CX.withConnection { implicit conn =>
       val comment = Comment.get(commentId)
       if (true) // TODO: hasPermission(user.id.get, comment.id.get) ???????????????
-        List(Comment.Permissions.MESSAGE -> (Seq(comment) ++ Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }))
+        (Seq(comment) ++ Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) })
       else
           Nil
     }
-    Ok(commentWithSocialUserSerializer.writes(replies))
+    Ok(commentWithSocialUserSerializer.writes(Comment.Permissions.MESSAGE -> replies))
   }
 
   // TODO: delete once no beta users have old plugin supporting replies
@@ -113,7 +107,7 @@ object CommentController extends FortyTwoController {
     val replies = CX.withConnection { implicit conn =>
       val comment = Comment.get(commentId)
       val user = User.get(request.userId)
-      if (true) // TODO: hasPermission(user.id.get, comment.id.get)
+      if (true) // TODO: hasPermission(user.id.get, comment.id.get) ??????????????
         Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }
       else
           Nil
@@ -200,7 +194,8 @@ object CommentController extends FortyTwoController {
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
-                  from = EmailAddresses.SUPPORT, to = addr, subject = "[new comment] " + uri.title,
+                  from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
+                  to = addr, subject = "[new comment] " + uri.title,
                   htmlBody = views.html.email.newComment(author, recipient, uri, comment).body,
                   category = PostOffice.Categories.COMMENT))
             }
@@ -217,7 +212,8 @@ object CommentController extends FortyTwoController {
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
-                  from = EmailAddresses.SUPPORT, to = addr, subject = subjectPrefix + uri.title.getOrElse(uri.url),
+                  from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(sender.firstName, sender.lastName)),
+                  to = addr, subject = subjectPrefix + uri.title.getOrElse(uri.url),
                   htmlBody = views.html.email.newMessage(sender, recipient, uri, comment).body,
                   category = PostOffice.Categories.COMMENT))
             }
