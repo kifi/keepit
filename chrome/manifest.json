@@ -272,6 +272,7 @@
     "comments.html",
     "lib/jquery-1.8.2.min.js",
     "icons/social-icons.png",
+    "icons/more-right.png",
     "templates/main_hover.html",
     "templates/footer.html",
     "templates/comments/hearts.html",
