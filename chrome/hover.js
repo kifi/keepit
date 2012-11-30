@@ -442,7 +442,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
           var recipientNames = [];
           for(r in recipients) {
-            recipientNames.push(recipients[r].firstName + " " + recipients[r].lastName)
+            var name = recipients[r].firstName + " " + recipients[r].lastName;
+            recipientNames.push(name);
           }
 
           // handled separately because this will need to be refactored to be cleaner
@@ -476,19 +477,43 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             else if(l == 2)
               recipientText = displayedRecipients[0] + " and " + displayedRecipients[1];
             else if(l == 3 || l == 4)
-              recipientText = displayedRecipients.slice(0,l-1).join(", ") + " and " + displayedRecipients[l-1];
+              recipientText = displayedRecipients.slice(0, l - 1).join(", ") + " and " + displayedRecipients[l - 1];
           } else {
-            recipientText = displayedRecipients.slice(0,3).join(", ");
+            recipientText = displayedRecipients.slice(0, 3).join(", ");
             storedRecipients = recipientNames.slice(3);
           }
           // todo "You wrote to "
 
           iterMessages[msg]["recipientText"] = recipientText;
           iterMessages[msg]["storedRecipients"] = storedRecipients;
-          iterMessages[msg]["showMessageCount"] = iterMessages[msg]["messageCount"] > 1
+          iterMessages[msg]["showMessageCount"] = iterMessages[msg]["messageCount"] > 1;
         }
 
         if(id) {
+          var othersInConversation = {};
+          for(msg in visibleComments) {
+            var recipients = visibleComments[msg]["recipients"];
+            var initiatorId = visibleComments[msg].user.externalId;
+            if (initiatorId != config.user.keepit_external_id) {
+              var initiatorName = visibleComments[msg].user.firstName + " " + visibleComments[msg].user.lastName;
+              othersInConversation[visibleComments[msg].user.externalId] = initiatorName;
+            }
+            for(r in recipients) {
+              var name = recipients[r].firstName + " " + recipients[r].lastName;
+              var recipientId = recipients[r].externalId;
+              if (recipientId != config.user.keepit_external_id) {
+                othersInConversation[recipientId] = name;
+              }
+            }
+          }
+          var othersInConversationText = "";
+          for (id in othersInConversation) {
+            if (othersInConversationText.length > 1) {
+              othersInConversationText += ", ";
+            }
+            othersInConversationText += othersInConversation[id];
+          }
+          params.othersInConversationText = othersInConversationText;
           params.recipientText = visibleComments[0].recipientText;
           params.storedRecipients = visibleComments[0].storedRecipients;
           params.externalId = visibleComments[0].externalId;
