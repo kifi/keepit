@@ -1,4 +1,3 @@
-
 .kifi_comment_wrapper .control-bar {
   font-size: 11px;
   color: #8C7E7E;
@@ -187,9 +186,7 @@ div.more-recipient-list {
     font-size: 11px;
     padding:10px;
     cursor: pointer;
-    
 }
-
 
 .kifi_comment_wrapper .recipient-list {
   display: block;
@@ -239,59 +236,88 @@ div.more-recipient-list {
   text-align: right;
 }
 
-.kifi_comment_wrapper .comment_post_view .submit-comment {
+.kifi_comment_wrapper .submit-comment {
   outline: none;
   cursor: pointer;
-  vertical-align: middle;
   font-size: 11px;
-  text-align: center;
-  text-decoration: initial;
   color: #FAFAFA;
   background: #414b52;
-  padding: 4px 6px;
   border-radius: 3px;
+  height: 20px;
+  line-height: 20px;
+  vertical-align: middle;
+  padding: 0 6px;
 }
-
-.kifi_comment_wrapper .comment_post_view .submit-comment:hover {
+.kifi_comment_wrapper .submit-comment:hover {
   background: #515b62;
 }
 
-
-.kifi_comment_wrapper .comment-box .crosshair {
-  display:none;
-  position:relative;
-  width:18px;
-  height:18px;
-  left:0px;
-  bottom:15px;
-  /* DEPRICATED! Jared, this is for look here background: url(crosshair-grayed.png) no-repeat;*/
-  background-size: 18px;
-  background-position:center;
+.kifi_comment_wrapper .take-snapshot {
+  display: inline-block;
+  height: 20px;
+  width: 20px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 8px;
 }
+.kifi_comment_wrapper .take-snapshot:hover {
+  box-shadow: inset 0 0 2px rgba(0,0,0,.3);
+  background-color: #fff;
+  background-position: -20px 0;
+}
+.kifi_comment_wrapper .take-snapshot:active {
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.2);
+  background-color: inherit;
+  background-position: -40px 0;
+}
+body .snapshot-glass {
+  position: absolute;
+  z-index: 2147483639;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  box-shadow: 0 0 5px 1px #fff;
+  cursor: crosshair;
+}
+body .snapshot-shade {
+  background-color: rgba(0,0,0,.4);
+  position: absolute;
+  z-index: 2147483639;
+  cursor: crosshair;
+}
+body .snapshot-shade-t { left: 0; right: 0; top: 0; bottom: 0; }
+body .snapshot-shade-b { left: 0; right: 0; bottom: 0; }
+body .snapshot-shade-l { left: 0; }
+body .snapshot-shade-r { right: 0; }
 
-.kifi_comment_wrapper .comment-box .crosshair:hover {
-  position:relative;
-  width:18px;
-  height:18px;
-  left:0px;
-  bottom:15px;
-  /* DEPRICATED! Jared, this is for look here background: url(crosshair.png) no-repeat;*/
-  background-size: 18px;
-  background-position:center;
+body .snapshot-bar-wrap {
+  position: fixed;
+  z-index: 2147483639;
+  left: 0;
+  right: 0;
+  bottom: 80px;
+  height: 0;
+  text-align: center;
+}
+body .snapshot-bar-wrap .snapshot-bar {
+  display: inline-block;
+  background-color: black;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 15px;
+  cursor: move;
+}
+body .snapshot-bar-wrap .snapshot-bar .cancel {
   cursor: pointer;
 }
 
-
-.kifi_comment_wrapper img.self-avatar {
-  border-radius: 100px 100px !important;
-}
-
-
-
-
 .kifi_comment_wrapper img.user-avatar {
-  float:left;
-  border-radius: 50px 50px 50px 50px;
+  float: left;
+  border-radius: 50px;
+}
+.kifi_comment_wrapper img.self-avatar {
+  border-radius: 100px !important;
 }
 
 /* Token to */

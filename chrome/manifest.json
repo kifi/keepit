@@ -11,7 +11,7 @@
     "default_icon": "keepit.png", // optional
     "default_title": "Kifi"//,    // optional; shown in tooltip
     //"default_popup": "keep.html"    // optional
-  },  
+  },
   "background" : {
     "page": "keep.html"
   },
@@ -253,6 +253,7 @@
     "magicQueries.json",
     "mustache.js",
     "options.html",
+    "snapshot.png",
     "social_hover.html",
     "social_window.css",
     "social_window.html",
@@ -283,6 +284,7 @@
     "templates/comments/thread.html",
     "templates/comments/message_list.html",
     "templates/comments/comment_post.html",
-    "templates/comments/message_post.html"
-  ] 
+    "templates/comments/message_post.html",
+    "templates/comments/snapshot_bar.html"
+  ]
 }

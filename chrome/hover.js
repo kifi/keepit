@@ -63,22 +63,19 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       callback(tmpl);
     } else {
       var req = new XMLHttpRequest();
-      req.open("GET",chrome.extension.getURL(name), true);
+      req.open("GET", chrome.extension.getURL(name), true);
       req.onreadystatechange = function() {
-          if (req.readyState == 4 && req.status == 200) {
-            var response = req.responseText
-            callback(response);
-            templateCache[name] = response;
-          }
+        if (req.readyState == 4 && req.status == 200) {
+          callback(templateCache[name] = req.responseText);
+        }
       };
       req.send(null);
     }
   }
 
   function renderTemplate(name, params, callback, partials) {
-    loadFile(name, function(contents) {
-      var tb = Mustache.render(contents, params, partials);
-      callback(tb);
+    loadFile(name, function(template) {
+      callback(Mustache.render(template, params, partials));
     });
   }
 
@@ -198,7 +195,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     // Event bindings
 
-    $(".kifi_hover").draggable({ cursor: "move", axis: "y", distance: 20, handle: "div.kifihdr", containment: "body", scroll: false});
+    $(".kifi_hover").draggable({cursor: "move", axis: "y", distance: 10, handle: "div.kifihdr", containment: "body", scroll: false});
 
     $('.xlink').click(function() {
       slideOut();
@@ -262,14 +259,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       });
   }
 
-  function slideOut() {
+  function slideOut(temporary) {
     $('.kifi_hover').animate({
         opacity: 0,
         right: '-=330'
       },
       300,
       'easeQuickSnapBounce',
-      function() {
+      temporary ? $.noop : function() {
         $('.kifi_hover').detach();
       });
   }
@@ -397,7 +394,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       formatIsoDate: isoDateFormatter,
       comments: visibleComments,
       showControlBar: type == "public",
-      following: following
+      following: following,
+      snapshotUri: chrome.extension.getURL("snapshot.png")
     }
 
     loadFile("templates/comments/hearts.html", function(hearts) {
@@ -528,20 +526,19 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     $('.comment_body_view').on("hover", ".more-recipients", function(event) {
       //$(this).parent().find('.more-recipient-list')[event.type == 'mouseenter' ? "show" : "hide"]();
-    }).on('click','.thread-info', function() {
-      var externalId = $(this).parent().attr("data-externalid");
-      showComments(user, type, externalId);
+    }).on('click', '.thread-info', function() {
+      showComments(user, type, $(this).parent().data("externalid"));
     }).on('click', '.back-button', function() {
       showComments(user, type, null, true);
     });
 
-    if(type == "message") {
+    if (type == "message") {
       $.get("http://" + config.server + "/users/friends?url=" + encodeURIComponent(document.location.href),
         null,
         function(data) {
           var friends = data.friends; //TODO!
-          for(var friend in friends) {
-            friends[friend]["name"] = friends[friend]["firstName"] + " " + friends[friend]["lastName"]
+          for (var friend in friends) {
+            friends[friend].name = friends[friend].firstName + " " + friends[friend].lastName
           }
           $("#to-list").tokenInput(friends, {
             theme: "kifi"
@@ -551,28 +548,92 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           });
         }
       );
-
     }
 
     // Main comment textarea
-    var placeholder = "<span class=\"placeholder\">Add a " + (type == "public" ? "comment" : "message") + "…</span>";
+    var typeName = type == "public" ? "comment" : "message";
+    var placeholder = "<span class=\"placeholder\">Add a " + typeName + "…</span>";
     $('.comment-compose').html(placeholder);
     $('.comment_post_view').on('focus','.comment-compose',function() {
       if ($('.comment-compose').html() == placeholder) { // unchanged text!
         $('.comment-compose').html("");
       }
-      //$('.crosshair').slideDown(150); // Not in mvp
       $('.comment-compose').animate({'height': '85'}, 150, 'easeQuickSnapBounce');
-    }).on('blur','.comment-compose',function() {
+    }).on('blur', '.comment-compose', function() {
       var value = $('.comment-compose').html()
       value = commentSerializer(value);
       if (value == "") { // unchanged text!
         $('.comment-compose').html(placeholder);
       }
       $('.comment-compose').animate({'height': '35'}, 150, 'easeQuickSnapBounce');
+    }).on('click','.take-snapshot', function() {
+      // make absolute positioning relative to document instead of viewport
+      document.documentElement.style.position = "relative";
 
-      //$('.crosshair').slideUp(20);
-      //$('.submit-comment').slideUp(20);
+      slideOut(true);
+
+      var sel = {}, cX, cY;
+      var $shades = $(["t","b","l","r"].map(function(s) {
+        return $("<div class='snapshot-shade snapshot-shade-" + s + "'>")[0];
+      }));
+      var $glass = $("<div class=snapshot-glass>");
+      var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
+        updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
+      });
+      renderTemplate("templates/comments/snapshot_bar.html", {"type": typeName}, function(html) {
+        $(html).appendTo("body")
+          .draggable({cursor: "move", distance: 10, handle: ".snapshot-bar", scroll: false})
+          .on("click", ".cancel", exitSnapshotMode)
+          .add($shades).css("opacity", 0).animate({opacity: 1}, 300);
+      });
+      $(window).scroll(function() {
+        if (sel) updateSelection(cX, cY);
+      });
+      $glass.click(function() {
+        exitSnapshotMode();
+        //console.dir(sel); // TODO: Insert link to sel.el into composition.
+      });
+      function exitSnapshotMode() {
+        $selectable.add(".snapshot-bar-wrap").animate({opacity: 0}, 400, function() { $(this).remove(); });
+        slideIn();
+      }
+      function updateSelection(clientX, clientY, scrollLeft, scrollTop) {
+        $selectable.hide();
+        var el = document.elementFromPoint(clientX, clientY);
+        $selectable.show();
+        if (!el) return;
+        if (scrollLeft == null) scrollLeft = document.body.scrollLeft;
+        if (scrollTop == null) scrollTop = document.body.scrollTop;
+        var pageX = scrollLeft + clientX;
+        var pageY = scrollTop + clientY;
+        if (el === sel.el) {
+          // track the latest hover point over the current element
+          sel.x = pageX; sel.y = pageY;
+        } else {
+          var r = el.getBoundingClientRect();
+          var dx = Math.abs(pageX - sel.x);
+          var dy = Math.abs(pageY - sel.y);
+          if (!sel.el ||
+              (dx == 0 || r.width < sel.r.width * 2 * dx) &&
+              (dy == 0 || r.height < sel.r.height * 2 * dy) &&
+              (dx == 0 && dy == 0 || r.width * r.height < sel.r.width * sel.r.height * Math.sqrt(dx * dx + dy * dy))) {
+            // if (sel.el) console.log(
+            //   r.width + " < " + sel.r.width + " * 2 * " + dx + " AND " +
+            //   r.height + " < " + sel.r.height + " * 2 * " + dy + " AND " +
+            //   r.width * r.height + " < " + sel.r.width * sel.r.height + " * " + Math.sqrt(dx * dx + dy * dy));
+            var yT = scrollTop + r.top - 2;
+            var yB = scrollTop + r.bottom + 2;
+            var xL = scrollLeft + r.left - 3;
+            var xR = scrollLeft + r.right + 3;
+            $shades.eq(0).css({height: yT});
+            $shades.eq(1).css({top: yB});
+            $shades.eq(2).css({top: yT, height: yB - yT, width: xL});
+            $shades.eq(3).css({top: yT, height: yB - yT, left: xR});
+            $glass.css({top: yT, height: yB - yT, left: xL, width: xR - xL});
+            sel.el = el; sel.r = r; sel.x = pageX; sel.y = pageY;
+          }
+        }
+      }
     }).on('submit','.comment_form', function(e) {
       e.preventDefault();
       var text = commentSerializer($('.comment-compose').html());
