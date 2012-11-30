@@ -486,7 +486,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
   }
 
   function boldSearchTerms(input, needle, useSpaces) {
-    if(useSpaces === true)
+    if (!needle) return input;
+    if (useSpaces === true)
       return input.replace(new RegExp('(^|\\s)(' + needle + ')(\\s|$)','ig'), '$1<b>$2</b>$3');
     else
       return input.replace(new RegExp('(^|\\.?)(' + needle + ')(\\.?|$)','ig'), '$1<b>$2</b>$3');
