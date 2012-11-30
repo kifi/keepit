@@ -11,7 +11,7 @@
     "default_icon": "keepit.png", // optional
     "default_title": "Kifi"//,    // optional; shown in tooltip
     //"default_popup": "keep.html"    // optional
-  },  
+  },
   "background" : {
     "page": "keep.html"
   },
@@ -218,7 +218,7 @@
         "http://*/*",
         "https://*/*"
       ],
-      "js" : ["lib/jquery-1.8.2.min.js", "jquery-ui-1.9.1.custom.min.js", "keymaster.min.js", "lodash.min.js", "jquery.tokeninput.js", "contentscript.js", "mustache.js", "lib/jquery.timeago.js", "lib/jquery.tokeninput.js", "hover.js"],
+      "js" : ["lib/jquery-1.8.2.min.js", "jquery-ui-1.9.1.custom.min.js", "keymaster.min.js", "lodash.min.js", "jquery.tokeninput.js", "contentscript.js", "mustache.js", "lib/jquery.timeago.js", "lib/jquery.tokeninput.js", "templates/comments/snapshot.js", "hover.js"],
       "css": ["keepit.css", "hover.css", "social_window.css", "templates/comments/comments.css"],
       "run_at" : "document_end",
       "all_frames" : false
@@ -253,6 +253,7 @@
     "magicQueries.json",
     "mustache.js",
     "options.html",
+    "snapshot.png",
     "social_hover.html",
     "social_window.css",
     "social_window.html",
@@ -283,6 +284,8 @@
     "templates/comments/thread.html",
     "templates/comments/message_list.html",
     "templates/comments/comment_post.html",
-    "templates/comments/message_post.html"
-  ] 
+    "templates/comments/message_post.html",
+    "templates/comments/snapshot_bar.html",
+    "templates/comments/snapshot.js"
+  ]
 }
