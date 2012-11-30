@@ -16,7 +16,7 @@ object CommentWithSocialUser {
       comment,
       Comment.getChildCount(comment.id.get),
       if(comment.permissions != Comment.Permissions.MESSAGE) {
-        Seq[UserWithSocial]()
+        Nil
       } else {
         CommentRecipient.getByComment(comment.id.get) map { cr => UserWithSocial.toUserWithSocial(User.get(cr.userId.get)) }
       }
