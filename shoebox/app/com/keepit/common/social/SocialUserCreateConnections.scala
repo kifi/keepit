@@ -12,8 +12,8 @@ import com.keepit.model.User
 class SocialUserCreateConnections() extends Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
-	disableConnectionsNotInJson(socialUserInfo, parentJson)
-	createConnectionsFromJson(socialUserInfo, parentJson) 
+	  disableConnectionsNotInJson(socialUserInfo, parentJson)
+	  createConnectionsFromJson(socialUserInfo, parentJson)
   }
 
   def createConnectionsFromJson(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] =
@@ -47,21 +47,20 @@ class SocialUserCreateConnections() extends Logging {
   def disableConnectionsNotInJson(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
     log.info("looking for connections to disable for user %s".format(socialUserInfo.fullName))
     CX.withConnection { implicit conn =>
-    {
-	  val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends map extractSocialId  
-	  val existingSocialUserInfoIds = SocialConnection.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
-	  log.info("socialUserInfoForAllFriendsIds = %s".format(socialUserInfoForAllFriendsIds))
-	  log.info("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
-	  log.info("size of diff =%s".format((existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds).length))
-	  existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds  map { 
-	    socialId => {
-	      val friendSocialUserInfoId = SocialUserInfo.get(socialId, SocialNetworks.FACEBOOK).id.get
-		  log.info("about to disbale connection between %s and for socialId = %s".format(socialUserInfo.id.get,friendSocialUserInfoId ));
-	      SocialConnection.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
+	    val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends map extractSocialId
+	    val existingSocialUserInfoIds = SocialConnection.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
+	    log.info("socialUserInfoForAllFriendsIds = %s".format(socialUserInfoForAllFriendsIds))
+	    log.info("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
+	    log.info("size of diff =%s".format((existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds).length))
+	    existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds  map {
+	      socialId => {
+	        val friendSocialUserInfoId = SocialUserInfo.get(socialId, SocialNetworks.FACEBOOK).id.get
+		      log.info("about to disbale connection between %s and for socialId = %s".format(socialUserInfo.id.get,friendSocialUserInfoId ));
+	        SocialConnection.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
             case Some(c) => {
               if (c.state != SocialConnection.States.INACTIVE){
                 log.info("connection is disabled")
-            	c.withState(SocialConnection.States.INACTIVE).save
+            	  c.withState(SocialConnection.States.INACTIVE).save
               }
               else {
                 log.info("connection is already disabled")
@@ -70,12 +69,10 @@ class SocialUserCreateConnections() extends Logging {
             }
             case _ => throw new Exception("could not find the SocialConnection between %s and for socialId = %s".format(socialUserInfo.id.get,friendSocialUserInfoId ));
           }
-	    }
+	      }
 	    }
 	  } 
 	}
-  }
-
   private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
   private def extractSocialId(friend: JsValue): SocialId = SocialId((friend \ "id").as[String])
 

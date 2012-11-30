@@ -36,7 +36,7 @@ private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphP
   def receive() = {
     case RefreshAll => {
       log.info("going to check which SocilaUserInfo Was not fetched Lately")
-      val needToBeRefreshed = CX.withConnection { implicit conn => SocialUserInfo.getNeedtoBeRefreshed }
+      val needToBeRefreshed = CX.withConnection { implicit conn => SocialUserInfo.getNeedToBeRefreshed }
       log.info("find %s users that need to be refreshed".format(needToBeRefreshed.size))
       needToBeRefreshed.foreach(self ! RefreshUserInfo(_))
     }
@@ -63,7 +63,7 @@ class SocialGraphRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin
   override def enabled: Boolean = true
   override def onStart(): Unit = {
     _cancellables = Seq(
-      system.scheduler.schedule(0 seconds, 2 hours, actor, RefreshAll)
+      system.scheduler.schedule(0 seconds, 5 minutes, actor, RefreshAll)
     )
   }
   override def onStop(): Unit = {
