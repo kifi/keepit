@@ -114,17 +114,18 @@ object Comment {
     val c = CommentEntity AS "c"
     val cr = CommentRecipientEntity AS "cr"
 
-    val ids = (SELECT (c.id) FROM (c JOIN cr).ON("c.id = cr.comment_id") WHERE (
+    val ids: Set[Id[Comment]] = (SELECT (c.id) FROM (c JOIN cr).ON("c.id = cr.comment_id") WHERE (
         (c.uriId EQ uriId) AND
         (cr.userId EQ userId)))
     .UNION (SELECT (c.id) FROM c WHERE (
         (c.uriId EQ uriId) AND
         (c.userId EQ userId)))
-     .list.toSet.toSeq
+     .list.toSet
 
-//     (SELECT (c.id) FROM c WHERE (c.parent IN (ids: _*)))
+     val children = (SELECT (c.id) FROM c WHERE (c.parent IN (ids.toSeq))).list
+     val all: Set[Id[Comment]] = ids ++ children
 
-     ids.length
+     all.size
   }
 
 
