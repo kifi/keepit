@@ -55,7 +55,7 @@ object SearchController extends FortyTwoController {
     }
 
     val filterOut = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-    val config = SearchConfig.getDefaultConfig
+    val config = SearchConfig.getUserConfig(userId)
 
     val articleIndexer = inject[ArticleIndexer]
     val uriGraph = inject[URIGraph]
