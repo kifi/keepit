@@ -9,20 +9,20 @@
   </span>
 }
 
-@paramValue(parameter: String, value: String) = {
-  <tr> <td>@parameter</td> <td><input type="text" name="@{parameter}" value="@{value}"></td> </tr>
+@paramValue(parameter: String, value: String, description: Option[String]) = {
+  <tr> <td>@parameter</td> <td><input type="text" name="@{parameter}" value="@{value}"></td><td>@description.getOrElse("")</td> </tr>
 }
 
 @admin("Search Configuration") {
   <h2>@userWithSocial.user.firstName @userWithSocial.user.lastName</h2>
   <form action="@com.keepit.controllers.routes.SearchConfigController.setUserConfig(userWithSocial.user.id.get)" method="POST" class="form-inline">
     <table class="table table-bordered">
-      <tr> <th>Parameter</th><th>Value</th> </tr>
-      @com.keepit.search.SearchConfig.getUserConfig(userWithSocial.user.id.get).iterator.toSeq.sortBy(_._1).map{ case (p, v) => @paramValue(p, v) }
+      <tr> <th>Parameter</th><th>Value</th><th>Description</th> </tr>
+      @com.keepit.search.SearchConfig.getUserConfig(userWithSocial.user.id.get).iterator.toSeq.sortBy(_._1).map{ case (p, v) => @paramValue(p, v, com.keepit.search.SearchConfig.getDescription(p)) }
     </table>
     <button type="submit" class="btn">Update</button>
   </form>
   <form action="@com.keepit.controllers.routes.SearchConfigController.resetUserConfig(userWithSocial.user.id.get)" method="GET" class="form-inline">
-     <button type="submit" class="btn">Revert To Defaults</button><br/><br/>
+     <button type="submit" class="btn">Revert To Defaults</button><br/>
   </form>
 }
