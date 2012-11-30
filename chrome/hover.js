@@ -450,13 +450,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
           var displayedRecipients = [];
           var storedRecipients = [];
-          if(l == 0)
+          if(l == 0) {
             displayedRecipients.push(user.name);
+          }
           else if(l <= 4) {
-            displayedRecipients = recipientNames.slice(0,l);
+            displayedRecipients = recipientNames.slice(0, l);
           }
           else {
-            displayedRecipients = recipientNames.slice(0,3);
+            displayedRecipients = recipientNames.slice(0, 3);
             storedRecipients = recipientNames.slice(3);
           }
 
@@ -464,6 +465,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             displayedRecipients[d] = formatRecipient(displayedRecipients[d]);
           }
 
+          var recipientText;
           if(l == 0) {
             recipientText = displayedRecipients[0];
           } else if(l <= 4) {

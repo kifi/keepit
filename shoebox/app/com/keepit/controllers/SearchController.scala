@@ -7,13 +7,6 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.ws.WS
 import play.api.mvc._
-import play.api.libs.json.JsArray
-import play.api.libs.json.Json
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsNumber
-import play.api.libs.json.JsArray
 import play.api.http.ContentTypes
 import com.keepit.controllers.CommonActions._
 import com.keepit.common.db.CX
@@ -22,13 +15,8 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.async._
 import com.keepit.model._
 import com.keepit.inject._
-import com.keepit.serializer.BookmarkSerializer
-import com.keepit.serializer.{URIPersonalSearchResultSerializer => BPSRS}
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
-import java.util.concurrent.TimeUnit
 import java.sql.Connection
-import play.api.http.ContentTypes
-import play.api.libs.json.JsString
 import com.keepit.common.logging.Logging
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.Hit
@@ -36,14 +24,12 @@ import com.keepit.search.graph._
 import com.keepit.search._
 import com.keepit.common.social.UserWithSocial
 import org.apache.commons.lang3.StringEscapeUtils
-import com.keepit.common.actor.ActorPlugin
 import com.keepit.search.ArticleSearchResultStore
-import securesocial.core._
 import com.keepit.common.controller.FortyTwoController
 
 //note: users.size != count if some users has the bookmark marked as private
-case class PersonalSearchResult(uri: NormalizedURI, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[UserWithSocial], score: Float)
-
+case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
+case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[UserWithSocial], score: Float)
 case class PersonalSearchResultPacket(
   uuid: ExternalId[ArticleSearchResultRef],
   query: String,
@@ -75,7 +61,7 @@ object SearchController extends FortyTwoController {
     val uriGraph = inject[URIGraph]
     val searcher = new MainSearcher(userId, friendIds, filterOut, articleIndexer, uriGraph, config)
     val searchRes = searcher.search(term, maxHits, lastUUID)
-    val res = toPersonalSearchResultPacket(searchRes)
+    val res = toPersonalSearchResultPacket(userId, searchRes)
     reportArticleSearchResult(searchRes)
     Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
@@ -89,23 +75,31 @@ object SearchController extends FortyTwoController {
          log.error("Could not persist article search result %s".format(res), e)
       })
 
-  private[controllers] def toPersonalSearchResultPacket(res: ArticleSearchResult) = {
+  private[controllers] def toPersonalSearchResultPacket(userId: Id[User], res: ArticleSearchResult) = {
     val hits = CX.withConnection { implicit conn =>
-      res.hits map toPersonalSearchResult
+      res.hits.map(toPersonalSearchResult(userId, _))
     }
     log.debug(hits mkString "\n")
 
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, filter)
   }
-  private[controllers] def toPersonalSearchResult(res: ArticleHit)(implicit conn: Connection): PersonalSearchResult = {
+  private[controllers] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit conn: Connection): PersonalSearchResult = {
     val uri = NormalizedURI.get(res.uriId)
+    val bookmark = if (res.isMyBookmark) Bookmark.load(uri, userId) else None
     val users = res.users.toSeq.map{ userId =>
       val user = User.get(userId)
       val info = SocialUserInfo.getByUser(user.id.get).head
       UserWithSocial(user, info, Bookmark.count(user), Seq(), Seq())
     }
-    PersonalSearchResult(uri, res.bookmarkCount, res.isMyBookmark, false, users, res.score)
+    PersonalSearchResult(toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark, false, users, res.score)
+  }
+  private[controllers] def toPersonalSearchHit(uri: NormalizedURI, bookmark: Option[Bookmark]) = {
+    val title = bookmark match {
+      case Some(bookmark) => Some(bookmark.title)
+      case None => uri.title
+    }
+    PersonalSearchHit(uri.id.get, uri.externalId, title, uri.url)
   }
 
   case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)

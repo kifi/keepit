@@ -21,17 +21,16 @@ class ThreadInfoSerializer extends Writes[ThreadInfo] {
       "lastCommentedAt" -> JsString(ThreadInfo.lastCommentedAt.toString)
     ))
 
-  def writes (comments: Seq[ThreadInfo]): JsValue =
-    JsArray(comments map { comment =>
-      ThreadInfoSerializer.ThreadInfoSerializer.writes(comment)
-    })
+  def writes (comments: Seq[ThreadInfo]): JsValue = JsArray(comments map writes)
 
-  def writes(commentsGroups: List[(State[Comment.Permission],Seq[ThreadInfo])]): JsValue =
+  def writes(commentsGroups: List[(State[Comment.Permission], Seq[ThreadInfo])]): JsValue =
     JsObject(commentsGroups map { commentsGroup =>
       commentsGroup._1.value -> writes(commentsGroup._2)
     })
+
+  def writes(commentsGroup: (State[Comment.Permission], Seq[ThreadInfo])): JsValue = writes(commentsGroup :: Nil)
 }
 
 object ThreadInfoSerializer {
-  implicit val ThreadInfoSerializer = new ThreadInfoSerializer
+  implicit val threadInfoSerializer = new ThreadInfoSerializer
 }

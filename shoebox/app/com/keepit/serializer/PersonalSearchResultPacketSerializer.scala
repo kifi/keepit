@@ -12,7 +12,7 @@ class PersonalSearchResultPacketSerializer extends Writes[PersonalSearchResultPa
       JsObject(List(
         "uuid" -> JsString(res.uuid.toString),
         "query" -> JsString(res.query),
-        "hits" -> URIPersonalSearchResultSerializer.resSerializer.writes(res.hits),
+        "hits" -> PersonalSearchResultSerializer.resSerializer.writes(res.hits),
         "mayHaveMore" -> JsBoolean(res.mayHaveMoreHits),
         "context" -> JsString(res.context)
       ))
