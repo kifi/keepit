@@ -1,5 +1,8 @@
 package com.keepit.search
 
+import com.keepit.common.db.Id
+import com.keepit.model.User
+
 object SearchConfig {
   private var defaultParams =
     Map[String, String](
@@ -26,6 +29,11 @@ object SearchConfig {
 
   def apply(params: Map[String, String]): SearchConfig = defaultConfig(params)
   def apply(newParams: (String, String)*): SearchConfig = apply(newParams.foldLeft(Map.empty[String, String]){ (m, p) => m + p })
+
+  private var userConfig = Map.empty[Long, SearchConfig]
+  def getUserConfig(userId: Id[User]) = userConfig.getOrElse(userId.id, defaultConfig)
+  def setUserConfig(userId: Id[User], config: SearchConfig) { userConfig = userConfig + (userId.id -> config) }
+  def resetUserConfig(userId: Id[User]) { userConfig = userConfig - userId.id }
 }
 
 class SearchConfig(params: Map[String, String]) {
@@ -38,4 +46,6 @@ class SearchConfig(params: Map[String, String]) {
 
   def apply(newParams: Map[String, String]): SearchConfig = new SearchConfig(params ++ newParams)
   def apply(newParams: (String, String)*): SearchConfig = apply(newParams.foldLeft(Map.empty[String, String]){ (m, p) => m + p })
+
+  def iterator: Iterator[(String, String)] = params.iterator
 }
