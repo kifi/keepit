@@ -561,7 +561,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       showComments(user, type, null, true);
     });
 
-    $('.kifi_comment_wrapper').on("mousedown", ".post_to_network .kn_social", function() {
+    $('.comment_post_view').on("mousedown", ".post_to_network .kn_social", function() {
       alert("Not yet implemented. Coming soon!");
       return;
     });
