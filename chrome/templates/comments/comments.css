@@ -7,7 +7,7 @@
 .kifi_comment_wrapper .control-bar a {
   display: inline-block;
   padding: 6px;
-  color: inherit;
+  color: inherit !important;
   text-decoration: none !important;
 }
 .kifi_comment_wrapper .control-bar a:hover {

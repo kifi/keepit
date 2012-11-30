@@ -348,19 +348,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
   }
 
-  function commentSerializer(comment) {
-    var serialized = comment.replace(/<div><br\s*[\/]?><\/div>/gi, '\n').replace(/<br\s*[\/]?>/gi, '\n').replace(/<\/div><div>/gi, '\n').replace(/<\/div>/gi, '').replace(/<div\s*[\/]?>/gi, '\n').replace(/<\/div>/gi, '');
-
-    /*serialized = serialized + "<abbr data-lookhere='adsasd'>[look here]</abbr>"*/
-
-    serializedHTML = $('<div/>').html(serialized);
-    serializedHTML.find('abbr[data-lookhere]').replaceWith(function(a,e) {
-      console.log("Found one!",this,a,e);
-      return "haha";
-    });
-
-    res = serializedHTML.text();
-    return $.trim(res);
+  function commentSerializer(html) {
+    html = html
+      .replace(/<div><br\s*[\/]?><\/div>/gi, '\n')
+      .replace(/<br\s*[\/]?>/gi, '\n')
+      .replace(/<\/div><div>/gi, '\n')
+      .replace(/<div\s*[\/]?>/gi, '\n')
+      .replace(/<\/div>/gi, '');
+    return $.trim($('<div>').html(html).text());
   }
 
   function updateCommentCount(type, count) {
@@ -440,7 +435,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
           var recipientNames = [];
           for(r in recipients) {
-            recipientNames.push(recipients[r].firstName + " " + recipients[r].lastName)
+            var name = recipients[r].firstName + " " + recipients[r].lastName;
+            recipientNames.push(name);
           }
 
           // handled separately because this will need to be refactored to be cleaner
@@ -474,19 +470,43 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             else if(l == 2)
               recipientText = displayedRecipients[0] + " and " + displayedRecipients[1];
             else if(l == 3 || l == 4)
-              recipientText = displayedRecipients.slice(0,l-1).join(", ") + " and " + displayedRecipients[l-1];
+              recipientText = displayedRecipients.slice(0, l - 1).join(", ") + " and " + displayedRecipients[l - 1];
           } else {
-            recipientText = displayedRecipients.slice(0,3).join(", ");
+            recipientText = displayedRecipients.slice(0, 3).join(", ");
             storedRecipients = recipientNames.slice(3);
           }
           // todo "You wrote to "
 
           iterMessages[msg]["recipientText"] = recipientText;
           iterMessages[msg]["storedRecipients"] = storedRecipients;
-          iterMessages[msg]["showMessageCount"] = iterMessages[msg]["messageCount"] > 1
+          iterMessages[msg]["showMessageCount"] = iterMessages[msg]["messageCount"] > 1;
         }
 
         if(id) {
+          var othersInConversation = {};
+          for(msg in visibleComments) {
+            var recipients = visibleComments[msg]["recipients"];
+            var initiatorId = visibleComments[msg].user.externalId;
+            if (initiatorId != config.user.keepit_external_id) {
+              var initiatorName = visibleComments[msg].user.firstName + " " + visibleComments[msg].user.lastName;
+              othersInConversation[visibleComments[msg].user.externalId] = initiatorName;
+            }
+            for(r in recipients) {
+              var name = recipients[r].firstName + " " + recipients[r].lastName;
+              var recipientId = recipients[r].externalId;
+              if (recipientId != config.user.keepit_external_id) {
+                othersInConversation[recipientId] = name;
+              }
+            }
+          }
+          var othersInConversationText = "";
+          for (id in othersInConversation) {
+            if (othersInConversationText.length > 1) {
+              othersInConversationText += ", ";
+            }
+            othersInConversationText += othersInConversation[id];
+          }
+          params.othersInConversationText = othersInConversationText;
           params.recipientText = visibleComments[0].recipientText;
           params.storedRecipients = visibleComments[0].storedRecipients;
           params.externalId = visibleComments[0].externalId;
@@ -524,6 +544,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $.ajax("http://" + config.server + "/comments/follow?url=" + encodeURIComponent(document.location.href),
         {"type": following ? "POST" : "DELETE"});
       $(this).toggleClass("following", following);
+    });
+
+    $(".kifi_comment_wrapper").on("mousedown", "a[href^='x-kifi-sel:']", function(e) {
+      e.preventDefault();
+      // TODO: find and highlight reference
     });
 
     $('.comment_body_view').on("hover", ".more-recipients", function(event) {
@@ -593,7 +618,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       });
       $glass.click(function() {
         exitSnapshotMode();
-        //console.dir(sel); // TODO: Insert link to sel.el into composition.
+        $(".kifi_hover").find(".comment-compose")
+          .find(".placeholder").remove().end()
+          .append(" <a href='x-kifi-sel:" + generateSelector(sel.el).replace("'", "&#39;") + "'>look here</a>");
       });
       function exitSnapshotMode() {
         $selectable.add(".snapshot-bar-wrap").animate({opacity: 0}, 400, function() { $(this).remove(); });
@@ -638,7 +665,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       }
     }).on('submit','.comment_form', function(e) {
       e.preventDefault();
-      var text = commentSerializer($('.comment-compose').html());
+      var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
 
       submitComment(text, type, user, null, null, function(newComment) {
         $('.comment-compose').text("").html(placeholder);
@@ -658,12 +685,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           updateCommentCount(type);
           repositionScroll(false);
         });
-
       });
       return false;
     }).on('submit','.message_form', function(e) {
       e.preventDefault();
-      var text = commentSerializer($('.comment-compose').html());
+      var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
 
       var isReply = $(this).is('.message-reply');
       var recipients;

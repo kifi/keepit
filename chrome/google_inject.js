@@ -32,7 +32,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
   }
 
   log("injecting keep it to google search result page");
-  
+
   function updateQuery(calledTimes) {
     log("updating query...");
 
@@ -77,7 +77,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
     log("New query! New: " + query + ", old: " + resultsStore.query);
 
     var request = {
-      type: "get_keeps", 
+      type: "get_keeps",
       query: $("input[name='q']").val() // it may have changed since last checked
     };
     inprogressSearchQuery = query;
@@ -309,7 +309,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       req.open("GET", chrome.extension.getURL('google_inject.html'), true);
       req.onreadystatechange = function() {
         if (req.readyState == 4 && req.status == 200) {
-          
+
           log('Rendering Mustache.js Google template...');
           var results = new Array();
 
@@ -373,7 +373,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
             results.push(formattedResult);
           });
-          
+
           var adminMode = config["show_score"] === true;
 
           var tb = Mustache.to_html(
@@ -389,9 +389,9 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
             if(times<=0) {
               return;
             }
-            if(resultsStore.query === '' || 
-              typeof resultsStore.results === 'undefined' || 
-              typeof resultsStore.results === 'undefined' || 
+            if(resultsStore.query === '' ||
+              typeof resultsStore.results === 'undefined' ||
+              typeof resultsStore.results === 'undefined' ||
               resultsStore.results.length == 0) {
               // Catch bogus injections
               log("Injection not relevant. Stopping.");
@@ -477,8 +477,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       $(friendTooltip).mouseover(function () {
           clearTimeout(timeout);
       }).mouseout(hide);
-
-    }); 
+    });
   }
 
   function addActionToSocialBar(socialBar) {
@@ -486,7 +485,8 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
   }
 
   function boldSearchTerms(input, needle, useSpaces) {
-    if(useSpaces === true)
+    if (!needle) return input;
+    if (useSpaces === true)
       return input.replace(new RegExp('(^|\\s)(' + needle + ')(\\s|$)','ig'), '$1<b>$2</b>$3');
     else
       return input.replace(new RegExp('(^|\\.?)(' + needle + ')(\\.?|$)','ig'), '$1<b>$2</b>$3');
