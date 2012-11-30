@@ -351,19 +351,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
   }
 
-  function commentSerializer(comment) {
-    var serialized = comment.replace(/<div><br\s*[\/]?><\/div>/gi, '\n').replace(/<br\s*[\/]?>/gi, '\n').replace(/<\/div><div>/gi, '\n').replace(/<\/div>/gi, '').replace(/<div\s*[\/]?>/gi, '\n').replace(/<\/div>/gi, '');
-
-    /*serialized = serialized + "<abbr data-lookhere='adsasd'>[look here]</abbr>"*/
-
-    serializedHTML = $('<div/>').html(serialized);
-    serializedHTML.find('abbr[data-lookhere]').replaceWith(function(a,e) {
-      console.log("Found one!",this,a,e);
-      return "haha";
-    });
-
-    res = serializedHTML.text();
-    return $.trim(res);
+  function commentSerializer(html) {
+    html = html
+      .replace(/<div><br\s*[\/]?><\/div>/gi, '\n')
+      .replace(/<br\s*[\/]?>/gi, '\n')
+      .replace(/<\/div><div>/gi, '\n')
+      .replace(/<div\s*[\/]?>/gi, '\n')
+      .replace(/<\/div>/gi, '');
+    return $.trim($('<div>').html(html).text());
   }
 
   function updateCommentCount(type, count) {
@@ -553,6 +548,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $(this).toggleClass("following", following);
     });
 
+    $(".kifi_comment_wrapper").on("mousedown", "a[href^='x-kifi-sel:']", function(e) {
+      e.preventDefault();
+      // TODO: find and highlight reference
+    });
+
     $('.comment_body_view').on("hover", ".more-recipients", function(event) {
       //$(this).parent().find('.more-recipient-list')[event.type == 'mouseenter' ? "show" : "hide"]();
     }).on('click','.thread-info', function() {
@@ -597,12 +597,79 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         $('.comment-compose').html(placeholder);
       }
       $('.comment-compose').animate({'height': '35'}, 150, 'easeQuickSnapBounce');
+    }).on('click','.take-snapshot', function() {
+      // make absolute positioning relative to document instead of viewport
+      document.documentElement.style.position = "relative";
 
-      //$('.crosshair').slideUp(20);
-      //$('.submit-comment').slideUp(20);
+      slideOut(true);
+
+      var sel = {}, cX, cY;
+      var $shades = $(["t","b","l","r"].map(function(s) {
+        return $("<div class='snapshot-shade snapshot-shade-" + s + "'>")[0];
+      }));
+      var $glass = $("<div class=snapshot-glass>");
+      var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
+        updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
+      });
+      renderTemplate("templates/comments/snapshot_bar.html", {"type": typeName}, function(html) {
+        $(html).appendTo("body")
+          .draggable({cursor: "move", distance: 10, handle: ".snapshot-bar", scroll: false})
+          .on("click", ".cancel", exitSnapshotMode)
+          .add($shades).css("opacity", 0).animate({opacity: 1}, 300);
+      });
+      $(window).scroll(function() {
+        if (sel) updateSelection(cX, cY);
+      });
+      $glass.click(function() {
+        exitSnapshotMode();
+        $(".kifi_hover").find(".comment-compose")
+          .find(".placeholder").remove().end()
+          .append(" <a href='x-kifi-sel:" + generateSelector(sel.el).replace("'", "&#39;") + "'>look here</a>");
+      });
+      function exitSnapshotMode() {
+        $selectable.add(".snapshot-bar-wrap").animate({opacity: 0}, 400, function() { $(this).remove(); });
+        slideIn();
+      }
+      function updateSelection(clientX, clientY, scrollLeft, scrollTop) {
+        $selectable.hide();
+        var el = document.elementFromPoint(clientX, clientY);
+        $selectable.show();
+        if (!el) return;
+        if (scrollLeft == null) scrollLeft = document.body.scrollLeft;
+        if (scrollTop == null) scrollTop = document.body.scrollTop;
+        var pageX = scrollLeft + clientX;
+        var pageY = scrollTop + clientY;
+        if (el === sel.el) {
+          // track the latest hover point over the current element
+          sel.x = pageX; sel.y = pageY;
+        } else {
+          var r = el.getBoundingClientRect();
+          var dx = Math.abs(pageX - sel.x);
+          var dy = Math.abs(pageY - sel.y);
+          if (!sel.el ||
+              (dx == 0 || r.width < sel.r.width * 2 * dx) &&
+              (dy == 0 || r.height < sel.r.height * 2 * dy) &&
+              (dx == 0 && dy == 0 || r.width * r.height < sel.r.width * sel.r.height * Math.sqrt(dx * dx + dy * dy))) {
+            // if (sel.el) console.log(
+            //   r.width + " < " + sel.r.width + " * 2 * " + dx + " AND " +
+            //   r.height + " < " + sel.r.height + " * 2 * " + dy + " AND " +
+            //   r.width * r.height + " < " + sel.r.width * sel.r.height + " * " + Math.sqrt(dx * dx + dy * dy));
+            var yT = scrollTop + r.top - 2;
+            var yB = scrollTop + r.bottom + 2;
+            var xL = scrollLeft + r.left - 3;
+            var xR = scrollLeft + r.right + 3;
+            $shades.eq(0).css({height: yT});
+            $shades.eq(1).css({top: yB});
+            $shades.eq(2).css({top: yT, height: yB - yT, width: xL});
+            $shades.eq(3).css({top: yT, height: yB - yT, left: xR});
+            $glass.css({top: yT, height: yB - yT, left: xL, width: xR - xL});
+            sel.el = el; sel.r = r; sel.x = pageX; sel.y = pageY;
+          }
+        }
+      }
     }).on('submit','.comment_form', function(e) {
       e.preventDefault();
-      var text = commentSerializer($('.comment-compose').html());
+      var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
 
       submitComment(text, type, user, null, null, function(newComment) {
         $('.comment-compose').text("").html(placeholder);
@@ -622,12 +689,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           updateCommentCount(type);
           repositionScroll(false);
         });
-
       });
       return false;
     }).on('submit','.message_form', function(e) {
       e.preventDefault();
-      var text = commentSerializer($('.comment-compose').html());
+      var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
 
       var isReply = $(this).is('.message-reply');
       var recipients;
