@@ -288,23 +288,29 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     return $(".kifi_comment_wrapper").is(":visible");
   }
 
-  setInterval(function(){
-    refreshCommentsHack();
-  }, 15000);
-
   function refreshCommentsHack() {
     if (isCommentPanelVisible() !== true) return;
-    if (hasNewComments() === true) {
-      showComments(badGlobalState.user, badGlobalState.type, badGlobalState.id, badGlobalState.keepOpen)    
-    }
-  }
-
-  function hasNewComments() {
-    var url = "http://" + config.server + "/users/slider/updates?url=" + encodeURIComponent(document.location.href);
-    $.get(url, null, function(updates) {
-      console.log(updates);
+    hasNewComments(function(){
+      showComments(badGlobalState.user, badGlobalState.type, badGlobalState.id, badGlobalState.keepOpen);
     });
   }
+
+  function hasNewComments(callback) {
+    var url = "http://" + config.server + "/users/slider/updates?url=" + encodeURIComponent(document.location.href);
+    $.get(url, null, function(updates) {
+      if (badGlobalState["updates"]) {
+        var hasUpdates = badGlobalState["updates"]["commentsAndMessagesCount"] === updates["commentsAndMessagesCount"];
+        if (callback) {
+          callback(hasUpdates)
+        }
+      }
+      badGlobalState["updates"] = updates;
+    });
+  }
+
+  setInterval(function(){
+    refreshCommentsHack();
+  }, 10000);
 
   function showComments(user, type, id, keepOpen) {
     var type = type || "public";
@@ -837,7 +843,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
   function repositionScroll(resizeQuickly) {
     resizeCommentBodyView(resizeQuickly);
-
     $(".comment_body_view").prop("scrollTop", 99999);
   }
 
@@ -865,6 +870,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
     config = response;
     console.log("user config",response);
+    hasNewComments();
   });
 
 })();
