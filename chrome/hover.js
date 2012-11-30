@@ -148,7 +148,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           "arrow": arrow,
           "profilepic": facebookImageLink,
           "name": user.name,
-          "is_kept": o.kept
+          "is_kept": o.kept,
+          "connected_networks": chrome.extension.getURL("icons/connected_networks.png")
         }
 
         following = o.following;
@@ -390,7 +391,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       comments: visibleComments,
       showControlBar: type == "public",
       following: following,
-      snapshotUri: chrome.extension.getURL("snapshot.png")
+      snapshotUri: chrome.extension.getURL("snapshot.png"),
+      connected_networks: chrome.extension.getURL("icons/social-icons.png")
     }
 
     loadFile("templates/comments/hearts.html", function(hearts) {
@@ -557,6 +559,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       showComments(user, type, $(this).parent().data("externalid"));
     }).on('click', '.back-button', function() {
       showComments(user, type, null, true);
+    });
+
+    $('.kifi_comment_wrapper').on("mousedown", ".post_to_network .kn_social", function() {
+      alert("Not yet implemented. Coming soon!");
+      return;
     });
 
     if (type == "message") {
