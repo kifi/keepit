@@ -18,7 +18,8 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   // get config params
   val minMyBookmarks = config.asInt("minMyBookmarks")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
-  val sharingBoost = config.asFloat("sharingBoost")
+  val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
+  val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   val percentMatch = config.asFloat("percentMatch")
   val recencyBoost = config.asFloat("recencyBoost")
   val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
@@ -26,6 +27,9 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   val proximityBoost = config.asFloat("proximityBoost")
   val semanticBoost = config.asFloat("semanticBoost")
   val dumpingByRank = config.asBoolean("dumpingByRank")
+  val dumpingHalfDecayMine = config.asFloat("dumpingHalfDecayMine")
+  val dumpingHalfDecayFriends = config.asFloat("dumpingHalfDecayFriends")
+  val dumpingHalfDecayOthers = config.asFloat("dumpingHalfDecayOthers")
 
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
   val articleSearcher = articleIndexer.getArticleSearcher
@@ -103,7 +107,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     var threshold = highScore * tailCutting
 
     myHits.toSortedList.iterator.zipWithIndex.map{ case (h, rank) =>
-      if (dumpingByRank) h.score = h.score * dumpFunc(rank, 8.0d) // dumping the scores by rank
+      if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayMine) // dumping the scores by rank
       h
     }.takeWhile{ h =>
       h.score > threshold
@@ -112,8 +116,8 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
       val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet - userId
 
       h.users = sharingUsers
-      h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(sharingUsers.size + 3), recencyScore(myUriEdges.getCreatedAt(id)))
-      h.score = h.scoring.score(myBookmarkBoost, sharingBoost, recencyBoost)
+      h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(sharingUsers.size + 1), recencyScore(myUriEdges.getCreatedAt(id)))
+      h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
       hits.insert(h)
     }
 
@@ -121,7 +125,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
       friendsHits.toSortedList.iterator.zipWithIndex.map{ case (h, rank) =>
-        if (dumpingByRank) h.score = h.score * dumpFunc(rank, 4.0d) // dumping the scores by rank
+        if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayFriends) // dumping the scores by rank
         h
       }.takeWhile{ h =>
         h.score > threshold
@@ -131,7 +135,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
 
         h.users = sharingUsers
         h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(sharingUsers.size), 0.0f)
-        h.score = h.scoring.score(1.0f, sharingBoost, recencyBoost)
+        h.score = h.scoring.score(1.0f, sharingBoostInNetwork, recencyBoost)
         queue.insert(h)
       }
       queue.foreach{ h => hits.insert(h) }
@@ -140,7 +144,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     if (hits.size < numHitsToReturn && othersHits.size > 0) {
       val queue = createQueue(numHitsToReturn - hits.size)
       othersHits.toSortedList.iterator.zipWithIndex.map{ case (h, rank) =>
-        if (dumpingByRank) h.score = h.score * dumpFunc(rank, 2.0d) // dumping the scores by rank
+        if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayOthers) // dumping the scores by rank
         h
       }.takeWhile{
         h => h.score > threshold
@@ -148,7 +152,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
         h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
         if (h.bookmarkCount > 0) {
           h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(h.bookmarkCount), 0.0f)
-          h.score = h.scoring.score(1.0f, sharingBoost, recencyBoost)
+          h.score = h.scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost)
           queue.insert(h)
         }
       }

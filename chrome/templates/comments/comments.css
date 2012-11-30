@@ -66,7 +66,7 @@
   border-top: 1px solid #e2e2e2;
   position: relative;
 }
-.kifi_hover.message .comment-wrapper:first-child {
+.kifi_comment_wrapper .comment-wrapper:first-child {
   border-top: none;
 }
 
@@ -435,7 +435,6 @@ div.token-input-dropdown ul li.token-input-selected-dropdown-item {
     background-color: #d0efa0;
 }
 
-/* Example tokeninput style #2: kifi style */
 ul.token-input-list-kifi {
     overflow: hidden;
     height: auto !important;
@@ -455,6 +454,16 @@ ul.token-input-list-kifi {
     list-style-type: none;
     clear: left;
     color: #524d4d;
+}
+
+.comment_post_view #to-list {
+  height: 24px;
+  width: 247px;
+  background-color: #fff;
+  border: 1px solid #e2e2e2;
+  border-radius: 3px 3px 0px 0px;
+  border-bottom: 0px;
+  padding-left: 8px;
 }
 
 ul.token-input-list-kifi li input {
