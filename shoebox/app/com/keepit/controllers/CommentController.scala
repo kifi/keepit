@@ -72,6 +72,13 @@ object CommentController extends FortyTwoController {
     }
   }
 
+  def getUpdates(url: String) = AuthenticatedJsonAction { request =>
+    val count = CX.withReadOnlyConnection { implicit conn =>
+      Comment.getMessageAndCommentCount(NormalizedURI.getByNormalizedUrl(url).get.id.get, request.userId)
+    }
+    Ok(JsObject(List("commentsAndMessagesCount" -> JsNumber(count))))
+  }
+
   def getComments(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
       NormalizedURI.getByNormalizedUrl(url) map { normalizedURI =>

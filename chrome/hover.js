@@ -281,16 +281,42 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
+  var badGlobalState = { }
+
+  function isCommentPanelVisible() {
+    return $(".kifi_comment_wrapper").is(":visible");
+  }
+
+  setInterval(function(){
+    refreshCommentsHack();
+  }, 15000);
+
+  function refreshCommentsHack() {
+    if (isCommentPanelVisible() !== true) return;
+    if (hasNewComments() === true) {
+      showComments(badGlobalState.user, badGlobalState.type, badGlobalState.id, badGlobalState.keepOpen)    
+    }
+  }
+
+  function hasNewComments() {
+    var url = "http://" + config.server + "/users/slider/updates?url=" + encodeURIComponent(document.location.href);
+    $.get(url, null, function(updates) {
+      console.log(updates);
+    });
+  }
+
   function showComments(user, type, id, keepOpen) {
     var type = type || "public";
 
-    var isVisible = $(".kifi_comment_wrapper").is(":visible");
+    badGlobalState = {"user": user, "type": type, "id": id, "keepOpen": keepOpen};
+
+    var isVisible = isCommentPanelVisible();
     var showingType = $(".kifi_hover").data("view");
 
     if (isVisible && !id && !keepOpen) { // already open!
       if (type == showingType) {
         $('.kifi-content').slideDown();
-        $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
+        $('.kifi_comment_wrapper').slideUp(600, 'easeInOutBack');
         $(".kifi_hover").removeClass(type);
         return;
       } else { // already open, yet showing a different type.

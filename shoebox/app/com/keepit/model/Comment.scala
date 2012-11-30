@@ -110,6 +110,24 @@ object Comment {
   def getMessageCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Long =
     selectMessages({c => c.id}, uriId, userId).list.size
 
+  def getMessageAndCommentCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Int = {
+    val c = CommentEntity AS "c"
+    val cr = CommentRecipientEntity AS "cr"
+
+    val ids = (SELECT (c.id) FROM (c JOIN cr).ON("c.id = cr.comment_id") WHERE (
+        (c.uriId EQ uriId) AND
+        (cr.userId EQ userId)))
+    .UNION (SELECT (c.id) FROM c WHERE (
+        (c.uriId EQ uriId) AND
+        (c.userId EQ userId)))
+     .list.toSet.toSeq
+
+//     (SELECT (c.id) FROM c WHERE (c.parent IN (ids: _*)))
+
+     ids.length
+  }
+
+
   private def selectMessages[T](
       project: RelationNode[Id[Comment],CommentEntity] => Projection[T],
       uriId: Id[NormalizedURI],

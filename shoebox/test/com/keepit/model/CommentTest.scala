@@ -96,6 +96,17 @@ class CommentTest extends SpecificationWithJUnit {
         }
       }
     }
+    "count messages AND comments by URI and UserId" in {
+      running(new EmptyApplication()) {
+        val (user1, user2, uri1, uri2) = setup()
+        CX.withConnection { implicit conn =>
+          Comment.getMessageAndCommentCount(uri1.id.get, user1.id.get) === 5
+          Comment.getMessageAndCommentCount(uri1.id.get, user2.id.get) === 4
+          Comment.getMessageAndCommentCount(uri2.id.get, user1.id.get) === 1
+          Comment.getMessageAndCommentCount(uri2.id.get, user2.id.get) === 0
+        }
+      }
+    }
   }
 
 }
