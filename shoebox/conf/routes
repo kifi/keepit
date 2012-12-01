@@ -22,7 +22,7 @@ DELETE  /comments/follow            com.keepit.controllers.CommentController.sto
 
 GET     /messages/threads/:id       com.keepit.controllers.CommentController.getMessageThread(id: ExternalId[Comment])
 GET     /messages/threads           com.keepit.controllers.CommentController.getMessageThreadList(url: String)
-POST    /messages                   com.keepit.controllers.CommentController.createComment(url: String, text: String, permissions = "message", recipients: String ?= "", parent: String ?= "")
+POST    /messages                   com.keepit.controllers.CommentController.createComment(url: String, title: String, text: String, permissions = "message", recipients: String ?= "", parent: String ?= "")
 
 GET     /users/slider               com.keepit.controllers.UserController.getSliderInfo(url: String)
 GET     /users/slider/updates       com.keepit.controllers.CommentController.getUpdates(url: String)
