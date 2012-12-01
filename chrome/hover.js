@@ -84,7 +84,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       if (numFriends > 0) {
         return "You and " +
           (numFriends == 1 ? "another friend" : (numFriends + " of your friends")) +
-          "kept this.";
+          " kept this.";
       }
       return "You kept this!";
     }
