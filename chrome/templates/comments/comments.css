@@ -93,6 +93,7 @@
 }
 .kifi_comment_wrapper .comment-wrapper:hover .comment-meta {
   -webkit-transform: none;
+  -webkit-transition-delay: .5s;
 }
 
 .kifi_comment_wrapper .comment-text {
