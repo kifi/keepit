@@ -818,11 +818,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }).on('submit','.comment_form', function(e) {
       e.preventDefault();
       var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
-
-      if(text == "") {
-        alert("This will eventually be a pretty message reminding you not to submit empty comments.")
-        return false;
-      }
+      if (!text) return false;
 
       submitComment(text, type, user, null, null, function(newComment) {
         $('.comment-compose').text("").html(placeholder);
@@ -847,6 +843,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }).on('submit','.message_form', function(e) {
       e.preventDefault();
       var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
+      if (!text) return false;
 
       var isReply = $(this).is('.message-reply');
       var recipients;
