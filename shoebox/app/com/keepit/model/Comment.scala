@@ -32,6 +32,7 @@ case class Comment(
   uriId: Id[NormalizedURI],
   userId: Id[User],
   text: String,
+  pageTitle: String,
   parent: Option[Id[Comment]] = None,
   permissions: State[Comment.Permission] = Comment.Permissions.PUBLIC,
   state: State[Comment] = Comment.States.ACTIVE) {
@@ -170,6 +171,7 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
   val externalId = "external_id".EXTERNAL_ID[Comment].NOT_NULL(ExternalId())
   val uriId = "normalized_uri_id".ID[NormalizedURI].NOT_NULL
   val userId = "user_id".ID[User]
+  val pageTitle = "page_title".VARCHAR(1024).NOT_NULL
   val text = "text".CLOB.NOT_NULL
   val parent = "parent".ID[Comment]
   val permissions = "permissions".STATE[Comment.Permission].NOT_NULL(Comment.Permissions.PUBLIC)
@@ -184,6 +186,7 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
     externalId = externalId(),
     uriId = uriId(),
     userId = userId(),
+    pageTitle = pageTitle(),
     text = text(),
     parent = parent.value,
     permissions = permissions(),
@@ -202,6 +205,7 @@ private[model] object CommentEntity extends CommentEntity with EntityTable[Comme
     comment.externalId := view.externalId
     comment.uriId := view.uriId
     comment.userId := view.userId
+    comment.pageTitle := view.pageTitle
     comment.text := view.text
     comment.parent.set(view.parent)
     comment.permissions := view.permissions

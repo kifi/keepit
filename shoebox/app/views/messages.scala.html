@@ -7,6 +7,7 @@
       <th>#</th>
       <th>User</th>
       <th>Recipients</th>
+      <th>Page Title</th>
       <th>Page</th>
       <th>Creation</th>
     </tr>
@@ -17,6 +18,7 @@
       <td>@for(recipient <- recipients) { 
         @adminHelper.userDisplay(recipient)
       }</td>
+      <td>@comment.pageTitle</td>
       <td>@adminHelper.articleDisplay(article)</td>
       <td>@adminHelper.dateDisplay(comment.createdAt) @adminHelper.timeDisplay(comment.createdAt)</td>
     </tr>
