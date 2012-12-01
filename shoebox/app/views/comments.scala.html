@@ -6,6 +6,7 @@
     <tr>
       <th>#</th>
       <th>User</th>
+      <th>Page Title</th>
       <th>Page</th>
       <th>Creation</th>
     </tr>
@@ -13,6 +14,7 @@
     <tr>
       <td rowspan="2">@{i+1}</td>
       <td>@adminHelper.userDisplay(user)</td>
+      <td>@comment.pageTitle</td>
       <td>@adminHelper.articleDisplay(article)</td>
       <td>@adminHelper.dateDisplay(comment.createdAt) @adminHelper.timeDisplay(comment.createdAt)</td>
     </tr>
