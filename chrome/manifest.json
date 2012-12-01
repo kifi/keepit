@@ -1,6 +1,6 @@
 {
-  "name": "Kifi",
-  "version": "1.0",
+  "name": "Kifi Beta",
+  "version": "1.9",
   "manifest_version": 2,
   "description": "Keep it, Find it!",
   "icons" : {
@@ -271,6 +271,8 @@
     "facebookConnect.png",
     "comments.html",
     "lib/jquery-1.8.2.min.js",
+    "icons/social-icons.png",
+    "icons/more-right.png",
     "templates/main_hover.html",
     "templates/footer.html",
     "templates/comments/hearts.html",

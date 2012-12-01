@@ -92,6 +92,11 @@
   font-size: 11px;
   color: #8c8484;
 }
+
+.kifi_hover .kififtr .close-message, .kifi_hover .kififtr .keepit-message {
+    cursor: pointer;
+}
+
 /*content*/
 .kifi_hover .roundedbox .kifi-content {
   padding: 5px 5px 5px 10px;
@@ -463,30 +468,74 @@
   margin:6px 0px 4px 0px;
 }
 
-.hover_connected_networks {
-  /*background: url(connected_networks.png);*/
+.post_to_network span.kn_facebook {
+  background-position: 0px 17px;
 }
 
-.kn_facebook {
+.post_to_network span.kn_linkedin {
+  background-position: -17px 17px;
+}
+
+.post_to_network span.kn_twitter {
+  background-position: -34px 17px;
+}
+
+.post_to_network span.kn_pinterest {
+  background-position: -51px 17px;
+}
+
+.post_to_network span.kn_facebook:hover {
   background-position: 0px 0px;
 }
 
-.kn_linkedin {
-  background-position: -34px 34px;
-}
-.kn_twitter {
-  background-position: -68px 34px;
-}
-.kn_pinterest {
-  background-position: -102px 34px;
+.post_to_network span.kn_linkedin:hover {
+  background-position: -17px 0px;
 }
 
-span.kn_social {
+.post_to_network span.kn_twitter:hover {
+  background-position: -34px 0px;
+}
+
+.post_to_network span.kn_pinterest:hover {
+  background-position: -51px 0px;
+}
+
+.post_to_network span.kn_social {
+  width: 17px;
+  height: 17px;
+  display: inline-block;
+  background-size: 68px;
+  margin-bottom: -3px;
+}
+
+.post_to_network span.kn_social:hover {
+  cursor: pointer;
+}
+
+.hover_connected_networks span.kn_social {
   width: 34px;
   height: 34px;
   display: inline-block;
-  background-size: 136px;
+  background-size: 136px !important;
 }
+
+
+.hover_connected_networks span.kn_facebook {
+  background-position: 0px 0px !important;
+}
+
+.hover_connected_networks span.kn_linkedin {
+  background-position: -34px 34px !important;
+}
+
+.hover_connected_networks span.kn_twitter {
+  background-position: -68px 34px !important;
+}
+
+.hover_connected_networks span.kn_pinterest {
+  background-position: -102px 34px !important;
+}
+
 
 .kifi_selection {
   background: rgba(50,100,150,.3) !important;

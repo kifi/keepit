@@ -1,7 +1,7 @@
 console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
 (function() {
-  var config, following;
+  var config, following, isKept = false;
 
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
@@ -84,7 +84,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       if (numFriends > 0) {
         return "You and " +
           (numFriends == 1 ? "another friend" : (numFriends + " of your friends")) +
-          "kept this.";
+          " kept this.";
       }
       return "You kept this!";
     }
@@ -131,6 +131,28 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
   }
 
+  function keepPage() {
+    log("bookmarking page: " + document.location.href);
+
+    chrome.extension.sendRequest({
+      "type": "set_page_icon",
+      "is_kept": true
+    });
+
+    isKept = true;
+
+    var request = {
+      "type": "add_bookmarks",
+      "url": document.location.href,
+      "title": document.title,
+      "private": $("#keepit_private").is(":checked")
+    }
+    chrome.extension.sendRequest(request, function(response) {
+      log("bookmark added! -> " + JSON.stringify(response));
+      keptItslideOut();
+   });
+  }
+
   function showKeepItHover(user) {
     var logo = chrome.extension.getURL('kifilogo.png');
     var arrow = chrome.extension.getURL('arrow.png');
@@ -143,12 +165,15 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       function(o) {
         log(o);
 
+        isKept = o.kept;
+
         var tmpl = {
           "logo": logo,
           "arrow": arrow,
           "profilepic": facebookImageLink,
           "name": user.name,
-          "is_kept": o.kept
+          "is_kept": o.kept,
+          "connected_networks": chrome.extension.getURL("icons/connected_networks.png")
         }
 
         following = o.following;
@@ -208,27 +233,12 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         "type": "set_page_icon",
         "is_kept": false
       });
+      isKept = false;
       slideOut();
     });
 
     $('.keepitbtn').click(function() {
-      log("bookmarking page: " + document.location.href);
-
-      chrome.extension.sendRequest({
-        "type": "set_page_icon",
-        "is_kept": true
-      });
-
-      var request = {
-        "type": "add_bookmarks",
-        "url": document.location.href,
-        "title": document.title,
-        "private": $("#keepit_private").is(":checked")
-      }
-      chrome.extension.sendRequest(request, function(response) {
-        log("bookmark added! -> " + JSON.stringify(response));
-        keptItslideOut();
-     });
+      keepPage();
     });
 
     $('.dropdownbtn').click(function() {
@@ -281,17 +291,78 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
+  function redrawFooter(showFooterNav, type) {
+    var footerParams = {
+      showFooterNav: showFooterNav,
+      isMessages: type == "message",
+      isKept: isKept,
+      logo: chrome.extension.getURL('kifilogo.png')
+    }
+
+    renderTemplate("templates/footer.html", footerParams, function(renderedTemplate) {
+      $('.kififtr').html(renderedTemplate)
+      .on('mousedown','.close-message', function() {
+        showComments(); // called with no params, hides comments/messages
+      })
+      .on('mousedown', '.footer-keepit', function() {
+        keepPage();
+      })
+      .on('mousedown', '.footer-unkeepit', function() {
+        alert("To be implemented.");
+      });
+    });
+  }
+
+  var badGlobalState = { }
+
+  function isCommentPanelVisible() {
+    return $(".kifi_comment_wrapper").is(":visible");
+  }
+
+  function refreshCommentsHack() {
+    if (isCommentPanelVisible() !== true) return;
+    hasNewComments(function(){
+      updateCommentCount("public", badGlobalState["updates"]["publicCount"]);
+      //updateCommentCount("message", badGlobalState["updates"]["messageCount"]);message count includes children, need to fix...
+      if (isCommentPanelVisible() !== true) return;
+      showComments(badGlobalState.user, badGlobalState.type, badGlobalState.id, true);
+    });
+  }
+
+  function hasNewComments(callback) {
+    var url = "http://" + config.server + "/users/slider/updates?url=" + encodeURIComponent(document.location.href);
+    $.get(url, null, function(updates) {
+      if (badGlobalState["updates"]) {
+        var hasUpdates = badGlobalState["updates"]["countSum"] !== updates["countSum"];
+        if (hasUpdates && callback) {
+          callback();
+        }
+      }
+      badGlobalState["updates"] = updates;
+    });
+  }
+
+  setInterval(function(){
+    refreshCommentsHack();
+  }, 10000);
+
   function showComments(user, type, id, keepOpen) {
     var type = type || "public";
 
-    var isVisible = $(".kifi_comment_wrapper").is(":visible");
+    badGlobalState["user"] = user;
+    badGlobalState["type"] = type;
+    badGlobalState["id"] = id;
+
+    var isVisible = isCommentPanelVisible();
     var showingType = $(".kifi_hover").data("view");
+    var shouldRedrawFooter = !isVisible || (showingType && type != showingType)
 
     if (isVisible && !id && !keepOpen) { // already open!
       if (type == showingType) {
         $('.kifi-content').slideDown();
-        $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
+        $('.kifi_comment_wrapper').slideUp(600, 'easeInOutBack');
         $(".kifi_hover").removeClass(type);
+        redrawFooter(false);
         return;
       } else { // already open, yet showing a different type.
         // For now, nothing. Eventually, some slick animation for a quick change?
@@ -314,6 +385,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             repositionScroll(false);
           });
         }
+        if(shouldRedrawFooter) {
+          redrawFooter(true, type);
+        }
       });
     });
   }
@@ -321,8 +395,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function commentTextFormatter() {
     return function(text, render) {
       text = $.trim(render(text));
+      text = text.replace(/\[(.*?)\]\(x-kifi-sel:(.*?)\)/g, "<a href='x-kifi-sel:$2'>$1</a>");
       text = "<p class=\"first-line\">" + text + "</p>";
-      text = text.replace(/\n\n/g,"\n")
+      text = text.replace(/\n\n/g, "\n")
       text = text.replace(/\n/g, "</p><p>");
       return text;
     }
@@ -354,8 +429,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       .replace(/<br\s*[\/]?>/gi, '\n')
       .replace(/<\/div><div>/gi, '\n')
       .replace(/<div\s*[\/]?>/gi, '\n')
-      .replace(/<\/div>/gi, '');
-    return $.trim($('<div>').html(html).text());
+      .replace(/<\/div>/gi, '')
+      .replace(/<a href="x-kifi-sel:(.*?)">(.*?)<\/a>/gi, "[$2](x-kifi-sel:$1)");
+    return $('<div>').html(html).text().trim();
   }
 
   function updateCommentCount(type, count) {
@@ -375,8 +451,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     var visibleComments = comments[type] || [];
 
-    if(!id)
+    if(!id) {
       updateCommentCount(type, visibleComments.length);
+    }
 
     var params = {
       kifiuser: {
@@ -390,7 +467,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       comments: visibleComments,
       showControlBar: type == "public",
       following: following,
-      snapshotUri: chrome.extension.getURL("snapshot.png")
+      snapshotUri: chrome.extension.getURL("snapshot.png"),
+      connected_networks: chrome.extension.getURL("icons/social-icons.png")
     }
 
     loadFile("templates/comments/hearts.html", function(hearts) {
@@ -548,7 +626,73 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     $(".kifi_comment_wrapper").on("mousedown", "a[href^='x-kifi-sel:']", function(e) {
       e.preventDefault();
-      // TODO: find and highlight reference
+      var el = snapshot.fuzzyFind(this.href.substring(11));
+      if (el) {
+        // make absolute positioning relative to document instead of viewport
+        document.documentElement.style.position = "relative";
+
+        var aRect = this.getBoundingClientRect();
+        var elRect = el.getBoundingClientRect();
+        var sTop = e.pageY - e.clientY, sLeft = e.pageX - e.clientX;
+        var ms = scrollTo(elRect);
+        $("<div class=snapshot-highlight>").css({
+          left: aRect.left + sLeft,
+          top: aRect.top + sTop,
+          width: aRect.width,
+          height: aRect.height
+        }).appendTo("body").animate({
+          left: elRect.left + sLeft - 3,
+          top: elRect.top + sTop - 2,
+          width: elRect.width + 6,
+          height: elRect.height + 4
+        }, ms).delay(2000).fadeOut(1000, function() {$(this).remove()});
+      } else {
+        alert("Sorry, this reference is no longer valid on this page.");
+      }
+
+      function scrollTo(r) {  // TODO: factor out for reuse
+        var pad = 100;
+        var hWin = $(window).height();
+        var wWin = $(window).width();
+        var sTop = $(document).scrollTop(), sTop2;
+        var sLeft = $(document).scrollLeft(), sLeft2;
+        var oTop = sTop + r.top;
+        var oLeft = sLeft + r.left;
+
+        if (r.height + 2 * pad < hWin) { // fits with space around it
+          sTop2 = (sTop > oTop - pad) ? oTop - pad :
+            (sTop + hWin < oTop + r.height + pad) ? oTop + r.height + pad - hWin : sTop;
+        } else if (r.height < hWin) { // fits without full space around it, so center
+          sTop2 = oTop - (hWin - r.height) / 2;
+        } else { // does not fit, so get it to fill up window
+          sTop2 = sTop < oTop ? oTop : (sTop + hWin > oTop + r.height) ? oTop + r.height - hWin : sTop;
+        }
+        sTop2 = Math.max(0, sTop2);
+
+        if (r.width + 2 * pad < wWin) { // fits with space around it
+          sLeft2 = (sLeft > oLeft - pad) ? oLeft - pad :
+            (sLeft + wWin < oLeft + r.width + pad) ? oLeft + r.width + pad - wWin : sLeft;
+        } else if (r.width < wWin) { // fits without full space around it, so center
+          sLeft2 = oLeft - (wWin - r.width) / 2;
+        } else { // does not fit, so get it to fill up window
+          sLeft2 = sLeft < oLeft ? oLeft : (sLeft + wWin > oLeft + r.width) ? oLeft + r.width - wWin : sLeft;
+        }
+        sLeft2 = Math.max(0, sLeft2);
+
+        if (sTop2 == sTop && sLeft2 == sLeft) return 400;
+
+        var ms = Math.max(400, Math.min(800, 100 * Math.log(Math.max(Math.abs(sLeft2 - sLeft), Math.abs(sTop2, sTop)))));
+        $("<b>").css({position: "absolute", opacity: 0, display: "none"}).appendTo("body").animate({opacity: 1}, {
+            duration: ms,
+            step: function(a) {
+              window.scroll(
+                sLeft2 * a + sLeft * (1 - a),
+                sTop2 * a + sTop * (1 - a));
+            }, complete: function() {
+              $(this).remove()
+            }});
+        return ms;
+      }
     });
 
     $('.comment_body_view').on("hover", ".more-recipients", function(event) {
@@ -557,6 +701,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       showComments(user, type, $(this).parent().data("externalid"));
     }).on('click', '.back-button', function() {
       showComments(user, type, null, true);
+    });
+
+    $('.comment_post_view').on("mousedown", ".post_to_network .kn_social", function() {
+      alert("Not yet implemented. Coming soon!");
+      return;
     });
 
     if (type == "message") {
@@ -620,7 +769,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         exitSnapshotMode();
         $(".kifi_hover").find(".comment-compose")
           .find(".placeholder").remove().end()
-          .append(" <a href='x-kifi-sel:" + generateSelector(sel.el).replace("'", "&#39;") + "'>look here</a>");
+          .append(" <a href='x-kifi-sel:" + snapshot.generateSelector(sel.el).replace("'", "&#39;") + "'>look here</a>");
       });
       function exitSnapshotMode() {
         $selectable.add(".snapshot-bar-wrap").animate({opacity: 0}, 400, function() { $(this).remove(); });
@@ -655,7 +804,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             var xL = scrollLeft + r.left - 3;
             var xR = scrollLeft + r.right + 3;
             $shades.eq(0).css({height: yT});
-            $shades.eq(1).css({top: yB});
+            $shades.eq(1).css({top: yB, height: document.documentElement.scrollHeight - yB});
             $shades.eq(2).css({top: yT, height: yB - yT, width: xL});
             $shades.eq(3).css({top: yT, height: yB - yT, left: xR});
             $glass.css({top: yT, height: yB - yT, left: xL, width: xR - xL});
@@ -666,6 +815,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }).on('submit','.comment_form', function(e) {
       e.preventDefault();
       var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
+      if (!text) return false;
 
       submitComment(text, type, user, null, null, function(newComment) {
         $('.comment-compose').text("").html(placeholder);
@@ -690,6 +840,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }).on('submit','.message_form', function(e) {
       e.preventDefault();
       var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
+      if (!text) return false;
 
       var isReply = $(this).is('.message-reply');
       var recipients;
@@ -754,6 +905,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     var request = {
       "type": "post_comment",
       "url": document.location.href,
+      "title": document.title,
       "text": text,
       "permissions": type,
       "parent": parent,
@@ -804,7 +956,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
   function repositionScroll(resizeQuickly) {
     resizeCommentBodyView(resizeQuickly);
-
     $(".comment_body_view").prop("scrollTop", 99999);
   }
 
@@ -832,6 +983,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
     config = response;
     console.log("user config",response);
+    hasNewComments();
   });
 
 })();
