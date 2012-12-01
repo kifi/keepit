@@ -322,6 +322,14 @@ body .snapshot-bar-wrap .snapshot-bar {
 body .snapshot-bar-wrap .snapshot-bar .cancel {
   cursor: pointer;
 }
+body .snapshot-highlight {
+  position: absolute;
+  z-index: 2147483639;
+  background: rgba(255,255,0,.15);
+  border: 3px solid rgba(255,255,0,.7);
+  border-radius: 6px;
+  box-sizing: border-box;
+}
 
 .kifi_comment_wrapper img.user-avatar {
   float: left;
