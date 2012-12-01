@@ -33,6 +33,7 @@ import com.keepit.common.social.ThreadInfo
 object CommentController extends FortyTwoController {
 
   def createComment(url: String,
+                    title: String,
                     text: String,
                     permission: String,
                     recipients: String = "",
@@ -41,7 +42,7 @@ object CommentController extends FortyTwoController {
 
       if(text.trim.isEmpty)
         throw new Exception("Empty comments are not allowed")
-        
+
       val userId = request.userId
       val uri = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save)
       val parentIdOpt = parent match {

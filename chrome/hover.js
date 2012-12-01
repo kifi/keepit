@@ -915,6 +915,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     var request = {
       "type": "post_comment",
       "url": document.location.href,
+      "title": document.title,
       "text": text,
       "permissions": type,
       "parent": parent,
