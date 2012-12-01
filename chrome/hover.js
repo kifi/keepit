@@ -1,7 +1,7 @@
 console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
 (function() {
-  var config, following;
+  var config, following, isKept = false;
 
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
@@ -143,6 +143,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       function(o) {
         log(o);
 
+        isKept = o.kept;
+
         var tmpl = {
           "logo": logo,
           "arrow": arrow,
@@ -209,6 +211,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         "type": "set_page_icon",
         "is_kept": false
       });
+      isKept = false;
       slideOut();
     });
 
@@ -219,6 +222,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         "type": "set_page_icon",
         "is_kept": true
       });
+
+      isKept = true;
 
       var request = {
         "type": "add_bookmarks",
@@ -282,17 +287,31 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
+  function redrawFooter(showFooterNav, type) {
+    var footerParams = {
+      showFooterNav: showFooterNav,
+      isMessages: type == "message",
+      isKept: isKept
+    }
+
+    renderTemplate("templates/footer.html", footerParams, function(renderedTemplate) {
+      $('.kififtr').html(renderedTemplate);
+    });
+  }
+
   function showComments(user, type, id, keepOpen) {
     var type = type || "public";
 
     var isVisible = $(".kifi_comment_wrapper").is(":visible");
     var showingType = $(".kifi_hover").data("view");
+    var shouldRedrawFooter = !isVisible || (showingType && type != showingType)
 
     if (isVisible && !id && !keepOpen) { // already open!
       if (type == showingType) {
         $('.kifi-content').slideDown();
         $('.kifi_comment_wrapper').slideUp(600,'easeInOutBack');
         $(".kifi_hover").removeClass(type);
+        redrawFooter(false);
         return;
       } else { // already open, yet showing a different type.
         // For now, nothing. Eventually, some slick animation for a quick change?
@@ -314,6 +333,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           $('.kifi_comment_wrapper').slideDown(600, function() {
             repositionScroll(false);
           });
+        }
+        if(shouldRedrawFooter) {
+          redrawFooter(true, type);
         }
       });
     });
