@@ -295,7 +295,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     var footerParams = {
       showFooterNav: showFooterNav,
       isMessages: type == "message",
-      isKept: isKept
+      isKept: isKept,
+      logo: chrome.extension.getURL('kifilogo.png')
     }
 
     renderTemplate("templates/footer.html", footerParams, function(renderedTemplate) {
@@ -430,7 +431,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       .replace(/<br\s*[\/]?>/gi, '\n')
       .replace(/<\/div><div>/gi, '\n')
       .replace(/<div\s*[\/]?>/gi, '\n')
-      .replace(/<\/div>/gi, '');
+      .replace(/<\/div>/gi, '')
+      .replace(/&nbsp;/gi,' ');
   }
 
   function updateCommentCount(type, count) {
