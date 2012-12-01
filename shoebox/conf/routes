@@ -14,7 +14,7 @@ GET     /bookmarks/check            com.keepit.controllers.BookmarksController.c
 POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.removeBookmark(externalId: ExternalId[User], externalBookmarkId: ExternalId[Bookmark])
 POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy(externalId: ExternalId[Bookmark], isPrivate: Boolean = true)
 
-POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: String, title: String, text: String, permissions: String, recipients: String ?= "", parent: String ?= "")
+POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: String, title: String ?= "", text: String, permissions: String, recipients: String ?= "", parent: String ?= "")
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
 GET     /comments/reply             com.keepit.controllers.CommentController.getReplies(commentId: ExternalId[Comment])
 POST    /comments/follow            com.keepit.controllers.CommentController.startFollowing(url: String)
@@ -22,7 +22,7 @@ DELETE  /comments/follow            com.keepit.controllers.CommentController.sto
 
 GET     /messages/threads/:id       com.keepit.controllers.CommentController.getMessageThread(id: ExternalId[Comment])
 GET     /messages/threads           com.keepit.controllers.CommentController.getMessageThreadList(url: String)
-POST    /messages                   com.keepit.controllers.CommentController.createComment(url: String, title: String, text: String, permissions = "message", recipients: String ?= "", parent: String ?= "")
+POST    /messages                   com.keepit.controllers.CommentController.createComment(url: String, title: String ?= "", text: String, permissions = "message", recipients: String ?= "", parent: String ?= "")
 
 GET     /users/slider               com.keepit.controllers.UserController.getSliderInfo(url: String)
 GET     /users/slider/updates       com.keepit.controllers.CommentController.getUpdates(url: String)
