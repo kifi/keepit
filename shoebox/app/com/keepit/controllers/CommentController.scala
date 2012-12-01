@@ -40,7 +40,7 @@ object CommentController extends FortyTwoController {
     val comment = CX.withConnection { implicit conn =>
 
       if(text.trim.isEmpty)
-        throw new Exception("Emoty comments are not allowed")
+        throw new Exception("Empty comments are not allowed")
         
       val userId = request.userId
       val uri = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save)
