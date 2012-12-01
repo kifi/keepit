@@ -107,27 +107,14 @@ object Comment {
   def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] =
     selectMessages({c => c.*}, uriId, userId).list.map(_.view)
 
-  def getMessageCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Long =
-    selectMessages({c => c.id}, uriId, userId).list.size
-
-  def getMessageAndCommentCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Int = {
-    val c = CommentEntity AS "c"
-    val cr = CommentRecipientEntity AS "cr"
-
-    val ids: Set[Id[Comment]] = (SELECT (c.id) FROM (c JOIN cr).ON("c.id = cr.comment_id") WHERE (
-        (c.uriId EQ uriId) AND
-        (cr.userId EQ userId)))
-    .UNION (SELECT (c.id) FROM c WHERE (
-        (c.uriId EQ uriId) AND
-        (c.userId EQ userId)))
-     .list.toSet
-
-     val children = (SELECT (c.id) FROM c WHERE (c.parent IN (ids.toSeq))).list
-     val all: Set[Id[Comment]] = ids ++ children
-
-     all.size
+  def getMessagesWithChildrenCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Int = {
+    val comments = selectMessages({c => c.*}, uriId, userId).list.map(_.view).toSet
+    val childrenCounts: Seq[Int] = (comments.toList map {c => getChildCount(c.id.get).toInt})
+    childrenCounts.foldLeft(0)((sum, count) => sum + count) + comments.size
   }
 
+  def getMessageCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Long =
+    selectMessages({c => c.id}, uriId, userId).list.size
 
   private def selectMessages[T](
       project: RelationNode[Id[Comment],CommentEntity] => Projection[T],

@@ -291,7 +291,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function refreshCommentsHack() {
     if (isCommentPanelVisible() !== true) return;
     hasNewComments(function(){
-      showComments(badGlobalState.user, badGlobalState.type, badGlobalState.id, badGlobalState.keepOpen);
+      if (isCommentPanelVisible() !== true) return;
+      showComments(badGlobalState.user, badGlobalState.type, badGlobalState.id, true);
     });
   }
 
@@ -299,9 +300,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     var url = "http://" + config.server + "/users/slider/updates?url=" + encodeURIComponent(document.location.href);
     $.get(url, null, function(updates) {
       if (badGlobalState["updates"]) {
-        var hasUpdates = badGlobalState["updates"]["commentsAndMessagesCount"] === updates["commentsAndMessagesCount"];
-        if (callback) {
-          callback(hasUpdates)
+        var hasUpdates = badGlobalState["updates"]["countSum"] !== updates["countSum"];
+        if (hasUpdates && callback) {
+          callback();
         }
       }
       badGlobalState["updates"] = updates;
@@ -315,7 +316,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function showComments(user, type, id, keepOpen) {
     var type = type || "public";
 
-    badGlobalState = {"user": user, "type": type, "id": id, "keepOpen": keepOpen};
+    badGlobalState["user"] = user;
+    badGlobalState["type"] = type;
+    badGlobalState["id"] = id;
 
     var isVisible = isCommentPanelVisible();
     var showingType = $(".kifi_hover").data("view");

@@ -41,23 +41,24 @@ class CommentTest extends SpecificationWithJUnit {
       val msg2 = Comment(uriId = uri1.id.get, userId = user2.id.get, text = "Conversation on Google2", permissions = Comment.Permissions.MESSAGE).save
       CommentRecipient(commentId = msg2.id.get, userId = Some(user1.id.get)).save
       val msg3 = Comment(uriId = uri1.id.get, userId = user2.id.get, text = "Conversation on Google3", permissions = Comment.Permissions.MESSAGE).save
+      val msg4 = Comment(uriId = uri1.id.get, userId = user1.id.get, text = "Conversation on Google4", permissions = Comment.Permissions.MESSAGE, parent = msg3.id).save
 
-      (user1, user2, uri1, uri2)
+      (user1, user2, uri1, uri2, msg3)
     }
   }
 
   "Comment" should {
     "add comments" in {
       running(new EmptyApplication()) {
-        val (user1, user2, uri1, uri2) = setup()
+        val (user1, user2, uri1, uri2, msg3) = setup()
         CX.withConnection { implicit conn =>
-          Comment.all.length === 8
+          Comment.all.length === 9
         }
       }
     }
     "count and load public comments by URI" in {
       running(new EmptyApplication()) {
-        val (user1, user2, uri1, uri2) = setup()
+        val (user1, user2, uri1, uri2, msg3) = setup()
         CX.withConnection { implicit conn =>
           Comment.getPublicCount(uri1.id.get) === 2
           Comment.getPublicCount(uri2.id.get) === 1
@@ -68,7 +69,7 @@ class CommentTest extends SpecificationWithJUnit {
     }
     "count and load private comments by URI and UserId" in {
       running(new EmptyApplication()) {
-        val (user1, user2, uri1, uri2) = setup()
+        val (user1, user2, uri1, uri2, msg3) = setup()
         CX.withConnection { implicit conn =>
           Comment.getPrivateCount(uri1.id.get, user1.id.get) === 2
           Comment.getPrivateCount(uri1.id.get, user2.id.get) === 0
@@ -83,7 +84,7 @@ class CommentTest extends SpecificationWithJUnit {
     }
     "count and load messages by URI and UserId" in {
       running(new EmptyApplication()) {
-        val (user1, user2, uri1, uri2) = setup()
+        val (user1, user2, uri1, uri2, msg3) = setup()
         CX.withConnection { implicit conn =>
           Comment.getMessageCount(uri1.id.get, user1.id.get) === 2
           Comment.getMessageCount(uri1.id.get, user2.id.get) === 3
@@ -98,12 +99,13 @@ class CommentTest extends SpecificationWithJUnit {
     }
     "count messages AND comments by URI and UserId" in {
       running(new EmptyApplication()) {
-        val (user1, user2, uri1, uri2) = setup()
+        val (user1, user2, uri1, uri2, msg3) = setup()
         CX.withConnection { implicit conn =>
-          Comment.getMessageAndCommentCount(uri1.id.get, user1.id.get) === 5
-          Comment.getMessageAndCommentCount(uri1.id.get, user2.id.get) === 4
-          Comment.getMessageAndCommentCount(uri2.id.get, user1.id.get) === 1
-          Comment.getMessageAndCommentCount(uri2.id.get, user2.id.get) === 0
+          Comment.getChildCount(msg3.id.get) === 1
+          Comment.getMessagesWithChildrenCount(uri1.id.get, user1.id.get) === 2
+          Comment.getMessagesWithChildrenCount(uri1.id.get, user2.id.get) === 4
+          Comment.getMessagesWithChildrenCount(uri2.id.get, user1.id.get) === 0
+          Comment.getMessagesWithChildrenCount(uri2.id.get, user2.id.get) === 0
         }
       }
     }
