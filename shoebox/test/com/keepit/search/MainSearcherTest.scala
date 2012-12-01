@@ -57,6 +57,10 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
   val source = BookmarkSource("test")
 
+  val noBoostConfig = SearchConfig("myBookmarkBoost" -> "1", "sharingBoost" -> "0", "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
+                                   "percentMatch" -> "0", "tailCutting" -> "0", "dumpingByRank" -> "false")
+  val allHitsConfig = SearchConfig("tailCutting" -> "0")
+
   "MainSearcher" should {
     "search and categorize using social graph" in {
       running(new EmptyApplication()) {
@@ -76,14 +80,12 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === users.size
         indexer.run() === uris.size
 
-        val config = SearchConfig(Map("tailCutting" -> "0"))
-
         val numHitsPerCategory = 1000
         users.foreach{ user =>
           users.sliding(3).foreach{ friends =>
             val userId = user.id.get
             val friendIds = friends.map(_.id.get).toSet - userId
-            val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, config)
+            val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
             val (myHits, friendsHits, othersHits) = mainSearcher.searchText("alldocs", numHitsPerCategory)
 
@@ -136,8 +138,6 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === users.size
         indexer.run() === uris.size
 
-        val config = SearchConfig(Map("tailCutting" -> "0"))
-
         val numHitsToReturn = 7
         users.foreach{ user =>
           val userId = user.id.get
@@ -145,7 +145,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           users.sliding(3).foreach{ friends =>
             val friendIds = friends.map(_.id.get).toSet - userId
 
-            val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, config)
+            val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
             val res = mainSearcher.search("alldocs", numHitsToReturn, None)
 
@@ -168,7 +168,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
             }
             //println(hits)
             //println(List(mCnt, fCnt, oCnt)+ " <-- " + List(myUriIds.size, friendsUriIds.size, othersUriIds.size))
-            (mCnt >= min(myUriIds.size, config.asInt("minMyBookmarks"))) === true
+            (mCnt >= min(myUriIds.size, allHitsConfig.asInt("minMyBookmarks"))) === true
             fCnt === min(friendsUriIds.size, numHitsToReturn - mCnt)
             oCnt === (res.hits.size - mCnt - fCnt)
           }
@@ -195,14 +195,12 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === users.size
         indexer.run() === uris.size
 
-        val config = SearchConfig(Map("tailCutting" -> "0"))
-
         val numHitsToReturn = 100
         users.foreach{ user =>
           val userId = user.id.get
           //println("user:" + userId)
           val friendIds = users.map(_.id.get).toSet - userId
-          val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, config)
+          val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, allHitsConfig)
           val graphSearcher = mainSearcher.uriGraphSearcher
           val res = mainSearcher.search("personaltitle", numHitsToReturn, None)
 
@@ -246,13 +244,11 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === users.size
         indexer.run() === uris.size
 
-        val config = SearchConfig(Map("tailCutting" -> "0", "percentMatch" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0"))
-
         val numHitsToReturn = 100
         val userId = users(0).id.get
         //println("user:" + userId)
         val friendIds = users.map(_.id.get).toSet - userId
-        val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, config)
+        val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, noBoostConfig("myBookMarkBoost" -> "1.5"))
         val graphSearcher = mainSearcher.uriGraphSearcher
 
         val expected = (uris(3) :: ((uris diff List(uris(3))).reverse)).map(_.id.get).toList
@@ -283,15 +279,13 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === users.size
         indexer.run() === uris.size
 
-        val config = SearchConfig(Map("tailCutting" -> "0"))
-
         val numHitsToReturn = 3
         val userId = Id[User](8)
 
         val friendIds = Set(Id[User](6))
         var uriSeen = Set.empty[Long]
 
-        val mainSearcher= new MainSearcher(userId, friendIds, uriSeen, indexer, graph, config)
+        val mainSearcher= new MainSearcher(userId, friendIds, uriSeen, indexer, graph, allHitsConfig)
         val graphSearcher = mainSearcher.uriGraphSearcher
         val reachableUris = users.foldLeft(Set.empty[Long])((s, u) => s ++ graphSearcher.getUserToUriEdgeSet(u.id.get, publicOnly = true).destIdLongSet)
 
@@ -299,7 +293,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         var cnt = 0
         while (cnt < reachableUris.size && uriSeen.size < reachableUris.size) {
           cnt += 1
-          val mainSearcher= new MainSearcher(userId, friendIds, uriSeen, indexer, graph, config)
+          val mainSearcher= new MainSearcher(userId, friendIds, uriSeen, indexer, graph, allHitsConfig)
           //println("---" + uriSeen + ":" + reachableUris)
           val res = mainSearcher.search("alldocs", numHitsToReturn, uuid)
           res.hits.foreach{ h =>
@@ -316,7 +310,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
     "boost recent bookmarks" in {
       running(new EmptyApplication()) {
-        val (users, uris) = initData(numUsers = 1, numUris = 20)
+        val (users, uris) = initData(numUsers = 1, numUris = 5)
         val userId = users.head.id.get
         val now = currentDateTime
         val rand = new Random
@@ -335,9 +329,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === 1
         indexer.run() === uris.size
 
-        val config = SearchConfig(Map("tailCutting" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0"))
-
-        val mainSearcher= new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, config)
+        val mainSearcher= new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, noBoostConfig("recencyBoost" -> "1.0"))
         val res = mainSearcher.search("alldocs", uris.size, None)
 
         var lastTime = Long.MaxValue
@@ -371,9 +363,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === 1
         indexer.run() === uris.size
 
-        var config = SearchConfig(Map("myBookmarkBoost" -> "1", "sharingBoost" -> "0", "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
-                                      "tailCutting" -> "0"))
-        var mainSearcher= new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, config)
+        var mainSearcher= new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, noBoostConfig)
         var res = mainSearcher.search("alldocs", uris.size, None)
         //println("Scores: " + res.hits.map(_.score))
         val sz = res.hits.size
@@ -382,9 +372,8 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val medianScore = res.hits(sz/2).score
         (minScore < medianScore && medianScore < maxScore) === true // this is a sanity check of test data
 
-        config = SearchConfig(Map("myBookmarkBoost" -> "1", "sharingBoost" -> "0", "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
-                                  "tailCutting" -> medianScore.toString))
-        mainSearcher= new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, config)
+        val tailCuttingConfig = noBoostConfig("tailCutting" -> medianScore.toString)
+        mainSearcher= new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, tailCuttingConfig)
         res = mainSearcher.search("alldocs", uris.size, None)
         //println("Scores: " + res.hits.map(_.score))
         res.hits.map(h => h.score).reduce((s1, s2) => min(s1, s2)) >= medianScore === true
@@ -412,7 +401,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === users.size
         indexer.run() === uris.size
 
-        var mainSearcher= new MainSearcher(user1.id.get, Set(user2.id.get), Set.empty[Long], indexer, graph, SearchConfig.getDefaultConfig)
+        var mainSearcher= new MainSearcher(user1.id.get, Set(user2.id.get), Set.empty[Long], indexer, graph, noBoostConfig)
         var res = mainSearcher.search("alldocs", uris.size, None)
 
         val publicSet = publicUris.map(u => u.id.get).toSet
@@ -443,7 +432,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         graph.load() === users.size
         indexer.run() === uris.size
 
-        var mainSearcher= new MainSearcher(user1.id.get, Set(user2.id.get), Set.empty[Long], indexer, graph, SearchConfig.getDefaultConfig)
+        var mainSearcher= new MainSearcher(user1.id.get, Set(user2.id.get), Set.empty[Long], indexer, graph, noBoostConfig)
         var res = mainSearcher.search("alldocs", uris.size, None)
 
         val publicSet = publicUris.map(u => u.id.get).toSet

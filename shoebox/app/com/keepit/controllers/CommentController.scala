@@ -194,7 +194,8 @@ object CommentController extends FortyTwoController {
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
-                  from = EmailAddresses.SUPPORT, to = addr, subject = "[new comment] " + uri.title,
+                  from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
+                  to = addr, subject = "[new comment] " + uri.title,
                   htmlBody = views.html.email.newComment(author, recipient, uri, comment).body,
                   category = PostOffice.Categories.COMMENT))
             }
@@ -211,7 +212,8 @@ object CommentController extends FortyTwoController {
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
-                  from = EmailAddresses.SUPPORT, to = addr, subject = subjectPrefix + uri.title.getOrElse(uri.url),
+                  from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(sender.firstName, sender.lastName)),
+                  to = addr, subject = subjectPrefix + uri.title.getOrElse(uri.url),
                   htmlBody = views.html.email.newMessage(sender, recipient, uri, comment).body,
                   category = PostOffice.Categories.COMMENT))
             }
