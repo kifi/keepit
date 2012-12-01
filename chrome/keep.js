@@ -275,7 +275,13 @@ function postComment(request, sendResponse) {
   var parent = request.parent || "";
   var recipients = request.recipients || "";
 
-  xhr.open("POST", 'http://' + userConfigs.server + '/comments/add?&url=' + encodeURIComponent(request.url) + "&text=" + encodeURIComponent(request.text) + "&permissions=" + request.permissions + "&parent=" + parent + "&recipients=" + recipients, true);
+  xhr.open("POST", 'http://' + userConfigs.server + '/comments/add?&url=' + encodeURIComponent(request.url) + 
+    "&title=" + encodeURIComponent(request.title) + 
+    "&text=" + encodeURIComponent(request.text) + 
+    "&permissions=" + request.permissions + 
+    "&parent=" + parent + 
+    "&recipients=" + recipients, 
+    true);
   xhr.send();
 
 }

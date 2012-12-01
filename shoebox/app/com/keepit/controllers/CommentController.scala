@@ -33,6 +33,7 @@ import com.keepit.common.social.ThreadInfo
 object CommentController extends FortyTwoController {
 
   def createComment(url: String,
+                    title: String,
                     text: String,
                     permission: String,
                     recipients: String = "",
@@ -41,7 +42,7 @@ object CommentController extends FortyTwoController {
 
       if(text.trim.isEmpty)
         throw new Exception("Empty comments are not allowed")
-        
+
       val userId = request.userId
       val uri = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save)
       val parentIdOpt = parent match {
@@ -51,13 +52,13 @@ object CommentController extends FortyTwoController {
 
       permission.toLowerCase match {
         case "private" =>
-          Comment(uriId = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
         case "message" =>
-          val newComment = Comment(uriId = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
+          val newComment = Comment(uriId = uri.id.get, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
           createRecipients(newComment.id.get, recipients, parentIdOpt)
           newComment
         case "public" | "" =>
-          Comment(uriId = uri.id.get, userId = userId, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
         case _ =>
           throw new Exception("Invalid comment permission")
       }
@@ -78,12 +79,14 @@ object CommentController extends FortyTwoController {
 
   def getUpdates(url: String) = AuthenticatedJsonAction { request =>
     val (messageCount, privateCount, publicCount) = CX.withReadOnlyConnection { implicit conn =>
-      val uriId = NormalizedURI.getByNormalizedUrl(url).get.id.get
-      val userId = request.userId
-      val messageCount = Comment.getMessagesWithChildrenCount(uriId, userId)
-      val privateCount = Comment.getPrivateCount(uriId, userId)
-      val publicCount = Comment.getPublicCount(uriId)
-      (messageCount, privateCount, publicCount)
+      NormalizedURI.getByNormalizedUrl(url) map {uri =>
+        val uriId = uri.id.get
+        val userId = request.userId
+        val messageCount = Comment.getMessagesWithChildrenCount(uriId, userId)
+        val privateCount = Comment.getPrivateCount(uriId, userId)
+        val publicCount = Comment.getPublicCount(uriId)
+        (messageCount, privateCount, publicCount)
+      } getOrElse (0, 0L, 0L)
     }
     Ok(JsObject(List(
         "publicCount" -> JsNumber(publicCount),
@@ -216,7 +219,7 @@ object CommentController extends FortyTwoController {
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
                   from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
-                  to = addr, subject = "[new comment] " + uri.title,
+                  to = addr, subject = "[new comment] " + comment.pageTitle,
                   htmlBody = views.html.email.newComment(author, recipient, uri, comment).body,
                   category = PostOffice.Categories.COMMENT))
             }
@@ -234,9 +237,9 @@ object CommentController extends FortyTwoController {
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
                   from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(sender.firstName, sender.lastName)),
-                  to = addr, subject = subjectPrefix + uri.title.getOrElse(uri.url),
+                  to = addr, subject = subjectPrefix + comment.pageTitle,
                   htmlBody = views.html.email.newMessage(sender, recipient, uri, comment).body,
-                  category = PostOffice.Categories.COMMENT))
+                  category = PostOffice.Categories.MESSAGE))
             }
           }
         }
