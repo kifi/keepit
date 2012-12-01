@@ -1,7 +1,7 @@
 console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
 (function() {
-  var config, following;
+  var config, following, isKept = false;
 
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
@@ -131,6 +131,28 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
   }
 
+  function keepPage() {
+    log("bookmarking page: " + document.location.href);
+
+    chrome.extension.sendRequest({
+      "type": "set_page_icon",
+      "is_kept": true
+    });
+
+    isKept = true;
+
+    var request = {
+      "type": "add_bookmarks",
+      "url": document.location.href,
+      "title": document.title,
+      "private": $("#keepit_private").is(":checked")
+    }
+    chrome.extension.sendRequest(request, function(response) {
+      log("bookmark added! -> " + JSON.stringify(response));
+      keptItslideOut();
+   });
+  }
+
   function showKeepItHover(user) {
     var logo = chrome.extension.getURL('kifilogo.png');
     var arrow = chrome.extension.getURL('arrow.png');
@@ -142,6 +164,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       null,
       function(o) {
         log(o);
+
+        isKept = o.kept;
 
         var tmpl = {
           "logo": logo,
@@ -209,27 +233,12 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         "type": "set_page_icon",
         "is_kept": false
       });
+      isKept = false;
       slideOut();
     });
 
     $('.keepitbtn').click(function() {
-      log("bookmarking page: " + document.location.href);
-
-      chrome.extension.sendRequest({
-        "type": "set_page_icon",
-        "is_kept": true
-      });
-
-      var request = {
-        "type": "add_bookmarks",
-        "url": document.location.href,
-        "title": document.title,
-        "private": $("#keepit_private").is(":checked")
-      }
-      chrome.extension.sendRequest(request, function(response) {
-        log("bookmark added! -> " + JSON.stringify(response));
-        keptItslideOut();
-     });
+      keepPage();
     });
 
     $('.dropdownbtn').click(function() {
@@ -282,6 +291,27 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       'easeQuickSnapBounce');
   }
 
+  function redrawFooter(showFooterNav, type) {
+    var footerParams = {
+      showFooterNav: showFooterNav,
+      isMessages: type == "message",
+      isKept: isKept
+    }
+
+    renderTemplate("templates/footer.html", footerParams, function(renderedTemplate) {
+      $('.kififtr').html(renderedTemplate)
+      .on('mousedown','.close-message', function() {
+        showComments(); // called with no params, hides comments/messages 
+      })
+      .on('mousedown', '.footer-keepit', function() {
+        keepPage();
+      })
+      .on('mousedown', '.footer-unkeepit', function() {
+        alert("To be implemented.");
+      });
+    });
+  }
+
   var badGlobalState = { }
 
   function isCommentPanelVisible() {
@@ -322,12 +352,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     var isVisible = isCommentPanelVisible();
     var showingType = $(".kifi_hover").data("view");
+    var shouldRedrawFooter = !isVisible || (showingType && type != showingType)
 
     if (isVisible && !id && !keepOpen) { // already open!
       if (type == showingType) {
         $('.kifi-content').slideDown();
         $('.kifi_comment_wrapper').slideUp(600, 'easeInOutBack');
         $(".kifi_hover").removeClass(type);
+        redrawFooter(false);
         return;
       } else { // already open, yet showing a different type.
         // For now, nothing. Eventually, some slick animation for a quick change?
@@ -349,6 +381,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           $('.kifi_comment_wrapper').slideDown(600, function() {
             repositionScroll(false);
           });
+        }
+        if(shouldRedrawFooter) {
+          redrawFooter(true, type);
         }
       });
     });
@@ -662,7 +697,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       showComments(user, type, null, true);
     });
 
-    $('.kifi_comment_wrapper').on("mousedown", ".post_to_network .kn_social", function() {
+    $('.comment_post_view').on("mousedown", ".post_to_network .kn_social", function() {
       alert("Not yet implemented. Coming soon!");
       return;
     });
@@ -774,6 +809,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }).on('submit','.comment_form', function(e) {
       e.preventDefault();
       var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
+
+      if(text == "") {
+        alert("This will eventually be a pretty message reminding you not to submit empty comments.")
+        return false;
+      }
 
       submitComment(text, type, user, null, null, function(newComment) {
         $('.comment-compose').text("").html(placeholder);
