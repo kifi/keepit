@@ -1,5 +1,5 @@
 {{#showFooterNav}}
 <span class="close-message">{{#isMessages}}Close Messages{{/isMessages}}{{^isMessages}}Close Comments{{/isMessages}}</span> &#183; 
-<span class="keepit-message">{{#isKept}}Un-keep it{{/isKept}}{{^isKept}}Keep it{{/isKept}}</span>
+<span class="keepit-message">{{#isKept}}<span class="footer-unkeepit">Un-keep it</span>{{/isKept}}{{^isKept}}<span class="footer-keepit">Keep it</span>{{/isKept}}</span>
 {{/showFooterNav}}
 <span class="kifilogo" style="background: url({{logo}}) no-repeat; background-position: top; background-size: 25px;"></span>

@@ -131,6 +131,28 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
   }
 
+  function keepPage() {
+    log("bookmarking page: " + document.location.href);
+
+    chrome.extension.sendRequest({
+      "type": "set_page_icon",
+      "is_kept": true
+    });
+
+    isKept = true;
+
+    var request = {
+      "type": "add_bookmarks",
+      "url": document.location.href,
+      "title": document.title,
+      "private": $("#keepit_private").is(":checked")
+    }
+    chrome.extension.sendRequest(request, function(response) {
+      log("bookmark added! -> " + JSON.stringify(response));
+      keptItslideOut();
+   });
+  }
+
   function showKeepItHover(user) {
     var logo = chrome.extension.getURL('kifilogo.png');
     var arrow = chrome.extension.getURL('arrow.png');
@@ -216,25 +238,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     $('.keepitbtn').click(function() {
-      log("bookmarking page: " + document.location.href);
-
-      chrome.extension.sendRequest({
-        "type": "set_page_icon",
-        "is_kept": true
-      });
-
-      isKept = true;
-
-      var request = {
-        "type": "add_bookmarks",
-        "url": document.location.href,
-        "title": document.title,
-        "private": $("#keepit_private").is(":checked")
-      }
-      chrome.extension.sendRequest(request, function(response) {
-        log("bookmark added! -> " + JSON.stringify(response));
-        keptItslideOut();
-     });
+      keepPage();
     });
 
     $('.dropdownbtn').click(function() {
@@ -295,7 +299,16 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
 
     renderTemplate("templates/footer.html", footerParams, function(renderedTemplate) {
-      $('.kififtr').html(renderedTemplate);
+      $('.kififtr').html(renderedTemplate)
+      .on('mousedown','.close-message', function() {
+        showComments(); // called with no params, hides comments/messages 
+      })
+      .on('mousedown', '.footer-keepit', function() {
+        keepPage();
+      })
+      .on('mousedown', '.footer-unkeepit', function() {
+        alert("To be implemented.");
+      });
     });
   }
 

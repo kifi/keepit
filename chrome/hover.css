@@ -92,6 +92,11 @@
   font-size: 11px;
   color: #8c8484;
 }
+
+.kifi_hover .kififtr .close-message, .kifi_hover .kififtr .keepit-message {
+    cursor: pointer;
+}
+
 /*content*/
 .kifi_hover .roundedbox .kifi-content {
   padding: 5px 5px 5px 10px;
