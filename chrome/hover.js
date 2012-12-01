@@ -904,10 +904,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function submitComment(text, type, user, parent, recipients, callback) {
     /* Because we're using very simple templating now, re-rendering has to be done carefully.
      */
-    if (!text || $.trim(text).length == 0) {
-      log("empty text, not submitting the comment");
-      return;
-    }
     var permissions = type;
 
     console.log(parent);
