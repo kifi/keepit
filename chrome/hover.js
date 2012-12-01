@@ -301,7 +301,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     renderTemplate("templates/footer.html", footerParams, function(renderedTemplate) {
       $('.kififtr').html(renderedTemplate)
       .on('mousedown','.close-message', function() {
-        showComments(); // called with no params, hides comments/messages 
+        showComments(); // called with no params, hides comments/messages
       })
       .on('mousedown', '.footer-keepit', function() {
         keepPage();
@@ -643,7 +643,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           top: elRect.top + sTop - 2,
           width: elRect.width + 6,
           height: elRect.height + 4
-        }, ms).delay(1000).fadeOut(1000, function() {$(this).remove()});
+        }, ms).delay(2000).fadeOut(1000, function() {$(this).remove()});
       } else {
         alert("Sorry, this reference is no longer valid on this page.");
       }
