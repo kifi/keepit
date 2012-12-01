@@ -216,7 +216,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     updateCommentCount("public", numComments);
-    updateCommentCount("message", numMessages); 
+    updateCommentCount("message", numMessages);
 
     // Event bindings
 
@@ -395,13 +395,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function commentTextFormatter() {
     return function(text, render) {
       text = $.trim(render(text));
-      text = text.replace(
-        /&lt;a href=(?:&[^;]*?;)?x-kifi-sel:(.*?)(?:&[^;]*?;)?&gt;(.*?)&lt;(\/|&#x2F;)a&gt;/g,
-        function(match, $1, $2) {
-          return "<a href='x-kifi-sel:" + $("<div>").html($1).text() + "'>" + $2 + "</a>";
-        });
+      text = text.replace(/\[(.*?)\]\(x-kifi-sel:(.*?)\)/g, "<a href='x-kifi-sel:$2'>$1</a>");
       text = "<p class=\"first-line\">" + text + "</p>";
-      text = text.replace(/\n\n/g,"\n")
+      text = text.replace(/\n\n/g, "\n")
       text = text.replace(/\n/g, "</p><p>");
       return text;
     }
@@ -428,13 +424,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function commentSerializer(html) {
-    return html
+    html = html
       .replace(/<div><br\s*[\/]?><\/div>/gi, '\n')
       .replace(/<br\s*[\/]?>/gi, '\n')
       .replace(/<\/div><div>/gi, '\n')
       .replace(/<div\s*[\/]?>/gi, '\n')
       .replace(/<\/div>/gi, '')
-      .replace(/&nbsp;/gi,' ');
+      .replace(/<a href="x-kifi-sel:(.*?)">(.*?)<\/a>/gi, "[$2](x-kifi-sel:$1)");
+    return $('<div>').html(html).text().trim();
   }
 
   function updateCommentCount(type, count) {
