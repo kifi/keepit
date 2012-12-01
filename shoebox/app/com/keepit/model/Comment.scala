@@ -107,6 +107,12 @@ object Comment {
   def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] =
     selectMessages({c => c.*}, uriId, userId).list.map(_.view)
 
+  def getMessagesWithChildrenCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Int = {
+    val comments = selectMessages({c => c.*}, uriId, userId).list.map(_.view).toSet
+    val childrenCounts: Seq[Int] = (comments.toList map {c => getChildCount(c.id.get).toInt})
+    childrenCounts.foldLeft(0)((sum, count) => sum + count) + comments.size
+  }
+
   def getMessageCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Long =
     selectMessages({c => c.id}, uriId, userId).list.size
 
