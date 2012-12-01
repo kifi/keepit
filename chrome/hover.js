@@ -84,7 +84,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       if (numFriends > 0) {
         return "You and " +
           (numFriends == 1 ? "another friend" : (numFriends + " of your friends")) +
-          "kept this.";
+          " kept this.";
       }
       return "You kept this!";
     }
@@ -392,6 +392,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function commentTextFormatter() {
     return function(text, render) {
       text = $.trim(render(text));
+      text = text.replace(
+        /&lt;a href=(?:&[^;]*?;)?x-kifi-sel:(.*?)(?:&[^;]*?;)?&gt;(.*?)&lt;(\/|&#x2F;)a&gt;/g,
+        function(match, $1, $2) {
+          return "<a href='x-kifi-sel:" + $("<div>").html($1).text() + "'>" + $2 + "</a>";
+        });
       text = "<p class=\"first-line\">" + text + "</p>";
       text = text.replace(/\n\n/g,"\n")
       text = text.replace(/\n/g, "</p><p>");
@@ -420,13 +425,12 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function commentSerializer(html) {
-    html = html
+    return html
       .replace(/<div><br\s*[\/]?><\/div>/gi, '\n')
       .replace(/<br\s*[\/]?>/gi, '\n')
       .replace(/<\/div><div>/gi, '\n')
       .replace(/<div\s*[\/]?>/gi, '\n')
       .replace(/<\/div>/gi, '');
-    return $.trim($('<div>').html(html).text());
   }
 
   function updateCommentCount(type, count) {
@@ -798,7 +802,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             var xL = scrollLeft + r.left - 3;
             var xR = scrollLeft + r.right + 3;
             $shades.eq(0).css({height: yT});
-            $shades.eq(1).css({top: yB});
+            $shades.eq(1).css({top: yB, height: document.documentElement.scrollHeight - yB});
             $shades.eq(2).css({top: yT, height: yB - yT, width: xL});
             $shades.eq(3).css({top: yT, height: yB - yT, left: xR});
             $glass.css({top: yT, height: yB - yT, left: xL, width: xR - xL});
