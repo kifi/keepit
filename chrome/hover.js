@@ -740,6 +740,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       e.preventDefault();
       var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
 
+      if(text == "") {
+        alert("This will eventually be a pretty message reminding you not to submit empty comments.")
+        return false;
+      }
+
       submitComment(text, type, user, null, null, function(newComment) {
         $('.comment-compose').text("").html(placeholder);
 
