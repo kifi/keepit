@@ -216,7 +216,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     updateCommentCount("public", numComments);
-    updateCommentCount("message", numMessages);
+    updateCommentCount("message", numMessages); 
 
     // Event bindings
 
@@ -322,6 +322,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function refreshCommentsHack() {
     if (isCommentPanelVisible() !== true) return;
     hasNewComments(function(){
+      updateCommentCount("public", badGlobalState["updates"]["publicCount"]);
+      //updateCommentCount("message", badGlobalState["updates"]["messageCount"]);message count includes children, need to fix...
       if (isCommentPanelVisible() !== true) return;
       showComments(badGlobalState.user, badGlobalState.type, badGlobalState.id, true);
     });
@@ -452,8 +454,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     var visibleComments = comments[type] || [];
 
-    if(!id)
+    if(!id) {
       updateCommentCount(type, visibleComments.length);
+    }
 
     var params = {
       kifiuser: {
