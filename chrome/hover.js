@@ -728,7 +728,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             var xL = scrollLeft + r.left - 3;
             var xR = scrollLeft + r.right + 3;
             $shades.eq(0).css({height: yT});
-            $shades.eq(1).css({top: yB});
+            $shades.eq(1).css({top: yB, height: document.documentElement.scrollHeight - yB});
             $shades.eq(2).css({top: yT, height: yB - yT, width: xL});
             $shades.eq(3).css({top: yT, height: yB - yT, left: xR});
             $glass.css({top: yT, height: yB - yT, left: xL, width: xR - xL});
