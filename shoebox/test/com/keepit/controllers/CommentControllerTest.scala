@@ -39,8 +39,7 @@ class CommentControllerTest extends SpecificationWithJUnit {
         val mail = mails.head
         mail.subject === "[new message] My Title"
         println(mail.htmlBody)
-        mail.htmlBody.contains(
-          """Public Comment <a href="x-kifi-sel:body&gt;div#body-container&gt;div#page-container&gt;div#page.watch&gt;div#content&gt;div#watch7-container.transition-content&gt;div#watch7-video-container">look here</a> on Google1""") === true
+        mail.htmlBody.contains("""Public Comment <a href="http://www.google.com">look here</a> on Google1""") === true
       }
     }
   }
