@@ -23,9 +23,9 @@ class CommentControllerTest extends SpecificationWithJUnit {
 
     "replace link" in {
       val uri = NormalizedURI("http://42go.com/go")
-      CommentController.replaceLookHereLinks("[hi there](foo.bar#there)", uri) === """<a href="http://42go.com/go">hi there</a>"""
-      CommentController.replaceLookHereLinks("A [hi there](foo.bar#there) B", uri) === """A <a href="http://42go.com/go">hi there</a> B"""
-      CommentController.replaceLookHereLinks("(A) [hi there](foo.bar#there) [B] C", uri) === """(A) <a href="http://42go.com/go">hi there</a> [B] C"""
+      CommentController.replaceLookHereLinks("[hi there](x-kifi-sel:body>foo.bar#there)", uri) === """<a href="http://42go.com/go">hi there</a>"""
+      CommentController.replaceLookHereLinks("A [hi there](x-kifi-sel:foo.bar#there) B", uri) === """A <a href="http://42go.com/go">hi there</a> B"""
+      CommentController.replaceLookHereLinks("(A) [hi there](x-kifi-sel:foo.bar#there:nth-child(2\\)>a) [B] C", uri) === """(A) <a href="http://42go.com/go">hi there</a> [B] C"""
     }
 
     "persist comment emails" in {
