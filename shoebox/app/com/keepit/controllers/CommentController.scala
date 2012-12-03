@@ -250,7 +250,7 @@ object CommentController extends FortyTwoController {
   //e.g. [look here](x-kifi-sel:body>div#page.watch>div:nth-child(4\)>div#watch7-video-container)
   def replaceLookHereLinks(text: String, url: NormalizedURI): String =
     """\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)""".r.replaceAllIn(
-        text, m => "<a href=\"" + url.url + "\">" + m.group(1).replaceAll("""\\(.)""", "$1") + "</a>")
+        text, m => "[" + m.group(1).replaceAll("""\\(.)""", "$1") + "]")
 
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = CX.withConnection { implicit c =>
