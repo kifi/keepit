@@ -1,6 +1,6 @@
 <div class="comment-wrapper" data-externalId="{{externalId}}">
   <div class="comment real-comment">
-    <img class="comment-avatar" src="https://graph.facebook.com/{{user.facebookId}}/picture?type=square">
+    <img class="comment-avatar {{#isLoggedInUser}}self-avatar{{/isLoggedInUser}}" src="https://graph.facebook.com/{{user.facebookId}}/picture?type=square">
     
     <div class="comment-text">
       <span class="recipient-list"><strong>{{user.firstName}} {{user.lastName}}</strong></span>
