@@ -328,26 +328,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       updateCommentCount("public", badGlobalState["updates"]["publicCount"]);
       //updateCommentCount("message", badGlobalState["updates"]["messageCount"]);message count includes children, need to fix...
       if (isCommentPanelVisible() !== true) return;
-      showComments(badGlobalState.user, badGlobalState.type, badGlobalState.id, true);
-    });
-  }
-
-  function updateCommentsHack() {
-    fetchComments(type, id, function(comments) {
-      console.log(comments);
-      renderComments(user, comments, type, id, function() {
-        if (!isVisible) {
-          repositionScroll(false);
-
-          $('.kifi-content').slideUp(); // hide main hover content
-          $('.kifi_comment_wrapper').slideDown(600, function() {
-            repositionScroll(false);
-          });
-        }
-        if(shouldRedrawFooter) {
-          redrawFooter(true, type);
-        }
-      });
+      showComments(badGlobalState.user, badGlobalState.type, badGlobalState.id, true, true);
     });
   }
 
@@ -366,9 +347,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
   setInterval(function(){
     refreshCommentsHack();
-  }, 10000);
+  }, 5000);
 
-  function showComments(user, type, id, keepOpen) {
+  function showComments(user, type, id, keepOpen, partialRender) {
     var type = type || "public";
 
     badGlobalState["user"] = user;
@@ -407,7 +388,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         if(shouldRedrawFooter) {
           redrawFooter(true, type);
         }
-      });
+      }, partialRender);
     });
   }
 
@@ -478,7 +459,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       .toggleClass("zero_comments", count == 0);
   }
 
-  function renderComments(user, comments, type, id, onComplete) {
+  function renderComments(user, comments, type, id, onComplete, partialRender) {
     console.log("Drawing comments!");
     comments = comments || {};
     comments["public"] = comments["public"] || [];
@@ -639,10 +620,18 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         }
       }
 
-      renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
-        drawCommentView(renderedTemplate, user, type, partials);
-        onComplete();
-      }, partials);
+      if(partialRender) {
+        // Hacky solution for a partial refresh. Needs to be refactored.
+        var renderedTemplate = Mustache.render(partials.comment_body_view, params, partials);     
+        $('.comment_body_view').html(renderedTemplate).find("time").timeago();
+      }
+      else {
+        renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
+          drawCommentView(renderedTemplate, user, type, partials);
+          onComplete();
+        }, partials);
+      }
+
 
     });
     });
