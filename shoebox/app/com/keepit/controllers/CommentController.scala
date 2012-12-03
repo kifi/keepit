@@ -246,9 +246,9 @@ object CommentController extends FortyTwoController {
         log.error("unsupported comment type for email %s".format(unsupported))
     }
 
-  //e.g. href="x-kifi-sel:body&gt;div#body-container&gt;div#page-container&gt;div#page.watch&gt;div#content&gt;div#watch7-container.transition-content&gt;div#watch7-video-container"
-  private def replaceLookHereLinks(text: String, url: NormalizedURI): String =
-    text.replaceAll("""href="x-kifi-sel:(.*?)"""", """href="%s"""".format(url.url))
+  //e.g. [look here](x-kifi-sel:body&gt;div#body-container&gt;div#page-container&gt;div#page.watch&gt;div#content&gt;div#watch7-container.transition-content&gt;div#watch7-video-container)
+  def replaceLookHereLinks(text: String, url: NormalizedURI): String =
+    text.replaceAll("""\[(.*?)\]\(.*?\)""", """<a href="%s">$1</a>""".format(url.url))
 
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = CX.withConnection { implicit c =>

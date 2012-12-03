@@ -20,6 +20,14 @@ import com.keepit.common.mail._
 class CommentControllerTest extends SpecificationWithJUnit {
 
   "CommentController" should {
+
+    "replace link" in {
+      val uri = NormalizedURI("http://42go.com/go")
+      CommentController.replaceLookHereLinks("[hi there](foo.bar#there)", uri) === """<a href="http://42go.com/go">hi there</a>"""
+      CommentController.replaceLookHereLinks("A [hi there](foo.bar#there) B", uri) === """A <a href="http://42go.com/go">hi there</a> B"""
+      CommentController.replaceLookHereLinks("(A) [hi there](foo.bar#there) [B] C", uri) === """(A) <a href="http://42go.com/go">hi there</a> [B] C"""
+    }
+
     "persist comment emails" in {
       running(new EmptyApplication().withFakeMail()) {
         val comment = CX.withConnection { implicit conn =>
@@ -28,7 +36,7 @@ class CommentControllerTest extends SpecificationWithJUnit {
           EmailAddress(userId = recepient.id.get, verifiedAt = Some(currentDateTime), address = "eishay@42go.com").save
           val uri = NormalizedURI("Google", "http://www.google.com/").save
           val msg = Comment(uriId = uri.id.get, userId = user.id.get, pageTitle = "My Title",
-            text = """Public Comment <a href="x-kifi-sel:body&gt;div#body-container&gt;div#page-container&gt;div#page.watch&gt;div#content&gt;div#watch7-container.transition-content&gt;div#watch7-video-container">look here</a> on Google1""",
+            text = """Public Comment [look here](x-kifi-sel:body>div#page-container>div.column-container>div.left-container>div#module-post-detail.module-post-detail.__FIRST__.image>div.body-copy) on Google1""",
             permissions = Comment.Permissions.MESSAGE).save
           CommentRecipient(commentId = msg.id.get, userId = Some(recepient.id.get)).save
           msg
