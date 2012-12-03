@@ -146,6 +146,7 @@ div.more-recipient-list {
 
 .kifi_comment_wrapper .thread-info-text {
   max-height: 50px;
+  overflow: hidden;
 }
 
 .kifi_comment_wrapper .thread-info-text {
@@ -204,7 +205,11 @@ div.more-recipient-list {
   display: block;
 }
 
-.kifi_comment_wrapper .thread-recipients span.recipient-list {
+.recipient-list strong {
+  font-weight: bold;
+}
+
+.kifi_comment_wrapper .thread-recipients div.recipient-list {
   padding: 10px;
   line-height: 14px;
   border-top: 1px solid #e5e5e5;
