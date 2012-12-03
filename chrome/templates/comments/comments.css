@@ -264,12 +264,10 @@ div.more-recipient-list {
 }
 
 .kifi_comment_wrapper .take-snapshot {
-  display: inline-block;
+  float: left;
   height: 20px;
   width: 20px;
   border-radius: 3px;
-  vertical-align: middle;
-  margin-right: 8px;
 }
 .kifi_comment_wrapper .take-snapshot:hover {
   box-shadow: inset 0 0 2px rgba(0,0,0,.3);
