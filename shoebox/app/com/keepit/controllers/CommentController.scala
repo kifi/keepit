@@ -218,7 +218,8 @@ object CommentController extends FortyTwoController {
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
                   from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
-                  to = addr, subject = "[new comment] " + comment.pageTitle,
+                  to = addr,
+                  subject = "%s %s commented on a page you are following".format(author.firstName, author.lastName),
                   htmlBody = replaceLookHereLinks(views.html.email.newComment(author, recipient, uri, comment).body, uri),
                   category = PostOffice.Categories.COMMENT))
             }
@@ -228,7 +229,6 @@ object CommentController extends FortyTwoController {
         CX.withConnection { implicit c =>
           val sender = User.get(comment.userId)
           val uri = NormalizedURI.get(comment.uriId)
-          val subjectPrefix = if (comment.parent.isDefined) "[new reply] " else "[new message] "
           val recipients = Comment.getRecipients(comment.parent.getOrElse(comment.id.get))
           for (userId <- recipients.map(_.userId.get).toSet - comment.userId) {
             val recipient = User.get(userId)
@@ -236,7 +236,8 @@ object CommentController extends FortyTwoController {
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
                   from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(sender.firstName, sender.lastName)),
-                  to = addr, subject = subjectPrefix + comment.pageTitle,
+                  to = addr,
+                  subject = "%s %s sent you a message using KiFi".format(sender.firstName, sender.lastName),
                   htmlBody = replaceLookHereLinks(views.html.email.newMessage(sender, recipient, uri, comment).body, uri),
                   category = PostOffice.Categories.MESSAGE))
             }
