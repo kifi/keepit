@@ -64,7 +64,7 @@ object CommentController extends FortyTwoController {
       }
     }
 
-    notifyRecipientsAsync(comment)
+    dispatch(notifyRecipients(comment), {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
 
     comment.permissions match {
       case Comment.Permissions.PUBLIC =>
@@ -206,8 +206,7 @@ object CommentController extends FortyTwoController {
   private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
     Comment.getMessages(normalizedURI.id.get, userId)
 
-  private def notifyRecipientsAsync(comment: Comment) = dispatch({
-    comment.permissions match {
+  private[controllers] def notifyRecipients(comment: Comment): Unit = comment.permissions match {
       case Comment.Permissions.PUBLIC =>
         CX.withConnection { implicit c =>
           val author = User.get(comment.userId)
@@ -220,7 +219,7 @@ object CommentController extends FortyTwoController {
               inject[PostOffice].sendMail(ElectronicMail(
                   from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
                   to = addr, subject = "[new comment] " + comment.pageTitle,
-                  htmlBody = views.html.email.newComment(author, recipient, uri, comment).body,
+                  htmlBody = replaceLookHereLinks(views.html.email.newComment(author, recipient, uri, comment).body, uri),
                   category = PostOffice.Categories.COMMENT))
             }
           }
@@ -238,14 +237,18 @@ object CommentController extends FortyTwoController {
               inject[PostOffice].sendMail(ElectronicMail(
                   from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(sender.firstName, sender.lastName)),
                   to = addr, subject = subjectPrefix + comment.pageTitle,
-                  htmlBody = views.html.email.newMessage(sender, recipient, uri, comment).body,
+                  htmlBody = replaceLookHereLinks(views.html.email.newMessage(sender, recipient, uri, comment).body, uri),
                   category = PostOffice.Categories.MESSAGE))
             }
           }
         }
-      case _ =>
+      case unsupported =>
+        log.error("unsupported comment type for email %s".format(unsupported))
     }
-  }, {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
+
+  //e.g. href="x-kifi-sel:body&gt;div#body-container&gt;div#page-container&gt;div#page.watch&gt;div#content&gt;div#watch7-container.transition-content&gt;div#watch7-video-container"
+  private def replaceLookHereLinks(text: String, url: NormalizedURI): String =
+    text.replaceAll("""href="x-kifi-sel:(.*?)"""", """href="%s"""".format(url.url))
 
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = CX.withConnection { implicit c =>
