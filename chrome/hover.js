@@ -303,8 +303,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
 
     renderTemplate("templates/footer.html", footerParams, function(renderedTemplate) {
-      $('.kififtr').html(renderedTemplate)
-      .on('mousedown','.close-message', function() {
+      $('.kififtr').html(renderedTemplate);
+
+      $('.kififtr .footer-bar').on('mousedown','.close-message', function() {
         showComments(); // called with no params, hides comments/messages
       })
       .on('mousedown', '.footer-keepit', function() {
