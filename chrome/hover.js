@@ -706,6 +706,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             }});
         return ms;
       }
+    }).on("click", "a[href^='x-kifi-sel:']", function(e) {
+      e.preventDefault();
     });
 
     $('.comment_body_view').on("hover", ".more-recipients", function(event) {
