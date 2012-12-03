@@ -45,7 +45,7 @@ class CommentControllerTest extends SpecificationWithJUnit {
         val mails = inject[FakeOutbox]
         mails.size === 1
         val mail = mails.head
-        mail.subject === "[new message] My Title"
+        mail.subject === "Andrew Conner sent you a message using KiFi"
         println(mail.htmlBody)
         mail.htmlBody.contains("""Public Comment <a href="http://www.google.com">look here</a> on Google1""") === true
       }
