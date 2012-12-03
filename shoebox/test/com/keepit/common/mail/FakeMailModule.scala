@@ -12,12 +12,13 @@ import play.api.Play.current
 import play.api.Configuration
 import scala.collection.mutable.MutableList
 
-class FakeOutbox(var mails: MutableList[ElectronicMail] = MutableList()) {
+class FakeOutbox(val mails: MutableList[ElectronicMail] = MutableList()) {
   def add(email: ElectronicMail): ElectronicMail = {
     mails += email
     email
   }
   def size = mails.size
+  def head = mails.head
   def apply(i: Int) = mails(i)
 }
 
