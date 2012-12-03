@@ -288,7 +288,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         opacity: 1
       },
       400,
-      'easeQuickSnapBounce');
+      'easeQuickSnapBounce', function() {
+        $('.kifi_hover').css({'right': '-20px', 'opacity': 1});
+        console.log("opened", $('.kifi_hover')[0], $('.kifi_hover').css('right'))
+      });
   }
 
   function redrawFooter(showFooterNav, type) {
@@ -300,8 +303,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
 
     renderTemplate("templates/footer.html", footerParams, function(renderedTemplate) {
-      $('.kififtr').html(renderedTemplate)
-      .on('mousedown','.close-message', function() {
+      $('.kififtr').html(renderedTemplate);
+
+      $('.kififtr .footer-bar').on('mousedown','.close-message', function() {
         showComments(); // called with no params, hides comments/messages
       })
       .on('mousedown', '.footer-keepit', function() {
@@ -325,7 +329,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       updateCommentCount("public", badGlobalState["updates"]["publicCount"]);
       //updateCommentCount("message", badGlobalState["updates"]["messageCount"]);message count includes children, need to fix...
       if (isCommentPanelVisible() !== true) return;
-      showComments(badGlobalState.user, badGlobalState.type, badGlobalState.id, true);
+      showComments(badGlobalState.user, badGlobalState.type, badGlobalState.id, true, true);
     });
   }
 
@@ -344,9 +348,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
   setInterval(function(){
     refreshCommentsHack();
-  }, 10000);
+  }, 5000);
 
-  function showComments(user, type, id, keepOpen) {
+  function showComments(user, type, id, keepOpen, partialRender) {
     var type = type || "public";
 
     badGlobalState["user"] = user;
@@ -371,10 +375,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
     $(".kifi_hover").data("view", type).removeClass("public message").addClass(type);
 
-    var url = "http://" + config.server +
-      (type == "public" ? "/comments/public" : "/messages/threads") +
-      (id ? "/" + id : ("?url=" + encodeURIComponent(document.location.href)));
-    $.get(url, null, function(comments) {
+    fetchComments(type, id, function(comments) {
       console.log(comments);
       renderComments(user, comments, type, id, function() {
         if (!isVisible) {
@@ -388,7 +389,16 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         if(shouldRedrawFooter) {
           redrawFooter(true, type);
         }
-      });
+      }, partialRender);
+    });
+  }
+
+  function fetchComments(type, id, callback) {
+    var url = "http://" + config.server +
+      (type == "public" ? "/comments/public" : "/messages/threads") +
+      (id ? "/" + id : ("?url=" + encodeURIComponent(document.location.href)));
+    $.get(url, null, function(payload) {
+      callback(payload)
     });
   }
 
@@ -446,7 +456,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       .toggleClass("zero_comments", count == 0);
   }
 
-  function renderComments(user, comments, type, id, onComplete) {
+  function renderComments(user, comments, type, id, onComplete, partialRender) {
     console.log("Drawing comments!");
     comments = comments || {};
     comments["public"] = comments["public"] || [];
@@ -490,6 +500,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         "comment": comment,
         "comment_post_view": comment_post
       };
+
       if(type == "public") {
         for(msg in visibleComments) {
           console.log(visibleComments[msg].user.externalId == user.keepit_external_id)
@@ -601,14 +612,23 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           params.storedRecipients = visibleComments[0].storedRecipients;
           params.externalId = visibleComments[0].externalId;
           params.recipientCount = recipientCount;
+          params.recipientCountText = recipientCount == "1" ? "person" : "people"; 
           params.hideComposeTo = true;
         }
       }
 
-      renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
-        drawCommentView(renderedTemplate, user, type, partials);
-        onComplete();
-      }, partials);
+      if(partialRender) {
+        // Hacky solution for a partial refresh. Needs to be refactored.
+        var renderedTemplate = Mustache.render(partials.comment_body_view, params, partials);     
+        $('.comment_body_view').html(renderedTemplate).find("time").timeago();
+      }
+      else {
+        renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
+          drawCommentView(renderedTemplate, user, type, partials);
+          onComplete();
+        }, partials);
+      }
+
 
     });
     });
@@ -843,6 +863,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         params["formatDate"] = commentDateFormatter;
         params["formatIsoDate"] = isoDateFormatter;
 
+        badGlobalState["updates"].publicCount++;
+        badGlobalState["updates"].countSum++;
+
         renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
           //drawCommentView(renderedTemplate, user, type, partials);
           $('.comment_body_view').find('.no-comment').parent().detach();
@@ -860,6 +883,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       var isReply = $(this).is('.message-reply');
       var recipients;
       var parent;
+
+      badGlobalState["updates"].messageCount++;
+      badGlobalState["updates"].countSum++;
+
       if(!isReply) {
         var recipientJson = $("#to-list").tokenInput("get");
         $("#to-list").tokenInput("clear");
@@ -975,27 +1002,22 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function resizeCommentBodyView(resizeQuickly) {
-    //console.log($('.kifihdr').offset().top - 30, $('.comment_body_view').css('max-height'));
-    /*$('.kifi_hover').css({'top': ''});
-    console.log("hit", ($('.kifihdr').offset().top - 30))
-    var offset = $('.kifihdr').offset().top - 30;
-    if(offset )
-    $('.comment_body_view').stop().css({'max-height': '+=' + ($('.kifihdr').offset().top - 30)});
-    *//*
     var kifiheader = $('.kifihdr');
     if (resizeQuickly === true) {
-      $('.comment_body_view').stop().css({'max-height':$(window).height()-280});
+      $('.comment_body_view').stop().css({'max-height':$(window).height()-320});
     } else {
       if (kifiheader.length > 0) {
         var offset = kifiheader.offset().top - 30;
-        $('.comment_body_view').stop().animate({'max-height':'+='+offset},20, function() {
-          var newOffset = kifiheader.offset().top - 30;
-          if (newOffset < 0) {
-            resizeCommentBodyView(false);
-          }
-        });
+        if(Math.abs(offset) > 20) {
+          $('.comment_body_view').stop().animate({'max-height':'+='+offset},20, function() {
+            var newOffset = Math.abs(kifiheader.offset().top - 30);
+            if (newOffset > 20) {
+              resizeCommentBodyView(false);
+            }
+          });
+        }
       }
-    }*/
+    }
   }
 
   $(window).resize(function() {

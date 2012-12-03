@@ -61,6 +61,12 @@
 
 .kifi_hover .dtr {
   display: table-row;
+  padding:0;
+  margin:0; 
+}
+
+.kifi_hover .dtg {
+  display: table-group;
 }
 
 /*Rounded corner with shadow*/

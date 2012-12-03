@@ -195,10 +195,20 @@ div.more-recipient-list {
 }
 
 .kifi_comment_wrapper .back-button {
-    color: #8c8484;
-    font-size: 11px;
-    padding:10px;
-    cursor: pointer;
+  padding: 4px;
+}
+
+.kifi_comment_wrapper .back-button a {
+  color: #8c8484;
+  font-size: 11px;
+  display: inline-block;
+  padding: 6px;
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+.kifi_comment_wrapper .back-button:hover a {
+  background-color: #eee;
 }
 
 .kifi_comment_wrapper .recipient-list {
