@@ -405,11 +405,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function commentTextFormatter() {
     return function(text, render) {
       text = $.trim(render(text));
-      text = text.replace(
-        /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/g,
-        function($0, $1, $2) {
-          return "<a href='x-kifi-sel:" + $2.replace(/\\(.)/g, "$1") + "'>" + $1.replace(/\\(.)/g, "$1") + "</a>";
-        });
+      text = text.replace(/\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/g, function($0, $1, $2) {
+        return "<a href='x-kifi-sel:" + $2.replace(/\\(.)/g, "$1") + "'>" + $1.replace(/\\(.)/g, "$1") + "</a>";
+      });
       text = "<p class=\"first-line\">" + text + "</p>";
       text = text.replace(/\n\n/g, "\n")
       text = text.replace(/\n/g, "</p><p>");
@@ -444,11 +442,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       .replace(/<\/div><div>/gi, '\n')
       .replace(/<div\s*[\/]?>/gi, '\n')
       .replace(/<\/div>/gi, '')
-      .replace(
-        /<a href="x-kifi-sel:(.*?)">(.*?)<\/a>/gi,
-        function($0, $1, $2) {
-          return "[" + $2.replace(/\]/g, "\\]") + "](x-kifi-sel:" + $1.replace(/\)/g, "\\)") + ")";
-        });
+      .replace(/<a [^>]*\bhref="x-kifi-sel:([^"]*)"[^>]*>(.*?)<\/a>/gi, function($0, $1, $2) {
+        return "[" + $2.replace(/\]/g, "\\]") + "](x-kifi-sel:" + $1.replace(/\)/g, "\\)") + ")";
+      });
     return $('<div>').html(html).text().trim();
   }
 
@@ -730,6 +726,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             }});
         return ms;
       }
+    }).on("click", "a[href^='x-kifi-sel:']", function(e) {
+      e.preventDefault();
     });
 
     $('.comment_body_view').on("hover", ".more-recipients", function(event) {
