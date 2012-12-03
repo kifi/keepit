@@ -59,6 +59,10 @@
   font-size: 14px;
 }
 
+.kifi_hover .dtr {
+  display: table-row;
+}
+
 /*Rounded corner with shadow*/
 .kifi_hover .roundedbox {
   background-color: #faf9f9;
@@ -71,6 +75,7 @@
 
   width: 330px;
   position:relative;
+  display: table;
 }
 /*Header*/
 .kifi_hover .roundedbox .kifihdr {
@@ -546,6 +551,10 @@
   color: #2d2d2d;
   font-size: 12px;
   display:none;
+  position: relative;
+  width:310px;
+  margin:0px;
+  font-family: "helvetica neue", Helvetica, Arial, sans-serif;
 }
 
 .kifi_comment_wrapper .kifi_comment {

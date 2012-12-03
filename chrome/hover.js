@@ -486,6 +486,12 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         "comment": comment,
         "comment_post_view": comment_post
       };
+      if(type == "public") {
+        for(msg in visibleComments) {
+          console.log(visibleComments[msg].user.externalId == user.keepit_external_id)
+          visibleComments[msg]["isLoggedInUser"] = visibleComments[msg].user.externalId == user.keepit_external_id
+        }
+      }
 
       // By default we use the comment partials.
       // To override for a specific function, do so here.
@@ -562,6 +568,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
         if(id) {
           var othersInConversation = {};
+          var recipientCount = 0;
           for(msg in visibleComments) {
             var recipients = visibleComments[msg]["recipients"];
             var initiatorId = visibleComments[msg].user.externalId;
@@ -579,15 +586,17 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           }
           var othersInConversationText = "";
           for (id in othersInConversation) {
+            recipientCount++;
             if (othersInConversationText.length > 1) {
               othersInConversationText += ", ";
             }
-            othersInConversationText += othersInConversation[id];
+            othersInConversationText += "<strong>" + othersInConversation[id] + "</strong>";
           }
           params.othersInConversationText = othersInConversationText;
           params.recipientText = visibleComments[0].recipientText;
           params.storedRecipients = visibleComments[0].storedRecipients;
           params.externalId = visibleComments[0].externalId;
+          params.recipientCount = recipientCount;
           params.hideComposeTo = true;
         }
       }
@@ -861,7 +870,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         console.log("to: ", recipients);
       }
       else {
-        parent = $(this).parents(".flexcontainer").find(".thread-wrapper").attr("data-externalid");
+        parent = $(this).parents(".kifi_comment_wrapper").find(".thread-wrapper").attr("data-externalid");
         console.log(parent)
       }
 
@@ -960,6 +969,13 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function resizeCommentBodyView(resizeQuickly) {
+    //console.log($('.kifihdr').offset().top - 30, $('.comment_body_view').css('max-height'));
+    /*$('.kifi_hover').css({'top': ''});
+    console.log("hit", ($('.kifihdr').offset().top - 30))
+    var offset = $('.kifihdr').offset().top - 30;
+    if(offset )
+    $('.comment_body_view').stop().css({'max-height': '+=' + ($('.kifihdr').offset().top - 30)});
+    *//*
     var kifiheader = $('.kifihdr');
     if (resizeQuickly === true) {
       $('.comment_body_view').stop().css({'max-height':$(window).height()-280});
@@ -973,7 +989,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           }
         });
       }
-    }
+    }*/
   }
 
   $(window).resize(function() {
