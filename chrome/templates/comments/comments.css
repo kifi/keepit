@@ -323,7 +323,18 @@ body .snapshot-bar-wrap .snapshot-bar {
   cursor: move;
 }
 body .snapshot-bar-wrap .snapshot-bar .cancel {
+  display: inline-block;
+  padding: 2px 6px 3px;
+  border-image: initial;
+  background-color: buttonface;
+  color: buttontext;
+  font: -webkit-small-control;
+  -webkit-box-align: center;
+  text-align: center;
   cursor: pointer;
+}
+body .snapshot-bar-wrap .snapshot-bar .cancel:active {
+  border-image: initial;
 }
 body .snapshot-highlight {
   position: absolute;
