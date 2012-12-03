@@ -20,6 +20,7 @@ case class SocialConnection(
   socialUser2: Id[SocialUserInfo],
   state: State[SocialConnection] = SocialConnection.States.ACTIVE
 ) {
+  def withState(state: State[SocialConnection]) = copy(state = state)
 
   def save(implicit conn: Connection): SocialConnection = {
     val entity = SocialConnectionEntity(this.copy(updatedAt = currentDateTime))

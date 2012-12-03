@@ -27,14 +27,15 @@ case class SocialUserInfo(
   state: State[SocialUserInfo] = SocialUserInfo.States.CREATED,
   socialId: SocialId,
   networkType: SocialNetworkType,
-  credentials: Option[SocialUser] = None
+  credentials: Option[SocialUser] = None,
+  lastGraphRefresh: Option[DateTime] = Some(currentDateTime)
 ) {
 
   def reset() = copy(state = SocialUserInfo.States.CREATED, credentials = None)
   def withUser(user: User) = copy(userId = Some(user.id.get))//want to make sure the user has an id, fail hard if not!
   def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials))//want to make sure the user has an id, fail hard if not!
   def withState(state: State[SocialUserInfo]) = copy(state = state)
-
+  def withLastGraphRefresh(lastGraphRefresh : Option[DateTime] = Some(currentDateTime)) = copy(lastGraphRefresh = lastGraphRefresh)
   def save(implicit conn: Connection): SocialUserInfo = {
     val entity = SocialUserInfoEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
@@ -73,6 +74,10 @@ object SocialUserInfo {
     (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ((u.state IN(UNPROCESSED_STATE)) AND (u.credentials IS_NOT_NULL)) list }.map(_.view)
   }
 
+  def getNeedToBeRefreshed()(implicit conn: Connection): Seq[SocialUserInfo] = {
+    (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ( ((u.lastGraphRefresh IS_NULL) OR u.lastGraphRefresh.LT(new DateTime().minusMinutes(5)) )  AND (u.userId IS_NOT_NULL) AND (u.credentials IS_NOT_NULL ) ) list }.map(_.view)
+  }
+
   object States {
     val CREATED = State[SocialUserInfo]("created")
     val FETCHED_USING_FRIEND = State[SocialUserInfo]("fetched_using_friend")
@@ -91,6 +96,7 @@ private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialU
   val socialId = "social_id".VARCHAR(32).NOT_NULL
   val networkType = "network_type".VARCHAR(32).NOT_NULL
   val credentials = "credentials".VARCHAR(2048)
+  val lastGraphRefresh = "last_graph_refresh".JODA_TIMESTAMP
 
   def relation = SocialUserInfoEntity
 
@@ -106,7 +112,8 @@ private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialU
       case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK
       case _ => throw new RuntimeException("unknown network type %s".format(networkType()))
     },
-    credentials = credentials.map{ s => new SocialUserSerializer().reads(Json.parse(s)) }
+    credentials = credentials.map{ s => new SocialUserSerializer().reads(Json.parse(s)) },
+    lastGraphRefresh = lastGraphRefresh.value
   )
 }
 
@@ -124,6 +131,7 @@ private[model] object SocialUserInfoEntity extends SocialUserInfoEntity with Ent
     user.socialId := view.socialId.id
     user.networkType := view.networkType.name
     user.credentials.set(view.credentials.map{ s => new SocialUserSerializer().writes(s).toString() })
+    user.lastGraphRefresh.set(view.lastGraphRefresh)
     user
   }
 }
