@@ -96,7 +96,7 @@ private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialU
   val socialId = "social_id".VARCHAR(32).NOT_NULL
   val networkType = "network_type".VARCHAR(32).NOT_NULL
   val credentials = "credentials".VARCHAR(2048)
-  val lastGraphRefresh = "lastGraphRefresh".JODA_TIMESTAMP
+  val lastGraphRefresh = "last_graph_refresh".JODA_TIMESTAMP
 
   def relation = SocialUserInfoEntity
 
