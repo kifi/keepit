@@ -131,7 +131,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
   }
 
-  function keepPage() {
+  function keepPage(shouldSlideOut) {
     log("bookmarking page: " + document.location.href);
 
     chrome.extension.sendRequest({
@@ -149,7 +149,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
     chrome.extension.sendRequest(request, function(response) {
       log("bookmark added! -> " + JSON.stringify(response));
-      keptItslideOut();
+      if(shouldSlideOut)
+        keptItslideOut();
    });
   }
 
@@ -238,7 +239,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     $('.keepitbtn').click(function() {
-      keepPage();
+      keepPage(true);
     });
 
     $('.dropdownbtn').click(function() {
@@ -309,7 +310,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         showComments(); // called with no params, hides comments/messages
       })
       .on('mousedown', '.footer-keepit', function() {
-        keepPage();
+        keepPage(false);
+        redrawFooter(showFooterNav, type)
       })
       .on('mousedown', '.footer-unkeepit', function() {
         alert("To be implemented.");
