@@ -14,6 +14,8 @@ import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
+import play.api.mvc.QueryStringBindable
+import play.api.mvc.JavascriptLitteral
 
 case class UserAgent(val userAgent: String) {//here we'll have some smartness about parsing the string
   if(userAgent.length >  UserAgent.MAX_USER_AGENT_LENGTH) throw new Exception("trunking user agent string since its too long: %s".format(userAgent))
@@ -34,8 +36,8 @@ object UserAgent extends Logging {
 case class KifiVersion(major: Int, minor: Int, patch: Int = 0, tag: String = "") extends Ordered[KifiVersion]  {
   assert(major >= 0 && minor >= 0 && patch >= 0)
   def compare(that: KifiVersion) =
-    (this.major - that.major) * 10000 +
-    (this.minor - that.minor) * 100 +
+    ((this.major - that.major) << 20) +
+    ((this.minor - that.minor) << 10) +
     (this.patch - that.patch)
   override def toString = {
     Seq(major,minor,patch).mkString(".") + (if(tag != "") "-" + tag else "")
@@ -60,6 +62,21 @@ object KifiVersion extends Logging {
         log.warn("Invalid kifi version: %s".format(version))
         KifiVersion()
     }
+  }
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[KifiVersion] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, KifiVersion]] = {
+      stringBinder.bind(key, params) map {
+        case Right(version) => Right(KifiVersion(version))
+        case _ => Left("Unable to bind a KifiVersion")
+      }
+    }
+    override def unbind(key: String, kifiVersion: KifiVersion): String = {
+      stringBinder.unbind(key, kifiVersion.toString)
+    }
+  }
+  implicit def litteralInteger = new JavascriptLitteral[KifiVersion] {
+    def to(value: KifiVersion) = value.toString
   }
 }
 
@@ -110,7 +127,7 @@ private[model] class KifiInstallationEntity extends Entity[KifiInstallation, Kif
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val userId = "user_id".ID[User].NOT_NULL
   val version = "version".VARCHAR(16).NOT_NULL
-  val externalId = "browser_instance_id".EXTERNAL_ID[KifiInstallation].NOT_NULL
+  val externalId = "external_id".EXTERNAL_ID[KifiInstallation].NOT_NULL
   val userAgent = "user_agent".VARCHAR(512).NOT_NULL //could be more, I think we can trunk it at that
   val state = "state".STATE[KifiInstallation].NOT_NULL(KifiInstallation.States.ACTIVE)
 

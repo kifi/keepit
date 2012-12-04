@@ -39,7 +39,7 @@ case class PersonalSearchResultPacket(
 
 object SearchController extends FortyTwoController {
 
-  def search(escapedTerm: String, maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: String = "") = AuthenticatedJsonAction { request =>
+  def search(escapedTerm: String, maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
     val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
     val lastUUID = lastUUIDStr.flatMap{
         case "" => None
@@ -60,8 +60,8 @@ object SearchController extends FortyTwoController {
     val searcher = new MainSearcher(userId, friendIds, filterOut, articleIndexer, uriGraph, config)
     val searchRes = searcher.search(term, maxHits, lastUUID)
     val realResults = toPersonalSearchResultPacket(userId, searchRes)
-    
-    val version = KifiVersion(kifiVersion)
+
+    val version = kifiVersion.getOrElse(KifiVersion())
     val res = version match {
       case v: KifiVersion if v >= KifiVersion(2,0,1) => realResults
       case _ =>
