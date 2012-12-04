@@ -220,7 +220,7 @@ object CommentController extends FortyTwoController {
                   from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
                   to = addr,
                   subject = "%s %s commented on a page you are following".format(author.firstName, author.lastName),
-                  htmlBody = replaceLookHereLinks(views.html.email.newComment(author, recipient, uri, comment).body, uri),
+                  htmlBody = replaceLookHereLinks(views.html.email.newComment(author, recipient, uri, comment).body),
                   category = PostOffice.Categories.COMMENT))
             }
           }
@@ -238,7 +238,7 @@ object CommentController extends FortyTwoController {
                   from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(sender.firstName, sender.lastName)),
                   to = addr,
                   subject = "%s %s sent you a message using KiFi".format(sender.firstName, sender.lastName),
-                  htmlBody = replaceLookHereLinks(views.html.email.newMessage(sender, recipient, uri, comment).body, uri),
+                  htmlBody = replaceLookHereLinks(views.html.email.newMessage(sender, recipient, uri, comment).body),
                   category = PostOffice.Categories.MESSAGE))
             }
           }
@@ -248,7 +248,7 @@ object CommentController extends FortyTwoController {
     }
 
   //e.g. [look here](x-kifi-sel:body>div#page.watch>div:nth-child(4\)>div#watch7-video-container)
-  def replaceLookHereLinks(text: String, url: NormalizedURI): String =
+  def replaceLookHereLinks(text: String): String =
     """\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)""".r.replaceAllIn(
         text, m => "[" + m.group(1).replaceAll("""\\(.)""", "$1") + "]")
 
