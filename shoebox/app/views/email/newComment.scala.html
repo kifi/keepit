@@ -1,16 +1,16 @@
 @(sender: User, recipient: User, uri: NormalizedURI, comment: Comment)
 
 <div style="color:#333;font:13px 'Helvetica Neue',Helvetica,Arial,sans-serif">
-Hi recipient.firstName,
+Hi @recipient.firstName,
 
 <p>
-sender.firstName sender.lastName left a new comment at:
+@sender.firstName @sender.lastName left a new comment at:
 </p>
 
-<p><a href="@uri.url">comment.pageTitle</a></p>
+<p><a href="@uri.url">@comment.pageTitle</a></p>
 
 <p>
-sender.firstName wrote: "comment.text"
+@sender.firstName wrote: "@comment.text"
 </p>
 
 <p>
