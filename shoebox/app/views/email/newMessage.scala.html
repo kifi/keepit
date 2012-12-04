@@ -1,10 +1,10 @@
 @(sender: User, recipient: User, uri: NormalizedURI, comment: Comment)
 
 <div style="color:#333;font:13px 'Helvetica Neue',Helvetica,Arial,sans-serif">
-Hi @Html(recipient.firstName),
+Hi recipient.firstName,
 
 <p>
-@Html(sender.firstName) @Html(sender.lastName)
+sender.firstName sender.lastName
 @if(comment.parent.isDefined) {
   replied in a private conversation with you at:
 } else {
@@ -12,10 +12,10 @@ Hi @Html(recipient.firstName),
 }
 </p>
 
-<p><a href="@uri.url">@Html(comment.pageTitle)</a></p>
+<p><a href="@uri.url">comment.pageTitle</a></p>
 
 <p>
-@Html(sender.firstName) wrote: "@Html(comment.text)"
+sender.firstName wrote: "comment.text"
 </p>
 
 <a href="@uri.url" style="display:inline-block;margin-top:16px;background:#777;color:#fff;padding:5px 10px;text-decoration:none;font:12px LucidaGrande,tahoma,verdana,arial,sans-serif;border-radius:4px">
