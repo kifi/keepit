@@ -275,12 +275,12 @@ function postComment(request, sendResponse) {
   var parent = request.parent || "";
   var recipients = request.recipients || "";
 
-  xhr.open("POST", 'http://' + userConfigs.server + '/comments/add?&url=' + encodeURIComponent(request.url) + 
-    "&title=" + encodeURIComponent(request.title) + 
-    "&text=" + encodeURIComponent(request.text) + 
-    "&permissions=" + request.permissions + 
-    "&parent=" + parent + 
-    "&recipients=" + recipients, 
+  xhr.open("POST", 'http://' + userConfigs.server + '/comments/add?&url=' + encodeURIComponent(request.url) +
+    "&title=" + encodeURIComponent(request.title) +
+    "&text=" + encodeURIComponent(request.text) +
+    "&permissions=" + request.permissions +
+    "&parent=" + parent +
+    "&recipients=" + recipients,
     true);
   xhr.send();
 
@@ -496,7 +496,7 @@ function remoteIsAlreadyKept(location, callback) {
 
   $.get("http://" + getConfigs().server + "/bookmarks/check?externalId=" + userConfig.user["keepit_external_id"] + "&uri=" + encodeURIComponent(location), null,
     function(data) {
-      callback(data["user_has_bookmark"]) 
+      callback(data["user_has_bookmark"])
     },
     "json"
   ).error(function(error) {
@@ -561,7 +561,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, change) {
 function injectGoogleDiv(tab) {
   log("injecting google_inject.js into tab", tab)
   try {
-    safeExecuteScript(tab.id, {code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:google] tab: " + tab.id + "')"}, 
+    safeExecuteScript(tab.id, {code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:google] tab: " + tab.id + "')"},
       function(vars){
         log("[callback] executed logging", tab);
     });
@@ -600,61 +600,18 @@ function getConfigs() {
   try {
     var env = localStorage["env"];
     if (!env) {
-      env = "production";
-      localStorage["env"]=env;
-    }
-    var maxResStr = localStorage[getFullyQualifiedKey("max_res")];
-    if (!isNumber(maxResStr)) {
-      maxResStr = 5;
-    }
-    var maxRes = Number(maxResStr);
-
-    var showScore = localStorage[getFullyQualifiedKey("show_score")];
-    if (showScore === "yes" || showScore === true || showScore === "true") {
-      showScore = true;
-    } else {
-      showScore = false;
+      localStorage["env"] = env = "production";
     }
 
-    var uploadOnStart = localStorage[getFullyQualifiedKey("upload_on_start")];
-    if (uploadOnStart === "yes" || uploadOnStart === true || uploadOnStart === "true") {
-      uploadOnStart = true;
-    } else {
-      uploadOnStart = false;
-    }
-
-    var hoverTimeout = localStorage[getFullyQualifiedKey("hover_timeout")];
-    if (typeof hoverTimeout === 'undefined' || hoverTimeout === null) {
-      hoverTimeout = 10;
-    }
-    if (!isNumber(hoverTimeout)) {
-      throw Error("hover timeout is not a number: " + hoverTimeout);
-    }
-    hoverTimeout = Number(hoverTimeout);
-
-    var server = "keepitfindit.com";
-    if (env === "development") {
-      server = "dev.ezkeep.com:9000";
-    }
-    //debugger;
-    var userInfo = localStorage[getFullyQualifiedKey("user")];
-    var userInfoString;
-
-    try {
-      if (userInfo && userInfo != 'undefined') {
-        userInfoString = JSON.parse(userInfo);
-      }
-    }
-    catch(e) {} // if we can't parse the JSON, just let is stay undefined.
     var config = {
-      "env": env, 
-      "hover_timeout": hoverTimeout, 
-      "show_score": showScore, 
-      "upload_on_start": uploadOnStart, 
-      "max_res": maxRes,
-      "server": server,
-      "user": userInfoString
-    }
+      "env": env,
+      "server": env == "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com",
+      "kifi_installation_id": localStorage[getFullyQualifiedKey("kifi_installation_id")],
+      "hover_timeout": parseNonNegIntOr(localStorage[getFullyQualifiedKey("hover_timeout")], 10),
+      "show_score": parseBoolOr(localStorage[getFullyQualifiedKey("show_score")], false),
+      "upload_on_start": parseBoolOr(localStorage[getFullyQualifiedKey("upload_on_start")], false),
+      "max_res": parseNonNegIntOr(localStorage[getFullyQualifiedKey("max_res")], 5),
+      "user": parseJsonObjOr(localStorage[getFullyQualifiedKey("user")])};
     //log("loaded config:");
     //log(config);
     return config;
@@ -665,9 +622,24 @@ function getConfigs() {
   }
 }
 
-function isNumber(n) {
-  return !isNaN(parseFloat(n)) && isFinite(n);
-}    
+function parseNonNegIntOr(val, defaultValue) {
+  var n = parseInt(val, 10);
+  return isNaN(n) ? defaultValue : Math.abs(n);
+}
+
+function parseBoolOr(val, defaultValue) {
+  return val === "yes" || val === true || val === "true" || defaultValue;
+}
+
+function parseJsonObjOr(val, defaultValue) {
+  if (/^{/.test(val)) {
+    try {
+      return parseJSON(val);
+    } catch (e) {
+    }
+  }
+  return defaultValue;
+}
 
 function addNewKeep() {
   alert("did nothing!")
@@ -675,7 +647,7 @@ function addNewKeep() {
 
 function onInstall() {
   log("Extension Installed");
-} 
+}
 
 function onUpdate() {
   log("Extension Updated");
@@ -690,10 +662,10 @@ function getVersion() {
 function startHandShake(callback){
   log("starting handShake");
   $.get("http://" + getConfigs().server + "/isLoggedIn", null,
-    function(data) {         
+    function(data) {
       log("got success response "+data);
       log(data)
-      callback(data) 
+      callback(data)
     },
     "json"
   ).error(function(error) {
@@ -714,34 +686,11 @@ var prevVersion = getConfigs().version;
 if (currVersion != prevVersion) { // Check if we just installed this extension.
   if (typeof prevVersion == 'undefined' || prevVersion == '') { //install
     onInstall();
-  } else { //update 
+  } else { //update
     onUpdate();
   }
   setConfigs('version', currVersion);
 }
-
-function generateBrowserInstanceId() {
-  var S4 = function () {
-      return Math.floor(Math.random() * 0x10000).toString(16);
-  };
-  return ( S4()+S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4()+S4()+S4() );
-}
-
-function getBrowserInstanceId() {
-  var browserInstanceId = getConfigs().browserInstanceId;
-  if(typeof browserInstanceId == 'undefined' || browserInstanceId == '') {
-    browserInstanceId = generateBrowserInstanceId();
-    setConfigs('browserInstanceId', browserInstanceId);
-  }
-  return browserInstanceId;
-}
-
-
-var userAgent = navigator.userAgent || navigator.appVersion || navigator.vendor;
-var platform = navigator.platform;
-var language = navigator.language;
-
-
 
 var popup = null;
 
@@ -818,11 +767,8 @@ if (!hasKeepitIdAndFacebookId()) {
         log("NOT loading bookmarks to the server");
       }
       getBookMarks();
-
-      
     }
   });
-
 }
 
 logEvent("Plugin started!");
