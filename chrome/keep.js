@@ -606,6 +606,7 @@ function getConfigs() {
     var config = {
       "env": env,
       "server": env == "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com",
+      "kifi_installation_id": localStorage[getFullyQualifiedKey("kifi_installation_id")],
       "hover_timeout": parseNonNegIntOr(localStorage[getFullyQualifiedKey("hover_timeout")], 10),
       "show_score": parseBoolOr(localStorage[getFullyQualifiedKey("show_score")], false),
       "upload_on_start": parseBoolOr(localStorage[getFullyQualifiedKey("upload_on_start")], false),
