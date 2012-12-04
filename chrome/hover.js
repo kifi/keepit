@@ -22,6 +22,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
   });
 
+  $('<input id="editableFix" style="opacity:0;color:transparent;width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html')
+
   $.extend(jQuery.easing,{
     easeQuickSnapBounce:function(x,t,b,c,d) {
       if (typeof s === 'undefined') s = 1.3;
@@ -131,7 +133,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
   }
 
-  function keepPage() {
+  function keepPage(shouldSlideOut) {
     log("bookmarking page: " + document.location.href);
 
     chrome.extension.sendRequest({
@@ -149,7 +151,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
     chrome.extension.sendRequest(request, function(response) {
       log("bookmark added! -> " + JSON.stringify(response));
-      keptItslideOut();
+      if(shouldSlideOut)
+        keptItslideOut();
    });
   }
 
@@ -238,7 +241,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
 
     $('.keepitbtn').click(function() {
-      keepPage();
+      keepPage(true);
     });
 
     $('.dropdownbtn').click(function() {
@@ -309,7 +312,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         showComments(); // called with no params, hides comments/messages
       })
       .on('mousedown', '.footer-keepit', function() {
-        keepPage();
+        keepPage(false);
+        redrawFooter(showFooterNav, type)
       })
       .on('mousedown', '.footer-unkeepit', function() {
         alert("To be implemented.");
@@ -501,7 +505,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         "comment_post_view": comment_post
       };
 
-      if(type == "public") {
+      if(visibleComments[0].user && visibleComments[0].user.externalId) {
         for(msg in visibleComments) {
           console.log(visibleComments[msg].user.externalId == user.keepit_external_id)
           visibleComments[msg]["isLoggedInUser"] = visibleComments[msg].user.externalId == user.keepit_external_id
@@ -762,6 +766,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
 
     // Main comment textarea
+    var editableFix = $('#editableFix');
+
     var typeName = type == "public" ? "comment" : "message";
     var placeholder = "<span class=\"placeholder\">Add a " + typeName + "…</span>";
     $('.comment-compose').html(placeholder);
@@ -771,6 +777,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       }
       $('.comment-compose').animate({'height': '85'}, 150, 'easeQuickSnapBounce');
     }).on('blur', '.comment-compose', function() {
+      editableFix[0].setSelectionRange(0, 0);
+      editableFix.blur();
+
       var value = $('.comment-compose').html()
       value = commentSerializer(value);
       if (value == "") { // unchanged text!
@@ -856,12 +865,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       if (!text) return false;
 
       submitComment(text, type, user, null, null, function(newComment) {
-        $('.comment-compose').text("").html(placeholder);
+        $('.comment-compose').text("").html(placeholder).blur();
 
         console.log("new comment", newComment);
         // Clean up CSS
 
         var params = newComment;
+
+        newComment.isLoggedInUser = true;
         params["formatComments"] = commentTextFormatter;
         params["formatDate"] = commentDateFormatter;
         params["formatIsoDate"] = isoDateFormatter;
@@ -911,7 +922,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       }
 
       submitComment(text, type, user, parent, recipients, function(newComment) {
-        $('.comment-compose').text("").html(placeholder);
+        $('.comment-compose').text("").html(placeholder).blur();
 
         console.log("new message", newComment);
         // Clean up CSS
@@ -924,6 +935,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         }
 
         var params = newComment.message;
+        newComment.message.isLoggedInUser = true;
         params["formatComments"] = commentTextFormatter;
         params["formatDate"] = commentDateFormatter;
         params["formatIsoDate"] = isoDateFormatter;
@@ -1005,12 +1017,16 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function resizeCommentBodyView(resizeQuickly) {
+    $('.kifi_hover').css({'top':''});
     var kifiheader = $('.kifihdr');
     if (resizeQuickly === true) {
       $('.comment_body_view').stop().css({'max-height':$(window).height()-320});
     } else {
       if (kifiheader.length > 0) {
-        var offset = kifiheader.offset().top - 30;
+        var offset = Math.round(kifiheader.offset().top - 30);
+        if(Math.abs($('.comment_body_view').height() - offset) > 2) {
+          return;
+        }
         if(Math.abs(offset) > 20) {
           $('.comment_body_view').stop().animate({'max-height':'+='+offset},20, function() {
             var newOffset = Math.abs(kifiheader.offset().top - 30);
