@@ -93,7 +93,7 @@ setTimeout(function() {
 }, 4000);
 
 function error(exception, message) {
-  debugger;
+  //debugger;
   var errMessage = exception.message;
   if(message) {
     errMessage = "[" + message + "] " + exception.message;
@@ -103,7 +103,7 @@ function error(exception, message) {
   }
   console.error(errMessage);
   console.error(exception.stack);
-  alert("exception: " + exception.message);
+  //alert("exception: " + exception.message);
 }
 
 log("background page kicking in!");
@@ -639,9 +639,13 @@ function getConfigs() {
     //debugger;
     var userInfo = localStorage[getFullyQualifiedKey("user")];
     var userInfoString;
-    if (userInfo) {
-      userInfoString = JSON.parse(userInfo);
+
+    try {
+      if (userInfo && userInfo != 'undefined') {
+        userInfoString = JSON.parse(userInfo);
+      }
     }
+    catch(e) {} // if we can't parse the JSON, just let is stay undefined.
     var config = {
       "env": env, 
       "hover_timeout": hoverTimeout, 
@@ -655,6 +659,8 @@ function getConfigs() {
     //log(config);
     return config;
   } catch (e) {
+    console.log("User config")
+    console.log(userInfo);
     error(e);
   }
 }
@@ -706,17 +712,40 @@ function hasKeepitIdAndFacebookId() {
 var currVersion = getVersion();
 var prevVersion = getConfigs().version;
 if (currVersion != prevVersion) { // Check if we just installed this extension.
-  if (typeof prevVersion == 'undefined') { //install
-    onInstall();      
+  if (typeof prevVersion == 'undefined' || prevVersion == '') { //install
+    onInstall();
   } else { //update 
-    onUpdate()
+    onUpdate();
   }
   setConfigs('version', currVersion);
 }
+
+function generateBrowserInstanceId() {
+  var S4 = function () {
+      return Math.floor(Math.random() * 0x10000).toString(16);
+  };
+  return ( S4()+S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4()+S4()+S4() );
+}
+
+function getBrowserInstanceId() {
+  var browserInstanceId = getConfigs().browserInstanceId;
+  if(typeof browserInstanceId == 'undefined' || browserInstanceId == '') {
+    browserInstanceId = generateBrowserInstanceId();
+    setConfigs('browserInstanceId', browserInstanceId);
+  }
+  return browserInstanceId;
+}
+
+
+var userAgent = navigator.userAgent || navigator.appVersion || navigator.vendor;
+var platform = navigator.platform;
+var language = navigator.language;
+
+
+
 var popup = null;
 
 function openFacebookConnect() {
-
   chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     if(changeInfo.status == "loading") {
       if (tabId === popup && tab.url === "http://" + getConfigs().server + "/#_=_") {
