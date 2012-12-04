@@ -41,11 +41,14 @@ case class KifiVersion(major: Int, minor: Int, patch: Int = 0, tag: String = "")
     Seq(major,minor,patch).mkString(".") + (if(tag != "") "-" + tag else "")
   }
 }
-object KifiVersion {
+object KifiVersion extends Logging {
+  def apply(): KifiVersion = {
+    KifiVersion(0,0,0)
+  }
   def apply(version: String): KifiVersion = {
     try {
       def safeVersion(v: Array[String], i: Int) = if(v.length <= i) 0 else v(i).toInt
-
+      assert(version.length > 2)
       val t = version.split('-')
       assert(t.length > 0)
       val v = t(0).split('.')
@@ -53,7 +56,9 @@ object KifiVersion {
       val tag = if(t.length > 1) t(1) else ""
       KifiVersion(safeVersion(v,0), safeVersion(v,1), safeVersion(v,2), tag)
     } catch {
-      case _ => throw new Exception("Invalid Kifi Version")
+      case _ =>
+        log.warn("Invalid kifi version: %s".format(version))
+        KifiVersion()
     }
   }
 }

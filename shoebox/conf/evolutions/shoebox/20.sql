@@ -18,6 +18,7 @@ CREATE TABLE kifi_installation (
     CONSTRAINT extension_version_f_user FOREIGN KEY (user_id) REFERENCES user(id) 
 );
              
-insert into evolutions (name, description) values('20.sql', 'create new table extension_version');
+insert into evolutions (name, description) values('20.sql', 'create new table kifi_installation');
 
 # --- !Downs
+ 
