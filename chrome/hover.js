@@ -1004,12 +1004,16 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function resizeCommentBodyView(resizeQuickly) {
+    $('.kifi_hover').css({'top':''});
     var kifiheader = $('.kifihdr');
     if (resizeQuickly === true) {
       $('.comment_body_view').stop().css({'max-height':$(window).height()-320});
     } else {
       if (kifiheader.length > 0) {
-        var offset = kifiheader.offset().top - 30;
+        var offset = Math.round(kifiheader.offset().top - 30);
+        if(Math.abs($('.comment_body_view').height() - offset) > 2) {
+          return;
+        }
         if(Math.abs(offset) > 20) {
           $('.comment_body_view').stop().animate({'max-height':'+='+offset},20, function() {
             var newOffset = Math.abs(kifiheader.offset().top - 30);
