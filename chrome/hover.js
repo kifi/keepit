@@ -1018,6 +1018,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function resizeCommentBodyView(resizeQuickly) {
     console.log("hit")
     $('.kifi_hover').css({'top':''});
+    $('.comment_body_view').stop().css({'max-height':$(window).height()-320});
+    return; // for now, we'll do a rough fix
     var kifiheader = $('.kifihdr');
     if (resizeQuickly === true) {
       $('.comment_body_view').stop().css({'max-height':$(window).height()-320});
