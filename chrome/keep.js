@@ -696,27 +696,18 @@ var popup = null;
 
 function openFacebookConnect() {
   chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-    if(changeInfo.status == "loading") {
+    if (changeInfo.status == "loading") {
       if (tabId === popup && tab.url === "http://" + getConfigs().server + "/#_=_") {
         popup = undefined;
         startHandShake(function(data) {
-          if (data) {
-            log("got handshake data ");
-            log(data);
-            var userInfo = {};
-            userInfo.facebook_id = data.facebookId;
-            userInfo.keepit_external_id = data.externalId;
-            userInfo.avatar_url = data.avatarUrl;
-            userInfo.name = data.name;
-            log("updating userInfo ");
-            log(userInfo);
-            setConfigs("user", JSON.stringify(userInfo));
-            postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");//posting bookmarks
-            log("handshake done");
-          }
-          else{
-            log("handshake failes");
-          }
+          log("got handshake data: " + JSON.stringify(data));
+          setConfigs("user", JSON.stringify({
+            facebook_id: data.facebookId,
+            keepit_external_id: data.externalId,
+            avatar_url: data.avatarUrl,
+            name: data.name}));
+          postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
+          log("handshake done");
           chrome.tabs.remove(tabId);
         });
       }
