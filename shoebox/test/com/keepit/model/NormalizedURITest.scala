@@ -133,6 +133,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
     "search gets short" in {
       running(new EmptyApplication()) {
       	CX.withConnection { implicit c =>
+      	  NormalizedURI.all.size === 0 //making sure the db is clean, trying to understand some strange failures we got
       	  val user1 = User(firstName = "Joe", lastName = "Smith").save
       	  val user2 = User(firstName = "Moo", lastName = "Brown").save
       	  val uri1 = createUri(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURI.States.ACTIVE)
@@ -140,7 +141,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
           val uri3 = createUri(title = "three title", url = "http://www.keepit.com/three", state = NormalizedURI.States.ACTIVE)
       	}
         CX.withConnection { implicit c =>
-          var all = NormalizedURI.getByState(NormalizedURI.States.ACTIVE)
+          val all = NormalizedURI.getByState(NormalizedURI.States.ACTIVE)
           println(all.mkString("\n"))
           all.size === 2
         }
