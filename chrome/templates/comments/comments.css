@@ -101,9 +101,11 @@
   min-height: 35px;
   line-height: 14px;
   color: #524D4D;
+  word-wrap: break-word;
 }
 .kifi_comment_wrapper .comment-text p {
   line-height: 14px;
+  word-wrap: break-word;
 }
 
 .kifi_comment_wrapper .comment-text strong {
