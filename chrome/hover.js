@@ -505,8 +505,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         "comment_post_view": comment_post
       };
 
-      if(visibleComments[0].user && visibleComments[0].user.externalId) {
-        for(msg in visibleComments) {
+      if (visibleComments.length && visibleComments[0].user && visibleComments[0].user.externalId) {
+        for (msg in visibleComments) {
           visibleComments[msg]["isLoggedInUser"] = visibleComments[msg].user.externalId == user.keepit_external_id
         }
       }
@@ -615,14 +615,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           params.storedRecipients = visibleComments[0].storedRecipients;
           params.externalId = visibleComments[0].externalId;
           params.recipientCount = recipientCount;
-          params.recipientCountText = recipientCount == "1" ? "person" : "people"; 
+          params.recipientCountText = recipientCount == "1" ? "person" : "people";
           params.hideComposeTo = true;
         }
       }
 
       if(partialRender) {
         // Hacky solution for a partial refresh. Needs to be refactored.
-        var renderedTemplate = Mustache.render(partials.comment_body_view, params, partials);     
+        var renderedTemplate = Mustache.render(partials.comment_body_view, params, partials);
         $('.comment_body_view').html(renderedTemplate).find("time").timeago();
       }
       else {
