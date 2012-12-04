@@ -22,6 +22,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
   });
 
+  $('<input id="editableFix" style="opacity:0;color:transparent;width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html')
+
   $.extend(jQuery.easing,{
     easeQuickSnapBounce:function(x,t,b,c,d) {
       if (typeof s === 'undefined') s = 1.3;
@@ -503,7 +505,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         "comment_post_view": comment_post
       };
 
-      if(type == "public") {
+      if(visibleComments[0].user && visibleComments[0].user.externalId) {
         for(msg in visibleComments) {
           console.log(visibleComments[msg].user.externalId == user.keepit_external_id)
           visibleComments[msg]["isLoggedInUser"] = visibleComments[msg].user.externalId == user.keepit_external_id
@@ -764,6 +766,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
 
     // Main comment textarea
+    var editableFix = $('#editableFix');
+
     var typeName = type == "public" ? "comment" : "message";
     var placeholder = "<span class=\"placeholder\">Add a " + typeName + "…</span>";
     $('.comment-compose').html(placeholder);
@@ -773,6 +777,9 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       }
       $('.comment-compose').animate({'height': '85'}, 150, 'easeQuickSnapBounce');
     }).on('blur', '.comment-compose', function() {
+      editableFix[0].setSelectionRange(0, 0);
+      editableFix.blur();
+
       var value = $('.comment-compose').html()
       value = commentSerializer(value);
       if (value == "") { // unchanged text!
@@ -855,12 +862,14 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       if (!text) return false;
 
       submitComment(text, type, user, null, null, function(newComment) {
-        $('.comment-compose').text("").html(placeholder);
+        $('.comment-compose').text("").html(placeholder).blur();
 
         console.log("new comment", newComment);
         // Clean up CSS
 
         var params = newComment;
+
+        newComment.isLoggedInUser = true;
         params["formatComments"] = commentTextFormatter;
         params["formatDate"] = commentDateFormatter;
         params["formatIsoDate"] = isoDateFormatter;
@@ -910,7 +919,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       }
 
       submitComment(text, type, user, parent, recipients, function(newComment) {
-        $('.comment-compose').text("").html(placeholder);
+        $('.comment-compose').text("").html(placeholder).blur();
 
         console.log("new message", newComment);
         // Clean up CSS
@@ -923,6 +932,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
         }
 
         var params = newComment.message;
+        newComment.message.isLoggedInUser = true;
         params["formatComments"] = commentTextFormatter;
         params["formatDate"] = commentDateFormatter;
         params["formatIsoDate"] = isoDateFormatter;
