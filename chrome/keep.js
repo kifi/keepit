@@ -742,15 +742,6 @@ var platform = navigator.platform;
 var language = navigator.language;
 
 
-$.get("http://" + getConfigs().server + "/bookmarks/check?externalId=" + userConfig.user["keepit_external_id"] + "&uri=" + encodeURIComponent(location), null,
-  function(data) {
-    callback(data["user_has_bookmark"]) 
-  },
-  "json"
-).error(function(error) {
-  log(error.responseText);
-  callback(false);
-});
 
 var popup = null;
 
