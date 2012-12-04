@@ -1,6 +1,6 @@
 # --- !Ups
 
-CREATE TABLE extension_version (
+CREATE TABLE kifi_installation (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
