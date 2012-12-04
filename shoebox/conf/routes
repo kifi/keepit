@@ -29,8 +29,7 @@ GET     /users/slider/updates       com.keepit.controllers.CommentController.get
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
 GET     /users/friends              com.keepit.controllers.UserController.getSocialConnections()
 
-GET     /search2                    com.keepit.controllers.SearchController.search2(term: String, maxHits:Int, lastUUID: Option[String], context: Option[String])
-GET     /search                     com.keepit.controllers.SearchController.search(term: String, maxHits:Int, lastUUID: Option[String], context: Option[String])
+GET     /search                     com.keepit.controllers.SearchController.search(term: String, maxHits:Int, lastUUID: Option[String], context: Option[String], kifiVersion: String ?= "")
 
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
 GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
