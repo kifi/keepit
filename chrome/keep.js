@@ -710,15 +710,48 @@ function hasKeepitIdAndFacebookId() {
 
 // Check if the version has changed.
 var currVersion = getVersion();
-var prevVersion = getConfigs().version || "";
+var prevVersion = getConfigs().version;
 if (currVersion != prevVersion) { // Check if we just installed this extension.
-  if (typeof prevVersion == 'undefined') { //install
-    onInstall();      
+  if (typeof prevVersion == 'undefined' || prevVersion == '') { //install
+    onInstall();
   } else { //update 
-    onUpdate()
+    onUpdate();
   }
   setConfigs('version', currVersion);
 }
+
+function generateBrowserInstanceId() {
+  var S4 = function () {
+      return Math.floor(Math.random() * 0x10000).toString(16);
+  };
+  return ( S4()+S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4()+S4()+S4() );
+}
+
+function getBrowserInstanceId() {
+  var browserInstanceId = getConfigs().browserInstanceId;
+  if(typeof browserInstanceId == 'undefined' || browserInstanceId == '') {
+    browserInstanceId = generateBrowserInstanceId();
+    setConfigs('browserInstanceId', browserInstanceId);
+  }
+  return browserInstanceId;
+}
+
+
+var userAgent = navigator.userAgent || navigator.appVersion || navigator.vendor;
+var platform = navigator.platform;
+var language = navigator.language;
+
+
+$.get("http://" + getConfigs().server + "/bookmarks/check?externalId=" + userConfig.user["keepit_external_id"] + "&uri=" + encodeURIComponent(location), null,
+  function(data) {
+    callback(data["user_has_bookmark"]) 
+  },
+  "json"
+).error(function(error) {
+  log(error.responseText);
+  callback(false);
+});
+
 var popup = null;
 
 function openFacebookConnect() {
