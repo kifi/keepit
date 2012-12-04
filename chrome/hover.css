@@ -181,6 +181,7 @@
   padding-left:0px;
   white-space: nowrap;
   overflow: hidden;
+  width: 250px;
 }
 
 .kifi_hover .friendlist .friendlist_fade {
