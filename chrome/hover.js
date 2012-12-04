@@ -507,7 +507,6 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
       if(visibleComments[0].user && visibleComments[0].user.externalId) {
         for(msg in visibleComments) {
-          console.log(visibleComments[msg].user.externalId == user.keepit_external_id)
           visibleComments[msg]["isLoggedInUser"] = visibleComments[msg].user.externalId == user.keepit_external_id
         }
       }
@@ -1017,6 +1016,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function resizeCommentBodyView(resizeQuickly) {
+    console.log("hit")
     $('.kifi_hover').css({'top':''});
     var kifiheader = $('.kifihdr');
     if (resizeQuickly === true) {
@@ -1024,11 +1024,11 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     } else {
       if (kifiheader.length > 0) {
         var offset = Math.round(kifiheader.offset().top - 30);
-        if(Math.abs($('.comment_body_view').height() - offset) > 2) {
-          return;
-        }
         if(Math.abs(offset) > 20) {
           $('.comment_body_view').stop().animate({'max-height':'+='+offset},20, function() {
+            if(Math.abs($('.comment_body_view').height() - offset) > 2) {
+              return;
+            }
             var newOffset = Math.abs(kifiheader.offset().top - 30);
             if (newOffset > 20) {
               resizeCommentBodyView(false);
