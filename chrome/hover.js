@@ -776,6 +776,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           .draggable({cursor: "move", distance: 10, handle: ".snapshot-bar", scroll: false})
           .on("click", ".cancel", exitSnapshotMode)
           .add($shades).css("opacity", 0).animate({opacity: 1}, 300);
+        key.setScope("snapshot");
+        key("esc", "snapshot", exitSnapshotMode);
       });
       $(window).scroll(function() {
         if (sel) updateSelection(cX, cY);
@@ -788,6 +790,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       });
       function exitSnapshotMode() {
         $selectable.add(".snapshot-bar-wrap").animate({opacity: 0}, 400, function() { $(this).remove(); });
+        key.deleteScope("snapshot");
         slideIn();
       }
       function updateSelection(clientX, clientY, scrollLeft, scrollTop) {
