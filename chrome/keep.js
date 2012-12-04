@@ -93,7 +93,7 @@ setTimeout(function() {
 }, 4000);
 
 function error(exception, message) {
-  debugger;
+  //debugger;
   var errMessage = exception.message;
   if(message) {
     errMessage = "[" + message + "] " + exception.message;
@@ -103,7 +103,7 @@ function error(exception, message) {
   }
   console.error(errMessage);
   console.error(exception.stack);
-  alert("exception: " + exception.message);
+  //alert("exception: " + exception.message);
 }
 
 log("background page kicking in!");
@@ -639,9 +639,13 @@ function getConfigs() {
     //debugger;
     var userInfo = localStorage[getFullyQualifiedKey("user")];
     var userInfoString;
-    if (userInfo) {
-      userInfoString = JSON.parse(userInfo);
+
+    try {
+      if (userInfo && userInfo != 'undefined') {
+        userInfoString = JSON.parse(userInfo);
+      }
     }
+    catch(e) {} // if we can't parse the JSON, just let is stay undefined.
     var config = {
       "env": env, 
       "hover_timeout": hoverTimeout, 
@@ -655,6 +659,8 @@ function getConfigs() {
     //log(config);
     return config;
   } catch (e) {
+    console.log("User config")
+    console.log(userInfo);
     error(e);
   }
 }
@@ -704,7 +710,7 @@ function hasKeepitIdAndFacebookId() {
 
 // Check if the version has changed.
 var currVersion = getVersion();
-var prevVersion = getConfigs().version;
+var prevVersion = getConfigs().version || "";
 if (currVersion != prevVersion) { // Check if we just installed this extension.
   if (typeof prevVersion == 'undefined') { //install
     onInstall();      
@@ -716,7 +722,6 @@ if (currVersion != prevVersion) { // Check if we just installed this extension.
 var popup = null;
 
 function openFacebookConnect() {
-
   chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     if(changeInfo.status == "loading") {
       if (tabId === popup && tab.url === "http://" + getConfigs().server + "/#_=_") {
