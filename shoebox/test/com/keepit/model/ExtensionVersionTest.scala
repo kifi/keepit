@@ -30,7 +30,7 @@ class ExtensionVersionTest extends SpecificationWithJUnit {
           val all = ExtensionVersion.all(user.id.get)
           all.size === 1
           all.head === version
-          ExtensionVersion.getOpt(user.id.get, version.browserInstanceId) === version
+          ExtensionVersion.getOpt(user.id.get, version.browserInstanceId).get === version
         }
       }
     }
