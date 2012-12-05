@@ -4,6 +4,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
+import com.keepit.search.Lang
 import com.keepit.search.SearchConfig
 import com.keepit.model._
 import com.keepit.model.NormalizedURI.States._
@@ -31,18 +32,16 @@ import com.keepit.search.query.SemanticVectorQuery
 import com.keepit.search.query.BooleanQueryWithPercentMatch
 
 object ArticleIndexer {
-  val indexingAnalyzer = DefaultAnalyzer.forIndexing
-  val parsingAnalyzer = DefaultAnalyzer.forParsing
 
   def apply(indexDirectory: Directory, articleStore: ArticleStore): ArticleIndexer = {
-    val analyzer = indexingAnalyzer
+    val analyzer = DefaultAnalyzer.forIndexing
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
 
-    new ArticleIndexer(indexDirectory, config, articleStore, parsingAnalyzer)
+    new ArticleIndexer(indexDirectory, config, articleStore)
   }
 }
 
-class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, articleStore: ArticleStore, parsingAnalyzer: Analyzer)
+class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, articleStore: ArticleStore)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
   val commitBatchSize = 100
@@ -80,11 +79,11 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
   }
 
-  def getQueryParser: QueryParser = getQueryParser(0.0f, 0.0f)
+  def getQueryParser(lang: Lang): QueryParser = getQueryParser(lang, 0.0f, 0.0f)
 
-  def getQueryParser(proximityBoost: Float, semanticBoost: Float): QueryParser = {
+  def getQueryParser(lang: Lang, proximityBoost: Float, semanticBoost: Float): QueryParser = {
     val total = 1.0f + proximityBoost + semanticBoost
-    new ArticleQueryParser(1.0f/total, proximityBoost/total, semanticBoost/total)
+    new ArticleQueryParser(DefaultAnalyzer.forParsing(lang), 1.0f/total, proximityBoost/total, semanticBoost/total)
   }
 
   def getArticleSearcher() = searcher
@@ -111,34 +110,54 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       val doc = super.buildDocument
       articleStore.get(uri.id.get) match {
         case Some(article) =>
-          val analyzer = indexWriterConfig.getAnalyzer
-          val title = buildTextField("t", article.title)
-          val content = buildTextField("c", article.content)
-          val semanticVector = buildSemanticVectorField("sv", analyzer.tokenStream("t", article.title), analyzer.tokenStream("c", article.content))
+          val titleLang = Lang("en") //TODO: detect
+          val contentLang = Lang("en") //TODO: detect
+          val titleAnalyzer = DefaultAnalyzer.forIndexing(titleLang)
+          val contentAnalyzer = DefaultAnalyzer.forIndexing(contentLang)
+
+          val title = buildTextField("t", article.title, titleAnalyzer)
+          val content = buildTextField("c", article.content, contentAnalyzer)
           doc.add(title)
           doc.add(content)
-          doc.add(semanticVector)
+
+          DefaultAnalyzer.forIndexingWithStemmer(titleLang).foreach{ analyzer =>
+            doc.add(buildTextField("ts", article.title, analyzer))
+          }
+          DefaultAnalyzer.forIndexingWithStemmer(contentLang).foreach{ analyzer =>
+            doc.add(buildTextField("cs", article.content, analyzer))
+          }
+          doc.add(buildSemanticVectorField("sv", titleAnalyzer.tokenStream("t", article.title), contentAnalyzer.tokenStream("c", article.content)))
           doc
         case None => doc
       }
     }
   }
 
-  class ArticleQueryParser(baseBoost: Float, proximityBoost: Float, semanticBoost: Float) extends QueryParser(parsingAnalyzer) {
+  class ArticleQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Float, semanticBoost: Float) extends QueryParser(analyzer) {
 
     super.setAutoGeneratePhraseQueries(true)
 
     override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
-      (super.getFieldQuery("t", queryText, quoted), super.getFieldQuery("c", queryText, quoted)) match {
-        case (null, null) => null
-        case (query, null) => query
-        case (null, query) => query
-        case (q1, q2) =>
-          val booleanQuery = new BooleanQuery
-          booleanQuery.add(q1, Occur.SHOULD)
-          booleanQuery.add(q2, Occur.SHOULD)
-          booleanQuery
+      val booleanQuery = new BooleanQuery
+
+      var query = super.getFieldQuery("t", queryText, quoted)
+      if (query != null) booleanQuery.add(query, Occur.SHOULD)
+
+      query = super.getFieldQuery("c", queryText, quoted)
+      if (query != null) booleanQuery.add(query, Occur.SHOULD)
+
+      if(!quoted) {
+        query = super.getFieldQuery("ts", queryText, quoted)
+        if (query != null) booleanQuery.add(query, Occur.SHOULD)
+
+        query = super.getFieldQuery("cs", queryText, quoted)
+        if (query != null) booleanQuery.add(query, Occur.SHOULD)
       }
+
+      val clauses = booleanQuery.clauses
+      if (clauses.size == 0) null
+      else if (clauses.size == 1) clauses.get(0).getQuery()
+      else booleanQuery
     }
 
     override def parseQuery(queryText: String) = {

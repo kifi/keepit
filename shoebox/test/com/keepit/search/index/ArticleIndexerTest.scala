@@ -3,6 +3,7 @@ package com.keepit.search.index
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
+import com.keepit.search.Lang
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.model.NormalizedURI
@@ -148,7 +149,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
     "limit the result by percentMatch" in {
       val indexer = ArticleIndexer(ramDir, store)
 
-      val parser = indexer.getQueryParser
+      val parser = indexer.getQueryParser(Lang("en"))
 
       var res = indexer.search("title1 alldocs")
       res.size === 3
