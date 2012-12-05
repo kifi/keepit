@@ -24,7 +24,7 @@ object HealthController extends Controller with Logging with SecureSocial {
   }
 
   def causeError() = Action { implicit request =>
-    0/0 // The realest fake error imaginable // Technically, this error is non-Real
+    0/0 // The realest fake error imaginable // Technically, this error is ∉ ℝ
     Ok("You cannot see this.")
   }
 }
