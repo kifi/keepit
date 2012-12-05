@@ -35,7 +35,7 @@ import org.joda.time.LocalDate
 import scala.collection.immutable.Map
 import play.api.libs.json.JsArray
 
-case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConnectionCount: Long)
+case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConnectionCount: Long, kifiInstallations: Seq[KifiInstallation])
 
 object UserController extends FortyTwoController {
 
@@ -111,29 +111,31 @@ object UserController extends FortyTwoController {
 
   def userStatistics(user: User)(implicit conn: Connection): UserStatistics = {
     val socialConnectionCount = SocialConnection.getUserConnectionsCount(user.id.get)
-    UserStatistics(user, UserWithSocial.toUserWithSocial(user), socialConnectionCount)
+    val kifiInstallations = KifiInstallation.all(user.id.get).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
+    UserStatistics(user, UserWithSocial.toUserWithSocial(user), socialConnectionCount, kifiInstallations)
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows, comments, messages) = CX.withConnection { implicit conn =>
+    val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows, kifiInstallations, comments, messages) = CX.withConnection { implicit conn =>
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
       val bookmarks = Bookmark.ofUser(userWithSocial.user)
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
       val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
       val follows = Follow.all(userId) map {f => NormalizedURI.get(f.uriId)}
+      val kifiInstallations = KifiInstallation.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       val comments = Comment.all(Comment.Permissions.PUBLIC, userId) map {c =>
         (NormalizedURI.get(c.uriId), c)
       }
       val messages = Comment.all(Comment.Permissions.MESSAGE, userId) map {c =>
         (NormalizedURI.get(c.uriId), c, CommentRecipient.getByComment(c.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) })
       }
-      (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows, comments, messages)
+      (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows, kifiInstallations, comments, messages)
     }
     val rawInfos = socialUserInfos map {info =>
       inject[SocialUserRawInfoStore].get(info.id.get)
     }
-    Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections, follows, comments, messages))
+    Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections, follows, kifiInstallations, comments, messages))
   }
 
   def usersView = AdminHtmlAction { implicit request =>

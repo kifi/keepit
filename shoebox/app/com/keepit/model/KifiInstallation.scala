@@ -60,7 +60,7 @@ object KifiVersion extends Logging {
     } catch {
       case _ =>
         log.warn("Invalid kifi version: %s".format(version))
-        KifiVersion()
+        throw new Exception("Invalid kifi version: %s".format(version))
     }
   }
 

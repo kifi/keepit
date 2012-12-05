@@ -11,6 +11,7 @@
       <th>Emails</th>
       <th>Connections</th>
       <th>Experiments</th>
+      <th>Version</th>
     </tr>
   @for((userStatistics, i) <- userStatisticsList.zipWithIndex) {
     <tr>
@@ -22,6 +23,7 @@
       <td><a href='mailto:@{userStatistics.userWithSocial.emails.map(_.address).mkString(",")}'>@{userStatistics.userWithSocial.emails.map(_.address).mkString(",")}</a></td>
       <td>@userStatistics.socialConnectionCount</td>
       <td>@userStatistics.userWithSocial.experiments.mkString(",")</td>
+      <td>@userStatistics.kifiInstallations.map(_.version).mkString(",")</td>     
     </tr>
   }
   </table>
