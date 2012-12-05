@@ -43,7 +43,16 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
     }
     error.map { e =>
       message ++= "<br/>Exception %s stack trace: \n<br/>".format(e.toString())
-      message ++= (e.getStackTrace() mkString "\n<br/>")
+      message ++= (e.getStackTrace() mkString "\n<br/> &nbsp; ")
+      causeDisplay(e)
+    }
+
+    def causeDisplay(e: Throwable): Unit = {
+      Option(e.getCause) map { cause =>
+        message ++= "<br/>from cause: %s\n<br/>".format(cause.toString)
+        message ++= (cause.getStackTrace() mkString "\n<br/> &nbsp; ")
+        causeDisplay(cause)
+      }
     }
     message.toString()
   }
@@ -73,7 +82,7 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice) extends Acto
   def receive() = {
     case ReportErrorsAction =>
       if (errors.nonEmpty) {
-        val message = Html(errors map {_.toHtml} mkString "\n<br/>")
+        val message = Html(errors map {_.toHtml} mkString "\n<br/><hr/>")
         val subject = "ERROR REPORT: %s errors on %s version %s compiled on %s".format(
             errors.size, FortyTwoServices.currentService, FortyTwoServices.currentVersion, FortyTwoServices.compilationTime)
         errors = Nil
@@ -98,14 +107,15 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice) extends Acto
   }
 }
 
-trait Healthcheck extends Plugin {
+trait HealthcheckPlugin extends Plugin {
   def errorCountFuture(): Future[Int]
+  def errorCount(): Int
   def addError(error: HealthcheckError): HealthcheckError
   def reportStart(): ElectronicMail
   def reportStop(): ElectronicMail
 }
 
-class HealthcheckImpl(system: ActorSystem, host: String, postOffice: PostOffice) extends Healthcheck {
+class HealthcheckPluginImpl(system: ActorSystem, host: String, postOffice: PostOffice) extends HealthcheckPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
@@ -116,7 +126,7 @@ class HealthcheckImpl(system: ActorSystem, host: String, postOffice: PostOffice)
   override def enabled: Boolean = true
   override def onStart(): Unit = {
     _cancellables = Seq(
-      system.scheduler.schedule(0 seconds, 1 minutes, actor, ReportErrorsAction),
+      system.scheduler.schedule(0 seconds, 10 minutes, actor, ReportErrorsAction),
       system.scheduler.schedule(12 hours, 12 hours, actor, Heartbeat)
     )
   }
@@ -125,6 +135,10 @@ class HealthcheckImpl(system: ActorSystem, host: String, postOffice: PostOffice)
   }
 
   def errorCountFuture(): Future[Int] = (actor ? ErrorCountSinceLastCheck).mapTo[Int]
+
+  def errorCount(): Int = Await.result(errorCountFuture(), 5 seconds)
+
+  def fakeError() = addError(HealthcheckError(None, None, None, Healthcheck.API, Some("Fake error")))
 
   def addError(error: HealthcheckError): HealthcheckError = {
     actor ! error

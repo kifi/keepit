@@ -3,6 +3,7 @@ package com.keepit.common.mail
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.CX
 import com.keepit.common.db.ExternalId
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.inject._
@@ -17,6 +18,7 @@ import com.google.inject.{Inject, Singleton}
 
 import play.api.libs.json._
 
+import play.api.Play
 import play.api.Play.current
 import play.api.http.ContentTypes
 
@@ -145,8 +147,12 @@ class SendgridMailProvider @Inject() () extends Logging {
     val fromName: String = mail.fromName.getOrElse(mail.from.address)
     message.setFrom(new InternetAddress(mail.from.address, fromName, "UTF-8"))
 
+    val recipientAddr = Play.isProd match {
+      case true => mail.to.address
+      case false => System.getProperty("user.name") + "@42go.com"
+    }
     message.setSubject(mail.subject)
-    message.addRecipient(Message.RecipientType.TO, new InternetAddress(mail.to.address))
+    message.addRecipient(Message.RecipientType.TO, new InternetAddress(recipientAddr))
     message
   }
 
@@ -159,7 +165,7 @@ class SendgridMailProvider @Inject() () extends Logging {
 
   private def mailError(mail: ElectronicMail, message: String, transport: Transport): ElectronicMail = {
     nullifyTransport(transport)
-    val error = inject[Healthcheck].addError(HealthcheckError(callType = Healthcheck.EMAIL,
+    val error = inject[HealthcheckPlugin].addError(HealthcheckError(callType = Healthcheck.EMAIL,
       errorMessage = Some("Can't send email from %s to %s: %s. Error message: %s".format(mail.from, mail.to, mail.subject, message))))
     log.error(error.errorMessage)
     CX.withConnection { implicit c =>

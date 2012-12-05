@@ -90,6 +90,8 @@ GET     /admin/searchConfig/:id     com.keepit.controllers.SearchConfigControlle
 POST    /admin/searchConfig/:id/set   com.keepit.controllers.SearchConfigController.setUserConfig(id: Id[User])
 GET     /admin/searchConfig/:id/reset com.keepit.controllers.SearchConfigController.resetUserConfig(id: Id[User])
 
+GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
+GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()
 
 ##########################################
 # Secure social routes
