@@ -739,6 +739,7 @@ if (!hasKeepitIdAndFacebookId()) {
       openFacebookConnect();
     } else {
       log("User logged in, loading bookmarks");
+      setConfigs("kifi_installation_id", data.installationId);
       var config = getConfigs();
       log(config);
       if (config.upload_on_start === true) {
