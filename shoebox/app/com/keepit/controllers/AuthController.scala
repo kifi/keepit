@@ -60,17 +60,13 @@ object AuthController extends FortyTwoController {
     log.info("facebook id %s".format(socialUser.id))
     val params = request.body.asFormUrlEncoded.get
     val (user, installation) = CX.withConnection { implicit c =>
-      val installation = params.get("installation") match {
+      val userAgent = UserAgent(params.get("agent").get.head)
+      val version = KifiVersion(params.get("version").get.head)
+      val installationId = params.get("installation").map {id => ExternalId[KifiInstallation](id.head)}
+      val installation = installationId.flatMap {id => KifiInstallation.get(request.userId, id)} match {
         case None =>
-          KifiInstallation(
-              userId = request.userId,
-              userAgent = UserAgent(params.get("agent").get.head),
-              version = KifiVersion(params.get("version").get.head))
-            .save
-        case Some(id) =>
-          var userAgent = UserAgent(params.get("agent").get.head)
-          val version = KifiVersion(params.get("version").get.head)
-          val installation = KifiInstallation.get(request.userId, ExternalId(id.head))
+          KifiInstallation(userId = request.userId, userAgent = userAgent, version = version).save
+        case Some(installation) =>
           if (installation.version != version || installation.userAgent != userAgent) {
             installation.withUserAgent(userAgent).withVersion(version).save
           } else {
