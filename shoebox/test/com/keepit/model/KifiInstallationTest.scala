@@ -40,7 +40,7 @@ class KifiInstallationTest extends SpecificationWithJUnit {
           val all = KifiInstallation.all(user.id.get)
           all.size === 1
           all.head === install
-          KifiInstallation.getOpt(user.id.get, install.externalId).get === install
+          KifiInstallation.get(user.id.get, install.externalId) === install
         }
       }
     }

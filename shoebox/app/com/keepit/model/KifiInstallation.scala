@@ -75,7 +75,8 @@ object KifiVersion extends Logging {
       stringBinder.unbind(key, kifiVersion.toString)
     }
   }
-  implicit def litteralInteger = new JavascriptLitteral[KifiVersion] {
+
+  implicit def litteral = new JavascriptLitteral[KifiVersion] {
     def to(value: KifiVersion) = value.toString
   }
 }
@@ -85,8 +86,8 @@ case class KifiInstallation (
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   userId: Id[User],
+  externalId: ExternalId[KifiInstallation] = ExternalId(),
   version: KifiVersion,
-  externalId: ExternalId[KifiInstallation],
   userAgent: UserAgent,
   state: State[KifiInstallation] = KifiInstallation.States.ACTIVE
 ) extends Logging {
@@ -97,8 +98,8 @@ case class KifiInstallation (
     entity.view
   }
 
-  def withNewVersion(version: KifiVersion) = copy(version = version)
-  def withUserAgent(agent: String) = copy(userAgent = UserAgent(agent))
+  def withVersion(version: KifiVersion) = copy(version = version)
+  def withUserAgent(userAgent: UserAgent) = copy(userAgent = userAgent)
 }
 
 object KifiInstallation {
@@ -107,13 +108,14 @@ object KifiInstallation {
     KifiInstallationEntity.all.map(_.view)
 
   def all(userId: Id[User])(implicit conn: Connection): Seq[KifiInstallation] =
-    (KifiInstallationEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId) list }.map(_.view)
+    (KifiInstallationEntity AS "i").map { i => SELECT (i.*) FROM i WHERE (i.userId EQ userId) list }.map(_.view)
 
   def get(id: Id[KifiInstallation])(implicit conn: Connection): KifiInstallation =
     KifiInstallationEntity.get(id).map(_.view).getOrElse(throw NotFoundException(id))
 
-  def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): Option[KifiInstallation] =
-    (KifiInstallationEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId AND (f.externalId EQ externalId)) unique }.map(_.view)
+  def get(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): KifiInstallation =
+    (KifiInstallationEntity AS "i").map { i => SELECT (i.*) FROM i WHERE (i.userId EQ userId).AND (i.externalId EQ externalId) unique }.map(_.view)
+      .getOrElse(throw NotFoundException(classOf[KifiInstallation], userId, externalId))
 
   object States {
     val ACTIVE = State[KifiInstallation]("active")
@@ -126,8 +128,8 @@ private[model] class KifiInstallationEntity extends Entity[KifiInstallation, Kif
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val userId = "user_id".ID[User].NOT_NULL
-  val version = "version".VARCHAR(16).NOT_NULL
   val externalId = "external_id".EXTERNAL_ID[KifiInstallation].NOT_NULL
+  val version = "version".VARCHAR(16).NOT_NULL
   val userAgent = "user_agent".VARCHAR(512).NOT_NULL //could be more, I think we can trunk it at that
   val state = "state".STATE[KifiInstallation].NOT_NULL(KifiInstallation.States.ACTIVE)
 
@@ -138,9 +140,9 @@ private[model] class KifiInstallationEntity extends Entity[KifiInstallation, Kif
     createdAt = createdAt(),
     updatedAt = updatedAt(),
     userId = userId(),
+    externalId = externalId(),
     version = KifiVersion(version()),
     userAgent = UserAgent(userAgent()),
-    externalId = externalId(),
     state = state()
   )
 }
@@ -154,8 +156,8 @@ private[model] object KifiInstallationEntity extends KifiInstallationEntity with
     uri.createdAt := view.createdAt
     uri.updatedAt := view.updatedAt
     uri.userId := view.userId
-    uri.version := view.version.toString
     uri.externalId := view.externalId
+    uri.version := view.version.toString
     uri.userAgent := view.userAgent.userAgent
     uri.state := view.state
     uri
