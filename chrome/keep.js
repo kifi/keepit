@@ -381,16 +381,7 @@ function initPage(request, sendResponse, tab) {
       var pageLocation = request.location;
 
       log("injecting hover: " + request, tab);
-      var userConf =  getConfigs();
-      var hoverTimeout = userConf["hover_timeout"];
-
-
-      if(typeof userConf.user === "undefined" || typeof userConf.user.keepit_external_id === "undefined" || typeof userConf.user.facebook_id === "undefined") {
-        // User does not have facebook configured.
-        log("User does not have facebook configured.");
-        openFacebookConnect();
-        return;
-      }
+      var hoverTimeout = getConfigs().hover_timeout;
 
       remoteIsAlreadyKept(pageLocation, function(isKept) {
         if(isKept) {
