@@ -63,7 +63,7 @@ object SearchController extends FortyTwoController {
 
     val version = kifiVersion.getOrElse(KifiVersion())
     val res = version match {
-      case v: KifiVersion if v >= KifiVersion(2,0,1) => realResults
+      case v: KifiVersion if v >= KifiVersion(2,0,2) => realResults
       case _ =>
         val upgradeResult = PersonalSearchResult(
           hit = PersonalSearchHit(id = Id[NormalizedURI](0), externalId = ExternalId[NormalizedURI](), title = Some("★★★ KiFi has updated! Please reload your plugin. ★★★"), url = "http://keepitfindit.com/upgrade"),
