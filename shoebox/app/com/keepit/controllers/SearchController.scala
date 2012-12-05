@@ -66,7 +66,7 @@ object SearchController extends FortyTwoController {
       case v: KifiVersion if v >= KifiVersion(2,0,1) => realResults
       case _ =>
         val upgradeResult = PersonalSearchResult(
-          hit = PersonalSearchHit(id = Id[NormalizedURI](0), externalId = ExternalId[NormalizedURI](), title = Some("★★★KiFi has updated! Please reload your plugin.★★★"), url = "http://keepitfindit.com/upgrade"),
+          hit = PersonalSearchHit(id = Id[NormalizedURI](0), externalId = ExternalId[NormalizedURI](), title = Some("★★★ KiFi has updated! Please reload your plugin. ★★★"), url = "http://keepitfindit.com/upgrade"),
           count = 0,
           isMyBookmark = false,
           isPrivate = false,
