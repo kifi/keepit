@@ -20,12 +20,11 @@ object HealthController extends Controller with Logging with SecureSocial {
   }
 
   def ping() = Action { implicit request =>
-
     Ok(inject[HealthcheckPlugin].errorCount.toString)
   }
 
-  def fakeError = Action { implicit request =>
-    0/0 // The realest fake error imaginable
-    Ok("")
+  def causeError() = Action { implicit request =>
+    0/0 // The realest fake error imaginable // Technically, this error is non-Real
+    Ok("You cannot see this.")
   }
 }
