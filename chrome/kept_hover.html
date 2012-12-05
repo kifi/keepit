@@ -1,26 +1,34 @@
 <div class="kifi_hover">
   <div class="roundedbox">
-    <div class="imageborder"><div class="circular profilepic" style="background:url({{profilepic}}) center no-repeat"></div></div>
-    <div class="kifihdr color_a">
-      {{name}}
-      <span class="kifi-header-actions">
-        <span class="xlink">&times;</span>
-      </span>
+    <div class="kifi_header dtr">
+      <div class="imageborder"><div class="circular profilepic" style="background:url({{profilepic}}) center no-repeat"></div></div>
+      <div class="kifihdr color_a">
+        {{name}}
+        <span class="kifi-header-actions">
+          <span class="xlink">&times;</span>
+        </span>
+      </div>
+    </div>
+    
+    <div class="dtr">
+      <ul class="interaction-bar">
+        <li class="comments-label"><span class="notify-count comments-count">0</span>Comments
+        <li class="messages-label"><span class="notify-count messages-count">0</span>Messages
+      </ul>
     </div>
 
-    <ul class="interaction-bar">
-      <li class="comments-label"><span class="notify-count comments-count">0</span>Comments
-      <li class="messages-label"><span class="notify-count messages-count">0</span>Messages
-    </ul>
-
-    <div class="kifi-content">
-      {{> main_hover}}
+    <div class="dtr">
+      <div class="kifi-content">
+        {{> main_hover}}
+      </div>
     </div>
 
-    <div class="kifi_comment_wrapper"></div>
+    <div class="kifi_comment_wrapper dtg"></div>
 
-    <div class="kififtr">
-      {{> footer}}
+    <div class="dtr">
+      <div class="kififtr">
+        {{> footer}}
+      </div>
     </div>
   </div>
 </div>

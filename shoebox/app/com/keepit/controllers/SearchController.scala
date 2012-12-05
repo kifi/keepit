@@ -39,9 +39,7 @@ case class PersonalSearchResultPacket(
 
 object SearchController extends FortyTwoController {
 
-  def search2(escapedTerm: String, maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = search(escapedTerm, maxHits, lastUUIDStr, context)
-
-  def search(escapedTerm: String, maxHits: Int, lastUUIDStr: Option[String], context: Option[String]) = AuthenticatedJsonAction { request =>
+  def search(escapedTerm: String, maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
     val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
     val lastUUID = lastUUIDStr.flatMap{
         case "" => None
@@ -61,7 +59,23 @@ object SearchController extends FortyTwoController {
     val uriGraph = inject[URIGraph]
     val searcher = new MainSearcher(userId, friendIds, filterOut, articleIndexer, uriGraph, config)
     val searchRes = searcher.search(term, maxHits, lastUUID)
-    val res = toPersonalSearchResultPacket(userId, searchRes)
+    val realResults = toPersonalSearchResultPacket(userId, searchRes)
+
+    val version = kifiVersion.getOrElse(KifiVersion())
+    val res = version match {
+      case v: KifiVersion if v >= KifiVersion(2,0,1) => realResults
+      case _ =>
+        val upgradeResult = PersonalSearchResult(
+          hit = PersonalSearchHit(id = Id[NormalizedURI](0), externalId = ExternalId[NormalizedURI](), title = Some("★★★ KiFi has updated! Please reload your plugin. ★★★"), url = "http://keepitfindit.com/upgrade"),
+          count = 0,
+          isMyBookmark = false,
+          isPrivate = false,
+          users = Nil,
+          score = 42f
+        )
+        realResults.copy(hits = Seq(upgradeResult) ++ realResults.hits)
+    }
+
     reportArticleSearchResult(searchRes)
     Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }

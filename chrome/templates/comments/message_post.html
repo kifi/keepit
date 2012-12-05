@@ -6,10 +6,10 @@
       <input type="text" id="to-list" placeholder="To">
       {{/hideComposeTo}}
       <div class="comment-compose" contenteditable="true"></div>
-    </div>
-    <div class="submit-bar">
-      <a href="javascript:" class="take-snapshot" style="background-image:url({{snapshotUri}})"></a>
-      <input type="submit" class="submit-comment" value="Comment">
+      <div class="submit-bar">
+        <a href="javascript:" class="take-snapshot" style="background-image:url({{snapshotUri}})"></a>
+        <input type="submit" class="submit-comment" value="{{#hideComposeTo}}Reply{{/hideComposeTo}}{{^hideComposeTo}}Send{{/hideComposeTo}}">
+      </div>
     </div>
   </div>
 </form>

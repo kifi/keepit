@@ -93,7 +93,7 @@ setTimeout(function() {
 }, 4000);
 
 function error(exception, message) {
-  debugger;
+  //debugger;
   var errMessage = exception.message;
   if(message) {
     errMessage = "[" + message + "] " + exception.message;
@@ -103,13 +103,13 @@ function error(exception, message) {
   }
   console.error(errMessage);
   console.error(exception.stack);
-  alert("exception: " + exception.message);
+  //alert("exception: " + exception.message);
 }
 
 log("background page kicking in!");
 
 function postBookmarks(bookmarksSupplier, bookmarkSource) {
-  log("posging bookmarks...");
+  log("posting bookmarks...");
   try {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
@@ -275,12 +275,12 @@ function postComment(request, sendResponse) {
   var parent = request.parent || "";
   var recipients = request.recipients || "";
 
-  xhr.open("POST", 'http://' + userConfigs.server + '/comments/add?&url=' + encodeURIComponent(request.url) + 
-    "&title=" + encodeURIComponent(request.title) + 
-    "&text=" + encodeURIComponent(request.text) + 
-    "&permissions=" + request.permissions + 
-    "&parent=" + parent + 
-    "&recipients=" + recipients, 
+  xhr.open("POST", 'http://' + userConfigs.server + '/comments/add?&url=' + encodeURIComponent(request.url) +
+    "&title=" + encodeURIComponent(request.title) +
+    "&text=" + encodeURIComponent(request.text) +
+    "&permissions=" + request.permissions +
+    "&parent=" + parent +
+    "&recipients=" + recipients,
     true);
   xhr.send();
 
@@ -331,10 +331,10 @@ function searchOnServer(request, sendResponse, tab) {
     }
   }
   var term = encodeURIComponent(request.query);
-  var externalId = userConfigs.user["keepit_external_id"];
+  var externalId = userConfigs.user.keepit_external_id;
   var lastUUID = typeof request.lastUUID === 'undefined' ? '' : request.lastUUID;
   var context = typeof request.context === 'undefined' ? '' : request.context;
-  xhr.open("GET", 'http://' + userConfigs.server + '/search?term=' + term + '&externalId=' + externalId + '&maxHits=' + userConfigs["max_res"]*2 + '&lastUUI=' + lastUUID + '&context=' + context, true);
+  xhr.open("GET", 'http://' + userConfigs.server + '/search?term=' + term + '&externalId=' + externalId + '&maxHits=' + userConfigs["max_res"]*2 + '&lastUUI=' + lastUUID + '&context=' + context + '&kifiVersion=' + getVersion(), true);
   xhr.send();
 }
 
@@ -381,16 +381,7 @@ function initPage(request, sendResponse, tab) {
       var pageLocation = request.location;
 
       log("injecting hover: " + request, tab);
-      var userConf =  getConfigs();
-      var hoverTimeout = userConf["hover_timeout"];
-
-
-      if(typeof userConf.user === "undefined" || typeof userConf.user.keepit_external_id === "undefined" || typeof userConf.user.facebook_id === "undefined") {
-        // User does not have facebook configured.
-        log("User does not have facebook configured.");
-        openFacebookConnect();
-        return;
-      }
+      var hoverTimeout = getConfigs().hover_timeout;
 
       remoteIsAlreadyKept(pageLocation, function(isKept) {
         if(isKept) {
@@ -496,7 +487,7 @@ function remoteIsAlreadyKept(location, callback) {
 
   $.get("http://" + getConfigs().server + "/bookmarks/check?externalId=" + userConfig.user["keepit_external_id"] + "&uri=" + encodeURIComponent(location), null,
     function(data) {
-      callback(data["user_has_bookmark"]) 
+      callback(data["user_has_bookmark"])
     },
     "json"
   ).error(function(error) {
@@ -561,7 +552,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, change) {
 function injectGoogleDiv(tab) {
   log("injecting google_inject.js into tab", tab)
   try {
-    safeExecuteScript(tab.id, {code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:google] tab: " + tab.id + "')"}, 
+    safeExecuteScript(tab.id, {code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:google] tab: " + tab.id + "')"},
       function(vars){
         log("[callback] executed logging", tab);
     });
@@ -600,68 +591,46 @@ function getConfigs() {
   try {
     var env = localStorage["env"];
     if (!env) {
-      env = "production";
-      localStorage["env"]=env;
-    }
-    var maxResStr = localStorage[getFullyQualifiedKey("max_res")];
-    if (!isNumber(maxResStr)) {
-      maxResStr = 5;
-    }
-    var maxRes = Number(maxResStr);
-
-    var showScore = localStorage[getFullyQualifiedKey("show_score")];
-    if (showScore === "yes" || showScore === true || showScore === "true") {
-      showScore = true;
-    } else {
-      showScore = false;
+      localStorage["env"] = env = "production";
     }
 
-    var uploadOnStart = localStorage[getFullyQualifiedKey("upload_on_start")];
-    if (uploadOnStart === "yes" || uploadOnStart === true || uploadOnStart === "true") {
-      uploadOnStart = true;
-    } else {
-      uploadOnStart = false;
-    }
-
-    var hoverTimeout = localStorage[getFullyQualifiedKey("hover_timeout")];
-    if (typeof hoverTimeout === 'undefined' || hoverTimeout === null) {
-      hoverTimeout = 10;
-    }
-    if (!isNumber(hoverTimeout)) {
-      throw Error("hover timeout is not a number: " + hoverTimeout);
-    }
-    hoverTimeout = Number(hoverTimeout);
-
-    var server = "keepitfindit.com";
-    if (env === "development") {
-      server = "dev.ezkeep.com:9000";
-    }
-    //debugger;
-    var userInfo = localStorage[getFullyQualifiedKey("user")];
-    var userInfoString;
-    if (userInfo) {
-      userInfoString = JSON.parse(userInfo);
-    }
     var config = {
-      "env": env, 
-      "hover_timeout": hoverTimeout, 
-      "show_score": showScore, 
-      "upload_on_start": uploadOnStart, 
-      "max_res": maxRes,
-      "server": server,
-      "user": userInfoString
-    }
+      "env": env,
+      "server": env == "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com",
+      "kifi_installation_id": localStorage[getFullyQualifiedKey("kifi_installation_id")],
+      "hover_timeout": parseNonNegIntOr(localStorage[getFullyQualifiedKey("hover_timeout")], 10),
+      "show_score": parseBoolOr(localStorage[getFullyQualifiedKey("show_score")], false),
+      "upload_on_start": parseBoolOr(localStorage[getFullyQualifiedKey("upload_on_start")], false),
+      "max_res": parseNonNegIntOr(localStorage[getFullyQualifiedKey("max_res")], 5),
+      "user": parseJsonObjOr(localStorage[getFullyQualifiedKey("user")])};
     //log("loaded config:");
     //log(config);
     return config;
   } catch (e) {
+    console.log("User config")
+    console.log(userInfo);
     error(e);
   }
 }
 
-function isNumber(n) {
-  return !isNaN(parseFloat(n)) && isFinite(n);
-}    
+function parseNonNegIntOr(val, defaultValue) {
+  var n = parseInt(val, 10);
+  return isNaN(n) ? defaultValue : Math.abs(n);
+}
+
+function parseBoolOr(val, defaultValue) {
+  return val === "yes" || val === true || val === "true" || defaultValue;
+}
+
+function parseJsonObjOr(val, defaultValue) {
+  if (/^{/.test(val)) {
+    try {
+      return JSON.parse(val);
+    } catch (e) {
+    }
+  }
+  return defaultValue;
+}
 
 function addNewKeep() {
   alert("did nothing!")
@@ -669,30 +638,27 @@ function addNewKeep() {
 
 function onInstall() {
   log("Extension Installed");
-} 
+}
 
 function onUpdate() {
   log("Extension Updated");
 }
 
 function getVersion() {
-  var details = chrome.app.getDetails();
-  return details.version;
+  return chrome.app.getDetails().version;
 }
 
-
-function startHandShake(callback){
+function startHandShake(callback) {
   log("starting handShake");
-  $.get("http://" + getConfigs().server + "/isLoggedIn", null,
-    function(data) {         
-      log("got success response "+data);
-      log(data)
-      callback(data) 
-    },
-    "json"
-  ).error(function(error) {
-    log(error.responseText);
-    callback(null);
+  $.post("http://" + getConfigs().server + "/kifi/start", {
+    installation: getConfigs().kifi_installation_id,
+    version: getVersion(),
+    // platform: navigator.platform,
+    // language: navigator.language,
+    agent: navigator.userAgent || navigator.appVersion || navigator.vendor
+  }).success(callback).error(function(xhr) {
+    log(xhr.responseText);
+    callback();
   });
 }
 
@@ -706,38 +672,34 @@ function hasKeepitIdAndFacebookId() {
 var currVersion = getVersion();
 var prevVersion = getConfigs().version;
 if (currVersion != prevVersion) { // Check if we just installed this extension.
-  if (typeof prevVersion == 'undefined') { //install
-    onInstall();      
-  } else { //update 
-    onUpdate()
+  if (typeof prevVersion == 'undefined' || prevVersion == '') { //install
+    onInstall();
+  } else { //update
+    onUpdate();
   }
   setConfigs('version', currVersion);
 }
+
 var popup = null;
 
 function openFacebookConnect() {
-
   chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-    if(changeInfo.status == "loading") {
+    if (changeInfo.status == "loading") {
       if (tabId === popup && tab.url === "http://" + getConfigs().server + "/#_=_") {
         popup = undefined;
-        startHandShake(function(data) {
-          if (data) {
-            log("got handshake data ");
-            log(data);
-            var userInfo = {};
-            userInfo.facebook_id = data.facebookId;
-            userInfo.keepit_external_id = data.externalId;
-            userInfo.avatar_url = data.avatarUrl;
-            userInfo.name = data.name;
-            log("updating userInfo ");
-            log(userInfo);
-            setConfigs("user", JSON.stringify(userInfo));
-            postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");//posting bookmarks
+        startHandShake(function(o) {
+          if (o) {
+            log("got handshake data: " + JSON.stringify(o));
+            setConfigs("user", JSON.stringify({
+              facebook_id: o.facebookId,
+              keepit_external_id: o.userId,
+              avatar_url: o.avatarUrl,
+              name: o.name}));
+            setConfigs("kifi_installation_id", o.installationId);
+            postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
             log("handshake done");
-          }
-          else{
-            log("handshake failes");
+          } else {
+            log("handshake failed");
           }
           chrome.tabs.remove(tabId);
         });
@@ -770,30 +732,25 @@ if (!hasKeepitIdAndFacebookId()) {
   log("find user info in local storage");
 
   startHandShake(function(data) {
-    if(data == null) {
+    if (data == null) {
       // Need to refresh Facebook info
       log("User does not appear to be logged in remote. Refreshing data...");
-      var userInfo = {};
-      setConfigs("user", JSON.stringify(userInfo));
+      setConfigs("user", "{}");
       openFacebookConnect();
-    }
-    else {
+    } else {
       log("User logged in, loading bookmarks");
-      var userConfigs = getConfigs();
-      log(userConfigs);
+      setConfigs("kifi_installation_id", data.installationId);
       var config = getConfigs();
-      if(config["upload_on_start"] === true) {
+      log(config);
+      if (config.upload_on_start === true) {
         log("loading bookmarks to the server");
         postBookmarks(chrome.bookmarks.getTree, "PLUGIN_START");//posting bookmarks even when keepit id is found
       } else {
         log("NOT loading bookmarks to the server");
       }
       getBookMarks();
-
-      
     }
   });
-
 }
 
 logEvent("Plugin started!");

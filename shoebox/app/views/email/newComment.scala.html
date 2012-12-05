@@ -1,34 +1,30 @@
 @(sender: User, recipient: User, uri: NormalizedURI, comment: Comment)
 
 <div style="color:#333;font:13px 'Helvetica Neue',Helvetica,Arial,sans-serif">
-Hi @Html(recipient.firstName),
+Hi @recipient.firstName,
 
 <p>
-@Html(sender.firstName) @Html(sender.lastName) commented on a page you&rsquo;re following:
+@sender.firstName @sender.lastName left a new comment at:
 </p>
 
-<p><a href="@uri.url">@Html(comment.pageTitle)</a></p>
-
-<p style="margin:0;padding:6px 20px;background-color:#eee;color:#333;font-size:11px">
-@Html(sender.firstName) wrote:
-</p>
-
-<p style="margin:0;padding:10px 20px;border:1px solid #ddd;border-top:none">
-<i style="font-size:24px;line-height:0;vertical-align:-3px;color:#888">&#8220;</i>
-<span style="font-size:130%;color:#333">@Html(comment.text)</span><i style="font-size:24px;line-height:0;vertical-align:-3px;color:#888">&#8221;</i>
-</p>
-
-<a href="@uri.url" style="display:inline-block;margin-top:16px;background:#777;color:#fff;padding:5px 10px;text-decoration:none;font:12px LucidaGrande,tahoma,verdana,arial,sans-serif;border-radius:4px">
-Visit the page
-</a>
+<p><a href="@uri.url">@comment.pageTitle</a></p>
 
 <p>
-To see the message in context, <a href="@uri.url">visit the page</a> using a browser
-that has the Kifi plugin installed.
+@sender.firstName wrote: "@comment.text"
 </p>
 
 <p>
-Thanks,<br>
-The Kifi Team
+	<a href="@uri.url" style="display:inline-block;margin-top:16px;background:#777;color:#fff;padding:5px 10px;text-decoration:none;font:12px LucidaGrande,tahoma,verdana,arial,sans-serif;border-radius:4px">
+  	See Comment
+	</a>
 </p>
+
+<p>
+  <font style="font-size: 10px">If you want to stop being notified about comments on this page, visit the page and click the "Following" button on KiFi.</font>
+</p>
+
+<p>
+  <font style="font-size: 10px">This is an automated notification. Please do not reply to this email. Kindly carry on the conversation via KiFi.</font>
+</p>
+
 </div>

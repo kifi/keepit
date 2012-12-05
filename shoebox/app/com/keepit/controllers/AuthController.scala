@@ -14,7 +14,6 @@ package com.keepit.controllers
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 import play.api.mvc.{Action, Controller}
@@ -27,21 +26,16 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
-import play.api.libs.json._
 import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.db.{CX, ExternalId}
 import com.keepit.common.logging.Logging
-import com.keepit.model.SocialUserInfo
-import com.keepit.model.User
-import com.keepit.common.db.CX
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworks
+import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.logging.Logging
+import com.keepit.model.{KifiInstallation, KifiVersion, SocialUserInfo, User, UserAgent}
 
-/**
- * The Login page controller
- */
 object AuthController extends FortyTwoController {
-  def isLoggedIn = AuthenticatedHtmlAction { implicit request => {
+  // TODO: remove when all beta users are on 2.0.2+
+  def isLoggedIn = AuthenticatedJsonAction { implicit request =>
 	  UserService.find(request.socialUser.id) match {
 	    case None =>
 		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)).withNewSession
@@ -51,19 +45,50 @@ object AuthController extends FortyTwoController {
   	    	val userId = SocialUserInfo.get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).userId.get
   	    	User.get(userId)
   	  	}
-  			Ok(JsObject(
-  			  ("status" -> JsString("loggedin")) ::
-  			  ("avatarUrl" -> JsString(socialUser.avatarUrl.get)) ::
-  			  ("name" -> JsString(socialUser.displayName)) ::
-  			  ("facebookId" -> JsString(socialUser.id.id)) ::
-  			  ("provider" -> JsString(socialUser.id.providerId)) ::
-  			  ("externalId" -> JsString(user.externalId.id)) ::
-  			  Nil)
-        )
-	    }
-	  }
+        Ok(JsObject(Seq(
+          "status" -> JsString("loggedin"),
+          "avatarUrl" -> JsString(socialUser.avatarUrl.get),
+          "name" -> JsString(socialUser.displayName),
+          "facebookId" -> JsString(socialUser.id.id),
+          "provider" -> JsString(socialUser.id.providerId),
+          "externalId" -> JsString(user.externalId.id))))
+    }
   }
 
+  def start = AuthenticatedJsonAction { implicit request =>
+    val socialUser = request.socialUser
+    log.info("facebook id %s".format(socialUser.id))
+    val params = request.body.asFormUrlEncoded.get
+    val (user, installation) = CX.withConnection { implicit c =>
+      val userAgent = UserAgent(params.get("agent").get.head)
+      val version = KifiVersion(params.get("version").get.head)
+      val installationOpt: Option[String] = params.get("installation").map(s=>s.headOption.getOrElse(""))
+      val installation: KifiInstallation = installationOpt flatMap { id =>
+        KifiInstallation.getOpt(request.userId, ExternalId[KifiInstallation](id))
+      } match {
+        case None =>
+          KifiInstallation(userId = request.userId, userAgent = userAgent, version = version).save
+        case Some(install) =>
+          if (install.version != version || install.userAgent != userAgent) {
+            install.withUserAgent(userAgent).withVersion(version).save
+          } else {
+            install
+          }
+      }
+
+      (User.get(request.userId), installation)
+    }
+
+    Ok(JsObject(Seq(
+      "avatarUrl" -> JsString(socialUser.avatarUrl.get),
+      "name" -> JsString(socialUser.displayName),
+      "facebookId" -> JsString(socialUser.id.id),
+      "provider" -> JsString(socialUser.id.providerId),
+      "userId" -> JsString(user.externalId.id),
+      "installationId" -> JsString(installation.externalId.id))))
+  }
+
+  // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)
   def welcome = SecuredAction() { implicit request =>
     log.debug("in welcome. with user : [ %s ]".format(request.user ))
     Redirect(com.keepit.controllers.routes.HomeController.home())
