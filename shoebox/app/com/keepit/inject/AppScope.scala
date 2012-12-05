@@ -27,18 +27,22 @@ class AppScope extends Scope with Logging {
 
   def onStop(app: Application): Unit = synchronized {
     println("scope stopping...")
-    require(started, "AppScope has not been started")
-    require(!stopped, "AppScope has already been stopped")
-    // stop plugins, explicitly using the app classloader
-    Threads.withContextClassLoader(app.classloader) {
-      for (plugin <- plugins) {
-        log.info("stopping plugin: " + plugin)
-        plugin.onStop()
-      }
+    if(!started) {
+      log.error("AppScore has not been started")
     }
-    log.info("scope stopped")
-    plugins = Nil
-    stopped = true
+    else {
+      require(!stopped, "AppScope has already been stopped")
+      // stop plugins, explicitly using the app classloader
+      Threads.withContextClassLoader(app.classloader) {
+        for (plugin <- plugins) {
+          log.info("stopping plugin: " + plugin)
+          plugin.onStop()
+        }
+      }
+      log.info("scope stopped")
+      plugins = Nil
+      stopped = true
+    }
   }
 
   def scope[T](key: Key[T], unscoped: Provider[T]): Provider[T] = {
