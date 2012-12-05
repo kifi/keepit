@@ -1,6 +1,6 @@
 @(userWithSocial: UserWithSocial, bookmarks: Seq[Bookmark], socialUserInfos: Seq[SocialUserInfo], 
   rawInfos: Seq[SocialUserRawInfo], socialConnections: Seq[SocialUserInfo], fortyTwoConnections: Seq[UserWithSocial], 
-  follows: Seq[NormalizedURI], comments: Seq[(NormalizedURI, Comment)], messages: Seq[(NormalizedURI, Comment, Seq[UserWithSocial])])
+  follows: Seq[NormalizedURI], kifiInstallations: Seq[KifiInstallation], comments: Seq[(NormalizedURI, Comment)], messages: Seq[(NormalizedURI, Comment, Seq[UserWithSocial])])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
