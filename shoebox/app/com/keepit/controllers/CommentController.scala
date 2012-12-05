@@ -217,7 +217,7 @@ object CommentController extends FortyTwoController {
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
-                  from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
+                  from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
                   to = addr,
                   subject = "%s %s commented on a page you are following".format(author.firstName, author.lastName),
                   htmlBody = replaceLookHereLinks(views.html.email.newComment(author, recipient, uri, comment).body),
@@ -235,7 +235,7 @@ object CommentController extends FortyTwoController {
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
-                  from = EmailAddresses.SUPPORT, fromName = Some("%s %s via Kifi".format(sender.firstName, sender.lastName)),
+                  from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(sender.firstName, sender.lastName)),
                   to = addr,
                   subject = "%s %s sent you a message using KiFi".format(sender.firstName, sender.lastName),
                   htmlBody = replaceLookHereLinks(views.html.email.newMessage(sender, recipient, uri, comment).body),
