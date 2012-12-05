@@ -70,9 +70,9 @@ object AuthController extends FortyTwoController {
           KifiInstallation(userId = request.userId, userAgent = userAgent, version = version).save
         case Some(install) =>
           if (install.version != version || install.userAgent != userAgent) {
-            installation.withUserAgent(userAgent).withVersion(version).save
+            install.withUserAgent(userAgent).withVersion(version).save
           } else {
-            installation
+            install
           }
       }
 
