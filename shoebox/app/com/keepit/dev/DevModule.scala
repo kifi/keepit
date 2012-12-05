@@ -1,43 +1,45 @@
 package com.keepit.dev
 
-import com.tzavellas.sse.guice.ScalaModule
+import java.io.File
+import scala.collection.mutable.HashMap
+import org.apache.lucene.store.Directory
+import org.apache.lucene.store.MMapDirectory
+import org.apache.lucene.store.RAMDirectory
+import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.services.s3._
 import com.google.inject.Provides
-import com.google.inject.Provider
-import akka.actor.ActorSystem
-import akka.actor.Props
-import com.keepit.model.{NormalizedURI, SocialUserInfo}
-import com.keepit.search.Article
+import com.google.inject.Singleton
+import com.keepit.common.actor.ActorPlugin
+import com.keepit.common.db.ExternalId
+import com.keepit.common.db.Id
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckPluginImpl
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail.MailSenderPlugin
+import com.keepit.common.mail.MailSenderPluginImpl
+import com.keepit.common.mail.PostOfficeImpl
+import com.keepit.common.net.HttpClient
+import com.keepit.common.net.HttpClientImpl
+import com.keepit.common.social._
+import com.keepit.common.store.S3Bucket
+import com.keepit.inject._
+import com.keepit.model.NormalizedURI
+import com.keepit.model.SocialUserInfo
+import com.keepit.scraper._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.graph.URIGraphPluginImpl
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexerPluginImpl
-import com.keepit.common.actor.ActorPlugin
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.healthcheck.HealthcheckImpl
-import com.keepit.common.mail.PostOffice
-import com.keepit.common.mail.PostOfficeImpl
-import com.keepit.common.net.HttpClient
-import com.keepit.common.net.HttpClientImpl
-import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.inject._
-import com.keepit.scraper._
-import com.keepit.common.logging.Logging
-import com.keepit.search.ArticleStore
-import scala.collection.mutable.HashMap
 import com.keepit.search._
-import com.amazonaws.services.s3._
-import com.amazonaws.auth.BasicAWSCredentials
+import com.keepit.search.Article
+import com.keepit.search.ArticleStore
+import com.tzavellas.sse.guice.ScalaModule
+import akka.actor.ActorSystem
 import play.api.Play.current
-import com.google.inject.Singleton
-import org.apache.lucene.store.Directory
-import org.apache.lucene.store.RAMDirectory
-import org.apache.lucene.store.MMapDirectory
-import java.io.File
-import com.keepit.common.store.S3Bucket
-import com.keepit.common.social._
-import com.keepit.common.mail.{MailSenderPlugin, MailSenderPluginImpl}
+import com.keepit.common.mail.PostOffice
+import java.net.InetAddress
 
 case class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -127,4 +129,11 @@ case class DevModule() extends ScalaModule with Logging {
   @Provides
   @AppScoped
   def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-dev-actor-system")
+
+  @Provides
+  @AppScoped
+  def healthcheckProvider(system: ActorSystem, postOffice: PostOffice): HealthcheckPlugin = {
+    val host = InetAddress.getLocalHost().getCanonicalHostName()
+    new HealthcheckPluginImpl(system, host, postOffice)
+  }
 }

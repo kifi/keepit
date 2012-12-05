@@ -14,6 +14,7 @@ import com.google.inject.Injector
 import com.google.inject.Stage
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.mail.MailSenderPlugin
+import com.keepit.common.healthcheck._
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
 
@@ -29,6 +30,7 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
     require(inject[SocialGraphPlugin].enabled)
     require(inject[MailSenderPlugin].enabled)
     inject[MailSenderPlugin].processOutbox()
+    require(inject[HealthcheckPlugin].enabled)
     log.info("shoebox started")
   }
 
