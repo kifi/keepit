@@ -70,7 +70,7 @@ object AuthController extends FortyTwoController {
         case Some(id) =>
           var userAgent = UserAgent(params.get("agent").get.head)
           val version = KifiVersion(params.get("version").get.head)
-          val installation = KifiInstallation.get(request.userId, ExternalId(id.head))
+          val installation = KifiInstallation.getOpt(request.userId, ExternalId(id.head)).getOrElse(KifiInstallation(userId = request.userId, version = version, userAgent = userAgent))
           if (installation.version != version || installation.userAgent != userAgent) {
             installation.withUserAgent(userAgent).withVersion(version).save
           } else {
