@@ -63,7 +63,7 @@ object AuthController extends FortyTwoController {
       val userAgent = UserAgent(params.get("agent").get.head)
       val version = KifiVersion(params.get("version").get.head)
       val installationId = params.get("installation").map {id => ExternalId[KifiInstallation](id.head)}
-      val installation = installationId.flatMap {id => KifiInstallation.get(request.userId, id)} match {
+      val installation = installationId.flatMap {id => KifiInstallation.getOpt(request.userId, id)} match {
         case None =>
           KifiInstallation(userId = request.userId, userAgent = userAgent, version = version).save
         case Some(installation) =>

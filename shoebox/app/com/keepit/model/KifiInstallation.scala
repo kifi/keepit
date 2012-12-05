@@ -116,9 +116,11 @@ object KifiInstallation {
   def get(id: Id[KifiInstallation])(implicit conn: Connection): KifiInstallation =
     getOpt(id).getOrElse(throw NotFoundException(id))
 
-  def get(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): KifiInstallation =
+  def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): Option[KifiInstallation] =
     (KifiInstallationEntity AS "i").map { i => SELECT (i.*) FROM i WHERE (i.userId EQ userId).AND (i.externalId EQ externalId) unique }.map(_.view)
-      .getOrElse(throw NotFoundException(classOf[KifiInstallation], userId, externalId))
+
+  def get(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): KifiInstallation =
+    getOpt(userId, externalId).getOrElse(throw NotFoundException(classOf[KifiInstallation], userId, externalId))
 
   object States {
     val ACTIVE = State[KifiInstallation]("active")
