@@ -60,7 +60,7 @@ object KifiVersion extends Logging {
     } catch {
       case _ =>
         log.warn("Invalid kifi version: %s".format(version))
-        KifiVersion()
+        throw new Exception("Invalid kifi version: %s".format(version))
     }
   }
 
@@ -110,11 +110,17 @@ object KifiInstallation {
   def all(userId: Id[User])(implicit conn: Connection): Seq[KifiInstallation] =
     (KifiInstallationEntity AS "i").map { i => SELECT (i.*) FROM i WHERE (i.userId EQ userId) list }.map(_.view)
 
-  def get(id: Id[KifiInstallation])(implicit conn: Connection): KifiInstallation =
-    KifiInstallationEntity.get(id).map(_.view).getOrElse(throw NotFoundException(id))
+  def getOpt(id: Id[KifiInstallation])(implicit conn: Connection): Option[KifiInstallation] =
+    KifiInstallationEntity.get(id).map(_.view)
 
-  def get(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): Option[KifiInstallation] =
+  def get(id: Id[KifiInstallation])(implicit conn: Connection): KifiInstallation =
+    getOpt(id).getOrElse(throw NotFoundException(id))
+
+  def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): Option[KifiInstallation] =
     (KifiInstallationEntity AS "i").map { i => SELECT (i.*) FROM i WHERE (i.userId EQ userId).AND (i.externalId EQ externalId) unique }.map(_.view)
+
+  def get(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): KifiInstallation =
+    getOpt(userId, externalId).getOrElse(throw NotFoundException(classOf[KifiInstallation], userId, externalId))
 
   object States {
     val ACTIVE = State[KifiInstallation]("active")
