@@ -109,7 +109,7 @@ function error(exception, message) {
 log("background page kicking in!");
 
 function postBookmarks(bookmarksSupplier, bookmarkSource) {
-  log("posging bookmarks...");
+  log("posting bookmarks...");
   try {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
@@ -331,10 +331,10 @@ function searchOnServer(request, sendResponse, tab) {
     }
   }
   var term = encodeURIComponent(request.query);
-  var externalId = userConfigs.user["keepit_external_id"];
+  var externalId = userConfigs.user.keepit_external_id;
   var lastUUID = typeof request.lastUUID === 'undefined' ? '' : request.lastUUID;
   var context = typeof request.context === 'undefined' ? '' : request.context;
-  xhr.open("GET", 'http://' + userConfigs.server + '/search?term=' + term + '&externalId=' + externalId + '&maxHits=' + userConfigs["max_res"]*2 + '&lastUUI=' + lastUUID + '&context=' + context, true);
+  xhr.open("GET", 'http://' + userConfigs.server + '/search?term=' + term + '&externalId=' + externalId + '&maxHits=' + userConfigs["max_res"]*2 + '&lastUUI=' + lastUUID + '&context=' + context + '&kifiVersion=' + getVersion(), true);
   xhr.send();
 }
 
@@ -634,7 +634,7 @@ function parseBoolOr(val, defaultValue) {
 function parseJsonObjOr(val, defaultValue) {
   if (/^{/.test(val)) {
     try {
-      return parseJSON(val);
+      return JSON.parse(val);
     } catch (e) {
     }
   }
@@ -654,23 +654,20 @@ function onUpdate() {
 }
 
 function getVersion() {
-  var details = chrome.app.getDetails();
-  return details.version;
+  return chrome.app.getDetails().version;
 }
 
-
-function startHandShake(callback){
+function startHandShake(callback) {
   log("starting handShake");
-  $.get("http://" + getConfigs().server + "/isLoggedIn", null,
-    function(data) {
-      log("got success response "+data);
-      log(data)
-      callback(data)
-    },
-    "json"
-  ).error(function(error) {
-    log(error.responseText);
-    callback(null);
+  $.post("http://" + getConfigs().server + "/kifi/start", {
+    installation: getConfigs().kifi_installation_id,
+    version: getVersion(),
+    // platform: navigator.platform,
+    // language: navigator.language,
+    agent: navigator.userAgent || navigator.appVersion || navigator.vendor
+  }).success(callback).error(function(xhr) {
+    log(xhr.responseText);
+    callback();
   });
 }
 
@@ -699,15 +696,20 @@ function openFacebookConnect() {
     if (changeInfo.status == "loading") {
       if (tabId === popup && tab.url === "http://" + getConfigs().server + "/#_=_") {
         popup = undefined;
-        startHandShake(function(data) {
-          log("got handshake data: " + JSON.stringify(data));
-          setConfigs("user", JSON.stringify({
-            facebook_id: data.facebookId,
-            keepit_external_id: data.externalId,
-            avatar_url: data.avatarUrl,
-            name: data.name}));
-          postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
-          log("handshake done");
+        startHandShake(function(o) {
+          if (o) {
+            log("got handshake data: " + JSON.stringify(o));
+            setConfigs("user", JSON.stringify({
+              facebook_id: o.facebookId,
+              keepit_external_id: o.userId,
+              avatar_url: o.avatarUrl,
+              name: o.name}));
+            setConfigs("kifi_installation_id", o.installationId);
+            postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
+            log("handshake done");
+          } else {
+            log("handshake failed");
+          }
           chrome.tabs.remove(tabId);
         });
       }
@@ -739,19 +741,16 @@ if (!hasKeepitIdAndFacebookId()) {
   log("find user info in local storage");
 
   startHandShake(function(data) {
-    if(data == null) {
+    if (data == null) {
       // Need to refresh Facebook info
       log("User does not appear to be logged in remote. Refreshing data...");
-      var userInfo = {};
-      setConfigs("user", JSON.stringify(userInfo));
+      setConfigs("user", "{}");
       openFacebookConnect();
-    }
-    else {
+    } else {
       log("User logged in, loading bookmarks");
-      var userConfigs = getConfigs();
-      log(userConfigs);
       var config = getConfigs();
-      if(config["upload_on_start"] === true) {
+      log(config);
+      if (config.upload_on_start === true) {
         log("loading bookmarks to the server");
         postBookmarks(chrome.bookmarks.getTree, "PLUGIN_START");//posting bookmarks even when keepit id is found
       } else {
