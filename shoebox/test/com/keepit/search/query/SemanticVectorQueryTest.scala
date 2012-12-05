@@ -29,6 +29,7 @@ import org.apache.lucene.util.Version
 import com.keepit.common.db.Id
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.Indexable
+import com.keepit.search.Lang
 import com.keepit.search.SemanticVector
 import com.keepit.search.SemanticVectorBuilder
 import java.io.StringReader
@@ -43,7 +44,7 @@ class SemanticVectorQueryTest extends SpecificationWithJUnit {
 
   class Tst { }
 
-  class TstIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, parsingAnalyzer: Analyzer)
+  class TstIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig)
     extends Indexer[Tst](indexDirectory, indexWriterConfig) {
 
     class TstIndexable[Tst](override val id: Id[Tst], val text: String) extends Indexable[Tst] {
@@ -60,7 +61,7 @@ class SemanticVectorQueryTest extends SpecificationWithJUnit {
       }
     }
 
-    def getQueryParser: QueryParser = throw new UnsupportedOperationException
+    def getQueryParser(lang: Lang): QueryParser = throw new UnsupportedOperationException
 
     def index(id: Id[Tst], text: String) = {
       indexDocuments(Some(new TstIndexable(id, text)).iterator, 100){ docs => }
@@ -73,7 +74,7 @@ class SemanticVectorQueryTest extends SpecificationWithJUnit {
   val config = new IndexWriterConfig(Version.LUCENE_36, indexingAnalyzer)
 
   val ramDir = new RAMDirectory
-  val indexer = new TstIndexer(ramDir, config, DefaultAnalyzer.forParsing)
+  val indexer = new TstIndexer(ramDir, config)
   Array("abc", "abc def", "abc def ghi", "def ghi").zipWithIndex.map{ case (text, id) => indexer.index(Id[Tst](id), text) }
 
   "SemanticVectorQuery" should {

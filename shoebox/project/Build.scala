@@ -48,6 +48,7 @@ object ApplicationBuild extends Build {
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
       "org.apache.lucene" % "lucene-core" % "3.6.1",
+      "org.apache.lucene" % "lucene-analyzers" % "3.6.1",
       "org.apache.httpcomponents" % "httpclient" % "4.2.1",
       "org.apache.tika" % "tika-parsers" % "1.2",
       //used for securesocial

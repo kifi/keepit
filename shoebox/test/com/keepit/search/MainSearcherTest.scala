@@ -25,6 +25,8 @@ import scala.util.Random
 @RunWith(classOf[JUnitRunner])
 class MainSearcherTest extends SpecificationWithJUnit {
 
+  implicit val lang = "en"
+
   def initData(numUsers: Int, numUris: Int) = CX.withConnection { implicit c =>
     ((0 until numUsers).map(n => User(firstName = "foo" + n, lastName = "").save).toList,
      (0 until numUris).map(n => NormalizedURI(title = "a" + n, url = "http://www.keepit.com/article" + n, state=SCRAPED).save).toList)
@@ -87,7 +89,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
             val friendIds = friends.map(_.id.get).toSet - userId
             val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val (myHits, friendsHits, othersHits) = mainSearcher.searchText("alldocs", numHitsPerCategory)
+            val (myHits, friendsHits, othersHits) = mainSearcher.searchText("alldocs", numHitsPerCategory)(Lang("en"))
 
             //println("----")
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet.map(_.id)

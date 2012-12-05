@@ -42,15 +42,15 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
   val friendlyUris = friendIds.foldLeft(myUris){ (s, f) => s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet }
 
-  def searchBookmarkTitle(queryString: String) = {
-    val bookmarkTitleSearchParser = uriGraph.getQueryParser
+  def searchBookmarkTitle(queryString: String)(implicit lang: Lang) = {
+    val bookmarkTitleSearchParser = uriGraph.getQueryParser(lang)
     bookmarkTitleSearchParser.setPercentMatch(percentMatch)
     bookmarkTitleSearchParser.parseQuery(queryString).map{ bookmarkQuery =>
       uriGraphSearcher.search(userId, bookmarkQuery, percentMatch)
     }.getOrElse(Map.empty[Long, Float])
   }
 
-  def searchText(queryString: String, maxTextHitsPerCategory: Int) = {
+  def searchText(queryString: String, maxTextHitsPerCategory: Int)(implicit lang: Lang) = {
     var bookmarkTitleHits = searchBookmarkTitle(queryString)
 
     val mapper = articleSearcher.idMapper
@@ -58,7 +58,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
-    val articleParser = articleIndexer.getQueryParser(proximityBoost, semanticBoost)
+    val articleParser = articleIndexer.getQueryParser(lang, proximityBoost, semanticBoost)
     articleParser.setPercentMatch(percentMatch)
     articleParser.parseQuery(queryString).map{ articleQuery =>
       articleSearcher.doSearch(articleQuery){ scorer =>
@@ -91,6 +91,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   }
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]]): ArticleSearchResult = {
+    implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
     val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5)
 

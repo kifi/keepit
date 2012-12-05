@@ -2,6 +2,7 @@ package com.keepit.search.index
 
 import com.keepit.common.db.Id
 import com.keepit.search.SemanticVectorBuilder
+import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
@@ -11,6 +12,7 @@ import org.apache.lucene.document.Field
 import org.apache.lucene.index.Payload
 import org.apache.lucene.index.Term
 import java.io.IOException
+import java.io.StringReader
 
 trait Indexable[T] {
 
@@ -26,6 +28,10 @@ trait Indexable[T] {
 
   protected def buildTextField(fieldName: String, fieldValue: String) = {
     new Field(fieldName, fieldValue, Field.Store.NO, Field.Index.ANALYZED, Field.TermVector.NO)
+  }
+
+  protected def buildTextField(fieldName: String, fieldValue: String, analyzer: Analyzer) = {
+    new Field(fieldName, analyzer.tokenStream(fieldName, new StringReader(fieldValue)))
   }
 
   def buildIdPayloadField(typedId: Id[T]) = {
