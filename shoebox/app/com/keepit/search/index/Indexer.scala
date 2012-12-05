@@ -3,6 +3,7 @@ package com.keepit.search.index
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.search.Lang
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.CorruptIndexException
@@ -120,8 +121,8 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     Map() ++ mutableMap
   }
 
-  def getQueryParser: QueryParser
-  def parseQuery(queryText: String) = getQueryParser.parseQuery(queryText)
+  def getQueryParser(lang: Lang): QueryParser
+  def parseQuery(queryText: String, lang: Lang = Lang("en")) = getQueryParser(lang).parseQuery(queryText)
 
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
 
