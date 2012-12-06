@@ -20,14 +20,9 @@ object LangDetector extends Logging {
     path = path.substring(0, path.indexOf("!"))
     log.debug("loading language detection profiles from %s".format(path))
     val jarFile = new JarFile(path)
-    val profiles = jarFile.entries.filter{ _.getName.startsWith("profiles/") }.flatMap{ entry =>
-      try {
-        val reader = new InputStreamReader(jarFile.getInputStream(entry), "UTF-8")
-        val jsonText = readerToString(reader)
-        Some(jsonText)
-      } catch {
-        case _ => None
-      }
+    val profiles = jarFile.entries.filter{ _.getName.startsWith("profiles/") }.map{ entry =>
+      val reader = new InputStreamReader(jarFile.getInputStream(entry), "UTF-8")
+      readerToString(reader) // this should never fail. if fails, lang-detect won't work correctly. let it throw exception.
     }.toList
     DetectorFactory.loadProfile(profiles)
     log.debug("completed profile loading")
