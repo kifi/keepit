@@ -33,6 +33,7 @@ import java.io.File
 import com.keepit.common.mail.{MailSenderPlugin, MailSenderPluginImpl}
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.HealthcheckPluginImpl
+import akka.actor.Scheduler
 
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -117,4 +118,5 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     val host = InetAddress.getLocalHost().getCanonicalHostName()
     new HealthcheckPluginImpl(system, host, postOffice)
   }
+
 }

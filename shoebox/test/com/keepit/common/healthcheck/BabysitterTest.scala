@@ -22,7 +22,7 @@ class BabysitterTest extends SpecificationWithJUnit {
 
   "Babysitter" should {
     "do nothing if code executes quickly" in {
-      running(new EmptyApplication().withFakeHealthcheck().withFakeTime().withRealBabysitter()) {
+      running(new EmptyApplication().withFakeHealthcheck().withFakeTime().withRealBabysitter().withFakeScheduler()) {
 
         inject[Babysitter].watch(Duration(1, "seconds"), Duration(1, "seconds")) {
           // So fast!
@@ -35,11 +35,9 @@ class BabysitterTest extends SpecificationWithJUnit {
         inject[FakeClock].push(now)
         inject[FakeClock].push(now.minusSeconds(5))
 
-        inject[Babysitter].watch(Duration(0, "seconds"), Duration(0, "seconds")) {
+        inject[Babysitter].watch(Duration(1, "seconds"), Duration(1, "seconds")) {
           // So slow!
         }
-
-        // TODO: Use Akka TestKit to verify that Healthcheck has an error.
 
         1===1
       }
