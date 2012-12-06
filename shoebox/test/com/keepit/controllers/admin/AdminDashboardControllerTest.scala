@@ -71,7 +71,7 @@ class AdminDashboardControllerTest extends SpecificationWithJUnit {
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         charset(result) must beSome("utf-8")
-        Json.parse(contentAsString(result)) === Json.parse("{\"day0\":\"2012-05-28\",\"userCounts\":[1,0,2,0]}")
+        Json.parse(contentAsString(result)) === Json.parse("{\"day0\":\"2012-05-28\",\"counts\":[1,0,2,0]}")
       }
     }
   }
