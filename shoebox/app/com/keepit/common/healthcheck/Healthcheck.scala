@@ -70,6 +70,7 @@ object Healthcheck {
 
 case object ReportErrorsAction
 case object ErrorCountSinceLastCheck
+case object ResetErrorCount
 case object Heartbeat
 
 private[healthcheck] class HealthcheckActor(postOffice: PostOffice) extends Actor with Logging {
@@ -97,8 +98,9 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice) extends Acto
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = message.body, category = PostOffice.Categories.HEALTHCHECK))
     case ErrorCountSinceLastCheck =>
       val errorCountSinceLastCheck = errorCount
-      errorCount = 0
       sender ! errorCountSinceLastCheck
+    case ResetErrorCount =>
+      errorCount = 0
     case error: HealthcheckError =>
       errors = error :: errors
       errorCount = errorCount + 1
@@ -110,6 +112,7 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice) extends Acto
 trait HealthcheckPlugin extends Plugin {
   def errorCountFuture(): Future[Int]
   def errorCount(): Int
+  def resetErrorCount(): Unit
   def addError(error: HealthcheckError): HealthcheckError
   def reportStart(): ElectronicMail
   def reportStop(): ElectronicMail
@@ -137,6 +140,8 @@ class HealthcheckPluginImpl(system: ActorSystem, host: String, postOffice: PostO
   def errorCountFuture(): Future[Int] = (actor ? ErrorCountSinceLastCheck).mapTo[Int]
 
   def errorCount(): Int = Await.result(errorCountFuture(), 5 seconds)
+
+  def resetErrorCount(): Unit = actor ! ResetErrorCount
 
   def fakeError() = addError(HealthcheckError(None, None, None, Healthcheck.API, Some("Fake error")))
 
