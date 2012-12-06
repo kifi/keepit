@@ -14,9 +14,9 @@ class KifiInstallationTest extends SpecificationWithJUnit {
 
   "KifiInstallation" should {
     "parse version strings and order correctly" in {
-      val v0 = KifiVersion()
+      val v0 = KifiVersion("0.0.0")
       val v1 = KifiVersion("2.1.0")
-      val v2 = KifiVersion("2.1")
+      val v2 = KifiVersion("2.1.0")
       val v3 = KifiVersion("3.0.1")
       val v4 = KifiVersion("2.4.8")
 
@@ -26,6 +26,9 @@ class KifiInstallationTest extends SpecificationWithJUnit {
       v1 must be_<  (v3)
       v3 must be_>  (v4)
       v4 must be_>  (v2)
+    }
+    "fail to parse an invalid version string" in {
+      KifiVersion("foo") must throwA[Exception]
     }
     "persist" in {
       running(new EmptyApplication()) {
