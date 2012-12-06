@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
 import java.util.Arrays
 import javax.xml.bind.DatatypeConverter._
+import java.util.zip.Adler32
 
 object IdFilterCompressor {
   def toByteArray(ids: Set[Long]): Array[Byte] = {
@@ -16,12 +17,11 @@ object IdFilterCompressor {
 
     // version
     out.writeByte(2)
-    // a placeholder for 16-bit simple checksum (v2 and after)
-    out.writeByte(0)
-    out.writeByte(0)
+    // a placeholder for checksum (v2 and after)
+    out.writeInt(0)
     // size
     out.writeVInt(arr.length)
-    // TODO: obfuscation method
+    // ids
     var current = 0L
     arr.foreach{ id  =>
       out.writeVLong(id - current)
@@ -30,16 +30,21 @@ object IdFilterCompressor {
     baos.close()
 
     val bytes = baos.toByteArray()
-    val checksum = computeChecksum(bytes, 3, bytes.length)
-    bytes(1) = (checksum >> 8).toByte
-    bytes(2) = checksum.toByte
+    writeChecksum(bytes)
     bytes
+  }
+
+  private def writeChecksum(bytes: Array[Byte]) {
+    val checksum = computeChecksum(bytes)
+    bytes(1) = (checksum >> 24).toByte
+    bytes(2) = (checksum >> 16).toByte
+    bytes(3) = (checksum >>  8).toByte
+    bytes(4) = (checksum).toByte
   }
 
   def toSet(bytes: Array[Byte]): Set[Long]= {
     val in = new InputStreamDataInput(new ByteArrayInputStream(bytes))
     var idSet = Set.empty[Long]
-    var salt: Byte = 0
 
     val version = in.readByte().toInt
     if (version > 1) {
@@ -47,13 +52,13 @@ object IdFilterCompressor {
       if (bytes.length < 3) {
         throw new IdFilterCompressorException("invalid data [version=%d,length=%d]".format(version, bytes.length))
       }
-      val checksum = (in.readByte().toInt & 0xFF) << 8 | (in.readByte().toInt & 0xFF)
-      if (checksum != computeChecksum(bytes, 3, bytes.length)) {
+      val checksum = in.readInt()
+      if (checksum != computeChecksum(bytes)) {
         throw new IdFilterCompressorException("invalid data [checksum error]")
       }
     }
     val size = in.readVInt()
-    var current = 0L;
+    var current = 0L
     var i = 0
     while (i < size) {
       val id = current + in.readVLong
@@ -64,21 +69,27 @@ object IdFilterCompressor {
     idSet
   }
 
-  private def computeChecksum(bytes: Array[Byte], start: Int, end: Int) = {
-    var i = start
-    var sum = 0
-    while (i < end) {
-      sum += (bytes(i).toInt & 0xFF) << (sum % 7)
-      i += 1
-    }
-    sum / 65521 // the largest prime number smaller than 2^16
+  private def computeChecksum(bytes: Array[Byte]) = {
+    val adler32 = new Adler32
+    adler32.update(bytes, 5, bytes.length - 5)
+    adler32.getValue.toInt
   }
 
   def fromSetToBase64(ids: Set[Long]):String = printBase64Binary(toByteArray(ids))
 
   def fromBase64ToSet(base64: String) = {
-    if (base64.length == 0) Set.empty[Long] else toSet(parseBase64Binary(base64))
+    if (base64.length == 0) Set.empty[Long]
+    else {
+      val bytes = try {
+        parseBase64Binary(base64)
+      } catch {
+        case e: Exception => throw new IdFilterCompressorException("failed to decode base64", e)
+      }
+      toSet(bytes)
+    }
   }
 }
 
-class IdFilterCompressorException(msg: String) extends Exception(msg)
+class IdFilterCompressorException(msg: String, exception: Exception) extends Exception(msg) {
+  def this(msg: String) = this(msg, null)
+}

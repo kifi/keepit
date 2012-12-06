@@ -12,35 +12,45 @@ import scala.util.Random
 
 @RunWith(classOf[JUnitRunner])
 class IdFilterCompressorTest extends SpecificationWithJUnit {
+  val rand = new Random
+  val idSet = (0 to 100).foldLeft(Set.empty[Long]){ (s, n) => s + rand.nextInt(1000).toLong }
 
   "IdFilterCompressor" should {
     "comrpess/decompress id set" in {
-      val rand = new Random
-      val idSet = (0 to 100).foldLeft(Set.empty[Long]){ (s, n) => s + rand.nextInt(1000).toLong }
-
       val bytes = IdFilterCompressor.toByteArray(idSet)
       val decoded = IdFilterCompressor.toSet(bytes)
 
-      //println(bytes.mkString(","))
-      decoded === idSet
+      decoded.size === idSet.size
+      decoded.diff(idSet).isEmpty === true
+      idSet.diff(decoded).isEmpty === true
     }
 
     "encode/decode id set" in {
-      val rand = new Random
-      val idSet = (0 to 100).foldLeft(Set.empty[Long]){ (s, n) => s + rand.nextInt(1000).toLong }
-
       val base64 = IdFilterCompressor.fromSetToBase64(idSet)
       val decoded = IdFilterCompressor.fromBase64ToSet(base64)
 
-      //println(base64)
-      decoded === idSet
+      decoded.size === idSet.size
+      decoded.diff(idSet).isEmpty === true
+      idSet.diff(decoded).isEmpty === true
     }
 
     "handle the empty string" in {
       val decoded = IdFilterCompressor.fromBase64ToSet("")
 
-      decoded === Set.empty[Long]
+      decoded.isEmpty === true
     }
 
+    "detect truncated data" in {
+      val base64 = IdFilterCompressor.fromSetToBase64(idSet)
+      val truncated = base64.substring(0, base64.length - 1)
+      IdFilterCompressor.fromBase64ToSet(truncated) must throwA[IdFilterCompressorException]
+    }
+
+    "detect corrupted data" in {
+      val base64 = IdFilterCompressor.fromSetToBase64(idSet)
+      val aChar = base64.charAt(base64.length/2)
+      val corrupted = base64.replace(aChar, if(aChar == 'A') 'a' else 'A')
+      IdFilterCompressor.fromBase64ToSet(corrupted) must throwA[IdFilterCompressorException]
+    }
   }
 }
