@@ -83,7 +83,7 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
   supplyBookmarks(function(bookmarks) {
     log("bookmarks:");
     log(bookmarks);
-    if (!hasKeepitIdAndFacebookId()) {
+    if (!getUser()) {
       log("Can't post bookmark(s), no user info!");
       return;
     }
@@ -165,7 +165,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
 
 function uploadAllBookmarks() {
   log("going to upload all my bookmarks to server");
-  if (!hasKeepitIdAndFacebookId()) {
+  if (!getUser()) {
     log("Can't upload bookmarks, no user info!");
     return;
   }
@@ -242,7 +242,7 @@ function postComment(request, sendResponse) {
 function searchOnServer(request, sendResponse, tab) {
   var userConfigs = getConfigs();
 
-  if (!hasKeepitIdAndFacebookId()) {
+  if (!getUser()) {
     log("No facebook, can't search!");
     sendResponse({"userInfo": null, "searchResults": [], "userConfig": userConfigs});
     return;
@@ -277,7 +277,7 @@ function searchOnServer(request, sendResponse, tab) {
       '&maxHits=' + userConfigs.max_res * 2 +
       '&lastUUI=' + (request.lastUUID || "") +
       '&context=' + (request.context || "") +
-      '&kifiVersion=' + getVersion(),
+      '&kifiVersion=' + currVersion,
     true);
   xhr.send();
 }
@@ -294,7 +294,7 @@ var restrictedUrlPatternsForHover = [
 
 function initPage(request, sendResponse, tab) {
   log("[initPage]", request, tab);
-  if (!hasKeepitIdAndFacebookId()) {
+  if (!getUser()) {
     log("[initPage] No facebook configured!")
     return;
   }
@@ -448,124 +448,87 @@ function parseJsonObjOr(val, defaultValue) {
   return defaultValue;
 }
 
-function addNewKeep() {
-  alert("did nothing!")
-}
-
-function onInstall() {
-  log("Extension Installed");
-}
-
-function onUpdate() {
-  log("Extension Updated");
-}
-
-function getVersion() {
-  return chrome.app.getDetails().version;
-}
-
-function startHandShake(callback) {
-  log("starting handShake");
-  $.post("http://" + getConfigs().server + "/kifi/start", {
-    installation: getConfigs().kifi_installation_id,
-    version: getVersion(),
-    // platform: navigator.platform,
-    // language: navigator.language,
-    agent: navigator.userAgent || navigator.appVersion || navigator.vendor
-  }).success(callback).error(function(xhr) {
-    log(xhr.responseText);
-    callback();
-  });
-}
-
-function hasKeepitIdAndFacebookId() {
-  var user = getConfigs().user;
-  if (!user) return false;
-  return user.keepit_external_id && user.facebook_id && user.name && user.avatar_url;
+function getUser() {
+  var user = parseJsonObjOr(localStorage[getFullyQualifiedKey("user")]);
+  // Return undefined if it is not a complete user.
+  return user && user.keepit_external_id && user.facebook_id && user.name && user.avatar_url && user;
 }
 
 // Check if the version has changed.
-var currVersion = getVersion();
+var currVersion = chrome.app.getDetails().version;
 var prevVersion = getConfigs().version;
-if (currVersion != prevVersion) { // Check if we just installed this extension.
-  if (typeof prevVersion == 'undefined' || prevVersion == '') { //install
-    onInstall();
-  } else { //update
-    onUpdate();
+if (currVersion != prevVersion) {
+  if (!prevVersion) {
+    log("Extension Installed");
+  } else {
+    log("Extension Updated");
   }
-  setConfigs('version', currVersion);
+  setConfigs("version", currVersion);
 }
 
-var popup = null;
+function startHandShake(onFail) {
+  log("[startHandShake]");
+  var config = getConfigs();
+  $.post("http://" + config.server + "/kifi/start", {
+    installation: config.kifi_installation_id,
+    version: currVersion,
+    // platform: navigator.platform,
+    // language: navigator.language,
+    agent: navigator.userAgent || navigator.appVersion || navigator.vendor
+  }).success(onAuthenticate).error(function(xhr) {
+    error(Error("handshake failed"));
+    log(xhr.responseText);
+    if (onFail) onFail();
+  });
+}
 
 function openFacebookConnect() {
+  var popupTabId;
   chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-    if (changeInfo.status == "loading") {
-      if (tabId === popup && tab.url === "http://" + getConfigs().server + "/#_=_") {
-        popup = undefined;
-        startHandShake(function(o) {
-          if (o) {
-            log("got handshake data: ", o);
-            setConfigs("user", JSON.stringify({
-              facebook_id: o.facebookId,
-              keepit_external_id: o.userId,
-              avatar_url: o.avatarUrl,
-              name: o.name}));
-            setConfigs("kifi_installation_id", o.installationId);
-            postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
-            log("handshake done");
-          } else {
-            log("handshake failed");
-          }
-          log("[openFacebookConnect] closing tab ", tabId);
-          chrome.tabs.remove(tabId);
-        });
-      }
+    if (changeInfo.status == "loading" && tabId == popupTabId && tab.url == "http://" + getConfigs().server + "/#_=_") {
+      log("[openFacebookConnect] closing tab ", tabId);
+      chrome.tabs.remove(tabId);
+      popupTabId = null;
+
+      startHandShake();
     }
   });
 
   chrome.windows.create({'url': 'http://' + getConfigs().server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(win) {
-    popup = win.tabs[0].id
+    popupTabId = win.tabs[0].id
   });
 }
 
-function resetUserObjectIfInDevMode() {
-  var config = getConfigs();
-  if (config.env == "development") {
-    log("dev mode, removing user ", config.user);
-    removeFromConfigs("user");
+function onAuthenticate(data) {
+  log("[onAuthenticate]", data);
+  setConfigs("user", JSON.stringify({
+    facebook_id: data.facebookId,
+    keepit_external_id: data.userId,
+    avatar_url: data.avatarUrl,
+    name: data.name}));
+  setConfigs("kifi_installation_id", data.installationId);
+
+  if (!prevVersion || config.upload_on_start) {
+    log("loading bookmarks to the server");
+    postBookmarks(chrome.bookmarks.getTree, prevVersion ? "PLUGIN_START" : "INIT_LOAD");
+  } else {
+    log("[onAuthenticate] NOT uploading bookmarks");
   }
+
+  getBookmarks();
+  log("[onAuthenticate] done");
+  logEvent("authenticated");
 }
 
-resetUserObjectIfInDevMode();
-
-if (!hasKeepitIdAndFacebookId()) {
-  log("open facebook connect - till it is closed keepit is (suppose) to be disabled");
-  setConfigs("user", "{}");
+if (getConfigs().env == "development" || !getUser()) {
+  removeFromConfigs("user");
   openFacebookConnect();
 } else {
-  log("find user info in local storage");
-
-  startHandShake(function(data) {
-    if (data == null) {
-      // Need to refresh Facebook info
-      log("User does not appear to be logged in remote. Refreshing data...");
-      setConfigs("user", "{}");
-      openFacebookConnect();
-    } else {
-      log("User logged in, loading bookmarks");
-      setConfigs("kifi_installation_id", data.installationId);
-      var config = getConfigs();
-      log(config);
-      if (config.upload_on_start === true) {
-        log("loading bookmarks to the server");
-        postBookmarks(chrome.bookmarks.getTree, "PLUGIN_START");//posting bookmarks even when keepit id is found
-      } else {
-        log("NOT loading bookmarks to the server");
-      }
-      getBookmarks();
-    }
+  startHandShake(function() {
+    log("User does not appear to be logged in remote. Refreshing data...");
+    removeFromConfigs("user");
+    openFacebookConnect();
   });
 }
 
-logEvent("Plugin started!");
+logEvent("started");
