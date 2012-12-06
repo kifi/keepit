@@ -44,12 +44,12 @@ case class KifiVersion(major: Int, minor: Int, patch: Int, tag: String = "") ext
   }
 }
 object KifiVersion extends Logging {
-  private val R = """(\d{1,3})\.(\d{1,3})(?:\.(\d{1,3}))?(?:-([a-zA-Z0-9-])+)?""".r
+  private val R = """(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?:-([a-zA-Z0-9-])+)?""".r
 
   def apply(version: String): KifiVersion = {
     version match {
       case R(major, minor, patch, tag) =>
-        KifiVersion(major.toInt, minor.toInt, Option(patch).map(_.toInt).getOrElse(0), Option(tag).getOrElse(""))
+        KifiVersion(major.toInt, minor.toInt, patch.toInt, Option(tag).getOrElse(""))
       case _ =>
         throw new Exception("Invalid kifi version: " + version)
     }
