@@ -21,13 +21,22 @@ import org.joda.time.DateTime
 import scala.collection.mutable.{Stack => MutableStack}
 import com.google.inject.Provides
 import org.joda.time.LocalDate
+import com.keepit.common.healthcheck.Babysitter
+import com.keepit.common.healthcheck.BabysitterImpl
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import akka.actor.Scheduler
+import akka.actor.Cancellable
+import akka.util.Duration
+import akka.actor.ActorRef
 
 class TestApplication(override val global: TestGlobal) extends play.api.test.FakeApplication() {
   def withFakeMail() = overrideWith(FakeMailModule())
   def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
+  def withFakeScheduler() = overrideWith(FakeSchedulerModule())
   def withFakeHttpClient() = overrideWith(FakeHttpClientModule())
   def withFakeStore() = overrideWith(FakeStoreModule())
-  def withFakeClock() = overrideWith(FakeClockModule())
+  def withRealBabysitter() = overrideWith(BabysitterModule())
+  def withFakeTime() = overrideWith(FakeTimeModule())
 
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.module).`with`(model)))
@@ -35,9 +44,25 @@ class TestApplication(override val global: TestGlobal) extends play.api.test.Fak
 
 class DevApplication() extends TestApplication(new TestGlobal(DevModule()))
 class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxModule()))
-class EmptyApplication() extends TestApplication(new TestGlobal(FortyTwoModule()))
+class EmptyApplication() extends TestApplication(new TestGlobal(TestModule()))
 
-case class FakeClockModule() extends ScalaModule {
+case class TestModule() extends ScalaModule {
+  def configure(): Unit = {
+    bind[Babysitter].to[FakeBabysitter]
+  }
+
+  @Provides @Singleton
+  def clock = new FakeClock
+
+  @Provides
+  def dateTime(clock: FakeClock) : DateTime = clock.pop
+
+  @Provides
+  def localDate(clock: FakeClock) : LocalDate = clock.pop.toLocalDate
+
+}
+
+case class FakeTimeModule() extends ScalaModule {
   def configure(): Unit = {}
 
   @Provides @Singleton
@@ -50,6 +75,7 @@ case class FakeClockModule() extends ScalaModule {
   def localDate(clock: FakeClock) : LocalDate = clock.pop.toLocalDate
 }
 
+
 class FakeClock {
   val stack = MutableStack[DateTime]()
 
@@ -57,3 +83,40 @@ class FakeClock {
   def push(d : LocalDate): FakeClock = { stack push d.toDateTimeAtStartOfDay(DEFAULT_DATE_TIME_ZONE); this }
   def pop(): DateTime = if (stack.isEmpty) currentDateTime else stack.pop
 }
+
+case class BabysitterModule() extends ScalaModule {
+  override def configure(): Unit = {
+    bind[Babysitter].to[BabysitterImpl]
+  }
+}
+
+class FakeBabysitter extends Babysitter {
+  def watch[A](warnTimeout: akka.util.FiniteDuration, errorTimeout: akka.util.FiniteDuration)(block: => A)(implicit app: Application): A = {
+    block
+  }
+}
+
+case class FakeSchedulerModule() extends ScalaModule {
+  override def configure(): Unit = {
+    bind[Scheduler].to[FakeScheduler]
+  }
+}
+
+class FakeScheduler extends Scheduler {
+  private def fakeCancellable = new Cancellable() {
+    def cancel(): Unit = {}
+    def isCancelled = false
+  }
+  private def immediateExecutor(f: => Unit) = {
+    f
+    fakeCancellable
+  }
+
+  def schedule(initialDelay: Duration,frequency: Duration,receiver: ActorRef,message: Any): Cancellable = fakeCancellable
+  def schedule(initialDelay: Duration, frequency: Duration)(f: => Unit): Cancellable = immediateExecutor(f)
+  def schedule(initialDelay: Duration, frequency: Duration, runnable: Runnable): Cancellable = fakeCancellable
+  def scheduleOnce(delay: Duration, receiver: ActorRef, message: Any): Cancellable = fakeCancellable
+  def scheduleOnce(delay: Duration)(f: ⇒ Unit): Cancellable = immediateExecutor(f)
+  def scheduleOnce(delay: Duration, runnable: Runnable): Cancellable = fakeCancellable
+}
+
