@@ -20,6 +20,8 @@ case class FakeHealthcheck() extends HealthcheckPlugin {
 
   def errorCount(): Int = errors.size
 
+  def resetErrorCount(): Unit = errors.clear
+
   def addError(error: HealthcheckError): HealthcheckError = {
     errors += error
     error

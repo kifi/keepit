@@ -7,24 +7,40 @@ import com.keepit.common.controller.FortyTwoServices.started
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.dateTimeToRichDateTime
 import com.keepit.inject._
-
 import play.api.Play.current
 import play.api.mvc.Action
 import play.api.mvc.Controller
 import securesocial.core.SecureSocial
+import com.keepit.common.controller.FortyTwoController
 
-object HealthController extends Controller with Logging with SecureSocial {
+object HealthController extends FortyTwoController {
 
-  def serviceView = SecuredAction(false) { implicit request =>
-    Ok(views.html.serverInfo(currentService, currentVersion, compilationTime.toStandardTimeString, started.toStandardTimeString))
+  def serviceView = AdminHtmlAction { implicit request =>
+    val errorCount = inject[HealthcheckPlugin].errorCount
+    Ok(views.html.serverInfo(currentService, currentVersion, compilationTime.toStandardTimeString, started.toStandardTimeString, errorCount))
   }
 
   def ping() = Action { implicit request =>
     Ok(inject[HealthcheckPlugin].errorCount.toString)
   }
 
+  def isHealthy = Action { implicit request =>
+    val error = inject[HealthcheckPlugin].errorCount
+
+    error match {
+      case 0 => Ok("Good!")
+      case s: Int => Status(418)(error.toString)
+    }
+  }
+
   def causeError() = Action { implicit request =>
     0/0 // The realest fake error imaginable // Technically, this error is ∉ ℝ
     Ok("You cannot see this.")
+  }
+
+  def resetErrorCount() = AdminHtmlAction { implicit request =>
+    inject[HealthcheckPlugin].resetErrorCount
+
+    Redirect(routes.HealthController.serviceView)
   }
 }
