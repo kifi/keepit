@@ -35,7 +35,7 @@ object QueryUtil extends Logging {
   private def fromTermQuery(query: TermQuery) = Set(query.getTerm)
   private def fromPhraseQuery(query: PhraseQuery) = query.getTerms().toSet
   private def fromBooleanQuery(query: BooleanQuery) = {
-    query.getClauses.map{ cl => if (!cl.isProhibited) getTerms(cl.getQuery) else Set.empty[Term] }.reduce{ _ union _ }
+    query.getClauses.foldLeft(Set.empty[Term]){ (s, c) => if (!c.isProhibited) s ++ getTerms(c.getQuery) else s }
   }
   private def fromOtherQuery(query: Query) = {
     try {
