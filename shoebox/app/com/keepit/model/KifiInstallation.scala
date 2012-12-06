@@ -33,7 +33,7 @@ object UserAgent extends Logging {
     }
 }
 
-case class KifiVersion(major: Int, minor: Int, patch: Int = 0, tag: String = "") extends Ordered[KifiVersion]  {
+case class KifiVersion(major: Int, minor: Int, patch: Int, tag: String = "") extends Ordered[KifiVersion]  {
   assert(major >= 0 && minor >= 0 && patch >= 0)
   def compare(that: KifiVersion) =
     ((this.major - that.major) << 20) +
@@ -44,23 +44,14 @@ case class KifiVersion(major: Int, minor: Int, patch: Int = 0, tag: String = "")
   }
 }
 object KifiVersion extends Logging {
-  def apply(): KifiVersion = {
-    KifiVersion(0,0,0)
-  }
+  private val R = """(\d{1,3})\.(\d{1,3})(?:\.(\d{1,3}))?(?:-([a-zA-Z0-9-])+)?""".r
+
   def apply(version: String): KifiVersion = {
-    try {
-      def safeVersion(v: Array[String], i: Int) = if(v.length <= i) 0 else v(i).toInt
-      assert(version.length > 2)
-      val t = version.split('-')
-      assert(t.length > 0)
-      val v = t(0).split('.')
-      assert(v.length > 1)
-      val tag = if(t.length > 1) t(1) else ""
-      KifiVersion(safeVersion(v,0), safeVersion(v,1), safeVersion(v,2), tag)
-    } catch {
+    version match {
+      case R(major, minor, patch, tag) =>
+        KifiVersion(major.toInt, minor.toInt, Option(patch).map(_.toInt).getOrElse(0), Option(tag).getOrElse(""))
       case _ =>
-        log.warn("Invalid kifi version: %s".format(version))
-        throw new Exception("Invalid kifi version: %s".format(version))
+        throw new Exception("Invalid kifi version: " + version)
     }
   }
 

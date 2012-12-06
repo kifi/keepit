@@ -14,7 +14,7 @@ class KifiInstallationTest extends SpecificationWithJUnit {
 
   "KifiInstallation" should {
     "parse version strings and order correctly" in {
-      val v0 = KifiVersion()
+      val v0 = KifiVersion("0.0")
       val v1 = KifiVersion("2.1.0")
       val v2 = KifiVersion("2.1")
       val v3 = KifiVersion("3.0.1")
