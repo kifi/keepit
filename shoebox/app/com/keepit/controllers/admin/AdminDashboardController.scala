@@ -38,7 +38,7 @@ object AdminDashboardController extends FortyTwoController {
   private lazy val bookmarkCountByDate = calcCountByDate(CX.withConnection { implicit conn => Bookmark.all }.map(_.createdAt.toLocalDateInZone))
 
   private def calcCountByDate(dates: => Seq[LocalDate]) = {
-    val day0 = dates.min
+    val day0 = if(dates.isEmpty) currentDate else dates.min
     val dayCounts = dates.foldLeft(Map[LocalDate,Int]().withDefaultValue(0)){(m, d) => m + (d -> (1 + m(d)))}
     val userCounts = if (Play.isDev) {
       Seq.fill(40)(math.round(math.pow((math.random*4), 2D).toFloat)-2)
