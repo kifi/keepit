@@ -1,23 +1,28 @@
 package com.keepit.common.db
 
-import play.api._
-import play.api.db._
-import com.keepit.common.time._
-import java.util.UUID
-import org.joda.time.{DateTime, DateTimeZone}
-import ru.circumflex.orm._
-import ru.circumflex.core._
-import java.sql.Connection
-import play.api.db._
-import scala.collection.mutable.Buffer
-import play.api.mvc.PathBindable
-import play.api.mvc.QueryStringBindable
-import com.keepit.common.logging.Logging
-import java.sql.SQLException
-import scala.util.control.ControlThrowable
-import scala.io.Source
 import java.io.BufferedReader
 import java.sql.Clob
+import java.sql.Connection
+import java.util.UUID
+import scala.util.control.ControlThrowable
+import org.joda.time.DateTime
+import org.joda.time.DateTimeZone
+import com.keepit.common.logging.Logging
+import com.keepit.common.time._
+import play.api.db._
+import play.api.db._
+import play.api.mvc.PathBindable
+import play.api.mvc.QueryStringBindable
+import play.api._
+import ru.circumflex.core._
+import ru.circumflex.orm._
+import play.api.libs.concurrent.Akka
+import akka.util.duration._
+import com.keepit.common.healthcheck.Healthcheck
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.inject._
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.Babysitter
 
 class CustomTypeConverter extends TypeConverter {
   override def write(st: java.sql.PreparedStatement, parameter: Any, paramIndex: Int) {
@@ -448,8 +453,10 @@ object CX extends Logging {
     val conf = new BasicOrmConf(readOnly = readOnly)
     val connection: Connection = conf.connectionProvider.openConnection
     try {
-      using(conf) {
-        block(connection)
+      inject[Babysitter].watch(1 second, 5 seconds) {
+        using(conf) {
+          block(connection)
+        }
       }
     } catch {
       //ControlThrowable is used for control flow of scala's closure management. You must throw it up!

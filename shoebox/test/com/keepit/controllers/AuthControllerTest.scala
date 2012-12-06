@@ -42,7 +42,7 @@ class AuthControllerTest extends SpecificationWithJUnit {
   "AuthController" should {
 
     "start" in {
-      running(new EmptyApplication().withFakeClock()) {
+      running(new EmptyApplication()) {
         new SecureSocialUserService(current).onStart()
         UserService.delegate.isDefined === true
 

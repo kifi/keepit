@@ -5,6 +5,6 @@ import com.tzavellas.sse.guice.ScalaModule
 
 case class FakeHealthcheckModule() extends ScalaModule {
   def configure(): Unit = {
-    bind[HealthcheckPlugin].to[FakeHealthcheck].in[AppScoped]
+    bind[HealthcheckPlugin].to[FakeHealthcheck]
   }
 }

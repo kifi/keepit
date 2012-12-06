@@ -5,6 +5,8 @@ import com.google.inject.Provides
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
+import akka.actor.ActorSystem
+import akka.actor.Scheduler
 
 case class FortyTwoModule() extends ScalaModule {
   def configure(): Unit = {
@@ -18,5 +20,11 @@ case class FortyTwoModule() extends ScalaModule {
 
   @Provides
   def localDate: LocalDate = currentDate
+
+  @Provides
+  @AppScoped
+  def schedulerProvider(system: ActorSystem): Scheduler = {
+    system.scheduler
+  }
 
 }
