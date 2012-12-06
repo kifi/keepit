@@ -1,22 +1,22 @@
 // creates (if needed) bookmarks structure under bookmarks bar(if not exists) /keepIt/private /keepIt/public
 // returns all important bookmarks objects (root, bar, keepit, private and public)
-// since chrome.bookmarks api is asynchronious code is messi 
+// since chrome.bookmarks api is asynchronious code is messi
 
-function getBookMarks(callback) {
+function getBookmarks(callback) {
   $ = jQuery.noConflict()
 
 	function findRoot() {
-		chrome.bookmarks.get("0", function(bm){ 
-			bookmarks.root=bm[0]; 
+		chrome.bookmarks.get("0", function(bm){
+			bookmarks.root=bm[0];
 			findBar();
 		});
 	}
 
 	function findBar() {
 		chrome.bookmarks.getChildren(bookmarks.root.id, function(children) {
-		  var bar = $.grep(children, function (bm) { 
+		  var bar = $.grep(children, function (bm) {
 		  	var foundIt = (bm.title.toLowerCase() == "bookmarks bar");
-		  	return foundIt; 
+            return foundIt;
 		  });
 			if (bar.length === 0) {
 				console.error("Could not find bookmarks.bar named 'bookmarks bar' at " + children);
@@ -34,7 +34,7 @@ function getBookMarks(callback) {
 			if (res.length > 0) {
 				bookmarks.keepIt = res.shift();
 				internPrivate();
-			} else 
+			} else
 				createKeepIt();
 		});
 	}
@@ -88,7 +88,7 @@ function getBookMarks(callback) {
 
 	function done(bookmarks){
 		log("finish bookmars traversing");
-		getBookMarks.prototype.cachedBookmarks = bookmarks; 
+		getBookmarks.prototype.cachedBookmarks = bookmarks;
 		if (callback)
 			callback(bookmarks);
 	}
@@ -96,8 +96,8 @@ function getBookMarks(callback) {
 	var bookmarks={};
 	log("looking for bookmarks");
 
-	if(getBookMarks.prototype.cachedBookmarks){
-		callback(getBookMarks.prototype.cachedBookmarks);
+	if(getBookmarks.prototype.cachedBookmarks){
+		callback(getBookmarks.prototype.cachedBookmarks);
 	} else
 	findRoot();
 }
