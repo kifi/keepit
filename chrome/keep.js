@@ -1,46 +1,51 @@
+log("background page kicking in!");
+
+// ===== Logging
+
+function log() {
+  console.log.apply(console, Array.prototype.concat.apply(["[" + new Date().getTime() + "] "], arguments));
+}
+
+function error(exception, message) {
+  console.error(exception);
+  console.error((message ? "[" + message + "] " : "") + exception.message);
+  console.error(exception.stack);
+  //alert("exception: " + exception.message);
+}
+
+// ===== Queries with hard-coded results
+
 var magicQueries = [];
-// End Dummy results
-
-function log(message) {
-  console.log("[" + new Date().getTime() + "] ", message);
-}
-
-function loadMagicQueries() {
-  log("Loading magic!");
-  try {
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState == 4) {
-        magicQueries = JSON.parse(xhr.response);
-      }
+try {
+  var xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState == 4) {
+      magicQueries = JSON.parse(xhr.response);
     }
-    var mq = chrome.extension.getURL('magicQueries.json');
-    xhr.open("GET", mq, true);
-    xhr.send();
-  } catch(e) {
-    log("magicQueries failed.");
   }
+  xhr.open("GET", chrome.extension.getURL("magicQueries.json"), true);
+  xhr.send();
+} catch(e) {
+  error(e, "loading magic queries");
 }
 
-loadMagicQueries();
+// ===== User history
+
+var userHistory = new UserHistory();
 
 function UserHistory() {
   var HISTORY_SIZE = 200;
-  this.history = new Array();
+  this.history = [];
   this.add = function(uri) {
-    log("adding " + uri + " to user history.");
+    log("[UserHistory.add]", uri);
     this.history.unshift(uri);
-    if(history.length > HISTORY_SIZE) {
+    if (history.length > HISTORY_SIZE) {
       history.pop();
     }
   }
   this.exists = function(uri) {
-    log("current history:");
-    log(this.history);
-
-    for(var i=0;i<this.history.length;i++) {
-      if(this.history[i] === uri) {
-        log(uri + " already has been visited");
+    for (var i = 0; i < this.history.length; i++) {
+      if (this.history[i] === uri) {
         return true;
       }
     }
@@ -48,173 +53,123 @@ function UserHistory() {
   }
 }
 
-var userHistory = new UserHistory();
-var _eventLog = new Array();
+// ===== Event logging
+
+var _eventLog = [];
 
 function logEvent(payload) {
-  _eventLog.push({
-    "time": (new Date()).getTime(),
-    "event": payload
-  });
-}
-
-function sendEventLog() {
-  var userConfig = getConfigs();
-  var json = {
-    "client_time": (new Date()).getTime(),
-    "user_config": userConfig,
-    "event_log": _eventLog
-  }
-  var tosend = JSON.stringify(json);
-  console.log("Sending event log!", tosend);
-
-  // var xhr = new XMLHttpRequest();
-  // xhr.open("POST", 'http://' + userConfig.server + '/bookmarks/add', true);
-  // xhr.send(tosend);
-
-  _eventLog = new Array();
+  _eventLog.push({"time": new Date().getTime(), "event": payload});
 }
 
 var eventLogDelay = 2000;
-function eventLogTimer() {
-  if(_eventLog.length > 0) {
+setTimeout(function maybeSend() {
+  if (_eventLog.length) {
+    log("Pretending to send event log: ", {clientTime: new Date().getTime(), log: _eventLog});
+
+    // TODO: actually post event log to server
+
+    _eventLog.length = 0;
     eventLogDelay = Math.round(Math.max(Math.sqrt(eventLogDelay), 2000));
-    sendEventLog();
-  }
-  else {
-    // Nothing to send...
+  } else {
     eventLogDelay = Math.min(eventLogDelay * 2, 20000);
   }
-  setTimeout(eventLogTimer, eventLogDelay);
-}
-
-setTimeout(function() {
-  eventLogTimer();
+  setTimeout(maybeSend, eventLogDelay);
 }, 4000);
 
-function error(exception, message) {
-  //debugger;
-  var errMessage = exception.message;
-  if(message) {
-    errMessage = "[" + message + "] " + exception.message;
-  }
-  if (exception) {
-    console.error(exception);
-  }
-  console.error(errMessage);
-  console.error(exception.stack);
-  //alert("exception: " + exception.message);
-}
+// ===== Message handling
 
-log("background page kicking in!");
-
-function postBookmarks(bookmarksSupplier, bookmarkSource) {
+function postBookmarks(supplyBookmarks, bookmarkSource) {
   log("posting bookmarks...");
-  try {
+  supplyBookmarks(function(bookmarks) {
+    log("bookmarks:");
+    log(bookmarks);
+    if (!hasKeepitIdAndFacebookId()) {
+      log("Can't post bookmark(s), no user info!");
+      return;
+    }
+    var userConfigs = getConfigs();
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
       if (xhr.readyState == 4) {
-        log("[postBookmarks] xhr response:");
-        log(xhr.responseText);
+        log("[postBookmarks] response: ", xhr.responseText);
       }
     }
-    bookmarksSupplier(function(bookmarks){
-      try {
-        bookmarksPoster(bookmarks, bookmarkSource, xhr);
-      } catch (e) {
-        error(e);
-      }
-    });
-  } catch (e) {
-    error(e);
-  }
+    xhr.open("POST", 'http://' + userConfigs.server + '/bookmarks/add', true);
+    xhr.send(JSON.stringify({
+      "bookmarks": bookmarks,
+      "user_info": userConfigs.user,
+      "bookmark_source": bookmarkSource}));
+    log("posted bookmarks");
+  });
 }
 
-function bookmarksPoster(bookmarks, bookmarkSource, xhr) {
-  log("bookmarks:");
-  log(bookmarks);
-  if(!hasKeepitIdAndFacebookId()) {
-    log("Can't post bookmark, no user info!");
-    return;
-  }
-  var userConfigs = getConfigs();
-  var json = {
-    "bookmarks": bookmarks,
-    "user_info": userConfigs.user,
-    "bookmark_source": bookmarkSource
-  }
-  var tosend = JSON.stringify(json);
-  xhr.open("POST", 'http://' + getConfigs().server + '/bookmarks/add', true);
-  xhr.send(tosend);
-  log("posted bookmarks");
-}
-
-function onRequest(request, sender, sendResponse) {
-  log("new request...");
+// Listen for the content script to send a message to the background page.
+// TODO: onRequest => onMessage, see http://stackoverflow.com/questions/11335815/chrome-extensions-onrequest-sendrequest-vs-onmessage-sendmessage
+chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
+  var tab = sender.tab;
+  log("[onRequest] handling", request, "for", tab && tab.id);
   try {
-    if(typeof request === 'undefined' || typeof request.type === 'undefined' ) {
-      log("Recieved an unknown message. Discarding.");
-      log(request);
-      log(tab);
-      return;
-    }
-    var tab = sender.tab;
-    log("on request with " + JSON.stringify(request), tab);
-    // Show the page action for the tab that the sender (content script) was on.
-    log("executing request " + request.type, tab);
-    if (request.type === "init_page") {
-      initPage(request, sendResponse, tab);
-    } else if(request.type === "get_keeps") {
-      searchOnServer(request, sendResponse, tab);
-    } else if(request.type === "get_user_info") {
-      sendResponse(getConfigs().user);
-    } else if(request.type === "add_bookmarks") {
-      getBookMarks(function(bookmarks) {
-        addKeep(bookmarks, request, sendResponse, tab);
-      });
-    } else if (request.type == "get_conf") {
-      var conf = getConfigs();
-      sendResponse(conf);
-    } else if (request.type == "set_conf") {
-      setConfigs(request.key, request.value);
-      sendResponse();
-    } else if (request.type == "remove_conf") {
-      setConfigs(request.key);
-      sendResponse();
-    } else if (request.type == "upload_all_bookmarks") {
-      upload_all_bookmarks();
-    }
-    else if (request.type === "check_hover_existed") {
-      if(request.kifi_hover === false) { addHover(tab.id); }
-    }
-    else if (request.type === "set_page_icon") {
-      setPageIcon(tab.id, request.is_kept);
-    }
-    else if (request.type === "open_slider") {
-      addHover(tab.id);
-    }
-    else if (request.type === "log_event") {
-      logEvent(request.event);
-    }
-    else if (request.type === "post_comment") {
-      postComment(request, sendResponse);
+    switch (request && request.type) {
+      case "init_page":
+        initPage(request, sendResponse, tab);
+        break;
+      case "get_keeps":
+        searchOnServer(request, sendResponse, tab);
+        break;
+      case "get_user_info":
+        sendResponse(getConfigs().user);
+        break;
+      case "add_bookmarks":
+        getBookmarks(function(bookmarks) {
+          addKeep(bookmarks, request, sendResponse, tab);
+        });
+        break;
+      case "get_conf":
+        sendResponse(getConfigs());
+        break;
+      case "set_conf":
+        setConfigs(request.key, request.value);
+        sendResponse();
+        break;
+      case "remove_conf":
+        setConfigs(request.key);
+        sendResponse();
+        break;
+      case "upload_all_bookmarks":
+        uploadAllBookmarks();
+        break;
+      case "check_hover_existed":
+        if (request.kifi_hover === false) { showSlider(tab.id); }
+        break;
+      case "set_page_icon":
+        setPageIcon(tab.id, request.is_kept);
+        break;
+      case "open_slider":
+        showSlider(tab.id);
+        break;
+      case "log_event":
+        logEvent(request.event);
+        break;
+      case "post_comment":
+        postComment(request, sendResponse);
+        break;
+      default:
+        log("Ignoring unknown message");
     }
     // Return nothing to let the connection be cleaned up.
   } catch (e) {
     error(e);
   }
-  log("done request...");
-}
+  log("[onRequest] done", request);
+});
 
-function upload_all_bookmarks() {
-  log("going to upload all my bookamrks to server");
-  if(!hasKeepitIdAndFacebookId()) {
+function uploadAllBookmarks() {
+  log("going to upload all my bookmarks to server");
+  if (!hasKeepitIdAndFacebookId()) {
     log("Can't upload bookmarks, no user info!");
     return;
   }
-  var userConfigs = getConfigs();
-  getPicture(userConfigs.user);
-  getKeepitId(userConfigs.user)
+  // TODO: actually upload all bookmarks
 }
 
 function addKeep(bookmarks, request, sendResponse, tab) {
@@ -226,7 +181,7 @@ function addKeep(bookmarks, request, sendResponse, tab) {
     try {
       sendResponse(created);
       bookmark.isPrivate = isPrivate;
-      postBookmarks(function (poster) {poster([bookmark]);}, "HOVER_KEEP");
+      postBookmarks(function(f) {f([bookmark])}, "HOVER_KEEP");
     } catch (e) {
       error(e);
     }
@@ -234,7 +189,7 @@ function addKeep(bookmarks, request, sendResponse, tab) {
 }
 
 function removeKeep(bookmarks, request, sendResponse, tab) {
-  log("removing bookmark. " + request.externalId, tab);
+  log("removing bookmark: ", request.externalId, tab);
   sendResponse(created);
 
   var xhr = new XMLHttpRequest();
@@ -243,39 +198,38 @@ function removeKeep(bookmarks, request, sendResponse, tab) {
       log("removed bookmark. " + xhr.response);
     }
   }
-  var userInfo = getConfigs().user;
-  if(!userInfo) {
-    log("No userinfo! Can't remove keep!");
+  var userConfig = getConfigs();
+  var userInfo = userConfig.user;
+  if (!userInfo) {
+    log("No user info! Can't remove keep!");
     return;
   }
 
   xhr.open("POST", 'http://' + userConfig.server + '/bookmarks/remove/?externalId=' + userInfo["keepit_external_id"] + "&externalBookmarkId=" + request.externalId, true);
   xhr.send();
-
 }
 
 function postComment(request, sendResponse) {
-  log("posting comment:");
-  console.log(request);
+  log("posting comment: ", request);
 
   var xhr = new XMLHttpRequest();
   xhr.onreadystatechange = function() {
     if (xhr.readyState == 4) {
       var response = JSON.parse(xhr.response);
-      log("POSTED!" + response);
-      console.log(response);
+      log("POSTED! ", response);
       sendResponse(response);
     }
   }
   var userConfigs = getConfigs();
-  if(!userConfigs || !userConfigs.user) {
-    log("No userinfo! Can't post comment!");
+  if (!userConfigs || !userConfigs.user) {
+    log("No user info! Can't post comment!");
     return;
   }
   var parent = request.parent || "";
   var recipients = request.recipients || "";
 
-  xhr.open("POST", 'http://' + userConfigs.server + '/comments/add?&url=' + encodeURIComponent(request.url) +
+  xhr.open("POST", "http://" + userConfigs.server + "/comments/add" +
+    "?url=" + encodeURIComponent(request.url) +
     "&title=" + encodeURIComponent(request.title) +
     "&text=" + encodeURIComponent(request.text) +
     "&permissions=" + request.permissions +
@@ -283,30 +237,27 @@ function postComment(request, sendResponse) {
     "&recipients=" + recipients,
     true);
   xhr.send();
-
 }
 
 function searchOnServer(request, sendResponse, tab) {
-
   var userConfigs = getConfigs();
 
-  if(!userConfigs || !userConfigs.user || !userConfigs.user["keepit_external_id"] || !hasKeepitIdAndFacebookId()) {
+  if (!hasKeepitIdAndFacebookId()) {
     log("No facebook, can't search!");
     sendResponse({"userInfo": null, "searchResults": [], "userConfig": userConfigs});
     return;
   }
-  // Dummy results injection
-  for(i=0;i<magicQueries.length;i++) {
-    console.log("checking: ", magicQueries[i])
-    if(magicQueries[i].query === request.query) {
+
+  for (var i = 0; i < magicQueries.length; i++) {
+    console.log("checking: ", magicQueries[i]);
+    if (magicQueries[i].query === request.query) {
       log("Intercepting query: " + request.query);
       sendResponse({"userInfo": userConfigs.user, "searchResults": magicQueries[i].results, "userConfig": userConfigs});
       return;
     }
   }
-  // Dummy results injection
 
-  if(request.query === '') {
+  if (request.query === '') {
     sendResponse({"userInfo": userConfigs.user, "searchResults": [], "userConfig": userConfigs});
     return;
   }
@@ -316,34 +267,19 @@ function searchOnServer(request, sendResponse, tab) {
     if (xhr.readyState == 4) {
       log("[searchOnServer] xhr response:", tab);
       log(xhr.response, tab);
-      var searchResults = $.parseJSON(xhr.response);
-      log("sending res")
-      if (searchResults.length === 0) {
-        sendResponse({"userInfo": userConfigs.user, "searchResults": [], "userConfig": userConfigs});
-        return;
-      }
-      /*var maxRes = getConfigs()["max_res"];
-      if (searchResults.length > maxRes) {
-        searchResults = searchResults.slice(0, maxRes);
-      }*/
-      log("Sending response!")
-      sendResponse({"userInfo": userConfigs.user, "searchResults": searchResults, "userConfig": userConfigs});
+      sendResponse({"userInfo": userConfigs.user, "searchResults": JSON.parse(xhr.response), "userConfig": userConfigs});
     }
   }
-  var term = encodeURIComponent(request.query);
-  var externalId = userConfigs.user.keepit_external_id;
-  var lastUUID = typeof request.lastUUID === 'undefined' ? '' : request.lastUUID;
-  var context = typeof request.context === 'undefined' ? '' : request.context;
-  xhr.open("GET", 'http://' + userConfigs.server + '/search?term=' + term + '&externalId=' + externalId + '&maxHits=' + userConfigs["max_res"]*2 + '&lastUUI=' + lastUUID + '&context=' + context + '&kifiVersion=' + getVersion(), true);
+  xhr.open("GET",
+   'http://' + userConfigs.server + '/search' +
+      '?term=' + encodeURIComponent(request.query) +
+      '&externalId=' + userConfigs.user.keepit_external_id +
+      '&maxHits=' + userConfigs.max_res * 2 +
+      '&lastUUI=' + (request.lastUUID || "") +
+      '&context=' + (request.context || "") +
+      '&kifiVersion=' + getVersion(),
+    true);
   xhr.send();
-}
-
-function catching(block) {
-  try {
-    block();
-  } catch (e) {
-    error(e);
-  }
 }
 
 var restrictedUrlPatternsForHover = [
@@ -354,228 +290,110 @@ var restrictedUrlPatternsForHover = [
   "maps.google.com",
   "google.com*tbm=isch",
   "www.google.com",
-  "google.com"
-]
+  "google.com"];
 
 function initPage(request, sendResponse, tab) {
-  try {
-    log("init page!!!!!!!!");
-    if(!hasKeepitIdAndFacebookId()) {
-      log("No facebook configured!")
-      return;
-    }
-    setPageIcon(tab.id, false);
-
-    var restrictedElements = $.grep(restrictedUrlPatternsForHover, function(e, i){
-      return request.location.indexOf(e) >= 0;
-    });
-    if (restrictedElements.length > 0) {
-      log("restricted hover page: " + restrictedElements);
-      return;
-    }
-
-    if (request.isGoogle === true) {
-      log("init_page for Google pages");
-    } else if (request.isGoogle === false) {
-
-      var pageLocation = request.location;
-
-      log("injecting hover: " + request, tab);
-      var hoverTimeout = getConfigs().hover_timeout;
-
-      remoteIsAlreadyKept(pageLocation, function(isKept) {
-        if(isKept) {
-          setPageIcon(tab.id, true);
-          attachShortcut();
-          log("hiding hover cause URL " + pageLocation + " already kept", tab);
-          if(userHistory.exists(pageLocation) === true) {
-            return;
-          }
-
-          userHistory.add(pageLocation);
-        }
-        else {
-          setPageIcon(tab.id, false);
-          attachShortcut();
-          if(userHistory.exists(pageLocation) === true) {
-            return;
-          }
-
-          userHistory.add(pageLocation);
-          if (hoverTimeout > 0) {
-            setTimeout(function() {
-              // For the auto-slide in, we check to see if the hover has existed on this page before.
-              checkHoverExisted(tab.id);
-            }, hoverTimeout * 1000);
-          }
-        }
-      });
-    } else {
-      throw Error("request isGoogle is not well defined: " + request.isGoogle);
-    }
-  } catch (e) {
-    error(e);
-  }
-}
-
-function attachShortcut(tabid) {
-  /*safeExecuteScript(tabid, {
-    code: "$(window).keydown(function(e) { if(e.metaKey && e.keyCode == 75) { chrome.extension.sendRequest({'type':'open_slider'}); } });"
-  });*/
-}
-
-function checkHoverExisted(tabid) {
-  safeExecuteScript(tabid, {
-    code: "chrome.extension.sendRequest({'type': 'check_hover_existed', 'kifi_hover': typeof window.kifi_hover !== 'undefined'});"
-  });
-}
-
-function safeExecuteScript(tabid, data, callback) {
-  if(typeof tabid === 'undefined')
+  log("[initPage]", request, tab);
+  if (!hasKeepitIdAndFacebookId()) {
+    log("[initPage] No facebook configured!")
     return;
-  chrome.tabs.get(tabid, function(tab) {
-    if(typeof tab === 'undefined' || !tab) {
-      log("tab " + tabid + " is already closed.")
-      callback(null);
+  }
+  setPageIcon(tab.id, false);
+  var pageLocation = request.location;
+
+  if (restrictedUrlPatternsForHover.some(function(e) {return pageLocation.indexOf(e) >= 0})) {
+    log("[initPage] restricted ", tab.url);
+    return;
+  }
+
+  var hoverTimeout = getConfigs().hover_timeout;
+
+  checkWhetherKept(pageLocation, function(isKept) {
+    setPageIcon(tab.id, isKept);
+
+    if (userHistory.exists(pageLocation)) {
       return;
     }
-    else {
-      chrome.tabs.executeScript(tabid, data, callback);
+    userHistory.add(pageLocation);
+
+    if (isKept) {
+      log("[initPage] already kept ", pageLocation);
+    } else if (hoverTimeout > 0) {
+      setTimeout(function autoShowSlider() {
+        log("[autoShowSlider] tab", tab.id, pageLocation);
+        chrome.tabs.executeScript(tab.id, {
+          // We don't slide in automatically if the slider has already been shown (manually).
+          code: "chrome.extension.sendRequest({type:'check_hover_existed',kifi_hover:window.kifi_hover||false});"
+        });
+      }, hoverTimeout * 1000);
     }
   });
 }
 
-
-function addHover(tabid) {
-  chrome.tabs.sendRequest(tabid,{type:"show_hover"}, function(response) {
-    log("Hover shown");
-  });
-
+function showSlider(tabId) {
+  log("[showSlider] tab ", tabId);
+  chrome.tabs.sendRequest(tabId, {type: "show_hover"});
 }
 
-function addHoverToTab(tab) {
-  addHover(tab.id);
-}
+// Kifi icon in location bar
+chrome.pageAction.onClicked.addListener(function(tab) {
+  showSlider(tab.id);
+});
 
-chrome.pageAction.onClicked.addListener(addHoverToTab);
-
-function isAlreadyKept(bms, location) {
-  try {
-    var found;
-    $.each(bms, function(index, bm) {
-      if (bm.url) {
-        found = found || URI(location).equals(URI(bm.url));
-      }
-      else {
-        found = found || ( bm.children && isAlreadyKept(bm.children, location));
-      }
-      return !found
-    });
-    return found;
-  } catch (e) {
-    error(e);
-  }
-}
-
-function remoteIsAlreadyKept(location, callback) {
-  log("checking if user has already bookmarked page: " + location)
+function checkWhetherKept(location, callback) {
+  log("checking if user has already bookmarked page: " + location);
   var userConfig = getConfigs();
-  if(!userConfig || !userConfig.user || !userConfig.user["keepit_external_id"]) {
+  if (!userConfig || !userConfig.user || !userConfig.user.keepit_external_id) {
     log("Can't check if already kept, no user info!");
     return;
   }
 
-  $.get("http://" + getConfigs().server + "/bookmarks/check?externalId=" + userConfig.user["keepit_external_id"] + "&uri=" + encodeURIComponent(location), null,
-    function(data) {
-      callback(data["user_has_bookmark"])
-    },
-    "json"
-  ).error(function(error) {
-    log(error.responseText);
+  $.getJSON("http://" + userConfig.server + "/bookmarks/check" +
+    "?externalId=" + userConfig.user.keepit_external_id +
+    "&uri=" + encodeURIComponent(location))
+  .success(function(data) {
+    callback(data.user_has_bookmark);
+  }).error(function(xhr) {
+    log("remoteIsAlreadyKept error:", xhr.responseText);
     callback(false);
   });
 }
 
-function setPageIcon(tabId, is_kept) {
-  try {
-    if(typeof tabId === 'undefined') {
-      return;
-    }
-    chrome.tabs.get(tabId, function(tab) {
-      if(typeof tab === 'undefined' || !tab)
-        return;
-      if(is_kept === true) {
-        chrome.pageAction.setIcon({"tabId":tabId, "path":"kept.png"});
-      }
-      else {
-        chrome.pageAction.setIcon({"tabId":tabId, "path":"keepit.png"});
-      }
-      showPageIcon(tabId);
-    });
-  }  catch (e) { }
-}
-
-function showPageIcon(tabId) {
+function setPageIcon(tabId, kept) {
+  log("[setPageIcon] tab ", tabId);
   chrome.tabs.get(tabId, function(tab) {
-    if (chrome.extension.lastError) {
-      //Possibly do some tidy-up so you don't try again
-      return;
-    }
-    if(typeof tab === 'undefined' || !tab) {
-      return;
-    }
-    else {
-      chrome.pageAction.show(tabId);
-    }
+    log("[setPageIcon] tab ", tab);
+    chrome.pageAction.setIcon({"tabId": tabId, "path": kept ? "kept.png" : "keepit.png"});
+    chrome.pageAction.show(tabId);
   });
 }
 
-chrome.tabs.onActivated.addListener(function(activeInfo) {
-  console.log("Active");
-  chrome.tabs.query({active: true}, function(tabs) {
-    var tab = tabs[0];
-    if(tab.url.indexOf("http") === 0)
-      chrome.pageAction.show(tab.id);
+function maybeShowPageIcon(tabId, windowId) {
+  chrome.tabs.query({active: true, windowId: windowId, windowType: "normal"}, function(tabs) {
+    log("[maybeShowPageIcon] tabs: ", tabs);
+    tabs.forEach(function(tab) {
+      if (tab.id == tabId && tab.url.match(/^http/)) {
+        log("[maybeShowPageIcon] showing on ", tab);
+        chrome.pageAction.show(tab.id);
+      }
+    });
   });
+}
+
+chrome.tabs.onActivated.addListener(function(info) {
+  log("[onActivated] tab info ", info);
+  maybeShowPageIcon(info.tabId, info.windowId);
 });
 
-chrome.tabs.onUpdated.addListener(function(tabId, change) {
-  log("Updated");
-  chrome.tabs.query({active: true}, function(tabs) {
-    log("Two")
-    var tab = tabs[0];
-    if(tab.url.indexOf("http") === 0)
-      chrome.pageAction.show(tab.id);
-  });
-});
-
-function injectGoogleDiv(tab) {
-  log("injecting google_inject.js into tab", tab)
-  try {
-    safeExecuteScript(tab.id, {code:"console.log('[" + new Date().getTime() + "] (from injector) [keepit:google] tab: " + tab.id + "')"},
-      function(vars){
-        log("[callback] executed logging", tab);
-    });
-    safeExecuteScript(tab.id, {file:"google_inject.js"}, function(vars){
-      log("[callback] executed google_inject.js", tab);
-    });
-    log("injected google_inject.js into tab", tab)
-  } catch (e) {
-    error(e);
+chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
+  log("[onUpdated] tab ", tab, change);
+  if (tab.active && tab.url.match(/^http/)) {
+    maybeShowPageIcon(tabId, tab.windowId);
   }
-}
-
-// Listen for the content script to send a message to the background page.
-chrome.extension.onRequest.addListener(onRequest);
+});
 
 function getFullyQualifiedKey(key) {
-  var env = localStorage["env"];
-  if (!env) {
-    env = "production";
-  }
-  var fullyQualifiedKey = env + "_" + key;
-  //log("fullyQualifiedKey for key is " + fullyQualifiedKey);
-  return fullyQualifiedKey;
+  return (localStorage["env"] || "production") + "_" + key;
 }
 
 function removeFromConfigs(key) {
@@ -607,8 +425,6 @@ function getConfigs() {
     //log(config);
     return config;
   } catch (e) {
-    console.log("User config")
-    console.log(userInfo);
     error(e);
   }
 }
@@ -689,7 +505,7 @@ function openFacebookConnect() {
         popup = undefined;
         startHandShake(function(o) {
           if (o) {
-            log("got handshake data: " + JSON.stringify(o));
+            log("got handshake data: ", o);
             setConfigs("user", JSON.stringify({
               facebook_id: o.facebookId,
               keepit_external_id: o.userId,
@@ -701,32 +517,31 @@ function openFacebookConnect() {
           } else {
             log("handshake failed");
           }
+          log("[openFacebookConnect] closing tab ", tabId);
           chrome.tabs.remove(tabId);
         });
       }
     }
   });
 
-  chrome.windows.create({'url': 'http://' + getConfigs().server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(window) {
-    popup = window.tabs[0].id
+  chrome.windows.create({'url': 'http://' + getConfigs().server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(win) {
+    popup = win.tabs[0].id
   });
 }
 
 function resetUserObjectIfInDevMode() {
   var config = getConfigs();
-  if(config["env"] == "development") {
-    log("dev mode detected, removing user " + JSON.stringify(config["user"]));
+  if (config.env == "development") {
+    log("dev mode, removing user ", config.user);
     removeFromConfigs("user");
-    log("user removed");
   }
 }
 
 resetUserObjectIfInDevMode();
 
 if (!hasKeepitIdAndFacebookId()) {
-  var userInfo = {};
-  setConfigs("user", JSON.stringify(userInfo)); // initialzie user info
   log("open facebook connect - till it is closed keepit is (suppose) to be disabled");
+  setConfigs("user", "{}");
   openFacebookConnect();
 } else {
   log("find user info in local storage");
@@ -748,7 +563,7 @@ if (!hasKeepitIdAndFacebookId()) {
       } else {
         log("NOT loading bookmarks to the server");
       }
-      getBookMarks();
+      getBookmarks();
     }
   });
 }
