@@ -27,6 +27,9 @@ class KifiInstallationTest extends SpecificationWithJUnit {
       v3 must be_>  (v4)
       v4 must be_>  (v2)
     }
+    "fail to parse an invalid version string" in {
+      KifiVersion("foo") must throwA[Exception]
+    }
     "persist" in {
       running(new EmptyApplication()) {
         val (user, install) = CX.withConnection { implicit conn =>
