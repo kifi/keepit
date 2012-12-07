@@ -453,7 +453,7 @@ object CX extends Logging {
     val conf = new BasicOrmConf(readOnly = readOnly)
     val connection: Connection = conf.connectionProvider.openConnection
     try {
-      inject[Babysitter].watch(1 second, 5 seconds) {
+      inject[Babysitter].watch(5 second, 30 seconds) {
         using(conf) {
           block(connection)
         }
