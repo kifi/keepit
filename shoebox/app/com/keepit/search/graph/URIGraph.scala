@@ -4,10 +4,12 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.model.{Bookmark, NormalizedURI, User}
 import com.keepit.search.Lang
+import com.keepit.search.LangDetector
 import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher, QueryParser}
 import com.keepit.common.db.CX
 import play.api.Play.current
 import org.apache.lucene.analysis.Analyzer
+import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriter
@@ -20,6 +22,7 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.line.LineFieldBuilder
+import java.io.StringReader
 
 object URIGraph {
   val userTerm = new Term("usr", "")
@@ -113,19 +116,25 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
 
   class URIListIndexable(override val id: Id[User], val bookmarks: Seq[Bookmark]) extends Indexable[User] with LineFieldBuilder {
     override def buildDocument = {
-      val lang = Lang("en") //TODO: detect
       val doc = super.buildDocument
       val payload = URIList.toByteArray(bookmarks)
       val usr = buildURIListPayloadField(payload)
       val uri = buildURIIdField(bookmarks)
-      val title = buildBookmarkTitleField(URIGraph.titleTerm.field(), payload, bookmarks, DefaultAnalyzer.forIndexing(lang))
+      val title = buildBookmarkTitleField(URIGraph.titleTerm.field(), payload, bookmarks){ (fieldName, text) =>
+        val lang = LangDetector.detect(text, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
+        val analyzer = DefaultAnalyzer.forIndexing(lang)
+        Some(analyzer.tokenStream(fieldName, new StringReader(text)))
+      }
       doc.add(usr)
       doc.add(uri)
       doc.add(title)
-      DefaultAnalyzer.forIndexingWithStemmer(lang).foreach{ analyzer =>
-        val titleStemmed = buildBookmarkTitleField(URIGraph.stemmedTerm.field(), payload, bookmarks, analyzer)
-        doc.add(titleStemmed)
+      val titleStemmed = buildBookmarkTitleField(URIGraph.stemmedTerm.field(), payload, bookmarks){ (fieldName, text) =>
+        val lang = LangDetector.detect(text, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
+        DefaultAnalyzer.forIndexingWithStemmer(lang).map{ analyzer =>
+          analyzer.tokenStream(fieldName, new StringReader(text))
+        }
       }
+      doc.add(titleStemmed)
       doc
     }
 
@@ -139,7 +148,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       fld
     }
 
-    def buildBookmarkTitleField(fieldName: String, payload: Array[Byte], bookmarks: Seq[Bookmark], analyzer: Analyzer) = {
+    def buildBookmarkTitleField(fieldName: String, payload: Array[Byte], bookmarks: Seq[Bookmark])(tokenStreamFunc: (String, String)=>Option[TokenStream]) = {
       val titleMap = bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.title) }
 
       val list = new URIList(payload)
@@ -157,7 +166,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
         lineNo += 1
       }
 
-      buildLineField(fieldName, lines, analyzer)
+      buildLineField(fieldName, lines, tokenStreamFunc)
     }
   }
 

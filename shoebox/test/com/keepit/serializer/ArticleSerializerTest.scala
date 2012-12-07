@@ -13,6 +13,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
+import com.keepit.search.Lang
 
 @RunWith(classOf[JUnitRunner])
 class ArticleSerializerTest extends SpecificationWithJUnit {
@@ -27,7 +28,9 @@ class ArticleSerializerTest extends SpecificationWithJUnit {
           httpContentType = Some("text/html"),
           httpOriginalContentCharset = Option("UTF-8"),
           state = SCRAPED,
-          message = Some("everything is good"))
+          message = Some("everything is good"),
+          titleLang = Some(Lang("en")),
+          contentLang = Some(Lang("en")))
       val serializer = new ArticleSerializer()
       val json = serializer.writes(article)
       println(json)
@@ -48,7 +51,9 @@ class ArticleSerializerTest extends SpecificationWithJUnit {
           httpContentType = None,
           httpOriginalContentCharset = None,
           state = SCRAPED,
-          message = None)
+          message = None,
+          titleLang = None,
+          contentLang = None)
       val serializer = new ArticleSerializer()
       val json = serializer.writes(article)
       println(json)

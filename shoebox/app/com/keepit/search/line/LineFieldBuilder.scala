@@ -4,22 +4,22 @@ import org.apache.lucene.document.Field
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
-import java.io.StringReader
 
 trait LineFieldBuilder {
-  def buildLineField(fieldName: String, lines: Seq[(Int, String)], analyzer: Analyzer) = {
-    new Field(fieldName, new LineTokenStream(fieldName, lines, analyzer))
+  def buildLineField(fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>Option[TokenStream]) = {
+    new Field(fieldName, new LineTokenStream(fieldName, lines, tokenStreamFunc))
   }
 }
 
-class LineTokenStream[A](fieldName: String, lines: Seq[(Int, String)], analyzer: Analyzer) extends TokenStream {
+class LineTokenStream[A](fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>Option[TokenStream]) extends TokenStream {
   val termAttr = addAttribute(classOf[CharTermAttribute])
   val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
   val lineIter = lines.sortBy(_._1).iterator
 
-  var baseTokenStream = new TokenStream {
+  val emptyTokenStream = new TokenStream {
     override def incrementToken() = false
   }
+  var baseTokenStream = emptyTokenStream
 
   var gap = 0
   var curPos = 0
@@ -39,7 +39,7 @@ class LineTokenStream[A](fieldName: String, lines: Seq[(Int, String)], analyzer:
       val (lineStart, lineEnd) = lineRange(lineNo)
       incr = lineStart - curPos
       posLimit = lineEnd - 1
-      baseTokenStream = analyzer.tokenStream(fieldName, new StringReader(text))
+      baseTokenStream = tokenStreamFunc(fieldName, text).getOrElse(emptyTokenStream)
       baseHasPosIncrAttr = baseTokenStream.hasAttribute(classOf[PositionIncrementAttribute])
       moreToken = baseTokenStream.incrementToken()
     }

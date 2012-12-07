@@ -3,6 +3,7 @@ package com.keepit.search.graph
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
+import com.keepit.search.Lang
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.db.{Id, CX}
@@ -55,7 +56,9 @@ class URIGraphTest extends SpecificationWithJUnit {
         httpContentType = Some("text/html"),
         httpOriginalContentCharset = Option("UTF-8"),
         state = SCRAPED,
-        message = None)
+        message = None,
+        titleLang = Some(Lang("en")),
+        contentLang = Some(Lang("en")))
   }
 
   "URIGraph" should {
