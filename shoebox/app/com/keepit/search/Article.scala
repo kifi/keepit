@@ -12,5 +12,7 @@ case class Article(
     httpContentType: Option[String], // from http header
     httpOriginalContentCharset: Option[String], // from EntityUtils.getContentCharSet
     state: State[NormalizedURI],
-    message: Option[String])
+    message: Option[String],
+    titleLang: Option[Lang],
+    contentLang: Option[Lang])
 

@@ -11,6 +11,7 @@ import com.keepit.scraper.extractor.DefaultExtractor
 import com.keepit.scraper.extractor.DefaultExtractorFactory
 import com.keepit.scraper.extractor.Extractor
 import com.keepit.scraper.extractor.YoutubeExtractorFactory
+import com.keepit.search.LangDetector
 import com.google.inject.Inject
 import org.apache.http.HttpStatus
 import org.joda.time.Seconds
@@ -75,8 +76,10 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
             scrapedAt = currentDateTime,
             httpContentType = None,
             httpOriginalContentCharset = None,
-            NormalizedURI.States.SCRAPE_FAILED,
-            Option(error.msg))
+            state = NormalizedURI.States.SCRAPE_FAILED,
+            message = Option(error.msg),
+            titleLang = None,
+            contentLang = None)
         articleStore += (uri.id.get -> article)
         // succeeded. update the state to SCRAPE_FAILED and save
         val errorURI = CX.withConnection { implicit c =>
@@ -115,8 +118,10 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
-          val title = extractor.getMetadata("title").getOrElse("")
           val content = extractor.getContent
+          val contentLang = LangDetector.detect(content)
+          val title = extractor.getMetadata("title").getOrElse("")
+          val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
           Left(Article(id = normalizedUri.id.get,
                        title = title,
                        content = content,
@@ -124,7 +129,9 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
                        httpContentType = extractor.getMetadata("Content-Type"),
                        httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
                        state = SCRAPED,
-                       message = None))
+                       message = None,
+                       titleLang = Some(titleLang),
+                       contentLang = Some(contentLang)))
         case _ =>
           Right(ScraperError(normalizedUri, fetchStatus.statusCode, fetchStatus.message.getOrElse("fetch failed")))
       }
