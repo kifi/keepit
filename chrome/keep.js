@@ -81,8 +81,7 @@ setTimeout(function maybeSend() {
 function postBookmarks(supplyBookmarks, bookmarkSource) {
   log("posting bookmarks...");
   supplyBookmarks(function(bookmarks) {
-    log("bookmarks:");
-    log(bookmarks);
+    log("bookmarks: ", bookmarks);
     if (!getUser()) {
       log("Can't post bookmark(s), no user info!");
       return;
@@ -120,8 +119,8 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
         sendResponse(getConfigs().user);
         break;
       case "add_bookmarks":
-        getBookmarks(function(bookmarks) {
-          addKeep(bookmarks, request, sendResponse, tab);
+        getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+          addKeep(info, request, sendResponse, tab);
         });
         break;
       case "get_conf":
@@ -163,6 +162,73 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
   log("[onRequest] done", request);
 });
 
+// Finds KiFi bookmark folder by id (if provided) or by name in the Bookmarks Bar,
+// or else creates it there. Ensures that it has "public" and "private" subfolders.
+// Passes an object with the three folder ids to the callback.
+function getBookmarkFolderInfo(keepItBookmarkId, callback) {
+  log("[getBookmarkFolderInfo]");
+
+  if (keepItBookmarkId) {
+    chrome.bookmarks.get(keepItBookmarkId, function(bm) {
+      if (bm.length) {
+        // We created this bookmark folder. We continue to use it even if user has moved it or renamed it.
+        ensurePublicPrivate(bm[0]);
+      } else {
+        findOrCreateKeepIt();
+      }
+    });
+  } else {
+    findOrCreateKeepIt();
+  }
+
+  function findOrCreateKeepIt() {
+    chrome.bookmarks.getChildren("0", function(bm) {
+      var parent = bm.filter(function(bm) { return bm.title == "Bookmarks Bar" })[0] || bm[0];
+      chrome.bookmarks.getChildren(parent.id, function(bm) {
+        var keepIt = bm.filter(function(bm) { return bm.title == "KeepIt" });
+        if (keepIt.length) {
+          ensurePublicPrivate(keepIt[0]);
+        } else {
+          chrome.bookmarks.create({parentId: parent.id, title: "KeepIt"}, function(bm) {
+            ensurePublicPrivate(bm);
+          });
+        }
+      });
+    });
+  }
+
+  function ensurePublicPrivate(keepIt) {
+    chrome.bookmarks.getChildren(keepIt.id, function(children) {
+      var bm = children.filter(function(bm) { return bm.title == "public" });
+      if (bm.length) {
+        ensurePrivate({keepItId: keepIt.id, publicId: bm[0].id}, children);
+      } else {
+        chrome.bookmarks.create({parentId: keepIt.id, title: "public"}, function(bm) {
+          ensurePrivate({keepItId: keepIt.id, publicId: bm.id}, children);
+        });
+      }
+    });
+  }
+
+  function ensurePrivate(info, children) {
+    var bm = children.filter(function(bm) { return bm.title == "private" });
+    if (bm.length) {
+      info.privateId = bm[0].id;
+      done(info);
+    } else {
+      chrome.bookmarks.create({parentId: keepIt.id, title: "private"}, function(bm) {
+        info.privateId = bm.id;
+        done(info);
+      });
+    }
+  }
+
+  function done(info) {
+    log("[getBookmarkFolderInfo] done");
+    callback(info);
+  }
+}
+
 function uploadAllBookmarks() {
   log("going to upload all my bookmarks to server");
   if (!getUser()) {
@@ -172,15 +238,13 @@ function uploadAllBookmarks() {
   // TODO: actually upload all bookmarks
 }
 
-function addKeep(bookmarks, request, sendResponse, tab) {
-  log("creating bookmark. private: " + request.private + " tile " + request.title, tab);
-  var parent = (request.private) ? bookmarks.private : bookmarks.public;
-  var isPrivate = request.private ? true : false; // Forcing actual `true' and `false'
-  var bookmark = {'parentId': parent.id, 'title': request.title, 'url': request.url};
-  chrome.bookmarks.create(bookmark, function(created) {
+function addKeep(bmInfo, req, sendResponse, tab) {
+  log("[addKeep] private: " + !!req.private + ", title: " + req.title, tab);
+  var bookmark = {parentId: bmInfo[req.private ? "privateId" : "publicId"], title: req.title, url: req.url};
+  chrome.bookmarks.create(bookmark, function(bm) {
     try {
-      sendResponse(created);
-      bookmark.isPrivate = isPrivate;
+      sendResponse(bm);
+      bookmark.isPrivate = !!req.isPrivate;
       postBookmarks(function(f) {f([bookmark])}, "HOVER_KEEP");
     } catch (e) {
       error(e);
@@ -190,14 +254,7 @@ function addKeep(bookmarks, request, sendResponse, tab) {
 
 function removeKeep(bookmarks, request, sendResponse, tab) {
   log("removing bookmark: ", request.externalId, tab);
-  sendResponse(created);
 
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
-      log("removed bookmark. " + xhr.response);
-    }
-  }
   var userConfig = getConfigs();
   var userInfo = userConfig.user;
   if (!userInfo) {
@@ -205,6 +262,12 @@ function removeKeep(bookmarks, request, sendResponse, tab) {
     return;
   }
 
+  var xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState == 4) {
+      log("removed bookmark. " + xhr.response);
+    }
+  }
   xhr.open("POST", 'http://' + userConfig.server + '/bookmarks/remove/?externalId=' + userInfo["keepit_external_id"] + "&externalBookmarkId=" + request.externalId, true);
   xhr.send();
 }
@@ -401,8 +464,11 @@ function removeFromConfigs(key) {
 }
 
 function setConfigs(key, value) {
-  log("setting config key " + key + " with " + value + ", prev value is ", localStorage[getFullyQualifiedKey(key)]);
-  localStorage[getFullyQualifiedKey(key)] = value;
+  var prev = localStorage[getFullyQualifiedKey(key)];
+  if (prev !== String(value)) {
+    log("[setConfigs]", key, " = ", value, " (was ", prev, ")");
+    localStorage[getFullyQualifiedKey(key)] = value;
+  }
 }
 
 function getConfigs() {
@@ -416,6 +482,7 @@ function getConfigs() {
       "env": env,
       "server": env == "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com",
       "kifi_installation_id": localStorage[getFullyQualifiedKey("kifi_installation_id")],
+      "bookmark_id": localStorage[getFullyQualifiedKey("bookmark_id")],
       "hover_timeout": parseNonNegIntOr(localStorage[getFullyQualifiedKey("hover_timeout")], 10),
       "show_score": parseBoolOr(localStorage[getFullyQualifiedKey("show_score")], false),
       "upload_on_start": parseBoolOr(localStorage[getFullyQualifiedKey("upload_on_start")], false),
@@ -508,6 +575,7 @@ function onAuthenticate(data) {
     name: data.name}));
   setConfigs("kifi_installation_id", data.installationId);
 
+  var config = getConfigs();
   if (!prevVersion || config.upload_on_start) {
     log("loading bookmarks to the server");
     postBookmarks(chrome.bookmarks.getTree, prevVersion ? "PLUGIN_START" : "INIT_LOAD");
@@ -515,7 +583,11 @@ function onAuthenticate(data) {
     log("[onAuthenticate] NOT uploading bookmarks");
   }
 
-  getBookmarks();
+  // Locate or create KeepIt bookmark folder.
+  getBookmarkFolderInfo(config.bookmark_id, function(info) {
+    setConfigs("bookmark_id", info.keepItId);
+  });
+
   log("[onAuthenticate] done");
   logEvent("authenticated");
 }
