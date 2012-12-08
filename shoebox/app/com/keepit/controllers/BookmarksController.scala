@@ -125,16 +125,15 @@ object BookmarksController extends FortyTwoController {
     Ok(JsObject(("user_has_bookmark" -> JsBoolean(userHasBookmark)) :: Nil))
   }
 
-  def removeBookmark(externalId: ExternalId[User], externalBookmarkId: ExternalId[Bookmark]) = JsonAction { request =>
+  def removeBookmark(externalBookmarkId: ExternalId[Bookmark]) = AuthenticatedJsonAction { request =>
     val (user,bookmark) = CX.withConnection{ implicit conn =>
-      val user = User.getOpt(externalId).getOrElse(throw new Exception("user externalId %s not found".format(externalId)))
-      val bookmark = Bookmark.getOpt(externalBookmarkId).getOrElse(
-                throw new Exception("bookmark externalId %s not found".format(externalId))).withActive(false).save
+      val user = User.get(request.userId)
+      val bookmark = Bookmark.get(externalBookmarkId).withActive(false).save
       (user, bookmark)
     }
     inject[URIGraphPlugin].update(user.id.get)
 
-    Ok(JsObject(("status" -> JsString("success")) :: Nil))
+    Ok(JsObject(Seq("status" -> JsString("success"))))
   }
 
   def updatePrivacy(externalId: ExternalId[Bookmark], isPrivate: Boolean) = JsonAction { request =>
