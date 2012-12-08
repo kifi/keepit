@@ -18,6 +18,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   // get config params
   val minMyBookmarks = config.asInt("minMyBookmarks")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
+  val personalTitleBoost = config.asFloat("personalTitleBoost")
   val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   val percentMatch = config.asFloat("percentMatch")
@@ -70,7 +71,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
             if (friendlyUris.contains(id)) {
               if (myUris.contains(id)) {
                 // blend with personal bookmark title score
-                val blendedScore = score + bookmarkTitleHits.getOrElse(id, 0.0f)
+                val blendedScore = max(score, bookmarkTitleHits.getOrElse(id, 0.0f))
                 bookmarkTitleHits -= id
                 myHits.insert(id, blendedScore, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
               } else {
@@ -85,7 +86,8 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
       }
     }
     bookmarkTitleHits.foreach{ case (id, score) =>
-      if (!filterOut.contains(id)) myHits.insert(id, score, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
+      // boost scores to compensate missing article match
+      if (!filterOut.contains(id)) myHits.insert(id, score * personalTitleBoost, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
     }
     (myHits, friendsHits, othersHits)
   }

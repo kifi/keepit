@@ -2,10 +2,16 @@ package com.keepit.search.line
 
 import org.apache.lucene.index.IndexReader
 
-class BooleanNode[P <: LineQuery](required: Array[P], optional: Array[P], percentMatch: Float, reader: IndexReader) extends LineQuery(1.0f) {
+class BooleanNode[P <: LineQuery](required: Array[P], optional: Array[P], boost: Float, percentMatch: Float, reader: IndexReader) extends LineQuery(1.0f) {
 
-  val weightOnRequiredNodes = required.foldLeft(0.0f){ (w, n) => w + n.weight }
-  val threshold = if (percentMatch <= 0.0f) 0.0f else optional.foldLeft(weightOnRequiredNodes){ (w, n) => w + n.weight } * percentMatch / 100.0f
+  private var weightOnRequiredNodes = 0.0f
+  private var threshold = 0.0f
+  getReady
+
+  def getReady {
+    weightOnRequiredNodes = required.foldLeft(0.0f){ (w, n) => w + n.weight }
+    threshold = if (percentMatch <= 0.0f) 0.0f else optional.foldLeft(weightOnRequiredNodes){ (w, n) => w + n.weight } * percentMatch / 100.0f
+  }
 
   override def fetchDoc(targetDoc: Int) = {
     if (curDoc < LineQuery.NO_MORE_DOCS) {
@@ -83,5 +89,16 @@ class BooleanNode[P <: LineQuery](required: Array[P], optional: Array[P], percen
     required.foreach{ node => sc += node.score }
     optional.foreach{ node => if (node.curDoc == curDoc && node.curLine == curLine) sc += node.score }
     sc
+  }
+
+  override def normalize(norm: Float) {
+    required.foreach{ n => n.normalize(norm * boost) }
+    optional.foreach{ n => n.normalize(norm * boost) }
+    getReady
+  }
+
+  override def sumOfSquaredWeights = {
+    val sum = optional.foldLeft(boost * boost){ (s, n) => s + n.sumOfSquaredWeights }
+    required.foldLeft(sum){ (s, n) => s + n.sumOfSquaredWeights }
   }
 }

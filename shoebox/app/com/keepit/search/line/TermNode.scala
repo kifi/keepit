@@ -3,7 +3,7 @@ package com.keepit.search.line
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 
-class TermNode(term: Term, weight: Float, reader: IndexReader) extends LineQuery(weight) {
+class TermNode(term: Term, initialWeight: Float, reader: IndexReader) extends LineQuery(initialWeight) {
   val tp = reader.termPositions(term)
   var posLeft = 0
 

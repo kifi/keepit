@@ -59,6 +59,7 @@ object DefaultAnalyzer {
   import AnalyzerBuilder._
 
   private val stdAnalyzer = analyzer[DefaultAnalyzer]
+  private val defaultAnalyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
 
   val langAnalyzers = Map[String, Analyzer](
     "ar" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Arabic).withFilter[ArabicNormalizationFilter],
@@ -116,7 +117,7 @@ object DefaultAnalyzer {
     m.erasure.getConstructor(classOf[Version]).newInstance(version).asInstanceOf[Analyzer]
   }
 
-  private def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, stdAnalyzer)
+  private def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, defaultAnalyzer)
   private def getAnalyzerWithStemmer(lang: Lang): Option[Analyzer] = langAnalyzerWithStemmer.get(lang.lang)
 
   def forIndexing: Analyzer = forIndexing(Lang("en"))
