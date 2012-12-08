@@ -11,14 +11,14 @@ package object inject {
   class RichInjector(val injector: Injector) {
     def inject[A](implicit m: Manifest[A]): A = {
       m.typeArguments match {
-        case Nil => injector.getInstance(m.erasure.asInstanceOf[Class[A]])
+        case Nil => injector.getInstance(m.runtimeClass.asInstanceOf[Class[A]])
         case _   => injector.getInstance(key(m))
       }
     }
 
     private def key[A](implicit a: Manifest[A]): Key[A] = {
-      val targs = a.typeArguments.map(_.erasure)
-      Key.get(Types.newParameterizedType(a.erasure, targs:_*)).asInstanceOf[Key[A]]
+      val targs = a.typeArguments.map(_.runtimeClass)
+      Key.get(Types.newParameterizedType(a.runtimeClass, targs:_*)).asInstanceOf[Key[A]]
     }
   }
 
