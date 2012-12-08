@@ -17,7 +17,7 @@ class PersonalSearchResultPacketSerializer extends Writes[PersonalSearchResultPa
         "context" -> JsString(res.context)
       ))
     } catch {
-      case e =>
+      case e: Throwable =>
         log.error("can't serialize %s".format(res))
         throw e
     }

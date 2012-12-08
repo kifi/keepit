@@ -16,11 +16,14 @@
  */
 package securesocial.core.providers
 
-import play.api.{Application, Logger}
+import play.api.{ Application, Logger }
 import play.api.libs.json.JsObject
 import securesocial.core._
-import play.api.libs.ws.{Response, WS}
-
+import play.api.libs.ws.{ Response, WS }
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.Await
+import scala.concurrent.Future
 
 /**
  * A Facebook Provider
@@ -42,43 +45,44 @@ class FacebookProvider(application: Application) extends OAuth2Provider(applicat
   // facebook does not follow the OAuth2 spec :-\
   override protected def buildInfo(response: Response): OAuth2Info = {
     response.body.split("&|=") match {
-        case Array(AccessToken, token, Expires, expiresIn) => OAuth2Info(token, None, Some(expiresIn.toInt))
-        case _ =>
-          Logger.error("Invalid response format for accessToken")
-          throw new AuthenticationException()
+      case Array(AccessToken, token, Expires, expiresIn) => OAuth2Info(token, None, Some(expiresIn.toInt))
+      case _ =>
+        Logger.error("Invalid response format for accessToken")
+        throw new AuthenticationException()
     }
   }
 
   def fillProfile(user: SocialUser) = {
-    Logger.debug("in fillProfile for "+user);
+    Logger.debug("in fillProfile for " + user);
     val accessToken = user.oAuth2Info.get.accessToken
-    val promise = WS.url(MeApi + accessToken).get()
+    val promise = WS.url(MeApi + accessToken).withTimeout(10000).get()
 
-    promise.await(10000).fold( error => {
-      Logger.error( "Error retrieving profile information", error)
-      throw new AuthenticationException()
-    }, response => {
-      val me = response.json
-      (me \ Error).asOpt[JsObject] match {
-        case Some(error) =>
-          val message = (error \ Message).as[String]
-          val errorType = ( error \ Type).as[String]
-          Logger.error("Error retrieving profile information from Facebook. Error type = " + errorType
-            + ", message: " + message)
-          throw new AuthenticationException()
-        case _ =>
-          val id = ( me \ Id).as[String]
-          val displayName = ( me \ Name).as[String]
-          val avatarUrl = ( me \ Picture \ "data" \ "url").asOpt[String]
-          val email = ( me \ Email).as[String]
-          user.copy(
-            id = UserId(id.toString, providerId),
-            displayName = displayName,
-            avatarUrl = avatarUrl,
-            email = Some(email)
-          )
-      }
-    })
+    Await.result(promise.transform(
+      response => {
+        val me = response.json
+        (me \ Error).asOpt[JsObject] match {
+          case Some(error) =>
+            val message = (error \ Message).as[String]
+            val errorType = (error \ Type).as[String]
+            Logger.error("Error retrieving profile information from Facebook. Error type = " + errorType
+              + ", message: " + message)
+            throw new AuthenticationException()
+          case _ =>
+            val id = (me \ Id).as[String]
+            val displayName = (me \ Name).as[String]
+            val avatarUrl = (me \ Picture \ "data" \ "url").asOpt[String]
+            val email = (me \ Email).as[String]
+            user.copy(
+              id = UserId(id.toString, providerId),
+              displayName = displayName,
+              avatarUrl = avatarUrl,
+              email = Some(email))
+        }
+      },
+      error => {
+        Logger.error("Error retrieving profile information", error)
+        throw new AuthenticationException()
+      }), 10 seconds)
   }
 }
 

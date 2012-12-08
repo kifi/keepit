@@ -54,7 +54,7 @@ case class ElectronicMail (
     assert(1 == entity.save())
     entity.view
   } catch {
-    case e => throw new Exception("Error saving email from [%s] %s to %s with html body size %s: %s".format(fromName, from, to, htmlBody.size, subject), e)
+    case e: Throwable => throw new Exception("Error saving email from [%s] %s to %s with html body size %s: %s".format(fromName, from, to, htmlBody.size, subject), e)
   }
 }
 

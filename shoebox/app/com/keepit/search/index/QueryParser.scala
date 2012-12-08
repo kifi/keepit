@@ -16,7 +16,7 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
     val query = try {
       super.parse(queryText)
     } catch {
-      case e => super.parse(LuceneQueryParser.escape(queryText))
+      case e: Throwable => super.parse(LuceneQueryParser.escape(queryText))
     }
     Option(query)
   }

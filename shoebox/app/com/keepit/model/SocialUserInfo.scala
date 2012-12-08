@@ -112,7 +112,7 @@ private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialU
       case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK
       case _ => throw new RuntimeException("unknown network type %s".format(networkType()))
     },
-    credentials = credentials.map{ s => new SocialUserSerializer().reads(Json.parse(s)) },
+    credentials = credentials.map{ s => new SocialUserSerializer().reads(Json.parse(s)).value },
     lastGraphRefresh = lastGraphRefresh.value
   )
 }

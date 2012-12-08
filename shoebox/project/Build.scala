@@ -1,6 +1,6 @@
 import sbt._
 import Keys._
-import PlayProject._
+import play.Project._
 import scala.sys.process._
 import java.io.PrintWriter
 import java.io.File
@@ -41,9 +41,10 @@ object ApplicationBuild extends Build {
      * http://stackoverflow.com/questions/10958215/how-to-exclude-commons-logging-from-a-scala-sbt-slf4j-project 
      */
     val appDependencies = Seq(
+      jdbc,
       "ru.circumflex" % "circumflex-orm" % "2.1" % "compile->default",
       "mysql" % "mysql-connector-java" % "5.1.10",
-      "org.clapper" %% "grizzled-slf4j" % "0.6.9",
+      "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" % "akka-testkit" % "2.0.2",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
@@ -53,13 +54,13 @@ object ApplicationBuild extends Build {
       "org.apache.tika" % "tika-parsers" % "1.2",
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       //used for securesocial
-      "com.typesafe" %% "play-plugins-util" % "2.0.1",
+      "com.typesafe" % "play-plugins-util_2.9.2" % "2.1-09092012",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
       "javax.mail" % "mail" % "1.4.5"      
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
-    val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
+    val main = play.Project(appName, appVersion, appDependencies).settings(
       // add some imports to the routes file
       routesImport ++= Seq(
         "com.keepit.common.db.{ExternalId, Id, State}",
@@ -85,7 +86,7 @@ object ApplicationBuild extends Build {
       
       libraryDependencies ++= Seq(
         "com.google.inject" % "guice" % "3.0",
-        "org.scalatest" %% "scalatest" % "2.0.M4" % "test"
+        "org.scalatest" % "scalatest_2.10.0-RC5" % "2.0.M5-B1" % "test"
       )
     )
 }

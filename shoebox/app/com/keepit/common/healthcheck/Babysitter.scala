@@ -4,19 +4,21 @@ import play.api._
 import play.api.libs.concurrent.Akka
 import com.keepit.common.logging.Logging
 import play.api.libs.concurrent.Akka
-import akka.util.duration._
 import com.keepit.inject._
 import org.joda.time.DateTime
 import com.google.inject._
 import akka.actor.Scheduler
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.duration._
+import scala.concurrent.duration._
 
 @ImplementedBy(classOf[BabysitterImpl])
 trait Babysitter {
-  def watch[A](warnTimeout: akka.util.FiniteDuration, errorTimeout: akka.util.FiniteDuration)(block: => A)(implicit app: Application): A
+  def watch[A](warnTimeout: FiniteDuration, errorTimeout: FiniteDuration)(block: => A)(implicit app: Application): A
 }
 
 class BabysitterImpl extends Babysitter with Logging {
-  def watch[A](warnTimeout: akka.util.FiniteDuration, errorTimeout: akka.util.FiniteDuration)(block: => A)(implicit app: Application): A = {
+  def watch[A](warnTimeout: FiniteDuration, errorTimeout: FiniteDuration)(block: => A)(implicit app: Application): A = {
     val startTime = inject[DateTime]
     val e = new Exception("Babysitter error timeout")
     val babysitter = inject[Scheduler].scheduleOnce(errorTimeout) {

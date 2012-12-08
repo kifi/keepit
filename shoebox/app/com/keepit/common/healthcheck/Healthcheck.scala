@@ -18,14 +18,15 @@ import akka.util.Timeout
 import akka.actor._
 import akka.actor.Actor._
 import akka.actor.ActorRef
-import akka.util.duration._
+import scala.concurrent.duration._
 import akka.pattern.ask
-import akka.dispatch.Await
+import scala.concurrent.Await
 import play.api.libs.concurrent._
 import org.joda.time.DateTime
-import akka.dispatch.Future
+import scala.concurrent.Future
 import com.google.inject.Inject
 import com.google.inject.Provider
+import play.api.libs.concurrent.Execution.Implicits._
 
 case class HealthcheckError(error: Option[Throwable] = None, method: Option[String] = None,
     path: Option[String] = None, callType: CallType, errorMessage: Option[String] = None,

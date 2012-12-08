@@ -52,20 +52,20 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
     )
   }
 
-  def reads(json: JsValue): ArticleSearchResult = ArticleSearchResult(
+  def reads(json: JsValue): JsResult[ArticleSearchResult] = JsSuccess(ArticleSearchResult(
       last = (json \ "last").asOpt[String] map (j => ExternalId[ArticleSearchResultRef](j)),
       query = (json \ "query").as[String],
       hits = readHits((json \ "hits").asInstanceOf[JsArray]),
       myTotal = (json \ "myTotal").as[Int],
       friendsTotal = (json \ "friendsTotal").as[Int],
       mayHaveMoreHits = (json \ "mayHaveMoreHits").as[Boolean],
-      scorings = (json \ "scorings").asInstanceOf[JsArray].value map ScoringSerializer.scoringSerializer.reads,
+      scorings = (json \ "scorings").asInstanceOf[JsArray].value map (s => ScoringSerializer.scoringSerializer.reads(s).get),
       filter = (json \ "filter").asOpt[Seq[Long]].map(_.toSet).getOrElse(Set.empty[Long]),
       uuid = ExternalId[ArticleSearchResultRef]((json \ "uuid").as[String]),
       time = parseStandardTime((json \ "time").as[String]),
       millisPassed = (json \ "millisPassed").as[Int],
       pageNumber = (json \ "pageNumber").as[Int]
-    )
+    ))
 }
 
 object ArticleSearchResultSerializer {

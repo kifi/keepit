@@ -120,7 +120,7 @@ class SendgridMailProvider @Inject() () extends Logging {
         mail.sent("message sent", ElectronicMailMessageId(messageId.substring(1, messageId.length - 1))).save
       }
     } catch {
-      case e =>
+      case e: Throwable =>
         log.error(e)
         mailError(mail, e.toString(), transport)
     }

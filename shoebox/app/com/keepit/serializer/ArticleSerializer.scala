@@ -23,7 +23,7 @@ class ArticleSerializer extends Format[Article] {
       )
     )
 
-  def reads(json: JsValue): Article = Article(
+  def reads(json: JsValue): JsResult[Article] = JsSuccess(Article(
       Id((json \ "normalizedUriId").as[Long]),
       (json \ "title").as[String],
       (json \ "content").as[String],
@@ -31,7 +31,7 @@ class ArticleSerializer extends Format[Article] {
       (json \ "httpContentType").asOpt[String],
       (json \ "httpOriginalContentCharset").asOpt[String],
       State[NormalizedURI]((json \ "state").as[String]),
-      (json \ "message").asOpt[String])
+      (json \ "message").asOpt[String]))
 }
 
 object ArticleSerializer {

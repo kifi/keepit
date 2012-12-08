@@ -59,7 +59,7 @@ class SocialUserImportFriends() extends Logging {
     val socialId = try {
       SocialId((friend \ "id").as[String])
     } catch {
-      case e =>
+      case e: Throwable =>
         log.error("Can't parse username from friend json %s".format(friend))
         throw e
     }

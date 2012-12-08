@@ -173,7 +173,7 @@ object BookmarksController extends FortyTwoController {
   private def internBookmark(json: JsObject, user: User, source: BookmarkSource): Option[Bookmark] = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
-    val isPrivate = try { (json \ "isPrivate").as[Boolean] } catch { case e => false }
+    val isPrivate = try { (json \ "isPrivate").as[Boolean] } catch { case e: Throwable => false }
 
     url.toLowerCase.startsWith("javascript:") match {
       case false =>

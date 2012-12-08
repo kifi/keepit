@@ -12,9 +12,10 @@ import akka.util.Timeout
 import akka.actor._
 import akka.actor.Actor._
 import akka.actor.ActorRef
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.Await
 import akka.pattern.ask
-import akka.dispatch.Await
 import play.api.libs.concurrent._
 import org.joda.time.DateTime
 import akka.dispatch.Future

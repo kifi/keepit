@@ -30,7 +30,7 @@ class ExternalIdTest extends SpecificationWithJUnit {
         val id = ExternalId("asdf")
         failure("id should not have been created: " + id)
       } catch {
-        case e => success
+        case e: Throwable => success
       }
     }
   }

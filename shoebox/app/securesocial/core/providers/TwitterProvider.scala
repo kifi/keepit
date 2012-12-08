@@ -17,40 +17,40 @@
 package securesocial.core.providers
 
 import securesocial.core._
-import play.api.mvc.{Request, Results, Result}
-import play.api.libs.oauth.{RequestToken, OAuthCalculator}
-import play.api.libs.ws.{Response, WS}
-import play.api.{Application, Logger}
-
+import play.api.mvc.{ Request, Results, Result }
+import play.api.libs.oauth.{ RequestToken, OAuthCalculator }
+import play.api.libs.ws.{ Response, WS }
+import play.api.{ Application, Logger }
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.Await
+import scala.concurrent.Future
 
 /**
  * A Twitter Provider
  */
 class TwitterProvider(application: Application) extends OAuth1Provider(application) {
 
-
   override def providerId = TwitterProvider.Twitter
 
   override def fillProfile(user: SocialUser): SocialUser = {
     //var result = user
     val oauthInfo = user.oAuth1Info.get
-    val call = WS.url(TwitterProvider.VerifyCredentials).sign(
+    Await.result(WS.url(TwitterProvider.VerifyCredentials).sign(
       OAuthCalculator(oauthInfo.serviceInfo.key,
-      RequestToken(oauthInfo.token, oauthInfo.secret))).get()
-    call.await(10000).fold(
-      onError => {
-        Logger.error("timed out waiting for Twitter")
-        throw new AuthenticationException()
-      },
-      response =>
-      {
-        val me = response.json
-        val id = (me \ "id").as[Int]
-        val name = (me \ "name").as[String]
-        val profileImage = (me \ "profile_image_url").asOpt[String]
-        user.copy(id = UserId(id.toString, providerId), displayName = name, avatarUrl = profileImage)
-      }
-    )
+        RequestToken(oauthInfo.token, oauthInfo.secret))).get().transform(
+        response =>
+          {
+            val me = response.json
+            val id = (me \ "id").as[Int]
+            val name = (me \ "name").as[String]
+            val profileImage = (me \ "profile_image_url").asOpt[String]
+            user.copy(id = UserId(id.toString, providerId), displayName = name, avatarUrl = profileImage)
+          },
+        onError => {
+          Logger.error("timed out waiting for Twitter")
+          throw new AuthenticationException()
+        }), 10 seconds)
   }
 }
 

@@ -49,7 +49,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
               toInputStream(value),
               metadata))
           } catch {
-            case e =>
+            case e: Throwable =>
               log.error("could not send object key: [%s]\nvalue: [%s]\nto bucket %s".format(key, value, bucketName))
               throw e
           }
@@ -82,7 +82,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
     try {
       val jsonString = scala.io.Source.fromInputStream(is, ENCODING).getLines().mkString("\n")
       val json = Json.parse(jsonString)
-      formatter.reads(json)
+      formatter.reads(json).get // Play2.1 supports cool error handling. Let's explore that.
     } finally {
       is.close
     }

@@ -17,7 +17,7 @@ import play.api._
 import ru.circumflex.core._
 import ru.circumflex.orm._
 import play.api.libs.concurrent.Akka
-import akka.util.duration._
+import scala.concurrent.duration._
 import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.inject._
@@ -254,7 +254,7 @@ class ClobField[R <: Record[_, R]](name: String, record: R)
     } catch {
       //ControlThrowable is used for control flow of scala's closure management. You must throw it up!
       case e: ControlThrowable => throw e
-      case e => throw new DbException("error converting instance %s to clob with for name %s. cause: %s\n%s".format(result.toString(), name, e.toString(), e.getStackTrace() mkString "\n"), e)
+      case e: Throwable => throw new DbException("error converting instance %s to clob with for name %s. cause: %s\n%s".format(result.toString(), name, e.toString(), e.getStackTrace() mkString "\n"), e)
     }
     val reader = new BufferedReader(clob.getCharacterStream())
     val builder = new StringBuilder()
@@ -297,7 +297,7 @@ class JodaTimestampField[R <: Record[_, R]](name: String, record: R)
       } catch {
         //ControlThrowable is used for control flow of scala's closure management. You must throw it up!
         case e: ControlThrowable => throw e
-        case e => throw new DbException("error converting instance %s to timestemp with alias %s for name %s. cause: %s\n%s".format(o.toString(), alias, name, e.toString(), e.getStackTrace() mkString "\n"), e)
+        case e: Throwable => throw new DbException("error converting instance %s to timestemp with alias %s for name %s. cause: %s\n%s".format(o.toString(), alias, name, e.toString(), e.getStackTrace() mkString "\n"), e)
       }
       Some(timestemp.toDateTime)
     }
@@ -461,7 +461,7 @@ object CX extends Logging {
     } catch {
       //ControlThrowable is used for control flow of scala's closure management. You must throw it up!
       case e: ControlThrowable => throw e
-      case e =>
+      case e: Throwable =>
         log.error(">>Exception while executing block with readonly = %s".format(readOnly), e)
         e.printStackTrace()
         throw new DbException("Exception while executing block with readonly = %s. cause: %s\n%s".format(

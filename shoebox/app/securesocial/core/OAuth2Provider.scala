@@ -25,6 +25,10 @@ import play.api.mvc.{Results, Result, Request}
 import securesocial.controllers.routes
 import play.api.libs.ws.{Response, WS}
 import com.keepit.common.logging.Logging
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.Await
+import scala.concurrent.Future
 
 /**
  * Base class for all OAuth2 providers
@@ -58,12 +62,14 @@ abstract class OAuth2Provider(application: Application) extends IdentityProvider
       OAuth2Constants.Code -> Seq(code),
       OAuth2Constants.RedirectUri -> Seq(routes.LoginPage.authenticate(providerId).absoluteURL())
     )
-    WS.url(settings.accessTokenUrl).post(params).await(10000).fold( onError =>
-      {
-        log.error("Timed out trying to get an access token for provider " + providerId)
-        throw new AuthenticationException()
-      },
-      response =>  buildInfo(response)
+    Await.result(WS.url(settings.accessTokenUrl).post(params).transform(
+        response =>  buildInfo(response),
+        onError => {
+          log.error("Timed out trying to get an access token for provider " + providerId)
+          throw new AuthenticationException()
+        }
+      ),
+      10 seconds
     )
   }
 
