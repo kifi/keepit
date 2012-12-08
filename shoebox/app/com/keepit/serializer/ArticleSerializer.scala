@@ -3,6 +3,7 @@ package com.keepit.serializer
 import com.keepit.common.db.{Id, ExternalId, State}
 import com.keepit.common.time._
 import com.keepit.model.NormalizedURI
+import com.keepit.search.Lang
 import securesocial.core._
 import securesocial.core.AuthenticationMethod._
 import play.api.libs.json._
@@ -19,7 +20,9 @@ class ArticleSerializer extends Format[Article] {
         "httpContentType" -> (article.httpContentType map { t => JsString(t) } getOrElse(JsNull)),
         "httpOriginalContentCharset" -> (article.httpOriginalContentCharset map { t => JsString(t) } getOrElse(JsNull)),
         "state" -> JsString(article.state.toString),
-        "message" -> (article.message map { m => JsString(m) } getOrElse(JsNull))
+        "message" -> (article.message map { m => JsString(m) } getOrElse(JsNull)),
+        "titleLang" -> (article.titleLang map { lang => JsString(lang.lang) } getOrElse(JsNull)),
+        "contentLang" -> (article.contentLang map { lang => JsString(lang.lang) } getOrElse(JsNull))
       )
     )
 
@@ -31,7 +34,10 @@ class ArticleSerializer extends Format[Article] {
       (json \ "httpContentType").asOpt[String],
       (json \ "httpOriginalContentCharset").asOpt[String],
       State[NormalizedURI]((json \ "state").as[String]),
-      (json \ "message").asOpt[String])
+      (json \ "message").asOpt[String],
+      (json \ "titleLang").asOpt[String] map { lang => Lang(lang) },
+      (json \ "contentLang").asOpt[String] map { lang => Lang(lang) }
+    )
 }
 
 object ArticleSerializer {

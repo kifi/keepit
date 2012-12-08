@@ -110,8 +110,8 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       val doc = super.buildDocument
       articleStore.get(uri.id.get) match {
         case Some(article) =>
-          val titleLang = Lang("en") //TODO: detect
-          val contentLang = Lang("en") //TODO: detect
+          val titleLang = article.titleLang.getOrElse(Lang("en"))
+          val contentLang = article.contentLang.getOrElse(Lang("en"))
           val titleAnalyzer = DefaultAnalyzer.forIndexing(titleLang)
           val contentAnalyzer = DefaultAnalyzer.forIndexing(contentLang)
 

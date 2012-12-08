@@ -14,7 +14,7 @@ class LangDetectorTest extends SpecificationWithJUnit {
 
   "LangDetector" should {
     "detect English" in {
-      LangDetector.detect("This is English.") === Lang("en")
+      LangDetector.detect("This is a sample English text.") === Lang("en")
     }
 
     "detect Japanese" in {

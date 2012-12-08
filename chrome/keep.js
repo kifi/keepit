@@ -339,7 +339,7 @@ function searchOnServer(request, sendResponse, tab) {
       '&externalId=' + userConfigs.user.keepit_external_id +
       '&maxHits=' + userConfigs.max_res * 2 +
       '&lastUUI=' + (request.lastUUID || "") +
-      '&context=' + (request.context || "") +
+      '&context=' + encodeURIComponent(request.context || "") +
       '&kifiVersion=' + currVersion,
     true);
   xhr.send();
