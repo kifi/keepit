@@ -1,7 +1,7 @@
 console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
 (function() {
-  var config, following, isKept = false;
+  var config, following, isKept;
 
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
@@ -134,26 +134,40 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function keepPage(shouldSlideOut) {
-    log("bookmarking page: " + document.location.href);
+    log("[keepPage]", document.location.href);
 
     chrome.extension.sendRequest({
       "type": "set_page_icon",
-      "is_kept": true
-    });
-
+      "is_kept": true});
     isKept = true;
+    if (shouldSlideOut) {
+      keptItslideOut();
+    }
 
     var request = {
       "type": "add_bookmarks",
       "url": document.location.href,
       "title": document.title,
       "private": $("#keepit_private").is(":checked")
-    }
+    };
     chrome.extension.sendRequest(request, function(response) {
-      log("bookmark added! -> " + JSON.stringify(response));
-      if(shouldSlideOut)
-        keptItslideOut();
-   });
+     log("[keepPage] response", response);
+    });
+  }
+
+  function unkeepPage() {
+    log("[unkeepPage]", document.location.href);
+
+    chrome.extension.sendRequest({"type": "set_page_icon", "is_kept": false});
+    isKept = false;
+    slideOut();
+
+    chrome.extension.sendRequest({
+        "type": "unkeep",
+        "url": document.location.href.replace(/#.*/, "")},
+      function(response) {
+        log("[unkeepPage] response", response);
+      });
   }
 
   function showKeepItHover(user) {
@@ -230,15 +244,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
     //$('.profilepic').click(function() { location=facebookProfileLink; });
 
-    $('.unkeepitbtn').click(function() {
-      log("un-bookmarking page: " + document.location.href);
-      chrome.extension.sendRequest({
-        "type": "set_page_icon",
-        "is_kept": false
-      });
-      isKept = false;
-      slideOut();
-    });
+    $('.unkeepitbtn').click(unkeepPage);
 
     $('.keepitbtn').click(function() {
       keepPage(true);

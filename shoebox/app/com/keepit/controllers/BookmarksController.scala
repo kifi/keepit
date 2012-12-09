@@ -31,7 +31,7 @@ import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.net.HttpClient
 import com.keepit.search.graph.URIGraphPlugin
-import play.api.libs.json.JsBoolean
+import play.api.libs.json.{JsBoolean, JsNull}
 import com.keepit.common.controller.FortyTwoController
 
 object BookmarksController extends FortyTwoController {
@@ -47,11 +47,29 @@ object BookmarksController extends FortyTwoController {
 
   //post request with a list of private/public and active/inactive
   def updateBookmarks() = AdminHtmlAction { request =>
+    def toBoolean(str: String) = str.trim.toInt == 1
+
+    def setIsPrivate(id: Id[Bookmark], isPrivate: Boolean)(implicit conn: Connection): Id[User] = {
+      val bookmark = Bookmark.get(id)
+      log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate))
+      bookmark.withPrivate(isPrivate).save
+      log.info("updated bookmark %s".format(bookmark))
+      bookmark.userId
+    }
+
+    def setIsActive(id: Id[Bookmark], isActive: Boolean)(implicit conn: Connection): Id[User] = {
+      val bookmark = Bookmark.get(id)
+      log.info("updating bookmark %s with active = %s".format(bookmark, isActive))
+      bookmark.withActive(isActive).save
+      log.info("updated bookmark %s".format(bookmark))
+      bookmark.userId
+    }
+
     val uniqueUsers = CX.withConnection { implicit conn =>
       val modifiedUserIds = request.body.asFormUrlEncoded.get map { case (key, values) =>
         key.split("_") match {
-          case Array("private", id) => privateBookmark(Id[Bookmark](id.toInt), toBoolean(values.last))
-          case Array("active", id) => activeBookmark(Id[Bookmark](id.toInt), toBoolean(values.last))
+          case Array("private", id) => setIsPrivate(Id[Bookmark](id.toInt), toBoolean(values.last))
+          case Array("active", id) => setIsActive(Id[Bookmark](id.toInt), toBoolean(values.last))
         }
       }
       Set(modifiedUserIds.toSeq: _*)
@@ -61,24 +79,6 @@ object BookmarksController extends FortyTwoController {
       inject[URIGraphPlugin].update(userId)
     }
     Redirect(request.request.headers("referer"))
-  }
-
-  private def toBoolean(str: String) = {println(str.trim); str.trim.toInt == 1}
-
-  private def privateBookmark(id: Id[Bookmark], isPrivate: Boolean)(implicit conn: Connection): Id[User] = {
-    val bookmark = Bookmark.get(id)
-    log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate))
-    bookmark.withPrivate(isPrivate).save
-    log.info("updated bookmark %s".format(bookmark))
-    bookmark.userId
-  }
-
-  private def activeBookmark(id: Id[Bookmark], isActive: Boolean)(implicit conn: Connection): Id[User] = {
-    val bookmark = Bookmark.get(id)
-    log.info("updating bookmark %s with active = %s".format(bookmark, isActive))
-    bookmark.withActive(isActive).save
-    log.info("updated bookmark %s".format(bookmark))
-    bookmark.userId
   }
 
   //this is an admin only task!!!
@@ -115,26 +115,25 @@ object BookmarksController extends FortyTwoController {
     Ok(views.html.bookmarks(bookmarksAndUsers, page, count, pageCount))
   }
 
-  def checkIfExists(externalId: ExternalId[User], uri: String) = AuthenticatedJsonAction { request =>
-    val userHasBookmark = CX.withConnection { implicit conn =>
-      NormalizedURI.getByNormalizedUrl(uri).map { uri =>
-        Bookmark.load(uri, request.userId).isDefined // .state == ACTIVE ?
-      }.getOrElse(false)
+  def checkIfExists(uri: String) = AuthenticatedJsonAction { request =>
+    val bookmark = CX.withConnection { implicit conn =>
+      NormalizedURI.getByNormalizedUrl(uri).flatMap { uri =>
+        Bookmark.load(uri, request.userId).filter(_.isActive)
+      }
     }
 
-    Ok(JsObject(("user_has_bookmark" -> JsBoolean(userHasBookmark)) :: Nil))
+    Ok(JsObject(Seq("user_has_bookmark" -> JsBoolean(bookmark.isDefined))))
   }
 
-  def removeBookmark(externalId: ExternalId[User], externalBookmarkId: ExternalId[Bookmark]) = JsonAction { request =>
-    val (user,bookmark) = CX.withConnection{ implicit conn =>
-      val user = User.getOpt(externalId).getOrElse(throw new Exception("user externalId %s not found".format(externalId)))
-      val bookmark = Bookmark.getOpt(externalBookmarkId).getOrElse(
-                throw new Exception("bookmark externalId %s not found".format(externalId))).withActive(false).save
-      (user, bookmark)
+  def remove(url: String) = AuthenticatedJsonAction { request =>
+    CX.withConnection{ implicit conn =>
+      NormalizedURI.getByNormalizedUrl(url).map { uri =>
+        Bookmark.load(uri, request.userId).filter(_.isActive).map {b => b.withActive(false).save}
+      }
     }
-    inject[URIGraphPlugin].update(user.id.get)
+    inject[URIGraphPlugin].update(request.userId)
 
-    Ok(JsObject(("status" -> JsString("success")) :: Nil))
+    Ok(JsObject(Seq("status" -> JsString("success"))))
   }
 
   def updatePrivacy(externalId: ExternalId[Bookmark], isPrivate: Boolean) = JsonAction { request =>
@@ -150,8 +149,8 @@ object BookmarksController extends FortyTwoController {
     log.debug(json)
     log.info("user_info = [%s]".format(json \ "user_info"))
     val bookmarkSource = (json \ "bookmark_source").asOpt[String]
-    val keepitExternalId = parseKeepitExternalId(json \ "user_info")
-    val user = CX.withConnection { implicit conn => User.get(keepitExternalId) }
+    val userId = ExternalId[User]((json \ "user_info" \ "keepit_external_id").as[String])
+    val user = CX.withConnection { implicit conn => User.get(userId) }
     log.info("adding bookmarks of user %s".format(user))
     internBookmarks(json \ "bookmarks", user, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")))
     inject[URIGraphPlugin].update(user.id.get)
@@ -166,30 +165,26 @@ object BookmarksController extends FortyTwoController {
     case e => throw new Exception("can't figure what to do with %s".format(e))
   }
 
-  private def parseSocialId(value: JsValue): SocialId = SocialId((value \ "facebook_id").as[String])
-
-  private def parseKeepitExternalId(value: JsValue): ExternalId[User] = ExternalId[User](((value \ "keepit_external_id").as[String]))
-
   private def internBookmark(json: JsObject, user: User, source: BookmarkSource): Option[Bookmark] = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
     val isPrivate = try { (json \ "isPrivate").as[Boolean] } catch { case e => false }
 
-    url.toLowerCase.startsWith("javascript:") match {
-      case false =>
-        log.debug("interning bookmark %s with title [%s]".format(json, title))
-        CX.withConnection { implicit conn =>
-          val normalizedUri = NormalizedURI.getByNormalizedUrl(url) match {
-            case Some(uri) => uri
-            case None => createNewURI(title, url)
-          }
-          Bookmark.load(normalizedUri, user) match {
-            case Some(bookmark) => Some(bookmark)
-            case None => Some(Bookmark(normalizedUri, user, title, url, source, isPrivate).save)
-          }
+    if (!url.toLowerCase.startsWith("javascript:")) {
+      log.debug("interning bookmark %s with title [%s]".format(json, title))
+      CX.withConnection { implicit conn =>
+        val uri = NormalizedURI.getByNormalizedUrl(url) match {
+          case Some(uri) => uri
+          case None => createNewURI(title, url)
         }
-      case true =>
-        None
+        Bookmark.load(uri, user) match {
+          case Some(bookmark) if bookmark.isActive => Some(bookmark)
+          case Some(bookmark) => Some(bookmark.withActive(true).save)
+          case None => Some(Bookmark(uri, user, title, url, source, isPrivate).save)
+        }
+      }
+    } else {
+      None
     }
   }
 
