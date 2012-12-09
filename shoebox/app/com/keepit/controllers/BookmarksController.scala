@@ -47,11 +47,29 @@ object BookmarksController extends FortyTwoController {
 
   //post request with a list of private/public and active/inactive
   def updateBookmarks() = AdminHtmlAction { request =>
+    def toBoolean(str: String) = str.trim.toInt == 1
+
+    def setIsPrivate(id: Id[Bookmark], isPrivate: Boolean)(implicit conn: Connection): Id[User] = {
+      val bookmark = Bookmark.get(id)
+      log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate))
+      bookmark.withPrivate(isPrivate).save
+      log.info("updated bookmark %s".format(bookmark))
+      bookmark.userId
+    }
+
+    def setIsActive(id: Id[Bookmark], isActive: Boolean)(implicit conn: Connection): Id[User] = {
+      val bookmark = Bookmark.get(id)
+      log.info("updating bookmark %s with active = %s".format(bookmark, isActive))
+      bookmark.withActive(isActive).save
+      log.info("updated bookmark %s".format(bookmark))
+      bookmark.userId
+    }
+
     val uniqueUsers = CX.withConnection { implicit conn =>
       val modifiedUserIds = request.body.asFormUrlEncoded.get map { case (key, values) =>
         key.split("_") match {
-          case Array("private", id) => privateBookmark(Id[Bookmark](id.toInt), toBoolean(values.last))
-          case Array("active", id) => activeBookmark(Id[Bookmark](id.toInt), toBoolean(values.last))
+          case Array("private", id) => setIsPrivate(Id[Bookmark](id.toInt), toBoolean(values.last))
+          case Array("active", id) => setIsActive(Id[Bookmark](id.toInt), toBoolean(values.last))
         }
       }
       Set(modifiedUserIds.toSeq: _*)
@@ -61,24 +79,6 @@ object BookmarksController extends FortyTwoController {
       inject[URIGraphPlugin].update(userId)
     }
     Redirect(request.request.headers("referer"))
-  }
-
-  private def toBoolean(str: String) = {println(str.trim); str.trim.toInt == 1}
-
-  private def privateBookmark(id: Id[Bookmark], isPrivate: Boolean)(implicit conn: Connection): Id[User] = {
-    val bookmark = Bookmark.get(id)
-    log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate))
-    bookmark.withPrivate(isPrivate).save
-    log.info("updated bookmark %s".format(bookmark))
-    bookmark.userId
-  }
-
-  private def activeBookmark(id: Id[Bookmark], isActive: Boolean)(implicit conn: Connection): Id[User] = {
-    val bookmark = Bookmark.get(id)
-    log.info("updating bookmark %s with active = %s".format(bookmark, isActive))
-    bookmark.withActive(isActive).save
-    log.info("updated bookmark %s".format(bookmark))
-    bookmark.userId
   }
 
   //this is an admin only task!!!
