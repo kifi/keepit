@@ -12,15 +12,17 @@ import akka.actor.Scheduler
 
 @ImplementedBy(classOf[BabysitterImpl])
 trait Babysitter {
-  def watch[A](warnTimeout: akka.util.FiniteDuration, errorTimeout: akka.util.FiniteDuration)(block: => A)(implicit app: Application): A
+  def watch[A](timeout: BabysitterTimeout)(block: => A)(implicit app: Application): A
 }
 
+case class BabysitterTimeout(warnTimeout: akka.util.FiniteDuration, errorTimeout: akka.util.FiniteDuration)
+
 class BabysitterImpl extends Babysitter with Logging {
-  def watch[A](warnTimeout: akka.util.FiniteDuration, errorTimeout: akka.util.FiniteDuration)(block: => A)(implicit app: Application): A = {
+  def watch[A](timeout: BabysitterTimeout)(block: => A)(implicit app: Application): A = {
     val startTime = inject[DateTime]
     val e = new Exception("Babysitter error timeout")
-    val babysitter = inject[Scheduler].scheduleOnce(errorTimeout) {
-      log.error("BABYSITTER: Process taking way too long. %ss".format(errorTimeout.toMillis.toDouble / 1000.0))
+    val babysitter = inject[Scheduler].scheduleOnce(timeout.errorTimeout) {
+      log.error("BABYSITTER: Process taking way too long. %ss".format(timeout.errorTimeout.toMillis.toDouble / 1000.0))
       log.error(e.getStackTrace() mkString "\n  ")
       inject[HealthcheckPlugin].addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some("Babysitter error timeout")))
     }
@@ -30,7 +32,7 @@ class BabysitterImpl extends Babysitter with Logging {
     finally {
       val endTime = inject[DateTime]
       val difference = endTime.getMillis - endTime.getMillis
-      if(difference > warnTimeout.toMillis) {
+      if(difference > timeout.warnTimeout.toMillis) {
         val e = new Exception("Babysitter error timeout")
         log.warn("BABYSITTER: Process taking too long. %ss".format((difference.toDouble / 1000.0)))
         log.warn(e.getStackTrace() mkString "\n  ")
