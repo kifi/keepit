@@ -31,7 +31,7 @@ import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.net.HttpClient
 import com.keepit.search.graph.URIGraphPlugin
-import play.api.libs.json.JsBoolean
+import play.api.libs.json.{JsBoolean, JsNull}
 import com.keepit.common.controller.FortyTwoController
 
 object BookmarksController extends FortyTwoController {
@@ -115,23 +115,23 @@ object BookmarksController extends FortyTwoController {
     Ok(views.html.bookmarks(bookmarksAndUsers, page, count, pageCount))
   }
 
-  def checkIfExists(externalId: ExternalId[User], uri: String) = AuthenticatedJsonAction { request =>
-    val userHasBookmark = CX.withConnection { implicit conn =>
-      NormalizedURI.getByNormalizedUrl(uri).map { uri =>
-        Bookmark.load(uri, request.userId).isDefined // .state == ACTIVE ?
-      }.getOrElse(false)
+  def checkIfExists(uri: String) = AuthenticatedJsonAction { request =>
+    val bookmark = CX.withConnection { implicit conn =>
+      NormalizedURI.getByNormalizedUrl(uri).flatMap { uri =>
+        Bookmark.load(uri, request.userId).filter(_.isActive)
+      }
     }
 
-    Ok(JsObject(("user_has_bookmark" -> JsBoolean(userHasBookmark)) :: Nil))
+    Ok(JsObject(Seq("user_has_bookmark" -> JsBoolean(bookmark.isDefined))))
   }
 
-  def removeBookmark(externalBookmarkId: ExternalId[Bookmark]) = AuthenticatedJsonAction { request =>
-    val (user,bookmark) = CX.withConnection{ implicit conn =>
-      val user = User.get(request.userId)
-      val bookmark = Bookmark.get(externalBookmarkId).withActive(false).save
-      (user, bookmark)
+  def remove(url: String) = AuthenticatedJsonAction { request =>
+    CX.withConnection{ implicit conn =>
+      NormalizedURI.getByNormalizedUrl(url).map { uri =>
+        Bookmark.load(uri, request.userId).filter(_.isActive).map {b => b.withActive(false).save}
+      }
     }
-    inject[URIGraphPlugin].update(user.id.get)
+    inject[URIGraphPlugin].update(request.userId)
 
     Ok(JsObject(Seq("status" -> JsString("success"))))
   }

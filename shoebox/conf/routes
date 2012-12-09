@@ -11,8 +11,8 @@ POST    /bookmarks/update           com.keepit.controllers.BookmarksController.u
 GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all
 GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
-GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(externalId: ExternalId[User], uri: String)
-POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.removeBookmark(externalBookmarkId: ExternalId[Bookmark])
+GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(uri: String)
+POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.remove(uri: String)
 POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy(externalId: ExternalId[Bookmark], isPrivate: Boolean = true)
 
 POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: String, title: String ?= "", text: String, permissions: String, recipients: String ?= "", parent: String ?= "")

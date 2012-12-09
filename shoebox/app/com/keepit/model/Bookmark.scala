@@ -46,6 +46,8 @@ case class Bookmark(
     case false => Bookmark.States.INACTIVE
   })
 
+  def isActive: Boolean = state == Bookmark.States.ACTIVE
+
   def save(implicit conn: Connection): Bookmark = {
     val entity = BookmarkEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
