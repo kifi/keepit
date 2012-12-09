@@ -2,7 +2,7 @@ package com.keepit.search.line
 
 import org.apache.lucene.index.IndexReader
 
-class PhraseNode(termNodes: Array[TermNode], positions: Array[Int], weight: Float, reader: IndexReader) extends LineQuery(weight) {
+class PhraseNode(termNodes: Array[TermNode], positions: Array[Int], initialWeight: Float, reader: IndexReader) extends LineQuery(initialWeight) {
 
   override def fetchDoc(targetDoc: Int) = {
     if (curDoc < LineQuery.NO_MORE_DOCS) {

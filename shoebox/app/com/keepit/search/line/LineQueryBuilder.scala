@@ -13,18 +13,23 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
+import scala.math._
 
 class LineQueryBuilder(similarity: Similarity, percentMatch: Float) extends Logging {
 
   val pctMatch = (if (percentMatch > 0.0f) percentMatch else Float.MinPositiveValue)
 
   def build(query: Query)(implicit indexReader: IndexReader): LineQuery = {
-    query match {
+    val lineQuery = query match {
       case q: TermQuery => translateTermQuery(q)
       case q: PhraseQuery => translatePhraseQuery(q)
       case q: BooleanQuery => translateBooleanQuery(q)
       case q: Query => translateOtherQuery(q)
     }
+    val boost = query.getBoost()
+    val sum = lineQuery.sumOfSquaredWeights + (boost * boost)
+    lineQuery.normalize((1.0d / sqrt(sum.toDouble)).toFloat)
+    lineQuery
   }
 
   def translateTermQuery(query: TermQuery)(implicit indexReader: IndexReader) = {
@@ -56,9 +61,9 @@ class LineQueryBuilder(similarity: Similarity, percentMatch: Float) extends Logg
       }
     }
     val positiveExpr = if (required.size > 0) {
-      new BooleanNode(translate(required), translate(optional), pctMatch, indexReader)
+      new BooleanNode(translate(required), translate(optional), query.getBoost, pctMatch, indexReader)
     } else if (optional.size > 0){
-      new BooleanOrNode(translate(optional), pctMatch, indexReader)
+      new BooleanOrNode(translate(optional), query.getBoost, pctMatch, indexReader)
     } else {
       LineQuery.emptyQueryNode
     }
@@ -75,7 +80,7 @@ class LineQueryBuilder(similarity: Similarity, percentMatch: Float) extends Logg
         val idf = similarity.idf(indexReader.docFreq(term), indexReader.numDocs)
         new TermNode(term, idf, indexReader)
       }.toArray
-      if (termNodes.length > 0) new BooleanOrNode(termNodes, pctMatch, indexReader)
+      if (termNodes.length > 0) new BooleanOrNode(termNodes, query.getBoost, pctMatch, indexReader)
       else LineQuery.emptyQueryNode
     } catch {
       case _ =>
