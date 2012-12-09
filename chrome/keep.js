@@ -123,6 +123,11 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
           addKeep(info, request, sendResponse, tab);
         });
         break;
+      case "unkeep":
+        getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+          removeKeep(info, request, sendResponse, tab);
+        });
+        break;
       case "get_conf":
         sendResponse(getConfigs());
         break;
@@ -252,8 +257,8 @@ function addKeep(bmInfo, req, sendResponse, tab) {
   });
 }
 
-function removeKeep(bookmarks, request, sendResponse, tab) {
-  log("removing bookmark: ", request.externalId, tab);
+function removeKeep(bmInfo, req, sendResponse, tab) {
+  log("removing bookmark: ", req.url, tab);
 
   var userConfig = getConfigs();
   var userInfo = userConfig.user;
@@ -262,13 +267,22 @@ function removeKeep(bookmarks, request, sendResponse, tab) {
     return;
   }
 
+  chrome.bookmarks.search(req.url, function(bm) {
+    bm.forEach(function(bm) {
+      if (bm.url == req.url && (bm.parentId == bmInfo.publicId || bm.parentId == bmInfo.privateId)) {
+        chrome.bookmarks.remove(bm.id);
+      }
+    });
+  });
+
   var xhr = new XMLHttpRequest();
   xhr.onreadystatechange = function() {
     if (xhr.readyState == 4) {
-      log("removed bookmark. " + xhr.response);
+      log("[removeKeep] response:", xhr.response);
+      sendResponse(xhr.response);
     }
   }
-  xhr.open("POST", 'http://' + userConfig.server + '/bookmarks/remove/?externalId=' + userInfo["keepit_external_id"] + "&externalBookmarkId=" + request.externalId, true);
+  xhr.open("POST", "http://" + userConfig.server + "/bookmarks/remove?uri=" + encodeURIComponent(req.url), true);
   xhr.send();
 }
 
@@ -412,8 +426,7 @@ function checkWhetherKept(location, callback) {
   }
 
   $.getJSON("http://" + userConfig.server + "/bookmarks/check" +
-    "?externalId=" + userConfig.user.keepit_external_id +
-    "&uri=" + encodeURIComponent(location))
+    "?uri=" + encodeURIComponent(location))
   .success(function(data) {
     callback(data.user_has_bookmark);
   }).error(function(xhr) {

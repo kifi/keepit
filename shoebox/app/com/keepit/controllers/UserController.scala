@@ -44,8 +44,8 @@ object UserController extends FortyTwoController {
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
-          val kept = Bookmark.load(uri, userId).isDefined  // .state == ACTIVE ?
-          val following = Follow.get(userId, uri.id.get).map(_.isActive).getOrElse(false)
+          val kept = Bookmark.load(uri, userId).filter(_.isActive).isDefined
+          val following = Follow.get(userId, uri.id.get).filter(_.isActive).isDefined
 
           val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
           val searcher = inject[URIGraph].getURIGraphSearcher
