@@ -40,7 +40,7 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
               pageNumber = 3,
               millisPassed = 23)
          val json = new ArticleSearchResultSerializer().writes(res)
-         val deserialized = new ArticleSearchResultSerializer().reads(json)
+         val deserialized = new ArticleSearchResultSerializer().reads(json).get
          deserialized.uuid === res.uuid
          deserialized === res
       }
