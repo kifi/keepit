@@ -149,8 +149,8 @@ object BookmarksController extends FortyTwoController {
     log.debug(json)
     log.info("user_info = [%s]".format(json \ "user_info"))
     val bookmarkSource = (json \ "bookmark_source").asOpt[String]
-    val keepitExternalId = parseKeepitExternalId(json \ "user_info")
-    val user = CX.withConnection { implicit conn => User.get(keepitExternalId) }
+    val userId = ExternalId[User]((json \ "user_info" \ "keepit_external_id").as[String])
+    val user = CX.withConnection { implicit conn => User.get(userId) }
     log.info("adding bookmarks of user %s".format(user))
     internBookmarks(json \ "bookmarks", user, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")))
     inject[URIGraphPlugin].update(user.id.get)
@@ -165,30 +165,26 @@ object BookmarksController extends FortyTwoController {
     case e => throw new Exception("can't figure what to do with %s".format(e))
   }
 
-  private def parseSocialId(value: JsValue): SocialId = SocialId((value \ "facebook_id").as[String])
-
-  private def parseKeepitExternalId(value: JsValue): ExternalId[User] = ExternalId[User](((value \ "keepit_external_id").as[String]))
-
   private def internBookmark(json: JsObject, user: User, source: BookmarkSource): Option[Bookmark] = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
     val isPrivate = try { (json \ "isPrivate").as[Boolean] } catch { case e => false }
 
-    url.toLowerCase.startsWith("javascript:") match {
-      case false =>
-        log.debug("interning bookmark %s with title [%s]".format(json, title))
-        CX.withConnection { implicit conn =>
-          val normalizedUri = NormalizedURI.getByNormalizedUrl(url) match {
-            case Some(uri) => uri
-            case None => createNewURI(title, url)
-          }
-          Bookmark.load(normalizedUri, user) match {
-            case Some(bookmark) => Some(bookmark)
-            case None => Some(Bookmark(normalizedUri, user, title, url, source, isPrivate).save)
-          }
+    if (!url.toLowerCase.startsWith("javascript:")) {
+      log.debug("interning bookmark %s with title [%s]".format(json, title))
+      CX.withConnection { implicit conn =>
+        val uri = NormalizedURI.getByNormalizedUrl(url) match {
+          case Some(uri) => uri
+          case None => createNewURI(title, url)
         }
-      case true =>
-        None
+        Bookmark.load(uri, user) match {
+          case Some(bookmark) if bookmark.isActive => Some(bookmark)
+          case Some(bookmark) => Some(bookmark.withActive(true).save)
+          case None => Some(Bookmark(uri, user, title, url, source, isPrivate).save)
+        }
+      }
+    } else {
+      None
     }
   }
 
