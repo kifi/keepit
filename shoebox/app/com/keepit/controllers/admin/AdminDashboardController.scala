@@ -1,7 +1,6 @@
 package com.keepit.controllers.admin
 
 import play.api.data._
-import java.util.concurrent.TimeUnit
 import play.api._
 import play.api.Play.current
 import play.api.mvc._
@@ -11,6 +10,10 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
+
+import akka.util.duration._
+import java.util.concurrent.TimeUnit
+
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
@@ -20,14 +23,15 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
-import org.joda.time.LocalDate
-import org.joda.time.DateTimeZone
 import com.keepit.common.time._
 import com.keepit.model.User
+import com.keepit.model.Bookmark
+import com.keepit.common.healthcheck.BabysitterTimeout
+import org.joda.time.LocalDate
+import org.joda.time.DateTimeZone
 import org.joda.time.Days
 import play.api.libs.json.JsNumber
 import play.api.http.ContentTypes
-import com.keepit.model.Bookmark
 
 /**
  * Charts, etc.
@@ -38,6 +42,8 @@ object AdminDashboardController extends FortyTwoController {
   private lazy val bookmarkCountByDate = calcCountByDate(CX.withConnection { implicit conn => Bookmark.all }.map(_.createdAt.toLocalDateInZone))
 
   private def calcCountByDate(dates: => Seq[LocalDate]) = {
+    implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
+
     val day0 = if(dates.isEmpty) currentDate else dates.min
     val dayCounts = dates.foldLeft(Map[LocalDate,Int]().withDefaultValue(0)){(m, d) => m + (d -> (1 + m(d)))}
     val userCounts = if (Play.isDev) {
