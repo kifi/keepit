@@ -138,11 +138,34 @@ class URINormalizerTest extends Specification {
         "https://mail.google.com/mail/ca/u/0/#inbox/13ae709b43798f58"
       // google drive
       URINormalizer.normalize("https://docs.google.com/a/42go.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit") ===
-        "https://docs.google.com/a/42go.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit"
+        "https://docs.google.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit"
 
       // techcrunch
       URINormalizer.normalize("http://www.techcrunch.com") === "http://techcrunch.com"
       URINormalizer.normalize("http://techcrunch.com") === "http://techcrunch.com"
+
+      // amazon
+      // - product
+      URINormalizer.normalize("http://www.amazon.com/Play-Framework-Cookbook-Alexander-Reelsen/dp/1849515522/ref=sr_1_1?ie=UTF8&qid=1355167842&sr=8-1&keywords=play+scala") ===
+        "http://www.amazon.com/dp/1849515522"
+      URINormalizer.normalize("http://www.amazon.com/dp/1849515522/ref=sr_1_1?ie=UTF8&qid=1355167842&sr=8-1&keywords=play+scala") ===
+        "http://www.amazon.com/dp/1849515522"
+      URINormalizer.normalize("http://www.amazon.com/gp/product/1849515522/ref=sr_1_1?ie=UTF8&qid=1355167842&sr=8-1&keywords=play+scala") ===
+        "http://www.amazon.com/dp/1849515522"
+        // - product reviews
+      URINormalizer.normalize("http://www.amazon.com/Play-Framework-Cookbook-Alexander-Reelsen/product-reviews/1849515522/ref=cm_cr_dp_synop?ie=UTF8&showViewpoints=0&sortBy=bySubmissionDateDescending#R1JYRF9OJ74H7G") ===
+        "http://www.amazon.com/product-reviews/1849515522"
+      URINormalizer.normalize("http://www.amazon.com/product-reviews/1849515522/ref=cm_cr_dp_synop?ie=UTF8&showViewpoints=0&sortBy=bySubmissionDateDescending#R1JYRF9OJ74H7G") ===
+        "http://www.amazon.com/product-reviews/1849515522"
+      // - profiles
+      URINormalizer.normalize("http://www.amazon.com/gp/pdp/profile/A1BH4328F3ORDQ/ref=cm_cr_pr_pdp") ===
+        "http://www.amazon.com/gp/pdp/profile/A1BH4328F3ORDQ"
+      // - member reviews
+      URINormalizer.normalize("http://www.amazon.com/gp/cdp/member-reviews/A1BH4328F3ORDQ/ref=cm_pdp_rev_more?ie=UTF8&sort_by=MostRecentReview#RXT6FJYTTK625") ===
+        "http://www.amazon.com/gp/cdp/member-reviews/A1BH4328F3ORDQ"
+      // - wish list
+      URINormalizer.normalize("http://www.amazon.com/registry/wishlist/2VMW59G8OKZFM/ref=cm_pdp_wish_all_itms") ===
+        "http://www.amazon.com/wishlist/2VMW59G8OKZFM"
     }
   }
 }
