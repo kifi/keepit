@@ -4,24 +4,18 @@ import java.io.BufferedReader
 import java.sql.{Clob, Connection, PreparedStatement, ResultSet, Timestamp, SQLException}
 import java.util.UUID
 import scala.util.control.ControlThrowable
-import org.joda.time.DateTime
-import org.joda.time.DateTimeZone
+import org.joda.time.{DateTime, DateTimeZone}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import play.api.db._
-import play.api.db._
-import play.api.mvc.PathBindable
-import play.api.mvc.QueryStringBindable
+import play.api.mvc.{PathBindable, QueryStringBindable}
 import play.api._
 import ru.circumflex.core._
 import ru.circumflex.orm._
 import play.api.libs.concurrent.Akka
 import akka.util.duration._
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError, Babysitter, BabysitterTimeout}
 import com.keepit.inject._
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.{Babysitter, BabysitterTimeout}
 
 class CustomTypeConverter extends TypeConverter {
   override def write(st: PreparedStatement, parameter: Any, paramIndex: Int) {
@@ -401,6 +395,19 @@ object CX extends Logging {
   ru.circumflex.core.cx("orm.connection.username") = ""
   ru.circumflex.core.cx("orm.connection.password") = ""
 
+  private def getConnection(name: String, trials: Int): Connection =
+    try {
+      import play.api.Play.current
+      return DB.getConnection(name, false)
+    } catch {
+      case e: SQLException =>
+        if (trials > 0) {
+          log.error("Exception while trying to get connection. %s trials to go".format(trials), e)
+          getConnection(name, trials - 1)
+        }
+        else throw e
+    }
+
   class BasicConnectionProvider(name: String, readOnly: Boolean)
                                (implicit app: Application) extends ConnectionProvider {
     private var _connection: Option[Connection] = None
@@ -419,25 +426,12 @@ object CX extends Logging {
   }
 
   private class BasicOrmConf(readOnly: Boolean = false)(implicit app: Application) extends Logging with ORMConfiguration {
-
     override val url = {
       val connection = getConnection(name = "shoebox", trials = 3)
       val url = connection.getMetaData.getURL
       connection.close()
       url
     }
-
-    private def getConnection(name: String, trials: Int): Connection =
-      try {
-        return DB.getConnection(name, false)
-      } catch {
-        case e: SQLException =>
-          if (trials > 0) {
-            log.error("Exception while trying to get connection. %s trials to go".format(trials), e)
-            getConnection(name, trials - 1)
-          }
-          else throw e
-      }
 
     override val name = "shoebox"
     override lazy val connectionProvider = new BasicConnectionProvider(name, readOnly)
