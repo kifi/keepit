@@ -174,7 +174,6 @@ object BookmarksController extends FortyTwoController {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
     val isPrivate = try { (json \ "isPrivate").as[Boolean] } catch { case e => false }
-    println("===== PRIVATE: " + isPrivate)
 
     if (!url.toLowerCase.startsWith("javascript:")) {
       log.debug("interning bookmark %s with title [%s]".format(json, title))
