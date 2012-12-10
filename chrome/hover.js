@@ -312,7 +312,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       },
       400,
       'easeQuickSnapBounce', function() {
-        $('.kifi_hover').css({'right': '-20px', 'opacity': 1});
+        $('.kifi_hover').css({'right': '-10px', 'opacity': 1});
         console.log("opened", $('.kifi_hover')[0], $('.kifi_hover').css('right'))
       });
   }
