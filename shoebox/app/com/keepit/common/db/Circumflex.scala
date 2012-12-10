@@ -1,8 +1,7 @@
 package com.keepit.common.db
 
 import java.io.BufferedReader
-import java.sql.Clob
-import java.sql.Connection
+import java.sql.{Clob, Connection, PreparedStatement, ResultSet, Timestamp, SQLException}
 import java.util.UUID
 import scala.util.control.ControlThrowable
 import org.joda.time.DateTime
@@ -25,7 +24,7 @@ import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{Babysitter, BabysitterTimeout}
 
 class CustomTypeConverter extends TypeConverter {
-  override def write(st: java.sql.PreparedStatement, parameter: Any, paramIndex: Int) {
+  override def write(st: PreparedStatement, parameter: Any, paramIndex: Int) {
     parameter match {
       case Some(value) => write(st, value, paramIndex)
       case Id(value) => st.setLong(paramIndex, value)
@@ -80,7 +79,7 @@ class IdField[T, R <: Record[_, R]](name: String, record: R)
   override def toString(value: Option[Id[T]]): String =
     value.map(_.id.toString).getOrElse("")
 
-  override def read(rs: java.sql.ResultSet, alias: String): Option[Id[T]] = {
+  override def read(rs: ResultSet, alias: String): Option[Id[T]] = {
     val o = rs.getObject(alias)
     if (rs.wasNull) None
     else Some(Id(o.asInstanceOf[Long]))
@@ -147,7 +146,7 @@ class ExternalIdField[T, R <: Record[_, R]](name: String, record: R)
   override def toString(value: Option[ExternalId[T]]): String =
     value.map(_.id).getOrElse("")
 
-  override def read(rs: java.sql.ResultSet, alias: String): Option[ExternalId[T]] = {
+  override def read(rs: ResultSet, alias: String): Option[ExternalId[T]] = {
     val o = rs.getObject(alias)
     if (rs.wasNull) None
     else Some(ExternalId(o.asInstanceOf[String]))
@@ -206,7 +205,7 @@ class StateField[T, R <: Record[_, R]](name: String, record: R, length: Int)
   override def toString(value: Option[State[T]]): String =
     value.map(_.value).getOrElse("")
 
-  override def read(rs: java.sql.ResultSet, alias: String): Option[State[T]] = {
+  override def read(rs: ResultSet, alias: String): Option[State[T]] = {
     val o = rs.getObject(alias)
     if (rs.wasNull) None
     else Some(State(o.asInstanceOf[String]))
@@ -232,7 +231,7 @@ class ClobField[R <: Record[_, R]](name: String, record: R)
   def fromString(str: String): Option[String] = Some(str)
   override def toString(value: Option[String]): String = value.get
 
-  override def read(rs: java.sql.ResultSet, alias: String): Option[String] = {
+  override def read(rs: ResultSet, alias: String): Option[String] = {
     val o = rs.getObject(alias)
     if (rs.wasNull) {
       None
@@ -282,18 +281,18 @@ trait ClobFields[R <: Record[_, R]] { self: R =>
 class JodaTimestampField[R <: Record[_, R]](name: String, record: R)
     extends XmlSerializable[DateTime, R](name, record, ormConf.dialect.timestampType) {
   def fromString(str: String): Option[DateTime] =
-    try Some(java.sql.Timestamp.valueOf(str).toDateTime) catch { case e: Exception => None }
+    try Some(Timestamp.valueOf(str).toDateTime) catch { case e: Exception => None }
   override def toString(value: Option[DateTime]): String =
-    value.map(v => new java.sql.Timestamp(v.toDate.getTime).toString).getOrElse("")
+    value.map(v => new Timestamp(v.toDate.getTime).toString).getOrElse("")
 
-  override def read(rs: java.sql.ResultSet, alias: String): Option[DateTime] = {
+  override def read(rs: ResultSet, alias: String): Option[DateTime] = {
     val o = rs.getObject(alias)
     if (rs.wasNull) {
       None
     }
     else {
-      val timestemp: java.sql.Timestamp = try {
-        o.asInstanceOf[java.sql.Timestamp]
+      val timestemp: Timestamp = try {
+        o.asInstanceOf[Timestamp]
       } catch {
         //ControlThrowable is used for control flow of scala's closure management. You must throw it up!
         case e: ControlThrowable => throw e
@@ -311,7 +310,7 @@ class JodaDateField[R <: Record[_, R]](name: String, record: R)
   override def toString(value: Option[DateTime]): String =
     value.map(v => new java.sql.Date(v.toDate.getTime).toString).getOrElse("")
 
-  override def read(rs: java.sql.ResultSet, alias: String): Option[DateTime] = {
+  override def read(rs: ResultSet, alias: String): Option[DateTime] = {
     val o = rs.getObject(alias)
     if (rs.wasNull) None
     else Some(o.asInstanceOf[java.sql.Date].toDateTime)
@@ -325,7 +324,7 @@ class JodaTimeField[R <: Record[_, R]](name: String, record: R)
   override def toString(value: Option[DateTime]): String =
     value.map(v => new java.sql.Time(v.toDate.getTime).toString).getOrElse("")
 
-  override def read(rs: java.sql.ResultSet, alias: String): Option[DateTime] = {
+  override def read(rs: ResultSet, alias: String): Option[DateTime] = {
     val o = rs.getObject(alias)
     if (rs.wasNull) None
     else Some(o.asInstanceOf[java.sql.Time].toDateTime)
@@ -407,7 +406,7 @@ object CX extends Logging {
     private var _connection: Option[Connection] = None
     def openConnection: Connection = {
       if (_connection.isEmpty) {
-        val connection = DB.getConnection(name, autocommit = false)
+        val connection = getConnection(name = name, trials = 3)
         connection.setReadOnly(readOnly)
         _connection = Some(connection)
       }
@@ -422,11 +421,23 @@ object CX extends Logging {
   private class BasicOrmConf(readOnly: Boolean = false)(implicit app: Application) extends Logging with ORMConfiguration {
 
     override val url = {
-      val connection = DB.getConnection("shoebox")
+      val connection = getConnection(name = "shoebox", trials = 3)
       val url = connection.getMetaData.getURL
       connection.close()
       url
     }
+
+    private def getConnection(name: String, trials: Int): Connection =
+      try {
+        return DB.getConnection(name, false)
+      } catch {
+        case e: SQLException =>
+          if (trials > 0) {
+            log.error("Exception while trying to get connection. %s trials to go".format(trials), e)
+            getConnection(name, trials - 1)
+          }
+          else throw e
+      }
 
     override val name = "shoebox"
     override lazy val connectionProvider = new BasicConnectionProvider(name, readOnly)
