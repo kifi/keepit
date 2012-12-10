@@ -582,7 +582,7 @@ function startHandShake(onFail) {
   log("[startHandShake]");
   var config = getConfigs();
   $.post("http://" + config.server + "/kifi/start", {
-    installation: config.kifi_installation_id,
+    installation: config.kifi_installation_id || "",
     version: currVersion,
     // platform: navigator.platform,
     // language: navigator.language,
