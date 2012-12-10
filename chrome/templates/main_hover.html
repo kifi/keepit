@@ -24,7 +24,7 @@
 {{/socialConnections}}
 <div class="buttonwrapper">
 {{#is_kept}}
-  <span class="kbutton unkeepitbtn">Un-Keep it</span> <span class="kbutton makeprivatebtn">Make it Private</span></span>
+  <span class="kbutton unkeepitbtn">Un-Keep it</span> <span class="kbutton makeprivatebtn">Make it {{#private}}Public{{/private}}{{^private}}Private{{/private}}</span></span>
 {{/is_kept}}
 {{^is_kept}}
   <span class="kbutton keepitbtn">Keep it</span><span class="kbutton dropdownbtn"><span class="kifi_toggle">&#9662;</span></span>

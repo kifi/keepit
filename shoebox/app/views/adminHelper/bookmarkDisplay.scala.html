@@ -1,26 +1,6 @@
 @(bookmark: Bookmark)
 
-@showPrivacy() = {
-   @{bookmark.isPrivate match {
-     case false => {
-       <span class="badge badge-success">PUBLIC</span>
-     }
-     case true => {
-       <span class="badge badge-inverse">PRIVATE</span>
-     }
-   }}
-}
-
 <a href="@com.keepit.controllers.routes.BookmarksController.edit(bookmark.id.get)">
-@{bookmark.state.value match {
-  case "inactive" => {
-    <span class="label label-important">INACTIVE</span>
-  }
-  case _ => {
-    showPrivacy()
-  }
-}}
-
-@{if(bookmark.title.size > 70) bookmark.title.substring(0, 70) + "..." else bookmark.title}
+@adminHelper.bookmarkBadge(bookmark)
+@{if (bookmark.title.size > 70) bookmark.title.substring(0, 70) + "..." else bookmark.title}
 </a>
-
