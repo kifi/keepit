@@ -39,7 +39,9 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
         httpContentType = Some("text/html"),
         httpOriginalContentCharset = Option("UTF-8"),
         state = SCRAPED,
-        message = None)
+        message = None,
+        titleLang = Some(Lang("en")),
+        contentLang = Some(Lang("en")))
   }
 
   "ArticleIndexer" should {

@@ -234,7 +234,6 @@
   ],
   "web_accessible_resources": [
     "arrow.png",
-    "bookmarks.js",
     "contentscript.js",
     "downarrow_hover.png",
     "downarrow.png",

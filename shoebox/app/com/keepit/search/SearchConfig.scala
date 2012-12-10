@@ -8,6 +8,7 @@ object SearchConfig {
     Map[String, String](
       "minMyBookmarks" -> "2",
       "myBookmarkBoost" -> "1.5",
+      "personalTitleBoost" -> "1.5",
       "sharingBoostInNetwork" -> "0.5",
       "sharingBoostOutOfNetwork" -> "0.1",
       "percentMatch" -> "75",
@@ -25,6 +26,7 @@ object SearchConfig {
     Map[String, String](
       "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
       "myBookmarkBoost" -> "importance my bookmark",
+      "personalTitleBoost" -> "boosting the personal bookmark title score when there is no match in the article",
       "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
       "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
       "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF)",

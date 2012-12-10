@@ -5,6 +5,8 @@ import com.keepit.common.db.{CX, Id, State}
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.model.NormalizedURI.States._
+import com.keepit.search.ArticleStore
+import com.keepit.search.Lang
 import com.keepit.test.EmptyApplication
 import org.junit.runner.RunWith
 import org.specs2.mutable._
@@ -15,7 +17,6 @@ import play.api.test._
 import play.api.test.Helpers._
 import org.apache.http.HttpStatus
 import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.search.ArticleStore
 
 @RunWith(classOf[JUnitRunner])
 class ScraperTest extends SpecificationWithJUnit {
@@ -79,7 +80,9 @@ class ScraperTest extends SpecificationWithJUnit {
   	          httpContentType = Option("text/html"),
   	          httpOriginalContentCharset = Option("UTF-8"),
   	          state = SCRAPED,
-  	          message = None))
+  	          message = None,
+  	          titleLang = Some(Lang("en")),
+  	          contentLang = Some(Lang("en"))))
   	      case "http://www.keepit.com/missing" => Right(ScraperError(uri, HttpStatus.SC_NOT_FOUND, "not found"))
   	    }
   	  }

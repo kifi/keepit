@@ -25,6 +25,7 @@ import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
 import org.apache.lucene.search.WildcardQuery
+import java.io.StringReader
 
 @RunWith(classOf[JUnitRunner])
 class LineQueryTest extends SpecificationWithJUnit {
@@ -47,7 +48,7 @@ class LineQueryTest extends SpecificationWithJUnit {
         lines += line
       }
       val doc = new Document()
-      doc.add(lineFieldBuilder.buildLineField("B", lines, indexingAnalyzer))
+      doc.add(lineFieldBuilder.buildLineField("B", lines, (f, t) => Some(indexingAnalyzer.tokenStream(f, new StringReader(t)))))
       writer.addDocument(doc)
     }
     writer.commit()

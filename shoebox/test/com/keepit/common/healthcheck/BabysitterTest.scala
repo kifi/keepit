@@ -24,7 +24,7 @@ class BabysitterTest extends SpecificationWithJUnit {
     "do nothing if code executes quickly" in {
       running(new EmptyApplication().withFakeHealthcheck().withFakeTime().withRealBabysitter().withFakeScheduler()) {
 
-        inject[Babysitter].watch(Duration(1, "seconds"), Duration(1, "seconds")) {
+        inject[Babysitter].watch(BabysitterTimeout(Duration(1, "seconds"), Duration(1, "seconds"))) {
           // So fast!
         }
 
@@ -35,7 +35,7 @@ class BabysitterTest extends SpecificationWithJUnit {
         inject[FakeClock].push(now)
         inject[FakeClock].push(now.minusSeconds(5))
 
-        inject[Babysitter].watch(Duration(1, "seconds"), Duration(1, "seconds")) {
+        inject[Babysitter].watch(BabysitterTimeout(Duration(1, "seconds"), Duration(1, "seconds"))) {
           // So slow!
         }
 

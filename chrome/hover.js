@@ -1,7 +1,7 @@
 console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
 (function() {
-  var config, following, isKept = false;
+  var config, following, isKept;
 
   function log(message) {
     console.log("[" + new Date().getTime() + "] ", message);
@@ -134,26 +134,38 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function keepPage(shouldSlideOut) {
-    log("bookmarking page: " + document.location.href);
+    log("[keepPage]", document.location.href);
 
     chrome.extension.sendRequest({
       "type": "set_page_icon",
-      "is_kept": true
-    });
-
+      "is_kept": true});
     isKept = true;
+    if (shouldSlideOut) keptItslideOut();
 
     var request = {
       "type": "add_bookmarks",
       "url": document.location.href,
       "title": document.title,
       "private": $("#keepit_private").is(":checked")
-    }
+    };
     chrome.extension.sendRequest(request, function(response) {
-      log("bookmark added! -> " + JSON.stringify(response));
-      if(shouldSlideOut)
-        keptItslideOut();
-   });
+     log("[keepPage] response:", response);
+    });
+  }
+
+  function unkeepPage(shouldSlideOut) {
+    log("[unkeepPage]", document.location.href);
+
+    chrome.extension.sendRequest({"type": "set_page_icon", "is_kept": false});
+    isKept = false;
+    if (shouldSlideOut) slideOut();
+
+    chrome.extension.sendRequest({
+        "type": "unkeep",
+        "url": document.location.href.replace(/#.*/, "")},
+      function(response) {
+        log("[unkeepPage] response:", response);
+      });
   }
 
   function showKeepItHover(user) {
@@ -176,6 +188,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           "profilepic": facebookImageLink,
           "name": user.name,
           "is_kept": o.kept,
+          "private": o.private,
           "connected_networks": chrome.extension.getURL("icons/connected_networks.png")
         }
 
@@ -231,17 +244,24 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     //$('.profilepic').click(function() { location=facebookProfileLink; });
 
     $('.unkeepitbtn').click(function() {
-      log("un-bookmarking page: " + document.location.href);
-      chrome.extension.sendRequest({
-        "type": "set_page_icon",
-        "is_kept": false
-      });
-      isKept = false;
-      slideOut();
+      unkeepPage(true);
     });
 
     $('.keepitbtn').click(function() {
       keepPage(true);
+    });
+
+    $('.makeprivatebtn').click(function() {
+      var $btn = $(this), priv = /private/i.test($btn.text());
+      log("[setPrivate] " + priv);
+      chrome.extension.sendRequest({
+          "type": "set_private",
+          "url": document.location.href.replace(/#.*/, ""),
+          "private": priv},
+        function(response) {
+          log("[setPrivate] response:", response);
+          $btn.text("Make it " + (priv ? "Public" : "Private"));
+        });
     });
 
     $('.dropdownbtn').click(function() {
@@ -311,12 +331,17 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $('.kififtr .footer-bar').on('mousedown','.close-message', function() {
         showComments(); // called with no params, hides comments/messages
       })
-      .on('mousedown', '.footer-keepit', function() {
+      .on('mousedown', '.footer-keepit', function(e) {
+        e.preventDefault();
         keepPage(false);
-        redrawFooter(showFooterNav, type)
+        redrawFooter(showFooterNav, type);
+        // TODO: update message/buttons on main panel
       })
-      .on('mousedown', '.footer-unkeepit', function() {
-        alert("To be implemented.");
+      .on('mousedown', '.footer-unkeepit', function(e) {
+        e.preventDefault();
+        unkeepPage(false);
+        redrawFooter(showFooterNav, type);
+        // TODO: update message/buttons on main panel
       });
     });
   }

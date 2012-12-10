@@ -32,13 +32,16 @@ object LineQuery  {
   }
 }
 
-abstract class LineQuery(val weight: Float) {
+abstract class LineQuery(initialWeight: Float) {
 
   private[line] var curDoc = -1
   private[line] var curLine = -1
   private[line] var curPos = -1
   private[line] var curScore = 0.0f
   private[line] var isScored = false
+
+  protected var internalWeight = initialWeight
+  def weight = internalWeight
 
   def fetch(targetDoc: Int) = {
     var done = false
@@ -90,6 +93,9 @@ abstract class LineQuery(val weight: Float) {
   }
 
   private[line] def fetchPos() = LineQuery.NO_MORE_POSITIONS
+
+  def normalize(norm: Float) { internalWeight *= norm }
+  def sumOfSquaredWeights = { internalWeight * internalWeight }
 }
 
 class NodeQueue(size: Int) extends PriorityQueue[LineQuery] {

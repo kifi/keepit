@@ -2,9 +2,14 @@ package com.keepit.search.line
 
 import org.apache.lucene.index.IndexReader
 
-class BooleanOrNode[P <: LineQuery](optional: Array[P], percentMatch: Float, reader: IndexReader) extends LineQuery(1.0f) {
+class BooleanOrNode[P <: LineQuery](optional: Array[P], boost: Float, percentMatch: Float, reader: IndexReader) extends LineQuery(1.0f) {
 
-  val threshold = if (percentMatch <= 0.0f) 0.0f else optional.foldLeft(0.0f){ (w, n) => w + n.weight } * percentMatch / 100.0f
+  private var threshold = 0.0f
+  getReady
+
+  def getReady {
+    threshold = if (percentMatch <= 0.0f) 0.0f else optional.foldLeft(0.0f){ (w, n) => w + n.weight } * percentMatch / 100.0f
+  }
 
   val pq = new NodeQueue(optional.length)
   optional.foreach{ node => pq.insertWithOverflow(node) }
@@ -63,4 +68,13 @@ class BooleanOrNode[P <: LineQuery](optional: Array[P], percentMatch: Float, rea
   }
 
   override def computeScore = curScore
+
+  override def normalize(norm: Float) {
+    optional.foreach{ n => n.normalize(norm * boost) }
+    getReady
+  }
+
+  override def sumOfSquaredWeights = {
+    optional.foldLeft(boost * boost){ (s, n) => s + n.sumOfSquaredWeights }
+  }
 }
