@@ -275,7 +275,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function slideOut(temporary) {
     $('.kifi_hover').animate({
         opacity: 0,
-        right: '-=330'
+        right: '-=340'
       },
       300,
       'easeQuickSnapBounce',
@@ -287,7 +287,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   function slideIn() {
     //$("body").after(hover);
     $('.kifi_hover').animate({
-        right: '+=330',
+        right: '+=340',
         opacity: 1
       },
       400,
