@@ -140,9 +140,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       "type": "set_page_icon",
       "is_kept": true});
     isKept = true;
-    if (shouldSlideOut) {
-      keptItslideOut();
-    }
+    if (shouldSlideOut) keptItslideOut();
 
     var request = {
       "type": "add_bookmarks",
@@ -151,22 +149,22 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       "private": $("#keepit_private").is(":checked")
     };
     chrome.extension.sendRequest(request, function(response) {
-     log("[keepPage] response", response);
+     log("[keepPage] response:", response);
     });
   }
 
-  function unkeepPage() {
+  function unkeepPage(shouldSlideOut) {
     log("[unkeepPage]", document.location.href);
 
     chrome.extension.sendRequest({"type": "set_page_icon", "is_kept": false});
     isKept = false;
-    slideOut();
+    if (shouldSlideOut) slideOut();
 
     chrome.extension.sendRequest({
         "type": "unkeep",
         "url": document.location.href.replace(/#.*/, "")},
       function(response) {
-        log("[unkeepPage] response", response);
+        log("[unkeepPage] response:", response);
       });
   }
 
@@ -190,6 +188,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           "profilepic": facebookImageLink,
           "name": user.name,
           "is_kept": o.kept,
+          "private": o.private,
           "connected_networks": chrome.extension.getURL("icons/connected_networks.png")
         }
 
@@ -244,10 +243,25 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     });
     //$('.profilepic').click(function() { location=facebookProfileLink; });
 
-    $('.unkeepitbtn').click(unkeepPage);
+    $('.unkeepitbtn').click(function() {
+      unkeepPage(true);
+    });
 
     $('.keepitbtn').click(function() {
       keepPage(true);
+    });
+
+    $('.makeprivatebtn').click(function() {
+      var $btn = $(this), priv = /private/i.test($btn.text());
+      log("[setPrivate] " + priv);
+      chrome.extension.sendRequest({
+          "type": "set_private",
+          "url": document.location.href.replace(/#.*/, ""),
+          "private": priv},
+        function(response) {
+          log("[setPrivate] response:", response);
+          $btn.text("Make it " + (priv ? "Public" : "Private"));
+        });
     });
 
     $('.dropdownbtn').click(function() {
@@ -317,12 +331,17 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       $('.kififtr .footer-bar').on('mousedown','.close-message', function() {
         showComments(); // called with no params, hides comments/messages
       })
-      .on('mousedown', '.footer-keepit', function() {
+      .on('mousedown', '.footer-keepit', function(e) {
+        e.preventDefault();
         keepPage(false);
-        redrawFooter(showFooterNav, type)
+        redrawFooter(showFooterNav, type);
+        // TODO: update message/buttons on main panel
       })
-      .on('mousedown', '.footer-unkeepit', function() {
-        alert("To be implemented.");
+      .on('mousedown', '.footer-unkeepit', function(e) {
+        e.preventDefault();
+        unkeepPage(false);
+        redrawFooter(showFooterNav, type);
+        // TODO: update message/buttons on main panel
       });
     });
   }
