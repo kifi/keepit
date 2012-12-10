@@ -29,6 +29,8 @@ import play.api.mvc.Controller
 import securesocial.core.SecureSocial
 import securesocial.core.java.SecureSocial.SecuredAction
 import com.keepit.common.social.ThreadInfo
+import com.keepit.common.healthcheck.BabysitterTimeout
+import akka.util.duration._
 
 object CommentController extends FortyTwoController {
 
@@ -267,6 +269,7 @@ object CommentController extends FortyTwoController {
   }
 
   def messagesView = AdminHtmlAction { implicit request =>
+    implicit val timeout = BabysitterTimeout(30 second, 50 seconds)
     val uriAndUsers = CX.withConnection { implicit c =>
       Comment.all(Comment.Permissions.MESSAGE) map {co =>
         (toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId),
