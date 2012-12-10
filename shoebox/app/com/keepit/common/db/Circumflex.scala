@@ -22,7 +22,7 @@ import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.inject._
 import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.Babysitter
+import com.keepit.common.healthcheck.{Babysitter, BabysitterTimeout}
 
 class CustomTypeConverter extends TypeConverter {
   override def write(st: java.sql.PreparedStatement, parameter: Any, paramIndex: Int) {
@@ -445,15 +445,17 @@ object CX extends Logging {
     })
   }
 
-  def withReadOnlyConnection[A](block: Connection => A)(implicit app: Application): A = executeBlockWithConnection(true, block)
+  def withReadOnlyConnection[A](block: Connection => A)(implicit timeout: BabysitterTimeout = BabysitterTimeout(1 second, 5 seconds), app: Application): A =
+    executeBlockWithConnection(true, block)
 
-  def withConnection[A](block: Connection => A)(implicit app: Application): A = executeBlockWithConnection(false, block)
+  def withConnection[A](block: Connection => A)(implicit timeout: BabysitterTimeout = BabysitterTimeout(1 second, 5 seconds), app: Application): A =
+    executeBlockWithConnection(false, block)
 
-  private def executeBlockWithConnection[A](readOnly: Boolean, block: Connection => A)(implicit app: Application): A = {
+  private def executeBlockWithConnection[A](readOnly: Boolean, block: Connection => A)(implicit timeout: BabysitterTimeout, app: Application): A = {
     val conf = new BasicOrmConf(readOnly = readOnly)
     val connection: Connection = conf.connectionProvider.openConnection
     try {
-      inject[Babysitter].watch(1 second, 5 seconds) {
+      inject[Babysitter].watch(timeout) {
         using(conf) {
           block(connection)
         }

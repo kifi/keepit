@@ -21,13 +21,9 @@ import org.joda.time.DateTime
 import scala.collection.mutable.{Stack => MutableStack}
 import com.google.inject.Provides
 import org.joda.time.LocalDate
-import com.keepit.common.healthcheck.Babysitter
-import com.keepit.common.healthcheck.BabysitterImpl
-import com.keepit.common.healthcheck.HealthcheckPlugin
-import akka.actor.Scheduler
-import akka.actor.Cancellable
+import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout, HealthcheckPlugin}
+import akka.actor.{Scheduler, Cancellable, ActorRef}
 import akka.util.Duration
-import akka.actor.ActorRef
 
 class TestApplication(override val global: TestGlobal) extends play.api.test.FakeApplication() {
   def withFakeMail() = overrideWith(FakeMailModule())
@@ -91,7 +87,7 @@ case class BabysitterModule() extends ScalaModule {
 }
 
 class FakeBabysitter extends Babysitter {
-  def watch[A](warnTimeout: akka.util.FiniteDuration, errorTimeout: akka.util.FiniteDuration)(block: => A)(implicit app: Application): A = {
+  def watch[A](timeout: BabysitterTimeout)(block: => A)(implicit app: Application): A = {
     block
   }
 }
