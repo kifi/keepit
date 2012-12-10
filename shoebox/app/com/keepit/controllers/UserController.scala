@@ -40,11 +40,11 @@ case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConn
 object UserController extends FortyTwoController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
-    val (kept, following, socialUsers, numComments, numMessages) = CX.withConnection { implicit c =>
+    val (bookmark, following, socialUsers, numComments, numMessages) = CX.withConnection { implicit c =>
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
-          val kept = Bookmark.load(uri, userId).filter(_.isActive).isDefined
+          val bookmark = Bookmark.load(uri, userId).filter(_.isActive)
           val following = Follow.get(userId, uri.id.get).filter(_.isActive).isDefined
 
           val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
@@ -56,14 +56,15 @@ object UserController extends FortyTwoController {
           val numComments = Comment.getPublicCount(uri.id.get)
           val numMessages = Comment.getMessageCount(uri.id.get, userId)
 
-          (kept, following, socialUsers, numComments, numMessages)
+          (bookmark, following, socialUsers, numComments, numMessages)
         case None =>
-          (false, false, Nil, 0L, 0L)
+          (None, false, Nil, 0L, 0L)
       }
     }
 
     Ok(JsObject(Seq(
-        "kept" -> JsBoolean(kept),
+        "kept" -> JsBoolean(bookmark.isDefined),
+        "private" -> JsBoolean(bookmark.map(_.isPrivate).getOrElse(false)),
         "following" -> JsBoolean(following),
         "friends" -> userWithSocialSerializer.writes(socialUsers),
         "numComments" -> JsNumber(numComments),

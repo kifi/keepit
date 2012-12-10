@@ -128,6 +128,11 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
           removeKeep(info, request, sendResponse, tab);
         });
         break;
+      case "set_private":
+        getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+          setPrivate(info, request, sendResponse, tab);
+        });
+        break;
       case "get_conf":
         sendResponse(getConfigs());
         break;
@@ -249,7 +254,7 @@ function addKeep(bmInfo, req, sendResponse, tab) {
   chrome.bookmarks.create(bookmark, function(bm) {
     try {
       sendResponse(bm);
-      bookmark.isPrivate = !!req.isPrivate;
+      bookmark.isPrivate = !!req.private;
       postBookmarks(function(f) {f([bookmark])}, "HOVER_KEEP");
     } catch (e) {
       error(e);
@@ -258,7 +263,7 @@ function addKeep(bmInfo, req, sendResponse, tab) {
 }
 
 function removeKeep(bmInfo, req, sendResponse, tab) {
-  log("removing bookmark: ", req.url, tab);
+  log("removing bookmark:", req.url, tab);
 
   var userConfig = getConfigs();
   var userInfo = userConfig.user;
@@ -283,6 +288,33 @@ function removeKeep(bmInfo, req, sendResponse, tab) {
     }
   }
   xhr.open("POST", "http://" + userConfig.server + "/bookmarks/remove?uri=" + encodeURIComponent(req.url), true);
+  xhr.send();
+}
+
+function setPrivate(bmInfo, req, sendResponse, tab) {
+  log("[setPrivate]", req.private, req.url, tab);
+
+  var newParentId = req.private ? bmInfo.privateId : bmInfo.publicId;
+  var oldParentId = req.private ? bmInfo.publicId : bmInfo.privateId;
+  chrome.bookmarks.search(req.url, function(bm) {
+    bm.forEach(function(bm) {
+      if (bm.url == req.url && bm.parentId == oldParentId) {
+        chrome.bookmarks.move(bm.id, {parentId: newParentId});
+      }
+    });
+  });
+
+  var xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState == 4) {
+      log("[setPrivate] response:", xhr.response);
+      sendResponse(xhr.response);
+    }
+  }
+  xhr.open("POST", "http://" + getConfigs().server + "/bookmarks/private" +
+    "?uri=" + encodeURIComponent(req.url) +
+    "&isPrivate=" + +req.private,
+    true);
   xhr.send();
 }
 
