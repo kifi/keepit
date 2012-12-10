@@ -33,6 +33,14 @@ class QueryParserTest extends SpecificationWithJUnit {
       parser.parseQuery("aaa (bbb") must beSome[Query]
       parser.parseQuery("aaa (bbb))") must beSome[Query]
       parser.parseQuery("aaa) bbb") must beSome[Query]
+      parser.parseQuery("+") must beSome[Query]
+      parser.parseQuery("\"") must beSome[Query]
+    }
+
+    "handle an empty query" in {
+      parser.parseQuery(" ") must beNone
+      parser.parseQuery("") must beNone
+      parser.parseQuery(null) must beNone
     }
   }
 }
