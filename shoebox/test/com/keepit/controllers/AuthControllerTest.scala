@@ -38,7 +38,7 @@ import com.keepit.common.db.ExternalId
 @RunWith(classOf[JUnitRunner])
 class AuthControllerTest extends SpecificationWithJUnit {
 
-  //todo(eishay) refector commonalities out of this one and AdminDashboardController to make this test easy to write
+  //todo(eishay) refactor commonalities out of this one and AdminDashboardController to make this test easy to write
   "AuthController" should {
 
     "start" in {
@@ -67,7 +67,7 @@ class AuthControllerTest extends SpecificationWithJUnit {
         //first round
         val fakeRequest1 = FakeRequest().
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
-            withFormUrlEncodedBody(("agent" -> "crome agent"), ("version" -> "1.1.1"))
+            withFormUrlEncodedBody(("agent" -> "crome agent"), ("version" -> "1.1.1"), ("installation" -> ""))
         val authRequest1 = AuthController.AuthenticatedRequest(null, user.id.get, fakeRequest1)
         val result1 = AuthController.start(authRequest1)
         status(result1) must equalTo(OK)
