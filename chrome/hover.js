@@ -1,22 +1,15 @@
-console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
-
-(function() {
+!function() {
   var config, following, isKept;
-
-  function log(message) {
-    console.log("[" + new Date().getTime() + "] ", message);
-  }
 
   chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
     if (request.type === "show_hover") {
-      var existingElements = $('.kifi_hover').length;
-      if (existingElements > 0) {
+      if ($(".kifi_hover").length) {
         slideOut();
         return;
       }
       chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
         config = response;
-        console.log("user config",response);
+        log("user config",response);
         getUserInfo(showHover);
       });
     }
@@ -305,7 +298,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       400,
       'easeQuickSnapBounce', function() {
         $('.kifi_hover').css({'right': '-10px', 'opacity': 1});
-        console.log("opened", $('.kifi_hover')[0], $('.kifi_hover').css('right'))
+        log("opened", $('.kifi_hover')[0], $('.kifi_hover').css('right'))
       });
   }
 
@@ -397,7 +390,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     $(".kifi_hover").data("view", type).removeClass("public message").addClass(type);
 
     fetchComments(type, id, function(comments) {
-      console.log(comments);
+      log(comments);
       renderComments(user, comments, type, id, function() {
         if (!isVisible) {
           repositionScroll(false);
@@ -478,7 +471,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function renderComments(user, comments, type, id, onComplete, partialRender) {
-    console.log("Drawing comments!");
+    log("Drawing comments!");
     comments = comments || {};
     comments["public"] = comments["public"] || [];
     comments["message"] = comments["message"] || [];
@@ -661,7 +654,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function drawCommentView(renderedTemplate, user, type, partials) {
-    //console.log(renderedTemplate);
+    //log(renderedTemplate);
     repositionScroll(false);
     $('.kifi_comment_wrapper').html(renderedTemplate).find("time").timeago();
     repositionScroll(false);
@@ -859,7 +852,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
               (dx == 0 || r.width < sel.r.width * 2 * dx) &&
               (dy == 0 || r.height < sel.r.height * 2 * dy) &&
               (dx == 0 && dy == 0 || r.width * r.height < sel.r.width * sel.r.height * Math.sqrt(dx * dx + dy * dy))) {
-            // if (sel.el) console.log(
+            // if (sel.el) log(
             //   r.width + " < " + sel.r.width + " * 2 * " + dx + " AND " +
             //   r.height + " < " + sel.r.height + " * 2 * " + dy + " AND " +
             //   r.width * r.height + " < " + sel.r.width * sel.r.height + " * " + Math.sqrt(dx * dx + dy * dy));
@@ -884,7 +877,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       submitComment(text, type, user, null, null, function(newComment) {
         $('.comment-compose').text("").html(placeholder).blur();
 
-        console.log("new comment", newComment);
+        log("new comment", newComment);
         // Clean up CSS
 
         var params = newComment;
@@ -931,22 +924,22 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           return false;
         }
         recipients = recipientArr.join(",");
-        console.log("to: ", recipients);
+        log("to: ", recipients);
       }
       else {
         parent = $(this).parents(".kifi_comment_wrapper").find(".thread-wrapper").attr("data-externalid");
-        console.log(parent)
+        log(parent)
       }
 
       submitComment(text, type, user, parent, recipients, function(newComment) {
         $('.comment-compose').text("").html(placeholder).blur();
 
-        console.log("new message", newComment);
+        log("new message", newComment);
         // Clean up CSS
 
         if(!isReply) {
           updateCommentCount(type,parseInt($('.messages-count').text()) + 1)
-          console.log("not a reply. redirecting to new message");
+          log("not a reply. redirecting to new message");
           showComments(user, type, newComment.message.externalId);
           return;
         }
@@ -974,7 +967,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
      */
     var permissions = type;
 
-    console.log(parent);
+    log(parent);
 
     var request = {
       "type": "post_comment",
@@ -988,7 +981,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     chrome.extension.sendRequest(request, function(response) {
       var newComment;
       if(type == "message") {
-        console.log("fff",response)
+        log("fff",response)
         newComment = response;
       }
       else {
@@ -1010,7 +1003,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   key('command+shift+k, ctrl+shift+k', function(){
-    console.log('Opening kifi slider!');
+    log('Opening kifi slider!');
 
     var existingElements = $('.kifi_hover').length;
     if (existingElements > 0) {
@@ -1019,7 +1012,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     }
     chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
       config = response;
-      console.log("user config",response);
+      log("user config",response);
       getUserInfo(showHover);
     });
 
@@ -1034,8 +1027,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function resizeCommentBodyView(resizeQuickly) {
-    console.log("hit")
-    $('.kifi_hover').css({'top':''});
+    log("[resizeCommentBodyView]");
+    $('.kifi_hover').css("top", "");
     $('.comment_body_view').stop().css({'max-height':$(window).height()-320});
     return; // for now, we'll do a rough fix
     var kifiheader = $('.kifihdr');
@@ -1063,10 +1056,10 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     resizeCommentBodyView();
   });
 
-  chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
-    config = response;
-    console.log("user config",response);
+  chrome.extension.sendRequest({"type": "get_conf"}, function(o) {
+    config = o;
+    log("config", config);
     hasNewComments();
   });
 
-})();
+}();
