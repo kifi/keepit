@@ -2,6 +2,8 @@ package com.keepit.search.index
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
+import com.keepit.common.net.Host
+import com.keepit.common.net.URI
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
@@ -127,6 +129,18 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
             doc.add(buildTextField("cs", article.content, analyzer))
           }
           doc.add(buildSemanticVectorField("sv", titleAnalyzer.tokenStream("t", article.title), contentAnalyzer.tokenStream("c", article.content)))
+
+          // index domain name
+          URI.parse(uri.url) match {
+            case Some(uri) =>
+              uri.host match {
+                case Some(Host(domain @ _*)) =>
+                  doc.add(buildIteratorField("site", (1 to domain.size).iterator){ n => domain.take(n).reverse.mkString(".") })
+                case _ =>
+              }
+            case _ =>
+          }
+
           doc
         case None => doc
       }
@@ -138,6 +152,13 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     super.setAutoGeneratePhraseQueries(true)
 
     override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
+      field.toLowerCase match {
+        case "site" => getSiteQuery(queryText)
+        case _ => getTextQuery(queryText, quoted)
+      }
+    }
+
+    private def getTextQuery(queryText: String, quoted: Boolean) = {
       val booleanQuery = new BooleanQuery
 
       var query = super.getFieldQuery("t", queryText, quoted)
