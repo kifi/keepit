@@ -13,7 +13,7 @@
     //"default_popup": "keep.html"    // optional
   },
   "background" : {
-    "page": "keep.html"
+    "page": "background.html"
   },
   "content_scripts" : [
     {
@@ -240,7 +240,6 @@
     "google_inject.html",
     "hover.css",
     "hover.js",
-    "keep.html",
     "keepit.png",
     "kept_hover.html",
     "kept.png",
