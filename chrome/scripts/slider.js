@@ -54,26 +54,50 @@
 
   var templateCache = {};
 
-  function loadFile(name, callback) {
-    var tmpl = templateCache[name];
-    if (tmpl) {
-      callback(tmpl);
-    } else {
-      var req = new XMLHttpRequest();
-      req.open("GET", chrome.extension.getURL(name), true);
-      req.onreadystatechange = function() {
-        if (req.readyState == 4 && req.status == 200) {
-          callback(templateCache[name] = req.responseText);
-        }
-      };
-      req.send(null);
+  function renderTemplate(path, params, partialPaths, callback) {
+    // sort out partialPaths and callback (both optional)
+    if (!callback && typeof partialPaths == "function") {
+      callback = partialPaths;
+      partialPaths = undefined;
     }
-  }
 
-  function renderTemplate(name, params, callback, partials) {
-    loadFile(name, function(template) {
-      callback(Mustache.render(template, params, partials));
+    loadPartials(path.replace(/[^\/]*$/, ""), partialPaths || {}, function(partials) {
+      loadFile(path, function(template) {
+        callback(Mustache.render(template, params, partials));
+      });
     });
+
+    function loadPartials(basePath, paths, callback) {
+      var partials = {}, names = Object.keys(paths), numLoaded = 0;
+      if (!names.length) {
+        callback(partials);
+      } else {
+        names.forEach(function(name) {
+          loadFile(basePath + paths[name], function(tmpl) {
+            partials[name] = tmpl;
+            if (++numLoaded == names.length) {
+              callback(partials);
+            }
+          });
+        });
+      }
+    }
+
+    function loadFile(path, callback) {
+      var tmpl = templateCache[path];
+      if (tmpl) {
+        callback(tmpl);
+      } else {
+        var req = new XMLHttpRequest();
+        req.open("GET", chrome.extension.getURL(path), true);
+        req.onreadystatechange = function() {
+          if (req.readyState == 4 && req.status == 200) {
+            callback(templateCache[path] = req.responseText);
+          }
+        };
+        req.send(null);
+      }
+    }
   }
 
   function summaryText(numFriends, isKept) {
@@ -94,7 +118,7 @@
 
   function socialTooltip(friend, element) {
      // disabled for now
-    renderTemplate("templates/social_hover.html",{"friend": friend}, function(tmpl) {
+    renderTemplate("templates/social_hover.html", {"friend": friend}, function(tmpl) {
       var timeout;
       var timein;
 
@@ -188,17 +212,11 @@
           }
         }
 
-        loadFile("templates/footer.html", function(footer) {
-        loadFile("templates/main_hover.html", function(main_hover) {
-          var partials = {
-            "main_hover": main_hover,
-            "footer": footer
-          };
-
-          renderTemplate('templates/kept_hover.html', tmpl, function(template) {
-            drawKeepItHover(user, o.friends, o.numComments, o.numMessages, template);
-          }, partials);
-        });
+        renderTemplate('templates/kept_hover.html', tmpl, {
+          "main_hover": "main_hover.html",
+          "footer": "footer.html"
+        }, function(template) {
+          drawKeepItHover(user, o.friends, o.numComments, o.numMessages, template);
         });
       }
     );
@@ -481,7 +499,7 @@
 
     var visibleComments = comments[type] || [];
 
-    if(!id) {
+    if (!id) {
       updateCommentCount(type, visibleComments.length);
     }
 
@@ -499,23 +517,9 @@
       following: following,
       snapshotUri: chrome.extension.getURL("images/snapshot.png"),
       connected_networks: chrome.extension.getURL("images/social_icons.png")
-    }
+    };
 
-    loadFile("templates/comments/hearts.html", function(hearts) {
-    loadFile("templates/comments/comments_list.html", function(comment_list) {
-    loadFile("templates/comments/comment.html", function(comment) {
-    loadFile("templates/comments/thread_info.html", function(thread_info) {
-    loadFile("templates/comments/thread.html", function(thread) {
-    loadFile("templates/comments/message_list.html", function(message_list) {
-    loadFile("templates/comments/comment_post.html", function(comment_post) {
-    loadFile("templates/comments/message_post.html", function(message_post) {
-
-      var partials = {
-        "comment_body_view": comment_list,
-        "hearts": hearts,
-        "comment": comment,
-        "comment_post_view": comment_post
-      };
+    // TODO: fix indentation below
 
       if (visibleComments.length && visibleComments[0].user && visibleComments[0].user.externalId) {
         for (msg in visibleComments) {
@@ -523,17 +527,11 @@
         }
       }
 
-      // By default we use the comment partials.
-      // To override for a specific function, do so here.
       if (type == "message") {
-        partials.comment = (id ? comment : thread_info);
-        partials.comment_body_view = (id ? thread : message_list);
-        partials.comment_post_view = message_post;
-
-      // For thread lists, we need to do this for each one. For threads, only the first one
-        var iterMessages = (id ? [visibleComments[0]] : visibleComments )
+        // For thread lists, we need to do this for each one. For threads, only the first one
+        var iterMessages = (id ? [visibleComments[0]] : visibleComments)
         var threadAvatar = "";
-        for(msg in iterMessages) {
+        for (msg in iterMessages) {
           var recipients = iterMessages[msg]["recipients"];
           var l = recipients.length;
           if(l == 0) { // No recipients!
@@ -596,7 +594,7 @@
           iterMessages[msg]["showMessageCount"] = iterMessages[msg]["messageCount"] > 1;
         }
 
-        if(id) {
+        if (id) {
           var othersInConversation = {};
           var recipientCount = 0;
           for(msg in visibleComments) {
@@ -632,30 +630,25 @@
         }
       }
 
-      if(partialRender) {
+      var partials = {
+        "comment_body_view": type != "message" ? "comments_list.html" : id ? "thread.html" : "message_list.html",
+        "hearts": "hearts.html",
+        "comment": type != "message" || id ? "comment.html" : "thread_info.html",
+        "comment_post_view": type != "message" ? "comment_post.html" : "message_post.html"};
+      if (partialRender) {
         // Hacky solution for a partial refresh. Needs to be refactored.
-        var renderedTemplate = Mustache.render(partials.comment_body_view, params, partials);
-        $('.comment_body_view').html(renderedTemplate).find("time").timeago();
-      }
-      else {
-        renderTemplate("templates/comments/comments_view.html", params, function(renderedTemplate) {
-          drawCommentView(renderedTemplate, user, type, partials);
+        renderTemplate("templates/comments/" + partials.comment_body_view, params, partials, function(renderedTemplate) {
+          $('.comment_body_view').html(renderedTemplate).find("time").timeago();
+        });
+      } else {
+        renderTemplate("templates/comments/comments_view.html", params, partials, function(renderedTemplate) {
+          drawCommentView(renderedTemplate, user, type);
           onComplete();
-        }, partials);
+        });
       }
-
-
-    });
-    });
-    });
-    });
-    });
-    });
-    });
-    });
   }
 
-  function drawCommentView(renderedTemplate, user, type, partials) {
+  function drawCommentView(renderedTemplate, user, type) {
     //log(renderedTemplate);
     repositionScroll(false);
     $('.kifi_comment_wrapper').html(renderedTemplate).find("time").timeago();
@@ -893,7 +886,7 @@
         badGlobalState["updates"].countSum++;
 
         renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
-          //drawCommentView(renderedTemplate, user, type, partials);
+          //drawCommentView(renderedTemplate, user, type);
           $('.comment_body_view').find('.no-comment').parent().detach();
           $('.comment_body_view').append(renderedComment).find("time").timeago();
           updateCommentCount(type);
@@ -953,7 +946,7 @@
         params["formatIsoDate"] = isoDateFormatter;
 
         renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
-          //drawCommentView(renderedTemplate, user, type, partials);
+          //drawCommentView(renderedTemplate, user, type);
           $('.comment_body_view').find('.no-comment').parent().detach();
           $('.thread-wrapper').append(renderedComment).find("time.timeago").timeago();
           repositionScroll(false);
