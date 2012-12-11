@@ -209,7 +209,7 @@
         "*://www.google.co.zw/*"
       ],
       "js" : ["lib/jquery-1.8.2.min.js", "google_inject.js"],
-      "css": ["keepit.css"],
+      "css": ["google_inject.css"],
       "run_at" : "document_end",//document_start
       "all_frames" : false
     },
@@ -219,7 +219,7 @@
         "https://*/*"
       ],
       "js" : ["lib/jquery-1.8.2.min.js", "lib/jquery-ui-1.9.1.custom.min.js", "lib/keymaster.min.js", "lib/lodash.min.js", "lib/jquery.tokeninput.js", "lib/jquery.timeago.js", "lib/mustache-0.7.1.min.js", "contentscript.js", "templates/comments/snapshot.js", "hover.js"],
-      "css": ["keepit.css", "hover.css", "templates/comments/comments.css"],
+      "css": ["hover.css", "templates/comments/comments.css"],
       "run_at" : "document_end",
       "all_frames" : false
     }

@@ -62,7 +62,7 @@
 .kifi_hover .dtr {
   display: table-row;
   padding:0;
-  margin:0; 
+  margin:0;
 }
 
 .kifi_hover .dtg {
@@ -415,9 +415,12 @@
 
 .kifi_hover .keepit_private {
   display: inline;
+  border: 1px solid #D9D9D9;
+  margin: 9px 1px 0 0;
+  -webkit-border-radius: 2px;
+  -moz-border-radius: 2px;
+  border-radius: 2px;
 }
-
-
 
 .kifi_social_hover div {
   -display: block;
@@ -426,11 +429,6 @@
 .kifi_social_hover span {
   display: inline;
 }
-
-.kifi_social_hover {
-
-}
-
 
 .kifi_social_hover .hover_friend {
   padding: 5px;
