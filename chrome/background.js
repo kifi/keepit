@@ -471,7 +471,7 @@ function setPageIcon(tabId, kept) {
   log("[setPageIcon] tab ", tabId);
   chrome.tabs.get(tabId, function(tab) {
     log("[setPageIcon] tab ", tab);
-    chrome.pageAction.setIcon({"tabId": tabId, "path": kept ? "kept.png" : "keepit.png"});
+    chrome.pageAction.setIcon({"tabId": tabId, "path": kept ? "icons/kept.png" : "icons/keep.png"});
     chrome.pageAction.show(tabId);
   });
 }

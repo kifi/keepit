@@ -4,11 +4,11 @@
   "manifest_version": 2,
   "description": "Keep it, Find it!",
   "icons" : {
-    "256" : "kifi.png"
+    "256" : "icons/kifi.png"
   },
   "options_page": "options.html",
   "page_action": {
-    "default_icon": "keepit.png", // optional
+    "default_icon": "icons/keep.png", // optional
     "default_title": "Kifi"//,    // optional; shown in tooltip
     //"default_popup": "keep.html"    // optional
   },
@@ -246,13 +246,10 @@
     "arrow.png",
     "downarrow_hover.png",
     "downarrow.png",
-    "keepit.png",
-    "kept.png",
-    "kifi.png",
     "kifilogo.png",
     "magicQueries.json",
-    "snapshot.png",
-    "social-icons.png",
+    "images/snapshot.png",
+    "images/social_icons.png",
     "uparrow_hover.png",
     "uparrow.png",
     "icons/dropbox.png",
@@ -261,7 +258,6 @@
     "icons/gdrive.png",
     "icons/gmail.png",
     "icons/convo.png",
-    "icons/social-icons.png",
     "icons/more-right.png",
     "templates/google_inject.html",
     "templates/kept_hover.html",
