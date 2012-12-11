@@ -17,19 +17,21 @@
 
   $('<input id="editableFix" style="opacity:0;color:transparent;width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html')
 
-  $.extend(jQuery.easing,{
-    easeQuickSnapBounce:function(x,t,b,c,d) {
-      if (typeof s === 'undefined') s = 1.3;
+  $.extend(jQuery.easing, {
+    easeQuickSnapBounce: function(x,t,b,c,d,s) {
+      if (s == null) s = 1.3;
       return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
     },
-    easeCircle: function (x, t, b, c, d) {
-      if ((t/=d/2) < 1) return -c/2 * (Math.sqrt(1 - t*t) - 1) + b;
-      return c/2 * (Math.sqrt(1 - (t-=2)*t) + 1) + b;
+    easeCircle: function(x,t,b,c,d) {
+      return (t/=d/2) < 1 ?
+        -c/2 * (Math.sqrt(1 - t*t) - 1) + b :
+        c/2 * (Math.sqrt(1 - (t-=2)*t) + 1) + b;
     },
-    easeInOutBack: function (x, t, b, c, d, s) {
-      if (s == undefined) s = 1.3;
-      if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s)) + b;
-      return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
+    easeInOutBack: function(x,t,b,c,d,s) {
+      if (s == null) s = 1.3;
+      return (t/=d/2) < 1 ?
+        c/2*(t*t*(((s*=(1.525))+1)*t - s)) + b :
+        c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
     }
   });
 
