@@ -43,6 +43,10 @@ import java.net.InetAddress
 import com.keepit.common.analytics.S3EventStoreImpl
 import com.keepit.common.analytics.S3EventStore
 import com.keepit.common.analytics.Event
+import com.keepit.common.analytics.MongoEventStore
+import com.keepit.common.analytics.FakeMongoEventStoreImpl
+import com.keepit.common.analytics.MongoEventStoreImpl
+import com.mongodb.casbah.MongoConnection
 
 case class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -97,6 +101,19 @@ case class DevModule() extends ScalaModule with Logging {
       case None => new HashMap[ExternalId[Event], Event] with S3EventStore
       case Some(bucketName) => new S3EventStoreImpl(S3Bucket(bucketName), client)
     }
+
+  @Singleton
+  @Provides
+  def mongoEventStore(): MongoEventStore = {
+    current.configuration.getString("mongo.events.server") match {
+      case Some(server) =>
+        val mongoConn = MongoConnection(server)
+        val mongoDB = mongoConn(current.configuration.getString("mongo.events.database").get)
+        new MongoEventStoreImpl(mongoDB)
+      case None =>
+        new FakeMongoEventStoreImpl()
+    }
+  }
 
   @Singleton
   @Provides

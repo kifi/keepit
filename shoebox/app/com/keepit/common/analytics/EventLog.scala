@@ -54,6 +54,9 @@ case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: 
   def persistToS3() = {
     Event.S3Store += (externalId -> this)
   }
+  def persistToMongo() = {
+    inject[MongoEventStore].save(this)
+  }
 }
 
 object Event {

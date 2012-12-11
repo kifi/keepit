@@ -41,6 +41,9 @@ import akka.actor.ActorSystem
 import play.api.Play.current
 import com.keepit.common.analytics.S3EventStoreImpl
 import com.keepit.common.analytics.S3EventStore
+import com.keepit.common.analytics.MongoEventStoreImpl
+import com.mongodb.casbah.MongoConnection
+import com.keepit.common.analytics.MongoEventStore
 
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -77,7 +80,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def eventStore(amazonS3Client: AmazonS3): S3EventStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.event.bucket").get)
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.events.bucket").get)
     new S3EventStoreImpl(bucketName, amazonS3Client)
   }
 
@@ -89,6 +92,15 @@ case class ShoeboxModule() extends ScalaModule with Logging {
         conf.getString("accessKey").get,
         conf.getString("secretKey").get)
     new AmazonS3Client(awsCredentials)
+  }
+
+  @Singleton
+  @Provides
+  def mongoEventStore(): MongoEventStore = {
+    val server = current.configuration.getString("mongo.events.server").get
+    val mongoConn = MongoConnection(server)
+    val mongoDB = mongoConn("events")
+    new MongoEventStoreImpl(mongoDB)
   }
 
   @Singleton
