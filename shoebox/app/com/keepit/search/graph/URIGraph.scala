@@ -99,7 +99,11 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     }
   }
 
-  def getQueryParser(lang: Lang) = new URIGraphQueryParser(DefaultAnalyzer.forParsing(lang))
+  def getQueryParser(lang: Lang) = {
+    val parser = new URIGraphQueryParser(DefaultAnalyzer.forParsing(lang))
+    DefaultAnalyzer.forParsingWithStemmer(lang).foreach{ parser.setStemmingAnalyzer(_) }
+    parser
+  }
 
   def search(queryText: String, lang: Lang = Lang("en")): Seq[Hit] = {
     parseQuery(queryText, lang) match {
@@ -220,8 +224,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       if (query != null) booleanQuery.add(query, Occur.SHOULD)
 
       if (!quoted) {
-        query = super.getFieldQuery(URIGraph.stemmedTerm.field(), queryText, quoted)
-        if (query != null) booleanQuery.add(query, Occur.SHOULD)
+        super.getStemmedFieldQueryOpt(URIGraph.stemmedTerm.field(), queryText).foreach{ query => booleanQuery.add(query, Occur.SHOULD) }
       }
 
       val clauses = booleanQuery.clauses
