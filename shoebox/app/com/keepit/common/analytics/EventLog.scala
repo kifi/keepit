@@ -1,68 +1,76 @@
 package com.keepit.common.analytics
 
-import com.keepit.common.db.Id
+import java.sql.Connection
 import org.joda.time.DateTime
-import com.keepit.model.User
-import play.api.libs.json.JsObject
-import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoServices.currentService
-import com.keepit.common.controller.FortyTwoServices.currentVersion
-import play.api.libs.json._
-import play.api.libs.json.Json._
 import com.keepit.common.db.ExternalId
-import com.keepit.search.ArticleSearchResultRef
+import com.keepit.common.db.State
+import com.keepit.common.db.Id
+import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
+import com.keepit.inject.inject
+import com.keepit.model.KifiInstallation
+import com.keepit.model.User
+import com.keepit.model.UserExperiment
+import com.keepit.common.store.EventStore
+import com.keepit.common.time._
+import com.keepit.common.controller.FortyTwoServices._
 
-trait EventIdentifier {
+import play.api.Play.current
+import play.api.libs.json._
+
+trait EventFamily {
   val name: String
   override def toString = name
 }
 
-case class UserEventIdentifier(name: String) extends EventIdentifier
-case class ServerEventIdentifier(name: String) extends EventIdentifier
+case class UserEventFamily(name: String) extends EventFamily
+case class ServerEventFamily(name: String) extends EventFamily
 
-object EventFamily {
+object EventFamilies {
   // User
-  val SLIDER = UserEventIdentifier("slider")
-  val SEARCH = UserEventIdentifier("search")
-  val SERVER = ServerEventIdentifier("server")
-}
+  val SLIDER = UserEventFamily("slider")
+  val SEARCH = UserEventFamily("search")
+  val SERVER = ServerEventFamily("server")
 
-case class Meta[T](data: Tuple2[String,T]) {
-  private def jsonSerializer: JsValue = {
-    data._2 match {
-      case s: ExternalId[_] => JsString(s.id)
-      case s: Id[_] => JsNumber(s.id)
-      case s: String => JsString(s)
-      case _ => throw new Exception("")
+  def apply(event: String): EventFamily = {
+    event.toLowerCase.trim match {
+      case SLIDER.name => SLIDER
+      case SEARCH.name => SEARCH
+      case SERVER.name => SERVER
+      case s => throw new Exception("Unknown event family %s".format(s))
     }
   }
-  def toJson = JsObject(Seq(data._1 -> jsonSerializer))
 }
 
-case class MetaList[T](meta: Meta[_]*) {
-
-  lazy val toJson = JsObject(meta.map(m => (m.data._1, Json.toJson(m.data._2))))
+trait EventMetadata {
+  val eventName: String
+  val metaData: JsValue
+  val eventFamily: EventFamily
 }
 
-case class Event(eventType: EventIdentifier, metaData: Meta[_]*) {
-  val createdAt: DateTime = currentDateTime
-  lazy val serverVersion = currentService + ":" + currentVersion
-  lazy val toJson = JsObject(
-    Seq(
-     ("createdAt", Json.toJson(createdAt.toString())),
-     ("serverVersion", Json.toJson(serverVersion))
-    )
-  )
+case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: ExternalId[KifiInstallation], userExperiments: Seq[State[UserExperiment.ExperimentType]], metaData: JsValue) extends EventMetadata
+case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsValue) extends EventMetadata
+
+case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime = currentDateTime, serverVersion: String = currentService + ":" + currentVersion) {
+
+  def persistToS3() = {
+    Event.store += (externalId -> this)
+  }
 }
 
+object Event {
+  lazy val store = inject[EventStore]
+}
 
 object Events {
-  import EventIdentifiers.User._
+  def userEvent(eventFamily: UserEventFamily, eventName: String, userId: Id[User], installId: ExternalId[KifiInstallation], metaData: JsObject)(implicit conn: Connection) = {
+    val user = User.get(userId)
+    val experiments = UserExperiment.getByUser(userId) map (_.experimentType)
 
-  def pluginStart(userId: ExternalId[User]) = Event(PLUGIN_START, Meta(("userId" -> userId)))
-  def initSearch(userId: ExternalId[User], searchUuid: ExternalId[ArticleSearchResultRef]) = Event(INIT_SEARCH, Meta(("searchUuid", searchUuid)))
-  def sawResults(userId: ExternalId[User], searchUuid: ExternalId[ArticleSearchResultRef]) = Event(SAW_RESULTS, Meta(("searchUuid", searchUuid)))
-  def clickedKifiResult(userId: ExternalId[User], searchUuid: ExternalId[ArticleSearchResultRef]) = Event(SAW_RESULTS, Meta(("searchUuid", searchUuid)))
+    Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData))
+  }
+  def serverEvent(eventFamily: ServerEventFamily, eventName: String, metaData: JsObject)(implicit conn: Connection) = {
+    Event(metaData = ServerEventMetadata(eventFamily, eventName, metaData))
+  }
 }
 
 
