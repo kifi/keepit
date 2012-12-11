@@ -447,7 +447,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
   function socialTooltip(friend, element) {
      // disabled for now
-    getTemplate("social_hover.html",{"friend": friend}, function(tmpl) {
+    getTemplate("templates/social_hover.html",{"friend": friend}, function(tmpl) {
       var timeout;
       var timein;
 

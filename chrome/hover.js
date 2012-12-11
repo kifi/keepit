@@ -99,7 +99,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
   function socialTooltip(friend, element) {
      // disabled for now
-    renderTemplate("social_hover.html",{"friend": friend}, function(tmpl) {
+    renderTemplate("templates/social_hover.html",{"friend": friend}, function(tmpl) {
       var timeout;
       var timein;
 
@@ -208,7 +208,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             "footer": footer
           }
 
-          renderTemplate('kept_hover.html', tmpl, function(template) {
+          renderTemplate('templates/kept_hover.html', tmpl, function(template) {
             drawKeepItHover(user, o.friends, o.numComments, o.numMessages, template);
           }, partials);
         });
