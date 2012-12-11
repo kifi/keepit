@@ -164,44 +164,42 @@
   }
 
   function showKeepItHover(user) {
-    $.get("http://" + config.server + "/users/slider?url=" + encodeURIComponent(document.location.href),
-      function(o) {
-        log(o);
+    chrome.extension.sendRequest({type: "get_slider_info"}, function(o) {
+      log(o);
 
-        isKept = o.kept;
-        following = o.following;
+      isKept = o.kept;
+      following = o.following;
 
-        var tmpl = {
-          "logo": chrome.extension.getURL('images/kifilogo.png'),
-          "arrow": chrome.extension.getURL('images/triangle_down.31x16.png'),
-          "profilepic": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square",
-          "name": user.name,
-          "is_kept": o.kept,
-          "private": o.private,
-          "connected_networks": chrome.extension.getURL("images/networks.png")
-        }
-
-        if (o.friends.length) {
-          tmpl.socialConnections = {
-            countText: summaryText(o.friends.length, o.kept),
-            friends: o.friends
-          }
-        }
-
-        loadFile("templates/footer.html", function(footer) {
-        loadFile("templates/main_hover.html", function(main_hover) {
-          var partials = {
-            "main_hover": main_hover,
-            "footer": footer
-          };
-
-          renderTemplate('templates/kept_hover.html', tmpl, function(template) {
-            drawKeepItHover(user, o.friends, o.numComments, o.numMessages, template);
-          }, partials);
-        });
-        });
+      var tmpl = {
+        "logo": chrome.extension.getURL('images/kifilogo.png'),
+        "arrow": chrome.extension.getURL('images/triangle_down.31x16.png'),
+        "profilepic": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square",
+        "name": user.name,
+        "is_kept": o.kept,
+        "private": o.private,
+        "connected_networks": chrome.extension.getURL("images/networks.png")
       }
-    );
+
+      if (o.friends.length) {
+        tmpl.socialConnections = {
+          countText: summaryText(o.friends.length, o.kept),
+          friends: o.friends
+        }
+      }
+
+      loadFile("templates/footer.html", function(footer) {
+      loadFile("templates/main_hover.html", function(main_hover) {
+        var partials = {
+          "main_hover": main_hover,
+          "footer": footer
+        };
+
+        renderTemplate('templates/kept_hover.html', tmpl, function(template) {
+          drawKeepItHover(user, o.friends, o.numComments, o.numMessages, template);
+        }, partials);
+      });
+      });
+    });
   }
 
   function drawKeepItHover(user, friends, numComments, numMessages, renderedTemplate) {
@@ -350,8 +348,7 @@
   }
 
   function hasNewComments(callback) {
-    var url = "http://" + config.server + "/users/slider/updates?url=" + encodeURIComponent(document.location.href);
-    $.get(url, null, function(updates) {
+    chrome.extension.sendRequest({type: "get_slider_updates"}, function(updates) {
       if (badGlobalState["updates"]) {
         var hasUpdates = badGlobalState["updates"]["countSum"] !== updates["countSum"];
         if (hasUpdates && callback) {
@@ -391,7 +388,7 @@
 
     $(".kifi_hover").data("view", type).removeClass("public message").addClass(type);
 
-    fetchComments(type, id, function(comments) {
+    chrome.extension.sendRequest({type: "get_comments", kind: type, commentId: id}, function(comments) {
       log(comments);
       renderComments(user, comments, type, id, function() {
         if (!isVisible) {
@@ -406,15 +403,6 @@
           redrawFooter(true, type);
         }
       }, partialRender);
-    });
-  }
-
-  function fetchComments(type, id, callback) {
-    var url = "http://" + config.server +
-      (type == "public" ? "/comments/public" : "/messages/threads") +
-      (id ? "/" + id : ("?url=" + encodeURIComponent(document.location.href)));
-    $.get(url, null, function(payload) {
-      callback(payload)
     });
   }
 
@@ -667,8 +655,7 @@
   function createCommentBindings(type, user) {
     $(".control-bar").on("click", ".follow", function() {
       following = !following;  // TODO: server should return whether following along with the comments
-      $.ajax("http://" + config.server + "/comments/follow?url=" + encodeURIComponent(document.location.href),
-        {"type": following ? "POST" : "DELETE"});
+      chrome.extension.sendRequest({type: "follow", follow: following});
       $(this).toggleClass("following", following);
     });
 
@@ -760,21 +747,19 @@
     });
 
     if (type == "message") {
-      $.get("http://" + config.server + "/users/friends?url=" + encodeURIComponent(document.location.href),
-        null,
-        function(data) {
-          var friends = data.friends; //TODO!
-          for (var friend in friends) {
-            friends[friend].name = friends[friend].firstName + " " + friends[friend].lastName
-          }
-          $("#to-list").tokenInput(friends, {
-            theme: "kifi"
-          });
-          $("#token-input-to-list").keypress(function(e) {
-            return e.which !== 13;
-          });
+      chrome.extension.sendRequest({type: "get_friends"}, function(data) {
+        log("friends:", data);
+        var friends = data.friends; //TODO!
+        for (var friend in friends) {
+          friends[friend].name = friends[friend].firstName + " " + friends[friend].lastName
         }
-      );
+        $("#to-list").tokenInput(friends, {
+          theme: "kifi"
+        });
+        $("#token-input-to-list").keypress(function(e) {
+          return e.which !== 13;
+        });
+      });
     }
 
     // Main comment textarea
