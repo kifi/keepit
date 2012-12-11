@@ -40,9 +40,9 @@ import akka.actor.ActorSystem
 import play.api.Play.current
 import com.keepit.common.mail.PostOffice
 import java.net.InetAddress
-import com.keepit.common.store.EventStore
+import com.keepit.common.analytics.S3EventStoreImpl
+import com.keepit.common.analytics.S3EventStore
 import com.keepit.common.analytics.Event
-import com.keepit.common.store.S3EventStoreImpl
 
 case class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -92,9 +92,9 @@ case class DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def eventStore(client: AmazonS3): EventStore =
+  def eventStore(client: AmazonS3): S3EventStore =
     current.configuration.getString("amazon.s3.event.bucket") match {
-      case None => new HashMap[ExternalId[Event], Event] with EventStore
+      case None => new HashMap[ExternalId[Event], Event] with S3EventStore
       case Some(bucketName) => new S3EventStoreImpl(S3Bucket(bucketName), client)
     }
 

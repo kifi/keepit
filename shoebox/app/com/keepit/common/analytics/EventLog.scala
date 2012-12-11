@@ -10,7 +10,6 @@ import com.keepit.inject.inject
 import com.keepit.model.KifiInstallation
 import com.keepit.model.User
 import com.keepit.model.UserExperiment
-import com.keepit.common.store.EventStore
 import com.keepit.common.time._
 import com.keepit.common.controller.FortyTwoServices._
 
@@ -53,12 +52,12 @@ case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, meta
 case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime = currentDateTime, serverVersion: String = currentService + ":" + currentVersion) {
 
   def persistToS3() = {
-    Event.store += (externalId -> this)
+    Event.S3Store += (externalId -> this)
   }
 }
 
 object Event {
-  lazy val store = inject[EventStore]
+  lazy val S3Store = inject[S3EventStore]
 }
 
 object Events {

@@ -50,35 +50,35 @@ class EventSerializer extends Format[Event] {
   }
 
   private def jsonToMap(json: JsObject): Map[String,Any] = {
+    // Mongo Casbah conveniently gives us a Map[String,Any] -> DBObject implicit converter
+    // The converter calls the toString method on fields it doesn't have an explicit conversion for.
+    // Unfortunately, that means we need to visit every Jerkson JS field and convert to its Scala type,
+    // or else we'd end up with Horrible Nastiness™
     val fields = json.fields map { o =>
       val value = o._2 match {
-        case s: JsNumber =>
-          s.value
-        case s: JsString =>
-          s.value
-        case s: JsBoolean =>
-          s.value
-        case s: JsObject =>
-          jsonToMap(s)
-        case s: JsArray =>
-          s.value map ( s =>
-            s match {
-              case c: JsString =>
-                c.value
-              case c: JsNumber =>
-                c.value
-              case c: JsBoolean =>
-                c.value
-              case c =>
-                c.toString
-            }
-          )
-        case s =>
-          s.toString
+        case s: JsNumber => s.value
+        case s: JsString => s.value
+        case s: JsBoolean => s.value
+        case s: JsObject => jsonToMap(s)
+        case s: JsArray => jsArrayToScala(s)
+        case s => s.toString
       }
       (o._1, value)
     }
     fields.toMap
+  }
+
+  private def jsArrayToScala(arr: JsArray): Seq[Any] = {
+    arr.value map ( s =>
+      s match {
+        case c: JsObject => jsonToMap(c)
+        case c: JsArray => jsArrayToScala(c)
+        case c: JsString => c.value
+        case c: JsNumber => c.value
+        case c: JsBoolean => c.value
+        case c => c.toString
+      }
+    )
   }
 
   private def mapToJson(map: Map[String,Any]): JsObject = {
