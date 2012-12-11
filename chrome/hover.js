@@ -105,7 +105,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
 
       var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').html(tmpl);
 
-      var socialNetworks = chrome.extension.getURL("social-icons.png");
+      var socialNetworks = chrome.extension.getURL("images/social_icons.png");
       $(friendTooltip).find('.kn_social').css('background-image','url(' + socialNetworks + ')');
 
       function hide() {
@@ -169,30 +169,22 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
   }
 
   function showKeepItHover(user) {
-    var logo = chrome.extension.getURL('kifilogo.png');
-    var arrow = chrome.extension.getURL('arrow.png');
-    var facebookProfileLink = "http://www.facebook.com/" + user.facebook_id;
-    var facebookImageLink = "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square";
-    var userExternalId = user.keepit_external_id;
-
     $.get("http://" + config.server + "/users/slider?url=" + encodeURIComponent(document.location.href),
-      null,
       function(o) {
         log(o);
 
         isKept = o.kept;
+        following = o.following;
 
         var tmpl = {
-          "logo": logo,
-          "arrow": arrow,
-          "profilepic": facebookImageLink,
+          "logo": chrome.extension.getURL('images/kifilogo.png'),
+          "arrow": chrome.extension.getURL('images/triangle_down.31x16.png'),
+          "profilepic": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square",
           "name": user.name,
           "is_kept": o.kept,
           "private": o.private,
-          "connected_networks": chrome.extension.getURL("icons/connected_networks.png")
+          "connected_networks": chrome.extension.getURL("images/networks.png")
         }
-
-        following = o.following;
 
         if (o.friends.length) {
           tmpl.socialConnections = {
@@ -206,7 +198,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
           var partials = {
             "main_hover": main_hover,
             "footer": footer
-          }
+          };
 
           renderTemplate('templates/kept_hover.html', tmpl, function(template) {
             drawKeepItHover(user, o.friends, o.numComments, o.numMessages, template);
@@ -241,7 +233,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
     $('.xlink').click(function() {
       slideOut();
     });
-    //$('.profilepic').click(function() { location=facebookProfileLink; });
+    //$('.profilepic').click(function() { location = "http://www.facebook.com/" + user.facebook_id; });
 
     $('.unkeepitbtn').click(function() {
       unkeepPage(true);
@@ -322,7 +314,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       showFooterNav: showFooterNav,
       isMessages: type == "message",
       isKept: isKept,
-      logo: chrome.extension.getURL('kifilogo.png')
+      logo: chrome.extension.getURL('images/kifilogo.png')
     }
 
     renderTemplate("templates/footer.html", footerParams, function(renderedTemplate) {
@@ -510,8 +502,8 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
       comments: visibleComments,
       showControlBar: type == "public",
       following: following,
-      snapshotUri: chrome.extension.getURL("snapshot.png"),
-      connected_networks: chrome.extension.getURL("icons/social-icons.png")
+      snapshotUri: chrome.extension.getURL("images/snapshot.png"),
+      connected_networks: chrome.extension.getURL("images/social_icons.png")
     }
 
     loadFile("templates/comments/hearts.html", function(hearts) {
@@ -556,7 +548,7 @@ console.log("[" + new Date().getTime() + "] ", "injecting keep it hover div");
             threadAvatar = iterMessages[msg]["recipients"][0]["avatar"];
           }
           else {
-            threadAvatar = chrome.extension.getURL("icons/convo.png");
+            threadAvatar = chrome.extension.getURL("images/convo.png");
           }
           iterMessages[msg]["threadAvatar"] = threadAvatar;
 

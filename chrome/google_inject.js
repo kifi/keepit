@@ -240,8 +240,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
   /*******************************************************/
 
-  var urlAutoFormatters = [
-    {
+  var urlAutoFormatters = [{
       "match": "docs\\.google\\.com",
       "template": "A file in Google Docs",
       "icon": "gdocs.gif"
@@ -269,18 +268,17 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       "match": "facebook\\.com/messages/[\\w\\-\\.]{4,}",
       "template": "A conversation on Facebook",
       "icon": "facebook.png"
-    }
-  ];
+    }];
 
   function displayURLFormatter(url) {
     var prefix = "^https?://w{0,3}\\.?";
-    for(i=0;i<urlAutoFormatters.length;i++) {
+    for (var i = 0; i < urlAutoFormatters.length; i++) {
       var regex = new RegExp(prefix + urlAutoFormatters[i].match, "ig");
-      if(regex.test(url) === true) {
-        var result = ""
-        if(typeof urlAutoFormatters[i].icon !== 'undefined') {
-          var icon = chrome.extension.getURL('icons/'+urlAutoFormatters[i].icon);
-          result += "<span class=\"formatted_site\" style=\"background: url(" + icon + ") no-repeat;background-size: 15px;\"></span>"
+      if (regex.test(url)) {
+        var result = "";
+        if (urlAutoFormatters[i].icon) {
+          var icon = chrome.extension.getURL('images/results/' + urlAutoFormatters[i].icon);
+          result += "<span class=formatted_site style='background:url(" + icon + ") no-repeat;background-size:15px'></span>";
         }
         result += urlAutoFormatters[i].template;
         return result;
@@ -453,7 +451,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
 
       var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').html(tmpl);
 
-      var socialNetworks = chrome.extension.getURL("social-icons.png");
+      var socialNetworks = chrome.extension.getURL("images/social_icons.png");
       $(friendTooltip).find('.kn_social').css('background-image','url(' + socialNetworks + ')');
 
       function hide() {

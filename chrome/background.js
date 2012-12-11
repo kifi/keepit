@@ -23,7 +23,7 @@ try {
       magicQueries = JSON.parse(xhr.response);
     }
   }
-  xhr.open("GET", chrome.extension.getURL("magicQueries.json"), true);
+  xhr.open("GET", chrome.extension.getURL("data/magicQueries.json"), true);
   xhr.send();
 } catch(e) {
   error(e, "loading magic queries");
