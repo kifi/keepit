@@ -85,7 +85,9 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
 
   def getQueryParser(lang: Lang, proximityBoost: Float, semanticBoost: Float): QueryParser = {
     val total = 1.0f + proximityBoost + semanticBoost
-    new ArticleQueryParser(DefaultAnalyzer.forParsing(lang), 1.0f/total, proximityBoost/total, semanticBoost/total)
+    val parser = new ArticleQueryParser(DefaultAnalyzer.forParsing(lang), 1.0f/total, proximityBoost/total, semanticBoost/total)
+    DefaultAnalyzer.forParsingWithStemmer(lang).foreach{ parser.setStemmingAnalyzer(_) }
+    parser
   }
 
   def getArticleSearcher() = searcher
@@ -168,11 +170,8 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       if (query != null) booleanQuery.add(query, Occur.SHOULD)
 
       if(!quoted) {
-        query = super.getFieldQuery("ts", queryText, quoted)
-        if (query != null) booleanQuery.add(query, Occur.SHOULD)
-
-        query = super.getFieldQuery("cs", queryText, quoted)
-        if (query != null) booleanQuery.add(query, Occur.SHOULD)
+        super.getStemmedFieldQueryOpt("ts", queryText).foreach{ query => booleanQuery.add(query, Occur.SHOULD) }
+        super.getStemmedFieldQueryOpt("cs", queryText).foreach{ query => booleanQuery.add(query, Occur.SHOULD) }
       }
 
       val clauses = booleanQuery.clauses
