@@ -306,7 +306,7 @@ console.log("[" + new Date().getTime() + "] starting keepit google_inject.js");
       resultsStore.currentlyShowing = resultsStore.show;
 
       var req = new XMLHttpRequest();
-      req.open("GET", chrome.extension.getURL('google_inject.html'), true);
+      req.open("GET", chrome.extension.getURL('templates/google_inject.html'), true);
       req.onreadystatechange = function() {
         if (req.readyState == 4 && req.status == 200) {
 
