@@ -33,12 +33,6 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
   private var percentMatch: Float = 0.0f
   def setPercentMatch(value: Float) { percentMatch = value }
 
-  override def newBooleanQuery(disableCoord: Boolean) = {
-    val query = new BooleanQueryWithPercentMatch(disableCoord)
-    query.setPercentMatch(percentMatch)
-    query
-  }
-
   override protected def getBooleanQuery(clauses: JList[BooleanClause], disableCoord: Boolean) = {
     if (clauses.size ==0) {
       null; // all clause words were filtered away by the analyzer.
