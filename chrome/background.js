@@ -23,7 +23,7 @@ try {
       magicQueries = JSON.parse(xhr.response);
     }
   }
-  xhr.open("GET", chrome.extension.getURL("magicQueries.json"), true);
+  xhr.open("GET", chrome.extension.getURL("data/magicQueries.json"), true);
   xhr.send();
 } catch(e) {
   error(e, "loading magic queries");
@@ -133,6 +133,10 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
           setPrivate(info, request, sendResponse, tab);
         });
         break;
+      case "follow":
+        $.ajax("http://" + getConfigs().server + "/comments/follow?url=" + encodeURIComponent(tab.url),
+          {"type": request.follow ? "POST" : "DELETE"});
+        break;
       case "get_conf":
         sendResponse(getConfigs());
         break;
@@ -153,14 +157,29 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
       case "set_page_icon":
         setPageIcon(tab.id, request.is_kept);
         break;
+      case "get_slider_info":
+        $.get("http://" + getConfigs().server + "/users/slider?url=" + encodeURIComponent(tab.url), sendResponse);
+        break;
+      case "get_slider_updates":
+        $.get("http://" + getConfigs().server + "/users/slider/updates?url=" + encodeURIComponent(tab.url), sendResponse);
+        break;
       case "open_slider":
         showSlider(tab.id);
         break;
       case "log_event":
         logEvent(request.event);
         break;
+      case "get_comments":
+        $.get("http://" + getConfigs().server +
+          (request.kind == "public" ? "/comments/public" : "/messages/threads") +
+          (request.commentId ? "/" + request.commentId : "?url=" + encodeURIComponent(tab.url)),
+          sendResponse);
+        break;
       case "post_comment":
         postComment(request, sendResponse);
+        break;
+      case "get_friends":
+        $.get("http://" + getConfigs().server + "/users/friends", sendResponse);
         break;
       default:
         log("Ignoring unknown message");
@@ -471,7 +490,7 @@ function setPageIcon(tabId, kept) {
   log("[setPageIcon] tab ", tabId);
   chrome.tabs.get(tabId, function(tab) {
     log("[setPageIcon] tab ", tab);
-    chrome.pageAction.setIcon({"tabId": tabId, "path": kept ? "kept.png" : "keepit.png"});
+    chrome.pageAction.setIcon({"tabId": tabId, "path": kept ? "icons/kept.png" : "icons/keep.png"});
     chrome.pageAction.show(tabId);
   });
 }

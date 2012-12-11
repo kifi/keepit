@@ -1,12 +1,14 @@
 package com.keepit.search.graph
 
 import com.keepit.common.logging.Logging
+import com.keepit.common.db.CX
 import com.keepit.common.db.Id
+import com.keepit.common.net.Host
+import com.keepit.common.net.URI
 import com.keepit.model.{Bookmark, NormalizedURI, User}
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher, QueryParser}
-import com.keepit.common.db.CX
 import play.api.Play.current
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.TokenStream
@@ -29,6 +31,7 @@ object URIGraph {
   val uriTerm = new Term("uri", "")
   val titleTerm = new Term("title", "")
   val stemmedTerm = new Term("title_stemmed", "")
+  val siteTerm = new Term("site", "")
 
   def apply(indexDirectory: Directory): URIGraph = {
     val config = new IndexWriterConfig(Version.LUCENE_36, DefaultAnalyzer.forIndexing)
@@ -96,7 +99,11 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     }
   }
 
-  def getQueryParser(lang: Lang) = new URIGraphQueryParser(DefaultAnalyzer.forParsing(lang))
+  def getQueryParser(lang: Lang) = {
+    val parser = new URIGraphQueryParser(DefaultAnalyzer.forParsing(lang))
+    DefaultAnalyzer.forParsingWithStemmer(lang).foreach{ parser.setStemmingAnalyzer(_) }
+    parser
+  }
 
   def search(queryText: String, lang: Lang = Lang("en")): Seq[Hit] = {
     parseQuery(queryText, lang) match {
@@ -120,7 +127,9 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       val payload = URIList.toByteArray(bookmarks)
       val usr = buildURIListPayloadField(payload)
       val uri = buildURIIdField(bookmarks)
-      val title = buildBookmarkTitleField(URIGraph.titleTerm.field(), payload, bookmarks){ (fieldName, text) =>
+
+      val uriList = new URIList(payload)
+      val title = buildBookmarkTitleField(URIGraph.titleTerm.field(), uriList, bookmarks){ (fieldName, text) =>
         val lang = LangDetector.detect(text, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
         val analyzer = DefaultAnalyzer.forIndexing(lang)
         Some(analyzer.tokenStream(fieldName, new StringReader(text)))
@@ -128,13 +137,14 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       doc.add(usr)
       doc.add(uri)
       doc.add(title)
-      val titleStemmed = buildBookmarkTitleField(URIGraph.stemmedTerm.field(), payload, bookmarks){ (fieldName, text) =>
+      val titleStemmed = buildBookmarkTitleField(URIGraph.stemmedTerm.field(), uriList, bookmarks){ (fieldName, text) =>
         val lang = LangDetector.detect(text, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
         DefaultAnalyzer.forIndexingWithStemmer(lang).map{ analyzer =>
           analyzer.tokenStream(fieldName, new StringReader(text))
         }
       }
       doc.add(titleStemmed)
+      doc.add(buildBookmarkSiteField(URIGraph.siteTerm.field(), uriList, bookmarks))
       doc
     }
 
@@ -148,12 +158,11 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       fld
     }
 
-    def buildBookmarkTitleField(fieldName: String, payload: Array[Byte], bookmarks: Seq[Bookmark])(tokenStreamFunc: (String, String)=>Option[TokenStream]) = {
+    def buildBookmarkTitleField(fieldName: String, uriList: URIList, bookmarks: Seq[Bookmark])(tokenStreamFunc: (String, String)=>Option[TokenStream]) = {
       val titleMap = bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.title) }
 
-      val list = new URIList(payload)
-      val publicList = list.publicList
-      val privateList =  list.privateList
+      val publicList = uriList.publicList
+      val privateList = uriList.privateList
 
       var lineNo = 0
       var lines = new ArrayBuffer[(Int, String)]
@@ -168,6 +177,34 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
 
       buildLineField(fieldName, lines, tokenStreamFunc)
     }
+
+    def buildBookmarkSiteField(fieldName: String, uriList: URIList, bookmarks: Seq[Bookmark]) = {
+      val domainMap = bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.url) }
+
+      val publicList = uriList.publicList
+      val privateList = uriList.privateList
+
+      var lineNo = 0
+      var domains = new ArrayBuffer[(Int, String)]
+      publicList.foreach{ uriId =>
+        domainMap.get(uriId).foreach{ domain => domains += ((lineNo, domain)) }
+        lineNo += 1
+      }
+      privateList.foreach{ uriId =>
+        domainMap.get(uriId).foreach{ domain => domains += ((lineNo, domain)) }
+        lineNo += 1
+      }
+
+      buildLineField(fieldName, domains, (fieldName, url) =>
+        URI.parse(url).flatMap{ uri =>
+          uri.host match {
+            case Some(Host(domain @ _*)) =>
+              Some(new IteratorTokenStream((1 to domain.size).iterator, (n: Int) => domain.take(n).reverse.mkString(".")))
+            case _ => None
+          }
+        }
+      )
+    }
   }
 
   class URIGraphQueryParser(analyzer: Analyzer) extends QueryParser(analyzer) {
@@ -175,13 +212,19 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     super.setAutoGeneratePhraseQueries(true)
 
     override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
+      field.toLowerCase match {
+        case "site" => getSiteQuery(queryText)
+        case _ => getTextQuery(queryText, quoted)
+      }
+    }
+
+    private def getTextQuery(queryText: String, quoted: Boolean) = {
       val booleanQuery = new BooleanQuery
       var query = super.getFieldQuery(URIGraph.titleTerm.field(), queryText, quoted)
       if (query != null) booleanQuery.add(query, Occur.SHOULD)
 
       if (!quoted) {
-        query = super.getFieldQuery(URIGraph.stemmedTerm.field(), queryText, quoted)
-        if (query != null) booleanQuery.add(query, Occur.SHOULD)
+        super.getStemmedFieldQueryOpt(URIGraph.stemmedTerm.field(), queryText).foreach{ query => booleanQuery.add(query, Occur.SHOULD) }
       }
 
       val clauses = booleanQuery.clauses
