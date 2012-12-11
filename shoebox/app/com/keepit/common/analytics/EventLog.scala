@@ -1,11 +1,11 @@
 package com.keepit.common.analytics
 
 import java.sql.Connection
+import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.State
 import com.keepit.common.db.Id
-import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.inject.inject
 import com.keepit.model.KifiInstallation
 import com.keepit.model.User
@@ -46,8 +46,8 @@ trait EventMetadata {
   val eventFamily: EventFamily
 }
 
-case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: ExternalId[KifiInstallation], userExperiments: Seq[State[UserExperiment.ExperimentType]], metaData: JsValue) extends EventMetadata
-case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsValue) extends EventMetadata
+case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: ExternalId[KifiInstallation], userExperiments: Seq[State[UserExperiment.ExperimentType]], metaData: JsValue, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
+case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsValue, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 
 case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime = currentDateTime, serverVersion: String = currentService + ":" + currentVersion) {
 
@@ -64,14 +64,14 @@ object Event {
 }
 
 object Events {
-  def userEvent(eventFamily: UserEventFamily, eventName: String, userId: Id[User], installId: ExternalId[KifiInstallation], metaData: JsObject)(implicit conn: Connection) = {
+  def userEvent(eventFamily: UserEventFamily, eventName: String, userId: Id[User], installId: ExternalId[KifiInstallation], metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit conn: Connection) = {
     val user = User.get(userId)
     val experiments = UserExperiment.getByUser(userId) map (_.experimentType)
 
-    Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData))
+    Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents))
   }
-  def serverEvent(eventFamily: ServerEventFamily, eventName: String, metaData: JsObject)(implicit conn: Connection) = {
-    Event(metaData = ServerEventMetadata(eventFamily, eventName, metaData))
+  def serverEvent(eventFamily: ServerEventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit conn: Connection) = {
+    Event(metaData = ServerEventMetadata(eventFamily, eventName, metaData, prevEvents))
   }
 }
 

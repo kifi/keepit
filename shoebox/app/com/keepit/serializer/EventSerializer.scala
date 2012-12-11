@@ -10,6 +10,7 @@ import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.conversions.scala._
 import com.keepit.model._
 import com.mongodb.BasicDBObject
+import org.joda.time.format.ISODateTimeFormat
 
 class EventSerializer extends Format[Event] {
   // Play! 2.0 Json serializer
@@ -26,7 +27,13 @@ class EventSerializer extends Format[Event] {
     Event(
       externalId = ExternalId[Event]((json \ "id").as[String]),
       metaData = EventSerializer.eventMetadataSerializer.reads(json \ "metaData"),
-      createdAt = parseStandardTime((json \ "createdAt").as[String]),
+      createdAt = (json \ "createdAt") match {
+        case s: JsString => parseStandardTime(s.as[String])
+        case s: JsObject =>
+          val parser = ISODateTimeFormat.dateTime()
+          parser.parseDateTime(s.values.head.as[String]) // necessary for Mongo parsing
+        case s: JsValue => parseStandardTime(s.toString)
+      },
       serverVersion = (json \ "serverVersion").as[String]
     )
 
@@ -37,7 +44,7 @@ class EventSerializer extends Format[Event] {
     // To make future compatibility easier, serializing to a Map first
     val dbo: DBObject = Map[String,Any](
       "id" -> event.externalId.id,
-      "createdAt" -> (event.createdAt).toStandardTimeString,
+      "createdAt" -> (event.createdAt),
       "serverVersion" -> event.serverVersion,
       "eventFamily" -> event.metaData.eventFamily.name,
       "metaData" -> jsonToMap(EventSerializer.eventMetadataSerializer.writes(event.metaData))
@@ -98,20 +105,22 @@ class EventSerializer extends Format[Event] {
 class EventMetadataSerializer extends Format[EventMetadata] {
   def writes(metadata: EventMetadata): JsObject = {
     metadata match {
-      case UserEventMetadata(eventFamily, eventName, userId, installId, userExperiments, jsonMetaData) =>
+      case UserEventMetadata(eventFamily, eventName, userId, installId, userExperiments, jsonMetaData, prevEvents) =>
         JsObject(Seq(
           "eventFamily" -> JsString(eventFamily.name),
           "eventName" -> JsString(eventName),
           "userId" -> JsString(userId.id),
           "installId" -> JsString(installId.id),
           "userExperiments" -> JsArray(userExperiments.map { p => JsString(p.value) }),
-          "metaData" -> jsonMetaData
+          "metaData" -> jsonMetaData,
+          "prevEvents" -> JsArray(prevEvents map { p => JsString(p.id)})
         ))
-      case ServerEventMetadata(eventFamily, eventName, jsonMetaData) =>
+      case ServerEventMetadata(eventFamily, eventName, jsonMetaData, prevEvents) =>
         JsObject(Seq(
           "eventFamily" -> JsString(eventFamily.name),
           "eventName" -> JsString(eventName),
-          "metaData" -> jsonMetaData
+          "metaData" -> jsonMetaData,
+          "prevEvents" -> JsArray(prevEvents map { p => JsString(p.id)})
         ))
     }
   }
@@ -124,14 +133,16 @@ class EventMetadataSerializer extends Format[EventMetadata] {
           eventName = (json \ "eventName").as[String],
           userId = ExternalId[User]((json \ "userId").as[String]),
           installId = ExternalId[KifiInstallation]((json \ "installId").as[String]),
-          userExperiments = (json \ "userExperiments").as[List[String]] map {ux => UserExperiment.ExperimentTypes(ux)},
-          metaData = (json \ "metaData").as[JsObject]
+          userExperiments = (json \ "userExperiments").as[Seq[String]] map {ux => UserExperiment.ExperimentTypes(ux)},
+          metaData = (json \ "metaData").as[JsObject],
+          prevEvents = (json \ "prevEvents").as[Seq[String]] map { i => ExternalId[Event](i) }
         )
       case ServerEventFamily(name) =>
         ServerEventMetadata(
           eventFamily = EventFamilies((json \ "eventFamily").as[String]),
           eventName = (json \ "eventName").as[String],
-          metaData = (json \ "metaData").as[JsObject]
+          metaData = (json \ "metaData").as[JsObject],
+          prevEvents = (json \ "prevEvents").as[Seq[String]] map { i => ExternalId[Event](i) }
         )
     }
   }
