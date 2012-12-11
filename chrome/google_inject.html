@@ -20,19 +20,19 @@
     <!--n-->
     <div class="keep_social_bar">
       {{#isMyBookmark}}
- <a data-hover="tooltip" title="You! You look great!" class="name_tooltip_link" href="http://www.facebook.com/{{userInfo.facebook_id}}" target="_blank"><img class="keep_face self_profile_image {{^users}}self_profile_image_no_friends{{/users}}" src="{{userInfo.avatar_url}}" alt="You!"></a>
+        <a data-hover="tooltip" title="You! You look great!" class="name_tooltip_link" href="http://www.facebook.com/{{userInfo.facebook_id}}" target="_blank"><img class="keep_face self_profile_image {{^users}}self_profile_image_no_friends{{/users}}" src="{{userInfo.avatar_url}}" alt="You!"></a>
       {{/isMyBookmark}}
       {{#users}}
-      <a data-hover="tooltip" title="{{firstName}} {{lastName}}" class="name_tooltip_link" href="http://www.facebook.com/{{facebookId}}" target="_blank"><img class="keep_face" src="https://graph.facebook.com/{{facebookId}}/picture?type=square" alt="{{firstName}} {{lastName}}"></a>
+        <a data-hover="tooltip" title="{{firstName}} {{lastName}}" class="name_tooltip_link" href="http://www.facebook.com/{{facebookId}}" target="_blank"><img class="keep_face" src="https://graph.facebook.com/{{facebookId}}/picture?type=square" alt="{{firstName}} {{lastName}}"></a>
       {{/users}}
-      <div
-      class="social_bar_text"><span class="social_bar_message_highlighted">{{{countText}}}</span>
-        <span
-        class="social_bar_message"> kept this</span>
+      <div class="social_bar_text">
+        <span class="social_bar_message_highlighted">{{{countText}}}</span>
+        <span class="social_bar_message"> kept this</span>
+      </div>
     </div>
   </li>
   {{/results}}
-  
+
     <div class="kifi_more">
       <div class="kifi_more_button"></div>
     </div>
