@@ -26,10 +26,13 @@ import securesocial.core._
 import com.keepit.common.social._
 import views.html.defaultpages.unauthorized
 
-trait FortyTwoController extends Controller with Logging with SecureSocial {
-
+object FortyTwoController {
   private val FORTYTWO_USER_ID = "fortytwo_user_id"
-  private val FORTYTWO_IMPERSONATED_ID = "fortytwo_impersonated_user_id"
+  val FORTYTWO_IMPERSONATED_ID = "fortytwo_impersonated_user_id"
+}
+
+trait FortyTwoController extends Controller with Logging with SecureSocial {
+  import FortyTwoController._
 
   case class AuthenticatedRequest(socialUser: SocialUser, userId: Id[User], request: Request[AnyContent], experimants: Seq[State[UserExperiment.ExperimentType]] = Nil)
     extends WrappedRequest(request)

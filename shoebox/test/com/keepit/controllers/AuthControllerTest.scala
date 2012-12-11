@@ -41,6 +41,29 @@ class AuthControllerTest extends SpecificationWithJUnit {
   //todo(eishay) refactor commonalities out of this one and AdminDashboardController to make this test easy to write
   "AuthController" should {
 
+    "impersonate" in {
+      running(new EmptyApplication()) {
+        new SecureSocialUserService(current).onStart()
+        UserService.delegate.isDefined === true
+        val (admin, impersonate) = CX.withConnection { implicit c =>
+          val user = User(firstName = "A", lastName = "1").save
+          val oAuth2Info = OAuth2Info(accessToken = "A")
+          val su = SocialUser(UserId("111", "facebook"), "A 1", Some("a1@gmail.com"),
+            Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
+          val sui = SocialUserInfo(
+              userId = user.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK, credentials = Some(su)).save
+          (user, User(firstName = "B", lastName = "1").save)
+        }
+
+        val fakeRequest1 = FakeRequest().
+            withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
+            withFormUrlEncodedBody(("userId" -> impersonate.id.toString))
+        val authRequest1 = AuthController.AuthenticatedRequest(null, admin.id.get, fakeRequest1)
+        val result1 = AuthController.impersonate(impersonate.id.get)(authRequest1)
+        status(result1) must equalTo(401)
+      }
+    }
+
     "start" in {
       running(new EmptyApplication()) {
         new SecureSocialUserService(current).onStart()

@@ -27,11 +27,13 @@ import play.api.data.validation.Constraints._
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import com.keepit.common.controller.FortyTwoController
-import com.keepit.common.db.{CX, ExternalId}
+import com.keepit.common.db.{CX, ExternalId, Id}
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.logging.Logging
+import com.keepit.common.net._
 import com.keepit.model.{KifiInstallation, KifiVersion, SocialUserInfo, User, UserAgent}
+import com.keepit.common.controller.FortyTwoController
 
 object AuthController extends FortyTwoController {
   // TODO: remove when all beta users are on 2.0.2+
@@ -94,5 +96,17 @@ object AuthController extends FortyTwoController {
   def welcome = SecuredAction() { implicit request =>
     log.debug("in welcome. with user : [ %s ]".format(request.user ))
     Redirect(com.keepit.controllers.routes.HomeController.home())
+  }
+
+  def unimpersonate = AdminJsonAction { request =>
+    Ok(JsObject(Seq("userId" -> JsString(request.userId.toString)))).withNewSession
+  }
+
+  def impersonate(userId: Id[User]) = AdminJsonAction { request =>
+    val user = CX.withConnection { implicit c =>
+      User.get(userId)
+    }
+    log.info("impersonating user %s".format(user)) //todo(eishay) add event & email
+    Ok(JsObject(Seq("userId" -> JsString(userId.toString)))).withSession(FortyTwoController.FORTYTWO_IMPERSONATED_ID -> userId.toString)
   }
 }
