@@ -1,6 +1,7 @@
 package com.keepit.search.line
 
 import com.keepit.common.logging.Logging
+import com.keepit.search.query.BooleanQueryWithPercentMatch
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator
@@ -15,9 +16,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import scala.math._
 
-class LineQueryBuilder(similarity: Similarity, percentMatch: Float) extends Logging {
-
-  val pctMatch = (if (percentMatch > 0.0f) percentMatch else Float.MinPositiveValue)
+class LineQueryBuilder(similarity: Similarity, percentMatchForUnknowQueryClass: Float) extends Logging {
 
   def build(query: Query)(implicit indexReader: IndexReader): LineQuery = {
     val lineQuery = query match {
@@ -48,6 +47,10 @@ class LineQueryBuilder(similarity: Similarity, percentMatch: Float) extends Logg
   }
 
   def translateBooleanQuery(query: BooleanQuery)(implicit indexReader: IndexReader) = {
+    val pctMatch = query match {
+      case q: BooleanQueryWithPercentMatch => q.getPercentMatch
+      case _ => Float.MinPositiveValue
+    }
     var required = new ArrayBuffer[Query]
     var prohibited = new ArrayBuffer[Query]
     var optional = new ArrayBuffer[Query]
@@ -80,7 +83,10 @@ class LineQueryBuilder(similarity: Similarity, percentMatch: Float) extends Logg
         val idf = similarity.idf(indexReader.docFreq(term), indexReader.numDocs)
         new TermNode(term, idf, indexReader)
       }.toArray
-      if (termNodes.length > 0) new BooleanOrNode(termNodes, query.getBoost, pctMatch, indexReader)
+      if (termNodes.length > 0) {
+        val pctMatch = (if (percentMatchForUnknowQueryClass > 0.0f) percentMatchForUnknowQueryClass else Float.MinPositiveValue)
+        new BooleanOrNode(termNodes, query.getBoost, pctMatch, indexReader)
+      }
       else LineQuery.emptyQueryNode
     } catch {
       case _ =>

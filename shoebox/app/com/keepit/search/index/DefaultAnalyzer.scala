@@ -128,6 +128,9 @@ object DefaultAnalyzer {
 
   def forParsing: Analyzer = forParsing(Lang("en"))
   def forParsing(lang: Lang): Analyzer = getAnalyzer(lang)
+
+  def forParsingWithStemmer: Option[Analyzer] = forParsingWithStemmer(Lang("en"))
+  def forParsingWithStemmer(lang: Lang): Option[Analyzer] = getAnalyzerWithStemmer(lang)
 }
 
 class DefaultAnalyzer(version: Version) extends Analyzer {
