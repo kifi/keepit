@@ -65,12 +65,17 @@ class DefaultAnalyzerTest extends SpecificationWithJUnit {
              Token("<ALPHANUM>", "book", 1))
     }
 
-    "tokenize a word with apostrophe as one work in query parsing" in {
+    "tokenize a word with apostrophe as one word in query parsing" in {
       toTokenList(DefaultAnalyzer.forParsing.tokenStream("b", "O'Reilly's books")) ===
         List(Token("<ALPHANUM>", "o'reilly's", 1),
              Token("<ALPHANUM>", "books", 1))
     }
 
+    "tokenize a word with apostrophe as one word in query parsing (the possesive should be removed)" in {
+      toTokenList(DefaultAnalyzer.forParsingWithStemmer.get.tokenStream("b", "O'Reilly's books")) ===
+        List(Token("<ALPHANUM>", "o'reilly", 1),
+             Token("<ALPHANUM>", "book", 1))
+    }
   }
 
   def toTokenList(ts: TokenStream) = {

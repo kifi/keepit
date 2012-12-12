@@ -38,11 +38,12 @@ import play.api.http.ContentTypes
  */
 object AdminDashboardController extends FortyTwoController {
 
+  implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
+
   private lazy val userCountByDate = calcCountByDate(CX.withConnection { implicit conn => User.all }.map(_.createdAt.toLocalDateInZone))
   private lazy val bookmarkCountByDate = calcCountByDate(CX.withConnection { implicit conn => Bookmark.all }.map(_.createdAt.toLocalDateInZone))
 
   private def calcCountByDate(dates: => Seq[LocalDate]) = {
-    implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
 
     val day0 = if(dates.isEmpty) currentDate else dates.min
     val dayCounts = dates.foldLeft(Map[LocalDate,Int]().withDefaultValue(0)){(m, d) => m + (d -> (1 + m(d)))}

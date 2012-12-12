@@ -54,9 +54,9 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
            NormalizedURI(title = "a2", url = "http://www.keepit.org/article2", state = SCRAPED).save,
            NormalizedURI(title = "a3", url = "http://www.findit.com/article3", state = INDEXED).save)
         }
-        store += (uri1.id.get -> mkArticle(uri1.id.get, "title1", "content1 alldocs"))
-        store += (uri2.id.get -> mkArticle(uri2.id.get, "title2", "content2 alldocs"))
-        store += (uri3.id.get -> mkArticle(uri3.id.get, "title3", "content3 alldocs"))
+        store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
+        store += (uri2.id.get -> mkArticle(uri2.id.get, "title2 titles", "content2 alldocs bodies soul"))
+        store += (uri3.id.get -> mkArticle(uri3.id.get, "title3 titles", "content3 alldocs bodies souls"))
 
         // saving ids for the search test
         uriIdArray(0) = uri1.id.get.id
@@ -148,6 +148,17 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
       res.head.id === uriIdArray(2)
     }
 
+    "search documents using stemming" in {
+      val indexer = ArticleIndexer(ramDir, store)
+
+      indexer.search("alldoc").size === 3
+      indexer.search("title").size === 3
+      indexer.search("bodies").size === 3
+      indexer.search("soul").size === 3
+      indexer.search("+bodies +souls").size === 3
+      indexer.search("+body +soul").size === 3
+    }
+
     "limit the result by percentMatch" in {
       val indexer = ArticleIndexer(ramDir, store)
 
@@ -195,6 +206,15 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
 
       res = indexer.getArticleSearcher.search(parser.parseQuery("site:keepit.com").get)
       res.size === 1
+
+      res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs site:com -site:keepit.org").get)
+      res.size === 2
+
+      res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs site:com -site:keepit.com").get)
+      res.size === 1
+
+      res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs -site:keepit.org").get)
+      res.size === 2
     }
   }
 }

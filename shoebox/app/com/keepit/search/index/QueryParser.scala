@@ -30,7 +30,7 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
     Option(query)
   }
 
-  private var percentMatch: Float = 0.0f
+  private[this] var percentMatch: Float = 0.0f
   def setPercentMatch(value: Float) { percentMatch = value }
 
   override protected def getBooleanQuery(clauses: JList[BooleanClause], disableCoord: Boolean) = {
@@ -40,7 +40,7 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
     val query = new BooleanQueryWithPercentMatch(disableCoord)
     query.setPercentMatch(percentMatch)
 
-    val (siteClauses, otherClauses) = clauses.partition{ clause => clause.getQuery.isInstanceOf[SiteQuery] }
+    val (siteClauses, otherClauses) = clauses.partition{ clause => clause.getQuery.isInstanceOf[SiteQuery] && !clause.isProhibited }
     otherClauses.foreach{ clause => query.add(clause) }
 
     if (siteClauses.isEmpty) {
@@ -57,5 +57,19 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
   }
 
   def getSiteQuery(domain: String) = if (domain != null) SiteQuery(domain) else null
+
+  private[this] var stemmedQueryBuilder: Option[StemmedQueryBuilder] = None
+  def setStemmingAnalyzer(stemmingAnalyzer: Analyzer) {
+    stemmedQueryBuilder = Some(new StemmedQueryBuilder(stemmingAnalyzer))
+  }
+
+  def getStemmedFieldQueryOpt(fieldName: String, queryText: String): Option[Query] = {
+    stemmedQueryBuilder.flatMap{ builder => builder(fieldName, queryText) }
+  }
+
+  class StemmedQueryBuilder(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_36, "b", analyzer) {
+    super.setAutoGeneratePhraseQueries(true)
+    def apply(fieldName: String, term: String) = Option(getFieldQuery(fieldName, term, false))
+  }
 }
 
