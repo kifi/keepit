@@ -2,6 +2,7 @@ package com.keepit.search.line
 
 import com.keepit.common.logging.Logging
 import com.keepit.search.query.BooleanQueryWithPercentMatch
+import com.keepit.search.query.ConditionalQuery
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator
@@ -18,11 +19,14 @@ import scala.math._
 
 class LineQueryBuilder(similarity: Similarity, percentMatchForUnknowQueryClass: Float) extends Logging {
 
-  def build(query: Query)(implicit indexReader: IndexReader): LineQuery = {
+  def build(query: Query)(implicit indexReader: IndexReader): LineQuery = translateQuery(query)
+
+  def translateQuery(query: Query)(implicit indexReader: IndexReader): LineQuery = {
     val lineQuery = query match {
       case q: TermQuery => translateTermQuery(q)
       case q: PhraseQuery => translatePhraseQuery(q)
       case q: BooleanQuery => translateBooleanQuery(q)
+      case q: ConditionalQuery => translateConditionalQuery(q)
       case q: Query => translateOtherQuery(q)
     }
     val boost = query.getBoost()
@@ -73,6 +77,10 @@ class LineQueryBuilder(similarity: Similarity, percentMatchForUnknowQueryClass: 
 
     if (prohibited.size > 0) new BooleanNot(positiveExpr, translate(prohibited), indexReader)
     else positiveExpr
+  }
+
+  def translateConditionalQuery(query: ConditionalQuery)(implicit indexReader: IndexReader) = {
+    new CondNode(translateQuery(query.source), translateQuery(query.condition), indexReader)
   }
 
   def translateOtherQuery(query: Query)(implicit indexReader: IndexReader) = {

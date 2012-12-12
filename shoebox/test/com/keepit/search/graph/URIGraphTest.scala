@@ -5,6 +5,7 @@ import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import com.keepit.search.query.SiteQuery
+import com.keepit.search.query.ConditionalQuery
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.db.{Id, CX}
@@ -18,8 +19,10 @@ import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
+import org.apache.lucene.index.Term
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.search.TermQuery
+import org.apache.lucene.search.BooleanQuery
 
 @RunWith(classOf[JUnitRunner])
 class URIGraphTest extends SpecificationWithJUnit {
@@ -242,22 +245,26 @@ class URIGraphTest extends SpecificationWithJUnit {
 
         val searcher = graph.getURIGraphSearcher()
 
-        var site = SiteQuery("com")
+        def mkSiteQuery(site: String) = {
+          new ConditionalQuery(new TermQuery(new Term("title", "personaltitle")), SiteQuery(site))
+        }
+
+        var site = mkSiteQuery("com")
         searcher.search(users(0).id.get, site, 0.0f).keySet === Set(1L, 2L, 4L, 5L)
 
-        site = SiteQuery("keepit.com")
+        site = mkSiteQuery("keepit.com")
         searcher.search(users(0).id.get, site, 0.0f).keySet === Set(1L, 2L)
 
-        site = SiteQuery("org")
+        site = mkSiteQuery("org")
         searcher.search(users(0).id.get, site, 0.0f).keySet === Set(3L, 6L)
 
-        site = SiteQuery("findit.org")
+        site = mkSiteQuery("findit.org")
         searcher.search(users(0).id.get, site, 0.0f).keySet === Set(6L)
 
-        site = SiteQuery(".org")
+        site = mkSiteQuery(".org")
         searcher.search(users(0).id.get, site, 0.0f).keySet === Set(3L, 6L)
 
-        site = SiteQuery(".findit.org")
+        site = mkSiteQuery(".findit.org")
         searcher.search(users(0).id.get, site, 0.0f).keySet === Set(6L)
       }
     }
