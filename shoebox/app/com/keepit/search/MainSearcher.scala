@@ -4,6 +4,7 @@ import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIList
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
@@ -12,7 +13,8 @@ import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
 
-class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: SearchConfig) {
+class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: SearchConfig)
+extends Logging {
   val currentTime = currentDateTime.getMillis()
 
   // get config params
@@ -47,6 +49,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     val bookmarkTitleSearchParser = uriGraph.getQueryParser(lang)
     bookmarkTitleSearchParser.setPercentMatch(percentMatch)
     bookmarkTitleSearchParser.parseQuery(queryString).map{ bookmarkQuery =>
+      log.debug("bookmarkQuery: %s".format(bookmarkQuery.toString))
       uriGraphSearcher.search(userId, bookmarkQuery, percentMatch)
     }.getOrElse(Map.empty[Long, Float])
   }
@@ -62,6 +65,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     val articleParser = articleIndexer.getQueryParser(lang, proximityBoost, semanticBoost)
     articleParser.setPercentMatch(percentMatch)
     articleParser.parseQuery(queryString).map{ articleQuery =>
+      log.debug("articleQuery: %s".format(articleQuery.toString))
       articleSearcher.doSearch(articleQuery){ scorer =>
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
