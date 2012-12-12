@@ -161,7 +161,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
 
     private def getTextQuery(queryText: String, quoted: Boolean) = {
-      val booleanQuery = new BooleanQuery
+      val booleanQuery = new BooleanQuery(true)
 
       var query = super.getFieldQuery("t", queryText, quoted)
       if (query != null) booleanQuery.add(query, Occur.SHOULD)
@@ -185,14 +185,14 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
         val terms = QueryUtil.getTerms(query)
         if (terms.size <= 0) query
         else {
-          val booleanQuery = new BooleanQuery
+          val booleanQuery = new BooleanQuery(true)
           query.setBoost(baseBoost)
           booleanQuery.add(query, Occur.MUST)
           val svq = SemanticVectorQuery("sv", terms)
           svq.setBoost(semanticBoost)
           booleanQuery.add(svq, Occur.SHOULD)
           if (terms.size > 1) {
-            val proxQ = new BooleanQuery
+            val proxQ = new BooleanQuery(true)
             proxQ.add(ProximityQuery("c", terms), Occur.SHOULD)
             proxQ.add(ProximityQuery("t", terms), Occur.SHOULD)
             proxQ.setBoost(proximityBoost)
