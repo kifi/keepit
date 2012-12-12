@@ -1,10 +1,28 @@
 var snapshot = {
 
-  // Regular expression that matches characters that must not be considered parts of identifiers.
-  // Not using the official CSS grammar because the DOM APIs do not enforce it (e.g. el.id can be ":foo").
+  // Characters that must not be considered part of names/tokens.
   delim: /[#\.:> ]/,
 
-  // Generates a detailed CSS 2.1 selector for an element including, at a minimum, the tag name,
+  // HTML IDs and class names may not contain spaces.
+  // http://www.w3.org/TR/html5/global-attributes.html#the-id-attribute
+  // http://www.w3.org/TR/html5/global-attributes.html#classes
+  // http://www.w3.org/TR/html5/common-microsyntaxes.html#space-character
+  space: /\s/,
+
+  // Names in selectors must have all ASCII characters except [_a-zA-Z0-9-] escaped.
+  // Non-ASCII characters do not require escaping.
+  // http://www.w3.org/TR/selectors/#lex
+  requireEsc: /[\0-,.\/:-@[-^`{-~]/g,
+
+  // Escapes a selector name/token. Uses unicode escapes instead of simple backslash escapes
+  // so that selector parsing can be simpler.
+  escape: function(name) {
+    return name.replace(snapshot.requireEsc, function(ch) {
+      return "\\0000" + ch.charCodeAt(0).toString(16);
+    });
+  },
+
+  // Generates a detailed CSS selector for an element including, at a minimum, the tag name,
   // id (if present), and any classes on the element and all ancestors between it and the body.
   // e.g. "body>section#content>div.wrap>div#content-main.full>article.article>div#wikiArticle.page-content.boxed>table.standard-table>tbody>tr:nth-child(1)>td:nth-child(2)"
   generateSelector: function(el) {
@@ -13,9 +31,9 @@ var snapshot = {
       if (sel === "body") break;
 
       var id = el.id;
-      if (id && !snapshot.delim.test(id)) sel += "#" + id;
+      if (id && !snapshot.space.test(id)) sel += "#" + snapshot.escape(id);
 
-      sel += toArray(el.classList).map(function(c) {return snapshot.delim.test(c) ? "" : "." + c}).join("");
+      sel += toArray(el.classList).map(function(c) {return "." + snapshot.escape(c)}).join("");
 
       var children = toArray(el.parentNode.children);
       if (children.some(function(ch) {return ch !== el && ch.webkitMatchesSelector(sel)})) {
