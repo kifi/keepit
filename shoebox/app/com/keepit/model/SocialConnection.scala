@@ -58,7 +58,7 @@ object SocialConnection extends Logging {
              (%s) as suid, social_connection as sc
         where
              ( (sc.social_user_1 in (suid.id)) or (sc.social_user_2 in (suid.id)) )
-             and sc.state = "ACTIVE"    """.format(suidSQL)
+             and sc.state = 'active'    """.format(suidSQL)
     val rs = statement.executeQuery("""
         select
              sui.user_id
