@@ -30,6 +30,7 @@ import play.api.libs.json._
 import com.keepit.common.analytics._
 import com.keepit.model._
 import com.keepit.common.time._
+import com.keepit.common.analytics.reports._
 
 
 object EventController extends FortyTwoController {
@@ -86,16 +87,21 @@ object EventController extends FortyTwoController {
 
   def viewEvents() = AdminHtmlAction { request =>
 
-    val selector = MongoSelector(EventFamilies.SLIDER)
+    /*val selector = MongoSelector(EventFamilies.EXTENSION)
                      .withDateRange(currentDateTime.minusHours(24), currentDateTime)
-                     .withEventName("test")
+                     .withEventName("started")
                      .build
     val store = inject[MongoEventStore]
 
     val result = store.countGroup(EventFamilies.SLIDER, selector, MongoMapFunc.DATE_BY_HOUR)
 
 
-    Ok(JsArray(result)).as(ContentTypes.JSON)
+    Ok(JsArray(result)).as(ContentTypes.JSON)*/
+
+    val report = new DailyActiveUniqueUserReport
+    val result = report.get(currentDateTime.minusDays(10), currentDateTime)
+
+    Ok(result.toString)
   }
 
 

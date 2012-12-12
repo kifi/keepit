@@ -18,34 +18,48 @@ import play.api.libs.json._
 
 trait EventFamily {
   val name: String
+  val collection: String
   override def toString = name
 }
 
-case class UserEventFamily(name: String) extends EventFamily
-case class ServerEventFamily(name: String) extends EventFamily
+case class UserEventFamily(name: String) extends EventFamily {
+  val collection = "user"
+}
+case class ServerEventFamily(name: String) extends EventFamily {
+  val collection = "server"
+}
 
 object EventFamilies {
   // User
+  val GENERIC_USER = UserEventFamily("")
   val SLIDER = UserEventFamily("slider")
   val SEARCH = UserEventFamily("search")
   val EXTENSION = UserEventFamily("extension")
-  val SERVER = ServerEventFamily("server")
+  val ACCOUNT = UserEventFamily("account")
+  val NOTIFICATION = UserEventFamily("notification")
+
+  // Server
+  val GENERIC_SERVER = ServerEventFamily("")
+  val EXCEPTION = ServerEventFamily("exception")
 
   def apply(event: String): EventFamily = {
     event.toLowerCase.trim match {
       case SLIDER.name => SLIDER
       case SEARCH.name => SEARCH
-      case SERVER.name => SERVER
       case EXTENSION.name => EXTENSION
+      case ACCOUNT.name => ACCOUNT
+      case NOTIFICATION.name => NOTIFICATION
+      case EXCEPTION.name => EXCEPTION
       case s => throw new Exception("Unknown event family %s".format(s))
     }
   }
 }
 
 trait EventMetadata {
+  val eventFamily: EventFamily
   val eventName: String
   val metaData: JsValue
-  val eventFamily: EventFamily
+  val prevEvents: Seq[ExternalId[Event]]
 }
 
 case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: ExternalId[KifiInstallation], userExperiments: Seq[State[UserExperiment.ExperimentType]], metaData: JsValue, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata

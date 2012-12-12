@@ -13,10 +13,14 @@ import org.joda.time.DateTime
 import com.keepit.model.User
 import play.api.libs.json._
 import play.api.libs.json.Json._
+import com.mongodb.casbah.map_reduce.MapReduceStandardOutput
 
 
 case class MongoSelector(eventFamily: EventFamily) {
-  private var q = MongoDBObject()
+  private var q = eventFamily.name match {
+    case "" => MongoDBObject() // generic family
+    case name => MongoDBObject("eventFamily" -> name)
+  }
 
   def ofParentEvent(eventId: ExternalId[Event]) = {
     q = q ++ ("metaData.prevEvents" $in eventId.id)
@@ -62,32 +66,75 @@ trait MongoFunc {
   val js: String
 }
 
-case class MongoMapFunc(js: String) extends MongoFunc
-object MongoMapFunc {
-  val DATE_BY_HOUR = MongoMapFunc("""
+case class MongoKeyMapFunc(js: String) extends MongoFunc
+object MongoKeyMapFunc {
+  val DATE_BY_HOUR = MongoKeyMapFunc("""
     function(doc) {
       var date = new Date(doc.createdAt);
-      var dateKey = (date.getMonth()+1)+"/"+date.getDate()+"/"+date.getFullYear()+' '+date.getHours()+':00';
+      var dateKey = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '';
+      var dateKey = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + ' '+date.getHours()+':00';
       return {'day':dateKey};
     }
     """)
-  val DATE = MongoMapFunc("""
+  val DATE = MongoKeyMapFunc("""
     function(doc) {
       var date = new Date(doc.createdAt);
-      var dateKey = (date.getMonth()+1)+"/"+date.getDate()+"/"+date.getFullYear()+'';
+      var dateKey = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '';
       return {'day':dateKey};
+    }
+    """)
+  val USER_DATE = MongoKeyMapFunc("""
+    function(doc) {
+      var date = new Date(doc.createdAt);
+      var dateKey = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '';
+      var userId = doc.metaData.userId;
+      return {'user':userId, 'date':dateKey};
+    }
+    """)
+  val USER_DATE_HOUR  = MongoKeyMapFunc("""
+    function(doc) {
+      var date = new Date(doc.createdAt);
+      var dateKey = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + ' ' + date.getHours()+":00";
+      var userId = doc.metaData.userId;
+      return {'user':userId, 'date':dateKey};
     }
     """)
 }
 
-case class MongoReduceFunc(js: String, initial: DBObject = DBObject()) extends MongoFunc
+case class MongoMapFunc(js: String) extends MongoFunc
+object MongoMapFunc {
+
+  val USER_DATE_COUNT = MongoMapFunc("""
+    function() {
+      var date = new Date(this.createdAt);
+      var dateKey = (date.getMonth()+1)+"/"+date.getDate()+"/"+date.getFullYear();
+      emit({day: dateKey,userId: this.metaData.userId},{count:1});
+    };
+    """)
+  val KEY_DAY_COUNT = MongoMapFunc("""
+    function() {
+      emit(this['_id']['day'], {count: 1});
+    }
+    """)
+}
+
+case class MongoReduceFunc(js: String) extends MongoFunc
 object MongoReduceFunc {
-  val AGGREGATE = MongoReduceFunc("""function(obj, prev) {prev.count++;}""", DBObject("count" -> 0))
+  val KEY_AGGREGATE = MongoReduceFunc("""function(obj, prev) {prev.count++;}""")
+  val BASIC_COUNT = MongoReduceFunc("""
+    function(key, values) {
+      var count = 0;
+      values.forEach(function(v) {
+        count += v['count'];
+      });
+      return {count: count};
+    }
+    """)
 }
 
 trait MongoEventStore {
   def save(event: Event): Unit
-  def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoMapFunc): Seq[JsObject]
+  def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoKeyMapFunc): Seq[JsObject]
 }
 
 class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Logging {
@@ -99,21 +146,21 @@ class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Log
   }
 
   def save(eventFamily: EventFamily, dbObject: DBObject): Unit = {
-    val coll = mongoDB(eventFamily.name)
+    val coll = mongoDB(eventFamily.collection)
     val result = coll.insert(dbObject)
     log.info(result)
   }
 
-  def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoMapFunc): Seq[JsObject] = {
+  def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoKeyMapFunc): Seq[JsObject] = {
     // Casbah doesn't provide a way to use MongoDB's $keyf to group based on a meta-key,
     // so we're forced to use the (ugly) Java API.
     // https://jira.mongodb.org/browse/JAVA-99
 
-    val groupCmd = new BasicDBObject("ns", eventFamily.name)
+    val groupCmd = new BasicDBObject("ns", eventFamily.collection)
     groupCmd.append("$keyf", keyMap.js)
     groupCmd.append("cond", query)
-    groupCmd.append("$reduce", MongoReduceFunc.AGGREGATE.js)
-    groupCmd.append("initial", MongoReduceFunc.AGGREGATE.initial)
+    groupCmd.append("$reduce", MongoReduceFunc.KEY_AGGREGATE.js)
+    groupCmd.append("initial", DBObject("count" -> 0))
     val cmd = new BasicDBObject("group",groupCmd)
     val result = mongoDB.command(cmd)
     Json.parse(result.toString) \ "retval" match {
@@ -122,8 +169,18 @@ class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Log
     }
   }
 
+  def mapReduce(eventFamily: EventFamily, map: MongoMapFunc, reduce: MongoReduceFunc, outputCollection: Option[String], query: Option[DBObject], finalize: Option[MongoReduceFunc]) = {
+    val coll = mongoDB(eventFamily.collection)
+    val output = if(outputCollection.isDefined) {
+      MapReduceStandardOutput(outputCollection.get)
+    } else {
+      MapReduceInlineOutput
+    }
+    val result = coll.mapReduce(map.js, reduce.js, output)
+  }
+
   def find(mongoSelector: MongoSelector): MongoCursor = {
-    val coll = mongoDB(mongoSelector.eventFamily.name)
+    val coll = mongoDB(mongoSelector.eventFamily.collection)
     coll.find(mongoSelector)
   }
 
@@ -150,10 +207,10 @@ class FakeMongoEventStoreImpl() extends MongoEventStore with Logging {
   }
 
   def save(eventFamily: EventFamily, dbObject: DBObject): Unit = {
-    log.info("Saving to collection %s: %s".format(eventFamily.name, dbObject))
+    log.info("Saving to collection %s: %s".format(eventFamily.collection, dbObject))
   }
 
-  def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoMapFunc): Seq[JsObject] = {
+  def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoKeyMapFunc): Seq[JsObject] = {
     Seq[JsObject]()
   }
 }

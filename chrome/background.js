@@ -56,7 +56,7 @@ function UserHistory() {
 // ===== Event logging
 
 var _eventLog = [];
-var eventFamilies = ["slider","search","extension"];
+var eventFamilies = ["slider","search","extension","account","notification"];
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if($.inArray(eventFamily, eventFamilies) == -1) {
@@ -79,11 +79,21 @@ setTimeout(function maybeSend() {
   if (_eventLog.length) {
     var config = getConfigs();
     var eventLog = {
+      "version": 1,
       "time": new Date().getTime(),
       "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
       "events": _eventLog
     }
     log("Sending event log: ", JSON.parse(JSON.stringify(eventLog)));
+
+    $.post("http://" + config.server + "/users/events", {
+      payload: JSON.stringify(eventLog)
+    }).success(function(data) {
+      log("Event log sent. Response: ", data)
+    }).error(function(xhr) {
+      error(Error("Event log sending familed"));
+      log(xhr.responseText);
+    });
 
     _eventLog.length = 0;
     eventLogDelay = Math.round(Math.max(Math.sqrt(eventLogDelay), 5 * 1000));
@@ -391,6 +401,8 @@ function postComment(request, sendResponse) {
 function searchOnServer(request, sendResponse, tab) {
   var userConfigs = getConfigs();
 
+  logEvent("search","newSearch", {query: request.query});
+
   if (!getUser()) {
     log("No facebook, can't search!");
     sendResponse({"userInfo": null, "searchResults": [], "userConfig": userConfigs});
@@ -674,7 +686,6 @@ function onAuthenticate(data) {
   });
 
   log("[onAuthenticate] done");
-  request.eventFamily, request.eventName, request.metaData, request.prevEvents
   logEvent("extension", "authenticated");
 }
 
