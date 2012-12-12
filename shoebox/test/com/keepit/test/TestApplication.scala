@@ -11,6 +11,7 @@ import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time._
+import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.shoebox.ShoeboxModule
 import com.keepit.dev.DevModule
 import com.keepit.inject._
@@ -33,6 +34,7 @@ class TestApplication(override val global: TestGlobal) extends play.api.test.Fak
   def withFakeStore() = overrideWith(FakeStoreModule())
   def withRealBabysitter() = overrideWith(BabysitterModule())
   def withFakeTime() = overrideWith(FakeTimeModule())
+  def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
 
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.module).`with`(model)))

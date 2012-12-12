@@ -26,9 +26,23 @@ import securesocial.core._
 import com.keepit.common.social._
 import views.html.defaultpages.unauthorized
 
-trait FortyTwoController extends Controller with Logging with SecureSocial {
+object FortyTwoController {
+  val FORTYTWO_USER_ID = "fortytwo_user_id"
 
-  private val FORTYTWO_USER_ID = "fortytwo_user_id"
+  object ImpersonateCookie extends CookieBaker[Option[ExternalId[User]]] {
+    val COOKIE_NAME = "fortytwo_impersonated_user_id"
+    val emptyCookie = None
+    override val isSigned = true
+    override val secure = false
+    override val maxAge = -1
+    override val httpOnly = true
+    def deserialize(data: Map[String, String]) = data.get(COOKIE_NAME).map(ExternalId[User](_))
+    def serialize(data: Option[ExternalId[User]]) = data.map(id => Map(COOKIE_NAME -> id.id.toString())).getOrElse(Map.empty)
+  }
+}
+
+trait FortyTwoController extends Controller with Logging with SecureSocial {
+  import FortyTwoController._
 
   case class AuthenticatedRequest(socialUser: SocialUser, userId: Id[User], request: Request[AnyContent], experimants: Seq[State[UserExperiment.ExperimentType]] = Nil)
     extends WrappedRequest(request)
@@ -43,35 +57,64 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
   def AuthenticatedHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
     AuthenticatedAction(false, action)
 
+  private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit conn: Connection) = {
+    userIdOpt match {
+      case None =>
+        val socialUser = SocialUserInfo.get(socialId, SocialNetworks.FACEBOOK)
+        val userId = socialUser.userId.get
+        userId
+      case Some(userId) =>
+        val socialUser = SocialUserInfo.get(socialId, SocialNetworks.FACEBOOK)
+        if (socialUser.userId.get != userId) log.error("Social user id %s does not match session user id %s".format(socialUser, userId))
+        userId
+    }
+  }
+
+  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId) = CX.withConnection { implicit conn =>
+    val userId = loadUserId(userIdOpt, socialId)
+    (userId, getExperiments(userId))
+  }
+
+  private def getExperiments(userId: Id[User])(implicit conn: Connection): Seq[State[UserExperiment.ExperimentType]] =
+    UserExperiment.getByUser(userId).map(_.experimentType)
+
   private[controller] def AuthenticatedAction[A](isApi: Boolean, action: AuthenticatedRequest => Result) = {
     SecuredAction(isApi, parse.anyContent) { implicit request =>
       val userIdOpt = request.session.get(FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
-      val (userId, experiments, newSession) = CX.withConnection { implicit conn =>
-        val (userId, newSession) = userIdOpt match {
-          case None =>
-            val socialUser = SocialUserInfo.get(SocialId(request.user.id.id), SocialNetworks.FACEBOOK)
-            val userId = socialUser.userId.get
-            (userId, session + (FORTYTWO_USER_ID -> userId.id.toString))
-          case Some(userId) =>
-            val socialUser = SocialUserInfo.get(SocialId(request.user.id.id), SocialNetworks.FACEBOOK)
-            if (socialUser.userId.get != userId) log.error("Social user id %s does not match session user id %s".format(socialUser, userId))
-            (userId, session + (FORTYTWO_USER_ID -> socialUser.userId.get.id.toString))
-        }
-        val experiments = UserExperiment.getByUser(userId)
-        (userId, experiments.map(_.experimentType), newSession)
+      val impersonatedUserIdOpt: Option[ExternalId[User]] = ImpersonateCookie.decodeFromCookie(request.cookies.get(ImpersonateCookie.COOKIE_NAME))
+      val socialUser = request.user
+      val (userId, experiments) = loadUserContext(userIdOpt, SocialId(socialUser.id.id))
+      val newSession = session + (FORTYTWO_USER_ID -> userId.toString)
+      impersonatedUserIdOpt match {
+        case Some(impExternalUserId) =>
+          val (impExperiments, impSocialUser, impUserId) = CX.withConnection { implicit conn =>
+            val impUserId = User.get(impExternalUserId).id.get
+            val isAdmin = experiments.find(e => e == UserExperiment.ExperimentTypes.ADMIN).isDefined
+            if (!isAdmin) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
+            val impSocialUserInfo = SocialUserInfo.getByUser(impUserId).head
+            (getExperiments(impUserId), impSocialUserInfo.credentials.get, impUserId)
+          }
+          log.info("[IMPERSONATOR] admin user %s is impersonating user %s with request %s".format(userId, impSocialUser, request.request.path))
+          executeAction(action, impUserId, impSocialUser, impExperiments, newSession, request.request)
+        case None =>
+          executeAction(action, userId, socialUser, experiments, newSession, request.request)
       }
-      if (experiments.contains(UserExperiment.ExperimentTypes.BLOCK)) {
-        val message = "user %s access is forbidden".format(userId)
-        log.warn(message)
-        Forbidden(message)
-      } else {
-        val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> FortyTwoServices.currentVersion.value)
-        log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
+    }
+  }
 
-        action(AuthenticatedRequest(request.user, userId, request.request, experiments)) match {
-          case r: PlainResult => r.withSession(newSession)
-          case any => any
-        }
+  private def executeAction(action: AuthenticatedRequest => Result, userId: Id[User], socialUser: SocialUser,
+      experiments: Seq[State[UserExperiment.ExperimentType]], newSession: Session, request: Request[AnyContent]) = {
+    if (experiments.contains(UserExperiment.ExperimentTypes.BLOCK)) {
+      val message = "user %s access is forbidden".format(userId)
+      log.warn(message)
+      Forbidden(message)
+    } else {
+      val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> FortyTwoServices.currentVersion.value)
+      log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
+
+      action(AuthenticatedRequest(socialUser, userId, request, experiments)) match {
+        case r: PlainResult => r.withSession(newSession)
+        case any => any
       }
     }
   }

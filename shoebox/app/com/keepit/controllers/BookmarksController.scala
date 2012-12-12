@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit
 import java.sql.Connection
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net._
 import com.keepit.search.graph.URIGraphPlugin
 import play.api.libs.json.{JsBoolean, JsNull}
 import com.keepit.common.controller.FortyTwoController
@@ -78,7 +78,7 @@ object BookmarksController extends FortyTwoController {
       log.info("updating user %s".format(userId))
       inject[URIGraphPlugin].update(userId)
     }
-    Redirect(request.request.headers("referer"))
+    Redirect(request.request.referer)
   }
 
   //this is an admin only task!!!
