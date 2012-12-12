@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="org.clapper_grizzled-slf4j_2.9.1_0.6.9">
-    <CLASSES>
-      <root url="jar://$USER_HOME$/opt/play-2.0.4/repository/cache/org.clapper/grizzled-slf4j_2.9.1/jars/grizzled-slf4j_2.9.1-0.6.9.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

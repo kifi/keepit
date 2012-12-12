@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="org.apache.tika_tika-parsers_1.0">
-    <CLASSES>
-      <root url="jar://$USER_HOME$/opt/play-2.0.4/repository/cache/org.apache.tika/tika-parsers/bundles/tika-parsers-1.0.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>
