@@ -52,25 +52,28 @@ case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, meta
 case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime = currentDateTime, serverVersion: String = currentService + ":" + currentVersion) {
 
   def persistToS3() = {
-    Event.S3Store += (externalId -> this)
+    inject[S3EventStore] += (externalId -> this)
   }
   def persistToMongo() = {
     inject[MongoEventStore].save(this)
   }
+  def persist() = {
+    persistToS3()
+    persistToMongo()
+  }
 }
 
 object Event {
-  lazy val S3Store = inject[S3EventStore]
 }
 
 object Events {
-  def userEvent(eventFamily: UserEventFamily, eventName: String, userId: Id[User], installId: ExternalId[KifiInstallation], metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit conn: Connection) = {
+  def userEvent(eventFamily: EventFamily, eventName: String, userId: Id[User], installId: ExternalId[KifiInstallation], metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit conn: Connection) = {
     val user = User.get(userId)
     val experiments = UserExperiment.getByUser(userId) map (_.experimentType)
 
     Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents))
   }
-  def serverEvent(eventFamily: ServerEventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit conn: Connection) = {
+  def serverEvent(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit conn: Connection) = {
     Event(metaData = ServerEventMetadata(eventFamily, eventName, metaData, prevEvents))
   }
 }
