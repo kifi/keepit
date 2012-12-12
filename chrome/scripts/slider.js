@@ -428,7 +428,7 @@
     return function(text, render) {
       text = $.trim(render(text));
       text = text.replace(/\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/g, function($0, $1, $2) {
-        return "<a href='x-kifi-sel:" + $2.replace(/\\(.)/g, "$1") + "'>" + $1.replace(/\\(.)/g, "$1") + "</a>";
+        return "<a href='x-kifi-sel:" + $2.replace(/\\\)/g, ")") + "'>" + $1.replace(/\\\]/g, "]") + "</a>";
       });
       text = "<p class=\"first-line\">" + text + "</p>";
       text = text.replace(/\n\n/g, "\n")
