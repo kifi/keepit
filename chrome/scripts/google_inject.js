@@ -1,6 +1,6 @@
 console.log("[" + new Date().getTime() + "] in google_inject.js");
 
-!function() { try {
+!function() {
   var lastInjected;
   var config;
   var restrictedGoogleInject = [
@@ -472,10 +472,4 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
     else
       return input.replace(new RegExp('(^|\\.?)(' + needle + ')(\\.?|$)','ig'), '$1<b>$2</b>$3');
   }
-
-} catch(exception) {
-  // debugger;
-  // alert("exception: " + exception.message);
-  console.error(exception);
-  console.error(exception.stack);
-}}();
+}();
