@@ -20,11 +20,10 @@ case class BabysitterTimeout(warnTimeout: akka.util.FiniteDuration, errorTimeout
 class BabysitterImpl extends Babysitter with Logging {
   def watch[A](timeout: BabysitterTimeout)(block: => A)(implicit app: Application): A = {
     val startTime = inject[DateTime]
-    val e = new Exception("Babysitter error timeout")
+    val e = new Exception("Babysitter error timeout after %s millis".format(timeout.errorTimeout.toMillis))
     val babysitter = inject[Scheduler].scheduleOnce(timeout.errorTimeout) {
-      log.error("BABYSITTER: Process taking way too long. %ss".format(timeout.errorTimeout.toMillis.toDouble / 1000.0))
       log.error(e.getStackTrace() mkString "\n  ")
-      inject[HealthcheckPlugin].addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some("Babysitter error timeout")))
+      inject[HealthcheckPlugin].addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(e.getMessage())))
     }
     val result = try {
       block
@@ -33,8 +32,7 @@ class BabysitterImpl extends Babysitter with Logging {
       val endTime = inject[DateTime]
       val difference = endTime.getMillis - endTime.getMillis
       if(difference > timeout.warnTimeout.toMillis) {
-        val e = new Exception("Babysitter error timeout")
-        log.warn("BABYSITTER: Process taking too long. %ss".format((difference.toDouble / 1000.0)))
+        val e = new Exception("Babysitter error timeout after %s millis".format(timeout.errorTimeout.toMillis))
         log.warn(e.getStackTrace() mkString "\n  ")
       }
       babysitter.cancel
