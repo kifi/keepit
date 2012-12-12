@@ -28,6 +28,7 @@ object EventFamilies {
   // User
   val SLIDER = UserEventFamily("slider")
   val SEARCH = UserEventFamily("search")
+  val EXTENSION = UserEventFamily("extension")
   val SERVER = ServerEventFamily("server")
 
   def apply(event: String): EventFamily = {
@@ -35,6 +36,7 @@ object EventFamilies {
       case SLIDER.name => SLIDER
       case SEARCH.name => SEARCH
       case SERVER.name => SERVER
+      case EXTENSION.name => EXTENSION
       case s => throw new Exception("Unknown event family %s".format(s))
     }
   }

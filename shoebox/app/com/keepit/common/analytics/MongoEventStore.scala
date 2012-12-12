@@ -16,7 +16,6 @@ import play.api.libs.json.Json._
 
 
 case class MongoSelector(eventFamily: EventFamily) {
-  private val builder = MongoDBObject.newBuilder
   private var q = MongoDBObject()
 
   def ofParentEvent(eventId: ExternalId[Event]) = {
@@ -158,3 +157,4 @@ class FakeMongoEventStoreImpl() extends MongoEventStore with Logging {
     Seq[JsObject]()
   }
 }
+

@@ -56,6 +56,7 @@ object EventController extends FortyTwoController {
       case _: JsValue => throw new Exception()
     }
     val logClientTime = (params \ "time").as[Int]
+    val globalInstallId = (params \ "installId").asOpt[String].getOrElse("")
 
     CX.withConnection { implicit conn =>
       events map { event =>
@@ -64,7 +65,7 @@ object EventController extends FortyTwoController {
 
         val eventFamily = EventFamilies((event \ "eventFamily").as[String])
         val eventName = (event \ "eventName").as[String]
-        val installId = ExternalId[KifiInstallation]((event \ "installId").as[String])
+        val installId = ExternalId[KifiInstallation]((event \ "installId").asOpt[String].getOrElse(globalInstallId))
         val metaData = (event \ "metaData").as[JsObject]
         val prevEvents = (event \ "prevEvents") match {
           case JsArray(s) =>
