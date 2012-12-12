@@ -47,14 +47,7 @@ class ProximityQuery(val terms: Set[Term]) extends Query {
 
   override def extractTerms(out: JSet[Term]): Unit = out.addAll(terms)
 
-  override def toString(s: String) = {
-    val buffer = new StringBuilder()
-    buffer.append("proximity(")
-    buffer.append(terms.mkString(","))
-    buffer.append(")")
-    buffer.append(ToStringUtils.boost(getBoost()));
-    buffer.toString
-  }
+  override def toString(s: String) = "proximity(%s)%s".format(terms.mkString(","), ToStringUtils.boost(getBoost()))
 
   override def equals(obj: Any): Boolean = obj match {
     case prox: ProximityQuery => (terms == prox.terms && getBoost() == prox.getBoost())
