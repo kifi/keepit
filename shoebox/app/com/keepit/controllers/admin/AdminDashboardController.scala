@@ -1,7 +1,6 @@
 package com.keepit.controllers.admin
 
 import play.api.data._
-import java.util.concurrent.TimeUnit
 import play.api._
 import play.api.Play.current
 import play.api.mvc._
@@ -11,6 +10,10 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
+
+import akka.util.duration._
+import java.util.concurrent.TimeUnit
+
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
@@ -20,10 +23,12 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
-import org.joda.time.LocalDate
-import org.joda.time.DateTimeZone
 import com.keepit.common.time._
 import com.keepit.model.User
+import com.keepit.model.Bookmark
+import com.keepit.common.healthcheck.BabysitterTimeout
+import org.joda.time.LocalDate
+import org.joda.time.DateTimeZone
 import org.joda.time.Days
 import play.api.libs.json.JsNumber
 import play.api.http.ContentTypes
@@ -33,20 +38,23 @@ import play.api.http.ContentTypes
  */
 object AdminDashboardController extends FortyTwoController {
 
-  private lazy val userCountByDate = calcUserCountByDate
+  implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
 
-  private def calcUserCountByDate = {
-    val dates = CX.withConnection { implicit conn => User.all }.map(_.createdAt.toLocalDateInZone)
-    val day0 = dates.min
+  private lazy val userCountByDate = calcCountByDate(CX.withConnection { implicit conn => User.all }.map(_.createdAt.toLocalDateInZone))
+  private lazy val bookmarkCountByDate = calcCountByDate(CX.withConnection { implicit conn => Bookmark.all }.map(_.createdAt.toLocalDateInZone))
+
+  private def calcCountByDate(dates: => Seq[LocalDate]) = {
+
+    val day0 = if(dates.isEmpty) currentDate else dates.min
     val dayCounts = dates.foldLeft(Map[LocalDate,Int]().withDefaultValue(0)){(m, d) => m + (d -> (1 + m(d)))}
     val userCounts = if (Play.isDev) {
-      Seq(3,7,0,1,3,1,0,3,0,1,0,4,3,4,2,1,0,0,0,0,2,1,0,1,0,1,0,0,0,1)
+      Seq.fill(40)(math.round(math.pow((math.random*4), 2D).toFloat)-2)
     } else {
       (0 to Days.daysBetween(day0, inject[LocalDate]).getDays()) map {i => dayCounts(day0.plusDays(i))}
     }
     JsObject(List(
         "day0" -> day0.toJson,
-        "userCounts" -> JsArray(userCounts.map {i => JsNumber(i)})
+        "counts" -> JsArray(userCounts.map {i => JsNumber(i)})
     ))
   }
 
@@ -56,6 +64,10 @@ object AdminDashboardController extends FortyTwoController {
 
   def usersByDate = AdminJsonAction { implicit request =>
     Ok(userCountByDate)
+  }
+
+  def bookmarksByDate = AdminJsonAction { implicit request =>
+    Ok(bookmarkCountByDate)
   }
 
 }

@@ -1,6 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.test.EmptyApplication
+import com.keepit.search.Lang
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
@@ -16,7 +17,7 @@ import org.apache.lucene.search.Query
 @RunWith(classOf[JUnitRunner])
 class QueryParserTest extends SpecificationWithJUnit {
 
-  val analyzer = DefaultAnalyzer.forParsing
+  val analyzer = DefaultAnalyzer.forParsing(Lang("en"))
   val parser = new QueryParser(analyzer) {
     override def parseQuery(queryText: String) = {
       val qopt = super.parseQuery(queryText)
@@ -32,6 +33,14 @@ class QueryParserTest extends SpecificationWithJUnit {
       parser.parseQuery("aaa (bbb") must beSome[Query]
       parser.parseQuery("aaa (bbb))") must beSome[Query]
       parser.parseQuery("aaa) bbb") must beSome[Query]
+      parser.parseQuery("+") must beSome[Query]
+      parser.parseQuery("\"") must beSome[Query]
+    }
+
+    "handle an empty query" in {
+      parser.parseQuery(" ") must beNone
+      parser.parseQuery("") must beNone
+      parser.parseQuery(null) must beNone
     }
   }
 }

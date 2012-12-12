@@ -48,11 +48,13 @@ object ApplicationBuild extends Build {
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
       "org.apache.lucene" % "lucene-core" % "3.6.1",
+      "org.apache.lucene" % "lucene-analyzers" % "3.6.1",
       "org.apache.httpcomponents" % "httpclient" % "4.2.1",
+      "org.apache.tika" % "tika-parsers" % "1.2",
+      "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       //used for securesocial
       "com.typesafe" %% "play-plugins-util" % "2.0.1",
       "org.mindrot" % "jbcrypt" % "0.3m",
-      "edu.uci.ics" % "crawler4j" % "3.4",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
       "javax.mail" % "mail" % "1.4.5"      
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))

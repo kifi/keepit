@@ -3,6 +3,8 @@ package com.keepit.search.graph
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
+import com.keepit.search.Lang
+import com.keepit.search.query.SiteQuery
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.db.{Id, CX}
@@ -32,10 +34,10 @@ class URIGraphTest extends SpecificationWithJUnit {
             User(firstName = "Hactar", lastName = "").save),
        List(NormalizedURI(title = "a1", url = "http://www.keepit.com/article1", state=SCRAPED).save,
             NormalizedURI(title = "a2", url = "http://www.keepit.com/article2", state=SCRAPED).save,
-            NormalizedURI(title = "a3", url = "http://www.keepit.com/article3", state=SCRAPED).save,
-            NormalizedURI(title = "a4", url = "http://www.keepit.com/article4", state=SCRAPED).save,
-            NormalizedURI(title = "a5", url = "http://www.keepit.com/article5", state=SCRAPED).save,
-            NormalizedURI(title = "a6", url = "http://www.keepit.com/article6", state=SCRAPED).save))
+            NormalizedURI(title = "a3", url = "http://www.keepit.org/article3", state=SCRAPED).save,
+            NormalizedURI(title = "a4", url = "http://www.findit.com/article4", state=SCRAPED).save,
+            NormalizedURI(title = "a5", url = "http://www.findit.com/article5", state=SCRAPED).save,
+            NormalizedURI(title = "a6", url = "http://www.findit.org/article6", state=SCRAPED).save))
     }
   }
 
@@ -55,7 +57,9 @@ class URIGraphTest extends SpecificationWithJUnit {
         httpContentType = Some("text/html"),
         httpOriginalContentCharset = Option("UTF-8"),
         state = SCRAPED,
-        message = None)
+        message = None,
+        titleLang = Some(Lang("en")),
+        contentLang = Some(Lang("en")))
   }
 
   "URIGraph" should {
@@ -217,6 +221,44 @@ class URIGraphTest extends SpecificationWithJUnit {
 
         searcher.search(users(0).id.get, bmt2, 0.0f).keySet === Set(2L)
         searcher.search(users(1).id.get, bmt2, 0.0f).keySet === Set.empty[Long]
+      }
+    }
+
+    "search personal bookmark domains" in {
+      running(new EmptyApplication()) {
+        val (users, uris) = setupDB
+        val store = setupArticleStore(uris)
+
+        CX.withConnection { implicit c =>
+          uris.foreach{ uri =>
+            val uriId =  uri.id.get
+            Bookmark(title = ("personaltitle bmt"+uriId), url = uri.url,  uriId = uriId, userId = users(0).id.get, source = BookmarkSource("test")).save
+          }
+        }
+
+        val graphDir = new RAMDirectory
+        val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
+        graph.load() === users.size
+
+        val searcher = graph.getURIGraphSearcher()
+
+        var site = SiteQuery("com")
+        searcher.search(users(0).id.get, site, 0.0f).keySet === Set(1L, 2L, 4L, 5L)
+
+        site = SiteQuery("keepit.com")
+        searcher.search(users(0).id.get, site, 0.0f).keySet === Set(1L, 2L)
+
+        site = SiteQuery("org")
+        searcher.search(users(0).id.get, site, 0.0f).keySet === Set(3L, 6L)
+
+        site = SiteQuery("findit.org")
+        searcher.search(users(0).id.get, site, 0.0f).keySet === Set(6L)
+
+        site = SiteQuery(".org")
+        searcher.search(users(0).id.get, site, 0.0f).keySet === Set(3L, 6L)
+
+        site = SiteQuery(".findit.org")
+        searcher.search(users(0).id.get, site, 0.0f).keySet === Set(6L)
       }
     }
   }

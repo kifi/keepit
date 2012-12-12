@@ -7,7 +7,6 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.healthcheck.HealthcheckImpl
 import com.keepit.common.mail.MailSenderPlugin
 import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.PostOfficeImpl
@@ -32,6 +31,9 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import java.io.File
 import com.keepit.common.mail.{MailSenderPlugin, MailSenderPluginImpl}
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckPluginImpl
+import akka.actor.Scheduler
 
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -112,8 +114,9 @@ case class ShoeboxModule() extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def healthcheckProvider(system: ActorSystem, postOffice: PostOffice): Healthcheck = {
+  def healthcheckProvider(system: ActorSystem, postOffice: PostOffice): HealthcheckPlugin = {
     val host = InetAddress.getLocalHost().getCanonicalHostName()
-    new HealthcheckImpl(system, host, postOffice)
+    new HealthcheckPluginImpl(system, host, postOffice)
   }
+
 }

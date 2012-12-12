@@ -9,6 +9,7 @@ import play.api.test._
 import play.api.test.Helpers._
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.search.query.BooleanQueryWithPercentMatch
 import org.apache.lucene.document.Document
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.IndexWriter
@@ -25,6 +26,7 @@ import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
 import org.apache.lucene.search.WildcardQuery
+import java.io.StringReader
 
 @RunWith(classOf[JUnitRunner])
 class LineQueryTest extends SpecificationWithJUnit {
@@ -47,7 +49,7 @@ class LineQueryTest extends SpecificationWithJUnit {
         lines += line
       }
       val doc = new Document()
-      doc.add(lineFieldBuilder.buildLineField("B", lines, indexingAnalyzer))
+      doc.add(lineFieldBuilder.buildLineField("B", lines, (f, t) => Some(indexingAnalyzer.tokenStream(f, new StringReader(t)))))
       writer.addDocument(doc)
     }
     writer.commit()
@@ -285,9 +287,8 @@ class LineQueryTest extends SpecificationWithJUnit {
         ArrayBuffer((1, 0), (2, 0), (0, 2), (0, 0), (0, 1))
     }
 
-    "honor percentMatch in BooleanNode" in {
-      val builderWithPctMatch = new LineQueryBuilder(new DefaultSimilarity, 99.0f)
-      var q = new BooleanQuery
+    "disregard percentMatch in BooleanNode for BooleanQuery" in {
+      var q = new BooleanQuery(false)
       q.add(new TermQuery(new Term("B", "d2")), BooleanClause.Occur.MUST)
       q.add(new TermQuery(new Term("B", "l2")), BooleanClause.Occur.SHOULD)
       q.add(new TermQuery(new Term("B", "x")), BooleanClause.Occur.SHOULD)
@@ -303,10 +304,17 @@ class LineQueryTest extends SpecificationWithJUnit {
         doc = plan.fetchDoc(0)
       }
       hits === ArrayBuffer((2, 0), (2, 1), (2, 2))
+    }
 
-      hits = ArrayBuffer.empty[(Int, Int)]
-      plan = builderWithPctMatch.build(q)
-      doc = plan.fetchDoc(0)
+    "honor percentMatch in BooleanNode for BooleanQueryWithPercentMatch" in {
+      val hits = ArrayBuffer.empty[(Int, Int)]
+      val q = new BooleanQueryWithPercentMatch(false)
+      q.setPercentMatch(99.0f)
+      q.add(new TermQuery(new Term("B", "d2")), BooleanClause.Occur.MUST)
+      q.add(new TermQuery(new Term("B", "l2")), BooleanClause.Occur.SHOULD)
+      q.add(new TermQuery(new Term("B", "x")), BooleanClause.Occur.SHOULD)
+      val plan = builder.build(q)
+      var doc = plan.fetchDoc(0)
       while (doc < LineQuery.NO_MORE_DOCS) {
         var line = plan.fetchLine(0)
         while (line < LineQuery.NO_MORE_LINES) {
@@ -318,9 +326,8 @@ class LineQueryTest extends SpecificationWithJUnit {
       hits === ArrayBuffer((2, 2))
     }
 
-    "honor percentMatch in BooleanOrNode" in {
-      val builderWithPctMatch = new LineQueryBuilder(new DefaultSimilarity, 99.0f)
-      var q = new BooleanQuery
+    "honor percentMatch in BooleanOrNode for BooleanQuery" in {
+      var q = new BooleanQuery(false)
       q.add(new TermQuery(new Term("B", "d2")), BooleanClause.Occur.SHOULD)
       q.add(new TermQuery(new Term("B", "l2")), BooleanClause.Occur.SHOULD)
       q.add(new TermQuery(new Term("B", "x")), BooleanClause.Occur.SHOULD)
@@ -336,10 +343,17 @@ class LineQueryTest extends SpecificationWithJUnit {
         doc = plan.fetchDoc(0)
       }
       hits === ArrayBuffer((0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2))
+    }
 
-      hits = ArrayBuffer.empty[(Int, Int)]
-      plan = builderWithPctMatch.build(q)
-      doc = plan.fetchDoc(0)
+    "honor percentMatch in BooleanOrNode for BooleanQuery" in {
+      var q = new BooleanQueryWithPercentMatch(false)
+      q.setPercentMatch(99.0f)
+      q.add(new TermQuery(new Term("B", "d2")), BooleanClause.Occur.SHOULD)
+      q.add(new TermQuery(new Term("B", "l2")), BooleanClause.Occur.SHOULD)
+      q.add(new TermQuery(new Term("B", "x")), BooleanClause.Occur.SHOULD)
+      val hits = ArrayBuffer.empty[(Int, Int)]
+      val plan = builder.build(q)
+      var doc = plan.fetchDoc(0)
       while (doc < LineQuery.NO_MORE_DOCS) {
         var line = plan.fetchLine(0)
         while (line < LineQuery.NO_MORE_LINES) {

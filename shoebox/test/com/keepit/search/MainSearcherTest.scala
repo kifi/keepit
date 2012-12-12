@@ -38,7 +38,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
   def mkStore(uris: Seq[NormalizedURI]) = {
     uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
-      store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs".format(idx)))
+      store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs documents".format(idx)))
       store
     }
   }
@@ -52,7 +52,9 @@ class MainSearcherTest extends SpecificationWithJUnit {
         httpContentType = Some("text/html"),
         httpOriginalContentCharset = Option("UTF-8"),
         state = SCRAPED,
-        message = None)
+        message = None,
+        titleLang = Some(Lang("en")),
+        contentLang = Some(Lang("en")))
   }
 
   val source = BookmarkSource("test")
@@ -87,7 +89,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
             val friendIds = friends.map(_.id.get).toSet - userId
             val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val (myHits, friendsHits, othersHits) = mainSearcher.searchText("alldocs", numHitsPerCategory)
+            val (myHits, friendsHits, othersHits) = mainSearcher.searchText("alldocs", numHitsPerCategory)(Lang("en"))
 
             //println("----")
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet.map(_.id)
@@ -184,7 +186,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val bookmarks = CX.withConnection { implicit c =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              Bookmark(title = "personaltitle", url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              Bookmark(title = "personal title", url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
             }
           }
         }
@@ -202,7 +204,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           val friendIds = users.map(_.id.get).toSet - userId
           val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, allHitsConfig)
           val graphSearcher = mainSearcher.uriGraphSearcher
-          val res = mainSearcher.search("personaltitle", numHitsToReturn, None)
+          val res = mainSearcher.search("personal", numHitsToReturn, None)
 
           val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
           var mCnt = 0
@@ -233,7 +235,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val bookmarks = CX.withConnection { implicit c =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              Bookmark(title = "personaltitle", url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              Bookmark(title = "personal title", url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
             }
           }
         }
@@ -252,7 +254,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val graphSearcher = mainSearcher.uriGraphSearcher
 
         val expected = (uris(3) :: ((uris diff List(uris(3))).reverse)).map(_.id.get).toList
-        val res = mainSearcher.search("personaltitle title3 content3", numHitsToReturn, None)
+        val res = mainSearcher.search("personal title3 content3", numHitsToReturn, None)
 
         val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
 
@@ -443,6 +445,38 @@ class MainSearcherTest extends SpecificationWithJUnit {
           privateSet.contains(h.uriId) === false
         }
         res.hits.size === publicUris.size
+      }
+    }
+
+    "search hits using a stemmed word" in {
+      running(new EmptyApplication()) {
+        val (users, uris) = initData(numUsers = 9, numUris = 9)
+        val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
+        val bookmarks = CX.withConnection { implicit c =>
+          expectedUriToUserEdges.flatMap{ case (uri, users) =>
+            users.map{ user =>
+              Bookmark(title = "my books", url = uri.url,  uriId = uri.id.get, userId = user.id.get, source = source).save
+            }
+          }
+        }
+
+        val store = mkStore(uris)
+        val (graph, indexer) = initIndexes(store)
+
+        graph.load() === users.size
+        indexer.run() === uris.size
+
+        val numHitsToReturn = 100
+        val userId = users(0).id.get
+        val friendIds = users.map(_.id.get).toSet - userId
+        val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, noBoostConfig)
+        val graphSearcher = mainSearcher.uriGraphSearcher
+
+        var res = mainSearcher.search("document", numHitsToReturn, None)
+        res.hits.size > 0 === true
+
+        res = mainSearcher.search("book", numHitsToReturn, None)
+        res.hits.size > 0 === true
       }
     }
   }

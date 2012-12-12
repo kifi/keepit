@@ -15,6 +15,9 @@
   <h2>User details </h2>
    <button class="btn" onclick="refreshAllSociaUserInfo()">Refresh Social User Info!</button>&nbsp
    <button class="btn" onclick="blockUser()">Block User</button>&nbsp
+   <button class="btn" onclick="makeAdmin()">Make Admin</button>&nbsp
+   <button class="btn" onclick="impersonate()">Impersonate User</button>&nbsp
+   <button class="btn" onclick="unimpersonate()">Stop Impersonating</button>&nbsp
    <button class="btn" onclick="configSearch()">Config Search</button>
    <br/>
    <table class="table table-bordered">
@@ -183,8 +186,21 @@
     function refreshAllSociaUserInfo() {
       location.href="@com.keepit.controllers.routes.UserController.refreshAllSocialInfo(userWithSocial.user.id.get)"
     }
+    function impersonate() {
+      $.post("@com.keepit.controllers.routes.AuthController.impersonate(userWithSocial.user.id.get)")
+    }
+    function unimpersonate() {
+      $.post("@com.keepit.controllers.routes.AuthController.unimpersonate()")
+    }
     function blockUser() {
       $.post('@com.keepit.controllers.routes.UserController.addExperiment(userWithSocial.user.id.get, "block")', function(data) {
+        var list = $("<ul/>")
+        $(data).each(function(i, e){list.append($("<li>" + e + "</li>"));})
+        $('#experiments').html(list);
+      });
+    }
+    function makeAdmin() {
+      $.post('@com.keepit.controllers.routes.UserController.addExperiment(userWithSocial.user.id.get, "admin")', function(data) {
         var list = $("<ul/>")
         $(data).each(function(i, e){list.append($("<li>" + e + "</li>"));})
         $('#experiments').html(list);

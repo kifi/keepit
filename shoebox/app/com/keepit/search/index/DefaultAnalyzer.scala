@@ -1,175 +1,199 @@
 package com.keepit.search.index
 
-import org.apache.lucene.analysis.Analyzer
-import org.apache.lucene.analysis.TokenStream
-import org.apache.lucene.analysis.standard.StandardAnalyzer
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
-import org.apache.lucene.analysis.tokenattributes.TypeAttribute
-import org.apache.lucene.analysis.tokenattributes.TypeAttributeImpl
-import org.apache.lucene.analysis.TokenFilter
-import org.apache.lucene.util.AttributeImpl
-import org.apache.lucene.util.Version
 import java.io.Reader
+import java.lang.reflect.Constructor
+
+import org.apache.lucene.analysis.ar.ArabicNormalizationFilter
+import org.apache.lucene.analysis.ar.ArabicStemFilter
+import org.apache.lucene.analysis.bg.BulgarianStemFilter
+import org.apache.lucene.analysis.cz.CzechStemFilter
+import org.apache.lucene.analysis.de.GermanLightStemFilter
+import org.apache.lucene.analysis.de.GermanNormalizationFilter
+import org.apache.lucene.analysis.el.GreekLowerCaseFilter
+import org.apache.lucene.analysis.el.GreekStemFilter
+import org.apache.lucene.analysis.en.EnglishMinimalStemFilter
+import org.apache.lucene.analysis.en.KStemFilter
+import org.apache.lucene.analysis.es.SpanishLightStemFilter
+import org.apache.lucene.analysis.fa.PersianCharFilter
+import org.apache.lucene.analysis.fa.PersianNormalizationFilter
+import org.apache.lucene.analysis.fi.FinnishLightStemFilter
+import org.apache.lucene.analysis.fr.ElisionFilter
+import org.apache.lucene.analysis.fr.FrenchLightStemFilter
+import org.apache.lucene.analysis.hi.HindiNormalizationFilter
+import org.apache.lucene.analysis.hi.HindiStemFilter
+import org.apache.lucene.analysis.hu.HungarianLightStemFilter
+import org.apache.lucene.analysis.id.IndonesianStemFilter
+import org.apache.lucene.analysis.in.IndicNormalizationFilter
+import org.apache.lucene.analysis.it.ItalianLightStemFilter
+import org.apache.lucene.analysis.lv.LatvianStemFilter
+import org.apache.lucene.analysis.no.NorwegianLightStemFilter
+import org.apache.lucene.analysis.pt.PortugueseLightStemFilter
+import org.apache.lucene.analysis.ru.RussianLightStemFilter
+import org.apache.lucene.analysis.standard.StandardTokenizer
+import org.apache.lucene.analysis.sv.SwedishLightStemFilter
+import org.apache.lucene.analysis.th.ThaiWordFilter
+import org.apache.lucene.analysis.tr.TurkishLowerCaseFilter
+import org.apache.lucene.analysis.CharStream
+import org.apache.lucene.analysis.Analyzer
+import org.apache.lucene.analysis.CharFilter
+import org.apache.lucene.analysis.CharReader
+import org.apache.lucene.analysis.LowerCaseFilter
+import org.apache.lucene.analysis.TokenFilter
+import org.apache.lucene.analysis.TokenStream
+import org.apache.lucene.util.Version
+
+import com.keepit.common.logging.Logging
+import com.keepit.search.index.AnalyzerBuilder.toAnalyzer
+import com.keepit.search.index.AnalyzerBuilder.toAnalyzerBuilder
+import com.keepit.search.Lang
+
+import LuceneVersion.version
+
+
+object LuceneVersion {
+  val version = Version.LUCENE_36
+}
 
 object DefaultAnalyzer {
+  import LuceneVersion.version
+  import AnalyzerBuilder._
 
-  val baseAnalyzer = new StandardAnalyzer(Version.LUCENE_36)
-  baseAnalyzer.setMaxTokenLength(256)
+  private val stdAnalyzer = analyzer[DefaultAnalyzer]
+  private val defaultAnalyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
 
-  val forIndexing: Analyzer = {
-    val filters = List(DotDecompounder, ApostropheFilter)
-    buildAnalyzer(baseAnalyzer, filters)
+  val langAnalyzers = Map[String, Analyzer](
+    "ar" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Arabic).withFilter[ArabicNormalizationFilter],
+    "bg" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Bulgarian),
+    "cs" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Czech),
+    "da" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Danish),
+    "de" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.German).withFilter[GermanNormalizationFilter],
+    "el" -> stdAnalyzer.withFilter[GreekLowerCaseFilter].withStopFilter(_.Greek),
+    "en" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.English),
+    "es" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Spanish),
+    "fa" -> stdAnalyzer.withCharFilter[PersianCharFilter].withFilter[LowerCaseFilter].withFilter[ArabicNormalizationFilter].withFilter[PersianNormalizationFilter].withStopFilter(_.Persian),
+    "fi" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Finnish),
+    "fr" -> stdAnalyzer.withFilter[ElisionFilter].withFilter[LowerCaseFilter].withStopFilter(_.French),
+    "hi" -> stdAnalyzer.withFilter[LowerCaseFilter].withFilter[IndicNormalizationFilter].withFilter[HindiNormalizationFilter].withStopFilter(_.Hindi),
+    "hu" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Hungarian),
+    "id" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Indonesian),
+    "it" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Italian),
+    "lv" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Latvian),
+    "nl" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Dutch),
+    "no" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Norwegian),
+    "pt" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Portuguese),
+    "ro" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Romanian),
+    "ru" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Russian),
+    "sv" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Swedish),
+    "th" -> stdAnalyzer.withFilter[LowerCaseFilter].withFilter[ThaiWordFilter].withStopFilter(_.Thai),
+    "tr" -> stdAnalyzer.withFilter[TurkishLowerCaseFilter].withStopFilter(_.Turkish)
+  )
+
+  val langAnalyzerWithStemmer = Map[String, Analyzer](
+    "ar" -> langAnalyzers("ar").withFilter[ArabicStemFilter],
+    "bg" -> langAnalyzers("bg").withFilter[BulgarianStemFilter],
+    "cs" -> langAnalyzers("cs").withFilter[CzechStemFilter],
+    "da" -> langAnalyzers("da").withStemFilter(_.Danish),
+    "de" -> langAnalyzers("de").withFilter[GermanLightStemFilter],
+    "el" -> langAnalyzers("el").withFilter[GreekStemFilter],
+    "en" -> langAnalyzers("en").withFilter[KStemFilter].withFilter[EnglishMinimalStemFilter].withFilter[ApostropheFilter],
+    "es" -> langAnalyzers("es").withFilter[SpanishLightStemFilter],
+    "fi" -> langAnalyzers("fi").withFilter[FinnishLightStemFilter],
+    "fr" -> langAnalyzers("fr").withFilter[FrenchLightStemFilter],
+    "hi" -> langAnalyzers("hi").withFilter[HindiStemFilter],
+    "hu" -> langAnalyzers("hu").withFilter[HungarianLightStemFilter],
+    "id" -> langAnalyzers("id").withFilter[IndonesianStemFilter],
+    "it" -> langAnalyzers("it").withFilter[ItalianLightStemFilter],
+    "lv" -> langAnalyzers("lv").withFilter[LatvianStemFilter],
+    "nl" -> langAnalyzers("nl").withStemFilter(_.Dutch),
+    "no" -> langAnalyzers("no").withFilter[NorwegianLightStemFilter],
+    "pt" -> langAnalyzers("pt").withFilter[PortugueseLightStemFilter],
+    "ro" -> langAnalyzers("ro").withStemFilter(_.Romanian),
+    "ru" -> langAnalyzers("ru").withFilter[RussianLightStemFilter],
+    "sv" -> langAnalyzers("sv").withFilter[SwedishLightStemFilter],
+    "tr" -> langAnalyzers("tr").withStemFilter(_.Turkish)
+  )
+
+  private def analyzer[A <: Analyzer](implicit m : Manifest[A]) = {
+    m.erasure.getConstructor(classOf[Version]).newInstance(version).asInstanceOf[Analyzer]
   }
-  val forParsing: Analyzer = {
-    val filters = List(DotDecompounder)
-    buildAnalyzer(baseAnalyzer, filters)
 
+  private def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, defaultAnalyzer)
+  private def getAnalyzerWithStemmer(lang: Lang): Option[Analyzer] = langAnalyzerWithStemmer.get(lang.lang)
+
+  def forIndexing: Analyzer = forIndexing(Lang("en"))
+  def forIndexing(lang: Lang): Analyzer = getAnalyzer(lang).withFilter[DotDecompounder]
+
+  def forIndexingWithStemmer: Option[Analyzer] = forIndexingWithStemmer(Lang("en"))
+  def forIndexingWithStemmer(lang: Lang): Option[Analyzer] = getAnalyzerWithStemmer(lang)
+
+  def forParsing: Analyzer = forParsing(Lang("en"))
+  def forParsing(lang: Lang): Analyzer = getAnalyzer(lang)
+
+  def forParsingWithStemmer: Option[Analyzer] = forParsingWithStemmer(Lang("en"))
+  def forParsingWithStemmer(lang: Lang): Option[Analyzer] = getAnalyzerWithStemmer(lang)
+}
+
+class DefaultAnalyzer(version: Version) extends Analyzer {
+  def tokenStream(fieldName: String, reader: Reader): TokenStream = {
+    var tokenizer = new StandardTokenizer(version, reader)
+    tokenizer.setMaxTokenLength(256)
+    tokenizer
   }
+}
 
-  def buildAnalyzer(baseAnalyzer: Analyzer, filters: List[TokenFilterFactory]) = new Analyzer {
-    def tokenStream(fieldName: String, reader: Reader): TokenStream = {
-      filters.foldLeft(baseAnalyzer.tokenStream(fieldName, reader)){ (tokenStream, filter) => filter(tokenStream) }
+class AnalyzerWithCharFilter(analyzer: Analyzer, charFilterConstructor: Constructor[CharFilter]) extends Analyzer {
+  def tokenStream(fieldName: String, reader: Reader): TokenStream = {
+    var charFilter = charFilterConstructor.newInstance(CharReader.get(reader))
+    analyzer.tokenStream(fieldName, charFilter)
+  }
+}
+
+object AnalyzerBuilder extends Logging {
+  import LuceneVersion.version
+
+  implicit def toAnalyzerBuilder(analyzer: Analyzer): AnalyzerBuilder = new AnalyzerBuilder(analyzer, Nil, None)
+  implicit def toAnalyzer(builder: AnalyzerBuilder): Analyzer = builder.build
+
+  class AnalyzerBuilder(analyzer: Analyzer, factories: List[TokenFilterFactory], charFilterConstructor: Option[Constructor[CharFilter]]) {
+
+    def withFilter[T <: TokenFilter](implicit m : Manifest[T]): AnalyzerBuilder = {
+      try {
+        val constructor = m.erasure.getConstructor(classOf[Version], classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
+        withFilter(WrapperTokenFilterFactory(constructor, version))
+      } catch {
+        case ex: NoSuchMethodException =>
+          try {
+            val constructor = m.erasure.getConstructor(classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
+            withFilter(WrapperTokenFilterFactory(constructor))
+          } catch {
+            case ex: NoSuchMethodException => log.error("failed to find a filter constructor: %s".format(m.erasure.toString))
+            this
+          }
+      }
     }
-  }
-}
 
-trait TokenFilterFactory {
-  def apply(tokenStream: TokenStream): TokenStream
-}
+    def withStopFilter(f: StopFilterFactories=>TokenFilterFactory): AnalyzerBuilder = withFilter(f(TokenFilterFactories.stopFilter))
+    def withStemFilter(f: StemFilterFactories=>TokenFilterFactory): AnalyzerBuilder = withFilter(f(TokenFilterFactories.stemFilter))
 
-object DotDecompounder extends TokenFilterFactory {
-  def apply(tokenStream: TokenStream): TokenStream = new DotDecompounder(tokenStream)
-}
-class DotDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStream) {
-  val termAttr = addAttribute(classOf[CharTermAttribute])
-  val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
-  val typeAttr = tokenStream.getAttribute(classOf[TypeAttribute]).asInstanceOf[TypeAttributeImpl]
-  val tokenType = new TypeAttributeAccessor
+    def withFilter(factory: TokenFilterFactory): AnalyzerBuilder = new AnalyzerBuilder(analyzer, factory::factories, charFilterConstructor)
 
-  var tokenStart = 0
-  var buffer = Array.empty[Char]
-  var bufLen = 0
-
-  val alphanum = "<ALPHANUM>"
-
-  override def incrementToken() = {
-    if (bufLen - tokenStart > 0) { // has more chars in buffer
-      getConstituent
-      posIncrAttr.setPositionIncrement(1)
-      true
+    def withCharFilter[T <: CharFilter](implicit m : Manifest[T]): AnalyzerBuilder = {
+      val constructor = m.erasure.getConstructor(classOf[CharStream]).asInstanceOf[Constructor[CharFilter]]
+      new AnalyzerBuilder(analyzer, factories, Some(constructor))
     }
-    else {
-      if (tokenStream.incrementToken) {
-        if (findDotCompound()) getConstituent
-        true
-      } else {
-        false
+
+    def build: Analyzer = {
+      val baseAnalyzer = charFilterConstructor match {
+        case Some(charFilterConstructor) => new AnalyzerWithCharFilter(analyzer, charFilterConstructor)
+        case None => analyzer
+      }
+      val filters = factories.reverse
+      new Analyzer {
+        def tokenStream(fieldName: String, reader: Reader): TokenStream = {
+          filters.foldLeft(baseAnalyzer.tokenStream(fieldName, reader)){ (tokenStream, filter) => filter(tokenStream) }
+        }
       }
     }
   }
-
-  private def getConstituent {
-    var i = tokenStart
-    while (i < bufLen && buffer(i) != '.') i += 1
-    termAttr.copyBuffer(buffer, tokenStart, i - tokenStart)
-    tokenStart = (i + 1) // skip dot
-  }
-
-  private def findDotCompound(): Boolean = {
-    tokenStart = 0
-    bufLen = 0
-    val src = termAttr.buffer
-    val len = termAttr.length
-
-    var dotCnt = 0
-    var i = 0
-    while (i < len) {
-      if (src(i) == '.') dotCnt += 1
-      i += 1
-    }
-
-    if (dotCnt == 0 || dotCnt == len/2) {
-      false // regular word or acronym
-    } else {
-      if (tokenType(typeAttr) == alphanum) {
-        i = 0
-        while (i < len && src(i) != '.') i += 1
-
-        if (buffer.length < src.length) buffer = new Array[Char](src.length) // resize buffer
-        Array.copy(src, 0, buffer, 0, len)
-        bufLen = len
-        true  // something like a file name
-      } else {
-        false // probably a number
-      }
-    }
-  }
 }
 
-object ApostropheFilter extends TokenFilterFactory {
-  def apply(tokenStream: TokenStream): TokenStream = new ApostropheFilter(tokenStream)
-}
-class ApostropheFilter(tokenStream: TokenStream) extends TokenFilter(tokenStream) {
-  val termAttr = addAttribute(classOf[CharTermAttribute])
-  val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
-  val typeAttr = tokenStream.getAttribute(classOf[TypeAttribute]).asInstanceOf[TypeAttributeImpl]
-  val tokenType = new TypeAttributeAccessor
-
-  var tokenStart = 0
-  var buffer = Array.empty[Char]
-  var bufLen = 0
-
-  val alphanum = "<ALPHANUM>"
-
-  override def incrementToken() = {
-    if (bufLen - tokenStart > 0) { // has more chars in buffer
-      getConstituent
-      posIncrAttr.setPositionIncrement(0) // at the same position
-      true
-    }
-    else {
-      if (tokenStream.incrementToken) {
-        findApostrophe()
-        true
-      } else {
-        false
-      }
-    }
-  }
-
-  private def getConstituent {
-    var i = tokenStart
-    while (i < bufLen && buffer(i) != '\'') i += 1
-    termAttr.copyBuffer(buffer, tokenStart, i - tokenStart)
-    tokenStart = (i + 1) // skip apostrophe
-  }
-
-  private def findApostrophe() = {
-    tokenStart = 0
-    bufLen = 0
-    val src = termAttr.buffer
-    val len = termAttr.length
-
-    var dotCnt = 0
-    var i = 0
-    while (i < len && src(i) != '\'') i += 1
-
-    if (i < len && tokenType(typeAttr) == alphanum) {
-      if (buffer.length < src.length) buffer = new Array[Char](src.length) // resize buffer
-      Array.copy(src, 0, buffer, 0, len)
-      bufLen = len
-    }
-  }
-}
-
-
-class TypeAttributeAccessor extends TypeAttributeImpl {
-  var tokenType: String = TypeAttribute.DEFAULT_TYPE
-  override def setType(tt: String) { tokenType = tt }
-
-  def apply(ta: TypeAttributeImpl) = {
-    ta.copyTo(this)
-    tokenType
-  }
-}

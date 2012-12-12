@@ -38,9 +38,7 @@ class AdminDashboardControllerTest extends SpecificationWithJUnit {
 
   "AdminDashboardController" should {
     "get users by date as JSON" in {
-      running(new EmptyApplication().withFakeClock()) {
-        new SecureSocialUserService(current).onStart()
-        UserService.delegate.isDefined === true
+      running(new EmptyApplication().withFakeSecureSocialUserService()) {
 
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
@@ -71,7 +69,7 @@ class AdminDashboardControllerTest extends SpecificationWithJUnit {
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         charset(result) must beSome("utf-8")
-        Json.parse(contentAsString(result)) === Json.parse("{\"day0\":\"2012-05-28\",\"userCounts\":[1,0,2,0]}")
+        Json.parse(contentAsString(result)) === Json.parse("{\"day0\":\"2012-05-28\",\"counts\":[1,0,2,0]}")
       }
     }
   }

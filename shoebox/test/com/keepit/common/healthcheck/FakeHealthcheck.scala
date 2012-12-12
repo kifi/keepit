@@ -9,7 +9,7 @@ import scala.collection.mutable.MutableList
 import akka.dispatch.Promise
 import akka.dispatch.ExecutionContext
 
-case class FakeHealthcheck() extends Healthcheck {
+case class FakeHealthcheck() extends HealthcheckPlugin {
 
   val errors = MutableList[HealthcheckError]()
 
@@ -17,6 +17,10 @@ case class FakeHealthcheck() extends Healthcheck {
     def execute(runnable: Runnable): Unit = {}
     def reportFailure(t: Throwable): Unit = {}
   })
+
+  def errorCount(): Int = errors.size
+
+  def resetErrorCount(): Unit = errors.clear
 
   def addError(error: HealthcheckError): HealthcheckError = {
     errors += error

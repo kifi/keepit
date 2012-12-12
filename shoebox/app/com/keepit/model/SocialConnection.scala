@@ -88,21 +88,35 @@ object SocialConnection extends Logging {
 
   def getUserConnectionsCount(id: Id[User])(implicit conn: Connection): Long = {
     val suis = SocialUserInfo.getByUser(id).map(_.id.get)
-    (SocialConnectionEntity AS "sc").map { sc =>
-      SELECT (COUNT(sc.id)) FROM sc WHERE ( ((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis)))
+    if(!suis.isEmpty) {
+      (SocialConnectionEntity AS "sc").map { sc =>
+        SELECT (COUNT(sc.id)) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) 
           AND (sc.state EQ SocialConnection.States.ACTIVE) ) unique
-    } get
+      } get
+    } else {
+      0L
+    }
   }
 
   def getUserConnections(id: Id[User])(implicit conn: Connection): Seq[SocialUserInfo] = {
     val suis = SocialUserInfo.getByUser(id).map(_.id.get)
-    val conns = (SocialConnectionEntity AS "sc").map { sc =>
-      SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) AND (sc.state EQ SocialConnection.States.ACTIVE)  ) list
-    } map (_.view) map (s => if(suis.contains(s.socialUser1)) s.socialUser2 else s.socialUser1 ) toList
+    if(!suis.isEmpty) {
+      val conns = (SocialConnectionEntity AS "sc").map { sc =>
+        SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) AND (sc.state EQ SocialConnection.States.ACTIVE)) list
+      } map (_.view) map (s => if(suis.contains(s.socialUser1)) s.socialUser2 else s.socialUser1 ) toList
 
-    (SocialUserInfoEntity AS "sui").map { sui =>
-      SELECT (sui.*) FROM sui WHERE (sui.id IN(conns)) list
-    } map (_.view)
+      if(!conns.isEmpty) {
+        (SocialUserInfoEntity AS "sui").map { sui =>
+          SELECT (sui.*) FROM sui WHERE (sui.id IN(conns)) list
+        } map (_.view)
+      }
+      else  {
+        Nil
+      }
+    }
+    else {
+      Nil
+    }
   }
 
   def getSocialUserConnections(id: Id[SocialUserInfo])(implicit conn: Connection): Seq[SocialUserInfo] = {
@@ -111,9 +125,14 @@ object SocialConnection extends Logging {
       SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 EQ id) OR (sc.socialUser2 EQ id)) AND (sc.state EQ SocialConnection.States.ACTIVE) ) list
     } map (_.view) map (s => if(id == s.socialUser1) s.socialUser2 else s.socialUser1 ) toList
 
-    (SocialUserInfoEntity AS "sui").map { sui =>
-      SELECT (sui.*) FROM sui WHERE (sui.id IN(conns)) list
-    } map (_.view)
+    if(!conns.isEmpty) {
+      (SocialUserInfoEntity AS "sui").map { sui =>
+        SELECT (sui.*) FROM sui WHERE (sui.id IN(conns)) list
+      } map (_.view)
+    }
+    else {
+      Nil
+    }
 
   }
 

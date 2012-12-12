@@ -61,19 +61,17 @@ object SearchController extends FortyTwoController {
     val searchRes = searcher.search(term, maxHits, lastUUID)
     val realResults = toPersonalSearchResultPacket(userId, searchRes)
 
-    val version = kifiVersion.getOrElse(KifiVersion())
-    val res = version match {
-      case v: KifiVersion if v >= KifiVersion(2,0,1) => realResults
-      case _ =>
-        val upgradeResult = PersonalSearchResult(
-          hit = PersonalSearchHit(id = Id[NormalizedURI](0), externalId = ExternalId[NormalizedURI](), title = Some("★★★ KiFi has updated! Please reload your plugin. ★★★"), url = "http://keepitfindit.com/upgrade"),
-          count = 0,
-          isMyBookmark = false,
-          isPrivate = false,
-          users = Nil,
-          score = 42f
-        )
-        realResults.copy(hits = Seq(upgradeResult) ++ realResults.hits)
+    val res = if (kifiVersion.getOrElse(KifiVersion(0,0,0)) >= KifiVersion(2,0,5)) {
+      realResults
+    } else {
+      val upgradeResult = PersonalSearchResult(
+        hit = PersonalSearchHit(id = Id[NormalizedURI](0), externalId = ExternalId[NormalizedURI](), title = Some("★★★ KiFi has updated! Please reload your plugin. ★★★"), url = "http://keepitfindit.com/upgrade"),
+        count = 0,
+        isMyBookmark = false,
+        isPrivate = false,
+        users = Nil,
+        score = 42f)
+      realResults.copy(hits = Seq(upgradeResult) ++ realResults.hits)
     }
 
     reportArticleSearchResult(searchRes)

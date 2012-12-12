@@ -18,6 +18,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   // get config params
   val minMyBookmarks = config.asInt("minMyBookmarks")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
+  val personalTitleBoost = config.asFloat("personalTitleBoost")
   val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   val percentMatch = config.asFloat("percentMatch")
@@ -42,15 +43,15 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
   val friendlyUris = friendIds.foldLeft(myUris){ (s, f) => s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet }
 
-  def searchBookmarkTitle(queryString: String) = {
-    val bookmarkTitleSearchParser = uriGraph.getQueryParser
+  def searchBookmarkTitle(queryString: String)(implicit lang: Lang) = {
+    val bookmarkTitleSearchParser = uriGraph.getQueryParser(lang)
     bookmarkTitleSearchParser.setPercentMatch(percentMatch)
     bookmarkTitleSearchParser.parseQuery(queryString).map{ bookmarkQuery =>
       uriGraphSearcher.search(userId, bookmarkQuery, percentMatch)
     }.getOrElse(Map.empty[Long, Float])
   }
 
-  def searchText(queryString: String, maxTextHitsPerCategory: Int) = {
+  def searchText(queryString: String, maxTextHitsPerCategory: Int)(implicit lang: Lang) = {
     var bookmarkTitleHits = searchBookmarkTitle(queryString)
 
     val mapper = articleSearcher.idMapper
@@ -58,7 +59,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
-    val articleParser = articleIndexer.getQueryParser(proximityBoost, semanticBoost)
+    val articleParser = articleIndexer.getQueryParser(lang, proximityBoost, semanticBoost)
     articleParser.setPercentMatch(percentMatch)
     articleParser.parseQuery(queryString).map{ articleQuery =>
       articleSearcher.doSearch(articleQuery){ scorer =>
@@ -70,7 +71,7 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
             if (friendlyUris.contains(id)) {
               if (myUris.contains(id)) {
                 // blend with personal bookmark title score
-                val blendedScore = score + bookmarkTitleHits.getOrElse(id, 0.0f)
+                val blendedScore = max(score, bookmarkTitleHits.getOrElse(id, 0.0f))
                 bookmarkTitleHits -= id
                 myHits.insert(id, blendedScore, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
               } else {
@@ -85,12 +86,14 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
       }
     }
     bookmarkTitleHits.foreach{ case (id, score) =>
-      if (!filterOut.contains(id)) myHits.insert(id, score, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
+      // boost scores to compensate missing article match
+      if (!filterOut.contains(id)) myHits.insert(id, score * personalTitleBoost, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
     }
     (myHits, friendsHits, othersHits)
   }
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]]): ArticleSearchResult = {
+    implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
     val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5)
 

@@ -52,8 +52,6 @@ class AppScopeTest extends SpecificationWithJUnit {
       val app = FakeApplication()
       val scope = new AppScope
 
-      scope.onStop(app) must throwA[Exception]
-
       scope.onStart(app) // ok
 
       scope.onStart(app) must throwA[Exception]

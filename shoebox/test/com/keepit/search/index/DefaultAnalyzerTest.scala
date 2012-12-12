@@ -1,5 +1,6 @@
 package com.keepit.search.index
 
+import com.keepit.search.Lang
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
@@ -21,13 +22,13 @@ class DefaultAnalyzerTest extends SpecificationWithJUnit {
 
   implicit def toReader(str: String): Reader = new StringReader(str)
   val analyzer = DefaultAnalyzer.forIndexing
+  val analyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer.get
 
   "DefaultAnalyzer" should {
     "tokenize a string nicely" in {
       toTokenList(analyzer.tokenStream("b", "DefaultAnalyzer should tokenize a string nicely")) ===
         List(Token("<ALPHANUM>", "defaultanalyzer", 1),
-             Token("<ALPHANUM>", "should", 1),
-             Token("<ALPHANUM>", "tokenize", 1),
+             Token("<ALPHANUM>", "tokenize", 2),
              Token("<ALPHANUM>", "string", 2),
              Token("<ALPHANUM>", "nicely", 1))
     }
@@ -56,27 +57,25 @@ class DefaultAnalyzerTest extends SpecificationWithJUnit {
       toTokenList(analyzer.tokenStream("b", "1.2.3")) === List(Token("<NUM>", "1.2.3", 1))
     }
 
-    "tokenize a word with apostrophe and place the original and constituents at the same position in indexing" in {
-      toTokenList(analyzer.tokenStream("b", "O'Reilly's books you're interested")) ===
-        List(Token("<ALPHANUM>", "o'reilly's", 1),
-             Token("<ALPHANUM>", "o", 0),
-             Token("<ALPHANUM>", "reilly", 0),
-             Token("<ALPHANUM>", "s", 0),
-             Token("<ALPHANUM>", "books", 1),
-             Token("<ALPHANUM>", "you're", 1),
-             Token("<ALPHANUM>", "you", 0),
-             Token("<ALPHANUM>", "re", 0),
-             Token("<ALPHANUM>", "interested", 1))
+    "tokenize a word with stemming" in {
+      toTokenList(analyzerWithStemmer.tokenStream("b", "japanese boots O'Reilly's books")) ===
+        List(Token("<ALPHANUM>", "japan", 1),
+             Token("<ALPHANUM>", "boot", 1),
+             Token("<ALPHANUM>", "o'reilly", 1),
+             Token("<ALPHANUM>", "book", 1))
     }
 
-    "tokenize a word with apostrophe as one work in query parsing" in {
-      toTokenList(DefaultAnalyzer.forParsing.tokenStream("b", "O'Reilly's books you're interested")) ===
+    "tokenize a word with apostrophe as one word in query parsing" in {
+      toTokenList(DefaultAnalyzer.forParsing.tokenStream("b", "O'Reilly's books")) ===
         List(Token("<ALPHANUM>", "o'reilly's", 1),
-             Token("<ALPHANUM>", "books", 1),
-             Token("<ALPHANUM>", "you're", 1),
-             Token("<ALPHANUM>", "interested", 1))
+             Token("<ALPHANUM>", "books", 1))
     }
 
+    "tokenize a word with apostrophe as one word in query parsing (the possesive should be removed)" in {
+      toTokenList(DefaultAnalyzer.forParsingWithStemmer.get.tokenStream("b", "O'Reilly's books")) ===
+        List(Token("<ALPHANUM>", "o'reilly", 1),
+             Token("<ALPHANUM>", "book", 1))
+    }
   }
 
   def toTokenList(ts: TokenStream) = {
