@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="com.sleepycat_je_4.0.92">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/opt/play-2.0.4/repository/cache/com.sleepycat/je/jars/je-4.0.92.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

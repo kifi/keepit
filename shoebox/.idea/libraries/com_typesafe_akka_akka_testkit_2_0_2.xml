@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="com.typesafe.akka_akka-testkit_2.0.2">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/opt/play-2.0.4/repository/cache/com.typesafe.akka/akka-testkit/jars/akka-testkit-2.0.2.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

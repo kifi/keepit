@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="sse-guice-0.4-SNAPSHOT.jar">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/sse-guice-0.4-SNAPSHOT.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/sse-guice-0.4-SNAPSHOT-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
