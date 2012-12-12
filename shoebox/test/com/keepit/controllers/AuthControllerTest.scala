@@ -68,7 +68,7 @@ class AuthControllerTest extends SpecificationWithJUnit {
         val whoisResult1 = routeAndCall(whoisRequest1).get
         (Json.parse(contentAsString(whoisResult1)) \ "externalUserId").as[String] === admin.externalId.toString
 
-        val impersonateRequest = FakeRequest("POST", "/admin/impersonate/user/%s".format(impersonate.id.get.toString)).
+        val impersonateRequest = FakeRequest("POST", "/admin/user/%s/impersonate".format(impersonate.id.get.toString)).
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook", "userId" -> admin.id.get.toString)
         val impersonateResultFail = routeAndCall(impersonateRequest).get
         status(impersonateResultFail) must equalTo(401)
