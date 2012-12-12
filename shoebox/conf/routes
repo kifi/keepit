@@ -72,7 +72,7 @@ GET     /admin/user/:id             com.keepit.controllers.UserController.userVi
 POST    /admin/user/:id/experiment/add/:exp  com.keepit.controllers.UserController.addExperiment(id: Id[User], exp: String)
 POST    /admin/user/:id/update      com.keepit.controllers.UserController.updateUser(id: Id[User])
 GET     /admin/user/:id/social_users/refresh com.keepit.controllers.UserController.refreshAllSocialInfo(id: Id[User])
-POST    /admin/impersonate/user/:id com.keepit.controllers.AuthController.impersonate(id: Id[User])
+POST    /admin/user/:id/impersonate com.keepit.controllers.AuthController.impersonate(id: Id[User])
 POST    /admin/unimpersonate        com.keepit.controllers.AuthController.unimpersonate()
 
 GET     /admin/social_users/:page   com.keepit.controllers.SocialUserController.socialUsersView(page: Int)
