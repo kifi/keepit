@@ -40,7 +40,7 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
     val query = new BooleanQueryWithPercentMatch(disableCoord)
     query.setPercentMatch(percentMatch)
 
-    val (siteClauses, otherClauses) = clauses.partition{ clause => clause.getQuery.isInstanceOf[SiteQuery] }
+    val (siteClauses, otherClauses) = clauses.partition{ clause => clause.getQuery.isInstanceOf[SiteQuery] && !clause.isProhibited }
     otherClauses.foreach{ clause => query.add(clause) }
 
     if (siteClauses.isEmpty) {
