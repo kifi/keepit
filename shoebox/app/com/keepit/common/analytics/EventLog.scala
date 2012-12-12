@@ -49,7 +49,7 @@ trait EventMetadata {
 case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: ExternalId[KifiInstallation], userExperiments: Seq[State[UserExperiment.ExperimentType]], metaData: JsValue, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsValue, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 
-case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime = currentDateTime, serverVersion: String = currentService + ":" + currentVersion) {
+case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime, serverVersion: String = currentService + ":" + currentVersion) {
 
   def persistToS3() = {
     inject[S3EventStore] += (externalId -> this)
@@ -67,14 +67,14 @@ object Event {
 }
 
 object Events {
-  def userEvent(eventFamily: EventFamily, eventName: String, userId: Id[User], installId: ExternalId[KifiInstallation], metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit conn: Connection) = {
+  def userEvent(eventFamily: EventFamily, eventName: String, userId: Id[User], installId: ExternalId[KifiInstallation], metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime)(implicit conn: Connection) = {
     val user = User.get(userId)
     val experiments = UserExperiment.getByUser(userId) map (_.experimentType)
 
-    Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents))
+    Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = createdAt)
   }
-  def serverEvent(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit conn: Connection) = {
-    Event(metaData = ServerEventMetadata(eventFamily, eventName, metaData, prevEvents))
+  def serverEvent(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime)(implicit conn: Connection) = {
+    Event(metaData = ServerEventMetadata(eventFamily, eventName, metaData, prevEvents), createdAt = createdAt)
   }
 }
 

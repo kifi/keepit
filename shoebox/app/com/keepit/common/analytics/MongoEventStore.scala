@@ -14,10 +14,6 @@ import com.keepit.model.User
 import play.api.libs.json._
 import play.api.libs.json.Json._
 
-trait MongoEventStore {
-  def save(event: Event): Unit
-  def save(eventFamily: EventFamily, dbObject: DBObject): Unit
-}
 
 case class MongoSelector(eventFamily: EventFamily) {
   private val builder = MongoDBObject.newBuilder
@@ -90,6 +86,11 @@ object MongoReduceFunc {
   val AGGREGATE = MongoReduceFunc("""function(obj, prev) {prev.count++;}""", DBObject("count" -> 0))
 }
 
+trait MongoEventStore {
+  def save(event: Event): Unit
+  def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoMapFunc): Seq[JsObject]
+}
+
 class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Logging {
   RegisterJodaTimeConversionHelpers()
   implicit def MongoSelectorToDBObject(m: MongoSelector): DBObject = m.build
@@ -104,19 +105,10 @@ class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Log
     log.info(result)
   }
 
-  def queryByEventName(eventFamily: EventFamily, eventName: String): Stream[Event] = {
-    val q = MongoDBObject("metaData.eventName" -> eventName)
-    cursorToEvent(query(eventFamily, q)) toStream
-  }
-
-  def countByEventName(eventFamily: EventFamily, eventName: String): Int = {
-    val q = MongoDBObject("metaData.eventName" -> eventName)
-    query(eventFamily, q).count
-  }
-
-  def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoMapFunc) = {
-    // Casbah doesn't provide a way to use MongoDB's $keyf, to group based on a meta-key,
-    // so we're forced to use the Java API
+  def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoMapFunc): Seq[JsObject] = {
+    // Casbah doesn't provide a way to use MongoDB's $keyf to group based on a meta-key,
+    // so we're forced to use the (ugly) Java API.
+    // https://jira.mongodb.org/browse/JAVA-99
 
     val groupCmd = new BasicDBObject("ns", eventFamily.name)
     groupCmd.append("$keyf", keyMap.js)
@@ -124,25 +116,33 @@ class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Log
     groupCmd.append("$reduce", MongoReduceFunc.AGGREGATE.js)
     groupCmd.append("initial", MongoReduceFunc.AGGREGATE.initial)
     val cmd = new BasicDBObject("group",groupCmd)
-    Json.parse(mongoDB.command(cmd).toString) \ "retval" match {
-      case JsArray(s) => s
-      case s: JsValue => throw new Exception("Invalid response from Mongodb: %s".format(s))
+    val result = mongoDB.command(cmd)
+    Json.parse(result.toString) \ "retval" match {
+      case JsArray(s) => s map (_.as[JsObject])
+      case s: JsValue => throw new Exception("Invalid response from Mongodb: %s\nResponse: %s".format(s, result))
     }
   }
 
-  def find(mongoSelector: MongoSelector) = {
+  def find(mongoSelector: MongoSelector): MongoCursor = {
     val coll = mongoDB(mongoSelector.eventFamily.name)
     coll.find(mongoSelector)
   }
 
-  private def query(eventFamily: EventFamily, q: DBObject): MongoCursor = {
-    val coll = mongoDB(eventFamily.name)
-    coll.find(q)
+  private def cursorToEventOpt(cur: MongoCursor): Iterator[Option[Event]] = {
+    // Since we may have schema breaking records, fail gracefully when events fail to serialize from Mongo, and log
+    // Leaving as an Option to keep the cursor lazy
+    cur.map( result =>
+      try {
+        Some(dbObjectToEvent(result))
+      } catch {
+        case ex: Throwable =>
+          log.warn("Failed to serialize result to Event from MongoDB: %s".format(ex.getMessage))
+          None
+      }
+    )
   }
 
-  private def cursorToEvent(cur: MongoCursor): Iterator[Event] = {
-    cur.map(EventSerializer.eventSerializer.mongoReads(_))
-  }
+  private def dbObjectToEvent(o: DBObject) = EventSerializer.eventSerializer.mongoReads(o)
 }
 
 class FakeMongoEventStoreImpl() extends MongoEventStore with Logging {
@@ -152,5 +152,9 @@ class FakeMongoEventStoreImpl() extends MongoEventStore with Logging {
 
   def save(eventFamily: EventFamily, dbObject: DBObject): Unit = {
     log.info("Saving to collection %s: %s".format(eventFamily.name, dbObject))
+  }
+
+  def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoMapFunc): Seq[JsObject] = {
+    Seq[JsObject]()
   }
 }

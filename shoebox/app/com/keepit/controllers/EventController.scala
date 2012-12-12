@@ -29,34 +29,43 @@ import com.keepit.common.controller.FortyTwoController
 import play.api.libs.json._
 import com.keepit.common.analytics._
 import com.keepit.model._
-
+import com.keepit.common.time._
 
 
 object EventController extends FortyTwoController {
 
   def logUserEvents = AuthenticatedJsonAction { request =>
+
     val params = Json.parse(request.body.asFormUrlEncoded.get.get("payload").get.head)
     val userId = request.userId
+    val version = (params \ "version").as[Int]
+
+    version match {
+      case 1 => createEventsFromPayload(params, userId)
+      case i => throw new Exception("Unknown events version: %s".format(i))
+    }
+
+    Ok(JsObject(Seq("stored" -> JsString("ok"))))
+  }
+
+  private def createEventsFromPayload(params: JsValue, userId: Id[User]) = {
+    val logRecievedTime = currentDateTime
 
     val events = (params \ "events") match {
-      case JsArray(ev) => ev map { event =>
-        event match {
-          case o: JsObject => o
-          case _: JsValue => throw new Exception()
-        }
-      }
+      case JsArray(ev) => ev map (  _.as[JsObject] )
       case _: JsValue => throw new Exception()
     }
+    val logClientTime = (params \ "time").as[Int]
 
     CX.withConnection { implicit conn =>
       events map { event =>
+        val eventTimeAgo = math.max(logClientTime - (event \ "time").as[Int],0)
+        val eventTime = logRecievedTime.minusMillis(eventTimeAgo)
+
         val eventFamily = EventFamilies((event \ "eventFamily").as[String])
         val eventName = (event \ "eventName").as[String]
         val installId = ExternalId[KifiInstallation]((event \ "installId").as[String])
-        val metaData = (event \ "metaData") match {
-          case s: JsObject => s
-          case s: JsValue => throw new Exception()
-        }
+        val metaData = (event \ "metaData").as[JsObject]
         val prevEvents = (event \ "prevEvents") match {
           case JsArray(s) =>
             s map { ext =>
@@ -67,15 +76,25 @@ object EventController extends FortyTwoController {
             }
           case _: JsValue => throw new Exception()
         }
-        Events.userEvent(eventFamily, eventName, userId, installId, metaData, prevEvents).persist
+        val newEvent = Events.userEvent(eventFamily, eventName, userId, installId, metaData, prevEvents, eventTime).persist
+        log.info("Created new event: %s".format(newEvent))
+        newEvent
       }
     }
-
-    Ok(JsObject(Seq("stored" -> JsString("ok"))))
   }
-  def logEvent() = AuthenticatedJsonAction { request =>
 
-    Ok("").as(ContentTypes.JSON)
+  def viewEvents() = AdminHtmlAction { request =>
+
+    val selector = MongoSelector(EventFamilies.SLIDER)
+                     .withDateRange(currentDateTime.minusHours(24), currentDateTime)
+                     .withEventName("test")
+                     .build
+    val store = inject[MongoEventStore]
+
+    val result = store.countGroup(EventFamilies.SLIDER, selector, MongoMapFunc.DATE_BY_HOUR)
+
+
+    Ok(JsArray(result)).as(ContentTypes.JSON)
   }
 
 
