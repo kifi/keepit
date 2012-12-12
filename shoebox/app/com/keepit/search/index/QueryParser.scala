@@ -4,14 +4,13 @@ import com.keepit.search.query.BooleanQueryWithPercentMatch
 import com.keepit.search.query.ProximityQuery
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.SiteQuery
+import com.keepit.search.query.ConditionalQuery
 import org.apache.lucene.queryParser.{QueryParser => LuceneQueryParser}
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.search.TermQuery
-import org.apache.lucene.search.FilteredQuery
-import org.apache.lucene.search.QueryWrapperFilter
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.Version
@@ -48,11 +47,11 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
     } else {
       val siteQuery = {
         if (siteClauses.size == 1) siteClauses(0).getQuery
-        else siteClauses.foldLeft(new BooleanQuery(disableCoord)){ (bq, clause) => bq.add(clause.getQuery, Occur.MUST); bq }
+        else siteClauses.foldLeft(new BooleanQuery(true)){ (bq, clause) => bq.add(clause.getQuery, Occur.MUST); bq }
       }
 
       if (otherClauses.isEmpty) siteQuery
-      else new FilteredQuery(query, new QueryWrapperFilter(siteQuery))
+      else new ConditionalQuery(query, siteQuery)
     }
   }
 
