@@ -206,6 +206,15 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
 
       res = indexer.getArticleSearcher.search(parser.parseQuery("site:keepit.com").get)
       res.size === 1
+
+      res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs site:com -site:keepit.org").get)
+      res.size === 2
+
+      res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs site:com -site:keepit.com").get)
+      res.size === 1
+
+      res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs -site:keepit.org").get)
+      res.size === 2
     }
   }
 }
