@@ -30,11 +30,13 @@ GET     /users/slider/updates       com.keepit.controllers.CommentController.get
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
 GET     /users/friends              com.keepit.controllers.UserController.getSocialConnections()
 
+
 GET     /search                     com.keepit.controllers.SearchController.search(term: String, maxHits:Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
 
 POST    /kifi/start                 com.keepit.controllers.AuthController.start
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
 GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
+GET     /whois                      com.keepit.controllers.AuthController.whois
 
 POST    /chat/:recipientId          com.keepit.controllers.ChatController.chat(recipientId: ExternalId[User])
 
@@ -70,6 +72,8 @@ GET     /admin/user/:id             com.keepit.controllers.UserController.userVi
 POST    /admin/user/:id/experiment/add/:exp  com.keepit.controllers.UserController.addExperiment(id: Id[User], exp: String)
 POST    /admin/user/:id/update      com.keepit.controllers.UserController.updateUser(id: Id[User])
 GET     /admin/user/:id/social_users/refresh com.keepit.controllers.UserController.refreshAllSocialInfo(id: Id[User])
+POST    /admin/impersonate/user/:id com.keepit.controllers.AuthController.impersonate(id: Id[User])
+POST    /admin/unimpersonate        com.keepit.controllers.AuthController.unimpersonate()
 
 GET     /admin/social_users/:page   com.keepit.controllers.SocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      com.keepit.controllers.SocialUserController.socialUserView(id: Id[SocialUserInfo])
