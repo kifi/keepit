@@ -34,8 +34,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
 
   override def onBadRequest (request: RequestHeader, error: String): Result = {
     val errorId = ExternalId[Exception]()
-    log.warn("bad request %s: %s on %s".format(errorId, error, request.path))
-    InternalServerError("BAD REQUEST: %s: %s".format(errorId, error))
+    val msg = "BAD REQUEST: %s: [%s] on %s:%s query: %s".format(errorId, error, request.method, request.path, request.queryString.mkString("::"))
+    log.warn(msg)
+    InternalServerError(msg)
   }
 
   override def onHandlerNotFound (request: RequestHeader): Result = {
