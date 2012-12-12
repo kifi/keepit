@@ -27,8 +27,18 @@ import com.keepit.common.social._
 import views.html.defaultpages.unauthorized
 
 object FortyTwoController {
-  private val FORTYTWO_USER_ID = "fortytwo_user_id"
-  val FORTYTWO_IMPERSONATED_ID = "fortytwo_impersonated_user_id"
+  val FORTYTWO_USER_ID = "fortytwo_user_id"
+
+  object ImpersonateCookie extends CookieBaker[Option[ExternalId[User]]] {
+    val COOKIE_NAME = "fortytwo_impersonated_user_id"
+    val emptyCookie = None
+    override val isSigned = true
+    override val secure = false
+    override val maxAge = -1
+    override val httpOnly = true
+    def deserialize(data: Map[String, String]) = data.get(COOKIE_NAME).map(ExternalId[User](_))
+    def serialize(data: Option[ExternalId[User]]) = data.map(id => Map(COOKIE_NAME -> id.id.toString())).getOrElse(Map.empty)
+  }
 }
 
 trait FortyTwoController extends Controller with Logging with SecureSocial {
@@ -71,19 +81,21 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
   private[controller] def AuthenticatedAction[A](isApi: Boolean, action: AuthenticatedRequest => Result) = {
     SecuredAction(isApi, parse.anyContent) { implicit request =>
       val userIdOpt = request.session.get(FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
-      val impersonatedUserIdOpt = request.session.get(FORTYTWO_IMPERSONATED_ID).map{id => Id[User](id.toLong)}
+      val impersonatedUserIdOpt: Option[ExternalId[User]] = ImpersonateCookie.decodeFromCookie(request.cookies.get(ImpersonateCookie.COOKIE_NAME))
       val socialUser = request.user
       val (userId, experiments) = loadUserContext(userIdOpt, SocialId(socialUser.id.id))
       val newSession = session + (FORTYTWO_USER_ID -> userId.toString)
       impersonatedUserIdOpt match {
-        case Some(impUserId) =>
-          val isAdmin = experiments.find(e => e == UserExperiment.ExperimentTypes.ADMIN).isDefined
-          if (!isAdmin) throw new IllegalStateException("non admin user %s tries to impresonate to %s".format(userId, impUserId))
-          val (impExperiments, impSocialUser) = CX.withConnection { implicit conn =>
+        case Some(impExternalUserId) =>
+          val (impExperiments, impSocialUser, impUserId) = CX.withConnection { implicit conn =>
+            val impUserId = User.get(impExternalUserId).id.get
+            val isAdmin = experiments.find(e => e == UserExperiment.ExperimentTypes.ADMIN).isDefined
+            if (!isAdmin) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
             val impSocialUserInfo = SocialUserInfo.getByUser(impUserId).head
-            (getExperiments(impUserId), impSocialUserInfo.credentials.get)
+            (getExperiments(impUserId), impSocialUserInfo.credentials.get, impUserId)
           }
-          executeAction(action, impUserId, impSocialUser, impExperiments, newSession + (FORTYTWO_IMPERSONATED_ID -> impUserId.toString), request.request)
+          log.info("[IMPERSONATOR] admin user %s is impersonating user %s with request %s".format(userId, impSocialUser, request.request.path))
+          executeAction(action, impUserId, impSocialUser, impExperiments, newSession, request.request)
         case None =>
           executeAction(action, userId, socialUser, experiments, newSession, request.request)
       }

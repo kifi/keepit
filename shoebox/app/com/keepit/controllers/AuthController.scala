@@ -21,12 +21,14 @@ import play.api.i18n.Messages
 import securesocial.core._
 import play.api.{Play, Logger}
 import Play.current
+import play.api.mvc.{CookieBaker, Session}
 import play.api.data._
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.FortyTwoController._
 import com.keepit.common.db.{CX, ExternalId, Id}
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialId, SocialNetworks}
@@ -98,15 +100,22 @@ object AuthController extends FortyTwoController {
     Redirect(com.keepit.controllers.routes.HomeController.home())
   }
 
-  def unimpersonate = AdminJsonAction { request =>
-    Ok(JsObject(Seq("userId" -> JsString(request.userId.toString)))).withNewSession
+  def whois = AuthenticatedJsonAction { request =>
+    val user = CX.withConnection { implicit c =>
+      User.get(request.userId)
+    }
+    Ok(JsObject(Seq("externalUserId" -> JsString(user.externalId.toString))))
   }
 
-  def impersonate(userId: Id[User]) = AdminJsonAction { request =>
+  def unimpersonate = AdminJsonAction { request =>
+    Ok(JsObject(Seq("userId" -> JsString(request.userId.toString)))).discardingCookies(ImpersonateCookie.COOKIE_NAME)
+  }
+
+  def impersonate(id: Id[User]) = AdminJsonAction { request =>
     val user = CX.withConnection { implicit c =>
-      User.get(userId)
+      User.get(id)
     }
     log.info("impersonating user %s".format(user)) //todo(eishay) add event & email
-    Ok(JsObject(Seq("userId" -> JsString(userId.toString)))).withSession(FortyTwoController.FORTYTWO_IMPERSONATED_ID -> userId.toString)
+    Ok(JsObject(Seq("userId" -> JsString(id.toString)))).withCookies(ImpersonateCookie.encodeAsCookie(Some(user.externalId)))
   }
 }
