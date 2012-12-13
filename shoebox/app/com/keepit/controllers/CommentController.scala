@@ -229,10 +229,11 @@ object CommentController extends FortyTwoController {
         }
       case Comment.Permissions.MESSAGE =>
         CX.withConnection { implicit c =>
-          val sender = User.get(comment.userId)
+          val senderId = comment.userId
+          val sender = User.get(senderId)
           val uri = NormalizedURI.get(comment.uriId)
-          val recipients = Comment.getRecipients(comment.parent.getOrElse(comment.id.get))
-          for (userId <- recipients.map(_.userId.get).toSet - comment.userId) {
+          val participants = Comment.getParticipantsUserIds(comment)
+          for (userId <- participants - senderId) {
             val recipient = User.get(userId)
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {

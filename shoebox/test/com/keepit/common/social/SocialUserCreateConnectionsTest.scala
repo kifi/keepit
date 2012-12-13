@@ -54,6 +54,30 @@ class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
         connections.size === 199
       }
     }
+    
+    "disable non existing connecions" in {
+      running(new EmptyApplication().withFakeStore) {
+
+        val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay.json")).mkString)
+
+        inject[SocialUserImportFriends].importFriends(Seq(json1))
+
+        val socialUserInfo = CX.withConnection { implicit conn =>
+          SocialUserInfo(fullName = "Bob Smith", socialId = SocialId("bsmith"), networkType = SocialNetworks.FACEBOOK).withUser(User(firstName = "fn1", lastName = "ln1").save).save
+        }
+
+
+        val connections = inject[SocialUserCreateConnections].createConnections(socialUserInfo, Seq(json1))
+
+        connections.size === 199
+        
+        val json2 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
+
+        val connectionsAfter = inject[SocialUserCreateConnections].createConnections(socialUserInfo, Seq(json2))
+        connectionsAfter.size === 12
+      }
+    }
+    
   }
 
 

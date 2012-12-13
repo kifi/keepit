@@ -126,6 +126,8 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
       case _ => false
     }
   }
+
+  override def toString(s: String) = "%s>%f".format(super.toString(s), percentMatch)
 }
 
 object BooleanScorer {

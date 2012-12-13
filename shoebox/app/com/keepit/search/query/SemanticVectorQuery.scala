@@ -32,14 +32,7 @@ class SemanticVectorQuery(val terms: Set[Term]) extends Query {
 
   override def extractTerms(out: JSet[Term]): Unit = out.addAll(terms)
 
-  override def toString(s: String) = {
-    val buffer = new StringBuilder()
-    buffer.append("semantic vector (")
-    buffer.append(terms.mkString(","))
-    buffer.append(")")
-    buffer.append(ToStringUtils.boost(getBoost()))
-    buffer.toString
-  }
+  override def toString(s: String) = "semanticvector(%s)%s".format(terms.mkString(","),ToStringUtils.boost(getBoost()))
 
   override def equals(obj: Any): Boolean = obj match {
     case svq: SemanticVectorQuery => (terms == svq.terms && getBoost() == svq.getBoost())
