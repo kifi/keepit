@@ -1,19 +1,5 @@
-!function() {
+slider = function() {
   var config, following, isKept;
-
-  chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
-    if (request.type === "show_hover") {
-      if ($(".kifi_hover").length) {
-        slideOut();
-        return;
-      }
-      chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
-        config = response;
-        log("user config",response);
-        getUserInfo(showHover);
-      });
-    }
-  });
 
   $('<input id="editableFix" style="opacity:0;color:transparent;width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html')
 
@@ -34,23 +20,6 @@
         c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
     }
   });
-
-  function getUserInfo(callback) {
-    chrome.extension.sendRequest({"type": "get_user_info"}, function(user) {
-      callback(user);
-    });
-  }
-
-  function showHover(user) {
-    window.kifi_hover = true; // set global variable, so hover will not automatically slide out again.
-
-    if (!user || !user.keepit_external_id) {
-      log("No user info! Can't search.")
-      return;
-    }
-
-    showKeepItHover(user);
-  }
 
   var templateCache = {};
 
@@ -187,6 +156,7 @@
       });
   }
 
+  // TODO: inline this function into slider.show
   function showKeepItHover(user) {
     chrome.extension.sendRequest({type: "get_slider_info"}, function(o) {
       log(o);
@@ -982,25 +952,6 @@
     });
   }
 
-  key('command+shift+k, ctrl+shift+k', function(){
-    log('Opening kifi slider!');
-
-    var existingElements = $('.kifi_hover').length;
-    if (existingElements > 0) {
-      slideOut();
-      return;
-    }
-    chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
-      config = response;
-      log("user config",response);
-      getUserInfo(showHover);
-    });
-
-    key.setScope('kifi_open');
-
-    return false;
-  });
-
   function repositionScroll(resizeQuickly) {
     resizeCommentBodyView(resizeQuickly);
     $(".comment_body_view").prop("scrollTop", 99999);
@@ -1036,10 +987,27 @@
     resizeCommentBodyView();
   });
 
-  chrome.extension.sendRequest({"type": "get_conf"}, function(o) {
-    config = o;
-    log("config", config);
-    hasNewComments();
-  });
-
+  return {  // the slider API
+    show: function() {
+      var user;
+      if (!config) {
+        chrome.extension.sendRequest({"type": "get_conf"}, function(o) {
+          log("config:", o);
+          config = o;
+          slider.show();
+        });
+      } else if ((user = config.user) && user.keepit_external_id && user.facebook_id && user.name && user.avatar_url) {
+        showKeepItHover(user);
+        this.alreadyShown = true;
+      } else {
+        log("No user, can't show slider");
+      }
+    },
+    toggle: function() {
+      if (document.querySelector(".kifi_hover")) {
+        slideOut();
+      } else {
+        this.show();
+      }
+    }};
 }();

@@ -91,9 +91,6 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
       case "get_keeps":
         searchOnServer(request, sendResponse, tab);
         break;
-      case "get_user_info":
-        sendResponse(getConfigs().user);
-        break;
       case "add_bookmarks":
         getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
           addKeep(info, request, sendResponse, tab);
@@ -127,9 +124,6 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
       case "upload_all_bookmarks":
         uploadAllBookmarks();
         break;
-      case "check_hover_existed":
-        if (request.kifi_hover === false) { showSlider(tab.id); }
-        break;
       case "set_page_icon":
         setPageIcon(tab.id, request.is_kept);
         break;
@@ -138,9 +132,6 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
         break;
       case "get_slider_updates":
         $.get("http://" + getConfigs().server + "/users/slider/updates?url=" + encodeURIComponent(tab.url), sendResponse);
-        break;
-      case "open_slider":
-        showSlider(tab.id);
         break;
       case "log_event":
         logEvent(request.event);
@@ -428,14 +419,10 @@ function onPageLoad(request, sendResponse, tab) {
   });
 }
 
-function showSlider(tabId) {
-  log("[showSlider] tab ", tabId);
-  chrome.tabs.sendRequest(tabId, {type: "show_hover"});
-}
-
 // Kifi icon in location bar
 chrome.pageAction.onClicked.addListener(function(tab) {
-  showSlider(tab.id);
+  log("button clicked", tab);
+  chrome.tabs.sendRequest(tab.id, {type: "button_click"});
 });
 
 function checkWhetherKept(location, callback) {
