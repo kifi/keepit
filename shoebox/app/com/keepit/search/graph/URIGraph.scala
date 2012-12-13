@@ -25,18 +25,29 @@ import org.apache.lucene.util.Version
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.line.LineFieldBuilder
 import java.io.StringReader
+import com.keepit.search.index.DocUtil
+import com.keepit.search.index.FieldDecoder
 
 object URIGraph {
   val userTerm = new Term("usr", "")
   val uriTerm = new Term("uri", "")
+  val langTerm = new Term("title_lang", "")
   val titleTerm = new Term("title", "")
   val stemmedTerm = new Term("title_stemmed", "")
   val siteTerm = new Term("site", "")
 
+  val decoders = Map(
+    userTerm.field() -> DocUtil.URIListDecoder,
+    langTerm.field() -> DocUtil.LineFieldDecoder,
+    titleTerm.field() -> DocUtil.LineFieldDecoder,
+    stemmedTerm.field() -> DocUtil.LineFieldDecoder,
+    siteTerm.field() -> DocUtil.LineFieldDecoder
+  )
+
   def apply(indexDirectory: Directory): URIGraph = {
     val config = new IndexWriterConfig(Version.LUCENE_36, DefaultAnalyzer.forIndexing)
 
-    new URIGraphImpl(indexDirectory, config)
+    new URIGraphImpl(indexDirectory, config, decoders)
   }
 }
 
@@ -48,8 +59,8 @@ trait URIGraph {
   def close(): Unit
 }
 
-class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig)
-  extends Indexer[User](indexDirectory, indexWriterConfig) with URIGraph {
+class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, decoders: Map[String, FieldDecoder])
+  extends Indexer[User](indexDirectory, indexWriterConfig, decoders) with URIGraph {
 
   val commitBatchSize = 100
   val fetchSize = commitBatchSize * 3
@@ -114,6 +125,11 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
 
   def getURIGraphSearcher() = new URIGraphSearcher(searcher)
 
+  def buildIndexable(id: Id[User]) = {
+    val user = CX.withConnection{ implicit c => User.get(id) }
+    buildIndexable(user)
+  }
+
   def buildIndexable(user: User) = {
     val bookmarks = CX.withConnection { implicit c =>
         Bookmark.ofUser(user).filter{ b => b.state == Bookmark.States.ACTIVE }
@@ -129,8 +145,14 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       val uri = buildURIIdField(bookmarks)
 
       val uriList = new URIList(payload)
+      val langMap = buildLangMap(bookmarks, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
+      val langs = buildBookmarkTitleField(URIGraph.langTerm.field(), uriList, bookmarks){ (fieldName, text) =>
+        val lang = langMap.getOrElse(text, Lang("en"))
+        Some(new IteratorTokenStream(Some(lang.lang).iterator, (s: String) => s))
+      }
+
       val title = buildBookmarkTitleField(URIGraph.titleTerm.field(), uriList, bookmarks){ (fieldName, text) =>
-        val lang = LangDetector.detect(text, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
+        val lang = langMap.getOrElse(text, Lang("en"))
         val analyzer = DefaultAnalyzer.forIndexing(lang)
         Some(analyzer.tokenStream(fieldName, new StringReader(text)))
       }
@@ -138,7 +160,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       doc.add(uri)
       doc.add(title)
       val titleStemmed = buildBookmarkTitleField(URIGraph.stemmedTerm.field(), uriList, bookmarks){ (fieldName, text) =>
-        val lang = LangDetector.detect(text, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
+        val lang = langMap.getOrElse(text, Lang("en"))
         DefaultAnalyzer.forIndexingWithStemmer(lang).map{ analyzer =>
           analyzer.tokenStream(fieldName, new StringReader(text))
         }
@@ -156,6 +178,10 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       val fld = buildIteratorField(URIGraph.uriTerm.field(), bookmarks.iterator.filter(bm => !bm.isPrivate)){ bm => bm.uriId.toString }
       fld.setOmitNorms(true)
       fld
+    }
+
+    def buildLangMap(bookmarks: Seq[Bookmark], preferedLang: Lang) = {
+      bookmarks.foldLeft(Map.empty[String,Lang]){ (m, b) => m + (b.title -> LangDetector.detect(b.title, preferedLang)) }
     }
 
     def buildBookmarkTitleField(fieldName: String, uriList: URIList, bookmarks: Seq[Bookmark])(tokenStreamFunc: (String, String)=>Option[TokenStream]) = {

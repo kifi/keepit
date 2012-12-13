@@ -37,7 +37,7 @@ object Indexer {
   }
 }
 
-abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) extends Logging {
+abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, fieldDecoders: Map[String, FieldDecoder] = Map.empty) extends Logging {
 
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
 
@@ -129,6 +129,19 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   def refreshSearcher() {
     val reader = IndexReader.openIfChanged(searcher.indexReader) // this may return null
     if (reader != null) searcher = new Searcher(reader, ArrayIdMapper(reader))
+  }
+
+  def buildIndexable(data: T): Indexable[T]
+  def buildIndexable(id: Id[T]): Indexable[T]
+
+  def getFieldDecoder(fieldName: String) = {
+    fieldDecoders.get(fieldName) match {
+      case Some(decoder) => decoder
+      case _ => fieldName match {
+        case Indexer.idPayloadFieldName => DocUtil.IdPayloadFieldDecoder
+        case _ => DocUtil.TextFieldDecoder
+      }
+    }
   }
 }
 
