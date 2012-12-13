@@ -23,6 +23,7 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.BooleanQuery
+import scala.collection.JavaConversions._
 
 @RunWith(classOf[JUnitRunner])
 class URIGraphTest extends SpecificationWithJUnit {
@@ -266,6 +267,31 @@ class URIGraphTest extends SpecificationWithJUnit {
 
         site = mkSiteQuery(".findit.org")
         searcher.search(users(0).id.get, site, 0.0f).keySet === Set(6L)
+      }
+    }
+
+    "be able to dump Lucene Document" in {
+      running(new EmptyApplication()) {
+        val ramDir = new RAMDirectory
+        val store = new FakeArticleStore()
+
+        val (user, uris, bookmarks) = CX.withConnection { implicit c =>
+          val user = User(firstName = "Agrajag", lastName = "").save
+          val uris = Array(
+            NormalizedURI(title = "title", url = "http://www.keepit.com/article1", state=SCRAPED).save,
+            NormalizedURI(title = "title", url = "http://www.keepit.com/article2", state=SCRAPED).save
+          )
+          val bookmarks = Array(
+            Bookmark(title = "line1 titles", url = uris(0).url,  uriId = uris(0).id.get, userId = user.id.get, source = BookmarkSource("test")).save,
+            Bookmark(title = "line2 titles", url = uris(1).url,  uriId = uris(1).id.get, userId = user.id.get, source = BookmarkSource("test")).save
+          )
+          (user, uris, bookmarks)
+        }
+        uris.foreach{ uri => store += (uri.id.get -> mkArticle(uri.id.get, "title", "content")) }
+
+        val indexer = URIGraph(ramDir).asInstanceOf[URIGraphImpl]
+        val doc = indexer.buildIndexable(user.id.get).buildDocument
+        doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
       }
     }
   }
