@@ -26,7 +26,6 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import com.keepit.common.social._
 import java.util.concurrent.TimeUnit
-import java.util.NoSuchElementException
 import java.sql.Connection
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
