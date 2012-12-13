@@ -149,14 +149,17 @@ object BookmarksController extends FortyTwoController {
     }
   }
 
-  def addBookmarks() = AuthenticatedJsonAction { request =>
-    val json = request.body.asJson.get
+  def addBookmarks() = JsonAction { request =>
+    val json = request.body
+    log.debug(json)
     val bookmarkSource = (json \ "bookmark_source").asOpt[String]
-    val user = CX.withConnection { implicit conn => User.get(request.userId) }
+    val userId = ExternalId[User]((json \ "user_info" \ "keepit_external_id").as[String])
+    val user = CX.withConnection { implicit conn => User.get(userId) }
     log.info("adding bookmarks of user %s".format(user))
     internBookmarks(json \ "bookmarks", user, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")))
     inject[URIGraphPlugin].update(user.id.get)
-    Ok
+    Ok(JsObject(("status" -> JsString("success")) ::
+        ("userId" -> JsString(user.id.map(id => id.id.toString()).getOrElse(""))) :: Nil))//todo: need to send external id
   }
 
   private def internBookmarks(value: JsValue, user: User, source: BookmarkSource): List[Bookmark] = value match {
