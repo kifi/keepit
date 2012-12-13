@@ -71,6 +71,11 @@ object Comment {
   def getRecipients(commentId: Id[Comment])(implicit conn: Connection) =
     CommentRecipient.getByComment(commentId)
 
+  def getParticipantsUserIds(comment: Comment)(implicit conn: Connection): Set[Id[User]] = {
+    val head = comment.parent map (Comment.get(_)) getOrElse(comment)
+    (CommentRecipient.getByComment(head.id.get) map (_.userId)).flatten.toSet + head.userId
+  }
+
   def getPublic(uriId: Id[NormalizedURI])(implicit conn: Connection): Seq[Comment] =
     selectPublic({c => c.*}, uriId).list.map(_.view)
 
