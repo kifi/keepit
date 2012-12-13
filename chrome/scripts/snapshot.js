@@ -12,14 +12,22 @@ var snapshot = {
   // Names in selectors must have all ASCII characters except [_a-zA-Z0-9-] escaped.
   // Non-ASCII characters do not require escaping.
   // http://www.w3.org/TR/selectors/#lex
-  requireEsc: /[\0-,.\/:-@[-^`{-~]/g,
+  escapeChar: /[\0-,.\/:-@[-^`{-~]/g,
 
-  // Escapes a selector name/token. Uses unicode escapes instead of simple backslash escapes
-  // so that selector parsing can be simpler.
+  // Escapes a selector name/token.
   escape: function(name) {
-    return name.replace(snapshot.requireEsc, function(ch) {
-      return "\\0000" + ch.charCodeAt(0).toString(16);
-    });
+    // The first character has extra restrictions. It must be escaped if not [_a-zA-Z].
+    var code = name.charCodeAt(0);
+    if (code == 45) // a leading hyphen (-) must be escaped, can be backslash-escaped
+      return "\\" + name.replace(snapshot.escapeChar, snapshot.escapeReplace);
+    if (code >= 48 && code <= 57) // a leading digit (0-9) must be unicode-escaped
+      return snapshot.escapeReplace(name[0]) + name.substring(1).replace(snapshot.escapeChar, snapshot.escapeReplace);
+    return name.replace(snapshot.escapeChar, snapshot.escapeReplace);
+  },
+
+  // Uses unicode escapes instead of simple backslash escapes to keep selector parsing simpler.
+  escapeReplace: function(ch) {
+    return "\\0000" + ch.charCodeAt(0).toString(16);
   },
 
   // Generates a detailed CSS selector for an element including, at a minimum, the tag name,
