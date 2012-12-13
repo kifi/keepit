@@ -123,14 +123,14 @@ class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Log
   }
 
   private def cursorToEventOpt(cur: MongoCursor): Iterator[Option[Event]] = {
-    // Since we may have schema breaking records, fail gracefully when events fail to serialize from Mongo, and log
+    // Since we may have schema-breaking records, fail gracefully when events fail to deserialize from Mongo, and log
     // Leaving as an Option to keep the cursor lazy
     cur.map( result =>
       try {
         Some(dbObjectToEvent(result))
       } catch {
         case ex: Throwable =>
-          log.warn("Failed to serialize result to Event from MongoDB: %s".format(ex.getMessage))
+          log.warn("Failed to deserialize Event from MongoDB: %s".format(ex.getMessage))
           None
       }
     )
