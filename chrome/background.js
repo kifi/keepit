@@ -61,7 +61,7 @@ var eventFamilies = ["slider","search","extension","account","notification"];
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if($.inArray(eventFamily, eventFamilies) == -1) {
     // Invalid event family
-    log("Invalid event family", eventFamily);
+    log("[logEvent] Invalid event family", eventFamily);
     return;
   }
   var event = {
@@ -84,15 +84,15 @@ setTimeout(function maybeSend() {
       "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
       "events": _eventLog
     }
-    log("Sending event log: ", JSON.parse(JSON.stringify(eventLog)));
+    log("[logEvent:maybeSend] Sending event log: ", JSON.parse(JSON.stringify(eventLog)));
 
     $.post("http://" + config.server + "/users/events", {
       payload: JSON.stringify(eventLog)
     }).success(function(data) {
-      log("Event log sent. Response: ", data)
+      log("[logEvent:maybeSend] Event log sent. Response: ", data)
     }).error(function(xhr) {
-      error(Error("Event log sending familed"));
-      log(xhr.responseText);
+      error(Error("[logEvent:maybeSend] Event log sending failed"));
+      log("[logEvent:maybeSend] ", xhr.responseText);
     });
 
     _eventLog.length = 0;
@@ -112,8 +112,8 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
   log("[onRequest] handling", request, "for", tab && tab.id);
   try {
     switch (request && request.type) {
-      case "init_page":
-        initPage(request, sendResponse, tab);
+      case "page_load":
+        onPageLoad(request, sendResponse, tab);
         break;
       case "get_keeps":
         searchOnServer(request, sendResponse, tab);
@@ -410,7 +410,6 @@ function searchOnServer(request, sendResponse, tab) {
   xhr.open("GET",
    'http://' + userConfigs.server + '/search' +
       '?term=' + encodeURIComponent(request.query) +
-      '&externalId=' + userConfigs.user.keepit_external_id +
       '&maxHits=' + userConfigs.max_res * 2 +
       '&lastUUI=' + (request.lastUUID || "") +
       '&context=' + encodeURIComponent(request.context || "") +
@@ -429,42 +428,35 @@ var restrictedUrlPatternsForHover = [
   "www.google.com",
   "google.com"];
 
-function initPage(request, sendResponse, tab) {
-  log("[initPage]", request, tab);
+function onPageLoad(request, sendResponse, tab) {
+  log("[onPageLoad]", request, tab);
   if (!getUser()) {
-    log("[initPage] No facebook configured!")
+    log("[onPageLoad] No facebook configured!")
     return;
   }
   setPageIcon(tab.id, false);
-  var pageLocation = request.location;
-
   logEvent("extension", "pageLoad");
 
-  if (restrictedUrlPatternsForHover.some(function(e) {return pageLocation.indexOf(e) >= 0})) {
-    log("[initPage] restricted ", tab.url);
+  if (restrictedUrlPatternsForHover.some(function(e) {return tab.url.indexOf(e) >= 0})) {
+    log("[onPageLoad] restricted:", tab.url);
     return;
   }
 
-  var hoverTimeout = getConfigs().hover_timeout;
-
-  checkWhetherKept(pageLocation, function(isKept) {
+  checkWhetherKept(tab.url, function(isKept) {
     setPageIcon(tab.id, isKept);
 
-    if (userHistory.exists(pageLocation)) {
+    if (userHistory.exists(tab.url)) {
       return;
     }
-    userHistory.add(pageLocation);
+    userHistory.add(tab.url);
 
     if (isKept) {
-      log("[initPage] already kept ", pageLocation);
-    } else if (hoverTimeout > 0) {
-      setTimeout(function autoShowSlider() {
-        log("[autoShowSlider] tab", tab.id, pageLocation);
-        chrome.tabs.executeScript(tab.id, {
-          // We don't slide in automatically if the slider has already been shown (manually).
-          code: "chrome.extension.sendRequest({type:'check_hover_existed',kifi_hover:window.kifi_hover||false});"
-        });
-      }, hoverTimeout * 1000);
+      log("[onPageLoad] already kept:", tab.url);
+    } else {
+      var sliderDelaySec = getConfigs().hover_timeout;
+      if (sliderDelaySec > 0) {
+        sendResponse(sliderDelaySec * 1000);
+      }
     }
   });
 }
@@ -536,7 +528,6 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
     xhr.open("POST", 'http://' + userConfigs.server + '/bookmarks/add', true);
     xhr.send(JSON.stringify({
       "bookmarks": bookmarks,
-      "user_info": userConfigs.user,
       "bookmark_source": bookmarkSource}));
     log("posted bookmarks");
   });
