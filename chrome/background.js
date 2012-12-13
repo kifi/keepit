@@ -243,7 +243,7 @@ function getBookmarkFolderInfo(keepItBookmarkId, callback) {
       info.privateId = bm[0].id;
       done(info);
     } else {
-      chrome.bookmarks.create({parentId: keepIt.id, title: "private"}, function(bm) {
+      chrome.bookmarks.create({parentId: info.keepItId, title: "private"}, function(bm) {
         info.privateId = bm.id;
         done(info);
       });
