@@ -514,6 +514,7 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
       }
     }
     xhr.open("POST", 'http://' + userConfigs.server + '/bookmarks/add', true);
+    xhr.setRequestHeader("Content-Type","application/json; charset=utf-8");
     xhr.send(JSON.stringify({
       "bookmarks": bookmarks,
       "user_info": userConfigs.user,
