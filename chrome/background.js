@@ -65,11 +65,14 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
   }
   var event = {
       "time": new Date().getTime(),
-      "eventFamily": eventFamily, /* Currently, has to be one of: slider, search, extension */
-      "eventName": eventName, /* Any key for this event */
-      "metaData": metaData || {}, /* Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc. */
-      "prevEvents": prevEvents || [] /* a list of previous ExternalId[Event]s that are associated with this action. !!!: The frontend determines what is associated with what. */
-    }
+      "eventFamily": eventFamily, /* Category (see eventFamilies) */
+      "eventName": eventName}; /* Any key for this event */
+  if (metaData) {
+    event.metaData = metaData; /* Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc. */
+  }
+  if (prevEvents && prevEvents.length) {
+    event.prevEvents = prevEvents; /* a list of previous ExternalId[Event]s that are associated with this action. !!!: The frontend determines what is associated with what. */
+  }
   _eventLog.push(event);
 }
 
