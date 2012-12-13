@@ -80,7 +80,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def eventStore(amazonS3Client: AmazonS3): S3EventStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.events.bucket").get)
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.event.bucket").get)
     new S3EventStoreImpl(bucketName, amazonS3Client)
   }
 
