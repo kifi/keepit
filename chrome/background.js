@@ -165,11 +165,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
         $.get("http://" + getConfigs().server + "/users/slider/updates?url=" + encodeURIComponent(tab.url), sendResponse);
         break;
       case "log_event":
-        if(!request.eventFamily || !request.eventName) {
-          log("Bad event", request)
-          break;
-        }
-        logEvent(request.eventFamily, request.eventName, request.metaData || {}, request.prevEvents || []);
+        logEvent.apply(null, request.args);
         break;
       case "get_comments":
         $.get("http://" + getConfigs().server +
