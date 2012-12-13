@@ -43,15 +43,27 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
           val metadata = new ObjectMetadata()
           metadata.setContentEncoding(ENCODING)
           metadata.setContentType("application/json")
+          val content = formatter.writes(value).toString().getBytes(ENCODING)
+          metadata.setContentLength(content.length)
+          val inputStream = new ByteArrayInputStream(content)
           try {
             Some(s3Client.putObject(bucketName,
               idToBJsonKey(key),
-              toInputStream(value),
+              inputStream,
               metadata))
           } catch {
-            case e =>
-              log.error("could not send object key: [%s]\nvalue: [%s]\nto bucket %s".format(key, value, bucketName))
-              throw e
+            case ase: AmazonServiceException =>
+              val error = """Error Message: %s    " + );
+                             HTTP Status Code: %s
+                             AWS Error Code: %s
+                             Error Type: %s
+                             Request ID: %s""".format(
+                  ase.getMessage(), ase.getStatusCode(), ase.getErrorCode(), ase.getErrorType(), ase.getRequestId())
+              throw new Exception("could not send object key: [%s]\nvalue: [%s]\nto bucket %s: %s".format(key, value, bucketName, error), ase)
+            case e: Exception =>
+              throw new Exception("could not send object key: [%s]\nvalue: [%s]\nto bucket %s: %s".format(key, value, bucketName), e)
+          } finally {
+            try { inputStream.close() } catch {case e: Exception => log.error("error closing content stram.", e)}
           }
         }
     }
@@ -95,7 +107,5 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
       log.error("failed: " + what , ex)
       throw ex
   }
-
-  private def toInputStream(B: B): InputStream = new ByteArrayInputStream(formatter.writes(B).toString().getBytes(ENCODING))
 
 }
