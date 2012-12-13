@@ -44,6 +44,8 @@ import com.keepit.common.analytics.S3EventStore
 import com.keepit.common.analytics.MongoEventStoreImpl
 import com.mongodb.casbah.MongoConnection
 import com.keepit.common.analytics.MongoEventStore
+import com.keepit.common.analytics.PersistEventPlugin
+import com.keepit.common.analytics.PersistEventPluginImpl
 
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -54,6 +56,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
+    bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
   }
 
   @Singleton

@@ -62,30 +62,29 @@ trait EventMetadata {
   val prevEvents: Seq[ExternalId[Event]]
 }
 
-case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: ExternalId[KifiInstallation], userExperiments: Seq[State[UserExperiment.ExperimentType]], metaData: JsValue, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
+case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: String, userExperiments: Seq[State[UserExperiment.ExperimentType]], metaData: JsValue, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsValue, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 
 case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime, serverVersion: String = currentService + ":" + currentVersion) {
 
-  def persistToS3() = {
+  def persistToS3(): Unit = {
     inject[S3EventStore] += (externalId -> this)
   }
-  def persistToMongo() = {
+  def persistToMongo(): Unit = {
     inject[MongoEventStore].save(this)
   }
-  def persist() = {
+  def persist(): Unit = {
     persistToS3()
     persistToMongo()
   }
 }
 
 object Event {
+
 }
 
 object Events {
-  def userEvent(eventFamily: EventFamily, eventName: String, userId: Id[User], installId: ExternalId[KifiInstallation], metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime)(implicit conn: Connection) = {
-    val user = User.get(userId)
-    val experiments = UserExperiment.getByUser(userId) map (_.experimentType)
+  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[UserExperiment.ExperimentType]], installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime) = {
 
     Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = createdAt)
   }

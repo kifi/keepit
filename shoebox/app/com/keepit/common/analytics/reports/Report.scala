@@ -25,6 +25,12 @@ case class ReportRow(fields: Seq[String]) {
 }
 case class CompleteReport(list: Seq[ReportRow]) {
   def toCSV = (list.map(_.toCSV)).mkString("\n")
+  def +(that: CompleteReport) = {
+    CompleteReport((that.list ++ this.list))
+  }
+  def ++(that: CompleteReport) = {
+    CompleteReport((that.list ++ this.list).distinct.sortWith((a,b) => parseStandardDate(a.fields.headOption.getOrElse("01-01-1900")).compareTo(parseStandardDate(b.fields.headOption.getOrElse("01-01-1900"))) > 0))
+  }
 }
 
 trait Report {

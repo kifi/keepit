@@ -110,7 +110,7 @@ class EventMetadataSerializer extends Format[EventMetadata] {
           "eventFamily" -> JsString(eventFamily.name),
           "eventName" -> JsString(eventName),
           "userId" -> JsString(userId.id),
-          "installId" -> JsString(installId.id),
+          "installId" -> JsString(installId),
           "userExperiments" -> JsArray(userExperiments.map { p => JsString(p.value) }),
           "metaData" -> jsonMetaData,
           "prevEvents" -> JsArray(prevEvents map { p => JsString(p.id)})
@@ -132,10 +132,13 @@ class EventMetadataSerializer extends Format[EventMetadata] {
           eventFamily = EventFamilies((json \ "eventFamily").as[String]),
           eventName = (json \ "eventName").as[String],
           userId = ExternalId[User]((json \ "userId").as[String]),
-          installId = ExternalId[KifiInstallation]((json \ "installId").as[String]),
+          installId = (json \ "installId").asOpt[String].getOrElse(""),
           userExperiments = (json \ "userExperiments").as[Seq[String]] map {ux => UserExperiment.ExperimentTypes(ux)},
-          metaData = (json \ "metaData").as[JsObject],
-          prevEvents = (json \ "prevEvents").as[Seq[String]] map { i => ExternalId[Event](i) }
+          metaData = (json \ "metaData").asOpt[JsObject].getOrElse(JsObject(Seq())),
+          prevEvents = (json \ "prevEvents").asOpt[Seq[String]] match {
+            case Some(ev) => ev map { i => ExternalId[Event](i) }
+            case None => Seq()
+          }
         )
       case ServerEventFamily(name) =>
         ServerEventMetadata(
