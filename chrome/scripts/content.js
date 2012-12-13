@@ -3,16 +3,17 @@ function log(message) {
 }
 
 !function() {
-  log("content script starting");
+  log("host: ", document.location.host);
   if (window !== top) {
     log("should run only on top window");
     return;
   }
-  var href = document.location.href;
-  if (href.match(/^chrome-devtools:/)) return;
-  log("host is " + document.location.host);
 
-  chrome.extension.sendRequest({type: "init_page", location: href}, function(response) {
-    log("init_page response:", response);
+  chrome.extension.sendRequest({type: "page_load"}, function(sliderDelayMs) {
+    setTimeout(function() {
+      log("showing slider");
+      // We don't slide in automatically if the slider has already been shown (manually).
+      chrome.extension.sendRequest({type: "check_hover_existed", kifi_hover: window.kifi_hover || false});
+    }, sliderDelayMs);
   });
 }();
