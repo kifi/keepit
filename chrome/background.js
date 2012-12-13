@@ -517,7 +517,6 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
     xhr.setRequestHeader("Content-Type","application/json; charset=utf-8");
     xhr.send(JSON.stringify({
       "bookmarks": bookmarks,
-      "user_info": userConfigs.user,
       "bookmark_source": bookmarkSource}));
     log("posted bookmarks");
   });

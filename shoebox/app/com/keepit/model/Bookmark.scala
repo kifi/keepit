@@ -65,8 +65,8 @@ case class Bookmark(
 
 object Bookmark {
 
-  def apply(uri: NormalizedURI, user: User, title: String, url: String, source: BookmarkSource, isPrivate: Boolean): Bookmark =
-    Bookmark(title = title, url = url, userId = user.id.get, uriId = uri.id.get, source = source, isPrivate = isPrivate)
+  def apply(uri: NormalizedURI, userId: Id[User], title: String, url: String, source: BookmarkSource, isPrivate: Boolean): Bookmark =
+    Bookmark(title = title, url = url, userId = userId, uriId = uri.id.get, source = source, isPrivate = isPrivate)
 
   def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = load(uri, user.id.get)
 
