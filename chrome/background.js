@@ -501,7 +501,6 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
     xhr.open("POST", 'http://' + userConfigs.server + '/bookmarks/add', true);
     xhr.send(JSON.stringify({
       "bookmarks": bookmarks,
-      "user_info": userConfigs.user,
       "bookmark_source": bookmarkSource}));
     log("posted bookmarks");
   });
