@@ -105,30 +105,6 @@ setTimeout(function maybeSend() {
 
 // ===== Message handling
 
-function postBookmarks(supplyBookmarks, bookmarkSource) {
-  log("posting bookmarks...");
-  supplyBookmarks(function(bookmarks) {
-    log("bookmarks: ", bookmarks);
-    if (!getUser()) {
-      log("Can't post bookmark(s), no user info!");
-      return;
-    }
-    var userConfigs = getConfigs();
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState == 4) {
-        log("[postBookmarks] response: ", xhr.responseText);
-      }
-    }
-    xhr.open("POST", 'http://' + userConfigs.server + '/bookmarks/add', true);
-    xhr.send(JSON.stringify({
-      "bookmarks": bookmarks,
-      "user_info": userConfigs.user,
-      "bookmark_source": bookmarkSource}));
-    log("posted bookmarks");
-  });
-}
-
 // Listen for the content script to send a message to the background page.
 // TODO: onRequest => onMessage, see http://stackoverflow.com/questions/11335815/chrome-extensions-onrequest-sendrequest-vs-onmessage-sendmessage
 chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
@@ -537,6 +513,30 @@ function maybeShowPageIcon(tabId, windowId) {
         chrome.pageAction.show(tab.id);
       }
     });
+  });
+}
+
+function postBookmarks(supplyBookmarks, bookmarkSource) {
+  log("posting bookmarks...");
+  supplyBookmarks(function(bookmarks) {
+    log("bookmarks: ", bookmarks);
+    if (!getUser()) {
+      log("Can't post bookmark(s), no user info!");
+      return;
+    }
+    var userConfigs = getConfigs();
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState == 4) {
+        log("[postBookmarks] response: ", xhr.responseText);
+      }
+    }
+    xhr.open("POST", 'http://' + userConfigs.server + '/bookmarks/add', true);
+    xhr.send(JSON.stringify({
+      "bookmarks": bookmarks,
+      "user_info": userConfigs.user,
+      "bookmark_source": bookmarkSource}));
+    log("posted bookmarks");
   });
 }
 
