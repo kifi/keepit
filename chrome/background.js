@@ -76,10 +76,12 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
 var eventLogDelay = 2000;
 setTimeout(function maybeSend() {
   if (_eventLog.length) {
+    var t0 = _eventLog[0].time;
+    _eventLog.forEach(function(e) { e.time -= t0 }); // relative times = fewer bytes
     var config = getConfigs();
     var eventLog = {
       "version": 1,
-      "time": new Date().getTime(),
+      "time": new Date().getTime() - t0,
       "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
       "events": _eventLog
     }
