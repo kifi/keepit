@@ -73,7 +73,8 @@ class PersistEventPluginImpl @Inject() (system: ActorSystem) extends PersistEven
   def persist(events: Seq[Event]): Unit = actor ! PersistMany(events)
 }
 
-class FakePersistEventPluginImpl(system: ActorSystem) extends PersistEventPlugin with Logging {
+class FakePersistEventPluginImpl @Inject() (system: ActorSystem) extends PersistEventPlugin with Logging {
+
   def persist(event: Event): Unit = {
     log.info("Fake persisting event %s".format(event.externalId))
   }
