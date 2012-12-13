@@ -3,6 +3,7 @@ avatar
 bookmark
 bookmarks
 clob
+deserialize
 div
 docs
 eishay
@@ -17,6 +18,7 @@ kifi
 lifecycle
 malformed
 mixin
+mongo
 mysql
 params
 plugin
@@ -28,3 +30,5 @@ todo
 uri
 url
 val
+serializer
+scala
