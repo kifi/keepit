@@ -15,9 +15,12 @@ import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
+import com.keepit.search.graph.URIGraph
+import com.keepit.search.graph.URIGraphImpl
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.model.User
 import com.keepit.common.controller.FortyTwoController
+import org.apache.lucene.document.Document
 
 object URIGraphController extends FortyTwoController {
 
@@ -31,6 +34,16 @@ object URIGraphController extends FortyTwoController {
     val uriGraphPlugin = inject[URIGraphPlugin]
     val cnt = uriGraphPlugin.update(userId)
     Ok("indexed %d users".format(cnt))
+  }
+
+  def dumpLuceneDocument(id: Id[User]) =  AdminHtmlAction { implicit request =>
+    val indexer = inject[URIGraph].asInstanceOf[URIGraphImpl]
+    try {
+      val doc = indexer.buildIndexable(id).buildDocument
+      Ok(views.html.luceneDocDump("URIGraph", doc, indexer))
+    } catch {
+      case _ => Ok(views.html.luceneDocDump("No URIGraph", new Document, indexer))
+    }
   }
 }
 

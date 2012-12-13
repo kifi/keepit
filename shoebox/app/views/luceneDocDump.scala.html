@@ -1,0 +1,13 @@
+@(title: String, doc: org.apache.lucene.document.Document, indexer: com.keepit.search.index.Indexer[_])
+
+@printField(f: org.apache.lucene.document.Fieldable) = {
+  <tr> <td>@f.name</td> <td>@indexer.getFieldDecoder(f.name).apply(f)</td> </tr>
+}
+
+@admin("Lucene Document Dump") {
+  <h2>@title</h2>
+  <table class="table table-bordered">
+    <tr> <th>Field</th> <th>Value</th> </tr>
+    @scala.collection.JavaConversions.collectionAsScalaIterable(doc.getFields).map{ f => @printField(f) }
+  </table>
+}

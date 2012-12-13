@@ -21,9 +21,13 @@ trait Indexable[T] {
 
   def buildDocument: Document = {
     val doc = new Document()
-    doc.add(new Field(Indexer.idFieldName, idTerm.text(), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO))
+    doc.add(buildKeywordField(Indexer.idFieldName, idTerm.text()))
     doc.add(buildIdPayloadField(id))
     doc
+  }
+
+  protected def buildKeywordField(fieldName: String, keyword: String) = {
+    new Field(fieldName, keyword, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO)
   }
 
   protected def buildTextField(fieldName: String, fieldValue: String) = {

@@ -38,7 +38,7 @@ object ArrayIdMapper {
     new ArrayIdMapper(idArray)
   }
 
-  private def bytesToLong(bytes: Array[Byte]): Long = {
+  def bytesToLong(bytes: Array[Byte]): Long = {
     ((bytes(0) & 0xFF).toLong) |
     ((bytes(1) & 0xFF).toLong <<  8) |
     ((bytes(2) & 0xFF).toLong << 16) |

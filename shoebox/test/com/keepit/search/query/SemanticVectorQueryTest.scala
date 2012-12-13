@@ -42,12 +42,13 @@ import com.keepit.search.index.QueryParser
 @RunWith(classOf[JUnitRunner])
 class SemanticVectorQueryTest extends SpecificationWithJUnit {
 
-  class Tst { }
+  class Tst(val id: Id[Tst], val text: String)
 
   class TstIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig)
     extends Indexer[Tst](indexDirectory, indexWriterConfig) {
 
     class TstIndexable[Tst](override val id: Id[Tst], val text: String) extends Indexable[Tst] {
+
       implicit def toReader(text: String) = new StringReader(text)
 
       override def buildDocument = {
@@ -61,10 +62,13 @@ class SemanticVectorQueryTest extends SpecificationWithJUnit {
       }
     }
 
+    def buildIndexable(id: Id[Tst]): Indexable[Tst] = throw new UnsupportedOperationException()
+    def buildIndexable(data: Tst): Indexable[Tst] = new TstIndexable(data.id, data.text)
+
     def getQueryParser(lang: Lang): QueryParser = throw new UnsupportedOperationException
 
     def index(id: Id[Tst], text: String) = {
-      indexDocuments(Some(new TstIndexable(id, text)).iterator, 100){ docs => }
+      indexDocuments(Some(buildIndexable(new Tst(id, text))).iterator, 100){ docs => }
     }
 
     def getPersonalizedSeacher(ids: Set[Long]) = new PersonalizedSearcher(searcher.indexReader, searcher.idMapper, ids)
