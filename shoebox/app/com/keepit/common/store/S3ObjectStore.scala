@@ -63,7 +63,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
             case e: Exception =>
               throw new Exception("could not send object key: [%s]\nvalue: [%s]\nto bucket %s: %s".format(key, value, bucketName), e)
           } finally {
-            try { inputStream.close() } catch {case e: Exception => log.error("error closing content stram.", e)}
+            try { inputStream.close() } catch {case e: Exception => log.error("error closing content stream.", e)}
           }
         }
     }
