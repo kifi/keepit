@@ -56,31 +56,35 @@ function UserHistory() {
 // ===== Event logging
 
 var _eventLog = [];
-var eventFamilies = ["slider","search","extension","account","notification"];
+var eventFamilies = ["slider","search","extension","account","notification"].reduce(function(o, f) {o[f] = true; return o}, {});
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
-  if($.inArray(eventFamily, eventFamilies) == -1) {
-    // Invalid event family
+  if (!eventFamilies[eventFamily]) {
     log("[logEvent] Invalid event family", eventFamily);
     return;
   }
   var event = {
       "time": new Date().getTime(),
-      "eventFamily": eventFamily, /* Currently, has to be one of: slider, search, extension */
-      "eventName": eventName, /* Any key for this event */
-      "metaData": metaData || {}, /* Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc. */
-      "prevEvents": prevEvents || [] /* a list of previous ExternalId[Event]s that are associated with this action. !!!: The frontend determines what is associated with what. */
-    }
+      "eventFamily": eventFamily, /* Category (see eventFamilies) */
+      "eventName": eventName}; /* Any key for this event */
+  if (metaData) {
+    event.metaData = metaData; /* Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc. */
+  }
+  if (prevEvents && prevEvents.length) {
+    event.prevEvents = prevEvents; /* a list of previous ExternalId[Event]s that are associated with this action. !!!: The frontend determines what is associated with what. */
+  }
   _eventLog.push(event);
 }
 
 var eventLogDelay = 2000;
 setTimeout(function maybeSend() {
   if (_eventLog.length) {
+    var t0 = _eventLog[0].time;
+    _eventLog.forEach(function(e) { e.time -= t0 }); // relative times = fewer bytes
     var config = getConfigs();
     var eventLog = {
       "version": 1,
-      "time": new Date().getTime(),
+      "time": new Date().getTime() - t0,
       "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
       "events": _eventLog
     }
@@ -161,11 +165,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
         $.get("http://" + getConfigs().server + "/users/slider/updates?url=" + encodeURIComponent(tab.url), sendResponse);
         break;
       case "log_event":
-        if(!request.eventFamily || !request.eventName) {
-          log("Bad event", request)
-          break;
-        }
-        logEvent(request.eventFamily, request.eventName, request.metaData || {}, request.prevEvents || []);
+        logEvent.apply(null, request.args);
         break;
       case "get_comments":
         $.get("http://" + getConfigs().server +

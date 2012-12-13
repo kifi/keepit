@@ -3,16 +3,9 @@ function log(message) {
 }
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
-  var request = {
+  chrome.extension.sendRequest({
     type: "log_event",
-    eventFamily: eventFamily,
-    eventName: eventName,
-    metaData: metaData || {},
-    prevEvents: prevEvents || []
-  }
-  chrome.extension.sendRequest(request, function() {
-    log("[logEvent] Event logged.")
-  })
+    args: Array.prototype.slice.apply(arguments)});
 }
 
 !function() {
