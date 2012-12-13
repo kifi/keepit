@@ -61,7 +61,7 @@ object SearchController extends FortyTwoController {
     val searchRes = searcher.search(term, maxHits, lastUUID)
     val realResults = toPersonalSearchResultPacket(userId, searchRes)
 
-    val res = if (kifiVersion.getOrElse(KifiVersion(0,0,0)) >= KifiVersion(2,0,5)) {
+    val res = if (kifiVersion.getOrElse(KifiVersion(0,0,0)) >= KifiVersion(2,0,8)) {
       realResults
     } else {
       val upgradeResult = PersonalSearchResult(

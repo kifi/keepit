@@ -56,22 +56,49 @@ function UserHistory() {
 // ===== Event logging
 
 var _eventLog = [];
+var eventFamilies = ["slider","search","extension","account","notification"];
 
-function logEvent(payload) {
-  _eventLog.push({"time": new Date().getTime(), "event": payload});
+function logEvent(eventFamily, eventName, metaData, prevEvents) {
+  if($.inArray(eventFamily, eventFamilies) == -1) {
+    // Invalid event family
+    log("[logEvent] Invalid event family", eventFamily);
+    return;
+  }
+  var event = {
+      "time": new Date().getTime(),
+      "eventFamily": eventFamily, /* Currently, has to be one of: slider, search, extension */
+      "eventName": eventName, /* Any key for this event */
+      "metaData": metaData || {}, /* Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc. */
+      "prevEvents": prevEvents || [] /* a list of previous ExternalId[Event]s that are associated with this action. !!!: The frontend determines what is associated with what. */
+    }
+  _eventLog.push(event);
 }
 
 var eventLogDelay = 2000;
 setTimeout(function maybeSend() {
   if (_eventLog.length) {
-    log("Pretending to send event log: ", {clientTime: new Date().getTime(), log: _eventLog});
+    var config = getConfigs();
+    var eventLog = {
+      "version": 1,
+      "time": new Date().getTime(),
+      "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
+      "events": _eventLog
+    }
+    log("[logEvent:maybeSend] Sending event log: ", JSON.parse(JSON.stringify(eventLog)));
 
-    // TODO: actually post event log to server
+    $.post("http://" + config.server + "/users/events", {
+      payload: JSON.stringify(eventLog)
+    }).success(function(data) {
+      log("[logEvent:maybeSend] Event log sent. Response: ", data)
+    }).error(function(xhr) {
+      error(Error("[logEvent:maybeSend] Event log sending failed"));
+      log("[logEvent:maybeSend] ", xhr.responseText);
+    });
 
     _eventLog.length = 0;
-    eventLogDelay = Math.round(Math.max(Math.sqrt(eventLogDelay), 2000));
+    eventLogDelay = Math.round(Math.max(Math.sqrt(eventLogDelay), 5 * 1000));
   } else {
-    eventLogDelay = Math.min(eventLogDelay * 2, 20000);
+    eventLogDelay = Math.min(eventLogDelay * 2, 60 * 1000);
   }
   setTimeout(maybeSend, eventLogDelay);
 }, 4000);
@@ -85,14 +112,11 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
   log("[onRequest] handling", request, "for", tab && tab.id);
   try {
     switch (request && request.type) {
-      case "init_page":
-        initPage(request, sendResponse, tab);
+      case "page_load":
+        onPageLoad(request, sendResponse, tab);
         break;
       case "get_keeps":
         searchOnServer(request, sendResponse, tab);
-        break;
-      case "get_user_info":
-        sendResponse(getConfigs().user);
         break;
       case "add_bookmarks":
         getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
@@ -127,9 +151,6 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
       case "upload_all_bookmarks":
         uploadAllBookmarks();
         break;
-      case "check_hover_existed":
-        if (request.kifi_hover === false) { showSlider(tab.id); }
-        break;
       case "set_page_icon":
         setPageIcon(tab.id, request.is_kept);
         break;
@@ -139,11 +160,12 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
       case "get_slider_updates":
         $.get("http://" + getConfigs().server + "/users/slider/updates?url=" + encodeURIComponent(tab.url), sendResponse);
         break;
-      case "open_slider":
-        showSlider(tab.id);
-        break;
       case "log_event":
-        logEvent(request.event);
+        if(!request.eventFamily || !request.eventName) {
+          log("Bad event", request)
+          break;
+        }
+        logEvent(request.eventFamily, request.eventName, request.metaData || {}, request.prevEvents || []);
         break;
       case "get_comments":
         $.get("http://" + getConfigs().server +
@@ -346,6 +368,8 @@ function postComment(request, sendResponse) {
 function searchOnServer(request, sendResponse, tab) {
   var userConfigs = getConfigs();
 
+  logEvent("search","newSearch");
+
   if (!getUser()) {
     log("No facebook, can't search!");
     sendResponse({"userInfo": null, "searchResults": [], "userConfig": userConfigs});
@@ -377,7 +401,6 @@ function searchOnServer(request, sendResponse, tab) {
   xhr.open("GET",
    'http://' + userConfigs.server + '/search' +
       '?term=' + encodeURIComponent(request.query) +
-      '&externalId=' + userConfigs.user.keepit_external_id +
       '&maxHits=' + userConfigs.max_res * 2 +
       '&lastUUI=' + (request.lastUUID || "") +
       '&context=' + encodeURIComponent(request.context || "") +
@@ -396,52 +419,43 @@ var restrictedUrlPatternsForHover = [
   "www.google.com",
   "google.com"];
 
-function initPage(request, sendResponse, tab) {
-  log("[initPage]", request, tab);
+function onPageLoad(request, sendResponse, tab) {
+  log("[onPageLoad]", request, tab);
   if (!getUser()) {
-    log("[initPage] No facebook configured!")
+    log("[onPageLoad] No facebook configured!")
     return;
   }
   setPageIcon(tab.id, false);
-  var pageLocation = request.location;
+  logEvent("extension", "pageLoad");
 
-  if (restrictedUrlPatternsForHover.some(function(e) {return pageLocation.indexOf(e) >= 0})) {
-    log("[initPage] restricted ", tab.url);
+  if (restrictedUrlPatternsForHover.some(function(e) {return tab.url.indexOf(e) >= 0})) {
+    log("[onPageLoad] restricted:", tab.url);
     return;
   }
 
-  var hoverTimeout = getConfigs().hover_timeout;
-
-  checkWhetherKept(pageLocation, function(isKept) {
+  checkWhetherKept(tab.url, function(isKept) {
     setPageIcon(tab.id, isKept);
 
-    if (userHistory.exists(pageLocation)) {
+    if (userHistory.exists(tab.url)) {
       return;
     }
-    userHistory.add(pageLocation);
+    userHistory.add(tab.url);
 
     if (isKept) {
-      log("[initPage] already kept ", pageLocation);
-    } else if (hoverTimeout > 0) {
-      setTimeout(function autoShowSlider() {
-        log("[autoShowSlider] tab", tab.id, pageLocation);
-        chrome.tabs.executeScript(tab.id, {
-          // We don't slide in automatically if the slider has already been shown (manually).
-          code: "chrome.extension.sendRequest({type:'check_hover_existed',kifi_hover:window.kifi_hover||false});"
-        });
-      }, hoverTimeout * 1000);
+      log("[onPageLoad] already kept:", tab.url);
+    } else {
+      var sliderDelaySec = getConfigs().hover_timeout;
+      if (sliderDelaySec > 0) {
+        sendResponse(sliderDelaySec * 1000);
+      }
     }
   });
 }
 
-function showSlider(tabId) {
-  log("[showSlider] tab ", tabId);
-  chrome.tabs.sendRequest(tabId, {type: "show_hover"});
-}
-
 // Kifi icon in location bar
 chrome.pageAction.onClicked.addListener(function(tab) {
-  showSlider(tab.id);
+  log("button clicked", tab);
+  chrome.tabs.sendRequest(tab.id, {type: "button_click"});
 });
 
 function checkWhetherKept(location, callback) {
@@ -499,9 +513,9 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
       }
     }
     xhr.open("POST", 'http://' + userConfigs.server + '/bookmarks/add', true);
+    xhr.setRequestHeader("Content-Type","application/json; charset=utf-8");
     xhr.send(JSON.stringify({
       "bookmarks": bookmarks,
-      "user_info": userConfigs.user,
       "bookmark_source": bookmarkSource}));
     log("posted bookmarks");
   });
@@ -653,7 +667,7 @@ function onAuthenticate(data) {
   });
 
   log("[onAuthenticate] done");
-  logEvent("authenticated");
+  logEvent("extension", "authenticated");
 }
 
 if (getConfigs().env == "development" || !getUser()) {
@@ -667,4 +681,4 @@ if (getConfigs().env == "development" || !getUser()) {
   });
 }
 
-logEvent("started");
+logEvent("extension","started");

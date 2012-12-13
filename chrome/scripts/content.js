@@ -2,17 +2,44 @@ function log(message) {
   console.log.apply(console, Array.prototype.concat.apply(["[kifi][" + new Date().getTime() + "] "], arguments));
 }
 
+function logEvent(eventFamily, eventName, metaData, prevEvents) {
+  var request = {
+    type: "log_event",
+    eventFamily: eventFamily,
+    eventName: eventName,
+    metaData: metaData || {},
+    prevEvents: prevEvents || []
+  }
+  chrome.extension.sendRequest(request, function() {
+    log("[logEvent] Event logged.")
+  })
+}
+
 !function() {
-  log("content script starting");
+  log("host: ", document.location.host);
   if (window !== top) {
     log("should run only on top window");
     return;
   }
-  var href = document.location.href;
-  if (href.match(/^chrome-devtools:/)) return;
-  log("host is " + document.location.host);
 
-  chrome.extension.sendRequest({type: "init_page", location: href}, function(response) {
-    log("init_page response:", response);
+  chrome.extension.sendRequest({type: "page_load"}, function(sliderDelayMs) {
+    log("slider delay:", sliderDelayMs);
+    setTimeout(function() {
+      log("slider delay has passed");
+      if (!slider.alreadyShown) {
+        slider.show();
+      }
+    }, sliderDelayMs);
+  });
+
+  chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
+    if (request.type === "button_click") {
+      slider.toggle();
+    }
+  });
+
+  key('command+shift+k, ctrl+shift+k', function() {
+    slider.toggle();
+    return false;
   });
 }();
