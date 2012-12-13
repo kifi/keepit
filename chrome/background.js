@@ -56,11 +56,10 @@ function UserHistory() {
 // ===== Event logging
 
 var _eventLog = [];
-var eventFamilies = ["slider","search","extension","account","notification"];
+var eventFamilies = ["slider","search","extension","account","notification"].reduce(function(o, f) {o[f] = true; return o}, {});
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
-  if($.inArray(eventFamily, eventFamilies) == -1) {
-    // Invalid event family
+  if (!eventFamilies[eventFamily]) {
     log("[logEvent] Invalid event family", eventFamily);
     return;
   }
