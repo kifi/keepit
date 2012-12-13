@@ -98,8 +98,8 @@ object BookmarksController extends FortyTwoController {
     Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
   }
 
-  def bookmarksFirstPageView = Action { // TODO: remove me by 2013
-    Ok("Yo! please use http://keepitfindit.com/admin for admin interface. This page is no longer supported.")
+  def bookmarksFirstPageView = AdminHtmlAction { request =>// TODO: remove me by 2013
+    Ok("""<html>Yo! please use <a href="http://keepitfindit.com/admin">http://keepitfindit.com/admin</a> for admin site. This URL is no longer supported.</html>""")
   }
 
   def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
