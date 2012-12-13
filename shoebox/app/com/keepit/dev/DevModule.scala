@@ -47,6 +47,8 @@ import com.keepit.common.analytics.MongoEventStore
 import com.keepit.common.analytics.FakeMongoEventStoreImpl
 import com.keepit.common.analytics.MongoEventStoreImpl
 import com.mongodb.casbah.MongoConnection
+import com.keepit.common.analytics.PersistEventPlugin
+import com.keepit.common.analytics.FakePersistEventPluginImpl
 
 case class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -58,6 +60,7 @@ case class DevModule() extends ScalaModule with Logging {
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
     bind[SocialGraphRefresher].to[SocialGraphRefresherImpl].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
+    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped] // if Events need to be persisted in a dev environment, use PersistEventPluginImpl instead
   }
 
   @Singleton
