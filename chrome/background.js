@@ -56,22 +56,49 @@ function UserHistory() {
 // ===== Event logging
 
 var _eventLog = [];
+var eventFamilies = ["slider","search","extension","account","notification"];
 
-function logEvent(payload) {
-  _eventLog.push({"time": new Date().getTime(), "event": payload});
+function logEvent(eventFamily, eventName, metaData, prevEvents) {
+  if($.inArray(eventFamily, eventFamilies) == -1) {
+    // Invalid event family
+    log("[logEvent] Invalid event family", eventFamily);
+    return;
+  }
+  var event = {
+      "time": new Date().getTime(),
+      "eventFamily": eventFamily, /* Currently, has to be one of: slider, search, extension */
+      "eventName": eventName, /* Any key for this event */
+      "metaData": metaData || {}, /* Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc. */
+      "prevEvents": prevEvents || [] /* a list of previous ExternalId[Event]s that are associated with this action. !!!: The frontend determines what is associated with what. */
+    }
+  _eventLog.push(event);
 }
 
 var eventLogDelay = 2000;
 setTimeout(function maybeSend() {
   if (_eventLog.length) {
-    log("Pretending to send event log: ", {clientTime: new Date().getTime(), log: _eventLog});
+    var config = getConfigs();
+    var eventLog = {
+      "version": 1,
+      "time": new Date().getTime(),
+      "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
+      "events": _eventLog
+    }
+    log("[logEvent:maybeSend] Sending event log: ", JSON.parse(JSON.stringify(eventLog)));
 
-    // TODO: actually post event log to server
+    $.post("http://" + config.server + "/users/events", {
+      payload: JSON.stringify(eventLog)
+    }).success(function(data) {
+      log("[logEvent:maybeSend] Event log sent. Response: ", data)
+    }).error(function(xhr) {
+      error(Error("[logEvent:maybeSend] Event log sending failed"));
+      log("[logEvent:maybeSend] ", xhr.responseText);
+    });
 
     _eventLog.length = 0;
-    eventLogDelay = Math.round(Math.max(Math.sqrt(eventLogDelay), 2000));
+    eventLogDelay = Math.round(Math.max(Math.sqrt(eventLogDelay), 5 * 1000));
   } else {
-    eventLogDelay = Math.min(eventLogDelay * 2, 20000);
+    eventLogDelay = Math.min(eventLogDelay * 2, 60 * 1000);
   }
   setTimeout(maybeSend, eventLogDelay);
 }, 4000);
@@ -143,7 +170,11 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
         showSlider(tab.id);
         break;
       case "log_event":
-        logEvent(request.event);
+        if(!request.eventFamily || !request.eventName) {
+          log("Bad event", request)
+          break;
+        }
+        logEvent(request.eventFamily, request.eventName, request.metaData || {}, request.prevEvents || []);
         break;
       case "get_comments":
         $.get("http://" + getConfigs().server +
@@ -346,6 +377,8 @@ function postComment(request, sendResponse) {
 function searchOnServer(request, sendResponse, tab) {
   var userConfigs = getConfigs();
 
+  logEvent("search","newSearch");
+
   if (!getUser()) {
     log("No facebook, can't search!");
     sendResponse({"userInfo": null, "searchResults": [], "userConfig": userConfigs});
@@ -403,6 +436,7 @@ function onPageLoad(request, sendResponse, tab) {
     return;
   }
   setPageIcon(tab.id, false);
+  logEvent("extension", "pageLoad");
 
   if (restrictedUrlPatternsForHover.some(function(e) {return tab.url.indexOf(e) >= 0})) {
     log("[onPageLoad] restricted:", tab.url);
@@ -647,7 +681,7 @@ function onAuthenticate(data) {
   });
 
   log("[onAuthenticate] done");
-  logEvent("authenticated");
+  logEvent("extension", "authenticated");
 }
 
 if (getConfigs().env == "development" || !getUser()) {
@@ -661,4 +695,4 @@ if (getConfigs().env == "development" || !getUser()) {
   });
 }
 
-logEvent("started");
+logEvent("extension","started");

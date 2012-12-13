@@ -1,39 +1,49 @@
 package com.keepit.shoebox
 
-import com.tzavellas.sse.guice.ScalaModule
-import com.google.inject._
+import java.io.File
 import java.net.InetAddress
-import akka.actor.ActorSystem
-import akka.actor.Props
+import org.apache.lucene.store.MMapDirectory
+import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.AmazonS3Client
+import com.google.inject.Provides
+import com.google.inject.Singleton
 import com.keepit.common.actor.ActorPlugin
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.mail.MailSenderPlugin
-import com.keepit.common.mail.PostOffice
-import com.keepit.common.mail.PostOfficeImpl
-import com.keepit.common.net._
-import com.keepit.common.store.S3Bucket
-import com.keepit.common.social._
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckPluginImpl
 import com.keepit.common.logging.Logging
-import com.keepit.scraper._
-import com.keepit.inject._
-import com.keepit.search._
+import com.keepit.common.mail.MailSenderPlugin
+import com.keepit.common.mail.MailSenderPluginImpl
+import com.keepit.common.mail.PostOffice
+import com.keepit.common.net.HttpClient
+import com.keepit.common.net.HttpClientImpl
+import com.keepit.common.social.S3SocialUserRawInfoStoreImpl
+import com.keepit.common.social.SocialGraphPlugin
+import com.keepit.common.social.SocialGraphPluginImpl
+import com.keepit.common.social.SocialUserRawInfoStore
+import com.keepit.common.store.S3Bucket
+import com.keepit.inject.AppScoped
+import com.keepit.inject.FortyTwoModule
+import com.keepit.scraper.ScraperPlugin
+import com.keepit.scraper.ScraperPluginImpl
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.graph.URIGraphPluginImpl
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexerPluginImpl
-import play.api.Play
+import com.keepit.search.ArticleSearchResultStore
+import com.keepit.search.ArticleStore
+import com.keepit.search.S3ArticleSearchResultStoreImpl
+import com.keepit.search.S3ArticleStoreImpl
+import com.tzavellas.sse.guice.ScalaModule
+import akka.actor.ActorSystem
 import play.api.Play.current
-import com.amazonaws.services.s3._
-import com.amazonaws.auth.BasicAWSCredentials
-import org.apache.lucene.store.Directory
-import org.apache.lucene.store.MMapDirectory
-import java.io.File
-import com.keepit.common.mail.{MailSenderPlugin, MailSenderPluginImpl}
-import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.healthcheck.HealthcheckPluginImpl
-import akka.actor.Scheduler
+import com.keepit.common.analytics.S3EventStoreImpl
+import com.keepit.common.analytics.S3EventStore
+import com.keepit.common.analytics.MongoEventStoreImpl
+import com.mongodb.casbah.MongoConnection
+import com.keepit.common.analytics.MongoEventStore
 
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -69,12 +79,28 @@ case class ShoeboxModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
+  def eventStore(amazonS3Client: AmazonS3): S3EventStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.events.bucket").get)
+    new S3EventStoreImpl(bucketName, amazonS3Client)
+  }
+
+  @Singleton
+  @Provides
   def amazonS3Client(): AmazonS3 = {
     val conf = current.configuration.getConfig("amazon.s3").get
     val awsCredentials = new BasicAWSCredentials(
         conf.getString("accessKey").get,
         conf.getString("secretKey").get)
     new AmazonS3Client(awsCredentials)
+  }
+
+  @Singleton
+  @Provides
+  def mongoEventStore(): MongoEventStore = {
+    val server = current.configuration.getString("mongo.events.server").get
+    val mongoConn = MongoConnection(server)
+    val mongoDB = mongoConn("events")
+    new MongoEventStoreImpl(mongoDB)
   }
 
   @Singleton
