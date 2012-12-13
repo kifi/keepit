@@ -14,6 +14,7 @@ import com.keepit.search.index.ArticleIndexer
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.common.controller.FortyTwoController
+import org.apache.lucene.document.Document
 
 object ArticleIndexerController extends FortyTwoController {
 
@@ -43,6 +44,16 @@ object ArticleIndexerController extends FortyTwoController {
     val indexer = inject[ArticleIndexer]
     indexer.refreshSearcher
     Ok("searcher refreshed")
+  }
+
+  def dumpLuceneDocument(id: Id[NormalizedURI]) =  AdminHtmlAction { implicit request =>
+    val indexer = inject[ArticleIndexer]
+    try {
+      val doc = indexer.buildIndexable(id).buildDocument
+      Ok(views.html.luceneDocDump("Article", doc, indexer))
+    } catch {
+      case _ => Ok(views.html.luceneDocDump("No Article", new Document, indexer))
+    }
   }
 }
 

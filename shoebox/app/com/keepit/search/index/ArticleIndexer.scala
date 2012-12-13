@@ -103,6 +103,11 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
   }
 
+  def buildIndexable(id: Id[NormalizedURI]) = {
+    val uri = CX.withConnection{ implicit c => NormalizedURI.get(id) }
+    buildIndexable(uri)
+  }
+
   def buildIndexable(uri: NormalizedURI) = {
     new ArticleIndexable(uri.id.get, uri, articleStore)
   }
@@ -116,9 +121,11 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
         case Some(article) =>
           val titleLang = article.titleLang.getOrElse(Lang("en"))
           val contentLang = article.contentLang.getOrElse(Lang("en"))
+          doc.add(buildKeywordField("cl", contentLang.lang))
+          doc.add(buildKeywordField("tl", titleLang.lang))
+
           val titleAnalyzer = DefaultAnalyzer.forIndexing(titleLang)
           val contentAnalyzer = DefaultAnalyzer.forIndexing(contentLang)
-
           val title = buildTextField("t", article.title, titleAnalyzer)
           val content = buildTextField("c", article.content, contentAnalyzer)
           doc.add(title)

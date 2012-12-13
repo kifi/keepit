@@ -22,6 +22,7 @@ import play.api.test.Helpers._
 import org.apache.lucene.store.RAMDirectory
 import com.keepit.search.graph.UserToUserEdgeSet
 import scala.math._
+import scala.collection.JavaConversions._
 
 @RunWith(classOf[JUnitRunner])
 class ArticleIndexerTest extends SpecificationWithJUnit {
@@ -215,6 +216,22 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
 
       res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs -site:keepit.org").get)
       res.size === 2
+    }
+
+    "be able to dump Lucene Document" in {
+      running(new EmptyApplication()) {
+        val ramDir = new RAMDirectory
+        val store = new FakeArticleStore()
+
+        var uri = CX.withConnection { implicit c =>
+          NormalizedURI(title = "a1", url = "http://www.keepit.com/article1", state = ACTIVE).save
+        }
+        store += (uri.id.get -> mkArticle(uri.id.get, "title1 titles", "content1 alldocs body soul"))
+
+        val indexer = ArticleIndexer(ramDir, store)
+        val doc = indexer.buildIndexable(uri.id.get).buildDocument
+        doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
+      }
     }
   }
 }
