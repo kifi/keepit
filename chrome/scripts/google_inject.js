@@ -298,7 +298,7 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
         if (req.readyState == 4 && req.status == 200) {
 
           log('Rendering Mustache.js Google template...');
-          var results = new Array();
+          var results = [];
 
           $(searchResults).each(function(i, result){
             var formattedResult = result;
@@ -321,39 +321,32 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
             formattedResult.count = formattedResult.count - formattedResult.users.length - (formattedResult.isMyBookmark ? 1 : 0);
 
             // Awful decision tree for clean text. Come up with a better way.
-            if(formattedResult.isMyBookmark) { // you
-              if(numFriends == 0) { // no friends
-                if(formattedResult.count > 0) { // others
-                  formattedResult.countText = "You and " + formattedResult.count + " others";
-                }
-                else { // no others
+            if (formattedResult.isMyBookmark) { // you
+              if (numFriends == 0) { // no friends
+                if (formattedResult.count > 0) { // others
+                  formattedResult.countText = "You and " + plural(formattedResult.count, "other");
+                } else { // no others
                   formattedResult.countText = "You";
                 }
-              }
-              else { // numFriends > 0
-                if(formattedResult.count > 0) { // others
-                  formattedResult.countText = "You, <b>" + numFriends + " friends</b>, and " + formattedResult.count + " others";
-                }
-                else { // no others
-                  formattedResult.countText = "You and <b>" + numFriends + " friends</b>";
+              } else { // numFriends > 0
+                if (formattedResult.count > 0) { // others
+                  formattedResult.countText = "You, <b>" + plural(numFriends, "friend") + "</b>, and " + plural(formattedResult.count, "other");
+                } else { // no others
+                  formattedResult.countText = "You and <b>" + plural(numFriends, "friend") + "</b>";
                 }
               }
-            }
-            else { // not you
-              if(numFriends == 0) { // no friends
-                if(formattedResult.count > 0) { // others
-                  formattedResult.countText =  formattedResult.count + " others";
-                }
-                else { // no others
+            } else { // not you
+              if (numFriends == 0) { // no friends
+                if (formattedResult.count > 0) { // others
+                  formattedResult.countText = plural(formattedResult.count, "other");
+                } else { // no others
                   formattedResult.countText = "No one"; // ???
                 }
-              }
-              else { // numFriends > 0
-                if(formattedResult.count > 0) { // others
-                  formattedResult.countText = "<b>" + numFriends + " friends</b>, and " + formattedResult.count + " others";
-                }
-                else { // no others
-                  formattedResult.countText = "<b>" + numFriends + " friends</b>";
+              } else { // numFriends > 0
+                if (formattedResult.count > 0) { // others
+                  formattedResult.countText = "<b>" + plural(numFriends, "friend") + "</b>, and " + plural(formattedResult.count, "other");
+                } else { // no others
+                  formattedResult.countText = "<b>" + plural(numFriends, "friend") + "</b>";
                 }
               }
             }
@@ -429,6 +422,10 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
     } catch (e) {
       error(e);
     }
+  }
+
+  function plural(n, term) {
+    return n + " " + term + (n == 1 ? "" : "s");
   }
 
   function socialTooltip(friend, element) {
