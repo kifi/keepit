@@ -26,6 +26,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import com.keepit.common.social._
 import java.util.concurrent.TimeUnit
+import java.util.NoSuchElementException
 import java.sql.Connection
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
@@ -33,6 +34,7 @@ import com.keepit.common.net._
 import com.keepit.search.graph.URIGraphPlugin
 import play.api.libs.json.{JsBoolean, JsNull}
 import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 
 object BookmarksController extends FortyTwoController {
 
@@ -150,12 +152,18 @@ object BookmarksController extends FortyTwoController {
   }
 
   def addBookmarks() = AuthenticatedJsonAction { request =>
-    val json = request.body.asJson.get
-    val bookmarkSource = (json \ "bookmark_source").asOpt[String]
-    log.info("adding bookmarks of user %s".format(request.userId))
-    internBookmarks(json \ "bookmarks", request.userId, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")))
-    inject[URIGraphPlugin].update(request.userId)
-    Ok
+    request.body.asJson match {
+      case Some(json) =>
+        val bookmarkSource = (json \ "bookmark_source").asOpt[String]
+        log.info("adding bookmarks of user %s".format(request.userId))
+        internBookmarks(json \ "bookmarks", request.userId, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")))
+        inject[URIGraphPlugin].update(request.userId)
+        Ok
+      case None =>
+        val msg = "Unsupported operation for user %s with old installation".format(request.userId)
+        inject[HealthcheckPlugin].addError(HealthcheckError(callType = Healthcheck.API, errorMessage = Some(msg)))
+        BadRequest(msg)
+    }
   }
 
   private def internBookmarks(value: JsValue, userId: Id[User], source: BookmarkSource): List[Bookmark] = value match {
