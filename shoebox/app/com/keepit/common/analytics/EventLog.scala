@@ -67,13 +67,13 @@ case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, meta
 
 case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime, serverVersion: String = currentService + ":" + currentVersion) {
 
-  def persistToS3() = {
+  def persistToS3(): Unit = {
     inject[S3EventStore] += (externalId -> this)
   }
-  def persistToMongo() = {
+  def persistToMongo(): Unit = {
     inject[MongoEventStore].save(this)
   }
-  def persist() = {
+  def persist(): Unit = {
     persistToS3()
     persistToMongo()
   }

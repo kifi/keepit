@@ -14,6 +14,10 @@ import akka.actor.Props
 import com.keepit.model.User
 import akka.util.duration._
 import play.api.Play.current
+import com.keepit.common.healthcheck._
+import com.keepit.inject._
+import com.keepit.common.time._
+import org.joda.time._
 
 case object Load
 case class Update(userId: Id[User])
@@ -24,8 +28,23 @@ private[analytics] class PersistEventActor extends Actor with Logging {
 
   def receive() = {
     case Persist(event) =>
-      log.info("Persisting event %s".format(event.externalId))
-      event.persist
+      val diff = Seconds.secondsBetween(event.createdAt, currentDateTime).getSeconds
+      if(diff > 60) {
+        val ex = new Exception("Event log is backing up. Event is %s seconds old".format(diff))
+        inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        // To keep the event log from backing too far up, ignore very old events.
+        // If we get this, use parallel actors.
+      }
+      else {
+        try { event.persistToS3 } catch { case ex: Throwable =>
+          val ex = new Exception("Could not persist event to S3")
+          inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        }
+        try { event.persistToMongo } catch { case ex: Throwable =>
+          val ex = new Exception("Could not persist event to Mongo")
+          inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        }
+      }
     case PersistMany(events) =>
       events foreach ( self ! _ )
     case m => throw new Exception("unknown message %s".format(m))
