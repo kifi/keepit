@@ -156,32 +156,24 @@ slider = function() {
       });
   }
 
-  // TODO: inline this function into slider.show
   function showKeepItHover(user) {
     chrome.extension.sendRequest({type: "get_slider_info"}, function(o) {
       log(o);
-
       isKept = o.kept;
       following = o.following;
 
-      var tmpl = {
-        "logo": chrome.extension.getURL('images/kifilogo.png'),
-        "arrow": chrome.extension.getURL('images/triangle_down.31x16.png'),
-        "profilepic": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square",
-        "name": user.name,
-        "is_kept": o.kept,
-        "private": o.private,
-        "connected_networks": chrome.extension.getURL("images/networks.png")
-      }
-
-      if (o.friends.length) {
-        tmpl.socialConnections = {
-          countText: summaryText(o.friends.length, o.kept),
-          friends: o.friends
-        }
-      }
-
-      renderTemplate('templates/kept_hover.html', tmpl, {
+      renderTemplate('templates/kept_hover.html', {
+          "logo": chrome.extension.getURL('images/kifilogo.png'),
+          "arrow": chrome.extension.getURL('images/triangle_down.31x16.png'),
+          "profilepic": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square",
+          "name": user.name,
+          "is_kept": o.kept,
+          "private": o.private,
+          "connected_networks": chrome.extension.getURL("images/networks.png"),
+          "socialConnections": o.friends.length == 0 ? null : {
+            countText: summaryText(o.friends.length, o.kept),
+            friends: o.friends}
+        }, {
           "main_hover": "main_hover.html",
           "footer": "footer.html"
         }, function(template) {
@@ -191,14 +183,13 @@ slider = function() {
   }
 
   function drawKeepItHover(user, friends, numComments, numMessages, renderedTemplate) {
-    if ($('.kifi_hover').length > 0) {
-      // nevermind!
+    if ($('.kifi_hover').length) {
       log("No need to inject, it's already here!");
       return;
     }
 
     // Inject the slider!
-    $('body').prepend(renderedTemplate);
+    $('body').append(renderedTemplate);
 
     $('.social_friend').each(function(i,e) {
       socialTooltip(friends[i],e);
@@ -209,22 +200,20 @@ slider = function() {
 
     // Event bindings
 
-    $(".kifi_hover").draggable({cursor: "move", axis: "y", distance: 10, handle: "div.kifihdr", containment: "body", scroll: false});
-
-    $('.xlink').click(function() {
+    $(".kifi_hover").draggable({cursor: "move", axis: "y", distance: 10, handle: "div.kifihdr", containment: "body", scroll: false})
+    .on("click", ".xlink", function() {
       slideOut();
-    });
-    //$('.profilepic').click(function() { location = "http://www.facebook.com/" + user.facebook_id; });
-
-    $('.unkeepitbtn').click(function() {
+    })
+    // .on("click", ".profilepic", function() {
+    //   location = "http://www.facebook.com/" + user.facebook_id;
+    // })
+    .on("click", ".unkeepitbtn", function() {
       unkeepPage(true);
-    });
-
-    $('.keepitbtn').click(function() {
+    })
+    .on("click", ".keepitbtn", function() {
       keepPage(true);
-    });
-
-    $('.makeprivatebtn').click(function() {
+    })
+    .on("click", ".makeprivatebtn", function() {
       var $btn = $(this), priv = /private/i.test($btn.text());
       log("[setPrivate] " + priv);
       chrome.extension.sendRequest({
@@ -235,18 +224,18 @@ slider = function() {
           log("[setPrivate] response:", response);
           $btn.text("Make it " + (priv ? "Public" : "Private"));
         });
-    });
-
-    $('.dropdownbtn').click(function() {
+    })
+    .on("click", ".dropdownbtn", function() {
       $('.moreinnerbox').slideToggle(150);
-    });
-
-    $('.comments-label').click(function() {
+    })
+    .on("click", ".comments-label", function() {
       showComments(user, "public");
-    });
-
-    $('.messages-label').click(function() {
+    })
+    .on("click", ".messages-label", function() {
       showComments(user, "message", null, $('.thread-wrapper').length > 0);
+    })
+    .on("click mouseup mousedown keypress keyup keydown", function(e) {
+      e.stopPropagation();
     });
 
     slideIn();
