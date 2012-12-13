@@ -52,37 +52,40 @@ object EventController extends FortyTwoController {
   private def createEventsFromPayload(params: JsValue, userId: Id[User]) = {
     val logRecievedTime = currentDateTime
 
+    val (user, experiments) = CX.withConnection { implicit conn =>
+      (User.get(userId), UserExperiment.getByUser(userId) map (_.experimentType))
+    }
+
     val events = (params \ "events") match {
       case JsArray(ev) => ev map (  _.as[JsObject] )
       case _: JsValue => throw new Exception()
     }
+
     val logClientTime = (params \ "time").as[Int]
     val globalInstallId = (params \ "installId").asOpt[String].getOrElse("")
 
-    CX.withConnection { implicit conn =>
       events map { event =>
         val eventTimeAgo = math.max(logClientTime - (event \ "time").as[Int],0)
         val eventTime = logRecievedTime.minusMillis(eventTimeAgo)
 
         val eventFamily = EventFamilies((event \ "eventFamily").as[String])
         val eventName = (event \ "eventName").as[String]
-        val installId = ExternalId[KifiInstallation]((event \ "installId").asOpt[String].getOrElse(globalInstallId))
-        val metaData = (event \ "metaData").as[JsObject]
-        val prevEvents = (event \ "prevEvents") match {
+        val installId = (event \ "installId").asOpt[String].getOrElse(globalInstallId)
+        val metaData = (event \ "metaData").asOpt[JsObject].getOrElse(JsObject(Seq()))
+        val prevEvents = ((event \ "prevEvents") match {
           case JsArray(s) =>
-            s map { ext =>
+            Some(s map { ext =>
               ext match {
-                case JsString(id) => ExternalId[Event](id)
-                case _: JsValue => throw new Exception()
+                case JsString(id) => Some(ExternalId[Event](id))
+                case _: JsValue => None
               }
-            }
-          case _: JsValue => throw new Exception()
-        }
-        val newEvent = Events.userEvent(eventFamily, eventName, userId, installId, metaData, prevEvents, eventTime).persist
+            } flatten)
+          case _: JsValue => None
+        }).getOrElse(Seq())
+        val newEvent = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime).persist
         log.info("Created new event: %s".format(newEvent))
         newEvent
       }
-    }
   }
 
   def viewEvents() = AdminHtmlAction { request =>
