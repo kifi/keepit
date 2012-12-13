@@ -87,21 +87,11 @@ object EventController extends FortyTwoController {
 
   def viewEvents() = AdminHtmlAction { request =>
 
-    /*val selector = MongoSelector(EventFamilies.EXTENSION)
-                     .withDateRange(currentDateTime.minusHours(24), currentDateTime)
-                     .withEventName("started")
-                     .build
-    val store = inject[MongoEventStore]
-
-    val result = store.countGroup(EventFamilies.SLIDER, selector, MongoMapFunc.DATE_BY_HOUR)
-
-
-    Ok(JsArray(result)).as(ContentTypes.JSON)*/
-
     val report = new DailyActiveUniqueUserReport
-    val result = report.get(currentDateTime.minusDays(10), currentDateTime)
+    val result = report.get(currentDateTime.minusDays(15), currentDateTime)
 
-    Ok(result.toString)
+
+    Ok(result.toCSV + "\n\n" + (new DailyPageLoadReport).get(currentDateTime.minusDays(15), currentDateTime).toCSV)
   }
 
 

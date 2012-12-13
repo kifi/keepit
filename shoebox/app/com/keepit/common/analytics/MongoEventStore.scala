@@ -62,79 +62,12 @@ case class MongoSelector(eventFamily: EventFamily) {
   override def toString = q.toString
 }
 
-trait MongoFunc {
-  val js: String
-}
-
-case class MongoKeyMapFunc(js: String) extends MongoFunc
-object MongoKeyMapFunc {
-  val DATE_BY_HOUR = MongoKeyMapFunc("""
-    function(doc) {
-      var date = new Date(doc.createdAt);
-      var dateKey = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '';
-      var dateKey = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + ' '+date.getHours()+':00';
-      return {'day':dateKey};
-    }
-    """)
-  val DATE = MongoKeyMapFunc("""
-    function(doc) {
-      var date = new Date(doc.createdAt);
-      var dateKey = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '';
-      return {'day':dateKey};
-    }
-    """)
-  val USER_DATE = MongoKeyMapFunc("""
-    function(doc) {
-      var date = new Date(doc.createdAt);
-      var dateKey = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '';
-      var userId = doc.metaData.userId;
-      return {'user':userId, 'date':dateKey};
-    }
-    """)
-  val USER_DATE_HOUR  = MongoKeyMapFunc("""
-    function(doc) {
-      var date = new Date(doc.createdAt);
-      var dateKey = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + ' ' + date.getHours()+":00";
-      var userId = doc.metaData.userId;
-      return {'user':userId, 'date':dateKey};
-    }
-    """)
-}
-
-case class MongoMapFunc(js: String) extends MongoFunc
-object MongoMapFunc {
-
-  val USER_DATE_COUNT = MongoMapFunc("""
-    function() {
-      var date = new Date(this.createdAt);
-      var dateKey = (date.getMonth()+1)+"/"+date.getDate()+"/"+date.getFullYear();
-      emit({day: dateKey,userId: this.metaData.userId},{count:1});
-    };
-    """)
-  val KEY_DAY_COUNT = MongoMapFunc("""
-    function() {
-      emit(this['_id']['day'], {count: 1});
-    }
-    """)
-}
-
-case class MongoReduceFunc(js: String) extends MongoFunc
-object MongoReduceFunc {
-  val KEY_AGGREGATE = MongoReduceFunc("""function(obj, prev) {prev.count++;}""")
-  val BASIC_COUNT = MongoReduceFunc("""
-    function(key, values) {
-      var count = 0;
-      values.forEach(function(v) {
-        count += v['count'];
-      });
-      return {count: count};
-    }
-    """)
-}
 
 trait MongoEventStore {
   def save(event: Event): Unit
   def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoKeyMapFunc): Seq[JsObject]
+  def mapReduce(collection: String, map: MongoMapFunc, reduce: MongoReduceFunc, outputCollection: Option[String], query: Option[DBObject], finalize: Option[MongoReduceFunc]): Iterator[DBObject]
+  def find(collection: String, mongoSelector: MongoSelector): MongoCursor
 }
 
 class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Logging {
@@ -169,18 +102,23 @@ class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Log
     }
   }
 
-  def mapReduce(eventFamily: EventFamily, map: MongoMapFunc, reduce: MongoReduceFunc, outputCollection: Option[String], query: Option[DBObject], finalize: Option[MongoReduceFunc]) = {
-    val coll = mongoDB(eventFamily.collection)
+  def mapReduce(collection: String, map: MongoMapFunc, reduce: MongoReduceFunc, outputCollection: Option[String], query: Option[DBObject], finalize: Option[MongoReduceFunc]): Iterator[DBObject] = {
+    val coll = mongoDB(collection)
     val output = if(outputCollection.isDefined) {
       MapReduceStandardOutput(outputCollection.get)
     } else {
       MapReduceInlineOutput
     }
-    val result = coll.mapReduce(map.js, reduce.js, output)
+    coll.mapReduce(map.js, reduce.js, output, query).cursor
   }
 
   def find(mongoSelector: MongoSelector): MongoCursor = {
     val coll = mongoDB(mongoSelector.eventFamily.collection)
+    coll.find(mongoSelector)
+  }
+
+  def find(collection: String, mongoSelector: MongoSelector): MongoCursor = {
+    val coll = mongoDB(collection)
     coll.find(mongoSelector)
   }
 
@@ -212,6 +150,14 @@ class FakeMongoEventStoreImpl() extends MongoEventStore with Logging {
 
   def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoKeyMapFunc): Seq[JsObject] = {
     Seq[JsObject]()
+  }
+
+  def mapReduce(collection: String, map: MongoMapFunc, reduce: MongoReduceFunc, outputCollection: Option[String], query: Option[DBObject], finalize: Option[MongoReduceFunc]): Iterator[DBObject] = {
+    Iterator(new MongoDBObject())
+  }
+
+  def find(collection: String, mongoSelector: MongoSelector): MongoCursor = {
+    throw new Exception("Can't implement")
   }
 }
 

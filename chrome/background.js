@@ -174,7 +174,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
           log("Bad event", request)
           break;
         }
-        logEvent(request.eventFamily, request.eventName, request.metaData, request.prevEvents);
+        logEvent(request.eventFamily, request.eventName, request.metaData || {}, request.prevEvents || []);
         break;
       case "get_comments":
         $.get("http://" + getConfigs().server +
@@ -377,7 +377,7 @@ function postComment(request, sendResponse) {
 function searchOnServer(request, sendResponse, tab) {
   var userConfigs = getConfigs();
 
-  logEvent("search","newSearch", {query: request.query});
+  logEvent("search","newSearch");
 
   if (!getUser()) {
     log("No facebook, can't search!");
@@ -437,6 +437,8 @@ function initPage(request, sendResponse, tab) {
   }
   setPageIcon(tab.id, false);
   var pageLocation = request.location;
+
+  logEvent("extension", "pageLoad");
 
   if (restrictedUrlPatternsForHover.some(function(e) {return pageLocation.indexOf(e) >= 0})) {
     log("[initPage] restricted ", tab.url);
