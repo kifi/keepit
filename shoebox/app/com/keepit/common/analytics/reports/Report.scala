@@ -1,46 +1,36 @@
 package com.keepit.common.analytics.reports
 
+import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.analytics._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.inject._
 import play.api.Play.current
-import com.keepit.common.time._
+import org.joda.time._
 import com.keepit.common.logging.Logging
 import com.mongodb.casbah.Imports._
 import scala.util.Random
-import org.joda.time._
 
 object Parsers {
-  type ParsedDBObject = (DateTime,Map[String,String])
-  def dateCountParser(name: String, r: DBObject): ParsedDBObject = {
+  def dateCountParser(r: DBObject) = {
     val date = r.getAs[String]("_id").get
     val count = r.getAs[DBObject]("value").get.getAs[Double]("count").get.toInt
-    parseStandardDate(date).toDateTimeAtStartOfDay -> Map(name -> count.toString)
+    parseStandardDate(date) -> Seq(count.toString)
   }
 }
 
-case class ReportRow(date: DateTime, fields: Map[String, String]) {
-
-  def toCSV = STANDARD_DATETIME_FORMAT.print(date) + "," + fields.mkString(",")
+case class ReportRow(fields: Seq[String]) {
+  def toCSV = fields.mkString(",")
 }
 case class CompleteReport(list: Seq[ReportRow]) {
-  private lazy val dates = list map (_.date)
   def toCSV = (list.map(_.toCSV)).mkString("\n")
   def +(that: CompleteReport) = {
-    // Mutability and imperative loops for efficiency
-    dates map { thisDate =>
-      var i = 0
-      while(i < that.list.length) {
-        if(that.list(i).date.isAfter(thisDate)) {
-
-        }
-        i = i+1
-      }
-    }
+    CompleteReport((that.list ++ this.list))
   }
-
+  def ++(that: CompleteReport) = {
+    CompleteReport((that.list ++ this.list).distinct.sortWith((a,b) => parseStandardDate(a.fields.headOption.getOrElse("01-01-1900")).compareTo(parseStandardDate(b.fields.headOption.getOrElse("01-01-1900"))) > 0))
+  }
 }
 
 trait Report {
@@ -53,19 +43,23 @@ trait Report {
   def get(startDate: DateTime, endDate: DateTime): CompleteReport
   def get(): CompleteReport = get(currentDateTime.minusDays(default_report_size), currentDateTime)
 
-  def reportBuilder(startDate: DateTime, endDate: DateTime, numFields: Int)(reportFields: Map[DateTime,Map[String,String]]) = {
-    val rows = (reportFields map { row =>
-      ReportRow(row._1, row._2)
-    } toSeq) sortWith((a,b) => a.date.isBefore(b.date))
-    CompleteReport(rows)
+  def reportBuilder(startDate: LocalDate, endDate: LocalDate, numFields: Int)(reportFields: Map[LocalDate,Seq[String]]) = {
+    val firstDay = startDate
+    val daysBetween = Days.daysBetween(startDate,endDate).getDays()
+    val dayCountList = for(i <- 0 to daysBetween) yield {
+      val day = firstDay.plusDays(i)
+      val fields = Seq(day.toString) ++ reportFields.getOrElse(day,Seq.fill(numFields-1)("0"))
+      ReportRow(fields)
+    }
+    CompleteReport(dayCountList)
   }
 }
 
 trait BasicDailyAggregationReport extends Report {
-  def _get(name: String, query: DBObject, startDate: DateTime, endDate: DateTime): CompleteReport  = {
+  def _get(query: DBObject, startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val results = store.mapReduce(EventFamilies.EXTENSION.collection, MongoMapFunc.DATE_COUNT, MongoReduceFunc.BASIC_COUNT, None, Some(query), None).toList
-    val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
-    builder(results map(Parsers.dateCountParser(name,_)) toMap)
+    val builder = reportBuilder(startDate.toLocalDate, endDate.toLocalDate, 2)_
+    builder(results map Parsers.dateCountParser toMap)
   }
 }
 
@@ -84,9 +78,9 @@ class DailyActiveUniqueUserReport extends Report with Logging {
     val resultsSelector = MongoSelector(EventFamilies.GENERIC_USER)
     val results = store.find(collectionName, resultsSelector).toList
 
-    val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
+    val builder = reportBuilder(startDate.toLocalDate, endDate.toLocalDate, 2)_
 
-    builder(results map(Parsers.dateCountParser("DailyActiveUniqueUserCount",_)) toMap)
+    builder(results map Parsers.dateCountParser toMap)
   }
 }
 
@@ -96,7 +90,7 @@ class DailyPageLoadReport extends BasicDailyAggregationReport with Logging {
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val selector = MongoSelector(EventFamilies.EXTENSION).withDateRange(startDate, endDate).withEventName("pageLoad").build
-    _get("DailyPageLoadReportCount",selector, startDate, endDate)
+    _get(selector, startDate, endDate)
   }
 }
 
@@ -106,6 +100,6 @@ class DailySearchQueriesReport extends BasicDailyAggregationReport with Logging 
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("newSearch").build
-    _get("DailySearchQueriesReportCount",selector, startDate, endDate)
+    _get(selector, startDate, endDate)
   }
 }
