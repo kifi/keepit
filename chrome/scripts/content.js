@@ -23,10 +23,23 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
   }
 
   chrome.extension.sendRequest({type: "page_load"}, function(sliderDelayMs) {
+    log("slider delay:", sliderDelayMs);
     setTimeout(function() {
-      log("showing slider");
-      // We don't slide in automatically if the slider has already been shown (manually).
-      chrome.extension.sendRequest({type: "check_hover_existed", kifi_hover: window.kifi_hover || false});
+      log("slider delay has passed");
+      if (!slider.alreadyShown) {
+        slider.show();
+      }
     }, sliderDelayMs);
+  });
+
+  chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
+    if (request.type === "button_click") {
+      slider.toggle();
+    }
+  });
+
+  key('command+shift+k, ctrl+shift+k', function() {
+    slider.toggle();
+    return false;
   });
 }();
