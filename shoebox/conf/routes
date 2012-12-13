@@ -38,6 +38,9 @@ GET     /welcome                    com.keepit.controllers.AuthController.welcom
 GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
 GET     /whois                      com.keepit.controllers.AuthController.whois
 
+POST    /users/events               com.keepit.controllers.EventController.logUserEvents
+GET     /users/events               com.keepit.controllers.EventController.viewEvents
+
 POST    /chat/:recipientId          com.keepit.controllers.ChatController.chat(recipientId: ExternalId[User])
 
 # Map static resources from the /public folder to the /assets URL path

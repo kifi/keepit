@@ -2,6 +2,19 @@ function log(message) {
   console.log.apply(console, Array.prototype.concat.apply(["[kifi][" + new Date().getTime() + "] "], arguments));
 }
 
+function logEvent(eventFamily, eventName, metaData, prevEvents) {
+  var request = {
+    type: "log_event",
+    eventFamily: eventFamily,
+    eventName: eventName,
+    metaData: metaData || {},
+    prevEvents: prevEvents || []
+  }
+  chrome.extension.sendRequest(request, function() {
+    log("[logEvent] Event logged.")
+  })
+}
+
 !function() {
   log("host: ", document.location.host);
   if (window !== top) {

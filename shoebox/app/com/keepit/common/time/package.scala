@@ -65,6 +65,7 @@ package object time {
     new DateTime(timestamp.getTime, zone)
 
   def parseStandardTime(timeString: String) = STANDARD_DATETIME_FORMAT.parseDateTime(timeString)
+  def parseStandardDate(timeString: String) = STANDARD_DATE_FORMAT.parseLocalDate(timeString)
 
   class RichDateTime(date: DateTime) {
     def toLocalDateInZone(implicit zone: DateTimeZone): LocalDate = date.withZone(zone).toLocalDate

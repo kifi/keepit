@@ -103,6 +103,11 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
       log("kifi results recieved for " + resultsStore.query);
       log(resultsStore);
 
+      logEvent("search", "kifiLoaded");
+      if(results.searchResults.hits.length > 0) {
+        logEvent("search", "kifiAtLeastOneResult");
+      }
+
       drawResults(0);
 
       //fetchMoreResults();
