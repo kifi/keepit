@@ -98,8 +98,8 @@ object BookmarksController extends FortyTwoController {
     Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
   }
 
-  def bookmarksFirstPageView = Action { // TODO: remove me by 2013
-    Ok("Yo! please use http://keepitfindit.com/admin for admin interface. This page is no longer supported.")
+  def bookmarksFirstPageView = AdminHtmlAction { request =>// TODO: remove me by 2013
+    Ok("""Yo! please use http://keepitfindit.com/admin for admin site. This URL is no longer supported""")
   }
 
   def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
@@ -149,27 +149,23 @@ object BookmarksController extends FortyTwoController {
     }
   }
 
-  def addBookmarks() = JsonAction { request =>
-    val json = request.body
-    log.debug(json)
+  def addBookmarks() = AuthenticatedJsonAction { request =>
+    val json = request.body.asJson.get
     val bookmarkSource = (json \ "bookmark_source").asOpt[String]
-    val userId = ExternalId[User]((json \ "user_info" \ "keepit_external_id").as[String])
-    val user = CX.withConnection { implicit conn => User.get(userId) }
-    log.info("adding bookmarks of user %s".format(user))
-    internBookmarks(json \ "bookmarks", user, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")))
-    inject[URIGraphPlugin].update(user.id.get)
-    Ok(JsObject(("status" -> JsString("success")) ::
-        ("userId" -> JsString(user.id.map(id => id.id.toString()).getOrElse(""))) :: Nil))//todo: need to send external id
+    log.info("adding bookmarks of user %s".format(request.userId))
+    internBookmarks(json \ "bookmarks", request.userId, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")))
+    inject[URIGraphPlugin].update(request.userId)
+    Ok
   }
 
-  private def internBookmarks(value: JsValue, user: User, source: BookmarkSource): List[Bookmark] = value match {
-    case JsArray(elements) => (elements map {e => internBookmarks(e, user, source)} flatten).toList
-    case json: JsObject if(json.keys.contains("children")) => internBookmarks(json \ "children" , user, source)
-    case json: JsObject => List(internBookmark(json, user, source)).flatten
+  private def internBookmarks(value: JsValue, userId: Id[User], source: BookmarkSource): List[Bookmark] = value match {
+    case JsArray(elements) => (elements map {e => internBookmarks(e, userId, source)} flatten).toList
+    case json: JsObject if(json.keys.contains("children")) => internBookmarks(json \ "children" , userId, source)
+    case json: JsObject => List(internBookmark(json, userId, source)).flatten
     case e => throw new Exception("can't figure what to do with %s".format(e))
   }
 
-  private def internBookmark(json: JsObject, user: User, source: BookmarkSource): Option[Bookmark] = {
+  private def internBookmark(json: JsObject, userId: Id[User], source: BookmarkSource): Option[Bookmark] = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
     val isPrivate = try { (json \ "isPrivate").as[Boolean] } catch { case e => false }
@@ -181,10 +177,10 @@ object BookmarksController extends FortyTwoController {
           case Some(uri) => uri
           case None => createNewURI(title, url)
         }
-        Bookmark.load(uri, user) match {
+        Bookmark.load(uri, userId) match {
           case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
           case Some(bookmark) => Some(bookmark.withActive(true).withPrivate(isPrivate).save)
-          case None => Some(Bookmark(uri, user, title, url, source, isPrivate).save)
+          case None => Some(Bookmark(uri, userId, title, url, source, isPrivate).save)
         }
       }
     } else {
