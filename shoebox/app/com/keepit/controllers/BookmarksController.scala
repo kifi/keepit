@@ -99,7 +99,7 @@ object BookmarksController extends FortyTwoController {
   }
 
   def bookmarksFirstPageView = AdminHtmlAction { request =>// TODO: remove me by 2013
-    Ok("""<html>Yo! please use <a href="http://keepitfindit.com/admin">http://keepitfindit.com/admin</a> for admin site. This URL is no longer supported.</html>""")
+    Ok("""Yo! please use http://keepitfindit.com/admin for admin site. This URL is no longer supported""")
   }
 
   def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
