@@ -57,7 +57,8 @@ object SocialConnection extends Logging {
         from
              (%s) as suid, social_connection as sc
         where
-             (sc.social_user_1 in (suid.id)) or (sc.social_user_2 in (suid.id))""".format(suidSQL)
+             ( (sc.social_user_1 in (suid.id)) or (sc.social_user_2 in (suid.id)) )
+             and sc.state = 'active'    """.format(suidSQL)
     val rs = statement.executeQuery("""
         select
              sui.user_id
@@ -79,18 +80,18 @@ object SocialConnection extends Logging {
     }
   }
 
-  def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo])(implicit conn: Connection): Option[SocialConnection] = {
+  def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo] )(implicit conn: Connection): Option[SocialConnection] = {
     (SocialConnectionEntity AS "sc").map { sc => SELECT (sc.*) FROM sc WHERE (
-        ((sc.socialUser1 EQ u1) AND (sc.socialUser2 EQ u2)) OR
-        ((sc.socialUser1 EQ u2) AND (sc.socialUser2 EQ u1))) unique } map ( _.view )
+        (((sc.socialUser1 EQ u1) AND (sc.socialUser2 EQ u2)) OR
+        ((sc.socialUser1 EQ u2) AND (sc.socialUser2 EQ u1)))  ) unique } map ( _.view )
   }
-
 
   def getUserConnectionsCount(id: Id[User])(implicit conn: Connection): Long = {
     val suis = SocialUserInfo.getByUser(id).map(_.id.get)
     if(!suis.isEmpty) {
       (SocialConnectionEntity AS "sc").map { sc =>
-        SELECT (COUNT(sc.id)) FROM sc WHERE ((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) unique
+        SELECT (COUNT(sc.id)) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) 
+          AND (sc.state EQ SocialConnection.States.ACTIVE) ) unique
       } get
     } else {
       0L
@@ -101,7 +102,7 @@ object SocialConnection extends Logging {
     val suis = SocialUserInfo.getByUser(id).map(_.id.get)
     if(!suis.isEmpty) {
       val conns = (SocialConnectionEntity AS "sc").map { sc =>
-        SELECT (sc.*) FROM sc WHERE ((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) list
+        SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) AND (sc.state EQ SocialConnection.States.ACTIVE)) list
       } map (_.view) map (s => if(suis.contains(s.socialUser1)) s.socialUser2 else s.socialUser1 ) toList
 
       if(!conns.isEmpty) {
@@ -121,7 +122,7 @@ object SocialConnection extends Logging {
   def getSocialUserConnections(id: Id[SocialUserInfo])(implicit conn: Connection): Seq[SocialUserInfo] = {
 
     val conns = (SocialConnectionEntity AS "sc").map { sc =>
-      SELECT (sc.*) FROM sc WHERE ((sc.socialUser1 EQ id) OR (sc.socialUser2 EQ id)) list
+      SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 EQ id) OR (sc.socialUser2 EQ id)) AND (sc.state EQ SocialConnection.States.ACTIVE) ) list
     } map (_.view) map (s => if(id == s.socialUser1) s.socialUser2 else s.socialUser1 ) toList
 
     if(!conns.isEmpty) {

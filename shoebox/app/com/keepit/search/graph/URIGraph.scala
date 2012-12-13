@@ -219,7 +219,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     }
 
     private def getTextQuery(queryText: String, quoted: Boolean) = {
-      val booleanQuery = new BooleanQuery
+      val booleanQuery = new BooleanQuery(true)
       var query = super.getFieldQuery(URIGraph.titleTerm.field(), queryText, quoted)
       if (query != null) booleanQuery.add(query, Occur.SHOULD)
 
