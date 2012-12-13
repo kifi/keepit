@@ -150,7 +150,7 @@ object BookmarksController extends FortyTwoController {
   }
 
   def addBookmarks() = AuthenticatedJsonAction { request =>
-    val json = request.body.asJson.get
+    val json = Json.parse(request.body.asText.get)
     val bookmarkSource = (json \ "bookmark_source").asOpt[String]
     val user = CX.withConnection { implicit conn => User.get(request.userId) }
     log.info("adding bookmarks of user %s".format(user))
