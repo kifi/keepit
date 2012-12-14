@@ -62,8 +62,8 @@ trait EventMetadata {
   val prevEvents: Seq[ExternalId[Event]]
 }
 
-case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: String, userExperiments: Seq[State[UserExperiment.ExperimentType]], metaData: JsValue, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
-case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsValue, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
+case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: String, userExperiments: Seq[State[UserExperiment.ExperimentType]], metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
+case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 
 case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime, serverVersion: String = currentService + ":" + currentVersion) {
 
