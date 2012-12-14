@@ -5,6 +5,7 @@
   "description": "Keep it, Find it!",
   "icons": {
     "48": "icons/kifi.48.png",
+    "128": "icons/kifi.128.png",
     "256": "icons/kifi.256.png"
   },
   "options_page": "options.html",
