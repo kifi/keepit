@@ -237,11 +237,9 @@
   ],
   "permissions": [
     "tabs",
-    "cookies",
     "bookmarks",
     "http://*/",
-    "https://*/",
-    "unlimitedStorage"
+    "https://*/"
   ],
   "web_accessible_resources": [
     "data/magicQueries.json",
