@@ -1,10 +1,11 @@
 {
   "name": "Kifi Beta",
-  "version": "2.0.9",
+  "version": "2.1.0",
   "manifest_version": 2,
   "description": "Keep it, Find it!",
-  "icons" : {
-    "256" : "icons/kifi.png"
+  "icons": {
+    "48": "icons/kifi.48.png",
+    "256": "icons/kifi.256.png"
   },
   "options_page": "options.html",
   "page_action": {
