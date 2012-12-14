@@ -41,7 +41,6 @@ private[analytics] class PersistEventActor extends Actor with Logging {
           inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         }
         try { event.persistToMongo } catch { case ex: Throwable =>
-          val ex = new Exception("Could not persist event to Mongo")
           inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         }
       }
