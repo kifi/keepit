@@ -22,6 +22,49 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
     //alert("exception: " + exception.message);
   }
 
+  function logSearchEvent(t) {
+    //$("li.g .vsc a").mousedown(function(t) { console.log($(this).parents('.kifi_reslist').length); });
+    function countWhichResult(elem, selector) {
+      var results = selector.find('.g .vsc h3.r a');
+      var res = -1;
+      for(var i = 0;i<results.length;i++) {
+        if(results[i] == elem) {
+          res = i;
+          break;
+        }
+      }
+      return res;
+    }
+    var $this = $(t);
+    var kifi_reslist = $this.parents('#kifi_reslist')
+    var isKifi = kifi_reslist.length == 1;
+    var href = $this.attr("href");
+    var whichResult = -1;
+    if(isKifi) {
+      whichResult = countWhichResult($this[0], kifi_reslist);
+    }
+    else {
+      whichResult = countWhichResult($this[0], $("#ires"));
+    }
+    whichResult = whichResult.toString();
+    var query = $("input[name='q']").val();
+    var queryUUID = resultsStore.lastRemoteResults.uuid;
+
+    if(isKifi && href && queryUUID && whichResult != -1)
+      logEvent("search", "kifiResultClicked", {"url": href, "whichResult": whichResult, "query": query, "queryUUID": queryUUID});
+    else if(!isKifi && href && whichResult != -1)
+      logEvent("search", "googleResultClicked", {"url": href, "whichResult": whichResult, "query": query});
+  }
+
+  function bindSearchLogger() {
+    if(!$("#main").data("kgr-l")) {
+      $("#main").data("kgr-l", true);
+      $("#main").on('mousedown','.g .vsc h3.r a', function() {
+        logSearchEvent(this);
+      });
+    }
+  }
+
   log("injecting keep it to google search result page");
 
   function updateQuery(calledTimes) {
@@ -46,6 +89,9 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
       setTimeout(function(){ updateQuery(); }, 10);
       return;
     }
+
+    bindSearchLogger();
+
     var query = $("input[name='q']").val();
     if (!query) {
       if (typeof calledTimes !== 'undefined' && calledTimes <= 10) {

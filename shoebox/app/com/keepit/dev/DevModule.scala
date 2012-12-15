@@ -47,8 +47,8 @@ import com.keepit.common.analytics.MongoEventStore
 import com.keepit.common.analytics.FakeMongoEventStoreImpl
 import com.keepit.common.analytics.MongoEventStoreImpl
 import com.mongodb.casbah.MongoConnection
-import com.keepit.common.analytics.PersistEventPlugin
-import com.keepit.common.analytics.FakePersistEventPluginImpl
+import com.keepit.common.analytics._
+import com.keepit.common.analytics.reports._
 
 case class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -60,7 +60,7 @@ case class DevModule() extends ScalaModule with Logging {
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
     bind[SocialGraphRefresher].to[SocialGraphRefresherImpl].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
-    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped] // if Events need to be persisted in a dev environment, use PersistEventPluginImpl instead
+    bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped] // if Events need to be persisted in a dev environment, use PersistEventPluginImpl instead
   }
 
   @Singleton
@@ -103,6 +103,14 @@ case class DevModule() extends ScalaModule with Logging {
     current.configuration.getString("amazon.s3.event.bucket") match {
       case None => new HashMap[ExternalId[Event], Event] with S3EventStore
       case Some(bucketName) => new S3EventStoreImpl(S3Bucket(bucketName), client)
+    }
+
+  @Singleton
+  @Provides
+  def reportStore(client: AmazonS3): ReportStore =
+    current.configuration.getString("amazon.s3.report.bucket") match {
+      case None => new HashMap[String, CompleteReport] with ReportStore
+      case Some(bucketName) => new S3ReportStoreImpl(S3Bucket(bucketName), client)
     }
 
   @Singleton

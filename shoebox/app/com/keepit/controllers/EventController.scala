@@ -88,15 +88,4 @@ object EventController extends FortyTwoController {
         inject[PersistEventPlugin].persist(newEvent)
       }
   }
-
-  def viewEvents() = AdminHtmlAction { request =>
-
-    val report = new DailyActiveUniqueUserReport
-    val result = report.get(currentDateTime.minusDays(15), currentDateTime)
-
-
-    Ok(result.toCSV + "\n\n" + (new DailyPageLoadReport).get(currentDateTime.minusDays(15), currentDateTime).toCSV)
-  }
-
-
 }
