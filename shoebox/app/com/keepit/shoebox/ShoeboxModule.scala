@@ -39,13 +39,9 @@ import com.keepit.search.S3ArticleStoreImpl
 import com.tzavellas.sse.guice.ScalaModule
 import akka.actor.ActorSystem
 import play.api.Play.current
-import com.keepit.common.analytics.S3EventStoreImpl
-import com.keepit.common.analytics.S3EventStore
-import com.keepit.common.analytics.MongoEventStoreImpl
 import com.mongodb.casbah.MongoConnection
-import com.keepit.common.analytics.MongoEventStore
-import com.keepit.common.analytics.PersistEventPlugin
-import com.keepit.common.analytics.PersistEventPluginImpl
+import com.keepit.common.analytics._
+import com.keepit.common.analytics.reports._
 
 case class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -85,6 +81,13 @@ case class ShoeboxModule() extends ScalaModule with Logging {
   def eventStore(amazonS3Client: AmazonS3): S3EventStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.event.bucket").get)
     new S3EventStoreImpl(bucketName, amazonS3Client)
+  }
+
+  @Singleton
+  @Provides
+  def reportStore(amazonS3Client: AmazonS3): ReportStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.report.bucket").get)
+    new S3ReportStoreImpl(bucketName, amazonS3Client)
   }
 
   @Singleton

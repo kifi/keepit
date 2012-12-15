@@ -1,0 +1,33 @@
+@(reportNames: Seq[String], availableReports: List[String])
+
+@admin("Reports") {
+   <table class="table table-bordered">
+      <tr>
+        <th>Reports</th>
+        <td>
+          <form action="@com.keepit.controllers.admin.routes.AdminEventController.buildReport" method="POST">
+            <div>
+              <label class="radio">
+                <input type="radio" name="reportName" value="all" checked>All
+              </label>
+            @for(report <- reportNames) {
+              <label class="radio">
+                <input type="radio" name="reportName" value="report">@report
+              </label>
+            }
+            </div>
+            <div><input type="submit" value="Build Report"></div>
+          </form>
+        </td>
+      </tr>
+      <tr>
+        <th>Generated Reports</th>
+        <td>
+          @for(a <- availableReports) {
+            <div><a href="@com.keepit.controllers.admin.routes.AdminEventController.getReport(a)">@a</a></div>
+          }
+        </td>
+      </tr>
+  </table>
+
+}
