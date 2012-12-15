@@ -265,7 +265,7 @@ object CommentController extends FortyTwoController {
   def commentsViewFirstPage = commentsView(0)
 
   def commentsView(page: Int = 0) = AdminHtmlAction { request =>
-    val PAGE_SIZE = 3
+    val PAGE_SIZE = 200
     val (count, uriAndUsers) = CX.withConnection { implicit conn =>
       val comments = Comment.page(page, PAGE_SIZE)
       val count = Comment.count 
