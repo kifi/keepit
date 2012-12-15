@@ -94,7 +94,8 @@ GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPrevi
 GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
 
 GET     /admin/follows              com.keepit.controllers.CommentController.followsView
-GET     /admin/comments             com.keepit.controllers.CommentController.commentsView
+GET     /admin/comments             com.keepit.controllers.CommentController.commentsViewFirstPage
+GET     /admin/comments/:page       com.keepit.controllers.CommentController.commentsView(page: Int)
 GET     /admin/messages             com.keepit.controllers.CommentController.messagesView
 
 GET     /admin/searchConfig/:id     com.keepit.controllers.SearchConfigController.showUserConfig(id: Id[User])
