@@ -64,6 +64,7 @@ object Healthcheck {
 
   case object API extends CallType
   case object EMAIL extends CallType
+  case object SEARCH extends CallType
   case object FACEBOOK extends CallType
   case object BOOTSTRAP extends CallType
   case object INTERNAL extends CallType
