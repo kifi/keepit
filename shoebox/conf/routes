@@ -29,7 +29,7 @@ GET     /users/slider               com.keepit.controllers.UserController.getSli
 GET     /users/slider/updates       com.keepit.controllers.CommentController.getUpdates(url: String)
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
 GET     /users/friends              com.keepit.controllers.UserController.getSocialConnections()
-
+POST    /users/events               com.keepit.controllers.EventController.logUserEvents
 
 GET     /search                     com.keepit.controllers.SearchController.search(term: String, maxHits:Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
 
@@ -37,9 +37,6 @@ POST    /kifi/start                 com.keepit.controllers.AuthController.start
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
 GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
 GET     /whois                      com.keepit.controllers.AuthController.whois
-
-POST    /users/events               com.keepit.controllers.EventController.logUserEvents
-GET     /users/events               com.keepit.controllers.EventController.viewEvents
 
 POST    /chat/:recipientId          com.keepit.controllers.ChatController.chat(recipientId: ExternalId[User])
 
@@ -53,6 +50,10 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 GET     /admin                      com.keepit.controllers.admin.AdminDashboardController.index
 GET     /admin/graphs/users.json    com.keepit.controllers.admin.AdminDashboardController.usersByDate
 GET     /admin/graphs/bookmarks.json    com.keepit.controllers.admin.AdminDashboardController.bookmarksByDate
+
+GET     /admin/events               com.keepit.controllers.admin.AdminEventController.reportList
+POST    /admin/events/buildReport   com.keepit.controllers.admin.AdminEventController.buildReport
+GET     /admin/events/report        com.keepit.controllers.admin.AdminEventController.getReport(reportName: String)
 
 GET     /bookmarks                  com.keepit.controllers.BookmarksController.bookmarksFirstPageView
 GET     /admin/bookmarks            com.keepit.controllers.BookmarksController.bookmarksFirstPageView
@@ -93,7 +94,8 @@ GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPrevi
 GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
 
 GET     /admin/follows              com.keepit.controllers.CommentController.followsView
-GET     /admin/comments             com.keepit.controllers.CommentController.commentsView
+GET     /admin/comments             com.keepit.controllers.CommentController.commentsViewFirstPage
+GET     /admin/comments/:page       com.keepit.controllers.CommentController.commentsView(page: Int)
 GET     /admin/messages             com.keepit.controllers.CommentController.messagesView
 
 GET     /admin/searchConfig/:id     com.keepit.controllers.SearchConfigController.showUserConfig(id: Id[User])
