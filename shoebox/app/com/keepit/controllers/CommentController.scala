@@ -268,22 +268,23 @@ object CommentController extends FortyTwoController {
     val PAGE_SIZE = 200
     val (count, uriAndUsers) = CX.withConnection { implicit conn =>
       val comments = Comment.page(page, PAGE_SIZE)
-      val count = Comment.count 
+      val count = Comment.count(Comment.Permissions.PUBLIC)
       (count, (comments map {co => (toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId))} ))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.comments(uriAndUsers, page, count, pageCount))
   }
 
+  def messagesViewFirstPage =  messagesView(0)
   
-  def messagesView = AdminHtmlAction { implicit request =>
-    implicit val timeout = BabysitterTimeout(30 second, 50 seconds)
-    val uriAndUsers = CX.withConnection { implicit c =>
-      Comment.all(Comment.Permissions.MESSAGE) map {co =>
-        (toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId),
-            CommentRecipient.getByComment(co.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) })
-      }
+  def messagesView(page: Int = 0) = AdminHtmlAction { request =>
+    val PAGE_SIZE = 200
+    val (count, uriAndUsers) = CX.withConnection { implicit conn =>
+      val messages = Comment.page(page, PAGE_SIZE, Comment.Permissions.MESSAGE)
+      val count = Comment.count(Comment.Permissions.MESSAGE)
+      (count, (messages map {co => (toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId), CommentRecipient.getByComment(co.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) }) } ))
     }
-    Ok(views.html.messages(uriAndUsers))
+    val pageCount: Int = (count / PAGE_SIZE + 1).toInt
+    Ok(views.html.messages(uriAndUsers, page, count, pageCount))
   }
 }
