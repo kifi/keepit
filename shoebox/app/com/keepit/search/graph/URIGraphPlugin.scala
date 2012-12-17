@@ -4,6 +4,7 @@ import scala.collection.mutable.MutableList
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.model.User
+import play.api.Play.current
 import play.api.Plugin
 import play.api.templates.Html
 import akka.util.Timeout
@@ -18,6 +19,8 @@ import org.joda.time.DateTime
 import akka.dispatch.Future
 import com.google.inject.Inject
 import com.google.inject.Provider
+import com.keepit.inject._
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 
 case object Load
 case class Update(userId: Id[User])
@@ -25,9 +28,22 @@ case class Update(userId: Id[User])
 private[graph] class URIGraphActor(uriGraph: URIGraph) extends Actor with Logging {
 
   def receive() = {
-    case Load =>
-      var userLoaded = sender ! uriGraph.load()
-    case Update(u) => sender ! uriGraph.update(u)
+    case Load => try {
+        sender ! uriGraph.load()
+      } catch {
+        case e: Exception =>
+          inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
+              errorMessage = Some("Error loading uri graph")))
+          sender ! -1
+      }
+    case Update(u) => try {
+        sender ! uriGraph.update(u)
+      } catch {
+        case e: Exception =>
+          inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
+              errorMessage = Some("Error updating uri graph with %s".format(u))))
+          sender ! -1
+      }
     case m => throw new Exception("unknown message %s".format(m))
   }
 }

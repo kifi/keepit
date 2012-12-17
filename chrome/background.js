@@ -76,7 +76,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
   _eventLog.push(event);
 }
 
-var eventLogDelay = 2000;
+var eventLogDelay = 4000;
 setTimeout(function maybeSend() {
   if (_eventLog.length) {
     var t0 = _eventLog[0].time;

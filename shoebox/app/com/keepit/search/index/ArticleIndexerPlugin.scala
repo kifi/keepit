@@ -3,6 +3,7 @@ package com.keepit.search.index
 import scala.collection.mutable.MutableList
 import com.keepit.search.ArticleStore
 import com.keepit.common.logging.Logging
+import play.api.Play.current
 import play.api.Plugin
 import play.api.templates.Html
 import akka.util.Timeout
@@ -18,18 +19,25 @@ import akka.dispatch.Future
 import com.google.inject.Inject
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
+import com.keepit.inject._
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 
 case object Index
 
 private[index] class ArticleIndexerActor(articleIndexer: ArticleIndexer) extends Actor with Logging {
 
   def receive() = {
-    case Index =>
-      var articlesIndexed = articleIndexer.run()
-      if (articlesIndexed >= articleIndexer.commitBatchSize) {
-        self.forward(Index)
+    case Index => try {
+        var articlesIndexed = articleIndexer.run()
+        if (articlesIndexed >= articleIndexer.commitBatchSize) {
+          self.forward(Index)
+        }
+        sender ! articlesIndexed
+      } catch {
+        case e: Exception =>
+          inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH, errorMessage = Some("Error indexing articles")))
+          sender ! -1
       }
-      sender ! articlesIndexed
     case m => throw new Exception("unknown message %s".format(m))
   }
 }

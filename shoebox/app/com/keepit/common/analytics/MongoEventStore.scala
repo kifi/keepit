@@ -64,7 +64,7 @@ case class MongoSelector(eventFamily: EventFamily) {
 
 
 trait MongoEventStore {
-  def save(event: Event): Unit
+  def save(event: Event): Event
   def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoKeyMapFunc): Seq[JsObject]
   def mapReduce(collection: String, map: MongoMapFunc, reduce: MongoReduceFunc, outputCollection: Option[String], query: Option[DBObject], finalize: Option[MongoReduceFunc]): Iterator[DBObject]
   def find(collection: String, mongoSelector: MongoSelector): MongoCursor
@@ -74,11 +74,12 @@ class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Log
   RegisterJodaTimeConversionHelpers()
   implicit def MongoSelectorToDBObject(m: MongoSelector): DBObject = m.build
 
-  def save(event: Event): Unit = {
-    save(event.metaData.eventFamily, EventSerializer.eventSerializer.mongoWrites(event))
+  def save(event: Event): Event = {
+    saveEventObject(event.metaData.eventFamily, EventSerializer.eventSerializer.mongoWrites(event))
+    event
   }
 
-  def save(eventFamily: EventFamily, dbObject: DBObject): Unit = {
+  private def saveEventObject(eventFamily: EventFamily, dbObject: DBObject): Unit = {
     val coll = mongoDB(eventFamily.collection)
     val result = coll.insert(dbObject)
     log.info(result)
@@ -140,12 +141,9 @@ class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Log
 }
 
 class FakeMongoEventStoreImpl() extends MongoEventStore with Logging {
-  def save(event: Event): Unit = {
+  def save(event: Event): Event = {
     log.info("Saving event: %s".format(event.toString))
-  }
-
-  def save(eventFamily: EventFamily, dbObject: DBObject): Unit = {
-    log.info("Saving to collection %s: %s".format(eventFamily.collection, dbObject))
+    event
   }
 
   def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoKeyMapFunc): Seq[JsObject] = {
