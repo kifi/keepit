@@ -17,30 +17,18 @@ import java.lang.{Float => JFloat}
 import java.util.{Set => JSet}
 import scala.collection.JavaConversions._
 import scala.math._
+import java.util.Arrays
 
 object ProximityQuery {
-  def apply(fieldName: String, terms: Set[Term]) = new ProximityQuery(terms.map{ term => new Term(fieldName, term.text) })
-
-  val scoreFactorHalfDecay = 4.0f
-  val scoreFactorTable = {
-    val arr = new Array[Float](500)
-    for (i <- 1 until arr.length) {
-      arr(i) = 1.0f/(1.0f + (i.toFloat/scoreFactorHalfDecay))
-    }
-    arr
-  }
-  def scoreFactor(distance: Int) = {
-    if (distance < scoreFactorTable.length) scoreFactorTable(distance) else 0.0f
-  }
+  def apply(terms: Seq[Term]) = new ProximityQuery(terms)
 }
 
-class ProximityQuery(val terms: Set[Term]) extends Query {
+class ProximityQuery(val terms: Seq[Term]) extends Query {
 
   override def createWeight(searcher: Searcher): Weight = {
     val similarity = searcher.getSimilarity
     val numDocs = searcher.maxDoc()
-    val idfMap = terms.foldLeft(Map.empty[Term, Float]){ (m, term) => m + (term -> similarity.idf(searcher.docFreq(term), numDocs)) }
-    new ProximityWeight(this, idfMap)
+    new ProximityWeight(this)
   }
 
   override def rewrite(reader: IndexReader): Query = this
@@ -57,7 +45,7 @@ class ProximityQuery(val terms: Set[Term]) extends Query {
   override def hashCode(): Int = terms.hashCode() + JFloat.floatToRawIntBits(getBoost())
 }
 
-class ProximityWeight(query: ProximityQuery, idfMap: Map[Term, Float]) extends Weight {
+class ProximityWeight(query: ProximityQuery) extends Weight {
   var value = 0.0f
 
   override def getValue() = value
@@ -95,18 +83,32 @@ class ProximityWeight(query: ProximityQuery, idfMap: Map[Term, Float]) extends W
 
   override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
     if (query.terms.size > 1) {
-      val tps = query.terms.map{ term => new PositionAndWeight(reader.termPositions(term), idfMap(term) * value) }
-      new ProximityScorer(this, tps)
+      var i = -1
+      // uses first 64 terms (enough?)
+      val tps = query.terms.take(64).foldLeft(Map.empty[String, PositionAndMask]){ (tps, term) =>
+        i += 1
+        val termText = term.text()
+        tps + (termText -> (tps.getOrElse(termText, new PositionAndMask(reader.termPositions(term), termText).setBit(i))))
+      }
+      new ProximityScorer(this, tps.values.toArray)
     } else {
       QueryUtil.emptyScorer(this)
     }
   }
 }
 
-class PositionAndWeight(val tp: TermPositions, val weight: Float) {
+class PositionAndMask(val tp: TermPositions, val termText: String) {
   var doc = -1
   var pos = -1
-  var posLeft = 0
+
+  private[this] var mask: Long = 0L
+  private[this] var posLeft = 0
+
+  def getMask = mask
+  def setBit(index: Int) = {
+    mask = (mask | (1L << index))
+    this
+  }
 
   def fetchDoc(target: Int): Int = {
     pos = -1
@@ -144,64 +146,81 @@ class PositionAndWeight(val tp: TermPositions, val weight: Float) {
   }
 }
 
-class ProximityScorer(weight: ProximityWeight, tps: Set[PositionAndWeight]) extends Scorer(weight) {
-  private var curDoc = -1
-  private var proximityScore = 0.0f
-  private var scoredDoc = -1
+class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) extends Scorer(weight) {
+  private[this] var curDoc = -1
+  private[this] var proximityScore = 0.0f
+  private[this] var scoredDoc = -1
+  private[this] val numTerms = tps.length
+  private[this] val termPresenceScore = 1.0f // base score per term presence
+  private[this] def gapPenalty(distance: Int) = 0.05f * distance.toFloat // gap penalty
+  private[this] val rl = new Array[Float](numTerms + 1) // run lengths
+  private[this] val ls = new Array[Float](numTerms + 1) // local scores
 
-  val pq = new PriorityQueue[PositionAndWeight] {
-    super.initialize(tps.size)
+  private[this] val pq = new PriorityQueue[PositionAndMask] {
+    super.initialize(numTerms)
 
-    override def lessThan(nodeA: PositionAndWeight, nodeB: PositionAndWeight) = {
-      if (nodeA.doc == nodeB.doc) {
-        if (nodeA.pos == nodeB.pos) {
-          nodeA.weight > nodeB.weight
-        } else {
-          nodeA.pos < nodeB.pos
-        }
-      }
-      else {
-        nodeA.doc < nodeB.doc
-      }
+    override def lessThan(nodeA: PositionAndMask, nodeB: PositionAndMask) = {
+      if (nodeA.doc == nodeB.doc) nodeA.pos < nodeB.pos
+      else nodeA.doc < nodeB.doc
     }
   }
   tps.foreach{ tp => pq.insertWithOverflow(tp)}
 
   override def score(): Float = {
+    // compute edit distance based proximity score
+    val insertCost = 1.0f
+    val baseEditCost = 1.0f
+
     var top = pq.top
     var doc = top.doc
     if (scoredDoc != doc) {
-      var sum = 0.0f
+      proximityScore = 0.0f
+      var maxScore = 0.0f
       if (top.pos < Int.MaxValue) {
-        // start fetching position for all terms
+        var i = 0
+        Arrays.fill(rl, 0.0f) // clear the run lengths
+        Arrays.fill(ls, 0.0f) // clear the local scores
+
+        // start fetching position for all terms, and cumulate term presence scores as the base score
         while (top.doc == doc && top.pos == -1) {
-          top.nextPos()
+          proximityScore += termPresenceScore
+          val pos = top.nextPos()
           top = pq.updateTop()
         }
 
-        var prev = top
-        var prevPos = top.pos
-        var prevWeight = top.weight
+        var prevPos = -1
+        var prevRun = 0.0f
+        // Find all partial sequence matches (possible phrases) using the dynamic programming.
+        // This is similar to a local alignment matching in bioinformatics, but we disallow gaps.
+        // We give a weight to each term occurrence using a local alignment score, thus, a term in a
+        // a matching sequence gets a high weight. A weight is diffused to following positions with a constant decay.
+        // A local score at a position is the sum of weights of all terms.
+        // The max local score + the base score is the score of the current document.
         while (top.doc == doc && top.pos < Int.MaxValue) {
+          val curPos = top.pos
+          val mask = top.getMask
+          var i = 1
+          // update run lengths and local scores
+          var localScoreSum = 0.0f
+          while (i <= numTerms) {
+            val runLen = if (((1L << (i - 1)) & mask) != 0) prevRun + 1.0f else 0.0f
+            val localScore = max(ls(i) - (gapPenalty(curPos - prevPos)), 0.0f)
+            prevRun = rl(i)
+            rl(i) = runLen
+            ls(i) = if (localScore < runLen) runLen else localScore
+            localScoreSum += ls(i)
+            i += 1
+          }
+          maxScore = max(maxScore, localScoreSum)
           top.nextPos()
           top = pq.updateTop()
-          if (prev eq top) {
-            prev = top
-            prevPos = top.pos
-            prevWeight = top.weight
-          } else {
-            if (prevPos < top.pos) {
-              sum += (prevWeight + top.weight) * ProximityQuery.scoreFactor(top.pos - prevPos)
-              prevPos = top.pos
-              prevWeight = top.weight
-            }
-          }
+          if (top.pos > curPos) prevPos = curPos
         }
+        proximityScore += maxScore
       }
-      proximityScore = (sqrt(sum.toDouble + 1.0d) - 1.0d).toFloat
       scoredDoc = doc
     }
-    proximityScore
+    (sqrt(proximityScore.toDouble + 1.0d) - 1.0d).toFloat
   }
 
   override def docID(): Int = curDoc
