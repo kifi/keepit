@@ -25,12 +25,14 @@ trait EventFamily {
 case class UserEventFamily(name: String) extends EventFamily {
   val collection = "user"
 }
+
 case class ServerEventFamily(name: String) extends EventFamily {
   val collection = "server"
 }
 
 object EventFamilies {
   // User
+  //todo(Andrew): please document
   val GENERIC_USER = UserEventFamily("")
   val SLIDER = UserEventFamily("slider")
   val SEARCH = UserEventFamily("search")
@@ -66,34 +68,17 @@ case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId
 case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 
 case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime, serverVersion: String = currentService + ":" + currentVersion) {
-
-  def persistToS3(): Unit = {
+  def persistToS3(): Event = {
     inject[S3EventStore] += (externalId -> this)
+    this
   }
-  def persistToMongo(): Unit = {
-    inject[MongoEventStore].save(this)
-  }
-  def persist(): Unit = {
-    persistToS3()
-    persistToMongo()
-  }
-}
-
-object Event {
-
+  def persistToMongo(): Event = inject[MongoEventStore].save(this)
 }
 
 object Events {
-  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[UserExperiment.ExperimentType]], installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime) = {
-
+  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[UserExperiment.ExperimentType]], installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime) =
     Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = createdAt)
-  }
-  def serverEvent(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime)(implicit conn: Connection) = {
+
+  def serverEvent(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime) =
     Event(metaData = ServerEventMetadata(eventFamily, eventName, metaData, prevEvents), createdAt = createdAt)
-  }
-}
-
-
-class EventLog {
-
 }
