@@ -1,7 +1,43 @@
-@(uriAndUsers: Seq[(UserWithSocial, Comment, NormalizedURI)])
+@(uriAndUsers: Seq[(UserWithSocial, Comment, NormalizedURI)], page: Int, count: Long, pageCount: Int))
+@pagination(page: Int, pageCount: Int) = {
+  <div class="pagination pagination-centered pagination-mini">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@com.keepit.controllers.routes.CommentController.commentsView(page - 1)">
+        } else {
+         <a href="#">
+        }
+        Prev
+        </a>
+      </li>
+      @for(i <- 0 to (pageCount - 1)) {
+        @if(i == page) {
+	        <li class="disabled">
+	          <a href="@com.keepit.controllers.routes.CommentController.commentsView(i)">@{i + 1}</a>
+	        </li>
+        } else {
+	        <li class="active">
+	          <a href="@com.keepit.controllers.routes.CommentController.commentsView(i)">@{i + 1}</a>
+	        </li>
+	      }
+      }
+      <li>
+        @if(uriAndUsers.size > 0) {
+          <a href="@com.keepit.controllers.routes.CommentController.commentsView(page + 1)">
+        } else {
+         <a href="#">
+        }
+        Next
+        </a>
+      </li>
+    </ul>
+  </div>
+}
 
-@admin("Comments") {
-  <h2>Showing @uriAndUsers.size comments</h2>
+@admin("There are " + count + " comments (displaying " + uriAndUsers.size + ")") {
+  <h2>Showing @uriAndUsers.size comments of total @count (Page @{page + 1})</h2>
+  @pagination(page, pageCount)
   <table class="table table-bordered">
     <tr>
       <th>#</th>
@@ -23,4 +59,5 @@
     </tr>
   }
   </table>
+  @pagination(page, pageCount)
 }
