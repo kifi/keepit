@@ -198,10 +198,12 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           val svq = SemanticVectorQuery("sv", terms)
           svq.setBoost(semanticBoost)
           booleanQuery.add(svq, Occur.SHOULD)
-          if (terms.size > 1) {
+          val csterms = QueryUtil.getTermSeq("cs", query)
+          val tsterms = QueryUtil.getTermSeq("ts", query)
+          if (csterms.size + tsterms.size > 1) {
             val proxQ = new BooleanQuery(true)
-            proxQ.add(ProximityQuery("c", terms), Occur.SHOULD)
-            proxQ.add(ProximityQuery("t", terms), Occur.SHOULD)
+            proxQ.add(ProximityQuery(csterms), Occur.SHOULD)
+            proxQ.add(ProximityQuery(tsterms), Occur.SHOULD)
             proxQ.setBoost(proximityBoost)
             booleanQuery.add(proxQ, Occur.SHOULD)
           }
