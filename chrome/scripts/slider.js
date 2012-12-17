@@ -234,7 +234,7 @@ slider = function() {
     .on("click", ".messages-label", function() {
       showComments(user, "message", null, $('.thread-wrapper').length > 0);
     })
-    .on("click mouseup mousedown keypress keyup keydown", function(e) {
+    .on("mousedown click keydown keypress", function(e) {
       e.stopPropagation();
     });
 
