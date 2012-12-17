@@ -83,7 +83,7 @@ object EventController extends FortyTwoController {
           case _: JsValue => None
         }).getOrElse(Seq())
         val newEvent = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
-        log.info("Created new event: %s".format(newEvent))
+        log.debug("Created new event: %s".format(newEvent))
 
         inject[PersistEventPlugin].persist(newEvent)
       }
