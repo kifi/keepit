@@ -56,6 +56,14 @@ class CommentTest extends SpecificationWithJUnit {
         }
       }
     }
+   "count" in {
+      running(new EmptyApplication()) {
+        setup()
+        CX.withConnection { implicit conn =>
+          Comment.count === 9
+        }
+      }
+    }    
     "count and load public comments by URI" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()

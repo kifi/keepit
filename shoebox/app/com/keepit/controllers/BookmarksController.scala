@@ -30,10 +30,13 @@ import java.sql.Connection
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.net._
+import com.keepit.common.async._
 import com.keepit.search.graph.URIGraphPlugin
 import play.api.libs.json.{JsBoolean, JsNull}
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.analytics.Events
+import com.keepit.common.analytics.EventFamilies
 
 object BookmarksController extends FortyTwoController {
 
@@ -151,16 +154,30 @@ object BookmarksController extends FortyTwoController {
   }
 
   def addBookmarks() = AuthenticatedJsonAction { request =>
+    val userId = request.userId
     request.body.asJson match {
       case Some(json) =>
         val bookmarkSource = (json \ "bookmark_source").asOpt[String]
-        log.info("adding bookmarks of user %s".format(request.userId))
-        internBookmarks(json \ "bookmarks", request.userId, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")))
-        inject[URIGraphPlugin].update(request.userId)
+        log.info("adding bookmarks of user %s".format(userId))
+        internBookmarks(json \ "bookmarks", userId, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")))
+        inject[URIGraphPlugin].update(userId)
         Ok
       case None =>
-        val msg = "Unsupported operation for user %s with old installation".format(request.userId)
+        val msg = "Unsupported operation for user %s with old installation".format(userId)
         inject[HealthcheckPlugin].addError(HealthcheckError(callType = Healthcheck.API, errorMessage = Some(msg)))
+        val (user, experiments, installations) = CX.withConnection { implicit conn =>
+          (User.get(userId),
+           UserExperiment.getByUser(userId) map (_.experimentType),
+           KifiInstallation.all(userId).mkString(",")) //todo(eishay) replace with installation id from the session
+        }
+        val metaData = JsObject(Seq("message" -> JsString(msg)))
+        val event = Events.userEvent(EventFamilies.ACCOUNT, "deprecated_add_bookmarks", user, experiments, installations, metaData)
+        dispatch ({
+           event.persistToS3().persistToMongo()
+        }, { e =>
+          inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.API,
+              errorMessage = Some("Can't persist event %s".format(event))))
+        })
         BadRequest(msg)
     }
   }

@@ -197,7 +197,7 @@ function getBookmarkFolderInfo(keepItBookmarkId, callback) {
 
   if (keepItBookmarkId) {
     chrome.bookmarks.get(keepItBookmarkId, function(bm) {
-      if (bm.length) {
+      if (bm && bm.length) {
         // We created this bookmark folder. We continue to use it even if user has moved it or renamed it.
         ensurePublicPrivate(bm[0]);
       } else {
