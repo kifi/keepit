@@ -60,7 +60,8 @@ class CommentTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         setup()
         CX.withConnection { implicit conn =>
-          Comment.count === 9
+          Comment.count(Comment.Permissions.PUBLIC) === 3
+          Comment.count(Comment.Permissions.MESSAGE) === 4
         }
       }
     }    
