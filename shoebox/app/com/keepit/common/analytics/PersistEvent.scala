@@ -21,31 +21,30 @@ import org.joda.time._
 
 case object Load
 case class Update(userId: Id[User])
-case class Persist(event: Event)
-case class PersistMany(events: Seq[Event])
+case class Persist(event: Event, queueTime: DateTime)
+case class PersistMany(events: Seq[Event], queueTime: DateTime)
 
 private[analytics] class PersistEventActor extends Actor with Logging {
 
   def receive() = {
-    case Persist(event) =>
-      val diff = Seconds.secondsBetween(event.createdAt, currentDateTime).getSeconds
-      if(diff > 60) {
-        val ex = new Exception("Event log is backing up. Event is %s seconds old".format(diff))
+    case Persist(event, queueTime) =>
+      val diff = Seconds.secondsBetween(queueTime, currentDateTime).getSeconds
+      if(diff > 120) {
+        val ex = new Exception("Event log is backing up. Event was queued %s seconds ago".format(diff))
         inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         // To keep the event log from backing too far up, ignore very old events.
         // If we get this, use parallel actors.
       }
       else {
         try { event.persistToS3 } catch { case ex: Throwable =>
-          val ex = new Exception("Could not persist event to S3")
           inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         }
         try { event.persistToMongo } catch { case ex: Throwable =>
           inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         }
       }
-    case PersistMany(events) =>
-      events foreach ( self ! _ )
+    case PersistMany(events, queueTime) =>
+      events foreach ( self ! Persist(_, queueTime) )
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
@@ -68,8 +67,8 @@ class PersistEventPluginImpl @Inject() (system: ActorSystem) extends PersistEven
     log.info("stopping PersistEventImpl")
   }
 
-  def persist(event: Event): Unit = actor ! Persist(event)
-  def persist(events: Seq[Event]): Unit = actor ! PersistMany(events)
+  def persist(event: Event): Unit = actor ! Persist(event, currentDateTime)
+  def persist(events: Seq[Event]): Unit = actor ! PersistMany(events, currentDateTime)
 }
 
 class FakePersistEventPluginImpl @Inject() (system: ActorSystem) extends PersistEventPlugin with Logging {
