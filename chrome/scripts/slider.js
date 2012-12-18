@@ -1,5 +1,5 @@
 slider = function() {
-  var config, following, isKept;
+  var following, isKept, lastShownAt;
 
   $('<input id="editableFix" style="opacity:0;color:transparent;width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html')
 
@@ -146,7 +146,7 @@ slider = function() {
 
     chrome.extension.sendRequest({"type": "set_page_icon", "is_kept": false});
     isKept = false;
-    if (shouldSlideOut) slideOut();
+    if (shouldSlideOut) slideOut("unkeep");
 
     chrome.extension.sendRequest({
         "type": "unkeep",
@@ -156,18 +156,20 @@ slider = function() {
       });
   }
 
-  function showKeepItHover(user) {
+  function showKeepItHover(trigger) {
     chrome.extension.sendRequest({type: "get_slider_info"}, function(o) {
-      log(o);
+      log("slider info:", o);
+
       isKept = o.kept;
       following = o.following;
+      lastShownAt = new Date().getTime();
 
       renderTemplate('templates/kept_hover.html', {
           "logo": chrome.extension.getURL('images/kifilogo.png'),
           "arrow": chrome.extension.getURL('images/triangle_down.31x16.png'),
-          "profilepic": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square",
+          "profilepic": "https://graph.facebook.com/" + o.user.facebook_id + "/picture?type=square",
           "holidays_hat": chrome.extension.getURL('images/holidays_hat.png'),
-          "name": user.name,
+          "name": o.user.name,
           "is_kept": o.kept,
           "private": o.private,
           "connected_networks": chrome.extension.getURL("images/networks.png"),
@@ -178,18 +180,17 @@ slider = function() {
           "main_hover": "main_hover.html",
           "footer": "footer.html"
         }, function(template) {
-          drawKeepItHover(user, o.friends, o.numComments, o.numMessages, template);
+          if (document.querySelector(".kifi_hover")) {
+            log("No need to inject, it's already here!");
+          } else {
+            drawKeepItHover(o.user, o.friends, o.numComments, o.numMessages, template);
+            logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0)});
+          }
         });
     });
   }
 
   function drawKeepItHover(user, friends, numComments, numMessages, renderedTemplate) {
-    if ($('.kifi_hover').length) {
-      log("No need to inject, it's already here!");
-      return;
-    }
-
-    // Inject the slider!
     $('body').append(renderedTemplate);
 
     $('.social_friend').each(function(i,e) {
@@ -206,11 +207,9 @@ slider = function() {
     }
 
     // Event bindings
-    var t0 = new Date().getTime();
     $(".kifi_hover").draggable({cursor: "move", axis: "y", distance: 10, handle: "div.kifihdr", containment: "body", scroll: false})
     .on("click", ".xlink", function() {
-      logEvent("slider","sliderClosedByX",{"delay":""+(new Date().getTime() - t0)});
-      slideOut();
+      slideOut("x");
     })
     // .on("click", ".profilepic", function() {
     //   location = "http://www.facebook.com/" + user.facebook_id;
@@ -250,40 +249,45 @@ slider = function() {
   }
 
   function keptItslideOut() {
-    var position = $('.kifi_hover').position().top;
-    $('.kifi_hover').animate({
-        bottom: '+=' + position,
+    var $s = $(".kifi_hover");
+    $s.animate({
+        bottom: '+=' + $s.position().top,
         opacity: 0
       },
       900,
       'easeInOutBack',
       function() {
-        $('.kifi_hover').detach();
+        $s.remove();
       });
+    logEvent("slider", "sliderClosed", {trigger: "keep", shownForMs: String(new Date - t0)});
   }
 
-  function slideOut(temporary) {
-    $('.kifi_hover').animate({
+  // trigger is for the event log (e.g. "key", "icon"). pass no trigger if just hiding slider temporarily.
+  function slideOut(trigger) {
+    var $s = $(".kifi_hover").animate({
         opacity: 0,
         right: '-=340'
       },
       300,
       'easeQuickSnapBounce',
-      temporary ? $.noop : function() {
-        $('.kifi_hover').detach();
+      !trigger ? $.noop : function() {
+        $s.remove();
       });
+    if (trigger) {
+      logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - t0)});
+    }
   }
 
   function slideIn() {
-    //$("body").after(hover);
-    $('.kifi_hover').animate({
+    var $s = $(".kifi_hover").animate({
         right: '+=340',
         opacity: 1
       },
       400,
-      'easeQuickSnapBounce', function() {
-        $('.kifi_hover').css({'right': '-10px', 'opacity': 1});
-        log("opened", $('.kifi_hover')[0], $('.kifi_hover').css('right'))
+      "easeQuickSnapBounce",
+      function() {
+        $s.css({right: "-10px", opacity: 1});
+        log("opened", $s[0], $s.css("right"))
       });
   }
 
@@ -572,14 +576,14 @@ slider = function() {
           for(msg in visibleComments) {
             var recipients = visibleComments[msg]["recipients"];
             var initiatorId = visibleComments[msg].user.externalId;
-            if (initiatorId != config.user.keepit_external_id) {
+            if (initiatorId != user.keepit_external_id) {
               var initiatorName = visibleComments[msg].user.firstName + " " + visibleComments[msg].user.lastName;
               othersInConversation[visibleComments[msg].user.externalId] = initiatorName;
             }
             for(r in recipients) {
               var name = recipients[r].firstName + " " + recipients[r].lastName;
               var recipientId = recipients[r].externalId;
-              if (recipientId != config.user.keepit_external_id) {
+              if (recipientId != user.keepit_external_id) {
                 othersInConversation[recipientId] = name;
               }
             }
@@ -764,7 +768,7 @@ slider = function() {
       // make absolute positioning relative to document instead of viewport
       document.documentElement.style.position = "relative";
 
-      slideOut(true);
+      slideOut();
 
       var sel = {}, cX, cY;
       var $shades = $(["t","b","l","r"].map(function(s) {
@@ -1002,30 +1006,18 @@ slider = function() {
   });
 
   return {  // the slider API
-    show: function() {
-      var user;
-      if (!config) {
-        chrome.extension.sendRequest({"type": "get_conf"}, function(o) {
-          log("config:", o);
-          config = o;
-          slider.show();
-        });
-      } else if ((user = config.user) && user.keepit_external_id && user.facebook_id && user.name && user.avatar_url) {
-        showKeepItHover(user);
-        this.alreadyShown = true;
-      } else {
-        log("No user, can't show slider");
-      }
+    show: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
+      showKeepItHover(trigger);
     },
-    toggle: function() {
+    shown: function() {
+      return !!lastShownAt;
+    },
+    toggle: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
       if (document.querySelector(".kifi_hover")) {
-        slideOut();
+        slideOut(trigger);
       } else {
-        this.show();
+        this.show(trigger);
       }
-    },
-    isShowing: function() {
-      return document.querySelector(".kifi_hover");
     }
   };
 }();
