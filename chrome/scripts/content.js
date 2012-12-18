@@ -2,11 +2,13 @@ function log(message) {
   console.log.apply(console, Array.prototype.concat.apply(["[kifi][" + new Date().getTime() + "] "], arguments));
 }
 
-function logEvent(eventFamily, eventName, metaData, prevEvents) {
+function logEvent() {  // parameters defined in background.js
   chrome.extension.sendRequest({
     type: "log_event",
     args: Array.prototype.slice.apply(arguments)});
 }
+
+t0 = new Date().getTime();  // page load time
 
 !function() {
   log("host: ", document.location.host);
@@ -18,34 +20,20 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
   chrome.extension.sendRequest({type: "page_load"}, function(sliderDelayMs) {
     log("slider delay:", sliderDelayMs);
     setTimeout(function() {
-      log("slider delay has passed");
-      if (!slider.alreadyShown) {
-        logEvent("slider","sliderOpenedByDelay",{"delay":sliderDelayMs});
-        slider.show();
+      log("slider delay elapsed");
+      if (!slider.shown()) {
+        slider.show("auto");
       }
     }, sliderDelayMs);
   });
 
-  var t0 = new Date().getTime();
   chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
     if (request.type === "button_click") {
-      if(slider.isShowing) {
-        logEvent("slider","sliderClosedByIcon",{"delay":""+(new Date().getTime() - t0)});
-      }
-      else {
-        logEvent("slider","sliderOpenedByIcon",{"delay":""+(new Date().getTime() - t0)});
-      }
-      slider.toggle();
+      slider.toggle("icon");
     }
   });
   key('command+shift+k, ctrl+shift+k', function() {
-    if(slider.isShowing) {
-      logEvent("slider","sliderClosedByKeyShortcut",{"delay":""+(new Date().getTime() - t0)});
-    }
-    else {
-      logEvent("slider","sliderOpenedByKeyShortcut",{"delay":""+(new Date().getTime() - t0)});
-    }
-    slider.toggle();
+    slider.toggle("key");
     return false;
   });
 }();
