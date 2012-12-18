@@ -20,6 +20,7 @@ import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.controller.FortyTwoController.ImpersonateCookie
+import com.keepit.common.controller.FortyTwoController.KifiInstallationCookie
 import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.model.UserExperiment.ExperimentTypes.ADMIN
@@ -62,6 +63,7 @@ class AuthControllerTest extends SpecificationWithJUnit {
         sessionCookie("securesocial.user") === "111"
         sessionCookie("securesocial.provider") === "facebook"
         cookies(startResult).get(ImpersonateCookie.COOKIE_NAME) === None
+        cookies(startResult).get(KifiInstallationCookie.COOKIE_NAME) !== None
 
         val whoisRequest1 = FakeRequest("GET", "/whois").
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook", "userId" -> admin.id.get.toString)
