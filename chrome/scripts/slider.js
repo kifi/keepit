@@ -184,7 +184,7 @@ slider = function() {
             log("No need to inject, it's already here!");
           } else {
             drawKeepItHover(o.user, o.friends, o.numComments, o.numMessages, template);
-            logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: lastShownAt - t0});
+            logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0)});
           }
         });
     });
@@ -259,7 +259,7 @@ slider = function() {
       function() {
         $s.remove();
       });
-    logEvent("slider", "sliderClosed", {trigger: "keep", shownForMs: new Date - t0});
+    logEvent("slider", "sliderClosed", {trigger: "keep", shownForMs: String(new Date - t0)});
   }
 
   // trigger is for the event log (e.g. "key", "icon"). pass no trigger if just hiding slider temporarily.
@@ -274,7 +274,7 @@ slider = function() {
         $s.remove();
       });
     if (trigger) {
-      logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: new Date - t0});
+      logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - t0)});
     }
   }
 
