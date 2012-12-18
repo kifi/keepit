@@ -158,22 +158,17 @@ object BookmarksController extends FortyTwoController {
     request.body.asJson match {
       case Some(json) =>
         val installationId = request.kifiInstallId
-        val bookmarkSource = installationId match {
-          case Some(externalId) =>
-            val count = CX.withConnection { implicit conn => Bookmark.getCountByInstallation(externalId) }
-            count match {
-              case 0 => Some("INIT_LOAD")
-              case _ => Some("HOVER_KEEP")
-            }
-          case None =>
-            (json \ "bookmark_source").asOpt[String]  // deprecating 12/17
+        val bookmarkSource = (json \ "bookmark_source").asOpt[String]
+        bookmarkSource match {
+          case Some("PLUGIN_START") => Forbidden
+          case _ =>
+            log.info("adding bookmarks of user %s".format(userId))
+            val experiments = request.experimants
+            val user = CX.withConnection { implicit conn => User.get(userId) }
+            internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
+            inject[URIGraphPlugin].update(userId)
+            Ok
         }
-        log.info("adding bookmarks of user %s".format(userId))
-        val experiments = request.experimants
-        val user = CX.withConnection { implicit conn => User.get(userId) }
-        internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
-        inject[URIGraphPlugin].update(userId)
-        Ok
       case None =>
         val msg = "Unsupported operation for user %s with old installation".format(userId)
         inject[HealthcheckPlugin].addError(HealthcheckError(callType = Healthcheck.API, errorMessage = Some(msg)))
