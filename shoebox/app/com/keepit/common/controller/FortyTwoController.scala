@@ -30,7 +30,7 @@ object FortyTwoController {
   val FORTYTWO_USER_ID = "fortytwo_user_id"
 
   object ImpersonateCookie extends CookieBaker[Option[ExternalId[User]]] {
-    val COOKIE_NAME = "fortytwo_impersonated_user_id"
+    val COOKIE_NAME = "impersonated_as"
     val emptyCookie = None
     override val isSigned = true
     override val secure = false
@@ -41,7 +41,7 @@ object FortyTwoController {
   }
 
   object KifiInstallationCookie extends CookieBaker[Option[ExternalId[KifiInstallation]]] {
-    val COOKIE_NAME = "fortytwo_kifi_installid"
+    val COOKIE_NAME = "installation"
     val emptyCookie = None
     override val isSigned = true
     override val secure = false
