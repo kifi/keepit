@@ -158,9 +158,20 @@ object BookmarksController extends FortyTwoController {
     request.body.asJson match {
       case Some(json) =>
         val installationId = request.kifiInstallId
-        val bookmarkSource = (json \ "bookmark_source").asOpt[String]
+        val bookmarkSource = installationId match {
+          case Some(externalId) =>
+            val count = CX.withConnection { implicit conn => Bookmark.getCountByInstallation(externalId) }
+            count match {
+              case 0 => Some("INIT_LOAD")
+              case _ => Some("HOVER_KEEP")
+            }
+          case None =>
+            (json \ "bookmark_source").asOpt[String]  // deprecating 12/17
+        }
         log.info("adding bookmarks of user %s".format(userId))
-        internBookmarks(json \ "bookmarks", userId, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
+        val experiments = request.experimants
+        val user = CX.withConnection { implicit conn => User.get(userId) }
+        internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
         inject[URIGraphPlugin].update(userId)
         Ok
       case None =>
@@ -183,17 +194,18 @@ object BookmarksController extends FortyTwoController {
     }
   }
 
-  private def internBookmarks(value: JsValue, userId: Id[User], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): List[Bookmark] = value match {
-    case JsArray(elements) => (elements map {e => internBookmarks(e, userId, source, installationId)} flatten).toList
-    case json: JsObject if(json.keys.contains("children")) => internBookmarks(json \ "children" , userId, source)
-    case json: JsObject => List(internBookmark(json, userId, source)).flatten
+  private def internBookmarks(value: JsValue, user: User, experiments: Seq[State[UserExperiment.ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): List[Bookmark] = value match {
+    case JsArray(elements) => (elements map {e => internBookmarks(e, user, experiments, source, installationId)} flatten).toList
+    case json: JsObject if(json.keys.contains("children")) => internBookmarks(json \ "children" , user, experiments, source)
+    case json: JsObject => List(internBookmark(json, user, experiments, source)).flatten
     case e => throw new Exception("can't figure what to do with %s".format(e))
   }
 
-  private def internBookmark(json: JsObject, userId: Id[User], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = {
+  private def internBookmark(json: JsObject, user: User, experiments: Seq[State[UserExperiment.ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
     val isPrivate = try { (json \ "isPrivate").as[Boolean] } catch { case e => false }
+    val userId = user.id.get
 
     if (!url.toLowerCase.startsWith("javascript:")) {
       log.debug("interning bookmark %s with title [%s]".format(json, title))
@@ -205,7 +217,9 @@ object BookmarksController extends FortyTwoController {
         Bookmark.load(uri, userId) match {
           case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
           case Some(bookmark) => Some(bookmark.withActive(true).withPrivate(isPrivate).save)
-          case None => Some(Bookmark(uri, userId, title, url, source, isPrivate, installationId).save)
+          case None =>
+            Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, externalId.id, JsObject(Seq("source" -> JsString(source.value))))
+            Some(Bookmark(uri, user.id.get, title, url, source, isPrivate, installationId).save)
         }
       }
     } else {
