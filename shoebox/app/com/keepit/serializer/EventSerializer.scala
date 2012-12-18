@@ -63,7 +63,7 @@ class EventSerializer extends Format[Event] {
     // or else we'd end up with Horrible Nastiness™
     val fields = json.fields map { o =>
       val value = o._2 match {
-        case s: JsNumber => s.value
+        case s: JsNumber => new _root_.java.lang.Double(s.value.toDouble)
         case s: JsString => s.value
         case s: JsBoolean => s.value
         case s: JsObject => jsonToMap(s)
@@ -81,7 +81,7 @@ class EventSerializer extends Format[Event] {
         case c: JsObject => jsonToMap(c)
         case c: JsArray => jsArrayToScala(c)
         case c: JsString => c.value
-        case c: JsNumber => c.value
+        case c: JsNumber => new _root_.java.lang.Double(c.value.toDouble)
         case c: JsBoolean => c.value
         case c => c.toString
       }
