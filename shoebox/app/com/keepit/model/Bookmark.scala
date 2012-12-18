@@ -121,6 +121,9 @@ object Bookmark {
       }
   }
 
+  def getCountByInstallation(installation: ExternalId[KifiInstallation])(implicit conn: Connection): Long =
+    (BookmarkEntity AS "b").map { b => SELECT (COUNT(b.*)) FROM b WHERE (b.kifiInstallation EQ installation) unique } getOrElse(0)
+
   object States {
     val ACTIVE = State[Bookmark]("active")
     val INACTIVE = State[Bookmark]("inactive")
