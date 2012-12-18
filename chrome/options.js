@@ -9,7 +9,7 @@ function resetUser() {
   chrome.extension.sendRequest({type: "remove_conf", key: "user"}, function(response) {
     chrome.extension.sendRequest({type: "remove_conf", key: "user_info"}, function(response) {
       restoreConfigs();
-    });  
+    });
   });
 }
 
@@ -33,13 +33,6 @@ function saveConfigs() {
       showScore = false;
     }
   sendSaveConfig("show_score", showScore);
-  var uploadOnStart = $("#upload_on_start").val();
-    if (uploadOnStart === "yes" || uploadOnStart === true || uploadOnStart === "true") {
-      uploadOnStart = true;
-    } else {
-      uploadOnStart = false;
-    }
-  sendSaveConfig("upload_on_start", uploadOnStart);
   window.close();
 }
 
@@ -76,7 +69,7 @@ function restoreConfigs(callback) {
         window.open(url);
         return false;
       });
-    });  
+    });
     if (callback) {
       callback(config);
     }

@@ -193,7 +193,7 @@ object BookmarksController extends FortyTwoController {
   private def internBookmark(json: JsObject, userId: Id[User], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
-    val isPrivate = try { (json \ "isPrivate").as[Boolean] } catch { case e => false }
+    val isPrivate = try { (json \ "isPrivate").as[Boolean] } catch { case e => true }
 
     if (!url.toLowerCase.startsWith("javascript:")) {
       log.debug("interning bookmark %s with title [%s]".format(json, title))
