@@ -52,8 +52,9 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
 
     if(isKifi && href && queryUUID && whichResult != -1)
       logEvent("search", "kifiResultClicked", {"url": href, "whichResult": whichResult, "query": query, "queryUUID": queryUUID});
-    else if(!isKifi && href && whichResult != -1)
-      logEvent("search", "googleResultClicked", {"url": href, "whichResult": whichResult, "query": query});
+    else if(!isKifi && href && whichResult != -1) {
+      logEvent("search", "googleResultClicked", {"url": href, "whichResult": whichResult, "query": query, "kifiResultsCount": resultsStore.results.length});
+    }
   }
 
   function bindSearchLogger() {
