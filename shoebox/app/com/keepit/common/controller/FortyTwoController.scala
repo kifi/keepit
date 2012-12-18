@@ -39,12 +39,21 @@ object FortyTwoController {
     def deserialize(data: Map[String, String]) = data.get(COOKIE_NAME).map(ExternalId[User](_))
     def serialize(data: Option[ExternalId[User]]) = data.map(id => Map(COOKIE_NAME -> id.id.toString())).getOrElse(Map.empty)
   }
+
+  object KifiInstallationCookie extends CookieBaker[Option[ExternalId[KifiInstallation]]] {
+    val COOKIE_NAME = "fortytwo_kifi_installid"
+    val emptyCookie = None
+    override val isSigned = true
+    override val secure = false
+    def deserialize(data: Map[String, String]) = data.get(COOKIE_NAME).map(ExternalId[KifiInstallation](_))
+    def serialize(data: Option[ExternalId[KifiInstallation]]) = data.map(id => Map(COOKIE_NAME -> id.id.toString())).getOrElse(Map.empty)
+  }
 }
 
 trait FortyTwoController extends Controller with Logging with SecureSocial {
   import FortyTwoController._
 
-  case class AuthenticatedRequest(socialUser: SocialUser, userId: Id[User], request: Request[AnyContent], experimants: Seq[State[UserExperiment.ExperimentType]] = Nil)
+  case class AuthenticatedRequest(socialUser: SocialUser, userId: Id[User], request: Request[AnyContent], experimants: Seq[State[UserExperiment.ExperimentType]] = Nil, kifiInstallId: Option[ExternalId[KifiInstallation]] = None)
     extends WrappedRequest(request)
 
   def AuthenticatedJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
@@ -82,6 +91,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
     SecuredAction(isApi, parse.anyContent) { implicit request =>
       val userIdOpt = request.session.get(FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
       val impersonatedUserIdOpt: Option[ExternalId[User]] = ImpersonateCookie.decodeFromCookie(request.cookies.get(ImpersonateCookie.COOKIE_NAME))
+      val kifiInstallationId: Option[ExternalId[KifiInstallation]] = KifiInstallationCookie.decodeFromCookie(request.cookies.get(KifiInstallationCookie.COOKIE_NAME))
       val socialUser = request.user
       val (userId, experiments) = loadUserContext(userIdOpt, SocialId(socialUser.id.id))
       val newSession = session + (FORTYTWO_USER_ID -> userId.toString)
@@ -95,15 +105,15 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
             (getExperiments(impUserId), impSocialUserInfo.credentials.get, impUserId)
           }
           log.info("[IMPERSONATOR] admin user %s is impersonating user %s with request %s".format(userId, impSocialUser, request.request.path))
-          executeAction(action, impUserId, impSocialUser, impExperiments, newSession, request.request)
+          executeAction(action, impUserId, impSocialUser, impExperiments, kifiInstallationId, newSession, request.request)
         case None =>
-          executeAction(action, userId, socialUser, experiments, newSession, request.request)
+          executeAction(action, userId, socialUser, experiments, kifiInstallationId, newSession, request.request)
       }
     }
   }
 
   private def executeAction(action: AuthenticatedRequest => Result, userId: Id[User], socialUser: SocialUser,
-      experiments: Seq[State[UserExperiment.ExperimentType]], newSession: Session, request: Request[AnyContent]) = {
+      experiments: Seq[State[UserExperiment.ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]], newSession: Session, request: Request[AnyContent]) = {
     if (experiments.contains(UserExperiment.ExperimentTypes.BLOCK)) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
@@ -112,7 +122,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
       val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> FortyTwoServices.currentVersion.value)
       log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
 
-      action(AuthenticatedRequest(socialUser, userId, request, experiments)) match {
+      action(AuthenticatedRequest(socialUser, userId, request, experiments, kifiInstallationId)) match {
         case r: PlainResult => r.withSession(newSession)
         case any => any
       }
