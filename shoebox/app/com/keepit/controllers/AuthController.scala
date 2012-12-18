@@ -91,7 +91,7 @@ object AuthController extends FortyTwoController {
       "facebookId" -> JsString(socialUser.id.id),
       "provider" -> JsString(socialUser.id.providerId),
       "userId" -> JsString(user.externalId.id),
-      "installationId" -> JsString(installation.externalId.id))))
+      "installationId" -> JsString(installation.externalId.id)))).withCookies(KifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)

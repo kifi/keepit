@@ -156,11 +156,11 @@ object Comment {
     SELECT (project(c)) FROM c WHERE (c.parent EQ commentId)
   }
 
-  def page(page: Int = 0, size: Int = 20)(implicit conn: Connection): Seq[Comment] =
-    (CommentEntity AS "c").map { c => SELECT (c.*) FROM c  WHERE (c.permissions EQ Comment.Permissions.PUBLIC)  LIMIT size OFFSET (page * size) ORDER_BY (c.id DESC) list }.map(_.view)
+  def page(page: Int = 0, size: Int = 20, permissions: State[Comment.Permission] = Comment.Permissions.PUBLIC)(implicit conn: Connection): Seq[Comment] =
+    (CommentEntity AS "c").map { c => SELECT (c.*) FROM c  WHERE (c.permissions EQ permissions)  LIMIT size OFFSET (page * size) ORDER_BY (c.id DESC) list }.map(_.view)
 
-  def count(implicit conn: Connection): Long =
-    (CommentEntity AS "c").map(c => SELECT(COUNT(c.id)).FROM(c).unique).get
+  def count( permissions: State[Comment.Permission] = Comment.Permissions.PUBLIC)(implicit conn: Connection): Long =
+    (CommentEntity AS "c").map(c => SELECT(COUNT(c.id)).FROM(c).WHERE (c.permissions EQ permissions).unique).get
 
     object States {
     val ACTIVE = State[Comment]("active")

@@ -30,10 +30,13 @@ import java.sql.Connection
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.net._
+import com.keepit.common.async._
 import com.keepit.search.graph.URIGraphPlugin
 import play.api.libs.json.{JsBoolean, JsNull}
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.analytics.Events
+import com.keepit.common.analytics.EventFamilies
 
 object BookmarksController extends FortyTwoController {
 
@@ -151,28 +154,43 @@ object BookmarksController extends FortyTwoController {
   }
 
   def addBookmarks() = AuthenticatedJsonAction { request =>
+    val userId = request.userId
     request.body.asJson match {
       case Some(json) =>
+        val installationId = request.kifiInstallId
         val bookmarkSource = (json \ "bookmark_source").asOpt[String]
-        log.info("adding bookmarks of user %s".format(request.userId))
-        internBookmarks(json \ "bookmarks", request.userId, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")))
-        inject[URIGraphPlugin].update(request.userId)
+        log.info("adding bookmarks of user %s".format(userId))
+        internBookmarks(json \ "bookmarks", userId, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
+        inject[URIGraphPlugin].update(userId)
         Ok
       case None =>
-        val msg = "Unsupported operation for user %s with old installation".format(request.userId)
+        val msg = "Unsupported operation for user %s with old installation".format(userId)
         inject[HealthcheckPlugin].addError(HealthcheckError(callType = Healthcheck.API, errorMessage = Some(msg)))
+        val (user, experiments, installations) = CX.withConnection { implicit conn =>
+          (User.get(userId),
+           UserExperiment.getByUser(userId) map (_.experimentType),
+           KifiInstallation.all(userId).mkString(",")) //todo(eishay) replace with installation id from the session
+        }
+        val metaData = JsObject(Seq("message" -> JsString(msg)))
+        val event = Events.userEvent(EventFamilies.ACCOUNT, "deprecated_add_bookmarks", user, experiments, installations, metaData)
+        dispatch ({
+           event.persistToS3().persistToMongo()
+        }, { e =>
+          inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.API,
+              errorMessage = Some("Can't persist event %s".format(event))))
+        })
         BadRequest(msg)
     }
   }
 
-  private def internBookmarks(value: JsValue, userId: Id[User], source: BookmarkSource): List[Bookmark] = value match {
-    case JsArray(elements) => (elements map {e => internBookmarks(e, userId, source)} flatten).toList
+  private def internBookmarks(value: JsValue, userId: Id[User], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): List[Bookmark] = value match {
+    case JsArray(elements) => (elements map {e => internBookmarks(e, userId, source, installationId)} flatten).toList
     case json: JsObject if(json.keys.contains("children")) => internBookmarks(json \ "children" , userId, source)
     case json: JsObject => List(internBookmark(json, userId, source)).flatten
     case e => throw new Exception("can't figure what to do with %s".format(e))
   }
 
-  private def internBookmark(json: JsObject, userId: Id[User], source: BookmarkSource): Option[Bookmark] = {
+  private def internBookmark(json: JsObject, userId: Id[User], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
     val isPrivate = try { (json \ "isPrivate").as[Boolean] } catch { case e => false }
@@ -187,7 +205,7 @@ object BookmarksController extends FortyTwoController {
         Bookmark.load(uri, userId) match {
           case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
           case Some(bookmark) => Some(bookmark.withActive(true).withPrivate(isPrivate).save)
-          case None => Some(Bookmark(uri, userId, title, url, source, isPrivate).save)
+          case None => Some(Bookmark(uri, userId, title, url, source, isPrivate, installationId).save)
         }
       }
     } else {
