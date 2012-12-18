@@ -199,9 +199,10 @@ slider = function() {
     updateCommentCount("message", numMessages);
 
     // Event bindings
-
+    var t0 = new Date().getTime();
     $(".kifi_hover").draggable({cursor: "move", axis: "y", distance: 10, handle: "div.kifihdr", containment: "body", scroll: false})
     .on("click", ".xlink", function() {
+      logEvent("slider","sliderClosedByX",{"delay":(new Date().getTime() - t0)});
       slideOut();
     })
     // .on("click", ".profilepic", function() {
@@ -1015,5 +1016,9 @@ slider = function() {
       } else {
         this.show();
       }
-    }};
+    },
+    isShowing: function() {
+      return document.querySelector(".kifi_hover");
+    }
+  };
 }();

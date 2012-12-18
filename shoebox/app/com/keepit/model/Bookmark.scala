@@ -36,7 +36,8 @@ case class Bookmark(
   isPrivate: Boolean = false,
   userId: Id[User],
   state: State[Bookmark] = Bookmark.States.ACTIVE,
-  source: BookmarkSource
+  source: BookmarkSource,
+  kifiInstallation: Option[ExternalId[KifiInstallation]] = None
 ) {
 
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
@@ -65,7 +66,7 @@ case class Bookmark(
 
 object Bookmark {
 
-  def apply(uri: NormalizedURI, userId: Id[User], title: String, url: String, source: BookmarkSource, isPrivate: Boolean): Bookmark =
+  def apply(uri: NormalizedURI, userId: Id[User], title: String, url: String, source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
     Bookmark(title = title, url = url, userId = userId, uriId = uri.id.get, source = source, isPrivate = isPrivate)
 
   def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = load(uri, user.id.get)
@@ -138,6 +139,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
   val userId = "user_id".ID[User]
   val isPrivate = "is_private".BOOLEAN.NOT_NULL
   val source = "source".VARCHAR(256).NOT_NULL
+  val kifiInstallation = "kifi_installation".EXTERNAL_ID[KifiInstallation]
 
   def relation = BookmarkEntity
 
@@ -153,7 +155,8 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
     isPrivate = isPrivate(),
     userId = userId(),
     bookmarkPath = bookmarkPath.value,
-    source = source()
+    source = source(),
+    kifiInstallation = kifiInstallation.value
   )
 }
 
@@ -174,6 +177,7 @@ private[model] object BookmarkEntity extends BookmarkEntity with EntityTable[Boo
     bookmark.isPrivate := view.isPrivate
     bookmark.userId.set(view.userId)
     bookmark.source := view.source.value
+    bookmark.kifiInstallation.set(view.kifiInstallation)
     bookmark
   }
 }
