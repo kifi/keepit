@@ -20,10 +20,10 @@ class CompleteReportSerializer extends Format[CompleteReport] {
     )
 
   def reads(json: JsValue): CompleteReport =  {
-    val list = (json \ "report").as[JsObject].fields.map { s =>
-      val date = parseStandardTime(s._1)
-      val fields = (s._2.as[JsObject].fields map { t =>
-        t._1 -> t._2.as[String]
+    val list = (json \ "report").as[JsObject].fields.map { case (dateVal, row) =>
+      val date = parseStandardTime(dateVal)
+      val fields = (row.as[JsObject].fields map { case (key, value) =>
+        key -> value.as[String]
       }).toMap
       ReportRow(date, fields)
     }
