@@ -125,6 +125,7 @@ object URI extends Logging {
     }
   }
 }
+
 class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Option[String], val host: Option[Host], val port: Int, val path: Option[String], val query: Option[Query], val fragment: Option[String]) {
   override def toString() = {
     val updatedPath = (path, query) match {
@@ -136,7 +137,8 @@ class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Opt
     var uri = try {
       new java.net.URI(scheme.orNull, userInfo.orNull, host.map(_.toString).orNull, port, updatedPath.orNull, null, null).toString
     } catch {
-      case e: Exception => throw new Exception("can't create java.net.URI from this object %s".format(this), e)
+      case e: Exception => throw new Exception("can't create java.net.URI from raw %s: scheme %s, userInfo %s, host %s, port %s, updatedPath %s".
+          format(raw, scheme, userInfo, host, port, updatedPath), e)
     }
     query.foreach{ query => uri = uri + "?" + query }
     fragment.foreach{ fragment => uri = uri + "#" + fragment }
