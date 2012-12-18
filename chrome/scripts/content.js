@@ -30,20 +30,20 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
   chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
     if (request.type === "button_click") {
       if(slider.isShowing) {
-        logEvent("slider","sliderClosedByIcon",{"delay":(new Date().getTime() - t0)});
+        logEvent("slider","sliderClosedByIcon",{"delay":""+(new Date().getTime() - t0)});
       }
       else {
-        logEvent("slider","sliderOpenedByIcon",{"delay":(new Date().getTime() - t0)});
+        logEvent("slider","sliderOpenedByIcon",{"delay":""+(new Date().getTime() - t0)});
       }
       slider.toggle();
     }
   });
   key('command+shift+k, ctrl+shift+k', function() {
     if(slider.isShowing) {
-      logEvent("slider","sliderClosedByKeyShortcut",{"delay":(new Date().getTime() - t0)});
+      logEvent("slider","sliderClosedByKeyShortcut",{"delay":""+(new Date().getTime() - t0)});
     }
     else {
-      logEvent("slider","sliderOpenedByKeyShortcut",{"delay":(new Date().getTime() - t0)});
+      logEvent("slider","sliderOpenedByKeyShortcut",{"delay":""+(new Date().getTime() - t0)});
     }
     slider.toggle();
     return false;
