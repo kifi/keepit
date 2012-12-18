@@ -159,7 +159,10 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
         setPageIcon(tab.id, request.is_kept);
         break;
       case "get_slider_info":
-        $.get("http://" + getConfigs().server + "/users/slider?url=" + encodeURIComponent(tab.url), sendResponse);
+        $.get("http://" + getConfigs().server + "/users/slider?url=" + encodeURIComponent(tab.url), function(o) {
+          o.user = getConfigs().user;
+          sendResponse(o);
+        });
         break;
       case "get_slider_updates":
         $.get("http://" + getConfigs().server + "/users/slider/updates?url=" + encodeURIComponent(tab.url), sendResponse);
