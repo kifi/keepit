@@ -133,7 +133,11 @@ class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Opt
       case (Some("/"), None) => None
       case _ => path
     }
-    var uri = new java.net.URI(scheme.orNull, userInfo.orNull, host.map(_.toString).orNull, port, updatedPath.orNull, null, null).toString
+    var uri = try {
+      new java.net.URI(scheme.orNull, userInfo.orNull, host.map(_.toString).orNull, port, updatedPath.orNull, null, null).toString
+    } catch {
+      case e: Exception => throw new Exception("can't create java.net.URI from this object %s".format(this), e)
+    }
     query.foreach{ query => uri = uri + "?" + query }
     fragment.foreach{ fragment => uri = uri + "#" + fragment }
     uri
