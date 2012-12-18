@@ -566,7 +566,6 @@ function getConfigs() {
       "bookmark_id": localStorage[getFullyQualifiedKey("bookmark_id")],
       "hover_timeout": parseNonNegIntOr(localStorage[getFullyQualifiedKey("hover_timeout")], 10),
       "show_score": parseBoolOr(localStorage[getFullyQualifiedKey("show_score")], false),
-      "upload_on_start": parseBoolOr(localStorage[getFullyQualifiedKey("upload_on_start")], false),
       "max_res": parseNonNegIntOr(localStorage[getFullyQualifiedKey("max_res")], 5),
       "user": parseJsonObjOr(localStorage[getFullyQualifiedKey("user")])};
     //log("loaded config:");
@@ -657,9 +656,9 @@ function onAuthenticate(data) {
   setConfigs("kifi_installation_id", data.installationId);
 
   var config = getConfigs();
-  if (!prevVersion || config.upload_on_start) {
+  if (!prevVersion) {
     log("loading bookmarks to the server");
-    postBookmarks(chrome.bookmarks.getTree, prevVersion ? "PLUGIN_START" : "INIT_LOAD");
+    postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
   } else {
     log("[onAuthenticate] NOT uploading bookmarks");
   }
