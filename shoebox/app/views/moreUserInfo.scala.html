@@ -1,0 +1,97 @@
+@(userWithSocial: UserWithSocial, 
+  rawInfos: Seq[SocialUserRawInfo], 
+  socialUserInfos: Seq[SocialUserInfo], 
+  follows: Seq[NormalizedURI], 
+  comments: Seq[(NormalizedURI, Comment)], 
+  messages: Seq[(NormalizedURI, Comment, Seq[UserWithSocial])])
+
+@userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
+  <span style="margin:2px">
+    <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId.id" target="_blank">
+      <img class="user-avatar" src="https://graph.facebook.com/@userWithSocial.socialUserInfo.socialId.id/picture?type=square"/>
+      @userWithSocial.socialUserInfo.socialId.id
+    </a>
+  </span>
+}
+
+@admin("User: " + userWithSocial.user.firstName + " " + userWithSocial.user.lastName) {
+  <h2>User details </h2>
+   <br/>
+   <table class="table table-bordered">
+      <tr>
+        <th>Name</th><td>@userWithSocial.user.firstName @userWithSocial.user.lastName</td>
+      </tr>
+      <tr>
+        <th>OAuth</th><td><textarea class="json-textArea">@socialUserInfos</textarea></td>
+      </tr>
+      <tr>
+        <th>Social Raw info</th><td><textarea class="json-textArea">@rawInfos</textarea></td>
+      </tr>
+      <tr>
+        <th>Social User</th>
+        <td>@for(socialUserInfo <- socialUserInfos) {
+            @adminHelper.socialUserDisplay(socialUserInfo, true)
+        }</td>
+      </tr>
+  </table>
+
+  <h2>User follows @follows.size pages</h2>
+  <table class="table table-bordered">
+   <tr>
+     <th>#</th>
+     <th>Following</th>
+   </tr>
+   @for((uri, i) <- follows.zipWithIndex) {
+     <tr>
+        <td>@{i+1}</td>
+        <td>@adminHelper.articleDisplay(uri)</td>
+     </tr>
+   }
+  </table>
+  
+  <h2>User has @comments.size comments</h2>
+  <table class="table table-bordered">
+   <tr>
+     <th>#</th>
+     <th>Page Title</th>
+     <th>Page</th>
+     <th>Creation</th>
+   </tr>
+   @for(((uri, comment), i) <- comments.zipWithIndex) {
+     <tr>
+       <td rowspan="2">@{i+1}</td>
+       <td>@comment.pageTitle</td>
+       <td>@adminHelper.articleDisplay(uri)</td>
+       <td>@adminHelper.dateDisplay(comment.createdAt) @adminHelper.timeDisplay(comment.createdAt)</td>
+     </tr>
+     <tr>
+       <td colspan="2">@comment.text</td>
+     </tr>
+   }
+  </table>
+  
+  <h2>User has @messages.size messages</h2>
+  <table class="table table-bordered">
+   <tr>
+     <th>#</th>
+     <th>Page Title</th>
+     <th>Page</th>
+     <th>Recipients</th>
+     <th>Creation</th>
+   </tr>
+   @for(((uri, message, recipients), i) <- messages.zipWithIndex) {
+     <tr>
+       <td rowspan="2">@{i+1}</td>
+       <td>@message.pageTitle</td>
+       <td>@adminHelper.articleDisplay(uri)</td>
+       <td>@for(recipient <- recipients) { 
+         @adminHelper.userDisplay(recipient)
+       }</td>
+       <td>@adminHelper.dateDisplay(message.createdAt) @adminHelper.timeDisplay(message.createdAt)</td>
+     </tr>
+     <tr>
+       <td colspan="3">@message.text</td>
+     </tr>
+   }
+  </table>
+}

@@ -75,6 +75,7 @@ GET     /admin/uriGraph/dumpDoc/:userId  com.keepit.controllers.admin.URIGraphCo
 
 GET     /admin/users                com.keepit.controllers.UserController.usersView
 GET     /admin/user/:id             com.keepit.controllers.UserController.userView(id: Id[User])
+GET     /admin/user/:id/more-info   com.keepit.controllers.UserController.moreUserInfoView(id: Id[User])
 POST    /admin/user/:id/experiment/add/:exp  com.keepit.controllers.UserController.addExperiment(id: Id[User], exp: String)
 POST    /admin/user/:id/update      com.keepit.controllers.UserController.updateUser(id: Id[User])
 GET     /admin/user/:id/social_users/refresh com.keepit.controllers.UserController.refreshAllSocialInfo(id: Id[User])
