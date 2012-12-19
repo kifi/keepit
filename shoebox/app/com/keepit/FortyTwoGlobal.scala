@@ -5,8 +5,7 @@ import com.keepit.common.controller.CommonActions._
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.controller.ServiceType
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
 import com.keepit.common.controller
 import com.keepit.inject._
@@ -17,6 +16,7 @@ import play.api._
 import play.api.Mode
 import play.utils.Threads
 import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.controller.ReportedException
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with Logging {
 
@@ -63,15 +63,13 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
   }
 
   override def onError(request: RequestHeader, ex: Throwable): Result = {
-    //should we persist errors for later check?
-    val globalError = injector.inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(ex), method = Some(request.method.toUpperCase()), path = Some(request.path), callType = Healthcheck.API))
-    val errorId = globalError.id.toString
-//    val message = ("error [%s] on %s at path [%s] with query string %s".format(globalError.id, globalError.method, globalError.path, request.queryString.toString()), ex)
+    val errorId = ex match {
+      case reported: ReportedException =>
+        reported.id
+      case _ =>
+        injector.inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(ex), method = Some(request.method.toUpperCase()), path = Some(request.path), callType = Healthcheck.API)).id
+    }
     ex.printStackTrace()
-//    log.error(message, ex)
-
-    //should we json/structure the error message
-//    InternalServerError("error [%s] processing request %s on %s: %s".format(globalError.id, globalError.method, globalError.path, error))
     InternalServerError("error: %s".format(errorId))
   }
 

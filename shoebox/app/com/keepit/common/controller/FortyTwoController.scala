@@ -9,6 +9,7 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.ws.WS
 import play.api.mvc._
+import play.api.mvc.Results.InternalServerError
 import play.api.libs.json.JsArray
 import play.api.libs.json.Json
 import play.api.libs.json.JsObject
@@ -16,6 +17,7 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 import com.keepit.inject._
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.net._
 import com.keepit.common.db.{Id, CX, ExternalId, State}
 import com.keepit.common.logging.Logging
@@ -26,7 +28,10 @@ import securesocial.core._
 import com.keepit.common.social._
 import views.html.defaultpages.unauthorized
 
+case class ReportedException(val id: ExternalId[HealthcheckError], val cause: Throwable) extends Exception(id.toString, cause)
+
 object FortyTwoController {
+
   val FORTYTWO_USER_ID = "fortytwo_user_id"
 
   object ImpersonateCookie extends CookieBaker[Option[ExternalId[User]]] {
@@ -121,10 +126,22 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
     } else {
       val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> FortyTwoServices.currentVersion.value)
       log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
-
-      action(AuthenticatedRequest(socialUser, userId, request, experiments, kifiInstallationId)) match {
-        case r: PlainResult => r.withSession(newSession)
-        case any => any
+      try {
+        action(AuthenticatedRequest(socialUser, userId, request, experiments, kifiInstallationId)) match {
+          case r: PlainResult => r.withSession(newSession)
+          case any => any
+        }
+      } catch {
+        case e: Throwable =>
+          val globalError = inject[HealthcheckPlugin].addError(HealthcheckError(
+              error = Some(e),
+              method = Some(request.method.toUpperCase()),
+              path = Some(request.path),
+              callType = Healthcheck.API,
+              errorMessage = Some("Error executing with userId %s, experiments [%s], installation %s".format(
+                  userId, experiments.mkString(","), kifiInstallationId.getOrElse("NA")))))
+          log.error("healthcheck reported [%s]".format(globalError.id), e)
+          throw ReportedException(globalError.id, e)
       }
     }
   }
@@ -136,8 +153,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
     }
   }
 
-  def AdminHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
-    AdminAction(false, action)
+  def AdminHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] = AdminAction(false, action)
 
   private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest => Result): Action[AnyContent] = {
     AuthenticatedAction(isApi, { implicit request =>
