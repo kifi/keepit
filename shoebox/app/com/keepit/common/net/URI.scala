@@ -89,7 +89,7 @@ object URI extends Logging {
       }
       path2 match {
         case "" => None
-        case path => Some(path.replace("%7E", "~").replace(" ", "%20"))
+        case path => Some(path.replace("%7E", "~"))
       }
     }
   }
