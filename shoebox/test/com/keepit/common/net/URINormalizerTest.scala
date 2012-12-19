@@ -90,6 +90,7 @@ class URINormalizerTest extends Specification {
       URINormalizer.normalize("http://www.example.com/%7Eusername/") === "http://www.example.com/~username/"
       URINormalizer.normalize("http://ACME.com/./foo") === "http://acme.com/foo"
       URINormalizer.normalize("http://ACME.com/foo%26bar") === "http://acme.com/foo&bar"
+      URINormalizer.normalize("http://ACME.com/foo%20bar") === "http://acme.com/foo%20bar"
       URINormalizer.normalize("http://www.example.com/../../a.html") === "http://www.example.com/a.html"
       URINormalizer.normalize("http://www.example.com/../a/b/../c/./d.html") === "http://www.example.com/a/c/d.html"
       URINormalizer.normalize("http://foo.bar.com?baz=1") === "http://foo.bar.com/?baz=1"
