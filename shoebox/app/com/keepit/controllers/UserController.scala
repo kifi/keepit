@@ -116,27 +116,35 @@ object UserController extends FortyTwoController {
     UserStatistics(user, UserWithSocial.toUserWithSocial(user), socialConnectionCount, kifiInstallations)
   }
 
-  def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows, kifiInstallations, comments, messages) = CX.withConnection { implicit conn =>
+  def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
+    val (user, socialUserInfos, follows, comments, messages) = CX.withConnection { implicit conn =>
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
-      val bookmarks = Bookmark.ofUser(userWithSocial.user)
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
-      val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
-      val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
       val follows = Follow.all(userId) map {f => NormalizedURI.get(f.uriId)}
-      val kifiInstallations = KifiInstallation.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       val comments = Comment.all(Comment.Permissions.PUBLIC, userId) map {c =>
         (NormalizedURI.get(c.uriId), c)
       }
       val messages = Comment.all(Comment.Permissions.MESSAGE, userId) map {c =>
         (NormalizedURI.get(c.uriId), c, CommentRecipient.getByComment(c.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) })
       }
-      (userWithSocial, bookmarks, socialUserInfos, socialConnections, fortyTwoConnections, follows, kifiInstallations, comments, messages)
+      (userWithSocial, socialUserInfos, follows, comments, messages)
     }
     val rawInfos = socialUserInfos map {info =>
       inject[SocialUserRawInfoStore].get(info.id.get)
     }
-    Ok(views.html.user(user, bookmarks, socialUserInfos, rawInfos.flatten, socialConnections, fortyTwoConnections, follows, kifiInstallations, comments, messages))
+    Ok(views.html.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages))
+  }
+
+  def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
+    val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = CX.withConnection { implicit conn =>
+      val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
+      val bookmarks = Bookmark.ofUser(userWithSocial.user)
+      val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
+      val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
+      val kifiInstallations = KifiInstallation.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
+      (userWithSocial, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations)
+    }
+    Ok(views.html.user(user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations))
   }
 
   def usersView = AdminHtmlAction { implicit request =>
