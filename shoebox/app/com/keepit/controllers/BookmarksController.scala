@@ -155,9 +155,9 @@ object BookmarksController extends FortyTwoController {
 
   def addBookmarks() = AuthenticatedJsonAction { request =>
     val userId = request.userId
+    val installationId = request.kifiInstallationId
     request.body.asJson match {
       case Some(json) =>
-        val installationId = request.kifiInstallId
         val bookmarkSource = (json \ "bookmark_source").asOpt[String]
         bookmarkSource match {
           case Some("PLUGIN_START") => Forbidden
@@ -173,7 +173,7 @@ object BookmarksController extends FortyTwoController {
         val (user, experiments, installation) = CX.withConnection { implicit conn =>
           (User.get(userId),
            UserExperiment.getByUser(userId) map (_.experimentType),
-           request.kifiInstallId.map(_.id).getOrElse(""))
+           installationId.map(_.id).getOrElse(""))
         }
         val msg = "Unsupported operation for user %s with old installation".format(userId)
         val metaData = JsObject(Seq("message" -> JsString(msg)))
