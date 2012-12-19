@@ -173,7 +173,7 @@ object BookmarksController extends FortyTwoController {
         val (user, experiments, installations) = CX.withConnection { implicit conn =>
           (User.get(userId),
            UserExperiment.getByUser(userId) map (_.experimentType),
-           request.kifiInstallId.getOrElse("NO INSTALLATION ID"))
+           request.kifiInstallId.map(Seq(_)).getOrElse(Nil))
         }
         val msg = "Unsupported operation for user %s with old installation".format(userId)
         val metaData = JsObject(Seq("message" -> JsString(msg)))
