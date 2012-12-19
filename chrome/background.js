@@ -1,5 +1,3 @@
-log("background page kicking in!");
-
 // ===== Logging
 
 function log() {
@@ -407,7 +405,7 @@ function searchOnServer(request, sendResponse, tab) {
       '&maxHits=' + userConfigs.max_res * 2 +
       '&lastUUI=' + (request.lastUUID || "") +
       '&context=' + encodeURIComponent(request.context || "") +
-      '&kifiVersion=' + currVersion,
+      '&kifiVersion=' + chrome.app.getDetails().version,
     true);
   xhr.send();
 }
@@ -601,86 +599,77 @@ function getUser() {
   return user && user.keepit_external_id && user.facebook_id && user.name && user.avatar_url && user;
 }
 
-// Check if the version has changed.
-var currVersion = chrome.app.getDetails().version;
-var prevVersion = getConfigs().version;
-if (currVersion != prevVersion) {
-  if (!prevVersion) {
-    log("Extension Installed");
-  } else {
-    log("Extension Updated");
+chrome.runtime.onInstalled.addListener(function(details) {
+  log("[onInstalled]", details);
+  logEvent("extension", details.reason);
+  if (details.reason == "install") {
+    authenticate(function() {
+      postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
+    });
   }
-  setConfigs("version", currVersion);
-}
+});
 
-function startHandShake(onFail) {
-  log("[startHandShake]");
-  var config = getConfigs();
-  $.post("http://" + config.server + "/kifi/start", {
-    installation: config.kifi_installation_id || "",
-    version: currVersion,
-    // platform: navigator.platform,
-    // language: navigator.language,
-    agent: navigator.userAgent || navigator.appVersion || navigator.vendor
-  }).success(onAuthenticate).error(function(xhr) {
-    error(Error("handshake failed"));
-    log(xhr.responseText);
-    if (onFail) onFail();
-  });
-}
+chrome.runtime.onStartup.addListener(function() {
+  log("[onStartup]");
+  authenticate($.noop);
+});
 
-function openFacebookConnect() {
-  var popupTabId;
-  chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-    if (changeInfo.status == "loading" && tabId == popupTabId && tab.url == "http://" + getConfigs().server + "/#_=_") {
-      log("[openFacebookConnect] closing tab ", tabId);
-      chrome.tabs.remove(tabId);
-      popupTabId = null;
-
-      startHandShake();
-    }
-  });
-
-  chrome.windows.create({'url': 'http://' + getConfigs().server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(win) {
-    popupTabId = win.tabs[0].id
-  });
-}
-
-function onAuthenticate(data) {
-  log("[onAuthenticate]", data);
-  setConfigs("user", JSON.stringify({
-    facebook_id: data.facebookId,
-    keepit_external_id: data.userId,
-    avatar_url: data.avatarUrl,
-    name: data.name}));
-  setConfigs("kifi_installation_id", data.installationId);
-
-  var config = getConfigs();
-  if (!prevVersion) {
-    log("loading bookmarks to the server");
-    postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
-  } else {
-    log("[onAuthenticate] NOT uploading bookmarks");
-  }
-
-  // Locate or create KeepIt bookmark folder.
-  getBookmarkFolderInfo(config.bookmark_id, function(info) {
-    setConfigs("bookmark_id", info.keepItId);
-  });
-
-  log("[onAuthenticate] done");
-  logEvent("extension", "authenticated");
-}
-
-if (getConfigs().env == "development" || !getUser()) {
-  removeFromConfigs("user");
-  openFacebookConnect();
-} else {
-  startHandShake(function() {
-    log("User does not appear to be logged in remote. Refreshing data...");
-    removeFromConfigs("user");
+function authenticate(callback) {
+  logEvent("extension", "started");
+  if (getConfigs().env == "development" || !getUser()) {
     openFacebookConnect();
-  });
-}
+  } else {
+    startSession(openFacebookConnect);
+  }
 
-logEvent("extension","started");
+  function startSession(onFail) {
+    log("[startSession]");
+    var config = getConfigs();
+    $.post("http://" + config.server + "/kifi/start", {
+      installation: config.kifi_installation_id || "",
+      version: chrome.app.getDetails().version,
+      // platform: navigator.platform,
+      // language: navigator.language,
+      agent: navigator.userAgent || navigator.appVersion || navigator.vendor
+    }).success(function(data) {
+      log("[startSession] done:", data);
+      logEvent("extension", "authenticated");
+
+      setConfigs("user", JSON.stringify({
+        facebook_id: data.facebookId,
+        keepit_external_id: data.userId,
+        avatar_url: data.avatarUrl,
+        name: data.name}));
+      setConfigs("kifi_installation_id", data.installationId);
+
+      // Locate or create KeepIt bookmark folder.
+      getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+        setConfigs("bookmark_id", info.keepItId);
+      });
+
+      callback();
+    }).error(function(xhr) {
+      log("[startSession] xhr failed:", xhr);
+      if (onFail) onFail();
+    });
+  }
+
+  function openFacebookConnect() {
+    log("[openFacebookConnect]");
+    removeFromConfigs("user");
+    var popupTabId;
+    chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+      if (changeInfo.status == "loading" && tabId == popupTabId && tab.url == "http://" + getConfigs().server + "/#_=_") {
+        log("[openFacebookConnect] closing tab ", tabId);
+        chrome.tabs.remove(tabId);
+        popupTabId = null;
+
+        startSession();
+      }
+    });
+
+    chrome.windows.create({'url': 'http://' + getConfigs().server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(win) {
+      popupTabId = win.tabs[0].id
+    });
+  }
+}
