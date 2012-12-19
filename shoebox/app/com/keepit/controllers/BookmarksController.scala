@@ -170,14 +170,14 @@ object BookmarksController extends FortyTwoController {
             Ok
         }
       case None =>
-        val (user, experiments, installations) = CX.withConnection { implicit conn =>
+        val (user, experiments, installation) = CX.withConnection { implicit conn =>
           (User.get(userId),
            UserExperiment.getByUser(userId) map (_.experimentType),
-           request.kifiInstallId.map(Seq(_)).getOrElse(Nil))
+           request.kifiInstallId.map(_.id).getOrElse(""))
         }
         val msg = "Unsupported operation for user %s with old installation".format(userId)
         val metaData = JsObject(Seq("message" -> JsString(msg)))
-        val event = Events.userEvent(EventFamilies.ACCOUNT, "deprecated_add_bookmarks", user, experiments, installations, metaData)
+        val event = Events.userEvent(EventFamilies.ACCOUNT, "deprecated_add_bookmarks", user, experiments, installation, metaData)
         dispatch ({
            event.persistToS3().persistToMongo()
         }, { e =>
