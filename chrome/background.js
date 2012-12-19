@@ -120,7 +120,7 @@ setTimeout(function maybeSend() {
       payload: JSON.stringify(eventLog)
     }, function done(data) {
       log("[logEvent:maybeSend] Event log sent. Response:", data)
-    }, function error(xhr) {
+    }, function fail(xhr) {
       error(Error("[logEvent:maybeSend] Event log sending failed"));
       log("[logEvent:maybeSend] ", xhr.responseText);
     });
@@ -496,7 +496,7 @@ function checkWhetherKept(location, callback) {
 
   ajax("GET", "http://" + userConfig.server + "/bookmarks/check", {uri: location.href}, function done(o) {
     callback(o.user_has_bookmark);
-  }, function error(xhr) {
+  }, function fail(xhr) {
     log("[checkWhetherKept] error:", xhr.responseText);
     callback(false);
   });
@@ -673,7 +673,7 @@ function authenticate(callback) {
       });
 
       callback();
-    }, function error(xhr) {
+    }, function fail(xhr) {
       log("[startSession] xhr failed:", xhr);
       if (onFail) onFail();
     });
