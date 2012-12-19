@@ -107,7 +107,20 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
     }
   }
 
-  def fetchArticle(normalizedUri: NormalizedURI): Either[Article, ScraperError] = fetchArticle(normalizedUri, httpFetcher)
+  def fetchArticle(normalizedUri: NormalizedURI): Either[Article, ScraperError] = {
+    try {
+      URI.parse(normalizedUri.url) match {
+        case Some(uri) =>
+          uri.scheme match {
+            case Some("file") => Right(ScraperError(normalizedUri, -1, "forbidden scheme: %s".format("file")))
+            case _ => fetchArticle(normalizedUri, httpFetcher)
+          }
+        case _ => fetchArticle(normalizedUri, httpFetcher)
+      }
+    } catch {
+      case _ => fetchArticle(normalizedUri, httpFetcher)
+    }
+  }
 
   private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher): Either[Article, ScraperError] = {
     val url = normalizedUri.url
