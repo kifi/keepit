@@ -53,7 +53,13 @@ object FortyTwoController {
 trait FortyTwoController extends Controller with Logging with SecureSocial {
   import FortyTwoController._
 
-  case class AuthenticatedRequest(socialUser: SocialUser, userId: Id[User], request: Request[AnyContent], experimants: Seq[State[UserExperiment.ExperimentType]] = Nil, kifiInstallId: Option[ExternalId[KifiInstallation]] = None)
+  case class AuthenticatedRequest(
+      socialUser: SocialUser,
+      userId: Id[User],
+      request: Request[AnyContent],
+      experimants: Seq[State[UserExperiment.ExperimentType]] = Nil,
+      kifiInstallId: Option[ExternalId[KifiInstallation]] = None,
+      impersonatingUserId: Option[Id[User]] = None)
     extends WrappedRequest(request)
 
   def AuthenticatedJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
@@ -99,21 +105,25 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
         case Some(impExternalUserId) =>
           val (impExperiments, impSocialUser, impUserId) = CX.withConnection { implicit conn =>
             val impUserId = User.get(impExternalUserId).id.get
-            val isAdmin = experiments.find(e => e == UserExperiment.ExperimentTypes.ADMIN).isDefined
-            if (!isAdmin) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
+
+            if (!isAdmin(experiments)) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
             val impSocialUserInfo = SocialUserInfo.getByUser(impUserId).head
             (getExperiments(impUserId), impSocialUserInfo.credentials.get, impUserId)
           }
           log.info("[IMPERSONATOR] admin user %s is impersonating user %s with request %s".format(userId, impSocialUser, request.request.path))
-          executeAction(action, impUserId, impSocialUser, impExperiments, kifiInstallationId, newSession, request.request)
+          executeAction(action, impUserId, impSocialUser, impExperiments, kifiInstallationId, newSession, request.request, Some(userId))
         case None =>
           executeAction(action, userId, socialUser, experiments, kifiInstallationId, newSession, request.request)
       }
     }
   }
 
+  private def isAdmin(experiments: Seq[State[UserExperiment.ExperimentType]]) =
+    experiments.find(e => e == UserExperiment.ExperimentTypes.ADMIN).isDefined
+
   private def executeAction(action: AuthenticatedRequest => Result, userId: Id[User], socialUser: SocialUser,
-      experiments: Seq[State[UserExperiment.ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]], newSession: Session, request: Request[AnyContent]) = {
+      experiments: Seq[State[UserExperiment.ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
+      newSession: Session, request: Request[AnyContent], impersonatingUserId: Option[Id[User]] = None) = {
     if (experiments.contains(UserExperiment.ExperimentTypes.BLOCK)) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
@@ -121,8 +131,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
     } else {
       val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> FortyTwoServices.currentVersion.value)
       log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
-
-      action(AuthenticatedRequest(socialUser, userId, request, experiments, kifiInstallationId)) match {
+      action(AuthenticatedRequest(socialUser, userId, request, experiments, kifiInstallationId, impersonatingUserId)) match {
         case r: PlainResult => r.withSession(newSession)
         case any => any
       }
@@ -141,15 +150,16 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
 
   private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest => Result): Action[AnyContent] = {
     AuthenticatedAction(isApi, { implicit request =>
+      val userId = request.impersonatingUserId.getOrElse(request.userId)
       val isAdmin = CX.withConnection { implicit conn =>
-        UserExperiment.getExperiment(request.userId, UserExperiment.ExperimentTypes.ADMIN).isDefined
+        UserExperiment.getExperiment(userId, UserExperiment.ExperimentTypes.ADMIN).isDefined
       }
-      val authorizedDevUser = Play.isDev && request.userId.id == 1L
+      val authorizedDevUser = Play.isDev && userId.id == 1L
       if (authorizedDevUser || isAdmin) {
         action(request)
       } else {
         Unauthorized("""User %s does not have admin auth in %s mode, flushing session...
-            If you think you should see this page, please contact FortyTwo Engineering.""".format(request.userId, current.mode)).withNewSession
+            If you think you should see this page, please contact FortyTwo Engineering.""".format(userId, current.mode)).withNewSession
       }
     })
   }
