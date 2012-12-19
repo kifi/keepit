@@ -1,3 +1,5 @@
+function noop() {}
+
 // ===== Logging
 
 function log() {
@@ -14,17 +16,43 @@ function error(exception, message) {
 // ===== Queries with hard-coded results
 
 var magicQueries = [];
-try {
+ajax("GET", chrome.extension.getURL("data/magicQueries.json"), function(xhr) {
+  magicQueries = JSON.parse(xhr.response);
+});
+
+// ===== Ajax
+
+function ajax(method, uri, data, done, fail) {
+  if (typeof data == "function") {
+    fail = done, done = data, data = null;
+  } else if (data && typeof data == "object") {
+    var a = [], val;
+    for (var key in data) {
+      val = data[key];
+      if (data.hasOwnProperty(key)) {
+        a.push(encodeURIComponent(key) + "=" + encodeURIComponent(val == null ? "" : val));
+      }
+    }
+    data = a.join("&").replace(/%20/g, "+");
+  }
+
   var xhr = new XMLHttpRequest();
   xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
-      magicQueries = JSON.parse(xhr.response);
+    if (this.readyState == 4) {
+      var arg = /^application\/json/.test(this.getResponseHeader("Content-Type")) ? JSON.parse(this.responseText) : this;
+      ((this.status == 200 ? done : fail) || noop)(arg);
+      done = fail = noop;
     }
   }
-  xhr.open("GET", chrome.extension.getURL("data/magicQueries.json"), true);
-  xhr.send();
-} catch(e) {
-  error(e, "loading magic queries");
+  if (data && method.match(/^(?:GET|HEAD)$/)) {
+    uri = uri + (uri.indexOf("?") < 0 ? "?" : "&") + data;
+    data = null;
+  }
+  xhr.open(method, uri, true);
+  if (data) {
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+  }
+  xhr.send(data);
 }
 
 // ===== User history
@@ -88,11 +116,11 @@ setTimeout(function maybeSend() {
     }
     log("[logEvent:maybeSend] Sending event log: ", JSON.parse(JSON.stringify(eventLog)));
 
-    $.post("http://" + config.server + "/users/events", {
+    ajax("POST", "http://" + config.server + "/users/events", {
       payload: JSON.stringify(eventLog)
-    }).success(function(data) {
-      log("[logEvent:maybeSend] Event log sent. Response: ", data)
-    }).error(function(xhr) {
+    }, function done(data) {
+      log("[logEvent:maybeSend] Event log sent. Response:", data)
+    }, function fail(xhr) {
       error(Error("[logEvent:maybeSend] Event log sending failed"));
       log("[logEvent:maybeSend] ", xhr.responseText);
     });
@@ -136,8 +164,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
         });
         break;
       case "follow":
-        $.ajax("http://" + getConfigs().server + "/comments/follow?url=" + encodeURIComponent(tab.url),
-          {"type": request.follow ? "POST" : "DELETE"});
+        ajax(request.follow ? "POST" : "DELETE", "http://" + getConfigs().server + "/comments/follow", {url: tab.url});
         break;
       case "get_conf":
         sendResponse(getConfigs());
@@ -157,19 +184,19 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
         setPageIcon(tab.id, request.is_kept);
         break;
       case "get_slider_info":
-        $.get("http://" + getConfigs().server + "/users/slider?url=" + encodeURIComponent(tab.url), function(o) {
+        ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
           o.user = getConfigs().user;
           sendResponse(o);
         });
         break;
       case "get_slider_updates":
-        $.get("http://" + getConfigs().server + "/users/slider/updates?url=" + encodeURIComponent(tab.url), sendResponse);
+        ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, sendResponse);
         break;
       case "log_event":
         logEvent.apply(null, request.args);
         break;
       case "get_comments":
-        $.get("http://" + getConfigs().server +
+        ajax("GET", "http://" + getConfigs().server +
           (request.kind == "public" ? "/comments/public" : "/messages/threads") +
           (request.commentId ? "/" + request.commentId : "?url=" + encodeURIComponent(tab.url)),
           sendResponse);
@@ -178,7 +205,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
         postComment(request, sendResponse);
         break;
       case "get_friends":
-        $.get("http://" + getConfigs().server + "/users/friends", sendResponse);
+        ajax("GET", "http://" + getConfigs().server + "/users/friends", sendResponse);
         break;
       default:
         log("Ignoring unknown message");
@@ -467,12 +494,10 @@ function checkWhetherKept(location, callback) {
     return;
   }
 
-  $.getJSON("http://" + userConfig.server + "/bookmarks/check" +
-    "?uri=" + encodeURIComponent(location))
-  .success(function(data) {
-    callback(data.user_has_bookmark);
-  }).error(function(xhr) {
-    log("remoteIsAlreadyKept error:", xhr.responseText);
+  ajax("GET", "http://" + userConfig.server + "/bookmarks/check", {uri: location.href}, function done(o) {
+    callback(o.user_has_bookmark);
+  }, function fail(xhr) {
+    log("[checkWhetherKept] error:", xhr.responseText);
     callback(false);
   });
 }
@@ -611,7 +636,7 @@ chrome.runtime.onInstalled.addListener(function(details) {
 
 chrome.runtime.onStartup.addListener(function() {
   log("[onStartup]");
-  authenticate($.noop);
+  authenticate(noop);
 });
 
 function authenticate(callback) {
@@ -625,13 +650,13 @@ function authenticate(callback) {
   function startSession(onFail) {
     log("[startSession]");
     var config = getConfigs();
-    $.post("http://" + config.server + "/kifi/start", {
+    ajax("POST", "http://" + config.server + "/kifi/start", {
       installation: config.kifi_installation_id || "",
       version: chrome.app.getDetails().version,
       // platform: navigator.platform,
       // language: navigator.language,
       agent: navigator.userAgent || navigator.appVersion || navigator.vendor
-    }).success(function(data) {
+    }, function done(data) {
       log("[startSession] done:", data);
       logEvent("extension", "authenticated");
 
@@ -648,7 +673,7 @@ function authenticate(callback) {
       });
 
       callback();
-    }).error(function(xhr) {
+    }, function fail(xhr) {
       log("[startSession] xhr failed:", xhr);
       if (onFail) onFail();
     });
