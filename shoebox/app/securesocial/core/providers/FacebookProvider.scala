@@ -44,7 +44,7 @@ class FacebookProvider(application: Application) extends OAuth2Provider(applicat
     response.body.split("&|=") match {
         case Array(AccessToken, token, Expires, expiresIn) => OAuth2Info(token, None, Some(expiresIn.toInt))
         case _ =>
-          Logger.error("Invalid response format for accessToken")
+          Logger.error("Invalid response format for accessToken in body [%s]".format(response.body))
           throw new AuthenticationException()
     }
   }

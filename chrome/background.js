@@ -1,4 +1,4 @@
-log("background page kicking in!");
+function noop() {}
 
 // ===== Logging
 
@@ -16,17 +16,43 @@ function error(exception, message) {
 // ===== Queries with hard-coded results
 
 var magicQueries = [];
-try {
+ajax("GET", chrome.extension.getURL("data/magicQueries.json"), function(xhr) {
+  magicQueries = JSON.parse(xhr.response);
+});
+
+// ===== Ajax
+
+function ajax(method, uri, data, done, fail) {
+  if (typeof data == "function") {
+    fail = done, done = data, data = null;
+  } else if (data && typeof data == "object") {
+    var a = [], val;
+    for (var key in data) {
+      val = data[key];
+      if (data.hasOwnProperty(key)) {
+        a.push(encodeURIComponent(key) + "=" + encodeURIComponent(val == null ? "" : val));
+      }
+    }
+    data = a.join("&").replace(/%20/g, "+");
+  }
+
   var xhr = new XMLHttpRequest();
   xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
-      magicQueries = JSON.parse(xhr.response);
+    if (this.readyState == 4) {
+      var arg = /^application\/json/.test(this.getResponseHeader("Content-Type")) ? JSON.parse(this.responseText) : this;
+      ((this.status == 200 ? done : fail) || noop)(arg);
+      done = fail = noop;
     }
   }
-  xhr.open("GET", chrome.extension.getURL("data/magicQueries.json"), true);
-  xhr.send();
-} catch(e) {
-  error(e, "loading magic queries");
+  if (data && method.match(/^(?:GET|HEAD)$/)) {
+    uri = uri + (uri.indexOf("?") < 0 ? "?" : "&") + data;
+    data = null;
+  }
+  xhr.open(method, uri, true);
+  if (data) {
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+  }
+  xhr.send(data);
 }
 
 // ===== User history
@@ -90,11 +116,11 @@ setTimeout(function maybeSend() {
     }
     log("[logEvent:maybeSend] Sending event log: ", JSON.parse(JSON.stringify(eventLog)));
 
-    $.post("http://" + config.server + "/users/events", {
+    ajax("POST", "http://" + config.server + "/users/events", {
       payload: JSON.stringify(eventLog)
-    }).success(function(data) {
-      log("[logEvent:maybeSend] Event log sent. Response: ", data)
-    }).error(function(xhr) {
+    }, function done(data) {
+      log("[logEvent:maybeSend] Event log sent. Response:", data)
+    }, function fail(xhr) {
       error(Error("[logEvent:maybeSend] Event log sending failed"));
       log("[logEvent:maybeSend] ", xhr.responseText);
     });
@@ -138,8 +164,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
         });
         break;
       case "follow":
-        $.ajax("http://" + getConfigs().server + "/comments/follow?url=" + encodeURIComponent(tab.url),
-          {"type": request.follow ? "POST" : "DELETE"});
+        ajax(request.follow ? "POST" : "DELETE", "http://" + getConfigs().server + "/comments/follow", {url: tab.url});
         break;
       case "get_conf":
         sendResponse(getConfigs());
@@ -159,19 +184,19 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
         setPageIcon(tab.id, request.is_kept);
         break;
       case "get_slider_info":
-        $.get("http://" + getConfigs().server + "/users/slider?url=" + encodeURIComponent(tab.url), function(o) {
+        ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
           o.user = getConfigs().user;
           sendResponse(o);
         });
         break;
       case "get_slider_updates":
-        $.get("http://" + getConfigs().server + "/users/slider/updates?url=" + encodeURIComponent(tab.url), sendResponse);
+        ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, sendResponse);
         break;
       case "log_event":
         logEvent.apply(null, request.args);
         break;
       case "get_comments":
-        $.get("http://" + getConfigs().server +
+        ajax("GET", "http://" + getConfigs().server +
           (request.kind == "public" ? "/comments/public" : "/messages/threads") +
           (request.commentId ? "/" + request.commentId : "?url=" + encodeURIComponent(tab.url)),
           sendResponse);
@@ -180,7 +205,7 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
         postComment(request, sendResponse);
         break;
       case "get_friends":
-        $.get("http://" + getConfigs().server + "/users/friends", sendResponse);
+        ajax("GET", "http://" + getConfigs().server + "/users/friends", sendResponse);
         break;
       default:
         log("Ignoring unknown message");
@@ -407,7 +432,7 @@ function searchOnServer(request, sendResponse, tab) {
       '&maxHits=' + userConfigs.max_res * 2 +
       '&lastUUI=' + (request.lastUUID || "") +
       '&context=' + encodeURIComponent(request.context || "") +
-      '&kifiVersion=' + currVersion,
+      '&kifiVersion=' + chrome.app.getDetails().version,
     true);
   xhr.send();
 }
@@ -469,12 +494,10 @@ function checkWhetherKept(location, callback) {
     return;
   }
 
-  $.getJSON("http://" + userConfig.server + "/bookmarks/check" +
-    "?uri=" + encodeURIComponent(location))
-  .success(function(data) {
-    callback(data.user_has_bookmark);
-  }).error(function(xhr) {
-    log("remoteIsAlreadyKept error:", xhr.responseText);
+  ajax("GET", "http://" + userConfig.server + "/bookmarks/check", {uri: location.href}, function done(o) {
+    callback(o.user_has_bookmark);
+  }, function fail(xhr) {
+    log("[checkWhetherKept] error:", xhr.responseText);
     callback(false);
   });
 }
@@ -601,86 +624,77 @@ function getUser() {
   return user && user.keepit_external_id && user.facebook_id && user.name && user.avatar_url && user;
 }
 
-// Check if the version has changed.
-var currVersion = chrome.app.getDetails().version;
-var prevVersion = getConfigs().version;
-if (currVersion != prevVersion) {
-  if (!prevVersion) {
-    log("Extension Installed");
-  } else {
-    log("Extension Updated");
-  }
-  setConfigs("version", currVersion);
-}
-
-function startHandShake(onFail) {
-  log("[startHandShake]");
-  var config = getConfigs();
-  $.post("http://" + config.server + "/kifi/start", {
-    installation: config.kifi_installation_id || "",
-    version: currVersion,
-    // platform: navigator.platform,
-    // language: navigator.language,
-    agent: navigator.userAgent || navigator.appVersion || navigator.vendor
-  }).success(onAuthenticate).error(function(xhr) {
-    error(Error("handshake failed"));
-    log(xhr.responseText);
-    if (onFail) onFail();
-  });
-}
-
-function openFacebookConnect() {
-  var popupTabId;
-  chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-    if (changeInfo.status == "loading" && tabId == popupTabId && tab.url == "http://" + getConfigs().server + "/#_=_") {
-      log("[openFacebookConnect] closing tab ", tabId);
-      chrome.tabs.remove(tabId);
-      popupTabId = null;
-
-      startHandShake();
+chrome.runtime.onInstalled.addListener(function(details) {
+  log("[onInstalled]", details);
+  logEvent("extension", details.reason);
+  authenticate(function() {
+    if (details.reason == "install") {
+      postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
     }
   });
+});
 
-  chrome.windows.create({'url': 'http://' + getConfigs().server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(win) {
-    popupTabId = win.tabs[0].id
-  });
-}
+chrome.runtime.onStartup.addListener(function() {
+  log("[onStartup]");
+  authenticate(noop);
+});
 
-function onAuthenticate(data) {
-  log("[onAuthenticate]", data);
-  setConfigs("user", JSON.stringify({
-    facebook_id: data.facebookId,
-    keepit_external_id: data.userId,
-    avatar_url: data.avatarUrl,
-    name: data.name}));
-  setConfigs("kifi_installation_id", data.installationId);
-
-  var config = getConfigs();
-  if (!prevVersion) {
-    log("loading bookmarks to the server");
-    postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
+function authenticate(callback) {
+  logEvent("extension", "started");
+  if (getConfigs().env == "development" || !getUser()) {
+    openFacebookConnect();
   } else {
-    log("[onAuthenticate] NOT uploading bookmarks");
+    startSession(openFacebookConnect);
   }
 
-  // Locate or create KeepIt bookmark folder.
-  getBookmarkFolderInfo(config.bookmark_id, function(info) {
-    setConfigs("bookmark_id", info.keepItId);
-  });
+  function startSession(onFail) {
+    log("[startSession]");
+    var config = getConfigs();
+    ajax("POST", "http://" + config.server + "/kifi/start", {
+      installation: config.kifi_installation_id || "",
+      version: chrome.app.getDetails().version,
+      // platform: navigator.platform,
+      // language: navigator.language,
+      agent: navigator.userAgent || navigator.appVersion || navigator.vendor
+    }, function done(data) {
+      log("[startSession] done:", data);
+      logEvent("extension", "authenticated");
 
-  log("[onAuthenticate] done");
-  logEvent("extension", "authenticated");
-}
+      setConfigs("user", JSON.stringify({
+        facebook_id: data.facebookId,
+        keepit_external_id: data.userId,
+        avatar_url: data.avatarUrl,
+        name: data.name}));
+      setConfigs("kifi_installation_id", data.installationId);
 
-if (getConfigs().env == "development" || !getUser()) {
-  removeFromConfigs("user");
-  openFacebookConnect();
-} else {
-  startHandShake(function() {
-    log("User does not appear to be logged in remote. Refreshing data...");
+      // Locate or create KeepIt bookmark folder.
+      getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+        setConfigs("bookmark_id", info.keepItId);
+      });
+
+      callback();
+    }, function fail(xhr) {
+      log("[startSession] xhr failed:", xhr);
+      if (onFail) onFail();
+    });
+  }
+
+  function openFacebookConnect() {
+    log("[openFacebookConnect]");
     removeFromConfigs("user");
-    openFacebookConnect();
-  });
-}
+    var popupTabId;
+    chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+      if (changeInfo.status == "loading" && tabId == popupTabId && tab.url == "http://" + getConfigs().server + "/#_=_") {
+        log("[openFacebookConnect] closing tab ", tabId);
+        chrome.tabs.remove(tabId);
+        popupTabId = null;
 
-logEvent("extension","started");
+        startSession();
+      }
+    });
+
+    chrome.windows.create({'url': 'http://' + getConfigs().server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(win) {
+      popupTabId = win.tabs[0].id
+    });
+  }
+}

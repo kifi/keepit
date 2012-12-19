@@ -90,6 +90,7 @@ class URINormalizerTest extends Specification {
       URINormalizer.normalize("http://www.example.com/%7Eusername/") === "http://www.example.com/~username/"
       URINormalizer.normalize("http://ACME.com/./foo") === "http://acme.com/foo"
       URINormalizer.normalize("http://ACME.com/foo%26bar") === "http://acme.com/foo&bar"
+      URINormalizer.normalize("http://ACME.com/foo%20bar") === "http://acme.com/foo%20bar"
       URINormalizer.normalize("http://www.example.com/../../a.html") === "http://www.example.com/a.html"
       URINormalizer.normalize("http://www.example.com/../a/b/../c/./d.html") === "http://www.example.com/a/c/d.html"
       URINormalizer.normalize("http://foo.bar.com?baz=1") === "http://foo.bar.com/?baz=1"
@@ -130,6 +131,8 @@ class URINormalizerTest extends Specification {
     "handle edge cases" in {
       URINormalizer.normalize("http://www1.bloomingdales.com/search/results.ognc?sortOption=*&Keyword=juicy%20couture&resultsPerPage=24&Action=sd&attrs=Department%3ADepartment%3ADresses|Color:Color:Black") ===
         "http://www1.bloomingdales.com/search/results.ognc?Action=sd&Keyword=juicy+couture&attrs=Department%3ADepartment%3ADresses%7CColor%3AColor%3ABlack&resultsPerPage=24&sortOption=*"
+
+      URINormalizer.normalize("http:///") === "http:///"
     }
 
     "use custom normalizer when applicable" in {
