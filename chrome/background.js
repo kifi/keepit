@@ -627,11 +627,11 @@ function getUser() {
 chrome.runtime.onInstalled.addListener(function(details) {
   log("[onInstalled]", details);
   logEvent("extension", details.reason);
-  if (details.reason == "install") {
-    authenticate(function() {
+  authenticate(function() {
+    if (details.reason == "install") {
       postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
-    });
-  }
+    }
+  });
 });
 
 chrome.runtime.onStartup.addListener(function() {

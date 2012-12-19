@@ -9,6 +9,7 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.ws.WS
 import play.api.mvc._
+import play.api.mvc.Results.InternalServerError
 import play.api.libs.json.JsArray
 import play.api.libs.json.Json
 import play.api.libs.json.JsObject
@@ -16,6 +17,7 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 import com.keepit.inject._
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.net._
 import com.keepit.common.db.{Id, CX, ExternalId, State}
 import com.keepit.common.logging.Logging
@@ -26,7 +28,10 @@ import securesocial.core._
 import com.keepit.common.social._
 import views.html.defaultpages.unauthorized
 
+case class ReportedException(val id: ExternalId[HealthcheckError], val cause: Throwable) extends Exception(id.toString, cause)
+
 object FortyTwoController {
+
   val FORTYTWO_USER_ID = "fortytwo_user_id"
 
   object ImpersonateCookie extends CookieBaker[Option[ExternalId[User]]] {
@@ -58,8 +63,8 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
       userId: Id[User],
       request: Request[AnyContent],
       experimants: Seq[State[UserExperiment.ExperimentType]] = Nil,
-      kifiInstallId: Option[ExternalId[KifiInstallation]] = None,
-      impersonatingUserId: Option[Id[User]] = None)
+      kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
+      adminUserId: Option[Id[User]] = None)
     extends WrappedRequest(request)
 
   def AuthenticatedJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
@@ -123,7 +128,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
 
   private def executeAction(action: AuthenticatedRequest => Result, userId: Id[User], socialUser: SocialUser,
       experiments: Seq[State[UserExperiment.ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
-      newSession: Session, request: Request[AnyContent], impersonatingUserId: Option[Id[User]] = None) = {
+      newSession: Session, request: Request[AnyContent], adminUserId: Option[Id[User]] = None) = {
     if (experiments.contains(UserExperiment.ExperimentTypes.BLOCK)) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
@@ -131,9 +136,22 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
     } else {
       val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> FortyTwoServices.currentVersion.value)
       log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
-      action(AuthenticatedRequest(socialUser, userId, request, experiments, kifiInstallationId, impersonatingUserId)) match {
-        case r: PlainResult => r.withSession(newSession)
-        case any => any
+      try {
+        action(AuthenticatedRequest(socialUser, userId, request, experiments, kifiInstallationId, adminUserId)) match {
+          case r: PlainResult => r.withSession(newSession)
+          case any => any
+        }
+      } catch {
+        case e: Throwable =>
+          val globalError = inject[HealthcheckPlugin].addError(HealthcheckError(
+              error = Some(e),
+              method = Some(request.method.toUpperCase()),
+              path = Some(request.path),
+              callType = Healthcheck.API,
+              errorMessage = Some("Error executing with userId %s, experiments [%s], installation %s".format(
+                  userId, experiments.mkString(","), kifiInstallationId.getOrElse("NA")))))
+          log.error("healthcheck reported [%s]".format(globalError.id), e)
+          throw ReportedException(globalError.id, e)
       }
     }
   }
@@ -145,12 +163,11 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
     }
   }
 
-  def AdminHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
-    AdminAction(false, action)
+  def AdminHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] = AdminAction(false, action)
 
   private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest => Result): Action[AnyContent] = {
     AuthenticatedAction(isApi, { implicit request =>
-      val userId = request.impersonatingUserId.getOrElse(request.userId)
+      val userId = request.adminUserId.getOrElse(request.userId)
       val isAdmin = CX.withConnection { implicit conn =>
         UserExperiment.getExperiment(userId, UserExperiment.ExperimentTypes.ADMIN).isDefined
       }
