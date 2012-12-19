@@ -170,13 +170,12 @@ object BookmarksController extends FortyTwoController {
             Ok
         }
       case None =>
-        val msg = "Unsupported operation for user %s with old installation".format(userId)
-        inject[HealthcheckPlugin].addError(HealthcheckError(callType = Healthcheck.API, errorMessage = Some(msg)))
         val (user, experiments, installations) = CX.withConnection { implicit conn =>
           (User.get(userId),
            UserExperiment.getByUser(userId) map (_.experimentType),
-           KifiInstallation.all(userId).mkString(",")) //todo(eishay) replace with installation id from the session
+           request.kifiInstallId.map(Seq(_)).getOrElse(Nil))
         }
+        val msg = "Unsupported operation for user %s with old installation".format(userId)
         val metaData = JsObject(Seq("message" -> JsString(msg)))
         val event = Events.userEvent(EventFamilies.ACCOUNT, "deprecated_add_bookmarks", user, experiments, installations, metaData)
         dispatch ({
