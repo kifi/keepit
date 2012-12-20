@@ -34,17 +34,32 @@ import akka.util.duration._
 
 object CommentController extends FortyTwoController {
 
-  def createComment(url: String,
-                    title: String,
-                    text: String,
-                    permission: String,
-                    recipients: String = "",
-                    parent: String) = AuthenticatedJsonAction { request =>
+  // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
+  def createComment(urlOpt: Option[String],
+                    titleOpt: Option[String],
+                    textOpt: Option[String],
+                    permissionsOpt: Option[String],
+                    recipientsOpt: Option[String],
+                    parentOpt: Option[String]) = AuthenticatedJsonAction { request =>
+    val (url, title, text, permissions, recipients, parent) = request.body.asJson match {
+      case Some(o) => (
+        (o \ "url").as[String],
+        (o \ "title") match { case JsString(s) => s; case _ => ""},
+        (o \ "text").as[String].trim,
+        (o \ "permissions").as[String],
+        (o \ "recipients") match { case JsString(s) => s; case _ => ""},
+        (o \ "parent") match { case JsString(s) => s; case _ => ""})
+      case _ => (
+        urlOpt.get,
+        titleOpt.getOrElse(""),
+        textOpt.get.trim,
+        permissionsOpt.get,
+        recipientsOpt.getOrElse(""),
+        parentOpt.getOrElse(""))
+    }
+
+    if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val comment = CX.withConnection { implicit conn =>
-
-      if(text.trim.isEmpty)
-        throw new Exception("Empty comments are not allowed")
-
       val userId = request.userId
       val uri = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save)
       val parentIdOpt = parent match {
@@ -52,7 +67,7 @@ object CommentController extends FortyTwoController {
         case id => Comment.get(ExternalId[Comment](id)).id
       }
 
-      permission.toLowerCase match {
+      permissions.toLowerCase match {
         case "private" =>
           Comment(uriId = uri.id.get, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
         case "message" =>
@@ -141,7 +156,9 @@ object CommentController extends FortyTwoController {
     Ok(commentWithSocialUserSerializer.writes(replies))
   }
 
-  def startFollowing(url: String) = AuthenticatedJsonAction { request =>
+  // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
+  def startFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
+    val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
     CX.withConnection { implicit conn =>
       val uriId = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save).id.get
       Follow.get(request.userId, uriId) match {
@@ -153,7 +170,9 @@ object CommentController extends FortyTwoController {
     Ok(JsObject(Seq("following" -> JsBoolean(true))))
   }
 
-  def stopFollowing(url: String) = AuthenticatedJsonAction { request =>
+  // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
+  def stopFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
+    val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
     CX.withConnection { implicit conn =>
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) => Follow.get(request.userId, uri.id.get) match {
@@ -261,7 +280,7 @@ object CommentController extends FortyTwoController {
     }
     Ok(views.html.follows(uriAndUsers))
   }
-  
+
   def commentsViewFirstPage = commentsView(0)
 
   def commentsView(page: Int = 0) = AdminHtmlAction { request =>
@@ -276,7 +295,7 @@ object CommentController extends FortyTwoController {
   }
 
   def messagesViewFirstPage =  messagesView(0)
-  
+
   def messagesView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 200
     val (count, uriAndUsers) = CX.withConnection { implicit conn =>

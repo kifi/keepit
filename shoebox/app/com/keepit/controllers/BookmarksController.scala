@@ -129,7 +129,9 @@ object BookmarksController extends FortyTwoController {
     Ok(JsObject(Seq("user_has_bookmark" -> JsBoolean(bookmark.isDefined))))
   }
 
-  def remove(url: String) = AuthenticatedJsonAction { request =>
+  // TODO: Remove parameter and only check request body once all installations are 2.1.6 or later.
+  def remove(uri: Option[String]) = AuthenticatedJsonAction { request =>
+    val url = uri.getOrElse((request.body.asJson.get \ "url").as[String])
     val bookmark = CX.withConnection{ implicit conn =>
       NormalizedURI.getByNormalizedUrl(url).flatMap { uri =>
         Bookmark.load(uri, request.userId).filter(_.isActive).map {b => b.withActive(false).save}
@@ -142,10 +144,15 @@ object BookmarksController extends FortyTwoController {
     }
   }
 
-  def updatePrivacy(url: String, isPrivate: Boolean) = AuthenticatedJsonAction { request =>
+  // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
+  def updatePrivacy(uri: Option[String], isPrivate: Option[Boolean]) = AuthenticatedJsonAction { request =>
+    val (url, priv) = request.body.asJson match {
+      case Some(o) => ((o \ "url").as[String], (o \ "private").as[Boolean])
+      case _ => (uri.get, isPrivate.get)
+    }
     CX.withConnection{ implicit conn =>
       NormalizedURI.getByNormalizedUrl(url).flatMap { uri =>
-        Bookmark.load(uri, request.userId).filter(_.isPrivate != isPrivate).map {b => b.withPrivate(isPrivate).save}
+        Bookmark.load(uri, request.userId).filter(_.isPrivate != priv).map {b => b.withPrivate(priv).save}
       }
     } match {
       case Some(bookmark) => Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
@@ -157,8 +164,8 @@ object BookmarksController extends FortyTwoController {
     val userId = request.userId
     val installationId = request.kifiInstallationId
     request.body.asJson match {
-      case Some(json) =>
-        val bookmarkSource = (json \ "bookmark_source").asOpt[String]
+      case Some(json) =>  // TODO: remove bookmark_source check after everyone is at v2.1.6 or later.
+        val bookmarkSource = (json \ "bookmark_source").asOpt[String].orElse((json \ "source").asOpt[String])
         bookmarkSource match {
           case Some("PLUGIN_START") => Forbidden
           case _ =>
@@ -167,7 +174,7 @@ object BookmarksController extends FortyTwoController {
             val user = CX.withConnection { implicit conn => User.get(userId) }
             internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
             inject[URIGraphPlugin].update(userId)
-            Ok
+            Ok(JsObject(Seq()))
         }
       case None =>
         val (user, experiments, installation) = CX.withConnection { implicit conn =>

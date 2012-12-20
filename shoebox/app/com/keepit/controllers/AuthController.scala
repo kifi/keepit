@@ -62,15 +62,21 @@ object AuthController extends FortyTwoController {
   def start = AuthenticatedJsonAction { implicit request =>
     val socialUser = request.socialUser
     log.info("facebook id %s".format(socialUser.id))
-    val params = request.body.asFormUrlEncoded.get
+    val (userAgent, version, installationIdOpt) = request.body.asJson match {
+      case Some(json) =>
+        (UserAgent((json \ "agent").as[String]),
+         KifiVersion((json \ "version").as[String]),
+         (json \ "installation").asOpt[String].map(id => ExternalId[KifiInstallation](id)))
+      case _ =>  // TODO: remove this form encoding branch after everyone at v2.1.6 or later.
+        val params = request.body.asFormUrlEncoded.get
+        (UserAgent(params.get("agent").get.head),
+         KifiVersion(params.get("version").get.head),
+         params.get("installation").flatMap(_.headOption).filterNot(s => s.isEmpty || s == "undefined").map(id => ExternalId[KifiInstallation](id)))
+    }
     val (user, installation) = CX.withConnection { implicit c =>
-      val userAgent = UserAgent(params.get("agent").get.head)
-      val version = KifiVersion(params.get("version").get.head)
-      val installationIdOpt = params.get("installation").flatMap(_.headOption).filterNot(s => s.isEmpty || s == "undefined")
-
       log.info("start. details: %s, %s, %s".format(userAgent, version, installationIdOpt))
       val installation: KifiInstallation = installationIdOpt flatMap { id =>
-        KifiInstallation.getOpt(request.userId, ExternalId[KifiInstallation](id))
+        KifiInstallation.getOpt(request.userId, id)
       } match {
         case None =>
           KifiInstallation(userId = request.userId, userAgent = userAgent, version = version).save
