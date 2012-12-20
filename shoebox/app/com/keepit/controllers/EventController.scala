@@ -36,8 +36,10 @@ import com.keepit.common.analytics.reports._
 object EventController extends FortyTwoController {
 
   def logUserEvents = AuthenticatedJsonAction { request =>
-
-    val params = Json.parse(request.body.asFormUrlEncoded.get.get("payload").get.head)
+    val params = request.body.asJson match {
+      case Some(json) => json  // TODO: remove form encoding branch after everyone at v2.1.6 or later
+      case _ => Json.parse(request.body.asFormUrlEncoded.get.get("payload").get.head)
+    }
     val userId = request.userId
     val version = (params \ "version").as[Int]
 

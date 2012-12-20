@@ -22,18 +22,9 @@ ajax("GET", chrome.extension.getURL("data/magicQueries.json"), function(xhr) {
 
 // ===== Ajax
 
-function ajax(method, uri, data, done, fail) {
-  if (typeof data == "function") {
+function ajax(method, uri, data, done, fail) {  // method and uri are required
+  if (typeof data == "function") {  // shift args if data is missing and done is present
     fail = done, done = data, data = null;
-  } else if (data && typeof data == "object") {
-    var a = [], val;
-    for (var key in data) {
-      val = data[key];
-      if (data.hasOwnProperty(key)) {
-        a.push(encodeURIComponent(key) + "=" + encodeURIComponent(val == null ? "" : val));
-      }
-    }
-    data = a.join("&").replace(/%20/g, "+");
   }
 
   var xhr = new XMLHttpRequest();
@@ -41,16 +32,24 @@ function ajax(method, uri, data, done, fail) {
     if (this.readyState == 4) {
       var arg = /^application\/json/.test(this.getResponseHeader("Content-Type")) ? JSON.parse(this.responseText) : this;
       ((this.status == 200 ? done : fail) || noop)(arg);
-      done = fail = noop;
+      done = fail = noop;  // ensure we don't call a callback again
     }
   }
   if (data && method.match(/^(?:GET|HEAD)$/)) {
-    uri = uri + (uri.indexOf("?") < 0 ? "?" : "&") + data;
+    var a = [];
+    for (var key in data) {
+      if (data.hasOwnProperty(key)) {
+        var val = data[key];
+        a.push(encodeURIComponent(key) + "=" + encodeURIComponent(val == null ? "" : val));
+      }
+    }
+    uri = uri + (uri.indexOf("?") < 0 ? "?" : "&") + a.join("&").replace(/%20/g, "+");
     data = null;
   }
   xhr.open(method, uri, true);
   if (data) {
-    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+    data = JSON.stringify(data);
+    xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");
   }
   xhr.send(data);
 }
@@ -86,7 +85,7 @@ var eventFamilies = ["slider","search","extension","account","notification"].red
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
-    log("[logEvent] Invalid event family", eventFamily);
+    log("[logEvent] invalid event family:", eventFamily);
     return;
   }
   var event = {
@@ -108,21 +107,16 @@ setTimeout(function maybeSend() {
     var t0 = _eventLog[0].time;
     _eventLog.forEach(function(e) { e.time -= t0 }); // relative times = fewer bytes
     var config = getConfigs();
-    var eventLog = {
+    var data = {
       "version": 1,
-      "time": new Date().getTime() - t0,
+      "time": new Date - t0,
       "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
-      "events": _eventLog
-    }
-    log("[logEvent:maybeSend] Sending event log: ", JSON.parse(JSON.stringify(eventLog)));
-
-    ajax("POST", "http://" + config.server + "/users/events", {
-      payload: JSON.stringify(eventLog)
-    }, function done(data) {
-      log("[logEvent:maybeSend] Event log sent. Response:", data)
+      "events": _eventLog};
+    log("[EventLog] sending:", data);
+    ajax("POST", "http://" + config.server + "/users/events", data, function done(o) {
+      log("[EventLog] done:", o)
     }, function fail(xhr) {
-      error(Error("[logEvent:maybeSend] Event log sending failed"));
-      log("[logEvent:maybeSend] ", xhr.responseText);
+      log("[EventLog] fail:", xhr.responseText);
     });
 
     _eventLog.length = 0;
@@ -159,7 +153,9 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         });
         return true;
       case "follow":
-        ajax(request.follow ? "POST" : "DELETE", "http://" + getConfigs().server + "/comments/follow", {url: tab.url});
+        ajax(request.follow ? "POST" : "DELETE", "http://" + getConfigs().server + "/comments/follow", {url: tab.url}, function(o) {
+          log("[follow] resp:", o);
+        });
         return;
       case "get_conf":
         sendResponse(getConfigs());
@@ -323,15 +319,10 @@ function removeKeep(bmInfo, req, sendResponse, tab) {
     });
   });
 
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
-      log("[removeKeep] response:", xhr.response);
-      sendResponse(xhr.response);
-    }
-  }
-  xhr.open("POST", "http://" + userConfig.server + "/bookmarks/remove?uri=" + encodeURIComponent(req.url), true);
-  xhr.send();
+  ajax("POST", "http://" + userConfig.server + "/bookmarks/remove", {url: req.url}, function(o) {
+    log("[removeKeep] response:", o);
+    sendResponse(o);
+  });
 }
 
 function setPrivate(bmInfo, req, sendResponse, tab) {
@@ -347,48 +338,25 @@ function setPrivate(bmInfo, req, sendResponse, tab) {
     });
   });
 
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
-      log("[setPrivate] response:", xhr.response);
-      sendResponse(xhr.response);
-    }
-  }
-  xhr.open("POST", "http://" + getConfigs().server + "/bookmarks/private" +
-    "?uri=" + encodeURIComponent(req.url) +
-    "&isPrivate=" + +req.private,
-    true);
-  xhr.send();
+  ajax("POST", "http://" + getConfigs().server + "/bookmarks/private", {url: req.url, private: req.private}, function(o) {
+    log("[setPrivate] response:", o);
+    sendResponse(o);
+  });
 }
 
 function postComment(request, sendResponse) {
-  log("posting comment: ", request);
-
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
-      var response = JSON.parse(xhr.response);
-      log("POSTED! ", response);
-      sendResponse(response);
-    }
-  }
-  var userConfigs = getConfigs();
-  if (!userConfigs || !userConfigs.user) {
-    log("No user info! Can't post comment!");
-    return;
-  }
-  var parent = request.parent || "";
-  var recipients = request.recipients || "";
-
-  xhr.open("POST", "http://" + userConfigs.server + "/comments/add" +
-    "?url=" + encodeURIComponent(request.url) +
-    "&title=" + encodeURIComponent(request.title) +
-    "&text=" + encodeURIComponent(request.text) +
-    "&permissions=" + request.permissions +
-    "&parent=" + parent +
-    "&recipients=" + recipients,
-    true);
-  xhr.send();
+  log("[postComment] req:", request);
+  ajax("POST", "http://" + getConfigs().server + "/comments/add", {
+      url: request.url,
+      title: request.title,
+      text: request.text,
+      permissions: request.permissions,
+      parent: request.parent,
+      recipients: request.recipients},
+    function(o) {
+      log("[postComment] resp:", o);
+      sendResponse(o);
+    });
 }
 
 function searchOnServer(request, sendResponse, tab) {
@@ -545,26 +513,15 @@ function injectSlider(tabId, callback) {
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
-  log("posting bookmarks...");
+  log("[postBookmarks]");
   supplyBookmarks(function(bookmarks) {
-    log("bookmarks: ", bookmarks);
-    if (!getUser()) {
-      log("Can't post bookmark(s), no user info!");
-      return;
-    }
-    var userConfigs = getConfigs();
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState == 4) {
-        log("[postBookmarks] response: ", xhr.responseText);
-      }
-    }
-    xhr.open("POST", 'http://' + userConfigs.server + '/bookmarks/add', true);
-    xhr.setRequestHeader("Content-Type","application/json; charset=utf-8");
-    xhr.send(JSON.stringify({
-      "bookmarks": bookmarks,
-      "bookmark_source": bookmarkSource}));
-    log("posted bookmarks");
+    log("[postBookmarks] bookmarks:", bookmarks);
+    ajax("POST", "http://" + getConfigs().server + "/bookmarks/add", {
+        bookmarks: bookmarks,
+        source: bookmarkSource},
+      function(o) {
+        log("[postBookmarks] resp:", o);
+      });
   });
 }
 
@@ -678,12 +635,12 @@ function authenticate(callback) {
     log("[startSession]");
     var config = getConfigs();
     ajax("POST", "http://" + config.server + "/kifi/start", {
-      installation: config.kifi_installation_id || "",
+      installation: config.kifi_installation_id,
       version: chrome.app.getDetails().version,
       // platform: navigator.platform,
       // language: navigator.language,
-      agent: navigator.userAgent || navigator.appVersion || navigator.vendor
-    }, function done(data) {
+      agent: navigator.userAgent || navigator.appVersion || navigator.vendor},
+    function done(data) {
       log("[startSession] done:", data);
       logEvent("extension", "authenticated");
 
