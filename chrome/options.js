@@ -2,19 +2,19 @@
 // Saves configs to localStorage.
 
 function upload() {
-  chrome.extension.sendRequest({type: "upload_all_bookmarks"}, function(response) {});
+  chrome.extension.sendMessage({type: "upload_all_bookmarks"}, function(response) {});
 }
 
 function resetUser() {
-  chrome.extension.sendRequest({type: "remove_conf", key: "user"}, function(response) {
-    chrome.extension.sendRequest({type: "remove_conf", key: "user_info"}, function(response) {
+  chrome.extension.sendMessage({type: "remove_conf", key: "user"}, function(response) {
+    chrome.extension.sendMessage({type: "remove_conf", key: "user_info"}, function(response) {
       restoreConfigs();
     });
   });
 }
 
 function sendSaveConfig(key, value) {
-  chrome.extension.sendRequest({type: "set_conf", key: key, value: value}, function(response) {});
+  chrome.extension.sendMessage({type: "set_conf", key: key, value: value}, function(response) {});
 }
 
 function saveConfigs() {
@@ -44,7 +44,7 @@ function renderUserInfo(userInfo) {
 }
 
 function restoreConfigs(callback) {
-  chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
+  chrome.extension.sendMessage({"type": "get_conf"}, function(config) {
     console.log("loaded config", config);
     var env = config["env"];
     if (env === "development") {
@@ -63,7 +63,7 @@ function restoreConfigs(callback) {
     }
     $("#show_score").val(showScore);
     $("#facebook_connect_link").click(function() {
-      chrome.extension.sendRequest({"type": "get_conf"}, function(config) {
+      chrome.extension.sendMessage({"type": "get_conf"}, function(config) {
         var url = "http://" + config["server"] + "/authenticate/facebook";
         log("openning facebook window from " + url, "connect", "width=500,height=400");
         window.open(url);

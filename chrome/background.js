@@ -136,85 +136,83 @@ setTimeout(function maybeSend() {
 // ===== Message handling
 
 // Listen for the content script to send a message to the background page.
-// TODO: onRequest => onMessage, see http://stackoverflow.com/questions/11335815/chrome-extensions-onrequest-sendrequest-vs-onmessage-sendmessage
-chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
+chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
   var tab = sender.tab;
-  log("[onRequest] handling", request, "for", tab && tab.id);
+  log("[onMessage] handling:", request, "for", tab && tab.id);
   try {
     switch (request && request.type) {
-      case "page_load":
-        onPageLoad(request, sendResponse, tab);
-        break;
       case "get_keeps":
-        searchOnServer(request, sendResponse, tab);
-        break;
+        return searchOnServer(request, sendResponse, tab);
       case "add_bookmarks":
         getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
           addKeep(info, request, sendResponse, tab);
         });
-        break;
+        return true;
       case "unkeep":
         getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
           removeKeep(info, request, sendResponse, tab);
         });
-        break;
+        return true;
       case "set_private":
         getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
           setPrivate(info, request, sendResponse, tab);
         });
-        break;
+        return true;
       case "follow":
         ajax(request.follow ? "POST" : "DELETE", "http://" + getConfigs().server + "/comments/follow", {url: tab.url});
-        break;
+        return;
       case "get_conf":
         sendResponse(getConfigs());
-        break;
+        return;
       case "set_conf":
         setConfigs(request.key, request.value);
         sendResponse();
-        break;
+        return;
       case "remove_conf":
         setConfigs(request.key);
         sendResponse();
-        break;
+        return;
       case "upload_all_bookmarks":
         uploadAllBookmarks();
-        break;
+        return;
       case "set_page_icon":
-        setPageIcon(tab.id, request.is_kept);
-        break;
+        setPageIcon(tab, request.is_kept);
+        return;
+      case "inject_slider":
+        injectSlider(tab.id, sendResponse);
+        return true;
       case "get_slider_info":
         ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
           o.user = getConfigs().user;
           sendResponse(o);
         });
-        break;
+        return true;
       case "get_slider_updates":
         ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, sendResponse);
-        break;
+        return true;
       case "log_event":
         logEvent.apply(null, request.args);
-        break;
+        return;
       case "get_comments":
         ajax("GET", "http://" + getConfigs().server +
           (request.kind == "public" ? "/comments/public" : "/messages/threads") +
           (request.commentId ? "/" + request.commentId : "?url=" + encodeURIComponent(tab.url)),
           sendResponse);
-        break;
+        return true;
       case "post_comment":
         postComment(request, sendResponse);
-        break;
+        return true;
       case "get_friends":
         ajax("GET", "http://" + getConfigs().server + "/users/friends", sendResponse);
-        break;
+        return true;
       default:
-        log("Ignoring unknown message");
+        log("Ignoring unknown message:", request);
     }
-    // Return nothing to let the connection be cleaned up.
   } catch (e) {
     error(e);
+  } finally {
+    log("[onMessage] done:", request);
   }
-  log("[onRequest] done", request);
 });
 
 // Finds KiFi bookmark folder by id (if provided) or by name in the Bookmarks Bar,
@@ -435,6 +433,7 @@ function searchOnServer(request, sendResponse, tab) {
       '&kifiVersion=' + chrome.app.getDetails().version,
     true);
   xhr.send();
+  return true;
 }
 
 var restrictedUrlPatternsForHover = [
@@ -447,24 +446,18 @@ var restrictedUrlPatternsForHover = [
   "www.google.com",
   "google.com"];
 
-function onPageLoad(request, sendResponse, tab) {
-  log("[onPageLoad]", request, tab);
-  if (!getUser()) {
-    log("[onPageLoad] No facebook configured!")
-    return;
-  }
-  setPageIcon(tab.id, false);
+function onPageLoad(tab) {
+  log("[onPageLoad] tab:", tab);
   logEvent("extension", "pageLoad");
 
-  if (restrictedUrlPatternsForHover.some(function(e) {return tab.url.indexOf(e) >= 0})) {
-    log("[onPageLoad] restricted:", tab.url);
-    return;
-  }
-
   checkWhetherKept(tab.url, function(isKept) {
-    setPageIcon(tab.id, isKept);
+    setPageIcon(tab, isKept);
 
-    if (userHistory.exists(tab.url)) {
+    if (restrictedUrlPatternsForHover.some(function(e) {return tab.url.indexOf(e) >= 0})) {
+      log("[onPageLoad] restricted:", tab.url);
+      return;
+    } else if (userHistory.exists(tab.url)) {
+      log("[onPageLoad] recently visited:", tab.url);
       return;
     }
     userHistory.add(tab.url);
@@ -474,7 +467,7 @@ function onPageLoad(request, sendResponse, tab) {
     } else {
       var sliderDelaySec = getConfigs().hover_timeout;
       if (sliderDelaySec > 0) {
-        sendResponse(sliderDelaySec * 1000);
+        chrome.tabs.sendMessage({type: "auto_show_after", ms: sliderDelaySec * 1000});
       }
     }
   });
@@ -483,7 +476,7 @@ function onPageLoad(request, sendResponse, tab) {
 // Kifi icon in location bar
 chrome.pageAction.onClicked.addListener(function(tab) {
   log("button clicked", tab);
-  chrome.tabs.sendRequest(tab.id, {type: "button_click"});
+  chrome.tabs.sendMessage(tab.id, {type: "button_click"});
 });
 
 function checkWhetherKept(location, callback) {
@@ -502,25 +495,53 @@ function checkWhetherKept(location, callback) {
   });
 }
 
-function setPageIcon(tabId, kept) {
-  log("[setPageIcon] tab ", tabId);
-  chrome.tabs.get(tabId, function(tab) {
-    log("[setPageIcon] tab ", tab);
-    chrome.pageAction.setIcon({"tabId": tabId, "path": kept ? "icons/kept.png" : "icons/keep.png"});
-    chrome.pageAction.show(tabId);
+function setPageIcon(tab, kept) {
+  log("[setPageIcon] tab:", tab);
+  chrome.windows.get(tab.windowId, function(win) {
+    if (win.type == "normal") {
+      chrome.pageAction.setIcon({tabId: tab.id, path: kept ? "icons/kept.png" : "icons/keep.png"});
+      chrome.pageAction.show(tab.id);
+    }
   });
 }
 
-function maybeShowPageIcon(tabId, windowId) {
-  chrome.tabs.query({active: true, windowId: windowId, windowType: "normal"}, function(tabs) {
-    log("[maybeShowPageIcon] tabs: ", tabs);
-    tabs.forEach(function(tab) {
-      if (tab.id == tabId && tab.url.match(/^http/)) {
-        log("[maybeShowPageIcon] showing on ", tab);
-        chrome.pageAction.show(tab.id);
-      }
+function injectSlider(tabId, callback) {
+  injectScripts([
+      "lib/jquery-1.8.2.min.js",
+      "lib/jquery-ui-1.9.1.custom.min.js",
+      "lib/keymaster.min.js",
+      "lib/lodash.min.js",
+      "lib/jquery.tokeninput.js",
+      "lib/jquery.timeago.js",
+      "lib/mustache-0.7.1.min.js",
+      "scripts/slider.js",
+      "scripts/snapshot.js"],
+    function() {
+      injectStyles([
+          "styles/slider.css",
+          "styles/comments.css"],
+        callback);
     });
-  });
+
+  function injectScripts(paths, callback) {
+    for (var n = 0, i = 0; i < paths.length; i++) {
+      chrome.tabs.executeScript(tabId, {file: paths[i]}, function() {
+        if (++n == paths.length) {
+          callback();
+        }
+      });
+    }
+  }
+
+  function injectStyles(paths, callback) {
+    for (var n = 0, i = 0; i < paths.length; i++) {
+      chrome.tabs.insertCSS(tabId, {file: paths[i]}, function() {
+        if (++n == paths.length) {
+          callback();
+        }
+      });
+    }
+  }
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
@@ -548,14 +569,17 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
 }
 
 chrome.tabs.onActivated.addListener(function(info) {
-  log("[onActivated] tab info ", info);
-  maybeShowPageIcon(info.tabId, info.windowId);
+  log("[onActivated] tab info:", info);
+  //maybeShowPageIcon(info.tabId, info.windowId);
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
-  log("[onUpdated] tab ", tab, change);
-  if (tab.active && tab.url.match(/^http/)) {
-    maybeShowPageIcon(tabId, tab.windowId);
+  log("[onUpdated] tab:", tab, change);
+  if (change.url) {
+    setPageIcon(tab, false);
+  }
+  if (change.status == "complete" && /^http/.test(tab.url)) {
+    onPageLoad(tab);
   }
 });
 
