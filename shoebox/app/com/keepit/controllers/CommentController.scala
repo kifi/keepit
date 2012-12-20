@@ -45,14 +45,14 @@ object CommentController extends FortyTwoController {
       case Some(o) => (
         (o \ "url").as[String],
         (o \ "title") match { case JsString(s) => s; case _ => ""},
-        (o \ "text").as[String],
+        (o \ "text").as[String].trim,
         (o \ "permissions").as[String],
         (o \ "recipients") match { case JsString(s) => s; case _ => ""},
         (o \ "parent") match { case JsString(s) => s; case _ => ""})
       case _ => (
         urlOpt.get,
         titleOpt.getOrElse(""),
-        textOpt.get,
+        textOpt.get.trim,
         permissionsOpt.get,
         recipientsOpt.getOrElse(""),
         parentOpt.getOrElse(""))
