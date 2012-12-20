@@ -234,6 +234,20 @@
       "css": ["styles/slider.css", "styles/comments.css"],
       "run_at" : "document_end",
       "all_frames" : false
+    },
+    {
+      "matches" : [
+        "*://dev.ezkeep.com/r/*",
+        "*://*.keepitfindit.com/r/*",
+        "*://*.kifi.com/r/*"
+      ],
+      "js" : [
+        "lib/jquery-1.8.2.min.js",
+        "scripts/deeplink.js"
+      ],
+      "css": ["styles/deeplink.css"],
+      "run_at" : "document_end",
+      "all_frames" : false
     }
   ],
   "permissions": [

@@ -25,6 +25,9 @@ GET     /messages/threads/:id       com.keepit.controllers.CommentController.get
 GET     /messages/threads           com.keepit.controllers.CommentController.getMessageThreadList(url: String)
 POST    /messages                   com.keepit.controllers.CommentController.createComment(url: String, title: String ?= "", text: String, permissions = "message", recipients: String ?= "", parent: String ?= "")
 
+GET     /r/:id                      com.keepit.controllers.DeepLinkController.handle(id: String)
+GET /rcreate                        com.keepit.controllers.DeepLinkController.create()
+
 GET     /users/slider               com.keepit.controllers.UserController.getSliderInfo(url: String)
 GET     /users/slider/updates       com.keepit.controllers.CommentController.getUpdates(url: String)
 GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
