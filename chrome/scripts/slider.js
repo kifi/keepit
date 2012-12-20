@@ -124,7 +124,7 @@ slider = function() {
   function keepPage(shouldSlideOut) {
     log("[keepPage]", document.location.href);
 
-    chrome.extension.sendRequest({
+    chrome.extension.sendMessage({
       "type": "set_page_icon",
       "is_kept": true});
     isKept = true;
@@ -136,7 +136,7 @@ slider = function() {
       "title": document.title,
       "private": $("#keepit_private").is(":checked")
     };
-    chrome.extension.sendRequest(request, function(response) {
+    chrome.extension.sendMessage(request, function(response) {
      log("[keepPage] response:", response);
     });
   }
@@ -144,11 +144,11 @@ slider = function() {
   function unkeepPage(shouldSlideOut) {
     log("[unkeepPage]", document.location.href);
 
-    chrome.extension.sendRequest({"type": "set_page_icon", "is_kept": false});
+    chrome.extension.sendMessage({"type": "set_page_icon", "is_kept": false});
     isKept = false;
     if (shouldSlideOut) slideOut("unkeep");
 
-    chrome.extension.sendRequest({
+    chrome.extension.sendMessage({
         "type": "unkeep",
         "url": document.location.href.replace(/#.*/, "")},
       function(response) {
@@ -157,7 +157,7 @@ slider = function() {
   }
 
   function showKeepItHover(trigger) {
-    chrome.extension.sendRequest({type: "get_slider_info"}, function(o) {
+    chrome.extension.sendMessage({type: "get_slider_info"}, function(o) {
       log("slider info:", o);
 
       isKept = o.kept;
@@ -223,7 +223,7 @@ slider = function() {
     .on("click", ".makeprivatebtn", function() {
       var $btn = $(this), priv = /private/i.test($btn.text());
       log("[setPrivate] " + priv);
-      chrome.extension.sendRequest({
+      chrome.extension.sendMessage({
           "type": "set_private",
           "url": document.location.href.replace(/#.*/, ""),
           "private": priv},
@@ -337,7 +337,7 @@ slider = function() {
   }
 
   function hasNewComments(callback) {
-    chrome.extension.sendRequest({type: "get_slider_updates"}, function(updates) {
+    chrome.extension.sendMessage({type: "get_slider_updates"}, function(updates) {
       if (badGlobalState["updates"]) {
         var hasUpdates = badGlobalState["updates"]["countSum"] !== updates["countSum"];
         if (hasUpdates && callback) {
@@ -377,7 +377,7 @@ slider = function() {
 
     $(".kifi_hover").data("view", type).removeClass("public message").addClass(type);
 
-    chrome.extension.sendRequest({type: "get_comments", kind: type, commentId: id}, function(comments) {
+    chrome.extension.sendMessage({type: "get_comments", kind: type, commentId: id}, function(comments) {
       log(comments);
       renderComments(user, comments, type, id, function() {
         if (!isVisible) {
@@ -636,7 +636,7 @@ slider = function() {
   function createCommentBindings(type, user) {
     $(".control-bar").on("click", ".follow", function() {
       following = !following;  // TODO: server should return whether following along with the comments
-      chrome.extension.sendRequest({type: "follow", follow: following});
+      chrome.extension.sendMessage({type: "follow", follow: following});
       $(this).toggleClass("following", following);
     });
 
@@ -728,7 +728,7 @@ slider = function() {
     });
 
     if (type == "message") {
-      chrome.extension.sendRequest({type: "get_friends"}, function(data) {
+      chrome.extension.sendMessage({type: "get_friends"}, function(data) {
         log("friends:", data);
         var friends = data.friends; //TODO!
         for (var friend in friends) {
@@ -946,7 +946,7 @@ slider = function() {
       "parent": parent,
       "recipients": recipients
     };
-    chrome.extension.sendRequest(request, function(response) {
+    chrome.extension.sendMessage(request, function(response) {
       var newComment;
       if(type == "message") {
         log("fff",response)

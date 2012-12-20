@@ -22,18 +22,9 @@ ajax("GET", chrome.extension.getURL("data/magicQueries.json"), function(xhr) {
 
 // ===== Ajax
 
-function ajax(method, uri, data, done, fail) {
-  if (typeof data == "function") {
+function ajax(method, uri, data, done, fail) {  // method and uri are required
+  if (typeof data == "function") {  // shift args if data is missing and done is present
     fail = done, done = data, data = null;
-  } else if (data && typeof data == "object") {
-    var a = [], val;
-    for (var key in data) {
-      val = data[key];
-      if (data.hasOwnProperty(key)) {
-        a.push(encodeURIComponent(key) + "=" + encodeURIComponent(val == null ? "" : val));
-      }
-    }
-    data = a.join("&").replace(/%20/g, "+");
   }
 
   var xhr = new XMLHttpRequest();
@@ -41,16 +32,24 @@ function ajax(method, uri, data, done, fail) {
     if (this.readyState == 4) {
       var arg = /^application\/json/.test(this.getResponseHeader("Content-Type")) ? JSON.parse(this.responseText) : this;
       ((this.status == 200 ? done : fail) || noop)(arg);
-      done = fail = noop;
+      done = fail = noop;  // ensure we don't call a callback again
     }
   }
   if (data && method.match(/^(?:GET|HEAD)$/)) {
-    uri = uri + (uri.indexOf("?") < 0 ? "?" : "&") + data;
+    var a = [];
+    for (var key in data) {
+      if (data.hasOwnProperty(key)) {
+        var val = data[key];
+        a.push(encodeURIComponent(key) + "=" + encodeURIComponent(val == null ? "" : val));
+      }
+    }
+    uri = uri + (uri.indexOf("?") < 0 ? "?" : "&") + a.join("&").replace(/%20/g, "+");
     data = null;
   }
   xhr.open(method, uri, true);
   if (data) {
-    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+    data = JSON.stringify(data);
+    xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");
   }
   xhr.send(data);
 }
@@ -86,7 +85,7 @@ var eventFamilies = ["slider","search","extension","account","notification"].red
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
-    log("[logEvent] Invalid event family", eventFamily);
+    log("[logEvent] invalid event family:", eventFamily);
     return;
   }
   var event = {
@@ -108,21 +107,16 @@ setTimeout(function maybeSend() {
     var t0 = _eventLog[0].time;
     _eventLog.forEach(function(e) { e.time -= t0 }); // relative times = fewer bytes
     var config = getConfigs();
-    var eventLog = {
+    var data = {
       "version": 1,
-      "time": new Date().getTime() - t0,
+      "time": new Date - t0,
       "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
-      "events": _eventLog
-    }
-    log("[logEvent:maybeSend] Sending event log: ", JSON.parse(JSON.stringify(eventLog)));
-
-    ajax("POST", "http://" + config.server + "/users/events", {
-      payload: JSON.stringify(eventLog)
-    }, function done(data) {
-      log("[logEvent:maybeSend] Event log sent. Response:", data)
+      "events": _eventLog};
+    log("[EventLog] sending:", data);
+    ajax("POST", "http://" + config.server + "/users/events", data, function done(o) {
+      log("[EventLog] done:", o)
     }, function fail(xhr) {
-      error(Error("[logEvent:maybeSend] Event log sending failed"));
-      log("[logEvent:maybeSend] ", xhr.responseText);
+      log("[EventLog] fail:", xhr.responseText);
     });
 
     _eventLog.length = 0;
@@ -136,85 +130,85 @@ setTimeout(function maybeSend() {
 // ===== Message handling
 
 // Listen for the content script to send a message to the background page.
-// TODO: onRequest => onMessage, see http://stackoverflow.com/questions/11335815/chrome-extensions-onrequest-sendrequest-vs-onmessage-sendmessage
-chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
+chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
   var tab = sender.tab;
-  log("[onRequest] handling", request, "for", tab && tab.id);
+  log("[onMessage] handling:", request, "for", tab && tab.id);
   try {
     switch (request && request.type) {
-      case "page_load":
-        onPageLoad(request, sendResponse, tab);
-        break;
       case "get_keeps":
-        searchOnServer(request, sendResponse, tab);
-        break;
+        return searchOnServer(request, sendResponse, tab);
       case "add_bookmarks":
         getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
           addKeep(info, request, sendResponse, tab);
         });
-        break;
+        return true;
       case "unkeep":
         getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
           removeKeep(info, request, sendResponse, tab);
         });
-        break;
+        return true;
       case "set_private":
         getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
           setPrivate(info, request, sendResponse, tab);
         });
-        break;
+        return true;
       case "follow":
-        ajax(request.follow ? "POST" : "DELETE", "http://" + getConfigs().server + "/comments/follow", {url: tab.url});
-        break;
+        ajax(request.follow ? "POST" : "DELETE", "http://" + getConfigs().server + "/comments/follow", {url: tab.url}, function(o) {
+          log("[follow] resp:", o);
+        });
+        return;
       case "get_conf":
         sendResponse(getConfigs());
-        break;
+        return;
       case "set_conf":
         setConfigs(request.key, request.value);
         sendResponse();
-        break;
+        return;
       case "remove_conf":
         setConfigs(request.key);
         sendResponse();
-        break;
+        return;
       case "upload_all_bookmarks":
         uploadAllBookmarks();
-        break;
+        return;
       case "set_page_icon":
-        setPageIcon(tab.id, request.is_kept);
-        break;
+        setPageIcon(tab, request.is_kept);
+        return;
+      case "inject_slider":
+        injectSlider(tab.id, sendResponse);
+        return true;
       case "get_slider_info":
         ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
           o.user = getConfigs().user;
           sendResponse(o);
         });
-        break;
+        return true;
       case "get_slider_updates":
         ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, sendResponse);
-        break;
+        return true;
       case "log_event":
         logEvent.apply(null, request.args);
-        break;
+        return;
       case "get_comments":
         ajax("GET", "http://" + getConfigs().server +
           (request.kind == "public" ? "/comments/public" : "/messages/threads") +
           (request.commentId ? "/" + request.commentId : "?url=" + encodeURIComponent(tab.url)),
           sendResponse);
-        break;
+        return true;
       case "post_comment":
         postComment(request, sendResponse);
-        break;
+        return true;
       case "get_friends":
         ajax("GET", "http://" + getConfigs().server + "/users/friends", sendResponse);
-        break;
+        return true;
       default:
-        log("Ignoring unknown message");
+        log("Ignoring unknown message:", request);
     }
-    // Return nothing to let the connection be cleaned up.
   } catch (e) {
     error(e);
+  } finally {
+    log("[onMessage] done:", request);
   }
-  log("[onRequest] done", request);
 });
 
 // Finds KiFi bookmark folder by id (if provided) or by name in the Bookmarks Bar,
@@ -325,15 +319,10 @@ function removeKeep(bmInfo, req, sendResponse, tab) {
     });
   });
 
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
-      log("[removeKeep] response:", xhr.response);
-      sendResponse(xhr.response);
-    }
-  }
-  xhr.open("POST", "http://" + userConfig.server + "/bookmarks/remove?uri=" + encodeURIComponent(req.url), true);
-  xhr.send();
+  ajax("POST", "http://" + userConfig.server + "/bookmarks/remove", {url: req.url}, function(o) {
+    log("[removeKeep] response:", o);
+    sendResponse(o);
+  });
 }
 
 function setPrivate(bmInfo, req, sendResponse, tab) {
@@ -349,48 +338,25 @@ function setPrivate(bmInfo, req, sendResponse, tab) {
     });
   });
 
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
-      log("[setPrivate] response:", xhr.response);
-      sendResponse(xhr.response);
-    }
-  }
-  xhr.open("POST", "http://" + getConfigs().server + "/bookmarks/private" +
-    "?uri=" + encodeURIComponent(req.url) +
-    "&isPrivate=" + +req.private,
-    true);
-  xhr.send();
+  ajax("POST", "http://" + getConfigs().server + "/bookmarks/private", {url: req.url, private: req.private}, function(o) {
+    log("[setPrivate] response:", o);
+    sendResponse(o);
+  });
 }
 
 function postComment(request, sendResponse) {
-  log("posting comment: ", request);
-
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
-      var response = JSON.parse(xhr.response);
-      log("POSTED! ", response);
-      sendResponse(response);
-    }
-  }
-  var userConfigs = getConfigs();
-  if (!userConfigs || !userConfigs.user) {
-    log("No user info! Can't post comment!");
-    return;
-  }
-  var parent = request.parent || "";
-  var recipients = request.recipients || "";
-
-  xhr.open("POST", "http://" + userConfigs.server + "/comments/add" +
-    "?url=" + encodeURIComponent(request.url) +
-    "&title=" + encodeURIComponent(request.title) +
-    "&text=" + encodeURIComponent(request.text) +
-    "&permissions=" + request.permissions +
-    "&parent=" + parent +
-    "&recipients=" + recipients,
-    true);
-  xhr.send();
+  log("[postComment] req:", request);
+  ajax("POST", "http://" + getConfigs().server + "/comments/add", {
+      url: request.url,
+      title: request.title,
+      text: request.text,
+      permissions: request.permissions,
+      parent: request.parent,
+      recipients: request.recipients},
+    function(o) {
+      log("[postComment] resp:", o);
+      sendResponse(o);
+    });
 }
 
 function searchOnServer(request, sendResponse, tab) {
@@ -435,6 +401,7 @@ function searchOnServer(request, sendResponse, tab) {
       '&kifiVersion=' + chrome.app.getDetails().version,
     true);
   xhr.send();
+  return true;
 }
 
 var restrictedUrlPatternsForHover = [
@@ -447,24 +414,18 @@ var restrictedUrlPatternsForHover = [
   "www.google.com",
   "google.com"];
 
-function onPageLoad(request, sendResponse, tab) {
-  log("[onPageLoad]", request, tab);
-  if (!getUser()) {
-    log("[onPageLoad] No facebook configured!")
-    return;
-  }
-  setPageIcon(tab.id, false);
+function onPageLoad(tab) {
+  log("[onPageLoad] tab:", tab);
   logEvent("extension", "pageLoad");
 
-  if (restrictedUrlPatternsForHover.some(function(e) {return tab.url.indexOf(e) >= 0})) {
-    log("[onPageLoad] restricted:", tab.url);
-    return;
-  }
-
   checkWhetherKept(tab.url, function(isKept) {
-    setPageIcon(tab.id, isKept);
+    setPageIcon(tab, isKept);
 
-    if (userHistory.exists(tab.url)) {
+    if (restrictedUrlPatternsForHover.some(function(e) {return tab.url.indexOf(e) >= 0})) {
+      log("[onPageLoad] restricted:", tab.url);
+      return;
+    } else if (userHistory.exists(tab.url)) {
+      log("[onPageLoad] recently visited:", tab.url);
       return;
     }
     userHistory.add(tab.url);
@@ -474,7 +435,7 @@ function onPageLoad(request, sendResponse, tab) {
     } else {
       var sliderDelaySec = getConfigs().hover_timeout;
       if (sliderDelaySec > 0) {
-        sendResponse(sliderDelaySec * 1000);
+        chrome.tabs.sendMessage(tab.id, {type: "auto_show_after", ms: sliderDelaySec * 1000});
       }
     }
   });
@@ -483,18 +444,18 @@ function onPageLoad(request, sendResponse, tab) {
 // Kifi icon in location bar
 chrome.pageAction.onClicked.addListener(function(tab) {
   log("button clicked", tab);
-  chrome.tabs.sendRequest(tab.id, {type: "button_click"});
+  chrome.tabs.sendMessage(tab.id, {type: "button_click"});
 });
 
-function checkWhetherKept(location, callback) {
-  log("checking if user has already bookmarked page: " + location);
+function checkWhetherKept(url, callback) {
+  log("[checkWhetherKept] url:", url);
   var userConfig = getConfigs();
   if (!userConfig || !userConfig.user || !userConfig.user.keepit_external_id) {
-    log("Can't check if already kept, no user info!");
+    log("[checkWhetherKept] no user info!");
     return;
   }
 
-  ajax("GET", "http://" + userConfig.server + "/bookmarks/check", {uri: location.href}, function done(o) {
+  ajax("GET", "http://" + userConfig.server + "/bookmarks/check", {uri: url}, function done(o) {
     callback(o.user_has_bookmark);
   }, function fail(xhr) {
     log("[checkWhetherKept] error:", xhr.responseText);
@@ -502,60 +463,80 @@ function checkWhetherKept(location, callback) {
   });
 }
 
-function setPageIcon(tabId, kept) {
-  log("[setPageIcon] tab ", tabId);
-  chrome.tabs.get(tabId, function(tab) {
-    log("[setPageIcon] tab ", tab);
-    chrome.pageAction.setIcon({"tabId": tabId, "path": kept ? "icons/kept.png" : "icons/keep.png"});
-    chrome.pageAction.show(tabId);
+function setPageIcon(tab, kept) {
+  log("[setPageIcon] tab:", tab);
+  chrome.windows.get(tab.windowId, function(win) {
+    if (win.type == "normal") {
+      chrome.pageAction.setIcon({tabId: tab.id, path: kept ? "icons/kept.png" : "icons/keep.png"});
+      chrome.pageAction.show(tab.id);
+    }
   });
 }
 
-function maybeShowPageIcon(tabId, windowId) {
-  chrome.tabs.query({active: true, windowId: windowId, windowType: "normal"}, function(tabs) {
-    log("[maybeShowPageIcon] tabs: ", tabs);
-    tabs.forEach(function(tab) {
-      if (tab.id == tabId && tab.url.match(/^http/)) {
-        log("[maybeShowPageIcon] showing on ", tab);
-        chrome.pageAction.show(tab.id);
-      }
+function injectSlider(tabId, callback) {
+  injectStyles([
+      "styles/slider.css",
+      "styles/comments.css"],
+    function() {
+      injectScripts([
+          "lib/jquery-1.8.2.min.js",
+          "lib/jquery-ui-1.9.1.custom.min.js",
+          "lib/jquery.tokeninput.js",
+          "lib/jquery.timeago.js",
+          "lib/keymaster.min.js",
+          "lib/lodash.min.js",
+          "lib/mustache-0.7.1.min.js",
+          "scripts/slider.js",
+          "scripts/snapshot.js"],
+        callback);
     });
-  });
+
+  function injectScripts(paths, callback) {
+    for (var n = 0, i = 0; i < paths.length; i++) {
+      chrome.tabs.executeScript(tabId, {file: paths[i]}, function() {
+        if (++n == paths.length) {
+          callback();
+        }
+      });
+    }
+  }
+
+  function injectStyles(paths, callback) {
+    for (var n = 0, i = 0; i < paths.length; i++) {
+      chrome.tabs.insertCSS(tabId, {file: paths[i]}, function() {
+        if (++n == paths.length) {
+          callback();
+        }
+      });
+    }
+  }
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
-  log("posting bookmarks...");
+  log("[postBookmarks]");
   supplyBookmarks(function(bookmarks) {
-    log("bookmarks: ", bookmarks);
-    if (!getUser()) {
-      log("Can't post bookmark(s), no user info!");
-      return;
-    }
-    var userConfigs = getConfigs();
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState == 4) {
-        log("[postBookmarks] response: ", xhr.responseText);
-      }
-    }
-    xhr.open("POST", 'http://' + userConfigs.server + '/bookmarks/add', true);
-    xhr.setRequestHeader("Content-Type","application/json; charset=utf-8");
-    xhr.send(JSON.stringify({
-      "bookmarks": bookmarks,
-      "bookmark_source": bookmarkSource}));
-    log("posted bookmarks");
+    log("[postBookmarks] bookmarks:", bookmarks);
+    ajax("POST", "http://" + getConfigs().server + "/bookmarks/add", {
+        bookmarks: bookmarks,
+        source: bookmarkSource},
+      function(o) {
+        log("[postBookmarks] resp:", o);
+      });
   });
 }
 
 chrome.tabs.onActivated.addListener(function(info) {
-  log("[onActivated] tab info ", info);
-  maybeShowPageIcon(info.tabId, info.windowId);
+  log("[onActivated] tab info:", info);
+  //maybeShowPageIcon(info.tabId, info.windowId);
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
-  log("[onUpdated] tab ", tab, change);
-  if (tab.active && tab.url.match(/^http/)) {
-    maybeShowPageIcon(tabId, tab.windowId);
+  log("[onUpdated] tab:", tab, change);
+  if (change.url) {
+    setPageIcon(tab, false);
+  }
+  if (change.status == "complete" && /^http/.test(tab.url)) {
+    onPageLoad(tab);
   }
 });
 
@@ -654,12 +635,12 @@ function authenticate(callback) {
     log("[startSession]");
     var config = getConfigs();
     ajax("POST", "http://" + config.server + "/kifi/start", {
-      installation: config.kifi_installation_id || "",
+      installation: config.kifi_installation_id,
       version: chrome.app.getDetails().version,
       // platform: navigator.platform,
       // language: navigator.language,
-      agent: navigator.userAgent || navigator.appVersion || navigator.vendor
-    }, function done(data) {
+      agent: navigator.userAgent || navigator.appVersion || navigator.vendor},
+    function done(data) {
       log("[startSession] done:", data);
       logEvent("extension", "authenticated");
 

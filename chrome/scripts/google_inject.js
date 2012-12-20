@@ -117,7 +117,7 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
     };
     inprogressSearchQuery = query;
     var t1 = new Date().getTime();
-    chrome.extension.sendRequest(request, function(results) {
+    chrome.extension.sendMessage(request, function(results) {
       log("query response after: " + (new Date().getTime() - t1));
       log("RESULTS FROM SERVER", results);
 
@@ -171,7 +171,7 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
       };
 
       ///search2?term=<term>&externalId=<user external ID>&lastUUID=<uuid>&context=<context string>
-      chrome.extension.sendRequest(request, function(results) {
+      chrome.extension.sendMessage(request, function(results) {
         log("fetched more!",results);
         resultsStore.lastRemoteResults = results.searchResults;
         resultsStore.results = resultsStore.results.concat(results.searchResults.hits);
@@ -218,7 +218,7 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
     }
   }
 
-  chrome.extension.sendRequest({"type": "get_conf"}, function(response) {
+  chrome.extension.sendMessage({"type": "get_conf"}, function(response) {
     config = response;
   });
 
