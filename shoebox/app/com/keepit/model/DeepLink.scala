@@ -17,6 +17,8 @@ import com.keepit.common.logging.Logging
 import play.api.mvc.QueryStringBindable
 import play.api.mvc.JavascriptLitteral
 import com.keepit.common.controller.FortyTwoServices
+import com.keepit.inject.inject
+import play.api.Play.current
 
 
 case class DeepLinkToken(value: String)
@@ -41,7 +43,7 @@ case class DeepLink(
   deepLocator: DeepLocator,
   token: DeepLinkToken = DeepLinkToken(),
   state: State[DeepLink] = DeepLink.States.ACTIVE) extends Logging {
-  lazy val baseUrl = FortyTwoServices.baseUrl
+  lazy val baseUrl = inject[FortyTwoServices].baseUrl
   lazy val url = "%s/r/%s".format(baseUrl,token.value)
 
   def save(implicit conn: Connection): DeepLink = {
