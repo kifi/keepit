@@ -8,7 +8,7 @@ function logEvent() {  // parameters defined in background.js
     args: Array.prototype.slice.apply(arguments)});
 }
 
-var slider, injecting, t0 = new Date().getTime();
+var t0 = new Date().getTime();
 
 !function() {
   log("host:", location.host);
@@ -44,8 +44,9 @@ var slider, injecting, t0 = new Date().getTime();
     }
   });
 
+  var injecting;
   function withSlider(callback) {
-    if (slider) {
+    if (window.slider) {
       callback();
     } else if (injecting) {
       // TODO: queue callback?
