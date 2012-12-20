@@ -223,12 +223,14 @@ function createDeepLinkListener(link, linkTabId, sendResponse) {
       log("[createDeepLinkListener] Listener timed out.");
       return;
     }
-    var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") == -1 && tab.url.indexOf("dev.ezkeep.com") == -1;
-    if(linkTabId == tabId && hasForwarded && changeInfo.status == "complete") {
-      log("[createDeepLinkListener] Sending deep link to tab " + tabId, link.locator);
-      chrome.tabs.sendMessage(tabId, {type: "deep_link", link: link.locator});
-      chrome.tabs.onUpdated.removeListener(deepLinkListener);
-      return;
+    if(linkTabId == tabId && changeInfo.status == "complete") {
+      var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") == -1 && tab.url.indexOf("dev.ezkeep.com") == -1;
+      if(hasForwarded) {
+        log("[createDeepLinkListener] Sending deep link to tab " + tabId, link.locator);
+        chrome.tabs.sendMessage(tabId, {type: "deep_link", link: link.locator});
+        chrome.tabs.onUpdated.removeListener(deepLinkListener);
+        return;
+      }
     }
   });
 }
