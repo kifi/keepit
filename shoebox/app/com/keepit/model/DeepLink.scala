@@ -16,6 +16,7 @@ import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import play.api.mvc.QueryStringBindable
 import play.api.mvc.JavascriptLitteral
+import com.keepit.common.controller.FortyTwoServices
 
 
 case class DeepLinkToken(value: String)
@@ -25,10 +26,10 @@ object DeepLinkToken {
 
 case class DeepLocator(value: String)
 object DeepLocator {
-  def toMessageThreadList = DeepLocator("/messages/threads")
-  def toMessageThread(message: Comment) = DeepLocator("/messages/threads/%s".format(message.externalId))
-  def toComment(comment: Comment) = DeepLocator("/comments/%s".format(comment.externalId))
-  def toSlider = DeepLocator("/default")
+  def ofMessageThreadList = DeepLocator("/messages/threads")
+  def ofMessageThread(message: Comment) = DeepLocator("/messages/threads/%s".format(message.externalId))
+  def ofComment(comment: Comment) = DeepLocator("/comments/%s".format(comment.externalId))
+  def ofSlider = DeepLocator("/default")
 }
 
 case class DeepLink(
@@ -41,7 +42,7 @@ case class DeepLink(
   deepLocator: DeepLocator,
   token: DeepLinkToken = DeepLinkToken(),
   state: State[DeepLink] = DeepLink.States.ACTIVE) extends Logging {
-  lazy val baseUrl = Play.current.configuration.getString("application.baseUrl").get
+  lazy val baseUrl = FortyTwoServices.baseUrl
   lazy val url = "%s/r/%s".format(baseUrl,token.value)
 
   def save(implicit conn: Connection): DeepLink = {
