@@ -7,7 +7,6 @@ object URINormalizer extends Logging {
   val normalizers = Seq(AmazonNormalizer, GoogleNormalizer, RemoveWWWNormalizer, DefaultNormalizer)
 
   def normalize(uriString: String) = {
-    //better: use http://stackoverflow.com/a/4057470/81698
     URI.parse(uriString) match {
       case Some(uri) =>
         normalizers.find(_.isDefinedAt(uri)).map{ n =>
@@ -32,11 +31,17 @@ object URINormalizer extends Logging {
     def apply(uri: URI) = {
       uri match {
         case URI(scheme, userInfo, host, port, path, query, _) =>
-          val newQuery = query.flatMap{ query =>
-            val newParams = query.params.filter{ param => !stopParams.contains(param.name) }
-            if (newParams.isEmpty) None else Some(Query(newParams))
+          try {
+            val newQuery = query.flatMap{ query =>
+              val newParams = query.params.filter{ param => !stopParams.contains(param.name) }
+              if (newParams.isEmpty) None else Some(Query(newParams))
+            }
+            URI(scheme, userInfo, host, port, path, newQuery, None).toString
+          } catch {
+            case e: Exception =>
+              log.warn("uri normalization failed: [%s] caused by [%s]".format(uri.raw, e.getMessage))
+              uri.raw.get
           }
-          URI(scheme, userInfo, host, port, path, newQuery, None).toString
         case _ => throw new Exception("illegal invocation")
       }
     }
