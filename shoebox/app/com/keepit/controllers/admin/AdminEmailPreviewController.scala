@@ -12,17 +12,17 @@ object AdminEmailPreviewController extends FortyTwoController {
   val uri = NormalizedURI(title = Some("New Balance Minimus"), url = "http://www.newbalance.com/NB-Minimus/minimus,default,pg.html", urlHash = "")
 
   def newMessage = AdminHtmlAction { implicit request =>
-    Ok(views.html.email.newMessage(sender, recipient, uri,
+    Ok(views.html.email.newMessage(sender, recipient, uri.url,
         Comment(uriId = null, userId = null, pageTitle = "my title", text = "These are the running shoes I was telling you about.")))
   }
 
   def newMessageReply = AdminHtmlAction { implicit request =>
-    Ok(views.html.email.newMessage(sender, recipient, uri,
+    Ok(views.html.email.newMessage(sender, recipient, uri.url,
         Comment(uriId = null, userId = null, pageTitle = "my title", text = "These are the running shoes I was telling you about.", parent = Some(Id(1)))))
   }
 
   def newComment = AdminHtmlAction { implicit request =>
-    Ok(views.html.email.newComment(sender, recipient, uri,
+    Ok(views.html.email.newComment(sender, recipient, uri.url,
         Comment(uriId = null, userId = null, pageTitle = "my title", text = "Best running shoes I've ever tried!")))
   }
 

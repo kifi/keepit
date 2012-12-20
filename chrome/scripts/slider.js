@@ -179,7 +179,7 @@ function() {
       });
   }
 
-  function showKeepItHover(trigger) {
+  function showKeepItHover(trigger, callback) {
     chrome.extension.sendMessage({type: "get_slider_info"}, function(o) {
       log("slider info:", o);
 
@@ -206,14 +206,14 @@ function() {
           if (document.querySelector(".kifi_hover")) {
             log("No need to inject, it's already here!");
           } else {
-            drawKeepItHover(o.user, o.friends, o.numComments, o.numMessages, template);
+            drawKeepItHover(o.user, o.friends, o.numComments, o.numMessages, template, callback);
             logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0)});
           }
         });
     });
   }
 
-  function drawKeepItHover(user, friends, numComments, numMessages, renderedTemplate) {
+  function drawKeepItHover(user, friends, numComments, numMessages, renderedTemplate, callback) {
     $('body').append(renderedTemplate);
 
     $('.social_friend').each(function(i,e) {
@@ -264,11 +264,13 @@ function() {
     .on("click", ".messages-label", function() {
       showComments(user, "message", null, $('.thread-wrapper').length > 0);
     })
-    .on("mousedown click keydown keypress", function(e) {
+    .on("mousedown click keydown keypress keyup", function(e) {
       e.stopPropagation();
     });
 
     slideIn();
+
+    callback && callback(user);
   }
 
   function keptItslideOut() {
@@ -1024,6 +1026,27 @@ function() {
     }
   }
 
+  function openDeepLink(user, locator) {
+    var loc = locator.split("/").filter(function(s) { return s != ""; });
+    if(loc.length == 0)
+      return;
+    switch(loc[0]) {
+      case "messages":
+        openMessageDeepLink(user, loc.slice(1));
+        break;
+      case "comments":
+        showComments(user, "public");
+        break;
+    }
+  }
+
+  function openMessageDeepLink(user, loc) {
+    if(loc[0])
+      showComments(user, "message", loc[0], false);
+    else
+      showComments(user, "message", null, false);
+  }
+
   $(window).resize(function() {
     resizeCommentBodyView();
   });
@@ -1041,6 +1064,11 @@ function() {
     } else {
       this.show(trigger);
     }
+  };
+  slider.openDeepLink = function(locator) {
+    showKeepItHover("deepLink", function(user) {
+      openDeepLink(user, locator);
+    });
   };
   slider.loaded = true;
   slider.callbacks.forEach(function(f) { f() });
