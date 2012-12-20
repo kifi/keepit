@@ -1,6 +1,10 @@
 console.log("[" + new Date().getTime() + "] in google_inject.js");
 
-!function() {
+chrome.extension.sendMessage({type: "require", injected: window.injected,
+  scripts: [
+    "lib/jquery-1.8.2.min.js",
+    "lib/mustache-0.7.1.min.js"]},
+function() {
   var lastInjected;
   var config;
   var restrictedGoogleInject = [
@@ -521,4 +525,4 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
     else
       return input.replace(new RegExp('(^|\\.?)(' + needle + ')(\\.?|$)','ig'), '$1<b>$2</b>$3');
   }
-}();
+});

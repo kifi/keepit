@@ -1,4 +1,27 @@
-slider = function() {
+var slider = {
+  queue: function(f) {
+    if (this.loaded) {
+      f();
+    } else {
+      this.callbacks.push(f);
+    }
+  },
+  callbacks: []};
+
+chrome.extension.sendMessage({type: "require", injected: window.injected,
+  styles: [
+    "styles/slider.css",
+    "styles/comments.css"],
+  scripts: [
+    "lib/jquery-1.8.2.min.js",
+    "lib/jquery-ui-1.9.1.custom.min.js",
+    "lib/jquery.tokeninput.js",
+    "lib/jquery.timeago.js",
+    "lib/keymaster.min.js",
+    "lib/lodash.min.js",
+    "lib/mustache-0.7.1.min.js",
+    "scripts/snapshot.js"]},
+function() {
   var following, isKept, lastShownAt;
 
   $('<input id="editableFix" style="opacity:0;color:transparent;width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html')
@@ -1028,24 +1051,26 @@ slider = function() {
     resizeCommentBodyView();
   });
 
-  return {  // the slider API
-    show: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
-      showKeepItHover(trigger);
-    },
-    shown: function() {
-      return !!lastShownAt;
-    },
-    toggle: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
-      if (document.querySelector(".kifi_hover")) {
-        slideOut(trigger);
-      } else {
-        this.show(trigger);
-      }
-    },
-    openDeepLink: function(locator) {
-      showKeepItHover("deepLink", function(user) {
-        openDeepLink(user, locator);
-      });
+  // defining the slider API
+  slider.show = function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
+    showKeepItHover(trigger);
+  };
+  slider.shown = function() {
+    return !!lastShownAt;
+  };
+  slider.toggle = function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
+    if (document.querySelector(".kifi_hover")) {
+      slideOut(trigger);
+    } else {
+      this.show(trigger);
     }
   };
-}();
+  slider.openDeepLink = function(locator) {
+    showKeepItHover("deepLink", function(user) {
+      openDeepLink(user, locator);
+    });
+  };
+  slider.loaded = true;
+  slider.callbacks.forEach(function(f) { f() });
+  delete slider.callbacks;
+});

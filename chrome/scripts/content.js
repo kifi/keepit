@@ -49,15 +49,13 @@ var t0 = new Date().getTime();
     }
   });
 
-  var injecting;
   function withSlider(callback) {
     if (window.slider) {
-      callback();
-    } else if (injecting) {
-      // TODO: queue callback?
+      slider.queue(callback);
     } else {
-      injecting = true;
-      chrome.extension.sendMessage({type: "inject_slider"}, callback);
+      chrome.extension.sendMessage({type: "require", injected: window.injected, scripts: ["scripts/slider.js"]}, function() {
+        slider.queue(callback);
+      });
     }
   }
 }();
