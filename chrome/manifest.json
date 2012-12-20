@@ -224,16 +224,12 @@
       "all_frames" : false
     },
     {
-      "matches" : [
+      "matches": [
         "*://dev.ezkeep.com/r/*",
         "*://*.keepitfindit.com/r/*",
         "*://*.kifi.com/r/*"
       ],
-      "js" : [
-        "lib/jquery-1.8.2.min.js",
-        "scripts/deeplink.js"
-      ],
-      "css": ["styles/deeplink.css"],
+      "js": ["scripts/deeplink.js"],
       "run_at" : "document_end",
       "all_frames" : false
     }
