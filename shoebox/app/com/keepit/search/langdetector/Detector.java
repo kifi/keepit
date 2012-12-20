@@ -280,8 +280,8 @@ public class Detector {
         if (seed != null) rand.setSeed(seed);
         for (int t = 0; t < n_trial; ++t) {
             double[] prob = initProbability();
-            double alpha = this.alpha + rand.nextGaussian() * ALPHA_WIDTH;
-
+// not comfortable with Gaussian because it is unbounded. I don't think randomization here is essential.
+            double alpha = this.alpha;// + rand.nextGaussian() * ALPHA_WIDTH;
             for (int i = 0;; ++i) {
                 int r = rand.nextInt(ngrams.size());
                 updateLangProb(prob, ngrams.get(r), alpha);
