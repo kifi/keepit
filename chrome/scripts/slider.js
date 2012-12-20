@@ -1019,7 +1019,7 @@ slider = function() {
 
   function openMessageDeepLink(user, loc) {
     if(loc[0])
-      showComments(user, "message", loc[1], false);
+      showComments(user, "message", loc[0], false);
     else
       showComments(user, "message", null, false);
   }
