@@ -479,15 +479,15 @@ chrome.pageAction.onClicked.addListener(function(tab) {
   chrome.tabs.sendMessage(tab.id, {type: "button_click"});
 });
 
-function checkWhetherKept(location, callback) {
-  log("checking if user has already bookmarked page: " + location);
+function checkWhetherKept(url, callback) {
+  log("[checkWhetherKept] url:", url);
   var userConfig = getConfigs();
   if (!userConfig || !userConfig.user || !userConfig.user.keepit_external_id) {
-    log("Can't check if already kept, no user info!");
+    log("[checkWhetherKept] no user info!");
     return;
   }
 
-  ajax("GET", "http://" + userConfig.server + "/bookmarks/check", {uri: location.href}, function done(o) {
+  ajax("GET", "http://" + userConfig.server + "/bookmarks/check", {uri: url}, function done(o) {
     callback(o.user_has_bookmark);
   }, function fail(xhr) {
     log("[checkWhetherKept] error:", xhr.responseText);
