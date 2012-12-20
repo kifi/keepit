@@ -5,6 +5,7 @@ import play.api.Application
 import com.google.inject.Module
 import com.google.inject.Singleton
 import com.google.inject.util.Modules
+import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.healthcheck.FakeHealthcheck
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.healthcheck.Healthcheck
@@ -58,6 +59,9 @@ case class TestModule() extends ScalaModule {
   @Provides
   def localDate(clock: FakeClock) : LocalDate = clock.pop.toLocalDate
 
+  @Provides
+  @Singleton
+  def fortyTwoServices(dateTime: DateTime): FortyTwoServices = FortyTwoServices(dateTime)
 }
 
 case class FakeTimeModule() extends ScalaModule {
