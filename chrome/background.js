@@ -467,7 +467,7 @@ function onPageLoad(tab) {
     } else {
       var sliderDelaySec = getConfigs().hover_timeout;
       if (sliderDelaySec > 0) {
-        chrome.tabs.sendMessage({type: "auto_show_after", ms: sliderDelaySec * 1000});
+        chrome.tabs.sendMessage(tab.id, {type: "auto_show_after", ms: sliderDelaySec * 1000});
       }
     }
   });
