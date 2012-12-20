@@ -13,13 +13,6 @@ function error(exception, message) {
   //alert("exception: " + exception.message);
 }
 
-// ===== Queries with hard-coded results
-
-var magicQueries = [];
-ajax("GET", chrome.extension.getURL("data/magicQueries.json"), function(xhr) {
-  magicQueries = JSON.parse(xhr.response);
-});
-
 // ===== Ajax
 
 function ajax(method, uri, data, done, fail) {  // method and uri are required
@@ -392,15 +385,6 @@ function searchOnServer(request, sendResponse, tab) {
     log("No facebook, can't search!");
     sendResponse({"userInfo": null, "searchResults": [], "userConfig": userConfigs});
     return;
-  }
-
-  for (var i = 0; i < magicQueries.length; i++) {
-    console.log("checking: ", magicQueries[i]);
-    if (magicQueries[i].query === request.query) {
-      log("Intercepting query: " + request.query);
-      sendResponse({"userInfo": userConfigs.user, "searchResults": magicQueries[i].results, "userConfig": userConfigs});
-      return;
-    }
   }
 
   if (request.query === '') {
