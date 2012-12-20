@@ -21,6 +21,7 @@ shoebox/.target/*
 shoebox/cx.properties
 shoebox/.idea
 shoebox/*.iml
+shoebox/.idea_modules
 shoebox/modules/securesocial/.classpath
 shoebox/modules/securesocial/.project
 shoebox/modules/securesocial/.cache
