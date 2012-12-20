@@ -201,6 +201,9 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
       case "get_friends":
         ajax("GET", "http://" + getConfigs().server + "/users/friends", sendResponse);
         return true;
+      case "add_deep_link_listener":
+        createDeepLinkListener(request.link, tab.id, sendResponse);
+        return true;
       default:
         log("Ignoring unknown message:", request);
     }
@@ -210,6 +213,27 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
     log("[onMessage] done:", request);
   }
 });
+
+function createDeepLinkListener(link, linkTabId, sendResponse) {
+  var createdTime = new Date();
+  chrome.tabs.onUpdated.addListener(function deepLinkListener(tabId, changeInfo, tab) {
+    var now = new Date();
+    if(now - createdTime > 15000) {
+      chrome.tabs.onUpdated.removeListener(deepLinkListener);
+      log("[createDeepLinkListener] Listener timed out.");
+      return;
+    }
+    if(linkTabId == tabId && changeInfo.status == "complete") {
+      var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") == -1 && tab.url.indexOf("dev.ezkeep.com") == -1;
+      if(hasForwarded) {
+        log("[createDeepLinkListener] Sending deep link to tab " + tabId, link.locator);
+        chrome.tabs.sendMessage(tabId, {type: "deep_link", link: link.locator});
+        chrome.tabs.onUpdated.removeListener(deepLinkListener);
+        return;
+      }
+    }
+  });
+}
 
 // Finds KiFi bookmark folder by id (if provided) or by name in the Bookmarks Bar,
 // or else creates it there. Ensures that it has "public" and "private" subfolders.

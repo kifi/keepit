@@ -182,3 +182,4 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
   }
 
 }
+
