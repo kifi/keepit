@@ -241,7 +241,6 @@
     "https://*/"
   ],
   "web_accessible_resources": [
-    "data/magicQueries.json",
     "images/convo.png",
     "images/kifilogo.png",
     "images/snapshot.png",
