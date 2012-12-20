@@ -26,8 +26,7 @@ object DeepLinkToken {
 
 case class DeepLocator(value: String)
 object DeepLocator {
-  def ofMessageThreadList = DeepLocator("/messages/threads")
-  def ofMessageThread(message: Comment) = DeepLocator("/messages/threads/%s".format(message.externalId))
+  def ofMessageThread(message: Comment) = DeepLocator("/messages/%s".format(message.externalId))
   def ofComment(comment: Comment) = DeepLocator("/comments/%s".format(comment.externalId))
   def ofSlider = DeepLocator("/default")
 }

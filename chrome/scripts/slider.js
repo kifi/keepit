@@ -1018,14 +1018,10 @@ slider = function() {
   }
 
   function openMessageDeepLink(user, loc) {
-    switch (loc[0]) {
-      case "threads":
-        if(loc[1])
-          showComments(user, "message", loc[1], false);
-        else
-          showComments(user, "message", null, false);
-        break;
-    }
+    if(loc[0])
+      showComments(user, "message", loc[1], false);
+    else
+      showComments(user, "message", null, false);
   }
 
   $(window).resize(function() {
