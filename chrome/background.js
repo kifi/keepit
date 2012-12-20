@@ -474,31 +474,32 @@ function setPageIcon(tab, kept) {
 }
 
 function require(tabId, details, callback) {
-  injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), details.styles, details.injected || {},
-    function(injected) {
-      injectAll(chrome.tabs.executeScript.bind(chrome.tabs), details.scripts, injected, function() {
+  var injected = details.injected || {};
+  injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), details.styles,
+    function() {
+      injectAll(chrome.tabs.executeScript.bind(chrome.tabs), details.scripts, function() {
         chrome.tabs.executeScript(tabId, {code: "injected=" + JSON.stringify(injected)}, callback);
       });
     });
 
-  function injectAll(inject, paths, injected, callback) {
+  function injectAll(inject, paths, callback) {
     if (paths && paths.length) {
       var n = 0;
       paths.forEach(function(path) {
         if (!injected[path]) {
-          log("[require] tab " + tabId + " <=", path);
+          log("[require] tab", tabId, path);
           inject(tabId, {file: path}, function() {
             injected[path] = true;
             if (++n == paths.length) {
-              callback(injected);
+              callback();
             }
           });
         } else if (++n == paths.length) {
-          callback(injected);
+          callback();
         }
       });
     } else {
-      callback(injected);
+      callback();
     }
   }
 }
