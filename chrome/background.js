@@ -174,8 +174,8 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
       case "set_page_icon":
         setPageIcon(tab, request.is_kept);
         return;
-      case "inject_slider":
-        injectSlider(tab.id, sendResponse);
+      case "require":
+        require(tab.id, request, sendResponse);
         return true;
       case "get_slider_info":
         ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
@@ -473,41 +473,33 @@ function setPageIcon(tab, kept) {
   });
 }
 
-function injectSlider(tabId, callback) {
-  injectStyles([
-      "styles/slider.css",
-      "styles/comments.css"],
+function require(tabId, details, callback) {
+  var injected = details.injected || {};
+  injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), details.styles,
     function() {
-      injectScripts([
-          "lib/jquery-1.8.2.min.js",
-          "lib/jquery-ui-1.9.1.custom.min.js",
-          "lib/jquery.tokeninput.js",
-          "lib/jquery.timeago.js",
-          "lib/keymaster.min.js",
-          "lib/lodash.min.js",
-          "lib/mustache-0.7.1.min.js",
-          "scripts/slider.js",
-          "scripts/snapshot.js"],
-        callback);
+      injectAll(chrome.tabs.executeScript.bind(chrome.tabs), details.scripts, function() {
+        chrome.tabs.executeScript(tabId, {code: "injected=" + JSON.stringify(injected)}, callback);
+      });
     });
 
-  function injectScripts(paths, callback) {
-    for (var n = 0, i = 0; i < paths.length; i++) {
-      chrome.tabs.executeScript(tabId, {file: paths[i]}, function() {
-        if (++n == paths.length) {
+  function injectAll(inject, paths, callback) {
+    if (paths && paths.length) {
+      var n = 0;
+      paths.forEach(function(path) {
+        if (!injected[path]) {
+          log("[require] tab", tabId, path);
+          inject(tabId, {file: path}, function() {
+            injected[path] = true;
+            if (++n == paths.length) {
+              callback();
+            }
+          });
+        } else if (++n == paths.length) {
           callback();
         }
       });
-    }
-  }
-
-  function injectStyles(paths, callback) {
-    for (var n = 0, i = 0; i < paths.length; i++) {
-      chrome.tabs.insertCSS(tabId, {file: paths[i]}, function() {
-        if (++n == paths.length) {
-          callback();
-        }
-      });
+    } else {
+      callback();
     }
   }
 }
