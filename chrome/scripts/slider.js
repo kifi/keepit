@@ -110,7 +110,7 @@ function() {
 
   function socialTooltip(friend, element) {
      // disabled for now
-    renderTemplate("templates/social_hover.html", {"friend": friend}, function(tmpl) {
+    renderTemplate("html/social_hover.html", {"friend": friend}, function(tmpl) {
       var timeout;
       var timein;
 
@@ -187,7 +187,7 @@ function() {
       following = o.following;
       lastShownAt = new Date().getTime();
 
-      renderTemplate('templates/kept_hover.html', {
+      renderTemplate('html/kept_hover.html', {
           "logo": chrome.extension.getURL('images/kifilogo.png'),
           "arrow": chrome.extension.getURL('images/triangle_down.31x16.png'),
           "profilepic": "https://graph.facebook.com/" + o.user.facebook_id + "/picture?type=square",
@@ -324,7 +324,7 @@ function() {
       logo: chrome.extension.getURL('images/kifilogo.png')
     }
 
-    renderTemplate("templates/footer.html", footerParams, function(renderedTemplate) {
+    renderTemplate("html/footer.html", footerParams, function(renderedTemplate) {
       $('.kififtr').html(renderedTemplate);
 
       $('.kififtr .footer-bar').on('mousedown','.close-message', function() {
@@ -638,11 +638,11 @@ function() {
         "comment_post_view": type != "message" ? "comment_post.html" : "message_post.html"};
       if (partialRender) {
         // Hacky solution for a partial refresh. Needs to be refactored.
-        renderTemplate("templates/comments/" + partials.comment_body_view, params, partials, function(renderedTemplate) {
+        renderTemplate("html/comments/" + partials.comment_body_view, params, partials, function(renderedTemplate) {
           $('.comment_body_view').html(renderedTemplate).find("time").timeago();
         });
       } else {
-        renderTemplate("templates/comments/comments_view.html", params, partials, function(renderedTemplate) {
+        renderTemplate("html/comments/comments_view.html", params, partials, function(renderedTemplate) {
           drawCommentView(renderedTemplate, user, type);
           onComplete();
         });
@@ -803,7 +803,7 @@ function() {
       var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
         updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
       });
-      renderTemplate("templates/comments/snapshot_bar.html", {"type": typeName}, function(html) {
+      renderTemplate("html/comments/snapshot_bar.html", {"type": typeName}, function(html) {
         $(html).appendTo("body")
           .draggable({cursor: "move", distance: 10, handle: ".snapshot-bar", scroll: false})
           .on("click", ".cancel", exitSnapshotMode)
@@ -883,7 +883,7 @@ function() {
         badGlobalState["updates"].publicCount++;
         badGlobalState["updates"].countSum++;
 
-        renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
+        renderTemplate("html/comments/comment.html", params, function(renderedComment) {
           //drawCommentView(renderedTemplate, user, type);
           $('.comment_body_view').find('.no-comment').parent().detach();
           $('.comment_body_view').append(renderedComment).find("time").timeago();
@@ -943,7 +943,7 @@ function() {
         params["formatDate"] = commentDateFormatter;
         params["formatIsoDate"] = isoDateFormatter;
 
-        renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
+        renderTemplate("html/comments/comment.html", params, function(renderedComment) {
           //drawCommentView(renderedTemplate, user, type);
           $('.comment_body_view').find('.no-comment').parent().detach();
           $('.thread-wrapper').append(renderedComment).find("time.timeago").timeago();
