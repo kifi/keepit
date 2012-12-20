@@ -628,7 +628,8 @@ chrome.runtime.onInstalled.addListener(function(details) {
   log("[onInstalled]", details);
   logEvent("extension", details.reason);
   authenticate(function() {
-    if (details.reason == "install") {
+    log("[onInstalled] authenticated");
+    if (details.reason == "install" || getConfigs().env == "development") {
       postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
     }
   });
@@ -636,7 +637,9 @@ chrome.runtime.onInstalled.addListener(function(details) {
 
 chrome.runtime.onStartup.addListener(function() {
   log("[onStartup]");
-  authenticate(noop);
+  authenticate(function() {
+    log("[onStartup] authenticated");
+  });
 });
 
 function authenticate(callback) {
