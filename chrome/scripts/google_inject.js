@@ -344,7 +344,7 @@ function() {
       resultsStore.currentlyShowing = resultsStore.show;
 
       var req = new XMLHttpRequest();
-      req.open("GET", chrome.extension.getURL('templates/google_inject.html'), true);
+      req.open("GET", chrome.extension.getURL('html/google_inject.html'), true);
       req.onreadystatechange = function() {
         if (req.readyState == 4 && req.status == 200) {
 
@@ -481,7 +481,7 @@ function() {
 
   function socialTooltip(friend, element) {
      // disabled for now
-    getTemplate("templates/social_hover.html",{"friend": friend}, function(tmpl) {
+    getTemplate("html/social_hover.html",{"friend": friend}, function(tmpl) {
       var timeout;
       var timein;
 
