@@ -247,7 +247,7 @@ slider = function() {
 
     slideIn();
 
-    callback && callback();
+    callback && callback(user);
   }
 
   function keptItslideOut() {
@@ -1003,20 +1003,18 @@ slider = function() {
     }
   }
 
-  function openDeepLink(locator) {
-    chrome.extension.sendMessage({type: "get_slider_info"}, function(o) {
-      var loc = locator.split("/").filter(function(s) { return s != ""; });
-      if(loc.length == 0)
-        return;
-      switch(loc[0]) {
-        case "messages":
-          openMessageDeepLink(o.user, loc.slice(1));
-          break;
-        case "comments":
-          showComments(o.user, "public");
-          break;
-      }
-    });
+  function openDeepLink(user, locator) {
+    var loc = locator.split("/").filter(function(s) { return s != ""; });
+    if(loc.length == 0)
+      return;
+    switch(loc[0]) {
+      case "messages":
+        openMessageDeepLink(user, loc.slice(1));
+        break;
+      case "comments":
+        showComments(user, "public");
+        break;
+    }
   }
 
   function openMessageDeepLink(user, loc) {
@@ -1049,8 +1047,8 @@ slider = function() {
       }
     },
     openDeepLink: function(locator) {
-      showKeepItHover("deepLink", function() {
-        openDeepLink(locator);
+      showKeepItHover("deepLink", function(user) {
+        openDeepLink(user, locator);
       });
     }
   };
