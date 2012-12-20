@@ -1,0 +1,63 @@
+@(electronicMails: Seq[com.keepit.common.mail.ElectronicMail], page: Int, count: Long, pageCount: Int)
+@pagination(page: Int, pageCount: Int) = {
+  <div class="pagination pagination-centered pagination-mini">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@com.keepit.controllers.admin.routes.ElectronicMailController.electronicMailsView(page - 1)">
+        } else {
+         <a href="#">
+        }
+        Prev
+        </a>
+      </li>
+      @for(i <- 0 to (pageCount - 1)) {
+        @if(i == page) {
+	        <li class="disabled">
+	          <a href="@com.keepit.controllers.admin.routes.ElectronicMailController.electronicMailsView(i)">@{i + 1}</a>
+	        </li>
+        } else {
+	        <li class="active">
+	          <a href="@com.keepit.controllers.admin.routes.ElectronicMailController.electronicMailsView(i)">@{i + 1}</a>
+	        </li>
+	      }
+      }
+      <li>
+        @if(electronicMails.size > 0) {
+          <a href="@com.keepit.controllers.admin.routes.ElectronicMailController.electronicMailsView(page + 1)">
+        } else {
+         <a href="#">
+        }
+        Next
+        </a>
+      </li>
+    </ul>
+  </div>
+}
+
+@admin("There are " + count + " electronicMails (displaying " + electronicMails.size + ")") {
+  <h2>Showing @electronicMails.size electronicMails of total @count (Page @{page + 1})</h2>
+  @pagination(page, pageCount)
+  <table class="table table-bordered">
+    <tr>
+      <th>#</th>
+      <th>From</th>
+      <th>To</th>
+      <th>Subject</th>
+      <th>Creation</th>
+    </tr>
+  @for((electronicMail, i) <- electronicMails.zipWithIndex) {
+    <tr>
+      <td rowspan="2">@{i+1}</td>
+      <td>@electronicMail.fromName</td>
+      <td>@electronicMail.to.address</td>
+      <td>@electronicMail.subject</td>
+      <td>@adminHelper.dateDisplay(electronicMail.createdAt) @adminHelper.timeDisplay(electronicMail.createdAt)</td>
+    </tr>
+    <tr>
+      <td colspan="4">@electronicMail.htmlBody</td>
+    </tr>
+  }
+  </table>
+  @pagination(page, pageCount)
+}
