@@ -26,10 +26,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
     val conf = app.configuration
     val appName = conf.getString("application.name").get
     val dbs = conf.getConfig("db").get.subKeys
-
-    println("starting app %s with dbs %s".format(
-        appName, dbs.mkString(",")))
-
+    println("starting app %s with dbs %s".format(appName, dbs.mkString(",")))
   }
 
   override def onBadRequest (request: RequestHeader, error: String): Result = {
@@ -52,9 +49,10 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
       require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
     }
     println("Starting %s".format(this))
-    val baseUrl: String = current.configuration.getString("application.baseUrl").get
-    var startMessage = "FortyTwo %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
-        FortyTwoServices.currentService, FortyTwoServices.currentVersion, FortyTwoServices.compilationTime, baseUrl)
+    val services = injector.inject[FortyTwoServices]
+    val baseUrl: String = services.baseUrl
+    val startMessage = "FortyTwo %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
+        services.currentService, services.currentVersion, services.compilationTime, baseUrl)
     log.info(startMessage)
     println(startMessage)
     injector.inject[AppScope].onStart(app)

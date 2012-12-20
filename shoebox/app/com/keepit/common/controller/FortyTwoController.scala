@@ -134,7 +134,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
       log.warn(message)
       Forbidden(message)
     } else {
-      val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> FortyTwoServices.currentVersion.value)
+      val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> inject[FortyTwoServices].currentVersion.value)
       log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
       try {
         action(AuthenticatedRequest(socialUser, userId, request, experiments, kifiInstallationId, adminUserId)) match {

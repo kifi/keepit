@@ -1,9 +1,6 @@
 package com.keepit.common.healthcheck
 
-import com.keepit.common.controller.FortyTwoServices.compilationTime
-import com.keepit.common.controller.FortyTwoServices.currentService
-import com.keepit.common.controller.FortyTwoServices.currentVersion
-import com.keepit.common.controller.FortyTwoServices.started
+import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.dateTimeToRichDateTime
 import com.keepit.inject._
@@ -17,7 +14,8 @@ object HealthController extends FortyTwoController {
 
   def serviceView = AdminHtmlAction { implicit request =>
     val errorCount = inject[HealthcheckPlugin].errorCount
-    Ok(views.html.serverInfo(currentService, currentVersion, compilationTime.toStandardTimeString, started.toStandardTimeString, errorCount))
+    val services = inject[FortyTwoServices]
+    Ok(views.html.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString, services.started.toStandardTimeString, errorCount))
   }
 
   def ping() = Action { implicit request =>
