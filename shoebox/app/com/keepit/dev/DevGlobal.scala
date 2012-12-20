@@ -20,7 +20,7 @@ object DevGlobal extends FortyTwoGlobal(Dev) {
   override lazy val injector: Injector = Guice.createInjector(Stage.DEVELOPMENT, DevModule())
 
   override def onStart(app: Application): Unit = {
-    require(FortyTwoServices.currentService == ServiceType.DEV_MODE,
+    require(inject[FortyTwoServices].currentService == ServiceType.DEV_MODE,
         "DevGlobal can only be run on a dev service")
     log.info("starting the shoebox")
     super.onStart(app)

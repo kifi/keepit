@@ -21,13 +21,12 @@ object ServiceType {
   case object TEST_MODE extends ServiceType("TEST_MODE")
 }
 
-object FortyTwoServices {
+case class FortyTwoServices(started: DateTime) {
+
   val serviceByCode = Map(
     ServiceType.SHOEBOX.name -> ServiceType.SHOEBOX,
     ServiceType.DEV_MODE.name -> ServiceType.DEV_MODE
   )
-
-  val started: DateTime = currentDateTime
 
   lazy val currentService: ServiceType = current.mode match {
     case Mode.Test => ServiceType.TEST_MODE
