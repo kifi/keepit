@@ -506,20 +506,20 @@ function setPageIcon(tab, kept) {
 }
 
 function injectSlider(tabId, callback) {
-  injectScripts([
-      "lib/jquery-1.8.2.min.js",
-      "lib/jquery-ui-1.9.1.custom.min.js",
-      "lib/keymaster.min.js",
-      "lib/lodash.min.js",
-      "lib/jquery.tokeninput.js",
-      "lib/jquery.timeago.js",
-      "lib/mustache-0.7.1.min.js",
-      "scripts/slider.js",
-      "scripts/snapshot.js"],
+  injectStyles([
+      "styles/slider.css",
+      "styles/comments.css"],
     function() {
-      injectStyles([
-          "styles/slider.css",
-          "styles/comments.css"],
+      injectScripts([
+          "lib/jquery-1.8.2.min.js",
+          "lib/jquery-ui-1.9.1.custom.min.js",
+          "lib/jquery.tokeninput.js",
+          "lib/jquery.timeago.js",
+          "lib/keymaster.min.js",
+          "lib/lodash.min.js",
+          "lib/mustache-0.7.1.min.js",
+          "scripts/slider.js",
+          "scripts/snapshot.js"],
         callback);
     });
 
