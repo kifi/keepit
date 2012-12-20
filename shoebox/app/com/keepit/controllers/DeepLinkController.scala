@@ -40,18 +40,18 @@ object DeepLinkController extends FortyTwoController {
 
     deepLink match {
       case Some(deep) =>
-        Ok(views.html.deeplink(deep))
+        deep.recipientUserId match {
+          case Some(recip) if request.userId != recip =>
+            Forbidden
+          case _ =>
+            val uri = deep.uriId.map(uri => CX.withConnection{ implicit conn => NormalizedURI.get(uri).url }) getOrElse ("")
+            val locator = deep.deepLocator.value
+            val isSecure = deep.recipientUserId.isDefined
+            Ok(views.html.deeplink(uri, locator, isSecure))
+        }
       case None =>
         NotFound
     }
-  }
-
-  def create() = AuthenticatedHtmlAction { request =>
-    CX.withConnection { implicit co =>
-      DeepLink(initatorUserId = Option(request.userId), recipientUserId = None, uriId = Option(Id[NormalizedURI](0)), deepLocator = DeepLocator.toMessageThread(Id[Comment](0))).save
-    }
-    // DeepLink(None,2012-12-19T13:09:37.082-08:00,2012-12-19T13:09:37.103-08:00,None,None,None,DeepLocator(/messages/threads/0),DeepLinkToken(ced91bda-f97b-48c4-9c32-2e3f36177fb0),active)
-    Ok
   }
 
 }

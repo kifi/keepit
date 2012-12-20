@@ -26,8 +26,8 @@ object DeepLinkToken {
 case class DeepLocator(value: String)
 object DeepLocator {
   def toMessageThreadList = DeepLocator("/messages/threads")
-  def toMessageThread(message: Id[Comment]) = DeepLocator("/messages/threads/%s".format(message.id))
-  def toComment(comment: Id[Comment]) = DeepLocator("/comments/%s".format(comment.id))
+  def toMessageThread(message: Comment) = DeepLocator("/messages/threads/%s".format(message.externalId))
+  def toComment(comment: Comment) = DeepLocator("/comments/%s".format(comment.externalId))
   def toSlider = DeepLocator("/default")
 }
 
@@ -92,9 +92,9 @@ private[model] class DeepLinkEntity extends Entity[DeepLink, DeepLinkEntity] {
     id = id.value,
     createdAt = createdAt(),
     updatedAt = updatedAt(),
-    initatorUserId = Option(initatorUserId()),
-    recipientUserId = Option(recipientUserId()),
-    uriId = Option(uriId()),
+    initatorUserId = initatorUserId.value,
+    recipientUserId = recipientUserId.value,
+    uriId = uriId.value,
     deepLocator = DeepLocator(deepLocator()),
     token = DeepLinkToken(token()),
     state = state())

@@ -1,4 +1,8 @@
-@(deepLink: DeepLink)
+@(uri: String, locator: String, isSecure: Boolean)
+<html data-kifi-deep-link='{"locator":"@locator","uri":"@uri","isSecure":@isSecure}'>
+  <head></head>
+  <body>
+    <div class="kifi-deep-link-no-extension">Please </div>
+  </body>
+</html>
 
-<div style="display:none;" class="kifi-deep-link">Hi!</div>
-<div class="kifi-deep-link-no-extension">WHAT!!?</div>

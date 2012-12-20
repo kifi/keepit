@@ -41,6 +41,11 @@ var t0 = new Date().getTime();
           });
         }, msg.ms);
         break;
+      case "deep_link":
+        withSlider(function () {
+          slider.openDeepLink(msg.link);
+        });
+        break;
     }
   });
 

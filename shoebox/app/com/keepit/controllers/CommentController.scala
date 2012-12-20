@@ -14,7 +14,7 @@ import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.social.UserWithSocial
 import com.keepit.common.social.UserWithSocial.toUserWithSocial
 import com.keepit.inject.inject
-import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, Follow, NormalizedURI, SocialConnection, SocialUserInfo, User}
+import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, Follow, NormalizedURI, SocialConnection, SocialUserInfo, User, DeepLink, DeepLocator}
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
@@ -135,8 +135,9 @@ object CommentController extends FortyTwoController {
   def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     val replies = CX.withConnection { implicit conn =>
       val comment = Comment.get(commentId)
+      val parent = comment.parent map (Comment.get) getOrElse (comment)
       if (true) // TODO: hasPermission(user.id.get, comment.id.get) ???????????????
-        (Seq(comment) ++ Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) })
+        (Seq(parent) ++ Comment.getChildren(parent.id.get) map { child => CommentWithSocialUser(child) })
       else
           Nil
     }
@@ -235,13 +236,18 @@ object CommentController extends FortyTwoController {
           val follows = Follow.get(uri.id.get)
           for (userId <- follows.map(_.userId).toSet - comment.userId) {
             val recipient = User.get(userId)
+            val deepLink = DeepLink(
+                initatorUserId = Option(comment.userId),
+                recipientUserId = Some(userId),
+                uriId = Some(comment.uriId),
+                deepLocator = DeepLocator.toComment(comment)).save
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
                   from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
                   to = addr,
                   subject = "%s %s commented on a page you are following".format(author.firstName, author.lastName),
-                  htmlBody = replaceLookHereLinks(views.html.email.newComment(author, recipient, uri, comment).body),
+                  htmlBody = replaceLookHereLinks(views.html.email.newComment(author, recipient, deepLink.url, comment).body),
                   category = PostOffice.Categories.COMMENT))
             }
           }
@@ -254,13 +260,18 @@ object CommentController extends FortyTwoController {
           val participants = Comment.getParticipantsUserIds(comment)
           for (userId <- participants - senderId) {
             val recipient = User.get(userId)
+            val deepLink = DeepLink(
+                initatorUserId = Option(comment.userId),
+                recipientUserId = Some(userId),
+                uriId = Some(comment.uriId),
+                deepLocator = DeepLocator.toMessageThread(comment)).save
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
                   from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(sender.firstName, sender.lastName)),
                   to = addr,
                   subject = "%s %s sent you a message using KiFi".format(sender.firstName, sender.lastName),
-                  htmlBody = replaceLookHereLinks(views.html.email.newMessage(sender, recipient, uri, comment).body),
+                  htmlBody = replaceLookHereLinks(views.html.email.newMessage(sender, recipient, deepLink.url, comment).body),
                   category = PostOffice.Categories.MESSAGE))
             }
           }

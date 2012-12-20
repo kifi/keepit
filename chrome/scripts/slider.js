@@ -156,7 +156,7 @@ slider = function() {
       });
   }
 
-  function showKeepItHover(trigger) {
+  function showKeepItHover(trigger, callback) {
     chrome.extension.sendMessage({type: "get_slider_info"}, function(o) {
       log("slider info:", o);
 
@@ -183,14 +183,14 @@ slider = function() {
           if (document.querySelector(".kifi_hover")) {
             log("No need to inject, it's already here!");
           } else {
-            drawKeepItHover(o.user, o.friends, o.numComments, o.numMessages, template);
+            drawKeepItHover(o.user, o.friends, o.numComments, o.numMessages, template, callback);
             logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0)});
           }
         });
     });
   }
 
-  function drawKeepItHover(user, friends, numComments, numMessages, renderedTemplate) {
+  function drawKeepItHover(user, friends, numComments, numMessages, renderedTemplate, callback) {
     $('body').append(renderedTemplate);
 
     $('.social_friend').each(function(i,e) {
@@ -241,11 +241,13 @@ slider = function() {
     .on("click", ".messages-label", function() {
       showComments(user, "message", null, $('.thread-wrapper').length > 0);
     })
-    .on("mousedown click keydown keypress", function(e) {
+    .on("mousedown click keydown keypress keyup", function(e) {
       e.stopPropagation();
     });
 
     slideIn();
+
+    callback && callback();
   }
 
   function keptItslideOut() {
@@ -1001,6 +1003,33 @@ slider = function() {
     }
   }
 
+  function openDeepLink(locator) {
+    chrome.extension.sendMessage({type: "get_slider_info"}, function(o) {
+      var loc = locator.split("/").filter(function(s) { return s != ""; });
+      if(loc.length == 0)
+        return;
+      switch(loc[0]) {
+        case "messages":
+          openMessageDeepLink(o.user, loc.slice(1));
+          break;
+        case "comments":
+          showComments(o.user, "public");
+          break;
+      }
+    });
+  }
+
+  function openMessageDeepLink(user, loc) {
+    switch (loc[0]) {
+      case "threads":
+        if(loc[1])
+          showComments(user, "message", loc[1], false);
+        else
+          showComments(user, "message", null, false);
+        break;
+    }
+  }
+
   $(window).resize(function() {
     resizeCommentBodyView();
   });
@@ -1018,6 +1047,11 @@ slider = function() {
       } else {
         this.show(trigger);
       }
+    },
+    openDeepLink: function(locator) {
+      showKeepItHover("deepLink", function() {
+        openDeepLink(locator);
+      });
     }
   };
 }();

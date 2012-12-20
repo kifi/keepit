@@ -82,7 +82,6 @@ class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Log
   private def saveEventObject(eventFamily: EventFamily, dbObject: DBObject): Unit = {
     val coll = mongoDB(eventFamily.collection)
     val result = coll.insert(dbObject)
-    log.info(result)
   }
 
   def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoKeyMapFunc): Seq[JsObject] = {
