@@ -7,6 +7,7 @@ import com.keepit.common.net.URI
 import com.keepit.search.{Article, ArticleStore}
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.ScrapeInfo
 import com.keepit.scraper.extractor.DefaultExtractor
 import com.keepit.scraper.extractor.DefaultExtractorFactory
 import com.keepit.scraper.extractor.Extractor
@@ -23,47 +24,67 @@ object Scraper {
   val maxContentChars = 100000 // 100K chars
 }
 
-class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
+class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfig) extends Logging {
 
+  implicit val config = scraperConfig
   val httpFetcher = new HttpFetcher
+
+  implicit def toNormalizedUriId(id: Id[ScrapeInfo]) = Id[NormalizedURI](id.id)
+  implicit def toScrapeInfoId(id: Id[NormalizedURI]) = Id[ScrapeInfo](id.id)
 
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
     log.info("starting a new scrape round")
-    val uris = CX.withConnection { implicit c =>
-      NormalizedURI.getByState(ACTIVE, Scraper.BATCH_SIZE)
+    val tasks = CX.withConnection { implicit c =>
+      ScrapeInfo.getOverdueList().map{ info => (NormalizedURI.get(info.id.get), info) }
     }
-    log.info("got %s uris to scrape".format(uris.length))
-    val scrapedArticles = processURIs(uris)
+    log.info("got %s uris to scrape".format(tasks.length))
+    val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
     val jobTime = Seconds.secondsBetween(startedTime, currentDateTime).getSeconds()
     log.info("succesfuly scraped %s articles out of %s in %s seconds:\n%s".format(
-        scrapedArticles.size, uris.size, jobTime, scrapedArticles map {a => a._1} mkString "\n"))
+        scrapedArticles.flatMap{ a => a._2 }.size, tasks.size, jobTime, scrapedArticles map {a => a._1} mkString "\n"))
     scrapedArticles
   }
 
-  def processURIs(uris: Seq[NormalizedURI]): Seq[(NormalizedURI, Option[Article])] = uris map safeProcessURI
-
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
-      processURI(uri)
+    val info = CX.withConnection { implicit c => ScrapeInfo.get(uri.id.get) }
+    safeProcessURI(uri, info)
+  }
+
+  private def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {
+      processURI(uri, info)
     } catch {
       case e =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
         val errorURI = CX.withConnection { implicit c =>
+          ScrapeInfo.get(uri.id.get).withFailure().save
           uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
         }
         (errorURI, None)
     }
 
 
-  private def processURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
+  private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
     fetchArticle(uri) match {
       case Left(article) =>
         // store a scraped article in a store map
         articleStore += (uri.id.get -> article)
-        // succeeded. update the state to SCRAPED and save
+        // the article is saved, now detect the document change. making the detection more strict as time goes by.
+        val oldSig = Signature(info.signature)
+        val newSig = computeSignature(article)
+        val docChanged = (newSig.similarTo(oldSig) < (1.0d - config.changeThreshold * (config.minInterval / info.interval)))
+
         val scrapedURI = CX.withConnection { implicit c =>
-          uri.withTitle(article.title).withState(NormalizedURI.States.SCRAPED).save
+          if (docChanged) {
+            // update the scrape schedule and the uri state to SCRAPED
+            ScrapeInfo.get(uri.id.get).withDocumentChanged(newSig.toBase64).save
+            uri.withTitle(article.title).withState(NormalizedURI.States.SCRAPED).save
+          } else {
+            // update the scrape schedule, uri is not changed
+            ScrapeInfo.get(uri.id.get).withDocumentUnchanged().save
+            uri
+          }
         }
         log.info("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
@@ -81,8 +102,9 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
             titleLang = None,
             contentLang = None)
         articleStore += (uri.id.get -> article)
-        // succeeded. update the state to SCRAPE_FAILED and save
+        // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
         val errorURI = CX.withConnection { implicit c =>
+          ScrapeInfo.get(uri.id.get).withFailure().save
           uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
         }
         (errorURI, None)
@@ -152,6 +174,8 @@ class Scraper @Inject() (articleStore: ArticleStore) extends Logging {
       case e => Right(ScraperError(normalizedUri, -1, "fetch failed: %s".format(e.toString)))
     }
   }
+
+  private[this] def computeSignature(article: Article) = new SignatureBuilder().add(article.title).add(article.content).build
 
   def close() {
     httpFetcher.close()

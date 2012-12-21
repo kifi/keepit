@@ -49,8 +49,11 @@ class ScraperTest extends SpecificationWithJUnit {
         var (uri1, uri2) = CX.withConnection { implicit c =>
           val user1 = User(firstName = "Joe", lastName = "Smith").save
           val user2 = User(firstName = "Moo", lastName = "Brown").save
-          (NormalizedURI(title = "existing", url = "http://www.keepit.com/existing").save,
-           NormalizedURI(title = "missing", url = "http://www.keepit.com/missing").save)
+          val uris = (NormalizedURI(title = "existing", url = "http://www.keepit.com/existing").save,
+                      NormalizedURI(title = "missing", url = "http://www.keepit.com/missing").save)
+          ScrapeInfo.forNormalizedURI(uris._1).save
+          ScrapeInfo.forNormalizedURI(uris._2).save
+          uris
         }
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
@@ -69,7 +72,7 @@ class ScraperTest extends SpecificationWithJUnit {
   }
 
   def getMockScraper(articleStore: ArticleStore) = {
-  	new Scraper(articleStore) {
+  	new Scraper(articleStore, ScraperConfig()) {
   	  override def fetchArticle(uri: NormalizedURI): Either[Article, ScraperError]	 = {
   	    uri.url match {
   	      case "http://www.keepit.com/existing" => Left(Article(

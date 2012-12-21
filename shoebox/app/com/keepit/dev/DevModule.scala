@@ -175,4 +175,8 @@ case class DevModule() extends ScalaModule with Logging {
     val host = InetAddress.getLocalHost().getCanonicalHostName()
     new HealthcheckPluginImpl(system, host, postOffice)
   }
+
+  @Singleton
+  @Provides
+  def scraperConfig: ScraperConfig = ScraperConfig(minInterval = 0.1d)
 }
