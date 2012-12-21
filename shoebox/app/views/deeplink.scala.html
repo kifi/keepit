@@ -1,8 +1,16 @@
 @(uri: String, locator: String, isSecure: Boolean)
 <html data-kifi-deep-link='{"locator":"@locator","uri":"@uri","isSecure":@isSecure}'>
-  <head></head>
+  <head>
+    <script>
+      setTimeout(function() {
+        window.location = "@uri";
+      }, 1000);
+    </script>
+  </head>
   <body>
-    <div class="kifi-deep-link-no-extension">Please </div>
+    <div class="kifi-deep-link-no-extension">
+      It appears that you aren't running the Kifi extension. No worries, forwarding you to the page.
+    </div>
   </body>
 </html>
 
