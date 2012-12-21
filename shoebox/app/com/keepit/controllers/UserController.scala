@@ -63,6 +63,8 @@ object UserController extends FortyTwoController {
     }
 
     Ok(JsObject(Seq(
+        "name" -> JsString(request.socialUser.displayName),
+        "facebookId" -> JsString(request.socialUser.id.id),
         "kept" -> JsBoolean(bookmark.isDefined),
         "private" -> JsBoolean(bookmark.map(_.isPrivate).getOrElse(false)),
         "following" -> JsBoolean(following),
