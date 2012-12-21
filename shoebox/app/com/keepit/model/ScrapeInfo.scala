@@ -94,7 +94,7 @@ private[model] class ScrapeInfoEntity extends Entity[ScrapeInfo, ScrapeInfoEntit
   val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
   val lastScrape = "last_scrape".JODA_TIMESTAMP.NOT_NULL
   val nextScrape = "next_scrape".JODA_TIMESTAMP.NOT_NULL
-  val interval = "interval".DOUBLE().NOT_NULL
+  val interval = "scrape_interval".DOUBLE().NOT_NULL
   val failures = "failures".INTEGER.NOT_NULL
   val state = "state".STATE[ScrapeInfo].NOT_NULL
   val signature = "signature".VARCHAR(2046).NOT_NULL

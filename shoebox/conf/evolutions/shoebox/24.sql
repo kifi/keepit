@@ -5,7 +5,7 @@ CREATE TABLE scrape_info (
     uri_id bigint(20) NOT NULL,
     last_scrape datetime NOT NULL,
     next_scrape datetime NOT NULL,
-    interval double NOT NULL,
+    scrape_interval double NOT NULL,
     failures integer NOT NULL,
     state varchar(20) NOT NULL,
     signature varchar(2048) NOT NULL,
