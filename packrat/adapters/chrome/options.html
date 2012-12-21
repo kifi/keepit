@@ -1,32 +1,28 @@
-<html>
-  <head>
-    <title>Keep It Extension Configs</title>
-  </head>
-
-  <script src="scripts/lib/jquery-1.8.2.min.js"></script>
-  <script src="options.js"></script>
-
-  <body>
-
-      <div id="user_info">
-        <div id="user_info_data">
-          Hello: <span id="user_name"></span><img id="user_avatar" src="#"></img>
-        </div>
-      </div>
-
-    <div width="100px">
-      <fieldset>
-        <legend>Environment:</legend>
-        <input type="radio" id="env_dev"  name="env" value="development"/>Development<br/>
-        <input type="radio" id="env_prod" name="env" value="production"/>Production<br/>
-        Max Search Results: <input type="text" id="max_search_results" name="max_search_results" value="10"></input><br/>
-        Show Hover timeout in seconds: <input type="text" id="hover_timeout" name="hover_timeout" value="10"></input><br/>
-        Show score (use 'yes' if you want it): <input type="text" id="show_score" name="show_score" value="no"></input><br/>
-        <font size="small">If the value of the timeout is not a positive number (as in '0' or "NA") the hover will not show</font><br/>
-        <button id="saveConfigs">Save</button><br/>
-        <button id="upload">Upload all my bookmarks</button><br/>
-        <button id="resetUser">Reset User Info</button><br/>
-      </fieldset>
-    </div>
-  </body>
-</html>
+<!doctype html>
+<title>Keep It Extension Configs</title>
+<style>
+#name {margin: 3px 0 10px}
+input:not([type]) {width: 4ex}
+label>input[type=checkbox],
+label>input[type=radio],
+label>span {vertical-align: text-bottom}
+button {padding: 4px 10px; margin-top: 6px}
+</style>
+<fieldset style="width:400px">
+  Environment:
+    <label><input type="radio" name="env" value="development"> <span>Development</span></label>
+    <label><input type="radio" name="env" value="production"> <span>Production</span></label><br>
+  <label>
+    Slider Delay (sec):
+    <input id="hover_timeout" name="hover_timeout" value="10">
+  </label>
+  <span style="font-size:10px">("0" to not show it automatically)</span><br>
+  <label>
+    Max Search Results:
+    <input id="max_search_results" name="max_search_results" value="10">
+  </label><br>
+  <label><input type="checkbox" name="scores"> <span>Show Search Result Scores</span></label><br>
+  <button id="save">Save</button>
+</fieldset>
+<script src="scripts/lib/jquery-1.8.2.min.js"></script>
+<script src="options.js"></script>
