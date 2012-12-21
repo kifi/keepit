@@ -74,7 +74,7 @@ function UserHistory() {
 // ===== Event logging
 
 var _eventLog = [];
-var eventFamilies = ["slider","search","extension","account","notification"].reduce(function(o, f) {o[f] = true; return o}, {});
+var eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1};
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
