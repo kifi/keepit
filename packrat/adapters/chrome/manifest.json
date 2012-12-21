@@ -14,7 +14,7 @@
     "default_title": "Kifi"
   },
   "background" : {
-    "page": "background.html"
+    "page": "main.html"
   },
   "content_scripts" : [
     {
@@ -209,7 +209,7 @@
         "*://www.google.co.zm/*",
         "*://www.google.co.zw/*"
       ],
-      "js" : ["lib/jquery-1.8.2.min.js", "scripts/google_inject.js"],
+      "js" : ["scripts/lib/jquery-1.8.2.min.js", "scripts/google_inject.js"],
       "css": ["styles/google_inject.css"],
       "run_at" : "document_end",
       "all_frames" : false
