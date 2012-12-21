@@ -161,9 +161,6 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         setConfigs(request.key);
         sendResponse();
         return;
-      case "upload_all_bookmarks":
-        uploadAllBookmarks();
-        return;
       case "set_page_icon":
         setPageIcon(tab, request.is_kept);
         return;
@@ -293,15 +290,6 @@ function getBookmarkFolderInfo(keepItBookmarkId, callback) {
     log("[getBookmarkFolderInfo] done");
     callback(info);
   }
-}
-
-function uploadAllBookmarks() {
-  log("going to upload all my bookmarks to server");
-  if (!getUser()) {
-    log("Can't upload bookmarks, no user info!");
-    return;
-  }
-  // TODO: actually upload all bookmarks
 }
 
 function addKeep(bmInfo, req, sendResponse, tab) {
