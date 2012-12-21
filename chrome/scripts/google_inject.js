@@ -2,8 +2,8 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
 
 chrome.extension.sendMessage({type: "require", injected: window.injected,
   scripts: [
-    "lib/jquery-1.8.2.min.js",
-    "lib/mustache-0.7.1.min.js"]},
+    "scripts/lib/jquery-1.8.2.min.js",
+    "scripts/lib/mustache-0.7.1.min.js"]},
 function() {
   var lastInjected;
   var config;
