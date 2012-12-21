@@ -29,14 +29,11 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
   implicit val config = scraperConfig
   val httpFetcher = new HttpFetcher
 
-  implicit def toNormalizedUriId(id: Id[ScrapeInfo]) = Id[NormalizedURI](id.id)
-  implicit def toScrapeInfoId(id: Id[NormalizedURI]) = Id[ScrapeInfo](id.id)
-
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
     log.info("starting a new scrape round")
     val tasks = CX.withConnection { implicit c =>
-      ScrapeInfo.getOverdueList().map{ info => (NormalizedURI.get(info.id.get), info) }
+      ScrapeInfo.getOverdueList().map{ info => (NormalizedURI.get(info.uriId), info) }
     }
     log.info("got %s uris to scrape".format(tasks.length))
     val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
@@ -47,7 +44,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
   }
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
-    val info = CX.withConnection { implicit c => ScrapeInfo.get(uri.id.get) }
+    val info = CX.withConnection { implicit c => ScrapeInfo.ofUri(uri) }
     safeProcessURI(uri, info)
   }
 
@@ -57,7 +54,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
       case e =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
         val errorURI = CX.withConnection { implicit c =>
-          ScrapeInfo.get(uri.id.get).withFailure().save
+          info.withFailure().save
           uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
         }
         (errorURI, None)
@@ -78,11 +75,11 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
         val scrapedURI = CX.withConnection { implicit c =>
           if (docChanged) {
             // update the scrape schedule and the uri state to SCRAPED
-            ScrapeInfo.get(uri.id.get).withDocumentChanged(newSig.toBase64).save
+            info.withDocumentChanged(newSig.toBase64).save
             uri.withTitle(article.title).withState(NormalizedURI.States.SCRAPED).save
           } else {
             // update the scrape schedule, uri is not changed
-            ScrapeInfo.get(uri.id.get).withDocumentUnchanged().save
+            info.withDocumentUnchanged().save
             uri
           }
         }
@@ -104,7 +101,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
         articleStore += (uri.id.get -> article)
         // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
         val errorURI = CX.withConnection { implicit c =>
-          ScrapeInfo.get(uri.id.get).withFailure().save
+          info.withFailure().save
           uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
         }
         (errorURI, None)

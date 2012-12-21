@@ -179,5 +179,5 @@ case class DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def scraperConfig: ScraperConfig = ScraperConfig(minInterval = 0.1d)
+  def scraperConfig: ScraperConfig = ScraperConfig()
 }
