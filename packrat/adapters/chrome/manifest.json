@@ -1,6 +1,6 @@
 {
   "name": "Kifi Beta",
-  "version": "2.1.6",
+  "version": "2.1.7",
   "manifest_version": 2,
   "description": "Keep it, Find it!",
   "icons": {
@@ -14,7 +14,7 @@
     "default_title": "Kifi"
   },
   "background" : {
-    "page": "background.html"
+    "page": "main.html"
   },
   "content_scripts" : [
     {
@@ -209,7 +209,7 @@
         "*://www.google.co.zm/*",
         "*://www.google.co.zw/*"
       ],
-      "js" : ["lib/jquery-1.8.2.min.js", "scripts/google_inject.js"],
+      "js" : ["scripts/lib/jquery-1.8.2.min.js", "scripts/google_inject.js"],
       "css": ["styles/google_inject.css"],
       "run_at" : "document_end",
       "all_frames" : false
@@ -222,6 +222,16 @@
       "js" : ["scripts/content.js"],
       "run_at" : "document_end",
       "all_frames" : false
+    },
+    {
+      "matches": [
+        "*://dev.ezkeep.com/r/*",
+        "*://*.keepitfindit.com/r/*",
+        "*://*.kifi.com/r/*"
+      ],
+      "js": ["scripts/deeplink.js"],
+      "run_at" : "document_end",
+      "all_frames" : false
     }
   ],
   "permissions": [
@@ -231,7 +241,6 @@
     "https://*/"
   ],
   "web_accessible_resources": [
-    "data/magicQueries.json",
     "images/convo.png",
     "images/kifilogo.png",
     "images/snapshot.png",
@@ -243,22 +252,22 @@
     "images/results/gdocs.gif",
     "images/results/gdrive.png",
     "images/results/gmail.png",
-    "templates/google_inject.html",
-    "templates/kept_hover.html",
-    "templates/main_hover.html",
-    "templates/social_hover.html",
-    "templates/footer.html",
-    "templates/comments/hearts.html",
-    "templates/comments/comments_list.html",
-    "templates/comments/comments_view.html",
-    "templates/comments/reply.html",
-    "templates/comments/comment.html",
-    "templates/comments/reply_list.html",
-    "templates/comments/thread_info.html",
-    "templates/comments/thread.html",
-    "templates/comments/message_list.html",
-    "templates/comments/comment_post.html",
-    "templates/comments/message_post.html",
-    "templates/comments/snapshot_bar.html"
+    "html/google_inject.html",
+    "html/kept_hover.html",
+    "html/main_hover.html",
+    "html/social_hover.html",
+    "html/footer.html",
+    "html/comments/hearts.html",
+    "html/comments/comments_list.html",
+    "html/comments/comments_view.html",
+    "html/comments/reply.html",
+    "html/comments/comment.html",
+    "html/comments/reply_list.html",
+    "html/comments/thread_info.html",
+    "html/comments/thread.html",
+    "html/comments/message_list.html",
+    "html/comments/comment_post.html",
+    "html/comments/message_post.html",
+    "html/comments/snapshot_bar.html"
   ]
 }

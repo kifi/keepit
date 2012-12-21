@@ -6,4 +6,4 @@ from fabric.operations import run, put
 from time import sleep
 
 def chrome():
-  local("rsync -vrc --delete chrome ~/Dropbox/keepit")
+  local("rsync -vrc --delete out/chrome ~/Dropbox/keepit")

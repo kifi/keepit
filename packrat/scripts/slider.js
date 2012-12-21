@@ -1,4 +1,27 @@
-slider = function() {
+var slider = {
+  queue: function(f) {
+    if (this.loaded) {
+      f();
+    } else {
+      this.callbacks.push(f);
+    }
+  },
+  callbacks: []};
+
+chrome.extension.sendMessage({type: "require", injected: window.injected,
+  styles: [
+    "styles/slider.css",
+    "styles/comments.css"],
+  scripts: [
+    "scripts/lib/jquery-1.8.2.min.js",
+    "scripts/lib/jquery-ui-1.9.1.custom.min.js",
+    "scripts/lib/jquery.tokeninput.js",
+    "scripts/lib/jquery.timeago.js",
+    "scripts/lib/keymaster.min.js",
+    "scripts/lib/lodash.min.js",
+    "scripts/lib/mustache-0.7.1.min.js",
+    "scripts/snapshot.js"]},
+function() {
   var following, isKept, lastShownAt;
 
   $('<input id="editableFix" style="opacity:0;color:transparent;width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html')
@@ -87,7 +110,7 @@ slider = function() {
 
   function socialTooltip(friend, element) {
      // disabled for now
-    renderTemplate("templates/social_hover.html", {"friend": friend}, function(tmpl) {
+    renderTemplate("html/social_hover.html", {"friend": friend}, function(tmpl) {
       var timeout;
       var timein;
 
@@ -156,7 +179,7 @@ slider = function() {
       });
   }
 
-  function showKeepItHover(trigger) {
+  function showKeepItHover(trigger, callback) {
     chrome.extension.sendMessage({type: "get_slider_info"}, function(o) {
       log("slider info:", o);
 
@@ -164,7 +187,7 @@ slider = function() {
       following = o.following;
       lastShownAt = new Date().getTime();
 
-      renderTemplate('templates/kept_hover.html', {
+      renderTemplate('html/kept_hover.html', {
           "logo": chrome.extension.getURL('images/kifilogo.png'),
           "arrow": chrome.extension.getURL('images/triangle_down.31x16.png'),
           "profilepic": "https://graph.facebook.com/" + o.user.facebook_id + "/picture?type=square",
@@ -183,14 +206,14 @@ slider = function() {
           if (document.querySelector(".kifi_hover")) {
             log("No need to inject, it's already here!");
           } else {
-            drawKeepItHover(o.user, o.friends, o.numComments, o.numMessages, template);
+            drawKeepItHover(o.user, o.friends, o.numComments, o.numMessages, template, callback);
             logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0)});
           }
         });
     });
   }
 
-  function drawKeepItHover(user, friends, numComments, numMessages, renderedTemplate) {
+  function drawKeepItHover(user, friends, numComments, numMessages, renderedTemplate, callback) {
     $('body').append(renderedTemplate);
 
     $('.social_friend').each(function(i,e) {
@@ -241,11 +264,13 @@ slider = function() {
     .on("click", ".messages-label", function() {
       showComments(user, "message", null, $('.thread-wrapper').length > 0);
     })
-    .on("mousedown click keydown keypress", function(e) {
+    .on("mousedown click keydown keypress keyup", function(e) {
       e.stopPropagation();
     });
 
     slideIn();
+
+    callback && callback(user);
   }
 
   function keptItslideOut() {
@@ -299,7 +324,7 @@ slider = function() {
       logo: chrome.extension.getURL('images/kifilogo.png')
     }
 
-    renderTemplate("templates/footer.html", footerParams, function(renderedTemplate) {
+    renderTemplate("html/footer.html", footerParams, function(renderedTemplate) {
       $('.kififtr').html(renderedTemplate);
 
       $('.kififtr .footer-bar').on('mousedown','.close-message', function() {
@@ -613,11 +638,11 @@ slider = function() {
         "comment_post_view": type != "message" ? "comment_post.html" : "message_post.html"};
       if (partialRender) {
         // Hacky solution for a partial refresh. Needs to be refactored.
-        renderTemplate("templates/comments/" + partials.comment_body_view, params, partials, function(renderedTemplate) {
+        renderTemplate("html/comments/" + partials.comment_body_view, params, partials, function(renderedTemplate) {
           $('.comment_body_view').html(renderedTemplate).find("time").timeago();
         });
       } else {
-        renderTemplate("templates/comments/comments_view.html", params, partials, function(renderedTemplate) {
+        renderTemplate("html/comments/comments_view.html", params, partials, function(renderedTemplate) {
           drawCommentView(renderedTemplate, user, type);
           onComplete();
         });
@@ -778,7 +803,7 @@ slider = function() {
       var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
         updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
       });
-      renderTemplate("templates/comments/snapshot_bar.html", {"type": typeName}, function(html) {
+      renderTemplate("html/comments/snapshot_bar.html", {"type": typeName}, function(html) {
         $(html).appendTo("body")
           .draggable({cursor: "move", distance: 10, handle: ".snapshot-bar", scroll: false})
           .on("click", ".cancel", exitSnapshotMode)
@@ -858,7 +883,7 @@ slider = function() {
         badGlobalState["updates"].publicCount++;
         badGlobalState["updates"].countSum++;
 
-        renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
+        renderTemplate("html/comments/comment.html", params, function(renderedComment) {
           //drawCommentView(renderedTemplate, user, type);
           $('.comment_body_view').find('.no-comment').parent().detach();
           $('.comment_body_view').append(renderedComment).find("time").timeago();
@@ -918,7 +943,7 @@ slider = function() {
         params["formatDate"] = commentDateFormatter;
         params["formatIsoDate"] = isoDateFormatter;
 
-        renderTemplate("templates/comments/comment.html", params, function(renderedComment) {
+        renderTemplate("html/comments/comment.html", params, function(renderedComment) {
           //drawCommentView(renderedTemplate, user, type);
           $('.comment_body_view').find('.no-comment').parent().detach();
           $('.thread-wrapper').append(renderedComment).find("time.timeago").timeago();
@@ -1001,23 +1026,51 @@ slider = function() {
     }
   }
 
+  function openDeepLink(user, locator) {
+    var loc = locator.split("/").filter(function(s) { return s != ""; });
+    if(loc.length == 0)
+      return;
+    switch(loc[0]) {
+      case "messages":
+        openMessageDeepLink(user, loc.slice(1));
+        break;
+      case "comments":
+        showComments(user, "public");
+        break;
+    }
+  }
+
+  function openMessageDeepLink(user, loc) {
+    if(loc[0])
+      showComments(user, "message", loc[0], false);
+    else
+      showComments(user, "message", null, false);
+  }
+
   $(window).resize(function() {
     resizeCommentBodyView();
   });
 
-  return {  // the slider API
-    show: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
-      showKeepItHover(trigger);
-    },
-    shown: function() {
-      return !!lastShownAt;
-    },
-    toggle: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
-      if (document.querySelector(".kifi_hover")) {
-        slideOut(trigger);
-      } else {
-        this.show(trigger);
-      }
+  // defining the slider API
+  slider.show = function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
+    showKeepItHover(trigger);
+  };
+  slider.shown = function() {
+    return !!lastShownAt;
+  };
+  slider.toggle = function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
+    if (document.querySelector(".kifi_hover")) {
+      slideOut(trigger);
+    } else {
+      this.show(trigger);
     }
   };
-}();
+  slider.openDeepLink = function(locator) {
+    showKeepItHover("deepLink", function(user) {
+      openDeepLink(user, locator);
+    });
+  };
+  slider.loaded = true;
+  slider.callbacks.forEach(function(f) { f() });
+  delete slider.callbacks;
+});

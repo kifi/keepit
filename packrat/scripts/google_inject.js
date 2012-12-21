@@ -1,6 +1,10 @@
 console.log("[" + new Date().getTime() + "] in google_inject.js");
 
-!function() {
+chrome.extension.sendMessage({type: "require", injected: window.injected,
+  scripts: [
+    "scripts/lib/jquery-1.8.2.min.js",
+    "scripts/lib/mustache-0.7.1.min.js"]},
+function() {
   var lastInjected;
   var config;
   var restrictedGoogleInject = [
@@ -340,7 +344,7 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
       resultsStore.currentlyShowing = resultsStore.show;
 
       var req = new XMLHttpRequest();
-      req.open("GET", chrome.extension.getURL('templates/google_inject.html'), true);
+      req.open("GET", chrome.extension.getURL('html/google_inject.html'), true);
       req.onreadystatechange = function() {
         if (req.readyState == 4 && req.status == 200) {
 
@@ -477,7 +481,7 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
 
   function socialTooltip(friend, element) {
      // disabled for now
-    getTemplate("templates/social_hover.html",{"friend": friend}, function(tmpl) {
+    getTemplate("html/social_hover.html",{"friend": friend}, function(tmpl) {
       var timeout;
       var timein;
 
@@ -521,4 +525,4 @@ console.log("[" + new Date().getTime() + "] in google_inject.js");
     else
       return input.replace(new RegExp('(^|\\.?)(' + needle + ')(\\.?|$)','ig'), '$1<b>$2</b>$3');
   }
-}();
+});

@@ -2,7 +2,7 @@ function log(message) {
   console.log.apply(console, Array.prototype.concat.apply(["[kifi][" + new Date().getTime() + "] "], arguments));
 }
 
-function logEvent() {  // parameters defined in background.js
+function logEvent() {  // parameters defined in main.js
   chrome.extension.sendMessage({
     type: "log_event",
     args: Array.prototype.slice.apply(arguments)});
@@ -41,18 +41,21 @@ var t0 = new Date().getTime();
           });
         }, msg.ms);
         break;
+      case "deep_link":
+        withSlider(function () {
+          slider.openDeepLink(msg.link);
+        });
+        break;
     }
   });
 
-  var injecting;
   function withSlider(callback) {
     if (window.slider) {
-      callback();
-    } else if (injecting) {
-      // TODO: queue callback?
+      slider.queue(callback);
     } else {
-      injecting = true;
-      chrome.extension.sendMessage({type: "inject_slider"}, callback);
+      chrome.extension.sendMessage({type: "require", injected: window.injected, scripts: ["scripts/slider.js"]}, function() {
+        slider.queue(callback);
+      });
     }
   }
 }();

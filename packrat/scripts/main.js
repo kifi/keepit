@@ -13,13 +13,6 @@ function error(exception, message) {
   //alert("exception: " + exception.message);
 }
 
-// ===== Queries with hard-coded results
-
-var magicQueries = [];
-ajax("GET", chrome.extension.getURL("data/magicQueries.json"), function(xhr) {
-  magicQueries = JSON.parse(xhr.response);
-});
-
 // ===== Ajax
 
 function ajax(method, uri, data, done, fail) {  // method and uri are required
@@ -174,8 +167,8 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
       case "set_page_icon":
         setPageIcon(tab, request.is_kept);
         return;
-      case "inject_slider":
-        injectSlider(tab.id, sendResponse);
+      case "require":
+        require(tab.id, request, sendResponse);
         return true;
       case "get_slider_info":
         ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
@@ -201,6 +194,9 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
       case "get_friends":
         ajax("GET", "http://" + getConfigs().server + "/users/friends", sendResponse);
         return true;
+      case "add_deep_link_listener":
+        createDeepLinkListener(request.link, tab.id, sendResponse);
+        return true;
       default:
         log("Ignoring unknown message:", request);
     }
@@ -210,6 +206,27 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
     log("[onMessage] done:", request);
   }
 });
+
+function createDeepLinkListener(link, linkTabId, sendResponse) {
+  var createdTime = new Date();
+  chrome.tabs.onUpdated.addListener(function deepLinkListener(tabId, changeInfo, tab) {
+    var now = new Date();
+    if(now - createdTime > 15000) {
+      chrome.tabs.onUpdated.removeListener(deepLinkListener);
+      log("[createDeepLinkListener] Listener timed out.");
+      return;
+    }
+    if(linkTabId == tabId && changeInfo.status == "complete") {
+      var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") == -1 && tab.url.indexOf("dev.ezkeep.com") == -1;
+      if(hasForwarded) {
+        log("[createDeepLinkListener] Sending deep link to tab " + tabId, link.locator);
+        chrome.tabs.sendMessage(tabId, {type: "deep_link", link: link.locator});
+        chrome.tabs.onUpdated.removeListener(deepLinkListener);
+        return;
+      }
+    }
+  });
+}
 
 // Finds KiFi bookmark folder by id (if provided) or by name in the Bookmarks Bar,
 // or else creates it there. Ensures that it has "public" and "private" subfolders.
@@ -370,15 +387,6 @@ function searchOnServer(request, sendResponse, tab) {
     return;
   }
 
-  for (var i = 0; i < magicQueries.length; i++) {
-    console.log("checking: ", magicQueries[i]);
-    if (magicQueries[i].query === request.query) {
-      log("Intercepting query: " + request.query);
-      sendResponse({"userInfo": userConfigs.user, "searchResults": magicQueries[i].results, "userConfig": userConfigs});
-      return;
-    }
-  }
-
   if (request.query === '') {
     sendResponse({"userInfo": userConfigs.user, "searchResults": [], "userConfig": userConfigs});
     return;
@@ -473,41 +481,33 @@ function setPageIcon(tab, kept) {
   });
 }
 
-function injectSlider(tabId, callback) {
-  injectStyles([
-      "styles/slider.css",
-      "styles/comments.css"],
+function require(tabId, details, callback) {
+  var injected = details.injected || {};
+  injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), details.styles,
     function() {
-      injectScripts([
-          "lib/jquery-1.8.2.min.js",
-          "lib/jquery-ui-1.9.1.custom.min.js",
-          "lib/jquery.tokeninput.js",
-          "lib/jquery.timeago.js",
-          "lib/keymaster.min.js",
-          "lib/lodash.min.js",
-          "lib/mustache-0.7.1.min.js",
-          "scripts/slider.js",
-          "scripts/snapshot.js"],
-        callback);
+      injectAll(chrome.tabs.executeScript.bind(chrome.tabs), details.scripts, function() {
+        chrome.tabs.executeScript(tabId, {code: "injected=" + JSON.stringify(injected)}, callback);
+      });
     });
 
-  function injectScripts(paths, callback) {
-    for (var n = 0, i = 0; i < paths.length; i++) {
-      chrome.tabs.executeScript(tabId, {file: paths[i]}, function() {
-        if (++n == paths.length) {
+  function injectAll(inject, paths, callback) {
+    if (paths && paths.length) {
+      var n = 0;
+      paths.forEach(function(path) {
+        if (!injected[path]) {
+          log("[require] tab", tabId, path);
+          inject(tabId, {file: path}, function() {
+            injected[path] = true;
+            if (++n == paths.length) {
+              callback();
+            }
+          });
+        } else if (++n == paths.length) {
           callback();
         }
       });
-    }
-  }
-
-  function injectStyles(paths, callback) {
-    for (var n = 0, i = 0; i < paths.length; i++) {
-      chrome.tabs.insertCSS(tabId, {file: paths[i]}, function() {
-        if (++n == paths.length) {
-          callback();
-        }
-      });
+    } else {
+      callback();
     }
   }
 }

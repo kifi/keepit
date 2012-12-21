@@ -9,6 +9,7 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3._
 import com.google.inject.Provides
 import com.google.inject.Singleton
+import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
@@ -171,9 +172,9 @@ case class DevModule() extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def healthcheckProvider(system: ActorSystem, postOffice: PostOffice): HealthcheckPlugin = {
+  def healthcheckProvider(system: ActorSystem, postOffice: PostOffice, services: FortyTwoServices): HealthcheckPlugin = {
     val host = InetAddress.getLocalHost().getCanonicalHostName()
-    new HealthcheckPluginImpl(system, host, postOffice)
+    new HealthcheckPluginImpl(system, host, postOffice, services)
   }
 
   @Singleton

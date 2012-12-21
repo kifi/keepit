@@ -75,7 +75,7 @@ case object ErrorCountSinceLastCheck
 case object ResetErrorCount
 case object Heartbeat
 
-private[healthcheck] class HealthcheckActor(postOffice: PostOffice) extends Actor with Logging {
+private[healthcheck] class HealthcheckActor(postOffice: PostOffice, services: FortyTwoServices) extends Actor with Logging {
 
   private var errors: List[HealthcheckError] = Nil
   private var errorCount = 0
@@ -87,7 +87,7 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice) extends Acto
       if (errors.nonEmpty) {
         val message = Html(errors map {_.toHtml} mkString "\n<br/><hr/>")
         val subject = "ERROR REPORT: %s errors on %s version %s compiled on %s".format(
-            errors.size, FortyTwoServices.currentService, FortyTwoServices.currentVersion, FortyTwoServices.compilationTime)
+            errors.size, services.currentService, services.currentVersion, services.compilationTime)
         errors = Nil
         postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = message.body, category = PostOffice.Categories.HEALTHCHECK))
       }
@@ -95,8 +95,8 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice) extends Acto
       val now = currentDateTime
       val partOfDay = if (now.getHourOfDay() < 12) "morning" else "afternoon"
       val message = Html("Good %s!<br/>Time is %s, service %s version %s compiled at %s started on %s is happily running. Last error time was %s".
-          format(partOfDay, now, FortyTwoServices.currentService, FortyTwoServices.currentVersion, FortyTwoServices.compilationTime, startupTime, lastError.map(_.format).getOrElse("Never!")))
-      val subject = "Heartbeat message from %s version %s".format(FortyTwoServices.currentService, FortyTwoServices.currentVersion)
+          format(partOfDay, now, services.currentService, services.currentVersion, services.compilationTime, startupTime, lastError.map(_.format).getOrElse("Never!")))
+      val subject = "Heartbeat message from %s version %s".format(services.currentService, services.currentVersion)
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = message.body, category = PostOffice.Categories.HEALTHCHECK))
     case ErrorCountSinceLastCheck =>
       val errorCountSinceLastCheck = errorCount
@@ -120,11 +120,11 @@ trait HealthcheckPlugin extends Plugin {
   def reportStop(): ElectronicMail
 }
 
-class HealthcheckPluginImpl(system: ActorSystem, host: String, postOffice: PostOffice) extends HealthcheckPlugin {
+class HealthcheckPluginImpl(system: ActorSystem, host: String, postOffice: PostOffice, services: FortyTwoServices) extends HealthcheckPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = system.actorOf(Props { new HealthcheckActor(postOffice) })
+  private val actor = system.actorOf(Props { new HealthcheckActor(postOffice, services) })
 
   // plugin lifecycle methods
   private var _cancellables: Seq[Cancellable] = Nil
@@ -153,14 +153,14 @@ class HealthcheckPluginImpl(system: ActorSystem, host: String, postOffice: PostO
   }
 
   override def reportStart() = {
-    val subject = "Service %s [%s] started".format(FortyTwoServices.currentService, FortyTwoServices.currentVersion)
-    val message = Html("Started at %s on %s. Service compiled at %s".format(currentDateTime, host, FortyTwoServices.compilationTime))
+    val subject = "Service %s [%s] started".format(services.currentService, services.currentVersion)
+    val message = Html("Started at %s on %s. Service compiled at %s".format(currentDateTime, host, services.compilationTime))
     postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = message.body, category = PostOffice.Categories.HEALTHCHECK))
   }
 
   override def reportStop() = {
-    val subject = "Service %s [%s] stopped".format(FortyTwoServices.currentService, FortyTwoServices.currentVersion)
-    val message = Html("Stopped at %s on %s. Service compiled at %s".format(currentDateTime, host, FortyTwoServices.compilationTime))
+    val subject = "Service %s [%s] stopped".format(services.currentService, services.currentVersion)
+    val message = Html("Stopped at %s on %s. Service compiled at %s".format(currentDateTime, host, services.compilationTime))
     postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = message.body, category = PostOffice.Categories.HEALTHCHECK))
   }
 }
