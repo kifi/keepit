@@ -42,6 +42,7 @@ function() {
     var $this = $(t);
     var kifi_reslist = $this.parents('#kifi_reslist')
     var isKifi = kifi_reslist.length == 1;
+    var kifiResults = $('#kifi_reslist li').length;
     var href = $this.attr("href");
     var whichResult = -1;
     if(isKifi) {
@@ -57,7 +58,11 @@ function() {
     if(isKifi && href && queryUUID && whichResult != -1)
       logEvent("search", "kifiResultClicked", {"url": href, "whichResult": whichResult, "query": query, "queryUUID": queryUUID});
     else if(!isKifi && href && whichResult != -1) {
-      logEvent("search", "googleResultClicked", {"url": href, "whichResult": whichResult, "query": query, "kifiResultsCount": resultsStore.results.length});
+      logEvent("search", "googleResultClicked", {"url": href, "whichResult": whichResult, "query": query, "kifiResultsCount": kifiResults.length});
+    }
+
+    if(kifiHasResults && !isKifi && href && whichResult != -1) {
+      logEvent("search", "googleResultClickedOverKifi", {"url": href, "whichResult": whichResult, "query": query, "kifiResultsCount": kifiResults.length});
     }
   }
 
