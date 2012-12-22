@@ -258,5 +258,3 @@ class DailyNewUnkeep extends BasicDailyAggregationReport with Logging {
   }
 }
 
-
-

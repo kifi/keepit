@@ -60,10 +60,6 @@ function() {
     else if(!isKifi && href && whichResult != -1) {
       logEvent("search", "googleResultClicked", {"url": href, "whichResult": whichResult, "query": query, "kifiResultsCount": kifiResults.length});
     }
-
-    if(kifiHasResults && !isKifi && href && whichResult != -1) {
-      logEvent("search", "googleResultClickedOverKifi", {"url": href, "whichResult": whichResult, "query": query, "kifiResultsCount": kifiResults.length});
-    }
   }
 
   function bindSearchLogger() {
