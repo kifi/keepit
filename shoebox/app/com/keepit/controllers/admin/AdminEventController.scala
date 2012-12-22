@@ -39,7 +39,23 @@ import play.api.data.Forms._
 
 object AdminEventController extends FortyTwoController {
 
-  val reports = Seq(new DailyActiveUniqueUserReport, new DailyPageLoadReport, new DailySearchQueriesReport, new DailyGoogleResultClicked, new DailyKifiResultClicked)
+  val reports = Seq(
+    new DailyActiveUniqueUserReport,
+    new DailyPageLoadReport,
+    new DailySearchQueriesReport,
+    new DailyGoogleResultClicked,
+    new DailyKifiResultClicked,
+    new DailyGoogleResultClickedOverKifi,
+    new DailySliderShownByAuto,
+    new DailySliderShownByIcon,
+    new DailySliderShownByKey,
+    new DailySliderClosedByAuto,
+    new DailySliderClosedByIcon,
+    new DailySliderClosedByKey,
+    new DailyNewComment,
+    new DailyNewMessage,
+    new DailyNewUnkeep
+  )
   val reportNames = reports map(_.reportName)
   val startDay = currentDate.minusDays(30)
   val endDay = currentDate

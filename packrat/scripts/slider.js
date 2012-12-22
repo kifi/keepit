@@ -153,6 +153,8 @@ function() {
     isKept = true;
     if (shouldSlideOut) keptItslideOut();
 
+    logEvent("slider", "newKeep");
+
     var request = {
       "type": "add_bookmarks",
       "url": document.location.href,
@@ -170,6 +172,8 @@ function() {
     chrome.extension.sendMessage({"type": "set_page_icon", "is_kept": false});
     isKept = false;
     if (shouldSlideOut) slideOut("unkeep");
+
+    logEvent("slider", "newUnkeep");
 
     chrome.extension.sendMessage({
         "type": "unkeep",
@@ -849,6 +853,7 @@ function() {
       e.preventDefault();
       var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
       if (!text) return false;
+      logEvent("slider", "newComment");
 
       submitComment(text, type, session, null, null, function(newComment) {
         $('.comment-compose').text("").html(placeholder).blur();
@@ -879,6 +884,7 @@ function() {
       e.preventDefault();
       var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
       if (!text) return false;
+      logEvent("slider", "newMessage");
 
       var isReply = $(this).is('.message-reply');
       var recipients;
