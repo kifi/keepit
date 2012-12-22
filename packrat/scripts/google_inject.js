@@ -226,8 +226,8 @@ function() {
     }
   }
 
-  chrome.extension.sendMessage({"type": "get_conf"}, function(response) {
-    config = response;
+  chrome.extension.sendMessage({type: "get_conf"}, function(o) {
+    config = o.config;
   });
 
   updateQuery();
