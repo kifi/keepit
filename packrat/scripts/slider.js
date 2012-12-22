@@ -999,7 +999,7 @@ function() {
     var loc = locator.split("/").filter(function(s) { return s != ""; });
     switch (loc[0]) {
       case "messages":
-        showComments(session, "message", loc[1], false);
+        showComments(session, "message", loc[1] || null, false);
         break;
       case "comments":
         showComments(session, "public");
