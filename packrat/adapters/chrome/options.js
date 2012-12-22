@@ -1,87 +1,23 @@
-
-// Saves configs to localStorage.
-
-function upload() {
-  chrome.extension.sendMessage({type: "upload_all_bookmarks"}, function(response) {});
-}
-
-function resetUser() {
-  chrome.extension.sendMessage({type: "remove_conf", key: "user"}, function(response) {
-    chrome.extension.sendMessage({type: "remove_conf", key: "user_info"}, function(response) {
-      restoreConfigs();
-    });
+$(function() {
+  chrome.extension.sendMessage({type: "get_conf"}, function(o) {
+    console.log("config:", o);
+    var env = o.config.env;
+    $("[name=env][value=" + env + "]").attr("checked", true);
+    $("#max_search_results").val(o.config["max_res"]);
+    $("#hover_timeout").val(o.config["hover_timeout"]);
+    $("input[name=scores]").attr("checked", o.config["show_score"] == "true");
+    $(document.body)
+    .prepend($("<p>", {id: "name", text: o.session.name}))
+    .prepend("<img src='" + o.session.avatarUrl + "'>");
   });
-}
-
-function sendSaveConfig(key, value) {
-  chrome.extension.sendMessage({type: "set_conf", key: key, value: value}, function(response) {});
-}
-
-function saveConfigs() {
-  if ($("#env_prod").is(":checked")) {
-    localStorage["env"] = "production";
+  $("#save").click(function() {
+    localStorage.env = $("input[name=env][value=development]").is(":checked") ? "development" : "production";
+    set("max_res", $("#max_search_results").val());
+    set("hover_timeout", $("#hover_timeout").val());
+    set("show_score", $("input[name=scores]").is(":checked"));
+    window.close();
+  });
+  function set(key, value) {
+    chrome.extension.sendMessage({type: "set_conf", key: key, value: value});
   }
-  else {
-    localStorage["env"] = "development";
-  }
-  sendSaveConfig("max_res", $("#max_search_results").val());
-  sendSaveConfig("hover_timeout", $("#hover_timeout").val());
-  var showScore = $("#show_score").val();
-    if (showScore === "yes" || showScore === true || showScore === "true") {
-      showScore = true;
-    } else {
-      showScore = false;
-    }
-  sendSaveConfig("show_score", showScore);
-  window.close();
-}
-
-function renderUserInfo(userInfo) {
-  console.log(userInfo);
-  $("#user_info_data").show();
-  $("#user_name").html(userInfo.name);
-  $("#user_avatar").attr("src", userInfo.avatar_url);
-}
-
-function restoreConfigs(callback) {
-  chrome.extension.sendMessage({"type": "get_conf"}, function(config) {
-    console.log("loaded config", config);
-    var env = config["env"];
-    if (env === "development") {
-      $("#env_dev").attr("checked","checked");
-    }
-    if (env === "production") {
-      $("#env_prod").attr("checked","checked");
-    }
-    $("#max_search_results").val(config["max_res"]);
-    $("#hover_timeout").val(config["hover_timeout"]);
-    var showScore = config["show_score"];
-    if (showScore === "yes" || showScore === true) {
-      showScore = "yes";
-    } else {
-      showScore = "no";
-    }
-    $("#show_score").val(showScore);
-    $("#facebook_connect_link").click(function() {
-      chrome.extension.sendMessage({"type": "get_conf"}, function(config) {
-        var url = "http://" + config["server"] + "/authenticate/facebook";
-        log("openning facebook window from " + url, "connect", "width=500,height=400");
-        window.open(url);
-        return false;
-      });
-    });
-    if (callback) {
-      callback(config);
-    }
-  });
-}
-setTimeout(function() {
-  restoreConfigs(function(config) {
-    renderUserInfo(config["user"]);
-  });
-  $('#resetUser').click(resetUser);
-  $('#upload').click(upload);
-  $('#saveConfigs').click(saveConfigs);
-}, 50);
-
-
+});

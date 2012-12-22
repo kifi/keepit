@@ -194,9 +194,9 @@ function() {
       renderTemplate('html/kept_hover.html', {
           "logo": chrome.extension.getURL('images/kifilogo.png'),
           "arrow": chrome.extension.getURL('images/triangle_down.31x16.png'),
-          "profilepic": "https://graph.facebook.com/" + o.user.facebook_id + "/picture?type=square",
+          "profilepic": o.session.avatarUrl,
           "holidays_hat": chrome.extension.getURL('images/holidays_hat.png'),
-          "name": o.user.name,
+          "name": o.session.name,
           "is_kept": o.kept,
           "private": o.private,
           "connected_networks": chrome.extension.getURL("images/networks.png"),
@@ -210,14 +210,14 @@ function() {
           if (document.querySelector(".kifi_hover")) {
             log("No need to inject, it's already here!");
           } else {
-            drawKeepItHover(o.user, o.friends, o.numComments, o.numMessages, template, callback);
+            drawKeepItHover(o.session, o.friends, o.numComments, o.numMessages, template, callback);
             logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0)});
           }
         });
     });
   }
 
-  function drawKeepItHover(user, friends, numComments, numMessages, renderedTemplate, callback) {
+  function drawKeepItHover(session, friends, numComments, numMessages, renderedTemplate, callback) {
     $('body').append(renderedTemplate);
 
     $('.social_friend').each(function(i,e) {
@@ -238,9 +238,6 @@ function() {
     .on("click", ".xlink", function() {
       slideOut("x");
     })
-    // .on("click", ".profilepic", function() {
-    //   location = "http://www.facebook.com/" + user.facebook_id;
-    // })
     .on("click", ".unkeepitbtn", function() {
       unkeepPage(true);
     })
@@ -263,10 +260,10 @@ function() {
       $('.moreinnerbox').slideToggle(150);
     })
     .on("click", ".comments-label", function() {
-      showComments(user, "public");
+      showComments(session, "public");
     })
     .on("click", ".messages-label", function() {
-      showComments(user, "message", null, $('.thread-wrapper').length > 0);
+      showComments(session, "message", null, $('.thread-wrapper').length > 0);
     })
     .on("mousedown click keydown keypress keyup", function(e) {
       e.stopPropagation();
@@ -274,7 +271,7 @@ function() {
 
     slideIn();
 
-    callback && callback(user);
+    callback && callback(session);
   }
 
   function keptItslideOut() {
@@ -361,7 +358,7 @@ function() {
       updateCommentCount("public", badGlobalState["updates"]["publicCount"]);
       //updateCommentCount("message", badGlobalState["updates"]["messageCount"]);message count includes children, need to fix...
       if (isCommentPanelVisible() !== true) return;
-      showComments(badGlobalState.user, badGlobalState.type, badGlobalState.id, true, true);
+      showComments(badGlobalState.session, badGlobalState.type, badGlobalState.id, true, true);
     });
   }
 
@@ -381,10 +378,10 @@ function() {
     refreshCommentsHack();
   }, 5000);
 
-  function showComments(user, type, id, keepOpen, partialRender) {
+  function showComments(session, type, id, keepOpen, partialRender) {
     var type = type || "public";
 
-    badGlobalState["user"] = user;
+    badGlobalState["session"] = session;
     badGlobalState["type"] = type;
     badGlobalState["id"] = id;
 
@@ -408,7 +405,7 @@ function() {
 
     chrome.extension.sendMessage({type: "get_comments", kind: type, commentId: id}, function(comments) {
       log(comments);
-      renderComments(user, comments, type, id, function() {
+      renderComments(session, comments, type, id, function() {
         if (!isVisible) {
           repositionScroll(false);
 
@@ -495,7 +492,7 @@ function() {
       .toggleClass("zero_comments", count == 0);
   }
 
-  function renderComments(user, comments, type, id, onComplete, partialRender) {
+  function renderComments(session, comments, type, id, onComplete, partialRender) {
     log("Drawing comments!");
     comments = comments || {};
     comments["public"] = comments["public"] || [];
@@ -510,9 +507,9 @@ function() {
 
     var params = {
       kifiuser: {
-        "firstName": user.name,
+        "firstName": session.name,
         "lastName": "",
-        "avatar": "https://graph.facebook.com/" + user.facebook_id + "/picture?type=square"
+        "avatar": session.avatarUrl
       },
       formatComments: commentTextFormatter,
       formatDate: commentDateFormatter,
@@ -528,7 +525,7 @@ function() {
 
       if (visibleComments.length && visibleComments[0].user && visibleComments[0].user.externalId) {
         for (msg in visibleComments) {
-          visibleComments[msg]["isLoggedInUser"] = visibleComments[msg].user.externalId == user.keepit_external_id
+          visibleComments[msg]["isLoggedInUser"] = visibleComments[msg].user.externalId == session.userId
         }
       }
 
@@ -564,7 +561,7 @@ function() {
           var displayedRecipients = [];
           var storedRecipients = [];
           if(l == 0) {
-            displayedRecipients.push(user.name);
+            displayedRecipients.push(session.name);
           }
           else if(l <= 4) {
             displayedRecipients = recipientNames.slice(0, l);
@@ -601,36 +598,22 @@ function() {
 
         if (id) {
           var othersInConversation = {};
-          var recipientCount = 0;
-          for(msg in visibleComments) {
-            var recipients = visibleComments[msg]["recipients"];
-            var initiatorId = visibleComments[msg].user.externalId;
-            if (initiatorId != user.keepit_external_id) {
-              var initiatorName = visibleComments[msg].user.firstName + " " + visibleComments[msg].user.lastName;
-              othersInConversation[visibleComments[msg].user.externalId] = initiatorName;
-            }
-            for(r in recipients) {
-              var name = recipients[r].firstName + " " + recipients[r].lastName;
-              var recipientId = recipients[r].externalId;
-              if (recipientId != user.keepit_external_id) {
-                othersInConversation[recipientId] = name;
+          visibleComments.forEach(function(c) {
+            c.recipients.concat([c.user]).forEach(function(u) {
+              if (u.externalId != session.userId) {
+                othersInConversation[u.externalId] = u.firstName + " " + u.lastName;
               }
-            }
-          }
-          var othersInConversationText = "";
-          for (id in othersInConversation) {
-            recipientCount++;
-            if (othersInConversationText.length > 1) {
-              othersInConversationText += ", ";
-            }
-            othersInConversationText += "<strong>" + othersInConversation[id] + "</strong>";
-          }
-          params.othersInConversationText = othersInConversationText;
+            });
+          });
+          var othersIds = Object.keys(othersInConversation);
+          params.othersInConversationText = othersIds.map(function(id) {
+            return "<strong>" + othersInConversation[id] + "</strong>";
+          }).join(", ");
           params.recipientText = visibleComments[0].recipientText;
           params.storedRecipients = visibleComments[0].storedRecipients;
           params.externalId = visibleComments[0].externalId;
-          params.recipientCount = recipientCount;
-          params.recipientCountText = recipientCount == "1" ? "person" : "people";
+          params.recipientCount = othersIds.length;
+          params.recipientCountText = othersIds.length == 1 ? "person" : "people";
           params.hideComposeTo = true;
         }
       }
@@ -647,22 +630,22 @@ function() {
         });
       } else {
         renderTemplate("html/comments/comments_view.html", params, partials, function(renderedTemplate) {
-          drawCommentView(renderedTemplate, user, type);
+          drawCommentView(renderedTemplate, session, type);
           onComplete();
         });
       }
   }
 
-  function drawCommentView(renderedTemplate, user, type) {
+  function drawCommentView(renderedTemplate, session, type) {
     //log(renderedTemplate);
     repositionScroll(false);
     $('.kifi_comment_wrapper').html(renderedTemplate).find("time").timeago();
     repositionScroll(false);
 
-    createCommentBindings(type, user);
+    createCommentBindings(type, session);
   }
 
-  function createCommentBindings(type, user) {
+  function createCommentBindings(type, session) {
     $(".control-bar").on("click", ".follow", function() {
       following = !following;  // TODO: server should return whether following along with the comments
       chrome.extension.sendMessage({type: "follow", follow: following});
@@ -746,9 +729,9 @@ function() {
     $('.comment_body_view').on("hover", ".more-recipients", function(event) {
       //$(this).parent().find('.more-recipient-list')[event.type == 'mouseenter' ? "show" : "hide"]();
     }).on('click', '.thread-info', function() {
-      showComments(user, type, $(this).parent().data("externalid"));
+      showComments(session, type, $(this).parent().data("externalid"));
     }).on('click', '.back-button', function() {
-      showComments(user, type, null, true);
+      showComments(session, type, null, true);
     });
 
     $('.comment_post_view').on("mousedown", ".post_to_network .kn_social", function() {
@@ -872,7 +855,7 @@ function() {
       if (!text) return false;
       logEvent("slider", "comment");
 
-      submitComment(text, type, user, null, null, function(newComment) {
+      submitComment(text, type, session, null, null, function(newComment) {
         $('.comment-compose').text("").html(placeholder).blur();
 
         log("new comment", newComment);
@@ -889,7 +872,7 @@ function() {
         badGlobalState["updates"].countSum++;
 
         renderTemplate("html/comments/comment.html", params, function(renderedComment) {
-          //drawCommentView(renderedTemplate, user, type);
+          //drawCommentView(renderedTemplate, session, type);
           $('.comment_body_view').find('.no-comment').parent().detach();
           $('.comment_body_view').append(renderedComment).find("time").timeago();
           updateCommentCount(type);
@@ -930,7 +913,7 @@ function() {
         log(parent)
       }
 
-      submitComment(text, type, user, parent, recipients, function(newComment) {
+      submitComment(text, type, session, parent, recipients, function(newComment) {
         $('.comment-compose').text("").html(placeholder).blur();
 
         log("new message", newComment);
@@ -939,7 +922,7 @@ function() {
         if(!isReply) {
           updateCommentCount(type,parseInt($('.messages-count').text()) + 1)
           log("not a reply. redirecting to new message");
-          showComments(user, type, newComment.message.externalId);
+          showComments(session, type, newComment.message.externalId);
           return;
         }
 
@@ -950,7 +933,7 @@ function() {
         params["formatIsoDate"] = isoDateFormatter;
 
         renderTemplate("html/comments/comment.html", params, function(renderedComment) {
-          //drawCommentView(renderedTemplate, user, type);
+          //drawCommentView(renderedTemplate, session, type);
           $('.comment_body_view').find('.no-comment').parent().detach();
           $('.thread-wrapper').append(renderedComment).find("time.timeago").timeago();
           repositionScroll(false);
@@ -961,14 +944,9 @@ function() {
     });
   }
 
-  function submitComment(text, type, user, parent, recipients, callback) {
-    /* Because we're using very simple templating now, re-rendering has to be done carefully.
-     */
-    var permissions = type;
-
-    log(parent);
-
-    var request = {
+  function submitComment(text, type, session, parent, recipients, callback) {
+    log("[submitComment] parent:", parent);
+    chrome.extension.sendMessage({
       "type": "post_comment",
       "url": document.location.href,
       "title": document.title,
@@ -976,28 +954,19 @@ function() {
       "permissions": type,
       "parent": parent,
       "recipients": recipients
-    };
-    chrome.extension.sendMessage(request, function(response) {
-      var newComment;
-      if(type == "message") {
-        log("fff",response)
-        newComment = response;
-      }
-      else {
-        newComment = {
+    }, function(response) {
+      // Because we're using very simple templating now, re-rendering has to be done carefully.
+      callback(type == "message" ? response : {
           "createdAt": new Date,
           "text": request.text,
           "user": {
-            "externalId": user.keepit_external_id,
-            "firstName": user.name,
+            "externalId": session.userId,
+            "firstName": session.name,
             "lastName": "",
-            "facebookId": user.facebook_id
+            "facebookId": session.facebookId
           },
           "permissions": type,
-          "externalId": response.commentId
-        }
-      }
-      callback(newComment);
+          "externalId": response.commentId});
     });
   }
 
@@ -1032,25 +1001,16 @@ function() {
     }
   }
 
-  function openDeepLink(user, locator) {
+  function openDeepLink(session, locator) {
     var loc = locator.split("/").filter(function(s) { return s != ""; });
-    if(loc.length == 0)
-      return;
-    switch(loc[0]) {
+    switch (loc[0]) {
       case "messages":
-        openMessageDeepLink(user, loc.slice(1));
+        showComments(session, "message", loc[1] || null, false);
         break;
       case "comments":
-        showComments(user, "public");
+        showComments(session, "public");
         break;
     }
-  }
-
-  function openMessageDeepLink(user, loc) {
-    if(loc[0])
-      showComments(user, "message", loc[0], false);
-    else
-      showComments(user, "message", null, false);
   }
 
   $(window).resize(function() {
@@ -1072,8 +1032,8 @@ function() {
     }
   };
   slider.openDeepLink = function(locator) {
-    showKeepItHover("deepLink", function(user) {
-      openDeepLink(user, locator);
+    showKeepItHover("deepLink", function(session) {
+      openDeepLink(session, locator);
     });
   };
   slider.loaded = true;
