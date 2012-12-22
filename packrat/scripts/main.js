@@ -378,22 +378,16 @@ function searchOnServer(request, sendResponse, tab) {
     return;
   }
 
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
-      log("[searchOnServer] resp:", xhr.response);
-      sendResponse({"session": session, "searchResults": JSON.parse(xhr.response), "userConfig": config});
-    }
-  }
-  xhr.open("GET",
-   'http://' + config.server + '/search' +
-      '?term=' + encodeURIComponent(request.query) +
-      '&maxHits=' + config.max_res * 2 +
-      '&lastUUI=' + (request.lastUUID || "") +
-      '&context=' + encodeURIComponent(request.context || "") +
-      '&kifiVersion=' + chrome.app.getDetails().version,
-    true);
-  xhr.send();
+  ajax("GET", "http://" + config.server + "/search", {
+      term: request.query,
+      maxHits: config.max_res * 2,
+      lastUUI: request.lastUUID,
+      context: request.context,
+      kifiVersion: chrome.app.getDetails().version},
+    function(results) {
+      log("[searchOnServer] results:", results);
+      sendResponse({"session": session, "searchResults": results, "userConfig": config});
+    });
   return true;
 }
 
