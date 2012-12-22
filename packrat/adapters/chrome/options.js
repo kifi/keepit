@@ -1,14 +1,14 @@
 $(function() {
-  chrome.extension.sendMessage({type: "get_conf"}, function(config) {
-    console.log("config:", config);
-    var env = config.env;
+  chrome.extension.sendMessage({type: "get_conf"}, function(o) {
+    console.log("config:", o);
+    var env = o.config.env;
     $("[name=env][value=" + env + "]").attr("checked", true);
-    $("#max_search_results").val(config["max_res"]);
-    $("#hover_timeout").val(config["hover_timeout"]);
-    $("input[name=scores]").attr("checked", config["show_score"] == "true");
+    $("#max_search_results").val(o.config["max_res"]);
+    $("#hover_timeout").val(o.config["hover_timeout"]);
+    $("input[name=scores]").attr("checked", o.config["show_score"] == "true");
     $(document.body)
-    .prepend($("<p>", {id: "name", text: config.user.name}))
-    .prepend("<img src='" + config.user.avatar_url + "'>");
+    .prepend($("<p>", {id: "name", text: o.session.name}))
+    .prepend("<img src='" + o.session.avatarUrl + "'>");
   });
   $("#save").click(function() {
     localStorage.env = $("input[name=env][value=development]").is(":checked") ? "development" : "production";
