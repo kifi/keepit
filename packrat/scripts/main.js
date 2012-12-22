@@ -151,7 +151,7 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         });
         return;
       case "get_conf":
-        sendResponse(getConfigs());
+        sendResponse({config: getConfigs(), session: session});
         return;
       case "set_conf":
         setConfigs(request.key, request.value);
