@@ -131,7 +131,7 @@ function() {
       log("RESULTS FROM SERVER", results);
 
       inprogressSearchQuery = '';
-      if(!results.userConfig || !results.userInfo) {
+      if (!results.userConfig || !results.session) {
         log("No user info. Stopping search.")
         return;
       }
@@ -145,7 +145,7 @@ function() {
         "lastRemoteResults": results.searchResults,
         "results": results.searchResults.hits,
         "query": request.query,
-        "userInfo": results.userInfo,
+        "session": results.session,
         "currentlyShowing": 0,
         "show": results.userConfig.max_res,
         "mayShowMore": results.searchResults.mayHaveMore,
@@ -207,7 +207,6 @@ function() {
       return;
     }
     var searchResults = resultsStore.results;
-    var userInfo = resultsStore.userInfo;
     try {
       if (!searchResults || !searchResults.length) {
         log("No search results!");
@@ -344,7 +343,7 @@ function() {
   function addResults() {
     try {
       log("addResults parameters:", resultsStore);
-      var userInfo = resultsStore.userInfo;
+      var session = resultsStore.session;
       var searchResults = resultsStore.results.slice(0,resultsStore.show);
       resultsStore.currentlyShowing = resultsStore.show;
 
@@ -414,7 +413,7 @@ function() {
 
           var tb = Mustache.to_html(
               req.responseText,
-              {"results": results, "userInfo": userInfo, "adminMode": adminMode}
+              {"results": results, "session": session, "adminMode": adminMode}
           );
 
           // Binders
