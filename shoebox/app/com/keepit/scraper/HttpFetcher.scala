@@ -15,6 +15,7 @@ import org.apache.http.params.HttpParams
 import org.apache.http.params.BasicHttpParams
 import org.apache.http.params.HttpConnectionParams
 import org.apache.http.params.HttpProtocolParams
+import org.apache.http.protocol.BasicHttpContext
 import org.apache.http.protocol.HttpContext
 import org.apache.http.util.EntityUtils
 import java.io.InputStream
@@ -32,11 +33,22 @@ class HttpFetcher extends Logging {
   HttpProtocolParams.setUserAgent(httpParams, userAgent)
   val httpclient = new DefaultHttpClient(cm, httpParams)
 
+  // track redirects
+  httpclient.addResponseInterceptor(new HttpResponseInterceptor() {
+    override def process(response: HttpResponse, context: HttpContext) {
+      if (response.containsHeader("Location")) {
+        val locations = response.getHeaders("Location")
+        if (locations.length > 0) context.setAttribute("scraper_destination_url", locations(0).getValue())
+      }
+    }
+  })
+
   def fetch(url: String)(f: HttpInputStream => Unit): HttpFetchStatus = {
     val httpget = new HttpGet(url)
     log.info("executing request " + httpget.getURI())
 
-    val response = httpclient.execute(httpget)
+    val context = new BasicHttpContext();
+    val response = httpclient.execute(httpget, context)
     log.info(response.getStatusLine);
 
     val entity = response.getEntity
@@ -56,10 +68,10 @@ class HttpFetcher extends Logging {
         statusCode match {
           case HttpStatus.SC_OK =>
             f(input)
-            HttpFetchStatus(statusCode, None)
+            HttpFetchStatus(statusCode, None, context)
           case _ =>
             log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
-            HttpFetchStatus(statusCode, Some(response.getStatusLine.toString))
+            HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), context)
         }
       } catch {
         case ex: IOException =>
@@ -83,7 +95,7 @@ class HttpFetcher extends Logging {
       }
     } else {
       httpget.abort();
-      HttpFetchStatus(-1, Some("no entity found"))
+      HttpFetchStatus(-1, Some("no entity found"), context)
     }
   }
 
@@ -95,4 +107,6 @@ class HttpFetcher extends Logging {
   }
 }
 
-case class HttpFetchStatus(statusCode: Int, message: Option[String])
+case class HttpFetchStatus(statusCode: Int, message: Option[String], context: HttpContext) {
+  def destinationUrl = Option(context.getAttribute("scraper_destination_url").asInstanceOf[String])
+}
