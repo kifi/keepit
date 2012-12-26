@@ -74,7 +74,7 @@ function UserHistory() {
 // ===== Event logging
 
 var _eventLog = [];
-var eventFamilies = ["slider","search","extension","account","notification"].reduce(function(o, f) {o[f] = true; return o}, {});
+var eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1};
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
@@ -151,7 +151,7 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         });
         return;
       case "get_conf":
-        sendResponse(getConfigs());
+        sendResponse({config: getConfigs(), session: session});
         return;
       case "set_conf":
         setConfigs(request.key, request.value);
@@ -161,9 +161,6 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         setConfigs(request.key);
         sendResponse();
         return;
-      case "upload_all_bookmarks":
-        uploadAllBookmarks();
-        return;
       case "set_page_icon":
         setPageIcon(tab, request.is_kept);
         return;
@@ -172,7 +169,7 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         return true;
       case "get_slider_info":
         ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
-          o.user = getConfigs().user;
+          o.session = session;
           sendResponse(o);
         });
         return true;
@@ -295,15 +292,6 @@ function getBookmarkFolderInfo(keepItBookmarkId, callback) {
   }
 }
 
-function uploadAllBookmarks() {
-  log("going to upload all my bookmarks to server");
-  if (!getUser()) {
-    log("Can't upload bookmarks, no user info!");
-    return;
-  }
-  // TODO: actually upload all bookmarks
-}
-
 function addKeep(bmInfo, req, sendResponse, tab) {
   log("[addKeep] private: " + !!req.private + ", title: " + req.title, tab);
   var bookmark = {parentId: bmInfo[req.private ? "privateId" : "publicId"], title: req.title, url: req.url};
@@ -319,12 +307,10 @@ function addKeep(bmInfo, req, sendResponse, tab) {
 }
 
 function removeKeep(bmInfo, req, sendResponse, tab) {
-  log("removing bookmark:", req.url, tab);
+  log("[removeKeep] url:", req.url, tab);
 
-  var userConfig = getConfigs();
-  var userInfo = userConfig.user;
-  if (!userInfo) {
-    log("No user info! Can't remove keep!");
+  if (!session) {
+    log("[removeKeep] no session");
     return;
   }
 
@@ -336,7 +322,7 @@ function removeKeep(bmInfo, req, sendResponse, tab) {
     });
   });
 
-  ajax("POST", "http://" + userConfig.server + "/bookmarks/remove", {url: req.url}, function(o) {
+  ajax("POST", "http://" + getConfigs().server + "/bookmarks/remove", {url: req.url}, function(o) {
     log("[removeKeep] response:", o);
     sendResponse(o);
   });
@@ -377,38 +363,31 @@ function postComment(request, sendResponse) {
 }
 
 function searchOnServer(request, sendResponse, tab) {
-  var userConfigs = getConfigs();
+  var config = getConfigs();
 
-  logEvent("search","newSearch");
+  logEvent("search", "newSearch");
 
-  if (!getUser()) {
-    log("No facebook, can't search!");
-    sendResponse({"userInfo": null, "searchResults": [], "userConfig": userConfigs});
+  if (!session) {
+    log("[searchOnServer] no session");
+    sendResponse({"session": null, "searchResults": [], "userConfig": config});
     return;
   }
 
   if (request.query === '') {
-    sendResponse({"userInfo": userConfigs.user, "searchResults": [], "userConfig": userConfigs});
+    sendResponse({"session": session, "searchResults": [], "userConfig": config});
     return;
   }
 
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
-      log("[searchOnServer] xhr response:", tab);
-      log(xhr.response, tab);
-      sendResponse({"userInfo": userConfigs.user, "searchResults": JSON.parse(xhr.response), "userConfig": userConfigs});
-    }
-  }
-  xhr.open("GET",
-   'http://' + userConfigs.server + '/search' +
-      '?term=' + encodeURIComponent(request.query) +
-      '&maxHits=' + userConfigs.max_res * 2 +
-      '&lastUUI=' + (request.lastUUID || "") +
-      '&context=' + encodeURIComponent(request.context || "") +
-      '&kifiVersion=' + chrome.app.getDetails().version,
-    true);
-  xhr.send();
+  ajax("GET", "http://" + config.server + "/search", {
+      term: request.query,
+      maxHits: config.max_res * 2,
+      lastUUI: request.lastUUID,
+      context: request.context,
+      kifiVersion: chrome.app.getDetails().version},
+    function(results) {
+      log("[searchOnServer] results:", results);
+      sendResponse({"session": session, "searchResults": results, "userConfig": config});
+    });
   return true;
 }
 
@@ -457,13 +436,12 @@ chrome.pageAction.onClicked.addListener(function(tab) {
 
 function checkWhetherKept(url, callback) {
   log("[checkWhetherKept] url:", url);
-  var userConfig = getConfigs();
-  if (!userConfig || !userConfig.user || !userConfig.user.keepit_external_id) {
-    log("[checkWhetherKept] no user info!");
+  if (!session) {
+    log("[checkWhetherKept] no session");
     return;
   }
 
-  ajax("GET", "http://" + userConfig.server + "/bookmarks/check", {uri: url}, function done(o) {
+  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: url}, function done(o) {
     callback(o.user_has_bookmark);
   }, function fail(xhr) {
     log("[checkWhetherKept] error:", xhr.responseText);
@@ -570,8 +548,7 @@ function getConfigs() {
       "bookmark_id": localStorage[getFullyQualifiedKey("bookmark_id")],
       "hover_timeout": parseNonNegIntOr(localStorage[getFullyQualifiedKey("hover_timeout")], 10),
       "show_score": parseBoolOr(localStorage[getFullyQualifiedKey("show_score")], false),
-      "max_res": parseNonNegIntOr(localStorage[getFullyQualifiedKey("max_res")], 5),
-      "user": parseJsonObjOr(localStorage[getFullyQualifiedKey("user")])};
+      "max_res": parseNonNegIntOr(localStorage[getFullyQualifiedKey("max_res")], 5)};
     //log("loaded config:");
     //log(config);
     return config;
@@ -589,25 +566,10 @@ function parseBoolOr(val, defaultValue) {
   return val === "yes" || val === true || val === "true" || defaultValue;
 }
 
-function parseJsonObjOr(val, defaultValue) {
-  if (/^{/.test(val)) {
-    try {
-      return JSON.parse(val);
-    } catch (e) {
-    }
-  }
-  return defaultValue;
-}
-
-function getUser() {
-  var user = parseJsonObjOr(localStorage[getFullyQualifiedKey("user")]);
-  // Return undefined if it is not a complete user.
-  return user && user.keepit_external_id && user.facebook_id && user.name && user.avatar_url && user;
-}
-
 chrome.runtime.onInstalled.addListener(function(details) {
   log("[onInstalled]", details);
   logEvent("extension", details.reason);
+  removeFromConfigs("user"); // remove this line in early Feb or so
   authenticate(function() {
     log("[onInstalled] authenticated");
     if (details.reason == "install" || getConfigs().env == "development") {
@@ -623,9 +585,10 @@ chrome.runtime.onStartup.addListener(function() {
   });
 });
 
+var session;
 function authenticate(callback) {
   logEvent("extension", "started");
-  if (getConfigs().env == "development" || !getUser()) {
+  if (getConfigs().env == "development") {
     openFacebookConnect();
   } else {
     startSession(openFacebookConnect);
@@ -644,11 +607,7 @@ function authenticate(callback) {
       log("[startSession] done:", data);
       logEvent("extension", "authenticated");
 
-      setConfigs("user", JSON.stringify({
-        facebook_id: data.facebookId,
-        keepit_external_id: data.userId,
-        avatar_url: data.avatarUrl,
-        name: data.name}));
+      session = data;
       setConfigs("kifi_installation_id", data.installationId);
 
       // Locate or create KeepIt bookmark folder.
@@ -665,7 +624,6 @@ function authenticate(callback) {
 
   function openFacebookConnect() {
     log("[openFacebookConnect]");
-    removeFromConfigs("user");
     var popupTabId;
     chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
       if (changeInfo.status == "loading" && tabId == popupTabId && tab.url == "http://" + getConfigs().server + "/#_=_") {
