@@ -96,7 +96,7 @@ extends Logging {
     (myHits, friendsHits, othersHits)
   }
 
-  def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]]): ArticleSearchResult = {
+  def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter(None)): ArticleSearchResult = {
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
     val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5)
@@ -121,14 +121,17 @@ extends Logging {
     }.foreach{ h =>
       val id = Id[NormalizedURI](h.id)
       val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet - userId
-
-      h.users = sharingUsers
-      h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(sharingUsers.size + 1), recencyScore(myUriEdges.getCreatedAt(id)))
-      h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
-      hits.insert(h)
+      val sharingSize = sharingUsers.size
+      val ok = (sharingSize > 0 && filter.shared) || (sharingSize == 0 && filter.mine)
+      if (ok) {
+        h.users = sharingUsers
+        h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(sharingSize + 1), recencyScore(myUriEdges.getCreatedAt(id)))
+        h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
+        hits.insert(h)
+      }
     }
 
-    if (friendsHits.size > 0) {
+    if (friendsHits.size > 0 && filter.friends) {
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
       friendsHits.toSortedList.iterator.zipWithIndex.map{ case (h, rank) =>
@@ -148,7 +151,7 @@ extends Logging {
       queue.foreach{ h => hits.insert(h) }
     }
 
-    if (hits.size < numHitsToReturn && othersHits.size > 0) {
+    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.others) {
       val queue = createQueue(numHitsToReturn - hits.size)
       othersHits.toSortedList.iterator.zipWithIndex.map{ case (h, rank) =>
         if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayOthers) // dumping the scores by rank
