@@ -22,7 +22,12 @@ case class ScrapeInfo(
   signature: String = ""
 ) {
 
-  def withState(state: State[ScrapeInfo]) = copy(state = state)
+  def withState(state: State[ScrapeInfo]) = {
+    state match {
+      case ScrapeInfo.States.ACTIVE => copy(state = state, nextScrape = currentDateTime) // scrape ASAP when switched to ACTIVE
+      case ScrapeInfo.States.INACTIVE => copy(state = state, nextScrape = ScrapeInfo.NEVER) // never scrape when switched to INACTIVE
+    }
+  }
 
   def withFailure()(implicit config: ScraperConfig) = {
     val backoff = min(config.maxBackoff, (config.initialBackoff * (1 << failures).toDouble))
@@ -90,6 +95,8 @@ object ScrapeInfo {
     val ACTIVE = State[ScrapeInfo]("active")
     val INACTIVE = State[ScrapeInfo]("inactive")
   }
+
+  val NEVER = parseStandardTime("9999-01-01 00:00:00.000 -0800")
 }
 
 private[model] class ScrapeInfoEntity extends Entity[ScrapeInfo, ScrapeInfoEntity] {

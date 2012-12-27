@@ -127,9 +127,25 @@ class ScraperTest extends SpecificationWithJUnit {
           info2 = scrapeAndUpdateScrapeInfo(info2, getMockScraper(store))
           info2.nextScrape.getMillis - currentDateTime.getMillis
         }
-        println(backoff)
         val maxBackoffMillis = config.maxBackoff * 60*60*1000
         (backoff > maxBackoffMillis * 9/10 && backoff < maxBackoffMillis * 11/10) === true
+      }
+    }
+
+    "update scrape schedule upon state change" in {
+      running(new EmptyApplication()) {
+        var info = CX.withConnection { implicit c =>
+          val uri = NormalizedURI(title = "existing", url = "http://www.keepit.com/existing").save
+          ScrapeInfo.ofUri(uri).save
+        }
+        CX.withConnection { implicit c =>
+          info = info.withState(ScrapeInfo.States.INACTIVE).save
+          info.nextScrape === ScrapeInfo.NEVER
+        }
+        CX.withConnection { implicit c =>
+          info = info.withState(ScrapeInfo.States.ACTIVE).save
+          (info.nextScrape.getMillis <= currentDateTime.getMillis) === true
+        }
       }
     }
   }
