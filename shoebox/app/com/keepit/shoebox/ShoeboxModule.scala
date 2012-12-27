@@ -25,6 +25,7 @@ import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.store.S3Bucket
 import com.keepit.inject.AppScoped
 import com.keepit.inject.FortyTwoModule
+import com.keepit.scraper.ScraperConfig
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.scraper.ScraperPluginImpl
 import com.keepit.search.graph.URIGraph
@@ -152,4 +153,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     new HealthcheckPluginImpl(system, host, postOffice, services)
   }
 
+  @Singleton
+  @Provides
+  def scraperConfig: ScraperConfig = ScraperConfig()
 }

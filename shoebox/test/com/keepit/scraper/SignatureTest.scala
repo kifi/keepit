@@ -57,5 +57,9 @@ class SignatureTest extends SpecificationWithJUnit {
       (sim12 < sim11) === true
       (sim12 < sim13) === true
     }
+
+    "handle the empty base64" in {
+      (Signature("") similarTo Signature(new Array[Byte](100))) === 0.0d
+    }
   }
 }

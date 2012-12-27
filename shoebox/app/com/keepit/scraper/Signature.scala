@@ -18,7 +18,15 @@ object Signature {
 }
 
 class Signature(val bytes: Array[Byte]) {
-  def similarTo(other: Signature): Double = bytes.zip(other.bytes).filter{ pair => pair._1 == pair._2 }.size.toDouble / 100.0d
+
+  def similarTo(other: Signature): Double = {
+    if (bytes.length == other.bytes.length) {
+      bytes.zip(other.bytes).filter{ pair => pair._1 == pair._2 }.size.toDouble / 100.0d
+    } else {
+      0.0d
+    }
+  }
+
   def toBase64() = printBase64Binary(bytes)
 
   override def equals(other: Any) = {
