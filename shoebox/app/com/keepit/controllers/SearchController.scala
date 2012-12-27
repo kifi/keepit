@@ -39,12 +39,13 @@ case class PersonalSearchResultPacket(
 
 object SearchController extends FortyTwoController {
 
-  def search(escapedTerm: String, maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
+  def search(escapedTerm: String, maxHits: Int, lastUUIDStr: Option[String], filter: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
     val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
     val lastUUID = lastUUIDStr.flatMap{
         case "" => None
         case str => Some(ExternalId[ArticleSearchResultRef](str))
     }
+    val searchFilter = SearchFilter(filter)
 
     val userId = request.userId
     log.info("searching with %s using userId id %s".format(term, userId))
@@ -58,7 +59,7 @@ object SearchController extends FortyTwoController {
     val articleIndexer = inject[ArticleIndexer]
     val uriGraph = inject[URIGraph]
     val searcher = new MainSearcher(userId, friendIds, filterOut, articleIndexer, uriGraph, config)
-    val searchRes = searcher.search(term, maxHits, lastUUID)
+    val searchRes = searcher.search(term, maxHits, lastUUID, searchFilter)
     val realResults = toPersonalSearchResultPacket(userId, searchRes)
 
     val res = if (kifiVersion.getOrElse(KifiVersion(0,0,0)) >= KifiVersion(2,0,8)) {

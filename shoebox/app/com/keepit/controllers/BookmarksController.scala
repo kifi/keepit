@@ -209,11 +209,14 @@ object BookmarksController extends FortyTwoController {
 
     if (!url.toLowerCase.startsWith("javascript:")) {
       log.debug("interning bookmark %s with title [%s]".format(json, title))
-      CX.withConnection { implicit conn =>
-        val uri = NormalizedURI.getByNormalizedUrl(url) match {
-          case Some(uri) => uri
-          case None => createNewURI(title, url)
+      val (uri, isNewURI) = CX.withConnection { implicit conn =>
+        NormalizedURI.getByNormalizedUrl(url) match {
+          case Some(uri) => (uri, false)
+          case None => (createNewURI(title, url), true)
         }
+      }
+      if (isNewURI) inject[ScraperPlugin].asyncScrape(uri)
+      CX.withConnection { implicit conn =>
         Bookmark.load(uri, user.id.get) match {
           case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
           case Some(bookmark) => Some(bookmark.withActive(true).withPrivate(isPrivate).save)
@@ -229,7 +232,7 @@ object BookmarksController extends FortyTwoController {
 
   private def createNewURI(title: String, url: String)(implicit conn: Connection) = {
     val uri = NormalizedURI(title = title, url = url).save
-    inject[ScraperPlugin].asyncScrape(uri)
+    ScrapeInfo.ofUri(uri).save
     uri
   }
 
