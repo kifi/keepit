@@ -15,6 +15,7 @@ import org.apache.http.params.HttpParams
 import org.apache.http.params.BasicHttpParams
 import org.apache.http.params.HttpConnectionParams
 import org.apache.http.params.HttpProtocolParams
+import org.apache.http.protocol.BasicHttpContext
 import org.apache.http.protocol.HttpContext
 import org.apache.http.util.EntityUtils
 import java.io.InputStream
@@ -30,20 +31,30 @@ class HttpFetcher extends Logging {
   HttpConnectionParams.setConnectionTimeout(httpParams, 30000);
   HttpConnectionParams.setSoTimeout(httpParams, 30000);
   HttpProtocolParams.setUserAgent(httpParams, userAgent)
-  val httpclient = new DefaultHttpClient(cm, httpParams)
+  val httpClient = new DefaultHttpClient(cm, httpParams)
+
+  // track redirects
+  httpClient.addResponseInterceptor(new HttpResponseInterceptor() {
+    override def process(response: HttpResponse, context: HttpContext) {
+      if (response.containsHeader("Location")) {
+        val locations = response.getHeaders("Location")
+        if (locations.length > 0) context.setAttribute("scraper_destination_url", locations(0).getValue())
+      }
+    }
+  })
 
   def fetch(url: String)(f: HttpInputStream => Unit): HttpFetchStatus = {
     val httpget = new HttpGet(url)
     log.info("executing request " + httpget.getURI())
 
-    val response = httpclient.execute(httpget)
+    val httpContext = new BasicHttpContext();
+    val response = httpClient.execute(httpget, httpContext)
     log.info(response.getStatusLine);
 
     val entity = response.getEntity
 
     // If the response does not enclose an entity, there is no need to bother about connection release
     if (entity != null) {
-
 
       val input = new HttpInputStream(entity.getContent)
 
@@ -56,10 +67,10 @@ class HttpFetcher extends Logging {
         statusCode match {
           case HttpStatus.SC_OK =>
             f(input)
-            HttpFetchStatus(statusCode, None)
+            HttpFetchStatus(statusCode, None, httpContext)
           case _ =>
             log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
-            HttpFetchStatus(statusCode, Some(response.getStatusLine.toString))
+            HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), httpContext)
         }
       } catch {
         case ex: IOException =>
@@ -83,7 +94,7 @@ class HttpFetcher extends Logging {
       }
     } else {
       httpget.abort();
-      HttpFetchStatus(-1, Some("no entity found"))
+      HttpFetchStatus(-1, Some("no entity found"), httpContext)
     }
   }
 
@@ -91,8 +102,10 @@ class HttpFetcher extends Logging {
     // When HttpClient instance is no longer needed,
     // shut down the connection manager to ensure
     // immediate deallocation of all system resources
-    httpclient.getConnectionManager().shutdown();
+    httpClient.getConnectionManager().shutdown();
   }
 }
 
-case class HttpFetchStatus(statusCode: Int, message: Option[String])
+case class HttpFetchStatus(statusCode: Int, message: Option[String], context: HttpContext) {
+  def destinationUrl = Option(context.getAttribute("scraper_destination_url").asInstanceOf[String])
+}
