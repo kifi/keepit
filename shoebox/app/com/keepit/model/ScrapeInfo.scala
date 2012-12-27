@@ -68,8 +68,10 @@ object ScrapeInfo {
   def ofUri(uri: NormalizedURI)(implicit conn: Connection) = ofUriId(uri.id.get)
 
   def ofUriId(uriId: Id[NormalizedURI])(implicit conn: Connection) = {
-    val list = (ScrapeInfoEntity AS "s").map{ s => SELECT (s.*) FROM s WHERE (s.uriId EQ uriId) }.list.map( _.view )
-    if (list.isEmpty) ScrapeInfo(uriId = uriId).save else list.head
+    (ScrapeInfoEntity AS "s").map{ s => SELECT (s.*) FROM s WHERE (s.uriId EQ uriId) LIMIT 1 }.unique.map( _.view ) match {
+      case Some(info) => info
+      case None => ScrapeInfo(uriId = uriId).save
+    }
   }
 
   def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit conn: Connection): Seq[ScrapeInfo] = {
