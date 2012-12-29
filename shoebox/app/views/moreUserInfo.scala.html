@@ -3,7 +3,8 @@
   socialUserInfos: Seq[SocialUserInfo], 
   follows: Seq[NormalizedURI], 
   comments: Seq[(NormalizedURI, Comment)], 
-  messages: Seq[(NormalizedURI, Comment, Seq[UserWithSocial])])
+  messages: Seq[(NormalizedURI, Comment, Seq[UserWithSocial])],
+  electronicMails: Seq[com.keepit.common.mail.ElectronicMail])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
@@ -93,5 +94,28 @@
        <td colspan="3">@message.text</td>
      </tr>
    }
+   </table>
+   
+   <h2>User has sent @electronicMails.size emails</h2>
+   <table class="table table-bordered">
+    <tr>
+      <th>#</th>
+      <th>From</th>
+      <th>To</th>
+      <th>Subject</th>
+      <th>Creation</th>
+    </tr>
+  @for((electronicMail, i) <- electronicMails.zipWithIndex) {
+    <tr>
+      <td rowspan="2">@{i+1}</td>
+      <td>@electronicMail.fromName</td>
+      <td>@electronicMail.to.address</td>
+      <td>@electronicMail.subject</td>
+      <td>@adminHelper.dateDisplay(electronicMail.createdAt) @adminHelper.timeDisplay(electronicMail.createdAt)</td>
+    </tr>
+    <tr>
+      <td colspan="4">@electronicMail.htmlBody</td>
+    </tr>
+  }
   </table>
 }
