@@ -44,7 +44,6 @@ class CommentControllerTest extends SpecificationWithJUnit {
         val mails = inject[FakeOutbox]
         mails.size === 1
         val mail = mails.head
-        println("***\n"+mail)
         mail.userId.get === comment.userId
         mail.subject === "Andrew Conner sent you a message using KiFi"
         mail.htmlBody must contain("""Public Comment [look here] on Google1""")
