@@ -128,6 +128,14 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
   log("[onMessage] handling:", request, "for", tab && tab.id);
   try {
     switch (request && request.type) {
+      case "log_in":
+        authenticate(function() {
+          sendResponse(session);
+        });
+        return true;
+      case "log_out":
+        deauthenticate(sendResponse);
+        return true;
       case "get_keeps":
         return searchOnServer(request, sendResponse, tab);
       case "add_bookmarks":
@@ -569,6 +577,7 @@ function parseBoolOr(val, defaultValue) {
 chrome.runtime.onInstalled.addListener(function(details) {
   log("[onInstalled]", details);
   logEvent("extension", details.reason);
+  logEvent("extension", "started");
   removeFromConfigs("user"); // remove this line in early Feb or so
   authenticate(function() {
     log("[onInstalled] authenticated");
@@ -580,14 +589,17 @@ chrome.runtime.onInstalled.addListener(function(details) {
 
 chrome.runtime.onStartup.addListener(function() {
   log("[onStartup]");
+  logEvent("extension", "started");
   authenticate(function() {
     log("[onStartup] authenticated");
   });
 });
 
+// ===== Session management
+
 var session;
+
 function authenticate(callback) {
-  logEvent("extension", "started");
   if (getConfigs().env == "development") {
     openFacebookConnect();
   } else {
@@ -639,4 +651,19 @@ function authenticate(callback) {
       popupTabId = win.tabs[0].id
     });
   }
+}
+
+function deauthenticate(callback) {
+  log("[deauthenticate]");
+  session = null;
+  var host = getConfigs().server;
+  ajax("GET", "http://" + host + "/logout", function done(o) {
+    log("[deauthenticate] logged out of securesocial:", o);
+    chrome.windows.create({type: "popup", url: "http://" + host + "/session/end", width: 200, height: 100}, function(win) {
+      log("[deauthenticate] created popup to log out of facebook:", win);
+      callback();
+    });
+  }, function fail(xhr) {
+    log("[deauthenticate] fail:", xhr.responseText);
+  });
 }

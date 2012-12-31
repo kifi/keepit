@@ -1,0 +1,25 @@
+<div id="msg">Logging out...</div>
+<div id="fb-root"></div>
+<script>
+function fbAsyncInit() {
+  FB.init({appId: '@play.api.Play.current.configuration.getString("securesocial.facebook.clientId").get', status: false});
+  FB.getLoginStatus(function(o) {
+    if (o.status == "connected") {
+      FB.logout(function(o) {
+        if (o.status == "unknown") {
+          show("Logged out.");
+          window.close();
+        } else {
+          show("Status: " + o.status);
+        }
+      });
+    } else {
+      show("Status: " + o.status);
+    }
+  });
+}
+function show(msg) {
+  document.querySelector("#msg").innerHTML = msg;
+}
+</script>
+<script src="//connect.facebook.net/en_US/all.js" id="facebook-jssdk" async></script>
