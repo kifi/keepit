@@ -106,6 +106,10 @@ object AuthController extends FortyTwoController {
     Redirect(com.keepit.controllers.routes.HomeController.home())
   }
 
+  def logOut = UserAwareAction { implicit request =>
+    Ok(views.html.logOut(request.user)).withNewSession
+  }
+
   def whois = AuthenticatedJsonAction { request =>
     val user = CX.withConnection { implicit c =>
       User.get(request.userId)

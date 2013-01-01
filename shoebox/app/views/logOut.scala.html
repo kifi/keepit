@@ -1,0 +1,30 @@
+@(user: Option[securesocial.core.SocialUser])
+
+<!doctype html>
+@if(user.isEmpty) {
+  <script>window.close()</script>
+} else {
+  <div id="msg">Logging out...</div>
+  <div id="fb-root"></div>
+  <script>
+  function fbAsyncInit() {
+    FB.Event.subscribe("auth.authResponseChange", onStatus);
+    FB.init({appId: '@play.api.Play.current.configuration.getString("securesocial.facebook.clientId").get'});
+    FB.getLoginStatus(onStatus);
+  }
+  function onStatus(o) {
+    if (o.status == "connected") {
+      FB.logout();
+    } else if (o.status == "unknown") {
+      show("Logged out.");
+      window.close();
+    } else {
+      show("Status: " + o.status);
+    }
+  }
+  function show(msg) {
+    document.getElementById("msg").innerHTML = msg;
+  }
+  </script>
+  <script src="//connect.facebook.net/en_US/all.js" id="facebook-jssdk" async></script>
+}
