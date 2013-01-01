@@ -656,14 +656,8 @@ function authenticate(callback) {
 function deauthenticate(callback) {
   log("[deauthenticate]");
   session = null;
-  var host = getConfigs().server;
-  ajax("GET", "http://" + host + "/logout", function done(o) {
-    log("[deauthenticate] logged out of securesocial:", o);
-    chrome.windows.create({type: "popup", url: "http://" + host + "/session/end", width: 200, height: 100}, function(win) {
-      log("[deauthenticate] created popup to log out of facebook:", win);
-      callback();
-    });
-  }, function fail(xhr) {
-    log("[deauthenticate] fail:", xhr.responseText);
+  chrome.windows.create({type: "popup", url: "http://" + getConfigs().server + "/session/end", width: 200, height: 100}, function(win) {
+    log("[deauthenticate] created popup:", win);
+    callback();
   });
 }
