@@ -38,7 +38,7 @@ class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destId
   def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = getDestDocIdSetIterator(searcher.idMapper)
 
   private def getDestDocIdSetIterator(mapper: IdMapper): DocIdSetIterator = {
-    val docids = destIdSet.flatMap{ id => mapper.getDocId(id.id) }.toArray
+    val docids = destIdSet.map{ id => mapper.getDocId(id.id) }.filter{ _ >= 0 }.toArray
     Sorting.quickSort(docids)
     new DocIdSetIterator {
       var curDoc = NO_MORE_DOCS
