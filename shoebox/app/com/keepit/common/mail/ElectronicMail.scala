@@ -19,7 +19,7 @@ case class ElectronicMail (
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[ElectronicMail] = ExternalId(),
-  userId: Option[Id[User]] = None,
+  senderUserId: Option[Id[User]] = None,
   from: SystemEmailAddress,
   fromName: Option[String] = None,
   to: EmailAddressHolder,
@@ -80,12 +80,17 @@ object ElectronicMail {
   def get(id: ExternalId[ElectronicMail])(implicit conn: Connection): ElectronicMail =
     ((ElectronicMailEntity AS "p") map { p => SELECT (p.*) FROM p WHERE (p.externalId EQ id ) unique }).getOrElse(throw NotFoundException(id)).view
 
-  def forUser(user: User)(implicit conn: Connection): Seq[ElectronicMail] =
+  def forSender(senderId: Id[User])(implicit conn: Connection): Seq[ElectronicMail] =
     (ElectronicMailEntity AS "p").map { p =>
-      SELECT (p.*) FROM p WHERE (p.userId EQ user.id.get) list
+      SELECT (p.*) FROM p WHERE (p.senderUserId EQ senderId) list
     }.map(_.view)
     
-  def page(page: Int = 0, size: Int = 20)(implicit conn: Connection): Seq[ElectronicMail] =
+  def forRecipient(mailAddresses: Seq[String])(implicit conn: Connection): Seq[ElectronicMail] =
+    (ElectronicMailEntity AS "p").map { p =>
+      SELECT (p.*) FROM p WHERE (p.to IN (mailAddresses)) list
+    }.map(_.view)
+
+    def page(page: Int = 0, size: Int = 20)(implicit conn: Connection): Seq[ElectronicMail] =
     (ElectronicMailEntity AS "p").map { p => SELECT (p.*) FROM p  LIMIT size OFFSET (page * size) ORDER_BY (p.id DESC) list }.map(_.view)
 
   def count(implicit conn: Connection): Long =
@@ -97,7 +102,7 @@ private[mail] class ElectronicMailEntity extends Entity[ElectronicMail, Electron
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val externalId = "external_id".EXTERNAL_ID[ElectronicMail].NOT_NULL(ExternalId())
-  val userId = "user_id".ID[User]
+  val senderUserId = "user_id".ID[User]
   val from = "from_addr".VARCHAR(256).NOT_NULL
   val fromName = "from_name".VARCHAR(256).NOT_NULL
   val to = "to_addr".VARCHAR(256).NOT_NULL
@@ -117,7 +122,7 @@ private[mail] class ElectronicMailEntity extends Entity[ElectronicMail, Electron
     createdAt = createdAt(),
     updatedAt = updatedAt(),
     externalId = externalId(),
-    userId = userId.value,
+    senderUserId = senderUserId.value,
     from = EmailAddresses(from()),
     fromName = fromName.value,
     to = new EmailAddressHolder(){val address = to()},
@@ -141,7 +146,7 @@ private object ElectronicMailEntity extends ElectronicMailEntity with EntityTabl
     entity.createdAt := view.createdAt
     entity.updatedAt := view.updatedAt
     entity.externalId := view.externalId
-    entity.userId.set(view.userId)
+    entity.senderUserId.set(view.senderUserId)
     entity.state := view.state
     entity.from := view.from.address
     entity.fromName.set(view.fromName)

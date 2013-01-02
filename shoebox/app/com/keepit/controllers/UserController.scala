@@ -119,7 +119,7 @@ object UserController extends FortyTwoController {
   }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, socialUserInfos, follows, comments, messages, electronicMails) = CX.withConnection { implicit conn =>
+    val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = CX.withConnection { implicit conn =>
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
       val follows = Follow.all(userId) map {f => NormalizedURI.get(f.uriId)}
@@ -129,13 +129,15 @@ object UserController extends FortyTwoController {
       val messages = Comment.all(Comment.Permissions.MESSAGE, userId) map {c =>
         (NormalizedURI.get(c.uriId), c, CommentRecipient.getByComment(c.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) })
       }
-      val electronicMails = ElectronicMail.forUser(User.get(userId));
-      (userWithSocial, socialUserInfos, follows, comments, messages, electronicMails)
+      val sentElectronicMails = ElectronicMail.forSender(userId);
+      val mailAddresses = UserWithSocial.toUserWithSocial(User.get(userId)).emails.map(_.address)
+      val receivedElectronicMails = ElectronicMail.forRecipient(mailAddresses);
+      (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails)
     }
     val rawInfos = socialUserInfos map {info =>
       inject[SocialUserRawInfoStore].get(info.id.get)
     }
-    Ok(views.html.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages, electronicMails))
+    Ok(views.html.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails))
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
