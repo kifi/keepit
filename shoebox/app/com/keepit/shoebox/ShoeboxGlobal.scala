@@ -16,6 +16,7 @@ import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.mail.MailSenderPlugin
 import com.keepit.common.healthcheck._
 import com.keepit.common.analytics.PersistEventPlugin
+import com.keepit.common.analytics.reports.ReportBuilderPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
 
@@ -33,6 +34,7 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
     inject[MailSenderPlugin].processOutbox()
     require(inject[HealthcheckPlugin].enabled)
     require(inject[PersistEventPlugin].enabled)
+    require(inject[ReportBuilderPlugin].enabled)
     log.info("shoebox started")
   }
 

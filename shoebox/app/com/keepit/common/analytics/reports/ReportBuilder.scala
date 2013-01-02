@@ -46,7 +46,7 @@ object Reports {
 
   case class ReportGroup(name: String, reports: Seq[Report])
 
-  val DailyReports = ReportGroup("DailyReport",
+  lazy val DailyReports = ReportGroup("DailyReport",
     Seq(DailyActiveUniqueUserReport,
       DailyPageLoadReport,
       DailySearchQueriesReport,
