@@ -18,16 +18,12 @@ case class SlickModule() extends ScalaModule {
   def configure(): Unit = {
   }
 
+  //todo(eishay): load from config
   @Provides
   @Singleton
   def database(): Database = Database.forURL("jdbc:h2:mem:shoebox;MODE=MYSQL;MVCC=TRUE", driver = "org.h2.Driver")
 
   @Provides
   @Singleton
-  def readOnlyConnection(database: Database): ReadOnlyConnection = ReadOnlyConnection(database)
-
-  @Provides
-  @Singleton
-  def readWriteConnection(database: Database): ReadWriteConnection = ReadWriteConnection(database)
-
+  def dbConnection(database: Database): DbConnection = DbConnection(database)
 }
