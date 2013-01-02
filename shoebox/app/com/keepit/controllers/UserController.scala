@@ -34,6 +34,8 @@ import views.html.defaultpages.unauthorized
 import org.joda.time.LocalDate
 import scala.collection.immutable.Map
 import play.api.libs.json.JsArray
+import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.mail._
 
 case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConnectionCount: Long, kifiInstallations: Seq[KifiInstallation])
 
@@ -117,7 +119,7 @@ object UserController extends FortyTwoController {
   }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, socialUserInfos, follows, comments, messages) = CX.withConnection { implicit conn =>
+    val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = CX.withConnection { implicit conn =>
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
       val follows = Follow.all(userId) map {f => NormalizedURI.get(f.uriId)}
@@ -127,12 +129,15 @@ object UserController extends FortyTwoController {
       val messages = Comment.all(Comment.Permissions.MESSAGE, userId) map {c =>
         (NormalizedURI.get(c.uriId), c, CommentRecipient.getByComment(c.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) })
       }
-      (userWithSocial, socialUserInfos, follows, comments, messages)
+      val sentElectronicMails = ElectronicMail.forSender(userId);
+      val mailAddresses = UserWithSocial.toUserWithSocial(User.get(userId)).emails.map(_.address)
+      val receivedElectronicMails = ElectronicMail.forRecipient(mailAddresses);
+      (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails)
     }
     val rawInfos = socialUserInfos map {info =>
       inject[SocialUserRawInfoStore].get(info.id.get)
     }
-    Ok(views.html.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages))
+    Ok(views.html.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails))
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
