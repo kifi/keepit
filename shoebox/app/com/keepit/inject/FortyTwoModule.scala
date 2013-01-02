@@ -1,5 +1,6 @@
 package com.keepit.inject
 
+import org.scalaquery.session.Database
 import com.tzavellas.sse.guice.ScalaModule
 import com.google.inject.{Provides, Inject, Singleton}
 import com.keepit.common.time._
@@ -11,6 +12,7 @@ import akka.actor.Scheduler
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.DbInfo
 import play.api.Play
+import play.api.db.DB
 
 case class FortyTwoModule() extends ScalaModule {
   def configure(): Unit = {
@@ -19,10 +21,7 @@ case class FortyTwoModule() extends ScalaModule {
     bind[AppScope].toInstance(appScope)
     install(new SlickModule(new DbInfo() {
       //later on we can customize it by the application name
-      def url = Play.current.configuration.getString("db.shoebox.url").get
-      def driver = Play.current.configuration.getString("db.shoebox.driver").get
-      override def user = Play.current.configuration.getString("db.shoebox.user").getOrElse(null)
-      override def password = Play.current.configuration.getString("db.shoebox.password").getOrElse(null)
+      lazy val database = Database.forDataSource(DB.getDataSource("shoebox")(Play.current))
     }))
   }
 

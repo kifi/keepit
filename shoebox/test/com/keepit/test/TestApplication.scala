@@ -28,6 +28,7 @@ import akka.actor.{Scheduler, Cancellable, ActorRef}
 import akka.util.Duration
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.DbInfo
+import org.scalaquery.session.Database
 
 class TestApplication(override val global: TestGlobal) extends play.api.test.FakeApplication() {
   def withFakeMail() = overrideWith(FakeMailModule())
@@ -51,8 +52,7 @@ case class TestModule() extends ScalaModule {
   def configure(): Unit = {
     bind[Babysitter].to[FakeBabysitter]
     install(new SlickModule(new DbInfo() {
-      val url = "jdbc:h2:mem:shoebox;MODE=MYSQL;MVCC=TRUE"
-      val driver = "org.h2.Driver"
+      lazy val database = Database.forURL("jdbc:h2:mem:shoebox;MODE=MYSQL;MVCC=TRUE", driver = "org.h2.Driver")
     }))
   }
 
