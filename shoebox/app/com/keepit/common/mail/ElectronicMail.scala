@@ -81,20 +81,21 @@ object ElectronicMail {
     ((ElectronicMailEntity AS "p") map { p => SELECT (p.*) FROM p WHERE (p.externalId EQ id ) unique }).getOrElse(throw NotFoundException(id)).view
 
   def forSender(senderId: Id[User])(implicit conn: Connection): Seq[ElectronicMail] =
-    (ElectronicMailEntity AS "p").map { p =>
-      SELECT (p.*) FROM p WHERE (p.senderUserId EQ senderId) list
+    (ElectronicMailEntity AS "p").map { p => SELECT (p.*) FROM p WHERE (p.senderUserId EQ senderId) list
     }.map(_.view)
     
   def forRecipient(mailAddresses: Seq[String])(implicit conn: Connection): Seq[ElectronicMail] =
-    (ElectronicMailEntity AS "p").map { p =>
-      SELECT (p.*) FROM p WHERE (p.to IN (mailAddresses)) list
+    (ElectronicMailEntity AS "p").map { p => SELECT (p.*) FROM p WHERE (p.to IN (mailAddresses)) list
     }.map(_.view)
 
-    def page(page: Int = 0, size: Int = 20)(implicit conn: Connection): Seq[ElectronicMail] =
+  def page(page: Int = 0, size: Int = 20)(implicit conn: Connection): Seq[ElectronicMail] =
     (ElectronicMailEntity AS "p").map { p => SELECT (p.*) FROM p  LIMIT size OFFSET (page * size) ORDER_BY (p.id DESC) list }.map(_.view)
 
-  def count(implicit conn: Connection): Long =
-    (ElectronicMailEntity AS "p").map(p => SELECT(COUNT(p.id)).FROM(p).unique).get
+  def page(page: Int = 0, size: Int = 20, filterRecipeintNot: EmailAddressHolder)(implicit conn: Connection): Seq[ElectronicMail] =
+    (ElectronicMailEntity AS "p").map { p => SELECT (p.*) FROM p WHERE (p.to NE filterRecipeintNot.address) LIMIT size OFFSET (page * size) ORDER_BY (p.id DESC) list }.map(_.view)
+
+  def count(filterRecipeintNot: EmailAddressHolder)(implicit conn: Connection): Long =
+    (ElectronicMailEntity AS "p").map(p => SELECT(COUNT(p.id)).FROM(p).WHERE (p.to NE filterRecipeintNot.address).unique).get
 
 }
 

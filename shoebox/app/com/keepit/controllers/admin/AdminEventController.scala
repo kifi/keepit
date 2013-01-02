@@ -52,6 +52,7 @@ object AdminEventController extends FortyTwoController {
     new DailySliderClosedByAuto,
     new DailySliderClosedByIcon,
     new DailySliderClosedByKey,
+    new DailySliderClosedByX,
     new DailyNewComment,
     new DailyNewMessage,
     new DailyNewUnkeep
