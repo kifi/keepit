@@ -8,12 +8,14 @@ import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import akka.actor.ActorSystem
 import akka.actor.Scheduler
+import com.keepit.common.db.SlickModule
 
 case class FortyTwoModule() extends ScalaModule {
   def configure(): Unit = {
     val appScope = new AppScope
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
+    install(new SlickModule())
   }
 
   @Provides
