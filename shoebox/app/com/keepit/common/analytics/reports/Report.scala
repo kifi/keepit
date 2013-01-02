@@ -43,9 +43,9 @@ case class CompleteReport(reportName: String, reportVersion: String, list: Seq[R
       case head :: Nil =>
         new Duration(head, currentDateTime)
       case head :: tail =>
-        new Duration(head, tail.lastOption.getOrElse(currentDateTime))
+        new Duration(head, tail.headOption.getOrElse(currentDateTime))
       case _ =>
-        new Duration(currentDateTime.minusDays(30),currentDateTime)
+        new Duration(currentDateTime.minusDays(1),currentDateTime)
     }
 
     val startDate = dates.headOption.getOrElse(currentDateTime.minusDays(30))
