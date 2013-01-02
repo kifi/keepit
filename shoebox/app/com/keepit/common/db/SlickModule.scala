@@ -14,20 +14,11 @@ import org.scalaquery.session.ResultSetConcurrency
 //import scala.slick.session.Session
 //import scala.slick.session.ResultSetConcurrency
 
-case class SlickModule() extends ScalaModule {
+case class SlickModule(dbInfo: DbInfo) extends ScalaModule {
   def configure(): Unit = {
   }
 
   @Provides
   @Singleton
-  def database(): Database = Database.forURL("jdbc:h2:mem:shoebox;MODE=MYSQL;MVCC=TRUE", driver = "org.h2.Driver")
-
-  @Provides
-  @Singleton
-  def readOnlyConnection(database: Database): ReadOnlyConnection = ReadOnlyConnection(database)
-
-  @Provides
-  @Singleton
-  def readWriteConnection(database: Database): ReadWriteConnection = ReadWriteConnection(database)
-
+  def dbConnection(): DbConnection = DbConnection(dbInfo)
 }
