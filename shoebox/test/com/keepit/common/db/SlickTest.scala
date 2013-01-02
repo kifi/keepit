@@ -3,7 +3,6 @@ package com.keepit.common.db
 import com.keepit.test._
 import com.keepit.TestAkkaSystem
 import com.keepit.inject._
-import com.keepit.common.db.Session._
 import org.scalaquery.ql._
 import org.scalaquery.ql.TypeMapper._
 import org.scalaquery.ql.extended.H2Driver.Implicit._
@@ -30,12 +29,12 @@ class SlickTest extends SpecificationWithJUnit {
           def * = name
         }
 
-        inject[ReadWriteConnection].run { implicit session =>
+        inject[DbConnection] readWrite { implicit session =>
           Test.ddl.create
           Test.insertAll(("test 1"), ("test 2"))
         }
 
-        inject[ReadOnlyConnection].run { implicit session =>
+        inject[DbConnection].readOnly { implicit session =>
           Query(Test.count).first === 2
         }
       }
