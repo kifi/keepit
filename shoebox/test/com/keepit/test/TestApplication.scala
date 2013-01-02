@@ -27,6 +27,7 @@ import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTime
 import akka.actor.{Scheduler, Cancellable, ActorRef}
 import akka.util.Duration
 import com.keepit.common.db.SlickModule
+import com.keepit.common.db.DbInfo
 
 class TestApplication(override val global: TestGlobal) extends play.api.test.FakeApplication() {
   def withFakeMail() = overrideWith(FakeMailModule())
@@ -49,7 +50,10 @@ class EmptyApplication() extends TestApplication(new TestGlobal(TestModule()))
 case class TestModule() extends ScalaModule {
   def configure(): Unit = {
     bind[Babysitter].to[FakeBabysitter]
-    install(new SlickModule())
+    install(new SlickModule(new DbInfo() {
+      val url = "jdbc:h2:mem:shoebox;MODE=MYSQL;MVCC=TRUE"
+      val driver = "org.h2.Driver"
+    }))
   }
 
   @Provides @Singleton
