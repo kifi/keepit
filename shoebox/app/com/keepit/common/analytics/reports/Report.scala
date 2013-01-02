@@ -39,14 +39,7 @@ case class CompleteReport(reportName: String, reportVersion: String, list: Seq[R
       (row.date, f)
     } toMap
 
-    val duration = dates match {
-      case head :: Nil =>
-        new Duration(head, currentDateTime)
-      case head :: tail =>
-        new Duration(head, tail.headOption.getOrElse(currentDateTime))
-      case _ =>
-        new Duration(currentDateTime.minusDays(1),currentDateTime)
-    }
+    val duration = new Duration(currentDateTime.minusDays(1),currentDateTime) // for now, all reports are 1 day durations
 
     val startDate = dates.headOption.getOrElse(currentDateTime.minusDays(30))
     val endDate = dates.lastOption.getOrElse(currentDateTime)

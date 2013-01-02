@@ -62,6 +62,7 @@ case class DevModule() extends ScalaModule with Logging {
     bind[SocialGraphRefresher].to[SocialGraphRefresherImpl].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped] // if Events need to be persisted in a dev environment, use PersistEventPluginImpl instead
+    bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
   }
 
   @Singleton
