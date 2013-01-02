@@ -32,16 +32,24 @@ case class CompleteReport(reportName: String, reportVersion: String, list: Seq[R
     } yield field._1).distinct.sorted
     val dates = list.map(_.date).sorted
 
-    val keyedList = list map { row =>
-      val f = columns map { column =>
+    val keyedList = list.map { row =>
+      val f = columns.map { column =>
         row.fields.getOrElse(column,"")
       }
       (row.date, f)
     } toMap
 
-    val duration = new Duration(dates.headOption.getOrElse(currentDateTime.minusDays(30)), dates.tail.headOption.getOrElse(currentDateTime))
-    val startDate = dates.head
-    val endDate = dates.last
+    val duration = dates match {
+      case head :: Nil =>
+        new Duration(head, currentDateTime)
+      case head :: tail =>
+        new Duration(head, tail.lastOption.getOrElse(currentDateTime))
+      case _ =>
+        new Duration(currentDateTime.minusDays(30),currentDateTime)
+    }
+
+    val startDate = dates.headOption.getOrElse(currentDateTime.minusDays(30))
+    val endDate = dates.lastOption.getOrElse(currentDateTime)
     var d = startDate
     var csvList = Seq[String]()
     while(!d.isAfter(endDate)) {
@@ -104,7 +112,7 @@ trait Report {
 trait BasicDailyAggregationReport extends Report {
   override val numFields = 2
 
-  def _get(query: DBObject, startDate: DateTime, endDate: DateTime): CompleteReport  = {
+  def get(query: DBObject, startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val results = store.mapReduce(EventFamilies.EXTENSION.collection, MongoMapFunc.DATE_COUNT, MongoReduceFunc.BASIC_COUNT, None, Some(query), None).toList
     val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
     builder(results map(Parsers.dateCountParser(reportName + "Count",_)) toMap)
@@ -137,7 +145,7 @@ class DailyPageLoadReport extends BasicDailyAggregationReport with Logging {
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val selector = MongoSelector(EventFamilies.EXTENSION).withDateRange(startDate, endDate).withEventName("pageLoad").build
-    _get(selector, startDate, endDate)
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -146,7 +154,7 @@ class DailySearchQueriesReport extends BasicDailyAggregationReport with Logging 
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("newSearch").build
-    _get(selector, startDate, endDate)
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -155,7 +163,7 @@ class DailyGoogleResultClicked extends BasicDailyAggregationReport with Logging 
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("googleResultClicked").build
-    _get(selector, startDate, endDate)
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -164,7 +172,7 @@ class DailyGoogleResultClickedOverKifi extends BasicDailyAggregationReport with 
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("googleResultClickedOverKifi").build
-    _get(selector, startDate, endDate)
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -173,7 +181,7 @@ class DailyKifiResultClicked extends BasicDailyAggregationReport with Logging {
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("kifiResultClicked").build
-    _get(selector, startDate, endDate)
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -181,8 +189,8 @@ class DailySliderShownByAuto extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailySliderShownByAuto"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("sliderShown").withMetaData("trigger","auto").build
-    _get(selector, startDate, endDate)
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderShown").withMetaData("trigger","auto").build
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -190,8 +198,8 @@ class DailySliderShownByIcon extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailySliderShownByIcon"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("sliderShown").withMetaData("trigger","icon").build
-    _get(selector, startDate, endDate)
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderShown").withMetaData("trigger","icon").build
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -199,8 +207,8 @@ class DailySliderShownByKey extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailySliderShownByKey"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("sliderShown").withMetaData("trigger","key").build
-    _get(selector, startDate, endDate)
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderShown").withMetaData("trigger","key").build
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -208,8 +216,8 @@ class DailySliderClosedByAuto extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailySliderClosedByAuto"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger","auto").build
-    _get(selector, startDate, endDate)
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger","auto").build
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -217,8 +225,8 @@ class DailySliderClosedByIcon extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailySliderClosedByIcon"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger","icon").build
-    _get(selector, startDate, endDate)
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger","icon").build
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -226,8 +234,16 @@ class DailySliderClosedByKey extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailySliderClosedByKey"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger","key").build
-    _get(selector, startDate, endDate)
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger","key").build
+    super.get(selector, startDate, endDate)
+  }
+}
+class DailySliderClosedByX extends BasicDailyAggregationReport with Logging {
+  override val reportName = "DailySliderClosedByX"
+
+  def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger","x").build
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -235,8 +251,8 @@ class DailyNewComment extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailyNewComment"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("newComment").build
-    _get(selector, startDate, endDate)
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("newComment").build
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -244,8 +260,8 @@ class DailyNewMessage extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailyNewMessage"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("newMessage").build
-    _get(selector, startDate, endDate)
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("newMessage").build
+    super.get(selector, startDate, endDate)
   }
 }
 
@@ -253,8 +269,8 @@ class DailyNewUnkeep extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailyNewUnkeep"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("newUnkeep").build
-    _get(selector, startDate, endDate)
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("newUnkeep").build
+    super.get(selector, startDate, endDate)
   }
 }
 
