@@ -1,16 +1,17 @@
-function log(message) {
+this.log = function log(message) {
   console.log.apply(console, Array.prototype.concat.apply(["[kifi][" + new Date().getTime() + "] "], arguments));
-}
+};
 
-function logEvent() {  // parameters defined in main.js
+this.logEvent = function logEvent() {  // parameters defined in main.js
   chrome.extension.sendMessage({
     type: "log_event",
     args: Array.prototype.slice.apply(arguments)});
-}
+};
 
-var t0 = new Date().getTime();
+this.t0 = new Date().getTime();
 
-!function() {
+// TODO: unindent all code below
+
   log("host:", location.host);
   if (window !== top) {
     log("not in top window");
@@ -42,7 +43,7 @@ var t0 = new Date().getTime();
         }, msg.ms);
         break;
       case "deep_link":
-        withSlider(function () {
+        withSlider(function() {
           slider.openDeepLink(msg.link);
         });
         break;
@@ -51,11 +52,8 @@ var t0 = new Date().getTime();
 
   function withSlider(callback) {
     if (window.slider) {
-      slider.queue(callback);
+      callback();
     } else {
-      chrome.extension.sendMessage({type: "require", injected: window.injected, scripts: ["scripts/slider.js"]}, function() {
-        slider.queue(callback);
-      });
+      chrome.extension.sendMessage({type: "require", injected: window.injected, scripts: ["scripts/slider.js"]}, callback);
     }
   }
-}();
