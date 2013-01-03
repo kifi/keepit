@@ -471,12 +471,10 @@ function require(tabId, details, callback) {
   var scripts = details.scripts.reduce(function(a, s) {
     return a.concat(transitiveClosure(s));
   }, []).filter(unique);
-  log("[require] scripts:", scripts);
   var styles = scripts.reduce(function(a, s) {
     a.push.apply(a, styleDeps[s]);
     return a;
   }, []);
-  log("[require] styles:", styles);
   var injected = details.injected || {};
   injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), styles, function() {
     injectAll(chrome.tabs.executeScript.bind(chrome.tabs), scripts, function() {
