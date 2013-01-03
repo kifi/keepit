@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import org.scalaquery.ql.extended.ExtendedTable
+
 import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
 import com.keepit.common.db.NotFoundException
 import com.keepit.common.db.StateException
@@ -39,25 +41,25 @@ case class Follow (
 object Follow {
 
   def all(implicit conn: Connection): Seq[Follow] =
-    FollowEntity.all.map(_.view)
+    throw new Exception //FollowEntity.all.map(_.view)
 
   def all(userId: Id[User])(implicit conn: Connection): Seq[Follow] =
-    (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId) list }.map(_.view)
+    throw new Exception //(FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId) list }.map(_.view)
 
   def get(uriId: Id[NormalizedURI])(implicit conn: Connection): Seq[Follow] =
-    (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.uriId EQ uriId AND (f.state EQ Follow.States.ACTIVE)) list }.map(_.view)
+    throw new Exception //(FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.uriId EQ uriId AND (f.state EQ Follow.States.ACTIVE)) list }.map(_.view)
 
   def get(id: Id[Follow])(implicit conn: Connection): Follow =
-    FollowEntity.get(id).map(_.view).getOrElse(throw NotFoundException(id))
+    throw new Exception //FollowEntity.get(id).map(_.view).getOrElse(throw NotFoundException(id))
 
   def get(userId: Id[User], uri: NormalizedURI)(implicit conn: Connection): Option[Follow] =
-    get(userId, uri.id.get)
+    throw new Exception //get(userId, uri.id.get)
 
   def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Option[Follow] =
-    (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId AND (f.uriId EQ uriId)) unique }.map(_.view)
+    throw new Exception //(FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId AND (f.uriId EQ uriId)) unique }.map(_.view)
 
   def getOrThrow(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Follow =
-    get(userId, uriId).getOrElse(throw NotFoundException(classOf[Follow], userId, uriId))
+    throw new Exception //get(userId, uriId).getOrElse(throw NotFoundException(classOf[Follow], userId, uriId))
 
   object States {
     val ACTIVE = State[Follow]("active")
@@ -66,36 +68,17 @@ object Follow {
 
 }
 
-private[model] class FollowEntity extends Entity[Follow, FollowEntity] {
-  val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val userId = "user_id".ID[User].NOT_NULL
-  val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
-  val state = "state".STATE[Follow].NOT_NULL(Follow.States.ACTIVE)
+private[model] object FollowEntity extends ExtendedTable[(Id[_], DateTime, DateTime, Id[_], Id[_], State[_])]("follow") {
+  import com.keepit.common.db.slick.FortyTwoTypeMappers
+  import com.keepit.common.db.slick.FortyTwoTypeMappers._
 
-  def relation = FollowEntity
+  def id =        column[Id[_]]("id", O.PrimaryKey, O.AutoInc)
+  def createdAt = column[DateTime]("created_at")
+  def updatedAt = column[DateTime]("updated_at")
+  def userId =    column[Id[_]]("user_id")
+  def uriId =     column[Id[_]]("uri_id")
+  def state =     column[State[_]]("state")
 
-  def view(implicit conn: Connection): Follow = Follow(
-    id = id.value,
-    createdAt = createdAt(),
-    updatedAt = updatedAt(),
-    userId = userId(),
-    uriId = uriId(),
-    state = state()
-  )
-}
-
-private[model] object FollowEntity extends FollowEntity with EntityTable[Follow, FollowEntity] {
-  override def relationName = "follow"
-
-  def apply(view: Follow): FollowEntity = {
-    val uri = new FollowEntity
-    uri.id.set(view.id)
-    uri.createdAt := view.createdAt
-    uri.updatedAt := view.updatedAt
-    uri.userId := view.userId
-    uri.uriId := view.uriId
-    uri.state := view.state
-    uri
-  }
+  def * = id ~ createdAt ~ updatedAt ~ userId ~ uriId ~ state
+  def autoInc = id.? ~ createdAt ~ updatedAt ~ userId ~ uriId ~ state <> (FollowEntity, FollowEntity.unapply _) returning id
 }
