@@ -55,6 +55,7 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
+    bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
   }
 
   @Singleton

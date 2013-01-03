@@ -36,6 +36,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net._
 import com.keepit.model.{KifiInstallation, KifiVersion, SocialUserInfo, User, UserAgent}
 import com.keepit.common.controller.FortyTwoController
+import com.keepit.inject._
+import com.keepit.common.healthcheck._
 
 object AuthController extends FortyTwoController {
   // TODO: remove when all beta users are on 2.0.2+
@@ -66,7 +68,20 @@ object AuthController extends FortyTwoController {
       case Some(json) =>
         (UserAgent((json \ "agent").as[String]),
          KifiVersion((json \ "version").as[String]),
-         (json \ "installation").asOpt[String].map(id => ExternalId[KifiInstallation](id)))
+         (json \ "installation").asOpt[String].flatMap { id =>
+           val kiId = ExternalId.asOpt[KifiInstallation](id)
+           kiId match {
+             case Some(_) =>
+             case None =>
+               // They sent an invalid id. Bug on client side?
+               inject[HealthcheckPlugin].addError(HealthcheckError(
+                 method = Some(request.method.toUpperCase()),
+                 path = Some(request.path),
+                 callType = Healthcheck.API,
+                 errorMessage = Some("Invalid ExternalId passed in \"%s\" for userId %s".format(id, request.userId))))
+           }
+           kiId
+         })
       case _ =>  // TODO: remove this form encoding branch after everyone at v2.1.6 or later.
         val params = request.body.asFormUrlEncoded.get
         (UserAgent(params.get("agent").get.head),
