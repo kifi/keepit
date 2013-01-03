@@ -43,6 +43,7 @@ object Reports {
   lazy val DailyNewComment = new DailyNewComment
   lazy val DailyNewMessage = new DailyNewMessage
   lazy val DailyNewUnkeep = new DailyNewUnkeep
+  lazy val DailyUniqueDepricatedAddBookmarks = new DailyUniqueDepricatedAddBookmarks
 
   case class ReportGroup(name: String, reports: Seq[Report])
 
@@ -64,6 +65,10 @@ object Reports {
       DailyNewMessage,
       DailyNewUnkeep)
   )
+
+  lazy val DailyAdminReports = ReportGroup("DailyAdminReport",
+    Seq(DailyUniqueDepricatedAddBookmarks, DailySearchQueriesReport)
+  )
 }
 
 trait ReportBuilderPlugin extends Plugin {
@@ -80,7 +85,7 @@ class ReportBuilderPluginImpl @Inject() (system: ActorSystem)
 
 
   def buildReport(startDate: DateTime, endDate: DateTime, report: Report): Unit = actor ! BuildReport(startDate, endDate, report)
-  def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor ! BuildReports(startDate, endDate, Reports.DailyReports)
+  def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor ! BuildReports(startDate, endDate, reportGroup)
 
   private val actor = system.actorOf(Props { new ReportBuilderActor() })
   // plugin lifecycle methods
