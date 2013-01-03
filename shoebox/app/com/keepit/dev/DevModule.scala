@@ -181,4 +181,15 @@ case class DevModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def scraperConfig: ScraperConfig = ScraperConfig()
+
+  @Singleton
+  @Provides
+  def searchConfigManager: SearchConfigManager = {
+    current.configuration.getString("index.config") match {
+      case None => new SearchConfigManager(None)
+      case Some(dirPath) =>
+        val dir = new File(dirPath).getCanonicalFile()
+        new SearchConfigManager(if (dir.exists) Some(dir) else None)
+    }
+  }
 }
