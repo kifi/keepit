@@ -15,7 +15,6 @@ import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.runner.JUnitRunner
 import com.keepit.common.db.CX
 
-
 @RunWith(classOf[JUnitRunner])
 class SendgridMailProviderTest extends Specification with TestAkkaSystem {
 

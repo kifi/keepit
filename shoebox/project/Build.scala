@@ -86,7 +86,10 @@ object ApplicationBuild extends Build {
       
       libraryDependencies ++= Seq(
         "com.google.inject" % "guice" % "3.0",
-        "org.scalatest" %% "scalatest" % "2.0.M4" % "test"
+        "org.scalatest" %% "scalatest" % "2.0.M4" % "test",
+        //"com.typesafe" % "slick_2.10" % "1.0.0-RC1"
+        "org.scalaquery" % "scalaquery_2.9.1" % "0.10.0-M1"
+            
       )
     )
 }

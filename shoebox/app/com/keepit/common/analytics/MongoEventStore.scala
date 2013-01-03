@@ -38,11 +38,11 @@ case class MongoSelector(eventFamily: EventFamily) {
     this
   }
   def withMetaData(field: String) = {
-    q = q ++ ("metaData.%s".format(field) $exists true)
+    q = q ++ ("metaData.metaData.%s".format(field) $exists true)
     this
   }
   def withMetaData(field: String, value: String) = {
-    q = q ++ ("metaData.%s".format(field) -> value)
+    q = q ++ ("metaData.metaData.%s".format(field) -> value)
     this
   }
   def withDateRange(startDate: DateTime, endDate: DateTime) = {
