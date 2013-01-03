@@ -71,7 +71,7 @@ class SemanticVectorQueryTest extends SpecificationWithJUnit {
       indexDocuments(Some(buildIndexable(new Tst(id, text))).iterator, 100){ docs => }
     }
 
-    def getPersonalizedSeacher(ids: Set[Long]) = new PersonalizedSearcher(searcher.indexReader, searcher.idMapper, ids)
+    def getPersonalizedSeacher(ids: Set[Long]) = PersonalizedSearcher(searcher, ids)
   }
 
   val indexingAnalyzer = DefaultAnalyzer.forIndexing

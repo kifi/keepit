@@ -92,9 +92,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
 
   def getArticleSearcher() = searcher
 
-  def getPersonalizedArticleSearcher(uris: Set[Id[NormalizedURI]]) = {
-    new PersonalizedSearcher(searcher.indexReader, searcher.idMapper, uris.map(id => id.id))
-  }
+  def getPersonalizedArticleSearcher(uris: Set[Id[NormalizedURI]]) = PersonalizedSearcher(searcher, uris.map(id => id.id))
 
   def search(queryText: String): Seq[Hit] = {
     parseQuery(queryText) match {
