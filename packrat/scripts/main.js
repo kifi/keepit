@@ -546,17 +546,13 @@ chrome.tabs.onActivated.addListener(function(info) {
   log("[onActivated] tab info:", info);
   // Tab may be older than current kifi installation and so not yet have icon and any content script(s).
   chrome.tabs.get(info.tabId, function(tab) {
-    if (!tab || tab.status == "loading" || !/^https?:/.test(tab.url)) return;  // if loading, just wait for onUpdated
-    chrome.windows.get(info.windowId, function(win) {
-      if (!win || win.type != "normal") return;  // ignore popups, etc.
-      chrome.tabs.executeScript(info.tabId, {code: "window.injected"}, function(arr) {
-        if (!arr || !arr[0]) {
-          log("[onActivated] old tab:", info);
-          setPageIcon(tab, false);
-          onPageLoad(tab);
+    if (tab && tab.status == "complete") {  // if not yet complete, wait for onUpdated
+      chrome.windows.get(info.windowId, function(win) {
+        if (win && win.type == "normal") {  // ignore popups, etc.
+          sprinkleSomeKiFiOn(tab);
         }
       });
-    });
+    }
   });
 });
 
@@ -573,6 +569,18 @@ chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     });
   }
 });
+
+function sprinkleSomeKiFiOn(tab) {
+  if (/^https?:/.test(tab.url)) {
+    chrome.tabs.executeScript(tab.id, {code: "window.injected"}, function(arr) {
+      if (!arr || !arr[0]) {
+        log("[sprinkleSomeKiFiOn] old tab:", tab.id);
+        setPageIcon(tab, false);
+        onPageLoad(tab);
+      }
+    });
+  }
+}
 
 function getFullyQualifiedKey(key) {
   return (localStorage["env"] || "production") + "_" + key;
@@ -629,6 +637,11 @@ chrome.runtime.onInstalled.addListener(function(details) {
   removeFromConfigs("user"); // remove this line in early Feb or so
   authenticate(function() {
     log("[onInstalled] authenticated");
+
+    chrome.tabs.query({windowType: "normal", active: true, status: "complete"}, function(tabs) {
+      tabs.forEach(sprinkleSomeKiFiOn);
+    });
+
     if (details.reason == "install" || getConfigs().env == "development") {
       postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
     }
