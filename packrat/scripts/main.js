@@ -413,6 +413,14 @@ function onPageLoad(tab) {
   log("[onPageLoad] tab:", tab);
   logEvent("extension", "pageLoad");
 
+  require(tab.id, {
+    scripts: contentScripts.reduce(function(a, s) {
+        if (s[1].test(tab.url)) {
+          a.push(s[0]);
+        }
+        return a;
+      }, [])});
+
   checkWhetherKept(tab.url, function(isKept) {
     setPageIcon(tab, isKept);
 
@@ -460,7 +468,7 @@ function checkWhetherKept(url, callback) {
 function setPageIcon(tab, kept) {
   log("[setPageIcon] tab:", tab);
   chrome.windows.get(tab.windowId, function(win) {
-    if (win.type == "normal") {
+    if (win && win.type == "normal") {
       chrome.pageAction.setIcon({tabId: tab.id, path: kept ? "icons/kept.png" : "icons/keep.png"});
       chrome.pageAction.show(tab.id);
     }
@@ -536,7 +544,20 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
 
 chrome.tabs.onActivated.addListener(function(info) {
   log("[onActivated] tab info:", info);
-  //maybeShowPageIcon(info.tabId, info.windowId);
+  // Tab may be older than current kifi installation and so not yet have icon and any content script(s).
+  chrome.tabs.get(info.tabId, function(tab) {
+    if (!tab || tab.status == "loading" || !/^https?:/.test(tab.url)) return;  // if loading, just wait for onUpdated
+    chrome.windows.get(info.windowId, function(win) {
+      if (!win || win.type != "normal") return;  // ignore popups, etc.
+      chrome.tabs.executeScript(info.tabId, {code: "window.injected"}, function(arr) {
+        if (!arr || !arr[0]) {
+          log("[onActivated] old tab:", info);
+          setPageIcon(tab, false);
+          onPageLoad(tab);
+        }
+      });
+    });
+  });
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
@@ -544,8 +565,12 @@ chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
   if (change.url) {
     setPageIcon(tab, false);
   }
-  if (change.status == "complete" && /^http/.test(tab.url)) {
-    onPageLoad(tab);
+  if (change.status == "complete" && /^https?:/.test(tab.url)) {
+    chrome.windows.get(tab.windowId, function(win) {
+      if (win && win.type == "normal") {
+        onPageLoad(tab);
+      }
+    });
   }
 });
 
@@ -559,7 +584,7 @@ function removeFromConfigs(key) {
 
 function setConfigs(key, value) {
   var prev = localStorage[getFullyQualifiedKey(key)];
-  if (prev !== String(value)) {
+  if (value != null && prev !== String(value)) {
     log("[setConfigs]", key, " = ", value, " (was ", prev, ")");
     localStorage[getFullyQualifiedKey(key)] = value;
   }

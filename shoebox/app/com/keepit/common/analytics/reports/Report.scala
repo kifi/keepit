@@ -39,14 +39,7 @@ case class CompleteReport(reportName: String, reportVersion: String, list: Seq[R
       (row.date, f)
     } toMap
 
-    val duration = dates match {
-      case head :: Nil =>
-        new Duration(head, currentDateTime)
-      case head :: tail =>
-        new Duration(head, tail.lastOption.getOrElse(currentDateTime))
-      case _ =>
-        new Duration(currentDateTime.minusDays(30),currentDateTime)
-    }
+    val duration = new Duration(currentDateTime.minusDays(1),currentDateTime) // for now, all reports are 1 day durations
 
     val startDate = dates.headOption.getOrElse(currentDateTime.minusDays(30))
     val endDate = dates.lastOption.getOrElse(currentDateTime)
@@ -136,7 +129,29 @@ class DailyActiveUniqueUserReport extends Report with Logging {
 
     val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
 
-    builder(results map(Parsers.dateCountParser("DailyActiveUniqueUserCount",_)) toMap)
+    builder(results map(Parsers.dateCountParser(reportName,_)) toMap)
+  }
+}
+
+class DailyUniqueDepricatedAddBookmarks extends Report with Logging {
+  override val reportName = "DailyUniqueDepricatedAddBookmarks"
+  override val numFields = 2
+
+  def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
+    val selector = MongoSelector(EventFamilies.ACCOUNT)
+      .withEventName("deprecated_add_bookmarks")
+      .withDateRange(startDate, endDate)
+      .build
+
+    store.mapReduce(EventFamilies.ACCOUNT.collection, MongoMapFunc.USER_DATE_COUNT, MongoReduceFunc.BASIC_COUNT, Some(collectionName), Some(selector), None)
+    store.mapReduce(collectionName, MongoMapFunc.KEY_DAY_COUNT, MongoReduceFunc.BASIC_COUNT, Some(collectionName), None, None)
+
+    val resultsSelector = MongoSelector(EventFamilies.GENERIC_USER)
+    val results = store.find(collectionName, resultsSelector).toList
+
+    val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
+
+    builder(results map(Parsers.dateCountParser(reportName,_)) toMap)
   }
 }
 
@@ -225,7 +240,7 @@ class DailySliderClosedByIcon extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailySliderClosedByIcon"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger","icon").build
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger","button").build
     super.get(selector, startDate, endDate)
   }
 }

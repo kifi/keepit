@@ -1,4 +1,4 @@
-@(reportNames: Seq[String], availableReports: List[String])
+@(availableReports: List[String])
 
 @admin("Reports") {
    <table class="table table-bordered">
@@ -6,24 +6,17 @@
         <th>Reports</th>
         <td>
           <form action="@com.keepit.controllers.admin.routes.AdminEventController.buildReport" method="POST">
-            <div>
-              <label class="radio">
-                <input type="radio" name="reportName" value="all" checked>All
-              </label>
-            @for(report <- reportNames) {
-              <label class="radio">
-                <input type="radio" name="reportName" value="@report">@report
-              </label>
-            }
-            </div>
-            <div><input type="submit" value="Build Report"></div>
+            <div><input type="hidden" name="reportName" value="daily"><input type="submit" value="Build Daily Reports"></div>
+          </form>
+          <form action="@com.keepit.controllers.admin.routes.AdminEventController.buildReport" method="POST">
+            <div><input type="hidden" name="reportName" value="admin"><input type="submit" value="Build Admin Reports"></div>
           </form>
         </td>
       </tr>
       <tr>
         <th>Generated Reports</th>
         <td>
-          @for(a <- availableReports) {
+          @for(a <- availableReports.reverse) {
             <div><a href="@com.keepit.controllers.admin.routes.AdminEventController.getReport(a)">@a</a></div>
           }
         </td>

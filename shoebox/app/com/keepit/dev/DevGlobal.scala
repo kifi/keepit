@@ -14,6 +14,7 @@ import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.common.social.SocialGraphRefresher
 import com.keepit.common.mail.MailSenderPlugin
+import com.keepit.common.analytics.reports.ReportBuilderPlugin
 
 object DevGlobal extends FortyTwoGlobal(Dev) {
 
@@ -28,6 +29,7 @@ object DevGlobal extends FortyTwoGlobal(Dev) {
     inject[ArticleIndexerPlugin].index()
     inject[SocialGraphRefresher]
     inject[MailSenderPlugin].processOutbox()
+    inject[ReportBuilderPlugin].enabled
     log.info("shoebox started")
   }
 }
