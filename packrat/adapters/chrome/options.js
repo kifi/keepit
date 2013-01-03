@@ -7,7 +7,7 @@ $(function() {
     $("[name=env][value=" + env + "]").attr("checked", true);
     $("#max_search_results").val(o.config["max_res"]);
     $("#hover_timeout").val(o.config["hover_timeout"]);
-    $("input[name=scores]").attr("checked", o.config["show_score"] == "true");
+    $("input[name=scores]").attr("checked", !!o.config["show_score"]);
     showSession(o.session);
   });
   $("#save").click(function() {
