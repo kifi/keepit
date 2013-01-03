@@ -129,7 +129,29 @@ class DailyActiveUniqueUserReport extends Report with Logging {
 
     val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
 
-    builder(results map(Parsers.dateCountParser("DailyActiveUniqueUserCount",_)) toMap)
+    builder(results map(Parsers.dateCountParser(reportName,_)) toMap)
+  }
+}
+
+class DailyUniqueDepricatedAddBookmarks extends Report with Logging {
+  override val reportName = "DailyUniqueDepricatedAddBookmarks"
+  override val numFields = 2
+
+  def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
+    val selector = MongoSelector(EventFamilies.ACCOUNT)
+      .withEventName("deprecated_add_bookmarks")
+      .withDateRange(startDate, endDate)
+      .build
+
+    store.mapReduce(EventFamilies.ACCOUNT.collection, MongoMapFunc.USER_DATE_COUNT, MongoReduceFunc.BASIC_COUNT, Some(collectionName), Some(selector), None)
+    store.mapReduce(collectionName, MongoMapFunc.KEY_DAY_COUNT, MongoReduceFunc.BASIC_COUNT, Some(collectionName), None, None)
+
+    val resultsSelector = MongoSelector(EventFamilies.GENERIC_USER)
+    val results = store.find(collectionName, resultsSelector).toList
+
+    val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
+
+    builder(results map(Parsers.dateCountParser(reportName,_)) toMap)
   }
 }
 
@@ -218,7 +240,7 @@ class DailySliderClosedByIcon extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailySliderClosedByIcon"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger","icon").build
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger","button").build
     super.get(selector, startDate, endDate)
   }
 }

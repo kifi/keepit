@@ -1,3 +1,5 @@
+// @match .*
+
 function log(message) {
   console.log.apply(console, Array.prototype.concat.apply(["[kifi][" + new Date().getTime() + "] "], arguments));
 }
