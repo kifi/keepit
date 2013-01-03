@@ -559,7 +559,7 @@ function removeFromConfigs(key) {
 
 function setConfigs(key, value) {
   var prev = localStorage[getFullyQualifiedKey(key)];
-  if (prev !== String(value)) {
+  if (value != null && prev !== String(value)) {
     log("[setConfigs]", key, " = ", value, " (was ", prev, ")");
     localStorage[getFullyQualifiedKey(key)] = value;
   }
