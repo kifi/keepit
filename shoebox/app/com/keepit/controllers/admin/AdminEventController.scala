@@ -48,8 +48,7 @@ object AdminEventController extends FortyTwoController {
 
     val reportName = reportForm.bindFromRequest.get.toLowerCase match {
       case "daily" => Reports.DailyReports
-      case "admin" =>
-        Reports.DailyAdminReports
+      case "admin" => Reports.DailyAdminReports
       case unknown => throw new Exception("Unknown report: %s".format(unknown))
     }
 
