@@ -35,6 +35,7 @@ import org.joda.time.LocalDate
 import scala.collection.immutable.Map
 import play.api.libs.json.JsArray
 import com.keepit.search.SearchConfig
+import com.keepit.search.SearchConfigManager
 
 object SearchConfigController extends FortyTwoController {
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -50,13 +51,20 @@ object SearchConfigController extends FortyTwoController {
       case None => throw new Exception("whoops")
     }
 
-    val config = SearchConfig.getUserConfig(userId)
-    SearchConfig.setUserConfig(userId, config(form))
+    val configManager = inject[SearchConfigManager]
+    val config = configManager.getUserConfig(userId)
+    configManager.setUserConfig(userId, config(form))
     Redirect(com.keepit.controllers.routes.SearchConfigController.showUserConfig(userId))
   }
 
   def resetUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    SearchConfig.resetUserConfig(userId)
+    val configManager = inject[SearchConfigManager]
+    configManager.resetUserConfig(userId)
     Redirect(com.keepit.controllers.routes.SearchConfigController.showUserConfig(userId))
+  }
+
+  def allConfigParams(userId: Id[User]): Seq[(String, String)] = {
+    val configManager = inject[SearchConfigManager]
+    configManager.getUserConfig(userId).iterator.toSeq.sortBy(_._1)
   }
 }

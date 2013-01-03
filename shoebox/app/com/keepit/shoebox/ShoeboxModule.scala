@@ -38,6 +38,7 @@ import com.keepit.search.ArticleSearchResultStore
 import com.keepit.search.ArticleStore
 import com.keepit.search.S3ArticleSearchResultStoreImpl
 import com.keepit.search.S3ArticleStoreImpl
+import com.keepit.search.SearchConfigManager
 import com.tzavellas.sse.guice.ScalaModule
 import akka.actor.ActorSystem
 import play.api.Play.current
@@ -157,4 +158,15 @@ case class ShoeboxModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def scraperConfig: ScraperConfig = ScraperConfig()
+
+  @Singleton
+  @Provides
+  def searchConfigManager: SearchConfigManager = {
+    current.configuration.getString("index.config") match {
+      case None => new SearchConfigManager(None)
+      case Some(dirPath) =>
+        val dir = new File(dirPath).getCanonicalFile()
+        new SearchConfigManager(if (dir.exists) Some(dir) else None)
+    }
+  }
 }

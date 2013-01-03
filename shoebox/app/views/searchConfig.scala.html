@@ -18,7 +18,7 @@
   <form action="@com.keepit.controllers.routes.SearchConfigController.setUserConfig(userWithSocial.user.id.get)" method="POST" class="form-inline">
     <table class="table table-bordered">
       <tr> <th>Parameter</th><th>Value</th><th>Description</th> </tr>
-      @com.keepit.search.SearchConfig.getUserConfig(userWithSocial.user.id.get).iterator.toSeq.sortBy(_._1).map{ case (p, v) => @paramValue(p, v, com.keepit.search.SearchConfig.getDescription(p)) }
+      @com.keepit.controllers.SearchConfigController.allConfigParams(userWithSocial.user.id.get).map{ case (p, v) => @paramValue(p, v, com.keepit.search.SearchConfig.getDescription(p)) }
     </table>
     <button type="submit" class="btn">Update</button>
   </form>
