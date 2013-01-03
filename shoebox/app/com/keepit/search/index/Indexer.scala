@@ -50,7 +50,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
       indexWriter.commit()
     }
     val reader = IndexReader.open(indexDirectory)
-    new Searcher(reader, ArrayIdMapper(reader))
+    Searcher(reader)
   }
 
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
@@ -127,8 +127,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
 
   def refreshSearcher() {
-    val reader = IndexReader.openIfChanged(searcher.indexReader) // this may return null
-    if (reader != null) searcher = new Searcher(reader, ArrayIdMapper(reader))
+    searcher = Searcher.reopen(searcher)
   }
 
   def buildIndexable(data: T): Indexable[T]

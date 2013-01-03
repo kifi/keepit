@@ -81,7 +81,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
         var valuesOnOptional = new ArrayBuffer[Float]
         val success = clauses.zip(weights).forall{ case (c, w) =>
           val subScorer = w.scorer(reader, true, false)
-          if (subScorer == null) c.isRequired()
+          if (subScorer == null) !c.isRequired()
           else {
             if (c.isRequired()) {
               required += subScorer
