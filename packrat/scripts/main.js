@@ -176,10 +176,11 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         require(tab.id, request, sendResponse);
         return true;
       case "get_slider_info":
-        ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
-          o.session = session;
-          sendResponse(o);
-        });
+        if (session) {
+          getSliderInfo(tab, sendResponse);
+        } else {
+          authenticate(getSliderInfo.bind(null, tab, sendResponse));
+        }
         return true;
       case "get_slider_updates":
         ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, sendResponse);
@@ -211,6 +212,13 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
     log("[onMessage] done:", request);
   }
 });
+
+function getSliderInfo(tab, sendResponse) {
+  ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
+    o.session = session;
+    sendResponse(o);
+  });
+}
 
 function createDeepLinkListener(link, linkTabId, sendResponse) {
   var createdTime = new Date();
