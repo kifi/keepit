@@ -39,28 +39,6 @@ import play.api.data.Forms._
 
 object AdminEventController extends FortyTwoController {
 
-  val reports = Seq(
-    new DailyActiveUniqueUserReport,
-    new DailyPageLoadReport,
-    new DailySearchQueriesReport,
-    new DailyGoogleResultClicked,
-    new DailyKifiResultClicked,
-    new DailyGoogleResultClickedOverKifi,
-    new DailySliderShownByAuto,
-    new DailySliderShownByIcon,
-    new DailySliderShownByKey,
-    new DailySliderClosedByAuto,
-    new DailySliderClosedByIcon,
-    new DailySliderClosedByKey,
-    new DailySliderClosedByX,
-    new DailyNewComment,
-    new DailyNewMessage,
-    new DailyNewUnkeep
-  )
-  val reportNames = reports map(_.reportName)
-  val startDay = currentDate.minusDays(30)
-  val endDay = currentDate
-
   def buildReport() = AdminHtmlAction { request =>
 
     implicit val playrequest = request.request
@@ -68,22 +46,14 @@ object AdminEventController extends FortyTwoController {
         "reportName" -> text
     )
 
-    val reportName = reportForm.bindFromRequest.get
-
-    val selectedReports = reports.filter(r => r.reportName == reportName || reportName.toLowerCase == "all")
-    val startDate = startDay.toDateTimeAtStartOfDay
-    val endDate = endDay.toDateTimeAtStartOfDay.plusDays(1)
-
-    val builtReports = selectedReports map { report =>
-      report.get(startDate, endDate)
+    val reportName = reportForm.bindFromRequest.get.toLowerCase match {
+      case "daily" => Reports.DailyReports
+      case unknown => throw new Exception("Unknown report: %s".format(unknown))
     }
 
-    val outputReport = builtReports.foldRight(CompleteReport("","",Nil))((a,b) => a + b)
+    val rb = inject[ReportBuilderPlugin]
 
-    if(reportName.toLowerCase == "all")
-      outputReport.copy(reportName = "All").persist
-    else
-      outputReport.persist
+    rb.buildReports(rb.defaultStartTime, rb.defaultEndTime, reportName)
 
     Redirect(com.keepit.controllers.admin.routes.AdminEventController.reportList())
   }
@@ -101,6 +71,6 @@ object AdminEventController extends FortyTwoController {
 
     val availableReports = inject[ReportStore].getReports() // strip ".json"
 
-    Ok(views.html.reports(reportNames, availableReports))
+    Ok(views.html.reports(availableReports))
   }
 }
