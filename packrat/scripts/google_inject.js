@@ -1,10 +1,11 @@
+// @match www\.google\.(com|com\.(a[fgiru]|b[dhnorz]|c[ouy]|do|e[cgt]|fj|g[hit]|hk|jm|k[hw]|l[by]|m[txy]|n[afgip]|om|p[aehkry]|qa|s[abglv]|t[jrw]|u[ay]|v[cn])|co\.(ao|bw|c[kr]|i[dln]|jp|k[er]|ls|m[az]|nz|t[hz]|u[gkz]|v[ei]|z[amw])|a[demstz]|b[aefgijsy]|cat|c[adfghilmnvz]|d[ejkmz]|e[es]|f[imr]|g[aeglmpry]|h[nrtu]|i[emqst]|j[eo]|k[giz]|l[aiktuv]|m[degklnsuvw]|n[eloru]|p[lnstosuw]|s[cehikmnot]|t[dgklmnot]|v[gu]|ws)
+// @require styles/google_inject.css
+// @require scripts/lib/jquery-1.8.2.min.js
+// @require scripts/lib/mustache-0.7.1.min.js
+
 console.log("[" + new Date().getTime() + "] in google_inject.js");
 
-chrome.extension.sendMessage({type: "require", injected: window.injected,
-  scripts: [
-    "scripts/lib/jquery-1.8.2.min.js",
-    "scripts/lib/mustache-0.7.1.min.js"]},
-function() {
+!function() {
   var lastInjected;
   var config;
   var restrictedGoogleInject = [
@@ -525,4 +526,4 @@ function() {
     else
       return input.replace(new RegExp('(^|\\.?)(' + needle + ')(\\.?|$)','ig'), '$1<b>$2</b>$3');
   }
-});
+}();
