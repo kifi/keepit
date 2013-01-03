@@ -9,7 +9,7 @@
 // @require scripts/lib/mustache-0.7.1.min.js
 // @require scripts/snapshot.js
 
-// TODO: unindent all code below
+slider = function() {
   var following, isKept, lastShownAt;
 
   $('<input id="editableFix" style="opacity:0;color:transparent;width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html')
@@ -1006,7 +1006,7 @@
   });
 
   // defining the slider API
-window.slider = {
+  return {
   show: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
     showKeepItHover(trigger);
   },
@@ -1025,3 +1025,4 @@ window.slider = {
       openDeepLink(session, locator);
     });
   }};
+}();

@@ -1,17 +1,16 @@
-this.log = function log(message) {
+function log(message) {
   console.log.apply(console, Array.prototype.concat.apply(["[kifi][" + new Date().getTime() + "] "], arguments));
-};
+}
 
-this.logEvent = function logEvent() {  // parameters defined in main.js
+function logEvent() {  // parameters defined in main.js
   chrome.extension.sendMessage({
     type: "log_event",
     args: Array.prototype.slice.apply(arguments)});
-};
+}
 
-this.t0 = new Date().getTime();
+var t0 = new Date().getTime();
 
-// TODO: unindent all code below
-
+!function() {
   log("host:", location.host);
   if (window !== top) {
     log("not in top window");
@@ -57,3 +56,4 @@ this.t0 = new Date().getTime();
       chrome.extension.sendMessage({type: "require", injected: window.injected, scripts: ["scripts/slider.js"]}, callback);
     }
   }
+}();
