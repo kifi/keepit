@@ -552,6 +552,7 @@ chrome.tabs.onActivated.addListener(function(info) {
       chrome.tabs.executeScript(info.tabId, {code: "window.injected"}, function(arr) {
         if (!arr || !arr[0]) {
           log("[onActivated] old tab:", info);
+          setPageIcon(tab, false);
           onPageLoad(tab);
         }
       });
@@ -559,20 +560,19 @@ chrome.tabs.onActivated.addListener(function(info) {
   });
 });
 
-chrome.tabs.onUpdated.addListener(onUpdated);
-function onUpdated(tabId, change, tab) {
+chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
   log("[onUpdated] tab:", tab, change);
   if (change.url) {
     setPageIcon(tab, false);
   }
   if (change.status == "complete" && /^https?:/.test(tab.url)) {
     chrome.windows.get(tab.windowId, function(win) {
-      if (win.type == "normal") {
+      if (win && win.type == "normal") {
         onPageLoad(tab);
       }
     });
   }
-}
+});
 
 function getFullyQualifiedKey(key) {
   return (localStorage["env"] || "production") + "_" + key;
