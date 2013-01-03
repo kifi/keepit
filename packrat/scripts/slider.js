@@ -183,7 +183,6 @@ slider = function() {
           "logo": chrome.extension.getURL('images/kifilogo.png'),
           "arrow": chrome.extension.getURL('images/triangle_down.31x16.png'),
           "profilepic": o.session.avatarUrl,
-          "holidays_hat": chrome.extension.getURL('images/holidays_hat.png'),
           "name": o.session.name,
           "is_kept": o.kept,
           "private": o.private,
@@ -214,12 +213,6 @@ slider = function() {
 
     updateCommentCount("public", numComments);
     updateCommentCount("message", numMessages);
-
-    var mas = new Date();
-    var x = new Date(2012, 11, 26);
-    if(x-mas > 0) {
-      $(".holidays_hat").show(0);
-    }
 
     // Event bindings
     $(".kifi_hover").draggable({cursor: "move", axis: "y", distance: 10, handle: "div.kifihdr", containment: "body", scroll: false})
