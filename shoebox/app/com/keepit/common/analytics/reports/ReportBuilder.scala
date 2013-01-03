@@ -123,8 +123,6 @@ private[reports] class ReportBuilderActor() extends Actor with Logging {
         report.get(startDate, endDate)
       }
 
-      log.warn(builtReports)
-
       val outputReport = builtReports.foldRight(CompleteReport("","",Nil))((a,b) => a + b)
       outputReport.copy(reportName = reportGroup.name).persist
     case unknown =>
