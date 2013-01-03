@@ -146,7 +146,7 @@ class DailyUniqueDepricatedAddBookmarks extends Report with Logging {
     store.mapReduce(EventFamilies.ACCOUNT.collection, MongoMapFunc.USER_DATE_COUNT, MongoReduceFunc.BASIC_COUNT, Some(collectionName), Some(selector), None)
     store.mapReduce(collectionName, MongoMapFunc.KEY_DAY_COUNT, MongoReduceFunc.BASIC_COUNT, Some(collectionName), None, None)
 
-    val resultsSelector = MongoSelector(EventFamilies.ACCOUNT)
+    val resultsSelector = MongoSelector(EventFamilies.GENERIC_USER)
     val results = store.find(collectionName, resultsSelector).toList
 
     val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
