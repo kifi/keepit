@@ -88,7 +88,7 @@ class ReportBuilderPluginImpl @Inject() (system: ActorSystem)
   override def enabled: Boolean = true
   override def onStart(): Unit = {
     _cancellables = Seq(
-      system.scheduler.schedule(10 minutes, 1 hour, actor, ReportCron(this))
+      system.scheduler.schedule(10 seconds, 1 hour, actor, ReportCron(this))
     )
   }
 
@@ -97,7 +97,7 @@ class ReportBuilderPluginImpl @Inject() (system: ActorSystem)
   }
 
   override def reportCron(): Unit = {
-    if (currentDateTime.hourOfDay == 3) // 3am PST
+    if (currentDateTime.hourOfDay().get() == 3) // 3am PST
       actor ! BuildReports(defaultStartTime, defaultEndTime, Reports.DailyReports)
   }
 }

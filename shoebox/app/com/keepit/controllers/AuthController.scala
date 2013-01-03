@@ -71,6 +71,7 @@ object AuthController extends FortyTwoController {
          (json \ "installation").asOpt[String].flatMap { id =>
            val kiId = ExternalId.asOpt[KifiInstallation](id)
            kiId match {
+             case Some(_) =>
              case None =>
                // They sent an invalid id. Bug on client side?
                inject[HealthcheckPlugin].addError(HealthcheckError(
