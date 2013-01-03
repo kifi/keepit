@@ -468,13 +468,36 @@ function setPageIcon(tab, kept) {
 }
 
 function require(tabId, details, callback) {
+  var scripts = details.scripts.reduce(function(a, s) {
+    return a.concat(transitiveClosure(s));
+  }, []).filter(unique);
+  var styles = scripts.reduce(function(a, s) {
+    a.push.apply(a, styleDeps[s]);
+    return a;
+  }, []);
   var injected = details.injected || {};
-  injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), details.styles,
-    function() {
-      injectAll(chrome.tabs.executeScript.bind(chrome.tabs), details.scripts, function() {
-        chrome.tabs.executeScript(tabId, {code: "injected=" + JSON.stringify(injected)}, callback);
-      });
+  injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), styles, function() {
+    injectAll(chrome.tabs.executeScript.bind(chrome.tabs), scripts, function() {
+      chrome.tabs.executeScript(tabId, {code: "injected=" + JSON.stringify(injected)}, callback);
     });
+  });
+
+  function transitiveClosure(path) {
+    var deps = scriptDeps[path];
+    if (deps) {
+      deps = deps.reduce(function(a, s) {
+        return a.concat(transitiveClosure(s));
+      }, []);
+      deps.push(path);
+      return deps.filter(unique);
+    } else {
+      return [path];
+    }
+  }
+
+  function unique(value, index, array) {
+    return array.indexOf(value) == index;
+  }
 
   function injectAll(inject, paths, callback) {
     if (paths && paths.length) {
