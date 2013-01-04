@@ -11,9 +11,10 @@ import _root_.com.keepit.common.db.DbInfo
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 class H2(val dbInfo: DbInfo)
-    extends DataBaseComponent with DataSourceComponent {
+    extends DataBaseComponent {
 
   val Driver = H2Driver
+  val handle = dbInfo.database
 
   val sequenceID = SimpleFunction.nullary[Int]("SCOPE_IDENTITY")
 }

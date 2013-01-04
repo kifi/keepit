@@ -53,6 +53,7 @@ case class TestModule() extends ScalaModule {
     bind[Babysitter].to[FakeBabysitter]
     install(new SlickModule(new DbInfo() {
       lazy val database = Database.forURL("jdbc:h2:mem:shoebox;MODE=MYSQL;MVCC=TRUE", driver = "org.h2.Driver")
+      val driverName = "org.h2.Driver"
     }))
   }
 

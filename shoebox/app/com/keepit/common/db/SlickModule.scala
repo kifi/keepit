@@ -12,9 +12,7 @@ import akka.actor.Scheduler
 import org.scalaquery.session.Database
 import org.scalaquery.session.Session
 import org.scalaquery.session.ResultSetConcurrency
-//import scala.slick.session.Database
-//import scala.slick.session.Session
-//import scala.slick.session.ResultSetConcurrency
+import javax.sql.DataSource
 
 case class SlickModule(dbInfo: DbInfo) extends ScalaModule {
   def configure(): Unit = {
@@ -22,12 +20,13 @@ case class SlickModule(dbInfo: DbInfo) extends ScalaModule {
 
   @Provides
   @Singleton
-  def dbConnection(): DbConnection = DbConnection(dbInfo)
-
-  @Provides
-  @Singleton
   def connection(): DataBaseComponent = dbInfo.driverName match {
     case MySQL.driverName     => new MySQL( dbInfo )
     case H2.driverName        => new H2( dbInfo )
   }
+}
+
+trait DbInfo {
+  def database: Database
+  def driverName: String
 }

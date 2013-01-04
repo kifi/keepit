@@ -11,9 +11,10 @@ import _root_.com.keepit.common.db.DbInfo
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 class MySQL(val dbInfo: DbInfo)
-    extends DataBaseComponent with DataSourceComponent {
+    extends DataBaseComponent {
 
   val Driver = MySQLDriver
+  val handle = dbInfo.database
 
   val sequenceID = SimpleFunction.nullary[Int]("LAST_INSERT_ID")
 }
