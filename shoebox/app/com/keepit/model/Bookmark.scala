@@ -33,6 +33,7 @@ case class Bookmark(
   title: String,
   uriId: Id[NormalizedURI],
   metadata: Option[NormalizedURIMetadata] = None,
+  deprecatedUrl: String = "",
   bookmarkPath: Option[String] = None,
   isPrivate: Boolean = false,
   userId: Id[User],
@@ -40,7 +41,7 @@ case class Bookmark(
   source: BookmarkSource,
   kifiInstallation: Option[ExternalId[KifiInstallation]] = None) {
 
-  val url = metadata.map(m => m.originalUrl ).getOrElse("")
+  val url = metadata.map(m => m.originalUrl ).getOrElse(deprecatedUrl)
 
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
 
@@ -146,6 +147,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
   val externalId = "external_id".EXTERNAL_ID[Bookmark].NOT_NULL(ExternalId())
   val title = "title".VARCHAR(256).NOT_NULL
   val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
+  val deprecatedUrl = "url".VARCHAR(256).NOT_NULL
   val metadata = "metadata".VARCHAR(1024) // after grandfathering, set .NOT_NULL
   val state = "state".STATE[Bookmark].NOT_NULL(Bookmark.States.ACTIVE)
   val bookmarkPath = "bookmark_path".VARCHAR(512).NOT_NULL
@@ -176,6 +178,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
           None
       }
     },
+    deprecatedUrl = deprecatedUrl(),
     isPrivate = isPrivate(),
     userId = userId(),
     bookmarkPath = bookmarkPath.value,
@@ -196,6 +199,7 @@ private[model] object BookmarkEntity extends BookmarkEntity with EntityTable[Boo
     bookmark.title := view.title
     bookmark.state := view.state
     bookmark.uriId := view.uriId
+    bookmark.deprecatedUrl := view.deprecatedUrl
     bookmark.metadata.set(view.metadata.map { m =>
       val serializer = NURIS.normalizedURIMetadataSerializer
       Json.stringify(serializer.writes(m))

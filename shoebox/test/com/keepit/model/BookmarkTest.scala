@@ -13,7 +13,6 @@ import com.keepit.test.EmptyApplication
 import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
-import com.keepit.model.NormalizedURIMetadata
 
 class BookmarkTest extends SpecificationWithJUnit {
 
