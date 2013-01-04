@@ -9,6 +9,7 @@ import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
+import play.api.libs.json._
 import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
@@ -19,6 +20,7 @@ import play.api.mvc.JavascriptLitteral
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.inject.inject
 import play.api.Play.current
+import com.keepit.serializer.{NormalizedURIMetadataSerializer => NURIS}
 
 
 case class DeepLinkToken(value: String)
@@ -40,11 +42,14 @@ case class DeepLink(
   initatorUserId: Option[Id[User]],
   recipientUserId: Option[Id[User]],
   uriId: Option[Id[NormalizedURI]],
+  uriData: Option[NormalizedURIMetadata] = None,
   deepLocator: DeepLocator,
   token: DeepLinkToken = DeepLinkToken(),
   state: State[DeepLink] = DeepLink.States.ACTIVE) extends Logging {
   lazy val baseUrl = inject[FortyTwoServices].baseUrl
   lazy val url = "%s/r/%s".format(baseUrl,token.value)
+
+  def withUriData(uriData: NormalizedURIMetadata) = copy(uriData = Some(uriData))
 
   def save(implicit conn: Connection): DeepLink = {
     val entity = DeepLinkEntity(this.copy(updatedAt = currentDateTime))
@@ -84,6 +89,7 @@ private[model] class DeepLinkEntity extends Entity[DeepLink, DeepLinkEntity] {
   val initatorUserId = "initiator_user_id".ID[User]
   val recipientUserId = "recipient_user_id".ID[User]
   val uriId = "uri_id".ID[NormalizedURI]
+  val uriData = "uri_data".VARCHAR(1024)
   val deepLocator = "deep_locator".VARCHAR(512).NOT_NULL
   val token = "token".VARCHAR(16).NOT_NULL
   val state = "state".STATE[DeepLink].NOT_NULL(DeepLink.States.ACTIVE)
@@ -97,6 +103,18 @@ private[model] class DeepLinkEntity extends Entity[DeepLink, DeepLinkEntity] {
     initatorUserId = initatorUserId.value,
     recipientUserId = recipientUserId.value,
     uriId = uriId.value,
+    uriData = {
+      try {
+        val json = Json.parse(uriData.value.getOrElse("{}")) // after grandfathering, force having a value
+        val serializer = NURIS.normalizedURIMetadataSerializer
+        Some(serializer.reads(json))
+      }
+      catch {
+        case ex: Throwable =>
+          // after grandfathering process, throw error
+          None
+      }
+    },
     deepLocator = DeepLocator(deepLocator()),
     token = DeepLinkToken(token()),
     state = state())
@@ -113,6 +131,10 @@ private[model] object DeepLinkEntity extends DeepLinkEntity with EntityTable[Dee
     uri.initatorUserId.set(view.initatorUserId)
     uri.recipientUserId.set(view.recipientUserId)
     uri.uriId.set(view.uriId)
+    uri.uriData.set(view.uriData.map { m =>
+      val serializer = NURIS.normalizedURIMetadataSerializer
+      Json.stringify(serializer.writes(m))
+    })
     uri.deepLocator := view.deepLocator.value
     uri.token := view.token.value
     uri.state := view.state
