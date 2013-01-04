@@ -1,3 +1,2 @@
-exports.api = {
-  timers: require("sdk/timers"),
-};
+exports.timers = require("sdk/timers");
+exports.tabs = require("sdk/tabs");
