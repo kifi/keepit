@@ -8,6 +8,7 @@ import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
+import play.api.libs.json._
 import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
@@ -32,6 +33,7 @@ case class Bookmark(
   title: String,
   url: String,
   uriId: Id[NormalizedURI],
+  metadata: Option[JsObject] = None,
   bookmarkPath: Option[String] = None,
   isPrivate: Boolean = false,
   userId: Id[User],
@@ -46,6 +48,8 @@ case class Bookmark(
     case true => Bookmark.States.ACTIVE
     case false => Bookmark.States.INACTIVE
   })
+
+  def withMetadata(json: JsObject) = copy(metadata = Some(json))
 
   def isActive: Boolean = state == Bookmark.States.ACTIVE
 
@@ -67,7 +71,7 @@ case class Bookmark(
 object Bookmark {
 
   def apply(uri: NormalizedURI, userId: Id[User], title: String, url: String, source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
-    Bookmark(title = title, url = url, userId = userId, uriId = uri.id.get, source = source, isPrivate = isPrivate)
+    Bookmark(title = title, url = url, userId = userId, uriId = uri.id.get, metadata = Some(JsObject(Seq("url" -> JsString(url)))), source = source, isPrivate = isPrivate)
 
   def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = load(uri, user.id.get)
 

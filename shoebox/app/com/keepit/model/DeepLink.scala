@@ -9,6 +9,7 @@ import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
+import play.api.libs.json._
 import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
@@ -40,11 +41,14 @@ case class DeepLink(
   initatorUserId: Option[Id[User]],
   recipientUserId: Option[Id[User]],
   uriId: Option[Id[NormalizedURI]],
+  metadata: Option[JsObject] = None,
   deepLocator: DeepLocator,
   token: DeepLinkToken = DeepLinkToken(),
   state: State[DeepLink] = DeepLink.States.ACTIVE) extends Logging {
   lazy val baseUrl = inject[FortyTwoServices].baseUrl
   lazy val url = "%s/r/%s".format(baseUrl,token.value)
+
+  def withMetadata(json: JsObject) = copy(metadata = Some(json))
 
   def save(implicit conn: Connection): DeepLink = {
     val entity = DeepLinkEntity(this.copy(updatedAt = currentDateTime))

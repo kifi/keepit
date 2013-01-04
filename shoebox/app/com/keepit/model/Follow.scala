@@ -14,6 +14,7 @@ import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
+import play.api.libs.json._
 
 case class Follow (
   id: Option[Id[Follow]] = None,
@@ -21,6 +22,7 @@ case class Follow (
   updatedAt: DateTime = currentDateTime,
   userId: Id[User],
   uriId: Id[NormalizedURI],
+  metadata: Option[JsObject] = None,
   state: State[Follow] = Follow.States.ACTIVE
 ) extends Logging {
 
@@ -30,6 +32,8 @@ case class Follow (
     assert(1 == entity.save())
     entity.view
   }
+
+  def withMetadata(json: JsObject) = copy(metadata = Some(json))
 
   def activate = copy(state = Follow.States.ACTIVE)
   def deactivate = copy(state = Follow.States.INACTIVE)

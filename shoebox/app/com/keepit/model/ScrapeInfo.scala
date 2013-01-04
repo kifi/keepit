@@ -14,6 +14,7 @@ import scala.math._
 case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
   uriId: Id[NormalizedURI], // = NomralizedURI id
+  metadata: Option[JsObject] = None,
   lastScrape: DateTime = currentDateTime,
   nextScrape: DateTime = currentDateTime,
   interval: Double = 24.0d, // hours
@@ -28,6 +29,8 @@ case class ScrapeInfo(
       case ScrapeInfo.States.INACTIVE => copy(state = state, nextScrape = ScrapeInfo.NEVER) // never scrape when switched to INACTIVE
     }
   }
+
+  def withMetadata(json: JsObject) = copy(metadata = Some(json))
 
   def withFailure()(implicit config: ScraperConfig) = {
     val backoff = min(config.maxBackoff, (config.initialBackoff * (1 << failures).toDouble))

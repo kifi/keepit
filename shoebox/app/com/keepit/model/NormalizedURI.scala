@@ -9,6 +9,7 @@ import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
+import play.api.libs.json._
 import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
@@ -28,6 +29,7 @@ case class NormalizedURI  (
   externalId: ExternalId[NormalizedURI] = ExternalId(),
   title: Option[String] = None,
   url: String,
+  metadata: Option[JsObject] = None,
   urlHash: String,
   state: State[NormalizedURI] = NormalizedURI.States.ACTIVE
 ) extends Logging {
@@ -38,6 +40,8 @@ case class NormalizedURI  (
     assert(1 == entity.save())
     entity.view
   }
+
+  def withMetadata(json: JsObject) = copy(metadata = Some(json))
 
   def withState(state: State[NormalizedURI]) = copy(state = state)
 

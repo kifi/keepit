@@ -23,6 +23,7 @@ import ru.circumflex.orm.RelationNode.toRelation
 import ru.circumflex.orm.SELECT
 import ru.circumflex.orm.str2expr
 import ru.circumflex.orm.COUNT
+import play.api.libs.json._
 
 case class Comment(
   id: Option[Id[Comment]] = None,
@@ -30,6 +31,7 @@ case class Comment(
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[Comment] = ExternalId(),
   uriId: Id[NormalizedURI],
+  metadata: Option[JsObject] = None,
   userId: Id[User],
   text: String,
   pageTitle: String,
@@ -38,6 +40,8 @@ case class Comment(
   state: State[Comment] = Comment.States.ACTIVE) {
 
   def withState(state: State[Comment]) = copy(state = state)
+
+  def withMetadata(json: JsObject) = copy(metadata = Some(json))
 
   def save(implicit conn: Connection): Comment = {
     val entity = CommentEntity(this.copy(updatedAt = currentDateTime))
