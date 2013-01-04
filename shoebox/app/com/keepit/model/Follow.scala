@@ -23,7 +23,7 @@ case class Follow (
   updatedAt: DateTime = currentDateTime,
   userId: Id[User],
   uriId: Id[NormalizedURI],
-  metadata: Option[NormalizedURIMetadata] = None,
+  uriData: Option[NormalizedURIMetadata] = None,
   state: State[Follow] = Follow.States.ACTIVE
 ) extends Logging {
 
@@ -34,7 +34,7 @@ case class Follow (
     entity.view
   }
 
-  def withMetadata(meta: NormalizedURIMetadata) = copy(metadata = Some(meta))
+  def withUriData(uriData: NormalizedURIMetadata) = copy(uriData = Some(uriData))
 
   def activate = copy(state = Follow.States.ACTIVE)
   def deactivate = copy(state = Follow.States.INACTIVE)
@@ -76,7 +76,7 @@ private[model] class FollowEntity extends Entity[Follow, FollowEntity] {
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val userId = "user_id".ID[User].NOT_NULL
   val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
-  val metadata = "metadata".VARCHAR(1024)
+  val uriData = "uri_data".VARCHAR(1024)
   val state = "state".STATE[Follow].NOT_NULL(Follow.States.ACTIVE)
 
   def relation = FollowEntity
@@ -87,9 +87,9 @@ private[model] class FollowEntity extends Entity[Follow, FollowEntity] {
     updatedAt = updatedAt(),
     userId = userId(),
     uriId = uriId(),
-    metadata = {
+    uriData = {
       try {
-        val json = Json.parse(metadata.value.getOrElse("{}")) // after grandfathering, force having a value
+        val json = Json.parse(uriData.value.getOrElse("{}")) // after grandfathering, force having a value
         val serializer = NURIS.normalizedURIMetadataSerializer
         Some(serializer.reads(json))
       }
@@ -113,7 +113,7 @@ private[model] object FollowEntity extends FollowEntity with EntityTable[Follow,
     uri.updatedAt := view.updatedAt
     uri.userId := view.userId
     uri.uriId := view.uriId
-    uri.metadata.set(view.metadata.map { m =>
+    uri.uriData.set(view.uriData.map { m =>
       val serializer = NURIS.normalizedURIMetadataSerializer
       Json.stringify(serializer.writes(m))
     })

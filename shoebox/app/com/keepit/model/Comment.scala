@@ -34,7 +34,7 @@ case class Comment(
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[Comment] = ExternalId(),
   uriId: Id[NormalizedURI],
-  metadata: Option[NormalizedURIMetadata] = None,
+  uriData: Option[NormalizedURIMetadata] = None,
   userId: Id[User],
   text: String,
   pageTitle: String,
@@ -44,7 +44,7 @@ case class Comment(
 
   def withState(state: State[Comment]) = copy(state = state)
 
-  def withMetadata(meta: NormalizedURIMetadata) = copy(metadata = Some(meta))
+  def withUriData(uriData: NormalizedURIMetadata) = copy(uriData = Some(uriData))
 
   def save(implicit conn: Connection): Comment = {
     val entity = CommentEntity(this.copy(updatedAt = currentDateTime))
@@ -188,7 +188,7 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val externalId = "external_id".EXTERNAL_ID[Comment].NOT_NULL(ExternalId())
   val uriId = "normalized_uri_id".ID[NormalizedURI].NOT_NULL
-  val metadata = "metadata".VARCHAR(1024)
+  val uriData = "uri_data".VARCHAR(1024)
   val userId = "user_id".ID[User]
   val pageTitle = "page_title".VARCHAR(1024).NOT_NULL
   val text = "text".CLOB.NOT_NULL
@@ -204,9 +204,9 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
     updatedAt = updatedAt(),
     externalId = externalId(),
     uriId = uriId(),
-    metadata = {
+    uriData = {
       try {
-        val json = Json.parse(metadata.value.getOrElse("{}")) // after grandfathering, force having a value
+        val json = Json.parse(uriData.value.getOrElse("{}")) // after grandfathering, force having a value
         val serializer = NURIS.normalizedURIMetadataSerializer
         Some(serializer.reads(json))
       }
@@ -235,7 +235,7 @@ private[model] object CommentEntity extends CommentEntity with EntityTable[Comme
     comment.updatedAt := view.updatedAt
     comment.externalId := view.externalId
     comment.uriId := view.uriId
-    comment.metadata.set(view.metadata.map { m =>
+    comment.uriData.set(view.uriData.map { m =>
       val serializer = NURIS.normalizedURIMetadataSerializer
       Json.stringify(serializer.writes(m))
     })

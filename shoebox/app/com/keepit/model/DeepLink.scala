@@ -42,14 +42,14 @@ case class DeepLink(
   initatorUserId: Option[Id[User]],
   recipientUserId: Option[Id[User]],
   uriId: Option[Id[NormalizedURI]],
-  metadata: Option[NormalizedURIMetadata] = None,
+  uriData: Option[NormalizedURIMetadata] = None,
   deepLocator: DeepLocator,
   token: DeepLinkToken = DeepLinkToken(),
   state: State[DeepLink] = DeepLink.States.ACTIVE) extends Logging {
   lazy val baseUrl = inject[FortyTwoServices].baseUrl
   lazy val url = "%s/r/%s".format(baseUrl,token.value)
 
-  def withMetadata(meta: NormalizedURIMetadata) = copy(metadata = Some(meta))
+  def withUriData(uriData: NormalizedURIMetadata) = copy(uriData = Some(uriData))
 
   def save(implicit conn: Connection): DeepLink = {
     val entity = DeepLinkEntity(this.copy(updatedAt = currentDateTime))
@@ -89,7 +89,7 @@ private[model] class DeepLinkEntity extends Entity[DeepLink, DeepLinkEntity] {
   val initatorUserId = "initiator_user_id".ID[User]
   val recipientUserId = "recipient_user_id".ID[User]
   val uriId = "uri_id".ID[NormalizedURI]
-  val metadata = "metadata".VARCHAR(1024)
+  val uriData = "uri_data".VARCHAR(1024)
   val deepLocator = "deep_locator".VARCHAR(512).NOT_NULL
   val token = "token".VARCHAR(16).NOT_NULL
   val state = "state".STATE[DeepLink].NOT_NULL(DeepLink.States.ACTIVE)
@@ -103,9 +103,9 @@ private[model] class DeepLinkEntity extends Entity[DeepLink, DeepLinkEntity] {
     initatorUserId = initatorUserId.value,
     recipientUserId = recipientUserId.value,
     uriId = uriId.value,
-    metadata = {
+    uriData = {
       try {
-        val json = Json.parse(metadata.value.getOrElse("{}")) // after grandfathering, force having a value
+        val json = Json.parse(uriData.value.getOrElse("{}")) // after grandfathering, force having a value
         val serializer = NURIS.normalizedURIMetadataSerializer
         Some(serializer.reads(json))
       }
@@ -131,7 +131,7 @@ private[model] object DeepLinkEntity extends DeepLinkEntity with EntityTable[Dee
     uri.initatorUserId.set(view.initatorUserId)
     uri.recipientUserId.set(view.recipientUserId)
     uri.uriId.set(view.uriId)
-    uri.metadata.set(view.metadata.map { m =>
+    uri.uriData.set(view.uriData.map { m =>
       val serializer = NURIS.normalizedURIMetadataSerializer
       Json.stringify(serializer.writes(m))
     })

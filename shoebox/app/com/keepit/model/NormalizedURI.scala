@@ -46,7 +46,7 @@ case class NormalizedURI  (
   externalId: ExternalId[NormalizedURI] = ExternalId(),
   title: Option[String] = None,
   url: String,
-  metadata: Option[NormalizedURIMetadata] = None,
+  uriData: Option[NormalizedURIMetadata] = None,
   urlHash: String,
   state: State[NormalizedURI] = NormalizedURI.States.ACTIVE
 ) extends Logging {
@@ -58,7 +58,7 @@ case class NormalizedURI  (
     entity.view
   }
 
-  def withMetadata(meta: NormalizedURIMetadata) = copy(metadata = Some(meta))
+  def withUriData(uriData: NormalizedURIMetadata) = copy(uriData = Some(uriData))
 
   def withState(state: State[NormalizedURI]) = copy(state = state)
 
@@ -192,7 +192,7 @@ private[model] class NormalizedURIEntity extends Entity[NormalizedURI, Normalize
   val externalId = "external_id".EXTERNAL_ID[NormalizedURI].NOT_NULL(ExternalId())
   val title = "title".VARCHAR(2048)
   val url = "url".VARCHAR(256).NOT_NULL
-  val metadata = "metadata".VARCHAR(1024) // after grandfathering, set .NOT_NULL
+  val uriData = "uri_data".VARCHAR(1024) // after grandfathering, set .NOT_NULL
   val state = "state".STATE[NormalizedURI].NOT_NULL(NormalizedURI.States.ACTIVE)
   val urlHash = "url_hash".VARCHAR(512).NOT_NULL
 
@@ -205,9 +205,9 @@ private[model] class NormalizedURIEntity extends Entity[NormalizedURI, Normalize
     externalId = externalId(),
     title = title.value,
     url = url(),
-    metadata = {
+    uriData = {
       try {
-        val json = Json.parse(metadata.value.getOrElse("{}")) // after grandfathering, force having a value
+        val json = Json.parse(uriData.value.getOrElse("{}")) // after grandfathering, force having a value
         val serializer = NURIS.normalizedURIMetadataSerializer
         Some(serializer.reads(json))
       }
@@ -233,7 +233,7 @@ private[model] object NormalizedURIEntity extends NormalizedURIEntity with Entit
     uri.externalId := view.externalId
     uri.title.set(view.title)
     uri.url := view.url
-    uri.metadata.set(view.metadata.map { m =>
+    uri.uriData.set(view.uriData.map { m =>
     val serializer = NURIS.normalizedURIMetadataSerializer
     Json.stringify(serializer.writes(m))
     })

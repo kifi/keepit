@@ -15,7 +15,7 @@ import com.keepit.serializer.{NormalizedURIMetadataSerializer => NURIS}
 case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
   uriId: Id[NormalizedURI], // = NormalizedURI id
-  metadata: Option[NormalizedURIMetadata] = None,
+  uriData: Option[NormalizedURIMetadata] = None,
   lastScrape: DateTime = currentDateTime,
   nextScrape: DateTime = currentDateTime,
   interval: Double = 24.0d, // hours
@@ -31,7 +31,7 @@ case class ScrapeInfo(
     }
   }
 
-  def withMetadata(meta: NormalizedURIMetadata) = copy(metadata = Some(meta))
+  def withUriData(uriData: NormalizedURIMetadata) = copy(uriData = Some(uriData))
 
   def withFailure()(implicit config: ScraperConfig) = {
     val backoff = min(config.maxBackoff, (config.initialBackoff * (1 << failures).toDouble))
@@ -105,7 +105,7 @@ object ScrapeInfo {
 
 private[model] class ScrapeInfoEntity extends Entity[ScrapeInfo, ScrapeInfoEntity] {
   val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
-  val metadata = "metadata".VARCHAR(1024)
+  val uriData = "uri_data".VARCHAR(1024)
   val lastScrape = "last_scrape".JODA_TIMESTAMP.NOT_NULL
   val nextScrape = "next_scrape".JODA_TIMESTAMP.NOT_NULL
   val interval = "scrape_interval".DOUBLE().NOT_NULL
@@ -118,9 +118,9 @@ private[model] class ScrapeInfoEntity extends Entity[ScrapeInfo, ScrapeInfoEntit
   def view(implicit conn: Connection): ScrapeInfo = ScrapeInfo(
     id = id.value,
     uriId = uriId(),
-    metadata = {
+    uriData = {
       try {
-        val json = Json.parse(metadata.value.getOrElse("{}")) // after grandfathering, force having a value
+        val json = Json.parse(uriData.value.getOrElse("{}")) // after grandfathering, force having a value
         val serializer = NURIS.normalizedURIMetadataSerializer
         Some(serializer.reads(json))
       }
@@ -146,7 +146,7 @@ private[model] object ScrapeInfoEntity extends ScrapeInfoEntity with EntityTable
     val entity = new ScrapeInfoEntity
     entity.id.set(view.id)
     entity.uriId := view.uriId
-    entity.metadata.set(view.metadata.map { m =>
+    entity.uriData.set(view.uriData.map { m =>
       val serializer = NURIS.normalizedURIMetadataSerializer
       Json.stringify(serializer.writes(m))
     })

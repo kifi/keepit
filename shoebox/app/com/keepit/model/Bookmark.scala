@@ -32,7 +32,7 @@ case class Bookmark(
   externalId: ExternalId[Bookmark] = ExternalId(),
   title: String,
   uriId: Id[NormalizedURI],
-  metadata: Option[NormalizedURIMetadata] = None,
+  uriData: Option[NormalizedURIMetadata] = None,
   deprecatedUrl: String = "",
   bookmarkPath: Option[String] = None,
   isPrivate: Boolean = false,
@@ -41,7 +41,7 @@ case class Bookmark(
   source: BookmarkSource,
   kifiInstallation: Option[ExternalId[KifiInstallation]] = None) {
 
-  val url = metadata.map(m => m.originalUrl ).getOrElse(deprecatedUrl)
+  val url = uriData.map(m => m.originalUrl ).getOrElse(deprecatedUrl)
 
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
 
@@ -50,7 +50,7 @@ case class Bookmark(
     case false => Bookmark.States.INACTIVE
   })
 
-  def withMetadata(meta: NormalizedURIMetadata) = copy(metadata = Some(meta))
+  def withUriData(uriData: NormalizedURIMetadata) = copy(uriData = Some(uriData))
 
   def isActive: Boolean = state == Bookmark.States.ACTIVE
 
@@ -72,13 +72,13 @@ case class Bookmark(
 object Bookmark {
 
   def apply(uri: NormalizedURI, userId: Id[User], title: String, url: String, source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
-    Bookmark(title = title, userId = userId, uriId = uri.id.get, metadata = Some(NormalizedURIMetadata(url, "", uri.id.get)), source = source, isPrivate = isPrivate)
+    Bookmark(title = title, userId = userId, uriId = uri.id.get, uriData = Some(NormalizedURIMetadata(url, "", uri.id.get)), source = source, isPrivate = isPrivate)
 
   def apply(title: String, url: String,  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource): Bookmark =
-    Bookmark(title = title, metadata = Some(NormalizedURIMetadata(url, "", uriId)), uriId = uriId, userId = userId, source = source)
+    Bookmark(title = title, uriData = Some(NormalizedURIMetadata(url, "", uriId)), uriId = uriId, userId = userId, source = source)
 
   def apply(title: String, url: String,  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource, isPrivate: Boolean): Bookmark =
-    Bookmark(title = title, metadata = Some(NormalizedURIMetadata(url, "", uriId)), uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
+    Bookmark(title = title, uriData = Some(NormalizedURIMetadata(url, "", uriId)), uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
 
   def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = load(uri, user.id.get)
 
@@ -148,7 +148,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
   val title = "title".VARCHAR(256).NOT_NULL
   val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
   val deprecatedUrl = "url".VARCHAR(256).NOT_NULL
-  val metadata = "metadata".VARCHAR(1024) // after grandfathering, set .NOT_NULL
+  val uriData = "uri_data".VARCHAR(1024) // after grandfathering, set .NOT_NULL
   val state = "state".STATE[Bookmark].NOT_NULL(Bookmark.States.ACTIVE)
   val bookmarkPath = "bookmark_path".VARCHAR(512).NOT_NULL
   val userId = "user_id".ID[User]
@@ -166,9 +166,9 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
     title = title(),
     state = state(),
     uriId = uriId(),
-    metadata = {
+    uriData = {
       try {
-        val json = Json.parse(metadata.value.getOrElse("{}")) // after grandfathering, force having a value
+        val json = Json.parse(uriData.value.getOrElse("{}")) // after grandfathering, force having a value
         val serializer = NURIS.normalizedURIMetadataSerializer
         Some(serializer.reads(json))
       }
@@ -200,7 +200,7 @@ private[model] object BookmarkEntity extends BookmarkEntity with EntityTable[Boo
     bookmark.state := view.state
     bookmark.uriId := view.uriId
     bookmark.deprecatedUrl := view.deprecatedUrl
-    bookmark.metadata.set(view.metadata.map { m =>
+    bookmark.uriData.set(view.uriData.map { m =>
       val serializer = NURIS.normalizedURIMetadataSerializer
       Json.stringify(serializer.writes(m))
     })
