@@ -58,8 +58,6 @@ GET     /admin/events               com.keepit.controllers.admin.AdminEventContr
 POST    /admin/events/buildReport   com.keepit.controllers.admin.AdminEventController.buildReport
 GET     /admin/events/report        com.keepit.controllers.admin.AdminEventController.getReport(reportName: String)
 
-GET     /bookmarks                  com.keepit.controllers.BookmarksController.bookmarksFirstPageView
-GET     /admin/bookmarks            com.keepit.controllers.BookmarksController.bookmarksFirstPageView
 GET     /admin/bookmarks/page/:page com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
 
 GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape

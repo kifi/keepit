@@ -102,10 +102,6 @@ object BookmarksController extends FortyTwoController {
     Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
   }
 
-  def bookmarksFirstPageView = AdminHtmlAction { request =>// TODO: remove me by 2013
-    Ok("""Yo! please use http://keepitfindit.com/admin for admin site. This URL is no longer supported""")
-  }
-
   def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 200
     val (count, bookmarksAndUsers) = CX.withConnection { implicit conn =>
