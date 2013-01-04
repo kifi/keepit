@@ -13,6 +13,7 @@ import com.keepit.test.EmptyApplication
 import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
+import com.keepit.model.NormalizedURIMetadata
 
 class BookmarkTest extends SpecificationWithJUnit {
 
@@ -30,9 +31,9 @@ class BookmarkTest extends SpecificationWithJUnit {
 
       val hover = BookmarkSource("HOVER_KEEP")
 
-      Bookmark(title = "G1", userId = user1.id.get, url = uri1.url, uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)).save
-      Bookmark(title = "A1", userId = user1.id.get, url = uri2.url, uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50)).save
-      Bookmark(title = "G2", userId = user2.id.get, url = uri1.url, uriId = uri1.id.get, source = hover, createdAt = t2.plusDays(1)).save
+      Bookmark(title = "G1", userId = user1.id.get, metadata = Some(NormalizedURIMetadata(uri1.url, "", uri1.id.get)), uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)).save
+      Bookmark(title = "A1", userId = user1.id.get, metadata = Some(NormalizedURIMetadata(uri2.url, "", uri2.id.get)), uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50)).save
+      Bookmark(title = "G2", userId = user2.id.get, metadata = Some(NormalizedURIMetadata(uri1.url, "", uri1.id.get)), uriId = uri1.id.get, source = hover, createdAt = t2.plusDays(1)).save
 
       (user1, user2, uri1, uri2)
     }
@@ -44,6 +45,16 @@ class BookmarkTest extends SpecificationWithJUnit {
         val (user1, user2, uri1, uri2) = setup()
         CX.withConnection { implicit conn =>
           Bookmark.all.map(_.title) === Seq("G1", "A1", "G2")
+        }
+      }
+    }
+    "create metadata when it doesn't previously exist" in {
+      running(new EmptyApplication()) {
+        val (user1, user2, uri1, uri2) = setup()
+        CX.withConnection { implicit conn =>
+          val meta = Bookmark.ofUri(uri1).head.metadata.get
+          meta.originalUrl === uri1.url
+          meta.history.size === 1
         }
       }
     }

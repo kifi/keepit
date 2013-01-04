@@ -38,8 +38,9 @@ case class Bookmark(
   userId: Id[User],
   state: State[Bookmark] = Bookmark.States.ACTIVE,
   source: BookmarkSource,
-  kifiInstallation: Option[ExternalId[KifiInstallation]] = None
-) {
+  kifiInstallation: Option[ExternalId[KifiInstallation]] = None) {
+
+  val url = metadata.map(m => m.originalUrl ).getOrElse("")
 
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
 
@@ -71,6 +72,12 @@ object Bookmark {
 
   def apply(uri: NormalizedURI, userId: Id[User], title: String, url: String, source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
     Bookmark(title = title, userId = userId, uriId = uri.id.get, metadata = Some(NormalizedURIMetadata(url, "", uri.id.get)), source = source, isPrivate = isPrivate)
+
+  def apply(title: String, url: String,  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource): Bookmark =
+    Bookmark(title = title, metadata = Some(NormalizedURIMetadata(url, "", uriId)), uriId = uriId, userId = userId, source = source)
+
+  def apply(title: String, url: String,  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource, isPrivate: Boolean): Bookmark =
+    Bookmark(title = title, metadata = Some(NormalizedURIMetadata(url, "", uriId)), uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
 
   def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = load(uri, user.id.get)
 
