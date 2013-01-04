@@ -33,45 +33,52 @@ class SlickTest extends SpecificationWithJUnit {
           name: String
         )
 
-        implicit object FooIdTypeMapper extends BaseTypeMapper[Id[Foo]] {
-          def apply(profile: BasicProfile) = new IdMapperDelegate[Foo]
-        }
-
-        class FooDAO(implicit val db: DataBaseComponent) {
-          import db.Driver.Implicit._ // here's the driver, abstracted away
-          import org.scalaquery.ql._
-          import org.scalaquery.ql.extended.ExtendedTable
-
-          val table = new ExtendedTable[Foo]("foo") {
-            def id =       column[Id[Foo]]("id", O.PrimaryKey, O.AutoInc)
-            def name =     column[String]("name")
-            def * = id.? ~ name <> (Foo, Foo.unapply _)
-          }
+        //could be easily mocked up
+        trait FooRepo {
+          def save(foo: Foo): Foo
+          def count: Int
         }
 
         //we can abstract out much of the standard repo and have it injected/mocked out
-        class FooRepo {
+        class FooRepoImpl extends FooRepo {
           implicit val db = inject[DataBaseComponent]
+          implicit object FooIdTypeMapper extends BaseTypeMapper[Id[Foo]] {
+            def apply(profile: BasicProfile) = new IdMapperDelegate[Foo]
+          }
 
-          val dao = new FooDAO
+          private val dao = new FooDAO
+          def createTableForTesting() = db.readWrite {implicit s => dao.table.ddl.create}
 
-          def insert(foo: Foo): Foo = db.readWrite {implicit session =>
+          def save(foo: Foo): Foo = db.readWrite {implicit session =>
+            // here you would do the insert/save logic and update the 'updatedAt' field
             dao.table.insert(foo)
             foo.copy(id = Some(Id(Query(db.sequenceID).first)))
           }
 
           def count = db.readWrite {implicit s => Query(dao.table.count).first }
+
+          private class FooDAO(implicit val db: DataBaseComponent) {
+            import db.Driver.Implicit._ // here's the driver, abstracted away
+            import org.scalaquery.ql._
+            import org.scalaquery.ql.extended.ExtendedTable
+
+            val table = new ExtendedTable[Foo]("foo") {
+              def id =       column[Id[Foo]]("id", O.PrimaryKey, O.AutoInc)
+              def name =     column[String]("name")
+              def * = id.? ~ name <> (Foo, Foo.unapply _)
+            }
+          }
         }
 
-        val repo = new FooRepo
+        val repo: FooRepo = new FooRepoImpl //to be injected with guice
 
         //just for testing you know...
-        repo.db.readWrite {implicit s => repo.dao.table.ddl.create }
+        repo.asInstanceOf[FooRepoImpl].createTableForTesting() //only in test mode we should know about the implementation
 
-        val fooA = repo.insert(Foo(name = "A"))
+        val fooA = repo.save(Foo(name = "A"))
         fooA.id.get.id === 1
 
-        val fooB = repo.insert(Foo(name = "B"))
+        val fooB = repo.save(Foo(name = "B"))
         fooB.id.get.id === 2
 
         repo.count === 2
