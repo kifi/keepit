@@ -6,7 +6,7 @@ import com.keepit.inject._
 import org.scalaquery.ql._
 import org.scalaquery.ql.TypeMapper._
 import org.scalaquery.ql.extended.H2Driver.Implicit._
-import org.scalaquery.ql.extended.{ExtendedTable => Table}
+import org.scalaquery.ql.extended.ExtendedTable
 import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.test.Helpers._
@@ -16,9 +16,8 @@ import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.runner.JUnitRunner
-import com.keepit.common.db.slick.DataBaseComponent
 import org.scalaquery.ql.basic.BasicProfile
-import com.keepit.common.db.slick.IdMapperDelegate
+import com.keepit.common.db.slick.{IdMapperDelegate, Repo, DbRepo, DataBaseComponent}
 
 @RunWith(classOf[JUnitRunner])
 class SlickTest extends SpecificationWithJUnit {
@@ -28,46 +27,40 @@ class SlickTest extends SpecificationWithJUnit {
     "using driver abstraction" in {
       running(new ShoeboxApplication()) {
 
-        case class Foo (
+        case class Foo(
           id: Option[Id[Foo]] = None,
           name: String
-        )
+        ) extends Model[Foo] {
+          def withId(id: Id[Foo]): Foo = this.copy(id = Some(id))
+        }
 
         //could be easily mocked up
-        trait FooRepo {
-          def save(foo: Foo): Foo
-          def count: Int
+        trait FooRepo extends Repo[Foo] {
+          //here you may have model specific queries...
+          def getByName(name: String): Seq[Foo]
         }
 
         //we can abstract out much of the standard repo and have it injected/mocked out
-        class FooRepoImpl extends FooRepo {
-          implicit val db = inject[DataBaseComponent]
+        class FooRepoImpl extends FooRepo with DbRepo[Foo] {
+          import db.Driver.Implicit._ // here's the driver, abstracted away
+
           implicit object FooIdTypeMapper extends BaseTypeMapper[Id[Foo]] {
             def apply(profile: BasicProfile) = new IdMapperDelegate[Foo]
           }
 
-          private val dao = new FooDAO
-          def createTableForTesting() = db.readWrite {implicit s => dao.table.ddl.create}
-
-          def save(foo: Foo): Foo = db.readWrite {implicit session =>
-            // here you would do the insert/save logic and update the 'updatedAt' field
-            dao.table.insert(foo)
-            foo.copy(id = Some(Id(Query(db.sequenceID).first)))
+          override val table = new ExtendedTable[Foo]("foo") {
+            def id =       column[Id[Foo]]("id", O.PrimaryKey, O.AutoInc)
+            def name =     column[String]("name")
+            def * = id.? ~ name <> (Foo, Foo.unapply _)
           }
 
-          def count = db.readWrite {implicit s => Query(dao.table.count).first }
-
-          private class FooDAO(implicit val db: DataBaseComponent) {
-            import db.Driver.Implicit._ // here's the driver, abstracted away
-            import org.scalaquery.ql._
-            import org.scalaquery.ql.extended.ExtendedTable
-
-            val table = new ExtendedTable[Foo]("foo") {
-              def id =       column[Id[Foo]]("id", O.PrimaryKey, O.AutoInc)
-              def name =     column[String]("name")
-              def * = id.? ~ name <> (Foo, Foo.unapply _)
-            }
+          def getByName(name: String): Seq[Foo] = db.readOnly {implicit session =>
+            val q = for { f <- table if f.name is name } yield (f)
+            q.list
           }
+
+          //only for testing
+          def createTableForTesting() = db.readWrite {implicit s => table.ddl.create}
         }
 
         val repo: FooRepo = new FooRepoImpl //to be injected with guice
@@ -83,6 +76,9 @@ class SlickTest extends SpecificationWithJUnit {
 
         repo.count === 2
 
+        val a = repo.getByName("A")
+        a.size === 1
+        a.head.name === "A"
       }
     }
 
