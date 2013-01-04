@@ -1,9 +1,9 @@
 {
-    "name": "ff", 
-    "license": "MPL 2.0", 
-    "author": "", 
-    "version": "0.1", 
-    "fullName": "ff", 
-    "id": "jid1-njrbRwZb5BQlkQ", 
-    "description": "a basic add-on"
+    "name": "kifi-beta",
+    "license": "MPL 2.0",
+    "author": "FortyTwo Inc.",
+    "version": "2.1.0",
+    "fullName": "Keep It, Find It!",
+    "id": "kifi@42go.com",
+    "description": "The answer to life, the universe, and everything."
 }
