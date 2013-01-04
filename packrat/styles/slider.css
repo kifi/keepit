@@ -232,17 +232,6 @@
     color: #414b52;
 }
 
-
-.kifi_hover .holidays_hat {
-  border: 0;
-  width: 65px;
-  height: 45px;
-  position:absolute;
-  top:-35px;
-  left:-50px;
-  z-index:100;
-  display:none;
-}
 .kifi_hover .circular {
   border: 2px solid white;
   width: 45px;

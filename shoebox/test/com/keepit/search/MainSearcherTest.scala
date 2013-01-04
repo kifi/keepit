@@ -59,9 +59,10 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
   val source = BookmarkSource("test")
 
-  val noBoostConfig = SearchConfig("myBookmarkBoost" -> "1", "sharingBoost" -> "0", "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
+  val defaultConfig = new SearchConfigManager(None).getDefaultConfig
+  val noBoostConfig = defaultConfig("myBookmarkBoost" -> "1", "sharingBoost" -> "0", "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
                                    "percentMatch" -> "0", "tailCutting" -> "0", "dumpingByRank" -> "false")
-  val allHitsConfig = SearchConfig("tailCutting" -> "0")
+  val allHitsConfig = defaultConfig("tailCutting" -> "0")
 
   "MainSearcher" should {
     "search and categorize using social graph" in {

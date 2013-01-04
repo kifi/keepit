@@ -57,7 +57,6 @@ extends Logging {
   def searchText(queryString: String, maxTextHitsPerCategory: Int)(implicit lang: Lang) = {
     var bookmarkTitleHits = searchBookmarkTitle(queryString)
 
-    val mapper = articleSearcher.idMapper
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
@@ -66,7 +65,7 @@ extends Logging {
     articleParser.setPercentMatch(percentMatch)
     articleParser.parseQuery(queryString).map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
-      articleSearcher.doSearch(articleQuery){ scorer =>
+      articleSearcher.doSearch(articleQuery){ (scorer, mapper) =>
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
           val id = mapper.getId(doc)

@@ -92,9 +92,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
 
   def getArticleSearcher() = searcher
 
-  def getPersonalizedArticleSearcher(uris: Set[Id[NormalizedURI]]) = {
-    new PersonalizedSearcher(searcher.indexReader, searcher.idMapper, uris.map(id => id.id))
-  }
+  def getPersonalizedArticleSearcher(uris: Set[Id[NormalizedURI]]) = PersonalizedSearcher(searcher, uris.map(id => id.id))
 
   def search(queryText: String): Seq[Hit] = {
     parseQuery(queryText) match {
@@ -200,12 +198,20 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           booleanQuery.add(svq, Occur.SHOULD)
           val csterms = QueryUtil.getTermSeq("cs", query)
           val tsterms = QueryUtil.getTermSeq("ts", query)
-          if (csterms.size + tsterms.size > 1) {
+          val cstermSize = csterms.size
+          val tstermSize = tsterms.size
+          if (cstermSize > 1 && tstermSize > 1) {
             val proxQ = new BooleanQuery(true)
             proxQ.add(ProximityQuery(csterms), Occur.SHOULD)
             proxQ.add(ProximityQuery(tsterms), Occur.SHOULD)
             proxQ.setBoost(proximityBoost)
             booleanQuery.add(proxQ, Occur.SHOULD)
+          } else {
+            if (cstermSize > 1 || tstermSize > 1) {
+              val proxQ = ProximityQuery(if (cstermSize > 1) csterms else tsterms)
+              proxQ.setBoost(proximityBoost)
+              booleanQuery.add(proxQ, Occur.SHOULD)
+            }
           }
           booleanQuery
         }

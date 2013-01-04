@@ -2,9 +2,13 @@ package com.keepit.search
 
 import com.keepit.common.db.Id
 import com.keepit.model.User
+import java.io.File
+import java.io.FileInputStream
+import java.util.Properties
+import java.io.FileOutputStream
 
 object SearchConfig {
-  private var defaultParams =
+  private[search] val defaultParams =
     Map[String, String](
       "minMyBookmarks" -> "2",
       "myBookmarkBoost" -> "1.5",
@@ -22,7 +26,7 @@ object SearchConfig {
       "dumpingHalfDecayFriends" -> "6.0",
       "dumpingHalfDecayOthers" -> "2.0"
     )
-  private val descriptions =
+  private[this] val descriptions =
     Map[String, String](
       "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
       "myBookmarkBoost" -> "importance my bookmark",
@@ -41,25 +45,44 @@ object SearchConfig {
       "dumpingHalfDecayOthers" -> "how many top hits in others' bookmark are important"
     )
 
-  var defaultConfig = new SearchConfig(defaultParams)
+  def getDescription(name: String) = descriptions.get(name)
+}
 
-  def setDefault(binding: (String, String)) = {
-    defaultParams += binding
-    defaultConfig = new SearchConfig(defaultParams)
+class SearchConfigManager(configDir: Option[File]) {
+
+  private val propertyFileName = "searchconfig.properties"
+
+  private[this] var defaultConfig = load
+
+  def load = {
+    configDir.flatMap{ dir =>
+      val file = new File(dir, propertyFileName)
+      if (file.exists()) {
+        val prop = new Properties()
+        prop.load(new FileInputStream(file))
+        val defaults = SearchConfig.defaultParams.foldLeft(Map.empty[String, String]){
+          case (m, (k, v)) => m + (k -> Option(prop.getProperty(k)).getOrElse(v))
+        }
+        Some(new SearchConfig(defaults))
+      } else {
+        None
+      }
+    }.getOrElse(new SearchConfig(SearchConfig.defaultParams))
+  }
+
+  def apply(params: Map[String, String]): SearchConfig = {
+    defaultConfig = defaultConfig(params)
     defaultConfig
   }
 
-  def getDefaultConfig = defaultConfig
-
-  def apply(params: Map[String, String]): SearchConfig = defaultConfig(params)
   def apply(newParams: (String, String)*): SearchConfig = apply(newParams.foldLeft(Map.empty[String, String]){ (m, p) => m + p })
+
+  def getDefaultConfig = defaultConfig
 
   private var userConfig = Map.empty[Long, SearchConfig]
   def getUserConfig(userId: Id[User]) = userConfig.getOrElse(userId.id, defaultConfig)
   def setUserConfig(userId: Id[User], config: SearchConfig) { userConfig = userConfig + (userId.id -> config) }
   def resetUserConfig(userId: Id[User]) { userConfig = userConfig - userId.id }
-
-  def getDescription(name: String) = descriptions.get(name)
 }
 
 class SearchConfig(params: Map[String, String]) {
