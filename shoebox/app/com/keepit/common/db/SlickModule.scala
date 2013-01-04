@@ -1,8 +1,10 @@
 package com.keepit.common.db
 
 import com.tzavellas.sse.guice.ScalaModule
+
 import com.google.inject.{Provides, Inject, Singleton}
 import com.keepit.common.time._
+import com.keepit.common.db.slick._
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import akka.actor.ActorSystem
@@ -21,4 +23,11 @@ case class SlickModule(dbInfo: DbInfo) extends ScalaModule {
   @Provides
   @Singleton
   def dbConnection(): DbConnection = DbConnection(dbInfo)
+
+  @Provides
+  @Singleton
+  def connection(): DataBaseComponent = dbInfo.driverName match {
+    case MySQL.driverName     => new MySQL( dbInfo )
+    case H2.driverName        => new H2( dbInfo )
+  }
 }

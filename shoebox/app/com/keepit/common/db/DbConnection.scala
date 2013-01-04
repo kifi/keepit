@@ -19,4 +19,5 @@ case class DbConnection(dbInfo: DbInfo) {
 
 trait DbInfo {
   def database: Database
+  def driverName: String
 }
