@@ -939,7 +939,7 @@ slider = function() {
       // Because we're using very simple templating now, re-rendering has to be done carefully.
       callback(type == "message" ? response : {
           "createdAt": new Date,
-          "text": request.text,
+          "text": text,
           "user": {
             "externalId": session.userId,
             "firstName": session.name,
