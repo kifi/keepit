@@ -398,7 +398,7 @@ function searchOnServer(request, respond) {
       maxHits: config.max_res * 2,
       lastUUI: request.lastUUID,
       context: request.context,
-      kifiVersion: chrome.app.getDetails().version},
+      kifiVersion: app.version()},
     function(results) {
       log("[searchOnServer] results:", results);
       respond({"session": session, "searchResults": results, "userConfig": config});
@@ -679,7 +679,7 @@ function authenticate(callback) {
     var config = getConfigs();
     ajax("POST", "http://" + config.server + "/kifi/start", {
       installation: config.kifi_installation_id,
-      version: chrome.app.getDetails().version,
+      version: api.version,
       // platform: navigator.platform,
       // language: navigator.language,
       agent: navigator.userAgent || navigator.appVersion || navigator.vendor},

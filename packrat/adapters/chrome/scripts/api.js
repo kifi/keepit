@@ -19,4 +19,5 @@ api = {
       });
     }
   },
-  timers: window};
+  timers: window,
+  version: chrome.app.getDetails().version};
