@@ -7,9 +7,13 @@ mkdir -p out
 cp -R adapters/chrome out/
 cp -R adapters/firefox out/
 
-for s in html icons images scripts styles; do
+for s in html icons images styles; do
   cp -R $s out/chrome/
+  cp -R $s out/firefox/data/
 done
+
+cp -R scripts out/chrome/
+cp scripts/main.js out/firefox/lib/
 
 matches=()
 styles=()
