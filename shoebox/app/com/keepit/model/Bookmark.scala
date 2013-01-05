@@ -13,7 +13,6 @@ import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
-import com.keepit.serializer.{NormalizedURIMetadataSerializer => NURIS}
 
 case class BookmarkSource(value: String) {
   implicit def getValue = value
@@ -32,7 +31,7 @@ case class Bookmark(
   externalId: ExternalId[Bookmark] = ExternalId(),
   title: String,
   uriId: Id[NormalizedURI],
-  uriData: Option[NormalizedURIMetadata] = None,
+  urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
   deprecatedUrl: String = "",
   bookmarkPath: Option[String] = None,
   isPrivate: Boolean = false,
@@ -41,7 +40,7 @@ case class Bookmark(
   source: BookmarkSource,
   kifiInstallation: Option[ExternalId[KifiInstallation]] = None) {
 
-  val url = uriData.map(m => m.originalUrl ).getOrElse(deprecatedUrl)
+  val url = deprecatedUrl
 
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
 
@@ -50,7 +49,7 @@ case class Bookmark(
     case false => Bookmark.States.INACTIVE
   })
 
-  def withUriData(uriData: NormalizedURIMetadata) = copy(uriData = Some(uriData))
+  def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
 
   def isActive: Boolean = state == Bookmark.States.ACTIVE
 
@@ -71,14 +70,14 @@ case class Bookmark(
 
 object Bookmark {
 
-  def apply(uri: NormalizedURI, userId: Id[User], title: String, url: String, source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
-    Bookmark(title = title, userId = userId, uriId = uri.id.get, uriData = Some(NormalizedURIMetadata(url, "", uri.id.get)), source = source, isPrivate = isPrivate)
+  def apply(uri: NormalizedURI, userId: Id[User], title: String, urlId: Id[URL], source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
+    Bookmark(title = title, userId = userId, uriId = uri.id.get, urlId = Some(urlId), source = source, isPrivate = isPrivate)
 
-  def apply(title: String, url: String,  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource): Bookmark =
-    Bookmark(title = title, uriData = Some(NormalizedURIMetadata(url, "", uriId)), uriId = uriId, userId = userId, source = source)
+  def apply(title: String, urlId: Id[URL], uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource): Bookmark =
+    Bookmark(title = title, urlId = Some(urlId), uriId = uriId, userId = userId, source = source)
 
-  def apply(title: String, url: String,  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource, isPrivate: Boolean): Bookmark =
-    Bookmark(title = title, uriData = Some(NormalizedURIMetadata(url, "", uriId)), uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
+  def apply(title: String, urlId: Id[URL],  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource, isPrivate: Boolean): Bookmark =
+    Bookmark(title = title, urlId = urlId, uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
 
   def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = load(uri, user.id.get)
 
@@ -147,8 +146,8 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
   val externalId = "external_id".EXTERNAL_ID[Bookmark].NOT_NULL(ExternalId())
   val title = "title".VARCHAR(256).NOT_NULL
   val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
+  val urlId = "url_id".ID[URL]
   val deprecatedUrl = "url".VARCHAR(256).NOT_NULL
-  val uriData = "uri_data".VARCHAR(1024) // after grandfathering, set .NOT_NULL
   val state = "state".STATE[Bookmark].NOT_NULL(Bookmark.States.ACTIVE)
   val bookmarkPath = "bookmark_path".VARCHAR(512).NOT_NULL
   val userId = "user_id".ID[User]
@@ -166,18 +165,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
     title = title(),
     state = state(),
     uriId = uriId(),
-    uriData = {
-      try {
-        val json = Json.parse(uriData.value.getOrElse("{}")) // after grandfathering, force having a value
-        val serializer = NURIS.normalizedURIMetadataSerializer
-        Some(serializer.reads(json))
-      }
-      catch {
-        case ex: Throwable =>
-          // after grandfathering process, throw error
-          None
-      }
-    },
+    urlId = urlId.value,
     deprecatedUrl = deprecatedUrl(),
     isPrivate = isPrivate(),
     userId = userId(),
@@ -199,11 +187,8 @@ private[model] object BookmarkEntity extends BookmarkEntity with EntityTable[Boo
     bookmark.title := view.title
     bookmark.state := view.state
     bookmark.uriId := view.uriId
+    bookmark.urlId.set(view.urlId)
     bookmark.deprecatedUrl := view.deprecatedUrl
-    bookmark.uriData.set(view.uriData.map { m =>
-      val serializer = NURIS.normalizedURIMetadataSerializer
-      Json.stringify(serializer.writes(m))
-    })
     bookmark.bookmarkPath.set(view.bookmarkPath)
     bookmark.isPrivate := view.isPrivate
     bookmark.userId.set(view.userId)
