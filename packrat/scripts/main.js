@@ -640,32 +640,17 @@ function parseBoolOr(val, defaultValue) {
 chrome.runtime.onInstalled.addListener(function(details) {
   log("[onInstalled]", details);
   logEvent("extension", details.reason);
-  logEvent("extension", "started");
   removeFromConfigs("user"); // remove this line in early Feb or so
-  authenticate(function() {
-    log("[onInstalled] authenticated");
 
-    chrome.tabs.query({windowType: "normal", active: true, status: "complete"}, function(tabs) {
-      tabs.forEach(sprinkleSomeKiFiOn);
-    });
-
-    if (details.reason == "install" || getConfigs().env == "development") {
-      postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
-    }
-  });
-});
-
-chrome.runtime.onStartup.addListener(function() {
-  log("[onStartup]");
-  logEvent("extension", "started");
-  authenticate(function() {
-    log("[onStartup] authenticated");
-  });
+  var config = getConfigs();
+  if (details.reason == "install" && !config.kifi_installation_id || config.env == "development") {
+    onAuthenticate = postBookmarks.bind(null, chrome.bookmarks.getTree, "INIT_LOAD");
+  }
 });
 
 // ===== Session management
 
-var session;
+var session, onAuthenticate = noop;
 
 function authenticate(callback) {
   if (getConfigs().env == "development") {
@@ -696,6 +681,8 @@ function authenticate(callback) {
       });
 
       callback();
+      onAuthenticate();
+      onAuthenticate = noop;
     }, function fail(xhr) {
       log("[startSession] xhr failed:", xhr);
       if (onFail) onFail();
@@ -729,3 +716,14 @@ function deauthenticate(callback) {
     callback();
   });
 }
+
+// ===== Main (executed upon install, reinstall, update, reenable, and browser start)
+
+logEvent("extension", "started");
+authenticate(function() {
+  log("[main] authenticated");
+
+  chrome.tabs.query({windowType: "normal", active: true, status: "complete"}, function(tabs) {
+    tabs.forEach(sprinkleSomeKiFiOn);
+  });
+});
