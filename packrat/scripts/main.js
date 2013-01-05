@@ -637,31 +637,27 @@ function parseBoolOr(val, defaultValue) {
   return val === "yes" || val === true || val === "true" || defaultValue;
 }
 
-chrome.runtime.onInstalled.addListener(function(details) {
-  log("[onInstalled]", details);
-  logEvent("extension", details.reason);
+api.on("install", function() {
+  logEvent("extension", "install");
+});
+api.on("update", function() {
+  logEvent("extension", "update");
   removeFromConfigs("user"); // remove this line in early Feb or so
-
-  var config = getConfigs();
-  if (details.reason == "install" && !config.kifi_installation_id || config.env == "development") {
-    onAuthenticate = postBookmarks.bind(null, chrome.bookmarks.getTree, "INIT_LOAD");
-  }
 });
 
 // ===== Session management
 
-var session, onAuthenticate = noop;
+var session;
 
 function authenticate(callback) {
-  if (getConfigs().env == "development") {
+  var config = getConfigs();
+  if (config.env == "development") {
     openFacebookConnect();
   } else {
     startSession(openFacebookConnect);
   }
 
   function startSession(onFail) {
-    log("[startSession]");
-    var config = getConfigs();
     ajax("POST", "http://" + config.server + "/kifi/start", {
       installation: config.kifi_installation_id,
       version: api.version,
@@ -669,20 +665,22 @@ function authenticate(callback) {
       // language: navigator.language,
       agent: navigator.userAgent || navigator.appVersion || navigator.vendor},
     function done(data) {
-      log("[startSession] done:", data);
+      log("[startSession] done, loadReason:", api.loadReason, "session:", data);
       logEvent("extension", "authenticated");
 
       session = data;
       setConfigs("kifi_installation_id", data.installationId);
 
       // Locate or create KeepIt bookmark folder.
-      getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+      getBookmarkFolderInfo(config.bookmark_id, function(info) {
         setConfigs("bookmark_id", info.keepItId);
       });
 
       callback();
-      onAuthenticate();
-      onAuthenticate = noop;
+
+      if (api.loadReason == "install" || config.env == "development") {
+        postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
+      }
     }, function fail(xhr) {
       log("[startSession] xhr failed:", xhr);
       if (onFail) onFail();
@@ -693,7 +691,7 @@ function authenticate(callback) {
     log("[openFacebookConnect]");
     var popupTabId;
     chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-      if (changeInfo.status == "loading" && tabId == popupTabId && tab.url == "http://" + getConfigs().server + "/#_=_") {
+      if (changeInfo.status == "loading" && tabId == popupTabId && tab.url == "http://" + config.server + "/#_=_") {
         log("[openFacebookConnect] closing tab ", tabId);
         chrome.tabs.remove(tabId);
         popupTabId = null;
@@ -702,7 +700,7 @@ function authenticate(callback) {
       }
     });
 
-    chrome.windows.create({'url': 'http://' + getConfigs().server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(win) {
+    chrome.windows.create({'url': 'http://' + config.server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(win) {
       popupTabId = win.tabs[0].id
     });
   }
