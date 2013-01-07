@@ -2,7 +2,7 @@
 
 CREATE TABLE url (
     id bigint(20) NOT NULL AUTO_INCREMENT,
-    url varchar(256) NOT NULL,
+    url varchar(2048) NOT NULL,
     normalized_uri_id bigint(20) NOT NULL,
     history varchar(1024),
     state varchar(20) NOT NULL,
@@ -10,6 +10,7 @@ CREATE TABLE url (
     updated_at datetime NOT NULL,
     
     PRIMARY KEY (id),
+    UNIQUE INDEX url_url (url),
     CONSTRAINT url_normalized_uri_id FOREIGN KEY (normalized_uri_id) REFERENCES normalized_uri(id)
 );
 

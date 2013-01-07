@@ -62,6 +62,9 @@ object URL {
   def all(implicit conn: Connection): Seq[URL] =
     URLEntity.all.map(_.view)
 
+  def get(url: String)(implicit conn: Connection): Option[URL] =
+    (URLEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.url EQ url) unique }.map(_.view)
+
   def get(id: Id[URL])(implicit conn: Connection): URL =
     getOpt(id).getOrElse(throw NotFoundException(id))
 
