@@ -29,7 +29,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   protected def table: RepoTable[M]
 
   def save(model: M)(implicit session: RWSession): M = {
-    val toUpdate = model.updateTime(inject[DateTime])
+    val toUpdate = model.withUpdateTime(inject[DateTime])
     model.id match {
       case Some(id) => update(toUpdate)
       case None => toUpdate.withId(insert(toUpdate))

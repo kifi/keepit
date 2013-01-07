@@ -35,7 +35,7 @@ class SlickTest extends SpecificationWithJUnit {
           name: String
         ) extends Model[Foo] {
           def withId(id: Id[Foo]): Foo = this.copy(id = Some(id))
-          def updateTime(now: DateTime) = this
+          def withUpdateTime(now: DateTime) = this
         }
 
         //could be easily mocked up

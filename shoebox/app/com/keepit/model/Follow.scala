@@ -29,7 +29,7 @@ case class Follow (
   state: State[Follow] = FollowCxRepo.States.ACTIVE
 ) extends Model[Follow] {
   def withId(id: Id[Follow]) = this.copy(id = Some(id))
-  def updateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def activate = copy(state = FollowCxRepo.States.ACTIVE)
   def deactivate = copy(state = FollowCxRepo.States.INACTIVE)
   def isActive = state == FollowCxRepo.States.ACTIVE
