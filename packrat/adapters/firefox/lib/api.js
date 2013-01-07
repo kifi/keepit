@@ -1,9 +1,10 @@
+// API for main.js
+
 function dispatch(a) {
   if (a) a.forEach(function(f) {f()});
 }
 
 var self = require("sdk/self"), data = self.data;
-var pageMod = require("page-mod");
 var timers = require("sdk/timers");
 //var tabs = require("sdk/tabs");
 

@@ -1,3 +1,5 @@
+// API for main.js
+
 api = function() {
 
   function dispatch(a) {
@@ -15,7 +17,7 @@ api = function() {
   });
 
   return {
-    loadReason: "enable",
+    loadReason: "enable",  // assuming "enable" by elimination
     on: {
       install: [],
       update: [],

@@ -1,4 +1,5 @@
 var api = api || require("./api");
+var meta = meta || require("./meta");
 
 function noop() {}
 
@@ -421,7 +422,7 @@ function onPageLoad(tab) {
   logEvent("extension", "pageLoad");
 
   injectDeps(tab.id, {
-    scripts: contentScripts.reduce(function(a, s) {
+    scripts: meta.contentScripts.reduce(function(a, s) {
         if (s[1].test(tab.url)) {
           a.push(s[0]);
         }
@@ -483,7 +484,7 @@ function injectDeps(tabId, details, callback) {
     return a.concat(transitiveClosure(s));
   }, []).filter(unique);
   var styles = scripts.reduce(function(a, s) {
-    a.push.apply(a, styleDeps[s]);
+    a.push.apply(a, meta.styleDeps[s]);
     return a;
   }, []);
   var injected = details.injected || {};
@@ -494,7 +495,7 @@ function injectDeps(tabId, details, callback) {
   });
 
   function transitiveClosure(path) {
-    var deps = scriptDeps[path];
+    var deps = meta.scriptDeps[path];
     if (deps) {
       deps = deps.reduce(function(a, s) {
         return a.concat(transitiveClosure(s));
