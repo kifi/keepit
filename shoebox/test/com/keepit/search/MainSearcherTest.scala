@@ -259,7 +259,6 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
         val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
 
-        println(res.hits)
         res.hits.map(h => h.uriId).toList === expected
       }
     }

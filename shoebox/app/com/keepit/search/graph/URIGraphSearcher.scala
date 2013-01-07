@@ -4,11 +4,11 @@ import com.keepit.common.db.Id
 import com.keepit.model.{NormalizedURI, User}
 import com.keepit.search.graph.EdgeSetUtil._
 import com.keepit.search.index.Searcher
-import com.keepit.search.line.LineQuery
-import com.keepit.search.line.LineQueryBuilder
+import com.keepit.search.line.LineIndexReader
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.Query
 import scala.collection.immutable.LongMap
+import org.apache.lucene.search.IndexSearcher
 
 class URIGraphSearcher(searcher: Searcher) {
 
@@ -95,35 +95,41 @@ class URIGraphSearcher(searcher: Searcher) {
     uriList
   }
 
+  def getIndexReader(user: Id[User], uriList: URIList) = {
+    val term = URIGraph.userTerm.createTerm(user.toString)
+    val td = searcher.indexReader.termDocs(term)
+    val userDocId = try {
+      if (td.next()) td.doc else DocIdSetIterator.NO_MORE_DOCS
+    } finally {
+      td.close()
+    }
+    new LineIndexReader(searcher.indexReader, userDocId, uriList.publicListSize + uriList.privateListSize, None)
+  }
+
   def search(user: Id[User], query: Query, percentMatch: Float): Map[Long, Float] = {
     var result = LongMap.empty[Float]
     getURIList(user).foreach{ uriList =>
       val publicList = uriList.publicList
       val privateList = uriList.privateList
 
-      val term = URIGraph.userTerm.createTerm(user.toString)
-      val td = searcher.indexReader.termDocs(term)
-      val docid = try {
-        if (td.next()) td.doc else LineQuery.NO_MORE_DOCS
-      } finally {
-        td.close()
-      }
-
-      val rewrittenQuery = query.rewrite(searcher.indexReader)
-      val queryBuilder = new LineQueryBuilder(searcher.getSimilarity, percentMatch)
-      val plan = queryBuilder.build(rewrittenQuery)(searcher.indexReader)
-
-      if (plan.fetchDoc(docid) == docid) {
-        var line = plan.fetchLine(0)
-        while (line < LineQuery.NO_MORE_LINES) {
-          if (line < publicList.length) {
-            val id = publicList(line)
-            result += (id -> plan.score)
-          } else if (line < publicList.length + privateList.length) {
-            val id = privateList(line - publicList.length)
-            result += (id -> plan.score)
+      val lineIndexReader = getIndexReader(user, uriList)
+      val rewrittenQuery = query.rewrite(lineIndexReader)
+      val lineSearcher = new IndexSearcher(lineIndexReader)
+      var weight = lineSearcher.createNormalizedWeight(rewrittenQuery)
+      if (weight != null) {
+        var scorer = weight.scorer(lineIndexReader, true, true)
+        if (scorer != null) {
+          var doc = scorer.nextDoc()
+          while (doc < DocIdSetIterator.NO_MORE_DOCS) {
+            if (doc < publicList.length) {
+              val id = publicList(doc)
+              result += (id -> scorer.score())
+            } else if (doc < publicList.length + privateList.length) {
+              val id = privateList(doc - publicList.length)
+              result += (id -> scorer.score())
+            }
+            doc = scorer.nextDoc()
           }
-          line = plan.fetchLine(0)
         }
       }
     }

@@ -44,7 +44,7 @@ class LineTokenStreamTest extends SpecificationWithJUnit {
         curPos += posIncrAttr.getPositionIncrement
       }
       count === 3000
-      curPos === LineQuery.MAX_POSITION_PER_LINE - LineQuery.LINE_GAP - 1
+      curPos === LineField.MAX_POSITION_PER_LINE - LineField.LINE_GAP - 1
     }
 
     "maintain gaps between lines" in {
@@ -56,10 +56,10 @@ class LineTokenStreamTest extends SpecificationWithJUnit {
       while (ts.incrementToken) {
         count += 1
         curPos += posIncrAttr.getPositionIncrement
-        ((curPos % LineQuery.MAX_POSITION_PER_LINE) < (LineQuery.MAX_POSITION_PER_LINE - LineQuery.LINE_GAP)) === true
+        ((curPos % LineField.MAX_POSITION_PER_LINE) < (LineField.MAX_POSITION_PER_LINE - LineField.LINE_GAP)) === true
       }
       count === 5000 * 3
-      curPos === LineQuery.MAX_POSITION_PER_LINE * 3 - LineQuery.LINE_GAP - 1
+      curPos === LineField.MAX_POSITION_PER_LINE * 3 - LineField.LINE_GAP - 1
     }
   }
 }

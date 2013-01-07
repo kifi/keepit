@@ -2,7 +2,7 @@ package com.keepit.search.index
 
 import com.keepit.common.time._
 import com.keepit.search.graph.URIList
-import com.keepit.search.line.LineQuery
+import com.keepit.search.line.LineField
 import org.apache.lucene.document.Fieldable
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
@@ -89,8 +89,8 @@ object DocUtil {
         case Some(ts) =>
           decodeTokenStream(ts).map{ case (term, pos, payload) =>
             payload match {
-              case "" => "#%d: %s @%d".format(pos / LineQuery.MAX_POSITION_PER_LINE, term, pos % LineQuery.MAX_POSITION_PER_LINE)
-              case _ => "#%d: %s @%d [%s]".format(pos / LineQuery.MAX_POSITION_PER_LINE, term, pos % LineQuery.MAX_POSITION_PER_LINE, payload)
+              case "" => "#%d: %s @%d".format(pos / LineField.MAX_POSITION_PER_LINE, term, pos % LineField.MAX_POSITION_PER_LINE)
+              case _ => "#%d: %s @%d [%s]".format(pos / LineField.MAX_POSITION_PER_LINE, term, pos % LineField.MAX_POSITION_PER_LINE, payload)
             }
           }.mkString(" / ")
         case _ => "unable to decode"
