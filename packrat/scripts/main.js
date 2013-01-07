@@ -1,3 +1,5 @@
+this.require && require("./api");
+
 function noop() {}
 
 // ===== Logging
@@ -95,7 +97,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
 }
 
 var eventLogDelay = 4000;
-setTimeout(function maybeSend() {
+api.timers.setTimeout(function maybeSend() {
   if (_eventLog.length) {
     var t0 = _eventLog[0].time;
     _eventLog.forEach(function(e) { e.time -= t0 }); // relative times = fewer bytes
@@ -117,7 +119,7 @@ setTimeout(function maybeSend() {
   } else {
     eventLogDelay = Math.min(eventLogDelay * 2, 60 * 1000);
   }
-  setTimeout(maybeSend, eventLogDelay);
+  api.timers.setTimeout(maybeSend, eventLogDelay);
 }, 4000);
 
 // ===== Message handling
@@ -173,7 +175,7 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         setPageIcon(tab, request.is_kept);
         return;
       case "require":
-        require(tab.id, request, sendResponse);
+        injectDeps(tab.id, request, sendResponse);
         return true;
       case "get_slider_info":
         if (session) {
@@ -421,7 +423,7 @@ function onPageLoad(tab) {
   log("[onPageLoad] tab:", tab);
   logEvent("extension", "pageLoad");
 
-  require(tab.id, {
+  injectDeps(tab.id, {
     scripts: contentScripts.reduce(function(a, s) {
         if (s[1].test(tab.url)) {
           a.push(s[0]);
@@ -483,7 +485,7 @@ function setPageIcon(tab, kept) {
   });
 }
 
-function require(tabId, details, callback) {
+function injectDeps(tabId, details, callback) {
   var scripts = details.scripts.reduce(function(a, s) {
     return a.concat(transitiveClosure(s));
   }, []).filter(unique);
@@ -520,7 +522,7 @@ function require(tabId, details, callback) {
       var n = 0;
       paths.forEach(function(path) {
         if (!injected[path]) {
-          log("[require] tab", tabId, path);
+          log("[injectDeps] tab:", tabId, path);
           inject(tabId, {file: path}, function() {
             injected[path] = true;
             if (++n == paths.length) {

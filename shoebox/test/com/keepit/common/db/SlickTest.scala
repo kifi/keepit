@@ -6,7 +6,7 @@ import com.keepit.inject._
 import org.scalaquery.ql._
 import org.scalaquery.ql.TypeMapper._
 import org.scalaquery.ql.extended.H2Driver.Implicit._
-import org.scalaquery.ql.extended.{ExtendedTable => Table}
+import org.scalaquery.ql.extended.ExtendedTable
 import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.test.Helpers._
@@ -16,28 +16,71 @@ import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.runner.JUnitRunner
+import org.scalaquery.ql.basic.BasicProfile
+import com.keepit.common.db.slick.{IdMapperDelegate, Repo, DbRepo, DataBaseComponent}
 
 @RunWith(classOf[JUnitRunner])
 class SlickTest extends SpecificationWithJUnit {
 
   "Slick" should {
-    "run in session" in {
-      running(new ShoeboxApplication().withFakeHealthcheck()) {
 
-        object Test extends Table[(String)]("TEST") {
-          def name = column[String]("NAME", O.PrimaryKey)
-          def * = name
+    "using driver abstraction" in {
+      running(new ShoeboxApplication()) {
+
+        case class Foo(
+          id: Option[Id[Foo]] = None,
+          name: String
+        ) extends Model[Foo] {
+          def withId(id: Id[Foo]): Foo = this.copy(id = Some(id))
         }
 
-        inject[DbConnection] readWrite { implicit session =>
-          Test.ddl.create
-          Test.insertAll(("test 1"), ("test 2"))
+        //could be easily mocked up
+        trait FooRepo extends Repo[Foo] {
+          //here you may have model specific queries...
+          def getByName(name: String): Seq[Foo]
         }
 
-        inject[DbConnection].readOnly { implicit session =>
-          Query(Test.count).first === 2
+        //we can abstract out much of the standard repo and have it injected/mocked out
+        class FooRepoImpl extends FooRepo with DbRepo[Foo] {
+          import db.Driver.Implicit._ // here's the driver, abstracted away
+
+          implicit object FooIdTypeMapper extends BaseTypeMapper[Id[Foo]] {
+            def apply(profile: BasicProfile) = new IdMapperDelegate[Foo]
+          }
+
+          override val table = new ExtendedTable[Foo]("foo") {
+            def id =       column[Id[Foo]]("id", O.PrimaryKey, O.AutoInc)
+            def name =     column[String]("name")
+            def * = id.? ~ name <> (Foo, Foo.unapply _)
+          }
+
+          def getByName(name: String): Seq[Foo] = db.readOnly {implicit session =>
+            val q = for { f <- table if f.name is name } yield (f)
+            q.list
+          }
+
+          //only for testing
+          def createTableForTesting() = db.readWrite {implicit s => table.ddl.create}
         }
+
+        val repo: FooRepo = new FooRepoImpl //to be injected with guice
+
+        //just for testing you know...
+        repo.asInstanceOf[FooRepoImpl].createTableForTesting() //only in test mode we should know about the implementation
+
+        val fooA = repo.save(Foo(name = "A"))
+        fooA.id.get.id === 1
+
+        val fooB = repo.save(Foo(name = "B"))
+        fooB.id.get.id === 2
+
+        repo.count === 2
+
+        val a = repo.getByName("A")
+        a.size === 1
+        a.head.name === "A"
       }
     }
+
   }
 }

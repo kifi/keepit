@@ -22,6 +22,7 @@ case class FortyTwoModule() extends ScalaModule {
     install(new SlickModule(new DbInfo() {
       //later on we can customize it by the application name
       lazy val database = Database.forDataSource(DB.getDataSource("shoebox")(Play.current))
+      lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
     }))
   }
 

@@ -9,6 +9,7 @@ import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
+import play.api.libs.json._
 import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
@@ -16,10 +17,27 @@ import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URINormalizer
+import com.keepit.serializer.{NormalizedURIMetadataSerializer => NURIS}
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
 case class NormalizedURIStats(uri: NormalizedURI, bookmarks: Seq[Bookmark])
+
+case class URIHistoryCause(value: String)
+object URIHistoryCause {
+  val create = URIHistoryCause("create")
+  val split = URIHistoryCause("split")
+  val merge = URIHistoryCause("merge")
+}
+case class URIHistory(date: DateTime, id: Id[NormalizedURI], cause: URIHistoryCause)
+
+case class NormalizedURIMetadata(originalUrl: String, context: String, history: Seq[URIHistory]) {
+  def withHistory(historyItem: URIHistory) = copy(history = historyItem +: history)
+}
+
+object NormalizedURIMetadata {
+  def apply(originalUrl: String, context: String, id: Id[NormalizedURI]): NormalizedURIMetadata = NormalizedURIMetadata(originalUrl = originalUrl, context = context, history = Seq(URIHistory(currentDateTime, id, URIHistoryCause.create)))
+}
 
 case class NormalizedURI  (
   id: Option[Id[NormalizedURI]] = None,
@@ -28,6 +46,7 @@ case class NormalizedURI  (
   externalId: ExternalId[NormalizedURI] = ExternalId(),
   title: Option[String] = None,
   url: String,
+  uriData: Option[NormalizedURIMetadata] = None,
   urlHash: String,
   state: State[NormalizedURI] = NormalizedURI.States.ACTIVE
 ) extends Logging {
@@ -38,6 +57,8 @@ case class NormalizedURI  (
     assert(1 == entity.save())
     entity.view
   }
+
+  def withUriData(uriData: NormalizedURIMetadata) = copy(uriData = Some(uriData))
 
   def withState(state: State[NormalizedURI]) = copy(state = state)
 
@@ -171,6 +192,7 @@ private[model] class NormalizedURIEntity extends Entity[NormalizedURI, Normalize
   val externalId = "external_id".EXTERNAL_ID[NormalizedURI].NOT_NULL(ExternalId())
   val title = "title".VARCHAR(2048)
   val url = "url".VARCHAR(256).NOT_NULL
+  val uriData = "uri_data".VARCHAR(1024) // after grandfathering, set .NOT_NULL
   val state = "state".STATE[NormalizedURI].NOT_NULL(NormalizedURI.States.ACTIVE)
   val urlHash = "url_hash".VARCHAR(512).NOT_NULL
 
@@ -183,6 +205,18 @@ private[model] class NormalizedURIEntity extends Entity[NormalizedURI, Normalize
     externalId = externalId(),
     title = title.value,
     url = url(),
+    uriData = {
+      try {
+        val json = Json.parse(uriData.value.getOrElse("{}")) // after grandfathering, force having a value
+        val serializer = NURIS.normalizedURIMetadataSerializer
+        Some(serializer.reads(json))
+      }
+      catch {
+        case ex: Throwable =>
+          // after grandfathering process, throw error
+          None
+      }
+    },
     state = state(),
     urlHash = urlHash()
   )
@@ -199,6 +233,10 @@ private[model] object NormalizedURIEntity extends NormalizedURIEntity with Entit
     uri.externalId := view.externalId
     uri.title.set(view.title)
     uri.url := view.url
+    uri.uriData.set(view.uriData.map { m =>
+    val serializer = NURIS.normalizedURIMetadataSerializer
+    Json.stringify(serializer.writes(m))
+    })
     uri.state := view.state
     uri.urlHash := view.urlHash
     uri
