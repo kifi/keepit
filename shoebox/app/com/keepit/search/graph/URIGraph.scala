@@ -9,6 +9,8 @@ import com.keepit.model.{Bookmark, NormalizedURI, User}
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher, QueryParser}
+import com.keepit.search.query.ProximityQuery
+import com.keepit.search.query.QueryUtil
 import play.api.Play.current
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.TokenStream
@@ -55,7 +57,7 @@ trait URIGraph {
   def load(): Int
   def update(userId: Id[User]): Int
   def getURIGraphSearcher(): URIGraphSearcher
-  def getQueryParser(lang: Lang): QueryParser
+  def getQueryParser(lang: Lang, proximityBoost: Float): QueryParser
   def close(): Unit
 }
 
@@ -110,8 +112,11 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     }
   }
 
-  def getQueryParser(lang: Lang) = {
-    val parser = new URIGraphQueryParser(DefaultAnalyzer.forParsing(lang))
+  def getQueryParser(lang: Lang): QueryParser = getQueryParser(lang, 0.0f)
+
+  def getQueryParser(lang: Lang, proximityBoost: Float) = {
+    val total = 1.0f + proximityBoost
+    val parser = new URIGraphQueryParser(DefaultAnalyzer.forParsing(lang), 1.0f/total, proximityBoost/total)
     DefaultAnalyzer.forParsingWithStemmer(lang).foreach{ parser.setStemmingAnalyzer(_) }
     parser
   }
@@ -233,7 +238,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     }
   }
 
-  class URIGraphQueryParser(analyzer: Analyzer) extends QueryParser(analyzer) {
+  class URIGraphQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Float) extends QueryParser(analyzer) {
 
     super.setAutoGeneratePhraseQueries(true)
 
@@ -257,6 +262,24 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       if (clauses.size == 0) null
       else if (clauses.size == 1) clauses.get(0).getQuery()
       else booleanQuery
+    }
+
+    override def parseQuery(queryText: String) = {
+      super.parseQuery(queryText).map{ query =>
+        val terms = QueryUtil.getTermSeq(URIGraph.stemmedTerm.field(), query)
+        val termSize = terms.size
+        if (termSize > 1) {
+          val booleanQuery = new BooleanQuery(true)
+          query.setBoost(baseBoost)
+          booleanQuery.add(query, Occur.MUST)
+          val proxQ = ProximityQuery(terms)
+          proxQ.setBoost(proximityBoost)
+          booleanQuery.add(proxQ, Occur.SHOULD)
+          booleanQuery
+        } else {
+          query
+        }
+      }
     }
   }
 }
