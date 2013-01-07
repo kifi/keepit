@@ -1,4 +1,4 @@
-this.require && require("./api");
+var api = api || require("./api");
 
 function noop() {}
 
@@ -122,107 +122,104 @@ api.timers.setTimeout(function maybeSend() {
   api.timers.setTimeout(maybeSend, eventLogDelay);
 }, 4000);
 
-// ===== Message handling
+// ===== Handling messages from content scripts or other extension pages
 
-// Listen for the content script to send a message to the background page.
-chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
-  var tab = sender.tab;
-  log("[onMessage] handling:", request, "for", tab && tab.id);
-  try {
-    switch (request && request.type) {
-      case "log_in":
-        authenticate(function() {
-          sendResponse(session);
-        });
-        return true;
-      case "log_out":
-        deauthenticate(sendResponse);
-        return true;
-      case "get_keeps":
-        return searchOnServer(request, sendResponse, tab);
-      case "add_bookmarks":
-        getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
-          addKeep(info, request, sendResponse, tab);
-        });
-        return true;
-      case "unkeep":
-        getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
-          removeKeep(info, request, sendResponse, tab);
-        });
-        return true;
-      case "set_private":
-        getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
-          setPrivate(info, request, sendResponse, tab);
-        });
-        return true;
-      case "follow":
-        ajax(request.follow ? "POST" : "DELETE", "http://" + getConfigs().server + "/comments/follow", {url: tab.url}, function(o) {
-          log("[follow] resp:", o);
-        });
-        return;
-      case "get_conf":
-        sendResponse({config: getConfigs(), session: session});
-        return;
-      case "set_conf":
-        setConfigs(request.key, request.value);
-        sendResponse();
-        return;
-      case "remove_conf":
-        setConfigs(request.key);
-        sendResponse();
-        return;
-      case "set_page_icon":
-        setPageIcon(tab, request.is_kept);
-        return;
-      case "require":
-        injectDeps(tab.id, request, sendResponse);
-        return true;
-      case "get_slider_info":
-        if (session) {
-          getSliderInfo(tab, sendResponse);
-        } else {
-          authenticate(getSliderInfo.bind(null, tab, sendResponse));
-        }
-        return true;
-      case "get_slider_updates":
-        ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, sendResponse);
-        return true;
-      case "log_event":
-        logEvent.apply(null, request.args);
-        return;
-      case "get_comments":
-        ajax("GET", "http://" + getConfigs().server +
-          (request.kind == "public" ? "/comments/public" : "/messages/threads") +
-          (request.commentId ? "/" + request.commentId : "?url=" + encodeURIComponent(tab.url)),
-          sendResponse);
-        return true;
-      case "post_comment":
-        postComment(request, sendResponse);
-        return true;
-      case "get_friends":
-        ajax("GET", "http://" + getConfigs().server + "/users/friends", sendResponse);
-        return true;
-      case "add_deep_link_listener":
-        createDeepLinkListener(request.link, tab.id, sendResponse);
-        return true;
-      default:
-        log("Ignoring unknown message:", request);
+api.port.on({
+  log_in: function(data, respond) {
+    authenticate(function() {
+      respond(session);
+    });
+    return true;
+  },
+  log_out: function(data, respond) {
+    deauthenticate(respond);
+    return true;
+  },
+  get_keeps: function(data, respond) {
+    return searchOnServer(data, respond);
+  },
+  add_bookmarks: function(data, respond) {
+    getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+      addKeep(info, data, respond);
+    });
+    return true;
+  },
+  unkeep: function(data, respond) {
+    getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+      removeKeep(info, data, respond);
+    });
+    return true;
+  },
+  set_private: function(data, respond) {
+    getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+      setPrivate(info, data, respond);
+    });
+    return true;
+  },
+  follow: function(data, respond, tab) {
+    ajax(data.follow ? "POST" : "DELETE", "http://" + getConfigs().server + "/comments/follow", {url: tab.url}, function(o) {
+      log("[follow] resp:", o);
+    });
+  },
+  get_conf: function(data, respond) {
+    respond({config: getConfigs(), session: session});
+  },
+  set_conf: function(data) {
+    setConfigs(data.key, data.value);
+  },
+  remove_conf: function(data) {
+    setConfigs(data.key);
+  },
+  set_page_icon: function(data, respond, tab) {
+    setPageIcon(tab.id, data.is_kept);
+  },
+  require: function(data, respond, tab) {
+    injectDeps(tab.id, data, respond);
+    return true;
+  },
+  get_slider_info: function(data, respond, tab) {
+    if (session) {
+      getSliderInfo(tab, respond);
+    } else {
+      authenticate(getSliderInfo.bind(null, tab, respond));
     }
-  } catch (e) {
-    error(e);
-  } finally {
-    log("[onMessage] done:", request);
-  }
-});
+    return true;
+  },
+  get_slider_updates: function(data, respond, tab) {
+    ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, respond);
+    return true;
+  },
+  log_event: function(data) {
+    logEvent.apply(null, data.args);
+  },
+  get_comments: function(data, respond, tab) {
+    ajax("GET", "http://" + getConfigs().server +
+      (data.kind == "public" ? "/comments/public" : "/messages/threads") +
+      (data.commentId ? "/" + data.commentId : "?url=" + encodeURIComponent(tab.url)),
+      respond);
+    return true;
+  },
+  post_comment: function(data, respond) {
+    postComment(data, respond);
+    return true;
+  },
+  get_friends: function(data, respond) {
+    ajax("GET", "http://" + getConfigs().server + "/users/friends", respond);
+    return true;
+  },
+  add_deep_link_listener: function(data, respond, tab) {
+    createDeepLinkListener(data.link, tab.id, respond);
+    return true;
+  }});
 
-function getSliderInfo(tab, sendResponse) {
+function getSliderInfo(tab, respond) {
   ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
     o.session = session;
-    sendResponse(o);
+    respond(o);
   });
 }
 
-function createDeepLinkListener(link, linkTabId, sendResponse) {
+function createDeepLinkListener(link, linkTabId, respond) {
   var createdTime = new Date();
   chrome.tabs.onUpdated.addListener(function deepLinkListener(tabId, changeInfo, tab) {
     var now = new Date();
@@ -310,12 +307,12 @@ function getBookmarkFolderInfo(keepItBookmarkId, callback) {
   }
 }
 
-function addKeep(bmInfo, req, sendResponse, tab) {
-  log("[addKeep] private: " + !!req.private + ", title: " + req.title, tab);
+function addKeep(bmInfo, req, respond) {
+  log("[addKeep] private: " + !!req.private + ", title: " + req.title);
   var bookmark = {parentId: bmInfo[req.private ? "privateId" : "publicId"], title: req.title, url: req.url};
   chrome.bookmarks.create(bookmark, function(bm) {
     try {
-      sendResponse(bm);
+      respond(bm);
       bookmark.isPrivate = !!req.private;
       postBookmarks(function(f) {f([bookmark])}, "HOVER_KEEP");
     } catch (e) {
@@ -324,8 +321,8 @@ function addKeep(bmInfo, req, sendResponse, tab) {
   });
 }
 
-function removeKeep(bmInfo, req, sendResponse, tab) {
-  log("[removeKeep] url:", req.url, tab);
+function removeKeep(bmInfo, req, respond) {
+  log("[removeKeep] url:", req.url);
 
   if (!session) {
     log("[removeKeep] no session");
@@ -342,12 +339,12 @@ function removeKeep(bmInfo, req, sendResponse, tab) {
 
   ajax("POST", "http://" + getConfigs().server + "/bookmarks/remove", {url: req.url}, function(o) {
     log("[removeKeep] response:", o);
-    sendResponse(o);
+    respond(o);
   });
 }
 
-function setPrivate(bmInfo, req, sendResponse, tab) {
-  log("[setPrivate]", req.private, req.url, tab);
+function setPrivate(bmInfo, req, respond) {
+  log("[setPrivate]", req.private, req.url);
 
   var newParentId = req.private ? bmInfo.privateId : bmInfo.publicId;
   var oldParentId = req.private ? bmInfo.publicId : bmInfo.privateId;
@@ -361,11 +358,11 @@ function setPrivate(bmInfo, req, sendResponse, tab) {
 
   ajax("POST", "http://" + getConfigs().server + "/bookmarks/private", {url: req.url, private: req.private}, function(o) {
     log("[setPrivate] response:", o);
-    sendResponse(o);
+    respond(o);
   });
 }
 
-function postComment(request, sendResponse) {
+function postComment(request, respond) {
   log("[postComment] req:", request);
   ajax("POST", "http://" + getConfigs().server + "/comments/add", {
       url: request.url,
@@ -376,23 +373,23 @@ function postComment(request, sendResponse) {
       recipients: request.recipients},
     function(o) {
       log("[postComment] resp:", o);
-      sendResponse(o);
+      respond(o);
     });
 }
 
-function searchOnServer(request, sendResponse, tab) {
+function searchOnServer(request, respond) {
   var config = getConfigs();
 
   logEvent("search", "newSearch");
 
   if (!session) {
     log("[searchOnServer] no session");
-    sendResponse({"session": null, "searchResults": [], "userConfig": config});
+    respond({"session": null, "searchResults": [], "userConfig": config});
     return;
   }
 
   if (request.query === '') {
-    sendResponse({"session": session, "searchResults": [], "userConfig": config});
+    respond({"session": session, "searchResults": [], "userConfig": config});
     return;
   }
 
@@ -401,10 +398,10 @@ function searchOnServer(request, sendResponse, tab) {
       maxHits: config.max_res * 2,
       lastUUI: request.lastUUID,
       context: request.context,
-      kifiVersion: chrome.app.getDetails().version},
+      kifiVersion: app.version()},
     function(results) {
       log("[searchOnServer] results:", results);
-      sendResponse({"session": session, "searchResults": results, "userConfig": config});
+      respond({"session": session, "searchResults": results, "userConfig": config});
     });
   return true;
 }
@@ -432,7 +429,7 @@ function onPageLoad(tab) {
       }, [])});
 
   checkWhetherKept(tab.url, function(isKept) {
-    setPageIcon(tab, isKept);
+    setPageIcon(tab.id, isKept);
 
     if (restrictedUrlPatternsForHover.some(function(e) {return tab.url.indexOf(e) >= 0})) {
       log("[onPageLoad] restricted:", tab.url);
@@ -475,14 +472,10 @@ function checkWhetherKept(url, callback) {
   });
 }
 
-function setPageIcon(tab, kept) {
-  log("[setPageIcon] tab:", tab);
-  chrome.windows.get(tab.windowId, function(win) {
-    if (win && win.type == "normal") {
-      chrome.pageAction.setIcon({tabId: tab.id, path: kept ? "icons/kept.png" : "icons/keep.png"});
-      chrome.pageAction.show(tab.id);
-    }
-  });
+function setPageIcon(tabId, kept) {
+  log("[setPageIcon] tab:", tabId, "kept:", !!kept);
+  chrome.pageAction.setIcon({tabId: tabId, path: kept ? "icons/kept.png" : "icons/keep.png"});
+  chrome.pageAction.show(tabId);
 }
 
 function injectDeps(tabId, details, callback) {
@@ -568,8 +561,12 @@ chrome.tabs.onActivated.addListener(function(info) {
 
 chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
   log("[onUpdated] tab:", tab, change);
-  if (change.url) {
-    setPageIcon(tab, false);
+  if (change.url && /^https?:/.test(tab.url)) {
+    chrome.windows.get(tab.windowId, function(win) {
+      if (win && win.type == "normal") {
+        setPageIcon(tabId, false);
+      }
+    });
   }
   if (change.status == "complete" && /^https?:/.test(tab.url)) {
     chrome.windows.get(tab.windowId, function(win) {
@@ -585,7 +582,7 @@ function sprinkleSomeKiFiOn(tab) {
     chrome.tabs.executeScript(tab.id, {code: "window.injected"}, function(arr) {
       if (!arr || !arr[0]) {
         log("[sprinkleSomeKiFiOn] old tab:", tab.id);
-        setPageIcon(tab, false);
+        setPageIcon(tab.id, false);
         onPageLoad(tab);
       }
     });
@@ -640,30 +637,12 @@ function parseBoolOr(val, defaultValue) {
   return val === "yes" || val === true || val === "true" || defaultValue;
 }
 
-chrome.runtime.onInstalled.addListener(function(details) {
-  log("[onInstalled]", details);
-  logEvent("extension", details.reason);
-  logEvent("extension", "started");
-  removeFromConfigs("user"); // remove this line in early Feb or so
-  authenticate(function() {
-    log("[onInstalled] authenticated");
-
-    chrome.tabs.query({windowType: "normal", active: true, status: "complete"}, function(tabs) {
-      tabs.forEach(sprinkleSomeKiFiOn);
-    });
-
-    if (details.reason == "install" || getConfigs().env == "development") {
-      postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
-    }
-  });
+api.on.install.push(function() {
+  logEvent("extension", "install");
 });
-
-chrome.runtime.onStartup.addListener(function() {
-  log("[onStartup]");
-  logEvent("extension", "started");
-  authenticate(function() {
-    log("[onStartup] authenticated");
-  });
+api.on.update.push(function() {
+  logEvent("extension", "update");
+  removeFromConfigs("user"); // remove this line in early Feb or so
 });
 
 // ===== Session management
@@ -671,34 +650,37 @@ chrome.runtime.onStartup.addListener(function() {
 var session;
 
 function authenticate(callback) {
-  if (getConfigs().env == "development") {
+  var config = getConfigs();
+  if (config.env == "development") {
     openFacebookConnect();
   } else {
     startSession(openFacebookConnect);
   }
 
   function startSession(onFail) {
-    log("[startSession]");
-    var config = getConfigs();
     ajax("POST", "http://" + config.server + "/kifi/start", {
       installation: config.kifi_installation_id,
-      version: chrome.app.getDetails().version,
+      version: api.version,
       // platform: navigator.platform,
       // language: navigator.language,
       agent: navigator.userAgent || navigator.appVersion || navigator.vendor},
     function done(data) {
-      log("[startSession] done:", data);
+      log("[startSession] done, loadReason:", api.loadReason, "session:", data);
       logEvent("extension", "authenticated");
 
       session = data;
       setConfigs("kifi_installation_id", data.installationId);
 
       // Locate or create KeepIt bookmark folder.
-      getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+      getBookmarkFolderInfo(config.bookmark_id, function(info) {
         setConfigs("bookmark_id", info.keepItId);
       });
 
       callback();
+
+      if (api.loadReason == "install" || config.env == "development") {
+        postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
+      }
     }, function fail(xhr) {
       log("[startSession] xhr failed:", xhr);
       if (onFail) onFail();
@@ -709,7 +691,7 @@ function authenticate(callback) {
     log("[openFacebookConnect]");
     var popupTabId;
     chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-      if (changeInfo.status == "loading" && tabId == popupTabId && tab.url == "http://" + getConfigs().server + "/#_=_") {
+      if (changeInfo.status == "loading" && tabId == popupTabId && tab.url == "http://" + config.server + "/#_=_") {
         log("[openFacebookConnect] closing tab ", tabId);
         chrome.tabs.remove(tabId);
         popupTabId = null;
@@ -718,7 +700,7 @@ function authenticate(callback) {
       }
     });
 
-    chrome.windows.create({'url': 'http://' + getConfigs().server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(win) {
+    chrome.windows.create({'url': 'http://' + config.server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(win) {
       popupTabId = win.tabs[0].id
     });
   }
@@ -732,3 +714,14 @@ function deauthenticate(callback) {
     callback();
   });
 }
+
+// ===== Main (executed upon install, reinstall, update, reenable, and browser start)
+
+logEvent("extension", "started");
+authenticate(function() {
+  log("[main] authenticated");
+
+  chrome.tabs.query({windowType: "normal", active: true, status: "complete"}, function(tabs) {
+    tabs.forEach(sprinkleSomeKiFiOn);
+  });
+});
