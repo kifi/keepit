@@ -18,7 +18,7 @@ object SearchConfig {
       "percentMatch" -> "75",
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
-      "tailCutting" -> "0.01",
+      "tailCutting" -> "0.20",
       "proximityBoost" -> "1.0",
       "semanticBoost" -> "1.0",
       "dumpingByRank" -> "true",

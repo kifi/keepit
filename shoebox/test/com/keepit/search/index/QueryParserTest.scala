@@ -13,6 +13,10 @@ import com.keepit.search.graph.UserToUserEdgeSet
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import org.apache.lucene.search.Query
+import org.apache.lucene.search.TermQuery
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.BooleanClause
+import org.apache.lucene.search.BooleanClause._
 
 @RunWith(classOf[JUnitRunner])
 class QueryParserTest extends SpecificationWithJUnit {
@@ -41,6 +45,27 @@ class QueryParserTest extends SpecificationWithJUnit {
       parser.parseQuery(" ") must beNone
       parser.parseQuery("") must beNone
       parser.parseQuery(null) must beNone
+    }
+
+    "handle query operators" in {
+      var query = parser.parseQuery("+aaa")
+      query must beSome[Query]
+
+      query = parser.parseQuery("+aaa +bbb")
+      query must beSome[Query]
+
+      var clauses = query.get.asInstanceOf[BooleanQuery].getClauses
+      clauses.length === 2
+      clauses(0).getOccur() === Occur.MUST
+      clauses(1).getOccur() === Occur.MUST
+
+      query = parser.parseQuery("aaa +bbb")
+      query must beSome[Query]
+
+      clauses = query.get.asInstanceOf[BooleanQuery].getClauses
+      clauses.length === 2
+      clauses(0).getOccur() === Occur.SHOULD
+      clauses(1).getOccur() === Occur.MUST
     }
   }
 }
