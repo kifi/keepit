@@ -1,3 +1,5 @@
+this.require && require("./api");
+
 function noop() {}
 
 // ===== Logging
@@ -95,7 +97,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
 }
 
 var eventLogDelay = 4000;
-setTimeout(function maybeSend() {
+api.timers.setTimeout(function maybeSend() {
   if (_eventLog.length) {
     var t0 = _eventLog[0].time;
     _eventLog.forEach(function(e) { e.time -= t0 }); // relative times = fewer bytes
@@ -117,7 +119,7 @@ setTimeout(function maybeSend() {
   } else {
     eventLogDelay = Math.min(eventLogDelay * 2, 60 * 1000);
   }
-  setTimeout(maybeSend, eventLogDelay);
+  api.timers.setTimeout(maybeSend, eventLogDelay);
 }, 4000);
 
 // ===== Message handling
@@ -173,13 +175,14 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         setPageIcon(tab, request.is_kept);
         return;
       case "require":
-        require(tab.id, request, sendResponse);
+        injectDeps(tab.id, request, sendResponse);
         return true;
       case "get_slider_info":
-        ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
-          o.session = session;
-          sendResponse(o);
-        });
+        if (session) {
+          getSliderInfo(tab, sendResponse);
+        } else {
+          authenticate(getSliderInfo.bind(null, tab, sendResponse));
+        }
         return true;
       case "get_slider_updates":
         ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, sendResponse);
@@ -211,6 +214,13 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
     log("[onMessage] done:", request);
   }
 });
+
+function getSliderInfo(tab, sendResponse) {
+  ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
+    o.session = session;
+    sendResponse(o);
+  });
+}
 
 function createDeepLinkListener(link, linkTabId, sendResponse) {
   var createdTime = new Date();
@@ -413,6 +423,14 @@ function onPageLoad(tab) {
   log("[onPageLoad] tab:", tab);
   logEvent("extension", "pageLoad");
 
+  injectDeps(tab.id, {
+    scripts: contentScripts.reduce(function(a, s) {
+        if (s[1].test(tab.url)) {
+          a.push(s[0]);
+        }
+        return a;
+      }, [])});
+
   checkWhetherKept(tab.url, function(isKept) {
     setPageIcon(tab, isKept);
 
@@ -460,28 +478,51 @@ function checkWhetherKept(url, callback) {
 function setPageIcon(tab, kept) {
   log("[setPageIcon] tab:", tab);
   chrome.windows.get(tab.windowId, function(win) {
-    if (win.type == "normal") {
+    if (win && win.type == "normal") {
       chrome.pageAction.setIcon({tabId: tab.id, path: kept ? "icons/kept.png" : "icons/keep.png"});
       chrome.pageAction.show(tab.id);
     }
   });
 }
 
-function require(tabId, details, callback) {
+function injectDeps(tabId, details, callback) {
+  var scripts = details.scripts.reduce(function(a, s) {
+    return a.concat(transitiveClosure(s));
+  }, []).filter(unique);
+  var styles = scripts.reduce(function(a, s) {
+    a.push.apply(a, styleDeps[s]);
+    return a;
+  }, []);
   var injected = details.injected || {};
-  injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), details.styles,
-    function() {
-      injectAll(chrome.tabs.executeScript.bind(chrome.tabs), details.scripts, function() {
-        chrome.tabs.executeScript(tabId, {code: "injected=" + JSON.stringify(injected)}, callback);
-      });
+  injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), styles, function() {
+    injectAll(chrome.tabs.executeScript.bind(chrome.tabs), scripts, function() {
+      chrome.tabs.executeScript(tabId, {code: "injected=" + JSON.stringify(injected)}, callback);
     });
+  });
+
+  function transitiveClosure(path) {
+    var deps = scriptDeps[path];
+    if (deps) {
+      deps = deps.reduce(function(a, s) {
+        return a.concat(transitiveClosure(s));
+      }, []);
+      deps.push(path);
+      return deps.filter(unique);
+    } else {
+      return [path];
+    }
+  }
+
+  function unique(value, index, array) {
+    return array.indexOf(value) == index;
+  }
 
   function injectAll(inject, paths, callback) {
     if (paths && paths.length) {
       var n = 0;
       paths.forEach(function(path) {
         if (!injected[path]) {
-          log("[require] tab", tabId, path);
+          log("[injectDeps] tab:", tabId, path);
           inject(tabId, {file: path}, function() {
             injected[path] = true;
             if (++n == paths.length) {
@@ -513,7 +554,16 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
 
 chrome.tabs.onActivated.addListener(function(info) {
   log("[onActivated] tab info:", info);
-  //maybeShowPageIcon(info.tabId, info.windowId);
+  // Tab may be older than current kifi installation and so not yet have icon and any content script(s).
+  chrome.tabs.get(info.tabId, function(tab) {
+    if (tab && tab.status == "complete") {  // if not yet complete, wait for onUpdated
+      chrome.windows.get(info.windowId, function(win) {
+        if (win && win.type == "normal") {  // ignore popups, etc.
+          sprinkleSomeKiFiOn(tab);
+        }
+      });
+    }
+  });
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
@@ -521,10 +571,26 @@ chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
   if (change.url) {
     setPageIcon(tab, false);
   }
-  if (change.status == "complete" && /^http/.test(tab.url)) {
-    onPageLoad(tab);
+  if (change.status == "complete" && /^https?:/.test(tab.url)) {
+    chrome.windows.get(tab.windowId, function(win) {
+      if (win && win.type == "normal") {
+        onPageLoad(tab);
+      }
+    });
   }
 });
+
+function sprinkleSomeKiFiOn(tab) {
+  if (/^https?:/.test(tab.url)) {
+    chrome.tabs.executeScript(tab.id, {code: "window.injected"}, function(arr) {
+      if (!arr || !arr[0]) {
+        log("[sprinkleSomeKiFiOn] old tab:", tab.id);
+        setPageIcon(tab, false);
+        onPageLoad(tab);
+      }
+    });
+  }
+}
 
 function getFullyQualifiedKey(key) {
   return (localStorage["env"] || "production") + "_" + key;
@@ -536,7 +602,7 @@ function removeFromConfigs(key) {
 
 function setConfigs(key, value) {
   var prev = localStorage[getFullyQualifiedKey(key)];
-  if (prev !== String(value)) {
+  if (value != null && prev !== String(value)) {
     log("[setConfigs]", key, " = ", value, " (was ", prev, ")");
     localStorage[getFullyQualifiedKey(key)] = value;
   }
@@ -581,6 +647,11 @@ chrome.runtime.onInstalled.addListener(function(details) {
   removeFromConfigs("user"); // remove this line in early Feb or so
   authenticate(function() {
     log("[onInstalled] authenticated");
+
+    chrome.tabs.query({windowType: "normal", active: true, status: "complete"}, function(tabs) {
+      tabs.forEach(sprinkleSomeKiFiOn);
+    });
+
     if (details.reason == "install" || getConfigs().env == "development") {
       postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
     }

@@ -1,3 +1,5 @@
+// @match .*
+
 function log(message) {
   console.log.apply(console, Array.prototype.concat.apply(["[kifi][" + new Date().getTime() + "] "], arguments));
 }
@@ -42,7 +44,7 @@ var t0 = new Date().getTime();
         }, msg.ms);
         break;
       case "deep_link":
-        withSlider(function () {
+        withSlider(function() {
           slider.openDeepLink(msg.link);
         });
         break;
@@ -51,11 +53,9 @@ var t0 = new Date().getTime();
 
   function withSlider(callback) {
     if (window.slider) {
-      slider.queue(callback);
+      callback();
     } else {
-      chrome.extension.sendMessage({type: "require", injected: window.injected, scripts: ["scripts/slider.js"]}, function() {
-        slider.queue(callback);
-      });
+      chrome.extension.sendMessage({type: "require", injected: window.injected, scripts: ["scripts/slider.js"]}, callback);
     }
   }
 }();

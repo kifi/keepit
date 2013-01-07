@@ -1,27 +1,15 @@
-var slider = {
-  queue: function(f) {
-    if (this.loaded) {
-      f();
-    } else {
-      this.callbacks.push(f);
-    }
-  },
-  callbacks: []};
+// @require styles/slider.css
+// @require styles/comments.css
+// @require scripts/lib/jquery-1.8.2.min.js
+// @require scripts/lib/jquery-ui-1.9.1.custom.min.js
+// @require scripts/lib/jquery.tokeninput.js
+// @require scripts/lib/jquery.timeago.js
+// @require scripts/lib/keymaster.min.js
+// @require scripts/lib/lodash.min.js
+// @require scripts/lib/mustache-0.7.1.min.js
+// @require scripts/snapshot.js
 
-chrome.extension.sendMessage({type: "require", injected: window.injected,
-  styles: [
-    "styles/slider.css",
-    "styles/comments.css"],
-  scripts: [
-    "scripts/lib/jquery-1.8.2.min.js",
-    "scripts/lib/jquery-ui-1.9.1.custom.min.js",
-    "scripts/lib/jquery.tokeninput.js",
-    "scripts/lib/jquery.timeago.js",
-    "scripts/lib/keymaster.min.js",
-    "scripts/lib/lodash.min.js",
-    "scripts/lib/mustache-0.7.1.min.js",
-    "scripts/snapshot.js"]},
-function() {
+slider = function() {
   var following, isKept, lastShownAt;
 
   $('<input id="editableFix" style="opacity:0;color:transparent;width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html')
@@ -195,7 +183,6 @@ function() {
           "logo": chrome.extension.getURL('images/kifilogo.png'),
           "arrow": chrome.extension.getURL('images/triangle_down.31x16.png'),
           "profilepic": o.session.avatarUrl,
-          "holidays_hat": chrome.extension.getURL('images/holidays_hat.png'),
           "name": o.session.name,
           "is_kept": o.kept,
           "private": o.private,
@@ -226,12 +213,6 @@ function() {
 
     updateCommentCount("public", numComments);
     updateCommentCount("message", numMessages);
-
-    var mas = new Date();
-    var x = new Date(2012, 11, 26);
-    if(x-mas > 0) {
-      $(".holidays_hat").show(0);
-    }
 
     // Event bindings
     $(".kifi_hover").draggable({cursor: "move", axis: "y", distance: 10, handle: "div.kifihdr", containment: "body", scroll: false})
@@ -958,7 +939,7 @@ function() {
       // Because we're using very simple templating now, re-rendering has to be done carefully.
       callback(type == "message" ? response : {
           "createdAt": new Date,
-          "text": request.text,
+          "text": text,
           "user": {
             "externalId": session.userId,
             "firstName": session.name,
@@ -1018,25 +999,23 @@ function() {
   });
 
   // defining the slider API
-  slider.show = function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
+  return {
+  show: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
     showKeepItHover(trigger);
-  };
-  slider.shown = function() {
+  },
+  shown: function() {
     return !!lastShownAt;
-  };
-  slider.toggle = function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
+  },
+  toggle: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
     if (document.querySelector(".kifi_hover")) {
       slideOut(trigger);
     } else {
       this.show(trigger);
     }
-  };
-  slider.openDeepLink = function(locator) {
+  },
+  openDeepLink: function(locator) {
     showKeepItHover("deepLink", function(session) {
       openDeepLink(session, locator);
     });
-  };
-  slider.loaded = true;
-  slider.callbacks.forEach(function(f) { f() });
-  delete slider.callbacks;
-});
+  }};
+}();

@@ -59,9 +59,10 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
   val source = BookmarkSource("test")
 
-  val noBoostConfig = SearchConfig("myBookmarkBoost" -> "1", "sharingBoost" -> "0", "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
+  val defaultConfig = new SearchConfigManager(None).getDefaultConfig
+  val noBoostConfig = defaultConfig("myBookmarkBoost" -> "1", "sharingBoost" -> "0", "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
                                    "percentMatch" -> "0", "tailCutting" -> "0", "dumpingByRank" -> "false")
-  val allHitsConfig = SearchConfig("tailCutting" -> "0")
+  val allHitsConfig = defaultConfig("tailCutting" -> "0")
 
   "MainSearcher" should {
     "search and categorize using social graph" in {
@@ -258,7 +259,6 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
         val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
 
-        println(res.hits)
         res.hits.map(h => h.uriId).toList === expected
       }
     }
@@ -321,7 +321,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           uris.foldLeft(Map.empty[Id[NormalizedURI], Bookmark]){ (m, uri) =>
             val createdAt = now.minusHours(rand.nextInt(100))
             val uriId = uri.id.get
-            m + (uriId -> Bookmark(createdAt = createdAt, title = uri.title.get, url = uri.url,  uriId = uriId, userId = userId, source = source).save)
+            m + (uriId -> Bookmark(createdAt = createdAt, title = uri.title.get, uriData = Some(NormalizedURIMetadata(uri.url, "", uri.id.get)),  uriId = uriId, userId = userId, source = source).save)
           }
         }
 

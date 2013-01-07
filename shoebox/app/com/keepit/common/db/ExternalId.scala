@@ -14,6 +14,15 @@ object ExternalId {
 
   val UUID_PATTERN = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$".r
 
+  def asOpt[T](id: String): Option[ExternalId[T]] = {
+    if (ExternalId.UUID_PATTERN.pattern.matcher(id).matches()) {
+      Some(ExternalId[T](id))
+    }
+    else {
+      None
+    }
+  }
+
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[ExternalId[T]] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ExternalId[T]]] = {
       stringBinder.bind(key, params) map {

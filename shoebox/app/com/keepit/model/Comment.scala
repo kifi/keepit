@@ -23,6 +23,10 @@ import ru.circumflex.orm.RelationNode.toRelation
 import ru.circumflex.orm.SELECT
 import ru.circumflex.orm.str2expr
 import ru.circumflex.orm.COUNT
+import play.api.libs.json._
+import com.keepit.inject._
+import com.keepit.common.healthcheck._
+import com.keepit.serializer.{NormalizedURIMetadataSerializer => NURIS}
 
 case class Comment(
   id: Option[Id[Comment]] = None,
@@ -30,6 +34,7 @@ case class Comment(
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[Comment] = ExternalId(),
   uriId: Id[NormalizedURI],
+  uriData: Option[NormalizedURIMetadata] = None,
   userId: Id[User],
   text: String,
   pageTitle: String,
@@ -38,6 +43,8 @@ case class Comment(
   state: State[Comment] = Comment.States.ACTIVE) {
 
   def withState(state: State[Comment]) = copy(state = state)
+
+  def withUriData(uriData: NormalizedURIMetadata) = copy(uriData = Some(uriData))
 
   def save(implicit conn: Connection): Comment = {
     val entity = CommentEntity(this.copy(updatedAt = currentDateTime))
@@ -181,6 +188,7 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val externalId = "external_id".EXTERNAL_ID[Comment].NOT_NULL(ExternalId())
   val uriId = "normalized_uri_id".ID[NormalizedURI].NOT_NULL
+  val uriData = "uri_data".VARCHAR(1024)
   val userId = "user_id".ID[User]
   val pageTitle = "page_title".VARCHAR(1024).NOT_NULL
   val text = "text".CLOB.NOT_NULL
@@ -196,6 +204,18 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
     updatedAt = updatedAt(),
     externalId = externalId(),
     uriId = uriId(),
+    uriData = {
+      try {
+        val json = Json.parse(uriData.value.getOrElse("{}")) // after grandfathering, force having a value
+        val serializer = NURIS.normalizedURIMetadataSerializer
+        Some(serializer.reads(json))
+      }
+      catch {
+        case ex: Throwable =>
+          // after grandfathering process, throw error
+          None
+      }
+    },
     userId = userId(),
     pageTitle = pageTitle(),
     text = text(),
@@ -215,6 +235,10 @@ private[model] object CommentEntity extends CommentEntity with EntityTable[Comme
     comment.updatedAt := view.updatedAt
     comment.externalId := view.externalId
     comment.uriId := view.uriId
+    comment.uriData.set(view.uriData.map { m =>
+      val serializer = NURIS.normalizedURIMetadataSerializer
+      Json.stringify(serializer.writes(m))
+    })
     comment.userId := view.userId
     comment.pageTitle := view.pageTitle
     comment.text := view.text

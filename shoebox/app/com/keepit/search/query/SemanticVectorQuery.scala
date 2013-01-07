@@ -81,11 +81,9 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
     val terms = query.terms
     if (terms.size > 0) {
-      val similarity = searcher.getSimilarity
-      val numDocs = searcher.maxDoc()
       val vector = searcher.getSemanticVector(terms)
       val tps = terms.map{
-          term => new DocAndVector(reader.termPositions(term), vector, similarity.idf(searcher.docFreq(term), numDocs) * value)
+        term => new DocAndVector(reader.termPositions(term), vector, searcher.idf(term) * value)
       }
       new SemanticVectorScorer(this, tps)
     } else {
