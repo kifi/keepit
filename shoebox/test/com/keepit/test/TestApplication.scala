@@ -1,9 +1,12 @@
 package com.keepit.test
 
+import play.api.Play
 import play.api.GlobalSettings
 import play.api.Application
+import play.api.db.DB
 import com.google.inject.Module
 import com.google.inject.Singleton
+import com.google.inject.Provides
 import com.google.inject.util.Modules
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.healthcheck.FakeHealthcheck
@@ -19,16 +22,15 @@ import com.keepit.inject._
 import com.keepit.FortyTwoGlobal
 import com.tzavellas.sse.guice.ScalaModule
 import com.keepit.common.store.FakeStoreModule
-import org.joda.time.DateTime
-import scala.collection.mutable.{Stack => MutableStack}
-import com.google.inject.Provides
-import org.joda.time.LocalDate
 import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout, HealthcheckPlugin}
-import akka.actor.{Scheduler, Cancellable, ActorRef}
-import akka.util.Duration
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.DbInfo
 import org.scalaquery.session.Database
+import org.joda.time.DateTime
+import org.joda.time.LocalDate
+import akka.actor.{Scheduler, Cancellable, ActorRef}
+import akka.util.Duration
+import scala.collection.mutable.{Stack => MutableStack}
 
 class TestApplication(override val global: TestGlobal) extends play.api.test.FakeApplication() {
   def withFakeMail() = overrideWith(FakeMailModule())
@@ -52,8 +54,9 @@ case class TestModule() extends ScalaModule {
   def configure(): Unit = {
     bind[Babysitter].to[FakeBabysitter]
     install(new SlickModule(new DbInfo() {
-      lazy val database = Database.forURL("jdbc:h2:mem:shoebox;MODE=MYSQL;MVCC=TRUE", driver = "org.h2.Driver")
-      val driverName = "org.h2.Driver"
+      //later on we can customize it by the application name
+      lazy val database = Database.forDataSource(DB.getDataSource("shoebox")(Play.current))
+      lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
     }))
   }
 

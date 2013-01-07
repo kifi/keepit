@@ -4,7 +4,7 @@ import org.scalaquery.ql.{TypeMapper, TypeMapperDelegate, BaseTypeMapper}
 import org.scalaquery.ql.basic.BasicProfile
 import org.scalaquery.session.{PositionedParameters, PositionedResult}
 
-import com.keepit.common.db.{Id, State}
+import com.keepit.common.db.{Id, State, Model}
 import com.keepit.common.time._
 
 import com.keepit.model._
@@ -18,6 +18,10 @@ object FortyTwoTypeMappers {
 
   implicit object DateTimeTypeMapper extends BaseTypeMapper[DateTime] {
     def apply(profile: BasicProfile) = new DateTimeMapperDelegate
+  }
+
+  implicit object GenericIdTypeMapper extends BaseTypeMapper[Id[Model[_]]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Model[_]]
   }
 
   implicit object FollowIdTypeMapper extends BaseTypeMapper[Id[Follow]] {

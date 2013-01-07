@@ -6,6 +6,7 @@ import scala.math.BigDecimal.long2bigDecimal
 import com.keepit.common.async.dispatch
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.db.{CX, ExternalId, Id, State}
+import com.keepit.common.db.slick.{Repo, DBConnection}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
 import com.keepit.common.social.CommentWithSocialUser
@@ -14,7 +15,7 @@ import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.social.UserWithSocial
 import com.keepit.common.social.UserWithSocial.toUserWithSocial
 import com.keepit.inject.inject
-import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, Follow, NormalizedURI, SocialConnection, SocialUserInfo, User, DeepLink, DeepLocator}
+import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, Follow, FollowCxRepo, NormalizedURI, SocialConnection, SocialUserInfo, User, DeepLink, DeepLocator}
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
@@ -160,12 +161,17 @@ object CommentController extends FortyTwoController {
   // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
   def startFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
     val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
-    CX.withConnection { implicit conn =>
+    val followOpt = CX.withConnection { implicit conn =>
       val uriId = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save).id.get
-      Follow.get(request.userId, uriId) match {
-        case Some(follow) if !follow.isActive => follow.activate.save
-        case None => Follow(userId = request.userId, uriId = uriId).save
+      FollowCxRepo.get(request.userId, uriId) match {
+        case Some(follow) if !follow.isActive => Some(follow.activate)
+        case None => Some(Follow(userId = request.userId, uriId = uriId))
         case _ => None
+      }
+    }
+    followOpt.map{ follow =>
+      inject[DBConnection].readWrite{ implicit session =>
+        inject[Repo[Follow]].save(follow)
       }
     }
     Ok(JsObject(Seq("following" -> JsBoolean(true))))
@@ -174,15 +180,21 @@ object CommentController extends FortyTwoController {
   // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
   def stopFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
     val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
-    CX.withConnection { implicit conn =>
+    val followOpt = CX.withConnection { implicit conn =>
       NormalizedURI.getByNormalizedUrl(url) match {
-        case Some(uri) => Follow.get(request.userId, uri.id.get) match {
-          case Some(follow) => follow.deactivate.save
+        case Some(uri) => FollowCxRepo.get(request.userId, uri.id.get) match {
+          case Some(follow) => Some(follow.deactivate)
           case None => None
         }
         case None => None
       }
     }
+    followOpt.map{ follow =>
+      inject[DBConnection].readWrite{ implicit session =>
+        inject[Repo[Follow]].save(follow)
+      }
+    }
+
     Ok(JsObject(Seq("following" -> JsBoolean(false))))
   }
 
@@ -233,7 +245,7 @@ object CommentController extends FortyTwoController {
         CX.withConnection { implicit c =>
           val author = User.get(comment.userId)
           val uri = NormalizedURI.get(comment.uriId)
-          val follows = Follow.get(uri.id.get)
+          val follows = FollowCxRepo.get(uri.id.get)
           for (userId <- follows.map(_.userId).toSet - comment.userId) {
             val recipient = User.get(userId)
             val deepLink = DeepLink(
@@ -287,7 +299,7 @@ object CommentController extends FortyTwoController {
 
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = CX.withConnection { implicit c =>
-      Follow.all map {f => (toUserWithSocial(User.get(f.userId)), f, NormalizedURI.get(f.uriId))}
+      FollowCxRepo.all map {f => (toUserWithSocial(User.get(f.userId)), f, NormalizedURI.get(f.uriId))}
     }
     Ok(views.html.follows(uriAndUsers))
   }
