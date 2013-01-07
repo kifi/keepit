@@ -12,15 +12,15 @@ object SearchConfig {
     Map[String, String](
       "minMyBookmarks" -> "2",
       "myBookmarkBoost" -> "1.5",
-      "personalTitleBoost" -> "1.5",
+      "personalTitleBoost" -> "2.0",
       "sharingBoostInNetwork" -> "0.5",
       "sharingBoostOutOfNetwork" -> "0.1",
       "percentMatch" -> "75",
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
       "tailCutting" -> "0.01",
-      "proximityBoost" -> "0.5",
-      "semanticBoost" -> "0.5",
+      "proximityBoost" -> "1.0",
+      "semanticBoost" -> "1.0",
       "dumpingByRank" -> "true",
       "dumpingHalfDecayMine" -> "8.0",
       "dumpingHalfDecayFriends" -> "6.0",
@@ -29,7 +29,7 @@ object SearchConfig {
   private[this] val descriptions =
     Map[String, String](
       "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
-      "myBookmarkBoost" -> "importance my bookmark",
+      "myBookmarkBoost" -> "importance of my bookmark",
       "personalTitleBoost" -> "boosting the personal bookmark title score when there is no match in the article",
       "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
       "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
