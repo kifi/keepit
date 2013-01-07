@@ -124,7 +124,7 @@ api.timers.setTimeout(function maybeSend() {
 
 // ===== Handling messages from content scripts or other extension pages
 
-api.messages.on({
+api.port.on({
   log_in: function(data, respond) {
     authenticate(function() {
       respond(session);
@@ -637,10 +637,10 @@ function parseBoolOr(val, defaultValue) {
   return val === "yes" || val === true || val === "true" || defaultValue;
 }
 
-api.on("install", function() {
+api.on.install.push(function() {
   logEvent("extension", "install");
 });
-api.on("update", function() {
+api.on.update.push(function() {
   logEvent("extension", "update");
   removeFromConfigs("user"); // remove this line in early Feb or so
 });

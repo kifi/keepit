@@ -1,23 +1,26 @@
 api = function() {
-  var handlers = {};
-  function fire(eventType) {
-    var arr = handlers[eventType];
-    if (arr) {
-      arr.forEach(function(f) {f()});
-    }
+
+  function dispatch(a) {
+    if (a) a.forEach(function(f) {f()});
   }
 
   chrome.runtime.onStartup.addListener(function() {
-    fire(api.loadReason = "startup");
+    api.loadReason = "startup";
+    dispatch(api.on.startup);
   });
 
   chrome.runtime.onInstalled.addListener(function(details) {
-    fire(api.loadReason = details.reason);
+    api.loadReason = details.reason;
+    dispatch(api.on[details.reason]);
   });
 
   return {
     loadReason: "enable",
-    messages: {
+    on: {
+      install: [],
+      update: [],
+      startup: []},
+    port: {
       on: function(handlers) {
         chrome.extension.onMessage.addListener(function(msg, sender, respond) {
           var handler = handlers[msg && msg.type];
@@ -35,23 +38,6 @@ api = function() {
             log("[onMessage] ignoring:", msg, "from:", tab && tab.id);
           }
         });
-      }
-    },
-    off: function(event, callback) {
-      var arr = handlers[event];
-      if (arr) {
-        var i = arr.indexOf(callback);
-        if (i >= 0) {
-          arr.splice(i, 1);
-        }
-      }
-    },
-    on: function(event, callback) {
-      var arr = handlers[event];
-      if (!arr) {
-        handlers[event] = [callback];
-      } else {
-        arr.push(callback);
       }
     },
     timers: window,
