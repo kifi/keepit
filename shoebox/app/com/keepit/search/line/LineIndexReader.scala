@@ -15,7 +15,7 @@ import org.apache.lucene.index.TermEnum
 import org.apache.lucene.index.TermDocs
 import org.apache.lucene.index.TermPositions
 
-class LineIndexReader(indexReader: IndexReader, userDocId: Int, numLines: Int, idMapper: Option[IdMapper]) extends IndexReader {
+class LineIndexReader(indexReader: IndexReader, userDocId: Int, numLines: Int) extends IndexReader {
 
   private[this] var invertedLists = Map.empty[Term, InvertedList]
 

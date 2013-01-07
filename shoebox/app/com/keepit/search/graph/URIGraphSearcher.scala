@@ -103,7 +103,7 @@ class URIGraphSearcher(searcher: Searcher) {
     } finally {
       td.close()
     }
-    new LineIndexReader(searcher.indexReader, userDocId, uriList.publicListSize + uriList.privateListSize, None)
+    new LineIndexReader(searcher.indexReader, userDocId, uriList.publicListSize + uriList.privateListSize)
   }
 
   def search(user: Id[User], query: Query, percentMatch: Float): Map[Long, Float] = {

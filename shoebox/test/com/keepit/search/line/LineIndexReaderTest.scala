@@ -79,7 +79,7 @@ class LineIndexReaderTest extends SpecificationWithJUnit {
   "LineIndexReader" should {
 
     "find lines using term query" in {
-      var ir = new LineIndexReader(indexReader, 1, 3, None)
+      var ir = new LineIndexReader(indexReader, 1, 3)
 
       var q = new TermQuery(new Term("B", "t10"))
       var res = doQuery(q, ir)
@@ -90,7 +90,7 @@ class LineIndexReaderTest extends SpecificationWithJUnit {
       res = doQuery(q, ir)
       res.size === 0
 
-      ir = new LineIndexReader(indexReader, 2, 3, None)
+      ir = new LineIndexReader(indexReader, 2, 3)
 
       q = new TermQuery(new Term("B", "t22"))
       res = doQuery(q, ir)
@@ -99,7 +99,7 @@ class LineIndexReaderTest extends SpecificationWithJUnit {
     }
 
     "find lines with boolean query" in {
-      var ir = new LineIndexReader(indexReader, 1, 3, None)
+      var ir = new LineIndexReader(indexReader, 1, 3)
 
       var q = new BooleanQuery
       q.add(new TermQuery(new Term("B", "l1")), BooleanClause.Occur.MUST)
@@ -121,7 +121,7 @@ class LineIndexReaderTest extends SpecificationWithJUnit {
       val qx = new TermQuery(new Term("B", "x"))
       val qy = new TermQuery(new Term("B", "y"))
 
-      var ir = new LineIndexReader(indexReader, 0, 3, None)
+      var ir = new LineIndexReader(indexReader, 0, 3)
       var res = doQuery(qx, ir)
       res.size === 3
       res.sortWith((a, b) => (a._2 < b._2)).map(h => h._1) === ArrayBuffer(0, 1, 2)
@@ -130,7 +130,7 @@ class LineIndexReaderTest extends SpecificationWithJUnit {
       res.size === 3
       res.sortWith((a, b) => (a._2 < b._2)).map(h => h._1) === ArrayBuffer(2, 1, 0)
 
-      ir = new LineIndexReader(indexReader, 1, 3, None)
+      ir = new LineIndexReader(indexReader, 1, 3)
       res = doQuery(qx, ir)
       res.size === 3
       res.sortWith((a, b) => (a._2 < b._2)).map(h => h._1) === ArrayBuffer(2, 0, 1)
@@ -139,7 +139,7 @@ class LineIndexReaderTest extends SpecificationWithJUnit {
       res.size === 3
       res.sortWith((a, b) => (a._2 < b._2)).map(h => h._1) === ArrayBuffer(1, 0, 2)
 
-      ir = new LineIndexReader(indexReader, 2, 3, None)
+      ir = new LineIndexReader(indexReader, 2, 3)
       res = doQuery(qx, ir)
       res.size === 3
       res.sortWith((a, b) => (a._2 < b._2)).map(h => h._1) === ArrayBuffer(1, 2, 0)
