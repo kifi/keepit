@@ -14,7 +14,7 @@ import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.social.UserWithSocial
 import com.keepit.common.social.UserWithSocial.toUserWithSocial
 import com.keepit.inject.inject
-import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, Follow, NormalizedURI, SocialConnection, SocialUserInfo, User, DeepLink, DeepLocator}
+import com.keepit.model._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
@@ -41,7 +41,7 @@ object CommentController extends FortyTwoController {
                     permissionsOpt: Option[String],
                     recipientsOpt: Option[String],
                     parentOpt: Option[String]) = AuthenticatedJsonAction { request =>
-    val (url, title, text, permissions, recipients, parent) = request.body.asJson match {
+    val (urlStr, title, text, permissions, recipients, parent) = request.body.asJson match {
       case Some(o) => (
         (o \ "url").as[String],
         (o \ "title") match { case JsString(s) => s; case _ => ""},
@@ -58,24 +58,28 @@ object CommentController extends FortyTwoController {
         parentOpt.getOrElse(""))
     }
 
+
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val comment = CX.withConnection { implicit conn =>
       val userId = request.userId
-      val uri = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save)
+      val uri = NormalizedURI.getByNormalizedUrl(urlStr).getOrElse(NormalizedURI(url = urlStr).save)
+
       val parentIdOpt = parent match {
         case "" => None
         case id => Comment.get(ExternalId[Comment](id)).id
       }
 
+      val url: URL = URL.get(urlStr).getOrElse(URL(urlStr, uri.id.get).save)
+
       permissions.toLowerCase match {
         case "private" =>
-          Comment(uriId = uri.id.get, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
         case "message" =>
-          val newComment = Comment(uriId = uri.id.get, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
+          val newComment = Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
           createRecipients(newComment.id.get, recipients, parentIdOpt)
           newComment
         case "public" | "" =>
-          Comment(uriId = uri.id.get, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
         case _ =>
           throw new Exception("Invalid comment permission")
       }
