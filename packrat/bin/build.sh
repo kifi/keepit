@@ -7,13 +7,13 @@ mkdir -p out
 cp -R adapters/chrome out/
 cp -R adapters/firefox out/
 
-for s in html icons images styles; do
-  cp -R $s out/chrome/
-  cp -R $s out/firefox/data/
+for d in html icons images scripts styles; do
+  cp -R $d out/chrome/
+  cp -R $d out/firefox/data/
 done
 
-cp -R scripts out/chrome/
-cp scripts/main.js out/firefox/lib/
+cp main.js out/chrome/
+cp main.js out/firefox/lib/
 
 matches=()
 styles=()
@@ -33,6 +33,6 @@ for s in $(ls scripts/*.js); do
     deps=("${deps[@]}" "\n  \"$s\": [\n$(echo "$js" | sed -e 's/^/    "/g' -e 's/$/",/g')\n  ]")
   fi
 done
-IFS=,; echo -e "contentScripts = [${matches[*]}];\nstyleDeps = {${styles[*]}};\nscriptDeps = {${deps[*]}};" > out/chrome/scripts/meta.js
+IFS=,; echo -e "contentScripts = [${matches[*]}];\nstyleDeps = {${styles[*]}};\nscriptDeps = {${deps[*]}};" > out/chrome/meta.js
 
 popd > /dev/null
