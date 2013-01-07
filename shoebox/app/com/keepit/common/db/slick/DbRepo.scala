@@ -18,7 +18,7 @@ import play.api.Play.current
 trait Repo[M <: Model[M]] {
   import DBSession._
   def save(model: M)(implicit session: RWSession): M
-  def count(implicit session: ROSession): Int
+  def count(implicit session: RSession): Int
 }
 
 trait DbRepo[M <: Model[M]] extends Repo[M] {
@@ -36,7 +36,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
     }
   }
 
-  def count(implicit session: ROSession): Int = Query(table.count).first
+  def count(implicit session: RSession): Int = Query(table.count).first
 
   private def insert(model: M)(implicit session: RWSession) = {
     assert(1 == table.insert(model))

@@ -29,23 +29,24 @@ class DBConnection(db: DataBaseComponent) {
 }
 
 object DBSession {
-  class ROSession(val roSession: Session) extends Session {
-    def conn: Connection = roSession.conn
-    def metaData = roSession.metaData
-    def capabilities = roSession.capabilities
-
-    override def resultSetType = roSession.resultSetType
-    override def resultSetConcurrency = roSession.resultSetConcurrency
-    override def resultSetHoldability = roSession.resultSetHoldability
-    def close() = roSession.close
-    def rollback() = roSession.rollback
-    def withTransaction[T](f: => T): T = roSession.withTransaction(f)
+  abstract class SessionWrapper(val session: Session) extends Session {
+    def conn: Connection = session.conn
+    def metaData = session.metaData
+    def capabilities = session.capabilities
+    override def resultSetType = session.resultSetType
+    override def resultSetConcurrency = session.resultSetConcurrency
+    override def resultSetHoldability = session.resultSetHoldability
+    def close() = throw new UnsupportedOperationException
+    def rollback() = session.rollback
+    def withTransaction[T](f: => T): T = session.withTransaction(f)
     override def forParameters(rsType: ResultSetType = resultSetType, rsConcurrency: ResultSetConcurrency = resultSetConcurrency,
-      rsHoldability: ResultSetHoldability = resultSetHoldability) = roSession.forParameters(rsType, rsConcurrency, rsHoldability)
+      rsHoldability: ResultSetHoldability = resultSetHoldability) = throw new UnsupportedOperationException
   }
 
-  class RWSession(val rwSession: Session) extends ROSession(rwSession)
+  abstract class RSession(roSession: Session) extends SessionWrapper(roSession)
+  class ROSession(roSession: Session) extends RSession(roSession)
+  class RWSession(rwSession: Session) extends RSession(rwSession)
 
-  implicit def roToSession(session: ROSession): Session = session.roSession
-  implicit def rwToSession(session: RWSession): Session = session.rwSession
+  implicit def roToSession(roSession: ROSession): Session = roSession.session
+  implicit def rwToSession(rwSession: RWSession): Session = rwSession.session
 }
