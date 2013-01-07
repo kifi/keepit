@@ -22,17 +22,17 @@ import com.keepit.serializer.{URLHistorySerializer => URLHS}
 import com.keepit.inject._
 import play.api.Play.current
 
-case class URLHistoryCause(value: String)
+sealed class URLHistoryCause(value: String)
 object URLHistoryCause {
-  val create = URLHistoryCause("create")
-  val split = URLHistoryCause("split")
-  val merge = URLHistoryCause("merge")
+  case object CREATE extends URLHistoryCause("create")
+  case object SPLIT extends URLHistoryCause("split")
+  case object MERGE extends URLHistoryCause("merge")
 }
 case class URLHistory(date: DateTime, id: Id[NormalizedURI], cause: URLHistoryCause)
 
 object URLHistory {
   def apply(id: Id[NormalizedURI], cause: URLHistoryCause): URLHistory = URLHistory(inject[DateTime], id, cause)
-  def apply(id: Id[NormalizedURI]): URLHistory = URLHistory(inject[DateTime], id, URLHistoryCause.create)
+  def apply(id: Id[NormalizedURI]): URLHistory = URLHistory(inject[DateTime], id, URLHistoryCause.CREATE)
 }
 
 case class URL (
