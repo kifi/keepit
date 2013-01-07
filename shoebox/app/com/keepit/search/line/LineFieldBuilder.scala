@@ -5,6 +5,11 @@ import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 
+object LineField {
+  val MAX_POSITION_PER_LINE = 2048
+  val LINE_GAP = 3
+}
+
 trait LineFieldBuilder {
   def buildLineField(fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>Option[TokenStream]) = {
     new Field(fieldName, new LineTokenStream(fieldName, lines, tokenStreamFunc))
@@ -26,8 +31,8 @@ class LineTokenStream[A](fieldName: String, lines: Seq[(Int, String)], tokenStre
   var posLimit = 0
   var baseHasPosIncrAttr = false
 
-  private def lineRange(lineNo: Int) = (lineNo * LineQuery.MAX_POSITION_PER_LINE,
-                                        (lineNo + 1) * LineQuery.MAX_POSITION_PER_LINE - LineQuery.LINE_GAP)
+  private def lineRange(lineNo: Int) = (lineNo * LineField.MAX_POSITION_PER_LINE,
+                                        (lineNo + 1) * LineField.MAX_POSITION_PER_LINE - LineField.LINE_GAP)
 
   override def incrementToken(): Boolean = {
     clearAttributes()

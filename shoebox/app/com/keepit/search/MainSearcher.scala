@@ -46,7 +46,7 @@ extends Logging {
   val friendlyUris = friendIds.foldLeft(myUris){ (s, f) => s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet }
 
   def searchBookmarkTitle(queryString: String)(implicit lang: Lang) = {
-    val bookmarkTitleSearchParser = uriGraph.getQueryParser(lang)
+    val bookmarkTitleSearchParser = uriGraph.getQueryParser(lang, proximityBoost)
     bookmarkTitleSearchParser.setPercentMatch(percentMatch)
     bookmarkTitleSearchParser.parseQuery(queryString).map{ bookmarkQuery =>
       log.debug("bookmarkQuery: %s".format(bookmarkQuery.toString))

@@ -259,7 +259,6 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
         val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
 
-        println(res.hits)
         res.hits.map(h => h.uriId).toList === expected
       }
     }
@@ -322,7 +321,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           uris.foldLeft(Map.empty[Id[NormalizedURI], Bookmark]){ (m, uri) =>
             val createdAt = now.minusHours(rand.nextInt(100))
             val uriId = uri.id.get
-            m + (uriId -> Bookmark(createdAt = createdAt, title = uri.title.get, url = uri.url,  uriId = uriId, userId = userId, source = source).save)
+            m + (uriId -> Bookmark(createdAt = createdAt, title = uri.title.get, uriData = Some(NormalizedURIMetadata(uri.url, "", uri.id.get)),  uriId = uriId, userId = userId, source = source).save)
           }
         }
 
