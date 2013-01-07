@@ -52,7 +52,7 @@ class SlickTest extends SpecificationWithJUnit {
             def apply(profile: BasicProfile) = new IdMapperDelegate[Foo]
           }
 
-          override val table = new RepoTable[Foo]("foo") {
+          override lazy val table = new RepoTable[Foo]("foo") {
             def name =     column[String]("name")
             def * = id.? ~ name <> (Foo, Foo.unapply _)
           }

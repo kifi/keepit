@@ -23,10 +23,15 @@ trait Repo[M <: Model[M]] {
 
 trait DbRepo[M <: Model[M]] extends Repo[M] {
   implicit val db = inject[DataBaseComponent]
+
   import db.Driver.Implicit._ // here's the driver, abstracted away
   import DBSession._
 
   protected def table: RepoTable[M]
+
+  def descTable(): String = db.handle.withSession {
+    table.ddl.createStatements mkString "\n"
+  }
 
   def save(model: M)(implicit session: RWSession): M = {
     val toUpdate = model.withUpdateTime(inject[DateTime])

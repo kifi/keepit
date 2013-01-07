@@ -40,7 +40,7 @@ case class Follow (
 class FollowRepoImpl extends DbRepo[Follow] {
   import db.Driver.Implicit._ // here's the driver, abstracted away
 
-  override val table = new RepoTable[Follow]("follow") {
+  override lazy val table = new RepoTable[Follow]("follow") {
     import FortyTwoTypeMappers._
     import org.scalaquery.ql._
     import org.scalaquery.ql.ColumnOps._
