@@ -218,8 +218,8 @@ object BookmarksController extends FortyTwoController {
           case Some(bookmark) => Some(bookmark.withActive(true).withPrivate(isPrivate).save)
           case None =>
             Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
-            val urlId = URL(url, uri.id.get).save
-            Some(Bookmark(uri, user.id.get, title, urlId.id.get, source, isPrivate, installationId).save)
+            val urlObj = URL(url, uri.id.get).save
+            Some(Bookmark(uri, user.id.get, title, urlObj, source, isPrivate, installationId).save)
         }
       }
     } else {

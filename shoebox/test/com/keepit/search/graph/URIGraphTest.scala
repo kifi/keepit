@@ -78,7 +78,7 @@ class URIGraphTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URL(uri.url, uri.id.get).save
-              Bookmark(title = uri.title.get, urlId = url1.id.get,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+              Bookmark(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
             }
           }
         }
@@ -110,7 +110,7 @@ class URIGraphTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URL(uri.url, uri.id.get).save
-              Bookmark(title = uri.title.get, urlId = url1.id.get, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+              Bookmark(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
             }
           }
         }
@@ -143,7 +143,7 @@ class URIGraphTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URL(uri.url, uri.id.get).save
-              Bookmark(title = uri.title.get, urlId = url1.id.get, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+              Bookmark(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
             }
           }
         }
@@ -208,7 +208,7 @@ class URIGraphTest extends SpecificationWithJUnit {
           uris.foreach{ uri =>
             val uriId =  uri.id.get
             val url1 = URL(uri.url, uri.id.get).save
-            Bookmark(title = ("personaltitle bmt"+uriId), urlId = url1.id.get,  uriId = uriId, userId = users((uriId.id % 2L).toInt).id.get, source = BookmarkSource("test")).save
+            Bookmark(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users((uriId.id % 2L).toInt).id.get, source = BookmarkSource("test")).save
           }
         }
 
@@ -241,8 +241,12 @@ class URIGraphTest extends SpecificationWithJUnit {
           uris.foreach{ uri =>
             val uriId =  uri.id.get
             val url1 = URL(uri.url, uri.id.get).save
-            Bookmark(title = ("personaltitle bmt"+uriId), urlId = url1.id.get,  uriId = uriId, userId = users(0).id.get, source = BookmarkSource("test")).save
+            Bookmark(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users(0).id.get, source = BookmarkSource("test")).save
           }
+        }
+
+        CX.withConnection { implicit conn =>
+          println(Bookmark.all)
         }
 
         val graphDir = new RAMDirectory
@@ -257,6 +261,7 @@ class URIGraphTest extends SpecificationWithJUnit {
 
         var site = mkSiteQuery("com")
         searcher.search(users(0).id.get, site, 0.0f).keySet === Set(1L, 2L, 4L, 5L)
+
 
         site = mkSiteQuery("keepit.com")
         searcher.search(users(0).id.get, site, 0.0f).keySet === Set(1L, 2L)
@@ -286,9 +291,13 @@ class URIGraphTest extends SpecificationWithJUnit {
             NormalizedURI(title = "title", url = "http://www.keepit.com/article1", state=SCRAPED).save,
             NormalizedURI(title = "title", url = "http://www.keepit.com/article2", state=SCRAPED).save
           )
+
+          val url1 = URL(uris(0).url, uris(0).id.get).save
+          val url2 = URL(uris(1).url, uris(1).id.get).save
+
           val bookmarks = Array(
-            Bookmark(title = "line1 titles", urlId = URL(uris(0).url, uris(0).id.get).save.id.get,  uriId = uris(0).id.get, userId = user.id.get, source = BookmarkSource("test")).save,
-            Bookmark(title = "line2 titles", urlId = URL(uris(1).url, uris(1).id.get).save.id.get,  uriId = uris(1).id.get, userId = user.id.get, source = BookmarkSource("test")).save
+            Bookmark(title = "line1 titles", url = url1,  uriId = uris(0).id.get, userId = user.id.get, source = BookmarkSource("test")).save,
+            Bookmark(title = "line2 titles", url = url2,  uriId = uris(1).id.get, userId = user.id.get, source = BookmarkSource("test")).save
           )
           (user, uris, bookmarks)
         }

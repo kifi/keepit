@@ -19,6 +19,8 @@ import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URINormalizer
 import com.keepit.serializer.{URLHistorySerializer => URLHS}
+import com.keepit.inject._
+import play.api.Play.current
 
 case class URLHistoryCause(value: String)
 object URLHistoryCause {
@@ -29,14 +31,14 @@ object URLHistoryCause {
 case class URLHistory(date: DateTime, id: Id[NormalizedURI], cause: URLHistoryCause)
 
 object URLHistory {
-  def apply(id: Id[NormalizedURI], cause: URLHistoryCause): URLHistory = URLHistory(currentDateTime, id, cause)
-  def apply(id: Id[NormalizedURI]): URLHistory = URLHistory(currentDateTime, id, URLHistoryCause.create)
+  def apply(id: Id[NormalizedURI], cause: URLHistoryCause): URLHistory = URLHistory(inject[DateTime], id, cause)
+  def apply(id: Id[NormalizedURI]): URLHistory = URLHistory(inject[DateTime], id, URLHistoryCause.create)
 }
 
 case class URL (
   id: Option[Id[URL]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
+  createdAt: DateTime = inject[DateTime],
+  updatedAt: DateTime = inject[DateTime],
   url: String,
   normalizedUriId: Id[NormalizedURI],
   history: Seq[URLHistory] = Seq(),
@@ -44,7 +46,7 @@ case class URL (
   ) extends Logging {
   def withHistory(historyItem: URLHistory): URL = copy(history = historyItem +: history)
   def save(implicit conn: Connection): URL = {
-    val entity = URLEntity(this.copy(updatedAt = currentDateTime))
+    val entity = URLEntity(this.copy(updatedAt = inject[DateTime]))
     assert(1 == entity.save())
     entity.view
   }
@@ -73,8 +75,8 @@ object URL {
 }
 
 private[model] class URLEntity extends Entity[URL, URLEntity] {
-  val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
+  val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(inject[DateTime])
+  val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(inject[DateTime])
   val url = "url".VARCHAR(256).NOT_NULL
   val normalizedUriId = "normalized_uri_id".ID[NormalizedURI].NOT_NULL
   val history = "history".VARCHAR(1024)

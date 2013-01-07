@@ -32,15 +32,13 @@ case class Bookmark(
   title: String,
   uriId: Id[NormalizedURI],
   urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
-  deprecatedUrl: String = "",
+  url: String, // denormalized for efficiency
   bookmarkPath: Option[String] = None,
   isPrivate: Boolean = false,
   userId: Id[User],
   state: State[Bookmark] = Bookmark.States.ACTIVE,
   source: BookmarkSource,
   kifiInstallation: Option[ExternalId[KifiInstallation]] = None) {
-
-  val url = deprecatedUrl
 
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
 
@@ -70,11 +68,11 @@ case class Bookmark(
 
 object Bookmark {
 
-  def apply(uri: NormalizedURI, userId: Id[User], title: String, urlId: Id[URL], source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
-    Bookmark(title = title, userId = userId, uriId = uri.id.get, urlId = Some(urlId), source = source, isPrivate = isPrivate)
+  def apply(uri: NormalizedURI, userId: Id[User], title: String, url: URL, source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
+    Bookmark(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)
 
-  def apply(title: String, urlId: Id[URL], uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource): Bookmark =
-    Bookmark(title = title, urlId = Some(urlId), uriId = uriId, userId = userId, source = source)
+  def apply(title: String, url: URL, uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource): Bookmark =
+    Bookmark(title = title, urlId = Some(url.id.get), url = url.url, uriId = uriId, userId = userId, source = source)
 
   def apply(title: String, urlId: Id[URL],  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource, isPrivate: Boolean): Bookmark =
     Bookmark(title = title, urlId = urlId, uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
@@ -147,7 +145,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
   val title = "title".VARCHAR(256).NOT_NULL
   val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
   val urlId = "url_id".ID[URL]
-  val deprecatedUrl = "url".VARCHAR(256).NOT_NULL
+  val url = "url".VARCHAR(256).NOT_NULL
   val state = "state".STATE[Bookmark].NOT_NULL(Bookmark.States.ACTIVE)
   val bookmarkPath = "bookmark_path".VARCHAR(512).NOT_NULL
   val userId = "user_id".ID[User]
@@ -166,7 +164,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
     state = state(),
     uriId = uriId(),
     urlId = urlId.value,
-    deprecatedUrl = deprecatedUrl(),
+    url = url(),
     isPrivate = isPrivate(),
     userId = userId(),
     bookmarkPath = bookmarkPath.value,
@@ -188,7 +186,7 @@ private[model] object BookmarkEntity extends BookmarkEntity with EntityTable[Boo
     bookmark.state := view.state
     bookmark.uriId := view.uriId
     bookmark.urlId.set(view.urlId)
-    bookmark.deprecatedUrl := view.deprecatedUrl
+    bookmark.url := view.url
     bookmark.bookmarkPath.set(view.bookmarkPath)
     bookmark.isPrivate := view.isPrivate
     bookmark.userId.set(view.userId)
