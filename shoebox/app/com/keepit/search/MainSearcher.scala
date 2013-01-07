@@ -16,6 +16,7 @@ import org.joda.time.DateTime
 class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: SearchConfig)
 extends Logging {
   val currentTime = currentDateTime.getMillis()
+  val isInitialSearch = filterOut.isEmpty
 
   // get config params
   val minMyBookmarks = config.asInt("minMyBookmarks")
@@ -26,7 +27,7 @@ extends Logging {
   val percentMatch = config.asFloat("percentMatch")
   val recencyBoost = config.asFloat("recencyBoost")
   val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
-  val tailCutting = config.asFloat("tailCutting")
+  val tailCutting = if (isInitialSearch) config.asFloat("tailCutting") else 0.01
   val proximityBoost = config.asFloat("proximityBoost")
   val semanticBoost = config.asFloat("semanticBoost")
   val dumpingByRank = config.asBoolean("dumpingByRank")
@@ -45,24 +46,30 @@ extends Logging {
   val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
   val friendlyUris = friendIds.foldLeft(myUris){ (s, f) => s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet }
 
-  def searchBookmarkTitle(queryString: String)(implicit lang: Lang) = {
+  def searchBookmarkTitle(queryString: String, initial: Boolean)(implicit lang: Lang) = {
     val bookmarkTitleSearchParser = uriGraph.getQueryParser(lang, proximityBoost)
-    bookmarkTitleSearchParser.setPercentMatch(percentMatch)
+    bookmarkTitleSearchParser.setPercentMatch(if (initial) 100.0f else percentMatch)
     bookmarkTitleSearchParser.parseQuery(queryString).map{ bookmarkQuery =>
       log.debug("bookmarkQuery: %s".format(bookmarkQuery.toString))
-      uriGraphSearcher.search(userId, bookmarkQuery, percentMatch)
+      uriGraphSearcher.search(userId, bookmarkQuery)
     }.getOrElse(Map.empty[Long, Float])
   }
 
-  def searchText(queryString: String, maxTextHitsPerCategory: Int)(implicit lang: Lang) = {
-    var bookmarkTitleHits = searchBookmarkTitle(queryString)
-
+  def searchText(queryString: String, maxTextHitsPerCategory: Int, initial: Boolean = true)(implicit lang: Lang) = {
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
+    searchTextSub(queryString, myHits, friendsHits, othersHits, initial)
+
+    (myHits, friendsHits, othersHits)
+  }
+
+  private def searchTextSub(queryString: String, myHits: ArticleHitQueue, friendsHits: ArticleHitQueue, othersHits: ArticleHitQueue, initial: Boolean)(implicit lang: Lang) {
+    var bookmarkTitleHits = searchBookmarkTitle(queryString, initial)
+
     val articleParser = articleIndexer.getQueryParser(lang, proximityBoost, semanticBoost)
-    articleParser.setPercentMatch(percentMatch)
+    articleParser.setPercentMatch(if (initial) 100.0f else percentMatch)
     articleParser.parseQuery(queryString).map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
       articleSearcher.doSearch(articleQuery){ (scorer, mapper) =>
@@ -92,13 +99,22 @@ extends Logging {
       // boost scores to compensate missing article match
       if (!filterOut.contains(id)) myHits.insert(id, score * personalTitleBoost, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
     }
-    (myHits, friendsHits, othersHits)
+
+    if ((myHits.totalHits + friendsHits.totalHits) > 0 || !initial || !articleParser.isMultiClauseQuery) {
+      (myHits, friendsHits, othersHits)
+    } else {
+      myHits.clear()
+      friendsHits.clear()
+      othersHits.clear()
+      searchTextSub(queryString, myHits, friendsHits, othersHits, false)
+    }
   }
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter(None)): ArticleSearchResult = {
+
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
-    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5)
+    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, isInitialSearch)
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits

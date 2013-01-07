@@ -217,14 +217,14 @@ class URIGraphTest extends SpecificationWithJUnit {
         val bmt1 = new TermQuery(URIGraph.titleTerm.createTerm("bmt1"))
         val bmt2 = new TermQuery(URIGraph.titleTerm.createTerm("bmt2"))
 
-        searcher.search(users(0).id.get, personaltitle, 0.0f).keySet === Set(2L, 4L, 6L)
-        searcher.search(users(1).id.get, personaltitle, 0.0f).keySet === Set(1L, 3L, 5L)
+        searcher.search(users(0).id.get, personaltitle).keySet === Set(2L, 4L, 6L)
+        searcher.search(users(1).id.get, personaltitle).keySet === Set(1L, 3L, 5L)
 
-        searcher.search(users(0).id.get, bmt1, 0.0f).keySet === Set.empty[Long]
-        searcher.search(users(1).id.get, bmt1, 0.0f).keySet === Set(1L)
+        searcher.search(users(0).id.get, bmt1).keySet === Set.empty[Long]
+        searcher.search(users(1).id.get, bmt1).keySet === Set(1L)
 
-        searcher.search(users(0).id.get, bmt2, 0.0f).keySet === Set(2L)
-        searcher.search(users(1).id.get, bmt2, 0.0f).keySet === Set.empty[Long]
+        searcher.search(users(0).id.get, bmt2).keySet === Set(2L)
+        searcher.search(users(1).id.get, bmt2).keySet === Set.empty[Long]
       }
     }
 
@@ -251,22 +251,22 @@ class URIGraphTest extends SpecificationWithJUnit {
         }
 
         var site = mkSiteQuery("com")
-        searcher.search(users(0).id.get, site, 0.0f).keySet === Set(1L, 2L, 4L, 5L)
+        searcher.search(users(0).id.get, site).keySet === Set(1L, 2L, 4L, 5L)
 
         site = mkSiteQuery("keepit.com")
-        searcher.search(users(0).id.get, site, 0.0f).keySet === Set(1L, 2L)
+        searcher.search(users(0).id.get, site).keySet === Set(1L, 2L)
 
         site = mkSiteQuery("org")
-        searcher.search(users(0).id.get, site, 0.0f).keySet === Set(3L, 6L)
+        searcher.search(users(0).id.get, site).keySet === Set(3L, 6L)
 
         site = mkSiteQuery("findit.org")
-        searcher.search(users(0).id.get, site, 0.0f).keySet === Set(6L)
+        searcher.search(users(0).id.get, site).keySet === Set(6L)
 
         site = mkSiteQuery(".org")
-        searcher.search(users(0).id.get, site, 0.0f).keySet === Set(3L, 6L)
+        searcher.search(users(0).id.get, site).keySet === Set(3L, 6L)
 
         site = mkSiteQuery(".findit.org")
-        searcher.search(users(0).id.get, site, 0.0f).keySet === Set(6L)
+        searcher.search(users(0).id.get, site).keySet === Set(6L)
       }
     }
 
