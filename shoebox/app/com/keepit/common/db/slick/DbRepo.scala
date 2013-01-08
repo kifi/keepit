@@ -33,6 +33,8 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
     table.ddl.createStatements mkString "\n"
   }
 
+  println("  %s".format(descTable()))
+
   def save(model: M)(implicit session: RWSession): M = {
     val toUpdate = model.withUpdateTime(inject[DateTime])
     model.id match {
