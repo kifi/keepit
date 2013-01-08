@@ -106,7 +106,7 @@ class URIGraphSearcher(searcher: Searcher) {
     new LineIndexReader(searcher.indexReader, userDocId, uriList.publicListSize + uriList.privateListSize)
   }
 
-  def search(user: Id[User], query: Query, percentMatch: Float): Map[Long, Float] = {
+  def search(user: Id[User], query: Query): Map[Long, Float] = {
     var result = LongMap.empty[Float]
     getURIList(user).foreach{ uriList =>
       val publicList = uriList.publicList
