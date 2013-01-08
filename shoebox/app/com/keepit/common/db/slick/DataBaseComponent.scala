@@ -5,16 +5,17 @@ import org.scalaquery.session.{Database, Session, ResultSetConcurrency, ResultSe
 import org.scalaquery.ql._
 import java.sql.{PreparedStatement, Connection, DatabaseMetaData, Statement}
 import org.scalaquery.SQueryException
+import com.google.inject.Inject
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
   val Driver: Profile
   def handle: Database
 
-  val sequenceID: OperatorColumn[Int]
+  def sequenceID: OperatorColumn[Int]
 }
 
-class DBConnection(db: DataBaseComponent) {
+class DBConnection @Inject() (db: DataBaseComponent) {
   import DBSession._
 
   def readOnly[T](f: ROSession => T): T = {
