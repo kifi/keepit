@@ -45,6 +45,8 @@ case class Comment(
 
   def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
 
+  def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
+
   def save(implicit conn: Connection): Comment = {
     val entity = CommentEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())

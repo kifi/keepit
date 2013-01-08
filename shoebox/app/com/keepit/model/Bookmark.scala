@@ -47,6 +47,8 @@ case class Bookmark(
     case false => Bookmark.States.INACTIVE
   })
 
+  def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
+
   def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
 
   def isActive: Boolean = state == Bookmark.States.ACTIVE

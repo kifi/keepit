@@ -67,7 +67,7 @@ case class NormalizedURI  (
 object NormalizedURI {
 
   def apply(url: String): NormalizedURI =
-    apply(title = None, url = url, state = NormalizedURI.States.ACTIVE)  // TODO: make title an Option[String]
+    apply(title = None, url = url, state = NormalizedURI.States.ACTIVE)
 
   def apply(title: String, url: String): NormalizedURI =
     NormalizedURI(title = Some(title), url = url, state = NormalizedURI.States.ACTIVE)

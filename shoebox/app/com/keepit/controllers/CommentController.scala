@@ -168,7 +168,9 @@ object CommentController extends FortyTwoController {
       val uriId = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save).id.get
       Follow.get(request.userId, uriId) match {
         case Some(follow) if !follow.isActive => follow.activate.save
-        case None => Follow(userId = request.userId, uriId = uriId).save
+        case None =>
+          val urlId = URL.get(url).getOrElse(URL(url,uriId).save).id
+          Follow(userId = request.userId, uriId = uriId, urlId = urlId).save
         case _ => None
       }
     }
@@ -244,6 +246,7 @@ object CommentController extends FortyTwoController {
                 initatorUserId = Option(comment.userId),
                 recipientUserId = Some(userId),
                 uriId = Some(comment.uriId),
+                urlId = comment.urlId,
                 deepLocator = DeepLocator.ofComment(comment)).save
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
@@ -269,6 +272,7 @@ object CommentController extends FortyTwoController {
                 initatorUserId = Option(comment.userId),
                 recipientUserId = Some(userId),
                 uriId = Some(comment.uriId),
+                urlId = comment.urlId,
                 deepLocator = DeepLocator.ofMessageThread(comment)).save
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {

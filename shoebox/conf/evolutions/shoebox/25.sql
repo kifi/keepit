@@ -4,7 +4,7 @@ CREATE TABLE url (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     url varchar(2048) NOT NULL,
     normalized_uri_id bigint(20) NOT NULL,
-    history varchar(1024),
+    history varchar(2048),
     state varchar(20) NOT NULL,
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
@@ -14,8 +14,6 @@ CREATE TABLE url (
     CONSTRAINT url_normalized_uri_id FOREIGN KEY (normalized_uri_id) REFERENCES normalized_uri(id)
 );
 
-alter TABLE normalized_uri
-  add column url_id bigint(20);
 alter TABLE bookmark
   add column url_id bigint(20);
 alter TABLE comment

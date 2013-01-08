@@ -80,9 +80,9 @@ object URL {
 private[model] class URLEntity extends Entity[URL, URLEntity] {
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(inject[DateTime])
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(inject[DateTime])
-  val url = "url".VARCHAR(256).NOT_NULL
+  val url = "url".VARCHAR(2048).NOT_NULL
   val normalizedUriId = "normalized_uri_id".ID[NormalizedURI].NOT_NULL
-  val history = "history".VARCHAR(1024)
+  val history = "history".VARCHAR(2048)
   val state = "state".STATE[URL].NOT_NULL(URL.States.ACTIVE)
 
   def relation = URLEntity
