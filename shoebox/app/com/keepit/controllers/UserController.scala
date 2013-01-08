@@ -47,7 +47,7 @@ object UserController extends FortyTwoController {
         case Some(uri) =>
           val userId = request.userId
           val bookmark = Bookmark.load(uri, userId).filter(_.isActive)
-          val following = Follow.get(userId, uri.id.get).filter(_.isActive).isDefined
+          val following = FollowCxRepo.get(userId, uri.id.get).filter(_.isActive).isDefined
 
           val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
           val searcher = inject[URIGraph].getURIGraphSearcher
@@ -122,7 +122,7 @@ object UserController extends FortyTwoController {
     val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = CX.withConnection { implicit conn =>
       val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
-      val follows = Follow.all(userId) map {f => NormalizedURI.get(f.uriId)}
+      val follows = FollowCxRepo.all(userId) map {f => NormalizedURI.get(f.uriId)}
       val comments = Comment.all(Comment.Permissions.PUBLIC, userId) map {c =>
         (NormalizedURI.get(c.uriId), c)
       }
