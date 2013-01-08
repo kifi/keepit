@@ -40,7 +40,7 @@ class FollowTest extends SpecificationWithJUnit {
         inject[DBConnection].readWrite{ implicit session =>
           val repo = inject[Repo[Follow]]
           repo.save(Follow(userId = user1.id.get, uriId = uriB.id.get))
-          repo.save(Follow(userId = user2.id.get, uriId = uriA.id.get, state = FollowCxRepo.States.INACTIVE))
+          repo.save(Follow(userId = user2.id.get, uriId = uriA.id.get, state = FollowStates.INACTIVE))
         }
 
         CX.withConnection { implicit c =>
