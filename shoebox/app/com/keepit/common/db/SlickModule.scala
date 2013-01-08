@@ -21,10 +21,11 @@ case class SlickModule(dbInfo: DbInfo) extends ScalaModule {
     //see http://stackoverflow.com/questions/6271435/guice-and-scala-injection-on-generics-dependencies
     bind[Repo[Follow]].to(classOf[FollowRepoImpl]).in(classOf[Singleton])
     bind[DBConnection].in(classOf[Singleton])
-    bind[DataBaseComponent].toInstance(dbInfo.driverName match {
+    val db = dbInfo.driverName match {
       case MySQL.driverName     => new MySQL( dbInfo )
       case H2.driverName        => new H2( dbInfo )
-    })
+    }
+    bind[DataBaseComponent].toInstance(db)
   }
 }
 
