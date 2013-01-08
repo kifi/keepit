@@ -25,6 +25,9 @@ alter TABLE follow
 alter TABLE scrape_info
   add column url_id bigint(20);
 
+alter TABLE normalized_uri
+  add column domain varchar(512);
+
 insert into evolutions (name, description) values('25.sql', 'adding uri_data (JSON) to all tables that use a normalized_uri_id');
 
 # --- !Downs
