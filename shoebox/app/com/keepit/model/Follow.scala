@@ -44,7 +44,6 @@ class FollowRepoImpl extends DbRepo[Follow] {
     import FortyTwoTypeMappers._
     import org.scalaquery.ql._
     import org.scalaquery.ql.ColumnOps._
-    import org.scalaquery.ql.TypeMapper._
     import org.scalaquery.ql.basic.BasicProfile
     import org.scalaquery.ql.extended.ExtendedTable
     import org.scalaquery.util.{Node, UnaryNode, BinaryNode}

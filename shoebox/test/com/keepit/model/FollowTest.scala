@@ -20,9 +20,10 @@ class FollowTest extends SpecificationWithJUnit {
 
     "load by user and uri" in {
       running(new EmptyApplication()) {
+        val repo = inject[Repo[Follow]]
 
         inject[DBConnection].readWrite{ implicit session =>
-          inject[Repo[Follow]].count === 0
+          repo.count === 0
         }
 
         val (user1, user2, uriA, uriB) = CX.withConnection { implicit c =>
@@ -37,10 +38,27 @@ class FollowTest extends SpecificationWithJUnit {
           FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === false
         }
 
+        val (f1, f2) = inject[DBConnection].readWrite{ implicit session =>
+          val f1 = repo.save(Follow(userId = user1.id.get, uriId = uriB.id.get))
+          val f2 = repo.save(Follow(userId = user2.id.get, uriId = uriA.id.get, state = FollowCxRepo.States.INACTIVE))
+          (f1, f2)
+        }
+//
+//        inject[DBConnection].readOnly{ implicit session =>
+//          repo.get(f1.id.get) === f1
+//          repo.get(f2.id.get) === f2
+//        }
+
+        CX.withConnection { implicit c =>
+          FollowCxRepo.get(user1.id.get, uriA.id.get).isDefined === false
+          FollowCxRepo.get(user1.id.get, uriB.id.get).isDefined === true
+          FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === true
+          FollowCxRepo.get(user2.id.get, uriB.id.get).isDefined === false
+        }
+
         inject[DBConnection].readWrite{ implicit session =>
-          val repo = inject[Repo[Follow]]
-          repo.save(Follow(userId = user1.id.get, uriId = uriB.id.get))
-          repo.save(Follow(userId = user2.id.get, uriId = uriA.id.get, state = FollowCxRepo.States.INACTIVE))
+          repo.save(f1.deactivate)
+          repo.save(f2.deactivate)
         }
 
         CX.withConnection { implicit c =>
@@ -49,8 +67,8 @@ class FollowTest extends SpecificationWithJUnit {
           FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === true
           FollowCxRepo.get(user2.id.get, uriB.id.get).isDefined === false
         }
+
       }
     }
   }
-
 }
