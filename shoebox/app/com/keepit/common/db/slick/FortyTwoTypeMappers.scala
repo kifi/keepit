@@ -4,8 +4,9 @@ import org.scalaquery.ql.{TypeMapper, TypeMapperDelegate, BaseTypeMapper}
 import org.scalaquery.ql.basic.BasicProfile
 import org.scalaquery.session.{PositionedParameters, PositionedResult}
 
-import com.keepit.common.db.{Id, State}
+import com.keepit.common.db.{Id, State, Model}
 import com.keepit.common.time._
+import com.keepit.serializer.{NormalizedURIMetadataSerializer => NURIS}
 
 import com.keepit.model._
 
@@ -14,10 +15,16 @@ import org.joda.time.DateTime
 import java.sql.Types.{TIMESTAMP, BIGINT, VARCHAR}
 import java.sql.Timestamp
 
+import play.api.libs.json._
+
 object FortyTwoTypeMappers {
 
   implicit object DateTimeTypeMapper extends BaseTypeMapper[DateTime] {
     def apply(profile: BasicProfile) = new DateTimeMapperDelegate
+  }
+
+  implicit object GenericIdTypeMapper extends BaseTypeMapper[Id[Model[_]]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Model[_]]
   }
 
   implicit object FollowIdTypeMapper extends BaseTypeMapper[Id[Follow]] {
@@ -35,6 +42,10 @@ object FortyTwoTypeMappers {
   implicit object FollowStateTypeMapper extends BaseTypeMapper[State[Follow]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[Follow]
   }
+
+  implicit object NormalizedURIMetadataTypeMapper extends BaseTypeMapper[NormalizedURIMetadata] {
+    def apply(profile: BasicProfile) = new NormalizedURIMetadataMapperDelegate
+  }
 }
 
 //************************************
@@ -50,6 +61,34 @@ class DateTimeMapperDelegate extends TypeMapperDelegate[DateTime] {
   override def valueToSQLLiteral(value: DateTime) = "{ts '" + timestamp(value) + "'}"
 
   private def timestamp(value: DateTime) = new Timestamp(value.toDate.getTime)
+}
+
+
+//************************************
+//       NormalizedURIMetadata -> String
+//************************************
+class NormalizedURIMetadataMapperDelegate extends TypeMapperDelegate[NormalizedURIMetadata] {
+  def zero = NormalizedURIMetadata("", "", Seq())
+  def sqlType = VARCHAR
+  def setValue(value: NormalizedURIMetadata, p: PositionedParameters) = p.setString(asString(value))
+  def setOption(valueOpt: Option[NormalizedURIMetadata], p: PositionedParameters) = p.setStringOption(valueOpt map asString)
+  def nextValue(r: PositionedResult) = try {
+        val uriData = r.nextStringOption
+        val json = Json.parse(uriData.getOrElse("{}")) // after grandfathering, force having a value
+        val serializer = NURIS.normalizedURIMetadataSerializer
+        serializer.reads(json)
+      }
+      catch {
+        case ex: Throwable =>
+          // after grandfathering process, throw error
+          zero
+      }
+  def updateValue(value: NormalizedURIMetadata, r: PositionedResult) = r.updateString(asString(value))
+
+  private def asString(value: NormalizedURIMetadata) = {
+    val serializer = NURIS.normalizedURIMetadataSerializer
+    Json.stringify(serializer.writes(value))
+  }
 }
 
 //************************************
