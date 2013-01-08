@@ -37,7 +37,9 @@ case class NormalizedURI  (
     log.info("saving new uri %s with hash %s".format(url, urlHash))
     val entity = NormalizedURIEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
-    entity.view
+    val uri = entity.view
+    ScrapeInfo.ofUri(uri).save
+    uri
   }
 
   def withState(state: State[NormalizedURI]) = copy(state = state)

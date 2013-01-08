@@ -228,9 +228,7 @@ object BookmarksController extends FortyTwoController {
   }
 
   private def createNewURI(title: String, url: String)(implicit conn: Connection) = {
-    val uri = NormalizedURI(title = title, url = url).save
-    ScrapeInfo.ofUri(uri).save
-    uri
+    NormalizedURI(title = title, url = url).save
   }
 
 }
