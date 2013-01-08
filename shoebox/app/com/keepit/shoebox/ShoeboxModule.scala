@@ -46,9 +46,10 @@ import com.mongodb.casbah.MongoConnection
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
 
-case class ShoeboxModule() extends ScalaModule with Logging {
+class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
-    install(FortyTwoModule())
+    println("configuring ShoeboxModule")
+    install(new FortyTwoModule())
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]

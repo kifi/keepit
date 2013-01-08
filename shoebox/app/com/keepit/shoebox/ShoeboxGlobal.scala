@@ -20,7 +20,7 @@ import com.keepit.common.analytics.reports.ReportBuilderPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
 
-  override lazy val injector: Injector = Guice.createInjector(Stage.PRODUCTION, ShoeboxModule())
+  override lazy val injector: Injector = Guice.createInjector(Stage.PRODUCTION, new ShoeboxModule())
 
   override def onStart(app: Application): Unit = {
     require(inject[FortyTwoServices].currentService == ServiceType.SHOEBOX,
