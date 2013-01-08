@@ -6,6 +6,8 @@ import org.specs2.runner.JUnitRunner
 
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
+import com.keepit.common.db.slick._
+import com.keepit.inject._
 import com.keepit.test.EmptyApplication
 
 import play.api.Play.current
@@ -19,6 +21,10 @@ class FollowTest extends SpecificationWithJUnit {
     "load by user and uri" in {
       running(new EmptyApplication()) {
 
+        inject[DBConnection].readWrite{ implicit session =>
+          inject[Repo[Follow]].count === 0
+        }
+
         val (user1, user2, uriA, uriB) = CX.withConnection { implicit c =>
           (User(firstName = "User", lastName = "1").save,
            User(firstName = "User", lastName = "2").save,
@@ -27,15 +33,21 @@ class FollowTest extends SpecificationWithJUnit {
         }
 
         CX.withConnection { implicit c =>
-          Follow(userId = user1.id.get, uriId = uriB.id.get).save
-          Follow(userId = user2.id.get, uriId = uriA.id.get, state = Follow.States.INACTIVE).save
+          FollowCxRepo.get(user1.id.get, uriB.id.get).isDefined === false
+          FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === false
+        }
+
+        inject[DBConnection].readWrite{ implicit session =>
+          val repo = inject[Repo[Follow]]
+          repo.save(Follow(userId = user1.id.get, uriId = uriB.id.get))
+          repo.save(Follow(userId = user2.id.get, uriId = uriA.id.get, state = FollowStates.INACTIVE))
         }
 
         CX.withConnection { implicit c =>
-          Follow.get(user1.id.get, uriA.id.get).isDefined === false
-          Follow.get(user1.id.get, uriB.id.get).isDefined === true
-          Follow.get(user2.id.get, uriA.id.get).isDefined === true
-          Follow.get(user2.id.get, uriB.id.get).isDefined === false
+          FollowCxRepo.get(user1.id.get, uriA.id.get).isDefined === false
+          FollowCxRepo.get(user1.id.get, uriB.id.get).isDefined === true
+          FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === true
+          FollowCxRepo.get(user2.id.get, uriB.id.get).isDefined === false
         }
       }
     }

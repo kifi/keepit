@@ -87,7 +87,7 @@ object UrlController extends FortyTwoController {
         }
       }
 
-      val follows = Follow.all
+      val follows = FollowCxRepo.all
       val followsCount = follows.size
 
       follows map { follow =>
@@ -101,7 +101,7 @@ object UrlController extends FortyTwoController {
           case Some(id) if id.id == urlObj.id.map(_.id).getOrElse(0) =>
           case None =>
             changedURLs += ChangedURL("follow-url", normUri.url, follow.urlId, urlObj.id.getOrElse(Id[URL](0)) )
-            if(!readOnly) follow.withUrlId(urlObj.id.get).save
+            if(!readOnly) follow.withUrlId(urlObj.id.get).saveWithCx
         }
       }
 

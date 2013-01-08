@@ -4,7 +4,7 @@ import org.scalaquery.ql.{TypeMapper, TypeMapperDelegate, BaseTypeMapper}
 import org.scalaquery.ql.basic.BasicProfile
 import org.scalaquery.session.{PositionedParameters, PositionedResult}
 
-import com.keepit.common.db.{Id, State}
+import com.keepit.common.db.{Id, State, Model}
 import com.keepit.common.time._
 
 import com.keepit.model._
@@ -14,10 +14,16 @@ import org.joda.time.DateTime
 import java.sql.Types.{TIMESTAMP, BIGINT, VARCHAR}
 import java.sql.Timestamp
 
+import play.api.libs.json._
+
 object FortyTwoTypeMappers {
 
   implicit object DateTimeTypeMapper extends BaseTypeMapper[DateTime] {
     def apply(profile: BasicProfile) = new DateTimeMapperDelegate
+  }
+
+  implicit object GenericIdTypeMapper extends BaseTypeMapper[Id[Model[_]]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Model[_]]
   }
 
   implicit object FollowIdTypeMapper extends BaseTypeMapper[Id[Follow]] {
@@ -26,6 +32,10 @@ object FortyTwoTypeMappers {
 
   implicit object UserIdTypeMapper extends BaseTypeMapper[Id[User]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[User]
+  }
+
+  implicit object URLIdTypeMapper extends BaseTypeMapper[Id[URL]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[URL]
   }
 
   implicit object NormalizedURIIdTypeMapper extends BaseTypeMapper[Id[NormalizedURI]] {
@@ -51,6 +61,7 @@ class DateTimeMapperDelegate extends TypeMapperDelegate[DateTime] {
 
   private def timestamp(value: DateTime) = new Timestamp(value.toDate.getTime)
 }
+
 
 //************************************
 //       Id -> Long

@@ -6,6 +6,7 @@ import scala.math.BigDecimal.long2bigDecimal
 import com.keepit.common.async.dispatch
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.db.{CX, ExternalId, Id, State}
+import com.keepit.common.db.slick.{Repo, DBConnection}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
 import com.keepit.common.social.CommentWithSocialUser
@@ -166,14 +167,15 @@ object CommentController extends FortyTwoController {
     val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
     CX.withConnection { implicit conn =>
       val uriId = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save).id.get
-      Follow.get(request.userId, uriId) match {
-        case Some(follow) if !follow.isActive => follow.activate.save
-        case None =>
+      FollowCxRepo.get(request.userId, uriId) match {
+        case Some(follow) if !follow.isActive => Some(follow.activate.saveWithCx)
+        case None => 
           val urlId = URL.get(url).getOrElse(URL(url,uriId).save).id
-          Follow(userId = request.userId, uriId = uriId, urlId = urlId).save
+          Some(Follow(userId = request.userId, urlId = urlId, uriId = uriId).saveWithCx)
         case _ => None
       }
     }
+
     Ok(JsObject(Seq("following" -> JsBoolean(true))))
   }
 
@@ -182,13 +184,14 @@ object CommentController extends FortyTwoController {
     val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
     CX.withConnection { implicit conn =>
       NormalizedURI.getByNormalizedUrl(url) match {
-        case Some(uri) => Follow.get(request.userId, uri.id.get) match {
-          case Some(follow) => follow.deactivate.save
+        case Some(uri) => FollowCxRepo.get(request.userId, uri.id.get) match {
+          case Some(follow) => Some(follow.deactivate.saveWithCx)
           case None => None
         }
         case None => None
       }
     }
+
     Ok(JsObject(Seq("following" -> JsBoolean(false))))
   }
 
@@ -239,7 +242,7 @@ object CommentController extends FortyTwoController {
         CX.withConnection { implicit c =>
           val author = User.get(comment.userId)
           val uri = NormalizedURI.get(comment.uriId)
-          val follows = Follow.get(uri.id.get)
+          val follows = FollowCxRepo.get(uri.id.get)
           for (userId <- follows.map(_.userId).toSet - comment.userId) {
             val recipient = User.get(userId)
             val deepLink = DeepLink(
@@ -297,7 +300,7 @@ object CommentController extends FortyTwoController {
 
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = CX.withConnection { implicit c =>
-      Follow.all map {f => (toUserWithSocial(User.get(f.userId)), f, NormalizedURI.get(f.uriId))}
+      FollowCxRepo.all map {f => (toUserWithSocial(User.get(f.userId)), f, NormalizedURI.get(f.uriId))}
     }
     Ok(views.html.follows(uriAndUsers))
   }
