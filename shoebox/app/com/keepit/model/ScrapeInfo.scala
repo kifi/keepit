@@ -10,12 +10,11 @@ import play.api._
 import ru.circumflex.orm._
 import play.api.libs.json._
 import scala.math._
-import com.keepit.serializer.{NormalizedURIMetadataSerializer => NURIS}
 
 case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
   uriId: Id[NormalizedURI], // = NormalizedURI id
-  uriData: Option[NormalizedURIMetadata] = None,
+  urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
   lastScrape: DateTime = currentDateTime,
   nextScrape: DateTime = currentDateTime,
   interval: Double = 24.0d, // hours
@@ -31,7 +30,7 @@ case class ScrapeInfo(
     }
   }
 
-  def withUriData(uriData: NormalizedURIMetadata) = copy(uriData = Some(uriData))
+  def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
 
   def withFailure()(implicit config: ScraperConfig) = {
     val backoff = min(config.maxBackoff, (config.initialBackoff * (1 << failures).toDouble))
@@ -105,7 +104,7 @@ object ScrapeInfo {
 
 private[model] class ScrapeInfoEntity extends Entity[ScrapeInfo, ScrapeInfoEntity] {
   val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
-  val uriData = "uri_data".VARCHAR(1024)
+  val urlId = "url_id".ID[URL]
   val lastScrape = "last_scrape".JODA_TIMESTAMP.NOT_NULL
   val nextScrape = "next_scrape".JODA_TIMESTAMP.NOT_NULL
   val interval = "scrape_interval".DOUBLE().NOT_NULL
@@ -118,18 +117,7 @@ private[model] class ScrapeInfoEntity extends Entity[ScrapeInfo, ScrapeInfoEntit
   def view(implicit conn: Connection): ScrapeInfo = ScrapeInfo(
     id = id.value,
     uriId = uriId(),
-    uriData = {
-      try {
-        val json = Json.parse(uriData.value.getOrElse("{}")) // after grandfathering, force having a value
-        val serializer = NURIS.normalizedURIMetadataSerializer
-        Some(serializer.reads(json))
-      }
-      catch {
-        case ex: Throwable =>
-          // after grandfathering process, throw error
-          None
-      }
-    },
+    urlId = urlId.value,
     lastScrape = lastScrape(),
     nextScrape = nextScrape(),
     interval = interval(),
@@ -146,10 +134,7 @@ private[model] object ScrapeInfoEntity extends ScrapeInfoEntity with EntityTable
     val entity = new ScrapeInfoEntity
     entity.id.set(view.id)
     entity.uriId := view.uriId
-    entity.uriData.set(view.uriData.map { m =>
-      val serializer = NURIS.normalizedURIMetadataSerializer
-      Json.stringify(serializer.writes(m))
-    })
+    entity.urlId.set(view.urlId)
     entity.lastScrape := view.lastScrape
     entity.nextScrape := view.nextScrape
     entity.interval := view.interval

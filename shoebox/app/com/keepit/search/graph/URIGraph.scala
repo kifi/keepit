@@ -210,7 +210,9 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     }
 
     def buildBookmarkSiteField(fieldName: String, uriList: URIList, bookmarks: Seq[Bookmark]) = {
-      val domainMap = bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.url) }
+      val domainMap = CX.withConnection { implicit conn =>
+        bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.url) }
+      }
 
       val publicList = uriList.publicList
       val privateList = uriList.privateList

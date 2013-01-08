@@ -15,7 +15,7 @@ import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.social.UserWithSocial
 import com.keepit.common.social.UserWithSocial.toUserWithSocial
 import com.keepit.inject.inject
-import com.keepit.model.{Bookmark, Comment, CommentRecipient, EmailAddress, Follow, FollowCxRepo, NormalizedURI, SocialConnection, SocialUserInfo, User, DeepLink, DeepLocator}
+import com.keepit.model._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
@@ -42,7 +42,7 @@ object CommentController extends FortyTwoController {
                     permissionsOpt: Option[String],
                     recipientsOpt: Option[String],
                     parentOpt: Option[String]) = AuthenticatedJsonAction { request =>
-    val (url, title, text, permissions, recipients, parent) = request.body.asJson match {
+    val (urlStr, title, text, permissions, recipients, parent) = request.body.asJson match {
       case Some(o) => (
         (o \ "url").as[String],
         (o \ "title") match { case JsString(s) => s; case _ => ""},
@@ -59,24 +59,28 @@ object CommentController extends FortyTwoController {
         parentOpt.getOrElse(""))
     }
 
+
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val comment = CX.withConnection { implicit conn =>
       val userId = request.userId
-      val uri = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save)
+      val uri = NormalizedURI.getByNormalizedUrl(urlStr).getOrElse(NormalizedURI(url = urlStr).save)
+
       val parentIdOpt = parent match {
         case "" => None
         case id => Comment.get(ExternalId[Comment](id)).id
       }
 
+      val url: URL = URL.get(urlStr).getOrElse(URL(urlStr, uri.id.get).save)
+
       permissions.toLowerCase match {
         case "private" =>
-          Comment(uriId = uri.id.get, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
         case "message" =>
-          val newComment = Comment(uriId = uri.id.get, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
+          val newComment = Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
           createRecipients(newComment.id.get, recipients, parentIdOpt)
           newComment
         case "public" | "" =>
-          Comment(uriId = uri.id.get, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
         case _ =>
           throw new Exception("Invalid comment permission")
       }
@@ -161,37 +165,30 @@ object CommentController extends FortyTwoController {
   // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
   def startFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
     val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
-    val followOpt = CX.withConnection { implicit conn =>
+    CX.withConnection { implicit conn =>
       val uriId = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save).id.get
       FollowCxRepo.get(request.userId, uriId) match {
-        case Some(follow) if !follow.isActive => Some(follow.activate)
-        case None => Some(Follow(userId = request.userId, uriId = uriId))
+        case Some(follow) if !follow.isActive => Some(follow.activate.saveWithCx)
+        case None => 
+          val urlId = URL.get(url).getOrElse(URL(url,uriId).save).id
+          Some(Follow(userId = request.userId, urlId = urlId, uriId = uriId).saveWithCx)
         case _ => None
       }
     }
-    followOpt.map{ follow =>
-      inject[DBConnection].readWrite{ implicit session =>
-        inject[Repo[Follow]].save(follow)
-      }
-    }
+
     Ok(JsObject(Seq("following" -> JsBoolean(true))))
   }
 
   // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
   def stopFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
     val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
-    val followOpt = CX.withConnection { implicit conn =>
+    CX.withConnection { implicit conn =>
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) => FollowCxRepo.get(request.userId, uri.id.get) match {
-          case Some(follow) => Some(follow.deactivate)
+          case Some(follow) => Some(follow.deactivate.saveWithCx)
           case None => None
         }
         case None => None
-      }
-    }
-    followOpt.map{ follow =>
-      inject[DBConnection].readWrite{ implicit session =>
-        inject[Repo[Follow]].save(follow)
       }
     }
 
@@ -252,6 +249,7 @@ object CommentController extends FortyTwoController {
                 initatorUserId = Option(comment.userId),
                 recipientUserId = Some(userId),
                 uriId = Some(comment.uriId),
+                urlId = comment.urlId,
                 deepLocator = DeepLocator.ofComment(comment)).save
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
@@ -277,6 +275,7 @@ object CommentController extends FortyTwoController {
                 initatorUserId = Option(comment.userId),
                 recipientUserId = Some(userId),
                 uriId = Some(comment.uriId),
+                urlId = comment.urlId,
                 deepLocator = DeepLocator.ofMessageThread(comment)).save
             val addrs = EmailAddress.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
