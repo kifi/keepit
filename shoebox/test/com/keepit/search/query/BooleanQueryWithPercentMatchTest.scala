@@ -117,5 +117,34 @@ class BooleanQueryWithPercentMatchTest extends SpecificationWithJUnit {
       q.setPercentMatch(pct)
       doQuery(q).map(_._1) === Seq(1, 5, 7) // docs with bbb and ccc
     }
+
+    "search with required terms" in {
+      indexReader.numDocs() === 10
+
+      var q = new BooleanQueryWithPercentMatch(false)
+      q.add(new TermQuery(aaa), Occur.MUST)
+      q.add(new TermQuery(bbb), Occur.MUST)
+      doQuery(q).map(_._1) === Seq(1, 2, 4, 7, 8)
+
+      q setPercentMatch(50.0f)
+      doQuery(q).map(_._1) === Seq(1, 2, 4, 7, 8)
+
+      q = new BooleanQueryWithPercentMatch(false)
+      q.add(new TermQuery(bbb), Occur.MUST)
+      q.add(new TermQuery(ccc), Occur.MUST)
+      doQuery(q).map(_._1) === Seq(1, 5, 7)
+
+      q.setPercentMatch(50.0f)
+      doQuery(q).map(_._1) === Seq(1, 5, 7)
+
+      q = new BooleanQueryWithPercentMatch(false)
+      q.add(new TermQuery(aaa), Occur.MUST)
+      q.add(new TermQuery(bbb), Occur.MUST)
+      q.add(new TermQuery(ccc), Occur.MUST)
+      doQuery(q).map(_._1) === Seq(1, 7)
+
+      q.setPercentMatch(50.0f)
+      doQuery(q).map(_._1) === Seq(1, 7)
+    }
   }
 }

@@ -19,6 +19,9 @@ import scala.collection.JavaConversions._
 
 class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_36, "b", analyzer) {
 
+  private[this] var booleanUsed = false
+  def isMultiClauseQuery = booleanUsed
+
   def parseQuery(queryText: String) = {
     val query = try {
       if (queryText == null || queryText.trim.length == 0) null
@@ -43,7 +46,7 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
     otherClauses.foreach{ clause => query.add(clause) }
 
     if (siteClauses.isEmpty) {
-      query
+      reduceBooleanQueryWithPercentMatch(query)
     } else {
       val siteQuery = {
         if (siteClauses.size == 1) siteClauses(0).getQuery
@@ -51,7 +54,17 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
       }
 
       if (otherClauses.isEmpty) siteQuery
-      else new ConditionalQuery(query, siteQuery)
+      else new ConditionalQuery(reduceBooleanQueryWithPercentMatch(query), siteQuery)
+    }
+  }
+
+  private[this] def reduceBooleanQueryWithPercentMatch(query: BooleanQuery) = {
+    val clauses = query.getClauses
+    if (clauses.length == 1) {
+      clauses(0).getQuery
+    } else {
+      booleanUsed = true
+      query
     }
   }
 
