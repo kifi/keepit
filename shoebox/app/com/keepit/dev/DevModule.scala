@@ -51,9 +51,9 @@ import com.mongodb.casbah.MongoConnection
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
 
-case class DevModule() extends ScalaModule with Logging {
+class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
-    install(FortyTwoModule())
+    install(new FortyTwoModule())
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]

@@ -16,8 +16,9 @@ import org.scalaquery.session.Session
 import org.scalaquery.session.ResultSetConcurrency
 import javax.sql.DataSource
 
-case class SlickModule(dbInfo: DbInfo) extends ScalaModule {
+class SlickModule(dbInfo: DbInfo) extends ScalaModule {
   def configure(): Unit = {
+    println("configuring SlickModule")
     //see http://stackoverflow.com/questions/6271435/guice-and-scala-injection-on-generics-dependencies
     bind[Repo[Follow]].to(classOf[FollowRepoImpl]).in(classOf[Singleton])
     bind[DBConnection].in(classOf[Singleton])

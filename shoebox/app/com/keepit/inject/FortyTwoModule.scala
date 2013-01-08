@@ -13,8 +13,9 @@ import com.keepit.common.db.DbInfo
 import play.api.Play
 import play.api.db.DB
 
-case class FortyTwoModule() extends ScalaModule {
+class FortyTwoModule() extends ScalaModule {
   def configure(): Unit = {
+    println("configuring FortyTwoModule")
     val appScope = new AppScope
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
