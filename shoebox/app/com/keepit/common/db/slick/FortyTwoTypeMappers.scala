@@ -6,7 +6,6 @@ import org.scalaquery.session.{PositionedParameters, PositionedResult}
 
 import com.keepit.common.db.{Id, State, Model}
 import com.keepit.common.time._
-import com.keepit.serializer.{NormalizedURIMetadataSerializer => NURIS}
 
 import com.keepit.model._
 
@@ -35,16 +34,16 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[User]
   }
 
+  implicit object URLIdTypeMapper extends BaseTypeMapper[Id[URL]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[URL]
+  }
+
   implicit object NormalizedURIIdTypeMapper extends BaseTypeMapper[Id[NormalizedURI]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[NormalizedURI]
   }
 
   implicit object FollowStateTypeMapper extends BaseTypeMapper[State[Follow]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[Follow]
-  }
-
-  implicit object NormalizedURIMetadataTypeMapper extends BaseTypeMapper[NormalizedURIMetadata] {
-    def apply(profile: BasicProfile) = new NormalizedURIMetadataMapperDelegate
   }
 }
 
@@ -63,33 +62,6 @@ class DateTimeMapperDelegate extends TypeMapperDelegate[DateTime] {
   private def timestamp(value: DateTime) = new Timestamp(value.toDate.getTime)
 }
 
-
-//************************************
-//       NormalizedURIMetadata -> String
-//************************************
-class NormalizedURIMetadataMapperDelegate extends TypeMapperDelegate[NormalizedURIMetadata] {
-  def zero = NormalizedURIMetadata("", "", Seq())
-  def sqlType = VARCHAR
-  def setValue(value: NormalizedURIMetadata, p: PositionedParameters) = p.setString(asString(value))
-  def setOption(valueOpt: Option[NormalizedURIMetadata], p: PositionedParameters) = p.setStringOption(valueOpt map asString)
-  def nextValue(r: PositionedResult) = try {
-        val uriData = r.nextStringOption
-        val json = Json.parse(uriData.getOrElse("{}")) // after grandfathering, force having a value
-        val serializer = NURIS.normalizedURIMetadataSerializer
-        serializer.reads(json)
-      }
-      catch {
-        case ex: Throwable =>
-          // after grandfathering process, throw error
-          zero
-      }
-  def updateValue(value: NormalizedURIMetadata, r: PositionedResult) = r.updateString(asString(value))
-
-  private def asString(value: NormalizedURIMetadata) = {
-    val serializer = NURIS.normalizedURIMetadataSerializer
-    Json.stringify(serializer.writes(value))
-  }
-}
 
 //************************************
 //       Id -> Long
