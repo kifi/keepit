@@ -33,7 +33,7 @@ case class NormalizedURI  (
   state: State[NormalizedURI] = NormalizedURI.States.ACTIVE
 ) extends Logging {
 
-  def domain = URI.normalizeHost(Some(url))
+  def domain = URI.parse(url).flatMap(_.host)
 
   def save(implicit conn: Connection): NormalizedURI = {
     log.info("saving new uri %s with hash %s".format(url, urlHash))

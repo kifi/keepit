@@ -44,7 +44,7 @@ case class URL (
   state: State[URL] = URL.States.ACTIVE
   ) extends Logging {
 
-  def domain = URI.normalizeHost(Some(url))
+  def domain = URI.parse(url).flatMap(_.host)
 
   def withHistory(historyItem: URLHistory): URL = copy(history = historyItem +: history)
   def save(implicit conn: Connection): URL = {
