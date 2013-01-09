@@ -62,7 +62,7 @@ var snapshot = {
   // using some aribitrarily chosen fuzzy match heuristics. It would be fun to measure how each heuristic
   // performs and to collect information about real failures to gain insight into how to improve this.
   fuzzyFind: function(sel, doc) {
-    doc = doc || document; //{querySelectorAll: function(s) { console.log("TRIED: " + s); return []}};
+    doc = doc || document; //{querySelectorAll: function(s) { api.log("TRIED: " + s); return []}};
     var els = doc.querySelectorAll(sel);
     switch (els.length) {
       case 0: break;
