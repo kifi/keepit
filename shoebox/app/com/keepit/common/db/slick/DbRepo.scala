@@ -24,9 +24,9 @@ trait Repo[M <: Model[M]] {
 
 trait DbRepo[M <: Model[M]] extends Repo[M] {
   import FortyTwoTypeMappers._
-  val db = inject[DataBaseComponent]
-
+  val db: DataBaseComponent
   import db.Driver.Implicit._ // here's the driver, abstracted away
+
   import DBSession._
 
   protected def table: RepoTable[M]
@@ -34,8 +34,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   def descTable(): String = db.handle.withSession {
     table.ddl.createStatements mkString "\n"
   }
-
-  println("  %s".format(descTable()))
 
 //  def get(id: Id[M])(implicit session: RSession): M =
 //    table.where(r => Is(r.id, id))
