@@ -1,6 +1,6 @@
 $(function() {
   var config;
-  chrome.extension.sendMessage({type: "get_conf"}, function init(o) {
+  chrome.extension.sendMessage(["get_conf"], function init(o) {
     console.log("[init] config:", o.config);
     config = o.config;
     var env = o.config.env;
@@ -17,18 +17,18 @@ $(function() {
     set("show_score", $("input[name=scores]").is(":checked"));
     window.close();
     function set(key, value) {
-      chrome.extension.sendMessage({type: "set_conf", key: key, value: value});
+      chrome.extension.sendMessage(["set_conf", {key: key, value: value}]);
     }
   });
   $("#log-out").click(function(e) {
     e.preventDefault();
-    chrome.extension.sendMessage({type: "log_out"}, function() {
+    chrome.extension.sendMessage(["log_out"], function() {
       showSession();
     });
   });
   $("#log-in").click(function(e) {
     e.preventDefault();
-    chrome.extension.sendMessage({type: "log_in"}, function(session) {
+    chrome.extension.sendMessage(["log_in"], function(session) {
       showSession(session);
     });
   });

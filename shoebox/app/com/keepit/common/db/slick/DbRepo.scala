@@ -17,14 +17,16 @@ import play.api.Play.current
 
 trait Repo[M <: Model[M]] {
   import DBSession._
+//  def get(id: Id[M])(implicit session: RSession): M
   def save(model: M)(implicit session: RWSession): M
   def count(implicit session: RSession): Int
 }
 
 trait DbRepo[M <: Model[M]] extends Repo[M] {
-  implicit val db = inject[DataBaseComponent]
-
+  import FortyTwoTypeMappers._
+  val db: DataBaseComponent
   import db.Driver.Implicit._ // here's the driver, abstracted away
+
   import DBSession._
 
   protected def table: RepoTable[M]
@@ -33,7 +35,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
     table.ddl.createStatements mkString "\n"
   }
 
-  println("  %s".format(descTable()))
+//  def get(id: Id[M])(implicit session: RSession): M =
+//    table.where(r => Is(r.id, id))
+//    (for(r <- table if Is(r.id, Node(ConstColumn(id)))) yield (r)).first
 
   def save(model: M)(implicit session: RWSession): M = {
     val toUpdate = model.withUpdateTime(inject[DateTime])
@@ -51,7 +55,10 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   }
 
   private def update(model: M)(implicit session: RWSession) = {
-    assert(1 == (for(r <- table if Is(r.id, Node(model.id))) yield(r)).update(model))
+    implicit val mapper = new BaseTypeMapper[Id[M]] {
+      def apply(profile: BasicProfile) = new IdMapperDelegate[M]
+    }
+    assert(1 == table.where(r => Is(r.id, model.id.get)).update(model))
     model
   }
 
@@ -64,9 +71,11 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
 abstract class RepoTable[M <: Model[M]](name: String) extends ExtendedTable[M](name.toUpperCase()) {
   import FortyTwoTypeMappers._
 
-  def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)(new BaseTypeMapper[Id[M]] {
+  implicit val mapper = new BaseTypeMapper[Id[M]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[M]
-  })
+  }
+
+  def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
 
   def createdAt = column[DateTime]("CREATED_AT", O.NotNull)
   def updatedAt = column[DateTime]("UPDATED_AT", O.NotNull)

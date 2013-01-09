@@ -68,14 +68,9 @@ slider = function() {
       if (tmpl) {
         callback(tmpl);
       } else {
-        var req = new XMLHttpRequest();
-        req.open("GET", chrome.extension.getURL(path), true);
-        req.onreadystatechange = function() {
-          if (req.readyState == 4 && req.status == 200) {
-            callback(templateCache[path] = req.responseText);
-          }
-        };
-        req.send(null);
+        api.load(path, function(tmpl) {
+          callback(templateCache[path] = tmpl);
+        });
       }
     }
   }
@@ -104,7 +99,7 @@ slider = function() {
 
       var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').html(tmpl);
 
-      var socialNetworks = chrome.extension.getURL("images/social_icons.png");
+      var socialNetworks = api.url("images/social_icons.png");
       $(friendTooltip).find('.kn_social').css('background-image','url(' + socialNetworks + ')');
 
       function hide() {
@@ -133,60 +128,53 @@ slider = function() {
   }
 
   function keepPage(shouldSlideOut) {
-    log("[keepPage]", document.location.href);
+    api.log("[keepPage]", document.location.href);
 
-    chrome.extension.sendMessage({
-      "type": "set_page_icon",
-      "is_kept": true});
+    api.port.emit("set_page_icon", true);
     isKept = true;
     if (shouldSlideOut) keptItslideOut();
 
     logEvent("slider", "keep");
 
-    var request = {
-      "type": "add_bookmarks",
+    api.port.emit("add_bookmarks", {
       "url": document.location.href,
       "title": document.title,
       "private": $("#keepit_private").is(":checked")
-    };
-    chrome.extension.sendMessage(request, function(response) {
-     log("[keepPage] response:", response);
+    }, function(response) {
+      api.log("[keepPage] response:", response);
     });
   }
 
   function unkeepPage(shouldSlideOut) {
-    log("[unkeepPage]", document.location.href);
+    api.log("[unkeepPage]", document.location.href);
 
-    chrome.extension.sendMessage({"type": "set_page_icon", "is_kept": false});
+    api.port.emit("set_page_icon", false);
     isKept = false;
     if (shouldSlideOut) slideOut("unkeep");
 
     logEvent("slider", "unkeep");
 
-    chrome.extension.sendMessage({
-        "type": "unkeep",
-        "url": document.location.href.replace(/#.*/, "")},
-      function(response) {
-        log("[unkeepPage] response:", response);
-      });
+    api.port.emit("unkeep", function(o) {
+      api.log("[unkeepPage] response:", o);
+    });
   }
 
   function showKeepItHover(trigger, callback) {
-    chrome.extension.sendMessage({type: "get_slider_info"}, function(o) {
-      log("slider info:", o);
+    api.port.emit("get_slider_info", function(o) {
+      api.log("slider info:", o);
 
       isKept = o.kept;
       following = o.following;
       lastShownAt = new Date().getTime();
 
       renderTemplate('html/kept_hover.html', {
-          "logo": chrome.extension.getURL('images/kifilogo.png'),
-          "arrow": chrome.extension.getURL('images/triangle_down.31x16.png'),
+          "logo": api.url('images/kifilogo.png'),
+          "arrow": api.url('images/triangle_down.31x16.png'),
           "profilepic": o.session.avatarUrl,
           "name": o.session.name,
           "is_kept": o.kept,
           "private": o.private,
-          "connected_networks": chrome.extension.getURL("images/networks.png"),
+          "connected_networks": api.url("images/networks.png"),
           "socialConnections": o.friends.length == 0 ? null : {
             countText: summaryText(o.friends.length, o.kept),
             friends: o.friends}
@@ -195,7 +183,7 @@ slider = function() {
           "footer": "footer.html"
         }, function(template) {
           if (document.querySelector(".kifi_hover")) {
-            log("No need to inject, it's already here!");
+            api.log("No need to inject, it's already here!");
           } else {
             drawKeepItHover(o.session, o.friends, o.numComments, o.numMessages, template, callback);
             logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0)});
@@ -227,15 +215,11 @@ slider = function() {
     })
     .on("click", ".makeprivatebtn", function() {
       var $btn = $(this), priv = /private/i.test($btn.text());
-      log("[setPrivate] " + priv);
-      chrome.extension.sendMessage({
-          "type": "set_private",
-          "url": document.location.href.replace(/#.*/, ""),
-          "private": priv},
-        function(response) {
-          log("[setPrivate] response:", response);
-          $btn.text("Make it " + (priv ? "Public" : "Private"));
-        });
+      api.log("[setPrivate]", priv);
+      api.port.emit("set_private", priv, function(o) {
+        api.log("[setPrivate] response:", o);
+        $btn.text("Make it " + (priv ? "Public" : "Private"));
+      });
     })
     .on("click", ".dropdownbtn", function() {
       $('.moreinnerbox').slideToggle(150);
@@ -294,7 +278,7 @@ slider = function() {
       "easeQuickSnapBounce",
       function() {
         $s.css({right: "-10px", opacity: 1});
-        log("opened", $s[0], $s.css("right"))
+        api.log("opened", $s[0], $s.css("right"))
       });
   }
 
@@ -303,7 +287,7 @@ slider = function() {
       showFooterNav: showFooterNav,
       isMessages: type == "message",
       isKept: isKept,
-      logo: chrome.extension.getURL('images/kifilogo.png')
+      logo: api.url('images/kifilogo.png')
     }
 
     renderTemplate("html/footer.html", footerParams, function(renderedTemplate) {
@@ -344,7 +328,7 @@ slider = function() {
   }
 
   function hasNewComments(callback) {
-    chrome.extension.sendMessage({type: "get_slider_updates"}, function(updates) {
+    api.port.emit("get_slider_updates", function(updates) {
       if (badGlobalState["updates"]) {
         var hasUpdates = badGlobalState["updates"]["countSum"] !== updates["countSum"];
         if (hasUpdates && callback) {
@@ -384,8 +368,8 @@ slider = function() {
 
     $(".kifi_hover").data("view", type).removeClass("public message").addClass(type);
 
-    chrome.extension.sendMessage({type: "get_comments", kind: type, commentId: id}, function(comments) {
-      log(comments);
+    api.port.emit("get_comments", {kind: type, commentId: id}, function(comments) {
+      api.log("[showComments] comments:", comments);
       renderComments(session, comments, type, id, function() {
         if (!isVisible) {
           repositionScroll(false);
@@ -474,7 +458,7 @@ slider = function() {
   }
 
   function renderComments(session, comments, type, id, onComplete, partialRender) {
-    log("Drawing comments!");
+    api.log("Drawing comments!");
     comments = comments || {};
     comments["public"] = comments["public"] || [];
     comments["message"] = comments["message"] || [];
@@ -498,8 +482,8 @@ slider = function() {
       comments: visibleComments,
       showControlBar: type == "public",
       following: following,
-      snapshotUri: chrome.extension.getURL("images/snapshot.png"),
-      connected_networks: chrome.extension.getURL("images/social_icons.png")
+      snapshotUri: api.url("images/snapshot.png"),
+      connected_networks: api.url("images/social_icons.png")
     };
 
     // TODO: fix indentation below
@@ -524,7 +508,7 @@ slider = function() {
             threadAvatar = iterMessages[msg]["recipients"][0]["avatar"];
           }
           else {
-            threadAvatar = chrome.extension.getURL("images/convo.png");
+            threadAvatar = api.url("images/convo.png");
           }
           iterMessages[msg]["threadAvatar"] = threadAvatar;
 
@@ -618,7 +602,7 @@ slider = function() {
   }
 
   function drawCommentView(renderedTemplate, session, type) {
-    //log(renderedTemplate);
+    //api.log(renderedTemplate);
     repositionScroll(false);
     $('.kifi_comment_wrapper').html(renderedTemplate).find("time").timeago();
     repositionScroll(false);
@@ -629,7 +613,7 @@ slider = function() {
   function createCommentBindings(type, session) {
     $(".control-bar").on("click", ".follow", function() {
       following = !following;  // TODO: server should return whether following along with the comments
-      chrome.extension.sendMessage({type: "follow", follow: following});
+      api.port.emit("follow", following);
       $(this).toggleClass("following", following);
     });
 
@@ -691,7 +675,7 @@ slider = function() {
 
         if (sTop2 == sTop && sLeft2 == sLeft) return 400;
 
-        var ms = Math.max(400, Math.min(800, 100 * Math.log(Math.max(Math.abs(sLeft2 - sLeft), Math.abs(sTop2, sTop)))));
+        var ms = Math.max(400, Math.min(800, 100 * Math.api.log(Math.max(Math.abs(sLeft2 - sLeft), Math.abs(sTop2, sTop)))));
         $("<b>").css({position: "absolute", opacity: 0, display: "none"}).appendTo("body").animate({opacity: 1}, {
             duration: ms,
             step: function(a) {
@@ -721,11 +705,12 @@ slider = function() {
     });
 
     if (type == "message") {
-      chrome.extension.sendMessage({type: "get_friends"}, function(data) {
-        log("friends:", data);
+      api.port.emit("get_friends", function(data) {
+        api.log("friends:", data);
         var friends = data.friends; //TODO!
-        for (var friend in friends) {
-          friends[friend].name = friends[friend].firstName + " " + friends[friend].lastName
+        for (var i in friends) {
+          var f = friends[i];
+          f.name = f.firstName + " " + f.lastName;
         }
         $("#to-list").tokenInput(friends, {
           theme: "kifi"
@@ -813,7 +798,7 @@ slider = function() {
               (dx == 0 || r.width < sel.r.width * 2 * dx) &&
               (dy == 0 || r.height < sel.r.height * 2 * dy) &&
               (dx == 0 && dy == 0 || r.width * r.height < sel.r.width * sel.r.height * Math.sqrt(dx * dx + dy * dy))) {
-            // if (sel.el) log(
+            // if (sel.el) api.log(
             //   r.width + " < " + sel.r.width + " * 2 * " + dx + " AND " +
             //   r.height + " < " + sel.r.height + " * 2 * " + dy + " AND " +
             //   r.width * r.height + " < " + sel.r.width * sel.r.height + " * " + Math.sqrt(dx * dx + dy * dy));
@@ -839,7 +824,7 @@ slider = function() {
       submitComment(text, type, session, null, null, function(newComment) {
         $('.comment-compose').text("").html(placeholder).blur();
 
-        log("new comment", newComment);
+        api.log("new comment", newComment);
         // Clean up CSS
 
         var params = newComment;
@@ -887,22 +872,22 @@ slider = function() {
           return false;
         }
         recipients = recipientArr.join(",");
-        log("to: ", recipients);
+        api.log("to: ", recipients);
       }
       else {
         parent = $(this).parents(".kifi_comment_wrapper").find(".thread-wrapper").attr("data-externalid");
-        log(parent)
+        api.log(parent)
       }
 
       submitComment(text, type, session, parent, recipients, function(newComment) {
         $('.comment-compose').text("").html(placeholder).blur();
 
-        log("new message", newComment);
+        api.log("new message", newComment);
         // Clean up CSS
 
         if(!isReply) {
           updateCommentCount(type,parseInt($('.messages-count').text()) + 1)
-          log("not a reply. redirecting to new message");
+          api.log("not a reply. redirecting to new message");
           showComments(session, type, newComment.message.externalId);
           return;
         }
@@ -926,9 +911,8 @@ slider = function() {
   }
 
   function submitComment(text, type, session, parent, recipients, callback) {
-    log("[submitComment] parent:", parent);
-    chrome.extension.sendMessage({
-      "type": "post_comment",
+    api.log("[submitComment] parent:", parent);
+    api.port.emit("post_comment", {
       "url": document.location.href,
       "title": document.title,
       "text": text,
@@ -957,7 +941,7 @@ slider = function() {
   }
 
   function resizeCommentBodyView(resizeQuickly) {
-    log("[resizeCommentBodyView]");
+    api.log("[resizeCommentBodyView]");
     $('.kifi_hover').css("top", "");
     $('.comment_body_view').stop().css({'max-height':$(window).height()-320});
     return; // for now, we'll do a rough fix

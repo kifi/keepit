@@ -46,8 +46,8 @@ class TestApplication(override val global: TestGlobal) extends play.api.test.Fak
     new TestApplication(new TestGlobal(Modules.`override`(global.module).`with`(model)))
 }
 
-class DevApplication() extends TestApplication(new TestGlobal(DevModule()))
-class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxModule()))
+class DevApplication() extends TestApplication(new TestGlobal(new DevModule()))
+class ShoeboxApplication() extends TestApplication(new TestGlobal(new ShoeboxModule()))
 class EmptyApplication() extends TestApplication(new TestGlobal(TestModule()))
 
 case class TestModule() extends ScalaModule {

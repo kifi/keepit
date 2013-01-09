@@ -1,21 +1,16 @@
 // @match .*
-
-function log(message) {
-  console.log.apply(console, Array.prototype.concat.apply(["[kifi][" + new Date().getTime() + "] "], arguments));
-}
+// @require scripts/api.js
 
 function logEvent() {  // parameters defined in main.js
-  chrome.extension.sendMessage({
-    type: "log_event",
-    args: Array.prototype.slice.apply(arguments)});
+  api.port.emit("log_event", arguments);
 }
 
-var t0 = new Date().getTime();
+var slider, injected, t0 = new Date().getTime();
 
 !function() {
-  log("host:", location.host);
+  api.log("host:", location.host);
   if (window !== top) {
-    log("not in top window");
+    api.log("not in top window");
     return;
   }
 
@@ -28,34 +23,30 @@ var t0 = new Date().getTime();
     }
   });
 
-  chrome.extension.onMessage.addListener(function handleMessage(msg) {
-    log("[onMessage] handling:", msg);
-    switch (msg.type) {
-      case "button_click":
+  api.port.on({
+    button_click: function() {
+      withSlider(function() {
+        slider.toggle("button");
+      });
+    },
+    auto_show_after: function(ms) {
+      setTimeout(function() {
         withSlider(function() {
-          slider.toggle("button");
+          slider.shown() || slider.show("auto");
         });
-        break;
-      case "auto_show_after":
-        setTimeout(function() {
-          withSlider(function() {
-            slider.shown() || slider.show("auto");
-          });
-        }, msg.ms);
-        break;
-      case "deep_link":
-        withSlider(function() {
-          slider.openDeepLink(msg.link);
-        });
-        break;
-    }
-  });
+      }, ms);
+    },
+    deep_link: function(link) {
+      withSlider(function() {
+        slider.openDeepLink(link);
+      });
+    }});
 
   function withSlider(callback) {
-    if (window.slider) {
+    if (slider) {
       callback();
     } else {
-      chrome.extension.sendMessage({type: "require", injected: window.injected, scripts: ["scripts/slider.js"]}, callback);
+      api.port.emit("require", {injected: injected, scripts: ["scripts/slider.js"]}, callback);
     }
   }
 }();

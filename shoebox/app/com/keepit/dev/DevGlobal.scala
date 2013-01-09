@@ -18,7 +18,7 @@ import com.keepit.common.analytics.reports.ReportBuilderPlugin
 
 object DevGlobal extends FortyTwoGlobal(Dev) {
 
-  override lazy val injector: Injector = Guice.createInjector(Stage.DEVELOPMENT, DevModule())
+  override lazy val injector: Injector = Guice.createInjector(Stage.DEVELOPMENT, new DevModule())
 
   override def onStart(app: Application): Unit = {
     require(inject[FortyTwoServices].currentService == ServiceType.DEV_MODE,

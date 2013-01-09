@@ -33,6 +33,7 @@ for s in $(ls scripts/*.js); do
     deps=("${deps[@]}" "\n  \"$s\": [\n$(echo "$js" | sed -e 's/^/    "/g' -e 's/$/",/g')\n  ]")
   fi
 done
-IFS=,; echo -e "contentScripts = [${matches[*]}];\nstyleDeps = {${styles[*]}};\nscriptDeps = {${deps[*]}};" > out/chrome/meta.js
+IFS=,; echo -e "meta = {\n  contentScripts: [${matches[*]}],\n  styleDeps: {${styles[*]}},\n  scriptDeps: {${deps[*]}}};" > out/chrome/meta.js
+IFS=,; echo -e "exports.contentScripts = [${matches[*]}];\nexports.styleDeps = {${styles[*]}};\nexports.scriptDeps = {${deps[*]}};" > out/firefox/lib/meta.js
 
 popd > /dev/null

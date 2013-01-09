@@ -17,6 +17,7 @@ import java.security.MessageDigest
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import play.api.libs.json._
+import com.google.inject.Inject
 
 case class Follow (
   id: Option[Id[Follow]] = None,
@@ -43,14 +44,12 @@ case class Follow (
   }
 }
 
-class FollowRepoImpl extends DbRepo[Follow] {
-  import db.Driver.Implicit._ // here's the driver, abstracted away
+class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow] {
 
   override lazy val table = new RepoTable[Follow]("follow") {
     import FortyTwoTypeMappers._
     import org.scalaquery.ql._
     import org.scalaquery.ql.ColumnOps._
-    import org.scalaquery.ql.TypeMapper._
     import org.scalaquery.ql.basic.BasicProfile
     import org.scalaquery.ql.extended.ExtendedTable
     import org.scalaquery.util.{Node, UnaryNode, BinaryNode}
