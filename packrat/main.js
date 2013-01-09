@@ -1,36 +1,13 @@
 var api = api || require("./api");
 var meta = meta || require("./meta");
 
-function noop() {}
-
-// ===== Logging
-
-function log() {
-  console.log.apply(console, Array.prototype.concat.apply(["[" + new Date().getTime() + "] "], arguments));
-}
-
-function error(exception, message) {
-  console.error(exception);
-  console.error((message ? "[" + message + "] " : "") + exception.message);
-  console.error(exception.stack);
-  //alert("exception: " + exception.message);
-}
-
-// ===== Ajax
+// ===== Async requests
 
 function ajax(method, uri, data, done, fail) {  // method and uri are required
   if (typeof data == "function") {  // shift args if data is missing and done is present
     fail = done, done = data, data = null;
   }
 
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (this.readyState == 4) {
-      var arg = /^application\/json/.test(this.getResponseHeader("Content-Type")) ? JSON.parse(this.responseText) : this;
-      ((this.status == 200 ? done : fail) || noop)(arg);
-      done = fail = noop;  // ensure we don't call a callback again
-    }
-  }
   if (data && method.match(/^(?:GET|HEAD)$/)) {
     var a = [];
     for (var key in data) {
@@ -42,12 +19,8 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
     uri = uri + (uri.indexOf("?") < 0 ? "?" : "&") + a.join("&").replace(/%20/g, "+");
     data = null;
   }
-  xhr.open(method, uri, true);
-  if (data) {
-    data = JSON.stringify(data);
-    xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");
-  }
-  xhr.send(data);
+
+  api.request(method, uri, data, done, fail);
 }
 
 // ===== User history
@@ -58,7 +31,7 @@ function UserHistory() {
   var HISTORY_SIZE = 200;
   this.history = [];
   this.add = function(uri) {
-    log("[UserHistory.add]", uri);
+    api.log("[UserHistory.add]", uri);
     this.history.unshift(uri);
     if (history.length > HISTORY_SIZE) {
       history.pop();
@@ -81,7 +54,7 @@ var eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1}
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
-    log("[logEvent] invalid event family:", eventFamily);
+    api.log("[logEvent] invalid event family:", eventFamily);
     return;
   }
   var event = {
@@ -102,18 +75,18 @@ api.timers.setTimeout(function maybeSend() {
   if (_eventLog.length) {
     var t0 = _eventLog[0].time;
     _eventLog.forEach(function(e) { e.time -= t0 }); // relative times = fewer bytes
-    var config = getConfigs();
-    var data = {
-      "version": 1,
-      "time": new Date - t0,
-      "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
-      "events": _eventLog};
-    log("[EventLog] sending:", data);
-    ajax("POST", "http://" + config.server + "/users/events", data, function done(o) {
-      log("[EventLog] done:", o)
-    }, function fail(xhr) {
-      log("[EventLog] fail:", xhr.responseText);
-    });
+    //var config = getConfigs();
+    // var data = {
+    //   "version": 1,
+    //   "time": new Date - t0,
+    //   "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
+    //   "events": _eventLog};
+    // api.log("[EventLog] sending:", data);
+    // ajax("POST", "http://" + config.server + "/users/events", data, function done(o) {
+    //   api.log("[EventLog] done:", o)
+    // }, function fail(xhr) {
+    //   api.log("[EventLog] fail:", xhr.responseText);
+    // });
 
     _eventLog.length = 0;
     eventLogDelay = Math.round(Math.max(Math.sqrt(eventLogDelay), 5 * 1000));
@@ -136,30 +109,28 @@ api.port.on({
     deauthenticate(respond);
     return true;
   },
-  get_keeps: function(data, respond) {
-    return searchOnServer(data, respond);
-  },
+  get_keeps: searchOnServer,
   add_bookmarks: function(data, respond) {
     getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
       addKeep(info, data, respond);
     });
     return true;
   },
-  unkeep: function(data, respond) {
+  unkeep: function(data, respond, tab) {
     getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
-      removeKeep(info, data, respond);
+      removeKeep(info, tab.url, respond);
     });
     return true;
   },
-  set_private: function(data, respond) {
+  set_private: function(data, respond, tab) {
     getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
-      setPrivate(info, data, respond);
+      setPrivate(info, tab.url, data, respond);
     });
     return true;
   },
   follow: function(data, respond, tab) {
-    ajax(data.follow ? "POST" : "DELETE", "http://" + getConfigs().server + "/comments/follow", {url: tab.url}, function(o) {
-      log("[follow] resp:", o);
+    ajax(data ? "POST" : "DELETE", "http://" + getConfigs().server + "/comments/follow", {url: tab.url}, function(o) {
+      api.log("[follow] resp:", o);
     });
   },
   get_conf: function(data, respond) {
@@ -172,7 +143,7 @@ api.port.on({
     setConfigs(data.key);
   },
   set_page_icon: function(data, respond, tab) {
-    setPageIcon(tab.id, data.is_kept);
+    setPageIcon(tab.id, data);
   },
   require: function(data, respond, tab) {
     injectDeps(tab.id, data, respond);
@@ -224,16 +195,16 @@ function createDeepLinkListener(link, linkTabId, respond) {
   var createdTime = new Date();
   chrome.tabs.onUpdated.addListener(function deepLinkListener(tabId, changeInfo, tab) {
     var now = new Date();
-    if(now - createdTime > 15000) {
+    if (now - createdTime > 15000) {
       chrome.tabs.onUpdated.removeListener(deepLinkListener);
-      log("[createDeepLinkListener] Listener timed out.");
+      api.log("[createDeepLinkListener] Listener timed out.");
       return;
     }
-    if(linkTabId == tabId && changeInfo.status == "complete") {
+    if (linkTabId == tabId && changeInfo.status == "complete") {
       var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") == -1 && tab.url.indexOf("dev.ezkeep.com") == -1;
-      if(hasForwarded) {
-        log("[createDeepLinkListener] Sending deep link to tab " + tabId, link.locator);
-        chrome.tabs.sendMessage(tabId, {type: "deep_link", link: link.locator});
+      if (hasForwarded) {
+        api.log("[createDeepLinkListener] Sending deep link to tab " + tabId, link.locator);
+        api.tabs.emit(tabId, "deep_link", link.locator);
         chrome.tabs.onUpdated.removeListener(deepLinkListener);
         return;
       }
@@ -245,7 +216,7 @@ function createDeepLinkListener(link, linkTabId, respond) {
 // or else creates it there. Ensures that it has "public" and "private" subfolders.
 // Passes an object with the three folder ids to the callback.
 function getBookmarkFolderInfo(keepItBookmarkId, callback) {
-  log("[getBookmarkFolderInfo]");
+  api.log("[getBookmarkFolderInfo]");
 
   if (keepItBookmarkId) {
     chrome.bookmarks.get(keepItBookmarkId, function(bm) {
@@ -303,13 +274,13 @@ function getBookmarkFolderInfo(keepItBookmarkId, callback) {
   }
 
   function done(info) {
-    log("[getBookmarkFolderInfo] done");
+    api.log("[getBookmarkFolderInfo] done");
     callback(info);
   }
 }
 
 function addKeep(bmInfo, req, respond) {
-  log("[addKeep] private: " + !!req.private + ", title: " + req.title);
+  api.log("[addKeep] private: " + !!req.private + ", title: " + req.title);
   var bookmark = {parentId: bmInfo[req.private ? "privateId" : "publicId"], title: req.title, url: req.url};
   chrome.bookmarks.create(bookmark, function(bm) {
     try {
@@ -317,54 +288,54 @@ function addKeep(bmInfo, req, respond) {
       bookmark.isPrivate = !!req.private;
       postBookmarks(function(f) {f([bookmark])}, "HOVER_KEEP");
     } catch (e) {
-      error(e);
+       api.log.error(e);
     }
   });
 }
 
-function removeKeep(bmInfo, req, respond) {
-  log("[removeKeep] url:", req.url);
+function removeKeep(bmInfo, url, respond) {
+  api.log("[removeKeep] url:", url);
 
   if (!session) {
-    log("[removeKeep] no session");
+    api.log("[removeKeep] no session");
     return;
   }
 
-  chrome.bookmarks.search(req.url, function(bm) {
+  chrome.bookmarks.search(url, function(bm) {
     bm.forEach(function(bm) {
-      if (bm.url == req.url && (bm.parentId == bmInfo.publicId || bm.parentId == bmInfo.privateId)) {
+      if (bm.url == url && (bm.parentId == bmInfo.publicId || bm.parentId == bmInfo.privateId)) {
         chrome.bookmarks.remove(bm.id);
       }
     });
   });
 
   ajax("POST", "http://" + getConfigs().server + "/bookmarks/remove", {url: req.url}, function(o) {
-    log("[removeKeep] response:", o);
+    api.log("[removeKeep] response:", o);
     respond(o);
   });
 }
 
-function setPrivate(bmInfo, req, respond) {
-  log("[setPrivate]", req.private, req.url);
+function setPrivate(bmInfo, url, priv, respond) {
+  api.log("[setPrivate]", url, priv);
 
-  var newParentId = req.private ? bmInfo.privateId : bmInfo.publicId;
-  var oldParentId = req.private ? bmInfo.publicId : bmInfo.privateId;
-  chrome.bookmarks.search(req.url, function(bm) {
+  var newParentId = priv ? bmInfo.privateId : bmInfo.publicId;
+  var oldParentId = priv ? bmInfo.publicId : bmInfo.privateId;
+  chrome.bookmarks.search(url, function(bm) {
     bm.forEach(function(bm) {
-      if (bm.url == req.url && bm.parentId == oldParentId) {
+      if (bm.url == url && bm.parentId == oldParentId) {
         chrome.bookmarks.move(bm.id, {parentId: newParentId});
       }
     });
   });
 
-  ajax("POST", "http://" + getConfigs().server + "/bookmarks/private", {url: req.url, private: req.private}, function(o) {
-    log("[setPrivate] response:", o);
+  ajax("POST", "http://" + getConfigs().server + "/bookmarks/private", {url: url, private: priv}, function(o) {
+    api.log("[setPrivate] response:", o);
     respond(o);
   });
 }
 
 function postComment(request, respond) {
-  log("[postComment] req:", request);
+  api.log("[postComment] req:", request);
   ajax("POST", "http://" + getConfigs().server + "/comments/add", {
       url: request.url,
       title: request.title,
@@ -373,7 +344,7 @@ function postComment(request, respond) {
       parent: request.parent,
       recipients: request.recipients},
     function(o) {
-      log("[postComment] resp:", o);
+      api.log("[postComment] resp:", o);
       respond(o);
     });
 }
@@ -384,7 +355,7 @@ function searchOnServer(request, respond) {
   logEvent("search", "newSearch");
 
   if (!session) {
-    log("[searchOnServer] no session");
+    api.log("[searchOnServer] no session");
     respond({"session": null, "searchResults": [], "userConfig": config});
     return;
   }
@@ -399,9 +370,9 @@ function searchOnServer(request, respond) {
       maxHits: config.max_res * 2,
       lastUUI: request.lastUUID,
       context: request.context,
-      kifiVersion: app.version()},
+      kifiVersion: api.version},
     function(results) {
-      log("[searchOnServer] results:", results);
+      api.log("[searchOnServer] results:", results);
       respond({"session": session, "searchResults": results, "userConfig": config});
     });
   return true;
@@ -418,7 +389,7 @@ var restrictedUrlPatternsForHover = [
   "google.com"];
 
 function onPageLoad(tab) {
-  log("[onPageLoad] tab:", tab);
+  api.log("[onPageLoad] tab:", tab);
   logEvent("extension", "pageLoad");
 
   injectDeps(tab.id, {
@@ -427,162 +398,131 @@ function onPageLoad(tab) {
           a.push(s[0]);
         }
         return a;
-      }, [])});
+      }, [])},
+    api.noop);
 
   checkWhetherKept(tab.url, function(isKept) {
     setPageIcon(tab.id, isKept);
 
     if (restrictedUrlPatternsForHover.some(function(e) {return tab.url.indexOf(e) >= 0})) {
-      log("[onPageLoad] restricted:", tab.url);
+      api.log("[onPageLoad] restricted:", tab.url);
       return;
     } else if (userHistory.exists(tab.url)) {
-      log("[onPageLoad] recently visited:", tab.url);
+      api.log("[onPageLoad] recently visited:", tab.url);
       return;
     }
     userHistory.add(tab.url);
 
     if (isKept) {
-      log("[onPageLoad] already kept:", tab.url);
+      api.log("[onPageLoad] already kept:", tab.url);
     } else {
       var sliderDelaySec = getConfigs().hover_timeout;
       if (sliderDelaySec > 0) {
-        chrome.tabs.sendMessage(tab.id, {type: "auto_show_after", ms: sliderDelaySec * 1000});
+        api.tabs.emit(tab.id, "auto_show_after", sliderDelaySec * 1000);
       }
     }
   });
 }
 
 // Kifi icon in location bar
-chrome.pageAction.onClicked.addListener(function(tab) {
-  log("button clicked", tab);
-  chrome.tabs.sendMessage(tab.id, {type: "button_click"});
+api.icon.on.click.push(function(tab) {
+  api.tabs.emit(tab.id, "button_click");
 });
 
 function checkWhetherKept(url, callback) {
-  log("[checkWhetherKept] url:", url);
+  api.log("[checkWhetherKept] url:", url);
   if (!session) {
-    log("[checkWhetherKept] no session");
+    api.log("[checkWhetherKept] no session");
     return;
   }
 
   ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: url}, function done(o) {
     callback(o.user_has_bookmark);
   }, function fail(xhr) {
-    log("[checkWhetherKept] error:", xhr.responseText);
+    api.log("[checkWhetherKept] error:", xhr.responseText);
     callback(false);
   });
 }
 
 function setPageIcon(tabId, kept) {
-  log("[setPageIcon] tab:", tabId, "kept:", !!kept);
+  api.log("[setPageIcon] tab:", tabId, "kept:", !!kept);
   chrome.pageAction.setIcon({tabId: tabId, path: kept ? "icons/kept.png" : "icons/keep.png"});
   chrome.pageAction.show(tabId);
 }
 
 function injectDeps(tabId, details, callback) {
-  var scripts = details.scripts.reduce(function(a, s) {
+  var injected = details.injected || {};
+  function notYetInjected(path) {
+    return !injected[path];
+  }
+
+  details.scripts = details.scripts.reduce(function(a, s) {
     return a.concat(transitiveClosure(s));
-  }, []).filter(unique);
-  var styles = scripts.reduce(function(a, s) {
+  }, []).filter(isUnique).filter(notYetInjected);
+
+  details.styles = details.scripts.reduce(function(a, s) {
     a.push.apply(a, meta.styleDeps[s]);
     return a;
-  }, []);
-  var injected = details.injected || {};
-  injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), styles, function() {
-    injectAll(chrome.tabs.executeScript.bind(chrome.tabs), scripts, function() {
-      chrome.tabs.executeScript(tabId, {code: "injected=" + JSON.stringify(injected)}, callback);
-    });
-  });
+  }, []).filter(isUnique).filter(notYetInjected);
 
-  function transitiveClosure(path) {
-    var deps = meta.scriptDeps[path];
-    if (deps) {
-      deps = deps.reduce(function(a, s) {
-        return a.concat(transitiveClosure(s));
-      }, []);
-      deps.push(path);
-      return deps.filter(unique);
-    } else {
-      return [path];
-    }
-  }
+  details.script = "injected=" + JSON.stringify(
+    details.styles.reduce(addEntry,
+      details.scripts.reduce(addEntry, injected)));
 
-  function unique(value, index, array) {
-    return array.indexOf(value) == index;
-  }
+  api.log("[injectDeps] details: " + JSON.stringify(details));
 
-  function injectAll(inject, paths, callback) {
-    if (paths && paths.length) {
-      var n = 0;
-      paths.forEach(function(path) {
-        if (!injected[path]) {
-          log("[injectDeps] tab:", tabId, path);
-          inject(tabId, {file: path}, function() {
-            injected[path] = true;
-            if (++n == paths.length) {
-              callback();
-            }
-          });
-        } else if (++n == paths.length) {
-          callback();
-        }
-      });
-    } else {
-      callback();
-    }
+  api.tabs.inject(tabId, details, callback);
+
+  function addEntry(o, k) {
+    o[k] = true;
+    return o;
   }
 }
 
+function transitiveClosure(path) {
+  var deps = meta.scriptDeps[path];
+  if (deps) {
+    deps = deps.reduce(function(a, s) {
+      return a.concat(transitiveClosure(s));
+    }, []);
+    deps.push(path);
+    return deps.filter(isUnique);
+  } else {
+    return [path];
+  }
+}
+
+function isUnique(value, index, array) {
+  return array.indexOf(value) == index;
+}
+
 function postBookmarks(supplyBookmarks, bookmarkSource) {
-  log("[postBookmarks]");
+  api.log("[postBookmarks]");
   supplyBookmarks(function(bookmarks) {
-    log("[postBookmarks] bookmarks:", bookmarks);
+    api.log("[postBookmarks] bookmarks:", bookmarks);
     ajax("POST", "http://" + getConfigs().server + "/bookmarks/add", {
         bookmarks: bookmarks,
         source: bookmarkSource},
       function(o) {
-        log("[postBookmarks] resp:", o);
+        api.log("[postBookmarks] resp:", o);
       });
   });
 }
 
-chrome.tabs.onActivated.addListener(function(info) {
-  log("[onActivated] tab info:", info);
-  // Tab may be older than current kifi installation and so not yet have icon and any content script(s).
-  chrome.tabs.get(info.tabId, function(tab) {
-    if (tab && tab.status == "complete") {  // if not yet complete, wait for onUpdated
-      chrome.windows.get(info.windowId, function(win) {
-        if (win && win.type == "normal") {  // ignore popups, etc.
-          sprinkleSomeKiFiOn(tab);
-        }
-      });
-    }
-  });
+// Tab may be older than current kifi installation and so not yet have icon and any content script(s).
+api.tabs.on.activate.push(sprinkleSomeKiFiOn);
+
+api.tabs.on.navigate.push(function(tab) {
+  setPageIcon(tab.id, false);
 });
 
-chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
-  log("[onUpdated] tab:", tab, change);
-  if (change.url && /^https?:/.test(tab.url)) {
-    chrome.windows.get(tab.windowId, function(win) {
-      if (win && win.type == "normal") {
-        setPageIcon(tabId, false);
-      }
-    });
-  }
-  if (change.status == "complete" && /^https?:/.test(tab.url)) {
-    chrome.windows.get(tab.windowId, function(win) {
-      if (win && win.type == "normal") {
-        onPageLoad(tab);
-      }
-    });
-  }
-});
+api.tabs.on.load.push(onPageLoad);
 
 function sprinkleSomeKiFiOn(tab) {
   if (/^https?:/.test(tab.url)) {
-    chrome.tabs.executeScript(tab.id, {code: "window.injected"}, function(arr) {
-      if (!arr || !arr[0]) {
-        log("[sprinkleSomeKiFiOn] old tab:", tab.id);
+    api.tabs.inject(tab.id, {script: "window.injected"}, function(val) {
+      if (!val) {
+        api.log("[sprinkleSomeKiFiOn] old tab:", tab.id);
         setPageIcon(tab.id, false);
         onPageLoad(tab);
       }
@@ -591,41 +531,38 @@ function sprinkleSomeKiFiOn(tab) {
 }
 
 function getFullyQualifiedKey(key) {
-  return (localStorage["env"] || "production") + "_" + key;
+  return (api.storage.env || "production") + "_" + key;
 }
 
 function removeFromConfigs(key) {
-  localStorage.removeItem(getFullyQualifiedKey(key));
+  delete api.storage[getFullyQualifiedKey(key)];
 }
 
 function setConfigs(key, value) {
-  var prev = localStorage[getFullyQualifiedKey(key)];
+  var prev = api.storage[getFullyQualifiedKey(key)];
   if (value != null && prev !== String(value)) {
-    log("[setConfigs]", key, " = ", value, " (was ", prev, ")");
-    localStorage[getFullyQualifiedKey(key)] = value;
+    api.log("[setConfigs]", key, " = ", value, " (was ", prev, ")");
+    api.storage[getFullyQualifiedKey(key)] = value;
   }
 }
 
 function getConfigs() {
   try {
-    var env = localStorage["env"];
+    var env = api.storage.env;
     if (!env) {
-      localStorage["env"] = env = "production";
+      api.storage.env = env = "production";
     }
 
-    var config = {
+    return {
       "env": env,
       "server": env == "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com",
-      "kifi_installation_id": localStorage[getFullyQualifiedKey("kifi_installation_id")],
-      "bookmark_id": localStorage[getFullyQualifiedKey("bookmark_id")],
-      "hover_timeout": parseNonNegIntOr(localStorage[getFullyQualifiedKey("hover_timeout")], 10),
-      "show_score": parseBoolOr(localStorage[getFullyQualifiedKey("show_score")], false),
-      "max_res": parseNonNegIntOr(localStorage[getFullyQualifiedKey("max_res")], 5)};
-    //log("loaded config:");
-    //log(config);
-    return config;
+      "kifi_installation_id": api.storage[getFullyQualifiedKey("kifi_installation_id")],
+      "bookmark_id": api.storage[getFullyQualifiedKey("bookmark_id")],
+      "hover_timeout": parseNonNegIntOr(api.storage[getFullyQualifiedKey("hover_timeout")], 10),
+      "show_score": parseBoolOr(api.storage[getFullyQualifiedKey("show_score")], false),
+      "max_res": parseNonNegIntOr(api.storage[getFullyQualifiedKey("max_res")], 5)};
   } catch (e) {
-    error(e);
+    api.log.error(e);
   }
 }
 
@@ -662,11 +599,9 @@ function authenticate(callback) {
     ajax("POST", "http://" + config.server + "/kifi/start", {
       installation: config.kifi_installation_id,
       version: api.version,
-      // platform: navigator.platform,
-      // language: navigator.language,
-      agent: navigator.userAgent || navigator.appVersion || navigator.vendor},
+      agent: api.browserVersion},
     function done(data) {
-      log("[startSession] done, loadReason:", api.loadReason, "session:", data);
+      api.log("[startSession] done, loadReason:", api.loadReason, "session:", data);
       logEvent("extension", "authenticated");
 
       session = data;
@@ -683,35 +618,33 @@ function authenticate(callback) {
         postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
       }
     }, function fail(xhr) {
-      log("[startSession] xhr failed:", xhr);
+      api.log("[startSession] xhr failed:", xhr);
       if (onFail) onFail();
     });
   }
 
   function openFacebookConnect() {
-    log("[openFacebookConnect]");
-    var popupTabId;
-    chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-      if (changeInfo.status == "loading" && tabId == popupTabId && tab.url == "http://" + config.server + "/#_=_") {
-        log("[openFacebookConnect] closing tab ", tabId);
-        chrome.tabs.remove(tabId);
-        popupTabId = null;
-
-        startSession();
-      }
-    });
-
-    chrome.windows.create({'url': 'http://' + config.server + '/authenticate/facebook', 'type': 'popup', 'width' : 1020, 'height' : 530}, function(win) {
-      popupTabId = win.tabs[0].id
-    });
+    api.log("[openFacebookConnect]");
+    api.popup.open({
+      name: "kifi-authenticate",
+      url: "http://" + config.server + "/authenticate/facebook",
+      width: 1020,
+      height: 530}, {
+      navigate: function(url) {
+        if (url == "http://" + config.server + "/#_=_") {
+          api.log("[openFacebookConnect] closing popup");
+          this.close();
+          startSession();
+        }
+      }});
   }
 }
 
 function deauthenticate(callback) {
-  log("[deauthenticate]");
+  api.log("[deauthenticate]");
   session = null;
   chrome.windows.create({type: "popup", url: "http://" + getConfigs().server + "/session/end", width: 200, height: 100}, function(win) {
-    log("[deauthenticate] created popup:", win);
+    api.log("[deauthenticate] created popup:", win);
     callback();
   });
 }
@@ -719,10 +652,16 @@ function deauthenticate(callback) {
 // ===== Main (executed upon install, reinstall, update, reenable, and browser start)
 
 logEvent("extension", "started");
-authenticate(function() {
-  log("[main] authenticated");
 
-  chrome.tabs.query({windowType: "normal", active: true, status: "complete"}, function(tabs) {
-    tabs.forEach(sprinkleSomeKiFiOn);
-  });
+meta.contentScripts.forEach(function(arr) {
+  var path = arr[0];
+  api.scripts.register(arr[1], transitiveClosure(path), meta.styleDeps[path]);
+});
+
+authenticate(function() {
+  api.log("[main] authenticated");
+
+  // chrome.tabs.query({windowType: "normal", active: true, status: "complete"}, function(tabs) {
+  //   tabs.forEach(sprinkleSomeKiFiOn);
+  // });
 });
