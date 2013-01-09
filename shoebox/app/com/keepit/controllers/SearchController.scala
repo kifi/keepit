@@ -110,7 +110,7 @@ object SearchController extends FortyTwoController {
   private[controllers] def toPersonalSearchHit(uri: NormalizedURI, bookmark: Option[Bookmark]) = {
     val (title, url) = bookmark match {
       case Some(bookmark) => (Some(bookmark.title), bookmark.url)
-      case None => (uri.title,uri.url)
+      case None => (uri.title, uri.url)
     }
 
     PersonalSearchHit(uri.id.get, uri.externalId, title, url)
