@@ -12,12 +12,11 @@ import org.joda.time.DateTime
 import play.api._
 import play.api.libs.json._
 import ru.circumflex.orm._
-import java.net.URI
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.URINormalizer
+import com.keepit.common.net.{URI, URINormalizer}
 import com.keepit.serializer.{URLHistorySerializer => URLHS}
 import com.keepit.inject._
 import play.api.Play.current
@@ -44,6 +43,9 @@ case class URL (
   history: Seq[URLHistory] = Seq(),
   state: State[URL] = URL.States.ACTIVE
   ) extends Logging {
+
+  def domain = URI.parse(url).flatMap(_.host)
+
   def withHistory(historyItem: URLHistory): URL = copy(history = historyItem +: history)
   def save(implicit conn: Connection): URL = {
     val entity = URLEntity(this.copy(updatedAt = inject[DateTime]))
@@ -71,6 +73,9 @@ object URL {
   def getOpt(id: Id[URL])(implicit conn: Connection): Option[URL] =
     URLEntity.get(id).map(_.view)
 
+  def getByDomain(domain: String)(implicit conn: Connection) =
+    (URLEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.domain EQ domain) }.list.map( _.view )
+
   object States {
     val ACTIVE = State[URL]("active")
     val INACTIVE = State[URL]("inactive")
@@ -84,6 +89,7 @@ private[model] class URLEntity extends Entity[URL, URLEntity] {
   val normalizedUriId = "normalized_uri_id".ID[NormalizedURI].NOT_NULL
   val history = "history".VARCHAR(2048)
   val state = "state".STATE[URL].NOT_NULL(URL.States.ACTIVE)
+  val domain = "domain".VARCHAR(512)
 
   def relation = URLEntity
 
@@ -118,6 +124,7 @@ private[model] object URLEntity extends URLEntity with EntityTable[URL, URLEntit
     uri.createdAt := view.createdAt
     uri.updatedAt := view.updatedAt
     uri.url := view.url
+    uri.domain.set(view.domain.map(_.toString))
     uri.normalizedUriId := view.normalizedUriId
     uri.history := {
         val serializer = URLHS.urlHistorySerializer

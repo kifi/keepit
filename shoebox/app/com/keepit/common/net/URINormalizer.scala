@@ -109,11 +109,26 @@ object URINormalizer extends Logging {
         case _ => false
       }
     }
-    val regex = """(.*)(/document/d/[^/]+/)(.*)""".r
+    val document = """(.*)(/document/d/[^/]+/)(.*)""".r
+    val spreadsheet = """(.*)(/spreadsheet/ccc)(.*)""".r
+    val file = """(.*)(/file/d/[^/]+/)(.*)""".r
+    val gmail = """(/mail/)(.*)""".r
+
     def apply(uri: URI) = {
       uri match {
-        case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(regex(_, docKey, _)), query, fragment) =>
-          URI(scheme, userInfo, host, port, Some(docKey + "edit"), query, fragment).toString
+        case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(document(_, docKey, _)), query, fragment) =>
+          URI(scheme, userInfo, host, port, Some(docKey + "edit"), query, None).toString
+        case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(file(_, fileKey, _)), query, fragment) =>
+          URI(scheme, userInfo, host, port, Some(fileKey + "edit"), query, None).toString
+        case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(spreadsheet(_, spreadKey, _)), Some(query), fragment) =>
+          val newQuery = Query(query.params.filter{ q => q.name == "key" || q.name == "authkey"})
+          URI(scheme, userInfo, host, port, Some(spreadKey), Some(newQuery), None).toString
+        case URI(scheme, userInfo, host @ Some(Host("com", "google", "mail")), port, Some(gmail(_, addr)), _, Some(fragment)) =>
+          val msgFragments = fragment.replaceAll("%2F","/").split("/")
+          msgFragments.lastOption match {
+            case Some(id) if msgFragments.length > 1 => URI(scheme, userInfo, host, port, Some("/mail/" + addr), None, Some("search//" + id)).toString
+            case _ => URI(scheme, userInfo, host, port, Some("/mail/" + addr), None, Some(fragment)).toString
+          }
         case _ => uri.raw.get // expects the raw uri string is always there
       }
     }

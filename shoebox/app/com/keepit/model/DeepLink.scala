@@ -50,6 +50,8 @@ case class DeepLink(
 
   def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
 
+  def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = Some(normUriId))
+
   def save(implicit conn: Connection): DeepLink = {
     val entity = DeepLinkEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
