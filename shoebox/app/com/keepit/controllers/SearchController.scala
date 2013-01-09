@@ -108,11 +108,12 @@ object SearchController extends FortyTwoController {
     PersonalSearchResult(toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark, false, users, res.score)
   }
   private[controllers] def toPersonalSearchHit(uri: NormalizedURI, bookmark: Option[Bookmark]) = {
-    val title = bookmark match {
-      case Some(bookmark) => Some(bookmark.title)
-      case None => uri.title
+    val (title, url) = bookmark match {
+      case Some(bookmark) => (Some(bookmark.title), bookmark.url)
+      case None => (uri.title,uri.url)
     }
-    PersonalSearchHit(uri.id.get, uri.externalId, title, uri.url)
+
+    PersonalSearchHit(uri.id.get, uri.externalId, title, url)
   }
 
   case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
