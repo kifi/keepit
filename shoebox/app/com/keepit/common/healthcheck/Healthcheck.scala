@@ -74,6 +74,7 @@ case object ReportErrorsAction
 case object ErrorCountSinceLastCheck
 case object ResetErrorCount
 case object Heartbeat
+case object GetErrors
 
 private[healthcheck] class HealthcheckActor(postOffice: PostOffice, services: FortyTwoServices) extends Actor with Logging {
 
@@ -103,6 +104,8 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice, services: Fo
       sender ! errorCountSinceLastCheck
     case ResetErrorCount =>
       errorCount = 0
+    case GetErrors =>
+      sender ! errors
     case error: HealthcheckError =>
       errors = error :: errors
       errorCount = errorCount + 1
@@ -114,6 +117,8 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice, services: Fo
 trait HealthcheckPlugin extends Plugin {
   def errorCountFuture(): Future[Int]
   def errorCount(): Int
+  def errorsFuture(): Future[List[HealthcheckError]]
+  def errors(): List[HealthcheckError]
   def resetErrorCount(): Unit
   def addError(error: HealthcheckError): HealthcheckError
   def reportStart(): ElectronicMail
@@ -142,6 +147,10 @@ class HealthcheckPluginImpl(system: ActorSystem, host: String, postOffice: PostO
   def errorCountFuture(): Future[Int] = (actor ? ErrorCountSinceLastCheck).mapTo[Int]
 
   def errorCount(): Int = Await.result(errorCountFuture(), 5 seconds)
+
+  def errorsFuture(): Future[List[HealthcheckError]] = (actor ? GetErrors).mapTo[List[HealthcheckError]]
+
+  def errors(): List[HealthcheckError] = Await.result(errorsFuture(), 20 seconds)
 
   def resetErrorCount(): Unit = actor ! ResetErrorCount
 
