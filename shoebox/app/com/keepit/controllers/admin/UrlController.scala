@@ -86,11 +86,17 @@ object UrlController extends FortyTwoController {
 
             if (currNormURI.url != renormURI.url) {
               changedURIs += ChangedNormURI("bookmark-nuri", urlObj.url, currNormURI.url, currNormURI.id.map(_.id).getOrElse(0L), renormURI.id.map(_.id).getOrElse(0L), renormURI.url)
-              if(!readOnly) {
-                val savedNormURI = renormURI.save
-                urlObj.withHistory(URLHistory(savedNormURI.id.get,reason)).save
-                bookmark.withNormUriId(renormURI.id.get).save
+              try {
+                if(!readOnly) {
+                  val savedNormURI = renormURI.save
+                  urlObj.withHistory(URLHistory(savedNormURI.id.get,reason)).save
+                  bookmark.withNormUriId(renormURI.id.get).save
+                }
+              } catch {
+                case ex: Throwable =>
+                  log.error("URL Migration error",ex)
               }
+
             }
         }
       }
@@ -120,9 +126,14 @@ object UrlController extends FortyTwoController {
             if (currNormURI.url != renormURI.url) {
               changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.url, currNormURI.id.map(_.id).getOrElse(0L), renormURI.id.map(_.id).getOrElse(0L), renormURI.url)
               if(!readOnly) {
-                val savedNormURI = renormURI.save
-                urlObj.withHistory(URLHistory(savedNormURI.id.get,reason)).save
-                comment.withNormUriId(renormURI.id.get).save
+                try {
+                  val savedNormURI = renormURI.save
+                  urlObj.withHistory(URLHistory(savedNormURI.id.get,reason)).save
+                  comment.withNormUriId(renormURI.id.get).save
+                } catch {
+                  case ex: Throwable =>
+                    log.error("URL Migration error",ex)
+                }
               }
             }
         }
@@ -152,10 +163,15 @@ object UrlController extends FortyTwoController {
             }
             if (currNormURI.url != renormURI.url) {
               changedURIs += ChangedNormURI("follow-nuri", urlObj.url, currNormURI.url, currNormURI.id.map(_.id).getOrElse(0L), renormURI.id.map(_.id).getOrElse(0L), renormURI.url)
-              if(!readOnly) {
-                val savedNormURI = renormURI.save
-                urlObj.withHistory(URLHistory(savedNormURI.id.get,reason)).save
-                follow.withNormUriId(renormURI.id.get).saveWithCx
+              try {
+                if(!readOnly) {
+                  val savedNormURI = renormURI.save
+                  urlObj.withHistory(URLHistory(savedNormURI.id.get,reason)).save
+                  follow.withNormUriId(renormURI.id.get).saveWithCx
+                }
+              } catch {
+                case ex: Throwable =>
+                  log.error("URL Migration error",ex)
               }
             }
         }
@@ -186,10 +202,15 @@ object UrlController extends FortyTwoController {
             }
             if (currNormURI.url != renormURI.url) {
               changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.url, currNormURI.id.map(_.id).getOrElse(0L), renormURI.id.map(_.id).getOrElse(0L), renormURI.url)
-              if(!readOnly) {
-                val savedNormURI = renormURI.save
-                urlObj.withHistory(URLHistory(savedNormURI.id.get,reason)).save
-                deep.withNormUriId(renormURI.id.get).save
+              try {
+                if(!readOnly) {
+                  val savedNormURI = renormURI.save
+                  urlObj.withHistory(URLHistory(savedNormURI.id.get,reason)).save
+                  deep.withNormUriId(renormURI.id.get).save
+                }
+              } catch {
+                case ex: Throwable =>
+                  log.error("URL Migration error",ex)
               }
             }
         }
