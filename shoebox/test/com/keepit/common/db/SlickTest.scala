@@ -45,7 +45,7 @@ class SlickTest extends SpecificationWithJUnit {
         }
 
         //we can abstract out much of the standard repo and have it injected/mocked out
-        class FooRepoImpl extends FooRepo with DbRepo[Foo] {
+        class FooRepoImpl(val db: DataBaseComponent) extends FooRepo with DbRepo[Foo] {
           import db.Driver.Implicit._ // here's the driver, abstracted away
 
           implicit object FooIdTypeMapper extends BaseTypeMapper[Id[Foo]] {
@@ -53,7 +53,7 @@ class SlickTest extends SpecificationWithJUnit {
           }
 
           override lazy val table = new RepoTable[Foo]("foo") {
-            def name =     column[String]("name")
+            def name = column[String]("name")
             def * = id.? ~ name <> (Foo, Foo.unapply _)
           }
 
@@ -66,7 +66,7 @@ class SlickTest extends SpecificationWithJUnit {
           def createTableForTesting()(implicit session: RWSession) = table.ddl.create
         }
 
-        val repo: FooRepo = new FooRepoImpl //to be injected with guice
+        val repo: FooRepo = new FooRepoImpl(inject[DataBaseComponent])
 
         //just for testing you know...
         inject[DBConnection].readWrite{ implicit session =>
