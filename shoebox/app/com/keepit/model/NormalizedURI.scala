@@ -11,7 +11,6 @@ import org.joda.time.DateTime
 import play.api._
 import play.api.libs.json._
 import ru.circumflex.orm._
-import java.net.URI
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
@@ -99,6 +98,9 @@ object NormalizedURI {
       (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.state EQ state) LIMIT limit }.list.map( _.view )
     }
   }
+
+  def getByDomain(domain: String)(implicit conn: Connection) =
+    (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.domain EQ domain) }.list.map( _.view )
 
   def getByNormalizedUrl(url: String)(implicit conn: Connection): Option[NormalizedURI] = {
     val hash = hashUrl(normalize(url))

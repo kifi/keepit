@@ -47,6 +47,10 @@ object UrlController extends FortyTwoController {
   case class ChangedNormURI(context: String, url: String, from: Option[Id[NormalizedURI]], to: Id[NormalizedURI])
 
   def grandfathering(readOnly: Boolean = true) = AdminHtmlAction { implicit request =>
+    Ok(doGrandfathering(readOnly))
+  }
+
+  def doGrandfathering(readOnly: Boolean) = {
     // Creates urlId connections where they do not exist, and verifies that references to URL are correct
     // After migration, these models should use `urlId` appropriately. Any nulls should give an indication
     // of controllers not setting the `urlId`.
@@ -131,10 +135,14 @@ object UrlController extends FortyTwoController {
       "%s,%s,%s,%s".format(u.context,u.url, u.from.map(s=>s.id.toString).getOrElse(""), u.to.id)
     }
     val header = "%s bookmarks, %s comments, %s follows, %s deeplinks processed. Found %s necessary updates.".format(bookmarkCount, commentCount, followsCount, deepsCount, out.size)
-    Ok(header + "\n\n\n" + out.mkString("\n"))
+    header + "\n\n\n" + out.mkString("\n")
   }
 
-  def renormalize(readOnly: Boolean = true) = AdminHtmlAction { implicit request =>
+  def renormalize(readOnly: Boolean = true, domain: Option[String] = None) = AdminHtmlAction { implicit request =>
+    doRenormalize(readOnly, domain)
+  }
+
+  def doRenormalize(readOnly: Boolean = true, domain: Option[String] = None) = {
     // Processes all models that reference a `NormalizedURI`, and renormalizes all URLs.
     // Should be run AFTER grandfathering.
     val changedURIs = scala.collection.mutable.MutableList[ChangedNormURI]()
