@@ -43,8 +43,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
   }
 
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
-    println("Session cookie info: name [%s], http only [%s], signed [%s], max-age [%s], secure [%s]".format(
-        Session.COOKIE_NAME, Session.httpOnly, Session.isSigned, Session.maxAge, Session.secure))
     if (app.mode != Mode.Test) {
       require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
     }
