@@ -115,7 +115,7 @@ GET     /admin/healthcheck/isHealthy    com.keepit.common.healthcheck.HealthCont
 GET     /admin/healthcheck/resetErrorCount    com.keepit.common.healthcheck.HealthController.resetErrorCount()
 
 GET     /admin/url/grandfathering      com.keepit.controllers.admin.UrlController.grandfathering(readOnly: Boolean ?= true, domain: Option[String] ?= None, page: Int ?= -1)
-GET     /admin/url/renormalize         com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true)
+GET     /admin/url/renormalize         com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 
 ##########################################
 # Secure social routes

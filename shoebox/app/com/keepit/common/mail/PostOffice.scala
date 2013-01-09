@@ -38,6 +38,7 @@ object PostOffice {
     val HEALTHCHECK = ElectronicMailCategory("HEALTHCHECK")
     val COMMENT = ElectronicMailCategory("COMMENT")
     val MESSAGE = ElectronicMailCategory("MESSAGE")
+    val ADMIN = ElectronicMailCategory("ADMIN")
   }
 }
 
