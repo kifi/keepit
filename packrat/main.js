@@ -661,7 +661,7 @@ meta.contentScripts.forEach(function(arr) {
 authenticate(function() {
   api.log("[main] authenticated");
 
-  // chrome.tabs.query({windowType: "normal", active: true, status: "complete"}, function(tabs) {
-  //   tabs.forEach(sprinkleSomeKiFiOn);
-  // });
+  chrome.tabs.query({windowType: "normal", active: true, status: "complete"}, function(tabs) {
+    tabs.forEach(sprinkleSomeKiFiOn);
+  });
 });
