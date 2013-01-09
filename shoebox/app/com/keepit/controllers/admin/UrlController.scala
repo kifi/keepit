@@ -65,7 +65,7 @@ object UrlController extends FortyTwoController {
     val changedURLs = scala.collection.mutable.MutableList[ChangedURL]()
     val (bookmarkCount, commentCount, followsCount, deepsCount) = CX.withConnection { implicit conn =>
 
-      val bookmarks = page match { case i: Int if i > 0 => Bookmark.page(i,20) case _ => Bookmark.all }
+      val bookmarks = page match { case i: Int if i >= 0 => Bookmark.page(i,20) case _ => Bookmark.all }
       val bookmarkCount = bookmarks.size
 
       bookmarks map { bookmark =>
