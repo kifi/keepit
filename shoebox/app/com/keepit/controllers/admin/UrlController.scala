@@ -31,6 +31,8 @@ import org.joda.time.LocalDate
 import org.joda.time.DateTimeZone
 import com.keepit.model._
 import com.keepit.common.net.URINormalizer
+import com.keepit.common.mail._
+import play.api.libs.concurrent.Akka
 
 /**
  * Charts, etc.
@@ -47,8 +49,12 @@ object UrlController extends FortyTwoController {
   case class ChangedNormURI(context: String, url: String, from: Option[Id[NormalizedURI]], to: Id[NormalizedURI])
 
   def grandfathering(readOnly: Boolean = true, domain: Option[String] = None, page: Int = -1) = AdminHtmlAction { implicit request =>
-    log.info(domain)
-    Ok(doGrandfathering(readOnly, domain))
+    Akka.future {
+      val result = doGrandfathering(readOnly, domain)
+      val postOffice = inject[PostOffice]
+      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = "Grandfathering Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
+    }
+    Ok("Started! Will email %s".format(EmailAddresses.ENG))
   }
 
   def doGrandfathering(readOnly: Boolean, domain: Option[String] = None, page: Int = -1) = {
@@ -95,11 +101,20 @@ object UrlController extends FortyTwoController {
           if(!readOnly) u.save
           else u
         }
-        comment.urlId match {
-          case Some(id) if id.id == urlObj.id.map(_.id).getOrElse(0) =>
+
+        (domain match {
+          case Some(d) if urlObj.domain.map(_.toString).getOrElse("") != domain.getOrElse("") =>
+            Some(d)
+          case _ => None
+        }) match {
+          case Some(d) =>
           case None =>
-            changedURLs += ChangedURL("comment-url", normUri.url, comment.urlId, urlObj.id.getOrElse(Id[URL](0)) )
-            if(!readOnly) comment.withUrlId(urlObj.id.get).save
+            comment.urlId match {
+              case Some(id) if id.id == urlObj.id.map(_.id).getOrElse(0) =>
+              case None =>
+                changedURLs += ChangedURL("comment-url", normUri.url, comment.urlId, urlObj.id.getOrElse(Id[URL](0)) )
+                if(!readOnly) comment.withUrlId(urlObj.id.get).save
+            }
         }
       }
 
@@ -113,11 +128,19 @@ object UrlController extends FortyTwoController {
           if(!readOnly) u.save
           else u
         }
-        follow.urlId match {
-          case Some(id) if id.id == urlObj.id.map(_.id).getOrElse(0) =>
+        (domain match {
+          case Some(d) if urlObj.domain.map(_.toString).getOrElse("") != domain.getOrElse("") =>
+            Some(d)
+          case _ => None
+        }) match {
+          case Some(d) =>
           case None =>
-            changedURLs += ChangedURL("follow-url", normUri.url, follow.urlId, urlObj.id.getOrElse(Id[URL](0)) )
-            if(!readOnly) follow.withUrlId(urlObj.id.get).saveWithCx
+            follow.urlId match {
+              case Some(id) if id.id == urlObj.id.map(_.id).getOrElse(0) =>
+              case None =>
+                changedURLs += ChangedURL("follow-url", normUri.url, follow.urlId, urlObj.id.getOrElse(Id[URL](0)) )
+                if(!readOnly) follow.withUrlId(urlObj.id.get).saveWithCx
+            }
         }
       }
 
@@ -131,11 +154,19 @@ object UrlController extends FortyTwoController {
           if(!readOnly) u.save
           else u
         }
-        deeps.urlId match {
-          case Some(id) if id.id == urlObj.id.map(_.id).getOrElse(0) =>
+        (domain match {
+          case Some(d) if urlObj.domain.map(_.toString).getOrElse("") != domain.getOrElse("") =>
+            Some(d)
+          case _ => None
+        }) match {
+          case Some(d) =>
           case None =>
-            changedURLs += ChangedURL("deep-url", normUri.url, deeps.urlId, urlObj.id.getOrElse(Id[URL](0)) )
-            if(!readOnly) deeps.withUrlId(urlObj.id.get).save
+            deeps.urlId match {
+              case Some(id) if id.id == urlObj.id.map(_.id).getOrElse(0) =>
+              case None =>
+                changedURLs += ChangedURL("deep-url", normUri.url, deeps.urlId, urlObj.id.getOrElse(Id[URL](0)) )
+                if(!readOnly) deeps.withUrlId(urlObj.id.get).save
+            }
         }
       }
 
@@ -149,7 +180,12 @@ object UrlController extends FortyTwoController {
   }
 
   def renormalize(readOnly: Boolean = true, domain: Option[String] = None) = AdminHtmlAction { implicit request =>
-    doRenormalize(readOnly, domain)
+    Akka.future {
+      val result = doRenormalize(readOnly, domain)
+      val postOffice = inject[PostOffice]
+      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = "Renormalization Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
+    }
+    Ok("Started! Will email %s".format(EmailAddresses.ENG))
   }
 
   def doRenormalize(readOnly: Boolean = true, domain: Option[String] = None) = {
@@ -170,17 +206,24 @@ object UrlController extends FortyTwoController {
             if (!readOnly) u.save
             else u
         }
-        val (renormURI,reason) = NormalizedURI.getByNormalizedUrl(urlObj.url) match {
-          case Some(u) => (u,URLHistoryCause.MERGE)
-          case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
-        }
+        (domain match {
+          case Some(d) if urlObj.domain.map(_.toString).getOrElse("") != domain.getOrElse("") => Some(d)
+          case _ => None
+        }) match {
+          case Some(d) =>
+          case None =>
+            val (renormURI,reason) = NormalizedURI.getByNormalizedUrl(urlObj.url) match {
+              case Some(u) => (u,URLHistoryCause.MERGE)
+              case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
+            }
 
-        if (currNormURI.id != renormURI.id) {
-          changedURIs += ChangedNormURI("bookmark-nuri", urlObj.url, currNormURI.id, renormURI.id.get)
-          if(!readOnly) {
-            urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
-            bookmark.withNormUriId(renormURI.id.get).save
-          }
+            if (currNormURI.id != renormURI.id) {
+              changedURIs += ChangedNormURI("bookmark-nuri", urlObj.url, currNormURI.id, renormURI.id.get)
+              if(!readOnly) {
+                urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
+                bookmark.withNormUriId(renormURI.id.get).save
+              }
+            }
         }
       }
 
@@ -196,16 +239,23 @@ object UrlController extends FortyTwoController {
             if (!readOnly) u.save
             else u
         }
-        val (renormURI,reason) = NormalizedURI.getByNormalizedUrl(urlObj.url) match {
-          case Some(u) => (u,URLHistoryCause.MERGE)
-          case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
-        }
-        if (currNormURI.id != renormURI.id) {
-          changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.id, renormURI.id.get)
-          if(!readOnly) {
-            urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
-            comment.withNormUriId(renormURI.id.get).save
-          }
+        (domain match {
+          case Some(d) if urlObj.domain.map(_.toString).getOrElse("") != domain.getOrElse("") => Some(d)
+          case _ => None
+        }) match {
+          case Some(d) =>
+          case None =>
+            val (renormURI,reason) = NormalizedURI.getByNormalizedUrl(urlObj.url) match {
+              case Some(u) => (u,URLHistoryCause.MERGE)
+              case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
+            }
+            if (currNormURI.id != renormURI.id) {
+              changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.id, renormURI.id.get)
+              if(!readOnly) {
+                urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
+                comment.withNormUriId(renormURI.id.get).save
+              }
+            }
         }
       }
 
@@ -221,16 +271,23 @@ object UrlController extends FortyTwoController {
             if (!readOnly) u.save
             else u
         }
-        val (renormURI,reason) = NormalizedURI.getByNormalizedUrl(urlObj.url) match {
-          case Some(u) => (u,URLHistoryCause.MERGE)
-          case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
-        }
-        if (currNormURI.id != renormURI.id) {
-          changedURIs += ChangedNormURI("follow-nuri", urlObj.url, currNormURI.id, renormURI.id.get)
-          if(!readOnly) {
-            urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
-            follow.withNormUriId(renormURI.id.get).saveWithCx
-          }
+        (domain match {
+          case Some(d) if urlObj.domain.map(_.toString).getOrElse("") != domain.getOrElse("") => Some(d)
+          case _ => None
+        }) match {
+          case Some(d) =>
+          case None =>
+            val (renormURI,reason) = NormalizedURI.getByNormalizedUrl(urlObj.url) match {
+              case Some(u) => (u,URLHistoryCause.MERGE)
+              case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
+            }
+            if (currNormURI.id != renormURI.id) {
+              changedURIs += ChangedNormURI("follow-nuri", urlObj.url, currNormURI.id, renormURI.id.get)
+              if(!readOnly) {
+                urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
+                follow.withNormUriId(renormURI.id.get).saveWithCx
+              }
+            }
         }
       }
 
@@ -247,16 +304,23 @@ object UrlController extends FortyTwoController {
             if (!readOnly) u.save
             else u
         }
-        val (renormURI,reason) = NormalizedURI.getByNormalizedUrl(urlObj.url) match {
-          case Some(u) => (u,URLHistoryCause.MERGE)
-          case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
-        }
-        if (currNormURI.id != renormURI.id) {
-          changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.id, renormURI.id.get)
-          if(!readOnly) {
-            urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
-            deep.withNormUriId(renormURI.id.get).save
-          }
+        (domain match {
+          case Some(d) if urlObj.domain.map(_.toString).getOrElse("") != domain.getOrElse("") => Some(d)
+          case _ => None
+        }) match {
+          case Some(d) =>
+          case None =>
+            val (renormURI,reason) = NormalizedURI.getByNormalizedUrl(urlObj.url) match {
+              case Some(u) => (u,URLHistoryCause.MERGE)
+              case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
+            }
+            if (currNormURI.id != renormURI.id) {
+              changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.id, renormURI.id.get)
+              if(!readOnly) {
+                urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
+                deep.withNormUriId(renormURI.id.get).save
+              }
+            }
         }
       }
 
@@ -266,7 +330,7 @@ object UrlController extends FortyTwoController {
       "%s,%s,%s,%s".format(u.context,u.url, u.from.map(s=>s.id.toString).getOrElse("NULL"), u.to.id)
     }
     val header = "%s bookmarks, %s comments, %s follows, %s deeplinks processed. Found %s necessary updates.".format(bookmarkCount, commentCount, followsCount, deepsCount, out.size)
-    Ok(header + "\n\n\n" + out.mkString("\n"))
+    header + "\n\n\n" + out.mkString("\n")
   }
 
 }
