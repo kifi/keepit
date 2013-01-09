@@ -110,8 +110,12 @@ GET     /admin/searchConfig/:id/reset com.keepit.controllers.SearchConfigControl
 
 GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
 GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()
+GET     /admin/healthcheck/errors    com.keepit.common.healthcheck.HealthController.getErrors()
 GET     /admin/healthcheck/isHealthy    com.keepit.common.healthcheck.HealthController.isHealthy()
 GET     /admin/healthcheck/resetErrorCount    com.keepit.common.healthcheck.HealthController.resetErrorCount()
+
+GET     /admin/url/grandfathering      com.keepit.controllers.admin.UrlController.grandfathering(readOnly: Boolean ?= true, domain: Option[String] ?= None, page: Int ?= -1)
+GET     /admin/url/renormalize         com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 
 ##########################################
 # Secure social routes

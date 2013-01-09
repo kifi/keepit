@@ -138,10 +138,22 @@ class URINormalizerTest extends Specification {
     "use custom normalizer when applicable" in {
       // gmail
       URINormalizer.normalize("https://mail.google.com/mail/ca/u/0/#inbox/13ae709b43798f58") ===
-        "https://mail.google.com/mail/ca/u/0/#inbox/13ae709b43798f58"
+        "https://mail.google.com/mail/ca/u/0/#search//13ae709b43798f58"
+      URINormalizer.normalize("https://mail.google.com/mail/u/0/#imp/13bb4dcd0016031f") ===
+        "https://mail.google.com/mail/u/0/#search//13bb4dcd0016031f"
+      URINormalizer.normalize("https://mail.google.com/mail/u/0/#sent") ===
+        "https://mail.google.com/mail/u/0/#sent"
       // google drive
       URINormalizer.normalize("https://docs.google.com/a/42go.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit") ===
         "https://docs.google.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit"
+
+      // google docs
+      URINormalizer.normalize("https://docs.google.com/document/d/1pFRKQtcZFqBYRdfcRbYT3TQaZaFqI1PgeOHEacF57q8/edit") ===
+        "https://docs.google.com/document/d/1pFRKQtcZFqBYRdfcRbYT3TQaZaFqI1PgeOHEacF57q8/edit"
+      URINormalizer.normalize("https://docs.google.com/a/fuks.co.il/document/d/1Va2VsQwZqIgB73Eb0cWqPSF-bClwEBVCdgE3Nyik0sI/edit") ===
+        "https://docs.google.com/document/d/1Va2VsQwZqIgB73Eb0cWqPSF-bClwEBVCdgE3Nyik0sI/edit"
+      URINormalizer.normalize("https://docs.google.com/a/42go.com/file/d/0B17Ux0DwquOwOVNWRGJLcEt6SW8/edit") === "https://docs.google.com/file/d/0B17Ux0DwquOwOVNWRGJLcEt6SW8/edit"
+      URINormalizer.normalize("https://docs.google.com/spreadsheet/ccc?authkey=CKqfiacO&hl=en_US&key=0AmrEm2VP6NfgdGU5czBIdnBYUHBYSE9wRzd6Q3VvakE&ndplr=1") === "https://docs.google.com/spreadsheet/ccc?authkey=CKqfiacO&key=0AmrEm2VP6NfgdGU5czBIdnBYUHBYSE9wRzd6Q3VvakE"
 
       // techcrunch
       URINormalizer.normalize("http://www.techcrunch.com") === "http://techcrunch.com"

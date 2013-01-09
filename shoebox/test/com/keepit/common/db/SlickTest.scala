@@ -1,5 +1,7 @@
 package com.keepit.common.db
 
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
 import com.keepit.TestAkkaSystem
 import com.keepit.inject._
@@ -17,7 +19,8 @@ import org.specs2.mutable.Specification
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.runner.JUnitRunner
 import org.scalaquery.ql.basic.BasicProfile
-import com.keepit.common.db.slick.{IdMapperDelegate, Repo, DbRepo, DataBaseComponent}
+import com.keepit.common.db.slick._
+import org.joda.time.DateTime
 
 @RunWith(classOf[JUnitRunner])
 class SlickTest extends SpecificationWithJUnit {
@@ -32,53 +35,54 @@ class SlickTest extends SpecificationWithJUnit {
           name: String
         ) extends Model[Foo] {
           def withId(id: Id[Foo]): Foo = this.copy(id = Some(id))
+          def withUpdateTime(now: DateTime) = this
         }
 
         //could be easily mocked up
         trait FooRepo extends Repo[Foo] {
           //here you may have model specific queries...
-          def getByName(name: String): Seq[Foo]
+          def getByName(name: String)(implicit session: ROSession): Seq[Foo]
         }
 
         //we can abstract out much of the standard repo and have it injected/mocked out
-        class FooRepoImpl extends FooRepo with DbRepo[Foo] {
+        class FooRepoImpl(val db: DataBaseComponent) extends FooRepo with DbRepo[Foo] {
           import db.Driver.Implicit._ // here's the driver, abstracted away
 
           implicit object FooIdTypeMapper extends BaseTypeMapper[Id[Foo]] {
             def apply(profile: BasicProfile) = new IdMapperDelegate[Foo]
           }
 
-          override val table = new ExtendedTable[Foo]("foo") {
-            def id =       column[Id[Foo]]("id", O.PrimaryKey, O.AutoInc)
-            def name =     column[String]("name")
+          override lazy val table = new RepoTable[Foo]("foo") {
+            def name = column[String]("name")
             def * = id.? ~ name <> (Foo, Foo.unapply _)
           }
 
-          def getByName(name: String): Seq[Foo] = db.readOnly {implicit session =>
-            val q = for { f <- table if f.name is name } yield (f)
+          def getByName(name: String)(implicit session: ROSession): Seq[Foo] = {
+            val q = for ( f <- table if f.name is name ) yield (f)
             q.list
           }
 
           //only for testing
-          def createTableForTesting() = db.readWrite {implicit s => table.ddl.create}
+          def createTableForTesting()(implicit session: RWSession) = table.ddl.create
         }
 
-        val repo: FooRepo = new FooRepoImpl //to be injected with guice
+        val repo: FooRepo = new FooRepoImpl(inject[DataBaseComponent])
 
         //just for testing you know...
-        repo.asInstanceOf[FooRepoImpl].createTableForTesting() //only in test mode we should know about the implementation
+        inject[DBConnection].readWrite{ implicit session =>
+          repo.asInstanceOf[FooRepoImpl].createTableForTesting() //only in test mode we should know about the implementation
+          val fooA = repo.save(Foo(name = "A"))
+          fooA.id.get.id === 1
+          val fooB = repo.save(Foo(name = "B"))
+          fooB.id.get.id === 2
+        }
 
-        val fooA = repo.save(Foo(name = "A"))
-        fooA.id.get.id === 1
-
-        val fooB = repo.save(Foo(name = "B"))
-        fooB.id.get.id === 2
-
-        repo.count === 2
-
-        val a = repo.getByName("A")
-        a.size === 1
-        a.head.name === "A"
+        inject[DBConnection].readOnly{ implicit session =>
+          repo.count(session) === 2
+          val a = repo.getByName("A")
+          a.size === 1
+          a.head.name === "A"
+        }
       }
     }
 

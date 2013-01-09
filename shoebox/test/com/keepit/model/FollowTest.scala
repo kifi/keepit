@@ -6,6 +6,8 @@ import org.specs2.runner.JUnitRunner
 
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
+import com.keepit.common.db.slick._
+import com.keepit.inject._
 import com.keepit.test.EmptyApplication
 
 import play.api.Play.current
@@ -18,6 +20,11 @@ class FollowTest extends SpecificationWithJUnit {
 
     "load by user and uri" in {
       running(new EmptyApplication()) {
+        val repo = inject[Repo[Follow]]
+
+        inject[DBConnection].readWrite{ implicit session =>
+          repo.count === 0
+        }
 
         val (user1, user2, uriA, uriB) = CX.withConnection { implicit c =>
           (User(firstName = "User", lastName = "1").save,
@@ -27,18 +34,41 @@ class FollowTest extends SpecificationWithJUnit {
         }
 
         CX.withConnection { implicit c =>
-          Follow(userId = user1.id.get, uriId = uriB.id.get).save
-          Follow(userId = user2.id.get, uriId = uriA.id.get, state = Follow.States.INACTIVE).save
+          FollowCxRepo.get(user1.id.get, uriB.id.get).isDefined === false
+          FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === false
+        }
+
+        val (f1, f2) = inject[DBConnection].readWrite{ implicit session =>
+          val f1 = repo.save(Follow(userId = user1.id.get, uriId = uriB.id.get))
+          val f2 = repo.save(Follow(userId = user2.id.get, uriId = uriA.id.get, state = FollowStates.INACTIVE))
+          (f1, f2)
+        }
+//
+//        inject[DBConnection].readOnly{ implicit session =>
+//          repo.get(f1.id.get) === f1
+//          repo.get(f2.id.get) === f2
+//        }
+
+        CX.withConnection { implicit c =>
+          FollowCxRepo.get(user1.id.get, uriA.id.get).isDefined === false
+          FollowCxRepo.get(user1.id.get, uriB.id.get).isDefined === true
+          FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === true
+          FollowCxRepo.get(user2.id.get, uriB.id.get).isDefined === false
+        }
+
+        inject[DBConnection].readWrite{ implicit session =>
+          repo.save(f1.deactivate)
+          repo.save(f2.deactivate)
         }
 
         CX.withConnection { implicit c =>
-          Follow.get(user1.id.get, uriA.id.get).isDefined === false
-          Follow.get(user1.id.get, uriB.id.get).isDefined === true
-          Follow.get(user2.id.get, uriA.id.get).isDefined === true
-          Follow.get(user2.id.get, uriB.id.get).isDefined === false
+          FollowCxRepo.get(user1.id.get, uriA.id.get).isDefined === false
+          FollowCxRepo.get(user1.id.get, uriB.id.get).isDefined === true
+          FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === true
+          FollowCxRepo.get(user2.id.get, uriB.id.get).isDefined === false
         }
+
       }
     }
   }
-
 }
