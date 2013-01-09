@@ -84,7 +84,7 @@ object Bookmark {
   def load(uri: NormalizedURI, userId: Id[User])(implicit conn: Connection): Option[Bookmark] = load(uri.id.get, userId)
 
   def load(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Option[Bookmark] =
-    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.userId EQ userId AND (b.uriId EQ uriId)) unique }.map(_.view)
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.userId EQ userId AND (b.uriId EQ uriId)) LIMIT(1) unique }.map(_.view)
 
   def ofUri(uri: NormalizedURI)(implicit conn: Connection): Seq[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.uriId EQ uri.id.get) list }.map(_.view)
