@@ -45,12 +45,12 @@ object UrlController extends FortyTwoController {
     Ok(views.html.adminDashboard())
   }
 
-  case class ChangedURL(context: String, url: String, from: Option[Id[URL]], to: Id[URL])
-  case class ChangedNormURI(context: String, url: String, from: Option[Id[NormalizedURI]], to: Id[NormalizedURI])
+  case class ChangedURL(context: String, oldUrl: String, from: Option[Id[URL]], to: Id[URL])
+  case class ChangedNormURI(context: String, url: String, from: Option[Id[NormalizedURI]], to: Id[NormalizedURI], toUrl: String)
 
   def grandfathering(readOnly: Boolean = true, domain: Option[String] = None, page: Int = -1) = AdminHtmlAction { implicit request =>
     Akka.future {
-      val result = doGrandfathering(readOnly, domain)
+      val result = doGrandfathering(readOnly, domain).replaceAll("\n","\n<br>");
       val postOffice = inject[PostOffice]
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = "Grandfathering Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
     }
@@ -84,7 +84,7 @@ object UrlController extends FortyTwoController {
             bookmark.urlId match {
               case Some(id) if id.id == urlObj.id.map(_.id).getOrElse(0) =>
               case _ =>
-                changedURLs += ChangedURL("bookmark-url", bookmark.url, bookmark.urlId, urlObj.id.getOrElse(Id[URL](0)) )
+                changedURLs += ChangedURL("bookmark-url", bookmark.url, bookmark.urlId, urlObj.id.getOrElse(Id[URL](0)))
                 if(!readOnly) bookmark.withUrlId(urlObj.id.get).save
             }
         }
@@ -173,7 +173,7 @@ object UrlController extends FortyTwoController {
       (bookmarkCount, commentCount, followsCount, deepsCount)
     }
     val out = changedURLs.map { u =>
-      "%s,%s,%s,%s".format(u.context,u.url, u.from.map(s=>s.id.toString).getOrElse("NULL"), u.to.id)
+      "%s, %s, %s, %s".format(u.context,u.oldUrl, u.from.map(s=>s.id.toString).getOrElse("NULL"), u.to.id)
     }
     val header = "%s bookmarks, %s comments, %s follows, %s deeplinks processed. Found %s necessary updates.".format(bookmarkCount, commentCount, followsCount, deepsCount, out.size)
     header + "\n\n\n" + out.mkString("\n")
@@ -181,7 +181,7 @@ object UrlController extends FortyTwoController {
 
   def renormalize(readOnly: Boolean = true, domain: Option[String] = None) = AdminHtmlAction { implicit request =>
     Akka.future {
-      val result = doRenormalize(readOnly, domain)
+      val result = doRenormalize(readOnly, domain).replaceAll("\n","\n<br>");
       val postOffice = inject[PostOffice]
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = "Renormalization Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
     }
@@ -218,7 +218,7 @@ object UrlController extends FortyTwoController {
             }
 
             if (currNormURI.id != renormURI.id) {
-              changedURIs += ChangedNormURI("bookmark-nuri", urlObj.url, currNormURI.id, renormURI.id.get)
+              changedURIs += ChangedNormURI("bookmark-nuri", urlObj.url, currNormURI.id, renormURI.id.get, renormURI.url)
               if(!readOnly) {
                 urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
                 bookmark.withNormUriId(renormURI.id.get).save
@@ -250,7 +250,7 @@ object UrlController extends FortyTwoController {
               case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
             }
             if (currNormURI.id != renormURI.id) {
-              changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.id, renormURI.id.get)
+              changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.id, renormURI.id.get, renormURI.url)
               if(!readOnly) {
                 urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
                 comment.withNormUriId(renormURI.id.get).save
@@ -282,7 +282,7 @@ object UrlController extends FortyTwoController {
               case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
             }
             if (currNormURI.id != renormURI.id) {
-              changedURIs += ChangedNormURI("follow-nuri", urlObj.url, currNormURI.id, renormURI.id.get)
+              changedURIs += ChangedNormURI("follow-nuri", urlObj.url, currNormURI.id, renormURI.id.get, renormURI.url)
               if(!readOnly) {
                 urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
                 follow.withNormUriId(renormURI.id.get).saveWithCx
@@ -315,7 +315,7 @@ object UrlController extends FortyTwoController {
               case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
             }
             if (currNormURI.id != renormURI.id) {
-              changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.id, renormURI.id.get)
+              changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.id, renormURI.id.get, renormURI.url)
               if(!readOnly) {
                 urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
                 deep.withNormUriId(renormURI.id.get).save
@@ -327,7 +327,7 @@ object UrlController extends FortyTwoController {
       (bookmarkCount, commentCount, followsCount, deepsCount)
     }
     val out = changedURIs.map { u =>
-      "%s,%s,%s,%s".format(u.context,u.url, u.from.map(s=>s.id.toString).getOrElse("NULL"), u.to.id)
+      "%s, %s, %s, %s".format(u.context,u.url, u.from.map(s=>s.id.toString).getOrElse("NULL"), u.to.id)
     }
     val header = "%s bookmarks, %s comments, %s follows, %s deeplinks processed. Found %s necessary updates.".format(bookmarkCount, commentCount, followsCount, deepsCount, out.size)
     header + "\n\n\n" + out.mkString("\n")
