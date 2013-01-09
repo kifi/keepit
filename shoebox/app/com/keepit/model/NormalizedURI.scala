@@ -11,12 +11,12 @@ import org.joda.time.DateTime
 import play.api._
 import play.api.libs.json._
 import ru.circumflex.orm._
-import java.net.URI
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URINormalizer
+import com.keepit.common.net.URI
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
@@ -32,6 +32,8 @@ case class NormalizedURI  (
   urlHash: String,
   state: State[NormalizedURI] = NormalizedURI.States.ACTIVE
 ) extends Logging {
+
+  def domain = URI.parse(url).flatMap(_.host)
 
   def save(implicit conn: Connection): NormalizedURI = {
     log.info("saving new uri %s with hash %s".format(url, urlHash))
@@ -96,6 +98,9 @@ object NormalizedURI {
       (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.state EQ state) LIMIT limit }.list.map( _.view )
     }
   }
+
+  def getByDomain(domain: String)(implicit conn: Connection) =
+    (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.domain EQ domain) }.list.map( _.view )
 
   def getByNormalizedUrl(url: String)(implicit conn: Connection): Option[NormalizedURI] = {
     val hash = hashUrl(normalize(url))
@@ -176,6 +181,7 @@ private[model] class NormalizedURIEntity extends Entity[NormalizedURI, Normalize
   val url = "url".VARCHAR(256).NOT_NULL
   val state = "state".STATE[NormalizedURI].NOT_NULL(NormalizedURI.States.ACTIVE)
   val urlHash = "url_hash".VARCHAR(512).NOT_NULL
+  val domain = "domain".VARCHAR(512)
 
   def relation = NormalizedURIEntity
 
@@ -204,6 +210,7 @@ private[model] object NormalizedURIEntity extends NormalizedURIEntity with Entit
     uri.url := view.url
     uri.state := view.state
     uri.urlHash := view.urlHash
+    uri.domain.set(view.domain.map(_.toString))
     uri
   }
 }
