@@ -75,18 +75,18 @@ api.timers.setTimeout(function maybeSend() {
   if (_eventLog.length) {
     var t0 = _eventLog[0].time;
     _eventLog.forEach(function(e) { e.time -= t0 }); // relative times = fewer bytes
-    //var config = getConfigs();
-    // var data = {
-    //   "version": 1,
-    //   "time": new Date - t0,
-    //   "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
-    //   "events": _eventLog};
-    // api.log("[EventLog] sending:", data);
-    // ajax("POST", "http://" + config.server + "/users/events", data, function done(o) {
-    //   api.log("[EventLog] done:", o)
-    // }, function fail(xhr) {
-    //   api.log("[EventLog] fail:", xhr.responseText);
-    // });
+    var config = getConfigs();
+    var data = {
+      "version": 1,
+      "time": new Date - t0,
+      "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
+      "events": _eventLog};
+    api.log("[EventLog] sending:", data);
+    ajax("POST", "http://" + config.server + "/users/events", data, function done(o) {
+      api.log("[EventLog] done:", o)
+    }, function fail(xhr) {
+      api.log("[EventLog] fail:", xhr.responseText);
+    });
 
     _eventLog.length = 0;
     eventLogDelay = Math.round(Math.max(Math.sqrt(eventLogDelay), 5 * 1000));
