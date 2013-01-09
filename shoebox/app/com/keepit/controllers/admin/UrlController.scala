@@ -217,7 +217,7 @@ object UrlController extends FortyTwoController {
               case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
             }
 
-            if (currNormURI.id != renormURI.id) {
+            if (currNormURI.url != renormURI.url) {
               changedURIs += ChangedNormURI("bookmark-nuri", urlObj.url, currNormURI.id, renormURI.id.get, renormURI.url)
               if(!readOnly) {
                 urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
@@ -249,7 +249,7 @@ object UrlController extends FortyTwoController {
               case Some(u) => (u,URLHistoryCause.MERGE)
               case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
             }
-            if (currNormURI.id != renormURI.id) {
+            if (currNormURI.url != renormURI.url) {
               changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.id, renormURI.id.get, renormURI.url)
               if(!readOnly) {
                 urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
@@ -281,7 +281,7 @@ object UrlController extends FortyTwoController {
               case Some(u) => (u,URLHistoryCause.MERGE)
               case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
             }
-            if (currNormURI.id != renormURI.id) {
+            if (currNormURI.url != renormURI.url) {
               changedURIs += ChangedNormURI("follow-nuri", urlObj.url, currNormURI.id, renormURI.id.get, renormURI.url)
               if(!readOnly) {
                 urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
@@ -314,7 +314,7 @@ object UrlController extends FortyTwoController {
               case Some(u) => (u,URLHistoryCause.MERGE)
               case None => (NormalizedURI(urlObj.url).save,URLHistoryCause.SPLIT)
             }
-            if (currNormURI.id != renormURI.id) {
+            if (currNormURI.url != renormURI.url) {
               changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.id, renormURI.id.get, renormURI.url)
               if(!readOnly) {
                 urlObj.withHistory(URLHistory(renormURI.id.get,reason)).save
