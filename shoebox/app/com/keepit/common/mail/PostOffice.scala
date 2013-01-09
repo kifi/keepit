@@ -9,8 +9,7 @@ import play.api.libs.json._
 import play.api.libs.ws._
 import play.api.http.ContentTypes
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.{HealthcheckPlugin, Healthcheck, HealthcheckError}
 import com.keepit.common.db.CX
 import com.keepit.inject._
 import akka.actor.ActorSystem
@@ -46,7 +45,15 @@ class PostOfficeImpl extends PostOffice with Logging {
 
   def sendMail(mail: ElectronicMail): ElectronicMail = {
     val prepared = CX.withConnection { implicit c =>
-      mail.prepareToSend().save
+      val newMail = if(mail.htmlBody.size > 524288 || (mail.textBody.isDefined && mail.textBody.get.size > 524288)) {
+        val newMail = mail.copy(htmlBody = mail.htmlBody.take(524288), textBody = mail.textBody.map(_.take(524288)))
+        val ex = new Exception("PostOffice attempted to send an email (%s) longer than 524288 bytes. Too big!".format(newMail.externalId))
+        inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        newMail.save
+      } else {
+        mail.save
+      }
+      newMail.prepareToSend()
     }
     inject[MailSenderPlugin].processMail(prepared)
     prepared
