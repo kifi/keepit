@@ -327,7 +327,7 @@ object UrlController extends FortyTwoController {
       (bookmarkCount, commentCount, followsCount, deepsCount)
     }
     val out = changedURIs.map { u =>
-      "%s, %s, %s, %s".format(u.context,u.url, u.from.map(s=>s.id.toString).getOrElse("NULL"), u.to.id)
+      "%s, %s, %s, %s, %s".format(u.context,u.url, u.from.map(s=>s.id.toString).getOrElse("NULL"), u.to.id, u.toUrl)
     }
     val header = "%s bookmarks, %s comments, %s follows, %s deeplinks processed. Found %s necessary updates.".format(bookmarkCount, commentCount, followsCount, deepsCount, out.size)
     header + "\n\n\n" + out.mkString("\n")
