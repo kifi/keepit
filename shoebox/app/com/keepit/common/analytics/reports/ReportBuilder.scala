@@ -69,7 +69,7 @@ object Reports {
   )
 
   lazy val DailyAdminReports = ReportGroup("DailyAdminReport",
-    Seq(DailyUniqueDepricatedAddBookmarks, DailySearchQueriesReport)
+    Seq(dailyUniqueDepricatedAddBookmarks, dailySearchQueriesReport)
   )
 }
 
