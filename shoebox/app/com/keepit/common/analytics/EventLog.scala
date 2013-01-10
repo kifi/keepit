@@ -69,6 +69,9 @@ case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, meta
 
 case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime,
     serverVersion: String = inject[FortyTwoServices].currentService + ":" + inject[FortyTwoServices].currentVersion) {
+
+  EventListener.newEvent(this)
+
   def persistToS3(): Event = {
     inject[S3EventStore] += (externalId -> this)
     this
