@@ -89,7 +89,7 @@ object UrlController extends FortyTwoController {
               try {
                 if(!readOnly) {
                   val savedNormURI = renormURI.save
-                  urlObj.withHistory(URLHistory(savedNormURI.id.get,reason)).save
+                  urlObj.withNormURI(savedNormURI.id.get).withHistory(URLHistory(savedNormURI.id.get,reason)).save
                   bookmark.withNormUriId(renormURI.id.get).save
                 }
               } catch {

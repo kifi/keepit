@@ -31,6 +31,8 @@ import org.joda.time.LocalDate
 import akka.actor.{Scheduler, Cancellable, ActorRef}
 import akka.util.Duration
 import scala.collection.mutable.{Stack => MutableStack}
+import com.google.inject.multibindings.Multibinder
+import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
 
 class TestApplication(override val global: TestGlobal) extends play.api.test.FakeApplication() {
   def withFakeMail() = overrideWith(FakeMailModule())
@@ -58,6 +60,10 @@ case class TestModule() extends ScalaModule {
       lazy val database = Database.forDataSource(DB.getDataSource("shoebox")(Play.current))
       lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
     }))
+
+    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
+    listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
+    listenerBinder.addBinding().to(classOf[UsefulPageListener])
   }
 
   @Provides @Singleton
