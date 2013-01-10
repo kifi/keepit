@@ -2,7 +2,7 @@
 // @require scripts/api.js
 
 function logEvent() {  // parameters defined in main.js
-  api.port.emit("log_event", arguments);
+  api.port.emit("log_event", Array.prototype.slice.call(arguments));
 }
 
 var slider, injected, t0 = new Date().getTime();
