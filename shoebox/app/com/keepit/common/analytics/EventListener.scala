@@ -8,7 +8,7 @@ import play.api.Play.current
 import java.sql.Connection
 
 object EventListener {
-  val listeners: Seq[EventListener] = Seq(KifiResultClickedListener, GoogleResultClickedListener, DeadQueryListener)
+  val listeners: Seq[EventListener] = Seq(KifiResultClickedListener, UsefulPageListener, DeadQueryListener)
   def newEvent(event: Event): Seq[String] = {
     val events = listeners.filter(_.onEvent.isDefinedAt(event))
     events.map(_.onEvent)
@@ -46,14 +46,15 @@ object KifiResultClickedListener extends EventListener {
   }
 }
 
-object GoogleResultClickedListener extends EventListener {
+object UsefulPageListener extends EventListener {
   def onEvent: PartialFunction[Event,Unit] = {
-    case Event(_,UserEventMetadata(EventFamilies.SEARCH,"googleResultClicked",externalUser,_,experiments,metaData,_),_,_) =>
-      val (user, meta) = CX.withConnection { implicit conn =>
-        val (user, meta) = EventHelper.searchParser(externalUser, metaData)
-        (user, meta)
+    case Event(_,UserEventMetadata(EventFamilies.SLIDER,"usefulPage",externalUser,_,experiments,metaData,_),_,_) =>
+      val (user, url) = CX.withConnection { implicit conn =>
+        val user = User.get(externalUser)
+        val url = (metaData \ "url").asOpt[String].getOrElse("")
+        (user, url)
       }
-      // handle GoogleResultClicked
+      // handle UsefulPageListener
   }
 }
 
@@ -61,11 +62,11 @@ object DeadQueryListener extends EventListener {
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_,UserEventMetadata(EventFamilies.SEARCH,"searchUnload",externalUser,_,experiments,metaData,_),_,_)
       if (metaData \ "kifiClicked").asOpt[String].getOrElse("-1").toDouble.toInt == 0 =>
-
-      val (user, meta) = CX.withConnection { implicit conn =>
-        val (user, meta) = EventHelper.searchParser(externalUser, metaData)
-        (user, meta)
-      }
+        // Commenting to not waste queries while this isn't used. However, the pattern here can be used elsewhere.
+//      val (user, meta) = CX.withConnection { implicit conn =>
+//        val (user, meta) = EventHelper.searchParser(externalUser, metaData)
+//        (user, meta)
+//      }
       // handle DeadQuery
   }
 }
