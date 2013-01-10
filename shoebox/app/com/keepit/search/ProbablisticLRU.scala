@@ -3,13 +3,11 @@ package com.keepit.search
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.channels.FileChannel.MapMode
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.nio.IntBuffer
-import java.util.Random
 import java.nio.ByteBuffer
+import java.nio.IntBuffer
 import java.nio.MappedByteBuffer
 import java.util.concurrent.atomic.AtomicLong
+import java.util.Random
 
 object ProbablisticLRU {
   def apply(file: File, tableSize: Int, numHashFuncs: Int, syncEvery: Int) = {
