@@ -44,7 +44,19 @@ case class Follow (
   }
 }
 
-class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow] {
+trait FollowRepo extends Repo[Follow] {
+
+}
+
+class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow] with FollowRepo {
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.TypeMapper._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import org.scalaquery.util.{Node, UnaryNode, BinaryNode}
+  import db.Driver.Implicit._
+  import DBSession._
 
   override lazy val table = new RepoTable[Follow]("follow") {
     import FortyTwoTypeMappers._
@@ -60,6 +72,7 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
     def state = column[State[Follow]]("state", O.NotNull)
     def * = idCreateUpdateBase ~ userId ~ uriId ~ urlId.? ~ state <> (Follow, Follow.unapply _)
   }
+
 }
 
 object FollowCxRepo {
@@ -72,12 +85,6 @@ object FollowCxRepo {
 
   def get(uriId: Id[NormalizedURI])(implicit conn: Connection): Seq[Follow] =
     (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.uriId EQ uriId AND (f.state EQ FollowStates.ACTIVE)) list }.map(_.view)
-
-  def get(id: Id[Follow])(implicit conn: Connection): Follow =
-    FollowEntity.get(id).map(_.view).getOrElse(throw NotFoundException(id))
-
-  def get(userId: Id[User], uri: NormalizedURI)(implicit conn: Connection): Option[Follow] =
-    get(userId, uri.id.get)
 
   def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Option[Follow] =
     (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId AND (f.uriId EQ uriId)) unique }.map(_.view)
