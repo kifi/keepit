@@ -17,7 +17,7 @@ import java.security.MessageDigest
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import play.api.libs.json._
-import com.google.inject.Inject
+import com.google.inject.{Inject, ImplementedBy}
 
 case class Follow (
   id: Option[Id[Follow]] = None,
@@ -44,27 +44,23 @@ case class Follow (
   }
 }
 
-trait FollowRepo extends Repo[Follow] {
 
+@ImplementedBy(classOf[FollowRepoImpl])
+trait FollowRepo extends Repo[Follow] {
+  def all(userId: Id[User])(implicit session: RSession): Seq[Follow]
 }
 
 class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow] with FollowRepo {
+  import FortyTwoTypeMappers._
   import org.scalaquery.ql._
   import org.scalaquery.ql.ColumnOps._
   import org.scalaquery.ql.TypeMapper._
   import org.scalaquery.ql.basic.BasicProfile
   import org.scalaquery.ql.extended.ExtendedTable
-  import org.scalaquery.util.{Node, UnaryNode, BinaryNode}
   import db.Driver.Implicit._
   import DBSession._
 
   override lazy val table = new RepoTable[Follow]("follow") {
-    import FortyTwoTypeMappers._
-    import org.scalaquery.ql._
-    import org.scalaquery.ql.ColumnOps._
-    import org.scalaquery.ql.basic.BasicProfile
-    import org.scalaquery.ql.extended.ExtendedTable
-    import org.scalaquery.util.{Node, UnaryNode, BinaryNode}
 
     def userId = column[Id[User]]("user_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
@@ -72,6 +68,9 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
     def state = column[State[Follow]]("state", O.NotNull)
     def * = idCreateUpdateBase ~ userId ~ uriId ~ urlId.? ~ state <> (Follow, Follow.unapply _)
   }
+
+  def all(userId: Id[User])(implicit session: RSession): Seq[Follow] = (for(f <- table if f.userId is userId) yield f).list
+
 
 }
 

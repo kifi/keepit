@@ -21,6 +21,7 @@ class FollowTest extends SpecificationWithJUnit {
     "load by user and uri" in {
       running(new EmptyApplication()) {
         val repo = inject[Repo[Follow]]
+        val followRepo = inject[FollowRepo]
 
         inject[DBConnection].readWrite{ implicit session =>
           repo.count === 0
@@ -48,6 +49,10 @@ class FollowTest extends SpecificationWithJUnit {
           repo.get(f1.id.get) === f1
           repo.get(f2.id.get) === f2
           repo.all.size === 2
+          followRepo.all(user1.id.get).size === 1
+          followRepo.all(user2.id.get).size === 1
+          followRepo.all(user1.id.get).head === f1
+          followRepo.all(user2.id.get).head === f2
         }
 
         CX.withConnection { implicit c =>
