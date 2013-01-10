@@ -50,26 +50,23 @@ class FollowTest extends SpecificationWithJUnit {
           repo.get(f2.id.get) === f2
           repo.all.size === 2
           followRepo.all(user1.id.get).size === 1
-          followRepo.all(user2.id.get).size === 1
+          followRepo.all(user2.id.get).size === 0 //inactive
           followRepo.all(user1.id.get).head === f1
-          followRepo.all(user2.id.get).head === f2
-        }
 
-        inject[DBConnection].readOnly{ implicit session =>
           followRepo.get(user1.id.get, uriA.id.get).isDefined === false
           followRepo.get(user1.id.get, uriB.id.get).isDefined === true
-          followRepo.get(user2.id.get, uriA.id.get).isDefined === true
+          followRepo.get(user2.id.get, uriA.id.get).isDefined === false
           followRepo.get(user2.id.get, uriB.id.get).isDefined === false
         }
 
         inject[DBConnection].readWrite{ implicit session =>
           repo.save(f1.deactivate)
-          repo.save(f2.deactivate)
+          repo.save(f2.activate)
         }
 
         inject[DBConnection].readOnly{ implicit session =>
           followRepo.get(user1.id.get, uriA.id.get).isDefined === false
-          followRepo.get(user1.id.get, uriB.id.get).isDefined === true
+          followRepo.get(user1.id.get, uriB.id.get).isDefined === false
           followRepo.get(user2.id.get, uriA.id.get).isDefined === true
           followRepo.get(user2.id.get, uriB.id.get).isDefined === false
         }

@@ -83,7 +83,7 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
 
   def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[Follow] = {
     val q = for {
-      f <- table if f.uriId === uriId && f.userId === userId && f.state === FollowStates.ACTIVE
+      f <- table if (f.uriId === uriId) && (f.userId === userId) && (f.state === FollowStates.ACTIVE)
     } yield f
     q.firstOption
   }
