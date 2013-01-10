@@ -615,7 +615,7 @@ logEvent("extension", "started");
 authenticate(function() {
   api.log("[main] authenticated");
   api.tabs.each(function(tab) {
-    setIcon(tab.id, "icons/keep.faint.png");
+    setIcon(tab.id);
     if (tab.active) {
       setIconIfFaint(tab);
     }
