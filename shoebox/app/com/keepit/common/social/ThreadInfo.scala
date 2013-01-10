@@ -1,7 +1,7 @@
 package com.keepit.common.social
 
 import com.keepit.model.Comment
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import java.sql.Connection
 import com.keepit.common.db.ExternalId
 import com.keepit.model.CommentRecipient
@@ -29,7 +29,7 @@ object ThreadInfo extends Logging {
       externalId = comment.externalId,
       recipients = recipients,
       digest = lastComment.text, // todo: make smarter
-      lastAuthor = User.get(lastComment.userId).externalId,
+      lastAuthor = UserCxRepo.get(lastComment.userId).externalId,
       messageCount = children.size + 1,
       hasAttachments = false, // todo fix
       createdAt = comment.createdAt,
@@ -38,5 +38,5 @@ object ThreadInfo extends Logging {
   }
 
   def filteredRecipients(userIds: Seq[Id[User]], sessionUser: Option[Id[User]])(implicit conn: Connection): Seq[BasicUser] =
-    userIds.filterNot(recepientUserId => sessionUser map (_ == recepientUserId) getOrElse(false)).distinct map (u => BasicUser(User.get(u)))
+    userIds.filterNot(recepientUserId => sessionUser map (_ == recepientUserId) getOrElse(false)).distinct map (u => BasicUser(UserCxRepo.get(u)))
 }

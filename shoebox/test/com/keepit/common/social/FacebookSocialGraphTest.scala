@@ -15,7 +15,7 @@ import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
 import com.keepit.test.EmptyApplication
 import com.keepit.common.net.HttpClientImpl
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
 import com.keepit.common.net.FakeHttpClient
 import com.keepit.model.SocialUserInfo

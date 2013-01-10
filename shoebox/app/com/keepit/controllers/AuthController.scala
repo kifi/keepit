@@ -34,7 +34,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
-import com.keepit.model.{KifiInstallation, KifiVersion, SocialUserInfo, User, UserAgent}
+import com.keepit.model.{KifiInstallation, KifiVersion, SocialUserInfo, User, UserAgent, UserCxRepo}
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.inject._
 import com.keepit.common.healthcheck._
@@ -49,7 +49,7 @@ object AuthController extends FortyTwoController {
 	      log.info("facebook id %s".format(socialUser.id.id))
 	      val user = CX.withConnection { implicit c =>
   	    	val userId = SocialUserInfo.get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).userId.get
-  	    	User.get(userId)
+  	    	UserCxRepo.get(userId)
   	  	}
         Ok(JsObject(Seq(
           "status" -> JsString("loggedin"),
@@ -103,7 +103,7 @@ object AuthController extends FortyTwoController {
           }
       }
 
-      (User.get(request.userId), installation)
+      (UserCxRepo.get(request.userId), installation)
     }
 
     Ok(JsObject(Seq(
@@ -127,7 +127,7 @@ object AuthController extends FortyTwoController {
 
   def whois = AuthenticatedJsonAction { request =>
     val user = CX.withConnection { implicit c =>
-      User.get(request.userId)
+      UserCxRepo.get(request.userId)
     }
     Ok(JsObject(Seq("externalUserId" -> JsString(user.externalId.toString))))
   }
@@ -138,7 +138,7 @@ object AuthController extends FortyTwoController {
 
   def impersonate(id: Id[User]) = AdminJsonAction { request =>
     val user = CX.withConnection { implicit c =>
-      User.get(id)
+      UserCxRepo.get(id)
     }
     log.info("impersonating user %s".format(user)) //todo(eishay) add event & email
     Ok(JsObject(Seq("userId" -> JsString(id.toString)))).withCookies(ImpersonateCookie.encodeAsCookie(Some(user.externalId)))

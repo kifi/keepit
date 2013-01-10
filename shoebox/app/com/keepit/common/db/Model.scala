@@ -8,3 +8,7 @@ trait Model[M] {
   def withId(id: Id[M]): M
   def withUpdateTime(now: DateTime): M
 }
+
+trait ModelWithExternalId[M] extends Model[M] { self: Model[M] =>
+  def externalId: ExternalId[M]
+}

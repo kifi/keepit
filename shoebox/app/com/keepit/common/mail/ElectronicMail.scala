@@ -9,7 +9,7 @@ import java.sql.Connection
 import org.joda.time.DateTime
 import play.api.Play.current
 import ru.circumflex.orm._
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 
 case class ElectronicMailMessageId(val id: String)
 case class ElectronicMailCategory(val category: String)

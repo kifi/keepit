@@ -10,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.mongodb.casbah.commons.conversions.scala._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import play.api.libs.json._
 import play.api.libs.json.Json._
 import com.mongodb.casbah.map_reduce.MapReduceStandardOutput

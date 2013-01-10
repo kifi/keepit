@@ -25,7 +25,7 @@ object EventHelper {
   def searchParser(externalUser: ExternalId[User], json: JsObject)(implicit conn: Connection) = {
       val query = (json \ "query").asOpt[String].getOrElse("")
       val url = (json \ "url").asOpt[String].getOrElse("")
-      val user = User.get(externalUser)
+      val user = UserCxRepo.get(externalUser)
       val normUrl = NormalizedURI.getByNormalizedUrl(url)
       val queryUUID = ExternalId.asOpt[ArticleSearchResultRef]((json \ "queryUUID").asOpt[String].getOrElse(""))
       (user, SearchMeta(query, url, normUrl, queryUUID))
@@ -50,7 +50,7 @@ object UsefulPageListener extends EventListener {
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_,UserEventMetadata(EventFamilies.SLIDER,"usefulPage",externalUser,_,experiments,metaData,_),_,_) =>
       val (user, url) = CX.withConnection { implicit conn =>
-        val user = User.get(externalUser)
+        val user = UserCxRepo.get(externalUser)
         val url = (metaData \ "url").asOpt[String].getOrElse("")
         (user, url)
       }

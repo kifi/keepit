@@ -1,6 +1,6 @@
 package com.keepit.common.db.slick
 
-import com.keepit.common.db.{Id, Model}
+import com.keepit.common.db._
 import com.keepit.inject._
 
 import org.joda.time.DateTime
@@ -11,6 +11,8 @@ import org.scalaquery.ql.TypeMapper._
 import org.scalaquery.ql.basic.BasicProfile
 import org.scalaquery.ql.extended.ExtendedTable
 import org.scalaquery.util.{Node, UnaryNode, BinaryNode}
+
+import DBSession._
 
 import play.api.Play.current
 
@@ -23,12 +25,15 @@ trait Repo[M <: Model[M]] {
   def count(implicit session: RSession): Int
 }
 
+trait RepoWithExternalId[M <: ModelWithExternalId[M]] { self: Repo[M] =>
+  def get(id: ExternalId[M])(implicit session: RSession): M
+  def getOpt(id: ExternalId[M])(implicit session: RSession): M
+}
+
 trait DbRepo[M <: Model[M]] extends Repo[M] {
   import FortyTwoTypeMappers._
   val db: DataBaseComponent
   import db.Driver.Implicit._ // here's the driver, abstracted away
-
-  import DBSession._
 
   implicit val IdMapper = new BaseTypeMapper[Id[M]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[M]
@@ -68,6 +73,10 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   }
 
 }
+
+//trait DbRepoWithExternalId[M <: Model[M]] extends RepoWithExternalId[M] { self: DbRepo[M] =>
+//  def get(id: ExternalId[M])(implicit session: RSession): M = (for(f <- table if f.id is id) yield f).first
+//}
 
 /**
  * The toUpperCase is per an H2 "bug?"

@@ -1,5 +1,8 @@
 package com.keepit.model
 
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
 import com.keepit.common.db.NotFoundException
 import com.keepit.common.time._
@@ -18,30 +21,71 @@ case class User(
   externalId: ExternalId[User] = ExternalId(),
   firstName: String,
   lastName: String,
-  state: State[User] = User.States.ACTIVE
-) {
+  state: State[User] = UserStates.ACTIVE
+) extends Model[User] {
+  def withId(id: Id[User]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
   def withExternalId(id: ExternalId[User]) = copy(externalId = id)
 
-  def save(implicit conn: Connection): User = {
+  def save(implicit conn: Connection) = {
     val entity = UserEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
     entity.view
   }
 }
 
-object User {
-  //Used for admin, checking that we can talk with the db
-  def loadTest()(implicit conn: Connection): Unit = {
-    val user: Option[UserEntity] = (UserEntity AS "u").map { u =>
-      SELECT (u.*) FROM u LIMIT 1
-    } unique;
-    user.get.view
-  }
+//@ImplementedBy(classOf[UserRepoImpl])
+//trait UserRepo extends Repo[User] {
+//  def all(userId: Id[User])(implicit session: RSession): Seq[User]
+//  def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[User]
+//  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[User]
+//}
 
+//class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] with UserRepo {
+//  import FortyTwoTypeMappers._
+//  import org.scalaquery.ql._
+//  import org.scalaquery.ql.ColumnOps._
+//  import org.scalaquery.ql.basic.BasicProfile
+//  import org.scalaquery.ql.extended.ExtendedTable
+//  import db.Driver.Implicit._
+//  import DBSession._
+//
+//  override lazy val table = new RepoTable[User]("User") {
+//
+//    def userId = column[Id[User]]("user_id", O.NotNull)
+//    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+//    def urlId = column[Id[URL]]("url_id", O.Nullable)
+//    def state = column[State[User]]("state", O.NotNull)
+//    def * = idCreateUpdateBase ~ userId ~ uriId ~ urlId.? ~ state <> (User, UserCxRepo.unapply _)
+//  }
+//
+//  def all(userId: Id[User])(implicit session: RSession): Seq[User] =
+//    (for(f <- table if f.userId === userId && f.state === UserStates.ACTIVE) yield f).list
+//
+//  def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[User] = {
+//    val q = for {
+//      f <- table if f.uriId === uriId && f.state === UserStates.ACTIVE
+//    } yield f
+//    q.list
+//  }
+//
+//  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[User] = {
+//    val q = for {
+//      f <- table if (f.uriId === uriId) && (f.userId === userId) && (f.state === UserStates.ACTIVE)
+//    } yield f
+//    q.firstOption
+//  }
+//
+//}
+
+object UserCxRepo {
+
+  //slicked
   def all(implicit conn: Connection): Seq[User] =
     UserEntity.all.map(_.view)
 
+  //slicked
   def get(id: Id[User])(implicit conn: Connection): User =
     getOpt(id).getOrElse(throw NotFoundException(id))
 
@@ -61,10 +105,11 @@ object User {
     user.map { user => SELECT(user.*) FROM (((user JOIN bookmark).ON("b.user_id = u.id")) JOIN nuri).ON("b.uri_id = nuri.id") WHERE (nuri.urlHash EQ hashUrl) list }.map(_.view)
   }
 
-  object States {
-    val ACTIVE = State[User]("active")
-    val INACTIVE = State[User]("inactive")
-  }
+}
+
+object UserStates {
+  val ACTIVE = State[User]("active")
+  val INACTIVE = State[User]("inactive")
 }
 
 private[model] class UserEntity extends Entity[User, UserEntity] {
@@ -73,7 +118,7 @@ private[model] class UserEntity extends Entity[User, UserEntity] {
   val externalId = "external_id".EXTERNAL_ID[User].NOT_NULL(ExternalId())
   val firstName = "first_name".VARCHAR(256).NOT_NULL
   val lastName = "last_name".VARCHAR(256).NOT_NULL
-  val state = "state".STATE[User].NOT_NULL(User.States.ACTIVE)
+  val state = "state".STATE[User].NOT_NULL(UserStates.ACTIVE)
 
   def relation = UserEntity
 

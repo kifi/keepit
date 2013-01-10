@@ -8,8 +8,7 @@ import com.keepit.common.db.State
 import com.keepit.common.db.Id
 import com.keepit.inject.inject
 import com.keepit.model.KifiInstallation
-import com.keepit.model.User
-import com.keepit.model.UserExperiment
+import com.keepit.model.{UserExperiment, User, UserCxRepo}
 import com.keepit.common.time._
 import com.keepit.common.controller.FortyTwoServices
 

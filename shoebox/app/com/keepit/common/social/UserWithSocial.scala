@@ -5,8 +5,8 @@ import com.keepit.model.{User, SocialUserInfo}
 import com.keepit.model.Bookmark
 import com.keepit.model.EmailAddress
 import com.keepit.model.UserExperiment.ExperimentType
-import com.keepit.common.db.State
 import com.keepit.model.UserExperiment
+import com.keepit.common.db.State
 
 case class UserWithSocial(user: User, socialUserInfo: SocialUserInfo, bookmarksCount: Long, emails: Seq[EmailAddress], experiments: Seq[State[ExperimentType]])
 
