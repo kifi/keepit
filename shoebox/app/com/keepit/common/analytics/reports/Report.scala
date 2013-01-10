@@ -281,7 +281,7 @@ class DailyMessage extends BasicDailyAggregationReport with Logging {
 }
 
 class DailyUnkeep extends BasicDailyAggregationReport with Logging {
-  override val reportName = "DailyKeep"
+  override val reportName = "DailyUnkeep"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("unkeep").build
@@ -290,7 +290,7 @@ class DailyUnkeep extends BasicDailyAggregationReport with Logging {
 }
 
 class DailyKeep extends BasicDailyAggregationReport with Logging {
-  override val reportName = "DailyUnkeep"
+  override val reportName = "DailyKeep"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("keep").build
