@@ -34,9 +34,9 @@ class FollowTest extends SpecificationWithJUnit {
            NormalizedURI("Amazon", "http://www.amazon.com/").save)
         }
 
-        CX.withConnection { implicit c =>
-          FollowCxRepo.get(user1.id.get, uriB.id.get).isDefined === false
-          FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === false
+        inject[DBConnection].readOnly{ implicit session =>
+          followRepo.get(user1.id.get, uriB.id.get).isDefined === false
+          followRepo.get(user2.id.get, uriA.id.get).isDefined === false
         }
 
         val (f1, f2) = inject[DBConnection].readWrite{ implicit session =>
@@ -55,11 +55,11 @@ class FollowTest extends SpecificationWithJUnit {
           followRepo.all(user2.id.get).head === f2
         }
 
-        CX.withConnection { implicit c =>
-          FollowCxRepo.get(user1.id.get, uriA.id.get).isDefined === false
-          FollowCxRepo.get(user1.id.get, uriB.id.get).isDefined === true
-          FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === true
-          FollowCxRepo.get(user2.id.get, uriB.id.get).isDefined === false
+        inject[DBConnection].readOnly{ implicit session =>
+          followRepo.get(user1.id.get, uriA.id.get).isDefined === false
+          followRepo.get(user1.id.get, uriB.id.get).isDefined === true
+          followRepo.get(user2.id.get, uriA.id.get).isDefined === true
+          followRepo.get(user2.id.get, uriB.id.get).isDefined === false
         }
 
         inject[DBConnection].readWrite{ implicit session =>
@@ -67,13 +67,12 @@ class FollowTest extends SpecificationWithJUnit {
           repo.save(f2.deactivate)
         }
 
-        CX.withConnection { implicit c =>
-          FollowCxRepo.get(user1.id.get, uriA.id.get).isDefined === false
-          FollowCxRepo.get(user1.id.get, uriB.id.get).isDefined === true
-          FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === true
-          FollowCxRepo.get(user2.id.get, uriB.id.get).isDefined === false
+        inject[DBConnection].readOnly{ implicit session =>
+          followRepo.get(user1.id.get, uriA.id.get).isDefined === false
+          followRepo.get(user1.id.get, uriB.id.get).isDefined === true
+          followRepo.get(user2.id.get, uriA.id.get).isDefined === true
+          followRepo.get(user2.id.get, uriB.id.get).isDefined === false
         }
-
       }
     }
   }
