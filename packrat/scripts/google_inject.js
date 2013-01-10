@@ -16,6 +16,9 @@ api.log("[google_inject.js]");
     "showDefault": 5
   };
   var inprogressSearchQuery = "";
+  var timeSinceLastSearch;
+  var kifiResultsClicked = 0;
+  var googleResultsClicked = 0;
 
   function logSearchEvent(t) {
     //$("li.g .vsc a").mousedown(function(t) { console.log($(this).parents('.kifi_reslist').length); });
@@ -45,6 +48,13 @@ api.log("[google_inject.js]");
     whichResult = whichResult.toString();
     var query = $("input[name='q']").val();
     var queryUUID = resultsStore.lastRemoteResults.uuid;
+
+    if(whichResult != -1) {
+      if(isKifi)
+        kifiResultsClicked++;
+      else
+        googleResultsClicked++;
+    }
 
     if(isKifi && href && queryUUID && whichResult != -1)
       logEvent("search", "kifiResultClicked", {"url": href, "whichResult": whichResult, "query": query, "queryUUID": queryUUID});
@@ -139,13 +149,17 @@ api.log("[google_inject.js]");
         return;
       }
 
+      timeSinceLastSearch = new Date().getTime();
+
       api.log("kifi results recieved for " + resultsStore.query);
       api.log(resultsStore);
 
-      logEvent("search", "kifiLoaded");
+      logEvent("search", "kifiLoaded", {"query": resultsStore.lastRemoteResults.query, "queryUUID": resultsStore.lastRemoteResults.uuid });
       if(results.searchResults.hits.length > 0) {
-        logEvent("search", "kifiAtLeastOneResult");
+        logEvent("search", "kifiAtLeastOneResult", {"query": resultsStore.lastRemoteResults.query, "queryUUID": resultsStore.lastRemoteResults.uuid });
       }
+      kifiResultsClicked = 0;
+      googleResultsClicked = 0;
 
       drawResults(0);
 
@@ -231,6 +245,16 @@ api.log("[google_inject.js]");
     resultsStore.show = resultsStore.showDefault;
     updateQuery();
     setTimeout(function(){ updateQuery(0); }, 300); // sanity check
+  });
+
+  $(window).bind('unload', function() {
+    var now = new Date().getTime();
+    var inputQuery = $("input[name='q']").val();
+    var kifiQuery = resultsStore.lastRemoteResults.query;
+
+    if(inputQuery == kifiQuery && timeSinceLastSearch && now-timeSinceLastSearch > 2000) {
+      logEvent("search", "searchUnload", {"query": kifiQuery, "queryUUID": resultsStore.lastRemoteResults.queryUUID, "kifiResultsClicked": kifiResultsClicked, "googleResultsClicked": googleResultsClicked});
+    }
   });
 
   function cleanupKifiResults() {

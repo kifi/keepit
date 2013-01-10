@@ -12,6 +12,7 @@ import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.common.time._
 import com.keepit.common.controller.FortyTwoServices
+import java.util.{Set => JSet}
 
 import play.api.Play.current
 import play.api.libs.json._
@@ -69,6 +70,9 @@ case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, meta
 
 case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime,
     serverVersion: String = inject[FortyTwoServices].currentService + ":" + inject[FortyTwoServices].currentVersion) {
+
+  inject[EventHelper].newEvent(this)
+
   def persistToS3(): Event = {
     inject[S3EventStore] += (externalId -> this)
     this

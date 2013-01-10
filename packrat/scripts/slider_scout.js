@@ -23,6 +23,16 @@ var slider, injected, t0 = new Date().getTime();
     }
   });
 
+  (function() {
+    var timeout = setInterval(function() {
+      var now = new Date().getTime();
+      if(document.body.scrollTop > 300 && document.hasFocus() == true && now-t0 > 60000) {
+        clearInterval(timeout);
+        logEvent("slider", "usefulPage", { "url": document.location.href });
+      }
+    }, 5000);
+  })();
+
   api.port.on({
     button_click: function() {
       withSlider(function() {

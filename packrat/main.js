@@ -351,7 +351,7 @@ function postComment(request, respond) {
 function searchOnServer(request, respond) {
   var config = getConfigs();
 
-  logEvent("search", "newSearch");
+  logEvent("search", "newSearch", {"query": request.query});
 
   if (!session) {
     api.log("[searchOnServer] no session");
