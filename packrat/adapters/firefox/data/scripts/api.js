@@ -17,8 +17,11 @@ api = function() {
       el.innerHTML = css;
       (document.head || document.body).appendChild(el);
     });
-    scripts.forEach(eval);
-    self.port.emit("api_response", callbackId);
+    var result;
+    scripts.forEach(function(js) {
+      result = window.eval(js);
+    });
+    self.port.emit("api_response", callbackId, result);
   });
 
   return {
@@ -27,7 +30,14 @@ api = function() {
     },
     log: function() {
       var d = new Date(), ds = d.toString();
-      console.log.apply(console, Array.prototype.concat.apply(["|" + ds.substring(0, 2) + ds.substring(15,24) + "." + String(+d).substring(10) + "|"], arguments));
+      var args = Array.prototype.slice.apply(arguments);
+      for (var i = 0; i < args.length; i++) {
+        var arg = args[i];
+        if (typeof arg == "object") {
+          args[i] = JSON.stringify(arg);
+        }
+      }
+      console.log("[" + ds.substring(0,2) + ds.substring(15,24) + "." + String(+d).substring(10) + "]", args.join(" "));
     },
     port: {
       emit: function(type, data, callback) {
