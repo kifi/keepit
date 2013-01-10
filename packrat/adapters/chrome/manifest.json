@@ -10,13 +10,18 @@
   },
   "options_page": "options.html",
   "page_action": {
-    "default_icon": "icons/keep.png",
-    "default_title": "Kifi"
+    "default_icon": "icons/keep.faint.png",
+    "default_title": "KiFi"
   },
   "background" : {
     "page": "main.html"
   },
   "content_scripts" : [
+    {
+      "matches": ["*://*/*"],
+      "js": ["scripts/ready.js"],
+      "run_at": "document_end"
+    },
     {
       "matches": [
         "*://dev.ezkeep.com/r/*",
@@ -24,8 +29,7 @@
         "*://*.kifi.com/r/*"
       ],
       "js": ["scripts/deeplink.js"],
-      "run_at" : "document_end",
-      "all_frames" : false
+      "run_at": "document_end"
     }
   ],
   "permissions": [
