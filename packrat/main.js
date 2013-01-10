@@ -162,7 +162,7 @@ api.port.on({
     return true;
   },
   log_event: function(data) {
-    logEvent.apply(null, data.args);
+    logEvent.apply(null, data);
   },
   get_comments: function(data, respond, tab) {
     ajax("GET", "http://" + getConfigs().server +
