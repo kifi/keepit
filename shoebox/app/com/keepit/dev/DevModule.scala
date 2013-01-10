@@ -50,6 +50,9 @@ import com.keepit.common.analytics.MongoEventStoreImpl
 import com.mongodb.casbah.MongoConnection
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
+import com.google.inject.multibindings._
+import com.keepit.common.analytics._
+
 
 class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -61,8 +64,12 @@ class DevModule() extends ScalaModule with Logging {
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
     bind[SocialGraphRefresher].to[SocialGraphRefresherImpl].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
-    bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped] // if Events need to be persisted in a dev environment, use PersistEventPluginImpl instead
+    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped] // if Events need to be persisted in a dev environment, use PersistEventPluginImpl instead
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
+
+    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
+    listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
+    listenerBinder.addBinding().to(classOf[UsefulPageListener])
   }
 
   @Singleton
