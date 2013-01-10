@@ -21,6 +21,7 @@ class FollowTest extends SpecificationWithJUnit {
     "load by user and uri" in {
       running(new EmptyApplication()) {
         val repo = inject[Repo[Follow]]
+        val followRepo = inject[FollowRepo]
 
         inject[DBConnection].readWrite{ implicit session =>
           repo.count === 0
@@ -33,9 +34,9 @@ class FollowTest extends SpecificationWithJUnit {
            NormalizedURI("Amazon", "http://www.amazon.com/").save)
         }
 
-        CX.withConnection { implicit c =>
-          FollowCxRepo.get(user1.id.get, uriB.id.get).isDefined === false
-          FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === false
+        inject[DBConnection].readOnly{ implicit session =>
+          followRepo.get(user1.id.get, uriB.id.get).isDefined === false
+          followRepo.get(user2.id.get, uriA.id.get).isDefined === false
         }
 
         val (f1, f2) = inject[DBConnection].readWrite{ implicit session =>
@@ -43,31 +44,32 @@ class FollowTest extends SpecificationWithJUnit {
           val f2 = repo.save(Follow(userId = user2.id.get, uriId = uriA.id.get, state = FollowStates.INACTIVE))
           (f1, f2)
         }
-//
-//        inject[DBConnection].readOnly{ implicit session =>
-//          repo.get(f1.id.get) === f1
-//          repo.get(f2.id.get) === f2
-//        }
 
-        CX.withConnection { implicit c =>
-          FollowCxRepo.get(user1.id.get, uriA.id.get).isDefined === false
-          FollowCxRepo.get(user1.id.get, uriB.id.get).isDefined === true
-          FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === true
-          FollowCxRepo.get(user2.id.get, uriB.id.get).isDefined === false
+        inject[DBConnection].readOnly{ implicit session =>
+          repo.get(f1.id.get) === f1
+          repo.get(f2.id.get) === f2
+          repo.all.size === 2
+          followRepo.all(user1.id.get).size === 1
+          followRepo.all(user2.id.get).size === 0 //inactive
+          followRepo.all(user1.id.get).head === f1
+
+          followRepo.get(user1.id.get, uriA.id.get).isDefined === false
+          followRepo.get(user1.id.get, uriB.id.get).isDefined === true
+          followRepo.get(user2.id.get, uriA.id.get).isDefined === false
+          followRepo.get(user2.id.get, uriB.id.get).isDefined === false
         }
 
         inject[DBConnection].readWrite{ implicit session =>
           repo.save(f1.deactivate)
-          repo.save(f2.deactivate)
+          repo.save(f2.activate)
         }
 
-        CX.withConnection { implicit c =>
-          FollowCxRepo.get(user1.id.get, uriA.id.get).isDefined === false
-          FollowCxRepo.get(user1.id.get, uriB.id.get).isDefined === true
-          FollowCxRepo.get(user2.id.get, uriA.id.get).isDefined === true
-          FollowCxRepo.get(user2.id.get, uriB.id.get).isDefined === false
+        inject[DBConnection].readOnly{ implicit session =>
+          followRepo.get(user1.id.get, uriA.id.get).isDefined === false
+          followRepo.get(user1.id.get, uriB.id.get).isDefined === false
+          followRepo.get(user2.id.get, uriA.id.get).isDefined === true
+          followRepo.get(user2.id.get, uriB.id.get).isDefined === false
         }
-
       }
     }
   }

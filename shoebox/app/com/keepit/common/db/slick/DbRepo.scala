@@ -17,7 +17,8 @@ import play.api.Play.current
 
 trait Repo[M <: Model[M]] {
   import DBSession._
-//  def get(id: Id[M])(implicit session: RSession): M
+  def get(id: Id[M])(implicit session: RSession): M
+  def all(implicit session: RSession): Seq[M]
   def save(model: M)(implicit session: RWSession): M
   def count(implicit session: RSession): Int
 }
@@ -29,15 +30,15 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
 
   import DBSession._
 
+  implicit val IdMapper = new BaseTypeMapper[Id[M]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[M]
+  }
+
   protected def table: RepoTable[M]
 
   def descTable(): String = db.handle.withSession {
     table.ddl.createStatements mkString "\n"
   }
-
-//  def get(id: Id[M])(implicit session: RSession): M =
-//    table.where(r => Is(r.id, id))
-//    (for(r <- table if Is(r.id, Node(ConstColumn(id)))) yield (r)).first
 
   def save(model: M)(implicit session: RWSession): M = {
     val toUpdate = model.withUpdateTime(inject[DateTime])
@@ -48,6 +49,10 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   }
 
   def count(implicit session: RSession): Int = Query(table.count).first
+
+  def get(id: Id[M])(implicit session: RSession): M = (for(f <- table if f.id is id) yield f).first
+
+  def all(implicit session: RSession): Seq[M] = (for(f <- table) yield f).list
 
   private def insert(model: M)(implicit session: RWSession) = {
     assert(1 == table.insert(model))
@@ -71,7 +76,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
 abstract class RepoTable[M <: Model[M]](name: String) extends ExtendedTable[M](name.toUpperCase()) {
   import FortyTwoTypeMappers._
 
-  implicit val mapper = new BaseTypeMapper[Id[M]] {
+  implicit val IdMapper = new BaseTypeMapper[Id[M]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[M]
   }
 

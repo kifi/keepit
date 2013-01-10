@@ -17,7 +17,7 @@ import java.security.MessageDigest
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import play.api.libs.json._
-import com.google.inject.Inject
+import com.google.inject.{Inject, ImplementedBy}
 
 case class Follow (
   id: Option[Id[Follow]] = None,
@@ -44,15 +44,25 @@ case class Follow (
   }
 }
 
-class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow] {
+
+@ImplementedBy(classOf[FollowRepoImpl])
+trait FollowRepo extends Repo[Follow] {
+  def all(userId: Id[User])(implicit session: RSession): Seq[Follow]
+  def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Follow]
+  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[Follow]
+}
+
+class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow] with FollowRepo {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.TypeMapper._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
 
   override lazy val table = new RepoTable[Follow]("follow") {
-    import FortyTwoTypeMappers._
-    import org.scalaquery.ql._
-    import org.scalaquery.ql.ColumnOps._
-    import org.scalaquery.ql.basic.BasicProfile
-    import org.scalaquery.ql.extended.ExtendedTable
-    import org.scalaquery.util.{Node, UnaryNode, BinaryNode}
 
     def userId = column[Id[User]]("user_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
@@ -60,30 +70,43 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
     def state = column[State[Follow]]("state", O.NotNull)
     def * = idCreateUpdateBase ~ userId ~ uriId ~ urlId.? ~ state <> (Follow, Follow.unapply _)
   }
+
+  def all(userId: Id[User])(implicit session: RSession): Seq[Follow] =
+    (for(f <- table if f.userId === userId && f.state === FollowStates.ACTIVE) yield f).list
+
+  def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Follow] = {
+    val q = for {
+      f <- table if f.uriId === uriId && f.state === FollowStates.ACTIVE
+    } yield f
+    q.list
+  }
+
+  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[Follow] = {
+    val q = for {
+      f <- table if (f.uriId === uriId) && (f.userId === userId) && (f.state === FollowStates.ACTIVE)
+    } yield f
+    q.firstOption
+  }
+
 }
 
 object FollowCxRepo {
 
+  //slicked
   def all(implicit conn: Connection): Seq[Follow] =
     FollowEntity.all.map(_.view)
 
+  //slicked
   def all(userId: Id[User])(implicit conn: Connection): Seq[Follow] =
     (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId) list }.map(_.view)
 
+  //slicked
   def get(uriId: Id[NormalizedURI])(implicit conn: Connection): Seq[Follow] =
     (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.uriId EQ uriId AND (f.state EQ FollowStates.ACTIVE)) list }.map(_.view)
 
-  def get(id: Id[Follow])(implicit conn: Connection): Follow =
-    FollowEntity.get(id).map(_.view).getOrElse(throw NotFoundException(id))
-
-  def get(userId: Id[User], uri: NormalizedURI)(implicit conn: Connection): Option[Follow] =
-    get(userId, uri.id.get)
-
+  //slicked
   def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Option[Follow] =
     (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId AND (f.uriId EQ uriId)) unique }.map(_.view)
-
-  def getOrThrow(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Follow =
-    get(userId, uriId).getOrElse(throw NotFoundException(classOf[Follow], userId, uriId))
 }
 
 object FollowStates {
