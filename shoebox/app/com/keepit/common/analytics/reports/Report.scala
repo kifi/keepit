@@ -213,7 +213,7 @@ class DailySliderShownByIcon extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailySliderShownByIcon"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderShown").withMetaData("trigger","icon").build
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderShown").withMetaData("trigger","button").build
     super.get(selector, startDate, endDate)
   }
 }
