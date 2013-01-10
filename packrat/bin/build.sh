@@ -6,6 +6,8 @@ rm -rf out
 mkdir -p out
 cp -R adapters/chrome out/
 cp -R adapters/firefox out/
+cp adapters/shared/*.js out/chrome/
+cp adapters/shared/*.js out/firefox/lib/
 
 for d in html icons images scripts styles; do
   cp -R $d out/chrome/
