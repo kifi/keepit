@@ -16,6 +16,7 @@ import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
 import com.keepit.model._
 import com.keepit.common.db._
 import play.api.Play.current
+import com.keepit.inject.inject
 
 @RunWith(classOf[JUnitRunner])
 class EventListenerTest extends SpecificationWithJUnit {
@@ -40,7 +41,10 @@ class EventListenerTest extends SpecificationWithJUnit {
     "parse search events" in {
       running(new EmptyApplication()) {
         val (normUrlId, url, user, bookmark) = setup()
-        val (user2, result) = CX.withConnection { implicit conn => EventHelper.searchParser(user.externalId, JsObject(Seq("url" -> JsString("http://google.com/"), "query" -> JsString("potatoes")))) }
+        val listener = new EventListenerPlugin {
+         def onEvent: PartialFunction[Event,Unit] = { case _ => }
+        }
+        val (user2, result) = CX.withConnection { implicit conn => listener.searchParser(user.externalId, JsObject(Seq("url" -> JsString("http://google.com/"), "query" -> JsString("potatoes")))) }
 
         user2.id === user.id
         result.url === "http://google.com/"
@@ -58,8 +62,8 @@ class EventListenerTest extends SpecificationWithJUnit {
 
         val event = Events.userEvent(EventFamilies.SEARCH,"kifiResultClicked", user, Seq(), "", JsObject(Seq()), Seq())
 
-        EventListener.newEvent(unrelatedEvent) === Seq()
-        EventListener.newEvent(event) === Seq("KifiResultClickedListener")
+        inject[EventHelper].newEvent(unrelatedEvent) === Seq()
+        inject[EventHelper].newEvent(event) === Seq("KifiResultClickedListener")
 
       }
     }
