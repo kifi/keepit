@@ -9,7 +9,7 @@ api = function() {
 
   chrome.pageAction.onClicked.addListener(function(tab) {
     api.log("[pageAction.onClicked]", tab);
-    dispatch.call(api.icon.on.click, tab);
+    dispatch.call(api.icon.on.click, pages[tab.id]);
   });
 
   chrome.runtime.onStartup.addListener(function() {
@@ -20,48 +20,145 @@ api = function() {
 
   chrome.runtime.onInstalled.addListener(function(details) {
     api.log("[onInstalled] details:", details);
-    api.loadReason = details.reason;
-    dispatch.call(api.on[details.reason]);
+    if (details.reason === "install" || details.reason === "update") {
+      api.loadReason = details.reason;
+      dispatch.call(api.on[details.reason]);
+    }
   });
 
   chrome.tabs.onActivated.addListener(function(info) {
     api.log("[onActivated] tab info:", info);
-    chrome.tabs.get(info.tabId, function(tab) {
-      try {
-        chrome.windows.get(info.windowId, function(win) {
-          if (win.type == "normal") {  // ignore popups, etc.
-            dispatch.call(api.tabs.on.activate, tab);
-          }
-        });
-      } catch (e) {/* no window */}
-    });
+    var lastActivePage = activePages[info.windowId];
+    if (lastActivePage) { // ignore popups, etc.
+      lastActivePage.active = false;
+      var page = pages[info.tabId];
+      if (page && /^https?:/.test(page.url)) {
+        page.active = true;
+        activePages[info.windowId] = page;
+        dispatch.call(api.tabs.on.activate, page);
+      } else {
+        // new tab, no url yet
+        activePages[info.windowId] = {};
+      }
+    }
   });
 
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     api.log("[onUpdated] tab:", tabId, "change:", change);
-    if (/^https?:/.test(tab.url)) {
-      if (change.url) try {
-        chrome.windows.get(tab.windowId, function(win) {
-          if (win.type == "normal") {
-            dispatch.call(api.tabs.on.navigate, tab);
+    if (activePages[tab.windowId]) {
+      if (change.url) {
+        var page = pages[tabId] = {
+          id: tabId,
+          url: tab.url,
+          ready: change.status === "complete"};
+        if (/^https?:/.test(page.url)) {
+          dispatch.call(api.tabs.on.loading, page);
+        }
+      }
+      // would be nice to get "interactive" too. see http://crbug.com/169070
+      if (change.status === "complete") {
+        var page = pages[tabId];
+        if (page) {
+          page.ready = true;
+          if (/^https?:/.test(page.url)) {
+            dispatch.call(api.tabs.on.complete, page);
           }
-        });
-      } catch (e) {/* no window */}
-      if (change.status === "complete") try {
-        chrome.windows.get(tab.windowId, function(win) {
-          if (win.type == "normal") {
-            dispatch.call(api.tabs.on.load, tab);
-          }
-        });
-      } catch (e) {/* no window */}
+        } else {
+          api.log.error(Error("no page for " + tabId), "onUpdated");
+        }
+      }
     }
   });
+
+  chrome.tabs.onRemoved.addListener(function(tabId) {
+    delete pages[tabId];
+  });
+
+  chrome.windows.onCreated.addListener(function(win) {
+    if (win.type === "normal") {
+      activePages[win.id] = {};
+    }
+  });
+
+  chrome.windows.onRemoved.addListener(function(windowId) {
+    delete activePages[windowId];
+  });
+
+  var pages = {};  // by tab.id
+  var activePages = {};  // in "normal" windows only, by window.id
+  chrome.tabs.query({windowType: "normal"}, function(tabs) {
+    tabs.forEach(function(tab) {
+      var page = pages[tab.id] = {
+        id: tab.id,
+        url: tab.url,
+        active: tab.active,
+        ready: tab.status === "complete"};
+      if (page.active) {
+        activePages[tab.windowId] = page;
+      }
+      if (tab.status === "loading" && /^https?:/.test(tab.url)) {
+        chrome.tabs.executeScript(tab.id, {code: "document.readyState"}, function(arr) {
+          page.ready = !!(page.ready || arr && arr[0]);
+        });
+      }
+    });
+  });
+
+  var portHandlers;
+  chrome.extension.onMessage.addListener(function(msg, sender, respond) {
+    var tab = sender.tab, tabId = tab && tab.id, page = pages[tabId];
+    if (tab && page && tab.url !== page.url) {
+      api.log.error(Error("url mismatch:\n" + tab.url + "\n" + page.url), "onMessage");
+    }
+    if (msg === "api:dom_ready") {
+      injectContentScripts(tab, function() {
+        page.ready = true;
+        dispatch.call(api.tabs.on.ready, page);
+      });
+    } else if (portHandlers) {
+      var handler = portHandlers[msg[0]];
+      if (handler) {
+        api.log("[onMessage] handling:", msg, "from:", tabId);
+        try {
+          return handler(msg[1], respond, page);
+        } catch (e) {
+          api.log.error(e);
+        } finally {
+          api.log("[onMessage] done:", msg);
+        }
+      } else {
+        api.log("[onMessage] ignoring:", msg, "from:", tabId);
+      }
+    }
+  });
+
+  function injectContentScripts(tab, callback) {
+    for (var i = 0, n = 0, N = 0; i < meta.contentScripts.length; i++) {
+      var cs = meta.contentScripts[i];
+      if (cs[1].test(tab.url)) {
+        N++;
+        api.tabs.inject(tab.id, cs[0], function() {
+          if (++n === N) {
+            callback();
+          }
+        });
+      }
+    }
+    if (N === 0) callback();
+  }
 
   var api = {
     browserVersion: navigator.userAgent.replace(/^.*(Chrom[ei][^ ]*).*$/, "$1"),
     icon: {
-      on: {
-        click: []}},
+      get: function(tabId) {
+        return pages[tabId].icon;
+      },
+      on: {click: []},
+      set: function(tabId, path) {
+        pages[tabId].icon = path;
+        chrome.pageAction.setIcon({tabId: tabId, path: path});
+        chrome.pageAction.show(tabId);
+      }},
     loadReason: "enable",  // assuming "enable" by elimination
     log: function() {
       var d = new Date(), ds = d.toString();
@@ -86,7 +183,7 @@ api = function() {
           chrome.windows.onRemoved.addListener(onClosed);
         }
         function onUpdated(tabId, changed, tab) {
-          if (tabId == popupTabId && changed.status == "loading") {
+          if (tabId == popupTabId && changed.status === "loading") {
             handlers.navigate.call({close: function() {
               chrome.windows.remove(popupWinId);
             }}, changed.url);
@@ -99,22 +196,8 @@ api = function() {
       }},
     port: {
       on: function(handlers) {
-        chrome.extension.onMessage.addListener(function(msg, sender, respond) {
-          var handler = handlers[msg && msg[0]];
-          var tab = sender.tab;
-          if (handler) {
-            api.log("[onMessage] handling:", msg, "from:", tab && tab.id);
-            try {
-              return handler(msg[1], respond, tab);
-            } catch (e) {
-              api.log.error(e);
-            } finally {
-              api.log("[onMessage] done:", msg);
-            }
-          } else {
-            api.log("[onMessage] ignoring:", msg, "from:", tab && tab.id);
-          }
-        });
+        if (portHandlers) throw Error("api.port.on already called");
+        portHandlers = handlers;
       }
     },
     request: function(method, uri, data, done, fail) {
@@ -133,27 +216,27 @@ api = function() {
       }
       xhr.send(data);
     },
-    scripts: {
-      register: function() {
-
-      }},
     storage: localStorage,
     tabs: {
+      each: function(callback) {
+        Object.keys(pages)
+        .map(function(tabId) { return pages[tabId]; })
+        .filter(function(page) { return /^https?:/.test(page.url); })
+        .forEach(callback);
+      },
       emit: function(tabId, type, data) {
         api.log("[api.tabs.emit] tab:", tabId, "type:", type, "data:", data);
         chrome.tabs.sendMessage(tabId, [type, data]);
       },
-      inject: function(tabId, details, callback) {
-        api.log("[api.tabs.inject] details:", details);
-        injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), details.styles, function() {
-          injectAll(chrome.tabs.executeScript.bind(chrome.tabs), details.scripts, function() {
-            if (details.script) {
-              chrome.tabs.executeScript(tabId, {code: details.script}, function(arr) {
-                callback(arr && arr[0]);
-              });
-            } else {
-              callback();
-            }
+      get: function(tabId) {
+        return pages[tabId];
+      },
+      inject: function(tabId, path, callback) {
+        var o = deps(path, pages[tabId].injected);
+        injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, function() {
+          injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, function() {
+            pages[tabId].injected = o.injected;
+            callback();
           });
         });
 
@@ -175,15 +258,16 @@ api = function() {
       },
       on: {
         activate: [],
-        load: [],
-        navigate: []}
+        loading: [],
+        ready: [],
+        complete: []}
     },
     timers: window,
     version: chrome.app.getDetails().version};
 
-   api.log.error = function(exception, context) {
-    console.error((context ? "[" + context + "] " : "") + exception);
-    console.error(exception.stack);
+  api.log.error = function(exception, context) {
+    var d = new Date(), ds = d.toString();
+    console.error("[" + ds.substring(0, 2) + ds.substring(15,24) + "." + String(+d).substring(10) + "]" + (context ? "[" + context + "] " : ""), exception.message, exception.stack);
   };
 
   return api;
