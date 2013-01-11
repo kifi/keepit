@@ -47,21 +47,19 @@ api = function() {
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     api.log("[onUpdated] tab:", tabId, "change:", change);
     if (activePages[tab.windowId]) {
-      var page = pages[tabId];
       if (change.url) {
-        if (change.url !== (page && page.url)) {
-          page = pages[tabId] = {
-            id: tabId,
-            url: tab.url,
-            active: tab.active,
-            ready: change.status === "complete"};
-        }
+        var page = pages[tabId] = {
+          id: tabId,
+          url: tab.url,
+          active: tab.active,
+          ready: tab.status === "complete"};
         if (/^https?:/.test(page.url)) {
           dispatch.call(api.tabs.on.loading, page);
         }
       }
       // would be nice to get "interactive" too. see http://crbug.com/169070
       if (change.status === "complete") {
+        var page = pages[tabId];
         if (page) {
           page.ready = true;
           if (/^https?:/.test(page.url)) {
@@ -108,7 +106,7 @@ api = function() {
         if (page.ready) {
           injectContentScripts(page, api.noop);
         } else if (tab.status === "loading") {
-          chrome.tabs.executeScript(tab.id, {code: "document.readyState"}, function(arr) {
+          chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
             page.ready = !!(page.ready || arr && arr[0]);
             if (page.ready) {
               injectContentScripts(page, api.noop);
@@ -151,8 +149,9 @@ api = function() {
 
   function injectContentScripts(tab, callback) {
     // for ignoring messages from future updates/installs/reloads of this extension
-    chrome.tabs.executeScript(tab.id,
-      {code: "lifeId=" + t0 + ";!function(e){e.initEvent('kifiunload');e.lifeId=lifeId;dispatchEvent(e)}(document.createEvent('Event'))"});
+    chrome.tabs.executeScript(tab.id, {
+      code: "lifeId=" + t0 + ";!function(e){e.initEvent('kifiunload');e.lifeId=lifeId;dispatchEvent(e)}(document.createEvent('Event'))",
+      runAt: "document_start"});
 
     for (var i = 0, n = 0, N = 0; i < meta.contentScripts.length; i++) {
       var cs = meta.contentScripts[i];
@@ -253,12 +252,20 @@ api = function() {
         return pages[tabId];
       },
       inject: function(tabId, path, callback) {
-        var page = pages[tabId];
-        page.injected = page.injected || {};
-        var o = deps(path, page.injected);
-        injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, function() {
-          if (pages[tabId] === page) {  // tab may have navigated or closed
-            injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, callback);
+        // To avoid duplicate injections, we use one script to both:
+        // 1) read what's already been injected and
+        // 2) record what's about to be injected.
+        // We use runAt: "document_start" to ensure that it executes ASAP.
+        var paths = function(o) {return o.styles.concat(o.scripts)}(deps(path));
+        chrome.tabs.executeScript(tabId, {
+            code: "var injected=injected||{};(function(i){var o={},n=['" + paths.join("','") + "'],k;for(k in i)o[k]=i[k];for(k in n)i[n[k]]=1;return o})(injected)",
+            runAt: "document_start"}, function(arr) {
+          var injected = arr && arr[0] || {};
+          var o = deps(path, injected), n = 0;
+          injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, done);
+          injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, done);
+          function done() {
+            if (++n === 2) callback();
           }
         });
 
@@ -266,17 +273,12 @@ api = function() {
           var n = 0, N = paths.length;
           if (N) {
             paths.forEach(function(path) {
-              if (!page.injected[path]) {
-                page.injected[path] = true;
-                api.log("[api.tabs.inject] tab:", tabId, path);
-                inject(tabId, {file: path}, function() {
-                  if (++n === N) {
-                    callback();
-                  }
-                });
-              } else if (++n === N) {
-                callback();
-              }
+              api.log("[api.tabs.inject] tab:", tabId, path);
+              inject(tabId, {file: path, runAt: "document_end"}, function() {
+                if (++n === N) {
+                  callback();
+                }
+              });
             });
           } else {
             callback();
