@@ -1,6 +1,7 @@
 // API for main.js
 
 api = function() {
+  var t0 = +new Date;
 
   function dispatch() {
     var args = arguments;
@@ -50,7 +51,8 @@ api = function() {
         var page = pages[tabId] = {
           id: tabId,
           url: tab.url,
-          ready: change.status === "complete"};
+          active: tab.active,
+          ready: tab.status === "complete"};
         if (/^https?:/.test(page.url)) {
           dispatch.call(api.tabs.on.loading, page);
         }
@@ -88,18 +90,29 @@ api = function() {
   var activePages = {};  // in "normal" windows only, by window.id
   chrome.tabs.query({windowType: "normal"}, function(tabs) {
     tabs.forEach(function(tab) {
-      var page = pages[tab.id] = {
-        id: tab.id,
-        url: tab.url,
-        active: tab.active,
-        ready: tab.status === "complete"};
+      var page = pages[tab.id];
+      if (tab.url !== (page && page.url)) {
+        page = pages[tab.id] = {
+          id: tab.id,
+          url: tab.url,
+          active: tab.active,
+          ready: tab.status === "complete"};
+      }
       if (page.active) {
         activePages[tab.windowId] = page;
       }
-      if (tab.status === "loading" && /^https?:/.test(tab.url)) {
-        chrome.tabs.executeScript(tab.id, {code: "document.readyState"}, function(arr) {
-          page.ready = !!(page.ready || arr && arr[0]);
-        });
+      if (/^https?:/.test(tab.url)) {
+        // Note: intentionally not dispatching api.tabs.on.ready after injecting content scripts
+        if (page.ready) {
+          injectContentScripts(page, api.noop);
+        } else if (tab.status === "loading") {
+          chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
+            page.ready = !!(page.ready || arr && arr[0]);
+            if (page.ready) {
+              injectContentScripts(page, api.noop);
+            }
+          });
+        }
       }
     });
   });
@@ -111,10 +124,12 @@ api = function() {
       api.log.error(Error("url mismatch:\n" + tab.url + "\n" + page.url), "onMessage");
     }
     if (msg === "api:dom_ready") {
-      injectContentScripts(tab, function() {
+      if (page) {
         page.ready = true;
-        dispatch.call(api.tabs.on.ready, page);
-      });
+        injectContentScripts(tab, function() {
+          dispatch.call(api.tabs.on.ready, page);
+        });
+      }
     } else if (portHandlers) {
       var handler = portHandlers[msg[0]];
       if (handler) {
@@ -133,6 +148,11 @@ api = function() {
   });
 
   function injectContentScripts(tab, callback) {
+    // for ignoring messages from future updates/installs/reloads of this extension
+    chrome.tabs.executeScript(tab.id, {
+      code: "lifeId=" + t0 + ";!function(e){e.initEvent('kifiunload');e.lifeId=lifeId;dispatchEvent(e)}(document.createEvent('Event'))",
+      runAt: "document_start"});
+
     for (var i = 0, n = 0, N = 0; i < meta.contentScripts.length; i++) {
       var cs = meta.contentScripts[i];
       if (cs[1].test(tab.url)) {
@@ -226,27 +246,36 @@ api = function() {
       },
       emit: function(tabId, type, data) {
         api.log("[api.tabs.emit] tab:", tabId, "type:", type, "data:", data);
-        chrome.tabs.sendMessage(tabId, [type, data]);
+        chrome.tabs.sendMessage(tabId, [t0, type, data]);
       },
       get: function(tabId) {
         return pages[tabId];
       },
       inject: function(tabId, path, callback) {
-        var o = deps(path, pages[tabId].injected);
-        injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, function() {
-          injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, function() {
-            pages[tabId].injected = o.injected;
-            callback();
-          });
+        // To avoid duplicate injections, we use one script to both:
+        // 1) read what's already been injected and
+        // 2) record what's about to be injected.
+        // We use runAt: "document_start" to ensure that it executes ASAP.
+        var paths = function(o) {return o.styles.concat(o.scripts)}(deps(path));
+        chrome.tabs.executeScript(tabId, {
+            code: "var injected=injected||{};(function(i){var o={},n=['" + paths.join("','") + "'],k;for(k in i)o[k]=i[k];for(k in n)i[n[k]]=1;return o})(injected)",
+            runAt: "document_start"}, function(arr) {
+          var injected = arr && arr[0] || {};
+          var o = deps(path, injected), n = 0;
+          injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, done);
+          injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, done);
+          function done() {
+            if (++n === 2) callback();
+          }
         });
 
         function injectAll(inject, paths, callback) {
-          if (paths && paths.length) {
-            var n = 0;
+          var n = 0, N = paths.length;
+          if (N) {
             paths.forEach(function(path) {
               api.log("[api.tabs.inject] tab:", tabId, path);
-              inject(tabId, {file: path}, function() {
-                if (++n == paths.length) {
+              inject(tabId, {file: path, runAt: "document_end"}, function() {
+                if (++n === N) {
                   callback();
                 }
               });
