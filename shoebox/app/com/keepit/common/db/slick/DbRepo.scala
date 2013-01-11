@@ -2,19 +2,18 @@ package com.keepit.common.db.slick
 
 import com.keepit.common.db._
 import com.keepit.inject._
-
 import org.joda.time.DateTime
-
 import org.scalaquery.ql._
 import org.scalaquery.ql.ColumnOps._
 import org.scalaquery.ql.TypeMapper._
 import org.scalaquery.ql.basic.BasicProfile
 import org.scalaquery.ql.extended.ExtendedTable
 import org.scalaquery.util.{Node, UnaryNode, BinaryNode}
-
 import DBSession._
-
 import play.api.Play.current
+import org.scalaquery.ql.extended.ExtendedProfile
+import org.scalaquery.ql.extended.ExtendedColumnOptions
+import org.scalaquery.ql.extended.ExtendedImplicitConversions
 
 
 trait Repo[M <: Model[M]] {
@@ -74,9 +73,17 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
 
 }
 
-//trait DbRepoWithExternalId[M <: Model[M]] extends RepoWithExternalId[M] { self: DbRepo[M] =>
-//  def get(id: ExternalId[M])(implicit session: RSession): M = (for(f <- table if f.id is id) yield f).first
-//}
+trait DbRepoWithExternalId[M <: ModelWithExternalId[M]] extends RepoWithExternalId[M] { self: DbRepo[M] =>
+  import db.Driver.Implicit._
+  private def tableWithExternalId: RepoTableWithExternalId[M] = table.asInstanceOf[RepoTableWithExternalId[M]]
+
+  implicit val ExternalIdMapper = new BaseTypeMapper[ExternalId[M]] {
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
+  }
+
+  def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id: ExternalId[M]).get
+  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = (for(f <- tableWithExternalId if Is(f.externalId, id)) yield f).firstOption
+}
 
 /**
  * The toUpperCase is per an H2 "bug?"
@@ -99,7 +106,7 @@ abstract class RepoTable[M <: Model[M]](name: String) extends ExtendedTable[M](n
   override def column[C : TypeMapper](n: String, options: ColumnOption[C, ProfileType]*) = super.column(n.toUpperCase(), options:_*)
 }
 
-trait RepoTableWithExternalId[M <: Model[M]] { self: RepoTable[M] =>
+trait RepoTableWithExternalId[M <: ModelWithExternalId[M]] extends RepoTable[M] {
   implicit val ExternalIdMapper = new BaseTypeMapper[ExternalId[M]] {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
   }
