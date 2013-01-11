@@ -109,7 +109,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
       impersonatedUserIdOpt match {
         case Some(impExternalUserId) =>
           val (impExperiments, impSocialUser, impUserId) = CX.withConnection { implicit conn =>
-            val impUserId = User.get(impExternalUserId).id.get
+            val impUserId = UserCxRepo.get(impExternalUserId).id.get
 
             if (!isAdmin(experiments)) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
             val impSocialUserInfo = SocialUserInfo.getByUser(impUserId).head

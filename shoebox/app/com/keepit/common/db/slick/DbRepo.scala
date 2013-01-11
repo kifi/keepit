@@ -1,18 +1,19 @@
 package com.keepit.common.db.slick
 
-import com.keepit.common.db.{Id, Model}
+import com.keepit.common.db._
 import com.keepit.inject._
-
 import org.joda.time.DateTime
-
 import org.scalaquery.ql._
 import org.scalaquery.ql.ColumnOps._
 import org.scalaquery.ql.TypeMapper._
 import org.scalaquery.ql.basic.BasicProfile
 import org.scalaquery.ql.extended.ExtendedTable
 import org.scalaquery.util.{Node, UnaryNode, BinaryNode}
-
+import DBSession._
 import play.api.Play.current
+import org.scalaquery.ql.extended.ExtendedProfile
+import org.scalaquery.ql.extended.ExtendedColumnOptions
+import org.scalaquery.ql.extended.ExtendedImplicitConversions
 
 
 trait Repo[M <: Model[M]] {
@@ -23,12 +24,15 @@ trait Repo[M <: Model[M]] {
   def count(implicit session: RSession): Int
 }
 
+trait RepoWithExternalId[M <: ModelWithExternalId[M]] { self: Repo[M] =>
+  def get(id: ExternalId[M])(implicit session: RSession): M
+  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M]
+}
+
 trait DbRepo[M <: Model[M]] extends Repo[M] {
   import FortyTwoTypeMappers._
   val db: DataBaseComponent
   import db.Driver.Implicit._ // here's the driver, abstracted away
-
-  import DBSession._
 
   implicit val IdMapper = new BaseTypeMapper[Id[M]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[M]
@@ -69,6 +73,18 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
 
 }
 
+trait DbRepoWithExternalId[M <: ModelWithExternalId[M]] extends RepoWithExternalId[M] { self: DbRepo[M] =>
+  import db.Driver.Implicit._
+  private def tableWithExternalId: RepoTableWithExternalId[M] = table.asInstanceOf[RepoTableWithExternalId[M]]
+
+  implicit val ExternalIdMapper = new BaseTypeMapper[ExternalId[M]] {
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
+  }
+
+  def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id: ExternalId[M]).get
+  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = (for(f <- tableWithExternalId if Is(f.externalId, id)) yield f).firstOption
+}
+
 /**
  * The toUpperCase is per an H2 "bug?"
  * http://stackoverflow.com/a/8722814/81698
@@ -82,11 +98,21 @@ abstract class RepoTable[M <: Model[M]](name: String) extends ExtendedTable[M](n
 
   def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
 
-  def createdAt = column[DateTime]("CREATED_AT", O.NotNull)
-  def updatedAt = column[DateTime]("UPDATED_AT", O.NotNull)
+  def createdAt = column[DateTime]("created_at", O.NotNull)
+  def updatedAt = column[DateTime]("updated_at", O.NotNull)
 
   def idCreateUpdateBase = id.? ~ createdAt ~ updatedAt
 
   override def column[C : TypeMapper](n: String, options: ColumnOption[C, ProfileType]*) = super.column(n.toUpperCase(), options:_*)
 }
+
+trait RepoTableWithExternalId[M <: ModelWithExternalId[M]] extends RepoTable[M] {
+  implicit val ExternalIdMapper = new BaseTypeMapper[ExternalId[M]] {
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
+  }
+
+  def externalId = column[ExternalId[M]]("external_id", O.NotNull)
+}
+
+
 

@@ -44,7 +44,7 @@ object BookmarksController extends FortyTwoController {
     CX.withConnection { implicit conn =>
       val bookmark = Bookmark.get(id)
       val uri = NormalizedURI.get(bookmark.uriId)
-      val user = UserWithSocial.toUserWithSocial(User.get(bookmark.userId))
+      val user = UserWithSocial.toUserWithSocial(UserCxRepo.get(bookmark.userId))
       Ok(views.html.bookmark(bookmark, uri, user))
     }
   }
@@ -106,7 +106,7 @@ object BookmarksController extends FortyTwoController {
     val PAGE_SIZE = 200
     val (count, bookmarksAndUsers) = CX.withConnection { implicit conn =>
       val bookmarks = Bookmark.page(page, PAGE_SIZE)
-      val users = bookmarks map (_.userId) map User.get map UserWithSocial.toUserWithSocial
+      val users = bookmarks map (_.userId) map UserCxRepo.get map UserWithSocial.toUserWithSocial
       val uris = bookmarks map (_.uriId) map NormalizedURI.get map (_.stats)
       val count = Bookmark.count
       (count, (bookmarks, uris, users).zipped.toList.seq)
@@ -167,14 +167,14 @@ object BookmarksController extends FortyTwoController {
           case _ =>
             log.info("adding bookmarks of user %s".format(userId))
             val experiments = request.experimants
-            val user = CX.withConnection { implicit conn => User.get(userId) }
+            val user = CX.withConnection { implicit conn => UserCxRepo.get(userId) }
             internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
             inject[URIGraphPlugin].update(userId)
             Ok(JsObject(Seq()))
         }
       case None =>
         val (user, experiments, installation) = CX.withConnection { implicit conn =>
-          (User.get(userId),
+          (UserCxRepo.get(userId),
            UserExperiment.getByUser(userId) map (_.experimentType),
            installationId.map(_.id).getOrElse(""))
         }

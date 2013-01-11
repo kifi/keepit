@@ -2,7 +2,7 @@ package com.keepit.common.social
 
 import com.keepit.common.db.CX
 import com.keepit.common.logging.Logging
-import com.keepit.model.{SocialConnection, SocialUserInfo, User}
+import com.keepit.model.{SocialConnection, SocialUserInfo, User, UserCxRepo}
 import com.keepit.common.healthcheck.BabysitterTimeout
 
 import play.api.Play.current

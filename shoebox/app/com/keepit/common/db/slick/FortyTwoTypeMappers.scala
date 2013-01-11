@@ -3,7 +3,7 @@ package com.keepit.common.db.slick
 import org.scalaquery.ql.{TypeMapper, TypeMapperDelegate, BaseTypeMapper}
 import org.scalaquery.ql.basic.BasicProfile
 import org.scalaquery.session.{PositionedParameters, PositionedResult}
-import com.keepit.common.db.{Id, State, Model}
+import com.keepit.common.db.{Id, State, Model, ExternalId}
 import com.keepit.common.time._
 import com.keepit.model._
 import org.joda.time.DateTime
@@ -50,15 +50,14 @@ class DateTimeMapperDelegate extends TypeMapperDelegate[DateTime] {
   private val delegate = new TimestampTypeMapperDelegate()
   def zero = currentDateTime
   def sqlType = delegate.sqlType
-  def setValue(value: DateTime, p: PositionedParameters) = p.setTimestamp(timestamp(value))
-  def setOption(valueOpt: Option[DateTime], p: PositionedParameters) = p.setTimestampOption(valueOpt map timestamp)
-  def nextValue(r: PositionedResult) = r.nextTimestamp
-  def updateValue(value: DateTime, r: PositionedResult) = r.updateTimestamp(timestamp(value))
+  def setValue(value: DateTime, p: PositionedParameters) = delegate.setValue(timestamp(value), p)
+  def setOption(valueOpt: Option[DateTime], p: PositionedParameters) = delegate.setOption(valueOpt map timestamp, p)
+  def nextValue(r: PositionedResult): DateTime = delegate.nextValue(r)
+  def updateValue(value: DateTime, r: PositionedResult) = delegate.updateValue(timestamp(value), r)
   override def valueToSQLLiteral(value: DateTime) = delegate.valueToSQLLiteral(timestamp(value))
 
   private def timestamp(value: DateTime) = new Timestamp(value.toDate.getTime)
 }
-
 
 //************************************
 //       Id -> Long
@@ -67,11 +66,25 @@ class IdMapperDelegate[T] extends TypeMapperDelegate[Id[T]] {
   private val delegate = new LongTypeMapperDelegate()
   def zero = Id[T](0)
   def sqlType = delegate.sqlType
-  def setValue(value: Id[T], p: PositionedParameters) = p.setLong(value.id)
-  def setOption(valueOpt: Option[Id[T]], p: PositionedParameters) = p.setLongOption(valueOpt map (_.id))
-  def nextValue(r: PositionedResult) = Id(r.nextLong)
-  def updateValue(value: Id[T], r: PositionedResult) = r.updateLong(value.id)
+  def setValue(value: Id[T], p: PositionedParameters) = delegate.setValue(value.id, p)
+  def setOption(valueOpt: Option[Id[T]], p: PositionedParameters) = delegate.setOption(valueOpt map (_.id), p)
+  def nextValue(r: PositionedResult) = Id(delegate.nextValue(r))
+  def updateValue(value: Id[T], r: PositionedResult) = delegate.updateValue(value.id, r)
   override def valueToSQLLiteral(value: Id[T]) = delegate.valueToSQLLiteral(value.id)
+}
+
+//************************************
+//       ExternalId -> String
+//************************************
+class ExternalIdMapperDelegate[T] extends TypeMapperDelegate[ExternalId[T]] {
+  private val delegate = new StringTypeMapperDelegate()
+  def zero = ExternalId[T]()
+  def sqlType = delegate.sqlType
+  def setValue(value: ExternalId[T], p: PositionedParameters) = delegate.setValue(value.id, p)
+  def setOption(valueOpt: Option[ExternalId[T]], p: PositionedParameters) = delegate.setOption(valueOpt map (_.id), p)
+  def nextValue(r: PositionedResult) = ExternalId(delegate.nextValue(r))
+  def updateValue(value: ExternalId[T], r: PositionedResult) = delegate.updateValue(value.id, r)
+  override def valueToSQLLiteral(value: ExternalId[T]) = delegate.valueToSQLLiteral(value.id)
 }
 
 //************************************
@@ -81,9 +94,9 @@ class StateMapperDelegate[T] extends TypeMapperDelegate[State[T]] {
   private val delegate = new StringTypeMapperDelegate()
   def zero = new State("")
   def sqlType = delegate.sqlType
-  def setValue(value: State[T], p: PositionedParameters) = p.setString(value.value)
-  def setOption(valueOpt: Option[State[T]], p: PositionedParameters) = p.setStringOption(valueOpt map (_.value))
-  def nextValue(r: PositionedResult) = State(r.nextString)
-  def updateValue(value: State[T], r: PositionedResult) = r.updateString(value.value)
+  def setValue(value: State[T], p: PositionedParameters) = delegate.setValue(value.value, p)
+  def setOption(valueOpt: Option[State[T]], p: PositionedParameters) = delegate.setOption(valueOpt map (_.value), p)
+  def nextValue(r: PositionedResult) = State(delegate.nextValue(r))
+  def updateValue(value: State[T], r: PositionedResult) = delegate.updateValue(value.value, r)
   override def valueToSQLLiteral(value: State[T]) = delegate.valueToSQLLiteral(value.value)
 }

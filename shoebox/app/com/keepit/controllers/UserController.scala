@@ -53,7 +53,7 @@ object UserController extends FortyTwoController {
           val searcher = inject[URIGraph].getURIGraphSearcher
           val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
           val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
-          val socialUsers = sharingUserIds.map(u => UserWithSocial.toUserWithSocial(User.get(u))).toSeq
+          val socialUsers = sharingUserIds.map(u => UserWithSocial.toUserWithSocial(UserCxRepo.get(u))).toSeq
 
           val numComments = Comment.getPublicCount(uri.id.get)
           val numMessages = Comment.getMessageCount(uri.id.get, userId)
@@ -85,7 +85,7 @@ object UserController extends FortyTwoController {
           val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
           val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
 
-          sharingUserIds.map(u => UserWithSocial.toUserWithSocial(User.get(u))).toSeq
+          sharingUserIds.map(u => UserWithSocial.toUserWithSocial(UserCxRepo.get(u))).toSeq
 
         case None =>
           Seq[UserWithSocial]()
@@ -97,7 +97,7 @@ object UserController extends FortyTwoController {
 
   def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
     val socialConnections = CX.withConnection { implicit c =>
-      SocialConnection.getFortyTwoUserConnections(authRequest.userId).map(uid => BasicUser(User.get(uid))).toSeq
+      SocialConnection.getFortyTwoUserConnections(authRequest.userId).map(uid => BasicUser(UserCxRepo.get(uid))).toSeq
     }
 
     Ok(JsObject(Seq(
@@ -107,7 +107,7 @@ object UserController extends FortyTwoController {
 
   def getUser(id: Id[User]) = AdminJsonAction { request =>
     val user = CX.withConnection { implicit c =>
-      UserWithSocial.toUserWithSocial(User.get(id))
+      UserWithSocial.toUserWithSocial(UserCxRepo.get(id))
     }
     Ok(userWithSocialSerializer.writes(user))
   }
@@ -120,17 +120,17 @@ object UserController extends FortyTwoController {
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = CX.withConnection { implicit conn =>
-      val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
+      val userWithSocial = UserWithSocial.toUserWithSocial(UserCxRepo.get(userId))
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
       val follows = FollowCxRepo.all(userId) map {f => NormalizedURI.get(f.uriId)}
       val comments = Comment.all(Comment.Permissions.PUBLIC, userId) map {c =>
         (NormalizedURI.get(c.uriId), c)
       }
       val messages = Comment.all(Comment.Permissions.MESSAGE, userId) map {c =>
-        (NormalizedURI.get(c.uriId), c, CommentRecipient.getByComment(c.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) })
+        (NormalizedURI.get(c.uriId), c, CommentRecipient.getByComment(c.id.get) map { r => toUserWithSocial(UserCxRepo.get(r.userId.get)) })
       }
       val sentElectronicMails = ElectronicMail.forSender(userId);
-      val mailAddresses = UserWithSocial.toUserWithSocial(User.get(userId)).emails.map(_.address)
+      val mailAddresses = UserWithSocial.toUserWithSocial(UserCxRepo.get(userId)).emails.map(_.address)
       val receivedElectronicMails = ElectronicMail.forRecipient(mailAddresses);
       (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails)
     }
@@ -142,10 +142,10 @@ object UserController extends FortyTwoController {
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = CX.withConnection { implicit conn =>
-      val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
+      val userWithSocial = UserWithSocial.toUserWithSocial(UserCxRepo.get(userId))
       val bookmarks = Bookmark.ofUser(userWithSocial.user)
       val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
-      val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
+      val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (UserCxRepo.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
       val kifiInstallations = KifiInstallation.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       (userWithSocial, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations)
     }
@@ -154,7 +154,7 @@ object UserController extends FortyTwoController {
 
   def usersView = AdminHtmlAction { implicit request =>
     val users = CX.withConnection { implicit c =>
-      User.all map userStatistics
+      UserCxRepo.all map userStatistics
     }
     Ok(views.html.users(users))
   }
@@ -207,7 +207,7 @@ object UserController extends FortyTwoController {
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val socialUserInfos = CX.withConnection { implicit c =>
-      val user = User.get(userId)
+      val user = UserCxRepo.get(userId)
       SocialUserInfo.getByUser(user.id.get)
     }
     val graph = inject[SocialGraphPlugin]

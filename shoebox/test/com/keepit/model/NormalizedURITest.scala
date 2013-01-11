@@ -20,7 +20,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
   def setup() = {
     CX.withConnection { implicit c =>
       NormalizedURI.all.size === 0 //making sure the db is clean, we had some strange failures
-      User.all.size === 0 //making sure the db is clean
+      UserCxRepo.all.size === 0 //making sure the db is clean
       val user1 = User(firstName = "Joe", lastName = "Smith").save
       val user2 = User(firstName = "Moo", lastName = "Brown").save
       val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short")

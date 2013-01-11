@@ -40,7 +40,7 @@ import com.keepit.search.SearchConfigManager
 object SearchConfigController extends FortyTwoController {
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val user = CX.withConnection { implicit conn =>
-      UserWithSocial.toUserWithSocial(User.get(userId))
+      UserWithSocial.toUserWithSocial(UserCxRepo.get(userId))
     }
     Ok(views.html.searchConfig(user))
   }

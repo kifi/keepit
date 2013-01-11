@@ -11,7 +11,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.graph.URIGraph
 import akka.util.Timeout
 import akka.actor.Props
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import akka.util.duration._
 import play.api.Play.current
 import com.keepit.common.healthcheck._

@@ -18,7 +18,7 @@ import com.keepit.inject._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphImpl
 import com.keepit.search.graph.URIGraphPlugin
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import com.keepit.common.controller.FortyTwoController
 import org.apache.lucene.document.Document
 

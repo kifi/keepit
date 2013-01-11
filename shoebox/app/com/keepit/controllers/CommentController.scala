@@ -153,7 +153,7 @@ object CommentController extends FortyTwoController {
   def getReplies(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     val replies = CX.withConnection { implicit conn =>
       val comment = Comment.get(commentId)
-      val user = User.get(request.userId)
+      val user = UserCxRepo.get(request.userId)
       if (true) // TODO: hasPermission(user.id.get, comment.id.get) ??????????????
         Comment.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }
       else
@@ -201,7 +201,7 @@ object CommentController extends FortyTwoController {
     recipients.split(",").map(_.trim()) map { recipientId =>
       // Split incoming list of externalIds
       try {
-        User.getOpt(ExternalId[User](recipientId)) match {
+        UserCxRepo.getOpt(ExternalId[User](recipientId)) match {
           case Some(recipientUser) =>
             log.info("Adding recipient %s to new comment %s".format(recipientUser.id.get, commentId))
             // When comment is a reply (has a parent), add recipient to parent if does not exist. Else, add to comment.
@@ -240,11 +240,11 @@ object CommentController extends FortyTwoController {
   private[controllers] def notifyRecipients(comment: Comment): Unit = comment.permissions match {
       case Comment.Permissions.PUBLIC =>
         CX.withConnection { implicit c =>
-          val author = User.get(comment.userId)
+          val author = UserCxRepo.get(comment.userId)
           val uri = NormalizedURI.get(comment.uriId)
           val follows = FollowCxRepo.get(uri.id.get)
           for (userId <- follows.map(_.userId).toSet - comment.userId) {
-            val recipient = User.get(userId)
+            val recipient = UserCxRepo.get(userId)
             val deepLink = DeepLink(
                 initatorUserId = Option(comment.userId),
                 recipientUserId = Some(userId),
@@ -266,11 +266,11 @@ object CommentController extends FortyTwoController {
       case Comment.Permissions.MESSAGE =>
         CX.withConnection { implicit c =>
           val senderId = comment.userId
-          val sender = User.get(senderId)
+          val sender = UserCxRepo.get(senderId)
           val uri = NormalizedURI.get(comment.uriId)
           val participants = Comment.getParticipantsUserIds(comment)
           for (userId <- participants - senderId) {
-            val recipient = User.get(userId)
+            val recipient = UserCxRepo.get(userId)
             val deepLink = DeepLink(
                 initatorUserId = Option(comment.userId),
                 recipientUserId = Some(userId),
@@ -300,7 +300,7 @@ object CommentController extends FortyTwoController {
 
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = CX.withConnection { implicit c =>
-      FollowCxRepo.all map {f => (toUserWithSocial(User.get(f.userId)), f, NormalizedURI.get(f.uriId))}
+      FollowCxRepo.all map {f => (toUserWithSocial(UserCxRepo.get(f.userId)), f, NormalizedURI.get(f.uriId))}
     }
     Ok(views.html.follows(uriAndUsers))
   }
@@ -312,7 +312,7 @@ object CommentController extends FortyTwoController {
     val (count, uriAndUsers) = CX.withConnection { implicit conn =>
       val comments = Comment.page(page, PAGE_SIZE)
       val count = Comment.count(Comment.Permissions.PUBLIC)
-      (count, (comments map {co => (toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId))} ))
+      (count, (comments map {co => (toUserWithSocial(UserCxRepo.get(co.userId)), co, NormalizedURI.get(co.uriId))} ))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.comments(uriAndUsers, page, count, pageCount))
@@ -325,7 +325,7 @@ object CommentController extends FortyTwoController {
     val (count, uriAndUsers) = CX.withConnection { implicit conn =>
       val messages = Comment.page(page, PAGE_SIZE, Comment.Permissions.MESSAGE)
       val count = Comment.count(Comment.Permissions.MESSAGE)
-      (count, (messages map {co => (toUserWithSocial(User.get(co.userId)), co, NormalizedURI.get(co.uriId), CommentRecipient.getByComment(co.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) }) } ))
+      (count, (messages map {co => (toUserWithSocial(UserCxRepo.get(co.userId)), co, NormalizedURI.get(co.uriId), CommentRecipient.getByComment(co.id.get) map { r => toUserWithSocial(UserCxRepo.get(r.userId.get)) }) } ))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.messages(uriAndUsers, page, count, pageCount))
