@@ -5,13 +5,20 @@ function dispatch() {
   this.forEach(function(f) {f.apply(null, args)});
 }
 
+function extend(a, b) {
+  for (var k in b) {
+    a[k] = b[k];
+  }
+  return a;
+}
+
 // TODO: load some of these APIs on demand instead of up front
-var self = require("sdk/self"), data = self.data, load = data.load.bind(data);
+var self = require("sdk/self"), data = self.data, load = data.load.bind(data), url = data.url.bind(url);
 var timers = require("sdk/timers");
 var tabs = require("sdk/tabs");
-var mod = require("sdk/page-mod");
 var privateBrowsing = require("sdk/private-browsing"); // TODO: if (!privateBrowsing.isActive) { ... }
 var xulApp = require("sdk/system/xul-app");
+let {deps} = require("./deps");
 
 // tabs.on('ready', function(tab) {
 //   tab.attach({
@@ -96,11 +103,11 @@ exports.popup = {
     // FAILS! win.getXULWindow()
   }};
 
-var portHandlers = [];
+var portHandlers;
 exports.port = {
   on: function(handlers) {
-    if (mods.length) throw Error("Please register all port handlers before any page mods.");
-    portHandlers.push(handlers);
+    if (portHandlers) throw Error("api.port.on already called");
+    portHandlers = handlers;
   }};
 
 exports.request = function(method, url, data, done, fail) {
@@ -119,33 +126,58 @@ exports.request = function(method, url, data, done, fail) {
     options.contentType = "application/json; charset=utf-8";
     options.content = JSON.stringify(data);
   }
-  require("request").Request(options)[method.toLowerCase()]();
+  require("sdk/request").Request(options)[method.toLowerCase()]();
 };
 
-var mods = [], workers = {}, nextWorkerId = 1;
-exports.scripts = {
-  register: function(urlRe, scripts, styles) {
-    mods.push(mod.PageMod({
+exports.storage = require("sdk/simple-storage").storage;
+
+var nextCallbackId = 1, callbacks = {};
+exports.tabs = {
+  inject: function(workerId, path, callback) {
+    var o = deps(path, injected[workerId]);
+    var callbackId = nextCallbackId++;
+    callbacks[callbackId] = callback;
+    workers[workerId].port.emit("inject", o.styles.map(load), o.scripts.map(load), callbackId);
+  },
+  on: {
+    activate: [],
+    loading: [],
+    ready: [],
+    complete: []}};
+
+exports.timers = timers;
+exports.version = self.version;
+
+// attaching content scripts
+
+var workers = {}, injected = {}, nextWorkerId = 1;
+timers.setTimeout(function() {  // async to allow main.js to complete (so portHandlers can be defined)
+  let {PageMod} = require("sdk/page-mod");
+  require("./meta").contentScripts.forEach(function(arr) {
+    var path = arr[0], urlRe = arr[1];
+    var o = deps(path);
+    exports.log("defining PageMod:", path, "deps:", o);
+    PageMod({
       include: urlRe,
-      contentStyleFile: styles && styles.map(data.url.bind(data)),
-      contentScriptFile: scripts && scripts.map(data.url.bind(data)),
+      contentStyleFile: o.styles.map(url),
+      contentScriptFile: o.scripts.map(url),
       contentScriptWhen: "ready",
-      contentScriptOptions: {dataUriPrefix: data.url("")},
+      contentScriptOptions: {dataUriPrefix: url("")},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
         var workerId = nextWorkerId++;
         workers[workerId] = worker;
+        injected[workerId] = extend(injected[workerId] || {}, o.injected);
         worker.on("detach", function() {
           delete workers[workerId];
+          delete injected[workerId];
         });
-        portHandlers.forEach(function(handlers) {
-          Object.keys(handlers).forEach(function(type) {
-            worker.port.on(type, function(data, callbackId) {
-              console.log("==== received message: " + type + " with data: " + JSON.stringify(data) + " and callbackId:" + callbackId);
-              handlers[type](data, function(response) {
-                  worker.port.emit("api_response", callbackId, response);
-                }, {id: workerId, url: worker.url});
-            });
+        Object.keys(portHandlers).forEach(function(type) {
+          worker.port.on(type, function(data, callbackId) {
+            exports.log("[worker.port.on] message:", type, "data:", data, "callbackId:", callbackId);
+            portHandlers[type](data, function(response) {
+                worker.port.emit("api_response", callbackId, response);
+              }, {id: workerId, url: worker.url});
           });
         });
         worker.port.on("api_load", function(path, callbackId) {
@@ -158,27 +190,6 @@ exports.scripts = {
             cb(response);
           }
         });
-      }}));
-  }};
-
-exports.storage = require("sdk/simple-storage").storage;
-
-var nextCallbackId = 1, callbacks = {};
-exports.tabs = {
-  inject: function(tabId, details, callback) {
-    var styles = (details.styles || []).map(load);
-    var scripts = (details.scripts || []).map(load);
-    if (details.script) {
-      scripts.push(details.script);
-    }
-    var callbackId = nextCallbackId++;
-    callbacks[callbackId] = callback;
-    workers[tabId].port.emit("inject", styles, scripts, callbackId);
-  },
-  on: {
-    activate: [],
-    load: [],
-    navigate: []}};
-
-exports.timers = timers;
-exports.version = self.version;
+      }});
+  });
+}, 0);

@@ -45,6 +45,8 @@ import play.api.Play.current
 import com.mongodb.casbah.MongoConnection
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
+import com.google.inject.multibindings.Multibinder
+import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -58,6 +60,10 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
+
+    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
+    listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
+    listenerBinder.addBinding().to(classOf[UsefulPageListener])
   }
 
   @Singleton

@@ -26,7 +26,7 @@ trait Repo[M <: Model[M]] {
 
 trait RepoWithExternalId[M <: ModelWithExternalId[M]] { self: Repo[M] =>
   def get(id: ExternalId[M])(implicit session: RSession): M
-  def getOpt(id: ExternalId[M])(implicit session: RSession): M
+  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M]
 }
 
 trait DbRepo[M <: Model[M]] extends Repo[M] {

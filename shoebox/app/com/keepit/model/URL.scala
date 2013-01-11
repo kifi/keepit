@@ -46,6 +46,7 @@ case class URL (
 
   def domain = URI.parse(url).flatMap(_.host)
 
+  def withNormURI(normUriId: Id[NormalizedURI]) = copy(normalizedUriId = normUriId)
   def withHistory(historyItem: URLHistory): URL = copy(history = historyItem +: history)
   def save(implicit conn: Connection): URL = {
     val entity = URLEntity(this.copy(updatedAt = inject[DateTime]))

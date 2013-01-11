@@ -27,49 +27,49 @@ import com.keepit.common.time._
 import com.keepit.common.analytics.reports.Reports.ReportGroup
 
 object Reports {
-  lazy val DailyActiveUniqueUserReport = new DailyActiveUniqueUserReport
-  lazy val DailyPageLoadReport = new DailyPageLoadReport
-  lazy val DailySearchQueriesReport = new DailySearchQueriesReport
-  lazy val DailyGoogleResultClicked = new DailyGoogleResultClicked
-  lazy val DailyKifiResultClicked = new DailyKifiResultClicked
-  lazy val DailyGoogleResultClickedOverKifi = new DailyGoogleResultClickedOverKifi
-  lazy val DailySliderShownByAuto = new DailySliderShownByAuto
-  lazy val DailySliderShownByIcon = new DailySliderShownByIcon
-  lazy val DailySliderShownByKey = new DailySliderShownByKey
-  lazy val DailySliderClosedByAuto = new DailySliderClosedByAuto
-  lazy val DailySliderClosedByIcon = new DailySliderClosedByIcon
-  lazy val DailySliderClosedByKey = new DailySliderClosedByKey
-  lazy val DailySliderClosedByX = new DailySliderClosedByX
-  lazy val DailyComment = new DailyComment
-  lazy val DailyMessage = new DailyMessage
-  lazy val DailyUnkeep = new DailyUnkeep
-  lazy val DailyKeep = new DailyKeep
-  lazy val DailyUniqueDepricatedAddBookmarks = new DailyUniqueDepricatedAddBookmarks
+  lazy val dailyActiveUniqueUserReport = new DailyActiveUniqueUserReport
+  lazy val dailyPageLoadReport = new DailyPageLoadReport
+  lazy val dailySearchQueriesReport = new DailySearchQueriesReport
+  lazy val dailyGoogleResultClicked = new DailyGoogleResultClicked
+  lazy val dailyKifiResultClicked = new DailyKifiResultClicked
+  lazy val dailyGoogleResultClickedOverKifi = new DailyGoogleResultClickedOverKifi
+  lazy val dailySliderShownByAuto = new DailySliderShownByAuto
+  lazy val dailySliderShownByIcon = new DailySliderShownByIcon
+  lazy val dailySliderShownByKey = new DailySliderShownByKey
+  lazy val dailySliderClosedByAuto = new DailySliderClosedByAuto
+  lazy val dailySliderClosedByIcon = new DailySliderClosedByIcon
+  lazy val dailySliderClosedByKey = new DailySliderClosedByKey
+  lazy val dailySliderClosedByX = new DailySliderClosedByX
+  lazy val dailyComment = new DailyComment
+  lazy val dailyMessage = new DailyMessage
+  lazy val dailyUnkeep = new DailyUnkeep
+  lazy val dailyKeep = new DailyKeep
+  lazy val dailyUniqueDepricatedAddBookmarks = new DailyUniqueDepricatedAddBookmarks
 
   case class ReportGroup(name: String, reports: Seq[Report])
 
   lazy val DailyReports = ReportGroup("DailyReport",
-    Seq(DailyActiveUniqueUserReport,
-      DailyPageLoadReport,
-      DailySearchQueriesReport,
-      DailyGoogleResultClicked,
-      DailyKifiResultClicked,
-      DailyGoogleResultClickedOverKifi,
-      DailySliderShownByAuto,
-      DailySliderShownByIcon,
-      DailySliderShownByKey,
-      DailySliderClosedByAuto,
-      DailySliderClosedByIcon,
-      DailySliderClosedByKey,
-      DailySliderClosedByX,
-      DailyComment,
-      DailyMessage,
-      DailyUnkeep,
-      DailyKeep)
+    Seq(dailyActiveUniqueUserReport,
+      dailyPageLoadReport,
+      dailySearchQueriesReport,
+      dailyGoogleResultClicked,
+      dailyKifiResultClicked,
+      dailyGoogleResultClickedOverKifi,
+      dailySliderShownByAuto,
+      dailySliderShownByIcon,
+      dailySliderShownByKey,
+      dailySliderClosedByAuto,
+      dailySliderClosedByIcon,
+      dailySliderClosedByKey,
+      dailySliderClosedByX,
+      dailyComment,
+      dailyMessage,
+      dailyUnkeep,
+      dailyKeep)
   )
 
   lazy val DailyAdminReports = ReportGroup("DailyAdminReport",
-    Seq(DailyUniqueDepricatedAddBookmarks, DailySearchQueriesReport)
+    Seq(dailyUniqueDepricatedAddBookmarks, dailySearchQueriesReport)
   )
 }
 
