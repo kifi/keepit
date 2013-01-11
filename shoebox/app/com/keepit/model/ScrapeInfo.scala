@@ -14,7 +14,6 @@ import scala.math._
 case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
   uriId: Id[NormalizedURI], // = NormalizedURI id
-  urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
   lastScrape: DateTime = currentDateTime,
   nextScrape: DateTime = currentDateTime,
   interval: Double = 24.0d, // hours
@@ -29,8 +28,6 @@ case class ScrapeInfo(
       case ScrapeInfo.States.INACTIVE => copy(state = state, nextScrape = ScrapeInfo.NEVER) // never scrape when switched to INACTIVE
     }
   }
-
-  def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
 
   def withFailure()(implicit config: ScraperConfig) = {
     val backoff = min(config.maxBackoff, (config.initialBackoff * (1 << failures).toDouble))
@@ -73,6 +70,9 @@ case class ScrapeInfo(
 
 object ScrapeInfo {
 
+  def all(implicit conn: Connection): Seq[ScrapeInfo] =
+    ScrapeInfoEntity.all.map(_.view)
+
   def ofUri(uri: NormalizedURI)(implicit conn: Connection) = ofUriId(uri.id.get)
 
   def ofUriId(uriId: Id[NormalizedURI])(implicit conn: Connection) = {
@@ -104,7 +104,6 @@ object ScrapeInfo {
 
 private[model] class ScrapeInfoEntity extends Entity[ScrapeInfo, ScrapeInfoEntity] {
   val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
-  val urlId = "url_id".ID[URL]
   val lastScrape = "last_scrape".JODA_TIMESTAMP.NOT_NULL
   val nextScrape = "next_scrape".JODA_TIMESTAMP.NOT_NULL
   val interval = "scrape_interval".DOUBLE().NOT_NULL
@@ -117,7 +116,6 @@ private[model] class ScrapeInfoEntity extends Entity[ScrapeInfo, ScrapeInfoEntit
   def view(implicit conn: Connection): ScrapeInfo = ScrapeInfo(
     id = id.value,
     uriId = uriId(),
-    urlId = urlId.value,
     lastScrape = lastScrape(),
     nextScrape = nextScrape(),
     interval = interval(),
@@ -134,7 +132,6 @@ private[model] object ScrapeInfoEntity extends ScrapeInfoEntity with EntityTable
     val entity = new ScrapeInfoEntity
     entity.id.set(view.id)
     entity.uriId := view.uriId
-    entity.urlId.set(view.urlId)
     entity.lastScrape := view.lastScrape
     entity.nextScrape := view.nextScrape
     entity.interval := view.interval
