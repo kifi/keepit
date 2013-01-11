@@ -16,10 +16,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
 import com.keepit.scraper._
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ScrapeInfo, NormalizedURI}
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
+import javax.xml.bind.DatatypeConverter._
 
 object ScraperController extends FortyTwoController {
 
@@ -30,7 +31,11 @@ object ScraperController extends FortyTwoController {
   }
 
   def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
-    val dupe = new DuplicateDocumentDetection()
+
+    val documentSignatures = CX.withConnection { implicit conn =>
+      ScrapeInfo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
+    }
+    val dupe = new DuplicateDocumentDetection(documentSignatures)
     val docs = dupe.processDocuments()
     val result = CX.withConnection { implicit conn =>
       docs.collect { case (id,similars) =>
