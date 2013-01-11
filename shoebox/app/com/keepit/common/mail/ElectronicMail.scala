@@ -86,9 +86,9 @@ object ElectronicMail {
     
   def forRecipient(mailAddresses: Seq[String])(implicit conn: Connection): Seq[ElectronicMail] =
     mailAddresses match {
-      case Nil => Seq[ElectronicMail]()
+      case Nil => Nil
       case addrs =>
-        (ElectronicMailEntity AS "p").map { p => SELECT (p.*) FROM p WHERE (p.to IN (mailAddresses)) list }.map(_.view)
+        (ElectronicMailEntity AS "p").map { p => SELECT (p.*) FROM p WHERE (p.to IN (addrs)) list }.map(_.view)
     }
 
   def page(page: Int, size: Int, filterRecipeintNot: EmailAddressHolder)(implicit conn: Connection): Seq[ElectronicMail] =
