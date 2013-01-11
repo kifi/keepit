@@ -91,11 +91,21 @@ abstract class RepoTable[M <: Model[M]](name: String) extends ExtendedTable[M](n
 
   def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
 
-  def createdAt = column[DateTime]("CREATED_AT", O.NotNull)
-  def updatedAt = column[DateTime]("UPDATED_AT", O.NotNull)
+  def createdAt = column[DateTime]("created_at", O.NotNull)
+  def updatedAt = column[DateTime]("updated_at", O.NotNull)
 
   def idCreateUpdateBase = id.? ~ createdAt ~ updatedAt
 
   override def column[C : TypeMapper](n: String, options: ColumnOption[C, ProfileType]*) = super.column(n.toUpperCase(), options:_*)
 }
+
+trait RepoTableWithExternalId[M <: Model[M]] { self: RepoTable[M] =>
+  implicit val ExternalIdMapper = new BaseTypeMapper[ExternalId[M]] {
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
+  }
+
+  def externalId = column[ExternalId[M]]("external_id", O.NotNull)
+}
+
+
 
