@@ -15,11 +15,12 @@ import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
-import com.keepit.scraper.ScraperPlugin
-import com.keepit.model.NormalizedURI
+import com.keepit.scraper._
+import com.keepit.model.{ScrapeInfo, NormalizedURI}
 import com.keepit.model.NormalizedURI.States._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
+import javax.xml.bind.DatatypeConverter._
 
 object ScraperController extends FortyTwoController {
 
@@ -27,6 +28,26 @@ object ScraperController extends FortyTwoController {
     val scraper = inject[ScraperPlugin]
     val articles = scraper.scrape()
     Ok(views.html.scrape(articles))
+  }
+
+  def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
+
+    val documentSignatures = CX.withConnection { implicit conn =>
+      ScrapeInfo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
+    }
+    val dupe = new DuplicateDocumentDetection(documentSignatures)
+    val docs = dupe.processDocuments()
+    val result = CX.withConnection { implicit conn =>
+      docs.collect { case (id,similars) =>
+        val t = NormalizedURI.get(id)
+        t.id.get.id + "\t" + t.url.take(150) + "\n" +
+        similars.map { sid =>
+          val s = NormalizedURI.get(sid._1)
+          "\t" + sid._2 + "\t" + s.id.get.id + "\t" + s.url.take(150)
+        }.mkString("\n")
+      }.mkString("\n")
+    }
+    Ok(result)
   }
 
   def scrapeByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>

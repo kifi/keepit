@@ -62,6 +62,7 @@ GET     /admin/bookmarks/page/:page com.keepit.controllers.BookmarksController.b
 
 GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scrape/:state        com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
+GET     /admin/scraped/dupes         com.keepit.controllers.admin.ScraperController.duplicateDocumentDetection
 GET     /admin/scraped/:uriId       com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
 
 GET     /admin/article/index        com.keepit.controllers.admin.ArticleIndexerController.index
