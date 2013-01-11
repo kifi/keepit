@@ -20,7 +20,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.CX
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
 import com.keepit.serializer.UserWithSocialSerializer

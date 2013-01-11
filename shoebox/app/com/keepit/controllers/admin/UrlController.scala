@@ -24,7 +24,7 @@ import com.keepit.model.NormalizedURI.States._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.time._
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import com.keepit.model.Bookmark
 import com.keepit.common.healthcheck.BabysitterTimeout
 import org.joda.time.LocalDate

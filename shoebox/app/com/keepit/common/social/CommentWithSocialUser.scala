@@ -1,7 +1,7 @@
 package com.keepit.common.social
 
 import com.keepit.model.Comment
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import java.sql.Connection
 import com.keepit.common.db.ExternalId
 import com.keepit.model.CommentRecipient
@@ -12,13 +12,13 @@ object CommentWithSocialUser {
   // TODO: Major optimizations needed!
   def apply(comment: Comment)(implicit conn: Connection): CommentWithSocialUser = {
     CommentWithSocialUser(
-      UserWithSocial.toUserWithSocial(User.get(comment.userId)),
+      UserWithSocial.toUserWithSocial(UserCxRepo.get(comment.userId)),
       comment,
       Comment.getChildCount(comment.id.get),
       if(comment.permissions != Comment.Permissions.MESSAGE) {
         Nil
       } else {
-        CommentRecipient.getByComment(comment.id.get) map { cr => UserWithSocial.toUserWithSocial(User.get(cr.userId.get)) }
+        CommentRecipient.getByComment(comment.id.get) map { cr => UserWithSocial.toUserWithSocial(UserCxRepo.get(cr.userId.get)) }
       }
     )
   }

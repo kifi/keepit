@@ -5,7 +5,7 @@ import com.keepit.common.time._
 import java.sql.Connection
 import org.joda.time.DateTime
 import ru.circumflex.orm._
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 
 case class ArticleSearchResultRef (
   id: Option[Id[ArticleSearchResultRef]] = None,

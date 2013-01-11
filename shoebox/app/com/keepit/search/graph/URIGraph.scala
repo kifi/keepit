@@ -5,7 +5,7 @@ import com.keepit.common.db.CX
 import com.keepit.common.db.Id
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
-import com.keepit.model.{Bookmark, NormalizedURI, User}
+import com.keepit.model.{Bookmark, NormalizedURI, User, UserCxRepo}
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher, QueryParser}
@@ -83,7 +83,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   def load(): Int = {
     log.info("loading URIGraph")
     try {
-      val users = CX.withConnection { implicit c => User.all }
+      val users = CX.withConnection { implicit c => UserCxRepo.all }
       var cnt = 0
       indexDocuments(users.iterator.map{ user => buildIndexable(user) }, commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
@@ -99,7 +99,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   def update(userId: Id[User]): Int = {
     log.info("updating a URIGraph for user=%d".format(userId.id))
     try {
-      val user = CX.withConnection { implicit c => User.get(userId) }
+      val user = CX.withConnection { implicit c => UserCxRepo.get(userId) }
       var cnt = 0
       indexDocuments(Iterator(buildIndexable(user)), commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
@@ -131,7 +131,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   def getURIGraphSearcher() = new URIGraphSearcher(searcher)
 
   def buildIndexable(id: Id[User]) = {
-    val user = CX.withConnection{ implicit c => User.get(id) }
+    val user = CX.withConnection{ implicit c => UserCxRepo.get(id) }
     buildIndexable(user)
   }
 

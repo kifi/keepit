@@ -1,6 +1,6 @@
 package com.keepit.common.social
 
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import com.keepit.common.db.Id
 import play.api.libs.json.JsValue
 import com.keepit.model.SocialUserInfo

@@ -55,7 +55,7 @@ object EventController extends FortyTwoController {
     val logRecievedTime = currentDateTime
 
     val (user, experiments) = CX.withConnection { implicit conn =>
-      (User.get(userId), UserExperiment.getByUser(userId) map (_.experimentType))
+      (UserCxRepo.get(userId), UserExperiment.getByUser(userId) map (_.experimentType))
     }
 
     val events = (params \ "events") match {

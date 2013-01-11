@@ -21,7 +21,7 @@ import akka.dispatch.Future
 import com.google.inject.Inject
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import com.keepit.inject._
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._

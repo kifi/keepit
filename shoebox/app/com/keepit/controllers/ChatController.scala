@@ -13,7 +13,7 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import com.keepit.common.db.CX
 import play.api.libs.ws.WS
 import org.jivesoftware.smack._
@@ -57,7 +57,7 @@ object ChatController extends FortyTwoController {
     log.info("will chat with user (externalId) %s, url is %s and message is %s".format(receipantExternalId, url, message))
 
     val receipantSocialUserInfo = CX.withConnection { implicit c =>
-      val user = User.get(receipantExternalId)
+      val user = UserCxRepo.get(receipantExternalId)
       val infos = SocialUserInfo.getByUser(user.id.get)
       //at this point we must have a single info per user
       if (infos.size != 1) throw new Exception("info for %s is not ONE: \n%s".format(user, infos.mkString("\n")))

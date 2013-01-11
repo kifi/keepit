@@ -8,7 +8,7 @@ import securesocial.core.AuthenticationMethod._
 import play.api.libs.json._
 import com.keepit.search.ArticleSearchResult
 import com.keepit.search.ArticleHit
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import com.keepit.search.ArticleSearchResultRef
 
 class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {

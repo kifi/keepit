@@ -9,7 +9,7 @@ import play.api.data.validation.Constraints._
 import play.api.http.ContentTypes
 import play.api.mvc._
 import play.api._
-import com.keepit.model.User
+import com.keepit.model.{User, UserCxRepo}
 import com.keepit.common.db.CX
 
 object HomeController extends FortyTwoController {
@@ -21,7 +21,7 @@ object HomeController extends FortyTwoController {
   }
 
   def upgrade = AuthenticatedHtmlAction { implicit request =>
-    val user = CX.withConnection { implicit conn => User.get(request.userId) }
+    val user = CX.withConnection { implicit conn => UserCxRepo.get(request.userId) }
     log.info("Looks like %s needs to upgrade".format(user.firstName + " " + user.lastName))
     val html = io.Source.fromURL(Play.resource("/public/html/upgrade.html").get).mkString
     Ok(html).as(ContentTypes.HTML)

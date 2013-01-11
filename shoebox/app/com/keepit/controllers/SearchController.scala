@@ -101,7 +101,7 @@ object SearchController extends FortyTwoController {
     val uri = NormalizedURI.get(res.uriId)
     val bookmark = if (res.isMyBookmark) Bookmark.load(uri, userId) else None
     val users = res.users.toSeq.map{ userId =>
-      val user = User.get(userId)
+      val user = UserCxRepo.get(userId)
       val info = SocialUserInfo.getByUser(user.id.get).head
       UserWithSocial(user, info, Bookmark.count(user), Seq(), Seq())
     }
@@ -129,7 +129,7 @@ object SearchController extends FortyTwoController {
         val scoring = tuple._2
         val uri = NormalizedURI.get(hit.uriId)
         val users = hit.users.map { userId =>
-          User.get(userId)
+          UserCxRepo.get(userId)
         }
         ArticleSearchResultHitMeta(uri, users.toSeq, scoring, hit)
       }
