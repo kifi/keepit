@@ -86,7 +86,7 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithEx
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
   }
 
-  def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id: ExternalId[M]).get
+  def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id).get
   def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = (for(f <- externalIdColumn if Is(f.externalId, id)) yield f).firstOption
 }
 
