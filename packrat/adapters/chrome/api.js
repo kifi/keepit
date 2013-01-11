@@ -1,6 +1,7 @@
 // API for main.js
 
 api = function() {
+  var t0 = +new Date;
 
   function dispatch() {
     var args = arguments;
@@ -46,10 +47,12 @@ api = function() {
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     api.log("[onUpdated] tab:", tabId, "change:", change);
     if (activePages[tab.windowId]) {
-      if (change.url) {
-        var page = pages[tabId] = {
+      var page = pages[tabId];
+      if (change.url && change.url !== (page && page.url)) {
+        page = pages[tabId] = {
           id: tabId,
           url: tab.url,
+          active: tab.active,
           ready: change.status === "complete"};
         if (/^https?:/.test(page.url)) {
           dispatch.call(api.tabs.on.loading, page);
@@ -57,7 +60,6 @@ api = function() {
       }
       // would be nice to get "interactive" too. see http://crbug.com/169070
       if (change.status === "complete") {
-        var page = pages[tabId];
         if (page) {
           page.ready = true;
           if (/^https?:/.test(page.url)) {
@@ -88,18 +90,29 @@ api = function() {
   var activePages = {};  // in "normal" windows only, by window.id
   chrome.tabs.query({windowType: "normal"}, function(tabs) {
     tabs.forEach(function(tab) {
-      var page = pages[tab.id] = {
-        id: tab.id,
-        url: tab.url,
-        active: tab.active,
-        ready: tab.status === "complete"};
+      var page = pages[tab.id];
+      if (tab.url !== (page && page.url)) {
+        page = pages[tab.id] = {
+          id: tab.id,
+          url: tab.url,
+          active: tab.active,
+          ready: tab.status === "complete"};
+      }
       if (page.active) {
         activePages[tab.windowId] = page;
       }
-      if (tab.status === "loading" && /^https?:/.test(tab.url)) {
-        chrome.tabs.executeScript(tab.id, {code: "document.readyState"}, function(arr) {
-          page.ready = !!(page.ready || arr && arr[0]);
-        });
+      if (/^https?:/.test(tab.url)) {
+        // Note: intentionally not dispatching api.tabs.on.ready after injecting content scripts
+        if (page.ready) {
+          injectContentScripts(page, api.noop);
+        } else if (tab.status === "loading") {
+          chrome.tabs.executeScript(tab.id, {code: "document.readyState"}, function(arr) {
+            page.ready = !!(page.ready || arr && arr[0]);
+            if (page.ready) {
+              injectContentScripts(page, api.noop);
+            }
+          });
+        }
       }
     });
   });
@@ -111,10 +124,12 @@ api = function() {
       api.log.error(Error("url mismatch:\n" + tab.url + "\n" + page.url), "onMessage");
     }
     if (msg === "api:dom_ready") {
-      injectContentScripts(tab, function() {
+      if (page) {
         page.ready = true;
-        dispatch.call(api.tabs.on.ready, page);
-      });
+        injectContentScripts(tab, function() {
+          dispatch.call(api.tabs.on.ready, page);
+        });
+      }
     } else if (portHandlers) {
       var handler = portHandlers[msg[0]];
       if (handler) {
@@ -133,6 +148,10 @@ api = function() {
   });
 
   function injectContentScripts(tab, callback) {
+    // for ignoring messages from future updates/installs/reloads of this extension
+    chrome.tabs.executeScript(tab.id,
+      {code: "!function(e){e.initEvent('kifiunload');dispatchEvent(e)}(document.createEvent('Event'));lifeId=" + t0});
+
     for (var i = 0, n = 0, N = 0; i < meta.contentScripts.length; i++) {
       var cs = meta.contentScripts[i];
       if (cs[1].test(tab.url)) {
@@ -226,30 +245,36 @@ api = function() {
       },
       emit: function(tabId, type, data) {
         api.log("[api.tabs.emit] tab:", tabId, "type:", type, "data:", data);
-        chrome.tabs.sendMessage(tabId, [type, data]);
+        chrome.tabs.sendMessage(tabId, [t0, type, data]);
       },
       get: function(tabId) {
         return pages[tabId];
       },
       inject: function(tabId, path, callback) {
-        var o = deps(path, pages[tabId].injected);
+        var page = pages[tabId];
+        page.injected = page.injected || {};
+        var o = deps(path, page.injected);
         injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, function() {
-          injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, function() {
-            pages[tabId].injected = o.injected;
-            callback();
-          });
+          if (pages[tabId] === page) {  // tab may have navigated or closed
+            injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, callback);
+          }
         });
 
         function injectAll(inject, paths, callback) {
-          if (paths && paths.length) {
-            var n = 0;
+          var n = 0, N = paths.length;
+          if (N) {
             paths.forEach(function(path) {
-              api.log("[api.tabs.inject] tab:", tabId, path);
-              inject(tabId, {file: path}, function() {
-                if (++n == paths.length) {
-                  callback();
-                }
-              });
+              if (!page.injected[path]) {
+                page.injected[path] = true;
+                api.log("[api.tabs.inject] tab:", tabId, path);
+                inject(tabId, {file: path}, function() {
+                  if (++n === N) {
+                    callback();
+                  }
+                });
+              } else if (++n === N) {
+                callback();
+              }
             });
           } else {
             callback();

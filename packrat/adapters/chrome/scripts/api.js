@@ -1,6 +1,8 @@
 // API for content scripts
 
-api = {
+api = function() {
+  var msgListeners = [];
+  var api = {
   load: function(path, callback) {
     var req = new XMLHttpRequest();
     req.open("GET", api.url(path), true);
@@ -24,25 +26,42 @@ api = {
       chrome.extension.sendMessage([type, data], callback || api.noop);
     },
     on: function(handlers) {
-      chrome.extension.onMessage.addListener(function(msg, sender, respond) {
-        var handler = handlers[msg && msg[0]];
-        if (handler) {
-          api.log("[onMessage] handling:", msg, "from:", sender);
-          try {
-            return handler(msg[1], respond);
-          } catch (e) {
-            api.log.error(e, "onMessage");
-          } finally {
-            api.log("[onMessage] done:", msg);
+      msgListeners.push(f);
+      chrome.extension.onMessage.addListener(f);
+      function f(msg, sender, respond) {
+        if (msg && msg.length && msg[0] === lifeId) {
+          var kind = msg[1], handler = handlers[kind];
+          if (handler) {
+            var data = msg[2];
+            api.log("[onMessage] handling:", kind, data);
+            try {
+              return handler(data, respond);
+            } catch (e) {
+              api.log.error(e, "onMessage");
+            } finally {
+              api.log("[onMessage] done:", kind, data);
+            }
           }
-        } else {
-          api.log("[onMessage] ignoring:", msg, "from:", sender);
         }
-      });
+      }
     }},
   url: chrome.extension.getURL.bind(chrome.extension)};
 
-api.log.error = function(exception, context) {
-  console.error((context ? "[" + context + "] " : "") + exception);
-  console.error(exception.stack);
-};
+  api.log.error = function(exception, context) {
+    console.error((context ? "[" + context + "] " : "") + exception);
+    console.error(exception.stack);
+  };
+
+  window.addEventListener("kifiunload", function f() {
+    api.log("\u2205 end life:", lifeId);
+    window.removeEventListener("kifiunload", f);
+    msgListeners.forEach(function(ml) {
+      chrome.extension.onMessage.removeListener(ml);
+    });
+    api.port.emit = api.noop;
+  });
+
+  return api;
+}();
+
+api.log("\u2058 new life:", lifeId);
