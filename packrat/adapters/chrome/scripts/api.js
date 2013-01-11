@@ -52,13 +52,15 @@ api = function() {
     console.error(exception.stack);
   };
 
-  window.addEventListener("kifiunload", function f() {
-    api.log("\u2205 end life:", lifeId);
-    window.removeEventListener("kifiunload", f);
-    msgListeners.forEach(function(ml) {
-      chrome.extension.onMessage.removeListener(ml);
-    });
-    api.port.emit = api.noop;
+  window.addEventListener("kifiunload", function f(e) {
+    if (e.lifeId !== lifeId) {
+      api.log("\u2205 end life:", lifeId);
+      window.removeEventListener("kifiunload", f);
+      msgListeners.forEach(function(ml) {
+        chrome.extension.onMessage.removeListener(ml);
+      });
+      api.port.emit = api.noop;
+    }
   });
 
   return api;

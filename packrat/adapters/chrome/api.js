@@ -48,12 +48,14 @@ api = function() {
     api.log("[onUpdated] tab:", tabId, "change:", change);
     if (activePages[tab.windowId]) {
       var page = pages[tabId];
-      if (change.url && change.url !== (page && page.url)) {
-        page = pages[tabId] = {
-          id: tabId,
-          url: tab.url,
-          active: tab.active,
-          ready: change.status === "complete"};
+      if (change.url) {
+        if (change.url !== (page && page.url)) {
+          page = pages[tabId] = {
+            id: tabId,
+            url: tab.url,
+            active: tab.active,
+            ready: change.status === "complete"};
+        }
         if (/^https?:/.test(page.url)) {
           dispatch.call(api.tabs.on.loading, page);
         }
@@ -150,7 +152,7 @@ api = function() {
   function injectContentScripts(tab, callback) {
     // for ignoring messages from future updates/installs/reloads of this extension
     chrome.tabs.executeScript(tab.id,
-      {code: "!function(e){e.initEvent('kifiunload');dispatchEvent(e)}(document.createEvent('Event'));lifeId=" + t0});
+      {code: "lifeId=" + t0 + ";!function(e){e.initEvent('kifiunload');e.lifeId=lifeId;dispatchEvent(e)}(document.createEvent('Event'))"});
 
     for (var i = 0, n = 0, N = 0; i < meta.contentScripts.length; i++) {
       var cs = meta.contentScripts[i];
