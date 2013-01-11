@@ -1,5 +1,4 @@
 var api = api || require("./api");
-var meta = meta || require("./meta");
 
 // ===== Async requests
 
@@ -143,10 +142,10 @@ api.port.on({
     setConfigs(data.key);
   },
   set_page_icon: function(data, respond, tab) {
-    setPageIcon(tab.id, data);
+    setIcon(tab.id, data);
   },
   require: function(data, respond, tab) {
-    injectDeps(tab.id, data, respond);
+    api.tabs.inject(tab.id, data, respond);
     return true;
   },
   get_slider_info: function(data, respond, tab) {
@@ -388,42 +387,6 @@ var restrictedUrlPatternsForHover = [
   "www.google.com",
   "google.com"];
 
-function onPageLoad(tab) {
-  api.log("[onPageLoad] tab:", tab);
-  logEvent("extension", "pageLoad");
-
-  injectDeps(tab.id, {
-    scripts: meta.contentScripts.reduce(function(a, s) {
-        if (s[1].test(tab.url)) {
-          a.push(s[0]);
-        }
-        return a;
-      }, [])},
-    api.noop);
-
-  checkWhetherKept(tab.url, function(isKept) {
-    setPageIcon(tab.id, isKept);
-
-    if (restrictedUrlPatternsForHover.some(function(e) {return tab.url.indexOf(e) >= 0})) {
-      api.log("[onPageLoad] restricted:", tab.url);
-      return;
-    } else if (userHistory.exists(tab.url)) {
-      api.log("[onPageLoad] recently visited:", tab.url);
-      return;
-    }
-    userHistory.add(tab.url);
-
-    if (isKept) {
-      api.log("[onPageLoad] already kept:", tab.url);
-    } else {
-      var sliderDelaySec = getConfigs().hover_timeout;
-      if (sliderDelaySec > 0) {
-        api.tabs.emit(tab.id, "auto_show_after", sliderDelaySec * 1000);
-      }
-    }
-  });
-}
-
 // Kifi icon in location bar
 api.icon.on.click.push(function(tab) {
   api.tabs.emit(tab.id, "button_click");
@@ -444,56 +407,26 @@ function checkWhetherKept(url, callback) {
   });
 }
 
-function setPageIcon(tabId, kept) {
-  api.log("[setPageIcon] tab:", tabId, "kept:", !!kept);
-  chrome.pageAction.setIcon({tabId: tabId, path: kept ? "icons/kept.png" : "icons/keep.png"});
-  chrome.pageAction.show(tabId);
-}
-
-function injectDeps(tabId, details, callback) {
-  var injected = details.injected || {};
-  function notYetInjected(path) {
-    return !injected[path];
-  }
-
-  details.scripts = details.scripts.reduce(function(a, s) {
-    return a.concat(transitiveClosure(s));
-  }, []).filter(isUnique).filter(notYetInjected);
-
-  details.styles = details.scripts.reduce(function(a, s) {
-    a.push.apply(a, meta.styleDeps[s]);
-    return a;
-  }, []).filter(isUnique).filter(notYetInjected);
-
-  details.script = "injected=" + JSON.stringify(
-    details.styles.reduce(addEntry,
-      details.scripts.reduce(addEntry, injected)));
-
-  api.log("[injectDeps] details: " + JSON.stringify(details));
-
-  api.tabs.inject(tabId, details, callback);
-
-  function addEntry(o, k) {
-    o[k] = true;
-    return o;
+function setIconIfFaint(tab) {
+  api.log("[setIconIfFaint]", tab.id, tab.url, tab.icon);
+  if (api.icon.get(tab.id) === "icons/keep.faint.png") {
+    checkWhetherKept(tab.url, function(isKept) {
+      setIconIfStillAt(tab.id, tab.url, isKept);
+    });
   }
 }
 
-function transitiveClosure(path) {
-  var deps = meta.scriptDeps[path];
-  if (deps) {
-    deps = deps.reduce(function(a, s) {
-      return a.concat(transitiveClosure(s));
-    }, []);
-    deps.push(path);
-    return deps.filter(isUnique);
-  } else {
-    return [path];
+function setIconIfStillAt(tabId, url, kept, callback) {
+  var tab = api.tabs.get(tabId);  // tab may have navigated
+  if (tab.url === url && api.icon.get(tabId) === "icons/keep.faint.png") {
+    setIcon(tabId, kept);
+    callback && callback(tab);
   }
 }
 
-function isUnique(value, index, array) {
-  return array.indexOf(value) == index;
+function setIcon(tabId, kept) {
+  api.log("[setIcon] tab:", tabId, "kept:", kept);
+  api.icon.set(tabId, kept == null ? "icons/keep.faint.png" : kept ? "icons/kept.png" : "icons/keep.png");
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
@@ -509,24 +442,48 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
   });
 }
 
-// Tab may be older than current kifi installation and so not yet have icon and any content script(s).
-api.tabs.on.activate.push(sprinkleSomeKiFiOn);
+api.tabs.on.activate.push(setIconIfFaint);
 
-api.tabs.on.navigate.push(function(tab) {
-  setPageIcon(tab.id, false);
-});
+api.tabs.on.loading.push(function(tab) {
+  api.log("[tabs.on.loading]", tab.id, tab.url);
+  setIcon(tab.id);
 
-api.tabs.on.load.push(onPageLoad);
-
-function sprinkleSomeKiFiOn(tab) {
-  if (/^https?:/.test(tab.url)) {
-    api.tabs.inject(tab.id, {script: "window.injected"}, function(val) {
-      if (!val) {
-        api.log("[sprinkleSomeKiFiOn] old tab:", tab.id);
-        setPageIcon(tab.id, false);
-        onPageLoad(tab);
+  checkWhetherKept(tab.url, function(isKept) {
+    setIconIfStillAt(tab.id, tab.url, isKept, function(tab) {
+      if (!isKept && tab.ready) {
+        handleSliderAutoShow(tab);
       }
     });
+  });
+});
+
+api.tabs.on.ready.push(function(tab) {
+  api.log("[tabs.on.ready]", tab);
+  logEvent("extension", "pageLoad");
+
+  if (api.icon.get(tab.id) === "icons/keep.png") {
+    handleSliderAutoShow(tab);
+  }
+});
+
+//api.tabs.on.complete.push(function(tab) {...});
+
+function handleSliderAutoShow(tab) {
+  // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
+  var url = tab.url;
+  if (restrictedUrlPatternsForHover.some(function(e) {return url.indexOf(e) >= 0})) {
+    api.log("[handleSliderAutoShow] restricted:", url);
+    return;
+  }
+  if (userHistory.exists(url)) {
+    api.log("[handleSliderAutoShow] recently visited:", url);
+    return;
+  }
+  userHistory.add(url);
+
+  var sliderDelaySec = getConfigs().hover_timeout;
+  if (sliderDelaySec > 0) {
+    api.tabs.emit(tab.id, "auto_show_after", sliderDelaySec * 1000);
   }
 }
 
@@ -643,25 +600,24 @@ function authenticate(callback) {
 function deauthenticate(callback) {
   api.log("[deauthenticate]");
   session = null;
-  chrome.windows.create({type: "popup", url: "http://" + getConfigs().server + "/session/end", width: 200, height: 100}, function(win) {
-    api.log("[deauthenticate] created popup:", win);
-    callback();
-  });
+  api.popup.open({
+    name: "kifi-deauthenticate",
+    url: "http://" + getConfigs().server + "/session/end",
+    width: 200,
+    height: 100})
+  callback();
 }
 
 // ===== Main (executed upon install, reinstall, update, reenable, and browser start)
 
 logEvent("extension", "started");
 
-meta.contentScripts.forEach(function(arr) {
-  var path = arr[0];
-  api.scripts.register(arr[1], transitiveClosure(path), meta.styleDeps[path]);
-});
-
 authenticate(function() {
   api.log("[main] authenticated");
-
-  chrome.tabs.query({windowType: "normal", active: true, status: "complete"}, function(tabs) {
-    tabs.forEach(sprinkleSomeKiFiOn);
+  api.tabs.each(function(tab) {
+    setIcon(tab.id);
+    if (tab.active) {
+      setIconIfFaint(tab);
+    }
   });
 });
