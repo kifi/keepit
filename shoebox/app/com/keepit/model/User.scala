@@ -13,6 +13,7 @@ import org.joda.time.DateTime
 import play.api._
 import ru.circumflex.orm._
 import play.api.libs.json._
+import com.google.inject.{Inject, ImplementedBy}
 
 case class User(
   id: Option[Id[User]] = None,
@@ -34,51 +35,51 @@ case class User(
     entity.view
   }
 }
+/*
+@ImplementedBy(classOf[UserRepoImpl])
+trait UserRepo extends Repo[User] {
+  def all(userId: Id[User])(implicit session: RSession): Seq[User]
+  def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[User]
+  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[User]
+}
 
-//@ImplementedBy(classOf[UserRepoImpl])
-//trait UserRepo extends Repo[User] {
-//  def all(userId: Id[User])(implicit session: RSession): Seq[User]
-//  def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[User]
-//  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[User]
-//}
+class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] with UserRepo {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
 
-//class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] with UserRepo {
-//  import FortyTwoTypeMappers._
-//  import org.scalaquery.ql._
-//  import org.scalaquery.ql.ColumnOps._
-//  import org.scalaquery.ql.basic.BasicProfile
-//  import org.scalaquery.ql.extended.ExtendedTable
-//  import db.Driver.Implicit._
-//  import DBSession._
-//
-//  override lazy val table = new RepoTable[User]("User") {
-//
-//    def userId = column[Id[User]]("user_id", O.NotNull)
-//    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
-//    def urlId = column[Id[URL]]("url_id", O.Nullable)
-//    def state = column[State[User]]("state", O.NotNull)
-//    def * = idCreateUpdateBase ~ userId ~ uriId ~ urlId.? ~ state <> (User, UserCxRepo.unapply _)
-//  }
-//
-//  def all(userId: Id[User])(implicit session: RSession): Seq[User] =
-//    (for(f <- table if f.userId === userId && f.state === UserStates.ACTIVE) yield f).list
-//
-//  def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[User] = {
-//    val q = for {
-//      f <- table if f.uriId === uriId && f.state === UserStates.ACTIVE
-//    } yield f
-//    q.list
-//  }
-//
-//  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[User] = {
-//    val q = for {
-//      f <- table if (f.uriId === uriId) && (f.userId === userId) && (f.state === UserStates.ACTIVE)
-//    } yield f
-//    q.firstOption
-//  }
-//
-//}
+  override lazy val table = new RepoTable[User]("user") {
 
+    def userId = column[Id[User]]("user_id", O.NotNull)
+    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def urlId = column[Id[URL]]("url_id", O.Nullable)
+    def state = column[State[User]]("state", O.NotNull)
+    def * = idCreateUpdateBase ~ userId ~ uriId ~ urlId.? ~ state <> (User, UserCxRepo.unapply _)
+  }
+
+  def all(userId: Id[User])(implicit session: RSession): Seq[User] =
+    (for(f <- table if f.userId === userId && f.state === UserStates.ACTIVE) yield f).list
+
+  def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[User] = {
+    val q = for {
+      f <- table if f.uriId === uriId && f.state === UserStates.ACTIVE
+    } yield f
+    q.list
+  }
+
+  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[User] = {
+    val q = for {
+      f <- table if (f.uriId === uriId) && (f.userId === userId) && (f.state === UserStates.ACTIVE)
+    } yield f
+    q.firstOption
+  }
+
+}
+*/
 object UserCxRepo {
 
   //slicked
