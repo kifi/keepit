@@ -26,7 +26,6 @@ class SlickModule(dbInfo: DbInfo) extends ScalaModule {
       case H2.driverName        => new H2( dbInfo )
     }
     bind[DataBaseComponent].toInstance(db)
-    bind[Repo[Follow]].to(classOf[FollowRepoImpl]).in(classOf[Singleton])
   }
 }
 

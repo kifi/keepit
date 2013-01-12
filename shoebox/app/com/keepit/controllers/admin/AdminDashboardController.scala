@@ -10,10 +10,8 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
-
 import akka.util.duration._
 import java.util.concurrent.TimeUnit
-
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
@@ -32,6 +30,9 @@ import org.joda.time.DateTimeZone
 import org.joda.time.Days
 import play.api.libs.json.JsNumber
 import play.api.http.ContentTypes
+import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Repo
+import com.keepit.model.UserRepo
 
 /**
  * Charts, etc.
@@ -40,7 +41,7 @@ object AdminDashboardController extends FortyTwoController {
 
   implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
 
-  private lazy val userCountByDate = calcCountByDate(CX.withConnection { implicit conn => UserCxRepo.all }.map(_.createdAt.toLocalDateInZone))
+  private lazy val userCountByDate = calcCountByDate(inject[DBConnection].readOnly(implicit session => inject[UserRepo].all).map(_.createdAt.toLocalDateInZone))
   private lazy val bookmarkCountByDate = calcCountByDate(CX.withConnection { implicit conn => Bookmark.all }.map(_.createdAt.toLocalDateInZone))
 
   private def calcCountByDate(dates: => Seq[LocalDate]) = {

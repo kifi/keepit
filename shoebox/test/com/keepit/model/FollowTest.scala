@@ -20,8 +20,8 @@ class FollowTest extends SpecificationWithJUnit {
 
     "load by user and uri" in {
       running(new EmptyApplication()) {
-        val repo = inject[Repo[Follow]]
-        val followRepo = inject[FollowRepo]
+        val repo = inject[FollowRepo]
+        repo.eq(inject[FollowRepo]) === true //verify singleton
 
         inject[DBConnection].readWrite{ implicit session =>
           repo.count === 0
@@ -35,8 +35,8 @@ class FollowTest extends SpecificationWithJUnit {
         }
 
         inject[DBConnection].readOnly{ implicit session =>
-          followRepo.get(user1.id.get, uriB.id.get).isDefined === false
-          followRepo.get(user2.id.get, uriA.id.get).isDefined === false
+          repo.get(user1.id.get, uriB.id.get).isDefined === false
+          repo.get(user2.id.get, uriA.id.get).isDefined === false
         }
 
         val (f1, f2) = inject[DBConnection].readWrite{ implicit session =>
@@ -48,15 +48,15 @@ class FollowTest extends SpecificationWithJUnit {
         inject[DBConnection].readOnly{ implicit session =>
           repo.get(f1.id.get) === f1
           repo.get(f2.id.get) === f2
-          repo.all.size === 2
-          followRepo.all(user1.id.get).size === 1
-          followRepo.all(user2.id.get).size === 0 //inactive
-          followRepo.all(user1.id.get).head === f1
+          repo.all().size === 2
+          repo.all(user1.id.get).size === 1
+          repo.all(user2.id.get).size === 0 //inactive
+          repo.all(user1.id.get).head === f1
 
-          followRepo.get(user1.id.get, uriA.id.get).isDefined === false
-          followRepo.get(user1.id.get, uriB.id.get).isDefined === true
-          followRepo.get(user2.id.get, uriA.id.get).isDefined === false
-          followRepo.get(user2.id.get, uriB.id.get).isDefined === false
+          repo.get(user1.id.get, uriA.id.get).isDefined === false
+          repo.get(user1.id.get, uriB.id.get).isDefined === true
+          repo.get(user2.id.get, uriA.id.get).isDefined === false
+          repo.get(user2.id.get, uriB.id.get).isDefined === false
         }
 
         inject[DBConnection].readWrite{ implicit session =>
@@ -65,10 +65,10 @@ class FollowTest extends SpecificationWithJUnit {
         }
 
         inject[DBConnection].readOnly{ implicit session =>
-          followRepo.get(user1.id.get, uriA.id.get).isDefined === false
-          followRepo.get(user1.id.get, uriB.id.get).isDefined === false
-          followRepo.get(user2.id.get, uriA.id.get).isDefined === true
-          followRepo.get(user2.id.get, uriB.id.get).isDefined === false
+          repo.get(user1.id.get, uriA.id.get).isDefined === false
+          repo.get(user1.id.get, uriB.id.get).isDefined === false
+          repo.get(user2.id.get, uriA.id.get).isDefined === true
+          repo.get(user2.id.get, uriB.id.get).isDefined === false
         }
       }
     }

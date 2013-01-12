@@ -34,10 +34,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
-import com.keepit.model.{KifiInstallation, KifiVersion, SocialUserInfo, User, UserAgent, UserCxRepo}
+import com.keepit.model.{KifiInstallation, KifiVersion, SocialUserInfo, User, UserAgent, UserCxRepo, UserRepo}
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.inject._
 import com.keepit.common.healthcheck._
+import com.keepit.common.db.slick._
 
 object AuthController extends FortyTwoController {
   // TODO: remove when all beta users are on 2.0.2+
@@ -126,9 +127,7 @@ object AuthController extends FortyTwoController {
   }
 
   def whois = AuthenticatedJsonAction { request =>
-    val user = CX.withConnection { implicit c =>
-      UserCxRepo.get(request.userId)
-    }
+    val user = inject[DBConnection].readOnly(implicit s => inject[UserRepo].get(request.userId))
     Ok(JsObject(Seq("externalUserId" -> JsString(user.externalId.toString))))
   }
 
