@@ -41,6 +41,10 @@ object FortyTwoTypeMappers {
   implicit object FollowStateTypeMapper extends BaseTypeMapper[State[Follow]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[Follow]
   }
+
+  implicit object UserStateTypeMapper extends BaseTypeMapper[State[User]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[User]
+  }
 }
 
 //************************************
