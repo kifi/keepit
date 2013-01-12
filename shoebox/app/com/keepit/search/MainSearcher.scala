@@ -13,7 +13,8 @@ import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
 
-class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], articleIndexer: ArticleIndexer, uriGraph: URIGraph, config: SearchConfig)
+class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], articleIndexer: ArticleIndexer, uriGraph: URIGraph,
+                   resultClickTracker: ResultClickTracker, config: SearchConfig)
 extends Logging {
   val currentTime = currentDateTime.getMillis()
   val isInitialSearch = filterOut.isEmpty
@@ -34,6 +35,7 @@ extends Logging {
   val dumpingHalfDecayMine = config.asFloat("dumpingHalfDecayMine")
   val dumpingHalfDecayFriends = config.asFloat("dumpingHalfDecayFriends")
   val dumpingHalfDecayOthers = config.asFloat("dumpingHalfDecayOthers")
+  val maxResultClickBoost = config.asFloat("maxResultClickBoost")
 
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
   val articleSearcher = articleIndexer.getArticleSearcher
@@ -55,17 +57,18 @@ extends Logging {
     }.getOrElse(Map.empty[Long, Float])
   }
 
-  def searchText(queryString: String, maxTextHitsPerCategory: Int, initial: Boolean = true)(implicit lang: Lang) = {
+  def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts, initial: Boolean = true)(implicit lang: Lang) = {
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
-    searchTextSub(queryString, myHits, friendsHits, othersHits, initial)
+    searchTextSub(queryString, myHits, friendsHits, othersHits, clickBoosts, initial)
 
     (myHits, friendsHits, othersHits)
   }
 
-  private def searchTextSub(queryString: String, myHits: ArticleHitQueue, friendsHits: ArticleHitQueue, othersHits: ArticleHitQueue, initial: Boolean)(implicit lang: Lang) {
+  private def searchTextSub(queryString: String, myHits: ArticleHitQueue, friendsHits: ArticleHitQueue, othersHits: ArticleHitQueue,
+                            clickBoosts: ResultClickTracker.ResultClickBoosts, initial: Boolean)(implicit lang: Lang) {
     var bookmarkTitleHits = searchBookmarkTitle(queryString, initial)
 
     val articleParser = articleIndexer.getQueryParser(lang, proximityBoost, semanticBoost)
@@ -77,7 +80,7 @@ extends Logging {
         while (doc != NO_MORE_DOCS) {
           val id = mapper.getId(doc)
           if (!filterOut.contains(id)) {
-            val score = scorer.score()
+            val score = scorer.score() * clickBoosts(id)
             if (friendlyUris.contains(id)) {
               if (myUris.contains(id)) {
                 // blend with personal bookmark title score
@@ -106,7 +109,7 @@ extends Logging {
       myHits.clear()
       friendsHits.clear()
       othersHits.clear()
-      searchTextSub(queryString, myHits, friendsHits, othersHits, false)
+      searchTextSub(queryString, myHits, friendsHits, othersHits, clickBoosts, false)
     }
   }
 
@@ -114,10 +117,12 @@ extends Logging {
 
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
-    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, isInitialSearch)
+    val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
+    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts, isInitialSearch)
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
+
 
     val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds ++ Set(userId))
 

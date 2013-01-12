@@ -1,6 +1,7 @@
 package com.keepit.common.analytics
 
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
+import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.common.db._
 import com.keepit.search.ArticleSearchResultRef
@@ -11,6 +12,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import java.util.{Set => JSet}
 import com.google.inject.Inject
 import scala.collection.JavaConversions._
+import com.keepit.search.ResultClickTracker
 
 trait EventListenerPlugin extends Plugin {
   def onEvent: PartialFunction[Event,Unit]
@@ -37,6 +39,8 @@ class EventHelper @Inject() (listeners: JSet[EventListenerPlugin]) {
 
 
 class KifiResultClickedListener extends EventListenerPlugin {
+  private lazy val resultClickTracker = inject[ResultClickTracker]
+
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_,UserEventMetadata(EventFamilies.SEARCH,"kifiResultClicked",externalUser,_,experiments,metaData,_),_,_) =>
       val (user, meta, bookmark) = CX.withConnection { implicit conn =>
@@ -46,6 +50,7 @@ class KifiResultClickedListener extends EventListenerPlugin {
       }
 
       // handle KifiResultClicked
+      meta.normUrl.map(n => resultClickTracker.add(user.id.get, meta.query, n.id.get))
   }
 }
 

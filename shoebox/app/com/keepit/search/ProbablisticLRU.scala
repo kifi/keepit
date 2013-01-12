@@ -23,9 +23,41 @@ object ProbablisticLRU {
     }
     new ProbablisticLRU(byteBuffer, tableSize, numHashFuncs, syncEvery)
   }
+
+  def apply(tableSize: Int, numHashFuncs: Int, syncEvery: Int) = {
+    val bufferSize = tableSize * 4 + 4
+    val byteBuffer = ByteBuffer.allocate(bufferSize)
+    byteBuffer.putInt(0, tableSize)
+    new ProbablisticLRU(byteBuffer, tableSize, numHashFuncs, syncEvery)
+  }
+
+  def valueHash(key: Long, value: Long): Int = {
+    // positive integer, excluding zero. negative int (specifically -1) and zero are special
+    (((key ^ value) & 0x7FFFFFFFFFFFFFFFL) % 0x7FFFFFFFL).toInt + 1
+  }
+
+  class Likeliness(key: Long, candidates: Map[Int, Int]) {
+    def apply(value: Long) = {
+      val hash = valueHash(key, value)
+      candidates.get(hash) match {
+        case Some(count) => 1.0f/(count.toFloat)
+        case None => 0.0f
+      }
+    }
+
+    def count(value: Long) = {
+      val hash = valueHash(key, value)
+      candidates.get(hash) match {
+        case Some(count) => count
+        case None => 0
+      }
+    }
+  }
 }
 
 class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int, syncEvery: Int) {
+  import ProbablisticLRU._
+
   private[this] val intBuffer = byteBuffer.asIntBuffer
   private[this] val rnd = new Random
 
@@ -39,14 +71,13 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
     if ((ins % syncEvery) == 0) sync
   }
 
+  def get(key: Long): ProbablisticLRU.Likeliness = new ProbablisticLRU.Likeliness(key, getValueHashes(key))
+
   def get(key: Long, values: Seq[Long]): Map[Long, Int] = {
-    val candidates = getValueHashes(key)
+    val likeliness = get(key)
     values.foldLeft(Map.empty[Long, Int]){ (m, value) =>
-      val hash = valueHash(key, value)
-      candidates.get(hash) match {
-        case Some(count) => m + (value -> count)
-        case None => m
-      }
+      val c = likeliness.count(value)
+      if (c > 0)  m + (value -> c) else m
     }
   }
 
@@ -105,10 +136,6 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
       ret += (value -> (ret.getOrElse(value, 0) + 1))
     }
     ret
-  }
-  private def valueHash(key: Long, value: Long): Int = {
-    // positive integer, excluding zero. negative int (specifically -1) and zero are special
-    (((key ^ value) & 0x7FFFFFFFFFFFFFFFL) % 0x7FFFFFFFL).toInt + 1
   }
 
   private[this] def foreachPosition(key: Long)(f: Int => Unit) {

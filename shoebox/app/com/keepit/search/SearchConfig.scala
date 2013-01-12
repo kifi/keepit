@@ -10,6 +10,7 @@ import java.io.FileOutputStream
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
+      "maxResultClickBoost" -> "3.0",
       "minMyBookmarks" -> "2",
       "myBookmarkBoost" -> "1.5",
       "personalTitleBoost" -> "2.0",
@@ -28,6 +29,7 @@ object SearchConfig {
     )
   private[this] val descriptions =
     Map[String, String](
+      "maxResultClickBoost" -> "boosting by recent result clicks",
       "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
       "myBookmarkBoost" -> "importance of my bookmark",
       "personalTitleBoost" -> "boosting the personal bookmark title score when there is no match in the article",
