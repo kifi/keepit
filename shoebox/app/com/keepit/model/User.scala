@@ -3,7 +3,7 @@ package com.keepit.model
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
+import com.keepit.common.db._
 import com.keepit.common.db.NotFoundException
 import com.keepit.common.time._
 import com.keepit.common.crypto._
@@ -13,7 +13,7 @@ import org.joda.time.DateTime
 import play.api._
 import ru.circumflex.orm._
 import play.api.libs.json._
-import com.google.inject.{Inject, ImplementedBy}
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 case class User(
   id: Option[Id[User]] = None,
@@ -23,7 +23,7 @@ case class User(
   firstName: String,
   lastName: String,
   state: State[User] = UserStates.ACTIVE
-) extends Model[User] {
+) extends ModelWithExternalId[User] {
   def withId(id: Id[User]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
@@ -35,15 +35,13 @@ case class User(
     entity.view
   }
 }
-/*
+
 @ImplementedBy(classOf[UserRepoImpl])
-trait UserRepo extends Repo[User] {
-  def all(userId: Id[User])(implicit session: RSession): Seq[User]
-  def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[User]
-  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[User]
+trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
 }
 
-class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] with UserRepo {
+@Singleton
+class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] {
   import FortyTwoTypeMappers._
   import org.scalaquery.ql._
   import org.scalaquery.ql.ColumnOps._
@@ -52,34 +50,15 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] wi
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[User]("user") {
+  override lazy val table = new RepoTable[User]("user") with ExternalIdColumn[User] {
 
-    def userId = column[Id[User]]("user_id", O.NotNull)
-    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
-    def urlId = column[Id[URL]]("url_id", O.Nullable)
+    def firstName = column[String]("first_name", O.NotNull)
+    def lastName = column[String]("last_name", O.NotNull)
     def state = column[State[User]]("state", O.NotNull)
-    def * = idCreateUpdateBase ~ userId ~ uriId ~ urlId.? ~ state <> (User, UserCxRepo.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state <> (User, User.unapply _)
   }
-
-  def all(userId: Id[User])(implicit session: RSession): Seq[User] =
-    (for(f <- table if f.userId === userId && f.state === UserStates.ACTIVE) yield f).list
-
-  def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[User] = {
-    val q = for {
-      f <- table if f.uriId === uriId && f.state === UserStates.ACTIVE
-    } yield f
-    q.list
-  }
-
-  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[User] = {
-    val q = for {
-      f <- table if (f.uriId === uriId) && (f.userId === userId) && (f.state === UserStates.ACTIVE)
-    } yield f
-    q.firstOption
-  }
-
 }
-*/
+
 object UserCxRepo {
 
   //slicked
@@ -88,23 +67,15 @@ object UserCxRepo {
 
   //slicked
   def get(id: Id[User])(implicit conn: Connection): User =
-    getOpt(id).getOrElse(throw NotFoundException(id))
+    UserEntity.get(id).get.view
 
-  def getOpt(id: Id[User])(implicit conn: Connection): Option[User] =
-    UserEntity.get(id).map(_.view)
-
+  //slicked
   def get(externalId: ExternalId[User])(implicit conn: Connection): User =
     getOpt(externalId).getOrElse(throw NotFoundException(externalId))
 
+  //slicked
   def getOpt(externalId: ExternalId[User])(implicit conn: Connection): Option[User] =
     (UserEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.externalId EQ externalId) unique }.map(_.view)
-
-  def getbyUrlHash(hashUrl: String)(implicit conn: Connection): Seq[User] = {
-    val user = UserEntity AS "u"
-    val bookmark = BookmarkEntity AS "b"
-    val nuri = NormalizedURIEntity AS "nuri"
-    user.map { user => SELECT(user.*) FROM (((user JOIN bookmark).ON("b.user_id = u.id")) JOIN nuri).ON("b.uri_id = nuri.id") WHERE (nuri.urlHash EQ hashUrl) list }.map(_.view)
-  }
 
 }
 
