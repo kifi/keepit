@@ -73,16 +73,21 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
 
 }
 
-trait DbRepoWithExternalId[M <: ModelWithExternalId[M]] extends RepoWithExternalId[M] { self: DbRepo[M] =>
+trait ExternalIdColumnFunction[M <: ModelWithExternalId[M]] {
+  def get(id: ExternalId[M])(implicit session: RSession): M
+  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M]
+}
+
+trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithExternalId[M] { self: DbRepo[M] =>
   import db.Driver.Implicit._
-  private def tableWithExternalId: RepoTableWithExternalId[M] = table.asInstanceOf[RepoTableWithExternalId[M]]
+  private def externalIdColumn: ExternalIdColumn[M] = table.asInstanceOf[ExternalIdColumn[M]]
 
   implicit val ExternalIdMapper = new BaseTypeMapper[ExternalId[M]] {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
   }
 
-  def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id: ExternalId[M]).get
-  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = (for(f <- tableWithExternalId if Is(f.externalId, id)) yield f).firstOption
+  def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id).get
+  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = (for(f <- externalIdColumn if Is(f.externalId, id)) yield f).firstOption
 }
 
 /**
@@ -106,7 +111,7 @@ abstract class RepoTable[M <: Model[M]](name: String) extends ExtendedTable[M](n
   override def column[C : TypeMapper](n: String, options: ColumnOption[C, ProfileType]*) = super.column(n.toUpperCase(), options:_*)
 }
 
-trait RepoTableWithExternalId[M <: ModelWithExternalId[M]] extends RepoTable[M] {
+trait ExternalIdColumn[M <: ModelWithExternalId[M]] extends RepoTable[M] {
   implicit val ExternalIdMapper = new BaseTypeMapper[ExternalId[M]] {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
   }
