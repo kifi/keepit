@@ -14,9 +14,9 @@ class H2(val dbInfo: DbInfo)
     extends DataBaseComponent {
   println("initiating H2 driver")
   val Driver = H2Driver
-  lazy val handle = dbInfo.database
 
   lazy val sequenceID = SimpleFunction.nullary[Int]("SCOPE_IDENTITY")
+  override def entityName(name: String): String = name.toUpperCase()
 }
 
 object H2 {

@@ -61,7 +61,7 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[Follow]("follow") {
+  override lazy val table = new RepoTable[Follow]("follow")(db) {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def urlId = column[Id[URL]]("url_id", O.Nullable)
