@@ -94,7 +94,7 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithEx
  * The toUpperCase is per an H2 "bug?"
  * http://stackoverflow.com/a/8722814/81698
  */
-abstract class RepoTable[M <: Model[M]](name: String) extends ExtendedTable[M](name.toUpperCase()) {
+abstract class RepoTable[M <: Model[M]](name: String)(db: DataBaseComponent) extends ExtendedTable[M](db.entityName(name)) {
   import FortyTwoTypeMappers._
 
   implicit val IdMapper = new BaseTypeMapper[Id[M]] {
@@ -106,7 +106,8 @@ abstract class RepoTable[M <: Model[M]](name: String) extends ExtendedTable[M](n
   def createdAt = column[DateTime]("created_at", O.NotNull)
   def updatedAt = column[DateTime]("updated_at", O.NotNull)
 
-  override def column[C : TypeMapper](n: String, options: ColumnOption[C, ProfileType]*) = super.column(n.toUpperCase(), options:_*)
+  override def column[C : TypeMapper](name: String, options: ColumnOption[C, ProfileType]*) =
+    super.column(db.entityName(name), options:_*)
 }
 
 trait ExternalIdColumn[M <: ModelWithExternalId[M]] extends RepoTable[M] {
