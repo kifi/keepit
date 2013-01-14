@@ -47,6 +47,7 @@ import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
 import com.google.inject.multibindings.Multibinder
 import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
+import com.keepit.common.cache.{ShoeboxCache, ShoeboxCacheImpl, FakeShoeboxCacheImpl}
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -60,6 +61,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
+    bind[ShoeboxCache].to[ShoeboxCacheImpl].in[AppScoped]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
