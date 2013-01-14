@@ -10,28 +10,27 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
-
 import akka.util.duration._
 import java.util.concurrent.TimeUnit
-
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
 import com.keepit.scraper.ScraperPlugin
-import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.time._
 import com.keepit.model.{User, UserCxRepo}
-import com.keepit.model.Bookmark
+import com.keepit.model.{Bookmark, BookmarkCxRepo}
 import com.keepit.common.healthcheck.BabysitterTimeout
 import org.joda.time.LocalDate
 import org.joda.time.DateTimeZone
 import org.joda.time.Days
 import play.api.libs.json.JsNumber
 import play.api.http.ContentTypes
+import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Repo
+import com.keepit.model.UserRepo
 
 /**
  * Charts, etc.
@@ -40,8 +39,8 @@ object AdminDashboardController extends FortyTwoController {
 
   implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
 
-  private lazy val userCountByDate = calcCountByDate(CX.withConnection { implicit conn => UserCxRepo.all }.map(_.createdAt.toLocalDateInZone))
-  private lazy val bookmarkCountByDate = calcCountByDate(CX.withConnection { implicit conn => Bookmark.all }.map(_.createdAt.toLocalDateInZone))
+  private lazy val userCountByDate = calcCountByDate(inject[DBConnection].readOnly(implicit session => inject[UserRepo].all).map(_.createdAt.toLocalDateInZone))
+  private lazy val bookmarkCountByDate = calcCountByDate(CX.withConnection { implicit conn => BookmarkCxRepo.all }.map(_.createdAt.toLocalDateInZone))
 
   private def calcCountByDate(dates: => Seq[LocalDate]) = {
 

@@ -115,6 +115,9 @@ GET     /admin/healthcheck/errors    com.keepit.common.healthcheck.HealthControl
 GET     /admin/healthcheck/isHealthy    com.keepit.common.healthcheck.HealthController.isHealthy()
 GET     /admin/healthcheck/resetErrorCount    com.keepit.common.healthcheck.HealthController.resetErrorCount()
 
+POST    /admin/logging/emails    com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
+
+
 GET     /admin/url/renormalize         com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 
 ##########################################

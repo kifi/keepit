@@ -6,7 +6,7 @@ import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.search.graph.URIList
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db.{Id, CX, ExternalId}
 import com.keepit.common.time._
 import com.keepit.model._
@@ -27,7 +27,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
   def initData(numUsers: Int, numUris: Int) = CX.withConnection { implicit c =>
     ((0 until numUsers).map(n => User(firstName = "foo" + n, lastName = "").save).toList,
-     (0 until numUris).map(n => NormalizedURI(title = "a" + n, url = "http://www.keepit.com/article" + n, state=SCRAPED).save).toList)
+     (0 until numUris).map(n => NormalizedURIFactory(title = "a" + n, url = "http://www.keepit.com/article" + n, state=SCRAPED).save).toList)
   }
 
   def initIndexes(store: ArticleStore) = {
@@ -73,7 +73,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-              Bookmark(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
             }
           }
         }
@@ -133,7 +133,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-              Bookmark(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save            }
+              BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save            }
           }
         }
 
@@ -191,7 +191,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-              Bookmark(title = "personal title", url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              BookmarkFactory(title = "personal title", url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
             }
           }
         }
@@ -242,7 +242,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-              Bookmark(title = "personal title", url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              BookmarkFactory(title = "personal title", url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
             }
           }
         }
@@ -278,7 +278,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-              Bookmark(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save            }
+              BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save            }
           }
         }
 
@@ -330,7 +330,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
             val createdAt = now.minusHours(rand.nextInt(100))
             val uriId = uri.id.get
             val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-            val bookmark = Bookmark(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = userId, source = source).save
+            val bookmark = BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = userId, source = source).save
             m + (uriId -> bookmark)
           }
         }
@@ -363,7 +363,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val bookmarks = CX.withConnection { implicit c =>
           uris.map{ uri =>
             val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-            Bookmark(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = userId, source = source).save
+            BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = userId, source = source).save
           }
         }
 
@@ -406,11 +406,11 @@ class MainSearcherTest extends SpecificationWithJUnit {
         CX.withConnection { implicit c =>
           privateUris.foreach{ uri =>
             val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-            Bookmark(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source).save
+            BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source).save
           }
           publicUris.foreach{ uri =>
             val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-            Bookmark(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source).save          }
+            BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source).save          }
         }
 
         val store = mkStore(uris)
@@ -439,11 +439,11 @@ class MainSearcherTest extends SpecificationWithJUnit {
         CX.withConnection { implicit c =>
           privateUris.foreach{ uri =>
             val url = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-            Bookmark(title = uri.title.get, url = url, uriId = uri.id.get, userId = user2.id.get, source = source).withPrivate(true).save // wtf??
+            BookmarkFactory(title = uri.title.get, url = url, uriId = uri.id.get, userId = user2.id.get, source = source).withPrivate(true).save // wtf??
           }
           publicUris.foreach{ uri =>
             val url = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-            Bookmark(title = uri.title.get, url = url, uriId = uri.id.get, userId = user2.id.get, source = source).save
+            BookmarkFactory(title = uri.title.get, url = url, uriId = uri.id.get, userId = user2.id.get, source = source).save
           }
         }
 
@@ -476,7 +476,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-              Bookmark(title = "my books", url = url1, uriId = uri.id.get, userId = user.id.get, source = source).save
+              BookmarkFactory(title = "my books", url = url1, uriId = uri.id.get, userId = user.id.get, source = source).save
             }
           }
         }

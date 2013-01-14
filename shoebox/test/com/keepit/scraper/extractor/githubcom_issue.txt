@@ -1,0 +1,1198 @@
+
+  
+
+
+<!DOCTYPE html>
+<html>
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# githubog: http://ogp.me/ns/fb/githubog#">
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>fabric.StaticCanvas#controlsAboveOverlay = true bug · Issue #380 · kangax/fabric.js</title>
+    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="GitHub" />
+    <link rel="fluid-icon" href="https://github.com/fluidicon.png" title="GitHub" />
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="apple-touch-icon-114.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="apple-touch-icon-114.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="apple-touch-icon-144.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="apple-touch-icon-144.png" />
+    <meta name="msapplication-TileImage" content="/windows-tile.png">
+    <meta name="msapplication-TileColor" content="#ffffff">
+
+    
+    
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+    <meta content="authenticity_token" name="csrf-param" />
+<meta content="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" name="csrf-token" />
+
+    <link href="https://a248.e.akamai.net/assets.github.com/assets/github-7ef703df15129d3b898830277d50fc760ca91cbc.css" media="screen" rel="stylesheet" type="text/css" />
+    <link href="https://a248.e.akamai.net/assets.github.com/assets/github2-204e28c07493b8ba6089c49791ed7ab61ecb6581.css" media="screen" rel="stylesheet" type="text/css" />
+    
+
+
+      <script src="https://a248.e.akamai.net/assets.github.com/assets/frameworks-cc4895cbb610429d2ce48e7c2392822c33db2dfe.js" type="text/javascript"></script>
+      <script src="https://a248.e.akamai.net/assets.github.com/assets/github-e539dcf1e3c93f4acda64d064d3f30a39afabae0.js" type="text/javascript"></script>
+      
+
+          <meta property="og:title" content="fabric.js"/>
+    <meta property="og:type" content="githubog:gitrepository"/>
+    <meta property="og:url" content="https://github.com/kangax/fabric.js"/>
+    <meta property="og:image" content="https://secure.gravatar.com/avatar/f1fcf834ddad415f60d29c87cc10d4d4?s=420&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png"/>
+    <meta property="og:site_name" content="GitHub"/>
+    <meta property="og:description" content="If  object x is partially or completely surrounded by another object y, the part of object x which is contained in object y cannot be selected.
+
+http://jsfiddle.net/r2ZE7/96/"/>
+
+    <meta name="description" content="If  object x is partially or completely surrounded by another object y, the part of object x which is contained in object y cannot be selected.
+
+http://jsfiddle.net/r2ZE7/96/" />
+
+  <link href="https://github.com/kangax/fabric.js/commits/master.atom" rel="alternate" title="Recent Commits to fabric.js:master" type="application/atom+xml" />
+
+  </head>
+
+
+  <body class="logged_in  macintosh vis-public env-production ">
+    <div id="wrapper">
+
+      
+
+      
+
+      
+
+
+        <div class="header header-logged-in true">
+          <div class="container clearfix">
+
+            <a class="header-logo-blacktocat" href="https://github.com/">
+  <span class="mega-icon mega-icon-blacktocat"></span>
+</a>
+
+            <div class="divider-vertical"></div>
+
+            
+  <a href="/notifications" class="notification-indicator tooltipped downwards" title="You have unread notifications">
+    <span class="mail-status unread"></span>
+  </a>
+  <div class="divider-vertical"></div>
+
+
+              
+  <div class="topsearch command-bar-activated">
+    <form accept-charset="UTF-8" action="/search" class="command_bar_form" id="top_search_form" method="get">
+  <a href="/search/advanced" class="advanced-search tooltipped downwards command-bar-search" id="advanced_search" title="Advanced search"><span class="mini-icon mini-icon-advanced-search "></span></a>
+
+  <input type="text" name="q" id="command-bar" placeholder="Search or type a command" tabindex="1" data-username="andrewconner" autocapitalize="off">
+
+  <span class="mini-icon help tooltipped downwards" title="Show command bar help">
+    <span class="mini-icon mini-icon-help"></span>
+  </span>
+
+  <input type="hidden" name="ref" value="commandbar">
+
+  <div class="divider-vertical"></div>
+</form>
+
+    <ul class="top-nav">
+        <li class="explore"><a href="https://github.com/explore">Explore</a></li>
+        <li><a href="https://gist.github.com">Gist</a></li>
+        <li><a href="/blog">Blog</a></li>
+      <li><a href="http://help.github.com">Help</a></li>
+    </ul>
+  </div>
+
+
+            
+
+  
+    <ul id="user-links">
+      <li>
+        <a href="https://github.com/andrewconner" class="name">
+          <img height="20" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="20" /> andrewconner
+        </a>
+      </li>
+      <li>
+        <a href="/new" id="new_repo" class="tooltipped downwards" title="Create a new repo">
+          <span class="mini-icon mini-icon-create"></span>
+        </a>
+      </li>
+      <li>
+        <a href="/settings/profile" id="account_settings"
+          class="tooltipped downwards"
+          title="Account settings ">
+          <span class="mini-icon mini-icon-account-settings"></span>
+        </a>
+      </li>
+      <li>
+          <a href="/logout" data-method="post" id="logout" class="tooltipped downwards" title="Sign out">
+            <span class="mini-icon mini-icon-logout"></span>
+          </a>
+      </li>
+    </ul>
+
+
+
+            
+          </div>
+        </div>
+
+
+      
+
+      
+
+
+            <div class="site hfeed" itemscope itemtype="http://schema.org/WebPage">
+      <div class="hentry">
+        
+        <div class="pagehead repohead instapaper_ignore readability-menu">
+          <div class="container">
+            <div class="title-actions-bar">
+              
+
+
+                  <ul class="pagehead-actions">
+
+          <li class="subscription">
+              <form accept-charset="UTF-8" action="/notifications/subscribe" data-autosubmit="true" data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="authenticity_token" type="hidden" value="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" /></div>  <input id="repository_id" name="repository_id" type="hidden" value="712530" />
+  <div class="context-menu-container js-menu-container js-context-menu">
+    <span class="minibutton switcher bigger js-menu-target">
+      <span class="js-context-button">
+          <span class="mini-icon mini-icon-watching"></span>Watch
+      </span>
+    </span>
+
+    <div class="context-pane js-menu-content">
+      <a href="#" class="close js-menu-close"><span class="mini-icon mini-icon-remove-close"></span></a>
+      <div class="context-title">Notification status</div>
+
+      <div class="context-body pane-selector">
+        <ul class="js-navigation-container">
+          <li class="selector-item js-navigation-item js-navigation-target selected">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input checked="checked" id="do_included" name="do" type="radio" value="included" />
+              <h4>Not watching</h4>
+              <p>You will only receive notifications when you participate or are mentioned.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-watching"></span>
+              Watch
+            </span>
+          </li>
+          <li class="selector-item js-navigation-item js-navigation-target ">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input id="do_subscribed" name="do" type="radio" value="subscribed" />
+              <h4>Watching</h4>
+              <p>You will receive all notifications for this repository.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-unwatch"></span>
+              Unwatch
+            </span>
+          </li>
+          <li class="selector-item js-navigation-item js-navigation-target ">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input id="do_ignore" name="do" type="radio" value="ignore" />
+              <h4>Ignored</h4>
+              <p>You will not receive notifications for this repository.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-mute"></span>
+              Stop ignoring
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</form>
+          </li>
+
+          <li class="js-toggler-container js-social-container starring-container on">
+            <a href="/kangax/fabric.js/unstar" class="minibutton js-toggler-target starred" data-remote="true" data-method="post" rel="nofollow">
+              <span class="mini-icon mini-icon-star"></span>Unstar
+            </a><a href="/kangax/fabric.js/star" class="minibutton js-toggler-target unstarred" data-remote="true" data-method="post" rel="nofollow">
+              <span class="mini-icon mini-icon-star"></span>Star
+            </a><a class="social-count js-social-count" href="/kangax/fabric.js/stargazers">1,534</a>
+          </li>
+
+              <li>
+                <a href="/kangax/fabric.js/fork_select" class="minibutton js-toggler-target lighter" rel="facebox nofollow"><span class="mini-icon mini-icon-fork"></span>Fork</a><a href="/kangax/fabric.js/network" class="social-count">190</a>
+              </li>
+
+
+    </ul>
+
+              <h1 itemscope itemtype="http://data-vocabulary.org/Breadcrumb" class="entry-title public">
+                <span class="repo-label"><span>public</span></span>
+                <span class="mega-icon mega-icon-public-repo"></span>
+                <span class="author vcard">
+                  <a href="/kangax" class="url fn" itemprop="url" rel="author">
+                  <span itemprop="title">kangax</span>
+                  </a></span> /
+                <strong><a href="/kangax/fabric.js" class="js-current-repository">fabric.js</a></strong>
+              </h1>
+            </div>
+
+            
+
+  <ul class="tabs">
+    <li><a href="/kangax/fabric.js" highlight="repo_sourcerepo_downloadsrepo_commitsrepo_tagsrepo_branches">Code</a></li>
+    <li><a href="/kangax/fabric.js/network" highlight="repo_network">Network</a></li>
+    <li><a href="/kangax/fabric.js/pulls" highlight="repo_pulls">Pull Requests <span class='counter'>3</span></a></li>
+
+      <li><a href="/kangax/fabric.js/issues" class="selected" highlight="repo_issues">Issues <span class='counter'>31</span></a></li>
+
+      <li><a href="/kangax/fabric.js/wiki" highlight="repo_wiki">Wiki</a></li>
+
+
+    <li><a href="/kangax/fabric.js/graphs" highlight="repo_graphsrepo_contributors">Graphs</a></li>
+
+
+  </ul>
+  
+  
+  
+  
+
+
+            
+          </div>
+        </div><!-- /.repohead -->
+
+        <div id="js-repo-pjax-container" class="container context-loader-container" data-pjax-container>
+          
+<style type="text/css" media="screen">
+  span.labelstyle-e10c02, .labelstyle-e10c02.selected {  background:#e80c02 !important;filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0, startColorstr='#e80c02', endColorstr='#d90b01') !important;background:-webkit-gradient(linear, left top, left bottom, from(#e80c02), to(#d90b01)) !important;background:-moz-linear-gradient(top,  #e80c02,  #d90b01) !important;  color: #FFFFFF !important;  text-shadow:-1px -1px 0 rgba(0,0,0,0.2);}
+
+span.labelstyle-0b02e1, .labelstyle-0b02e1.selected {  background:#2d02e8 !important;filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0, startColorstr='#2d02e8', endColorstr='#0119d9') !important;background:-webkit-gradient(linear, left top, left bottom, from(#2d02e8), to(#0119d9)) !important;background:-moz-linear-gradient(top,  #2d02e8,  #0119d9) !important;  color: #FFFFFF !important;  text-shadow:-1px -1px 0 rgba(0,0,0,0.2);}
+
+span.labelstyle-d7e102, .labelstyle-d7e102.selected {  background:#d5e802 !important;filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0, startColorstr='#d5e802', endColorstr='#d8d901') !important;background:-webkit-gradient(linear, left top, left bottom, from(#d5e802), to(#d8d901)) !important;background:-moz-linear-gradient(top,  #d5e802,  #d8d901) !important;  color: #616600 !important;  text-shadow:1px 1px 0 rgba(255,255,255,0.3);}
+
+span.labelstyle-e102d8, .labelstyle-e102d8.selected {  background:#e802b4 !important;filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0, startColorstr='#e802b4', endColorstr='#b901d9') !important;background:-webkit-gradient(linear, left top, left bottom, from(#e802b4), to(#b901d9)) !important;background:-moz-linear-gradient(top,  #e802b4,  #b901d9) !important;  color: #FFFFFF !important;  text-shadow:-1px -1px 0 rgba(0,0,0,0.2);}
+
+span.labelstyle-02e10c, .labelstyle-02e10c.selected {  background:#02e81d !important;filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0, startColorstr='#02e81d', endColorstr='#08d901') !important;background:-webkit-gradient(linear, left top, left bottom, from(#02e81d), to(#08d901)) !important;background:-moz-linear-gradient(top,  #02e81d,  #08d901) !important;  color: #006605 !important;  text-shadow:1px 1px 0 rgba(255,255,255,0.3);}
+
+span.labelstyle-ededed, .labelstyle-ededed.selected {  background:#f1f1f1 !important;filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0, startColorstr='#f1f1f1', endColorstr='#e8d9d9') !important;background:-webkit-gradient(linear, left top, left bottom, from(#f1f1f1), to(#e8d9d9)) !important;background:-moz-linear-gradient(top,  #f1f1f1,  #e8d9d9) !important;  color: #666666 !important;  text-shadow:1px 1px 0 rgba(255,255,255,0.3);}
+</style>
+
+
+
+<div id="issues_next">
+  <div class="tabnav">
+    <div class="tabnav-right">
+      <div class="tabnav-widget search ">
+        <form accept-charset="UTF-8" action="/kangax/fabric.js/issues/search" method="get">
+            <a href="/kangax/fabric.js/issues/search" class="search-link">Search:</a>
+          <span class="fieldwrap">
+            <input type="text" name="q" id="js-issues-quicksearch" value=""
+              placeholder="Issues &amp; Milestones&hellip;"
+              data-hotkey="/"
+              tabindex="1"
+              autocapitalize="off"
+              data-url="/kangax/fabric.js/issues/quicksearch" /><button
+                type="submit" class="minibutton empty-icon"><span class="mini-icon mini-icon-search-input"></span></button>
+          </span>
+          <div class="autocomplete-results"></div>
+          <div class="quicksearch-loading" style="display: none">
+            <a class="selected initial autocomplete-header autocomplete-item" href="/kangax/fabric.js/issues/search">
+              See all results
+            </a>
+          </div>
+</form>      </div>
+      <div class="tabnav-widget ">
+        <a href="/kangax/fabric.js/issues/new" class="button minibutton bigger js-new-issue-button" data-hotkey="c">New Issue</a>
+      </div>
+    </div>
+
+    <ul class="tabnav-tabs">
+      <li><a href="/kangax/fabric.js/issues" class="tabnav-tab selected">Browse Issues</a></li>
+      <li><a href="/kangax/fabric.js/issues/milestones" class="tabnav-tab ">Milestones</a></li>
+    </ul>
+  </div>
+
+    <div id="show_issue">
+
+    <div class="issue-head clearfix">
+      <span class="back">
+        <span class="mini-icon mini-icon-arr-left"></span>
+        <a href="/kangax/fabric.js/issues" data-hotkey="u" id="to_isssues_list">Back to issue list</a>
+      </span>
+
+      <span class="number">
+        Issue <strong>#380</strong>
+      </span>
+    </div><!-- /.issue-head -->
+
+    <div id="discussion_bucket" class="tab-content">
+      <div class="discussion-sidebar">
+        <div class="discussion-stats">
+  
+
+<span class="state-indicator open">
+  Open
+</span>
+
+<p>
+  <strong>0</strong>
+  comments
+</p>
+
+<time id="js-discussion-last-modified" datetime="Mon, 14 Jan 2013 16:11:19 GMT"></time>
+<span class="js-socket-channel js-comment-channel" data-channel="issue:9944684" data-url="/kangax/fabric.js/issues/380/poll"></span>
+
+
+</div>
+
+<hr />
+
+<div class="discussion-labels">
+  <div class="label-manager">
+
+  <span>Labels</span>
+</div>
+
+<ul class="color-label-list filter-list small">
+  
+</ul>
+
+</div>
+
+      </div>
+
+      <div class="discussion-timeline">
+
+        <div class="js-discussion">
+
+          <div class="discussion-bubble js-comment-container">
+            <img class="discussion-bubble-avatar" height="48" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="48" />
+
+            <div class="discussion-bubble-content bubble">
+              <div class="discussion-bubble-inner">
+                <div class="js-comment comment discussion-topic starting-comment" id="issue-9944684">
+
+
+                  <div class="discussion-topic-header">
+                    <span class="discussion-topic-author"><a href="/Kienz">Kienz</a> opened this issue <time class="js-relative-date" datetime="2013-01-14T07:09:51-08:00" title="2013-01-14 07:09:51">January 14, 2013</time></span>
+                    <h2 class="discussion-topic-title">fabric.StaticCanvas#controlsAboveOverlay = true bug</h2>
+                  </div> <!-- /.topic-comment-header -->
+
+                  <div class="discusion-topic-infobar js-infobar">
+                    <div class="milestone infobar-widget">
+  <span class="text js-milestone-infobar-item-wrapper">
+      No milestone
+
+  </span>
+
+</div>
+
+<form accept-charset="UTF-8" action="/kangax/fabric.js/issues/380" class="edit_issue" data-remote="true" id="edit_issue_9944684" method="post"><div style="margin:0;padding:0;display:inline"><input name="_method" type="hidden" value="put" /><input name="authenticity_token" type="hidden" value="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" /></div>
+  
+
+<div class="assignee js-context-menu infobar-widget">
+  <span class="text js-context-button">
+      No one is assigned
+  </span>
+
+</div>
+
+</form>
+                  </div> <!-- /.discusion-topic-infobar -->
+
+                  <div class="comment-content">
+
+                    <div class="edit-comment-hide">
+                      <div class="js-comment-body comment-body markdown-body markdown-format" data-body-version="5e1d409ba14777e2c7706589901ec8f5">
+                          <p>If  object <strong>x</strong> is partially or completely surrounded by another object <strong>y</strong>, the part of object <strong>x</strong> which is contained in object <strong>y</strong> cannot be selected.</p>
+
+<p><a href="http://jsfiddle.net/r2ZE7/96/">http://jsfiddle.net/r2ZE7/96/</a></p>
+                      </div>
+                    </div>
+
+                  </div> <!-- /.comment-content -->
+                </div>
+              </div> <!-- /.discussion-bubble-inner -->
+            </div> <!-- /.discussion-bubble-content -->
+          </div> <!-- /.discussion-bubble -->
+
+          <div class="pull-participation">
+  <p class="quickstat"><a href="#pr_contributors_box" rel="facebox"><strong>1</strong> participant</a></p>
+
+    <a class="avatar tooltipped downwards" title="Kienz" href="/Kienz"><img height="24" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="24" /></a>
+</div>
+
+<div id="pr_contributors_box" style="display:none">
+  <h2>People who have participated in this issue</h2>
+  <ul class="facebox-user-list">
+    <li>
+      <img height="24" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="24" />
+      <a href="/Kienz">Kienz</a>
+    </li>
+  </ul>
+</div>
+
+
+          
+  
+  
+
+    
+
+<div class="discussion-bubble discussion-commit-list js-comment-container">
+  <img class="discussion-bubble-avatar" height="48" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="48" />
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+      <div class="js-comment comment" id="commit-ref-2715ef3">
+
+        <div class="comment-header">
+          <span class="comment-type-icon mini-icon mini-icon-reference"></span>
+          <a href="/Kienz" class="comment-header-author" truncate="true">Kienz</a>
+          <span class='comment-header-action-text'>
+            <a href='#commit-ref-2715ef3'>
+              referenced
+              this issue
+              from a commit
+                in Kienz/fabric.js
+            </a>
+          </span>
+          <span class="comment-header-right">
+            <a href="#commit-ref-2715ef3" class="comment-header-date">
+              <time class="js-relative-date" datetime="2013-01-14T08:09:50-08:00" title="2013-01-14 08:09:50">January 14, 2013</time>
+            </a>
+          </span>
+        </div> <!-- ./comment-header -->
+
+        <div class="comment-content">
+          <table class='commits commits-condensed' cellspacing='0' width="100%">
+            
+<tr class="commit js-details-container" id="commit-2715ef306cc9605fa6881e3608fd97b5e92f0eb7">
+  <td class="gravatar">
+    <span class="gravatar"><a href="/Kienz"><img height="16" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="16" /></a></span>
+  </td>
+  <td class="author">
+    <span class="commit-author" title="Kienz"><a href="/Kienz">Kienz</a></span>
+  </td>
+  <td class="message">
+      <code>
+          <a href="/Kienz/fabric.js/commit/2715ef306cc9605fa6881e3608fd97b5e92f0eb7" class="message">Bugfix for controlsAboveOverlay (issue</a> <a class="issue-link" href="https://github.com/kangax/fabric.js/issues/380" title="fabric.StaticCanvas#controlsAboveOverlay = true bug">#380</a><a href="/Kienz/fabric.js/commit/2715ef306cc9605fa6881e3608fd97b5e92f0eb7" class="message">)</a>
+      </code>
+        <span class="hidden-text-expander inline"><a href="#" class="js-details-target">…</a></span>
+        <div class="commit-desc"><pre>Only if pointer is over targetCorner lastRenderedObjectWithControlsAboveOverlay is used as targetObject.
+
+See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-link" title="fabric.StaticCanvas#controlsAboveOverlay = true bug">#380</a>.</pre></div>
+  </td>
+  <td class="commit-meta">
+    <code>
+        <a href="/Kienz/fabric.js/commit/2715ef306cc9605fa6881e3608fd97b5e92f0eb7">2715ef3</a>
+    </code>
+  </td>
+</tr>
+
+          </table>
+        </div> <!-- /.comment-content -->
+      </div> <!-- /.comment -->
+    </div>
+  </div>
+</div><!-- /.discussion-bubble -->
+
+
+
+    
+
+<div class="discussion-bubble discussion-reference js-comment-container">
+  <img class="discussion-bubble-avatar" height="48" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="48" />
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+      <div class="js-comment comment issue-ref-comment" id="issue-ref-34306676">
+
+        <div class="comment-header">
+          <span class="comment-type-icon mini-icon mini-icon-reference"></span>
+          <a href="/Kienz" class="comment-header-author" truncate="true">Kienz</a>
+          <span class='comment-header-action-text'>
+            <a href='#issue-ref-34306676'>
+              referenced
+              this issue
+            </a>
+          </span>
+
+          <span class="comment-header-right">
+            <a href="#issue-ref-34306676" class="comment-header-date"><time class="js-relative-date" datetime="2013-01-14T08:11:19-08:00" title="2013-01-14 08:11:19">January 14, 2013</time></a>
+          </span>
+        </div> <!-- /.comment-header -->
+
+        <div class="comment-content discussion-reference-content">
+          <div class="comment-body">
+            <strong class="state state-open">
+              Open
+            </strong>
+            <h2>
+              <a href="/kangax/fabric.js/issues/381">
+                <span>Pull Request #381:</span>
+                Bugfix for controlsAboveOverlay (issue #380)
+</a>            </h2>
+            
+          </div>
+        </div> <!-- /.comment-content -->
+      </div> <!-- ./comment -->
+    </div>
+  </div>
+</div><!-- /.discussion-bubble -->
+
+
+
+
+
+
+
+
+        </div>
+
+          
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" height="48" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="48" />
+
+  <form accept-charset="UTF-8" action="/kangax/fabric.js/issue_comments" class="js-new-comment-form js-discussion-update" data-remote="true" data-type="json" method="post"><div style="margin:0;padding:0;display:inline"><input name="authenticity_token" type="hidden" value="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" /></div>
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+      <input type="hidden" name="issue" value="380" />
+      
+
+<div class="js-previewable-comment-form previewable-comment-form write-selected" data-preview-url="/preview?repository=712530">
+  <div class="comment-form-head tabnav">
+    <ul class="js-preview-tabs tabnav-tabs">
+      <li><a href="#write_bucket_339" class="tabnav-tab write-tab selected" action="write">Write</a></li>
+      <li><a href="#preview_bucket_339" class="tabnav-tab preview-tab" action="preview">Preview</a></li>
+    </ul>
+    <span class="tabnav-right">
+      <span class="tabnav-widget text">Comments are parsed with <a href="http://github.github.com/github-flavored-markdown/" class="gfm-help" target="_blank">GitHub Flavored Markdown</a></span>
+    </span>
+  </div>
+  <div class="comment-form-error" style="display:none;"></div>
+
+  <div id="write_bucket_339" class="write-content js-write-bucket js-uploadable-container upload-enabled is-default" data-model="asset">
+    
+    <textarea name="comment[body]"
+              tabindex="1"
+              id="comment_body_339"
+              placeholder="Leave a comment"
+              class="js-comment-field js-size-to-fit "
+              data-suggester="339_new_preview_suggester"
+              ></textarea>
+
+    
+  <p class="drag-and-drop">
+    <span class="default">
+      Attach images by dragging &amp; dropping them or
+      <input type="file" multiple="multiple" class="manual-file-chooser js-manual-file-chooser">
+      <a class="manual-file-chooser-text" href="#">choose an image</a>
+    </span>
+    <span class="loading">
+      <img alt="Octocat-spinner-32" height="16" src="https://a248.e.akamai.net/assets.github.com/images/spinners/octocat-spinner-32.gif?1340659530" width="16" /> Uploading your images now…
+    </span>
+    <span class="error bad-file">
+      Unfortunately we don't support that file type yet. Try image files less than 5MB.
+    </span>
+    <span class="error failed-request">
+      Something went really wrong and we can't process that image.
+    </span>
+  </p>
+
+  </div>
+  <div id="preview_bucket_339" class="preview-content js-preview-bucket">
+    
+<div id="openstruct-75710340" class="js-comment comment">
+  <div class="comment-header normal-comment-header">
+      <img class="comment-header-gravatar" height="22" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="22" />
+    <a href="/andrewconner" class="comment-header-author">andrewconner</a>
+    <span class='comment-header-action-text'>
+      <a href="#openstruct-75710340">
+      commented
+      </a>
+    </span>
+
+    <span class="comment-header-right">
+      <a href="#openstruct-75710340" class="comment-header-date"><time class="js-relative-date" datetime="2013-01-14T10:52:25-08:00" title="2013-01-14 10:52:25">January 14, 2013</time></a>
+    </span>
+  </div> <!-- /.comment-header -->
+
+
+  <div class="comment-content">
+    <div class="edit-comment-hide">
+      <div class="js-comment-body comment-body markdown-body " data-body-version="">
+          <p>Nothing to preview</p>
+      </div>
+    </div>
+  </div> <!-- /.comment-content -->
+</div> <!-- /.comment -->
+
+  </div>
+
+  <div class="suggester-container">
+    <div class="suggester js-navigation-container" id="339_new_preview_suggester" 
+         data-url="/kangax/fabric.js/suggestions/issue/9944684">
+    </div>
+  </div>
+</div>
+
+    </div>
+  </div>
+  <div class="form-actions">
+    
+
+
+
+<button type="submit" class="button primary" tabindex="2" data-disable-with>
+  Comment
+</button>
+
+  </div>
+  </form> <!-- /.discussion-bubble-content -->
+</div><!-- /.discussion-bubble -->
+
+
+        
+
+<div class="thread-subscription-status clearfix">
+  <span class="mega-icon mega-icon-notifications"></span>
+
+  <form accept-charset="UTF-8" action="/notifications/thread" data-autosubmit="true" data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="authenticity_token" type="hidden" value="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" /></div>  <input id="repository_id" name="repository_id" type="hidden" value="712530" />
+  <input id="thread_id" name="thread_id" type="hidden" value="9944684" />
+  <input id="thread_class" name="thread_class" type="hidden" value="i" />
+
+  <div class="context-menu-container js-menu-container js-context-menu">
+
+    <span class="minibutton switcher js-menu-target">
+      <span class="js-context-button">
+          <span class="mini-icon mini-icon-mail-status read"></span>
+          Not watching thread
+      </span>
+    </span>
+
+    <div class="context-pane js-menu-content">
+      <a href="#" class="close js-menu-close"><span class="mini-icon mini-icon-remove-close"></span></a>
+      <div class="context-title">Thread notifications</div>
+
+      <div class="context-body pane-selector">
+        <ul class="js-navigation-container">
+
+          <li class="selector-item js-navigation-item js-navigation-target">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input checked="checked" id="id_subscribe" name="id" type="radio" value="subscribe" />
+              <h4>Watch</h4>
+              <p>Receive notifications for this thread.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-mail-status unread"></span>
+              Watching thread
+            </span>
+          </li>
+
+            <li class="selector-item js-navigation-item js-navigation-target">
+              <span class="mini-icon mini-icon-confirm"></span>
+              <label>
+                <input checked="checked" id="id_unsubscribe" name="id" type="radio" value="unsubscribe" />
+                <h4>Unwatch</h4>
+                <p>Stop receiving notifications unless you are @mentioned or you participate.</p>
+              </label>
+              <span class="context-button-text js-context-button-text">
+                <span class="mini-icon mini-icon-mail-status read"></span>
+                Unwatch thread
+              </span>
+            </li>
+
+          <li class="selector-item js-navigation-item js-navigation-target">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input checked="checked" id="id_mute" name="id" type="radio" value="mute" />
+              <h4>Mute</h4>
+              <p>Ignore all notifications from this thread.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-mute ignored"></span>
+              Thread muted
+            </span>
+          </li>
+
+        </ul>
+      </div>
+
+    </div><!-- /.context-pane -->
+  </div><!-- /.context-menu-container -->
+</form>
+</div>
+
+
+
+      </div><!-- /.discussion-timeline -->
+
+    </div><!-- /#discussion_bucket -->
+    <div class="clear"></div>
+  </div>
+
+</div>
+
+
+        </div>
+      </div>
+      <div class="context-overlay"></div>
+    </div>
+
+      <div id="footer-push"></div><!-- hack for sticky footer -->
+    </div><!-- end of wrapper - hack for sticky footer -->
+
+      <!-- footer -->
+      <div id="footer">
+  <div class="container clearfix">
+
+      <dl class="footer_nav">
+        <dt>GitHub</dt>
+        <dd><a href="https://github.com/about">About us</a></dd>
+        <dd><a href="https://github.com/blog">Blog</a></dd>
+        <dd><a href="https://github.com/contact">Contact &amp; support</a></dd>
+        <dd><a href="http://enterprise.github.com/">GitHub Enterprise</a></dd>
+        <dd><a href="http://status.github.com/">Site status</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>Applications</dt>
+        <dd><a href="http://mac.github.com/">GitHub for Mac</a></dd>
+        <dd><a href="http://windows.github.com/">GitHub for Windows</a></dd>
+        <dd><a href="http://eclipse.github.com/">GitHub for Eclipse</a></dd>
+        <dd><a href="http://mobile.github.com/">GitHub mobile apps</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>Services</dt>
+        <dd><a href="http://get.gaug.es/">Gauges: Web analytics</a></dd>
+        <dd><a href="http://speakerdeck.com">Speaker Deck: Presentations</a></dd>
+        <dd><a href="https://gist.github.com">Gist: Code snippets</a></dd>
+        <dd><a href="http://jobs.github.com/">Job board</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>Documentation</dt>
+        <dd><a href="http://help.github.com/">GitHub Help</a></dd>
+        <dd><a href="http://developer.github.com/">Developer API</a></dd>
+        <dd><a href="http://github.github.com/github-flavored-markdown/">GitHub Flavored Markdown</a></dd>
+        <dd><a href="http://pages.github.com/">GitHub Pages</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>More</dt>
+        <dd><a href="http://training.github.com/">Training</a></dd>
+        <dd><a href="https://github.com/edu">Students &amp; teachers</a></dd>
+        <dd><a href="http://shop.github.com">The Shop</a></dd>
+        <dd><a href="/plans">Plans &amp; pricing</a></dd>
+        <dd><a href="http://octodex.github.com/">The Octodex</a></dd>
+      </dl>
+
+      <hr class="footer-divider">
+
+
+    <p class="right">&copy; 2013 <span title="0.15709s from fe17.rs.github.com">GitHub</span> Inc. All rights reserved.</p>
+    <a class="left" href="https://github.com/">
+      <span class="mega-icon mega-icon-invertocat"></span>
+    </a>
+    <ul id="legal">
+        <li><a href="https://github.com/site/terms">Terms of Service</a></li>
+        <li><a href="https://github.com/site/privacy">Privacy</a></li>
+        <li><a href="https://github.com/security">Security</a></li>
+    </ul>
+
+  </div><!-- /.container -->
+
+</div><!-- /.#footer -->
+
+
+    
+
+    
+
+<div id="keyboard_shortcuts_pane" class="instapaper_ignore readability-extra" style="display:none">
+  <h2>Keyboard Shortcuts <small><a href="#" class="js-see-all-keyboard-shortcuts">(see all)</a></small></h2>
+
+  <div class="columns threecols">
+    <div class="column first">
+      <h3>Site wide shortcuts</h3>
+      <dl class="keyboard-mappings">
+        <dt>s</dt>
+        <dd>Focus command bar</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>?</dt>
+        <dd>Bring up this help dialog</dd>
+      </dl>
+    </div><!-- /.column.first -->
+
+    <div class="column middle" style='display:none'>
+      <h3>Commit list</h3>
+      <dl class="keyboard-mappings">
+        <dt>j</dt>
+        <dd>Move selection down</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>k</dt>
+        <dd>Move selection up</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>c <em>or</em> o <em>or</em> enter</dt>
+        <dd>Open commit</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>y</dt>
+        <dd>Expand URL to its canonical form</dd>
+      </dl>
+    </div><!-- /.column.first -->
+
+    <div class="column last js-hidden-pane" style='display:none'>
+      <h3>Pull request list</h3>
+      <dl class="keyboard-mappings">
+        <dt>j</dt>
+        <dd>Move selection down</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>k</dt>
+        <dd>Move selection up</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>o <em>or</em> enter</dt>
+        <dd>Open issue</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> enter</dt>
+        <dd>Submit comment</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> shift p</dt>
+        <dd>Preview comment</dd>
+      </dl>
+    </div><!-- /.columns.last -->
+
+  </div><!-- /.columns.equacols -->
+
+  <div class="js-hidden-pane" >
+    <div class="rule"></div>
+
+    <h3>Issues</h3>
+
+    <div class="columns threecols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt>j</dt>
+          <dd>Move selection down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>k</dt>
+          <dd>Move selection up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>x</dt>
+          <dd>Toggle selection</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o <em>or</em> enter</dt>
+          <dd>Open issue</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> enter</dt>
+          <dd>Submit comment</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> shift p</dt>
+          <dd>Preview comment</dd>
+        </dl>
+      </div><!-- /.column.first -->
+      <div class="column last">
+        <dl class="keyboard-mappings">
+          <dt>c</dt>
+          <dd>Create issue</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>l</dt>
+          <dd>Create label</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>i</dt>
+          <dd>Back to inbox</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>u</dt>
+          <dd>Back to issues</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>/</dt>
+          <dd>Focus issues search</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+
+    <h3>Issues Dashboard</h3>
+
+    <div class="columns threecols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt>j</dt>
+          <dd>Move selection down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>k</dt>
+          <dd>Move selection up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o <em>or</em> enter</dt>
+          <dd>Open issue</dd>
+        </dl>
+      </div><!-- /.column.first -->
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+
+    <h3>Network Graph</h3>
+    <div class="columns equacols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">←</span> <em>or</em> h</dt>
+          <dd>Scroll left</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">→</span> <em>or</em> l</dt>
+          <dd>Scroll right</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">↑</span> <em>or</em> k</dt>
+          <dd>Scroll up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">↓</span> <em>or</em> j</dt>
+          <dd>Scroll down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>t</dt>
+          <dd>Toggle visibility of head labels</dd>
+        </dl>
+      </div><!-- /.column.first -->
+      <div class="column last">
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">←</span> <em>or</em> shift h</dt>
+          <dd>Scroll all the way left</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">→</span> <em>or</em> shift l</dt>
+          <dd>Scroll all the way right</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">↑</span> <em>or</em> shift k</dt>
+          <dd>Scroll all the way up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">↓</span> <em>or</em> shift j</dt>
+          <dd>Scroll all the way down</dd>
+        </dl>
+      </div><!-- /.column.last -->
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+    <div class="columns threecols">
+      <div class="column first js-hidden-pane" style='display:none'>
+        <h3>Source Code Browsing</h3>
+        <dl class="keyboard-mappings">
+          <dt>t</dt>
+          <dd>Activates the file finder</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>l</dt>
+          <dd>Jump to line</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>w</dt>
+          <dd>Switch branch/tag</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>y</dt>
+          <dd>Expand URL to its canonical form</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+    <div class="columns threecols">
+      <div class="column first">
+        <h3>Browsing Commits</h3>
+        <dl class="keyboard-mappings">
+          <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> enter</dt>
+          <dd>Submit comment</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>escape</dt>
+          <dd>Close form</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>p</dt>
+          <dd>Parent commit</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o</dt>
+          <dd>Other parent commit</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+    <h3>Notifications</h3>
+
+    <div class="columns threecols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt>j</dt>
+          <dd>Move selection down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>k</dt>
+          <dd>Move selection up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o <em>or</em> enter</dt>
+          <dd>Open notification</dd>
+        </dl>
+      </div><!-- /.column.first -->
+
+      <div class="column second">
+        <dl class="keyboard-mappings">
+          <dt>e <em>or</em> shift i <em>or</em> y</dt>
+          <dd>Mark as read</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift m</dt>
+          <dd>Mute thread</dd>
+        </dl>
+      </div><!-- /.column.first -->
+    </div>
+  </div>
+
+</div>
+
+    <div id="markdown-help" class="instapaper_ignore readability-extra">
+  <h2>Markdown Cheat Sheet</h2>
+
+  <div class="cheatsheet-content">
+
+  <div class="mod">
+    <div class="col">
+      <h3>Format Text</h3>
+      <p>Headers</p>
+      <pre>
+# This is an &lt;h1&gt; tag
+## This is an &lt;h2&gt; tag
+###### This is an &lt;h6&gt; tag</pre>
+     <p>Text styles</p>
+     <pre>
+*This text will be italic*
+_This will also be italic_
+**This text will be bold**
+__This will also be bold__
+
+*You **can** combine them*
+</pre>
+    </div>
+    <div class="col">
+      <h3>Lists</h3>
+      <p>Unordered</p>
+      <pre>
+* Item 1
+* Item 2
+  * Item 2a
+  * Item 2b</pre>
+     <p>Ordered</p>
+     <pre>
+1. Item 1
+2. Item 2
+3. Item 3
+   * Item 3a
+   * Item 3b</pre>
+    </div>
+    <div class="col">
+      <h3>Miscellaneous</h3>
+      <p>Images</p>
+      <pre>
+![GitHub Logo](/images/logo.png)
+Format: ![Alt Text](url)
+</pre>
+     <p>Links</p>
+     <pre>
+http://github.com - automatic!
+[GitHub](http://github.com)</pre>
+<p>Blockquotes</p>
+     <pre>
+As Kanye West said:
+
+> We're living the future so
+> the present is our past.
+</pre>
+    </div>
+  </div>
+  <div class="rule"></div>
+
+  <h3>Code Examples in Markdown</h3>
+  <div class="col">
+      <p>Syntax highlighting with <a href="http://github.github.com/github-flavored-markdown/" title="GitHub Flavored Markdown" target="_blank">GFM</a></p>
+      <pre>
+```javascript
+function fancyAlert(arg) {
+  if(arg) {
+    $.facebox({div:'#foo'})
+  }
+}
+```</pre>
+    </div>
+    <div class="col">
+      <p>Or, indent your code 4 spaces</p>
+      <pre>
+Here is a Python code example
+without syntax highlighting:
+
+    def foo:
+      if not bar:
+        return true</pre>
+    </div>
+    <div class="col">
+      <p>Inline code for comments</p>
+      <pre>
+I think you should use an
+`&lt;addr&gt;` element here instead.</pre>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+
+    <div id="ajax-error-message" class="flash flash-error">
+      <span class="mini-icon mini-icon-exclamation"></span>
+      Something went wrong with that request. Please try again.
+      <a href="#" class="mini-icon mini-icon-remove-close ajax-error-dismiss"></a>
+    </div>
+
+    
+    
+    <span id='server_response_time' data-time='0.15845' data-host='fe17'></span>
+    
+  </body>
+</html>
+

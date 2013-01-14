@@ -5,7 +5,7 @@ import com.keepit.common.db.CX
 import com.keepit.common.db.Id
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
-import com.keepit.model.{Bookmark, NormalizedURI, User, UserCxRepo}
+import com.keepit.model.{Bookmark, BookmarkStates, BookmarkCxRepo, NormalizedURI, User, UserCxRepo}
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher, QueryParser}
@@ -137,7 +137,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
 
   def buildIndexable(user: User) = {
     val bookmarks = CX.withConnection { implicit c =>
-        Bookmark.ofUser(user).filter{ b => b.state == Bookmark.States.ACTIVE }
+        BookmarkCxRepo.ofUser(user).filter{ b => b.state == BookmarkStates.ACTIVE }
     }
     new URIListIndexable(user.id.get, bookmarks)
   }

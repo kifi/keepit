@@ -3,7 +3,6 @@ package com.keepit.common.social
 import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
-import com.keepit.model.NormalizedURI
 import com.keepit.serializer.ArticleSerializer
 import com.keepit.inject._
 import com.keepit.common.store.ObjectStore

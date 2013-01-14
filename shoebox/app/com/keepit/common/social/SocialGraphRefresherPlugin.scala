@@ -5,7 +5,6 @@ import com.keepit.search.ArticleStore
 import com.keepit.common.logging.Logging
 import com.keepit.search.Article
 import com.keepit.model.SocialUserInfo
-import com.keepit.model.NormalizedURI
 import play.api.Plugin
 import play.api.templates.Html
 import akka.util.Timeout
@@ -42,7 +41,7 @@ private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphP
     }
     case RefreshUserInfo(userInfo) => {
       log.info("found socialUserInfo that need to be refreshed %s".format(userInfo))
-      socialGraphPlugin.asyncFetch(userInfo)       
+      socialGraphPlugin.asyncFetch(userInfo)
     }
     case m => throw new Exception("unknown message %s".format(m))
   }
@@ -55,9 +54,9 @@ trait SocialGraphRefresher extends Plugin {
 
 class SocialGraphRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin : SocialGraphPlugin) extends SocialGraphRefresher with Logging {
   implicit val actorTimeout = Timeout(5 seconds)
-  
+
   private val actor = system.actorOf(Props { new SocialGraphRefresherActor(socialGraphPlugin) })
-  
+
   // plugin lifecycle methods
   private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
@@ -69,7 +68,7 @@ class SocialGraphRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin
   override def onStop(): Unit = {
     _cancellables.map(_.cancel)
   }
- 
+
 }
 
 

@@ -19,7 +19,7 @@ import org.scalaquery.ql.extended.ExtendedImplicitConversions
 trait Repo[M <: Model[M]] {
   import DBSession._
   def get(id: Id[M])(implicit session: RSession): M
-  def all(implicit session: RSession): Seq[M]
+  def all()(implicit session: RSession): Seq[M]
   def save(model: M)(implicit session: RWSession): M
   def count(implicit session: RSession): Int
 }
@@ -56,7 +56,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
 
   def get(id: Id[M])(implicit session: RSession): M = (for(f <- table if f.id is id) yield f).first
 
-  def all(implicit session: RSession): Seq[M] = (for(f <- table) yield f).list
+  def all()(implicit session: RSession): Seq[M] = (for(f <- table) yield f).list
 
   private def insert(model: M)(implicit session: RWSession) = {
     assert(1 == table.insert(model))
@@ -73,23 +73,28 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
 
 }
 
-trait DbRepoWithExternalId[M <: ModelWithExternalId[M]] extends RepoWithExternalId[M] { self: DbRepo[M] =>
+trait ExternalIdColumnFunction[M <: ModelWithExternalId[M]] {
+  def get(id: ExternalId[M])(implicit session: RSession): M
+  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M]
+}
+
+trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithExternalId[M] { self: DbRepo[M] =>
   import db.Driver.Implicit._
-  private def tableWithExternalId: RepoTableWithExternalId[M] = table.asInstanceOf[RepoTableWithExternalId[M]]
+  private def externalIdColumn: ExternalIdColumn[M] = table.asInstanceOf[ExternalIdColumn[M]]
 
   implicit val ExternalIdMapper = new BaseTypeMapper[ExternalId[M]] {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
   }
 
-  def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id: ExternalId[M]).get
-  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = (for(f <- tableWithExternalId if Is(f.externalId, id)) yield f).firstOption
+  def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id).get
+  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = (for(f <- externalIdColumn if Is(f.externalId, id)) yield f).firstOption
 }
 
 /**
  * The toUpperCase is per an H2 "bug?"
  * http://stackoverflow.com/a/8722814/81698
  */
-abstract class RepoTable[M <: Model[M]](name: String) extends ExtendedTable[M](name.toUpperCase()) {
+abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, name: String) extends ExtendedTable[M](db.entityName(name)) {
   import FortyTwoTypeMappers._
 
   implicit val IdMapper = new BaseTypeMapper[Id[M]] {
@@ -101,12 +106,11 @@ abstract class RepoTable[M <: Model[M]](name: String) extends ExtendedTable[M](n
   def createdAt = column[DateTime]("created_at", O.NotNull)
   def updatedAt = column[DateTime]("updated_at", O.NotNull)
 
-  def idCreateUpdateBase = id.? ~ createdAt ~ updatedAt
-
-  override def column[C : TypeMapper](n: String, options: ColumnOption[C, ProfileType]*) = super.column(n.toUpperCase(), options:_*)
+  override def column[C : TypeMapper](name: String, options: ColumnOption[C, ProfileType]*) =
+    super.column(db.entityName(name), options:_*)
 }
 
-trait RepoTableWithExternalId[M <: ModelWithExternalId[M]] extends RepoTable[M] {
+trait ExternalIdColumn[M <: ModelWithExternalId[M]] extends RepoTable[M] {
   implicit val ExternalIdMapper = new BaseTypeMapper[ExternalId[M]] {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
   }

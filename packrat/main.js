@@ -460,13 +460,14 @@ api.tabs.on.loading.push(function(tab) {
 api.tabs.on.ready.push(function(tab) {
   api.log("[tabs.on.ready]", tab);
   logEvent("extension", "pageLoad");
+});
 
-  if (api.icon.get(tab.id) === "icons/keep.png") {
+api.tabs.on.complete.push(function(tab) {
+  api.log("[tabs.on.complete]", tab);
+  if (tab.icon === "icons/keep.png") {
     handleSliderAutoShow(tab);
   }
 });
-
-//api.tabs.on.complete.push(function(tab) {...});
 
 function handleSliderAutoShow(tab) {
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.

@@ -57,7 +57,9 @@ object ApplicationBuild extends Build {
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
       "javax.mail" % "mail" % "1.4.5",
-      "org.mongodb" %% "casbah" % "2.4.1" 
+      "org.mongodb" %% "casbah" % "2.4.1",
+      "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
+      "org.jsoup" % "jsoup" % "1.7.1"
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
@@ -73,7 +75,8 @@ object ApplicationBuild extends Build {
         "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
         "kevoree Repository" at "http://maven2.kevoree.org/release/",
         //used for securesocial
-        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/"
+        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
+        "boilerpipe Repository" at "http://boilerpipe.googlecode.com/svn/repo/"
       ),
       
       // add some imports to the templates files

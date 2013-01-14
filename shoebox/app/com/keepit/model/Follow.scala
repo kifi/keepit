@@ -17,7 +17,7 @@ import java.security.MessageDigest
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import play.api.libs.json._
-import com.google.inject.{Inject, ImplementedBy}
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 case class Follow (
   id: Option[Id[Follow]] = None,
@@ -44,7 +44,6 @@ case class Follow (
   }
 }
 
-
 @ImplementedBy(classOf[FollowRepoImpl])
 trait FollowRepo extends Repo[Follow] {
   def all(userId: Id[User])(implicit session: RSession): Seq[Follow]
@@ -52,6 +51,7 @@ trait FollowRepo extends Repo[Follow] {
   def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[Follow]
 }
 
+@Singleton
 class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow] with FollowRepo {
   import FortyTwoTypeMappers._
   import org.scalaquery.ql._
@@ -61,13 +61,12 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[Follow]("follow") {
-
+  override lazy val table = new RepoTable[Follow](db, "follow") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def urlId = column[Id[URL]]("url_id", O.Nullable)
     def state = column[State[Follow]]("state", O.NotNull)
-    def * = idCreateUpdateBase ~ userId ~ uriId ~ urlId.? ~ state <> (Follow, Follow.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ uriId ~ urlId.? ~ state <> (Follow, Follow.unapply _)
   }
 
   def all(userId: Id[User])(implicit session: RSession): Seq[Follow] =

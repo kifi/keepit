@@ -22,7 +22,7 @@ trait EventListenerPlugin extends Plugin {
     val query = (json \ "query").asOpt[String].getOrElse("")
     val url = (json \ "url").asOpt[String].getOrElse("")
     val user = UserCxRepo.get(externalUser)
-    val normUrl = NormalizedURI.getByNormalizedUrl(url)
+    val normUrl = NormalizedURICxRepo.getByNormalizedUrl(url)
     val queryUUID = ExternalId.asOpt[ArticleSearchResultRef]((json \ "queryUUID").asOpt[String].getOrElse(""))
     (user, SearchMeta(query, url, normUrl, queryUUID))
   }
@@ -45,7 +45,7 @@ class KifiResultClickedListener extends EventListenerPlugin {
     case Event(_,UserEventMetadata(EventFamilies.SEARCH,"kifiResultClicked",externalUser,_,experiments,metaData,_),_,_) =>
       val (user, meta, bookmark) = CX.withConnection { implicit conn =>
         val (user, meta) = searchParser(externalUser, metaData)
-        val bookmark = meta.normUrl.map(n => Bookmark.load(n.id.get,user.id.get)).flatten
+        val bookmark = meta.normUrl.map(n => BookmarkCxRepo.load(n.id.get,user.id.get)).flatten
         (user, meta, bookmark)
       }
 

@@ -16,8 +16,9 @@ import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
 import com.keepit.scraper._
-import com.keepit.model.{ScrapeInfo, NormalizedURI}
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.ScrapeInfo
+import com.keepit.model.{NormalizedURI, NormalizedURICxRepo}
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
 import javax.xml.bind.DatatypeConverter._
@@ -39,10 +40,10 @@ object ScraperController extends FortyTwoController {
     val docs = dupe.processDocuments()
     val result = CX.withConnection { implicit conn =>
       docs.collect { case (id,similars) =>
-        val t = NormalizedURI.get(id)
+        val t = NormalizedURICxRepo.get(id)
         t.id.get.id + "\t" + t.url.take(150) + "\n" +
         similars.map { sid =>
-          val s = NormalizedURI.get(sid._1)
+          val s = NormalizedURICxRepo.get(sid._1)
           "\t" + sid._2 + "\t" + s.id.get.id + "\t" + s.url.take(150)
         }.mkString("\n")
       }.mkString("\n")
@@ -53,7 +54,7 @@ object ScraperController extends FortyTwoController {
   def scrapeByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
     transitionByAdmin(state -> Set(ACTIVE)) { newState =>
       CX.withConnection { implicit c =>
-        NormalizedURI.getByState(state).foreach{ uri => uri.withState(newState).save }
+        NormalizedURICxRepo.getByState(state).foreach{ uri => uri.withState(newState).save }
       }
       val scraper = inject[ScraperPlugin]
       val articles = scraper.scrape()
@@ -65,7 +66,7 @@ object ScraperController extends FortyTwoController {
     val store = inject[ArticleStore]
     val article = store.get(id).get
     val uri = CX.withConnection { implicit c =>
-      NormalizedURI.get(article.id)
+      NormalizedURICxRepo.get(article.id)
     }
     Ok(views.html.article(article, uri))
   }

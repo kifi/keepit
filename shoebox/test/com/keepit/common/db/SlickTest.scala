@@ -21,6 +21,7 @@ import org.specs2.runner.JUnitRunner
 import org.scalaquery.ql.basic.BasicProfile
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
+import com.keepit.common.db.slick.ExternalIdColumn
 
 @RunWith(classOf[JUnitRunner])
 class SlickTest extends SpecificationWithJUnit {
@@ -30,34 +31,34 @@ class SlickTest extends SpecificationWithJUnit {
     "using driver abstraction" in {
       running(new ShoeboxApplication()) {
 
-        case class Foo(
-          id: Option[Id[Foo]] = None,
+        case class Bar(
+          id: Option[Id[Bar]] = None,
           name: String
-        ) extends Model[Foo] {
-          def withId(id: Id[Foo]): Foo = this.copy(id = Some(id))
+        ) extends Model[Bar] {
+          def withId(id: Id[Bar]): Bar = this.copy(id = Some(id))
           def withUpdateTime(now: DateTime) = this
         }
 
         //could be easily mocked up
-        trait FooRepo extends Repo[Foo] {
+        trait BarRepo extends Repo[Bar] {
           //here you may have model specific queries...
-          def getByName(name: String)(implicit session: ROSession): Seq[Foo]
+          def getByName(name: String)(implicit session: ROSession): Seq[Bar]
         }
 
         //we can abstract out much of the standard repo and have it injected/mocked out
-        class FooRepoImpl(val db: DataBaseComponent) extends FooRepo with DbRepo[Foo] {
+        class BarRepoImpl(val db: DataBaseComponent) extends BarRepo with DbRepo[Bar] {
           import db.Driver.Implicit._ // here's the driver, abstracted away
 
-          implicit object FooIdTypeMapper extends BaseTypeMapper[Id[Foo]] {
-            def apply(profile: BasicProfile) = new IdMapperDelegate[Foo]
+          implicit object BarIdTypeMapper extends BaseTypeMapper[Id[Bar]] {
+            def apply(profile: BasicProfile) = new IdMapperDelegate[Bar]
           }
 
-          override lazy val table = new RepoTable[Foo]("foo") {
+          override lazy val table = new RepoTable[Bar](db, "foo") {
             def name = column[String]("name")
-            def * = id.? ~ name <> (Foo, Foo.unapply _)
+            def * = id.? ~ name <> (Bar, Bar.unapply _)
           }
 
-          def getByName(name: String)(implicit session: ROSession): Seq[Foo] = {
+          def getByName(name: String)(implicit session: ROSession): Seq[Bar] = {
             val q = for ( f <- table if f.name is name ) yield (f)
             q.list
           }
@@ -66,14 +67,14 @@ class SlickTest extends SpecificationWithJUnit {
           def createTableForTesting()(implicit session: RWSession) = table.ddl.create
         }
 
-        val repo: FooRepo = new FooRepoImpl(inject[DataBaseComponent])
+        val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent])
 
         //just for testing you know...
         inject[DBConnection].readWrite{ implicit session =>
-          repo.asInstanceOf[FooRepoImpl].createTableForTesting() //only in test mode we should know about the implementation
-          val fooA = repo.save(Foo(name = "A"))
+          repo.asInstanceOf[BarRepoImpl].createTableForTesting() //only in test mode we should know about the implementation
+          val fooA = repo.save(Bar(name = "A"))
           fooA.id.get.id === 1
-          val fooB = repo.save(Foo(name = "B"))
+          val fooB = repo.save(Bar(name = "B"))
           fooB.id.get.id === 2
         }
 
@@ -82,6 +83,62 @@ class SlickTest extends SpecificationWithJUnit {
           val a = repo.getByName("A")
           a.size === 1
           a.head.name === "A"
+        }
+      }
+    }
+
+    "using external id" in {
+      running(new ShoeboxApplication()) {
+
+        case class Bar(
+          id: Option[Id[Bar]] = None,
+          externalId: ExternalId[Bar] = ExternalId(),
+          name: String
+        ) extends ModelWithExternalId[Bar] {
+          def withId(id: Id[Bar]): Bar = this.copy(id = Some(id))
+          def withUpdateTime(now: DateTime) = this
+        }
+
+        //could be easily mocked up
+        trait BarRepo extends Repo[Bar] with RepoWithExternalId[Bar] {
+          //here you may have model specific queries...
+          def getByName(name: String)(implicit session: ROSession): Seq[Bar]
+        }
+
+        //we can abstract out much of the standard repo and have it injected/mocked out
+        class BarRepoImpl(val db: DataBaseComponent) extends BarRepo with DbRepo[Bar] with ExternalIdColumnDbFunction[Bar] {
+          import db.Driver.Implicit._ // here's the driver, abstracted away
+
+          implicit object BarIdTypeMapper extends BaseTypeMapper[Id[Bar]] {
+            def apply(profile: BasicProfile) = new IdMapperDelegate[Bar]
+          }
+
+          override lazy val table = new RepoTable[Bar](db, "foo") with ExternalIdColumn[Bar] {
+            def name = column[String]("name")
+            def * = id.? ~ externalId ~ name <> (Bar, Bar.unapply _)
+          }
+
+          def getByName(name: String)(implicit session: ROSession): Seq[Bar] = {
+            val q = for ( f <- table if f.name is name ) yield (f)
+            q.list
+          }
+
+          //only for testing
+          def createTableForTesting()(implicit session: RWSession) = table.ddl.create
+        }
+
+        val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent])
+
+        //just for testing you know...
+        val (b1, b2) = inject[DBConnection].readWrite{ implicit session =>
+          repo.asInstanceOf[BarRepoImpl].createTableForTesting() //only in test mode we should know about the implementation
+          (repo.save(Bar(name = "A")), repo.save(Bar(name = "B")))
+        }
+
+        inject[DBConnection].readOnly{ implicit session =>
+          repo.count(session) === 2
+          repo.get(b1.externalId) === b1
+          repo.get(b2.externalId) === b2
         }
       }
     }
