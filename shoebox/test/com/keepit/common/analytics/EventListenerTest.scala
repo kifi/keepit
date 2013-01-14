@@ -1,6 +1,6 @@
 package com.keepit.common.analytics
 
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.time._
 import org.junit.runner.RunWith
 import org.specs2.mutable._
@@ -23,7 +23,7 @@ class EventListenerTest extends SpecificationWithJUnit {
 
   def setup() = {
     CX.withConnection { implicit conn =>
-      val normUrlId = NormalizedURI("http://www.google.com/").save.id.get
+      val normUrlId = NormalizedURIFactory("http://www.google.com/").save.id.get
       val url = URL("http://www.google.com/", normUrlId).save
       val user = User(firstName = "Andrew", lastName = "Conner").save
       val bookmark = BookmarkFactory(

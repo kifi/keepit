@@ -7,7 +7,7 @@ import com.keepit.search.Lang
 import com.keepit.search.query.SiteQuery
 import com.keepit.search.query.ConditionalQuery
 import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db.{Id, CX}
 import com.keepit.common.time._
 import com.keepit.model._
@@ -36,12 +36,12 @@ class URIGraphTest extends SpecificationWithJUnit {
             User(firstName = "Dan", lastName = "").save,
             User(firstName = "Eccentrica", lastName = "").save,
             User(firstName = "Hactar", lastName = "").save),
-       List(NormalizedURI(title = "a1", url = "http://www.keepit.com/article1", state=SCRAPED).save,
-            NormalizedURI(title = "a2", url = "http://www.keepit.com/article2", state=SCRAPED).save,
-            NormalizedURI(title = "a3", url = "http://www.keepit.org/article3", state=SCRAPED).save,
-            NormalizedURI(title = "a4", url = "http://www.findit.com/article4", state=SCRAPED).save,
-            NormalizedURI(title = "a5", url = "http://www.findit.com/article5", state=SCRAPED).save,
-            NormalizedURI(title = "a6", url = "http://www.findit.org/article6", state=SCRAPED).save))
+       List(NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state=SCRAPED).save,
+            NormalizedURIFactory(title = "a2", url = "http://www.keepit.com/article2", state=SCRAPED).save,
+            NormalizedURIFactory(title = "a3", url = "http://www.keepit.org/article3", state=SCRAPED).save,
+            NormalizedURIFactory(title = "a4", url = "http://www.findit.com/article4", state=SCRAPED).save,
+            NormalizedURIFactory(title = "a5", url = "http://www.findit.com/article5", state=SCRAPED).save,
+            NormalizedURIFactory(title = "a6", url = "http://www.findit.org/article6", state=SCRAPED).save))
     }
   }
 
@@ -288,8 +288,8 @@ class URIGraphTest extends SpecificationWithJUnit {
         val (user, uris, bookmarks) = CX.withConnection { implicit c =>
           val user = User(firstName = "Agrajag", lastName = "").save
           val uris = Array(
-            NormalizedURI(title = "title", url = "http://www.keepit.com/article1", state=SCRAPED).save,
-            NormalizedURI(title = "title", url = "http://www.keepit.com/article2", state=SCRAPED).save
+            NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article1", state=SCRAPED).save,
+            NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article2", state=SCRAPED).save
           )
 
           val url1 = URL(uris(0).url, uris(0).id.get).save

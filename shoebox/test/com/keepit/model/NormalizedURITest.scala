@@ -19,7 +19,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
 
   def setup() = {
     CX.withConnection { implicit c =>
-      NormalizedURI.all.size === 0 //making sure the db is clean, we had some strange failures
+      NormalizedURICxRepo.all.size === 0 //making sure the db is clean, we had some strange failures
       UserCxRepo.all.size === 0 //making sure the db is clean
       val user1 = User(firstName = "Joe", lastName = "Smith").save
       val user2 = User(firstName = "Moo", lastName = "Brown").save
@@ -73,16 +73,16 @@ class NormalizedURITest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         setup()
         CX.withConnection { implicit c =>
-          var uris = NormalizedURI.getByState(NormalizedURI.States.ACTIVE)
+          var uris = NormalizedURICxRepo.getByState(NormalizedURIStates.ACTIVE)
           uris.size === 2
-          uris(0).withState(NormalizedURI.States.INACTIVE).save
-          NormalizedURI.getByState(NormalizedURI.States.ACTIVE).size === 1
-          uris(1).withState(NormalizedURI.States.INACTIVE).save
-          NormalizedURI.getByState(NormalizedURI.States.ACTIVE).size === 0
-          NormalizedURI.getByState(NormalizedURI.States.INACTIVE).size === 2
-          NormalizedURI.getByState(NormalizedURI.States.INACTIVE, 1).size === 1
-          NormalizedURI.getByState(NormalizedURI.States.INACTIVE, 0).size === 2
-          NormalizedURI.getByState(NormalizedURI.States.INACTIVE, -1).size === 2
+          uris(0).withState(NormalizedURIStates.INACTIVE).save
+          NormalizedURICxRepo.getByState(NormalizedURIStates.ACTIVE).size === 1
+          uris(1).withState(NormalizedURIStates.INACTIVE).save
+          NormalizedURICxRepo.getByState(NormalizedURIStates.ACTIVE).size === 0
+          NormalizedURICxRepo.getByState(NormalizedURIStates.INACTIVE).size === 2
+          NormalizedURICxRepo.getByState(NormalizedURIStates.INACTIVE, 1).size === 1
+          NormalizedURICxRepo.getByState(NormalizedURIStates.INACTIVE, 0).size === 2
+          NormalizedURICxRepo.getByState(NormalizedURIStates.INACTIVE, -1).size === 2
         }
       }
     }
@@ -93,7 +93,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         setup()
         CX.withConnection { implicit c =>
-          NormalizedURI.getByNormalizedUrl("http://www.keepit.com/med") === None
+          NormalizedURICxRepo.getByNormalizedUrl("http://www.keepit.com/med") === None
         }
       }
     }
@@ -101,10 +101,10 @@ class NormalizedURITest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         setup()
         CX.withConnection { implicit c =>
-          val all = NormalizedURI.all
+          val all = NormalizedURICxRepo.all
           all.size === 2
           println(all.mkString("\n"))
-          NormalizedURI.getByNormalizedUrl("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
+          NormalizedURICxRepo.getByNormalizedUrl("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
         }
       }
     }
@@ -112,7 +112,7 @@ class NormalizedURITest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         setup()
         CX.withConnection { implicit c =>
-          NormalizedURI.getByNormalizedUrl("http://www.keepit.com/long").get.url === "http://www.keepit.com/long"
+          NormalizedURICxRepo.getByNormalizedUrl("http://www.keepit.com/long").get.url === "http://www.keepit.com/long"
         }
       }
     }
@@ -124,26 +124,26 @@ class NormalizedURITest extends SpecificationWithJUnit {
       	CX.withConnection { implicit c =>
       	  val user1 = User(firstName = "Joe", lastName = "Smith").save
       	  val user2 = User(firstName = "Moo", lastName = "Brown").save
-      	  val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURI.States.INACTIVE)
-          val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURI.States.SCRAPED)
+      	  val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURIStates.INACTIVE)
+          val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURIStates.SCRAPED)
       	}
         CX.withConnection { implicit c =>
-          NormalizedURI.getByState(NormalizedURI.States.ACTIVE).isEmpty === true
+          NormalizedURICxRepo.getByState(NormalizedURIStates.ACTIVE).isEmpty === true
         }
       }
     }
     "search gets short" in {
       running(new EmptyApplication()) {
       	CX.withConnection { implicit c =>
-      	  NormalizedURI.all.size === 0 //making sure the db is clean, trying to understand some strange failures we got
+      	  NormalizedURICxRepo.all.size === 0 //making sure the db is clean, trying to understand some strange failures we got
       	  val user1 = User(firstName = "Joe", lastName = "Smith").save
       	  val user2 = User(firstName = "Moo", lastName = "Brown").save
-      	  val uri1 = createUri(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURI.States.ACTIVE)
-          val uri2 = createUri(title = "two title", url = "http://www.keepit.com/two", state = NormalizedURI.States.SCRAPED)
-          val uri3 = createUri(title = "three title", url = "http://www.keepit.com/three", state = NormalizedURI.States.ACTIVE)
+      	  val uri1 = createUri(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURIStates.ACTIVE)
+          val uri2 = createUri(title = "two title", url = "http://www.keepit.com/two", state = NormalizedURIStates.SCRAPED)
+          val uri3 = createUri(title = "three title", url = "http://www.keepit.com/three", state = NormalizedURIStates.ACTIVE)
       	}
         CX.withConnection { implicit c =>
-          val all = NormalizedURI.getByState(NormalizedURI.States.ACTIVE)
+          val all = NormalizedURICxRepo.getByState(NormalizedURIStates.ACTIVE)
           println(all.mkString("\n"))
           all.size === 2
         }
@@ -151,14 +151,14 @@ class NormalizedURITest extends SpecificationWithJUnit {
     }
   }
 
-  def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURI.States.ACTIVE)(implicit conn: Connection) = {
-    val uri = NormalizedURI(title = title, url = url, state = state)
+  def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit conn: Connection) = {
+    val uri = NormalizedURIFactory(title = title, url = url, state = state)
     try {
       uri.save
     } catch {
       case e =>
         println("fail to persist uri %s. Existing URIs in the db are: %s".
-            format(uri, NormalizedURI.all.map(_.toString).mkString("\n")))
+            format(uri, NormalizedURICxRepo.all.map(_.toString).mkString("\n")))
         throw e
     }
   }

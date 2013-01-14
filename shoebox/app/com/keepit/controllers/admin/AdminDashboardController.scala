@@ -17,8 +17,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
 import com.keepit.scraper.ScraperPlugin
-import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.time._

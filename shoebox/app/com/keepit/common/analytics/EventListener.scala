@@ -20,7 +20,7 @@ trait EventListenerPlugin extends Plugin {
     val query = (json \ "query").asOpt[String].getOrElse("")
     val url = (json \ "url").asOpt[String].getOrElse("")
     val user = UserCxRepo.get(externalUser)
-    val normUrl = NormalizedURI.getByNormalizedUrl(url)
+    val normUrl = NormalizedURICxRepo.getByNormalizedUrl(url)
     val queryUUID = ExternalId.asOpt[ArticleSearchResultRef]((json \ "queryUUID").asOpt[String].getOrElse(""))
     (user, SearchMeta(query, url, normUrl, queryUUID))
   }

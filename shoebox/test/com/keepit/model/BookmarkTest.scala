@@ -24,9 +24,9 @@ class BookmarkTest extends SpecificationWithJUnit {
       val user1 = User(firstName = "Andrew", lastName = "C", createdAt = t1).save
       val user2 = User(firstName = "Eishay", lastName = "S", createdAt = t2).save
 
-      NormalizedURI.all.length === 0
-      val uri1 = NormalizedURI("Google", "http://www.google.com/").save
-      val uri2 = NormalizedURI("Amazon", "http://www.amazon.com/").save
+      NormalizedURICxRepo.all.length === 0
+      val uri1 = NormalizedURIFactory("Google", "http://www.google.com/").save
+      val uri2 = NormalizedURIFactory("Amazon", "http://www.amazon.com/").save
 
       val url1 = URL(url = uri1.url, normalizedUriId = uri1.id.get).save
       val url2 = URL(url = uri2.url, normalizedUriId = uri2.id.get).save

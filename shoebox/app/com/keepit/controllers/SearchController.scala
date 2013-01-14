@@ -98,7 +98,7 @@ object SearchController extends FortyTwoController {
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, filter)
   }
   private[controllers] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit conn: Connection): PersonalSearchResult = {
-    val uri = NormalizedURI.get(res.uriId)
+    val uri = NormalizedURICxRepo.get(res.uriId)
     val bookmark = if (res.isMyBookmark) BookmarkCxRepo.load(uri, userId) else None
     val users = res.users.toSeq.map{ userId =>
       val user = UserCxRepo.get(userId)
@@ -127,7 +127,7 @@ object SearchController extends FortyTwoController {
       result.hits.zip(result.scorings) map { tuple =>
         val hit = tuple._1
         val scoring = tuple._2
-        val uri = NormalizedURI.get(hit.uriId)
+        val uri = NormalizedURICxRepo.get(hit.uriId)
         val users = hit.users.map { userId =>
           UserCxRepo.get(userId)
         }

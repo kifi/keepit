@@ -6,7 +6,7 @@ import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.search.graph.URIList
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db.{Id, CX, ExternalId}
 import com.keepit.common.time._
 import com.keepit.model._
@@ -27,7 +27,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
   def initData(numUsers: Int, numUris: Int) = CX.withConnection { implicit c =>
     ((0 until numUsers).map(n => User(firstName = "foo" + n, lastName = "").save).toList,
-     (0 until numUris).map(n => NormalizedURI(title = "a" + n, url = "http://www.keepit.com/article" + n, state=SCRAPED).save).toList)
+     (0 until numUris).map(n => NormalizedURIFactory(title = "a" + n, url = "http://www.keepit.com/article" + n, state=SCRAPED).save).toList)
   }
 
   def initIndexes(store: ArticleStore) = {

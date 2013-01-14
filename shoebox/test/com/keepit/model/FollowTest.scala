@@ -30,8 +30,8 @@ class FollowTest extends SpecificationWithJUnit {
         val (user1, user2, uriA, uriB) = CX.withConnection { implicit c =>
           (User(firstName = "User", lastName = "1").save,
            User(firstName = "User", lastName = "2").save,
-           NormalizedURI("Google", "http://www.google.com/").save,
-           NormalizedURI("Amazon", "http://www.amazon.com/").save)
+           NormalizedURIFactory("Google", "http://www.google.com/").save,
+           NormalizedURIFactory("Amazon", "http://www.amazon.com/").save)
         }
 
         inject[DBConnection].readOnly{ implicit session =>
