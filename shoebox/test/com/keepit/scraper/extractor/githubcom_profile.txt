@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html>
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# githubog: http://ogp.me/ns/fb/githubog#">
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>andrewconner (Andrew Conner)</title>
+    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="GitHub" />
+    <link rel="fluid-icon" href="https://github.com/fluidicon.png" title="GitHub" />
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="apple-touch-icon-114.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="apple-touch-icon-114.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="apple-touch-icon-144.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="apple-touch-icon-144.png" />
+    <meta name="msapplication-TileImage" content="/windows-tile.png">
+    <meta name="msapplication-TileColor" content="#ffffff">
+
+
+
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+    <meta content="authenticity_token" name="csrf-param" />
+<meta content="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" name="csrf-token" />
+
+    <link href="https://a248.e.akamai.net/assets.github.com/assets/github-7ef703df15129d3b898830277d50fc760ca91cbc.css" media="screen" rel="stylesheet" type="text/css" />
+    <link href="https://a248.e.akamai.net/assets.github.com/assets/github2-204e28c07493b8ba6089c49791ed7ab61ecb6581.css" media="screen" rel="stylesheet" type="text/css" />
+
+
+
+      <script src="https://a248.e.akamai.net/assets.github.com/assets/frameworks-cc4895cbb610429d2ce48e7c2392822c33db2dfe.js" type="text/javascript"></script>
+      <script src="https://a248.e.akamai.net/assets.github.com/assets/github-e539dcf1e3c93f4acda64d064d3f30a39afabae0.js" type="text/javascript"></script>
+
+
+
+  <link href="/andrewconner.atom" rel="alternate" title="atom" type="application/atom+xml" />
+  <meta name="description" content="andrewconner has 8 repos written in Scala, Python, and JavaScript. Follow their code on GitHub." />
+
+  </head>
+
+
+  <body class="logged_in page-profile mine macintosh  env-production ">
+    <div id="wrapper">
+
+
+
+
+
+
+
+
+        <div class="header header-logged-in true">
+          <div class="container clearfix">
+
+            <a class="header-logo-blacktocat" href="https://github.com/">
+  <span class="mega-icon mega-icon-blacktocat"></span>
+</a>
+
+            <div class="divider-vertical"></div>
+
+
+  <a href="/notifications" class="notification-indicator tooltipped downwards" title="You have unread notifications">
+    <span class="mail-status unread"></span>
+  </a>
+  <div class="divider-vertical"></div>
+
+
+
+  <div class="topsearch command-bar-activated">
+    <form accept-charset="UTF-8" action="/search" class="command_bar_form" id="top_search_form" method="get">
+  <a href="/search/advanced" class="advanced-search tooltipped downwards command-bar-search" id="advanced_search" title="Advanced search"><span class="mini-icon mini-icon-advanced-search "></span></a>
+
+  <input type="text" name="q" id="command-bar" placeholder="Search or type a command" tabindex="1" data-username="andrewconner" autocapitalize="off">
+
+  <span class="mini-icon help tooltipped downwards" title="Show command bar help">
+    <span class="mini-icon mini-icon-help"></span>
+  </span>
+
+  <input type="hidden" name="ref" value="commandbar">
+
+  <div class="divider-vertical"></div>
+</form>
+
+    <ul class="top-nav">
+        <li class="explore"><a href="https://github.com/explore">Explore</a></li>
+        <li><a href="https://gist.github.com">Gist</a></li>
+        <li><a href="/blog">Blog</a></li>
+      <li><a href="http://help.github.com">Help</a></li>
+    </ul>
+  </div>
+
+
+
+
+
+    <ul id="user-links">
+      <li>
+        <a href="https://github.com/andrewconner" class="name">
+          <img height="20" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="20" /> andrewconner
+        </a>
+      </li>
+      <li>
+        <a href="/new" id="new_repo" class="tooltipped downwards" title="Create a new repo">
+          <span class="mini-icon mini-icon-create"></span>
+        </a>
+      </li>
+      <li>
+        <a href="/settings/profile" id="account_settings"
+          class="tooltipped downwards"
+          title="Account settings ">
+          <span class="mini-icon mini-icon-account-settings"></span>
+        </a>
+      </li>
+      <li>
+          <a href="/logout" data-method="post" id="logout" class="tooltipped downwards" title="Sign out">
+            <span class="mini-icon mini-icon-logout"></span>
+          </a>
+      </li>
+    </ul>
+
+
+
+
+          </div>
+        </div>
+
+
+
+
+
+
+
+        <div class="site clearfix">
+          <div id="site-container" class="context-loader-container" data-pjax-container>
+
+
+<div class="container">
+  <div class="columns profilecols js-username" data-name="andrewconner">
+
+      <div class="first vcard" itemscope itemtype="http://schema.org/Person">
+        <div class="avatared">
+            <span class="tooltipped downwards" title="Change your avatar at gravatar.com"><a href="http://gravatar.com/emails/"><img height="210" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=420&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="210" /></a></span>
+
+            <h1>
+                <span itemprop="name">Andrew Conner</span>
+                <em itemprop="additionalName">andrewconner</em>
+            </h1>
+
+            <div class="details">
+
+
+
+              <dl><dt><span class="mini-icon mini-icon-unread-note"></span></dt><dd><a class="email js-obfuscate-email" data-email="%67%69%74%68%75%62%40%61%6e%64%72%65%77%63%6f%6e%6e%65%72%2e%6f%72%67" href="mailto:{email}">{email}</a></dd></dl>
+              <dl><dt><span class="mini-icon mini-icon-link"></span></dt><dd itemprop="url"><a href="http://andrewconner.org" class="url" rel="nofollow me">http://andrewconner.org</a></dd></dl>
+              <dl><dt><span class="mini-icon mini-icon-time"></span></dt><dd><span class="join-label">Joined on </span><span class="join-date">Jan 31, 2012</span></dd></dl>
+            </div>
+        </div>
+
+        <ul class="stats">
+          <li>
+            <a href="/andrewconner/followers">
+              <strong>0</strong>
+              <span>followers</span>
+            </a>
+          </li>
+          <li>
+              <a href="/stars">
+                <strong>17</strong>
+                <span>starred</span>
+              </a>
+          </li>
+          <li>
+            <a href="/andrewconner/following">
+              <strong>1</strong>
+              <span>following</span>
+            </a>
+          </li>
+        </ul>
+
+          <div class="orgs">
+            <h3>Organizations</h3>
+            <ul class="avatars">
+                <li>
+                  <a href="/FortyTwoEng" class="tooltipped downwards" itemprop="follows" title="FortyTwoEng"><img height="36" src="https://secure.gravatar.com/avatar/d41d8cd98f00b204e9800998ecf8427e?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-org-420.png" width="36" /></a>
+                </li>
+            </ul>
+          </div>
+      </div><!-- /.first -->
+
+  <div class="last">
+    <div class="tabnav">
+      <ul class="tabnav-tabs" data-pjax>
+          <li data-tab="contributions">
+            <a href="/andrewconner" class="tabnav-tab selected">
+              <span class="mini-icon mini-icon-added"></span>
+              Contributions
+            </a>
+          </li>
+        <li data-tab="repo">
+          <a href="/andrewconner?tab=repositories" class="tabnav-tab ">
+            <span class="mini-icon mini-icon-public-repo"></span>
+            Repositories
+          </a>
+        </li>
+        <li data-tab="activity">
+          <a href="/andrewconner?tab=activity" class="tabnav-tab ">
+            <span class="mini-icon mini-icon-feed"></span>
+            Public Activity
+          </a>
+        </li>
+      </ul>
+
+          <div class="tabnav-right">
+              <a href="/account" class="minibutton tabnav-widget"><span class="mini-icon mini-icon-edit"></span>Edit Your Profile</a>
+          </div>
+      </div>
+
+    <div class="tab-content js-repo-filter">
+        <div class="contributions-tab">
+
+  <!-- POPULAR REPOSITORIES -->
+  <div class="grid popular-repos">
+    <div class="col">
+      <div class="capped-box">
+        <h3>Popular repositories</h3>
+        <ol class="mini-repo-list">
+
+  <li class="public fork ">
+    <a href="/andrewconner/itsdangerous" class="css-truncate">
+        <span class="mini-icon mini-icon-repo-forked"></span>
+        <span class="css-truncate-target">
+          <span class="repo-and-owner">
+<span class="repo" title="itsdangerous">itsdangerous</span>
+        </span>
+      </span>
+      <span class="stars">
+        2
+        <span class="mini-icon mini-icon-star"></span>
+      </span>
+      <span class="rdesc css-truncate-target">Various helpers to pass trusted data to untrusted environments</span>
+    </a>
+  </li>
+
+  <li class="public source ">
+    <a href="/andrewconner/play-angularjs" class="css-truncate">
+        <span class="mini-icon mini-icon-public-repo"></span>
+        <span class="css-truncate-target">
+          <span class="repo-and-owner">
+<span class="repo" title="play-angularjs">play-angularjs</span>
+        </span>
+      </span>
+      <span class="stars">
+        2
+        <span class="mini-icon mini-icon-star"></span>
+      </span>
+      <span class="rdesc css-truncate-target">A sample Play! Framework 2.0 application with Angular.js integration. </span>
+    </a>
+  </li>
+
+  <li class="public source ">
+    <a href="/andrewconner/play-opencnam" class="css-truncate">
+        <span class="mini-icon mini-icon-public-repo"></span>
+        <span class="css-truncate-target">
+          <span class="repo-and-owner">
+<span class="repo" title="play-opencnam">play-opencnam</span>
+        </span>
+      </span>
+      <span class="stars">
+        1
+        <span class="mini-icon mini-icon-star"></span>
+      </span>
+      <span class="rdesc css-truncate-target">A simple Play! 2.0 library for getting caller ID name information. </span>
+    </a>
+  </li>
+
+  <li class="public source ">
+    <a href="/andrewconner/scala-opencnam" class="css-truncate">
+        <span class="mini-icon mini-icon-public-repo"></span>
+        <span class="css-truncate-target">
+          <span class="repo-and-owner">
+<span class="repo" title="scala-opencnam">scala-opencnam</span>
+        </span>
+      </span>
+      <span class="stars">
+        1
+        <span class="mini-icon mini-icon-star"></span>
+      </span>
+      <span class="rdesc css-truncate-target">A simple Scala snipplet for getting caller ID name information using OpenCNAM</span>
+    </a>
+  </li>
+
+  <li class="public fork ">
+    <a href="/andrewconner/sublime-ensime" class="css-truncate">
+        <span class="mini-icon mini-icon-repo-forked"></span>
+        <span class="css-truncate-target">
+          <span class="repo-and-owner">
+<span class="repo" title="sublime-ensime">sublime-ensime</span>
+        </span>
+      </span>
+      <span class="stars">
+        0
+        <span class="mini-icon mini-icon-star"></span>
+      </span>
+      <span class="rdesc css-truncate-target">This project is an integration of Sublime Text Editor 2 with Ensime for Scala development</span>
+    </a>
+  </li>
+
+        </ol>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="capped-box">
+        <h3>Repositories contributed to</h3>
+        <ol class="mini-repo-list">
+
+  <li class="private source no-description">
+    <a href="/FortyTwoEng/keepit" class="css-truncate">
+        <span class="mini-icon mini-icon-private-repo"></span>
+        <span class="css-truncate-target">
+          <span class="repo-and-owner">
+            <span class="owner" title="FortyTwoEng">FortyTwoEng</span>/<span class="repo" title="keepit">keepit</span>
+        </span>
+      </span>
+      <span class="stars">
+        1
+        <span class="mini-icon mini-icon-star"></span>
+      </span>
+      <span class="rdesc css-truncate-target"></span>
+    </a>
+  </li>
+
+  <li class="public source ">
+    <a href="/sptz45/sse-guice" class="css-truncate">
+        <span class="mini-icon mini-icon-public-repo"></span>
+        <span class="css-truncate-target">
+          <span class="repo-and-owner">
+            <span class="owner" title="sptz45">sptz45</span>/<span class="repo" title="sse-guice">sse-guice</span>
+        </span>
+      </span>
+      <span class="stars">
+        20
+        <span class="mini-icon mini-icon-star"></span>
+      </span>
+      <span class="rdesc css-truncate-target">Make the Guice EDSL more Scala friendly</span>
+    </a>
+  </li>
+
+  <li class="private source ">
+    <a href="/weswilson/Pioneer" class="css-truncate">
+        <span class="mini-icon mini-icon-private-repo"></span>
+        <span class="css-truncate-target">
+          <span class="repo-and-owner">
+            <span class="owner" title="weswilson">weswilson</span>/<span class="repo" title="Pioneer">Pioneer</span>
+        </span>
+      </span>
+      <span class="stars">
+        2
+        <span class="mini-icon mini-icon-star"></span>
+      </span>
+      <span class="rdesc css-truncate-target">Pioneer Game</span>
+    </a>
+  </li>
+
+        </ol>
+      </div>
+    </div>
+  </div>
+  <!-- /POPULAR REPOSITORIES -->
+
+  <div class="capped-box">
+    <h3>
+        Your Contributions
+        <span class="mini-icon mini-icon-lock tooltipped upwards" title="Includes contributions from private repositories you can access."></span>
+    </h3>
+
+    <!-- CALENDAR -->
+    <div id="contributions-calendar">
+      <div class="js-calendar-graph calendar-graph" data-url="/users/andrewconner/contributions_calendar_data"></div>
+      <span class="contrib-info">Summary of Pull Requests, issues opened and commits</span>
+      <div class="contrib-legend" title="A summary of pull requests, issues opened, and commits to the default and gh-pages branches.">
+        <span>Less</span>
+        <ul class="legend">
+          <li style="background-color: #eee"></li>
+          <li style="background-color: #d6e685"></li>
+          <li style="background-color: #8cc665"></li>
+          <li style="background-color: #44a340"></li>
+          <li style="background-color: #1e6823"></li>
+        </ul>
+        <span>More</span>
+      </div>
+      <div class="contrib-details grid">
+        <div class="col contrib-day">
+          <span class="num">321 Total</span>
+          Jan 14 2012 - Jan 14 2013
+          <span class="lbl">Year of Contributions</span>
+        </div>
+        <div class="col contrib-streak">
+            <span class="num">6 days</span>
+            October 22 -
+            October 27
+          <span class="lbl">Longest Streak</span>
+        </div>
+        <div class="col contrib-streak-current">
+            <span class="num">0 days</span>
+            Rock - Hard Place
+          <span class="lbl">Current Streak</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="period-filter clearfix">
+    <h2>Contribution Activity</h2>
+
+    <div class="select-menu js-menu-container js-select-menu js-period-container">
+
+      <span class="minibutton select-menu-button js-menu-target">
+        <i>Period:</i>
+        <span class="js-select-button">1 Week</span>
+      </span>
+
+      <div class="select-menu-modal-holder js-menu-content js-navigation-container js-select-menu-pane">
+        <div class="select-menu-modal">
+          <div class="select-menu-header">
+            <span class="select-menu-title">Filter activity</span>
+            <span class="mini-icon mini-icon-remove-close js-menu-close"></span>
+          </div> <!-- /.select-menu-header -->
+
+          <div class="select-menu-list">
+            <div class="select-menu-item js-navigation-item js-navigation-target ">
+              <input id="period_daily" name="period" type="radio" value="daily" />
+              <span class="select-menu-checkmark mini-icon mini-icon-confirm"></span>
+              <div class="select-menu-item-text js-select-button-text">1 Day</div>
+            </div> <!-- /.select-menu-item -->
+            <div class="select-menu-item js-navigation-item js-navigation-target ">
+              <input id="period_halfweekly" name="period" type="radio" value="halfweekly" />
+              <span class="select-menu-checkmark mini-icon mini-icon-confirm"></span>
+              <div class="select-menu-item-text js-select-button-text">3 Days</div>
+            </div> <!-- /.select-menu-item -->
+            <div class="select-menu-item js-navigation-item js-navigation-target selected">
+              <input checked="checked" id="period_weekly" name="period" type="radio" value="weekly" />
+              <span class="select-menu-checkmark mini-icon mini-icon-confirm"></span>
+              <div class="select-menu-item-text js-select-button-text">1 Week</div>
+            </div> <!-- /.select-menu-item -->
+            <div class="select-menu-item js-navigation-item js-navigation-target ">
+              <input id="period_monthly" name="period" type="radio" value="monthly" />
+              <span class="select-menu-checkmark mini-icon mini-icon-confirm"></span>
+              <div class="select-menu-item-text js-select-button-text">1 Month</div>
+            </div> <!-- /.select-menu-item -->
+
+          </div> <!-- /.select-menu-list -->
+        </div> <!-- /.select-menu-modal -->
+      </div> <!-- /.select-menu-modal-holder -->
+    </div> <!-- /.select-menu -->
+
+  </div>
+
+  <div class="activity-listing" id="contribution-activity">
+
+
+
+    <h3 class="conversation-list-heading">
+      <div class="inner">
+        <span class="mini-icon mini-icon-commit"></span>
+        <strong>51</strong> Commits
+      </div>
+    </h3>
+
+    <div id="issues-contributed" class="contribution-type">
+      <ul class="simple-conversation-list">
+        <li>
+            <a href="/FortyTwoEng/keepit/commits?author=andrewconner" class="title">
+            Pushed 51 commits to FortyTwoEng/keepit
+            </a>
+              Jan 08 - Jan 13
+        </li>
+      </ul>
+    </div>
+
+  <h3 class="conversation-list-heading">
+    <div class="inner">
+      <span class="mini-icon mini-icon-pull-request"></span>
+      <strong>15</strong> Pull Requests
+    </div>
+  </h3>
+  <div id="pulls-contributed" class="contribution-type">
+    <ol class="pulls-list simple-conversation-list varied-states">
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/633">This should fix the error.</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-11T15:49:49-08:00" title="2013-01-11 15:49:49">January 11, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/633/commits" class="cmt">2 commits</a> &bull;
+          <span class="a">5 ++</span>
+          <span class="d">2 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/629">Duplicate document detection</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-10T19:44:14-08:00" title="2013-01-10 19:44:14">January 10, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/629/commits" class="cmt">3 commits</a> &bull;
+          <span class="a">140 ++</span>
+          <span class="d">8 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/624">Event listening guiced up!</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-10T12:40:29-08:00" title="2013-01-10 12:40:29">January 10, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/624/commits" class="cmt">3 commits</a> &bull;
+          <span class="a">93 ++</span>
+          <span class="d">65 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/620">Typo ;)</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-09T19:21:28-08:00" title="2013-01-09 19:21:28">January 09, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/620/commits" class="cmt">1 commit</a> &bull;
+          <span class="a">2 ++</span>
+          <span class="d">2 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/619">Useful page load</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-09T18:26:04-08:00" title="2013-01-09 18:26:04">January 09, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/619/commits" class="cmt">8 commits</a> &bull;
+          <span class="a">214 ++</span>
+          <span class="d">25 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/618">Event Listeners, Dead Queries, Fixed Reports</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-09T16:54:58-08:00" title="2013-01-09 16:54:58">January 09, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/618/commits" class="cmt">7 commits</a> &bull;
+          <span class="a">203 ++</span>
+          <span class="d">25 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/616">Result sets now return the bookmark's URL...</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-09T13:12:29-08:00" title="2013-01-09 13:12:29">January 09, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/616/commits" class="cmt">3 commits</a> &bull;
+          <span class="a">147 ++</span>
+          <span class="d">4 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/615">At times, we have constraint violations.</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-09T12:41:29-08:00" title="2013-01-09 12:41:29">January 09, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/615/commits" class="cmt">1 commit</a> &bull;
+          <span class="a">36 ++</span>
+          <span class="d">15 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/614">Two bookmarks for the same (new) normalized URI. Problem.</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-09T12:26:57-08:00" title="2013-01-09 12:26:57">January 09, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/614/commits" class="cmt">1 commit</a> &bull;
+          <span class="a">1 ++</span>
+          <span class="d">1 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/613">Depreciating grandfathering. RIP. Better report.</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-09T11:42:08-08:00" title="2013-01-09 11:42:08">January 09, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/613/commits" class="cmt">2 commits</a> &bull;
+          <span class="a">22 ++</span>
+          <span class="d">152 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/611">Didn't include toUrl in report. Might help ;)</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-09T11:02:15-08:00" title="2013-01-09 11:02:15">January 09, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/611/commits" class="cmt">1 commit</a> &bull;
+          <span class="a">1 ++</span>
+          <span class="d">1 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/610">Normuri reflow</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-09T10:49:27-08:00" title="2013-01-09 10:49:27">January 09, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/610/commits" class="cmt">2 commits</a> &bull;
+          <span class="a">22 ++</span>
+          <span class="d">15 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/609">Handling of large email messages</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-09T09:57:53-08:00" title="2013-01-09 09:57:53">January 09, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/609/commits" class="cmt">1 commit</a> &bull;
+          <span class="a">11 ++</span>
+          <span class="d">4 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/606">Async grandfathering and re-normalization, sends emails on complete</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-08T18:48:53-08:00" title="2013-01-08 18:48:53">January 08, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/606/commits" class="cmt">1 commit</a> &bull;
+          <span class="a">122 ++</span>
+          <span class="d">57 --</span>
+        </span>
+      </li>
+      <li class="contribution">
+        <span class="state state-merged">merged</span>
+        <h3>
+          <a href="/FortyTwoEng/keepit/pull/605">Domain specific grandfathering, better URL normalizers</a>
+        </h3>
+        <time class="js-relative-date" datetime="2013-01-08T18:25:42-08:00" title="2013-01-08 18:25:42">January 08, 2013</time>
+        <span class="cmeta">
+          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
+          <a href="/FortyTwoEng/keepit/pull/605/commits" class="cmt">4 commits</a> &bull;
+          <span class="a">188 ++</span>
+          <span class="d">39 --</span>
+        </span>
+      </li>
+    </ol>
+  </div>
+
+
+  </div>
+
+<script src="https://a248.e.akamai.net/assets.github.com/assets/graphs/calendar-38f5d7b4e39f53705ac064f76cbd40b161b1ba0c.js" type="text/javascript"></script>
+
+    </div>
+  </div><!-- /.last -->
+
+  </div><!-- /.profilecols -->
+</div>
+
+          </div>
+          <div class="context-overlay"></div>
+        </div>
+      <div id="footer-push"></div><!-- hack for sticky footer -->
+    </div><!-- end of wrapper - hack for sticky footer -->
+
+      <!-- footer -->
+      <div id="footer">
+  <div class="container clearfix">
+
+      <dl class="footer_nav">
+        <dt>GitHub</dt>
+        <dd><a href="https://github.com/about">About us</a></dd>
+        <dd><a href="https://github.com/blog">Blog</a></dd>
+        <dd><a href="https://github.com/contact">Contact &amp; support</a></dd>
+        <dd><a href="http://enterprise.github.com/">GitHub Enterprise</a></dd>
+        <dd><a href="http://status.github.com/">Site status</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>Applications</dt>
+        <dd><a href="http://mac.github.com/">GitHub for Mac</a></dd>
+        <dd><a href="http://windows.github.com/">GitHub for Windows</a></dd>
+        <dd><a href="http://eclipse.github.com/">GitHub for Eclipse</a></dd>
+        <dd><a href="http://mobile.github.com/">GitHub mobile apps</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>Services</dt>
+        <dd><a href="http://get.gaug.es/">Gauges: Web analytics</a></dd>
+        <dd><a href="http://speakerdeck.com">Speaker Deck: Presentations</a></dd>
+        <dd><a href="https://gist.github.com">Gist: Code snippets</a></dd>
+        <dd><a href="http://jobs.github.com/">Job board</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>Documentation</dt>
+        <dd><a href="http://help.github.com/">GitHub Help</a></dd>
+        <dd><a href="http://developer.github.com/">Developer API</a></dd>
+        <dd><a href="http://github.github.com/github-flavored-markdown/">GitHub Flavored Markdown</a></dd>
+        <dd><a href="http://pages.github.com/">GitHub Pages</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>More</dt>
+        <dd><a href="http://training.github.com/">Training</a></dd>
+        <dd><a href="https://github.com/edu">Students &amp; teachers</a></dd>
+        <dd><a href="http://shop.github.com">The Shop</a></dd>
+        <dd><a href="/plans">Plans &amp; pricing</a></dd>
+        <dd><a href="http://octodex.github.com/">The Octodex</a></dd>
+      </dl>
+
+      <hr class="footer-divider">
+
+
+    <p class="right">&copy; 2013 <span title="9.39836s from fe16.rs.github.com">GitHub</span> Inc. All rights reserved.</p>
+    <a class="left" href="https://github.com/">
+      <span class="mega-icon mega-icon-invertocat"></span>
+    </a>
+    <ul id="legal">
+        <li><a href="https://github.com/site/terms">Terms of Service</a></li>
+        <li><a href="https://github.com/site/privacy">Privacy</a></li>
+        <li><a href="https://github.com/security">Security</a></li>
+    </ul>
+
+  </div><!-- /.container -->
+
+</div><!-- /.#footer -->
+
+
+
+
+
+
+<div id="keyboard_shortcuts_pane" class="instapaper_ignore readability-extra" style="display:none">
+  <h2>Keyboard Shortcuts <small><a href="#" class="js-see-all-keyboard-shortcuts">(see all)</a></small></h2>
+
+  <div class="columns threecols">
+    <div class="column first">
+      <h3>Site wide shortcuts</h3>
+      <dl class="keyboard-mappings">
+        <dt>s</dt>
+        <dd>Focus command bar</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>?</dt>
+        <dd>Bring up this help dialog</dd>
+      </dl>
+    </div><!-- /.column.first -->
+
+    <div class="column middle" style='display:none'>
+      <h3>Commit list</h3>
+      <dl class="keyboard-mappings">
+        <dt>j</dt>
+        <dd>Move selection down</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>k</dt>
+        <dd>Move selection up</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>c <em>or</em> o <em>or</em> enter</dt>
+        <dd>Open commit</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>y</dt>
+        <dd>Expand URL to its canonical form</dd>
+      </dl>
+    </div><!-- /.column.first -->
+
+    <div class="column last js-hidden-pane" style='display:none'>
+      <h3>Pull request list</h3>
+      <dl class="keyboard-mappings">
+        <dt>j</dt>
+        <dd>Move selection down</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>k</dt>
+        <dd>Move selection up</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>o <em>or</em> enter</dt>
+        <dd>Open issue</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> enter</dt>
+        <dd>Submit comment</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> shift p</dt>
+        <dd>Preview comment</dd>
+      </dl>
+    </div><!-- /.columns.last -->
+
+  </div><!-- /.columns.equacols -->
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+
+    <h3>Issues</h3>
+
+    <div class="columns threecols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt>j</dt>
+          <dd>Move selection down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>k</dt>
+          <dd>Move selection up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>x</dt>
+          <dd>Toggle selection</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o <em>or</em> enter</dt>
+          <dd>Open issue</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> enter</dt>
+          <dd>Submit comment</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> shift p</dt>
+          <dd>Preview comment</dd>
+        </dl>
+      </div><!-- /.column.first -->
+      <div class="column last">
+        <dl class="keyboard-mappings">
+          <dt>c</dt>
+          <dd>Create issue</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>l</dt>
+          <dd>Create label</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>i</dt>
+          <dd>Back to inbox</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>u</dt>
+          <dd>Back to issues</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>/</dt>
+          <dd>Focus issues search</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+
+    <h3>Issues Dashboard</h3>
+
+    <div class="columns threecols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt>j</dt>
+          <dd>Move selection down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>k</dt>
+          <dd>Move selection up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o <em>or</em> enter</dt>
+          <dd>Open issue</dd>
+        </dl>
+      </div><!-- /.column.first -->
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+
+    <h3>Network Graph</h3>
+    <div class="columns equacols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">←</span> <em>or</em> h</dt>
+          <dd>Scroll left</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">→</span> <em>or</em> l</dt>
+          <dd>Scroll right</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">↑</span> <em>or</em> k</dt>
+          <dd>Scroll up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">↓</span> <em>or</em> j</dt>
+          <dd>Scroll down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>t</dt>
+          <dd>Toggle visibility of head labels</dd>
+        </dl>
+      </div><!-- /.column.first -->
+      <div class="column last">
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">←</span> <em>or</em> shift h</dt>
+          <dd>Scroll all the way left</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">→</span> <em>or</em> shift l</dt>
+          <dd>Scroll all the way right</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">↑</span> <em>or</em> shift k</dt>
+          <dd>Scroll all the way up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">↓</span> <em>or</em> shift j</dt>
+          <dd>Scroll all the way down</dd>
+        </dl>
+      </div><!-- /.column.last -->
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+    <div class="columns threecols">
+      <div class="column first js-hidden-pane" style='display:none'>
+        <h3>Source Code Browsing</h3>
+        <dl class="keyboard-mappings">
+          <dt>t</dt>
+          <dd>Activates the file finder</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>l</dt>
+          <dd>Jump to line</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>w</dt>
+          <dd>Switch branch/tag</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>y</dt>
+          <dd>Expand URL to its canonical form</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+    <div class="columns threecols">
+      <div class="column first">
+        <h3>Browsing Commits</h3>
+        <dl class="keyboard-mappings">
+          <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> enter</dt>
+          <dd>Submit comment</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>escape</dt>
+          <dd>Close form</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>p</dt>
+          <dd>Parent commit</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o</dt>
+          <dd>Other parent commit</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+    <h3>Notifications</h3>
+
+    <div class="columns threecols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt>j</dt>
+          <dd>Move selection down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>k</dt>
+          <dd>Move selection up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o <em>or</em> enter</dt>
+          <dd>Open notification</dd>
+        </dl>
+      </div><!-- /.column.first -->
+
+      <div class="column second">
+        <dl class="keyboard-mappings">
+          <dt>e <em>or</em> shift i <em>or</em> y</dt>
+          <dd>Mark as read</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift m</dt>
+          <dd>Mute thread</dd>
+        </dl>
+      </div><!-- /.column.first -->
+    </div>
+  </div>
+
+</div>
+
+    <div id="markdown-help" class="instapaper_ignore readability-extra">
+  <h2>Markdown Cheat Sheet</h2>
+
+  <div class="cheatsheet-content">
+
+  <div class="mod">
+    <div class="col">
+      <h3>Format Text</h3>
+      <p>Headers</p>
+      <pre>
+# This is an &lt;h1&gt; tag
+## This is an &lt;h2&gt; tag
+###### This is an &lt;h6&gt; tag</pre>
+     <p>Text styles</p>
+     <pre>
+*This text will be italic*
+_This will also be italic_
+**This text will be bold**
+__This will also be bold__
+
+*You **can** combine them*
+</pre>
+    </div>
+    <div class="col">
+      <h3>Lists</h3>
+      <p>Unordered</p>
+      <pre>
+* Item 1
+* Item 2
+  * Item 2a
+  * Item 2b</pre>
+     <p>Ordered</p>
+     <pre>
+1. Item 1
+2. Item 2
+3. Item 3
+   * Item 3a
+   * Item 3b</pre>
+    </div>
+    <div class="col">
+      <h3>Miscellaneous</h3>
+      <p>Images</p>
+      <pre>
+![GitHub Logo](/images/logo.png)
+Format: ![Alt Text](url)
+</pre>
+     <p>Links</p>
+     <pre>
+http://github.com - automatic!
+[GitHub](http://github.com)</pre>
+<p>Blockquotes</p>
+     <pre>
+As Kanye West said:
+
+> We're living the future so
+> the present is our past.
+</pre>
+    </div>
+  </div>
+  <div class="rule"></div>
+
+  <h3>Code Examples in Markdown</h3>
+  <div class="col">
+      <p>Syntax highlighting with <a href="http://github.github.com/github-flavored-markdown/" title="GitHub Flavored Markdown" target="_blank">GFM</a></p>
+      <pre>
+```javascript
+function fancyAlert(arg) {
+  if(arg) {
+    $.facebox({div:'#foo'})
+  }
+}
+```</pre>
+    </div>
+    <div class="col">
+      <p>Or, indent your code 4 spaces</p>
+      <pre>
+Here is a Python code example
+without syntax highlighting:
+
+    def foo:
+      if not bar:
+        return true</pre>
+    </div>
+    <div class="col">
+      <p>Inline code for comments</p>
+      <pre>
+I think you should use an
+`&lt;addr&gt;` element here instead.</pre>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+
+    <div id="ajax-error-message" class="flash flash-error">
+      <span class="mini-icon mini-icon-exclamation"></span>
+      Something went wrong with that request. Please try again.
+      <a href="#" class="mini-icon mini-icon-remove-close ajax-error-dismiss"></a>
+    </div>
+
+
+
+    <span id='server_response_time' data-time='9.39962' data-host='fe16'></span>
+
+  </body>
+</html>
