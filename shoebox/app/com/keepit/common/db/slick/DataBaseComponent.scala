@@ -6,13 +6,16 @@ import org.scalaquery.ql._
 import java.sql.{PreparedStatement, Connection, DatabaseMetaData, Statement}
 import org.scalaquery.SQueryException
 import com.google.inject.Inject
+import com.keepit.common.db.DbInfo
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
   val Driver: Profile
-  def handle: Database
+  def dbInfo: DbInfo
+  lazy val handle: Database = dbInfo.database
 
   def sequenceID: OperatorColumn[Int]
+  def entityName(name: String): String = name
 }
 
 class DBConnection @Inject() (db: DataBaseComponent) {

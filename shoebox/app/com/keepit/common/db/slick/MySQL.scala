@@ -14,7 +14,6 @@ class MySQL(val dbInfo: DbInfo)
     extends DataBaseComponent {
   println("initiating MySQL driver")
   val Driver = MySQLDriver
-  lazy val handle = dbInfo.database
 
   lazy val sequenceID = SimpleFunction.nullary[Int]("LAST_INSERT_ID")
 }
