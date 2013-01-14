@@ -52,10 +52,7 @@ case class NormalizedURI  (
     (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlHash EQ urlHash) unique}.map(_.view)
 
 
-  def stats()(implicit conn: Connection): NormalizedURIStats = {
-    val uriBookmarks = Bookmark.ofUri(this)
-    NormalizedURIStats(this, uriBookmarks)
-  }
+  def stats()(implicit conn: Connection): NormalizedURIStats = NormalizedURIStats(this, BookmarkCxRepo.ofUri(this))
 }
 
 object NormalizedURI {

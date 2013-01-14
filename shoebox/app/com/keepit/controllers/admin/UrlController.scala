@@ -61,7 +61,7 @@ object UrlController extends FortyTwoController {
     val changedURIs = scala.collection.mutable.MutableList[ChangedNormURI]()
     val (bookmarkCount, commentCount, followsCount, deepsCount) = CX.withConnection { implicit conn =>
 
-      val bookmarks = Bookmark.all
+      val bookmarks = BookmarkCxRepo.all
       val bookmarkCount = bookmarks.size
 
       bookmarks map { bookmark =>

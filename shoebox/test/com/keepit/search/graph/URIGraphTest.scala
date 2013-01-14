@@ -78,7 +78,7 @@ class URIGraphTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-              Bookmark(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+              BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
             }
           }
         }
@@ -110,7 +110,7 @@ class URIGraphTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-              Bookmark(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+              BookmarkFactory(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
             }
           }
         }
@@ -143,7 +143,7 @@ class URIGraphTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-              Bookmark(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+              BookmarkFactory(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
             }
           }
         }
@@ -208,7 +208,7 @@ class URIGraphTest extends SpecificationWithJUnit {
           uris.foreach{ uri =>
             val uriId =  uri.id.get
             val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-            Bookmark(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users((uriId.id % 2L).toInt).id.get, source = BookmarkSource("test")).save
+            BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users((uriId.id % 2L).toInt).id.get, source = BookmarkSource("test")).save
           }
         }
 
@@ -241,12 +241,12 @@ class URIGraphTest extends SpecificationWithJUnit {
           uris.foreach{ uri =>
             val uriId =  uri.id.get
             val url1 = URL.get(uri.url).getOrElse(URL(uri.url, uri.id.get).save)
-            Bookmark(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users(0).id.get, source = BookmarkSource("test")).save
+            BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users(0).id.get, source = BookmarkSource("test")).save
           }
         }
 
         CX.withConnection { implicit conn =>
-          println(Bookmark.all)
+          println(BookmarkCxRepo.all)
         }
 
         val graphDir = new RAMDirectory
@@ -296,8 +296,8 @@ class URIGraphTest extends SpecificationWithJUnit {
           val url2 = URL(uris(1).url, uris(1).id.get).save
 
           val bookmarks = Array(
-            Bookmark(title = "line1 titles", url = url1,  uriId = uris(0).id.get, userId = user.id.get, source = BookmarkSource("test")).save,
-            Bookmark(title = "line2 titles", url = url2,  uriId = uris(1).id.get, userId = user.id.get, source = BookmarkSource("test")).save
+            BookmarkFactory(title = "line1 titles", url = url1,  uriId = uris(0).id.get, userId = user.id.get, source = BookmarkSource("test")).save,
+            BookmarkFactory(title = "line2 titles", url = url2,  uriId = uris(1).id.get, userId = user.id.get, source = BookmarkSource("test")).save
           )
           (user, uris, bookmarks)
         }

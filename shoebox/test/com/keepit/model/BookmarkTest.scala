@@ -46,7 +46,7 @@ class BookmarkTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         CX.withConnection { implicit conn =>
-          Bookmark.all.map(_.title) === Seq("G1", "A1", "G2")
+          BookmarkCxRepo.all.map(_.title) === Seq("G1", "A1", "G2")
         }
       }
     }
@@ -54,8 +54,8 @@ class BookmarkTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         CX.withConnection { implicit conn =>
-          Bookmark.ofUser(user1).map(_.title) === Seq("G1", "A1")
-          Bookmark.ofUser(user2).map(_.title) === Seq("G2")
+          BookmarkCxRepo.ofUser(user1).map(_.title) === Seq("G1", "A1")
+          BookmarkCxRepo.ofUser(user2).map(_.title) === Seq("G2")
         }
       }
     }
@@ -63,8 +63,8 @@ class BookmarkTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         CX.withConnection { implicit conn =>
-          Bookmark.ofUri(uri1).map(_.title) === Seq("G1", "G2")
-          Bookmark.ofUri(uri2).map(_.title) === Seq("A1")
+          BookmarkCxRepo.ofUri(uri1).map(_.title) === Seq("G1", "G2")
+          BookmarkCxRepo.ofUri(uri2).map(_.title) === Seq("A1")
         }
       }
     }
@@ -72,7 +72,7 @@ class BookmarkTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         CX.withConnection { implicit conn =>
-          Bookmark.count === 3
+          BookmarkCxRepo.count === 3
         }
       }
     }
@@ -80,8 +80,8 @@ class BookmarkTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         CX.withConnection { implicit conn =>
-          Bookmark.count(user1) === 2
-          Bookmark.count(user2) === 1
+          BookmarkCxRepo.count(user1) === 2
+          BookmarkCxRepo.count(user2) === 1
         }
       }
     }
@@ -89,7 +89,7 @@ class BookmarkTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         CX.withConnection { implicit conn =>
           val (user1, user2, uri1, uri2) = setup()
-          Bookmark.getDailyKeeps === Map(
+          BookmarkCxRepo.getDailyKeeps === Map(
               user1.id.get -> Map(0 -> 1, 2 -> 1),
               user2.id.get -> Map(1 -> 1))
         }

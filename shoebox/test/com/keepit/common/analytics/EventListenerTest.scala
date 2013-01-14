@@ -26,7 +26,7 @@ class EventListenerTest extends SpecificationWithJUnit {
       val normUrlId = NormalizedURI("http://www.google.com/").save.id.get
       val url = URL("http://www.google.com/", normUrlId).save
       val user = User(firstName = "Andrew", lastName = "Conner").save
-      val bookmark = Bookmark(
+      val bookmark = BookmarkFactory(
         title = "test",
         url = url,
         uriId = normUrlId,

@@ -46,7 +46,7 @@ object UserController extends FortyTwoController {
       NormalizedURI.getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
-          val bookmark = Bookmark.load(uri, userId).filter(_.isActive)
+          val bookmark = BookmarkCxRepo.load(uri, userId).filter(_.isActive)
           val following = FollowCxRepo.get(userId, uri.id.get).filter(_.isActive).isDefined
 
           val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
@@ -143,7 +143,7 @@ object UserController extends FortyTwoController {
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = CX.withConnection { implicit conn =>
       val userWithSocial = UserWithSocial.toUserWithSocial(UserCxRepo.get(userId))
-      val bookmarks = Bookmark.ofUser(userWithSocial.user)
+      val bookmarks = BookmarkCxRepo.ofUser(userWithSocial.user)
       val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (UserCxRepo.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
       val kifiInstallations = KifiInstallation.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))

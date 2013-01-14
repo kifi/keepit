@@ -23,7 +23,7 @@ import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.time._
 import com.keepit.model.{User, UserCxRepo}
-import com.keepit.model.Bookmark
+import com.keepit.model.{Bookmark, BookmarkCxRepo}
 import com.keepit.common.healthcheck.BabysitterTimeout
 import org.joda.time.LocalDate
 import org.joda.time.DateTimeZone
@@ -42,7 +42,7 @@ object AdminDashboardController extends FortyTwoController {
   implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
 
   private lazy val userCountByDate = calcCountByDate(inject[DBConnection].readOnly(implicit session => inject[UserRepo].all).map(_.createdAt.toLocalDateInZone))
-  private lazy val bookmarkCountByDate = calcCountByDate(CX.withConnection { implicit conn => Bookmark.all }.map(_.createdAt.toLocalDateInZone))
+  private lazy val bookmarkCountByDate = calcCountByDate(CX.withConnection { implicit conn => BookmarkCxRepo.all }.map(_.createdAt.toLocalDateInZone))
 
   private def calcCountByDate(dates: => Seq[LocalDate]) = {
 

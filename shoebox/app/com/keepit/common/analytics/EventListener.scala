@@ -41,7 +41,7 @@ class KifiResultClickedListener extends EventListenerPlugin {
     case Event(_,UserEventMetadata(EventFamilies.SEARCH,"kifiResultClicked",externalUser,_,experiments,metaData,_),_,_) =>
       val (user, meta, bookmark) = CX.withConnection { implicit conn =>
         val (user, meta) = searchParser(externalUser, metaData)
-        val bookmark = meta.normUrl.map(n => Bookmark.load(n.id.get,user.id.get)).flatten
+        val bookmark = meta.normUrl.map(n => BookmarkCxRepo.load(n.id.get,user.id.get)).flatten
         (user, meta, bookmark)
       }
 

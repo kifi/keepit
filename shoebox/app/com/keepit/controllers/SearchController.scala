@@ -99,11 +99,11 @@ object SearchController extends FortyTwoController {
   }
   private[controllers] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit conn: Connection): PersonalSearchResult = {
     val uri = NormalizedURI.get(res.uriId)
-    val bookmark = if (res.isMyBookmark) Bookmark.load(uri, userId) else None
+    val bookmark = if (res.isMyBookmark) BookmarkCxRepo.load(uri, userId) else None
     val users = res.users.toSeq.map{ userId =>
       val user = UserCxRepo.get(userId)
       val info = SocialUserInfo.getByUser(user.id.get).head
-      UserWithSocial(user, info, Bookmark.count(user), Seq(), Seq())
+      UserWithSocial(user, info, BookmarkCxRepo.count(user), Seq(), Seq())
     }
     PersonalSearchResult(toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark, false, users, res.score)
   }
