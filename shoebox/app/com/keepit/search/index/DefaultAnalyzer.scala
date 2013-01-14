@@ -59,7 +59,7 @@ object DefaultAnalyzer {
   import AnalyzerBuilder._
 
   private val stdAnalyzer = analyzer[DefaultAnalyzer]
-  private val defaultAnalyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
+  val defaultAnalyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
 
   val langAnalyzers = Map[String, Analyzer](
     "ar" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Arabic).withFilter[ArabicNormalizationFilter],

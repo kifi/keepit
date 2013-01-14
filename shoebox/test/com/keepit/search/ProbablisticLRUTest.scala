@@ -18,10 +18,7 @@ class ProbablisticLRUTest extends SpecificationWithJUnit {
   rand.setSeed(123456789L)
 
   def create(tableSize: Int, numHashFuncs: Int, syncEvery: Int = 1000) = {
-    val bufferSize = tableSize * 4 + 4
-    val byteBuffer = ByteBuffer.allocate(bufferSize)
-    byteBuffer.putInt(0, tableSize)
-    new ProbablisticLRU(byteBuffer, tableSize, numHashFuncs, syncEvery)
+    ProbablisticLRU(tableSize, numHashFuncs, syncEvery)
   }
 
   "ProbabalisticLRUTest" should {

@@ -39,6 +39,7 @@ import com.keepit.search.ArticleStore
 import com.keepit.search.S3ArticleSearchResultStoreImpl
 import com.keepit.search.S3ArticleStoreImpl
 import com.keepit.search.SearchConfigManager
+import com.keepit.search.ResultClickTracker
 import com.tzavellas.sse.guice.ScalaModule
 import akka.actor.ActorSystem
 import play.api.Play.current
@@ -175,5 +176,21 @@ class ShoeboxModule() extends ScalaModule with Logging {
         val dir = new File(dirPath).getCanonicalFile()
         new SearchConfigManager(if (dir.exists) Some(dir) else None)
     }
+  }
+
+    @Singleton
+  @Provides
+  def resultClickTracker: ResultClickTracker = {
+    val conf = current.configuration.getConfig("result-click-tracker").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val syncEvery = conf.getInt("syncEvery").get
+    val dirPath = conf.getString("dir").get
+    val dir = new File(dirPath).getCanonicalFile()
+    if (!dir.exists()) {
+      if (!dir.mkdirs()) {
+        throw new Exception("could not create dir %s".format(dir))
+      }
+    }
+    ResultClickTracker(dir, numHashFuncs, syncEvery)
   }
 }

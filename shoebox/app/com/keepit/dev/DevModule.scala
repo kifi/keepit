@@ -199,4 +199,24 @@ class DevModule() extends ScalaModule with Logging {
         new SearchConfigManager(if (dir.exists) Some(dir) else None)
     }
   }
+
+  @Singleton
+  @Provides
+  def resultClickTracker: ResultClickTracker = {
+    val conf = current.configuration.getConfig("result-click-tracker").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val syncEvery = conf.getInt("syncEvery").get
+
+    conf.getString("dir") match {
+      case None => ResultClickTracker(numHashFuncs)
+      case Some(dirPath) =>
+        val dir = new File(dirPath).getCanonicalFile()
+        if (!dir.exists()) {
+          if (!dir.mkdirs()) {
+            throw new Exception("could not create dir %s".format(dir))
+          }
+        }
+        ResultClickTracker(dir, numHashFuncs, syncEvery)
+    }
+  }
 }
