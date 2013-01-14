@@ -14,6 +14,9 @@ import play.api._
 import ru.circumflex.orm._
 import play.api.libs.json._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import com.keepit.common.cache.ShoeboxCache
+import play.api.Play.current
 
 case class User(
   id: Option[Id[User]] = None,
@@ -66,7 +69,9 @@ object UserCxRepo {
 
   //slicked
   def get(id: Id[User])(implicit conn: Connection): User =
-    UserEntity.get(id).get.view
+    inject[ShoeboxCache].getOrElse(3600)(id) {
+      UserEntity.get(id).get.view
+    }
 
   //slicked
   def get(externalId: ExternalId[User])(implicit conn: Connection): User =
@@ -74,7 +79,9 @@ object UserCxRepo {
 
   //slicked
   def getOpt(externalId: ExternalId[User])(implicit conn: Connection): Option[User] =
-    (UserEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.externalId EQ externalId) unique }.map(_.view)
+    inject[ShoeboxCache].getOrElse(3600)(externalId) {
+      (UserEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.externalId EQ externalId) unique }.map(_.view)
+    }
 
 }
 

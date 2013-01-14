@@ -17,6 +17,9 @@ import com.keepit.common.social.SocialNetworks
 import com.keepit.common.social.SocialUserRawInfo
 import com.keepit.common.social.SocialNetworks
 import com.keepit.common.social.SocialId
+import com.keepit.inject.inject
+import com.keepit.common.cache.ShoeboxCache
+import play.api.Play.current
 
 case class SocialUserInfo(
   id: Option[Id[SocialUserInfo]] = None,
@@ -55,10 +58,14 @@ object SocialUserInfo {
     getOpt(id, networkType).getOrElse(throw new Exception("not found %s:%s".format(id, networkType)))
 
   def getByUser(userId: Id[User])(implicit conn: Connection): Seq[SocialUserInfo] =
-    (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.userId EQ userId) list }.map(_.view)
+    inject[ShoeboxCache].getOrElse(3600)(userId) {
+      (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.userId EQ userId) list }.map(_.view)
+    }
 
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit conn: Connection): Option[SocialUserInfo] =
-    (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ((u.socialId EQ id.id) AND (u.networkType EQ networkType.name)) unique }.map(_.view)
+    inject[ShoeboxCache].getOrElse(3600)(id, networkType) {
+      (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ((u.socialId EQ id.id) AND (u.networkType EQ networkType.name)) unique }.map(_.view)
+    }
 
   def getOpt(id: Id[SocialUserInfo])(implicit conn: Connection): Option[SocialUserInfo] =
     SocialUserInfoEntity.get(id).map(_.view)
