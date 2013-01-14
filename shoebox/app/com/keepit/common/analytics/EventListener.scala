@@ -31,7 +31,7 @@ trait EventListenerPlugin extends Plugin {
 class EventHelper @Inject() (listeners: JSet[EventListenerPlugin]) {
   def newEvent(event: Event): Seq[String] = {
     val events = listeners.filter(_.onEvent.isDefinedAt(event))
-    events.map(_.onEvent)
+    events.map(_.onEvent(event))
     events.map(_.getClass.getSimpleName.replaceAll("\\$","")).toSeq
   }
 
@@ -50,7 +50,7 @@ class KifiResultClickedListener extends EventListenerPlugin {
       }
 
       // handle KifiResultClicked
-      meta.normUrl.map(n => resultClickTracker.add(user.id.get, meta.query, n.id.get))
+      meta.normUrl.foreach(n => resultClickTracker.add(user.id.get, meta.query, n.id.get))
   }
 }
 

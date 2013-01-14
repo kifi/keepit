@@ -80,18 +80,19 @@ extends Logging {
         while (doc != NO_MORE_DOCS) {
           val id = mapper.getId(doc)
           if (!filterOut.contains(id)) {
-            val score = scorer.score() * clickBoosts(id)
+            val clickBoost = clickBoosts(id)
+            val score = scorer.score()
             if (friendlyUris.contains(id)) {
               if (myUris.contains(id)) {
                 // blend with personal bookmark title score
                 val blendedScore = max(score, bookmarkTitleHits.getOrElse(id, 0.0f))
                 bookmarkTitleHits -= id
-                myHits.insert(id, blendedScore, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
+                myHits.insert(id, blendedScore * clickBoost, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
               } else {
-                friendsHits.insert(id, score, false, false, NO_FRIEND_IDS, 0)
+                friendsHits.insert(id, score * clickBoost, false, false, NO_FRIEND_IDS, 0)
               }
             } else {
-              othersHits.insert(id, score, false, false, NO_FRIEND_IDS, 0)
+              othersHits.insert(id, score * clickBoost, false, false, NO_FRIEND_IDS, 0)
             }
           }
           doc = scorer.nextDoc()
@@ -99,8 +100,9 @@ extends Logging {
       }
     }
     bookmarkTitleHits.foreach{ case (id, score) =>
-      // boost scores to compensate missing article match
-      if (!filterOut.contains(id)) myHits.insert(id, score * personalTitleBoost, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
+      val clickBoost = clickBoosts(id)
+      // boost scores by personalTitleBoost to compensate missing article match
+      if (!filterOut.contains(id)) myHits.insert(id, score * personalTitleBoost * clickBoost, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
     }
 
     if ((myHits.totalHits + friendsHits.totalHits) > 0 || !initial || !articleParser.isMultiClauseQuery) {
