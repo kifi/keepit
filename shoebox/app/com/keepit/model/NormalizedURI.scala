@@ -51,19 +51,9 @@ case class NormalizedURI  (
   def loadUsingHash(implicit conn: Connection): Option[NormalizedURI] =
     (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlHash EQ urlHash) unique}.map(_.view)
 
-  private var bookmarksCache: Option[Seq[Bookmark]] = None
-
-  def bookmarks()(implicit conn: Connection): Seq[Bookmark] = bookmarksCache match {
-      case None =>
-        val res = Bookmark.ofUri(this)
-        bookmarksCache = Some(res)
-        res
-      case Some(bmks) =>
-        bmks
-  }
 
   def stats()(implicit conn: Connection): NormalizedURIStats = {
-    val uriBookmarks = bookmarks()
+    val uriBookmarks = Bookmark.ofUri(this)
     NormalizedURIStats(this, uriBookmarks)
   }
 }
