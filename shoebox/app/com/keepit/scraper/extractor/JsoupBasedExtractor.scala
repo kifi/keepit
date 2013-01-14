@@ -9,7 +9,7 @@ import org.jsoup.nodes.Document
 abstract class JsoupBasedExtractor(url: String, maxContentChars: Int) extends Extractor with Logging {
   protected var doc: Document = null
 
-  def parse(url: String, doc: Document): String
+  def parse(doc: Document): String
 
   def process(input: HttpInputStream){
     try {
@@ -19,7 +19,7 @@ abstract class JsoupBasedExtractor(url: String, maxContentChars: Int) extends Ex
     }
   }
 
-  def getContent() = parse(url, doc).take(maxContentChars)
+  def getContent() = parse(doc).take(maxContentChars)
 
   def getMetadata(name: String) = Option(doc.select("meta[name=" + name + "]").select("content").first()) map (_.toString)
 }
