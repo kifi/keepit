@@ -10,7 +10,7 @@ import java.io.FileOutputStream
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
-      "maxResultClickBoost" -> "3.0",
+      "maxResultClickBoost" -> "10.0",
       "minMyBookmarks" -> "2",
       "myBookmarkBoost" -> "1.5",
       "personalTitleBoost" -> "2.0",
