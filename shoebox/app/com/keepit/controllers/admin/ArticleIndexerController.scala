@@ -11,8 +11,8 @@ import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexer
-import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.{NormalizedURI, NormalizedURICxRepo}
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.controller.FortyTwoController
 import org.apache.lucene.document.Document
 
@@ -27,7 +27,7 @@ object ArticleIndexerController extends FortyTwoController {
   def indexByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
     transitionByAdmin(state -> Set(SCRAPED, SCRAPE_FAILED)) { newState =>
       CX.withConnection { implicit c =>
-        NormalizedURI.getByState(state).foreach{ uri => uri.withState(newState).save }
+        NormalizedURICxRepo.getByState(state).foreach{ uri => uri.withState(newState).save }
       }
       val indexer = inject[ArticleIndexerPlugin]
       val cnt = indexer.index()

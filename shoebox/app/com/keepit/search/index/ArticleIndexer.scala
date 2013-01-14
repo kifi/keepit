@@ -9,7 +9,7 @@ import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import com.keepit.search.SearchConfig
 import com.keepit.model._
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db.CX
 import play.api.Play.current
 import org.apache.lucene.analysis.Analyzer
@@ -53,8 +53,8 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     log.info("starting a new indexing round")
     try {
       val uris = CX.withConnection { implicit c =>
-        val uris = NormalizedURI.getByState(SCRAPE_FAILED, fetchSize)
-        if (uris.size < fetchSize) uris ++ NormalizedURI.getByState(SCRAPED, fetchSize - uris.size)
+        val uris = NormalizedURICxRepo.getByState(SCRAPE_FAILED, fetchSize)
+        if (uris.size < fetchSize) uris ++ NormalizedURICxRepo.getByState(SCRAPED, fetchSize - uris.size)
         else uris
       }
       var cnt = 0
@@ -69,7 +69,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
                 cnt += 1
                 findNextState(articleIndexable.uri.state -> Set(INDEXED, FALLBACKED))
             }
-            NormalizedURI.get(indexable.id).withState(state).save
+            NormalizedURICxRepo.get(indexable.id).withState(state).save
           }
         }
       }
@@ -102,7 +102,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   }
 
   def buildIndexable(id: Id[NormalizedURI]) = {
-    val uri = CX.withConnection{ implicit c => NormalizedURI.get(id) }
+    val uri = CX.withConnection{ implicit c => NormalizedURICxRepo.get(id) }
     buildIndexable(uri)
   }
 

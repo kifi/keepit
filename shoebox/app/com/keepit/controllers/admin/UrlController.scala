@@ -20,7 +20,7 @@ import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.time._
@@ -61,11 +61,11 @@ object UrlController extends FortyTwoController {
     val changedURIs = scala.collection.mutable.MutableList[ChangedNormURI]()
     val (bookmarkCount, commentCount, followsCount, deepsCount) = CX.withConnection { implicit conn =>
 
-      val bookmarks = Bookmark.all
+      val bookmarks = BookmarkCxRepo.all
       val bookmarkCount = bookmarks.size
 
       bookmarks map { bookmark =>
-        val currNormURI = NormalizedURI.get(bookmark.uriId)
+        val currNormURI = NormalizedURICxRepo.get(bookmark.uriId)
         val urlObj = bookmark.urlId match {
           case Some(uu) => URL.get(uu)
           case None =>
@@ -79,9 +79,9 @@ object UrlController extends FortyTwoController {
         }) match {
           case Some(d) =>
           case None =>
-            val (renormURI,reason) = NormalizedURI.getByNormalizedUrl(urlObj.url) match {
+            val (renormURI,reason) = NormalizedURICxRepo.getByNormalizedUrl(urlObj.url) match {
               case Some(u) => (u,URLHistoryCause.MERGE)
-              case None => (NormalizedURI(urlObj.url),URLHistoryCause.SPLIT)
+              case None => (NormalizedURIFactory(urlObj.url),URLHistoryCause.SPLIT)
             }
 
             if (currNormURI.url != renormURI.url) {
@@ -105,7 +105,7 @@ object UrlController extends FortyTwoController {
       val commentCount = comments.size
 
       comments map { comment =>
-        val currNormURI = NormalizedURI.get(comment.uriId)
+        val currNormURI = NormalizedURICxRepo.get(comment.uriId)
         val urlObj = comment.urlId match {
           case Some(uu) => URL.get(uu)
           case None =>
@@ -119,9 +119,9 @@ object UrlController extends FortyTwoController {
         }) match {
           case Some(d) =>
           case None =>
-            val (renormURI,reason) = NormalizedURI.getByNormalizedUrl(urlObj.url) match {
+            val (renormURI,reason) = NormalizedURICxRepo.getByNormalizedUrl(urlObj.url) match {
               case Some(u) => (u,URLHistoryCause.MERGE)
-              case None => (NormalizedURI(urlObj.url),URLHistoryCause.SPLIT)
+              case None => (NormalizedURIFactory(urlObj.url),URLHistoryCause.SPLIT)
             }
             if (currNormURI.url != renormURI.url) {
               changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.url, currNormURI.id.map(_.id).getOrElse(0L), renormURI.id.map(_.id).getOrElse(0L), renormURI.url)
@@ -143,7 +143,7 @@ object UrlController extends FortyTwoController {
       val followsCount = follows.size
 
       follows map { follow =>
-        val currNormURI = NormalizedURI.get(follow.uriId)
+        val currNormURI = NormalizedURICxRepo.get(follow.uriId)
         val urlObj = follow.urlId match {
           case Some(uu) => URL.get(uu)
           case None =>
@@ -157,9 +157,9 @@ object UrlController extends FortyTwoController {
         }) match {
           case Some(d) =>
           case None =>
-            val (renormURI,reason) = NormalizedURI.getByNormalizedUrl(urlObj.url) match {
+            val (renormURI,reason) = NormalizedURICxRepo.getByNormalizedUrl(urlObj.url) match {
               case Some(u) => (u,URLHistoryCause.MERGE)
-              case None => (NormalizedURI(urlObj.url),URLHistoryCause.SPLIT)
+              case None => (NormalizedURIFactory(urlObj.url),URLHistoryCause.SPLIT)
             }
             if (currNormURI.url != renormURI.url) {
               changedURIs += ChangedNormURI("follow-nuri", urlObj.url, currNormURI.url, currNormURI.id.map(_.id).getOrElse(0L), renormURI.id.map(_.id).getOrElse(0L), renormURI.url)
@@ -182,7 +182,7 @@ object UrlController extends FortyTwoController {
       val deepsCount = deeps.size
 
       deeps map { deep =>
-        val currNormURI = NormalizedURI.get(deep.uriId.get)
+        val currNormURI = NormalizedURICxRepo.get(deep.uriId.get)
         val urlObj = deep.urlId match {
           case Some(uu) => URL.get(uu)
           case None =>
@@ -196,9 +196,9 @@ object UrlController extends FortyTwoController {
         }) match {
           case Some(d) =>
           case None =>
-            val (renormURI,reason) = NormalizedURI.getByNormalizedUrl(urlObj.url) match {
+            val (renormURI,reason) = NormalizedURICxRepo.getByNormalizedUrl(urlObj.url) match {
               case Some(u) => (u,URLHistoryCause.MERGE)
-              case None => (NormalizedURI(urlObj.url),URLHistoryCause.SPLIT)
+              case None => (NormalizedURIFactory(urlObj.url),URLHistoryCause.SPLIT)
             }
             if (currNormURI.url != renormURI.url) {
               changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.url, currNormURI.id.map(_.id).getOrElse(0L), renormURI.id.map(_.id).getOrElse(0L), renormURI.url)

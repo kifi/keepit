@@ -4,7 +4,7 @@ import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
 import scala.util.Random
-import com.keepit.model.{NormalizedURI, ScrapeInfo}
+import com.keepit.model.{NormalizedURI, ScrapeInfo, NormalizedURIFactory}
 import com.keepit.common.db.CX
 import play.api.Play.current
 import play.api.test.Helpers._
@@ -28,11 +28,11 @@ class DuplicateDocumentDetectionTest extends SpecificationWithJUnit {
         val sig4 = builder3.add("Completely unrelated to the others. In no way similar. These documents aren't even close.").build
 
         val documentSignatures2 = CX.withConnection { implicit conn =>
-          val nuri1 = NormalizedURI("http://google.com/1").save
-          val nuri2 = NormalizedURI("http://google.com/2").save
-          val nuri3 = NormalizedURI("http://google.com/3").save
-          val nuri4 = NormalizedURI("http://google.com/4").save
-          val nuri5 = NormalizedURI("http://google.com/5").save
+          val nuri1 = NormalizedURIFactory("http://google.com/1").save
+          val nuri2 = NormalizedURIFactory("http://google.com/2").save
+          val nuri3 = NormalizedURIFactory("http://google.com/3").save
+          val nuri4 = NormalizedURIFactory("http://google.com/4").save
+          val nuri5 = NormalizedURIFactory("http://google.com/5").save
 
           implicit val conf = com.keepit.scraper.ScraperConfig()
 

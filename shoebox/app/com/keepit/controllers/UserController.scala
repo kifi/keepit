@@ -43,10 +43,10 @@ object UserController extends FortyTwoController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
     val (bookmark, following, socialUsers, numComments, numMessages) = CX.withConnection { implicit c =>
-      NormalizedURI.getByNormalizedUrl(url) match {
+      NormalizedURICxRepo.getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
-          val bookmark = Bookmark.load(uri, userId).filter(_.isActive)
+          val bookmark = BookmarkCxRepo.load(uri, userId).filter(_.isActive)
           val following = FollowCxRepo.get(userId, uri.id.get).filter(_.isActive).isDefined
 
           val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
@@ -76,7 +76,7 @@ object UserController extends FortyTwoController {
   // TODO: delete once no beta users have old plugin using this (replaced by getSliderInfo)
   def usersKeptUrl(url: String) = AuthenticatedJsonAction { request =>
     val socialUsers = CX.withConnection { implicit c =>
-      NormalizedURI.getByNormalizedUrl(url) match {
+      NormalizedURICxRepo.getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
           val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
@@ -122,12 +122,12 @@ object UserController extends FortyTwoController {
     val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = CX.withConnection { implicit conn =>
       val userWithSocial = UserWithSocial.toUserWithSocial(UserCxRepo.get(userId))
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
-      val follows = FollowCxRepo.all(userId) map {f => NormalizedURI.get(f.uriId)}
+      val follows = FollowCxRepo.all(userId) map {f => NormalizedURICxRepo.get(f.uriId)}
       val comments = Comment.all(Comment.Permissions.PUBLIC, userId) map {c =>
-        (NormalizedURI.get(c.uriId), c)
+        (NormalizedURICxRepo.get(c.uriId), c)
       }
       val messages = Comment.all(Comment.Permissions.MESSAGE, userId) map {c =>
-        (NormalizedURI.get(c.uriId), c, CommentRecipient.getByComment(c.id.get) map { r => toUserWithSocial(UserCxRepo.get(r.userId.get)) })
+        (NormalizedURICxRepo.get(c.uriId), c, CommentRecipient.getByComment(c.id.get) map { r => toUserWithSocial(UserCxRepo.get(r.userId.get)) })
       }
       val sentElectronicMails = ElectronicMail.forSender(userId);
       val mailAddresses = UserWithSocial.toUserWithSocial(UserCxRepo.get(userId)).emails.map(_.address)
@@ -143,7 +143,7 @@ object UserController extends FortyTwoController {
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = CX.withConnection { implicit conn =>
       val userWithSocial = UserWithSocial.toUserWithSocial(UserCxRepo.get(userId))
-      val bookmarks = Bookmark.ofUser(userWithSocial.user)
+      val bookmarks = BookmarkCxRepo.ofUser(userWithSocial.user)
       val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (UserCxRepo.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
       val kifiInstallations = KifiInstallation.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
