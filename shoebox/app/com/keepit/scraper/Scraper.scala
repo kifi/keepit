@@ -5,8 +5,8 @@ import com.keepit.common.db.{Id, CX}
 import com.keepit.common.time._
 import com.keepit.common.net.URI
 import com.keepit.search.{Article, ArticleStore}
-import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.{NormalizedURI, NormalizedURICxRepo}
+import com.keepit.model.NormalizedURIStates
 import com.keepit.model.ScrapeInfo
 import com.keepit.scraper.extractor.DefaultExtractor
 import com.keepit.scraper.extractor.DefaultExtractorFactory
@@ -33,7 +33,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     val startedTime = currentDateTime
     log.info("starting a new scrape round")
     val tasks = CX.withConnection { implicit c =>
-      ScrapeInfo.getOverdueList().map{ info => (NormalizedURI.get(info.uriId), info) }
+      ScrapeInfo.getOverdueList().map{ info => (NormalizedURICxRepo.get(info.uriId), info) }
     }
     log.info("got %s uris to scrape".format(tasks.length))
     val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
@@ -55,7 +55,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
         log.error("uncaught exception while scraping uri %s".format(uri), e)
         val errorURI = CX.withConnection { implicit c =>
           info.withFailure().save
-          uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
+          uri.withState(NormalizedURIStates.SCRAPE_FAILED).save
         }
         (errorURI, None)
     }
@@ -76,7 +76,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
           if (docChanged) {
             // update the scrape schedule and the uri state to SCRAPED
             info.withDocumentChanged(newSig.toBase64).save
-            uri.withTitle(article.title).withState(NormalizedURI.States.SCRAPED).save
+            uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED).save
           } else {
             // update the scrape schedule, uri is not changed
             info.withDocumentUnchanged().save
@@ -94,7 +94,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
             scrapedAt = currentDateTime,
             httpContentType = None,
             httpOriginalContentCharset = None,
-            state = NormalizedURI.States.SCRAPE_FAILED,
+            state = NormalizedURIStates.SCRAPE_FAILED,
             message = Option(error.msg),
             titleLang = None,
             contentLang = None)
@@ -102,7 +102,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
         // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
         val errorURI = CX.withConnection { implicit c =>
           info.withFailure().save
-          uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
+          uri.withState(NormalizedURIStates.SCRAPE_FAILED).save
         }
         (errorURI, None)
     }
@@ -160,7 +160,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
                        scrapedAt = currentDateTime,
                        httpContentType = extractor.getMetadata("Content-Type"),
                        httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
-                       state = SCRAPED,
+                       state = NormalizedURIStates.SCRAPED,
                        message = None,
                        titleLang = Some(titleLang),
                        contentLang = Some(contentLang)))

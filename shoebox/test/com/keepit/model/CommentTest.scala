@@ -23,8 +23,8 @@ class CommentTest extends SpecificationWithJUnit {
       val user1 = User(firstName = "Andrew", lastName = "Conner").save
       val user2 = User(firstName = "Eishay", lastName = "Smith").save
 
-      val uri1 = NormalizedURI("Google", "http://www.google.com/").save
-      val uri2 = NormalizedURI("Bing", "http://www.bing.com/").save
+      val uri1 = NormalizedURIFactory("Google", "http://www.google.com/").save
+      val uri2 = NormalizedURIFactory("Bing", "http://www.bing.com/").save
 
       // Public
       Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Public Comment on Google1", permissions = Comment.Permissions.PUBLIC).save
@@ -64,7 +64,7 @@ class CommentTest extends SpecificationWithJUnit {
           Comment.count(Comment.Permissions.MESSAGE) === 4
         }
       }
-    }    
+    }
     "count and load public comments by URI" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
