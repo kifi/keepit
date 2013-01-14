@@ -33,7 +33,7 @@ class CommentControllerTest extends SpecificationWithJUnit {
           val user = User(firstName = "Andrew", lastName = "Conner").save
           val recepient = User(firstName = "Eishay", lastName = "Smith").save
           EmailAddress(userId = recepient.id.get, verifiedAt = Some(currentDateTime), address = "eishay@42go.com").save
-          val uri = NormalizedURI("Google", "http://www.google.com/").save
+          val uri = NormalizedURIFactory("Google", "http://www.google.com/").save
           val msg = Comment(uriId = uri.id.get, userId = user.id.get, pageTitle = "My Title",
             text = """Public Comment [look here](x-kifi-sel:body>div#page-container>div.column-container>div.left-container>div#module-post-detail.module-post-detail.__FIRST__.image>div.body-copy) on Google1""",
             permissions = Comment.Permissions.MESSAGE).save

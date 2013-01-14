@@ -5,7 +5,7 @@ import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db.{Id, CX, ExternalId}
 import com.keepit.common.time._
 import com.keepit.model._

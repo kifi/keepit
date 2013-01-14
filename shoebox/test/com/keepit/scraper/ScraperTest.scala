@@ -4,7 +4,7 @@ import com.keepit.search.Article
 import com.keepit.common.db.{CX, Id, State}
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import com.keepit.test.EmptyApplication
@@ -27,7 +27,7 @@ class ScraperTest extends SpecificationWithJUnit {
       val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/existing"
-      val uri = NormalizedURI(title = "title", url = url, state = NormalizedURI.States.ACTIVE).copy(id = Some(Id(33)))
+      val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(33)))
       val result = scraper.fetchArticle(uri)
 
       result.isLeft === true // Left is Article
@@ -39,7 +39,7 @@ class ScraperTest extends SpecificationWithJUnit {
       val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/missing"
-      val uri = NormalizedURI(title = "title", url = url, state = NormalizedURI.States.ACTIVE).copy(id = Some(Id(44)))
+      val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(44)))
       val result = scraper.fetchArticle(uri)
       result.isRight === true // Right is ScraperError
       result.right.get.httpStatusCode === HttpStatus.SC_NOT_FOUND
@@ -48,8 +48,8 @@ class ScraperTest extends SpecificationWithJUnit {
     "fetch ACTIVE uris and scrape them" in {
       running(new EmptyApplication()) {
         var (uri1, uri2, info1, info2) = CX.withConnection { implicit c =>
-          val uri1 = NormalizedURI(title = "existing", url = "http://www.keepit.com/existing").save
-          val uri2 = NormalizedURI(title = "missing", url = "http://www.keepit.com/missing").save
+          val uri1 = NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").save
+          val uri2 = NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing").save
           val info1 = ScrapeInfo.ofUri(uri1).save
           val info2 = ScrapeInfo.ofUri(uri2).save
           (uri1, uri2, info1, info2)
@@ -61,12 +61,12 @@ class ScraperTest extends SpecificationWithJUnit {
 
         // get URIs from db
         CX.withConnection { implicit c =>
-          uri1 = NormalizedURI.get(uri1.id.get)
-          uri2 = NormalizedURI.get(uri2.id.get)
+          uri1 = NormalizedURICxRepo.get(uri1.id.get)
+          uri2 = NormalizedURICxRepo.get(uri2.id.get)
         }
 
-        uri1.state === NormalizedURI.States.SCRAPED
-        uri2.state === NormalizedURI.States.SCRAPE_FAILED
+        uri1.state === NormalizedURIStates.SCRAPED
+        uri2.state === NormalizedURIStates.SCRAPE_FAILED
       }
     }
 
@@ -74,8 +74,8 @@ class ScraperTest extends SpecificationWithJUnit {
       // DEV should be using the default ScraperConfig
       running(new EmptyApplication()) {
         var (uri1, uri2, info1, info2) = CX.withConnection { implicit c =>
-          val uri1 = NormalizedURI(title = "existing", url = "http://www.keepit.com/existing").save
-          val uri2 = NormalizedURI(title = "missing", url = "http://www.keepit.com/missing").save
+          val uri1 = NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").save
+          val uri2 = NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing").save
           val info1 = ScrapeInfo.ofUri(uri1).save
           val info2 = ScrapeInfo.ofUri(uri2).save
           (uri1, uri2, info1, info2)
@@ -135,7 +135,7 @@ class ScraperTest extends SpecificationWithJUnit {
     "update scrape schedule upon state change" in {
       running(new EmptyApplication()) {
         var info = CX.withConnection { implicit c =>
-          val uri = NormalizedURI(title = "existing", url = "http://www.keepit.com/existing").save
+          val uri = NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").save
           ScrapeInfo.ofUri(uri).save
         }
         CX.withConnection { implicit c =>

@@ -7,7 +7,7 @@ import com.keepit.search.Lang
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db.{Id, CX}
 import com.keepit.common.time._
 import com.keepit.model._
@@ -51,9 +51,9 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
         var (uri1, uri2, uri3) = CX.withConnection { implicit c =>
           val user1 = User(firstName = "Joe", lastName = "Smith").save
           val user2 = User(firstName = "Moo", lastName = "Brown").save
-          (NormalizedURI(title = "a1", url = "http://www.keepit.com/article1", state = ACTIVE).save,
-           NormalizedURI(title = "a2", url = "http://www.keepit.org/article2", state = SCRAPED).save,
-           NormalizedURI(title = "a3", url = "http://www.findit.com/article3", state = INDEXED).save)
+          (NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state = ACTIVE).save,
+           NormalizedURIFactory(title = "a2", url = "http://www.keepit.org/article2", state = SCRAPED).save,
+           NormalizedURIFactory(title = "a3", url = "http://www.findit.com/article3", state = INDEXED).save)
         }
         store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
         store += (uri2.id.get -> mkArticle(uri2.id.get, "title2 titles", "content2 alldocs bodies soul"))
@@ -70,9 +70,9 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
         indexer.numDocs === 1
 
         CX.withConnection { implicit c =>
-          uri1 = NormalizedURI.get(uri1.id.get)
-          uri2 = NormalizedURI.get(uri2.id.get)
-          uri3 = NormalizedURI.get(uri3.id.get)
+          uri1 = NormalizedURICxRepo.get(uri1.id.get)
+          uri2 = NormalizedURICxRepo.get(uri2.id.get)
+          uri3 = NormalizedURICxRepo.get(uri3.id.get)
         }
         uri1.state === ACTIVE
         uri2.state === INDEXED
@@ -89,9 +89,9 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
         indexer.numDocs === 3
 
         CX.withConnection { implicit c =>
-          uri1 = NormalizedURI.get(uri1.id.get)
-          uri2 = NormalizedURI.get(uri2.id.get)
-          uri3 = NormalizedURI.get(uri3.id.get)
+          uri1 = NormalizedURICxRepo.get(uri1.id.get)
+          uri2 = NormalizedURICxRepo.get(uri2.id.get)
+          uri3 = NormalizedURICxRepo.get(uri3.id.get)
         }
         uri1.state === INDEXED
         uri2.state === INDEXED
@@ -224,7 +224,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
         val store = new FakeArticleStore()
 
         var uri = CX.withConnection { implicit c =>
-          NormalizedURI(title = "a1", url = "http://www.keepit.com/article1", state = ACTIVE).save
+          NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state = ACTIVE).save
         }
         store += (uri.id.get -> mkArticle(uri.id.get, "title1 titles", "content1 alldocs body soul"))
 

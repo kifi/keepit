@@ -50,7 +50,7 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] wi
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[User]("user")(db) with ExternalIdColumn[User] {
+  override lazy val table = new RepoTable[User](db, "user") with ExternalIdColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
     def lastName = column[String]("last_name", O.NotNull)
     def state = column[State[User]]("state", O.NotNull)

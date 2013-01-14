@@ -1,6 +1,6 @@
 package com.keepit.common.admin
 
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.time._
 import com.keepit.model._
 import org.junit.runner.RunWith

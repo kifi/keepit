@@ -13,7 +13,7 @@ import com.keepit.common.db.CX._
 import com.keepit.test.EmptyApplication
 import play.core.TestApplication
 import scala.collection.mutable.Map
-import com.keepit.model.{Comment, NormalizedURI, User, SocialUserInfo}
+import com.keepit.model.{Comment, NormalizedURI, User, SocialUserInfo, NormalizedURIFactory}
 import java.sql.Connection
 import com.keepit.common.db.ExternalId
 import com.keepit.model.CommentRecipient
@@ -28,8 +28,8 @@ class ThreadInfoTest extends SpecificationWithJUnit {
       val user1 = User(firstName = "Andrew", lastName = "Conner").save
       val user2 = User(firstName = "Eishay", lastName = "Smith").save
 
-      val uri1 = NormalizedURI("Google", "http://www.google.com/").save
-      val uri2 = NormalizedURI("Bing", "http://www.bing.com/").save
+      val uri1 = NormalizedURIFactory("Google", "http://www.google.com/").save
+      val uri2 = NormalizedURIFactory("Bing", "http://www.bing.com/").save
 
       SocialUserInfo(fullName = "Andrew Conner", socialId = SocialId("asdf"), networkType = SocialNetworks.FACEBOOK, userId = user1.id).save
       SocialUserInfo(fullName = "Eishay Smith", socialId = SocialId("fdaa"), networkType = SocialNetworks.FACEBOOK, userId = user2.id).save
