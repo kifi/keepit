@@ -23,7 +23,7 @@ object GithubExtractorFactory extends ExtractorFactory {
 
 class GithubExtractor(url: String, maxContentChars: Int) extends JsoupBasedExtractor(url, maxContentChars) with Logging {
 
-  def parse(url: String, doc: Document) = {
+  def parse(doc: Document) = {
     // Determine which kind of page we're on
     val selectors =
       if (url.matches(".*/issues/.*")) {

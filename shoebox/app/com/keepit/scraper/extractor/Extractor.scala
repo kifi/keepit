@@ -6,6 +6,7 @@ import com.keepit.scraper.HttpInputStream
 object Extractor {
   val factories = Seq(
     YoutubeExtractorFactory,
+    GithubExtractorFactory,
     DefaultExtractorFactory
   )
 }
