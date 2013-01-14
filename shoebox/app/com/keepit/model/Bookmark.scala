@@ -36,22 +36,22 @@ case class Bookmark(
   bookmarkPath: Option[String] = None,
   isPrivate: Boolean = false,
   userId: Id[User],
-  state: State[Bookmark] = Bookmark.States.ACTIVE,
+  state: State[Bookmark] = BookmarkStates.ACTIVE,
   source: BookmarkSource,
   kifiInstallation: Option[ExternalId[KifiInstallation]] = None) {
 
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
 
   def withActive(isActive: Boolean) = copy(state = isActive match {
-    case true => Bookmark.States.ACTIVE
-    case false => Bookmark.States.INACTIVE
+    case true => BookmarkStates.ACTIVE
+    case false => BookmarkStates.INACTIVE
   })
 
   def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 
   def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
 
-  def isActive: Boolean = state == Bookmark.States.ACTIVE
+  def isActive: Boolean = state == BookmarkStates.ACTIVE
 
   def save(implicit conn: Connection): Bookmark = {
     val entity = BookmarkEntity(this.copy(updatedAt = currentDateTime))
@@ -68,7 +68,7 @@ case class Bookmark(
 
 }
 
-object Bookmark {
+object BookmarkFactory {
 
   def apply(uri: NormalizedURI, userId: Id[User], title: String, url: URL, source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
     Bookmark(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)
@@ -77,8 +77,10 @@ object Bookmark {
     Bookmark(title = title, urlId = Some(url.id.get), url = url.url, uriId = uriId, userId = userId, source = source)
 
   def apply(title: String, urlId: Id[URL],  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource, isPrivate: Boolean): Bookmark =
-    Bookmark(title = title, urlId = urlId, uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
+    BookmarkFactory(title = title, urlId = urlId, uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
+}
 
+object BookmarkCxRepo {
   def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = load(uri, user.id.get)
 
   def load(uri: NormalizedURI, userId: Id[User])(implicit conn: Connection): Option[Bookmark] = load(uri.id.get, userId)
@@ -133,11 +135,11 @@ object Bookmark {
 
   def getCountByInstallation(installation: ExternalId[KifiInstallation])(implicit conn: Connection): Long =
     (BookmarkEntity AS "b").map { b => SELECT (COUNT(b.*)) FROM b WHERE (b.kifiInstallation EQ installation) unique } getOrElse(0)
+}
 
-  object States {
-    val ACTIVE = State[Bookmark]("active")
-    val INACTIVE = State[Bookmark]("inactive")
-  }
+object BookmarkStates {
+  val ACTIVE = State[Bookmark]("active")
+  val INACTIVE = State[Bookmark]("inactive")
 }
 
 private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
@@ -148,7 +150,7 @@ private[model] class BookmarkEntity extends Entity[Bookmark, BookmarkEntity] {
   val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
   val urlId = "url_id".ID[URL]
   val url = "url".VARCHAR(256).NOT_NULL
-  val state = "state".STATE[Bookmark].NOT_NULL(Bookmark.States.ACTIVE)
+  val state = "state".STATE[Bookmark].NOT_NULL(BookmarkStates.ACTIVE)
   val bookmarkPath = "bookmark_path".VARCHAR(512).NOT_NULL
   val userId = "user_id".ID[User]
   val isPrivate = "is_private".BOOLEAN.NOT_NULL

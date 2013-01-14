@@ -44,7 +44,7 @@ object DeepLinkController extends FortyTwoController {
           case Some(recip) if request.userId != recip =>
             Forbidden
           case _ =>
-            val uri = deep.uriId.map(uri => CX.withConnection{ implicit conn => NormalizedURI.get(uri).url }) getOrElse ("")
+            val uri = deep.uriId.map(uri => CX.withConnection{ implicit conn => NormalizedURICxRepo.get(uri).url }) getOrElse ("")
             val locator = deep.deepLocator.value
             val isSecure = deep.recipientUserId.isDefined
             Ok(views.html.deeplink(uri, locator, isSecure))
