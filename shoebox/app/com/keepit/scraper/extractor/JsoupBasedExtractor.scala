@@ -13,7 +13,7 @@ abstract class JsoupBasedExtractor(url: String, maxContentChars: Int) extends Ex
 
   def process(input: HttpInputStream){
     try {
-      doc = Jsoup.parse(input.input, null, url) // null charset autodetects based on `http-equiv` meta tag and default to UTF-8
+      doc = Jsoup.parse(input, null, url) // null charset autodetects based on `http-equiv` meta tag and default to UTF-8
     } catch {
       case e => log.error("Jsoup extraction failed: ", e)
     }
