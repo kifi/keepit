@@ -5,7 +5,6 @@ import com.keepit.search.ArticleStore
 import com.keepit.common.logging.Logging
 import com.keepit.search.Article
 import com.keepit.model.SocialUserInfo
-import com.keepit.model.NormalizedURI
 import play.api.Plugin
 import play.api.templates.Html
 import akka.util.Timeout

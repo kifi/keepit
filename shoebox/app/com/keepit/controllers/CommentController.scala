@@ -63,7 +63,7 @@ object CommentController extends FortyTwoController {
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val comment = CX.withConnection { implicit conn =>
       val userId = request.userId
-      val uri = NormalizedURI.getByNormalizedUrl(urlStr).getOrElse(NormalizedURI(url = urlStr).save)
+      val uri = NormalizedURICxRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr).save)
 
       val parentIdOpt = parent match {
         case "" => None
@@ -101,7 +101,7 @@ object CommentController extends FortyTwoController {
 
   def getUpdates(url: String) = AuthenticatedJsonAction { request =>
     val (messageCount, privateCount, publicCount) = CX.withReadOnlyConnection { implicit conn =>
-      NormalizedURI.getByNormalizedUrl(url) map {uri =>
+      NormalizedURICxRepo.getByNormalizedUrl(url) map {uri =>
         val uriId = uri.id.get
         val userId = request.userId
         val messageCount = Comment.getMessagesWithChildrenCount(uriId, userId)
@@ -120,7 +120,7 @@ object CommentController extends FortyTwoController {
 
   def getComments(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
-      NormalizedURI.getByNormalizedUrl(url) map { normalizedURI =>
+      NormalizedURICxRepo.getByNormalizedUrl(url) map { normalizedURI =>
           publicComments(normalizedURI).map(CommentWithSocialUser(_))
         } getOrElse Nil
     }
@@ -129,7 +129,7 @@ object CommentController extends FortyTwoController {
 
   def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
-      NormalizedURI.getByNormalizedUrl(url) map { normalizedURI =>
+      NormalizedURICxRepo.getByNormalizedUrl(url) map { normalizedURI =>
           messageComments(request.userId, normalizedURI).map(ThreadInfo(_, Some(request.userId))).reverse
         } getOrElse Nil
     }
@@ -166,10 +166,10 @@ object CommentController extends FortyTwoController {
   def startFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
     val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
     CX.withConnection { implicit conn =>
-      val uriId = NormalizedURI.getByNormalizedUrl(url).getOrElse(NormalizedURI(url = url).save).id.get
+      val uriId = NormalizedURICxRepo.getByNormalizedUrl(url).getOrElse(NormalizedURIFactory(url = url).save).id.get
       FollowCxRepo.get(request.userId, uriId) match {
         case Some(follow) if !follow.isActive => Some(follow.activate.saveWithCx)
-        case None => 
+        case None =>
           val urlId = URL.get(url).getOrElse(URL(url,uriId).save).id
           Some(Follow(userId = request.userId, urlId = urlId, uriId = uriId).saveWithCx)
         case _ => None
@@ -183,7 +183,7 @@ object CommentController extends FortyTwoController {
   def stopFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
     val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
     CX.withConnection { implicit conn =>
-      NormalizedURI.getByNormalizedUrl(url) match {
+      NormalizedURICxRepo.getByNormalizedUrl(url) match {
         case Some(uri) => FollowCxRepo.get(request.userId, uri.id.get) match {
           case Some(follow) => Some(follow.deactivate.saveWithCx)
           case None => None
@@ -241,7 +241,7 @@ object CommentController extends FortyTwoController {
       case Comment.Permissions.PUBLIC =>
         CX.withConnection { implicit c =>
           val author = UserCxRepo.get(comment.userId)
-          val uri = NormalizedURI.get(comment.uriId)
+          val uri = NormalizedURICxRepo.get(comment.uriId)
           val follows = FollowCxRepo.get(uri.id.get)
           for (userId <- follows.map(_.userId).toSet - comment.userId) {
             val recipient = UserCxRepo.get(userId)
@@ -267,7 +267,7 @@ object CommentController extends FortyTwoController {
         CX.withConnection { implicit c =>
           val senderId = comment.userId
           val sender = UserCxRepo.get(senderId)
-          val uri = NormalizedURI.get(comment.uriId)
+          val uri = NormalizedURICxRepo.get(comment.uriId)
           val participants = Comment.getParticipantsUserIds(comment)
           for (userId <- participants - senderId) {
             val recipient = UserCxRepo.get(userId)
@@ -300,7 +300,7 @@ object CommentController extends FortyTwoController {
 
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = CX.withConnection { implicit c =>
-      FollowCxRepo.all map {f => (toUserWithSocial(UserCxRepo.get(f.userId)), f, NormalizedURI.get(f.uriId))}
+      FollowCxRepo.all map {f => (toUserWithSocial(UserCxRepo.get(f.userId)), f, NormalizedURICxRepo.get(f.uriId))}
     }
     Ok(views.html.follows(uriAndUsers))
   }
@@ -312,7 +312,7 @@ object CommentController extends FortyTwoController {
     val (count, uriAndUsers) = CX.withConnection { implicit conn =>
       val comments = Comment.page(page, PAGE_SIZE)
       val count = Comment.count(Comment.Permissions.PUBLIC)
-      (count, (comments map {co => (toUserWithSocial(UserCxRepo.get(co.userId)), co, NormalizedURI.get(co.uriId))} ))
+      (count, (comments map {co => (toUserWithSocial(UserCxRepo.get(co.userId)), co, NormalizedURICxRepo.get(co.uriId))} ))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.comments(uriAndUsers, page, count, pageCount))
@@ -325,7 +325,7 @@ object CommentController extends FortyTwoController {
     val (count, uriAndUsers) = CX.withConnection { implicit conn =>
       val messages = Comment.page(page, PAGE_SIZE, Comment.Permissions.MESSAGE)
       val count = Comment.count(Comment.Permissions.MESSAGE)
-      (count, (messages map {co => (toUserWithSocial(UserCxRepo.get(co.userId)), co, NormalizedURI.get(co.uriId), CommentRecipient.getByComment(co.id.get) map { r => toUserWithSocial(UserCxRepo.get(r.userId.get)) }) } ))
+      (count, (messages map {co => (toUserWithSocial(UserCxRepo.get(co.userId)), co, NormalizedURICxRepo.get(co.uriId), CommentRecipient.getByComment(co.id.get) map { r => toUserWithSocial(UserCxRepo.get(r.userId.get)) }) } ))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.messages(uriAndUsers, page, count, pageCount))
