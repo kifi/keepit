@@ -35,7 +35,7 @@ import securesocial.core.UserId
 import securesocial.core.AuthenticationMethod
 import org.joda.time.LocalDate
 import org.joda.time.DateTime
-import com.keepit.model.KifiInstallation
+import com.keepit.model.{KifiInstallation, KifiInstallationCxRepo}
 import com.keepit.common.db.ExternalId
 
 @RunWith(classOf[JUnitRunner])
@@ -133,7 +133,7 @@ class AuthControllerTest extends SpecificationWithJUnit {
         val result1 = AuthController.start(authRequest1)
         status(result1) must equalTo(OK)
         val kifiInstallation1 = CX.withConnection { implicit c =>
-          val all = KifiInstallation.all
+          val all = KifiInstallationCxRepo.all
           all.size === 1
           all.head
         }
@@ -147,7 +147,7 @@ class AuthControllerTest extends SpecificationWithJUnit {
         val result2 = AuthController.start(authRequest2)
         status(result2) must equalTo(OK)
         val kifiInstallation2 = CX.withConnection { implicit c =>
-          val all = KifiInstallation.all
+          val all = KifiInstallationCxRepo.all
           all.size === 1
           all.head
         }

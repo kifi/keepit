@@ -39,11 +39,11 @@ class KifiInstallationTest extends SpecificationWithJUnit {
         }
 
         CX.withConnection { implicit conn =>
-          KifiInstallation.get(install.id.get) === install
-          val all = KifiInstallation.all(user.id.get)
+          KifiInstallationCxRepo.get(install.id.get) === install
+          val all = KifiInstallationCxRepo.all(user.id.get)
           all.size === 1
           all.head === install
-          KifiInstallation.get(user.id.get, install.externalId) === install
+          KifiInstallationCxRepo.get(user.id.get, install.externalId) === install
         }
       }
     }
