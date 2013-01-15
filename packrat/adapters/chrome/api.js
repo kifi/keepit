@@ -208,6 +208,30 @@ api = function() {
   }
 
   var api = {
+    bookmarks: {
+      create: function(parentId, name, url, callback) {
+        chrome.bookmarks.create({parentId: parentId, title: name, url: url}, callback);
+      },
+      createFolder: function(parentId, name, callback) {
+        chrome.bookmarks.create({parentId: parentId, title: name}, callback);
+      },
+      get: function(id, callback) {
+        chrome.bookmarks.get(id, function(bm) {
+          callback(bm && bm[0]);
+        });
+      },
+      getAll: chrome.bookmarks.getTree.bind(chrome.bookmarks),
+      getBarFolder: function(callback) {
+        chrome.bookmarks.getChildren("0", function(bm) {
+          callback(bm.filter(function(bm) { return bm.title == "Bookmarks Bar" })[0] || bm[0]);
+        });
+      },
+      getChildren: chrome.bookmarks.getChildren.bind(chrome.bookmarks),
+      move: function(id, newParentId) {
+        chrome.bookmarks.move(id, {parentId: newParentId});
+      },
+      remove: chrome.bookmarks.remove.bind(chrome.bookmarks),
+      search: chrome.bookmarks.search.bind(chrome.bookmarks)},
     browserVersion: navigator.userAgent.replace(/^.*(Chrom[ei][^ ]*).*$/, "$1"),
     icon: {
       on: {click: []},
