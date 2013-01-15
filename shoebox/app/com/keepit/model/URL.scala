@@ -98,7 +98,7 @@ class URLRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[URL] with
     (for(u <- table if u.domain === domain && u.state === URLStates.ACTIVE) yield u).list
 }
 
-
+//slicked
 object URLCxRepo {
 
   //slicked
