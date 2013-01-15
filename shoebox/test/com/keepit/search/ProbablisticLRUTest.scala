@@ -14,11 +14,12 @@ import java.io.File
 
 @RunWith(classOf[JUnitRunner])
 class ProbablisticLRUTest extends SpecificationWithJUnit {
-  val rand = new Random
-  rand.setSeed(123456789L)
+  val rand = new Random(123456789L)
 
   def create(tableSize: Int, numHashFuncs: Int, syncEvery: Int = 1000) = {
-    ProbablisticLRU(tableSize, numHashFuncs, syncEvery)
+    val lru = ProbablisticLRU(tableSize, numHashFuncs, syncEvery)
+    lru.setSeed(123456789L)
+    lru
   }
 
   "ProbabalisticLRUTest" should {
@@ -61,7 +62,7 @@ class ProbablisticLRUTest extends SpecificationWithJUnit {
     }
 
     "put/get multiple keys" in {
-      val numPairs = 120
+      val numPairs = 50
       val lru = create(1000, 10)
 
       val keys = for (i <- 0 until numPairs) yield rand.nextLong
