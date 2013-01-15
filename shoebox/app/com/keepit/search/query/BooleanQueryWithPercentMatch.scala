@@ -71,30 +71,29 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
   }
 
   override def createWeight(searcher: Searcher) = {
+
     new BooleanWeight(searcher, disableCoord) {
       override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean) = {
         val required = new ArrayBuffer[Scorer]
         val prohibited = new ArrayBuffer[Scorer]
         val optional = new ArrayBuffer[Scorer]
+        var valuesOnOptional = new ArrayBuffer[Float]
 
         var totalValueOnRequired = 0.0f
-        var valuesOnOptional = new ArrayBuffer[Float]
-        val success = clauses.zip(weights).forall{ case (c, w) =>
+        var totalValuesOnOptional = 0.0f
+        clauses.zip(weights).foreach{ case (c, w) =>
           val subScorer = w.scorer(reader, true, false)
-          if (subScorer == null) !c.isRequired()
-          else {
-            if (c.isRequired()) {
-              required += subScorer
-              totalValueOnRequired += w.getValue
-            }
-            else if (c.isProhibited()){
-              prohibited += subScorer
-            }
-            else {
+          if (c.isRequired()) {
+            totalValueOnRequired += w.getValue
+            if (subScorer != null) required += subScorer
+          } else if (c.isProhibited()) {
+            if (subScorer != null) prohibited += subScorer
+          } else {
+            totalValuesOnOptional += w.getValue
+            if (subScorer != null) {
               optional += subScorer
               valuesOnOptional += w.getValue
             }
-            true
           }
         }
 
@@ -106,11 +105,11 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
           // optional scorer. Therefore if there are not enough optional scorers
           // no documents will be matched by the query
           null
+        } else {
+          val threshold = (totalValueOnRequired + totalValuesOnOptional) * percentMatch / 100.0f - totalValueOnRequired
+          BooleanScorer(this, disableCoord, similarity, minNrShouldMatch, required.toArray, prohibited.toArray, optional.toArray, maxCoord,
+                        valuesOnOptional.toArray, threshold)
         }
-
-        val threshold = (totalValueOnRequired + valuesOnOptional.foldLeft(0.0f){ (s, v) => s + v }) * percentMatch / 100.0f - totalValueOnRequired
-        BooleanScorer(this, disableCoord, similarity, minNrShouldMatch, required.toArray, prohibited.toArray, optional.toArray, maxCoord,
-                      valuesOnOptional.toArray, threshold)
       }
     }
   }
