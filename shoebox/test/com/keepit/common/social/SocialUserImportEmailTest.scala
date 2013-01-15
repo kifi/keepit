@@ -23,7 +23,7 @@ import com.keepit.model.SocialUserInfo
 import play.api.Play
 import java.net.URL
 import java.io.File
-import com.keepit.model.EmailAddress
+import com.keepit.model.{EmailAddress, EmailAddressCxRepo}
 
 @RunWith(classOf[JUnitRunner])
 class SocialUserImportEmailTest extends SpecificationWithJUnit {
