@@ -4,7 +4,7 @@ import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
 import scala.util.Random
-import com.keepit.model.{NormalizedURI, ScrapeInfo, NormalizedURIFactory}
+import com.keepit.model._
 import com.keepit.common.db.CX
 import play.api.Play.current
 import play.api.test.Helpers._
@@ -36,17 +36,17 @@ class DuplicateDocumentDetectionTest extends SpecificationWithJUnit {
 
           implicit val conf = com.keepit.scraper.ScraperConfig()
 
-          ScrapeInfo.ofUri(nuri1).copy(signature = sig1.toBase64).save
-          ScrapeInfo.ofUri(nuri2).copy(signature = sig1.toBase64).save
-          ScrapeInfo.ofUri(nuri3).copy(signature = sig2.toBase64).save
-          ScrapeInfo.ofUri(nuri4).copy(signature = sig3.toBase64).save
-          ScrapeInfo.ofUri(nuri5).copy(signature = sig4.toBase64).save
+          ScrapeInfoCxRepo.ofUri(nuri1).copy(signature = sig1.toBase64).save
+          ScrapeInfoCxRepo.ofUri(nuri2).copy(signature = sig1.toBase64).save
+          ScrapeInfoCxRepo.ofUri(nuri3).copy(signature = sig2.toBase64).save
+          ScrapeInfoCxRepo.ofUri(nuri4).copy(signature = sig3.toBase64).save
+          ScrapeInfoCxRepo.ofUri(nuri5).copy(signature = sig4.toBase64).save
 
-          ScrapeInfo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
+          ScrapeInfoCxRepo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
         }
 
         val documentSignatures = CX.withConnection { implicit conn =>
-          ScrapeInfo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
+          ScrapeInfoCxRepo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
         }
         val dupe = new DuplicateDocumentDetection(documentSignatures)
 

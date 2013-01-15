@@ -17,8 +17,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
 import com.keepit.scraper._
-import com.keepit.model.ScrapeInfo
-import com.keepit.model.{NormalizedURI, NormalizedURICxRepo}
+import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
@@ -38,7 +37,7 @@ object ScraperController extends FortyTwoController {
     Akka.future {
       val startTime = System.currentTimeMillis
       val documentSignatures = CX.withConnection { implicit conn =>
-        ScrapeInfo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
+        ScrapeInfoCxRepo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
       }
       val dupe = new DuplicateDocumentDetection(documentSignatures)
       val docs = dupe.processDocuments()

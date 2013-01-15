@@ -49,12 +49,12 @@ class SocialUserInfoTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         setup()
         val page0 = CX.withReadOnlyConnection { implicit c =>
-          SocialUserInfo.page(0, 2)
+          SocialUserInfoCxRepo.page(0, 2)
         }
         page0.size === 2
         page0(0).fullName === "Bob User3"
         val page2 = CX.withReadOnlyConnection { implicit c =>
-          SocialUserInfo.page(2, 2)
+          SocialUserInfoCxRepo.page(2, 2)
         }
         page2.size === 2
         page2(1).fullName === "Eishay Smith"
@@ -65,7 +65,7 @@ class SocialUserInfoTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         setup()
         val page0 = CX.withReadOnlyConnection { implicit c =>
-        SocialUserInfo.page(0, 2000)
+        SocialUserInfoCxRepo.page(0, 2000)
         }
         page0.size === 6
       }
@@ -75,12 +75,12 @@ class SocialUserInfoTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         setup()
         val page0 = CX.withReadOnlyConnection { implicit c =>
-          SocialUserInfo.page(0, 4)
+          SocialUserInfoCxRepo.page(0, 4)
         }
         page0(0).fullName === "Bob User3"
         page0.size === 4
         val page1 = CX.withReadOnlyConnection { implicit c =>
-          SocialUserInfo.page(1, 4)
+          SocialUserInfoCxRepo.page(1, 4)
         }
         page1.size === 2
       }
@@ -90,14 +90,14 @@ class SocialUserInfoTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
 
         val none_unprocessed = CX.withConnection { implicit c =>
-          SocialUserInfo.getUnprocessed()
+          SocialUserInfoCxRepo.getUnprocessed()
         }
 
         none_unprocessed.size === 0
 
         setup()
         val unprocessed = CX.withConnection { implicit c =>
-          SocialUserInfo.getUnprocessed()
+          SocialUserInfoCxRepo.getUnprocessed()
         }
 
         unprocessed.size === 3

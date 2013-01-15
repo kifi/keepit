@@ -38,7 +38,7 @@ case class CommentRecipient(
 
 }
 
-object CommentRecipient {
+object CommentRecipientCxRepo {
 
   def all(implicit conn: Connection): Seq[CommentRecipient] =
     CommentRecipientEntity.all.map(_.view)

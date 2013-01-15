@@ -25,9 +25,9 @@ class SocialUserCreateConnections() extends Logging {
     implicit val timeout = BabysitterTimeout(30 seconds, 2 minutes)
 
     CX.withConnection { implicit conn =>
-      parentJson flatMap extractFriends map extractSocialId map { SocialUserInfo.get(_, SocialNetworks.FACEBOOK)
+      parentJson flatMap extractFriends map extractSocialId map { SocialUserInfoCxRepo.get(_, SocialNetworks.FACEBOOK)
       } map { sui =>
-        SocialConnection.getConnectionOpt(socialUserInfo.id.get, sui.id.get) match {
+        SocialConnectionCxRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get) match {
           case Some(c) => {
             if (c.state != SocialConnectionStates.ACTIVE) {
               log.info("activate connection between %s and %s".format(c.socialUser1, c.socialUser2))
@@ -52,15 +52,15 @@ class SocialUserCreateConnections() extends Logging {
     log.info("looking for connections to disable for user %s".format(socialUserInfo.fullName))
     CX.withConnection { implicit conn =>
 	    val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends map extractSocialId
-	    val existingSocialUserInfoIds = SocialConnection.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
+	    val existingSocialUserInfoIds = SocialConnectionCxRepo.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
 	    log.info("socialUserInfoForAllFriendsIds = %s".format(socialUserInfoForAllFriendsIds))
 	    log.info("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
 	    log.info("size of diff =%s".format((existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds).length))
 	    existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds  map {
 	      socialId => {
-	        val friendSocialUserInfoId = SocialUserInfo.get(socialId, SocialNetworks.FACEBOOK).id.get
+	        val friendSocialUserInfoId = SocialUserInfoCxRepo.get(socialId, SocialNetworks.FACEBOOK).id.get
 		      log.info("about to disbale connection between %s and for socialId = %s".format(socialUserInfo.id.get,friendSocialUserInfoId ));
-	        SocialConnection.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
+	        SocialConnectionCxRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
             case Some(c) => {
               if (c.state != SocialConnectionStates.INACTIVE){
                 log.info("connection is disabled")

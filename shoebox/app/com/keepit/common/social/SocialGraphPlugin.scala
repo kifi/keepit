@@ -35,7 +35,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
   def receive() = {
     case FetchAll =>
       val unprocessedUsers = CX.withConnection { implicit c =>
-        SocialUserInfo.getUnprocessed()
+        SocialUserInfoCxRepo.getUnprocessed()
       }
       unprocessedUsers foreach { user =>
         self ! FetchUserInfo(user)

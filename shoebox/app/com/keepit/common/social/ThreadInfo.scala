@@ -1,11 +1,9 @@
 package com.keepit.common.social
 
-import com.keepit.model.Comment
-import com.keepit.model.{User, UserCxRepo}
+import org.joda.time.DateTime
+import com.keepit.model._
 import java.sql.Connection
 import com.keepit.common.db.ExternalId
-import com.keepit.model.CommentRecipient
-import org.joda.time.DateTime
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 
@@ -14,9 +12,9 @@ case class ThreadInfo(externalId: ExternalId[Comment], recipients: Seq[BasicUser
 object ThreadInfo extends Logging {
   // TODO: Major optimizations needed!
   def apply(comment: Comment, sessionUserOpt: Option[Id[User]] = None)(implicit conn: Connection): ThreadInfo = {
-    val children = Comment.getChildren(comment.id.get).reverse
+    val children = CommentCxRepo.getChildren(comment.id.get).reverse
     val childrenUsers = children map (c => c.userId)
-    val allRecipients = CommentRecipient.getByComment(comment.id.get) map (cu => cu.userId.get)
+    val allRecipients = CommentRecipientCxRepo.getByComment(comment.id.get) map (cu => cu.userId.get)
 
     // We want to list recent commenters first, and then general recipients
     val recipients = filteredRecipients(comment.userId :: (childrenUsers ++ allRecipients).toList, sessionUserOpt)

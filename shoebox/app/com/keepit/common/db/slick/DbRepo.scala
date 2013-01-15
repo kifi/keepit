@@ -22,6 +22,7 @@ trait Repo[M <: Model[M]] {
   def all()(implicit session: RSession): Seq[M]
   def save(model: M)(implicit session: RWSession): M
   def count(implicit session: RSession): Int
+  def page(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[M]
 }
 
 trait RepoWithExternalId[M <: ModelWithExternalId[M]] { self: Repo[M] =>
@@ -56,7 +57,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
 
   def get(id: Id[M])(implicit session: RSession): M = (for(f <- table if f.id is id) yield f).first
 
-  def all()(implicit session: RSession): Seq[M] = (for(f <- table) yield f).list
+  def all()(implicit session: RSession): Seq[M] = table.map(t => t).list
+
+  def page(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[M] = table.map(t => t).drop(page * size).take(page).list
 
   private def insert(model: M)(implicit session: RWSession) = {
     assert(1 == table.insert(model))

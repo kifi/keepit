@@ -34,10 +34,10 @@ class UserExperimentTest extends SpecificationWithJUnit {
         }
 
         CX.withConnection { implicit c =>
-          UserExperiment.getExperiment(shanee.id.get, ExperimentTypes.ADMIN).isDefined === true
-          UserExperiment.getExperiment(shanee.id.get, ExperimentTypes.FAKE).isDefined === false
-          UserExperiment.getExperiment(santa.id.get, ExperimentTypes.ADMIN).isDefined === false
-          UserExperiment.getExperiment(santa.id.get, ExperimentTypes.FAKE).isDefined === false
+          UserExperimentCxRepo.getExperiment(shanee.id.get, ExperimentTypes.ADMIN).isDefined === true
+          UserExperimentCxRepo.getExperiment(shanee.id.get, ExperimentTypes.FAKE).isDefined === false
+          UserExperimentCxRepo.getExperiment(santa.id.get, ExperimentTypes.ADMIN).isDefined === false
+          UserExperimentCxRepo.getExperiment(santa.id.get, ExperimentTypes.FAKE).isDefined === false
         }
       }
     }
@@ -58,16 +58,16 @@ class UserExperimentTest extends SpecificationWithJUnit {
         }
 
         CX.withConnection { implicit c =>
-          val shanees = UserExperiment.getByUser(shanee.id.get)
+          val shanees = UserExperimentCxRepo.getByUser(shanee.id.get)
           shanees.size === 1
           shanees.head.experimentType === ExperimentTypes.ADMIN
-          val santas = UserExperiment.getByUser(santa.id.get)
+          val santas = UserExperimentCxRepo.getByUser(santa.id.get)
           santas.size === 2
-          val shachafs = UserExperiment.getByUser(shachaf.id.get)
+          val shachafs = UserExperimentCxRepo.getByUser(shachaf.id.get)
           shachafs.size === 0
-          val admins = UserExperiment.getByType(ExperimentTypes.ADMIN)
+          val admins = UserExperimentCxRepo.getByType(ExperimentTypes.ADMIN)
           admins.size === 2
-          val fakes = UserExperiment.getByType(ExperimentTypes.FAKE)
+          val fakes = UserExperimentCxRepo.getByType(ExperimentTypes.FAKE)
           fakes.size === 1
           fakes.head.userId === santa.id.get
         }
