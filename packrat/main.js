@@ -479,7 +479,7 @@ function handleSliderAutoShow(tab) {
 }
 
 function getFullyQualifiedKey(key) {
-  return ("development" || api.storage.env || "production") + "_" + key;
+  return (api.storage.env || "production") + "_" + key;
 }
 
 function removeFromConfigs(key) {
