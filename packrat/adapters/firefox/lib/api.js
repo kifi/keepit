@@ -278,7 +278,7 @@ PageMod({
     });
   }});
 
-var workers = {}, pageWorkers = {}, injected = {}, nextWorkerId = 1;
+var pageWorkers = {};
 timers.setTimeout(function() {  // async to allow main.js to complete (so portHandlers can be defined)
   require("./meta").contentScripts.forEach(function(arr) {
     var path = arr[0], urlRe = arr[1];
@@ -292,9 +292,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       contentScriptOptions: {dataUriPrefix: url("")},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
-        var workerId = nextWorkerId++;
-        workers[workerId] = worker;
-        injected[workerId] = extend(injected[workerId] || {}, o.injected);
+        let injected = extend(injected || {}, o.injected);
         let page = pagesByTabId[worker.tab.id], pw = pageWorkers[page.id];
         if (!pw) {
           pw = pageWorkers[page.id] = [worker];
@@ -303,8 +301,6 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
         }
         exports.log("page workers for page:", page.id, page.url, "are:", pw);
         worker.on("detach", function() {
-          delete workers[workerId];
-          delete injected[workerId];
           delete pageWorkers[page.id];
         });
         Object.keys(portHandlers).forEach(function(type) {
@@ -320,7 +316,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
           worker.port.emit("api:respond", callbackId, data.load(path));
         });
         worker.port.on("api:require", function(path, callbackId) {
-          var o = deps(path, injected[workerId]);
+          var o = deps(path, injected);
           worker.port.emit("api:inject", o.styles.map(load), o.scripts.map(load), callbackId);
         });
       }});
