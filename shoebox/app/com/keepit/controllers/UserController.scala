@@ -180,7 +180,7 @@ object UserController extends FortyTwoController {
           case Some(addr) => addr // We're good! It already exists
           case None => // Create a new one
             log.info("Adding email address %s to userId %s".format(address, userId.toString))
-            EmailAddress(address,userId).save
+            EmailAddress(address = address, userId = userId).save
         }
       }).toSet
 

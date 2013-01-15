@@ -34,8 +34,6 @@ object EmailAddress {
     val INACTIVE = State[EmailAddress]("inactive")
   }
 
-  def apply(addr: String, userId: Id[User]): EmailAddress = EmailAddress(address = addr, userId = userId)
-
   def get(id: Id[EmailAddress])(implicit conn: Connection): EmailAddress = EmailAddressEntity.get(id).get.view
 
   def getByAddressOpt(address: String)(implicit conn: Connection): Option[EmailAddress] =
