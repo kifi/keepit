@@ -3,15 +3,17 @@
 api = function() {
   var nextCallbackId = 1, callbacks = {};
 
-  self.port.on("api_response", function(callbackId, response) {
+  function invokeCallback(callbackId, response) {
     var cb = callbacks[callbackId];
     if (cb) {
       delete callbacks[callbackId];
       cb[0](response);
     }
-  });
+  }
 
-  self.port.on("inject", function(styles, scripts, callbackId) {
+  self.port.on("api:respond", invokeCallback);
+
+  self.port.on("api:inject", function(styles, scripts, callbackId) {
     styles.forEach(function(css) {
       var el = document.createElement("style");
       el.innerHTML = css;
@@ -21,12 +23,12 @@ api = function() {
     scripts.forEach(function(js) {
       result = window.eval(js);
     });
-    self.port.emit("api_response", callbackId, result);
+    invokeCallback(callbackId);
   });
 
   return {
     load: function(path, callback) {
-      api.port.emit("api_load", path, callback);
+      api.port.emit("api:load", path, callback);
     },
     log: function() {
       var d = new Date(), ds = d.toString();
@@ -37,7 +39,7 @@ api = function() {
           args[i] = JSON.stringify(arg);
         }
       }
-      console.log("[" + ds.substring(0,2) + ds.substring(15,24) + "." + String(+d).substring(10) + "]", args.join(" "));
+      console.log("|" + ds.substring(0,2) + ds.substring(15,24) + "." + String(+d).substring(10) + "|", args.join(" "));
     },
     port: {
       emit: function(type, data, callback) {
@@ -46,7 +48,7 @@ api = function() {
         }
         if (callback) {
           var callbackId = nextCallbackId++;
-          callbacks[callbackId] = [callback, new Date().getTime()];
+          callbacks[callbackId] = [callback, +new Date];
         }
         self.port.emit(type, data, callbackId);
       },
@@ -57,6 +59,11 @@ api = function() {
           }
         }
       }},
+    require: function(path, callback) {
+      var callbackId = nextCallbackId++;
+      callbacks[callbackId] = [callback, +new Date];
+      self.port.emit("api:require", path, callbackId);
+    },
     url: function(path) {
       return self.options.dataUriPrefix + path;
     }};

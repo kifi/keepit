@@ -23,30 +23,72 @@ object ProbablisticLRU {
     }
     new ProbablisticLRU(byteBuffer, tableSize, numHashFuncs, syncEvery)
   }
+
+  def apply(tableSize: Int, numHashFuncs: Int, syncEvery: Int) = {
+    val bufferSize = tableSize * 4 + 4
+    val byteBuffer = ByteBuffer.allocate(bufferSize)
+    byteBuffer.putInt(0, tableSize)
+    new ProbablisticLRU(byteBuffer, tableSize, numHashFuncs, syncEvery)
+  }
+
+  def valueHash(value: Long, position: Int): Int = {
+    // positive integer, excluding zero. negative int (specifically -1) and zero are special
+    ((value ^ position) % 0x7FFFFFFFL).toInt + 1
+  }
+
+  class Likeliness(key: Long, positions: Array[Int], values: Array[Int], norm: Float) {
+    def apply(value: Long) = {
+      var count = 0.0f
+      var i = 0
+      while (i < positions.length) {
+        val vhash = valueHash(value, positions(i))
+        if (values(i) == vhash) count += 1.0f
+        i += 1
+      }
+      count/norm
+    }
+
+    def count(value: Long) = {
+      var count = 0
+      var i = 0
+      while (i < positions.length) {
+        val vhash = valueHash(value, positions(i))
+        if (values(i) == vhash) count += 1
+        i += 1
+      }
+      count
+    }
+  }
 }
 
 class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int, syncEvery: Int) {
+  import ProbablisticLRU._
+
   private[this] val intBuffer = byteBuffer.asIntBuffer
   private[this] val rnd = new Random
 
   private[this] var inserts = new AtomicLong(0L)
   private[this] var syncs = 0L
 
+  def setSeed(seed: Long) = rnd.setSeed(seed)
+
   def put(key: Long, value: Long) {
     decay
-    putValueHash(key, valueHash(key, value))
+    putValueHash(key, value)
     val ins = inserts.incrementAndGet()
     if ((ins % syncEvery) == 0) sync
   }
 
+  def get(key: Long) = {
+    val (p, h) = getValueHashes(key)
+    new ProbablisticLRU.Likeliness(key, p, h, numHashFuncs.toFloat)
+  }
+
   def get(key: Long, values: Seq[Long]): Map[Long, Int] = {
-    val candidates = getValueHashes(key)
+    val likeliness = get(key)
     values.foldLeft(Map.empty[Long, Int]){ (m, value) =>
-      val hash = valueHash(key, value)
-      candidates.get(hash) match {
-        case Some(count) => m + (value -> count)
-        case None => m
-      }
+      val c = likeliness.count(value)
+      if (c > 0)  m + (value -> c) else m
     }
   }
 
@@ -54,7 +96,7 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
     // randomly clear positions
     var i = 0
     while (i < numHashFuncs) {
-      val pos = rnd.nextInt(numHashFuncs) + 1
+      val pos = rnd.nextInt(tableSize) + 1
       intBuffer.put(pos, 0)
       i += 1
     }
@@ -73,13 +115,13 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
   def numInserts = inserts.get
   def numSyncs = syncs
 
-  private[this] def putValueHash(key: Long, hash: Int) {
+  private[this] def putValueHash(key: Long, value: Long) {
     var pset = Set.empty[Int]
     var filled = 0
     foreachPosition(key){ pos =>
       if (intBuffer.get(pos) == 0) {
         // always fill empty positions
-        intBuffer.put(pos, if (filled < numHashFuncs/2) hash else -1)
+        intBuffer.put(pos, if (filled < numHashFuncs/2) valueHash(value, pos) else -1)
         filled += 1
       }
       else pset += pos
@@ -92,23 +134,22 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
         val index = rnd.nextInt(parray.length - i) + i
         val pos = parray(index)
         parray(index) = parray(i)
-        intBuffer.put(pos, hash)
+        intBuffer.put(pos, valueHash(value, pos))
         i += 1
       }
     }
   }
 
-  private def getValueHashes(key: Long): Map[Int, Int] = {
-    var ret = Map.empty[Int, Int]
+  private def getValueHashes(key: Long): (Array[Int], Array[Int]) = {
+    var p = new Array[Int](numHashFuncs)
+    var h = new Array[Int](numHashFuncs)
+    var i = 0
     foreachPosition(key){ pos =>
-      val value = intBuffer.get(pos)
-      ret += (value -> (ret.getOrElse(value, 0) + 1))
+      p(i) = pos
+      h(i) = intBuffer.get(pos)
+      i += 1
     }
-    ret
-  }
-  private def valueHash(key: Long, value: Long): Int = {
-    // positive integer, excluding zero. negative int (specifically -1) and zero are special
-    (((key ^ value) & 0x7FFFFFFFFFFFFFFFL) % 0x7FFFFFFFL).toInt + 1
+    (p, h)
   }
 
   private[this] def foreachPosition(key: Long)(f: Int => Unit) {
@@ -117,6 +158,7 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
     val tsize = tableSize.toLong
     while (i < numHashFuncs) {
       v = (v * 0x5DEECE66DL + 0x123456789L) & 0x7FFFFFFFFFFFFFFFL // linear congruential generator
+      // pass the position to the given function
       f((v % tsize).toInt + 1)
       i += 1
     }

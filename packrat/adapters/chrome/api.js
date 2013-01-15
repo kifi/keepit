@@ -87,7 +87,7 @@ api = function() {
   });
 
   var pages = {};  // by tab.id
-  var activePages = {};  // in "normal" windows only, by window.id
+  var activePages = {};  // in "normal" windows only, by window.id (just to avoid calling chrome.windows.get async to check whether a window is "normal")
   chrome.tabs.query({windowType: "normal"}, function(tabs) {
     tabs.forEach(function(tab) {
       var page = pages[tab.id];
@@ -130,6 +130,11 @@ api = function() {
           dispatch.call(api.tabs.on.ready, page);
         });
       }
+    } else if (msg[0] === "api:require") {
+      if (tab) {
+        injectWithDeps(tab.id, msg[1], respond);
+        return true;
+      }
     } else if (portHandlers) {
       var handler = portHandlers[msg[0]];
       if (handler) {
@@ -157,7 +162,7 @@ api = function() {
       var cs = meta.contentScripts[i];
       if (cs[1].test(tab.url)) {
         N++;
-        api.tabs.inject(tab.id, cs[0], function() {
+        injectWithDeps(tab.id, cs[0], function() {
           if (++n === N) {
             callback();
           }
@@ -167,12 +172,44 @@ api = function() {
     if (N === 0) callback();
   }
 
+  function injectWithDeps(tabId, path, callback) {
+    // To avoid duplicate injections, we use one script to both:
+    // 1) read what's already been injected and
+    // 2) record what's about to be injected.
+    // We use runAt: "document_start" to ensure that it executes ASAP.
+    var paths = function(o) {return o.styles.concat(o.scripts)}(deps(path));
+    chrome.tabs.executeScript(tabId, {
+        code: "var injected=injected||{};(function(i){var o={},n=['" + paths.join("','") + "'],k;for(k in i)o[k]=i[k];for(k in n)i[n[k]]=1;return o})(injected)",
+        runAt: "document_start"}, function(arr) {
+      var injected = arr && arr[0] || {};
+      var o = deps(path, injected), n = 0;
+      injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, done);
+      injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, done);
+      function done() {
+        if (++n === 2) callback();
+      }
+    });
+
+    function injectAll(inject, paths, callback) {
+      var n = 0, N = paths.length;
+      if (N) {
+        paths.forEach(function(path) {
+          api.log("[injectWithDeps] tab:", tabId, path);
+          inject(tabId, {file: path, runAt: "document_end"}, function() {
+            if (++n === N) {
+              callback();
+            }
+          });
+        });
+      } else {
+        callback();
+      }
+    }
+  }
+
   var api = {
     browserVersion: navigator.userAgent.replace(/^.*(Chrom[ei][^ ]*).*$/, "$1"),
     icon: {
-      get: function(tabId) {
-        return pages[tabId].icon;
-      },
       on: {click: []},
       set: function(tabId, path) {
         pages[tabId].icon = path;
@@ -250,40 +287,6 @@ api = function() {
       },
       get: function(tabId) {
         return pages[tabId];
-      },
-      inject: function(tabId, path, callback) {
-        // To avoid duplicate injections, we use one script to both:
-        // 1) read what's already been injected and
-        // 2) record what's about to be injected.
-        // We use runAt: "document_start" to ensure that it executes ASAP.
-        var paths = function(o) {return o.styles.concat(o.scripts)}(deps(path));
-        chrome.tabs.executeScript(tabId, {
-            code: "var injected=injected||{};(function(i){var o={},n=['" + paths.join("','") + "'],k;for(k in i)o[k]=i[k];for(k in n)i[n[k]]=1;return o})(injected)",
-            runAt: "document_start"}, function(arr) {
-          var injected = arr && arr[0] || {};
-          var o = deps(path, injected), n = 0;
-          injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, done);
-          injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, done);
-          function done() {
-            if (++n === 2) callback();
-          }
-        });
-
-        function injectAll(inject, paths, callback) {
-          var n = 0, N = paths.length;
-          if (N) {
-            paths.forEach(function(path) {
-              api.log("[api.tabs.inject] tab:", tabId, path);
-              inject(tabId, {file: path, runAt: "document_end"}, function() {
-                if (++n === N) {
-                  callback();
-                }
-              });
-            });
-          } else {
-            callback();
-          }
-        }
       },
       on: {
         activate: [],

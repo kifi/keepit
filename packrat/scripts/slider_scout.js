@@ -56,7 +56,7 @@ var slider, injected, t0 = new Date().getTime();
     if (slider) {
       callback();
     } else {
-      api.port.emit("require", "scripts/slider.js", callback);
+      api.require("scripts/slider.js", callback);
     }
   }
 }();
