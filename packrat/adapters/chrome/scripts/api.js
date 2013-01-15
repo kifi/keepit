@@ -45,6 +45,13 @@ api = function() {
         }
       }
     }},
+  require: function(path, callback) {
+    if (injected[path]) {
+      callback();
+    } else {
+      api.port.emit("api:require", path, callback);
+    }
+  },
   url: chrome.extension.getURL.bind(chrome.extension)};
 
   api.log.error = function(exception, context) {
