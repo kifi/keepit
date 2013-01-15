@@ -40,7 +40,7 @@ object UserExperimentStates {
   val INACTIVE = State[UserExperiment]("inactive")
 }
 
-object UserExperiment {
+object UserExperimentCxRepo {
 
   def apply(experiment: State[ExperimentType], userId: Id[User]): UserExperiment = UserExperiment(experimentType = experiment, userId = userId)
 

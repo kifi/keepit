@@ -1,7 +1,8 @@
 package com.keepit.model
 
-import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, FortyTwoDialect, State}
-import com.keepit.common.db.NotFoundException
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
 import java.security.SecureRandom
@@ -13,6 +14,7 @@ import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 case class BookmarkSource(value: String) {
   implicit def getValue = value
@@ -38,7 +40,10 @@ case class Bookmark(
   userId: Id[User],
   state: State[Bookmark] = BookmarkStates.ACTIVE,
   source: BookmarkSource,
-  kifiInstallation: Option[ExternalId[KifiInstallation]] = None) {
+  kifiInstallation: Option[ExternalId[KifiInstallation]] = None
+) extends ModelWithExternalId[Bookmark] {
+  def withId(id: Id[Bookmark]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
 
@@ -65,7 +70,60 @@ case class Bookmark(
       throw new Exception("[%s] did not delete %s".format(res, this))
     }
   }
+}
 
+@ImplementedBy(classOf[BookmarkRepoImpl])
+trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] {
+  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark]
+  def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
+  def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark]
+  def count(userId: Id[User])(implicit session: RSession): Int
+//  def getDailyKeeps(implicit session: RSession): Map[Id[User], Map[Long, Long]]
+  def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
+}
+
+@Singleton
+class BookmarkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.TypeMapper._
+  import org.scalaquery.ql.TypeMapperDelegate._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
+
+  override lazy val table = new RepoTable[Bookmark](db, "bookmark") with ExternalIdColumn[Bookmark] {
+    def title = column[String]("title", O.NotNull)
+    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def urlId = column[Id[URL]]("url_id", O.NotNull)
+    def url =   column[String]("url", O.NotNull)
+    def state = column[State[Bookmark]]("state", O.NotNull)
+    def bookmarkPath = column[String]("bookmark_path", O.NotNull)
+    def userId = column[Id[User]]("user_id", O.Nullable)
+    def isPrivate = column[Boolean]("is_private", O.NotNull)
+    def source = column[BookmarkSource]("source", O.NotNull)
+    def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~ userId ~ state ~ source ~ kifiInstallation.? <> (Bookmark, Bookmark.unapply _)
+  }
+
+  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark] =
+    (for(b <- table if b.uriId === uriId && b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).firstOption
+
+  def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark] =
+    (for(b <- table if b.uriId === uriId && b.state === BookmarkStates.ACTIVE) yield b).list
+
+  def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark] =
+    (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
+
+  def count(userId: Id[User])(implicit session: RSession): Int =
+    (for(b <- table if b.userId === userId) yield b.count).first
+
+//  def getDailyKeeps(implicit session: RSession): Map[Id[User], Map[Long, Long]]
+
+  def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int =
+    (for(b <- table if b.kifiInstallation === kifiInstallation) yield b.count).first
 }
 
 object BookmarkFactory {
@@ -81,11 +139,7 @@ object BookmarkFactory {
 }
 
 object BookmarkCxRepo {
-  def load(uri: NormalizedURI, user: User)(implicit conn: Connection): Option[Bookmark] = load(uri, user.id.get)
-
-  def load(uri: NormalizedURI, userId: Id[User])(implicit conn: Connection): Option[Bookmark] = load(uri.id.get, userId)
-
-  def load(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Option[Bookmark] =
+  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Option[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.userId EQ userId AND (b.uriId EQ uriId)) LIMIT(1) unique }.map(_.view)
 
   def ofUri(uri: NormalizedURI)(implicit conn: Connection): Seq[Bookmark] =

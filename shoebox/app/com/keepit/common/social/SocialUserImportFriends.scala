@@ -61,7 +61,7 @@ class SocialUserImportFriends() extends Logging {
         log.error("Can't parse username from friend json %s".format(friend))
         throw e
     }
-    SocialUserInfo.getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here
+    SocialUserInfoCxRepo.getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here
   }
 
   private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value

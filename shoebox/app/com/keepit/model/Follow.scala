@@ -34,7 +34,6 @@ case class Follow (
   def deactivate = copy(state = FollowStates.INACTIVE)
   def isActive = state == FollowStates.ACTIVE
   def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
-  def save(implicit session: RWSession): Follow = inject[Repo[Follow]].save(this)
   def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 
   def saveWithCx(implicit conn: Connection) = {

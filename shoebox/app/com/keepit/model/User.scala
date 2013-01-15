@@ -58,6 +58,7 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] wi
   }
 }
 
+//slicked
 object UserCxRepo {
 
   //slicked

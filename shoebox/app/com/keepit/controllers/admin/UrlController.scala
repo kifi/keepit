@@ -19,17 +19,13 @@ import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
 import com.keepit.scraper.ScraperPlugin
-import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURIStates._
+import com.keepit.model._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.time._
-import com.keepit.model.{User, UserCxRepo}
-import com.keepit.model.Bookmark
 import com.keepit.common.healthcheck.BabysitterTimeout
 import org.joda.time.LocalDate
 import org.joda.time.DateTimeZone
-import com.keepit.model._
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.mail._
 import play.api.libs.concurrent.Akka
@@ -67,9 +63,9 @@ object UrlController extends FortyTwoController {
       bookmarks map { bookmark =>
         val currNormURI = NormalizedURICxRepo.get(bookmark.uriId)
         val urlObj = bookmark.urlId match {
-          case Some(uu) => URL.get(uu)
+          case Some(uu) => URLCxRepo.get(uu)
           case None =>
-            val u = URL(bookmark.url, currNormURI.id.get)
+            val u = URLFactory(url = bookmark.url, normalizedUriId = currNormURI.id.get)
             if (!readOnly) u.save
             else u
         }
@@ -101,15 +97,15 @@ object UrlController extends FortyTwoController {
         }
       }
 
-      val comments = Comment.all
+      val comments = CommentCxRepo.all
       val commentCount = comments.size
 
       comments map { comment =>
         val currNormURI = NormalizedURICxRepo.get(comment.uriId)
         val urlObj = comment.urlId match {
-          case Some(uu) => URL.get(uu)
+          case Some(uu) => URLCxRepo.get(uu)
           case None =>
-            val u = URL(currNormURI.url, currNormURI.id.get)
+            val u = URLFactory(url = currNormURI.url, normalizedUriId = currNormURI.id.get)
             if (!readOnly) u.save
             else u
         }
@@ -145,9 +141,9 @@ object UrlController extends FortyTwoController {
       follows map { follow =>
         val currNormURI = NormalizedURICxRepo.get(follow.uriId)
         val urlObj = follow.urlId match {
-          case Some(uu) => URL.get(uu)
+          case Some(uu) => URLCxRepo.get(uu)
           case None =>
-            val u = URL(currNormURI.url, currNormURI.id.get)
+            val u = URLFactory(url = currNormURI.url, normalizedUriId = currNormURI.id.get)
             if (!readOnly) u.save
             else u
         }
@@ -184,9 +180,9 @@ object UrlController extends FortyTwoController {
       deeps map { deep =>
         val currNormURI = NormalizedURICxRepo.get(deep.uriId.get)
         val urlObj = deep.urlId match {
-          case Some(uu) => URL.get(uu)
+          case Some(uu) => URLCxRepo.get(uu)
           case None =>
-            val u = URL(currNormURI.url, currNormURI.id.get)
+            val u = URLFactory(url = currNormURI.url, normalizedUriId = currNormURI.id.get)
             if (!readOnly) u.save
             else u
         }
