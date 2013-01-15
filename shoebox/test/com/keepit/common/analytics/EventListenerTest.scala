@@ -24,7 +24,7 @@ class EventListenerTest extends SpecificationWithJUnit {
   def setup() = {
     CX.withConnection { implicit conn =>
       val normUrlId = NormalizedURIFactory("http://www.google.com/").save.id.get
-      val url = URL("http://www.google.com/", normUrlId).save
+      val url = URL(url = "http://www.google.com/", normalizedUriId = normUrlId).save
       val user = User(firstName = "Andrew", lastName = "Conner").save
       val bookmark = BookmarkFactory(
         title = "test",

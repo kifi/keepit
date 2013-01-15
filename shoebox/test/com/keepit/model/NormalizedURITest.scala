@@ -25,8 +25,8 @@ class NormalizedURITest extends SpecificationWithJUnit {
       val user2 = User(firstName = "Moo", lastName = "Brown").save
       val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short")
       val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long")
-      val url1 = URL(uri1.url, uri1.id.get).save
-      val url2 = URL(uri2.url, uri2.id.get).save
+      val url1 = URL(url = uri1.url, normalizedUriId = uri1.id.get).save
+      val url2 = URL(url = uri2.url, normalizedUriId = uri2.id.get).save
       BookmarkFactory(userId = user1.id.get, title = "my title is short", url = url1, uriId = uri1.id.get, source = BookmarkSource("NA")).save
       BookmarkFactory(userId = user1.id.get, title = "my title is long", url = url2, uriId = uri2.id.get, source = BookmarkSource("NA")).save
       BookmarkFactory(userId = user2.id.get, title = "my title is long", url = url2, uriId = uri2.id.get, source = BookmarkSource("NA")).save

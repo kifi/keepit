@@ -70,8 +70,8 @@ class SocialConnectionTest extends SpecificationWithJUnit {
 
         val (eishayFortyTwoConnection, andrewFortyTwoConnection) = CX.withConnection { implicit conn =>
           SocialConnectionCxRepo.all.size === 18
-          (SocialConnectionCxRepo.getFortyTwoUserConnections(eishaySocialUserInfoCxRepo.userId.get),
-          SocialConnectionCxRepo.getFortyTwoUserConnections(andrewSocialUserInfoCxRepo.userId.get))
+          (SocialConnectionCxRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
+          SocialConnectionCxRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
         }
 
         eishayFortyTwoConnection.size === 3
@@ -133,8 +133,8 @@ class SocialConnectionTest extends SpecificationWithJUnit {
 
         val (eishayFortyTwoConnection, andrewFortyTwoConnection) = CX.withConnection { implicit conn =>
           SocialConnectionCxRepo.all.size === 18
-          (SocialConnectionCxRepo.getFortyTwoUserConnections(eishaySocialUserInfoCxRepo.userId.get),
-            SocialConnectionCxRepo.getFortyTwoUserConnections(andrewSocialUserInfoCxRepo.userId.get))
+          (SocialConnectionCxRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
+            SocialConnectionCxRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
         }
 
         eishayFortyTwoConnection.size === 3
@@ -193,7 +193,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
 
         val eishayFortyTwoConnection = CX.withConnection { implicit conn =>
           SocialConnectionCxRepo.all.size === 12
-          SocialConnectionCxRepo.getFortyTwoUserConnections(eishaySocialUserInfoCxRepo.userId.get)
+          SocialConnectionCxRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get)
         }
 
         eishayFortyTwoConnection.size === 3
@@ -252,8 +252,8 @@ class SocialConnectionTest extends SpecificationWithJUnit {
 
         val (eishayFortyTwoConnection, andrewFortyTwoConnection) = CX.withConnection { implicit conn =>
           SocialConnectionCxRepo.all.size === 612
-          (SocialConnectionCxRepo.getFortyTwoUserConnections(eishaySocialUserInfoCxRepo.userId.get),
-          SocialConnectionCxRepo.getFortyTwoUserConnections(andrewSocialUserInfoCxRepo.userId.get))
+          (SocialConnectionCxRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
+          SocialConnectionCxRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
         }
 
         eishayFortyTwoConnection.size === 3

@@ -18,10 +18,8 @@ import com.keepit.inject._
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.model.{User, UserCxRepo}
-import com.keepit.model.UserExperiment
+import com.keepit.model._
 import com.keepit.model.ExperimentTypes.ADMIN
-import com.keepit.model.SocialUserInfo
 import com.keepit.test.FakeClock
 import securesocial.core.SecureSocial
 import com.keepit.social.SecureSocialUserService
@@ -58,7 +56,7 @@ class AdminDashboardControllerTest extends SpecificationWithJUnit {
               credentials = Some(su))
             .save
           SocialUserInfoCxRepo.getOpt(SocialId("111"), FACEBOOK) === Some(sui)
-          UserExperiment(ADMIN, u1.id.get).save
+          UserExperiment(experimentType = ADMIN, userId = u1.id.get).save
           u1
         }
 

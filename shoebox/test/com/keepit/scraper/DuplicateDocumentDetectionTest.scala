@@ -4,7 +4,7 @@ import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
 import scala.util.Random
-import com.keepit.model.{NormalizedURI, ScrapeInfo, NormalizedURIFactory}
+import com.keepit.model._
 import com.keepit.common.db.CX
 import play.api.Play.current
 import play.api.test.Helpers._
