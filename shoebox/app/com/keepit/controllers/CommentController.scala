@@ -251,7 +251,7 @@ object CommentController extends FortyTwoController {
                 uriId = Some(comment.uriId),
                 urlId = comment.urlId,
                 deepLocator = DeepLocator.ofComment(comment)).save
-            val addrs = EmailAddress.getByUser(userId)
+            val addrs = EmailAddressCxRepo.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
                   senderUserId = Option(comment.userId),
@@ -277,7 +277,7 @@ object CommentController extends FortyTwoController {
                 uriId = Some(comment.uriId),
                 urlId = comment.urlId,
                 deepLocator = DeepLocator.ofMessageThread(comment)).save
-            val addrs = EmailAddress.getByUser(userId)
+            val addrs = EmailAddressCxRepo.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
                   senderUserId = Option(comment.userId),
