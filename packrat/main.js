@@ -199,7 +199,7 @@ function createDeepLinkListener(link, linkTabId, respond) {
       var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") == -1 && tab.url.indexOf("dev.ezkeep.com") == -1;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tabId, link.locator);
-        api.tabs.emit(tabId, "deep_link", link.locator);
+        api.tabs.emit(tab, "deep_link", link.locator);
         chrome.tabs.onUpdated.removeListener(deepLinkListener);
         return;
       }
@@ -379,7 +379,7 @@ var restrictedUrlPatternsForHover = [
 
 // Kifi icon in location bar
 api.icon.on.click.push(function(tab) {
-  api.tabs.emit(tab.id, "button_click");
+  api.tabs.emit(tab, "button_click");
 });
 
 function checkWhetherKept(url, callback) {
@@ -474,7 +474,7 @@ function handleSliderAutoShow(tab) {
 
   var sliderDelaySec = getConfigs().hover_timeout;
   if (sliderDelaySec > 0) {
-    api.tabs.emit(tab.id, "auto_show_after", sliderDelaySec * 1000);
+    api.tabs.emit(tab, "auto_show_after", sliderDelaySec * 1000);
   }
 }
 

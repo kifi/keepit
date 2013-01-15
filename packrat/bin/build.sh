@@ -26,7 +26,7 @@ for s in $(ls scripts/*.js); do
   css=$(echo "$req" | grep css$)
   js=$(echo "$req" | grep js$)
   if [ "$match" != "" ]; then
-    matches=("${matches[@]}" "\n  [\"$s\", /^https?:\/\/${match}\//]")
+    matches=("${matches[@]}" "\n  [\"$s\", ${match}]")
   fi
   if [ "$css" != "" ]; then
     styles=("${styles[@]}" "\n  \"$s\": [\n$(echo "$css" | sed -e 's/^/    "/g' -e 's/$/",/g')\n  ]")

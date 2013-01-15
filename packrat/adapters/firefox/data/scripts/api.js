@@ -39,7 +39,7 @@ api = function() {
           args[i] = JSON.stringify(arg);
         }
       }
-      console.log("|" + ds.substring(0,2) + ds.substring(15,24) + "." + String(+d).substring(10) + "|", args.join(" "));
+      console.log("'" + ds.substring(0,2) + ds.substring(15,24) + "." + String(+d).substring(10) + "'", args.join(" "));
     },
     port: {
       emit: function(type, data, callback) {
