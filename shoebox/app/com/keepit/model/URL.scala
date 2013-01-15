@@ -1,9 +1,9 @@
 package com.keepit.model
 
 
-import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
-import com.keepit.common.db.NotFoundException
-import com.keepit.common.db.StateException
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
 import java.security.SecureRandom
@@ -19,6 +19,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.{URI, URINormalizer}
 import com.keepit.serializer.{URLHistorySerializer => URLHS}
 import com.keepit.inject._
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 import play.api.Play.current
 
 case class URLHistoryCause(value: String)
@@ -39,15 +40,17 @@ case class URL (
   createdAt: DateTime = inject[DateTime],
   updatedAt: DateTime = inject[DateTime],
   url: String,
+  domain: Option[String],
   normalizedUriId: Id[NormalizedURI],
   history: Seq[URLHistory] = Seq(),
   state: State[URL] = URLStates.ACTIVE
-  ) extends Logging {
-
-  def domain = URI.parse(url).flatMap(_.host)
+) extends Model[URL] {
+  def withId(id: Id[URL]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
   def withNormURI(normUriId: Id[NormalizedURI]) = copy(normalizedUriId = normUriId)
   def withHistory(historyItem: URLHistory): URL = copy(history = historyItem +: history)
+
   def save(implicit conn: Connection): URL = {
     val entity = URLEntity(this.copy(updatedAt = inject[DateTime]))
     assert(1 == entity.save())
@@ -55,20 +58,61 @@ case class URL (
   }
 
   def withState(state: State[URL]) = copy(state = state)
-
 }
+
+object URLFactory {
+  def apply(url: String, normalizedUriId: Id[NormalizedURI]) =
+    URL(url = url, normalizedUriId = normalizedUriId, domain = URI.parse(url).map(_.host.toString))
+}
+
+
+@ImplementedBy(classOf[URLRepoImpl])
+trait URLRepo extends Repo[URL] {
+  def get(url: String)(implicit session: RSession): Option[URL]
+  def getByDomain(domain: String)(implicit session: RSession): List[URL]
+}
+
+@Singleton
+class URLRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[URL] with URLRepo {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
+
+  override lazy val table = new RepoTable[URL](db, "follow") {
+    def url = column[String]("url", O.NotNull)
+    def domain = column[String]("domain", O.Nullable)
+    def normalizedUriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def history = column[Seq[URLHistory]]("history", O.NotNull)
+    def state = column[State[URL]]("state", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ url ~ domain.? ~ normalizedUriId ~ history ~ state <> (URL, URL.unapply _)
+  }
+
+  def get(url: String)(implicit session: RSession): Option[URL] =
+    (for(u <- table if u.url === url && u.state === URLStates.ACTIVE) yield u).firstOption
+
+  def getByDomain(domain: String)(implicit session: RSession): List[URL] =
+    (for(u <- table if u.domain === domain && u.state === URLStates.ACTIVE) yield u).list
+}
+
 
 object URLCxRepo {
 
+  //slicked
   def all(implicit conn: Connection): Seq[URL] =
     URLEntity.all.map(_.view)
 
   def get(url: String)(implicit conn: Connection): Option[URL] =
     (URLEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.url EQ url) unique }.map(_.view)
 
+  //slicked
   def get(id: Id[URL])(implicit conn: Connection): URL =
     getOpt(id).getOrElse(throw NotFoundException(id))
 
+  //WTF?
   def getOpt(id: Id[URL])(implicit conn: Connection): Option[URL] =
     URLEntity.get(id).map(_.view)
 
@@ -97,6 +141,7 @@ private[model] class URLEntity extends Entity[URL, URLEntity] {
     createdAt = createdAt(),
     updatedAt = updatedAt(),
     url = url(),
+    domain = domain.value,
     normalizedUriId = normalizedUriId(),
     history = {
       try {
@@ -123,7 +168,7 @@ private[model] object URLEntity extends URLEntity with EntityTable[URL, URLEntit
     uri.createdAt := view.createdAt
     uri.updatedAt := view.updatedAt
     uri.url := view.url
-    uri.domain.set(view.domain.map(_.toString))
+    uri.domain.set(view.domain)
     uri.normalizedUriId := view.normalizedUriId
     uri.history := {
         val serializer = URLHS.urlHistorySerializer
@@ -133,5 +178,3 @@ private[model] object URLEntity extends URLEntity with EntityTable[URL, URLEntit
     uri
   }
 }
-
-

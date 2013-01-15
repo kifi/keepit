@@ -11,6 +11,7 @@ import java.sql.Types.{TIMESTAMP, BIGINT, VARCHAR}
 import java.sql.Timestamp
 import play.api.libs.json._
 import org.scalaquery.ql.basic.BasicTypeMapperDelegates._
+import com.keepit.serializer.{URLHistorySerializer => URLHS}
 
 object FortyTwoTypeMappers {
 
@@ -42,8 +43,16 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new StateMapperDelegate[Follow]
   }
 
+  implicit object URLStateTypeMapper extends BaseTypeMapper[State[URL]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[URL]
+  }
+
   implicit object UserStateTypeMapper extends BaseTypeMapper[State[User]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[User]
+  }
+
+  implicit object URLHistoryURLHistoryStateTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
+    def apply(profile: BasicProfile) = new URLHistorySeqMapperDelegate
   }
 }
 
@@ -103,4 +112,29 @@ class StateMapperDelegate[T] extends TypeMapperDelegate[State[T]] {
   def nextValue(r: PositionedResult) = State(delegate.nextValue(r))
   def updateValue(value: State[T], r: PositionedResult) = delegate.updateValue(value.value, r)
   override def valueToSQLLiteral(value: State[T]) = delegate.valueToSQLLiteral(value.value)
+}
+
+//************************************
+//       Seq[URLHistory] -> String
+//************************************
+class URLHistorySeqMapperDelegate extends TypeMapperDelegate[Seq[URLHistory]] {
+  private val delegate = new StringTypeMapperDelegate()
+  def zero = Nil
+  def sqlType = delegate.sqlType
+  def setValue(value: Seq[URLHistory], p: PositionedParameters) = delegate.setValue(historyToString(value), p)
+  def setOption(valueOpt: Option[Seq[URLHistory]], p: PositionedParameters) = delegate.setOption(valueOpt map historyToString, p)
+  def nextValue(r: PositionedResult) = historyFromString(delegate.nextValue(r))
+  def updateValue(value: Seq[URLHistory], r: PositionedResult) = delegate.updateValue(historyToString(value), r)
+  override def valueToSQLLiteral(value: Seq[URLHistory]) = delegate.valueToSQLLiteral(historyToString(value))
+
+  private def historyToString(history: Seq[URLHistory]) = {
+    val serializer = URLHS.urlHistorySerializer
+    Json.stringify(serializer.writes(history))
+  }
+
+  private def historyFromString(history: String) = {
+    val json = Json.parse(history)
+    val serializer = URLHS.urlHistorySerializer
+    serializer.reads(json)
+  }
 }

@@ -70,7 +70,7 @@ object CommentController extends FortyTwoController {
         case id => CommentCxRepo.get(ExternalId[Comment](id)).id
       }
 
-      val url: URL = URLCxRepo.get(urlStr).getOrElse(URL(url = urlStr, normalizedUriId = uri.id.get).save)
+      val url: URL = URLCxRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get).save)
 
       permissions.toLowerCase match {
         case "private" =>
@@ -170,7 +170,7 @@ object CommentController extends FortyTwoController {
       FollowCxRepo.get(request.userId, uriId) match {
         case Some(follow) if !follow.isActive => Some(follow.activate.saveWithCx)
         case None =>
-          val urlId = URLCxRepo.get(url).getOrElse(URL(url = url, normalizedUriId = uriId).save).id
+          val urlId = URLCxRepo.get(url).getOrElse(URLFactory(url = url, normalizedUriId = uriId).save).id
           Some(Follow(userId = request.userId, urlId = urlId, uriId = uriId).saveWithCx)
         case _ => None
       }

@@ -65,7 +65,7 @@ object UrlController extends FortyTwoController {
         val urlObj = bookmark.urlId match {
           case Some(uu) => URLCxRepo.get(uu)
           case None =>
-            val u = URL(url = bookmark.url, normalizedUriId = currNormURI.id.get)
+            val u = URLFactory(url = bookmark.url, normalizedUriId = currNormURI.id.get)
             if (!readOnly) u.save
             else u
         }
@@ -105,7 +105,7 @@ object UrlController extends FortyTwoController {
         val urlObj = comment.urlId match {
           case Some(uu) => URLCxRepo.get(uu)
           case None =>
-            val u = URL(url = currNormURI.url, normalizedUriId = currNormURI.id.get)
+            val u = URLFactory(url = currNormURI.url, normalizedUriId = currNormURI.id.get)
             if (!readOnly) u.save
             else u
         }
@@ -143,7 +143,7 @@ object UrlController extends FortyTwoController {
         val urlObj = follow.urlId match {
           case Some(uu) => URLCxRepo.get(uu)
           case None =>
-            val u = URL(url = currNormURI.url, normalizedUriId = currNormURI.id.get)
+            val u = URLFactory(url = currNormURI.url, normalizedUriId = currNormURI.id.get)
             if (!readOnly) u.save
             else u
         }
@@ -182,7 +182,7 @@ object UrlController extends FortyTwoController {
         val urlObj = deep.urlId match {
           case Some(uu) => URLCxRepo.get(uu)
           case None =>
-            val u = URL(url = currNormURI.url, normalizedUriId = currNormURI.id.get)
+            val u = URLFactory(url = currNormURI.url, normalizedUriId = currNormURI.id.get)
             if (!readOnly) u.save
             else u
         }
