@@ -21,6 +21,7 @@ let {deps} = require("./deps");
 
 var pages = {}, pagesByTabId = {}, nextPageId = 1, nextTabId = 1;
 
+exports.bookmarks = require("./bookmarks");
 exports.browserVersion = xulApp.name + "/" + xulApp.version;
 
 exports.icon = {
