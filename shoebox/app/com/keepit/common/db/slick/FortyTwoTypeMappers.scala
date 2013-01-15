@@ -11,9 +11,10 @@ import java.sql.Types.{TIMESTAMP, BIGINT, VARCHAR}
 import java.sql.Timestamp
 import play.api.libs.json._
 import org.scalaquery.ql.basic.BasicTypeMapperDelegates._
+import com.keepit.serializer.{URLHistorySerializer => URLHS}
 
 object FortyTwoTypeMappers {
-
+  // Time
   implicit object DateTimeTypeMapper extends BaseTypeMapper[DateTime] {
     def apply(profile: BasicProfile) = new DateTimeMapperDelegate
   }
@@ -22,6 +23,12 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Model[_]]
   }
 
+  //ExternalIds
+  implicit object KifiInstallationExternalIdTypeMapper extends BaseTypeMapper[ExternalId[KifiInstallation]] {
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[KifiInstallation]
+  }
+
+  //Ids
   implicit object FollowIdTypeMapper extends BaseTypeMapper[Id[Follow]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Follow]
   }
@@ -38,12 +45,34 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[NormalizedURI]
   }
 
+  //States
   implicit object FollowStateTypeMapper extends BaseTypeMapper[State[Follow]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[Follow]
   }
 
+  implicit object URLStateTypeMapper extends BaseTypeMapper[State[URL]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[URL]
+  }
+
   implicit object UserStateTypeMapper extends BaseTypeMapper[State[User]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[User]
+  }
+
+  implicit object BookmarkStateTypeMapper extends BaseTypeMapper[State[Bookmark]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[Bookmark]
+  }
+
+  implicit object NormalizedURIStateTypeMapper extends BaseTypeMapper[State[NormalizedURI]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[NormalizedURI]
+  }
+
+  //Other
+  implicit object URLHistorySeqHistoryStateTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
+    def apply(profile: BasicProfile) = new URLHistorySeqMapperDelegate
+  }
+
+  implicit object BookmarkSourceHistoryStateTypeMapper extends BaseTypeMapper[BookmarkSource] {
+    def apply(profile: BasicProfile) = new BookmarkSourceMapperDelegate
   }
 }
 
@@ -104,3 +133,43 @@ class StateMapperDelegate[T] extends TypeMapperDelegate[State[T]] {
   def updateValue(value: State[T], r: PositionedResult) = delegate.updateValue(value.value, r)
   override def valueToSQLLiteral(value: State[T]) = delegate.valueToSQLLiteral(value.value)
 }
+
+//************************************
+//       Seq[URLHistory] -> String
+//************************************
+class URLHistorySeqMapperDelegate extends TypeMapperDelegate[Seq[URLHistory]] {
+  private val delegate = new StringTypeMapperDelegate()
+  def zero = Nil
+  def sqlType = delegate.sqlType
+  def setValue(value: Seq[URLHistory], p: PositionedParameters) = delegate.setValue(historyToString(value), p)
+  def setOption(valueOpt: Option[Seq[URLHistory]], p: PositionedParameters) = delegate.setOption(valueOpt map historyToString, p)
+  def nextValue(r: PositionedResult) = historyFromString(delegate.nextValue(r))
+  def updateValue(value: Seq[URLHistory], r: PositionedResult) = delegate.updateValue(historyToString(value), r)
+  override def valueToSQLLiteral(value: Seq[URLHistory]) = delegate.valueToSQLLiteral(historyToString(value))
+
+  private def historyToString(history: Seq[URLHistory]) = {
+    val serializer = URLHS.urlHistorySerializer
+    Json.stringify(serializer.writes(history))
+  }
+
+  private def historyFromString(history: String) = {
+    val json = Json.parse(history)
+    val serializer = URLHS.urlHistorySerializer
+    serializer.reads(json)
+  }
+}
+
+//************************************
+//       BookmarkSource -> String
+//************************************
+class BookmarkSourceMapperDelegate extends TypeMapperDelegate[BookmarkSource] {
+  private val delegate = new StringTypeMapperDelegate()
+  def zero = BookmarkSource("")
+  def sqlType = delegate.sqlType
+  def setValue(value: BookmarkSource, p: PositionedParameters) = delegate.setValue(value.value, p)
+  def setOption(valueOpt: Option[BookmarkSource], p: PositionedParameters) = delegate.setOption(valueOpt.map(_.value), p)
+  def nextValue(r: PositionedResult) = BookmarkSource(delegate.nextValue(r))
+  def updateValue(value: BookmarkSource, r: PositionedResult) = delegate.updateValue(value.value, r)
+  override def valueToSQLLiteral(value: BookmarkSource) = delegate.valueToSQLLiteral(value.value)
+}
+

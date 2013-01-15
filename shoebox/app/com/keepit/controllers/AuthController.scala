@@ -34,7 +34,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
-import com.keepit.model.{KifiInstallation, KifiVersion, SocialUserInfo, User, UserAgent, UserCxRepo, UserRepo, KifiInstallationCxRepo}
+import com.keepit.model._
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.inject._
 import com.keepit.common.healthcheck._
@@ -49,7 +49,7 @@ object AuthController extends FortyTwoController {
 	    case Some(socialUser) =>
 	      log.info("facebook id %s".format(socialUser.id.id))
 	      val user = CX.withConnection { implicit c =>
-  	    	val userId = SocialUserInfo.get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).userId.get
+  	    	val userId = SocialUserInfoCxRepo.get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).userId.get
   	    	UserCxRepo.get(userId)
   	  	}
         Ok(JsObject(Seq(

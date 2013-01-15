@@ -28,8 +28,8 @@ class BookmarkTest extends SpecificationWithJUnit {
       val uri1 = NormalizedURIFactory("Google", "http://www.google.com/").save
       val uri2 = NormalizedURIFactory("Amazon", "http://www.amazon.com/").save
 
-      val url1 = URL(url = uri1.url, normalizedUriId = uri1.id.get).save
-      val url2 = URL(url = uri2.url, normalizedUriId = uri2.id.get).save
+      val url1 = URLFactory(url = uri1.url, normalizedUriId = uri1.id.get).save
+      val url2 = URLFactory(url = uri2.url, normalizedUriId = uri2.id.get).save
 
       val hover = BookmarkSource("HOVER_KEEP")
 

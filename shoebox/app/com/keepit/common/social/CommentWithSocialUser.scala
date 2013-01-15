@@ -13,11 +13,11 @@ object CommentWithSocialUser {
     CommentWithSocialUser(
       UserWithSocial.toUserWithSocial(UserCxRepo.get(comment.userId)),
       comment,
-      Comment.getChildCount(comment.id.get),
+      CommentCxRepo.getChildCount(comment.id.get),
       if(comment.permissions != CommentPermissions.MESSAGE) {
         Nil
       } else {
-        CommentRecipient.getByComment(comment.id.get) map { cr => UserWithSocial.toUserWithSocial(UserCxRepo.get(cr.userId.get)) }
+        CommentRecipientCxRepo.getByComment(comment.id.get) map { cr => UserWithSocial.toUserWithSocial(UserCxRepo.get(cr.userId.get)) }
       }
     )
   }

@@ -40,7 +40,7 @@ case class NormalizedURI  (
     val entity = NormalizedURIEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
     val uri = entity.view
-    ScrapeInfo.ofUri(uri).save
+    ScrapeInfoCxRepo.ofUri(uri).save
     uri
   }
 

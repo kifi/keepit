@@ -80,11 +80,11 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
   private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit conn: Connection) = {
     userIdOpt match {
       case None =>
-        val socialUser = SocialUserInfo.get(socialId, SocialNetworks.FACEBOOK)
+        val socialUser = SocialUserInfoCxRepo.get(socialId, SocialNetworks.FACEBOOK)
         val userId = socialUser.userId.get
         userId
       case Some(userId) =>
-        val socialUser = SocialUserInfo.get(socialId, SocialNetworks.FACEBOOK)
+        val socialUser = SocialUserInfoCxRepo.get(socialId, SocialNetworks.FACEBOOK)
         if (socialUser.userId.get != userId) log.error("Social user id %s does not match session user id %s".format(socialUser, userId))
         userId
     }
@@ -96,7 +96,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
   }
 
   private def getExperiments(userId: Id[User])(implicit conn: Connection): Seq[State[ExperimentType]] =
-    UserExperiment.getByUser(userId).map(_.experimentType)
+    UserExperimentCxRepo.getByUser(userId).map(_.experimentType)
 
   private[controller] def AuthenticatedAction[A](isApi: Boolean, action: AuthenticatedRequest => Result) = {
     SecuredAction(isApi, parse.anyContent) { implicit request =>
@@ -112,7 +112,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
             val impUserId = UserCxRepo.get(impExternalUserId).id.get
 
             if (!isAdmin(experiments)) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
-            val impSocialUserInfo = SocialUserInfo.getByUser(impUserId).head
+            val impSocialUserInfo = SocialUserInfoCxRepo.getByUser(impUserId).head
             (getExperiments(impUserId), impSocialUserInfo.credentials.get, impUserId)
           }
           log.info("[IMPERSONATOR] admin user %s is impersonating user %s with request %s".format(userId, impSocialUser, request.request.path))
@@ -169,7 +169,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
     AuthenticatedAction(isApi, { implicit request =>
       val userId = request.adminUserId.getOrElse(request.userId)
       val isAdmin = CX.withConnection { implicit conn =>
-        UserExperiment.getExperiment(userId, ExperimentTypes.ADMIN).isDefined
+        UserExperimentCxRepo.getExperiment(userId, ExperimentTypes.ADMIN).isDefined
       }
       val authorizedDevUser = Play.isDev && userId.id == 1L
       if (authorizedDevUser || isAdmin) {

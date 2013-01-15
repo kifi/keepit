@@ -118,7 +118,7 @@ object BookmarksController extends FortyTwoController {
   def checkIfExists(uri: String) = AuthenticatedJsonAction { request =>
     val bookmark = CX.withConnection { implicit conn =>
       NormalizedURICxRepo.getByNormalizedUrl(uri).flatMap { uri =>
-        BookmarkCxRepo.load(uri, request.userId).filter(_.isActive)
+        BookmarkCxRepo.getByUriAndUser(uri.id.get, request.userId).filter(_.isActive)
       }
     }
 
@@ -130,7 +130,7 @@ object BookmarksController extends FortyTwoController {
     val url = uri.getOrElse((request.body.asJson.get \ "url").as[String])
     val bookmark = CX.withConnection{ implicit conn =>
       NormalizedURICxRepo.getByNormalizedUrl(url).flatMap { uri =>
-        BookmarkCxRepo.load(uri, request.userId).filter(_.isActive).map {b => b.withActive(false).save}
+        BookmarkCxRepo.getByUriAndUser(uri.id.get, request.userId).filter(_.isActive).map {b => b.withActive(false).save}
       }
     }
     inject[URIGraphPlugin].update(request.userId)
@@ -148,7 +148,7 @@ object BookmarksController extends FortyTwoController {
     }
     CX.withConnection{ implicit conn =>
       NormalizedURICxRepo.getByNormalizedUrl(url).flatMap { uri =>
-        BookmarkCxRepo.load(uri, request.userId).filter(_.isPrivate != priv).map {b => b.withPrivate(priv).save}
+        BookmarkCxRepo.getByUriAndUser(uri.id.get, request.userId).filter(_.isPrivate != priv).map {b => b.withPrivate(priv).save}
       }
     } match {
       case Some(bookmark) => Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
@@ -175,7 +175,7 @@ object BookmarksController extends FortyTwoController {
       case None =>
         val (user, experiments, installation) = CX.withConnection { implicit conn =>
           (UserCxRepo.get(userId),
-           UserExperiment.getByUser(userId) map (_.experimentType),
+           UserExperimentCxRepo.getByUser(userId) map (_.experimentType),
            installationId.map(_.id).getOrElse(""))
         }
         val msg = "Unsupported operation for user %s with old installation".format(userId)
@@ -213,12 +213,12 @@ object BookmarksController extends FortyTwoController {
       }
       if (isNewURI) inject[ScraperPlugin].asyncScrape(uri)
       CX.withConnection { implicit conn =>
-        BookmarkCxRepo.load(uri, user.id.get) match {
+        BookmarkCxRepo.getByUriAndUser(uri.id.get, user.id.get) match {
           case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
           case Some(bookmark) => Some(bookmark.withActive(true).withPrivate(isPrivate).save)
           case None =>
             Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
-            val urlObj = URL.get(url).getOrElse(URL(url, uri.id.get).save)
+            val urlObj = URLCxRepo.get(url).getOrElse(URLFactory(url = url, normalizedUriId = uri.id.get).save)
             Some(BookmarkFactory(uri, user.id.get, title, urlObj, source, isPrivate, installationId).save)
         }
       }

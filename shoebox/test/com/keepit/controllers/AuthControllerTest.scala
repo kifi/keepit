@@ -73,7 +73,7 @@ class AuthControllerTest extends SpecificationWithJUnit {
         status(impersonateResultFail) must equalTo(401)
 
         CX.withConnection { implicit c =>
-          UserExperiment(ExperimentTypes.ADMIN, admin.id.get).save
+          UserExperiment(experimentType = ExperimentTypes.ADMIN, userId = admin.id.get).save
         }
         val impersonateResult = routeAndCall(impersonateRequest).get
         val imprSessionCookie = session(impersonateResult)

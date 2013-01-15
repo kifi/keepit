@@ -36,7 +36,7 @@ object SocialUserController extends FortyTwoController {
 
   def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
     val socialUserInfo = CX.withConnection { implicit conn =>
-      SocialUserInfo.get(socialUserId).reset().save
+      SocialUserInfoCxRepo.get(socialUserId).reset().save
     }
     Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfo.id.get))
   }
@@ -44,8 +44,8 @@ object SocialUserController extends FortyTwoController {
   def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
 
     val (socialUserInfo, socialConnections) = CX.withConnection { implicit conn =>
-      val socialUserInfo = SocialUserInfo.get(socialUserId)
-      val socialConnections = SocialConnection.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName)
+      val socialUserInfo = SocialUserInfoCxRepo.get(socialUserId)
+      val socialConnections = SocialConnectionCxRepo.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName)
 
       (socialUserInfo, socialConnections)
     }
@@ -58,7 +58,7 @@ object SocialUserController extends FortyTwoController {
   def socialUsersView(page: Int) = AdminHtmlAction { implicit request =>
     val PAGE_SIZE = 300
     val (socialUsers, count) = CX.withConnection { implicit c =>
-      (SocialUserInfo.page(page, PAGE_SIZE), SocialUserInfo.count)
+      (SocialUserInfoCxRepo.page(page, PAGE_SIZE), SocialUserInfoCxRepo.count)
     }
     val pageCount = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.socialUsers(socialUsers, page, count, pageCount))
@@ -66,7 +66,7 @@ object SocialUserController extends FortyTwoController {
 
   def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
     val graph = inject[SocialGraphPlugin]
-    val socialUserInfo = CX.withConnection { implicit conn => SocialUserInfo.get(socialUserInfoId) }
+    val socialUserInfo = CX.withConnection { implicit conn => SocialUserInfoCxRepo.get(socialUserInfoId) }
     if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))
     graph.asyncFetch(socialUserInfo)
     Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfoId))

@@ -50,8 +50,8 @@ class ScraperTest extends SpecificationWithJUnit {
         var (uri1, uri2, info1, info2) = CX.withConnection { implicit c =>
           val uri1 = NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").save
           val uri2 = NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing").save
-          val info1 = ScrapeInfo.ofUri(uri1).save
-          val info2 = ScrapeInfo.ofUri(uri2).save
+          val info1 = ScrapeInfoCxRepo.ofUri(uri1).save
+          val info2 = ScrapeInfoCxRepo.ofUri(uri2).save
           (uri1, uri2, info1, info2)
         }
         val store = new FakeArticleStore()
@@ -76,8 +76,8 @@ class ScraperTest extends SpecificationWithJUnit {
         var (uri1, uri2, info1, info2) = CX.withConnection { implicit c =>
           val uri1 = NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").save
           val uri2 = NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing").save
-          val info1 = ScrapeInfo.ofUri(uri1).save
-          val info2 = ScrapeInfo.ofUri(uri2).save
+          val info1 = ScrapeInfoCxRepo.ofUri(uri1).save
+          val info2 = ScrapeInfoCxRepo.ofUri(uri2).save
           (uri1, uri2, info1, info2)
         }
         val store = new FakeArticleStore()
@@ -85,7 +85,7 @@ class ScraperTest extends SpecificationWithJUnit {
         store.size === 2
 
         // get ScrapeInfo from db
-        val (info1a, info2a) = CX.withConnection { implicit c => (ScrapeInfo.ofUri(uri1), ScrapeInfo.ofUri(uri2)) }
+        val (info1a, info2a) = CX.withConnection { implicit c => (ScrapeInfoCxRepo.ofUri(uri1), ScrapeInfoCxRepo.ofUri(uri2)) }
 
         info1a.failures === 0
         (info1a.interval < info1.interval) === true
@@ -136,7 +136,7 @@ class ScraperTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         var info = CX.withConnection { implicit c =>
           val uri = NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").save
-          ScrapeInfo.ofUri(uri).save
+          ScrapeInfoCxRepo.ofUri(uri).save
         }
         CX.withConnection { implicit c =>
           info = info.withState(ScrapeInfoStates.INACTIVE).save
@@ -153,7 +153,7 @@ class ScraperTest extends SpecificationWithJUnit {
   private[this] def scrapeAndUpdateScrapeInfo(info: ScrapeInfo, scraper: Scraper) = {
     CX.withConnection { implicit c => info.withNextScrape(info.lastScrape).save }
     scraper.run
-    CX.withConnection { implicit c => ScrapeInfo.ofUriId(info.uriId) }
+    CX.withConnection { implicit c => ScrapeInfoCxRepo.ofUriId(info.uriId) }
   }
 
   def getMockScraper(articleStore: ArticleStore, suffix: String = "") = {

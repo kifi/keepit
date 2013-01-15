@@ -19,15 +19,19 @@ var privateBrowsing = require("sdk/private-browsing"); // TODO: if (!privateBrow
 var xulApp = require("sdk/system/xul-app");
 let {deps} = require("./deps");
 
-var pages = {}, pagesByTabId = {}, nextPageId = 1, nextTabId = 1;
+var nextTabId = 1, pages = {}, workers = {};  // by tab.id
+function createPage(tab) {
+  if (!tab || !tab.id) throw Error(tab ? "tab without id" : "tab required");
+  return pages[tab.id] = {id: tab.id, url: tab.url, active: tab.active};
+}
 
 exports.bookmarks = require("./bookmarks");
 exports.browserVersion = xulApp.name + "/" + xulApp.version;
 
 exports.icon = {
   on: {click: []},
-  set: function(pageId, path) {
-    var page = pages[pageId];
+  set: function(tabId, path) {
+    var page = pages[tabId];
     if (page) {
       page.icon = path;
     }
@@ -139,23 +143,22 @@ exports.storage = require("sdk/simple-storage").storage;
 exports.tabs = {
   each: function(callback) {
     Object.keys(pages)
-    .map(function(pageId) { return pages[pageId]; })
+    .map(function(tabId) { return pages[tabId]; })
     .filter(function(page) { return /^https?:/.test(page.url); })
     .forEach(callback);
   },
-  emit: function(pageId, type, data) {
-    exports.log("[api.tabs.emit] tab:", pageId, "type:", type, "data:", data);
-    var pw = pageWorkers[pageId];
-    if (pw) {
-      pw.forEach(function(worker) {
+  emit: function(tab, type, data) {
+    if (tab === pages[tab.id]) {
+      exports.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data);
+      workers[tab.id].forEach(function(worker) {
         worker.port.emit(type, data);
       });
     } else {
-      exports.log.error(Error("no page " + pageId), "activate");
+      exports.log.error(Error("tab " + tab.id + " no longer at " + tab.url), "api.tabs.emit:" + type);
     }
   },
-  get: function(pageId) {
-    return pages[pageId];
+  get: function(tabId) {
+    return pages[tabId];
   },
   on: {
     activate: [],
@@ -170,41 +173,37 @@ exports.version = self.version;
 
 var tabs = require("sdk/tabs")
 .on("open", function(tab) {
-  tab.id = ++nextTabId;
+  tab.id = tab.id || nextTabId++;
   exports.log("[tabs.open]", tab.id, tab.url);
 })
 .on("close", function(tab) {
   exports.log("[tabs.close]", tab.id, tab.url);
-  var page = pagesByTabId[tab.id];
-  if (page) {
-    delete pagesByTabId[tab.id];
-    delete pages[page.id];
-  }
+  delete pages[tab.id];
+  delete workers[tab.id];
 })
 .on("activate", function(tab) {
   exports.log("[tabs.activate]", tab.id, tab.url);
   tab.active = true;
   if (tab.url !== "about:blank") {
-    var page = pagesByTabId[tab.id];
-    if (page) {
-      page.active = true;
-      dispatch.call(exports.tabs.on.activate, page);
-    } else {
-      exports.log.error(Error("no page for tab " + tab.id), "activate");
-    }
+    var page = pages[tab.id] || createPage(tab);
+    dispatch.call(exports.tabs.on.activate, page);
   }
 })
 .on("deactivate", function(tab) {
   exports.log("[tabs.deactivate]", tab.id, tab.url);
-  tab.active = false;
-  var page = pagesByTabId[tab.id];
+  var active;
+  for (let win in windows) {
+    active |= tab === win.activeTab;
+  }
+  tab.active = !!active;
+  var page = pages[tab.id];
   if (page) {
-    page.active = false;
+    page.active = tab.active;
   }
 })
 .on("ready", function(tab) {
   exports.log("[tabs.ready]", tab.id, tab.url);
-  var page = pagesByTabId[tab.id];
+  var page = pages[tab.id] || createPage(tab);
   page.ready = true;
   dispatch.call(exports.tabs.on.ready, page);  // TODO: ensure content scripts are fully injected before dispatch
 });
@@ -214,20 +213,13 @@ for (let win in windows) {
   let activeTab = win.activeTab;
   for (let tab in win.tabs) {
     if (!tab.id) {
-      tab.id = ++nextTabId;
+      tab.id = nextTabId++;
       tab.active = tab === activeTab;
-      exports.log("[windows] tab", tab.id, "at", tab.url, "active:", tab.active);
+      exports.log("[windows]", tab.id, tab.url, tab.active ? "active" : "");
     }
-    let page = pagesByTabId[tab.id];
-    if (page) {
-      page.active = tab.active;
-    } else {
-      page = pagesByTabId[tab.id] = {
-        id: ++nextPageId,
-        url: tab.url,
-        active: tab.active};  // TODO: initialize page.ready somehow
-      pages[page.id] = page;
-    }
+    let page = pages[tab.id] || createPage(tab);
+    page.active = tab.active;
+    // TODO: initialize page.ready somehow
   }
 };
 
@@ -241,44 +233,24 @@ PageMod({
   attachTo: ["existing", "top"],
   onAttach: function(worker) {
     var tab = worker.tab;
+    tab.id = tab.id || nextTabId++;
+    exports.log("[onAttach]", tab.id, "start.js", tab.url);
     worker.port.on("api:start", function() {
       exports.log("[api:start]", tab.id, tab.url);
-      var page = {
-        id: ++nextPageId,
-        url: tab.url,
-        active: tab.active};
-      pages[page.id] = page;
-      pagesByTabId[tab.id] = page;
-      dispatch.call(exports.tabs.on.loading, page);
+      dispatch.call(exports.tabs.on.loading, createPage(tab));
     });
     worker.port.on("api:complete", function() {
       exports.log("[api:complete]", tab.id, tab.url);
-      var page = pagesByTabId[tab.id];
-      if (!page) {
-        page = pagesByTabId[tab.id] = {
-          id: ++nextPageId,
-          url: tab.url,
-          active: tab.active};
-        pages[page.id] = page;
-      }
+      var page = pages[tab.id] || createPage(tab);
       page.ready = true;
       dispatch.call(exports.tabs.on.complete, page);
     });
     worker.port.on("api:nav", function() {
       exports.log("[api:nav]", tab.id, tab.url);
-      var page = pagesByTabId[tab.id];
-      if (!page) {
-        page = pagesByTabId[tab.id] = {
-          id: ++nextPageId,
-          url: tab.url,
-          active: tab.active};
-        pages[page.id] = page;
-      }
-      dispatch.call(exports.tabs.on.loading, page);
+      dispatch.call(exports.tabs.on.loading, createPage(tab));
     });
   }});
 
-var workers = {}, pageWorkers = {}, injected = {}, nextWorkerId = 1;
 timers.setTimeout(function() {  // async to allow main.js to complete (so portHandlers can be defined)
   require("./meta").contentScripts.forEach(function(arr) {
     var path = arr[0], urlRe = arr[1];
@@ -292,25 +264,17 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       contentScriptOptions: {dataUriPrefix: url("")},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
-        var workerId = nextWorkerId++;
-        workers[workerId] = worker;
-        injected[workerId] = extend(injected[workerId] || {}, o.injected);
-        let page = pagesByTabId[worker.tab.id], pw = pageWorkers[page.id];
-        if (!pw) {
-          pw = pageWorkers[page.id] = [worker];
-        } else {
-          pw.push(worker);
-        }
-        exports.log("page workers for page:", page.id, page.url, "are:", pw);
+        let tab = worker.tab, page = pages[tab.id];
+        exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
+        let injected = extend({}, o.injected);
+        let pw = workers[tab.id] || (workers[tab.id] = []);
+        pw.push(worker);
         worker.on("detach", function() {
-          delete workers[workerId];
-          delete injected[workerId];
-          delete pageWorkers[page.id];
+          pw.length = 0;
         });
         Object.keys(portHandlers).forEach(function(type) {
           worker.port.on(type, function(data, callbackId) {
             exports.log("[worker.port.on] message:", type, "data:", data, "callbackId:", callbackId);
-            var page = pagesByTabId[worker.tab.id];
             portHandlers[type](data, function(response) {
                 worker.port.emit("api:respond", callbackId, response);
               }, page);
@@ -320,7 +284,8 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
           worker.port.emit("api:respond", callbackId, data.load(path));
         });
         worker.port.on("api:require", function(path, callbackId) {
-          var o = deps(path, injected[workerId]);
+          var o = deps(path, injected);
+          exports.log("[api:require] tab:", tab.id, o);
           worker.port.emit("api:inject", o.styles.map(load), o.scripts.map(load), callbackId);
         });
       }});
@@ -330,5 +295,5 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
 let button = require("packages/barbutton/barbutton").BarButton({
   id: "firefox-barbutton",
   click: function() {
-    dispatch.call(exports.icon.on.click, pagesByTabId[tabs.activeTab.id]);
+    dispatch.call(exports.icon.on.click, pages[tabs.activeTab.id]);
   }});

@@ -19,7 +19,7 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
    */
   def find(id: UserId): Option[SocialUser] =
     CX.withConnection { implicit conn =>
-      SocialUserInfo.getOpt(SocialId(id.id), SocialNetworks.FACEBOOK)
+      SocialUserInfoCxRepo.getOpt(SocialId(id.id), SocialNetworks.FACEBOOK)
     } match {
       case None =>
         log.debug("No SocialUserInfo found for %s".format(id))
@@ -51,7 +51,7 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
   }
 
   private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser): SocialUserInfo = CX.withConnection { implicit conn =>
-    SocialUserInfo.getOpt(socialId, socialNetworkType) match {
+    SocialUserInfoCxRepo.getOpt(socialId, socialNetworkType) match {
       case Some(socialUserInfo) if (!socialUserInfo.userId.isEmpty) =>
         socialUserInfo
       case Some(socialUserInfo) if (socialUserInfo.userId.isEmpty) =>

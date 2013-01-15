@@ -73,7 +73,7 @@ case class ScrapeInfo(
   }
 }
 
-object ScrapeInfo {
+object ScrapeInfoCxRepo {
 
   def all(implicit conn: Connection): Seq[ScrapeInfo] =
     ScrapeInfoEntity.all.map(_.view)
