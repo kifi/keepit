@@ -305,9 +305,9 @@ api = function() {
         .filter(function(page) { return /^https?:/.test(page.url); })
         .forEach(callback);
       },
-      emit: function(tabId, type, data) {
-        api.log("[api.tabs.emit] tab:", tabId, "type:", type, "data:", data);
-        chrome.tabs.sendMessage(tabId, [t0, type, data]);
+      emit: function(tab, type, data) {
+        api.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data);
+        chrome.tabs.sendMessage(tab.id, [t0, type, data]);
       },
       get: function(tabId) {
         return pages[tabId];
