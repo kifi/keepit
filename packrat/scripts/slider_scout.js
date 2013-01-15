@@ -1,4 +1,4 @@
-// @match .*
+// @match /^https?:\/\/[^\/]*\/.*/
 // @require scripts/api.js
 
 function logEvent() {  // parameters defined in main.js
