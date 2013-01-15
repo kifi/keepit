@@ -175,7 +175,7 @@ object BookmarksController extends FortyTwoController {
       case None =>
         val (user, experiments, installation) = CX.withConnection { implicit conn =>
           (UserCxRepo.get(userId),
-           UserExperiment.getByUser(userId) map (_.experimentType),
+           UserExperimentCxRepo.getByUser(userId) map (_.experimentType),
            installationId.map(_.id).getOrElse(""))
         }
         val msg = "Unsupported operation for user %s with old installation".format(userId)
@@ -218,7 +218,7 @@ object BookmarksController extends FortyTwoController {
           case Some(bookmark) => Some(bookmark.withActive(true).withPrivate(isPrivate).save)
           case None =>
             Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
-            val urlObj = URL.get(url).getOrElse(URL(url, uri.id.get).save)
+            val urlObj = URLCxRepo.get(url).getOrElse(URL(url = url, normalizedUriId = uri.id.get).save)
             Some(BookmarkFactory(uri, user.id.get, title, urlObj, source, isPrivate, installationId).save)
         }
       }

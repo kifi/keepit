@@ -4,7 +4,7 @@ import scala.collection.mutable.MutableList
 import com.keepit.search.ArticleStore
 import com.keepit.common.logging.Logging
 import com.keepit.search.Article
-import com.keepit.model.SocialUserInfo
+import com.keepit.model._
 import play.api.Plugin
 import play.api.templates.Html
 import akka.util.Timeout
@@ -20,7 +20,6 @@ import akka.dispatch.Future
 import com.google.inject.Inject
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.model.{User, UserCxRepo}
 import com.keepit.inject._
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
@@ -35,7 +34,7 @@ private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphP
   def receive() = {
     case RefreshAll => {
       log.info("going to check which SocilaUserInfo Was not fetched Lately")
-      val needToBeRefreshed = CX.withConnection { implicit conn => SocialUserInfo.getNeedToBeRefreshed }
+      val needToBeRefreshed = CX.withConnection { implicit conn => SocialUserInfoCxRepo.getNeedToBeRefreshed }
       log.info("find %s users that need to be refreshed".format(needToBeRefreshed.size))
       needToBeRefreshed.foreach(self ! RefreshUserInfo(_))
     }

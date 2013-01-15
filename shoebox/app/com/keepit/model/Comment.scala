@@ -55,7 +55,7 @@ case class Comment(
 
 }
 
-object Comment {
+object CommentCxRepo {
 
   def all(implicit conn: Connection): Seq[Comment] =
     CommentEntity.all.map(_.view)
@@ -77,11 +77,11 @@ object Comment {
       .map(_.view).getOrElse(throw NotFoundException(id))
 
   def getRecipients(commentId: Id[Comment])(implicit conn: Connection) =
-    CommentRecipient.getByComment(commentId)
+    CommentRecipientCxRepo.getByComment(commentId)
 
   def getParticipantsUserIds(comment: Comment)(implicit conn: Connection): Set[Id[User]] = {
-    val head = comment.parent map (Comment.get(_)) getOrElse(comment)
-    (CommentRecipient.getByComment(head.id.get) map (_.userId)).flatten.toSet + head.userId
+    val head = comment.parent map (CommentCxRepo.get(_)) getOrElse(comment)
+    (CommentRecipientCxRepo.getByComment(head.id.get) map (_.userId)).flatten.toSet + head.userId
   }
 
   def getPublic(uriId: Id[NormalizedURI])(implicit conn: Connection): Seq[Comment] =

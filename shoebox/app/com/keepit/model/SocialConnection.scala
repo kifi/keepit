@@ -30,7 +30,7 @@ case class SocialConnection(
 
 }
 
-object SocialConnection extends Logging {
+object SocialConnectionCxRepo extends Logging {
 
   def all(implicit conn: Connection): Seq[SocialConnection] =
     SocialConnectionEntity.all.map(_.view)
@@ -87,7 +87,7 @@ object SocialConnection extends Logging {
   }
 
   def getUserConnectionsCount(id: Id[User])(implicit conn: Connection): Long = {
-    val suis = SocialUserInfo.getByUser(id).map(_.id.get)
+    val suis = SocialUserInfoCxRepo.getByUser(id).map(_.id.get)
     if(!suis.isEmpty) {
       (SocialConnectionEntity AS "sc").map { sc =>
         SELECT (COUNT(sc.id)) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis)))
@@ -99,7 +99,7 @@ object SocialConnection extends Logging {
   }
 
   def getUserConnections(id: Id[User])(implicit conn: Connection): Seq[SocialUserInfo] = {
-    val suis = SocialUserInfo.getByUser(id).map(_.id.get)
+    val suis = SocialUserInfoCxRepo.getByUser(id).map(_.id.get)
     if(!suis.isEmpty) {
       val conns = (SocialConnectionEntity AS "sc").map { sc =>
         SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) AND (sc.state EQ SocialConnectionStates.ACTIVE)) list

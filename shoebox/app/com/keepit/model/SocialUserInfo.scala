@@ -43,7 +43,7 @@ case class SocialUserInfo(
   }
 }
 
-object SocialUserInfo {
+object SocialUserInfoCxRepo {
 
   def all(implicit conn: Connection): Seq[SocialUserInfo] =
     SocialUserInfoEntity.all.map(_.view)

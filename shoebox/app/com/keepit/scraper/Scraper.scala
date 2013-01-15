@@ -5,9 +5,7 @@ import com.keepit.common.db.{Id, CX}
 import com.keepit.common.time._
 import com.keepit.common.net.URI
 import com.keepit.search.{Article, ArticleStore}
-import com.keepit.model.{NormalizedURI, NormalizedURICxRepo}
-import com.keepit.model.NormalizedURIStates
-import com.keepit.model.ScrapeInfo
+import com.keepit.model._
 import com.keepit.scraper.extractor.DefaultExtractor
 import com.keepit.scraper.extractor.DefaultExtractorFactory
 import com.keepit.scraper.extractor.Extractor
@@ -33,7 +31,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     val startedTime = currentDateTime
     log.info("starting a new scrape round")
     val tasks = CX.withConnection { implicit c =>
-      ScrapeInfo.getOverdueList().map{ info => (NormalizedURICxRepo.get(info.uriId), info) }
+      ScrapeInfoCxRepo.getOverdueList().map{ info => (NormalizedURICxRepo.get(info.uriId), info) }
     }
     log.info("got %s uris to scrape".format(tasks.length))
     val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
@@ -44,7 +42,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
   }
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
-    val info = CX.withConnection { implicit c => ScrapeInfo.ofUri(uri) }
+    val info = CX.withConnection { implicit c => ScrapeInfoCxRepo.ofUri(uri) }
     safeProcessURI(uri, info)
   }
 

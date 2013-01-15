@@ -58,9 +58,7 @@ case class URL (
 
 }
 
-object URL {
-  def apply(url: String, normalizedUriId: Id[NormalizedURI]): URL =
-    apply(url = url, normalizedUriId = normalizedUriId, history = Seq(URLHistory(normalizedUriId)), state = URLStates.ACTIVE)
+object URLCxRepo {
 
   def all(implicit conn: Connection): Seq[URL] =
     URLEntity.all.map(_.view)

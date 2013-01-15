@@ -52,7 +52,7 @@ class CommentTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
         CX.withConnection { implicit conn =>
-          Comment.all.length === 9
+          CommentCxRepo.all.length === 9
         }
       }
     }
@@ -60,8 +60,8 @@ class CommentTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         setup()
         CX.withConnection { implicit conn =>
-          Comment.count(CommentPermissions.PUBLIC) === 3
-          Comment.count(CommentPermissions.MESSAGE) === 4
+          CommentCxRepo.count(CommentPermissions.PUBLIC) === 3
+          CommentCxRepo.count(CommentPermissions.MESSAGE) === 4
         }
       }
     }
@@ -69,10 +69,10 @@ class CommentTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
         CX.withConnection { implicit conn =>
-          Comment.getPublicCount(uri1.id.get) === 2
-          Comment.getPublicCount(uri2.id.get) === 1
-          Comment.getPublic(uri1.id.get).length === 2
-          Comment.getPublic(uri2.id.get).length === 1
+          CommentCxRepo.getPublicCount(uri1.id.get) === 2
+          CommentCxRepo.getPublicCount(uri2.id.get) === 1
+          CommentCxRepo.getPublic(uri1.id.get).length === 2
+          CommentCxRepo.getPublic(uri2.id.get).length === 1
         }
       }
     }
@@ -80,14 +80,14 @@ class CommentTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
         CX.withConnection { implicit conn =>
-          Comment.getPrivateCount(uri1.id.get, user1.id.get) === 2
-          Comment.getPrivateCount(uri1.id.get, user2.id.get) === 0
-          Comment.getPrivateCount(uri2.id.get, user1.id.get) === 0
-          Comment.getPrivateCount(uri2.id.get, user2.id.get) === 0
-          Comment.getPrivate(uri1.id.get, user1.id.get).length === 2
-          Comment.getPrivate(uri1.id.get, user2.id.get).length === 0
-          Comment.getPrivate(uri2.id.get, user1.id.get).length === 0
-          Comment.getPrivate(uri2.id.get, user2.id.get).length === 0
+          CommentCxRepo.getPrivateCount(uri1.id.get, user1.id.get) === 2
+          CommentCxRepo.getPrivateCount(uri1.id.get, user2.id.get) === 0
+          CommentCxRepo.getPrivateCount(uri2.id.get, user1.id.get) === 0
+          CommentCxRepo.getPrivateCount(uri2.id.get, user2.id.get) === 0
+          CommentCxRepo.getPrivate(uri1.id.get, user1.id.get).length === 2
+          CommentCxRepo.getPrivate(uri1.id.get, user2.id.get).length === 0
+          CommentCxRepo.getPrivate(uri2.id.get, user1.id.get).length === 0
+          CommentCxRepo.getPrivate(uri2.id.get, user2.id.get).length === 0
         }
       }
     }
@@ -95,14 +95,14 @@ class CommentTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
         CX.withConnection { implicit conn =>
-          Comment.getMessageCount(uri1.id.get, user1.id.get) === 2
-          Comment.getMessageCount(uri1.id.get, user2.id.get) === 3
-          Comment.getMessageCount(uri2.id.get, user1.id.get) === 0
-          Comment.getMessageCount(uri2.id.get, user2.id.get) === 0
-          Comment.getMessages(uri1.id.get, user1.id.get).length === 2
-          Comment.getMessages(uri1.id.get, user2.id.get).length === 3
-          Comment.getMessages(uri2.id.get, user1.id.get).length === 0
-          Comment.getMessages(uri2.id.get, user2.id.get).length === 0
+          CommentCxRepo.getMessageCount(uri1.id.get, user1.id.get) === 2
+          CommentCxRepo.getMessageCount(uri1.id.get, user2.id.get) === 3
+          CommentCxRepo.getMessageCount(uri2.id.get, user1.id.get) === 0
+          CommentCxRepo.getMessageCount(uri2.id.get, user2.id.get) === 0
+          CommentCxRepo.getMessages(uri1.id.get, user1.id.get).length === 2
+          CommentCxRepo.getMessages(uri1.id.get, user2.id.get).length === 3
+          CommentCxRepo.getMessages(uri2.id.get, user1.id.get).length === 0
+          CommentCxRepo.getMessages(uri2.id.get, user2.id.get).length === 0
         }
       }
     }
@@ -110,11 +110,11 @@ class CommentTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
         CX.withConnection { implicit conn =>
-          Comment.getChildCount(msg3.id.get) === 1
-          Comment.getMessagesWithChildrenCount(uri1.id.get, user1.id.get) === 2
-          Comment.getMessagesWithChildrenCount(uri1.id.get, user2.id.get) === 4
-          Comment.getMessagesWithChildrenCount(uri2.id.get, user1.id.get) === 0
-          Comment.getMessagesWithChildrenCount(uri2.id.get, user2.id.get) === 0
+          CommentCxRepo.getChildCount(msg3.id.get) === 1
+          CommentCxRepo.getMessagesWithChildrenCount(uri1.id.get, user1.id.get) === 2
+          CommentCxRepo.getMessagesWithChildrenCount(uri1.id.get, user2.id.get) === 4
+          CommentCxRepo.getMessagesWithChildrenCount(uri2.id.get, user1.id.get) === 0
+          CommentCxRepo.getMessagesWithChildrenCount(uri2.id.get, user2.id.get) === 0
         }
       }
     }

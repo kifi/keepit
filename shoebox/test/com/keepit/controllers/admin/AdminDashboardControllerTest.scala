@@ -57,7 +57,7 @@ class AdminDashboardControllerTest extends SpecificationWithJUnit {
               userId = u1.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK,
               credentials = Some(su))
             .save
-          SocialUserInfo.getOpt(SocialId("111"), FACEBOOK) === Some(sui)
+          SocialUserInfoCxRepo.getOpt(SocialId("111"), FACEBOOK) === Some(sui)
           UserExperiment(ADMIN, u1.id.get).save
           u1
         }

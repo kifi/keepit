@@ -13,7 +13,7 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
-import com.keepit.model.{User, UserCxRepo}
+import com.keepit.model._
 import com.keepit.common.db.CX
 import play.api.libs.ws.WS
 import org.jivesoftware.smack._
@@ -30,7 +30,6 @@ import securesocial.core._
 import securesocial.core.providers.FacebookProvider
 import com.keepit.common.db.ExternalId
 import securesocial.core.providers.FacebookProvider
-import com.keepit.model.SocialUserInfo
 import com.keepit.common.social.SocialId
 import com.keepit.common.controller.FortyTwoController
 
@@ -58,7 +57,7 @@ object ChatController extends FortyTwoController {
 
     val receipantSocialUserInfo = CX.withConnection { implicit c =>
       val user = UserCxRepo.get(receipantExternalId)
-      val infos = SocialUserInfo.getByUser(user.id.get)
+      val infos = SocialUserInfoCxRepo.getByUser(user.id.get)
       //at this point we must have a single info per user
       if (infos.size != 1) throw new Exception("info for %s is not ONE: \n%s".format(user, infos.mkString("\n")))
       infos(0)
