@@ -32,8 +32,8 @@ object ProbablisticLRU {
   }
 
   def valueHash(value: Long, position: Int): Int = {
-    // positive integer, excluding zero. negative int (specifically -1) and zero are special
-    ((value ^ position) % 0x7FFFFFFFL).toInt + 1
+    // 32-bit integer, excluding zero. zero is special
+    (((value * position.toLong) ^ value) % 0xFFFFFFFFL + 1L).toInt
   }
 
   class Likeliness(key: Long, positions: Array[Int], values: Array[Int], norm: Float) {
@@ -73,7 +73,6 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
   def setSeed(seed: Long) = rnd.setSeed(seed)
 
   def put(key: Long, value: Long) {
-    decay
     putValueHash(key, value)
     val ins = inserts.incrementAndGet()
     if ((ins % syncEvery) == 0) sync
@@ -92,17 +91,6 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
     }
   }
 
-  def decay = {
-    // randomly clear positions
-    var i = 0
-    while (i < numHashFuncs) {
-      val pos = rnd.nextInt(tableSize) + 1
-      intBuffer.put(pos, 0)
-      i += 1
-    }
-    this
-  }
-
   def sync = {
     byteBuffer match {
       case mappedByteBuffer: MappedByteBuffer => mappedByteBuffer.force()
@@ -116,27 +104,20 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
   def numSyncs = syncs
 
   private[this] def putValueHash(key: Long, value: Long) {
-    var pset = Set.empty[Int]
-    var filled = 0
+    var positions = new Array[Int](numHashFuncs)
+    var i = 0
     foreachPosition(key){ pos =>
-      if (intBuffer.get(pos) == 0) {
-        // always fill empty positions
-        intBuffer.put(pos, if (filled < numHashFuncs/2) valueHash(value, pos) else -1)
-        filled += 1
-      }
-      else pset += pos
+      positions(i) = pos
+      i += 1
     }
-    if (filled < numHashFuncs) {
-      // randomly overwrite the half of the non-empty positions
-      val parray = pset.toArray
-      var i = 0
-      while (i < (parray.length - numHashFuncs/2)) {
-        val index = rnd.nextInt(parray.length - i) + i
-        val pos = parray(index)
-        parray(index) = parray(i)
-        intBuffer.put(pos, valueHash(value, pos))
-        i += 1
-      }
+    // randomly overwrite the half of the positions
+    i = 0
+    while (i < numHashFuncs/2) {
+      val index = rnd.nextInt(positions.length - i) + i
+      val pos = positions(index)
+      positions(index) = positions(i)
+      intBuffer.put(pos, valueHash(value, pos))
+      i += 1
     }
   }
 
