@@ -19,7 +19,7 @@ case class CommentRecipient(
   userId: Option[Id[User]] = None,
   socialUserId: Option[Id[SocialUserInfo]] = None,
   email: Option[String] = None, // change me?
-  state: State[CommentRecipient] = CommentRecipient.States.ACTIVE
+  state: State[CommentRecipient] = CommentRecipientStates.ACTIVE
 ) {
   require(userId.isDefined || socialUserId.isDefined || email.isDefined)
 
@@ -60,12 +60,11 @@ object CommentRecipient {
 
   def getByEmail(email: String)(implicit conn: Connection): Seq[CommentRecipient] =
     (CommentRecipientEntity AS "cr").map { cr => SELECT (cr.*) FROM cr WHERE (cr.email EQ email) list }.map(_.view)
+}
 
-
-  object States {
-    val ACTIVE = State[CommentRecipient]("active")
-    val INACTIVE = State[CommentRecipient]("inactive")
-  }
+object CommentRecipientStates {
+  val ACTIVE = State[CommentRecipient]("active")
+  val INACTIVE = State[CommentRecipient]("inactive")
 }
 
 private[model] class CommentRecipientEntity extends Entity[CommentRecipient, CommentRecipientEntity] {
@@ -75,7 +74,7 @@ private[model] class CommentRecipientEntity extends Entity[CommentRecipient, Com
   val userId = "user_id".ID[User]
   val socialUserId = "social_user_id".ID[SocialUserInfo]
   val email = "email".VARCHAR(512)
-  val state = "state".STATE[CommentRecipient].NOT_NULL(CommentRecipient.States.ACTIVE)
+  val state = "state".STATE[CommentRecipient].NOT_NULL(CommentRecipientStates.ACTIVE)
 
   def relation = CommentRecipientEntity
 

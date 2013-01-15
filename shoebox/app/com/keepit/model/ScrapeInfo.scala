@@ -18,14 +18,14 @@ case class ScrapeInfo(
   nextScrape: DateTime = currentDateTime,
   interval: Double = 24.0d, // hours
   failures: Int = 0,
-  state: State[ScrapeInfo] = ScrapeInfo.States.ACTIVE,
+  state: State[ScrapeInfo] = ScrapeInfoStates.ACTIVE,
   signature: String = ""
 ) {
 
   def withState(state: State[ScrapeInfo]) = {
     state match {
-      case ScrapeInfo.States.ACTIVE => copy(state = state, nextScrape = currentDateTime) // scrape ASAP when switched to ACTIVE
-      case ScrapeInfo.States.INACTIVE => copy(state = state, nextScrape = ScrapeInfo.NEVER) // never scrape when switched to INACTIVE
+      case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = currentDateTime) // scrape ASAP when switched to ACTIVE
+      case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
     }
   }
 
@@ -84,9 +84,9 @@ object ScrapeInfo {
 
   def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit conn: Connection): Seq[ScrapeInfo] = {
     if (limit <= 0) {
-      (ScrapeInfoEntity AS "s").map{ s => SELECT (s.*) FROM s WHERE ((s.nextScrape LE due) AND (s.state EQ States.ACTIVE)) }.list.map( _.view )
+      (ScrapeInfoEntity AS "s").map{ s => SELECT (s.*) FROM s WHERE ((s.nextScrape LE due) AND (s.state EQ ScrapeInfoStates.ACTIVE)) }.list.map( _.view )
     } else {
-      (ScrapeInfoEntity AS "s").map{ s => SELECT (s.*) FROM s WHERE ((s.nextScrape LE due) AND (s.state EQ States.ACTIVE)) LIMIT limit }.list.map( _.view )
+      (ScrapeInfoEntity AS "s").map{ s => SELECT (s.*) FROM s WHERE ((s.nextScrape LE due) AND (s.state EQ ScrapeInfoStates.ACTIVE)) LIMIT limit }.list.map( _.view )
     }
   }
 
@@ -94,12 +94,11 @@ object ScrapeInfo {
 
   def getOpt(id: Id[ScrapeInfo])(implicit conn: Connection): Option[ScrapeInfo] = ScrapeInfoEntity.get(id).map(_.view)
 
-  object States {
-    val ACTIVE = State[ScrapeInfo]("active")
-    val INACTIVE = State[ScrapeInfo]("inactive")
-  }
+}
 
-  val NEVER = parseStandardTime("9999-01-01 00:00:00.000 -0800")
+object ScrapeInfoStates {
+  val ACTIVE = State[ScrapeInfo]("active")
+  val INACTIVE = State[ScrapeInfo]("inactive")
 }
 
 private[model] class ScrapeInfoEntity extends Entity[ScrapeInfo, ScrapeInfoEntity] {

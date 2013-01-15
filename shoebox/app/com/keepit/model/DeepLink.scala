@@ -44,7 +44,7 @@ case class DeepLink(
   urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
   deepLocator: DeepLocator,
   token: DeepLinkToken = DeepLinkToken(),
-  state: State[DeepLink] = DeepLink.States.ACTIVE) extends Logging {
+  state: State[DeepLink] = DeepLinkStates.ACTIVE) extends Logging {
   lazy val baseUrl = inject[FortyTwoServices].baseUrl
   lazy val url = "%s/r/%s".format(baseUrl,token.value)
 
@@ -60,7 +60,7 @@ case class DeepLink(
 
 }
 
-object DeepLink {
+object DeepLinkCxRepo {
 
   def all(implicit conn: Connection): Seq[DeepLink] =
     DeepLinkEntity.all.map(_.view)
@@ -76,12 +76,11 @@ object DeepLink {
 
   def getOpt(token: DeepLinkToken)(implicit conn: Connection): Option[DeepLink] =
     (DeepLinkEntity AS "i").map { i => SELECT(i.*) FROM i WHERE (i.token EQ token.value) unique }.map(_.view)
+}
 
-  object States {
-    val ACTIVE = State[DeepLink]("active")
-    val INACTIVE = State[DeepLink]("inactive")
-  }
-
+object DeepLinkStates {
+  val ACTIVE = State[DeepLink]("active")
+  val INACTIVE = State[DeepLink]("inactive")
 }
 
 private[model] class DeepLinkEntity extends Entity[DeepLink, DeepLinkEntity] {
@@ -93,7 +92,7 @@ private[model] class DeepLinkEntity extends Entity[DeepLink, DeepLinkEntity] {
   val urlId = "url_id".ID[URL]
   val deepLocator = "deep_locator".VARCHAR(512).NOT_NULL
   val token = "token".VARCHAR(16).NOT_NULL
-  val state = "state".STATE[DeepLink].NOT_NULL(DeepLink.States.ACTIVE)
+  val state = "state".STATE[DeepLink].NOT_NULL(DeepLinkStates.ACTIVE)
 
   def relation = DeepLinkEntity
 

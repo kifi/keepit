@@ -24,7 +24,7 @@ case class ElectronicMail (
   fromName: Option[String] = None,
   to: EmailAddressHolder,
   subject: String,
-  state: State[ElectronicMail] = ElectronicMail.States.PREPARING,
+  state: State[ElectronicMail] = ElectronicMailStates.PREPARING,
   htmlBody: String,
   textBody: Option[String] = None,
   responseMessage: Option[String] = None,
@@ -34,20 +34,20 @@ case class ElectronicMail (
 ) extends Logging {
 
   def prepareToSend(): ElectronicMail = state match {
-    case ElectronicMail.States.PREPARING => copy(state = ElectronicMail.States.READY_TO_SEND)
+    case ElectronicMailStates.PREPARING => copy(state = ElectronicMailStates.READY_TO_SEND)
     case _ => throw new Exception("mail %s in bad state, can't prepare to send".format(this))
   }
 
   def sent(message: String, messageId: ElectronicMailMessageId): ElectronicMail = state match {
-    case ElectronicMail.States.READY_TO_SEND =>
-      copy(state = ElectronicMail.States.SENT, responseMessage = Some(message), timeSubmitted = Some(currentDateTime), messageId = Some(messageId))
-    case ElectronicMail.States.SENT =>
+    case ElectronicMailStates.READY_TO_SEND =>
+      copy(state = ElectronicMailStates.SENT, responseMessage = Some(message), timeSubmitted = Some(currentDateTime), messageId = Some(messageId))
+    case ElectronicMailStates.SENT =>
       log.info("mail already sent. new message is: %s".format(message))
       this
     case _ => throw new Exception("mail %s in bad state, can't prepare to send".format(this))
   }
 
-  def errorSending(message: String): ElectronicMail = copy(state = ElectronicMail.States.ERROR_SENDING, responseMessage = Some(message), timeSubmitted = Some(currentDateTime))
+  def errorSending(message: String): ElectronicMail = copy(state = ElectronicMailStates.ERROR_SENDING, responseMessage = Some(message), timeSubmitted = Some(currentDateTime))
 
   def save()(implicit conn: Connection): ElectronicMail = try {
     val entity = ElectronicMailEntity(this.copy(updatedAt = currentDateTime))
@@ -58,14 +58,14 @@ case class ElectronicMail (
   }
 }
 
-object ElectronicMail {
+object ElectronicMailStates {
+  val PREPARING = State[ElectronicMail]("preparing")
+  val READY_TO_SEND = State[ElectronicMail]("ready_to_send")
+  val SENT = State[ElectronicMail]("sent")
+  val ERROR_SENDING = State[ElectronicMail]("error_sending")
+}
 
-  object States {
-    val PREPARING = State[ElectronicMail]("preparing")
-    val READY_TO_SEND = State[ElectronicMail]("ready_to_send")
-    val SENT = State[ElectronicMail]("sent")
-    val ERROR_SENDING = State[ElectronicMail]("error_sending")
-  }
+object ElectronicMail {
 
   def all(implicit conn: Connection): Seq[ElectronicMail] =
     ElectronicMailEntity.all.map(_.view)
@@ -75,7 +75,7 @@ object ElectronicMail {
 
 
   def outbox()(implicit conn: Connection): Seq[ElectronicMail] =
-    ((ElectronicMailEntity AS "p") map { p => SELECT (p.*) FROM p WHERE (p.state EQ ElectronicMail.States.READY_TO_SEND ) }).list() map (_.view)
+    ((ElectronicMailEntity AS "p") map { p => SELECT (p.*) FROM p WHERE (p.state EQ ElectronicMailStates.READY_TO_SEND ) }).list() map (_.view)
 
   def get(id: ExternalId[ElectronicMail])(implicit conn: Connection): ElectronicMail =
     ((ElectronicMailEntity AS "p") map { p => SELECT (p.*) FROM p WHERE (p.externalId EQ id ) unique }).getOrElse(throw NotFoundException(id)).view
@@ -83,7 +83,7 @@ object ElectronicMail {
   def forSender(senderId: Id[User])(implicit conn: Connection): Seq[ElectronicMail] =
     (ElectronicMailEntity AS "p").map { p => SELECT (p.*) FROM p WHERE (p.senderUserId EQ senderId) list
     }.map(_.view)
-    
+
   def forRecipient(mailAddresses: Seq[String])(implicit conn: Connection): Seq[ElectronicMail] =
     mailAddresses match {
       case Nil => Nil

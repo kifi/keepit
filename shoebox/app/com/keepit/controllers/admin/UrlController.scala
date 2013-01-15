@@ -178,7 +178,7 @@ object UrlController extends FortyTwoController {
       }
 
 
-      val deeps = DeepLink.all
+      val deeps = DeepLinkCxRepo.all
       val deepsCount = deeps.size
 
       deeps map { deep =>

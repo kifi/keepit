@@ -80,7 +80,7 @@ case class KifiInstallation (
   externalId: ExternalId[KifiInstallation] = ExternalId(),
   version: KifiVersion,
   userAgent: UserAgent,
-  state: State[KifiInstallation] = KifiInstallation.States.ACTIVE
+  state: State[KifiInstallation] = KifiInstallationStates.ACTIVE
 ) extends Logging {
 
   def save(implicit conn: Connection): KifiInstallation = {
@@ -93,7 +93,7 @@ case class KifiInstallation (
   def withUserAgent(userAgent: UserAgent) = copy(userAgent = userAgent)
 }
 
-object KifiInstallation {
+object KifiInstallationCxRepo {
 
   def all(implicit conn: Connection): Seq[KifiInstallation] =
     KifiInstallationEntity.all.map(_.view)
@@ -112,12 +112,11 @@ object KifiInstallation {
 
   def get(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): KifiInstallation =
     getOpt(userId, externalId).getOrElse(throw NotFoundException(classOf[KifiInstallation], userId, externalId))
+}
 
-  object States {
-    val ACTIVE = State[KifiInstallation]("active")
-    val INACTIVE = State[KifiInstallation]("inactive")
-  }
-
+object KifiInstallationStates {
+  val ACTIVE = State[KifiInstallation]("active")
+  val INACTIVE = State[KifiInstallation]("inactive")
 }
 
 private[model] class KifiInstallationEntity extends Entity[KifiInstallation, KifiInstallationEntity] {
@@ -127,7 +126,7 @@ private[model] class KifiInstallationEntity extends Entity[KifiInstallation, Kif
   val externalId = "external_id".EXTERNAL_ID[KifiInstallation].NOT_NULL
   val version = "version".VARCHAR(16).NOT_NULL
   val userAgent = "user_agent".VARCHAR(512).NOT_NULL //could be more, I think we can trunk it at that
-  val state = "state".STATE[KifiInstallation].NOT_NULL(KifiInstallation.States.ACTIVE)
+  val state = "state".STATE[KifiInstallation].NOT_NULL(KifiInstallationStates.ACTIVE)
 
   def relation = KifiInstallationEntity
 

@@ -4,7 +4,7 @@ import scala.collection.mutable.MutableList
 import com.keepit.search.ArticleStore
 import com.keepit.common.logging.Logging
 import com.keepit.search.Article
-import com.keepit.model.SocialUserInfo
+import com.keepit.model._
 import play.api.Plugin
 import play.api.templates.Html
 import akka.util.Timeout
@@ -20,7 +20,6 @@ import akka.dispatch.Future
 import com.google.inject.Inject
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.model.{User, UserCxRepo}
 import com.keepit.inject._
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
@@ -68,7 +67,7 @@ class SocialUserImportFriends() extends Logging {
   private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
 
   private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) = (SocialUserInfo(fullName = (friend \ "name").as[String], socialId = SocialId((friend \ "id").as[String]),
-                                                networkType = SocialNetworks.FACEBOOK, state = SocialUserInfo.States.FETCHED_USING_FRIEND), friend)
+                                                networkType = SocialNetworks.FACEBOOK, state = SocialUserInfoStates.FETCHED_USING_FRIEND), friend)
 
   private def createSocialUserRawInfo(socialUserInfo: SocialUserInfo, friend: JsValue) = SocialUserRawInfo(socialUserInfo = socialUserInfo, json = friend)
 

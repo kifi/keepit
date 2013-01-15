@@ -5,14 +5,14 @@ import com.keepit.common.time._
 import java.sql.Connection
 import org.joda.time.DateTime
 import ru.circumflex.orm._
-import com.keepit.model.{User, UserCxRepo}
+import com.keepit.model._
 
 case class ArticleSearchResultRef (
   id: Option[Id[ArticleSearchResultRef]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[ArticleSearchResultRef],
-  state: State[ArticleSearchResultRef] = ArticleSearchResultRef.States.ACTIVE,
+  state: State[ArticleSearchResultRef] = ArticleSearchResultRefStates.ACTIVE,
   last: Option[ExternalId[ArticleSearchResultRef]],
   myTotal: Int,
   friendsTotal: Int,
@@ -28,11 +28,12 @@ case class ArticleSearchResultRef (
   }
 }
 
+object ArticleSearchResultRefStates {
+  val ACTIVE = State[ArticleSearchResultRef]("active")
+  val INACTIVE = State[ArticleSearchResultRef]("inactive")
+}
+
 object ArticleSearchResultRef {
-  object States {
-    val ACTIVE = State[ArticleSearchResultRef]("active")
-    val INACTIVE = State[ArticleSearchResultRef]("inactive")
-  }
 
   def apply(res: ArticleSearchResult): ArticleSearchResultRef =
     ArticleSearchResultRef(externalId = res.uuid, createdAt = res.time, updatedAt = res.time,
@@ -52,7 +53,7 @@ private[search] class ArticleSearchResultRefEntity extends Entity[ArticleSearchR
   val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val externalId = "external_id".EXTERNAL_ID[ArticleSearchResultRef].NOT_NULL(ExternalId())
-  val state = "state".STATE.NOT_NULL(ArticleSearchResultRef.States.ACTIVE)
+  val state = "state".STATE.NOT_NULL(ArticleSearchResultRefStates.ACTIVE)
   val last = "last".EXTERNAL_ID[ArticleSearchResultRef]
   val myTotal = "my_total".INTEGER.NOT_NULL
   val friendsTotal = "friends_total".INTEGER.NOT_NULL

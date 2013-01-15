@@ -41,7 +41,7 @@ case class URL (
   url: String,
   normalizedUriId: Id[NormalizedURI],
   history: Seq[URLHistory] = Seq(),
-  state: State[URL] = URL.States.ACTIVE
+  state: State[URL] = URLStates.ACTIVE
   ) extends Logging {
 
   def domain = URI.parse(url).flatMap(_.host)
@@ -60,7 +60,7 @@ case class URL (
 
 object URL {
   def apply(url: String, normalizedUriId: Id[NormalizedURI]): URL =
-    apply(url = url, normalizedUriId = normalizedUriId, history = Seq(URLHistory(normalizedUriId)), state = URL.States.ACTIVE)
+    apply(url = url, normalizedUriId = normalizedUriId, history = Seq(URLHistory(normalizedUriId)), state = URLStates.ACTIVE)
 
   def all(implicit conn: Connection): Seq[URL] =
     URLEntity.all.map(_.view)
@@ -76,11 +76,11 @@ object URL {
 
   def getByDomain(domain: String)(implicit conn: Connection) =
     (URLEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.domain EQ domain) }.list.map( _.view )
+}
 
-  object States {
-    val ACTIVE = State[URL]("active")
-    val INACTIVE = State[URL]("inactive")
-  }
+object URLStates {
+  val ACTIVE = State[URL]("active")
+  val INACTIVE = State[URL]("inactive")
 }
 
 private[model] class URLEntity extends Entity[URL, URLEntity] {
@@ -89,7 +89,7 @@ private[model] class URLEntity extends Entity[URL, URLEntity] {
   val url = "url".VARCHAR(2048).NOT_NULL
   val normalizedUriId = "normalized_uri_id".ID[NormalizedURI].NOT_NULL
   val history = "history".VARCHAR(2048)
-  val state = "state".STATE[URL].NOT_NULL(URL.States.ACTIVE)
+  val state = "state".STATE[URL].NOT_NULL(URLStates.ACTIVE)
   val domain = "domain".VARCHAR(512)
 
   def relation = URLEntity

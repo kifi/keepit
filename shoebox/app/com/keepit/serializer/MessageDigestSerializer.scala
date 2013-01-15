@@ -23,12 +23,12 @@ class ThreadInfoSerializer extends Writes[ThreadInfo] {
 
   def writes (comments: Seq[ThreadInfo]): JsValue = JsArray(comments map writes)
 
-  def writes(commentsGroups: List[(State[Comment.Permission], Seq[ThreadInfo])]): JsValue =
+  def writes(commentsGroups: List[(State[CommentPermission], Seq[ThreadInfo])]): JsValue =
     JsObject(commentsGroups map { commentsGroup =>
       commentsGroup._1.value -> writes(commentsGroup._2)
     })
 
-  def writes(commentsGroup: (State[Comment.Permission], Seq[ThreadInfo])): JsValue = writes(commentsGroup :: Nil)
+  def writes(commentsGroup: (State[CommentPermission], Seq[ThreadInfo])): JsValue = writes(commentsGroup :: Nil)
 }
 
 object ThreadInfoSerializer {

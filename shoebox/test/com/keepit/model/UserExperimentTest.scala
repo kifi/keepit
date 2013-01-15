@@ -30,14 +30,14 @@ class UserExperimentTest extends SpecificationWithJUnit {
         }
 
         CX.withConnection { implicit c =>
-          UserExperiment(userId = shanee.id.get, experimentType = UserExperiment.ExperimentTypes.ADMIN).save
+          UserExperiment(userId = shanee.id.get, experimentType = ExperimentTypes.ADMIN).save
         }
 
         CX.withConnection { implicit c =>
-          UserExperiment.getExperiment(shanee.id.get, UserExperiment.ExperimentTypes.ADMIN).isDefined === true
-          UserExperiment.getExperiment(shanee.id.get, UserExperiment.ExperimentTypes.FAKE).isDefined === false
-          UserExperiment.getExperiment(santa.id.get, UserExperiment.ExperimentTypes.ADMIN).isDefined === false
-          UserExperiment.getExperiment(santa.id.get, UserExperiment.ExperimentTypes.FAKE).isDefined === false
+          UserExperiment.getExperiment(shanee.id.get, ExperimentTypes.ADMIN).isDefined === true
+          UserExperiment.getExperiment(shanee.id.get, ExperimentTypes.FAKE).isDefined === false
+          UserExperiment.getExperiment(santa.id.get, ExperimentTypes.ADMIN).isDefined === false
+          UserExperiment.getExperiment(santa.id.get, ExperimentTypes.FAKE).isDefined === false
         }
       }
     }
@@ -52,22 +52,22 @@ class UserExperimentTest extends SpecificationWithJUnit {
         }
 
         CX.withConnection { implicit c =>
-          UserExperiment(userId = shanee.id.get, experimentType = UserExperiment.ExperimentTypes.ADMIN).save
-          UserExperiment(userId = santa.id.get, experimentType = UserExperiment.ExperimentTypes.ADMIN).save
-          UserExperiment(userId = santa.id.get, experimentType = UserExperiment.ExperimentTypes.FAKE).save
+          UserExperiment(userId = shanee.id.get, experimentType = ExperimentTypes.ADMIN).save
+          UserExperiment(userId = santa.id.get, experimentType = ExperimentTypes.ADMIN).save
+          UserExperiment(userId = santa.id.get, experimentType = ExperimentTypes.FAKE).save
         }
 
         CX.withConnection { implicit c =>
           val shanees = UserExperiment.getByUser(shanee.id.get)
           shanees.size === 1
-          shanees.head.experimentType === UserExperiment.ExperimentTypes.ADMIN
+          shanees.head.experimentType === ExperimentTypes.ADMIN
           val santas = UserExperiment.getByUser(santa.id.get)
           santas.size === 2
           val shachafs = UserExperiment.getByUser(shachaf.id.get)
           shachafs.size === 0
-          val admins = UserExperiment.getByType(UserExperiment.ExperimentTypes.ADMIN)
+          val admins = UserExperiment.getByType(ExperimentTypes.ADMIN)
           admins.size === 2
-          val fakes = UserExperiment.getByType(UserExperiment.ExperimentTypes.FAKE)
+          val fakes = UserExperiment.getByType(ExperimentTypes.FAKE)
           fakes.size === 1
           fakes.head.userId === santa.id.get
         }

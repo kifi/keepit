@@ -31,14 +31,14 @@ class SocialUserInfoTest extends SpecificationWithJUnit {
       }
 
       // Users that need to be processed
-      SocialUserInfo(userId = user.id, fullName = "Eishay Smith", state = SocialUserInfo.States.CREATED, socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)).save
-      SocialUserInfo(userId = user.id, fullName = "Andrew Conner", state = SocialUserInfo.States.CREATED, socialId = SocialId("andrew.conner"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)).save
-      SocialUserInfo(userId = user.id, fullName = "Bob User", state = SocialUserInfo.States.FETCHED_USING_FRIEND, socialId = SocialId("bob.user"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)).save
+      SocialUserInfo(userId = user.id, fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED, socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)).save
+      SocialUserInfo(userId = user.id, fullName = "Andrew Conner", state = SocialUserInfoStates.CREATED, socialId = SocialId("andrew.conner"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)).save
+      SocialUserInfo(userId = user.id, fullName = "Bob User", state = SocialUserInfoStates.FETCHED_USING_FRIEND, socialId = SocialId("bob.user"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)).save
 
       // Users that does not need to be processed
-      SocialUserInfo(userId = user.id, fullName = "Eishay Smith2", state = SocialUserInfo.States.CREATED, socialId = SocialId("eishay2"), networkType = SocialNetworks.FACEBOOK, credentials = None).save
-      SocialUserInfo(userId = user.id, fullName = "Bob User2", state = SocialUserInfo.States.FETCHED_USING_SELF, socialId = SocialId("bob.user2"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)).save
-      SocialUserInfo(userId = user.id, fullName = "Bob User3", state = SocialUserInfo.States.FETCHED_USING_FRIEND, socialId = SocialId("bob.user3"), networkType = SocialNetworks.FACEBOOK, credentials = None).save
+      SocialUserInfo(userId = user.id, fullName = "Eishay Smith2", state = SocialUserInfoStates.CREATED, socialId = SocialId("eishay2"), networkType = SocialNetworks.FACEBOOK, credentials = None).save
+      SocialUserInfo(userId = user.id, fullName = "Bob User2", state = SocialUserInfoStates.FETCHED_USING_SELF, socialId = SocialId("bob.user2"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)).save
+      SocialUserInfo(userId = user.id, fullName = "Bob User3", state = SocialUserInfoStates.FETCHED_USING_FRIEND, socialId = SocialId("bob.user3"), networkType = SocialNetworks.FACEBOOK, credentials = None).save
 
     }
   }

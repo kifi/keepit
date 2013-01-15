@@ -18,7 +18,7 @@ import play.api.libs.concurrent._
 import org.joda.time.DateTime
 import akka.dispatch.Future
 import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.model.{User, EmailAddress, UserCxRepo}
+import com.keepit.model._
 import com.keepit.inject._
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
@@ -37,7 +37,7 @@ class SocialUserImportEmail() extends Logging {
   private def importEmailFromJson(userId: Id[User], json: JsValue): Option[EmailAddress] = {
     (json \ "email").asOpt[String].map {emailString =>
       CX.withConnection { implicit conn =>
-        EmailAddress.getByAddressOpt(emailString) match {
+        EmailAddressCxRepo.getByAddressOpt(emailString) match {
           case Some(email) =>
             if (email.userId != userId) throw new IllegalStateException("email %s is not associated with user %s".format(email, UserCxRepo.get(userId)))
             log.info("email %s for user %s already exist".format(email, UserCxRepo.get(userId)))
