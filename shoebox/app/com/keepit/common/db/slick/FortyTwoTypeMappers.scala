@@ -66,6 +66,9 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new StateMapperDelegate[NormalizedURI]
   }
 
+  implicit object DuplicateDocumentTypeMapper extends BaseTypeMapper[State[DuplicateDocument]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[DuplicateDocument]
+  }
   //Other
   implicit object URLHistorySeqHistoryStateTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
     def apply(profile: BasicProfile) = new URLHistorySeqMapperDelegate

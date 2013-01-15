@@ -20,39 +20,28 @@ import play.api.libs.json._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 case class DuplicateDocument (
-                    id: Option[Id[DuplicateDocument]] = None,
-                    createdAt: DateTime = currentDateTime,
-                    updatedAt: DateTime = currentDateTime,
-                    userId: Id[User],
-                    uriId: Id[NormalizedURI],
-                    urlId: Option[Id[URL]] = None,
-                    state: State[DuplicateDocument] = FollowStates.ACTIVE
-                    ) extends Model[Follow] {
+  id: Option[Id[DuplicateDocument]] = None,
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
+  uri1Id: Id[NormalizedURI],
+  uri2Id: Id[NormalizedURI],
+  percentMatch: Double,
+  state: State[DuplicateDocument] = DuplicateDocumentStates.ACTIVE
+) extends Model[DuplicateDocument] {
   def withId(id: Id[DuplicateDocument]) = this.copy(id = Some(id))
+  def withState(newState: State[DuplicateDocument]) = this.copy(state = newState)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def activate = copy(state = FollowStates.ACTIVE)
-  def deactivate = copy(state = FollowStates.INACTIVE)
-  def isActive = state == FollowStates.ACTIVE
-  def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
-  def save(implicit session: RWSession): Follow = inject[Repo[Follow]].save(this)
-  def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 
-  def saveWithCx(implicit conn: Connection) = {
-    val entity = FollowEntity(this.copy(updatedAt = currentDateTime))
-    assert(1 == entity.save())
-    entity.view
-  }
 }
 
-@ImplementedBy(classOf[FollowRepoImpl])
-trait FollowRepo extends Repo[Follow] {
-  def all(userId: Id[User])(implicit session: RSession): Seq[Follow]
-  def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Follow]
-  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[Follow]
+@ImplementedBy(classOf[DuplicateDocumentRepoImpl])
+trait DuplicateDocumentRepo extends Repo[DuplicateDocument] {
+  def all(userId: Id[User])(implicit session: RSession): Seq[DuplicateDocument]
+  def getSimilarTo(id: Id[NormalizedURI])(implicit session: RSession): Seq[DuplicateDocument]
 }
 
 @Singleton
-class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow] with FollowRepo {
+class DuplicateDocumentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[DuplicateDocument] with DuplicateDocumentRepo {
   import FortyTwoTypeMappers._
   import org.scalaquery.ql._
   import org.scalaquery.ql.ColumnOps._
@@ -61,89 +50,27 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[Follow](db, "follow") {
+  override lazy val table = new RepoTable[DuplicateDocument](db, "duplicate_document") {
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
-    def urlId = column[Id[URL]]("url_id", O.Nullable)
-    def state = column[State[Follow]]("state", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ uriId ~ urlId.? ~ state <> (Follow, Follow.unapply _)
+    def uri1Id = column[Id[NormalizedURI]]("uri1_id", O.NotNull)
+    def uri2Id = column[Id[NormalizedURI]]("uri2_id", O.NotNull)
+    def percentMatch = column[Double]("percent_match", O.NotNull)
+    def state = column[State[DuplicateDocument]]("state", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ uri1Id ~ uri2Id ~ percentMatch ~ state <> (DuplicateDocument, DuplicateDocument.unapply _)
   }
 
-  def all(userId: Id[User])(implicit session: RSession): Seq[Follow] =
-    (for(f <- table if f.userId === userId && f.state === FollowStates.ACTIVE) yield f).list
+  def all(userId: Id[User])(implicit session: RSession): Seq[DuplicateDocument] =
+    (for(f <- table if f.userId === userId && f.state === DuplicateDocumentStates.ACTIVE) yield f).list
 
-  def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Follow] = {
+  def getSimilarTo(id: Id[NormalizedURI])(implicit session: RSession): Seq[DuplicateDocument] = {
     val q = for {
-      f <- table if f.uriId === uriId && f.state === FollowStates.ACTIVE
+      f <- table if (f.uri1Id === id || f.uri2Id === id) && f.state === DuplicateDocumentStates.ACTIVE
     } yield f
     q.list
   }
-
-  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[Follow] = {
-    val q = for {
-      f <- table if (f.uriId === uriId) && (f.userId === userId) && (f.state === FollowStates.ACTIVE)
-    } yield f
-    q.firstOption
-  }
 }
 
-object FollowCxRepo {
-
-  //slicked
-  def all(implicit conn: Connection): Seq[Follow] =
-    FollowEntity.all.map(_.view)
-
-  //slicked
-  def all(userId: Id[User])(implicit conn: Connection): Seq[Follow] =
-    (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId) list }.map(_.view)
-
-  //slicked
-  def get(uriId: Id[NormalizedURI])(implicit conn: Connection): Seq[Follow] =
-    (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.uriId EQ uriId AND (f.state EQ FollowStates.ACTIVE)) list }.map(_.view)
-
-  //slicked
-  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Option[Follow] =
-    (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId AND (f.uriId EQ uriId)) unique }.map(_.view)
-}
-
-object FollowStates {
-  val ACTIVE = State[Follow]("active")
-  val INACTIVE = State[Follow]("inactive")
-}
-
-private[model] class FollowEntity extends Entity[Follow, FollowEntity] {
-  val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val userId = "user_id".ID[User].NOT_NULL
-  val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
-  val urlId = "url_id".ID[URL]
-  val state = "state".STATE[Follow].NOT_NULL(FollowStates.ACTIVE)
-
-  def relation = FollowEntity
-
-  def view(implicit conn: Connection): Follow = Follow(
-    id = id.value,
-    createdAt = createdAt(),
-    updatedAt = updatedAt(),
-    userId = userId(),
-    uriId = uriId(),
-    urlId = urlId.value,
-    state = state()
-  )
-}
-
-private[model] object FollowEntity extends FollowEntity with EntityTable[Follow, FollowEntity] {
-  override def relationName = "follow"
-
-  def apply(view: Follow): FollowEntity = {
-    val uri = new FollowEntity
-    uri.id.set(view.id)
-    uri.createdAt := view.createdAt
-    uri.updatedAt := view.updatedAt
-    uri.userId := view.userId
-    uri.uriId := view.uriId
-    uri.urlId.set(view.urlId)
-    uri.state := view.state
-    uri
-  }
+object DuplicateDocumentStates {
+  val ACTIVE = State[DuplicateDocument]("active")
+  val INACTIVE = State[DuplicateDocument]("inactive")
 }

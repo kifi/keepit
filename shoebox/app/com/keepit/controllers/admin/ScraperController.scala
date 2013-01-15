@@ -23,6 +23,8 @@ import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
 import javax.xml.bind.DatatypeConverter._
 import com.keepit.common.mail._
+import slick.DBConnection
+import xml.dtd.SystemID
 
 object ScraperController extends FortyTwoController {
 
@@ -53,19 +55,19 @@ object ScraperController extends FortyTwoController {
       }
       val dupe = new DuplicateDocumentDetection(documentSignatures)
       val docs = dupe.processDocuments()
+      val elapsedTimeMs = System.currentTimeMillis - startTime
 
-      val result = "Runtime: %sms<br><br>\n\n".format(System.currentTimeMillis - startTime) + CX.withConnection { implicit conn =>
-        docs.map { case (id,similars) =>
-          val t = NormalizedURICxRepo.get(id)
-          t.id.get.id + "\t" + t.url.take(150) + "\n<br>" +
-            similars.map { sid =>
-              val s = NormalizedURICxRepo.get(sid._1)
-              "\t" + sid._2 + "\t" + s.id.get.id + "\t" + s.url.take(150)
-            }.mkString("\n<br>")
-        }.mkString("\n<br>")
+      val dupeDocumentsCount = docs.size
+      val dupeRepo = inject[DuplicateDocumentRepo]
+      inject[DBConnection].readWrite { implicit conn =>
+        docs.map { case(id, similars) =>
+          similars map { case (otherId, percentMatch) =>
+            val dupeDoc = DuplicateDocument(uri1Id = id, uri2Id = otherId, percentMatch = percentMatch)
+            dupeRepo.save(dupeDoc)
+          }
+        }
       }
-      val postOffice = inject[PostOffice]
-      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ANDREW, subject = "Duplication Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
+
     }
     Ok("Dupe logging started. Expect an email :)")
   }
