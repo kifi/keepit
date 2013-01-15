@@ -114,7 +114,7 @@ object UserController extends FortyTwoController {
 
   def userStatistics(user: User)(implicit conn: Connection): UserStatistics = {
     val socialConnectionCount = SocialConnection.getUserConnectionsCount(user.id.get)
-    val kifiInstallations = KifiInstallation.all(user.id.get).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
+    val kifiInstallations = KifiInstallationCxRepo.all(user.id.get).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
     UserStatistics(user, UserWithSocial.toUserWithSocial(user), socialConnectionCount, kifiInstallations)
   }
 
@@ -146,7 +146,7 @@ object UserController extends FortyTwoController {
       val bookmarks = BookmarkCxRepo.ofUser(userWithSocial.user)
       val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (UserCxRepo.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
-      val kifiInstallations = KifiInstallation.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
+      val kifiInstallations = KifiInstallationCxRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       (userWithSocial, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations)
     }
     Ok(views.html.user(user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations))

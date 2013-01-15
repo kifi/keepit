@@ -133,7 +133,7 @@ class AuthControllerTest extends SpecificationWithJUnit {
         val result1 = AuthController.start(authRequest1)
         status(result1) must equalTo(OK)
         val kifiInstallation1 = CX.withConnection { implicit c =>
-          val all = KifiInstallation.all
+          val all = KifiInstallationCxRepo.all
           all.size === 1
           all.head
         }
@@ -147,7 +147,7 @@ class AuthControllerTest extends SpecificationWithJUnit {
         val result2 = AuthController.start(authRequest2)
         status(result2) must equalTo(OK)
         val kifiInstallation2 = CX.withConnection { implicit c =>
-          val all = KifiInstallation.all
+          val all = KifiInstallationCxRepo.all
           all.size === 1
           all.head
         }
