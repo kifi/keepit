@@ -23,7 +23,7 @@ import com.keepit.model.SocialUserInfo
 import play.api.Play
 import java.net.URL
 import java.io.File
-import com.keepit.model.EmailAddress
+import com.keepit.model.{EmailAddress, EmailAddressCxRepo}
 
 @RunWith(classOf[JUnitRunner])
 class SocialUserImportEmailTest extends SpecificationWithJUnit {
@@ -49,7 +49,7 @@ class SocialUserImportEmailTest extends SpecificationWithJUnit {
         throw new Exception("fail getting email %s of %s".format(emailString, json.toString)))
     email.address === emailString
     CX.withConnection { implicit c =>
-      EmailAddress.get(email.id.get) === email
+      EmailAddressCxRepo.get(email.id.get) === email
     }
 
   }

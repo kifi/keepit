@@ -2,7 +2,7 @@ package com.keepit.common.social
 
 import com.keepit.common.db.CX
 import com.keepit.common.logging.Logging
-import com.keepit.model.{SocialConnection, SocialUserInfo, User, UserCxRepo}
+import com.keepit.model._
 import com.keepit.common.healthcheck.BabysitterTimeout
 
 import play.api.Play.current
@@ -29,9 +29,9 @@ class SocialUserCreateConnections() extends Logging {
       } map { sui =>
         SocialConnection.getConnectionOpt(socialUserInfo.id.get, sui.id.get) match {
           case Some(c) => {
-            if (c.state != SocialConnection.States.ACTIVE) {
+            if (c.state != SocialConnectionStates.ACTIVE) {
               log.info("activate connection between %s and %s".format(c.socialUser1, c.socialUser2))
-              c.withState(SocialConnection.States.ACTIVE).save
+              c.withState(SocialConnectionStates.ACTIVE).save
             }
             else
             {
@@ -62,9 +62,9 @@ class SocialUserCreateConnections() extends Logging {
 		      log.info("about to disbale connection between %s and for socialId = %s".format(socialUserInfo.id.get,friendSocialUserInfoId ));
 	        SocialConnection.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
             case Some(c) => {
-              if (c.state != SocialConnection.States.INACTIVE){
+              if (c.state != SocialConnectionStates.INACTIVE){
                 log.info("connection is disabled")
-            	  c.withState(SocialConnection.States.INACTIVE).save
+            	  c.withState(SocialConnectionStates.INACTIVE).save
               }
               else {
                 log.info("connection is already disabled")

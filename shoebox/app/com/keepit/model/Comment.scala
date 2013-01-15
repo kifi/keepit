@@ -38,8 +38,8 @@ case class Comment(
   text: String,
   pageTitle: String,
   parent: Option[Id[Comment]] = None,
-  permissions: State[Comment.Permission] = Comment.Permissions.PUBLIC,
-  state: State[Comment] = Comment.States.ACTIVE) {
+  permissions: State[CommentPermission] = CommentPermissions.PUBLIC,
+  state: State[Comment] = CommentStates.ACTIVE) {
 
   def withState(state: State[Comment]) = copy(state = state)
 
@@ -60,10 +60,10 @@ object Comment {
   def all(implicit conn: Connection): Seq[Comment] =
     CommentEntity.all.map(_.view)
 
-  def all(permissions: State[Comment.Permission])(implicit conn: Connection): Seq[Comment] =
+  def all(permissions: State[CommentPermission])(implicit conn: Connection): Seq[Comment] =
     (CommentEntity AS "c").map {c => SELECT (c.*) FROM c WHERE (c.permissions EQ permissions) list} map (_.view)
 
-  def all(permissions: State[Comment.Permission], userId: Id[User])(implicit conn: Connection): Seq[Comment] =
+  def all(permissions: State[CommentPermission], userId: Id[User])(implicit conn: Connection): Seq[Comment] =
     (CommentEntity AS "c").map {c => SELECT (c.*) FROM c WHERE ((c.userId EQ userId) AND (c.permissions EQ permissions)) list} map (_.view)
 
   def get(id: Id[Comment])(implicit conn: Connection): Comment =
@@ -96,8 +96,8 @@ object Comment {
     val c = CommentEntity AS "c"
     SELECT (project(c)) FROM c WHERE (
         (c.uriId EQ uriId) AND
-        (c.permissions EQ Comment.Permissions.PUBLIC) AND
-        (c.state EQ States.ACTIVE) AND
+        (c.permissions EQ CommentPermissions.PUBLIC) AND
+        (c.state EQ CommentStates.ACTIVE) AND
         (c.parent IS_NULL))
   }
 
@@ -115,7 +115,7 @@ object Comment {
     SELECT (project(c)) FROM c WHERE (
         (c.uriId EQ uriId) AND
         (c.userId EQ userId) AND
-        (c.permissions EQ Comment.Permissions.PRIVATE))
+        (c.permissions EQ CommentPermissions.PRIVATE))
   }
 
   def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Seq[Comment] =
@@ -142,12 +142,12 @@ object Comment {
     (SELECT (project(c)) FROM (c JOIN cr).ON("c.id = cr.comment_id") WHERE (
         (c.uriId EQ uriId) AND
         (cr.userId EQ userId) AND
-        (c.permissions EQ Comment.Permissions.MESSAGE) AND
+        (c.permissions EQ CommentPermissions.MESSAGE) AND
         (c.parent IS_NULL)))
     .UNION (SELECT (project(c)) FROM c WHERE (
         (c.uriId EQ uriId) AND
         (c.userId EQ userId) AND
-        (c.permissions EQ Comment.Permissions.MESSAGE) AND
+        (c.permissions EQ CommentPermissions.MESSAGE) AND
         (c.parent IS_NULL)))
   }
 
@@ -164,24 +164,24 @@ object Comment {
     SELECT (project(c)) FROM c WHERE (c.parent EQ commentId)
   }
 
-  def page(page: Int = 0, size: Int = 20, permissions: State[Comment.Permission] = Comment.Permissions.PUBLIC)(implicit conn: Connection): Seq[Comment] =
+  def page(page: Int = 0, size: Int = 20, permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit conn: Connection): Seq[Comment] =
     (CommentEntity AS "c").map { c => SELECT (c.*) FROM c  WHERE (c.permissions EQ permissions)  LIMIT size OFFSET (page * size) ORDER_BY (c.id DESC) list }.map(_.view)
 
-  def count( permissions: State[Comment.Permission] = Comment.Permissions.PUBLIC)(implicit conn: Connection): Long =
+  def count( permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit conn: Connection): Long =
     (CommentEntity AS "c").map(c => SELECT(COUNT(c.id)).FROM(c).WHERE (c.permissions EQ permissions).unique).get
+}
 
-    object States {
-    val ACTIVE = State[Comment]("active")
-    val INACTIVE = State[Comment]("inactive")
-  }
+object CommentStates {
+  val ACTIVE = State[Comment]("active")
+  val INACTIVE = State[Comment]("inactive")
+}
 
-  sealed trait Permission
+sealed trait CommentPermission
 
-  object Permissions {
-    val PRIVATE = State[Permission]("private")
-    val MESSAGE = State[Permission]("message")
-    val PUBLIC = State[Permission]("public")
-  }
+object CommentPermissions {
+  val PRIVATE = State[CommentPermission]("private")
+  val MESSAGE = State[CommentPermission]("message")
+  val PUBLIC  = State[CommentPermission]("public")
 }
 
 private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
@@ -194,8 +194,8 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
   val pageTitle = "page_title".VARCHAR(1024).NOT_NULL
   val text = "text".CLOB.NOT_NULL
   val parent = "parent".ID[Comment]
-  val permissions = "permissions".STATE[Comment.Permission].NOT_NULL(Comment.Permissions.PUBLIC)
-  val state = "state".STATE[Comment].NOT_NULL(Comment.States.ACTIVE)
+  val permissions = "permissions".STATE[CommentPermission].NOT_NULL(CommentPermissions.PUBLIC)
+  val state = "state".STATE[Comment].NOT_NULL(CommentStates.ACTIVE)
 
   def relation = CommentEntity
 

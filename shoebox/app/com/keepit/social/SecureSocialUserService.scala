@@ -36,7 +36,7 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
                            .withCredentials(socialUser).save
     require(socialUserInfo.credentials.isDefined, "social user info's credentias is not defined: %s".format(socialUserInfo))
     require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
-    if (socialUserInfo.state != SocialUserInfo.States.FETCHED_USING_SELF) {
+    if (socialUserInfo.state != SocialUserInfoStates.FETCHED_USING_SELF) {
       inject[SocialGraphPlugin].asyncFetch(socialUserInfo)
     }
     log.debug("persisting %s into %s".format(socialUser, socialUserInfo))

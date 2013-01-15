@@ -34,7 +34,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
-import com.keepit.model.{KifiInstallation, KifiVersion, SocialUserInfo, User, UserAgent, UserCxRepo, UserRepo}
+import com.keepit.model.{KifiInstallation, KifiVersion, SocialUserInfo, User, UserAgent, UserCxRepo, UserRepo, KifiInstallationCxRepo}
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.inject._
 import com.keepit.common.healthcheck._
@@ -92,7 +92,7 @@ object AuthController extends FortyTwoController {
     val (user, installation) = CX.withConnection { implicit c =>
       log.info("start. details: %s, %s, %s".format(userAgent, version, installationIdOpt))
       val installation: KifiInstallation = installationIdOpt flatMap { id =>
-        KifiInstallation.getOpt(request.userId, id)
+        KifiInstallationCxRepo.getOpt(request.userId, id)
       } match {
         case None =>
           KifiInstallation(userId = request.userId, userAgent = userAgent, version = version).save

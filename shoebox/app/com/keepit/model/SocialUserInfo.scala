@@ -24,14 +24,14 @@ case class SocialUserInfo(
   updatedAt: DateTime = currentDateTime,
   userId: Option[Id[User]] = None,
   fullName: String,
-  state: State[SocialUserInfo] = SocialUserInfo.States.CREATED,
+  state: State[SocialUserInfo] = SocialUserInfoStates.CREATED,
   socialId: SocialId,
   networkType: SocialNetworkType,
   credentials: Option[SocialUser] = None,
   lastGraphRefresh: Option[DateTime] = Some(currentDateTime)
 ) {
 
-  def reset() = copy(state = SocialUserInfo.States.CREATED, credentials = None)
+  def reset() = copy(state = SocialUserInfoStates.CREATED, credentials = None)
   def withUser(user: User) = copy(userId = Some(user.id.get))//want to make sure the user has an id, fail hard if not!
   def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials))//want to make sure the user has an id, fail hard if not!
   def withState(state: State[SocialUserInfo]) = copy(state = state)
@@ -70,21 +70,21 @@ object SocialUserInfo {
     (SocialUserInfoEntity AS "u").map(u => SELECT(COUNT(u.id)).FROM(u).unique).get
 
   def getUnprocessed()(implicit conn: Connection): Seq[SocialUserInfo] = {
-    val UNPROCESSED_STATE = States.CREATED::States.FETCHED_USING_FRIEND::Nil
+    val UNPROCESSED_STATE = SocialUserInfoStates.CREATED :: SocialUserInfoStates.FETCHED_USING_FRIEND :: Nil
     (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ((u.state IN(UNPROCESSED_STATE)) AND (u.credentials IS_NOT_NULL)) list }.map(_.view)
   }
 
   def getNeedToBeRefreshed()(implicit conn: Connection): Seq[SocialUserInfo] = {
     (SocialUserInfoEntity AS "u").map { u => SELECT (u.*) FROM u WHERE ( ((u.lastGraphRefresh IS_NULL) OR u.lastGraphRefresh.LT(new DateTime().minusMinutes(5)) )  AND (u.userId IS_NOT_NULL) AND (u.credentials IS_NOT_NULL ) ) list }.map(_.view)
   }
+}
 
-  object States {
-    val CREATED = State[SocialUserInfo]("created")
-    val FETCHED_USING_FRIEND = State[SocialUserInfo]("fetched_using_friend")
-    val FETCHED_USING_SELF = State[SocialUserInfo]("fetched_using_self")
-    val FETCHE_FAIL = State[SocialUserInfo]("fetch_fail")
-    val INACTIVE = State[SocialUserInfo]("inactive")
-  }
+object SocialUserInfoStates {
+  val CREATED = State[SocialUserInfo]("created")
+  val FETCHED_USING_FRIEND = State[SocialUserInfo]("fetched_using_friend")
+  val FETCHED_USING_SELF = State[SocialUserInfo]("fetched_using_self")
+  val FETCHE_FAIL = State[SocialUserInfo]("fetch_fail")
+  val INACTIVE = State[SocialUserInfo]("inactive")
 }
 
 private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialUserInfoEntity] {
@@ -92,7 +92,7 @@ private[model] class SocialUserInfoEntity extends Entity[SocialUserInfo, SocialU
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val userId = "user_id".ID[User]
   val fullName = "full_name".VARCHAR(512).NOT_NULL
-  val state = "state".STATE[SocialUserInfo].NOT_NULL(SocialUserInfo.States.CREATED)
+  val state = "state".STATE[SocialUserInfo].NOT_NULL(SocialUserInfoStates.CREATED)
   val socialId = "social_id".VARCHAR(32).NOT_NULL
   val networkType = "network_type".VARCHAR(32).NOT_NULL
   val credentials = "credentials".VARCHAR(2048)

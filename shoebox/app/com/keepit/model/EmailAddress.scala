@@ -12,7 +12,7 @@ case class EmailAddress (
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   userId: Id[User],
-  state: State[EmailAddress] = EmailAddress.States.UNVERIFIED,
+  state: State[EmailAddress] = EmailAddressStates.UNVERIFIED,
   address: String,
   verifiedAt: Option[DateTime] = None,
   lastVerificationSent: Option[DateTime] = None
@@ -27,23 +27,20 @@ case class EmailAddress (
   def withState(state: State[EmailAddress]) = copy(state = state)
 }
 
-object EmailAddress {
-  object States {
-    val VERIFIED = State[EmailAddress]("verified")
-    val UNVERIFIED = State[EmailAddress]("unverified")
-    val INACTIVE = State[EmailAddress]("inactive")
-  }
+object EmailAddressStates {
+  val VERIFIED = State[EmailAddress]("verified")
+  val UNVERIFIED = State[EmailAddress]("unverified")
+  val INACTIVE = State[EmailAddress]("inactive")
+}
 
-  def apply(addr: String, userId: Id[User]): EmailAddress = EmailAddress(address = addr, userId = userId)
-
+object EmailAddressCxRepo {
   def get(id: Id[EmailAddress])(implicit conn: Connection): EmailAddress = EmailAddressEntity.get(id).get.view
 
   def getByAddressOpt(address: String)(implicit conn: Connection): Option[EmailAddress] =
-    (EmailAddressEntity AS "e").map { e => SELECT (e.*) FROM e WHERE ((e.address EQ address) AND (e.state NE States.INACTIVE))}.unique.map(_.view)
+    (EmailAddressEntity AS "e").map { e => SELECT (e.*) FROM e WHERE ((e.address EQ address) AND (e.state NE EmailAddressStates.INACTIVE))}.unique.map(_.view)
 
   def getByUser(userId: Id[User])(implicit conn: Connection): Seq[EmailAddress] =
-    (EmailAddressEntity AS "e").map { e => SELECT (e.*) FROM e WHERE ((e.userId EQ userId) AND (e.state NE States.INACTIVE))}.list.map(_.view)
-
+    (EmailAddressEntity AS "e").map { e => SELECT (e.*) FROM e WHERE ((e.userId EQ userId) AND (e.state NE EmailAddressStates.INACTIVE))}.list.map(_.view)
 }
 
 private[model] class EmailAddressEntity extends Entity[EmailAddress, EmailAddressEntity] {
@@ -51,7 +48,7 @@ private[model] class EmailAddressEntity extends Entity[EmailAddress, EmailAddres
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val address = "address".VARCHAR(512).NOT_NULL
   val userId = "user_id".ID[User]
-  val state = "state".STATE.NOT_NULL(EmailAddress.States.UNVERIFIED)
+  val state = "state".STATE.NOT_NULL(EmailAddressStates.UNVERIFIED)
   val verifiedAt = "verified_at".JODA_TIMESTAMP
   val lastVerificationSent = "last_verification_sent".JODA_TIMESTAMP
 

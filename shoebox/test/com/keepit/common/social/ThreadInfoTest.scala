@@ -13,10 +13,9 @@ import com.keepit.common.db.CX._
 import com.keepit.test.EmptyApplication
 import play.core.TestApplication
 import scala.collection.mutable.Map
-import com.keepit.model.{Comment, NormalizedURI, User, SocialUserInfo, NormalizedURIFactory}
+import com.keepit.model._
 import java.sql.Connection
 import com.keepit.common.db.ExternalId
-import com.keepit.model.CommentRecipient
 import org.joda.time.DateTime
 import com.keepit.common.db.Id
 
@@ -35,11 +34,11 @@ class ThreadInfoTest extends SpecificationWithJUnit {
       SocialUserInfo(fullName = "Eishay Smith", socialId = SocialId("fdaa"), networkType = SocialNetworks.FACEBOOK, userId = user2.id).save
 
       // Messages
-      val msg1 = Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Conversation on Google1", permissions = Comment.Permissions.MESSAGE).save
+      val msg1 = Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Conversation on Google1", permissions = CommentPermissions.MESSAGE).save
       CommentRecipient(commentId = msg1.id.get, userId = Some(user2.id.get)).save
-      val msg2 = Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google2", permissions = Comment.Permissions.MESSAGE, parent = msg1.id).save
+      val msg2 = Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google2", permissions = CommentPermissions.MESSAGE, parent = msg1.id).save
       CommentRecipient(commentId = msg2.id.get, userId = Some(user1.id.get)).save
-      val msg3 = Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google3", permissions = Comment.Permissions.MESSAGE, parent = msg1.id).save
+      val msg3 = Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google3", permissions = CommentPermissions.MESSAGE, parent = msg1.id).save
 
       (user1, user2, msg1)
     }

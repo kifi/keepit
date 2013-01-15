@@ -114,7 +114,7 @@ object UserController extends FortyTwoController {
 
   def userStatistics(user: User)(implicit conn: Connection): UserStatistics = {
     val socialConnectionCount = SocialConnection.getUserConnectionsCount(user.id.get)
-    val kifiInstallations = KifiInstallation.all(user.id.get).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
+    val kifiInstallations = KifiInstallationCxRepo.all(user.id.get).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
     UserStatistics(user, UserWithSocial.toUserWithSocial(user), socialConnectionCount, kifiInstallations)
   }
 
@@ -123,10 +123,10 @@ object UserController extends FortyTwoController {
       val userWithSocial = UserWithSocial.toUserWithSocial(UserCxRepo.get(userId))
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
       val follows = FollowCxRepo.all(userId) map {f => NormalizedURICxRepo.get(f.uriId)}
-      val comments = Comment.all(Comment.Permissions.PUBLIC, userId) map {c =>
+      val comments = Comment.all(CommentPermissions.PUBLIC, userId) map {c =>
         (NormalizedURICxRepo.get(c.uriId), c)
       }
-      val messages = Comment.all(Comment.Permissions.MESSAGE, userId) map {c =>
+      val messages = Comment.all(CommentPermissions.MESSAGE, userId) map {c =>
         (NormalizedURICxRepo.get(c.uriId), c, CommentRecipient.getByComment(c.id.get) map { r => toUserWithSocial(UserCxRepo.get(r.userId.get)) })
       }
       val sentElectronicMails = ElectronicMail.forSender(userId);
@@ -146,7 +146,7 @@ object UserController extends FortyTwoController {
       val bookmarks = BookmarkCxRepo.ofUser(userWithSocial.user)
       val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (UserCxRepo.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
-      val kifiInstallations = KifiInstallation.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
+      val kifiInstallations = KifiInstallationCxRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       (userWithSocial, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations)
     }
     Ok(views.html.user(user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations))
@@ -173,21 +173,21 @@ object UserController extends FortyTwoController {
     }).flatten
 
     CX.withConnection { implicit conn =>
-      val oldEmails = EmailAddress.getByUser(userId).toSet
+      val oldEmails = EmailAddressCxRepo.getByUser(userId).toSet
       val newEmails = (emailList map { address =>
-        val email = EmailAddress.getByAddressOpt(address)
+        val email = EmailAddressCxRepo.getByAddressOpt(address)
         email match {
           case Some(addr) => addr // We're good! It already exists
           case None => // Create a new one
             log.info("Adding email address %s to userId %s".format(address, userId.toString))
-            EmailAddress(address,userId).save
+            EmailAddress(address = address, userId = userId).save
         }
       }).toSet
 
       // Set state of removed email addresses to INACTIVE
       (oldEmails -- newEmails) map { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        removedEmail.withState(EmailAddress.States.INACTIVE).save
+        removedEmail.withState(EmailAddressStates.INACTIVE).save
       }
     }
 
@@ -197,7 +197,7 @@ object UserController extends FortyTwoController {
   def addExperiment(userId: Id[User], experimentType: String) = AdminJsonAction { request =>
     val experimants = CX.withConnection { implicit c =>
       val existing = UserExperiment.getByUser(userId)
-      val experiment = UserExperiment.ExperimentTypes(experimentType)
+      val experiment = ExperimentTypes(experimentType)
       if (existing contains(experimentType)) throw new Exception("user %s already has an experiment %s".format(experimentType))
       UserExperiment(userId = userId, experimentType = experiment).save
       UserExperiment.getByUser(userId)
