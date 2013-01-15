@@ -70,6 +70,8 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
   private[this] var inserts = new AtomicLong(0L)
   private[this] var syncs = 0L
 
+  def setSeed(seed: Long) = rnd.setSeed(seed)
+
   def put(key: Long, value: Long) {
     decay
     putValueHash(key, value)
@@ -94,7 +96,7 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
     // randomly clear positions
     var i = 0
     while (i < numHashFuncs) {
-      val pos = rnd.nextInt(numHashFuncs) + 1
+      val pos = rnd.nextInt(tableSize) + 1
       intBuffer.put(pos, 0)
       i += 1
     }
