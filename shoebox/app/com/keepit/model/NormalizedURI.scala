@@ -117,32 +117,41 @@ object NormalizedURIStates {
   val ACTIVE = State[NormalizedURI]("active")
   val SCRAPED	= State[NormalizedURI]("scraped")
   val SCRAPE_FAILED = State[NormalizedURI]("scrape_failed")
+  val UNSCRAPABLE = State[NormalizedURI]("unscrapable")
   val INDEXED = State[NormalizedURI]("indexed")
   val INDEX_FAILED = State[NormalizedURI]("index_failed")
   val FALLBACKED = State[NormalizedURI]("fallbacked")
   val FALLBACK_FAILED = State[NormalizedURI]("fallback_failed")
+  val UNSCRAPE_FALLBACK = State[NormalizedURI]("unscrape_fallback")
+  val UNSCRAPE_FALLBACK_FAILED = State[NormalizedURI]("unscrape_fallback_failed")
   val INACTIVE = State[NormalizedURI]("inactive")
 
   type Transitions = Map[State[NormalizedURI], Set[State[NormalizedURI]]]
 
   val ALL_TRANSITIONS: Transitions = Map(
-      (ACTIVE -> Set(SCRAPED, SCRAPE_FAILED, INACTIVE)),
+      (ACTIVE -> Set(SCRAPED, SCRAPE_FAILED, UNSCRAPABLE, INACTIVE)),
       (SCRAPED -> Set(ACTIVE, INDEXED, INDEX_FAILED, INACTIVE)),
       (SCRAPE_FAILED -> Set(ACTIVE, FALLBACKED, FALLBACK_FAILED, INACTIVE)),
+      (UNSCRAPABLE -> Set(ACTIVE, UNSCRAPE_FALLBACK, UNSCRAPE_FALLBACK_FAILED, INACTIVE)),
       (INDEXED -> Set(ACTIVE, SCRAPED, INACTIVE)),
       (INDEX_FAILED -> Set(ACTIVE, SCRAPED, INACTIVE)),
       (FALLBACKED -> Set(ACTIVE, SCRAPE_FAILED, INACTIVE)),
       (FALLBACK_FAILED -> Set(ACTIVE, SCRAPE_FAILED, INACTIVE)),
+      (UNSCRAPE_FALLBACK -> Set(ACTIVE, UNSCRAPABLE, INACTIVE)),
+      (UNSCRAPE_FALLBACK_FAILED -> Set(ACTIVE, UNSCRAPABLE, INACTIVE)),
       (INACTIVE -> Set(ACTIVE)))
 
   val ADMIN_TRANSITIONS: Transitions = Map(
       (ACTIVE -> Set.empty),
       (SCRAPED -> Set(ACTIVE)),
       (SCRAPE_FAILED -> Set(ACTIVE)),
+      (UNSCRAPABLE -> Set(ACTIVE)),
       (INDEXED -> Set(ACTIVE, SCRAPED)),
       (INDEX_FAILED -> Set(ACTIVE, SCRAPED)),
       (FALLBACKED -> Set(ACTIVE, SCRAPE_FAILED)),
       (FALLBACK_FAILED -> Set(ACTIVE, SCRAPE_FAILED)),
+      (UNSCRAPE_FALLBACK -> Set(ACTIVE, UNSCRAPABLE)),
+      (UNSCRAPE_FALLBACK_FAILED -> Set(ACTIVE, UNSCRAPABLE)),
       (INACTIVE -> Set.empty))
 
   def transitionByAdmin[T](transition: (State[NormalizedURI], Set[State[NormalizedURI]]))(f:State[NormalizedURI]=>T) = {
@@ -168,7 +177,7 @@ private[model] class NormalizedURIEntity extends Entity[NormalizedURI, Normalize
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val externalId = "external_id".EXTERNAL_ID[NormalizedURI].NOT_NULL(ExternalId())
   val title = "title".VARCHAR(2048)
-  val url = "url".VARCHAR(256).NOT_NULL
+  val url = "url".VARCHAR(2048).NOT_NULL
   val state = "state".STATE[NormalizedURI].NOT_NULL(NormalizedURIStates.ACTIVE)
   val urlHash = "url_hash".VARCHAR(512).NOT_NULL
   val domain = "domain".VARCHAR(512)

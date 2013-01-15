@@ -54,7 +54,11 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     try {
       val uris = CX.withConnection { implicit c =>
         val uris = NormalizedURICxRepo.getByState(SCRAPE_FAILED, fetchSize)
-        if (uris.size < fetchSize) uris ++ NormalizedURICxRepo.getByState(SCRAPED, fetchSize - uris.size)
+        if (uris.size < fetchSize) {
+          val combo = uris ++ NormalizedURICxRepo.getByState(SCRAPED, fetchSize - uris.size)
+          if (uris.size < fetchSize) combo ++ NormalizedURICxRepo.getByState(UNSCRAPABLE, fetchSize - uris.size)
+          else combo
+        }
         else uris
       }
       var cnt = 0
@@ -64,10 +68,10 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
             val articleIndexable = indexable.asInstanceOf[ArticleIndexable]
             val state = indexError match {
               case Some(error) =>
-                findNextState(articleIndexable.uri.state -> Set(INDEX_FAILED, FALLBACK_FAILED))
+                findNextState(articleIndexable.uri.state -> Set(INDEX_FAILED, FALLBACK_FAILED, UNSCRAPE_FALLBACK_FAILED))
               case None =>
                 cnt += 1
-                findNextState(articleIndexable.uri.state -> Set(INDEXED, FALLBACKED))
+                findNextState(articleIndexable.uri.state -> Set(INDEXED, FALLBACKED, UNSCRAPE_FALLBACK))
             }
             NormalizedURICxRepo.get(indexable.id).withState(state).save
           }

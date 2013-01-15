@@ -19,7 +19,8 @@ case class ScrapeInfo(
   interval: Double = 24.0d, // hours
   failures: Int = 0,
   state: State[ScrapeInfo] = ScrapeInfoStates.ACTIVE,
-  signature: String = ""
+  signature: String = "",
+  destinationUrl: Option[String] = None
 ) {
 
   def withState(state: State[ScrapeInfo]) = {
@@ -27,6 +28,10 @@ case class ScrapeInfo(
       case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = currentDateTime) // scrape ASAP when switched to ACTIVE
       case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
     }
+  }
+
+  def withDestinationUrl(destinationUrl: Option[String]) = {
+   copy(destinationUrl = destinationUrl)
   }
 
   def withFailure()(implicit config: ScraperConfig) = {
@@ -109,6 +114,7 @@ private[model] class ScrapeInfoEntity extends Entity[ScrapeInfo, ScrapeInfoEntit
   val failures = "failures".INTEGER.NOT_NULL
   val state = "state".STATE[ScrapeInfo].NOT_NULL
   val signature = "signature".VARCHAR(2046).NOT_NULL
+  val destinationUrl = "destination_url".VARCHAR(2048)
 
   def relation = ScrapeInfoEntity
 
@@ -120,7 +126,8 @@ private[model] class ScrapeInfoEntity extends Entity[ScrapeInfo, ScrapeInfoEntit
     interval = interval(),
     failures = failures(),
     state = state(),
-    signature = signature()
+    signature = signature(),
+    destinationUrl = destinationUrl.value
   )
 }
 
@@ -137,6 +144,7 @@ private[model] object ScrapeInfoEntity extends ScrapeInfoEntity with EntityTable
     entity.failures := view.failures
     entity.state := view.state
     entity.signature := view.signature
+    entity.destinationUrl.set(view.destinationUrl)
     entity
   }
 }
