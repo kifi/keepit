@@ -3,6 +3,7 @@ package com.keepit.controllers.admin
 import play.api.data._
 import java.util.concurrent.TimeUnit
 import play.api._
+import libs.concurrent.Akka
 import play.api.Play.current
 import play.api.mvc._
 import play.api.libs.json.JsArray
@@ -21,6 +22,7 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.FortyTwoController
 import javax.xml.bind.DatatypeConverter._
+import com.keepit.common.mail._
 
 object ScraperController extends FortyTwoController {
 
@@ -32,22 +34,28 @@ object ScraperController extends FortyTwoController {
 
   def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
 
-    val documentSignatures = CX.withConnection { implicit conn =>
-      ScrapeInfoCxRepo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
+    Akka.future {
+      val startTime = System.currentTimeMillis
+      val documentSignatures = CX.withConnection { implicit conn =>
+        ScrapeInfoCxRepo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
+      }
+      val dupe = new DuplicateDocumentDetection(documentSignatures)
+      val docs = dupe.processDocuments()
+
+      val result = "Runtime: %sms".format(System.currentTimeMillis - startTime) + CX.withConnection { implicit conn =>
+        docs.collect { case (id,similars) =>
+          val t = NormalizedURICxRepo.get(id)
+          t.id.get.id + "\t" + t.url.take(150) + "\n<br>" +
+            similars.map { sid =>
+              val s = NormalizedURICxRepo.get(sid._1)
+              "\t" + sid._2 + "\t" + s.id.get.id + "\t" + s.url.take(150)
+            }.mkString("\n<br>")
+        }.mkString("\n<br>")
+      }
+      val postOffice = inject[PostOffice]
+      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = "Duplication Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
     }
-    val dupe = new DuplicateDocumentDetection(documentSignatures)
-    val docs = dupe.processDocuments()
-    val result = CX.withConnection { implicit conn =>
-      docs.collect { case (id,similars) =>
-        val t = NormalizedURICxRepo.get(id)
-        t.id.get.id + "\t" + t.url.take(150) + "\n" +
-        similars.map { sid =>
-          val s = NormalizedURICxRepo.get(sid._1)
-          "\t" + sid._2 + "\t" + s.id.get.id + "\t" + s.url.take(150)
-        }.mkString("\n")
-      }.mkString("\n")
-    }
-    Ok(result)
+    Ok("Dupe logging started. Expect an email :)")
   }
 
   def scrapeByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>

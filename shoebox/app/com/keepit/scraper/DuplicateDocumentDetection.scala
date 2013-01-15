@@ -21,7 +21,7 @@ class DuplicateDocumentDetection(documentSignatures: Seq[(Id[NormalizedURI], Arr
   }
 
   def processDocument(current: (Id[NormalizedURI], Array[Byte]), threshold: Double = DEFAULT_THRESHOLD) = {
-    documentSignatures.par.map { other =>
+    documentSignatures.map { other =>
       val s = similarTo(current._2, other._2)
       if(s >= threshold &&
         other._2.deep != EMPTY_DOCUMENT.deep &&
@@ -30,17 +30,15 @@ class DuplicateDocumentDetection(documentSignatures: Seq[(Id[NormalizedURI], Arr
       } else {
         None
       }
-    }.flatten.seq
+    }.flatten
   }
 
   def processDocuments(threshold: Double = DEFAULT_THRESHOLD) = {
-    CX.withConnection { implicit conn =>
-      documentSignatures.flatMap(ds =>
-        processDocument(ds, threshold) match {
-          case Nil => None
-          case result => Some((ds._1,result))
-        }
-      )
-    }
+    documentSignatures.flatMap(ds =>
+      processDocument(ds, threshold) match {
+        case Nil => None
+        case result => Some((ds._1,result))
+      }
+    )
   }
 }
