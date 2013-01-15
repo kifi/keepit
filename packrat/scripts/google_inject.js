@@ -20,6 +20,10 @@ api.log("[google_inject.js]");
   var kifiResultsClicked = 0;
   var googleResultsClicked = 0;
 
+  function logEvent() {  // parameters defined in main.js
+    api.port.emit("log_event", Array.prototype.slice.call(arguments));
+  }
+
   function logSearchEvent(t) {
     //$("li.g .vsc a").mousedown(function(t) { console.log($(this).parents('.kifi_reslist').length); });
     function countWhichResult(elem, selector) {
@@ -343,6 +347,18 @@ api.log("[google_inject.js]");
     return url;
   }
 
+  var templateCache = {};
+  function loadFile(path, callback) {
+    var tmpl = templateCache[path];
+    if (tmpl) {
+      callback(tmpl);
+    } else {
+      api.load(path, function(tmpl) {
+        callback(templateCache[path] = tmpl);
+      });
+    }
+  }
+
   function addResults() {
     try {
       api.log("addResults parameters:", resultsStore);
@@ -350,11 +366,7 @@ api.log("[google_inject.js]");
       var searchResults = resultsStore.results.slice(0,resultsStore.show);
       resultsStore.currentlyShowing = resultsStore.show;
 
-      var req = new XMLHttpRequest();
-      req.open("GET", api.url('html/google_inject.html'), true);
-      req.onreadystatechange = function() {
-        if (req.readyState == 4 && req.status == 200) {
-
+      loadFile("html/google_inject.html", function(tmpl) {
           api.log('Rendering Mustache.js Google template...');
           var results = [];
 
@@ -415,7 +427,7 @@ api.log("[google_inject.js]");
           var adminMode = config["show_score"] === true;
 
           var tb = Mustache.to_html(
-              req.responseText,
+              tmpl,
               {"results": results, "session": session, "adminMode": adminMode}
           );
 
@@ -472,11 +484,7 @@ api.log("[google_inject.js]");
             injectResults(100);
           }
           //updateQuery(0);
-
-        }
-      };
-      req.send(null);
-
+      });
     } catch (e) {
       api.log.error(e);
     }
