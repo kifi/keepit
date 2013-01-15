@@ -675,7 +675,7 @@ slider = function() {
 
         if (sTop2 == sTop && sLeft2 == sLeft) return 400;
 
-        var ms = Math.max(400, Math.min(800, 100 * Math.api.log(Math.max(Math.abs(sLeft2 - sLeft), Math.abs(sTop2, sTop)))));
+        var ms = Math.max(400, Math.min(800, 100 * Math.log(Math.max(Math.abs(sLeft2 - sLeft), Math.abs(sTop2, sTop)))));
         $("<b>").css({position: "absolute", opacity: 0, display: "none"}).appendTo("body").animate({opacity: 1}, {
             duration: ms,
             step: function(a) {
