@@ -100,7 +100,7 @@ object SearchController extends FortyTwoController {
   }
   private[controllers] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit conn: Connection): PersonalSearchResult = {
     val uri = NormalizedURICxRepo.get(res.uriId)
-    val bookmark = if (res.isMyBookmark) BookmarkCxRepo.load(uri.id.get, userId) else None
+    val bookmark = if (res.isMyBookmark) BookmarkCxRepo.getByUriAndUser(uri.id.get, userId) else None
     val users = res.users.toSeq.map{ userId =>
       val user = UserCxRepo.get(userId)
       val info = SocialUserInfoCxRepo.getByUser(user.id.get).head

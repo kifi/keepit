@@ -46,7 +46,7 @@ object UserController extends FortyTwoController {
       NormalizedURICxRepo.getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
-          val bookmark = BookmarkCxRepo.load(uri.id.get, userId).filter(_.isActive)
+          val bookmark = BookmarkCxRepo.getByUriAndUser(uri.id.get, userId).filter(_.isActive)
           val following = FollowCxRepo.get(userId, uri.id.get).filter(_.isActive).isDefined
 
           val friendIds = SocialConnectionCxRepo.getFortyTwoUserConnections(userId)
