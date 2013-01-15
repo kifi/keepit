@@ -60,6 +60,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
         inject[SocialUserImportEmail].importEmail(socialUserInfo.userId.get, rawInfo.jsons)
       }
       catch {
+        //todo(yonatan): healthcheck event, granular exception catching, frontend should be notified.
         case ex =>
           CX.withConnection { implicit c =>
             socialUserInfo.withState(SocialUserInfo.States.FETCHE_FAIL).save
