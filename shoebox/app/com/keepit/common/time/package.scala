@@ -67,6 +67,8 @@ package object time {
   def parseStandardTime(timeString: String) = STANDARD_DATETIME_FORMAT.parseDateTime(timeString)
   def parseStandardDate(timeString: String) = STANDARD_DATE_FORMAT.parseLocalDate(timeString)
 
+  val END_OF_TIME = parseStandardTime("9999-01-01 00:00:00.000 -0800")
+
   class RichDateTime(date: DateTime) {
     def toLocalDateInZone(implicit zone: DateTimeZone): LocalDate = date.withZone(zone).toLocalDate
     def toLocalTimeInZone(implicit zone: DateTimeZone): LocalTime = date.withZone(zone).toLocalTime

@@ -36,7 +36,7 @@ import com.keepit.common.analytics.reports._
 object DeepLinkController extends FortyTwoController {
 
   def handle(token: String) = AuthenticatedHtmlAction { request =>
-    val deepLink = CX.withConnection { implicit conn => DeepLink.getOpt(DeepLinkToken(token)) }
+    val deepLink = CX.withConnection { implicit conn => DeepLinkCxRepo.getOpt(DeepLinkToken(token)) }
 
     deepLink match {
       case Some(deep) =>

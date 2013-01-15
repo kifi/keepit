@@ -21,10 +21,8 @@ import com.keepit.common.time._
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.controller.FortyTwoController.ImpersonateCookie
 import com.keepit.common.controller.FortyTwoController.KifiInstallationCookie
-import com.keepit.model.{User, UserCxRepo}
-import com.keepit.model.UserExperiment
-import com.keepit.model.UserExperiment.ExperimentTypes.ADMIN
-import com.keepit.model.SocialUserInfo
+import com.keepit.model._
+import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.test.FakeClock
 import securesocial.core.SecureSocial
 import com.keepit.social.SecureSocialUserService
@@ -35,7 +33,6 @@ import securesocial.core.UserId
 import securesocial.core.AuthenticationMethod
 import org.joda.time.LocalDate
 import org.joda.time.DateTime
-import com.keepit.model.{KifiInstallation, KifiInstallationCxRepo}
 import com.keepit.common.db.ExternalId
 
 @RunWith(classOf[JUnitRunner])
@@ -76,7 +73,7 @@ class AuthControllerTest extends SpecificationWithJUnit {
         status(impersonateResultFail) must equalTo(401)
 
         CX.withConnection { implicit c =>
-          UserExperiment(UserExperiment.ExperimentTypes.ADMIN, admin.id.get).save
+          UserExperiment(ExperimentTypes.ADMIN, admin.id.get).save
         }
         val impersonateResult = routeAndCall(impersonateRequest).get
         val imprSessionCookie = session(impersonateResult)

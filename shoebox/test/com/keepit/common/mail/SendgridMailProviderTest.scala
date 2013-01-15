@@ -50,7 +50,7 @@ class SendgridMailProviderTest extends Specification with TestAkkaSystem {
           val loaded = ElectronicMail.get(mail.id.get)
           loaded.from === mail.from
           loaded.fromName === mail.fromName
-          loaded.state === ElectronicMail.States.PREPARING
+          loaded.state === ElectronicMailStates.PREPARING
         }
       }
     }

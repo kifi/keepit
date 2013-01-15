@@ -4,7 +4,7 @@ import scala.collection.mutable.MutableList
 import com.keepit.search.ArticleStore
 import com.keepit.common.logging.Logging
 import com.keepit.search.Article
-import com.keepit.model.SocialUserInfo
+import com.keepit.model._
 import play.api.Plugin
 import play.api.templates.Html
 import akka.util.Timeout
@@ -20,7 +20,6 @@ import akka.dispatch.Future
 import com.google.inject.Inject
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.model.{User, UserCxRepo}
 import com.keepit.inject._
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
@@ -50,7 +49,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
         val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo)
         log.info("fetched raw info %s for %s".format(rawInfo, socialUserInfo))
         CX.withConnection { implicit c =>
-          socialUserInfo.withState(SocialUserInfo.States.FETCHED_USING_SELF).withLastGraphRefresh().save
+          socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh().save
         }
         val store = inject[SocialUserRawInfoStore]
         store += (socialUserInfo.id.get -> rawInfo)
@@ -63,7 +62,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
         //todo(yonatan): healthcheck event, granular exception catching, frontend should be notified.
         case ex =>
           CX.withConnection { implicit c =>
-            socialUserInfo.withState(SocialUserInfo.States.FETCHE_FAIL).save
+            socialUserInfo.withState(SocialUserInfoStates.FETCHE_FAIL).save
           }
           log.error("Problem Fetching User Info for %s".format(socialUserInfo), ex)
       }

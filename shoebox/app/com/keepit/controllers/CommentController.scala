@@ -74,13 +74,13 @@ object CommentController extends FortyTwoController {
 
       permissions.toLowerCase match {
         case "private" =>
-          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PRIVATE, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = text, permissions = CommentPermissions.PRIVATE, parent = parentIdOpt).save
         case "message" =>
-          val newComment = Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.MESSAGE, parent = parentIdOpt).save
+          val newComment = Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = text, permissions = CommentPermissions.MESSAGE, parent = parentIdOpt).save
           createRecipients(newComment.id.get, recipients, parentIdOpt)
           newComment
         case "public" | "" =>
-          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = text, permissions = Comment.Permissions.PUBLIC, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = text, permissions = CommentPermissions.PUBLIC, parent = parentIdOpt).save
         case _ =>
           throw new Exception("Invalid comment permission")
       }
@@ -89,9 +89,9 @@ object CommentController extends FortyTwoController {
     dispatch(notifyRecipients(comment), {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
 
     comment.permissions match {
-      case Comment.Permissions.PUBLIC =>
+      case CommentPermissions.PUBLIC =>
         Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
-      case Comment.Permissions.MESSAGE =>
+      case CommentPermissions.MESSAGE =>
         val threadInfo = CX.withConnection{ implicit c => CommentWithSocialUser(comment) }
         Ok(JsObject(Seq("message" -> commentWithSocialUserSerializer.writes(threadInfo))))
       case _ =>
@@ -124,7 +124,7 @@ object CommentController extends FortyTwoController {
           publicComments(normalizedURI).map(CommentWithSocialUser(_))
         } getOrElse Nil
     }
-    Ok(commentWithSocialUserSerializer.writes(Comment.Permissions.PUBLIC -> comments))
+    Ok(commentWithSocialUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
   }
 
   def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
@@ -134,7 +134,7 @@ object CommentController extends FortyTwoController {
         } getOrElse Nil
     }
     log.info("comments for url %s:\n%s".format(url, comments mkString "\n"))
-    Ok(threadInfoSerializer.writes(Comment.Permissions.MESSAGE -> comments))
+    Ok(threadInfoSerializer.writes(CommentPermissions.MESSAGE -> comments))
   }
 
   def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
@@ -146,7 +146,7 @@ object CommentController extends FortyTwoController {
       else
           Nil
     }
-    Ok(commentWithSocialUserSerializer.writes(Comment.Permissions.MESSAGE -> replies))
+    Ok(commentWithSocialUserSerializer.writes(CommentPermissions.MESSAGE -> replies))
   }
 
   // TODO: delete once no beta users have old plugin supporting replies
@@ -223,10 +223,10 @@ object CommentController extends FortyTwoController {
     } flatten
   }
 
-  private def allComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection): List[(State[Comment.Permission],Seq[Comment])] =
-    (Comment.Permissions.PUBLIC -> publicComments(normalizedURI)) ::
-    (Comment.Permissions.MESSAGE -> messageComments(userId, normalizedURI)) ::
-    (Comment.Permissions.PRIVATE -> privateComments(userId, normalizedURI)) :: Nil
+  private def allComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection): List[(State[CommentPermission],Seq[Comment])] =
+    (CommentPermissions.PUBLIC -> publicComments(normalizedURI)) ::
+    (CommentPermissions.MESSAGE -> messageComments(userId, normalizedURI)) ::
+    (CommentPermissions.PRIVATE -> privateComments(userId, normalizedURI)) :: Nil
 
   private def publicComments(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
     Comment.getPublic(normalizedURI.id.get)
@@ -238,7 +238,7 @@ object CommentController extends FortyTwoController {
     Comment.getMessages(normalizedURI.id.get, userId)
 
   private[controllers] def notifyRecipients(comment: Comment): Unit = comment.permissions match {
-      case Comment.Permissions.PUBLIC =>
+      case CommentPermissions.PUBLIC =>
         CX.withConnection { implicit c =>
           val author = UserCxRepo.get(comment.userId)
           val uri = NormalizedURICxRepo.get(comment.uriId)
@@ -263,7 +263,7 @@ object CommentController extends FortyTwoController {
             }
           }
         }
-      case Comment.Permissions.MESSAGE =>
+      case CommentPermissions.MESSAGE =>
         CX.withConnection { implicit c =>
           val senderId = comment.userId
           val sender = UserCxRepo.get(senderId)
@@ -311,7 +311,7 @@ object CommentController extends FortyTwoController {
     val PAGE_SIZE = 200
     val (count, uriAndUsers) = CX.withConnection { implicit conn =>
       val comments = Comment.page(page, PAGE_SIZE)
-      val count = Comment.count(Comment.Permissions.PUBLIC)
+      val count = Comment.count(CommentPermissions.PUBLIC)
       (count, (comments map {co => (toUserWithSocial(UserCxRepo.get(co.userId)), co, NormalizedURICxRepo.get(co.uriId))} ))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
@@ -323,8 +323,8 @@ object CommentController extends FortyTwoController {
   def messagesView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 200
     val (count, uriAndUsers) = CX.withConnection { implicit conn =>
-      val messages = Comment.page(page, PAGE_SIZE, Comment.Permissions.MESSAGE)
-      val count = Comment.count(Comment.Permissions.MESSAGE)
+      val messages = Comment.page(page, PAGE_SIZE, CommentPermissions.MESSAGE)
+      val count = Comment.count(CommentPermissions.MESSAGE)
       (count, (messages map {co => (toUserWithSocial(UserCxRepo.get(co.userId)), co, NormalizedURICxRepo.get(co.uriId), CommentRecipient.getByComment(co.id.get) map { r => toUserWithSocial(UserCxRepo.get(r.userId.get)) }) } ))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt

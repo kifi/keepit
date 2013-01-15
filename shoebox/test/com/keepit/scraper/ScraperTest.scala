@@ -139,11 +139,11 @@ class ScraperTest extends SpecificationWithJUnit {
           ScrapeInfo.ofUri(uri).save
         }
         CX.withConnection { implicit c =>
-          info = info.withState(ScrapeInfo.States.INACTIVE).save
-          info.nextScrape === ScrapeInfo.NEVER
+          info = info.withState(ScrapeInfoStates.INACTIVE).save
+          info.nextScrape === END_OF_TIME
         }
         CX.withConnection { implicit c =>
-          info = info.withState(ScrapeInfo.States.ACTIVE).save
+          info = info.withState(ScrapeInfoStates.ACTIVE).save
           (info.nextScrape.getMillis <= currentDateTime.getMillis) === true
         }
       }

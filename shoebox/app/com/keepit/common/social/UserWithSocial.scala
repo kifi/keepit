@@ -4,7 +4,7 @@ import java.sql.Connection
 import com.keepit.model.{User, SocialUserInfo}
 import com.keepit.model.{Bookmark, BookmarkCxRepo}
 import com.keepit.model.{EmailAddress, EmailAddressCxRepo}
-import com.keepit.model.UserExperiment.ExperimentType
+import com.keepit.model.ExperimentType
 import com.keepit.model.UserExperiment
 import com.keepit.common.db.State
 

@@ -18,7 +18,7 @@ case class SocialConnection(
   updatedAt: DateTime = currentDateTime,
   socialUser1: Id[SocialUserInfo],
   socialUser2: Id[SocialUserInfo],
-  state: State[SocialConnection] = SocialConnection.States.ACTIVE
+  state: State[SocialConnection] = SocialConnectionStates.ACTIVE
 ) {
   def withState(state: State[SocialConnection]) = copy(state = state)
 
@@ -90,8 +90,8 @@ object SocialConnection extends Logging {
     val suis = SocialUserInfo.getByUser(id).map(_.id.get)
     if(!suis.isEmpty) {
       (SocialConnectionEntity AS "sc").map { sc =>
-        SELECT (COUNT(sc.id)) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) 
-          AND (sc.state EQ SocialConnection.States.ACTIVE) ) unique
+        SELECT (COUNT(sc.id)) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis)))
+          AND (sc.state EQ SocialConnectionStates.ACTIVE) ) unique
       } get
     } else {
       0L
@@ -102,7 +102,7 @@ object SocialConnection extends Logging {
     val suis = SocialUserInfo.getByUser(id).map(_.id.get)
     if(!suis.isEmpty) {
       val conns = (SocialConnectionEntity AS "sc").map { sc =>
-        SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) AND (sc.state EQ SocialConnection.States.ACTIVE)) list
+        SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) AND (sc.state EQ SocialConnectionStates.ACTIVE)) list
       } map (_.view) map (s => if(suis.contains(s.socialUser1)) s.socialUser2 else s.socialUser1 ) toList
 
       if(!conns.isEmpty) {
@@ -122,7 +122,7 @@ object SocialConnection extends Logging {
   def getSocialUserConnections(id: Id[SocialUserInfo])(implicit conn: Connection): Seq[SocialUserInfo] = {
 
     val conns = (SocialConnectionEntity AS "sc").map { sc =>
-      SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 EQ id) OR (sc.socialUser2 EQ id)) AND (sc.state EQ SocialConnection.States.ACTIVE) ) list
+      SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 EQ id) OR (sc.socialUser2 EQ id)) AND (sc.state EQ SocialConnectionStates.ACTIVE) ) list
     } map (_.view) map (s => if(id == s.socialUser1) s.socialUser2 else s.socialUser1 ) toList
 
     if(!conns.isEmpty) {
@@ -135,12 +135,11 @@ object SocialConnection extends Logging {
     }
 
   }
+}
 
-
-  object States {
-    val ACTIVE = State[SocialConnection]("active")
-    val INACTIVE = State[SocialConnection]("inactive")
-  }
+object SocialConnectionStates {
+  val ACTIVE = State[SocialConnection]("active")
+  val INACTIVE = State[SocialConnection]("inactive")
 }
 
 private[model] class SocialConnectionEntity extends Entity[SocialConnection, SocialConnectionEntity] {
@@ -148,7 +147,7 @@ private[model] class SocialConnectionEntity extends Entity[SocialConnection, Soc
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val socialUser1 = "social_user_1".ID[SocialUserInfo].NOT_NULL
   val socialUser2 = "social_user_2".ID[SocialUserInfo].NOT_NULL
-  val state = "state".STATE[SocialConnection].NOT_NULL(SocialConnection.States.ACTIVE)
+  val state = "state".STATE[SocialConnection].NOT_NULL(SocialConnectionStates.ACTIVE)
 
   def relation = SocialConnectionEntity
 

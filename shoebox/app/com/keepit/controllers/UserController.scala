@@ -123,10 +123,10 @@ object UserController extends FortyTwoController {
       val userWithSocial = UserWithSocial.toUserWithSocial(UserCxRepo.get(userId))
       val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
       val follows = FollowCxRepo.all(userId) map {f => NormalizedURICxRepo.get(f.uriId)}
-      val comments = Comment.all(Comment.Permissions.PUBLIC, userId) map {c =>
+      val comments = Comment.all(CommentPermissions.PUBLIC, userId) map {c =>
         (NormalizedURICxRepo.get(c.uriId), c)
       }
-      val messages = Comment.all(Comment.Permissions.MESSAGE, userId) map {c =>
+      val messages = Comment.all(CommentPermissions.MESSAGE, userId) map {c =>
         (NormalizedURICxRepo.get(c.uriId), c, CommentRecipient.getByComment(c.id.get) map { r => toUserWithSocial(UserCxRepo.get(r.userId.get)) })
       }
       val sentElectronicMails = ElectronicMail.forSender(userId);
@@ -197,7 +197,7 @@ object UserController extends FortyTwoController {
   def addExperiment(userId: Id[User], experimentType: String) = AdminJsonAction { request =>
     val experimants = CX.withConnection { implicit c =>
       val existing = UserExperiment.getByUser(userId)
-      val experiment = UserExperiment.ExperimentTypes(experimentType)
+      val experiment = ExperimentTypes(experimentType)
       if (existing contains(experimentType)) throw new Exception("user %s already has an experiment %s".format(experimentType))
       UserExperiment(userId = userId, experimentType = experiment).save
       UserExperiment.getByUser(userId)

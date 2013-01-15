@@ -62,7 +62,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
       socialUser: SocialUser,
       userId: Id[User],
       request: Request[AnyContent],
-      experimants: Seq[State[UserExperiment.ExperimentType]] = Nil,
+      experimants: Seq[State[ExperimentType]] = Nil,
       kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
       adminUserId: Option[Id[User]] = None)
     extends WrappedRequest(request)
@@ -95,7 +95,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
     (userId, getExperiments(userId))
   }
 
-  private def getExperiments(userId: Id[User])(implicit conn: Connection): Seq[State[UserExperiment.ExperimentType]] =
+  private def getExperiments(userId: Id[User])(implicit conn: Connection): Seq[State[ExperimentType]] =
     UserExperiment.getByUser(userId).map(_.experimentType)
 
   private[controller] def AuthenticatedAction[A](isApi: Boolean, action: AuthenticatedRequest => Result) = {
@@ -123,13 +123,13 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
     }
   }
 
-  private def isAdmin(experiments: Seq[State[UserExperiment.ExperimentType]]) =
-    experiments.find(e => e == UserExperiment.ExperimentTypes.ADMIN).isDefined
+  private def isAdmin(experiments: Seq[State[ExperimentType]]) =
+    experiments.find(e => e == ExperimentTypes.ADMIN).isDefined
 
   private def executeAction(action: AuthenticatedRequest => Result, userId: Id[User], socialUser: SocialUser,
-      experiments: Seq[State[UserExperiment.ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
+      experiments: Seq[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
       newSession: Session, request: Request[AnyContent], adminUserId: Option[Id[User]] = None) = {
-    if (experiments.contains(UserExperiment.ExperimentTypes.BLOCK)) {
+    if (experiments.contains(ExperimentTypes.BLOCK)) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
       Forbidden(message)
@@ -169,7 +169,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
     AuthenticatedAction(isApi, { implicit request =>
       val userId = request.adminUserId.getOrElse(request.userId)
       val isAdmin = CX.withConnection { implicit conn =>
-        UserExperiment.getExperiment(userId, UserExperiment.ExperimentTypes.ADMIN).isDefined
+        UserExperiment.getExperiment(userId, ExperimentTypes.ADMIN).isDefined
       }
       val authorizedDevUser = Play.isDev && userId.id == 1L
       if (authorizedDevUser || isAdmin) {
