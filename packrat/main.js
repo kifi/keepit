@@ -32,8 +32,8 @@ function UserHistory() {
   this.add = function(uri) {
     api.log("[UserHistory.add]", uri);
     this.history.unshift(uri);
-    if (history.length > HISTORY_SIZE) {
-      history.pop();
+    if (this.history.length > HISTORY_SIZE) {
+      this.history.pop();
     }
   }
   this.exists = function(uri) {
@@ -143,10 +143,6 @@ api.port.on({
   },
   set_page_icon: function(data, respond, tab) {
     setIcon(tab.id, data);
-  },
-  require: function(data, respond, tab) {
-    api.tabs.inject(tab.id, data, respond);
-    return true;
   },
   get_slider_info: function(data, respond, tab) {
     if (session) {
@@ -409,7 +405,7 @@ function checkWhetherKept(url, callback) {
 
 function setIconIfFaint(tab) {
   api.log("[setIconIfFaint]", tab.id, tab.url, tab.icon);
-  if (api.icon.get(tab.id) === "icons/keep.faint.png") {
+  if (tab.icon === "icons/keep.faint.png") {
     checkWhetherKept(tab.url, function(isKept) {
       setIconIfStillAt(tab.id, tab.url, isKept);
     });
@@ -418,7 +414,7 @@ function setIconIfFaint(tab) {
 
 function setIconIfStillAt(tabId, url, kept, callback) {
   var tab = api.tabs.get(tabId);  // tab may have navigated
-  if (tab.url === url && api.icon.get(tabId) === "icons/keep.faint.png") {
+  if (tab.url === url && tab.icon === "icons/keep.faint.png") {
     setIcon(tabId, kept);
     callback && callback(tab);
   }
