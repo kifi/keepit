@@ -35,7 +35,7 @@ import securesocial.core.UserId
 import securesocial.core.AuthenticationMethod
 import org.joda.time.LocalDate
 import org.joda.time.DateTime
-import com.keepit.model.KifiInstallation
+import com.keepit.model.{KifiInstallation, KifiInstallationCxRepo}
 import com.keepit.common.db.ExternalId
 
 @RunWith(classOf[JUnitRunner])
