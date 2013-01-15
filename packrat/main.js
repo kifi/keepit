@@ -214,10 +214,10 @@ function getBookmarkFolderInfo(keepItBookmarkId, callback) {
   api.log("[getBookmarkFolderInfo]");
 
   if (keepItBookmarkId) {
-    chrome.bookmarks.get(keepItBookmarkId, function(bm) {
-      if (bm && bm.length) {
+    api.bookmarks.get(keepItBookmarkId, function(bm) {
+      if (bm) {
         // We created this bookmark folder. We continue to use it even if user has moved it or renamed it.
-        ensurePublicPrivate(bm[0]);
+        ensurePublicPrivate(bm);
       } else {
         findOrCreateKeepIt();
       }
@@ -227,14 +227,13 @@ function getBookmarkFolderInfo(keepItBookmarkId, callback) {
   }
 
   function findOrCreateKeepIt() {
-    chrome.bookmarks.getChildren("0", function(bm) {
-      var parent = bm.filter(function(bm) { return bm.title == "Bookmarks Bar" })[0] || bm[0];
-      chrome.bookmarks.getChildren(parent.id, function(bm) {
+    api.bookmarks.getBarFolder(function(bar) {
+      api.bookmarks.getChildren(bar.id, function(bm) {
         var keepIt = bm.filter(function(bm) { return bm.title == "KeepIt" });
         if (keepIt.length) {
           ensurePublicPrivate(keepIt[0]);
         } else {
-          chrome.bookmarks.create({parentId: parent.id, title: "KeepIt"}, function(bm) {
+          api.bookmarks.createFolder(bar.id, "KeepIt", function(bm) {
             ensurePublicPrivate(bm);
           });
         }
@@ -243,12 +242,12 @@ function getBookmarkFolderInfo(keepItBookmarkId, callback) {
   }
 
   function ensurePublicPrivate(keepIt) {
-    chrome.bookmarks.getChildren(keepIt.id, function(children) {
+    api.bookmarks.getChildren(keepIt.id, function(children) {
       var bm = children.filter(function(bm) { return bm.title == "public" });
       if (bm.length) {
         ensurePrivate({keepItId: keepIt.id, publicId: bm[0].id}, children);
       } else {
-        chrome.bookmarks.create({parentId: keepIt.id, title: "public"}, function(bm) {
+        api.bookmarks.createFolder(keepIt.id, "public", function(bm) {
           ensurePrivate({keepItId: keepIt.id, publicId: bm.id}, children);
         });
       }
@@ -261,7 +260,7 @@ function getBookmarkFolderInfo(keepItBookmarkId, callback) {
       info.privateId = bm[0].id;
       done(info);
     } else {
-      chrome.bookmarks.create({parentId: info.keepItId, title: "private"}, function(bm) {
+      api.bookmarks.createFolder(info.keepItId, "private", function(bm) {
         info.privateId = bm.id;
         done(info);
       });
@@ -276,15 +275,10 @@ function getBookmarkFolderInfo(keepItBookmarkId, callback) {
 
 function addKeep(bmInfo, req, respond) {
   api.log("[addKeep] private: " + !!req.private + ", title: " + req.title);
-  var bookmark = {parentId: bmInfo[req.private ? "privateId" : "publicId"], title: req.title, url: req.url};
-  chrome.bookmarks.create(bookmark, function(bm) {
-    try {
-      respond(bm);
-      bookmark.isPrivate = !!req.private;
-      postBookmarks(function(f) {f([bookmark])}, "HOVER_KEEP");
-    } catch (e) {
-       api.log.error(e);
-    }
+  api.bookmarks.create(bmInfo[req.private ? "privateId" : "publicId"], req.title, req.url, function(bm) {
+    respond(bm);
+    bm.isPrivate = !!req.private;
+    postBookmarks(function(f) {f([bm])}, "HOVER_KEEP");
   });
 }
 
@@ -296,15 +290,15 @@ function removeKeep(bmInfo, url, respond) {
     return;
   }
 
-  chrome.bookmarks.search(url, function(bm) {
+  api.bookmarks.search(url, function(bm) {
     bm.forEach(function(bm) {
-      if (bm.url == url && (bm.parentId == bmInfo.publicId || bm.parentId == bmInfo.privateId)) {
-        chrome.bookmarks.remove(bm.id);
+      if (bm.url === url && (bm.parentId == bmInfo.publicId || bm.parentId == bmInfo.privateId)) {
+        api.bookmarks.remove(bm.id);
       }
     });
   });
 
-  ajax("POST", "http://" + getConfigs().server + "/bookmarks/remove", {url: req.url}, function(o) {
+  ajax("POST", "http://" + getConfigs().server + "/bookmarks/remove", {url: url}, function(o) {
     api.log("[removeKeep] response:", o);
     respond(o);
   });
@@ -315,10 +309,10 @@ function setPrivate(bmInfo, url, priv, respond) {
 
   var newParentId = priv ? bmInfo.privateId : bmInfo.publicId;
   var oldParentId = priv ? bmInfo.publicId : bmInfo.privateId;
-  chrome.bookmarks.search(url, function(bm) {
+  api.bookmarks.search(url, function(bm) {
     bm.forEach(function(bm) {
-      if (bm.url == url && bm.parentId == oldParentId) {
-        chrome.bookmarks.move(bm.id, {parentId: newParentId});
+      if (bm.url === url && bm.parentId == oldParentId) {
+        api.bookmarks.move(bm.id, newParentId);
       }
     });
   });
@@ -569,7 +563,7 @@ function authenticate(callback) {
       callback();
 
       if (api.loadReason == "install" || config.env == "development") {
-        postBookmarks(chrome.bookmarks.getTree, "INIT_LOAD");
+        postBookmarks(api.bookmarks.getAll, "INIT_LOAD");
       }
     }, function fail(xhr) {
       api.log("[startSession] xhr failed:", xhr);
