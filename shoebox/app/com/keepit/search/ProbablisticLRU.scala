@@ -12,7 +12,7 @@ import java.util.Random
 object ProbablisticLRU {
   def apply(file: File, tableSize: Int, numHashFuncs: Int, syncEvery: Int) = {
     val bufferSize = tableSize * 4 + 4
-    val isNew = file.exists
+    val isNew = !file.exists
     val raf = new RandomAccessFile(file, "rw")
     val byteBuffer = raf.getChannel().map(MapMode.READ_WRITE, 0, bufferSize)
     if (isNew) {
