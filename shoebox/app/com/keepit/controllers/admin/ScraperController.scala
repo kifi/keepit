@@ -34,6 +34,7 @@ object ScraperController extends FortyTwoController {
     Ok(views.html.scrape(articles))
   }
 
+  // These will be removed when the unscrapeable documents are reprocessed
   val IGNORED_DOCUMENTS = Set(
     "5XPalcuVz83xN6gTChVzNBWyFrm3Cfin8DQgqPQtZSIsIQg3Xz4n1v51KdvVEo0Pk9pGA3L7WTxNrgc/CzCaZ7S2YXAY/XkcWe1NIE0drQYstWxQpYZpHJaZWPJQVbANQ1CJiA==", // Gmail
     "kxZCPEHXuSaxCePUNWG60BjuZykQI9SPBTuYD6L3EFh6m0gfCsHZ9CUK3vf8w9h9KNhfFwX0/c7tMCi2Dk+rFo6q345kuMW28SQf/Eghowe2hLtrUuLdXR6JnfhipjZOh8CWhQ==", // Facebook
@@ -47,8 +48,7 @@ object ScraperController extends FortyTwoController {
     Akka.future {
       val startTime = System.currentTimeMillis
       val documentSignatures = CX.withConnection { implicit conn =>
-        ScrapeInfoCxRepo.all.map { s =>
-          println(s.signature)
+        ScrapeInfoCxRepo.allActive.map { s =>
           if (IGNORED_DOCUMENTS.contains(s.signature)) None
           else Some((s.uriId, parseBase64Binary(s.signature)))
         }.flatten

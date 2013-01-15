@@ -78,6 +78,13 @@ object ScrapeInfoCxRepo {
   def all(implicit conn: Connection): Seq[ScrapeInfo] =
     ScrapeInfoEntity.all.map(_.view)
 
+  def allActive(implicit conn: Connection): Seq[ScrapeInfo] = {
+    val si = ScrapeInfoEntity AS "si"
+    val nu = NormalizedURIEntity AS "nu"
+
+    (SELECT (si.*) FROM (si JOIN nu) WHERE (nu.state EQ NormalizedURIStates.INDEXED) list).map( _.view )
+  }
+
   def ofUri(uri: NormalizedURI)(implicit conn: Connection) = ofUriId(uri.id.get)
 
   def ofUriId(uriId: Id[NormalizedURI])(implicit conn: Connection) = {

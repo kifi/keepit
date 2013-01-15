@@ -28,6 +28,9 @@ case class DuplicateDocument (
   percentMatch: Double,
   state: State[DuplicateDocument] = DuplicateDocumentStates.ACTIVE
 ) extends Model[DuplicateDocument] {
+
+  assert(uri1Id.id < uri2Id.id, "uri1Id ≥ uri2Id")
+
   def withId(id: Id[DuplicateDocument]) = this.copy(id = Some(id))
   def withState(newState: State[DuplicateDocument]) = this.copy(state = newState)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
