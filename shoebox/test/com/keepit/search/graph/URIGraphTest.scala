@@ -244,10 +244,6 @@ class URIGraphTest extends SpecificationWithJUnit {
           }
         }
 
-        CX.withConnection { implicit conn =>
-          println(BookmarkCxRepo.all)
-        }
-
         val graphDir = new RAMDirectory
         val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
         graph.load() === users.size

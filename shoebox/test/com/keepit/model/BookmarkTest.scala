@@ -5,9 +5,14 @@ import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
 
-import com.keepit.common.db.CX
+import com.keepit.inject._
+
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db._
 import com.keepit.common.db.CX._
 import com.keepit.common.time.zones.PT
+
 import com.keepit.test.EmptyApplication
 
 import play.api.Play.current
@@ -17,9 +22,10 @@ import play.api.test.Helpers._
 class BookmarkTest extends SpecificationWithJUnit {
 
   def setup() = {
+    val t1 = new DateTime(2012, 2, 14, 21, 59, 0, 0, PT)
+    val t2 = new DateTime(2012, 3, 22, 14, 30, 0, 0, PT)
+
     CX.withConnection { implicit conn =>
-      val t1 = new DateTime(2012, 2, 14, 21, 59, 0, 0, PT)
-      val t2 = new DateTime(2012, 3, 22, 14, 30, 0, 0, PT)
 
       val user1 = User(firstName = "Andrew", lastName = "C", createdAt = t1).save
       val user2 = User(firstName = "Eishay", lastName = "S", createdAt = t2).save
@@ -45,53 +51,42 @@ class BookmarkTest extends SpecificationWithJUnit {
     "load all" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
-        CX.withConnection { implicit conn =>
-          BookmarkCxRepo.all.map(_.title) === Seq("G1", "A1", "G2")
-        }
+        val all = inject[DBConnection].readOnly(implicit session => inject[BookmarkRepo].all)
+        all.map(_.title) === Seq("G1", "A1", "G2")
       }
     }
     "load by user" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
-        CX.withConnection { implicit conn =>
-          BookmarkCxRepo.ofUser(user1).map(_.title) === Seq("G1", "A1")
-          BookmarkCxRepo.ofUser(user2).map(_.title) === Seq("G2")
+        inject[DBConnection].readOnly{ implicit session =>
+          inject[BookmarkRepo].getByUser(user1.id.get).map(_.title) === Seq("G1", "A1")
+          inject[BookmarkRepo].getByUser(user2.id.get).map(_.title) === Seq("G2")
         }
       }
     }
     "load by uri" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
-        CX.withConnection { implicit conn =>
-          BookmarkCxRepo.ofUri(uri1).map(_.title) === Seq("G1", "G2")
-          BookmarkCxRepo.ofUri(uri2).map(_.title) === Seq("A1")
+        inject[DBConnection].readOnly{ implicit session =>
+          inject[BookmarkRepo].getByUri(uri1.id.get).map(_.title) === Seq("G1", "G2")
+          inject[BookmarkRepo].getByUri(uri2.id.get).map(_.title) === Seq("A1")
         }
       }
     }
     "count all" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
-        CX.withConnection { implicit conn =>
-          BookmarkCxRepo.count === 3
+        inject[DBConnection].readOnly{ implicit session =>
+          inject[BookmarkRepo].count() === 3
         }
       }
     }
     "count by user" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
-        CX.withConnection { implicit conn =>
-          BookmarkCxRepo.count(user1) === 2
-          BookmarkCxRepo.count(user2) === 1
-        }
-      }
-    }
-    "get daily keeps" in {
-      running(new EmptyApplication()) {
-        CX.withConnection { implicit conn =>
-          val (user1, user2, uri1, uri2) = setup()
-          BookmarkCxRepo.getDailyKeeps === Map(
-              user1.id.get -> Map(0 -> 1, 2 -> 1),
-              user2.id.get -> Map(1 -> 1))
+        inject[DBConnection].readOnly{ implicit session =>
+          inject[BookmarkRepo].count(user1) === 2
+          inject[BookmarkRepo].count(user2) === 1
         }
       }
     }

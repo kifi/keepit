@@ -1,11 +1,13 @@
 package com.keepit.search.graph
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.CX
-import com.keepit.common.db.Id
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.inject._
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
-import com.keepit.model.{Bookmark, BookmarkStates, BookmarkCxRepo, NormalizedURI, User, UserCxRepo}
+import com.keepit.model.{Bookmark, BookmarkRepo, BookmarkStates, BookmarkCxRepo, NormalizedURI, User, UserCxRepo}
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher, QueryParser}
@@ -136,9 +138,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   }
 
   def buildIndexable(user: User) = {
-    val bookmarks = CX.withConnection { implicit c =>
-        BookmarkCxRepo.ofUser(user).filter{ b => b.state == BookmarkStates.ACTIVE }
-    }
+    val bookmarks = inject[DBConnection].readOnly(implicit session => inject[BookmarkRepo].allActive())
     new URIListIndexable(user.id.get, bookmarks)
   }
 
