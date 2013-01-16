@@ -22,7 +22,8 @@ class ArticleSerializer extends Format[Article] {
         "state" -> JsString(article.state.toString),
         "message" -> (article.message map { m => JsString(m) } getOrElse(JsNull)),
         "titleLang" -> (article.titleLang map { lang => JsString(lang.lang) } getOrElse(JsNull)),
-        "contentLang" -> (article.contentLang map { lang => JsString(lang.lang) } getOrElse(JsNull))
+        "contentLang" -> (article.contentLang map { lang => JsString(lang.lang) } getOrElse(JsNull)),
+        "destinationUrl" -> (article.destinationUrl map (JsString(_)) getOrElse(JsNull))
       )
     )
 
@@ -36,7 +37,8 @@ class ArticleSerializer extends Format[Article] {
       State[NormalizedURI]((json \ "state").as[String]),
       (json \ "message").asOpt[String],
       (json \ "titleLang").asOpt[String] map { lang => Lang(lang) },
-      (json \ "contentLang").asOpt[String] map { lang => Lang(lang) }
+      (json \ "contentLang").asOpt[String] map { lang => Lang(lang) },
+      (json \ "destinationUrl").asOpt[String]
     )
 }
 

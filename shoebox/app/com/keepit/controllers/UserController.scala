@@ -13,9 +13,9 @@ import play.api.libs.json.{Json, JsArray, JsBoolean, JsNumber, JsObject, JsStrin
 import com.keepit.inject._
 import com.keepit.common.time._
 import com.keepit.common.net._
-import com.keepit.common.db.Id
-import com.keepit.common.db.CX
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
@@ -172,22 +172,23 @@ object UserController extends FortyTwoController {
       case _ => None
     }).flatten
 
-    CX.withConnection { implicit conn =>
-      val oldEmails = EmailAddressCxRepo.getByUser(userId).toSet
+    inject[DBConnection].readWrite{ implicit session =>
+      val emailRepo = inject[EmailAddressRepo]
+      val oldEmails = emailRepo.getByUser(userId).toSet
       val newEmails = (emailList map { address =>
-        val email = EmailAddressCxRepo.getByAddressOpt(address)
+        val email = emailRepo.getByAddressOpt(address)
         email match {
           case Some(addr) => addr // We're good! It already exists
           case None => // Create a new one
             log.info("Adding email address %s to userId %s".format(address, userId.toString))
-            EmailAddress(address = address, userId = userId).save
+            emailRepo.save(EmailAddress(address = address, userId = userId))
         }
       }).toSet
 
       // Set state of removed email addresses to INACTIVE
       (oldEmails -- newEmails) map { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        removedEmail.withState(EmailAddressStates.INACTIVE).save
+        emailRepo.save(removedEmail.withState(EmailAddressStates.INACTIVE))
       }
     }
 
@@ -195,12 +196,13 @@ object UserController extends FortyTwoController {
   }
 
   def addExperiment(userId: Id[User], experimentType: String) = AdminJsonAction { request =>
-    val experimants = CX.withConnection { implicit c =>
-      val existing = UserExperimentCxRepo.getByUser(userId)
+    val repo = inject[UserExperimentRepo]
+    val experimants = inject[DBConnection].readWrite{ implicit session =>
+      val existing = repo.getByUser(userId)
       val experiment = ExperimentTypes(experimentType)
       if (existing contains(experimentType)) throw new Exception("user %s already has an experiment %s".format(experimentType))
-      UserExperiment(userId = userId, experimentType = experiment).save
-      UserExperimentCxRepo.getByUser(userId)
+      repo.save(UserExperiment(userId = userId, experimentType = experiment))
+      repo.getByUser(userId)
     }
     Ok(JsArray(experimants map {e => JsString(e.experimentType.value) }))
   }

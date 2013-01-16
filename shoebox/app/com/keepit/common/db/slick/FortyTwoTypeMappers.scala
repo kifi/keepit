@@ -28,6 +28,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[KifiInstallation]
   }
 
+  implicit object NormalizedURIExternalIdTypeMapper extends BaseTypeMapper[ExternalId[NormalizedURI]] {
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[NormalizedURI]
+  }
+
   //Ids
   implicit object FollowIdTypeMapper extends BaseTypeMapper[Id[Follow]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Follow]
@@ -66,6 +70,22 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new StateMapperDelegate[NormalizedURI]
   }
 
+  implicit object DuplicateDocumentTypeMapper extends BaseTypeMapper[State[DuplicateDocument]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[DuplicateDocument]
+  }
+
+  implicit object ExperimentTypeStateTypeMapper extends BaseTypeMapper[State[ExperimentType]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[ExperimentType]
+  }
+
+  implicit object EmailAddressStateTypeMapper extends BaseTypeMapper[State[EmailAddress]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[EmailAddress]
+  }
+
+  implicit object UserExperimentStateTypeMapper extends BaseTypeMapper[State[UserExperiment]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[UserExperiment]
+  }
+
   //Other
   implicit object URLHistorySeqHistoryStateTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
     def apply(profile: BasicProfile) = new URLHistorySeqMapperDelegate
@@ -85,7 +105,10 @@ class DateTimeMapperDelegate extends TypeMapperDelegate[DateTime] {
   def sqlType = delegate.sqlType
   def setValue(value: DateTime, p: PositionedParameters) = delegate.setValue(timestamp(value), p)
   def setOption(valueOpt: Option[DateTime], p: PositionedParameters) = delegate.setOption(valueOpt map timestamp, p)
-  def nextValue(r: PositionedResult): DateTime = delegate.nextValue(r)
+  def nextValue(r: PositionedResult): DateTime = Option(delegate.nextValue(r)) match {
+    case Some(date) => date
+    case None => START_OF_TIME
+  }
   def updateValue(value: DateTime, r: PositionedResult) = delegate.updateValue(timestamp(value), r)
   override def valueToSQLLiteral(value: DateTime) = delegate.valueToSQLLiteral(timestamp(value))
 
@@ -115,7 +138,10 @@ class ExternalIdMapperDelegate[T] extends TypeMapperDelegate[ExternalId[T]] {
   def sqlType = delegate.sqlType
   def setValue(value: ExternalId[T], p: PositionedParameters) = delegate.setValue(value.id, p)
   def setOption(valueOpt: Option[ExternalId[T]], p: PositionedParameters) = delegate.setOption(valueOpt map (_.id), p)
-  def nextValue(r: PositionedResult) = ExternalId(delegate.nextValue(r))
+  def nextValue(r: PositionedResult) = delegate.nextValueOrElse("", r) match {
+    case "" => zero
+    case some => ExternalId(some)
+  }
   def updateValue(value: ExternalId[T], r: PositionedResult) = delegate.updateValue(value.id, r)
   override def valueToSQLLiteral(value: ExternalId[T]) = delegate.valueToSQLLiteral(value.id)
 }

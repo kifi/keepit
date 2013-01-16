@@ -9,9 +9,9 @@ import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.http.ContentTypes
 import com.keepit.controllers.CommonActions._
-import com.keepit.common.db.CX
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.slick._
 import com.keepit.common.db._
-import com.keepit.common.db.ExternalId
 import com.keepit.common.async._
 import com.keepit.model._
 import com.keepit.inject._
@@ -54,8 +54,9 @@ object EventController extends FortyTwoController {
   private def createEventsFromPayload(params: JsValue, userId: Id[User]) = {
     val logRecievedTime = currentDateTime
 
-    val (user, experiments) = CX.withConnection { implicit conn =>
-      (UserCxRepo.get(userId), UserExperimentCxRepo.getByUser(userId) map (_.experimentType))
+    val (user, experiments) = inject[DBConnection].readOnly{ implicit session =>
+      (inject[UserRepo].get(userId),
+       inject[UserExperimentRepo].getByUser(userId) map (_.experimentType))
     }
 
     val events = (params \ "events") match {
