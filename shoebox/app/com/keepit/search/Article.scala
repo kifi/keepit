@@ -15,5 +15,5 @@ case class Article(
     message: Option[String],
     titleLang: Option[Lang],
     contentLang: Option[Lang],
-    destinationUrl: Option[String])
+    destinationUrl: Option[String] = None)
 

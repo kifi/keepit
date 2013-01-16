@@ -17,6 +17,11 @@ import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.net.URI
+import com.google.inject._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.model._
+import com.keepit.common.db._
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
@@ -28,12 +33,16 @@ case class NormalizedURI  (
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[NormalizedURI] = ExternalId(),
   title: Option[String] = None,
+  domain: Option[String] = None,
   url: String,
   urlHash: String,
   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE
-) extends Logging {
+) extends ModelWithExternalId[NormalizedURI] with Logging {
+  def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
+  def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
 
-  def domain = URI.parse(url).flatMap(_.host)
+  def withState(state: State[NormalizedURI]) = copy(state = state)
+  def withTitle(title: String) = if(title.isEmpty()) this else copy(title = Some(title))
 
   def save(implicit conn: Connection): NormalizedURI = {
     log.info("saving new uri %s with hash %s".format(url, urlHash))
@@ -44,15 +53,41 @@ case class NormalizedURI  (
     uri
   }
 
-  def withState(state: State[NormalizedURI]) = copy(state = state)
-
-  def withTitle(title: String) = if(title.isEmpty()) this else copy(title = Some(title))
-
   def loadUsingHash(implicit conn: Connection): Option[NormalizedURI] =
     (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlHash EQ urlHash) unique}.map(_.view)
 
 
   def stats()(implicit conn: Connection): NormalizedURIStats = NormalizedURIStats(this, BookmarkCxRepo.ofUri(this))
+}
+
+@ImplementedBy(classOf[NormalizedURIRepoImpl])
+trait NormalizedURIRepo extends DbRepo[NormalizedURI]  {
+  def all()(implicit session: RSession): Seq[NormalizedURI]
+
+}
+
+@Singleton
+class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[NormalizedURI] with NormalizedURIRepo {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
+
+  override lazy val table = new RepoTable[NormalizedURI](db, "normalized_uri") {
+    def externalId = column[ExternalId[NormalizedURI]]("external_id")
+    def title = column[String]("title")
+    def url = column[String]("url", O.NotNull)
+    def state = column[State[NormalizedURI]]("state", O.NotNull)
+    def urlHash = column[String]("url_hash", O.NotNull)
+    def domain = column[String]("domain", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ domain.? ~ url ~ urlHash ~ state <> (NormalizedURI, NormalizedURI.unapply _)
+  }
+
+  override def all()(implicit session: RSession): Seq[NormalizedURI] =
+    (for(f <- table if f.state === NormalizedURIStates.ACTIVE) yield f).list
 }
 
 object NormalizedURIFactory {
@@ -68,7 +103,7 @@ object NormalizedURIFactory {
 
   def apply(title: Option[String], url: String, state: State[NormalizedURI]): NormalizedURI = {
     val normalized = normalize(url)
-    NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized), state = state)
+    NormalizedURI(title = title, url = normalized, domain = Option(URI.parse(normalized).flatMap(_.host).toString), urlHash = hashUrl(normalized), state = state)
   }
 
   def normalize(url: String) = URINormalizer.normalize(url)
