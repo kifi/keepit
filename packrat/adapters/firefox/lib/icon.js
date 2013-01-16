@@ -36,17 +36,18 @@ exports.addToWindow = function(win, click) {
 
   let xpcomWin = getXpcomWindow(win);
 
-  let iconEL = xpcomWin.document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", "image");
-  iconEL.setAttribute("id", ICON_ID);
-  iconEL.setAttribute("class", "urlbar-icon");
-  iconEL.setAttribute("collapsed", true);
-  iconEL.addEventListener("click", clickListener);
+  let iconEl = xpcomWin.document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", "image");
+  iconEl.setAttribute("id", ICON_ID);
+  iconEl.setAttribute("class", "urlbar-icon");
+  iconEl.setAttribute("collapsed", true);
+  iconEl.addEventListener("click", clickListener);
 
   let tb = xpcomWin.document.getElementById("urlbar-icons");
-  tb.insertBefore(iconEL, tb.firstChild);
+  tb.insertBefore(iconEl, tb.firstChild);
 
   return function removeFromWindow() {
-    iconEL.addEventListener("click", clickListener);
+    iconEl.addEventListener("click", clickListener);
+    tb.removeChild(iconEl);
   };
 };
 

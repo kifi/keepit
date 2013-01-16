@@ -15,7 +15,6 @@ function extend(a, b) {
 // TODO: load some of these APIs on demand instead of up front
 const self = require("sdk/self"), data = self.data, load = data.load.bind(data), url = data.url.bind(url);
 const timers = require("sdk/timers");
-//const privateBrowsing = require("sdk/private-browsing"); // TODO: if (!privateBrowsing.isActive) { ... }
 const xulApp = require("sdk/system/xul-app");
 const { Ci, Cc } = require("chrome");
 const WM = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
@@ -23,6 +22,7 @@ const {deps} = require("./deps");
 const icon = require("./icon");
 const windows = require("sdk/windows").browserWindows;
 const tabs = require("sdk/tabs");
+const privateMode = require("private-browsing");
 
 var nextTabId = 1;
 const pages = {}, workers = {};  // by tab.id
@@ -196,7 +196,7 @@ tabs
 })
 .on("activate", function(tab) {
   var page = pages[tab.id];
-  if (!page || !page.active) {
+  if ((!page || !page.active) && !privateMode.isActive) {
     exports.log("[tabs.activate]", tab.id, tab.url);
     if (!/^about:/.test(tab.url)) {
       if (page) {
@@ -223,23 +223,26 @@ tabs
   }
 })
 .on("ready", function(tab) {
+  if (privateMode.isActive) return;
   exports.log("[tabs.ready]", tab.id, tab.url);
   var page = pages[tab.id] || createPage(tab);
-  page.ready = true;
   dispatch.call(exports.tabs.on.ready, page);  // TODO: ensure content scripts are fully injected before dispatch
 });
 
 windows
 .on("open", function(win) {
+  if (privateMode.isActive) return;
   exports.log("[windows.open]", win.title);
   win.removeIcon = icon.addToWindow(win, onIconClick);
 })
 .on("close", function(win) {
+  if (privateMode.isActive) return;
   exports.log("[windows.close]", win.title);
   removeFromWindow(win);
 });
 
 for each (let win in windows) {
+  if (privateMode.isActive) continue;
   if (!win.removeIcon) {
     exports.log("[windows] adding icon to window:", win.title);
     win.removeIcon = icon.addToWindow(win, onIconClick);
@@ -255,7 +258,7 @@ for each (let win in windows) {
     } else {
       createPage(tab);
     }
-    // TODO: initialize page.ready somehow
+    // TODO: initialize page.complete somehow
   }
 };
 
@@ -268,6 +271,7 @@ PageMod({
   contentScriptWhen: "start",
   attachTo: ["existing", "top"],
   onAttach: function(worker) {
+    if (privateMode.isActive) return;
     var tab = worker.tab;
     tab.id = tab.id || nextTabId++;
     exports.log("[onAttach]", tab.id, "start.js", tab.url);
@@ -278,7 +282,7 @@ PageMod({
     worker.port.on("api:complete", function() {
       exports.log("[api:complete]", tab.id, tab.url);
       var page = pages[tab.id] || createPage(tab);
-      page.ready = true;
+      page.complete = true;
       dispatch.call(exports.tabs.on.complete, page);
     });
     worker.port.on("api:nav", function() {
@@ -300,6 +304,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       contentScriptOptions: {dataUriPrefix: url("")},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
+        if (privateMode.isActive) return;
         let tab = worker.tab, page = pages[tab.id];
         exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
         let injected = extend({}, o.injected);
@@ -335,6 +340,14 @@ function removeFromWindow(win) {
   }
 }
 
+privateMode.on("start", function() {
+  for each (let win in windows) {
+    removeFromWindow(win);
+  }
+});
+
 exports.onUnload = function(reason) {
-  windows.forEach(removeFromWindow);
+  for each (let win in windows) {
+    removeFromWindow(win);
+  }
 };

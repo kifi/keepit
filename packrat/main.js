@@ -440,7 +440,7 @@ api.tabs.on.loading.push(function(tab) {
 
   checkWhetherKept(tab.url, function(isKept) {
     setIconIfStillAt(tab.id, tab.url, isKept, function(tab) {
-      if (!isKept && tab.ready) {
+      if (!isKept && tab.complete) {
         handleSliderAutoShow(tab);
       }
     });
