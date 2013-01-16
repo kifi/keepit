@@ -4,7 +4,7 @@ import play.api.mvc.{PathBindable, QueryStringBindable}
 import java.util.UUID
 
 case class ExternalId[T](id: String) {
-  if (id == null || !ExternalId.UUID_PATTERN.pattern.matcher(id).matches()) {
+  if (!ExternalId.UUID_PATTERN.pattern.matcher(id).matches()) {
     throw new Exception("external id [%s] does not match uuid pattern".format(id))
   }
   override def toString = id
