@@ -58,6 +58,8 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
         (errorURI, None)
     }
 
+  private val unscrapables = Seq("//www.facebook.com/login", "//accounts.google.com/ServiceLogin", "//www.google.com/accounts/ServiceLogin", "//app.asana.com/")
+  private def isUnscrapable(url: String): Boolean = !unscrapables.filter(url.contains).isEmpty
 
   private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
@@ -73,11 +75,18 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
         val scrapedURI = CX.withConnection { implicit c =>
           if (docChanged) {
             // update the scrape schedule and the uri state to SCRAPED
-            info.withDocumentChanged(newSig.toBase64).save
-            uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED).save
+            info.withDestinationUrl(article.destinationUrl).withDocumentChanged(newSig.toBase64).save
+            if (isUnscrapable(uri.url)) {
+              uri.withTitle(article.title).withState(NormalizedURIStates.UNSCRAPABLE).save
+            } else {
+              uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED).save
+            }
           } else {
             // update the scrape schedule, uri is not changed
-            info.withDocumentUnchanged().save
+            if (isUnscrapable(uri.url)) {
+              uri.withState(NormalizedURIStates.UNSCRAPABLE).save
+            }
+            info.withDestinationUrl(article.destinationUrl).withDocumentUnchanged().save
             uri
           }
         }
@@ -95,7 +104,8 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
             state = NormalizedURIStates.SCRAPE_FAILED,
             message = Option(error.msg),
             titleLang = None,
-            contentLang = None)
+            contentLang = None,
+            destinationUrl = None)
         articleStore += (uri.id.get -> article)
         // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
         val errorURI = CX.withConnection { implicit c =>
@@ -152,6 +162,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
           val contentLang = LangDetector.detect(content)
           val title = extractor.getMetadata("title").getOrElse("")
           val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
+          val destinationUrl = fetchStatus.destinationUrl
           Left(Article(id = normalizedUri.id.get,
                        title = title,
                        content = content,
@@ -161,7 +172,8 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
                        state = NormalizedURIStates.SCRAPED,
                        message = None,
                        titleLang = Some(titleLang),
-                       contentLang = Some(contentLang)))
+                       contentLang = Some(contentLang),
+                       destinationUrl = destinationUrl))
         case _ =>
           Right(ScraperError(normalizedUri, fetchStatus.statusCode, fetchStatus.message.getOrElse("fetch failed")))
       }
