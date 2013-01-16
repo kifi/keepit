@@ -66,6 +66,14 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new StateMapperDelegate[NormalizedURI]
   }
 
+  implicit object ExperimentTypeStateTypeMapper extends BaseTypeMapper[State[ExperimentType]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[ExperimentType]
+  }
+
+  implicit object UserExperimentStateTypeMapper extends BaseTypeMapper[State[UserExperiment]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[UserExperiment]
+  }
+
   //Other
   implicit object URLHistorySeqHistoryStateTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
     def apply(profile: BasicProfile) = new URLHistorySeqMapperDelegate

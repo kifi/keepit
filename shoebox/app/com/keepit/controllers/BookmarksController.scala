@@ -171,9 +171,9 @@ object BookmarksController extends FortyTwoController {
             Ok(JsObject(Seq()))
         }
       case None =>
-        val (user, experiments, installation) = CX.withConnection { implicit conn =>
-          (UserCxRepo.get(userId),
-           UserExperimentCxRepo.getByUser(userId) map (_.experimentType),
+        val (user, experiments, installation) = inject[DBConnection].readOnly{ implicit session =>
+          (inject[UserRepo].get(userId),
+           inject[UserExperimentRepo].getByUser(userId) map (_.experimentType),
            installationId.map(_.id).getOrElse(""))
         }
         val msg = "Unsupported operation for user %s with old installation".format(userId)

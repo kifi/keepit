@@ -13,9 +13,9 @@ import play.api.libs.json.{Json, JsArray, JsBoolean, JsNumber, JsObject, JsStrin
 import com.keepit.inject._
 import com.keepit.common.time._
 import com.keepit.common.net._
-import com.keepit.common.db.Id
-import com.keepit.common.db.CX
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
@@ -195,12 +195,13 @@ object UserController extends FortyTwoController {
   }
 
   def addExperiment(userId: Id[User], experimentType: String) = AdminJsonAction { request =>
-    val experimants = CX.withConnection { implicit c =>
-      val existing = UserExperimentCxRepo.getByUser(userId)
+    val repo = inject[UserExperimentRepo]
+    val experimants = inject[DBConnection].readWrite{ implicit session =>
+      val existing = repo.getByUser(userId)
       val experiment = ExperimentTypes(experimentType)
       if (existing contains(experimentType)) throw new Exception("user %s already has an experiment %s".format(experimentType))
-      UserExperiment(userId = userId, experimentType = experiment).save
-      UserExperimentCxRepo.getByUser(userId)
+      repo.save(UserExperiment(userId = userId, experimentType = experiment))
+      repo.getByUser(userId)
     }
     Ok(JsArray(experimants map {e => JsString(e.experimentType.value) }))
   }
