@@ -21,24 +21,29 @@ class DuplicateDocumentDetection(documentSignatures: Seq[(Id[NormalizedURI], Arr
   }
 
   def processDocument(current: (Id[NormalizedURI], Array[Byte]), threshold: Double = DEFAULT_THRESHOLD) = {
-    documentSignatures.map { other =>
-      val s = similarTo(current._2, other._2)
-      if(s >= threshold &&
-        other._2.deep != EMPTY_DOCUMENT.deep &&
-        other._1 != current._1) {
-        Some((other._1, s))
-      } else {
+    documentSignatures.map { case (otherId, otherSig) =>
+      val gt = current._1.id >= otherId.id
+      if (gt) {
         None
+      }
+      else {
+        val s = similarTo(current._2, otherSig)
+        if(s >= threshold &&
+          otherSig.deep != EMPTY_DOCUMENT.deep) {
+          Some((otherId, s))
+        } else {
+          None
+        }
       }
     }.flatten
   }
 
   def processDocuments(threshold: Double = DEFAULT_THRESHOLD) = {
-    documentSignatures.flatMap(ds =>
+    documentSignatures.flatMap { ds =>
       processDocument(ds, threshold) match {
         case Nil => None
         case result => Some((ds._1,result))
       }
-    )
+    }
   }
 }
