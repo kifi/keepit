@@ -3,6 +3,7 @@ package com.keepit.search
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIList
 import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.index.PersonalizedSearcher
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -48,6 +49,8 @@ extends Logging {
   val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
   val friendlyUris = friendIds.foldLeft(myUris){ (s, f) => s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet }
 
+  val personalizedArticleSearcher = PersonalizedSearcher(articleSearcher, myUris)
+
   def searchBookmarkTitle(queryString: String, initial: Boolean)(implicit lang: Lang) = {
     val bookmarkTitleSearchParser = uriGraph.getQueryParser(lang, proximityBoost)
     bookmarkTitleSearchParser.setPercentMatch(if (initial) 100.0f else percentMatch)
@@ -75,7 +78,7 @@ extends Logging {
     articleParser.setPercentMatch(if (initial) 100.0f else percentMatch)
     articleParser.parseQuery(queryString).map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
-      articleSearcher.doSearch(articleQuery){ (scorer, mapper) =>
+      personalizedArticleSearcher.doSearch(articleQuery){ (scorer, mapper) =>
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
           val id = mapper.getId(doc)
