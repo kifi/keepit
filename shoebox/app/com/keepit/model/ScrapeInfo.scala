@@ -82,7 +82,7 @@ object ScrapeInfoCxRepo {
     val si = ScrapeInfoEntity AS "si"
     val nu = NormalizedURIEntity AS "nu"
 
-    (SELECT (si.*) FROM (si JOIN nu) WHERE (nu.state EQ NormalizedURIStates.INDEXED) list).map( _.view )
+    (SELECT (si.*) FROM (si JOIN nu ON("si.uri_id = nu.id")) WHERE (nu.state EQ NormalizedURIStates.INDEXED) list).map( _.view )
   }
 
   def ofUri(uri: NormalizedURI)(implicit conn: Connection) = ofUriId(uri.id.get)
