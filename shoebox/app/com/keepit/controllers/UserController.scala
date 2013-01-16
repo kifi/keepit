@@ -172,22 +172,23 @@ object UserController extends FortyTwoController {
       case _ => None
     }).flatten
 
-    CX.withConnection { implicit conn =>
-      val oldEmails = EmailAddressCxRepo.getByUser(userId).toSet
+    inject[DBConnection].readWrite{ implicit session =>
+      val emailRepo = inject[EmailAddressRepo]
+      val oldEmails = emailRepo.getByUser(userId).toSet
       val newEmails = (emailList map { address =>
-        val email = EmailAddressCxRepo.getByAddressOpt(address)
+        val email = emailRepo.getByAddressOpt(address)
         email match {
           case Some(addr) => addr // We're good! It already exists
           case None => // Create a new one
             log.info("Adding email address %s to userId %s".format(address, userId.toString))
-            EmailAddress(address = address, userId = userId).save
+            emailRepo.save(EmailAddress(address = address, userId = userId))
         }
       }).toSet
 
       // Set state of removed email addresses to INACTIVE
       (oldEmails -- newEmails) map { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        removedEmail.withState(EmailAddressStates.INACTIVE).save
+        emailRepo.save(removedEmail.withState(EmailAddressStates.INACTIVE))
       }
     }
 

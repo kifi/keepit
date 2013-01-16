@@ -70,6 +70,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new StateMapperDelegate[ExperimentType]
   }
 
+  implicit object EmailAddressStateTypeMapper extends BaseTypeMapper[State[EmailAddress]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[EmailAddress]
+  }
+
   implicit object UserExperimentStateTypeMapper extends BaseTypeMapper[State[UserExperiment]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[UserExperiment]
   }
