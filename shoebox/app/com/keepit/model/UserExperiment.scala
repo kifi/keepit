@@ -62,7 +62,7 @@ class UserExperimentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRep
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[UserExperiment](db, "follow") {
+  override lazy val table = new RepoTable[UserExperiment](db, "user_experiment") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def experimentType = column[State[ExperimentType]]("experiment_type", O.NotNull)
     def state = column[State[UserExperiment]]("state", O.NotNull)

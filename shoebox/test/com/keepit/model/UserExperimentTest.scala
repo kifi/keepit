@@ -14,7 +14,6 @@ import securesocial.core._
 import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
-import com.keepit.model.UserRepo
 
 @RunWith(classOf[JUnitRunner])
 class UserExperimentTest extends SpecificationWithJUnit {
