@@ -2,14 +2,14 @@ package com.keepit.search
 
 import java.util.Random
 
-object DecayingHashFilter {
+object MultiHashFilter {
   def apply(tableSize: Int, numHashFuncs: Int, minHits: Int) = {
     val filter = new Array[Byte](tableSize)
-    new DecayingHashFilter(tableSize, filter, numHashFuncs, minHits)
+    new MultiHashFilter(tableSize, filter, numHashFuncs, minHits)
   }
 }
 
-class DecayingHashFilter(tableSize: Int, filter: Array[Byte], numHashFuncs: Int, minHits: Int) {
+class MultiHashFilter(tableSize: Int, filter: Array[Byte], numHashFuncs: Int, minHits: Int) {
 
   def put(key: Long) {
     forallPositions(key) { (pos, fingerprint) =>

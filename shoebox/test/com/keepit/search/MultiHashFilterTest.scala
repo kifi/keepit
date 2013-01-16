@@ -13,14 +13,14 @@ import java.nio.ByteBuffer
 import java.io.File
 
 @RunWith(classOf[JUnitRunner])
-class DecayingHashFilterTest extends SpecificationWithJUnit {
+class MultiHashFilterTest extends SpecificationWithJUnit {
   val rand = new Random(123456789L)
 
   def create(tableSize: Int, numHashFuncs: Int, minHits: Int, syncEvery: Int = 1000) = {
-    DecayingHashFilter(tableSize, numHashFuncs, minHits)
+    MultiHashFilter(tableSize, numHashFuncs, minHits)
   }
 
-  "DecayingHashFilter" should {
+  "MultiHashFilter" should {
     "put/get keys" in {
       val hf = create(3000, 3, 1)
       val keys = (0 until 10000).map(i => rand.nextLong).toList
