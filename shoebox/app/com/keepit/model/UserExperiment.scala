@@ -99,9 +99,6 @@ object UserExperimentCxRepo {
     (UserExperimentEntity AS "e").map { e => SELECT (e.*) FROM e WHERE ((e.userId EQ userId) AND
         (e.state EQ UserExperimentStates.ACTIVE) AND
         (e.experimentType EQ experiment))}.unique.map(_.view)
-
-  def getByType(experimentType: State[ExperimentType])(implicit conn: Connection): Seq[UserExperiment] =
-    (UserExperimentEntity AS "e").map { e => SELECT (e.*) FROM e WHERE ((e.experimentType EQ experimentType) AND (e.state EQ UserExperimentStates.ACTIVE))}.list.map(_.view)
 }
 
 private[model] class UserExperimentEntity extends Entity[UserExperiment, UserExperimentEntity] {
