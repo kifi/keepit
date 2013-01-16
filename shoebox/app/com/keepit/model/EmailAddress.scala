@@ -53,7 +53,7 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[
     def state = column[State[EmailAddress]]("state", O.NotNull)
     def address = column[String]("address", O.NotNull)
     def verifiedAt = column[DateTime]("verified_at", O.NotNull)
-    def lastVerificationSent = column[DateTime]("verified_at", O.Nullable)
+    def lastVerificationSent = column[DateTime]("last_verification_sent", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ state ~ address ~ verifiedAt.? ~ lastVerificationSent.? <> (EmailAddress, EmailAddress.unapply _)
   }
 

@@ -97,7 +97,10 @@ class DateTimeMapperDelegate extends TypeMapperDelegate[DateTime] {
   def sqlType = delegate.sqlType
   def setValue(value: DateTime, p: PositionedParameters) = delegate.setValue(timestamp(value), p)
   def setOption(valueOpt: Option[DateTime], p: PositionedParameters) = delegate.setOption(valueOpt map timestamp, p)
-  def nextValue(r: PositionedResult): DateTime = delegate.nextValue(r)
+  def nextValue(r: PositionedResult): DateTime = Option(delegate.nextValue(r)) match {
+    case Some(date) => date
+    case None => START_OF_TIME
+  }
   def updateValue(value: DateTime, r: PositionedResult) = delegate.updateValue(timestamp(value), r)
   override def valueToSQLLiteral(value: DateTime) = delegate.valueToSQLLiteral(timestamp(value))
 
