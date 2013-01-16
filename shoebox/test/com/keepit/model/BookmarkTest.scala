@@ -51,6 +51,10 @@ class BookmarkTest extends SpecificationWithJUnit {
     "load all" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
+        val cxAll = CX.withConnection { implicit conn =>
+          BookmarkCxRepo.all
+        }
+        println(cxAll mkString "\n")
         val all = inject[DBConnection].readOnly(implicit session => inject[BookmarkRepo].all)
         all.map(_.title) === Seq("G1", "A1", "G2")
       }
@@ -85,8 +89,8 @@ class BookmarkTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         inject[DBConnection].readOnly{ implicit session =>
-          inject[BookmarkRepo].count(user1) === 2
-          inject[BookmarkRepo].count(user2) === 1
+          inject[BookmarkRepo].count(user1.id.get) === 2
+          inject[BookmarkRepo].count(user2.id.get) === 1
         }
       }
     }

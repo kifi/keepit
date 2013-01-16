@@ -27,7 +27,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
   def initData(numUsers: Int, numUris: Int) = CX.withConnection { implicit c =>
     ((0 until numUsers).map(n => User(firstName = "foo" + n, lastName = "").save).toList,
-     (0 until numUris).map(n => NormalizedURIFactory(title = "a" + n, url = "http://www.keepit.com/article" + n, state=SCRAPED).save).toList)
+     (0 until numUris).map(n => NormalizedURIFactory(title = "a" + n, url = "http://www.keepit.com/article" + n, state = SCRAPED).save).toList)
   }
 
   def initIndexes(store: ArticleStore) = {
