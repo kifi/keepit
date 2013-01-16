@@ -77,7 +77,7 @@ class BookmarkTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         inject[DBConnection].readOnly{ implicit session =>
-          inject[BookmarkRepo].count() === 3
+          inject[BookmarkRepo].count(session) === 3
         }
       }
     }
