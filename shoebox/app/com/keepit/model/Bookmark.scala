@@ -74,11 +74,11 @@ case class Bookmark(
 
 @ImplementedBy(classOf[BookmarkRepoImpl])
 trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] {
+  def allActive()(implicit session: RSession): Seq[Bookmark]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark]
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark]
   def count(userId: Id[User])(implicit session: RSession): Int
-//  def getDailyKeeps(implicit session: RSession): Map[Id[User], Map[Long, Long]]
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
 }
 
@@ -108,6 +108,9 @@ class BookmarkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Book
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~ userId ~ state ~ source ~ kifiInstallation.? <> (Bookmark, Bookmark.unapply _)
   }
 
+  def allActive()(implicit session: RSession): Seq[Bookmark] =
+    (for(b <- table if b.state === BookmarkStates.ACTIVE) yield b).list
+
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark] =
     (for(b <- table if b.uriId === uriId && b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).firstOption
 
@@ -118,12 +121,10 @@ class BookmarkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Book
     (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
 
   def count(userId: Id[User])(implicit session: RSession): Int =
-    (for(b <- table if b.userId === userId) yield b.count).first
-
-//  def getDailyKeeps(implicit session: RSession): Map[Id[User], Map[Long, Long]]
+    Query(table.where(b => b.userId === userId).count).first
 
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int =
-    (for(b <- table if b.kifiInstallation === kifiInstallation) yield b.count).first
+    Query(table.where(b => b.kifiInstallation === kifiInstallation).count).first
 }
 
 object BookmarkFactory {
@@ -138,6 +139,7 @@ object BookmarkFactory {
     BookmarkFactory(title = title, urlId = urlId, uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
 }
 
+//slicked!
 object BookmarkCxRepo {
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Option[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.userId EQ userId AND (b.uriId EQ uriId)) LIMIT(1) unique }.map(_.view)
@@ -171,21 +173,6 @@ object BookmarkCxRepo {
 
   def getOpt(externalId: ExternalId[Bookmark])(implicit conn: Connection): Option[Bookmark] =
     (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.externalId EQ externalId) unique }.map(_.view)
-
-  def getDailyKeeps(implicit conn: Connection): Map[Id[User], Map[Long, Long]] = {
-    val u = UserEntity AS "u"
-    val b = BookmarkEntity AS "b"
-    val day = expr[Int](ormConf.dialect.asInstanceOf[FortyTwoDialect].DATEDIFF("u.created_at", "b.created_at"))
-    SELECT (u.id AS "user_id", day AS "day", COUNT(b.id) AS "count")
-      .FROM (u JOIN b ON "b.user_id = u.id")
-      .WHERE (b.source EQ "HOVER_KEEP")
-      .GROUP_BY (u.id, day)
-      .list.foldLeft(Map[Id[User], Map[Long, Long]]()) {(result, row) =>
-        val userId = Id[User](row("user_id").asInstanceOf[Long])
-        val dayCount = row("day").asInstanceOf[Long] -> row("count").asInstanceOf[Long]
-        result + (userId -> (result.getOrElse(userId, Map[Long, Long]()) + dayCount))
-      }
-  }
 
   def getCountByInstallation(installation: ExternalId[KifiInstallation])(implicit conn: Connection): Long =
     (BookmarkEntity AS "b").map { b => SELECT (COUNT(b.*)) FROM b WHERE (b.kifiInstallation EQ installation) unique } getOrElse(0)

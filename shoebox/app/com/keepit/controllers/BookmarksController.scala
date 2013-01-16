@@ -17,12 +17,12 @@ import play.api.libs.json.JsArray
 import play.api.http.ContentTypes
 import play.api.http.ContentTypes
 import com.keepit.controllers.CommonActions._
-import com.keepit.common.db.CX
 import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.inject._
 import com.keepit.serializer.BookmarkSerializer
-import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import com.keepit.common.social._
 import java.util.concurrent.TimeUnit
@@ -96,9 +96,7 @@ object BookmarksController extends FortyTwoController {
   }
 
   def all = AdminHtmlAction { request =>
-    val bookmarks = CX.withConnection { implicit conn =>
-      BookmarkCxRepo.all
-    }
+    val bookmarks = inject[DBConnection].readOnly(implicit session => inject[BookmarkRepo].all)
     Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
   }
 
