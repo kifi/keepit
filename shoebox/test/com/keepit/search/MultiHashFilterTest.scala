@@ -21,7 +21,7 @@ class MultiHashFilterTest extends SpecificationWithJUnit {
   }
 
   "MultiHashFilter" should {
-    "put/get keys" in {
+    "put/test keys" in {
       val hf = create(3000, 3, 1)
       val keys = (0 until 10000).map(i => rand.nextLong).toList
 

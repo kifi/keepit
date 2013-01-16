@@ -12,7 +12,7 @@ object MultiHashFilter {
 class MultiHashFilter(tableSize: Int, filter: Array[Byte], numHashFuncs: Int, minHits: Int) {
 
   def put(key: Long) {
-    forallPositions(key) { (pos, fingerprint) =>
+    forAllPositionsFor(key){ (pos, fingerprint) =>
       filter(pos) = fingerprint
       true
     }
@@ -20,13 +20,13 @@ class MultiHashFilter(tableSize: Int, filter: Array[Byte], numHashFuncs: Int, mi
 
   def mayContain(key: Long) = {
     var hits = 0
-    !forallPositions(key) { (pos, fingerprint) =>
+    !forAllPositionsFor(key){ (pos, fingerprint) =>
       if (filter(pos) == fingerprint) hits += 1
       (hits < minHits)
     }
   }
 
-  private[this] def forallPositions(key: Long)(f: (Int, Byte) => Boolean): Boolean = {
+  private[this] def forAllPositionsFor(key: Long)(f: (Int, Byte) => Boolean): Boolean = {
     var v = key & 0x7FFFFFFFFFFFFFFFL
     var i = 0
     val tsize = tableSize.toLong
