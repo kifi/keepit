@@ -160,11 +160,11 @@ class URIGraphTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.map{ case (uri, users) =>
             val expected = (users.map(_.id.get).toSet intersect friendIds)
             val answer = searcher.intersect(userToUserEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet
-            //println("friends:"+ friendIds)
-            //println("users:" + users.map(_.id.get))
-            //println("expected:" + expected)
-            //println("answer:" + answer)
-            //println("---")
+            println("friends:"+ friendIds)
+            println("users:" + users.map(_.id.get))
+            println("expected:" + expected)
+            println("answer:" + answer)
+            println("---")
             answer === expected
           }
         }
@@ -242,10 +242,6 @@ class URIGraphTest extends SpecificationWithJUnit {
             val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
             BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users(0).id.get, source = BookmarkSource("test")).save
           }
-        }
-
-        CX.withConnection { implicit conn =>
-          println(BookmarkCxRepo.all)
         }
 
         val graphDir = new RAMDirectory

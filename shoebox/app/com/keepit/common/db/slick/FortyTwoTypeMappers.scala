@@ -74,6 +74,14 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new StateMapperDelegate[DuplicateDocument]
   }
 
+  implicit object ExperimentTypeStateTypeMapper extends BaseTypeMapper[State[ExperimentType]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[ExperimentType]
+  }
+
+  implicit object UserExperimentStateTypeMapper extends BaseTypeMapper[State[UserExperiment]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[UserExperiment]
+  }
+
   //Other
   implicit object URLHistorySeqHistoryStateTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
     def apply(profile: BasicProfile) = new URLHistorySeqMapperDelegate
@@ -123,7 +131,10 @@ class ExternalIdMapperDelegate[T] extends TypeMapperDelegate[ExternalId[T]] {
   def sqlType = delegate.sqlType
   def setValue(value: ExternalId[T], p: PositionedParameters) = delegate.setValue(value.id, p)
   def setOption(valueOpt: Option[ExternalId[T]], p: PositionedParameters) = delegate.setOption(valueOpt map (_.id), p)
-  def nextValue(r: PositionedResult) = ExternalId(delegate.nextValue(r))
+  def nextValue(r: PositionedResult) = delegate.nextValueOrElse("", r) match {
+    case "" => zero
+    case some => ExternalId(some)
+  }
   def updateValue(value: ExternalId[T], r: PositionedResult) = delegate.updateValue(value.id, r)
   override def valueToSQLLiteral(value: ExternalId[T]) = delegate.valueToSQLLiteral(value.id)
 }

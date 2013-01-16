@@ -17,12 +17,12 @@ import play.api.libs.json.JsArray
 import play.api.http.ContentTypes
 import play.api.http.ContentTypes
 import com.keepit.controllers.CommonActions._
-import com.keepit.common.db.CX
 import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.inject._
 import com.keepit.serializer.BookmarkSerializer
-import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import com.keepit.common.social._
 import java.util.concurrent.TimeUnit
@@ -96,9 +96,7 @@ object BookmarksController extends FortyTwoController {
   }
 
   def all = AdminHtmlAction { request =>
-    val bookmarks = CX.withConnection { implicit conn =>
-      BookmarkCxRepo.all
-    }
+    val bookmarks = inject[DBConnection].readOnly(implicit session => inject[BookmarkRepo].all)
     Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
   }
 
@@ -173,9 +171,9 @@ object BookmarksController extends FortyTwoController {
             Ok(JsObject(Seq()))
         }
       case None =>
-        val (user, experiments, installation) = CX.withConnection { implicit conn =>
-          (UserCxRepo.get(userId),
-           UserExperimentCxRepo.getByUser(userId) map (_.experimentType),
+        val (user, experiments, installation) = inject[DBConnection].readOnly{ implicit session =>
+          (inject[UserRepo].get(userId),
+           inject[UserExperimentRepo].getByUser(userId) map (_.experimentType),
            installationId.map(_.id).getOrElse(""))
         }
         val msg = "Unsupported operation for user %s with old installation".format(userId)

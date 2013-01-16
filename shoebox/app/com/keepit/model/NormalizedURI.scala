@@ -62,7 +62,7 @@ case class NormalizedURI  (
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI]  {
-  def all()(implicit session: RSession): Seq[NormalizedURI]
+  def allActive()(implicit session: RSession): Seq[NormalizedURI]
 
 }
 
@@ -86,7 +86,7 @@ class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ domain.? ~ url ~ urlHash ~ state <> (NormalizedURI, NormalizedURI.unapply _)
   }
 
-  override def all()(implicit session: RSession): Seq[NormalizedURI] =
+  def allActive()(implicit session: RSession): Seq[NormalizedURI] =
     (for(f <- table if f.state === NormalizedURIStates.ACTIVE) yield f).list
 }
 
