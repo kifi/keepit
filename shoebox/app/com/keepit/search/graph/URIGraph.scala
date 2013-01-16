@@ -138,7 +138,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   }
 
   def buildIndexable(user: User) = {
-    val bookmarks = inject[DBConnection].readOnly(implicit session => inject[BookmarkRepo].allActive())
+    val bookmarks = inject[DBConnection].readOnly(implicit session => inject[BookmarkRepo].getByUser(user.id.get))
     new URIListIndexable(user.id.get, bookmarks)
   }
 
