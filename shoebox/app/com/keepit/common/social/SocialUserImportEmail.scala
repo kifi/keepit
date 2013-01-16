@@ -20,9 +20,9 @@ import akka.dispatch.Future
 import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.model._
 import com.keepit.inject._
-import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
 import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import play.api.Play.current
 import play.api.libs.json.JsArray
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
@@ -36,15 +36,17 @@ class SocialUserImportEmail() extends Logging {
 
   private def importEmailFromJson(userId: Id[User], json: JsValue): Option[EmailAddress] = {
     (json \ "email").asOpt[String].map {emailString =>
-      CX.withConnection { implicit conn =>
-        EmailAddressCxRepo.getByAddressOpt(emailString) match {
+      inject[DBConnection].readWrite{ implicit session =>
+        val userRepo = inject[UserRepo]
+        val emailRepo = inject[EmailAddressRepo]
+        emailRepo.getByAddressOpt(emailString) match {
           case Some(email) =>
-            if (email.userId != userId) throw new IllegalStateException("email %s is not associated with user %s".format(email, UserCxRepo.get(userId)))
-            log.info("email %s for user %s already exist".format(email, UserCxRepo.get(userId)))
+            if (email.userId != userId) throw new IllegalStateException("email %s is not associated with user %s".format(email, userRepo.get(userId)))
+            log.info("email %s for user %s already exist".format(email, userRepo.get(userId)))
             email
           case None =>
-            log.info("creating new email %s for user %s already exist".format(emailString, UserCxRepo.get(userId)))
-            EmailAddress(userId = userId, address = emailString).save
+            log.info("creating new email %s for user %s already exist".format(emailString, userRepo.get(userId)))
+            emailRepo.save(EmailAddress(userId = userId, address = emailString))
         }
       }
     }
