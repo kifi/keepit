@@ -78,6 +78,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new StateMapperDelegate[ExperimentType]
   }
 
+  implicit object EmailAddressStateTypeMapper extends BaseTypeMapper[State[EmailAddress]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[EmailAddress]
+  }
+
   implicit object UserExperimentStateTypeMapper extends BaseTypeMapper[State[UserExperiment]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[UserExperiment]
   }
@@ -101,7 +105,10 @@ class DateTimeMapperDelegate extends TypeMapperDelegate[DateTime] {
   def sqlType = delegate.sqlType
   def setValue(value: DateTime, p: PositionedParameters) = delegate.setValue(timestamp(value), p)
   def setOption(valueOpt: Option[DateTime], p: PositionedParameters) = delegate.setOption(valueOpt map timestamp, p)
-  def nextValue(r: PositionedResult): DateTime = delegate.nextValue(r)
+  def nextValue(r: PositionedResult): DateTime = Option(delegate.nextValue(r)) match {
+    case Some(date) => date
+    case None => START_OF_TIME
+  }
   def updateValue(value: DateTime, r: PositionedResult) = delegate.updateValue(timestamp(value), r)
   override def valueToSQLLiteral(value: DateTime) = delegate.valueToSQLLiteral(timestamp(value))
 
