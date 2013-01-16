@@ -17,6 +17,11 @@ import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.net.URI
+import com.google.inject._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.model._
+import com.keepit.common.db._
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
@@ -28,12 +33,16 @@ case class NormalizedURI  (
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[NormalizedURI] = ExternalId(),
   title: Option[String] = None,
+  domain: Option[String] = None,
   url: String,
   urlHash: String,
   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE
-) extends Logging {
+) extends ModelWithExternalId[NormalizedURI] with Logging {
+  def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
+  def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
 
-  def domain = URI.parse(url).flatMap(_.host)
+  def withState(state: State[NormalizedURI]) = copy(state = state)
+  def withTitle(title: String) = if(title.isEmpty()) this else copy(title = Some(title))
 
   def save(implicit conn: Connection): NormalizedURI = {
     log.info("saving new uri %s with hash %s".format(url, urlHash))
@@ -44,15 +53,41 @@ case class NormalizedURI  (
     uri
   }
 
-  def withState(state: State[NormalizedURI]) = copy(state = state)
-
-  def withTitle(title: String) = if(title.isEmpty()) this else copy(title = Some(title))
-
   def loadUsingHash(implicit conn: Connection): Option[NormalizedURI] =
     (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlHash EQ urlHash) unique}.map(_.view)
 
 
   def stats()(implicit conn: Connection): NormalizedURIStats = NormalizedURIStats(this, BookmarkCxRepo.ofUri(this))
+}
+
+@ImplementedBy(classOf[NormalizedURIRepoImpl])
+trait NormalizedURIRepo extends DbRepo[NormalizedURI]  {
+  def allActive()(implicit session: RSession): Seq[NormalizedURI]
+
+}
+
+@Singleton
+class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[NormalizedURI] with NormalizedURIRepo {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
+
+  override lazy val table = new RepoTable[NormalizedURI](db, "normalized_uri") {
+    def externalId = column[ExternalId[NormalizedURI]]("external_id")
+    def title = column[String]("title")
+    def url = column[String]("url", O.NotNull)
+    def state = column[State[NormalizedURI]]("state", O.NotNull)
+    def urlHash = column[String]("url_hash", O.NotNull)
+    def domain = column[String]("domain", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ domain.? ~ url ~ urlHash ~ state <> (NormalizedURI, NormalizedURI.unapply _)
+  }
+
+  def allActive()(implicit session: RSession): Seq[NormalizedURI] =
+    (for(f <- table if f.state === NormalizedURIStates.ACTIVE) yield f).list
 }
 
 object NormalizedURIFactory {
@@ -68,7 +103,7 @@ object NormalizedURIFactory {
 
   def apply(title: Option[String], url: String, state: State[NormalizedURI]): NormalizedURI = {
     val normalized = normalize(url)
-    NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized), state = state)
+    NormalizedURI(title = title, url = normalized, domain = Option(URI.parse(normalized).flatMap(_.host).toString), urlHash = hashUrl(normalized), state = state)
   }
 
   def normalize(url: String) = URINormalizer.normalize(url)
@@ -117,32 +152,41 @@ object NormalizedURIStates {
   val ACTIVE = State[NormalizedURI]("active")
   val SCRAPED	= State[NormalizedURI]("scraped")
   val SCRAPE_FAILED = State[NormalizedURI]("scrape_failed")
+  val UNSCRAPABLE = State[NormalizedURI]("unscrapable")
   val INDEXED = State[NormalizedURI]("indexed")
   val INDEX_FAILED = State[NormalizedURI]("index_failed")
   val FALLBACKED = State[NormalizedURI]("fallbacked")
   val FALLBACK_FAILED = State[NormalizedURI]("fallback_failed")
+  val UNSCRAPE_FALLBACK = State[NormalizedURI]("unscrape_fallback")
+  val UNSCRAPE_FALLBACK_FAILED = State[NormalizedURI]("unscrape_fallback_failed")
   val INACTIVE = State[NormalizedURI]("inactive")
 
   type Transitions = Map[State[NormalizedURI], Set[State[NormalizedURI]]]
 
   val ALL_TRANSITIONS: Transitions = Map(
-      (ACTIVE -> Set(SCRAPED, SCRAPE_FAILED, INACTIVE)),
+      (ACTIVE -> Set(SCRAPED, SCRAPE_FAILED, UNSCRAPABLE, INACTIVE)),
       (SCRAPED -> Set(ACTIVE, INDEXED, INDEX_FAILED, INACTIVE)),
       (SCRAPE_FAILED -> Set(ACTIVE, FALLBACKED, FALLBACK_FAILED, INACTIVE)),
+      (UNSCRAPABLE -> Set(ACTIVE, UNSCRAPE_FALLBACK, UNSCRAPE_FALLBACK_FAILED, INACTIVE)),
       (INDEXED -> Set(ACTIVE, SCRAPED, INACTIVE)),
       (INDEX_FAILED -> Set(ACTIVE, SCRAPED, INACTIVE)),
       (FALLBACKED -> Set(ACTIVE, SCRAPE_FAILED, INACTIVE)),
       (FALLBACK_FAILED -> Set(ACTIVE, SCRAPE_FAILED, INACTIVE)),
+      (UNSCRAPE_FALLBACK -> Set(ACTIVE, UNSCRAPABLE, INACTIVE)),
+      (UNSCRAPE_FALLBACK_FAILED -> Set(ACTIVE, UNSCRAPABLE, INACTIVE)),
       (INACTIVE -> Set(ACTIVE)))
 
   val ADMIN_TRANSITIONS: Transitions = Map(
       (ACTIVE -> Set.empty),
       (SCRAPED -> Set(ACTIVE)),
       (SCRAPE_FAILED -> Set(ACTIVE)),
+      (UNSCRAPABLE -> Set(ACTIVE)),
       (INDEXED -> Set(ACTIVE, SCRAPED)),
       (INDEX_FAILED -> Set(ACTIVE, SCRAPED)),
       (FALLBACKED -> Set(ACTIVE, SCRAPE_FAILED)),
       (FALLBACK_FAILED -> Set(ACTIVE, SCRAPE_FAILED)),
+      (UNSCRAPE_FALLBACK -> Set(ACTIVE, UNSCRAPABLE)),
+      (UNSCRAPE_FALLBACK_FAILED -> Set(ACTIVE, UNSCRAPABLE)),
       (INACTIVE -> Set.empty))
 
   def transitionByAdmin[T](transition: (State[NormalizedURI], Set[State[NormalizedURI]]))(f:State[NormalizedURI]=>T) = {
@@ -168,7 +212,7 @@ private[model] class NormalizedURIEntity extends Entity[NormalizedURI, Normalize
   val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
   val externalId = "external_id".EXTERNAL_ID[NormalizedURI].NOT_NULL(ExternalId())
   val title = "title".VARCHAR(2048)
-  val url = "url".VARCHAR(256).NOT_NULL
+  val url = "url".VARCHAR(2048).NOT_NULL
   val state = "state".STATE[NormalizedURI].NOT_NULL(NormalizedURIStates.ACTIVE)
   val urlHash = "url_hash".VARCHAR(512).NOT_NULL
   val domain = "domain".VARCHAR(512)

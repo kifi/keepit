@@ -28,6 +28,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[KifiInstallation]
   }
 
+  implicit object NormalizedURIExternalIdTypeMapper extends BaseTypeMapper[ExternalId[NormalizedURI]] {
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[NormalizedURI]
+  }
+
   //Ids
   implicit object FollowIdTypeMapper extends BaseTypeMapper[Id[Follow]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Follow]
@@ -64,6 +68,10 @@ object FortyTwoTypeMappers {
 
   implicit object NormalizedURIStateTypeMapper extends BaseTypeMapper[State[NormalizedURI]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[NormalizedURI]
+  }
+
+  implicit object DuplicateDocumentTypeMapper extends BaseTypeMapper[State[DuplicateDocument]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[DuplicateDocument]
   }
 
   implicit object ExperimentTypeStateTypeMapper extends BaseTypeMapper[State[ExperimentType]] {
