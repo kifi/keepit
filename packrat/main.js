@@ -408,7 +408,7 @@ function setIconIfFaint(tab) {
 
 function setIconIfStillAt(tabId, url, kept, callback) {
   var tab = api.tabs.get(tabId);  // tab may have navigated
-  if (tab.url === url && tab.icon === "icons/keep.faint.png") {
+  if (tab && tab.url === url && tab.icon === "icons/keep.faint.png") {
     setIcon(tabId, kept);
     callback && callback(tab);
   }
