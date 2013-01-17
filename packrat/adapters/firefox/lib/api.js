@@ -22,13 +22,13 @@ const {deps} = require("./deps");
 const icon = require("./icon");
 const windows = require("sdk/windows").browserWindows;
 const tabs = require("sdk/tabs");
-const privateMode = require("private-browsing");
+const privateMode = require("sdk/private-browsing");
 
 var nextTabId = 1;
-const pages = {}, workers = {};  // by tab.id
+const pages = {}, workers = {}, tabsById = {};  // all by tab.id
 function createPage(tab) {
   if (!tab || !tab.id) throw Error(tab ? "tab without id" : "tab required");
-  return pages[tab.id] = {id: tab.id, url: tab.url, active: tab === tab.window.tabs.activeTab, _win: tab.window};
+  return pages[tab.id] = {id: tab.id, url: tab.url, active: tab === tab.window.tabs.activeTab};
 }
 
 exports.bookmarks = require("./bookmarks");
@@ -42,7 +42,7 @@ exports.icon = {
     if (page) {
       page.icon = path;
       if (page.active) {
-        icon.show(page._win, url(path));
+        icon.show(tabsById[tabId].window, url(path));
       }
     }
   }};
@@ -188,11 +188,13 @@ tabs
 .on("open", function(tab) {
   tab.id = tab.id || nextTabId++;
   exports.log("[tabs.open]", tab.id, tab.url);
+  tabsById[tab.id] = tab;
 })
 .on("close", function(tab) {
   exports.log("[tabs.close]", tab.id, tab.url);
   delete pages[tab.id];
   delete workers[tab.id];
+  delete tabsById[tab.id];
 })
 .on("activate", function(tab) {
   var page = pages[tab.id];
@@ -251,6 +253,7 @@ for each (let win in windows) {
     if (!tab.id) {
       tab.id = nextTabId++;
       exports.log("[windows]", tab.id, tab.url);
+      tabsById[tab.id] = tab;
     }
     let page = pages[tab.id];
     if (page) {
@@ -304,7 +307,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       contentScriptOptions: {dataUriPrefix: url("")},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
-        if (privateMode.isActive) return;
+        if (privateMode.isActive) return; // TODO: tell script not to do anything if privateMode.isActive
         let tab = worker.tab, page = pages[tab.id];
         exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
         let injected = extend({}, o.injected);
