@@ -8,7 +8,7 @@ CREATE TABLE unscrapable (
     updated_at datetime NOT NULL,
     
     PRIMARY KEY (id),
-    UNIQUE INDEX unscrapable_pattern (pattern)
+    INDEX unscrapable_state (state)
 );
 
 insert into evolutions (name, description) values('27.sql', 'adding unscrapable table');
