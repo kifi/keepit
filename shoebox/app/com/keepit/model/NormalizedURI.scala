@@ -63,7 +63,6 @@ case class NormalizedURI  (
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI]  {
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
-
 }
 
 @Singleton
