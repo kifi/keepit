@@ -175,7 +175,7 @@ api.port.on({
     return true;
   },
   add_deep_link_listener: function(data, respond, tab) {
-    createDeepLinkListener(data.link, tab.id, respond);
+    createDeepLinkListener(data, tab.id, respond);
     return true;
   }});
 
