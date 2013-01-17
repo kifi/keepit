@@ -54,6 +54,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new StateMapperDelegate[Follow]
   }
 
+  implicit object ScrapeInfoStateTypeMapper extends BaseTypeMapper[State[ScrapeInfo]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[ScrapeInfo]
+  }
+
   implicit object URLStateTypeMapper extends BaseTypeMapper[State[URL]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[URL]
   }

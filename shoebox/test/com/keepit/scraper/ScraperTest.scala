@@ -1,7 +1,12 @@
 package com.keepit.scraper
 
 import com.keepit.search.Article
-import com.keepit.common.db.{CX, Id, State}
+import play.api.Play.current
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
@@ -11,12 +16,12 @@ import com.keepit.test.EmptyApplication
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
-import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import org.apache.http.HttpStatus
 import scala.collection.mutable.{Map => MutableMap}
+import com.keepit.common.db.slick.DBConnection
 
 @RunWith(classOf[JUnitRunner])
 class ScraperTest extends SpecificationWithJUnit {
@@ -43,6 +48,21 @@ class ScraperTest extends SpecificationWithJUnit {
       val result = scraper.fetchArticle(uri)
       result.isRight === true // Right is ScraperError
       result.right.get.httpStatusCode === HttpStatus.SC_NOT_FOUND
+    }
+
+    "fetch allActive" in {
+      running(new EmptyApplication()) {
+        inject[DBConnection].readWrite { implicit s =>
+          val uriRepo = inject[NormalizedURIRepo]
+          val scrapeRepo = inject[ScrapeInfoRepo]
+          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").withState(NormalizedURIStates.INDEXED))
+          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing").withState(NormalizedURIStates.INDEXED))
+          val info1 = scrapeRepo.save(ScrapeInfo(uriId = uri1.id.get))
+          val info2 = scrapeRepo.save(ScrapeInfo(uriId = uri2.id.get))
+          val all = scrapeRepo.allActive
+          all.size === 2
+        }
+      }
     }
 
     "fetch ACTIVE uris and scrape them" in {
