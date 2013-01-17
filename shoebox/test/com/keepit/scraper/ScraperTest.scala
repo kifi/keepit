@@ -82,13 +82,12 @@ class ScraperTest extends SpecificationWithJUnit {
         store.size === 2
 
         // get URIs from db
-        inject[DBConnection].readOnly { implicit s =>
-          uri1 = uriRepo.get(uri1.id.get)
-          uri2 = uriRepo.get(uri2.id.get)
+        val (uri11, uri22) = inject[DBConnection].readOnly { implicit s =>
+          (uriRepo.get(uri1.id.get), uriRepo.get(uri2.id.get))
         }
 
-        uri1.state === NormalizedURIStates.SCRAPED
-        uri2.state === NormalizedURIStates.SCRAPE_FAILED
+        uri11.state === NormalizedURIStates.SCRAPED
+        uri22.state === NormalizedURIStates.SCRAPE_FAILED
       }
     }
 
