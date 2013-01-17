@@ -35,7 +35,7 @@ case class Unscrapable(
 
 @ImplementedBy(classOf[Unscrapable])
 trait UnscrapableRepo extends Repo[Unscrapable] {
-  def allActive()(implicit session: RSession): Seq[NormalizedURI]
+  def allActive()(implicit session: RSession): Seq[Unscrapable]
   def contains(url: String)(implicit session: RSession): Boolean
 }
 
