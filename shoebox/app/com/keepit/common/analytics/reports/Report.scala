@@ -227,15 +227,6 @@ class DailySliderShownByKey extends BasicDailyAggregationReport with Logging {
   }
 }
 
-class DailySliderClosedByAuto extends BasicDailyAggregationReport with Logging {
-  override val reportName = "DailySliderClosedByAuto"
-
-  def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger","auto").build
-    super.get(selector, startDate, endDate)
-  }
-}
-
 class DailySliderClosedByIcon extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailySliderClosedByButton"
 
@@ -298,3 +289,11 @@ class DailyKeep extends BasicDailyAggregationReport with Logging {
   }
 }
 
+class DailyUsefulPage extends BasicDailyAggregationReport with Logging {
+  override val reportName = "DailyUsefulPage"
+
+  def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
+    val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("usefulPage").build
+    super.get(selector, startDate, endDate)
+  }
+}

@@ -39,7 +39,13 @@ object ScraperController extends FortyTwoController {
     "kxZCPEHXuSaxCePUNWG60BjuZykQI9SPBTuYD6L3EFh6m0gfCsHZ9CUK3vf8w9h9KNhfFwX0/c7tMCi2Dk+rFo6q345kuMW28SQf/Eghowe2hLtrUuLdXR6JnfhipjZOh8CWhQ==", // Facebook
     "F1YwNyMtApK7kNCx+rbBrFYA0bZUfYjLwWGuAElDRSa0QFGRuYWo2XUmKKv1cLxk6lsm7iSeb4YoafJUkdaA7jNhuzvWO139f2Y1QllHlDVFa4SoruDiMeBTyd/dOsgxu8OMmw==", // Google groups
     "Rn22yRvfiGeHlbEiaE0A4+q38BsEGqmGYmpArdUNrAit5WXGxjAFLEiZE24/7WRX+b4JXq4IV1TAPSJ1BjoHe55q7HaJiVPvnlKLHn6TboNVwqcUCMvD9l9g6HpZ/+EhwnUeAQ==", // Google drive
-    "dcpgM9N93t/5t4qXNFdu7N6I0TXSiYF7CslQGxTsislHL5SkH9eEnupZEeTBUCxwBHhqLuU7miNW6/kn4zGO+9QSN8qj0r3nNwtInWbWsshka7J/lbte/fXLk99hWfGbxVZOtg==" // Asana
+    "vbZhGbcWZEQaXBE7pR/Ofr7ggs9cJh3bjcdoLT0mtdxpNi/4cOhIKDfYt8dNST6BGkNwc+WlDx4IMpr+X146sRajcZgUKozX9UXW2lmgkJYJZQVv5jvWCJZCZo8PAJfqKD60cQ==", // Google docs
+    "JDbFvPSKTRlPsoKDyJg4JGGupPPFzMVfEs2nGu2J+TKPqJgJPDlIshLdgpU8LbthPjU9+w3wGrZD+aQGpNksEXAcVehY463O30R29FEcBxMI/69q9NqZUqljQihtC3d8sDMqJA==", // Google docs
+    "dcpgM9N93t/5t4qXNFdu7N6I0TXSiYF7CslQGxTsislHL5SkH9eEnupZEeTBUCxwBHhqLuU7miNW6/kn4zGO+9QSN8qj0r3nNwtInWbWsshka7J/lbte/fXLk99hWfGbxVZOtg==", // Asana
+    "406AgpatC4kT6qGqYgIm9fmn07G23tFxs+nFJfLlZCOMhzQ6OeXxz9oq8OnUu9uaNTAtLDr1aqikkXPWxgsgy4DlwHa9kvZI6TXRVvJUnkIFxn6ZE7eAQhWDtM4zkCjJ4hCEtA==", // Juniper
+    "wz+QbFgpl+4jhr2Li8kDbWGjqmxH9gu60g33fhq2u4EDWGUHW7PW2XSBoRfP8JYQ8UpahZAOfh3W5Mjl03AMgWNediM+1HQTKtPknY8lHf7IE20TQpH6H/gWQLS58nQKmNoeEg==", // LinkedIn
+    "AI3rIinEkzdH3np/61CIsuYfekOUMfjwnL+3fYCAwTi8BASzyLY3OiBmttJ8Y9LZBVoc4wcZZWncioDrNKwbcr1RK/Jg/0r71Bwq5164/B5fzBmNIqa8CQL1cMO6w/UX4h28PA==", // Google docs
+    "4k3jinEqzd67np/61CIsuYfehiUCvjwaL+3feeAe+OyBKmzWX9pOiBmttIu6uSSBVocxwdSxGnc4w6xO8cbPxL2K/lrNxL71Bwq51m4/B5fvhmNIhe81wb1cMO6w/Xo4mq8PA==" // Google docs
   )
 
   def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
@@ -68,12 +74,12 @@ object ScraperController extends FortyTwoController {
       inject[DBConnection].readWrite { implicit conn =>
         docs.map { case(id, similars) =>
           val uri = normURIRepo.get(id)
-          resultStr ++= "*\t%s\t*\t%s<br>\n".format(uri.id.getOrElse("x"), uri.url.take(100))
+          resultStr ++= "*\t%s\t*\t%s\n".format(uri.id.getOrElse("x"), uri.url.take(100))
           similars map { case (otherId, percentMatch) =>
             val otherUri = normURIRepo.get(otherId)
             val dupeDoc = DuplicateDocument(uri1Id = id, uri2Id = otherId, percentMatch = percentMatch)
             dupeRepo.save(dupeDoc)
-            resultStr ++= "\t%s\t%s\t%s<br>\n".format(otherUri.id.getOrElse("x"), percentMatch, otherUri.url.take(100))
+            resultStr ++= "\t%s\t%s\t%s\n".format(otherUri.id.getOrElse("x"), percentMatch, otherUri.url.take(100))
           }
         }
       }
@@ -107,6 +113,26 @@ object ScraperController extends FortyTwoController {
       NormalizedURICxRepo.get(article.id)
     }
     Ok(views.html.article(article, uri))
+  }
+
+  def getUnscrapable() = AdminHtmlAction { implicit request =>
+    val docs = inject[DBConnection].readOnly { implicit conn =>
+      inject[UnscrapableRepo].allActive()
+    }
+
+    Ok(views.html.unscrapable(docs))
+  }
+
+  def createUnscrapable() = AdminHtmlAction { implicit request =>
+    val form = request.request.body.asFormUrlEncoded match {
+      case Some(req) => req.map(r => (r._1 -> r._2.head))
+      case None => throw new Exception("No form data given.")
+    }
+    val pattern = form.get("pattern").get
+    inject[DBConnection].readWrite { implicit conn =>
+      inject[UnscrapableRepo].save(Unscrapable(pattern = pattern))
+    }
+    Redirect(com.keepit.controllers.admin.routes.ScraperController.getUnscrapable())
   }
 }
 
