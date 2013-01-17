@@ -67,11 +67,13 @@ class ScraperTest extends SpecificationWithJUnit {
 
     "fetch ACTIVE uris and scrape them" in {
       running(new EmptyApplication()) {
-        var (uri1, uri2, info1, info2) = CX.withConnection { implicit c =>
-          val uri1 = NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").save
-          val uri2 = NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing").save
-          val info1 = ScrapeInfoCxRepo.ofUri(uri1).save
-          val info2 = ScrapeInfoCxRepo.ofUri(uri2).save
+        val uriRepo = inject[NormalizedURIRepo]
+        val scrapeRepo = inject[ScrapeInfoRepo]
+        val (uri1, uri2, info1, info2) = inject[DBConnection].readWrite { implicit s =>
+          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
+          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing"))
+          val info1 = scrapeRepo.save(ScrapeInfo(uriId = uri1.id.get))
+          val info2 = scrapeRepo.save(ScrapeInfo(uriId = uri2.id.get))
           (uri1, uri2, info1, info2)
         }
         val store = new FakeArticleStore()
@@ -80,9 +82,9 @@ class ScraperTest extends SpecificationWithJUnit {
         store.size === 2
 
         // get URIs from db
-        CX.withConnection { implicit c =>
-          uri1 = NormalizedURICxRepo.get(uri1.id.get)
-          uri2 = NormalizedURICxRepo.get(uri2.id.get)
+        inject[DBConnection].readOnly { implicit s =>
+          uri1 = uriRepo.get(uri1.id.get)
+          uri2 = uriRepo.get(uri2.id.get)
         }
 
         uri1.state === NormalizedURIStates.SCRAPED

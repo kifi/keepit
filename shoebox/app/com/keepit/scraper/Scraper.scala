@@ -1,7 +1,11 @@
 package com.keepit.scraper
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.{Id, CX}
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.net.URI
 import com.keepit.search.{Article, ArticleStore}
@@ -30,8 +34,8 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
     log.info("starting a new scrape round")
-    val tasks = CX.withConnection { implicit c =>
-      ScrapeInfoCxRepo.getOverdueList().map{ info => (NormalizedURICxRepo.get(info.uriId), info) }
+    val tasks = inject[DBConnection].readOnly { implicit s =>
+      inject[ScrapeInfoRepo].getOverdueList().map{ info => (inject[NormalizedURIRepo].get(info.uriId), info) }
     }
     log.info("got %s uris to scrape".format(tasks.length))
     val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
@@ -42,7 +46,10 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
   }
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
-    val info = CX.withConnection { implicit c => ScrapeInfoCxRepo.ofUri(uri) }
+    val repo = inject[ScrapeInfoRepo]
+    val info = inject[DBConnection].readWrite { implicit s =>
+      repo.getByUri(uri.id.get).getOrElse(repo.save(ScrapeInfo(uriId = uri.id.get)))
+    }
     safeProcessURI(uri, info)
   }
 
@@ -51,9 +58,9 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     } catch {
       case e =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
-        val errorURI = CX.withConnection { implicit c =>
-          info.withFailure().save
-          uri.withState(NormalizedURIStates.SCRAPE_FAILED).save
+        val errorURI = inject[DBConnection].readWrite { implicit s =>
+          inject[ScrapeInfoRepo].save(info.withFailure())
+          inject[NormalizedURIRepo].save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         (errorURI, None)
     }

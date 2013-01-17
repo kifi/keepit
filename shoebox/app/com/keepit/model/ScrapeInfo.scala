@@ -15,6 +15,7 @@ import ru.circumflex.orm._
 import play.api.libs.json._
 import scala.math._
 import org.joda.time.Hours
+import org.specs2.internal.scalaz.FirstOption
 
 case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
@@ -79,6 +80,9 @@ case class ScrapeInfo(
 @ImplementedBy(classOf[ScrapeInfoRepoImpl])
 trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
   def allActive(implicit session: RSession): Seq[ScrapeInfo]
+  def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Option[ScrapeInfo]
+  def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo]
+
 }
 
 @Singleton
@@ -101,8 +105,6 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
     def signature =  column[String]("signature", O.NotNull)
     def destinationUrl = column[String]("destination_url", O.Nullable)
     def * = id.? ~ uriId ~ lastScrape ~ nextScrape ~ interval ~ failures ~ state ~ signature ~ destinationUrl.? <> (ScrapeInfo, ScrapeInfo.unapply _)
-
-    def uri = foreignKey("SCRAPE_NURI_FK", uriId, inject[NormalizedURIRepo].table)(_.id)
   }
 
   def allActive(implicit session: RSession): Seq[ScrapeInfo] = {
@@ -110,10 +112,18 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
        Join(s, u) <- table innerJoin inject[NormalizedURIRepoImpl].table on (_.uriId is _.id)
        if u.state is NormalizedURIStates.INDEXED
      } yield s.*)
-   println("================================")
-   println(q.selectStatement)
-   println("================================")
    q.list
+  }
+
+  def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Option[ScrapeInfo] =
+    (for(f <- table if f.uriId === uriId) yield f).firstOption
+
+  def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo] = {
+    val q = (for(f <- table if f.nextScrape <= due && f.state === ScrapeInfoStates.ACTIVE) yield f)
+    ((limit > 0) match {
+      case true => q.take(limit)
+      case false => q
+    }).list
   }
 
 }
