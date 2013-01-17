@@ -33,7 +33,7 @@ case class Unscrapable(
 
 }
 
-@ImplementedBy(classOf[Unscrapable])
+@ImplementedBy(classOf[UnscrapableRepoImpl])
 trait UnscrapableRepo extends Repo[Unscrapable] {
   def allActive()(implicit session: RSession): Seq[Unscrapable]
   def contains(url: String)(implicit session: RSession): Boolean
@@ -60,7 +60,10 @@ class UnscrapableRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[U
     (for(f <- table if f.state === UnscrapableStates.ACTIVE) yield f).list
 
   def contains(url: String)(implicit session: RSession): Boolean = {
-    !allActive().forall(s => !url.matches(s.pattern))
+    !allActive().forall { s =>
+      println(url + "   " + s.pattern + "   " + url.matches(s.pattern))
+      !url.matches(s.pattern)
+    }
   }
 }
 
