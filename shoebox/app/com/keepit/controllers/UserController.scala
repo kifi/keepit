@@ -163,7 +163,6 @@ object UserController extends FortyTwoController {
     val form = request.request.body.asFormUrlEncoded match {
       case Some(req) => req.map(r => (r._1 -> r._2.head))
       case None => throw new Exception("whoops")
-
     }
 
     // We want to throw an exception (.get) if `emails' was not passed in. As we expand this, we should add Play! form validation
