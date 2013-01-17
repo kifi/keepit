@@ -2,8 +2,11 @@
     "name": "kifi-beta",
     "license": "MPL 2.0",
     "author": "FortyTwo Inc.",
-    "version": "2.1.0",
+    "homepage": "http://www.keepitfindit.com/",
+    "version": "2.1.27",
     "fullName": "Keep It, Find It!",
     "id": "kifi@42go.com",
+    "icon": "data/icons/kifi.48.png",
+    "icon64": "data/icons/kifi.64.png",
     "description": "The answer to life, the universe, and everything."
 }
