@@ -61,7 +61,6 @@ class UnscrapableRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[U
 
   def contains(url: String)(implicit session: RSession): Boolean = {
     !allActive().forall { s =>
-      println(url + "   " + s.pattern + "   " + url.matches(s.pattern))
       !url.matches(s.pattern)
     }
   }

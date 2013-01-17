@@ -80,14 +80,11 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
         val scrapedURI = CX.withConnection { implicit c =>
 
           val isUnscrape = {
-            println("\n\n\n" + uri.url)
             inject[DBConnection].readOnly { implicit conn =>
               val uns = inject[UnscrapableRepo]
               if (uns.contains(uri.url) || (article.destinationUrl.isDefined && uns.contains(article.destinationUrl.get))) true else false
             }
           }
-
-          println("\n######\n" + isUnscrape)
 
           if (docChanged) {
             // update the scrape schedule and the uri state to SCRAPED
