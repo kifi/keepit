@@ -52,7 +52,7 @@ api = function() {
           id: tabId,
           url: tab.url,
           active: tab.active,
-          ready: tab.status === "complete"};
+          complete: tab.status === "complete"};
         if (/^https?:/.test(page.url)) {
           dispatch.call(api.tabs.on.loading, page);
         }
@@ -61,7 +61,7 @@ api = function() {
       if (change.status === "complete") {
         var page = pages[tabId];
         if (page) {
-          page.ready = true;
+          page.complete = true;
           if (/^https?:/.test(page.url)) {
             dispatch.call(api.tabs.on.complete, page);
           }
@@ -96,19 +96,19 @@ api = function() {
           id: tab.id,
           url: tab.url,
           active: tab.active,
-          ready: tab.status === "complete"};
+          complete: tab.status === "complete"};
       }
       if (page.active) {
         activePages[tab.windowId] = page;
       }
       if (/^https?:/.test(tab.url)) {
         // Note: intentionally not dispatching api.tabs.on.ready after injecting content scripts
-        if (page.ready) {
+        if (page.complete) {
           injectContentScripts(page, api.noop);
         } else if (tab.status === "loading") {
           chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
-            page.ready = !!(page.ready || arr && arr[0]);
-            if (page.ready) {
+            page.complete = arr[0] === "complete";
+            if (~["interactive","complete"].indexOf(arr[0])) {
               injectContentScripts(page, api.noop);
             }
           });
@@ -125,7 +125,6 @@ api = function() {
     }
     if (msg === "api:dom_ready") {
       if (page) {
-        page.ready = true;
         injectContentScripts(tab, function() {
           dispatch.call(api.tabs.on.ready, page);
         });

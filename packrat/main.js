@@ -175,7 +175,7 @@ api.port.on({
     return true;
   },
   add_deep_link_listener: function(data, respond, tab) {
-    createDeepLinkListener(data.link, tab.id, respond);
+    createDeepLinkListener(data, tab.id, respond);
     return true;
   }});
 
@@ -440,7 +440,7 @@ api.tabs.on.loading.push(function(tab) {
 
   checkWhetherKept(tab.url, function(isKept) {
     setIconIfStillAt(tab.id, tab.url, isKept, function(tab) {
-      if (!isKept && tab.ready) {
+      if (!isKept && tab.complete) {
         handleSliderAutoShow(tab);
       }
     });
