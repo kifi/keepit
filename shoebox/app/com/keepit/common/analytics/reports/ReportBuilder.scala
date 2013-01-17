@@ -36,7 +36,6 @@ object Reports {
   lazy val dailySliderShownByAuto = new DailySliderShownByAuto
   lazy val dailySliderShownByIcon = new DailySliderShownByIcon
   lazy val dailySliderShownByKey = new DailySliderShownByKey
-  lazy val dailySliderClosedByAuto = new DailySliderClosedByAuto
   lazy val dailySliderClosedByIcon = new DailySliderClosedByIcon
   lazy val dailySliderClosedByKey = new DailySliderClosedByKey
   lazy val dailySliderClosedByX = new DailySliderClosedByX
@@ -45,6 +44,7 @@ object Reports {
   lazy val dailyUnkeep = new DailyUnkeep
   lazy val dailyKeep = new DailyKeep
   lazy val dailyUniqueDepricatedAddBookmarks = new DailyUniqueDepricatedAddBookmarks
+  lazy val dailyUsefulPage = new DailyUsefulPage
 
   case class ReportGroup(name: String, reports: Seq[Report])
 
@@ -58,14 +58,14 @@ object Reports {
       dailySliderShownByAuto,
       dailySliderShownByIcon,
       dailySliderShownByKey,
-      dailySliderClosedByAuto,
       dailySliderClosedByIcon,
       dailySliderClosedByKey,
       dailySliderClosedByX,
       dailyComment,
       dailyMessage,
       dailyUnkeep,
-      dailyKeep)
+      dailyKeep,
+      dailyUsefulPage)
   )
 
   lazy val DailyAdminReports = ReportGroup("DailyAdminReport",
