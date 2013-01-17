@@ -80,7 +80,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
             // update the scrape schedule and the uri state to SCRAPED
             info.withDestinationUrl(article.destinationUrl).withDocumentChanged(newSig.toBase64).save
             if (isUnscrape)
-              uri.withTitle(article.title).withState(NormalizedURIStates.UNSCRAPABLE).save
+              uri.withState(NormalizedURIStates.UNSCRAPABLE).save
             else
               uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED).save
           } else {

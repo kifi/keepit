@@ -45,6 +45,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[URL]
   }
 
+  implicit object UnscrapableIdTypeMapper extends BaseTypeMapper[Id[Unscrapable]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Unscrapable]
+  }
+
   implicit object NormalizedURIIdTypeMapper extends BaseTypeMapper[Id[NormalizedURI]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[NormalizedURI]
   }
@@ -84,6 +88,10 @@ object FortyTwoTypeMappers {
 
   implicit object UserExperimentStateTypeMapper extends BaseTypeMapper[State[UserExperiment]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[UserExperiment]
+  }
+
+  implicit object UnscrapableStateTypeMapper extends BaseTypeMapper[State[Unscrapable]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[Unscrapable]
   }
 
   //Other
