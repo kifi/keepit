@@ -133,7 +133,7 @@ api.port.on({
     });
   },
   get_prefs: function(data, respond) {
-    respond({session: session, prefs: api.prefs.get("env", "hover_timeout", "max_res", "show_score")});
+    respond({session: session, prefs: api.prefs.get("env", "sliderDelay", "maxResults", "showScores")});
   },
   set_prefs: function(data) {
     api.prefs.set(data);
@@ -349,7 +349,7 @@ function searchOnServer(request, respond) {
     return;
   }
 
-  var config = getConfigs(), maxResults = api.prefs.get("max_res");
+  var config = getConfigs(), maxResults = api.prefs.get("maxResults");
   ajax("GET", "http://" + config.server + "/search", {
       term: request.query,
       maxHits: maxResults * 2,
@@ -362,7 +362,7 @@ function searchOnServer(request, respond) {
         "session": session,
         "searchResults": results,
         "maxResults": maxResults,
-        "showScores": api.prefs.get("show_score"),
+        "showScores": api.prefs.get("showScores"),
         "server": config.server});
     });
   return true;
@@ -473,7 +473,7 @@ function handleSliderAutoShow(tab) {
   }
   userHistory.add(url);
 
-  var sliderDelaySec = api.prefs.get("hover_timeout");
+  var sliderDelaySec = api.prefs.get("sliderDelay");
   if (sliderDelaySec > 0) {
     api.tabs.emit(tab, "auto_show_after", sliderDelaySec * 1000);
   }

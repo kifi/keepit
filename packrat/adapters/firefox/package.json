@@ -23,19 +23,19 @@
             "title": "Slider delay (sec)",
             "description": "(0 to not show it automatically)",
             "type": "integer",
-            "name": "hover_timeout",
+            "name": "sliderDelay",
             "value": 30
         },
         {
             "title": "Maximum search results",
             "type": "integer",
-            "name": "max_res",
+            "name": "maxResults",
             "value": 5
         },
         {
             "title": "Show search result scores",
             "type": "bool",
-            "name": "show_score",
+            "name": "showScores",
             "value": false
         }
     ]

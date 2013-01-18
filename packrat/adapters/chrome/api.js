@@ -293,7 +293,7 @@ api = function() {
         if (v != null) try {
           return JSON.parse(v);
         } catch (e) {}
-        return {hover_timeout: 30, max_res: 5, show_score: false}[key] || v;  // TODO: factor our default settings out of this API
+        return {sliderDelay: 30, maxResults: 5, showScores: false}[key] || v;  // TODO: factor our default settings out of this API
       },
       set: function set(key, value) {
         if (typeof key === "object") {
