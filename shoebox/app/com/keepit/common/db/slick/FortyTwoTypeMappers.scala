@@ -33,6 +33,10 @@ object FortyTwoTypeMappers {
   }
 
   //Ids
+  implicit object SocialUserInfoIdTypeMapper extends BaseTypeMapper[Id[SocialUserInfo]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[SocialUserInfo]
+  }
+
   implicit object FollowIdTypeMapper extends BaseTypeMapper[Id[Follow]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Follow]
   }
@@ -54,6 +58,10 @@ object FortyTwoTypeMappers {
   }
 
   //States
+  implicit object SocialConnectionStateTypeMapper extends BaseTypeMapper[State[SocialConnection]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[SocialConnection]
+  }
+
   implicit object FollowStateTypeMapper extends BaseTypeMapper[State[Follow]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[Follow]
   }
