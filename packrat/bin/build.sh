@@ -2,7 +2,7 @@
 
 pushd "$(dirname $0)/.." > /dev/null
 
-rm -rf out
+rm -rf out/*
 mkdir -p out
 cp -R adapters/chrome out/
 cp -R adapters/firefox out/
@@ -37,5 +37,34 @@ for s in $(ls scripts/*.js); do
 done
 IFS=,; echo -e "meta = {\n  contentScripts: [${matches[*]}],\n  styleDeps: {${styles[*]}},\n  scriptDeps: {${deps[*]}}};" > out/chrome/meta.js
 IFS=,; echo -e "exports.contentScripts = [${matches[*]}];\nexports.styleDeps = {${styles[*]}};\nexports.scriptDeps = {${deps[*]}};" > out/firefox/lib/meta.js
+
+# TODO: factor kifi-specific stuff below out of this script
+if [ "$1" == "package" ]; then
+  cd out/chrome
+  zip -rDq ../kifi-beta.zip * -x "*/.*"
+  cd - > /dev/null
+
+  cd out
+  cfx xpi --pkgdir=firefox \
+    --update-link=https://www.keepitfindit.com/install/kifi-beta.xpi \
+    --update-url=https://www.keepitfindit.com/install/kifi-beta.update.rdf > /dev/null
+  cd - > /dev/null
+
+  find out -d 1
+
+  if [ "$2" == "deploy" ]; then
+    echo -e "\nDeploying unpacked Chrome extension via Dropbox"
+    sed -i '' '/"version":/s/2[.]1[.]/2.0./' out/chrome/manifest.json
+    rsync -vrc --delete out/chrome ~/Dropbox/keepit
+    sed -i '' '/"version":/s/2[.]0[.]/2.1./' out/chrome/manifest.json
+
+    echo -e "\nDeploying Firefox extension to keepitfindit.com"
+    scp out/kifi-beta.xpi marvin:
+    scp out/kifi-beta.update.rdf marvin:
+    ssh marvin scp kifi-beta.* fortytwo@b01:www-install/
+
+    echo -e "\n!! Please upload kifi-beta.zip to the Chrome Web Store at https://chrome.google.com/webstore/developer/dashboard"
+  fi
+fi
 
 popd > /dev/null
