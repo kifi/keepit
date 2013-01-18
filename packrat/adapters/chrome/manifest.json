@@ -21,15 +21,6 @@
       "matches": ["*://*/*"],
       "js": ["scripts/ready.js"],
       "run_at": "document_end"
-    },
-    {
-      "matches": [
-        "*://dev.ezkeep.com/r/*",
-        "*://*.keepitfindit.com/r/*",
-        "*://*.kifi.com/r/*"
-      ],
-      "js": ["scripts/deeplink.js"],
-      "run_at": "document_end"
     }
   ],
   "permissions": [

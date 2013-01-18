@@ -1,3 +1,4 @@
+// @match /^https?:\/\/(dev\.ezkeep\.com:9000|(www\.)?keepitfindit.com)\/r\/.*/
 
 !function() {
   document.querySelector(".kifi-deep-link-no-extension").style.display = "none";

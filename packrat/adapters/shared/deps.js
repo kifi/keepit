@@ -10,5 +10,5 @@ var meta = meta || require("./meta");
   var scripts = meta.scriptDeps[path];
   return {
     styles: styles ? styles.filter(notYetInjected) : [],
-    scripts: scripts ? scripts.concat([path]).filter(notYetInjected) : []};
+    scripts: scripts ? scripts.concat([path]).filter(notYetInjected) : [path]};
 };
