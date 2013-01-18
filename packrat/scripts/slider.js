@@ -776,6 +776,13 @@ slider = function() {
         $selectable.add(".snapshot-bar-wrap").animate({opacity: 0}, 400, function() { $(this).remove(); });
         key.deleteScope("snapshot");
         slideIn();
+        $(".kifi_hover").find(".comment-compose").focus().each(function() {
+          var r = document.createRange(), s = window.getSelection();
+          r.selectNodeContents(this);
+          r.collapse(false);
+          s.removeAllRanges();
+          s.addRange(r);
+        });
       }
       function updateSelection(clientX, clientY, scrollLeft, scrollTop) {
         $selectable.hide();
