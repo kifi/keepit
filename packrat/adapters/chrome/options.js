@@ -1,24 +1,19 @@
 $(function() {
-  var config;
-  chrome.extension.sendMessage(["get_conf"], function init(o) {
-    console.log("[init] config:", o.config);
-    config = o.config;
-    var env = o.config.env;
-    $("[name=env][value=" + env + "]").attr("checked", true);
-    $("#max_search_results").val(o.config["max_res"]);
-    $("#hover_timeout").val(o.config["hover_timeout"]);
-    $("input[name=scores]").attr("checked", !!o.config["show_score"]);
+  chrome.extension.sendMessage(["get_prefs"], function init(o) {
+    console.log("[init] prefs:", o.prefs);
+    $("[name=env][value=" + o.prefs.env + "]").attr("checked", true);
+    $("#max_search_results").val(o.prefs.max_res);
+    $("#hover_timeout").val(o.prefs.hover_timeout);
+    $("input[name=scores]").prop("checked", o.prefs.show_score);
     showSession(o.session);
   });
   $("#save").click(function() {
-    localStorage.env = $("input[name=env][value=development]").is(":checked") ? "development" : "production";
-    set("max_res", $("#max_search_results").val());
-    set("hover_timeout", $("#hover_timeout").val());
-    set("show_score", $("input[name=scores]").is(":checked"));
+    chrome.extension.sendMessage(["set_prefs", {
+      env: $("input[name=env][value=development]").is(":checked") ? "development" : "production",
+      max_res: $("#max_search_results").val(),
+      hover_timeout: $("#hover_timeout").val(),
+      show_score: $("input[name=scores]").is(":checked")}]);
     window.close();
-    function set(key, value) {
-      chrome.extension.sendMessage(["set_conf", {key: key, value: value}]);
-    }
   });
   $("#log-out").click(function(e) {
     e.preventDefault();
