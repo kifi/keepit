@@ -270,15 +270,14 @@ slider = function() {
   }
 
   function slideIn() {
-    var $s = $(".kifi_hover").animate({
+    $(".kifi_hover").animate({
         right: '+=340',
         opacity: 1
       },
       400,
       "easeQuickSnapBounce",
       function() {
-        $s.css({right: "-10px", opacity: 1});
-        api.log("opened", $s[0], $s.css("right"))
+        $(this).css({right: "-10px", opacity: 1});
       });
   }
 
