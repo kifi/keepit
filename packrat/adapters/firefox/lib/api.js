@@ -132,6 +132,30 @@ exports.port = {
     portHandlers = handlers;
   }};
 
+const {prefs} = require("sdk/simple-prefs");
+exports.prefs = {
+  get: function get(key) {
+    if (arguments.length > 1) {
+      for (var o = {}, i = 0; i < arguments.length; i++) {
+        key = arguments[i];
+        o[key] = get(key);
+      }
+      return o;
+    }
+    return prefs[key];
+  },
+  set: function set(key, value) {
+    if (typeof key === "object") {
+      Object.keys(key).forEach(function(k) {
+        set(k, key[k]);
+      });
+    } else if (value == null) {
+      delete prefs[key];
+    } else {
+      prefs[key] = value;
+    }
+  }};
+
 exports.request = function(method, url, data, done, fail) {
   var options = {
     url: url,
