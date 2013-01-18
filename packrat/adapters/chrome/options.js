@@ -12,7 +12,7 @@ $(function() {
       env: $("input[name=env][value=development]").is(":checked") ? "development" : "production",
       sliderDelay: $("#slider-delay").val(),
       maxResults: $("#max-results").val(),
-      showScores: $("#show-scores]").is(":checked")}]);
+      showScores: $("#show-scores").is(":checked")}]);
     window.close();
   });
   $("#log-out").click(function(e) {
