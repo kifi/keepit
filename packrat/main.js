@@ -132,14 +132,11 @@ api.port.on({
       api.log("[follow] resp:", o);
     });
   },
-  get_conf: function(data, respond) {
-    respond({config: getConfigs(), session: session});
+  get_prefs: function(data, respond) {
+    respond({session: session, prefs: api.prefs.get("env", "sliderDelay", "maxResults", "showScores")});
   },
-  set_conf: function(data) {
-    setConfigs(data.key, data.value);
-  },
-  remove_conf: function(data) {
-    setConfigs(data.key);
+  set_prefs: function(data) {
+    api.prefs.set(data);
   },
   set_page_icon: function(data, respond, tab) {
     setIcon(tab.id, data);
@@ -339,30 +336,34 @@ function postComment(request, respond) {
 }
 
 function searchOnServer(request, respond) {
-  var config = getConfigs();
-
   logEvent("search", "newSearch", {"query": request.query});
 
   if (!session) {
     api.log("[searchOnServer] no session");
-    respond({"session": null, "searchResults": [], "userConfig": config});
+    respond({"session": null, "searchResults": []});
     return;
   }
 
   if (request.query === '') {
-    respond({"session": session, "searchResults": [], "userConfig": config});
+    respond({"session": session, "searchResults": [], "maxResults": 0});
     return;
   }
 
+  var config = getConfigs(), maxResults = api.prefs.get("maxResults");
   ajax("GET", "http://" + config.server + "/search", {
       term: request.query,
-      maxHits: config.max_res * 2,
+      maxHits: maxResults * 2,
       lastUUI: request.lastUUID,
       context: request.context,
       kifiVersion: api.version},
     function(results) {
       api.log("[searchOnServer] results:", results);
-      respond({"session": session, "searchResults": results, "userConfig": config});
+      respond({
+        "session": session,
+        "searchResults": results,
+        "maxResults": maxResults,
+        "showScores": api.prefs.get("showScores"),
+        "server": config.server});
     });
   return true;
 }
@@ -472,14 +473,14 @@ function handleSliderAutoShow(tab) {
   }
   userHistory.add(url);
 
-  var sliderDelaySec = getConfigs().hover_timeout;
+  var sliderDelaySec = api.prefs.get("sliderDelay");
   if (sliderDelaySec > 0) {
     api.tabs.emit(tab, "auto_show_after", sliderDelaySec * 1000);
   }
 }
 
 function getFullyQualifiedKey(key) {
-  return (api.storage.env || "production") + "_" + key;
+  return (api.prefs.get("env") || "production") + "_" + key;
 }
 
 function removeFromConfigs(key) {
@@ -495,32 +496,10 @@ function setConfigs(key, value) {
 }
 
 function getConfigs() {
-  try {
-    var env = api.storage.env;
-    if (!env) {
-      api.storage.env = env = "production";
-    }
-
-    return {
-      "env": env,
-      "server": env == "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com",
-      "kifi_installation_id": api.storage[getFullyQualifiedKey("kifi_installation_id")],
-      "bookmark_id": api.storage[getFullyQualifiedKey("bookmark_id")],
-      "hover_timeout": parseNonNegIntOr(api.storage[getFullyQualifiedKey("hover_timeout")], 10),
-      "show_score": parseBoolOr(api.storage[getFullyQualifiedKey("show_score")], false),
-      "max_res": parseNonNegIntOr(api.storage[getFullyQualifiedKey("max_res")], 5)};
-  } catch (e) {
-    api.log.error(e);
-  }
-}
-
-function parseNonNegIntOr(val, defaultValue) {
-  var n = parseInt(val, 10);
-  return isNaN(n) ? defaultValue : Math.abs(n);
-}
-
-function parseBoolOr(val, defaultValue) {
-  return val === "yes" || val === true || val === "true" || defaultValue;
+  return {
+    "server": api.prefs.get("env") === "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com",
+    "kifi_installation_id": api.storage[getFullyQualifiedKey("kifi_installation_id")],
+    "bookmark_id": api.storage[getFullyQualifiedKey("bookmark_id")]};
 }
 
 api.on.install.push(function() {
@@ -536,8 +515,8 @@ api.on.update.push(function() {
 var session;
 
 function authenticate(callback) {
-  var config = getConfigs();
-  if (config.env == "development") {
+  var config = getConfigs(), dev = api.prefs.get("env") === "development";
+  if (dev) {
     openFacebookConnect();
   } else {
     startSession(openFacebookConnect);
@@ -562,7 +541,7 @@ function authenticate(callback) {
 
       callback();
 
-      if (api.loadReason == "install" || config.env == "development") {
+      if (api.loadReason == "install" || dev) {
         postBookmarks(api.bookmarks.getAll, "INIT_LOAD");
       }
     }, function fail(xhr) {
@@ -612,3 +591,19 @@ authenticate(function() {
     }
   });
 });
+
+// TODO: remove the temporary prefs storage migration code below after Jan 31.
+if (this.chrome) {
+  ["hover_timeout","max_res","show_score"].forEach(function(name) {
+    var val = api.storage["production_" + name] || api.storage["development_" + name];
+    if (val) api.prefs.set({hover_timeout: "sliderDelay", max_res: "maxResults", show_score: "showScores"}[name], val === "yes" ? true : val);
+    delete api.storage["production_" + name];
+    delete api.storage["development_" + name];
+  });
+}
+if (api.storage.env) {
+  if (api.storage.env === "development") {
+    api.prefs.set("env", "development");
+  }
+  delete api.storage.env;
+}

@@ -8,7 +8,6 @@ api.log("[google_inject.js]");
 
 !function() {
   var lastInjected;
-  var config;
   var restrictedGoogleInject = [
     "tbm=isch"
   ];
@@ -123,32 +122,33 @@ api.log("[google_inject.js]");
 
     inprogressSearchQuery = query;
     var t1 = new Date().getTime();
-    api.port.emit("get_keeps", {query: query}, function(results) {
+    api.port.emit("get_keeps", {query: query}, function(resp) {
       api.log("query response after: " + (new Date().getTime() - t1));
-      api.log("RESULTS FROM SERVER", results);
+      api.log("RESULTS FROM SERVER", resp);
 
       inprogressSearchQuery = '';
-      if (!results.userConfig || !results.session) {
+      if (!resp.session) {
         api.log("No user info. Stopping search.")
         return;
       }
-      if ($("input[name='q']").val() !== query || query !== results.searchResults.query) { // query changed
+      if ($("input[name='q']").val() !== query || query !== resp.searchResults.query) { // query changed
         api.log("Query changed. Re-loading...");
         updateQuery(0);
         return;
       }
       $("#keepit").detach(); // get rid of old results
       resultsStore = {
-        "lastRemoteResults": results.searchResults,
-        "results": results.searchResults.hits,
+        "lastRemoteResults": resp.searchResults,
+        "results": resp.searchResults.hits,
         "query": query,
-        "session": results.session,
+        "server": resp.server,
+        "session": resp.session,
         "currentlyShowing": 0,
-        "show": results.userConfig.max_res,
-        "mayShowMore": results.searchResults.mayHaveMore,
-        "userConfig": results.userConfig,
-        "showDefault": results.userConfig.max_res
-      };
+        "show": resp.maxResults,
+        "mayShowMore": resp.searchResults.mayHaveMore,
+        "showDefault": resp.maxResults,
+        "maxResults": resp.maxResults,
+        "showScores": resp.showScores};
       if (query === '') {
         return;
       }
@@ -159,7 +159,7 @@ api.log("[google_inject.js]");
       api.log(resultsStore);
 
       logEvent("search", "kifiLoaded", {"query": resultsStore.lastRemoteResults.query, "queryUUID": resultsStore.lastRemoteResults.uuid });
-      if(results.searchResults.hits.length > 0) {
+      if (resp.searchResults.hits.length) {
         logEvent("search", "kifiAtLeastOneResult", {"query": resultsStore.lastRemoteResults.query, "queryUUID": resultsStore.lastRemoteResults.uuid });
       }
       kifiResultsClicked = 0;
@@ -177,12 +177,12 @@ api.log("[google_inject.js]");
         "query": resultsStore.query,
         "lastUUID": resultsStore.lastRemoteResults.uuid,
         "context": resultsStore.lastRemoteResults.context
-      }, function(results) {
-        api.log("[fetchMoreResults] fetched:", results);
-        resultsStore.lastRemoteResults = results.searchResults;
-        resultsStore.results = resultsStore.results.concat(results.searchResults.hits);
+      }, function(resp) {
+        api.log("[fetchMoreResults] fetched:", resp);
+        resultsStore.lastRemoteResults = resp.searchResults;
+        resultsStore.results = resultsStore.results.concat(resp.searchResults.hits);
         api.log("[fetchMoreResults] stored:", resultsStore.results);
-        resultsStore.mayShowMore = results.searchResults.mayHaveMore;
+        resultsStore.mayShowMore = resp.searchResults.mayHaveMore;
         //drawResults(0);
       });
     } else {
@@ -191,7 +191,7 @@ api.log("[google_inject.js]");
   }
 
   function showMoreResults() {
-    var numberMore = resultsStore.userConfig.max_res;
+    var numberMore = resultsStore.maxResults;
     resultsStore.show = resultsStore.results.length >= resultsStore.show + numberMore ? resultsStore.show + numberMore : resultsStore.results.length;
     api.log("Showing more results", numberMore, resultsStore.results.length, resultsStore.currentlyShowing, resultsStore.show);
     drawResults(0);
@@ -222,10 +222,6 @@ api.log("[google_inject.js]");
       api.log.error(e);
     }
   }
-
-  api.port.emit("get_conf", function(o) {
-    config = o.config;
-  });
 
   updateQuery();
 
@@ -380,7 +376,7 @@ api.log("[google_inject.js]");
             $.each(resultsStore.query.split(/[\s\W]/), function(i, term) { title = boldSearchTerms(title,term,true); });
             formattedResult.bookmark.title = title;
 
-            if (config["show_score"] === true) {
+            if (resultsStore.showScores === true) {
               formattedResult.displayScore = "[" + Math.round(result.score*100)/100 + "] ";
             }
 
@@ -424,12 +420,7 @@ api.log("[google_inject.js]");
             results.push(formattedResult);
           });
 
-          var adminMode = config["show_score"] === true;
-
-          var tb = Mustache.to_html(
-              tmpl,
-              {"results": results, "session": session, "adminMode": adminMode}
-          );
+          var tb = Mustache.to_html(tmpl, {"results": results, "session": session});
 
           // Binders
           api.log("Preparing to inject!");
@@ -440,9 +431,8 @@ api.log("[google_inject.js]");
               return;
             }
             if (resultsStore.query === '' ||
-              typeof resultsStore.results === 'undefined' ||
-              typeof resultsStore.results === 'undefined' ||
-              resultsStore.results.length == 0) {
+                !resultsStore.results ||
+                !resultsStore.results.length) {
               // Catch bogus injections
               api.log("Injection not relevant. Stopping.");
               return;
@@ -460,14 +450,9 @@ api.log("[google_inject.js]");
                     updateQuery(0);
                   });*/
                 });
-                if(config["show_score"] === true) {
-                  $('#admin-mode').show().click(function() {
-                    $('#kifi_reslist').before('<div id="adminresults"><a href="http://' + config.server + '/admin/search/results/' + resultsStore.lastRemoteResults.uuid + '" target="_blank">Search result info<br/><br/></div>');
-                    $(this).click(function() {
-                      $("#adminresults").detach();
-                    });
-                    return false;
-                  });
+                if (resultsStore.showScores === true) {
+                  $("#kifi_trusted").prepend(
+                    '<a class=kifi-debug-results href="http://' + resultsStore.server + '/admin/search/results/' + resultsStore.lastRemoteResults.uuid + '" target=_blank>debug</a>');
                 }
               }
               setTimeout(function() { injectResults(--times) }, 30);
