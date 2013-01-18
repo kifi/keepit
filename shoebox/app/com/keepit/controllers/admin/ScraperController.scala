@@ -52,8 +52,8 @@ object ScraperController extends FortyTwoController {
 
     Akka.future {
       val startTime = System.currentTimeMillis
-      val documentSignatures = CX.withConnection { implicit conn =>
-        ScrapeInfoCxRepo.allActive.map { s =>
+      val documentSignatures = inject[DBConnection].readWrite { implicit s =>
+        inject[ScrapeInfoRepo].allActive.map { s =>
           if (IGNORED_DOCUMENTS.contains(s.signature)) None
           else Some((s.uriId, parseBase64Binary(s.signature)))
         }.flatten

@@ -57,8 +57,8 @@ class ScraperTest extends SpecificationWithJUnit {
           val scrapeRepo = inject[ScrapeInfoRepo]
           val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").withState(NormalizedURIStates.INDEXED))
           val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing").withState(NormalizedURIStates.INDEXED))
-          val info1 = scrapeRepo.save(ScrapeInfo(uriId = uri1.id.get))
-          val info2 = scrapeRepo.save(ScrapeInfo(uriId = uri2.id.get))
+          val info1 = scrapeRepo.getByUri(uri1.id.get).get
+          val info2 = scrapeRepo.getByUri(uri2.id.get).get
           val all = scrapeRepo.allActive
           all.size === 2
         }
@@ -72,8 +72,8 @@ class ScraperTest extends SpecificationWithJUnit {
         val (uri1, uri2, info1, info2) = inject[DBConnection].readWrite { implicit s =>
           val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
           val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing"))
-          val info1 = scrapeRepo.save(ScrapeInfo(uriId = uri1.id.get))
-          val info2 = scrapeRepo.save(ScrapeInfo(uriId = uri2.id.get))
+          val info1 = scrapeRepo.getByUri(uri1.id.get).get
+          val info2 = scrapeRepo.getByUri(uri2.id.get).get
           (uri1, uri2, info1, info2)
         }
         val store = new FakeArticleStore()
@@ -94,11 +94,13 @@ class ScraperTest extends SpecificationWithJUnit {
     "adjust scrape schedule" in {
       // DEV should be using the default ScraperConfig
       running(new EmptyApplication()) {
-        var (uri1, uri2, info1, info2) = CX.withConnection { implicit c =>
-          val uri1 = NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").save
-          val uri2 = NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing").save
-          val info1 = ScrapeInfoCxRepo.ofUri(uri1).save
-          val info2 = ScrapeInfoCxRepo.ofUri(uri2).save
+        val uriRepo = inject[NormalizedURIRepo]
+        val scrapeRepo = inject[ScrapeInfoRepo]
+        var (uri1, uri2, info1, info2) = inject[DBConnection].readWrite { implicit s =>
+          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
+          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing"))
+          val info1 = scrapeRepo.getByUri(uri1.id.get).get
+          val info2 = scrapeRepo.getByUri(uri2.id.get).get
           (uri1, uri2, info1, info2)
         }
         val store = new FakeArticleStore()
@@ -106,7 +108,9 @@ class ScraperTest extends SpecificationWithJUnit {
         store.size === 2
 
         // get ScrapeInfo from db
-        val (info1a, info2a) = CX.withConnection { implicit c => (ScrapeInfoCxRepo.ofUri(uri1), ScrapeInfoCxRepo.ofUri(uri2)) }
+        val (info1a, info2a) = inject[DBConnection].readOnly { implicit s =>
+          (scrapeRepo.getByUri(uri1.id.get).get, scrapeRepo.getByUri(uri2.id.get).get)
+        }
 
         info1a.failures === 0
         (info1a.interval < info1.interval) === true
@@ -155,26 +159,29 @@ class ScraperTest extends SpecificationWithJUnit {
 
     "update scrape schedule upon state change" in {
       running(new EmptyApplication()) {
-        var info = CX.withConnection { implicit c =>
-          val uri = NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").save
-          ScrapeInfoCxRepo.ofUri(uri).save
+        val uriRepo = inject[NormalizedURIRepo]
+        val scrapeRepo = inject[ScrapeInfoRepo]
+        var info = inject[DBConnection].readWrite { implicit s =>
+          val uri = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
+          scrapeRepo.getByUri(uri.id.get).get
         }
-        CX.withConnection { implicit c =>
-          info = info.withState(ScrapeInfoStates.INACTIVE).save
+        inject[DBConnection].readWrite { implicit s =>
+          info = scrapeRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
           info.nextScrape === END_OF_TIME
         }
-        CX.withConnection { implicit c =>
-          info = info.withState(ScrapeInfoStates.ACTIVE).save
+        inject[DBConnection].readWrite { implicit s =>
+          info = scrapeRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
           (info.nextScrape.getMillis <= currentDateTime.getMillis) === true
         }
       }
     }
   }
 
-  private[this] def scrapeAndUpdateScrapeInfo(info: ScrapeInfo, scraper: Scraper) = {
-    CX.withConnection { implicit c => info.withNextScrape(info.lastScrape).save }
+  private[this] def scrapeAndUpdateScrapeInfo(info: ScrapeInfo, scraper: Scraper): ScrapeInfo = {
+    val repo = inject[ScrapeInfoRepo]
+    inject[DBConnection].readWrite { implicit s => repo.save(info.withNextScrape(info.lastScrape)) }
     scraper.run
-    CX.withConnection { implicit c => ScrapeInfoCxRepo.ofUriId(info.uriId) }
+    inject[DBConnection].readOnly { implicit s => repo.getByUri(info.uriId).get }
   }
 
   def getMockScraper(articleStore: ArticleStore, suffix: String = "") = {
