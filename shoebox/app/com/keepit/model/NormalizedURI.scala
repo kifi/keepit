@@ -84,7 +84,6 @@ class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo
     def externalId = column[ExternalId[NormalizedURI]]("external_id")
     def title = column[String]("title")
     def url = column[String]("url", O.NotNull)
-    def state = column[State[NormalizedURI]]("state", O.NotNull)
     def urlHash = column[String]("url_hash", O.NotNull)
     def domain = column[String]("domain", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ domain.? ~ url ~ urlHash ~ state <> (NormalizedURI, NormalizedURI.unapply _)

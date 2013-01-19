@@ -52,7 +52,6 @@ class UnscrapableRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[U
 
   override lazy val table = new RepoTable[Unscrapable](db, "unscrapable") {
     def pattern = column[String]("pattern", O.NotNull)
-    def state = column[State[Unscrapable]]("state", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ pattern ~ state <> (Unscrapable, Unscrapable.unapply _)
   }
 
