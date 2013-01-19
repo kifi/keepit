@@ -129,37 +129,12 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
 }
 
 object ScrapeInfoCxRepo {
-
-  def all(implicit conn: Connection): Seq[ScrapeInfo] =
-    ScrapeInfoEntity.all.map(_.view)
-
-  def allActive(implicit conn: Connection): Seq[ScrapeInfo] = {
-    val si = ScrapeInfoEntity AS "si"
-    val nu = NormalizedURIEntity AS "nu"
-
-    (SELECT (si.*) FROM (si JOIN nu ON("si.uri_id = nu.id")) WHERE (nu.state EQ NormalizedURIStates.INDEXED) list).map( _.view )
-  }
-
-  def ofUri(uri: NormalizedURI)(implicit conn: Connection) = ofUriId(uri.id.get)
-
   def ofUriId(uriId: Id[NormalizedURI])(implicit conn: Connection) = {
     (ScrapeInfoEntity AS "s").map{ s => SELECT (s.*) FROM s WHERE (s.uriId EQ uriId) LIMIT 1 }.unique.map( _.view ) match {
       case Some(info) => info
       case None => ScrapeInfo(uriId = uriId).save
     }
   }
-
-  def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit conn: Connection): Seq[ScrapeInfo] = {
-    if (limit <= 0) {
-      (ScrapeInfoEntity AS "s").map{ s => SELECT (s.*) FROM s WHERE ((s.nextScrape LE due) AND (s.state EQ ScrapeInfoStates.ACTIVE)) }.list.map( _.view )
-    } else {
-      (ScrapeInfoEntity AS "s").map{ s => SELECT (s.*) FROM s WHERE ((s.nextScrape LE due) AND (s.state EQ ScrapeInfoStates.ACTIVE)) LIMIT limit }.list.map( _.view )
-    }
-  }
-
-  def get(id: Id[ScrapeInfo])(implicit conn: Connection): ScrapeInfo = getOpt(id).getOrElse(throw NotFoundException(id))
-
-  def getOpt(id: Id[ScrapeInfo])(implicit conn: Connection): Option[ScrapeInfo] = ScrapeInfoEntity.get(id).map(_.view)
 }
 
 object ScrapeInfoStates {

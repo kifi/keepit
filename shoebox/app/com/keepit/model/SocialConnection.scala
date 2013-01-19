@@ -1,7 +1,11 @@
 package com.keepit.model
 
-import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
-import com.keepit.common.db.NotFoundException
+import play.api.Play.current
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
 import java.security.SecureRandom
@@ -19,7 +23,9 @@ case class SocialConnection(
   socialUser1: Id[SocialUserInfo],
   socialUser2: Id[SocialUserInfo],
   state: State[SocialConnection] = SocialConnectionStates.ACTIVE
-) {
+) extends Model[SocialConnection] {
+  def withId(id: Id[SocialConnection]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[SocialConnection]) = copy(state = state)
 
   def save(implicit conn: Connection): SocialConnection = {
@@ -27,8 +33,32 @@ case class SocialConnection(
     assert(1 == entity.save())
     entity.view
   }
+}
+
+@ImplementedBy(classOf[SocialConnectionRepoImpl])
+trait SocialConnectionRepo extends Repo[SocialConnection] {
+}
+
+@Singleton
+class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[SocialConnection] with SocialConnectionRepo {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
+
+  override lazy val table = new RepoTable[SocialConnection](db, "social_connection") {
+    def socialUser1 = column[Id[SocialUserInfo]]("social_user_1", O.NotNull)
+    def socialUser2 = column[Id[SocialUserInfo]]("social_user_1", O.NotNull)
+    def state = column[State[SocialConnection]]("state", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ socialUser1 ~ socialUser2 ~ state <> (SocialConnection, SocialConnection.unapply _)
+  }
 
 }
+
+
 
 object SocialConnectionCxRepo extends Logging {
 
