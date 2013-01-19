@@ -19,12 +19,13 @@ var slider, injected, t0 = +new Date;
     }
   });
 
-  var usefulPageInterval = setInterval(function() {
-    if (document.body.scrollTop > 300 && document.hasFocus() && new Date - t0 > 60000) {
-      clearInterval(usefulPageInterval);
+  setTimeout(function checkIfUseful() {
+    if (document.hasFocus() && document.body.scrollTop > 300) {
       logEvent("slider", "usefulPage", {url: document.location.href});
+    } else {
+      setInterval(checkIfUseful, 5000);
     }
-  }, 5000);
+  }, 60000);
 
   api.port.on({
     button_click: function() {
