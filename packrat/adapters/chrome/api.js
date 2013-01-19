@@ -47,7 +47,7 @@ api = function() {
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     api.log("[onUpdated] tab:", tabId, "change:", change);
     if (activePages[tab.windowId]) {
-      if (change.url) {
+      if (change.url || change.status === "loading") {
         var page = pages[tabId] = {
           id: tabId,
           url: tab.url,
