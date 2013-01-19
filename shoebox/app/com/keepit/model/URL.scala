@@ -48,7 +48,7 @@ case class URL (
   def withId(id: Id[URL]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
-  def withNormURI(normUriId: Id[NormalizedURI]) = copy(normalizedUriId = normUriId)
+  def withNormUriId(normUriId: Id[NormalizedURI]) = copy(normalizedUriId = normUriId)
   def withHistory(historyItem: URLHistory): URL = copy(history = historyItem +: history)
 
   def save(implicit conn: Connection): URL = {
@@ -123,6 +123,7 @@ object URLCxRepo {
 object URLStates {
   val ACTIVE = State[URL]("active")
   val INACTIVE = State[URL]("inactive")
+  val MERGED = State[URL]("merged")
 }
 
 private[model] class URLEntity extends Entity[URL, URLEntity] {

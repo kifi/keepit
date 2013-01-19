@@ -80,6 +80,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark]
   def count(userId: Id[User])(implicit session: RSession): Int
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
+  def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
 }
 
 @Singleton
@@ -125,6 +126,9 @@ class BookmarkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Book
 
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int =
     Query(table.where(b => b.kifiInstallation === kifiInstallation).count).first
+
+  def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark] =
+    (for(b <- table if b.urlId === urlId) yield b).list
 }
 
 object BookmarkFactory {
@@ -176,6 +180,10 @@ object BookmarkCxRepo {
 
   def getCountByInstallation(installation: ExternalId[KifiInstallation])(implicit conn: Connection): Long =
     (BookmarkEntity AS "b").map { b => SELECT (COUNT(b.*)) FROM b WHERE (b.kifiInstallation EQ installation) unique } getOrElse(0)
+
+  //slicked
+  def getByUrlId(urlId: Id[URL])(implicit conn: Connection): Seq[Bookmark] =
+    (BookmarkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlId EQ urlId) list() }.map(_.view)
 }
 
 object BookmarkStates {

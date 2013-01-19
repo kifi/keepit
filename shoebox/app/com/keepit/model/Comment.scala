@@ -169,6 +169,10 @@ object CommentCxRepo {
 
   def count( permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit conn: Connection): Long =
     (CommentEntity AS "c").map(c => SELECT(COUNT(c.id)).FROM(c).WHERE (c.permissions EQ permissions).unique).get
+
+  def getByUrlId(urlId: Id[URL])(implicit conn: Connection): Seq[Comment] =
+    (CommentEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlId EQ urlId) list() }.map(_.view)
+
 }
 
 object CommentStates {

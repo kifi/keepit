@@ -76,6 +76,9 @@ object DeepLinkCxRepo {
 
   def getOpt(token: DeepLinkToken)(implicit conn: Connection): Option[DeepLink] =
     (DeepLinkEntity AS "i").map { i => SELECT(i.*) FROM i WHERE (i.token EQ token.value) unique }.map(_.view)
+
+  def getByUrlId(urlId: Id[URL])(implicit conn: Connection): Seq[DeepLink] =
+    (DeepLinkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlId EQ urlId) list() }.map(_.view)
 }
 
 object DeepLinkStates {

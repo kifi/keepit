@@ -48,6 +48,7 @@ trait FollowRepo extends Repo[Follow] {
   def all(userId: Id[User])(implicit session: RSession): Seq[Follow]
   def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Follow]
   def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[Follow]
+  def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
 }
 
 @Singleton
@@ -84,6 +85,10 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
     } yield f
     q.firstOption
   }
+
+  def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Follow] =
+    (for(b <- table if b.urlId === urlId) yield b).list
+
 }
 
 object FollowCxRepo {
@@ -103,6 +108,10 @@ object FollowCxRepo {
   //slicked
   def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Option[Follow] =
     (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId AND (f.uriId EQ uriId)) unique }.map(_.view)
+
+  //slicked
+  def getByUrlId(urlId: Id[URL])(implicit conn: Connection): Seq[Comment] =
+    (CommentEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlId EQ urlId) list() }.map(_.view)
 }
 
 object FollowStates {
