@@ -141,9 +141,13 @@ li.keepit {
   cursor: pointer;
 }
 
-#admin-mode {
-  display: none;
-  position: relative;
+.kifi-debug-results {
   float: left;
-  padding-left: 10px;
+  margin: 4px 0 0 10px;
+  font-size: 8px;
+  opacity: .3;
+  text-decoration: none;
+}
+.kifi-debug-results:hover {
+  opacity: .5;
 }

@@ -47,7 +47,7 @@ api = function() {
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     api.log("[onUpdated] tab:", tabId, "change:", change);
     if (activePages[tab.windowId]) {
-      if (change.url) {
+      if (change.url || change.status === "loading") {
         var page = pages[tabId] = {
           id: tabId,
           url: tab.url,
@@ -278,6 +278,33 @@ api = function() {
       on: function(handlers) {
         if (portHandlers) throw Error("api.port.on already called");
         portHandlers = handlers;
+      }
+    },
+    prefs: {
+      get: function get(key) {
+        if (arguments.length > 1) {
+          for (var o = {}, i = 0; i < arguments.length; i++) {
+            key = arguments[i];
+            o[key] = get(key);
+          }
+          return o;
+        }
+        var v = localStorage[":" + key];
+        if (v != null) try {
+          return JSON.parse(v);
+        } catch (e) {}
+        return {sliderDelay: 30, maxResults: 5, showScores: false}[key] || v;  // TODO: factor our default settings out of this API
+      },
+      set: function set(key, value) {
+        if (typeof key === "object") {
+          Object.keys(key).forEach(function(k) {
+            set(k, key[k]);
+          });
+        } else if (value == null) {
+          delete localStorage[":" + key];
+        } else {
+          localStorage[":" + key] = typeof value === "string" ? value : JSON.stringify(value);
+        }
       }
     },
     request: function(method, uri, data, done, fail) {
