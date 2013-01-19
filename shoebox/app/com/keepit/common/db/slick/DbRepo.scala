@@ -35,9 +35,14 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   val db: DataBaseComponent
   import db.Driver.Implicit._ // here's the driver, abstracted away
 
-  implicit val IdMapper = new BaseTypeMapper[Id[M]] {
+  implicit val idMapper = new BaseTypeMapper[Id[M]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[M]
   }
+
+  implicit val stateTypeMapper = new BaseTypeMapper[State[M]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[M]
+  }
+
 
   protected def table: RepoTable[M]
 
@@ -85,7 +90,7 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithEx
   import db.Driver.Implicit._
   private def externalIdColumn: ExternalIdColumn[M] = table.asInstanceOf[ExternalIdColumn[M]]
 
-  implicit val ExternalIdMapper = new BaseTypeMapper[ExternalId[M]] {
+  implicit val externalIdMapper = new BaseTypeMapper[ExternalId[M]] {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
   }
 
@@ -100,8 +105,12 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithEx
 abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, name: String) extends ExtendedTable[M](db.entityName(name)) {
   import FortyTwoTypeMappers._
 
-  implicit val IdMapper = new BaseTypeMapper[Id[M]] {
+  implicit val idMapper = new BaseTypeMapper[Id[M]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[M]
+  }
+
+  implicit def stateMapper = new BaseTypeMapper[State[M]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[M]
   }
 
   def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
@@ -109,12 +118,14 @@ abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, name: String) ext
   def createdAt = column[DateTime]("created_at", O.NotNull)
   def updatedAt = column[DateTime]("updated_at", O.NotNull)
 
+  def state = column[State[M]]("state", O.NotNull)
+
   override def column[C : TypeMapper](name: String, options: ColumnOption[C, ProfileType]*) =
     super.column(db.entityName(name), options:_*)
 }
 
 trait ExternalIdColumn[M <: ModelWithExternalId[M]] extends RepoTable[M] {
-  implicit val ExternalIdMapper = new BaseTypeMapper[ExternalId[M]] {
+  implicit val externalIdMapper = new BaseTypeMapper[ExternalId[M]] {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
   }
 

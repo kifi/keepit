@@ -17,6 +17,7 @@ import play.api.libs.json._
 import java.io.File
 import com.keepit.common.social.SocialUserImportFriends
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBConnection
 
 @RunWith(classOf[JUnitRunner])
 class SocialConnectionTest extends SpecificationWithJUnit {
@@ -35,15 +36,16 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         loadJsonImportFriends("facebook_graph_andrew_min.json")
         loadJsonImportFriends("facebook_graph_eishay_min.json")
 
-        CX.withConnection { implicit conn =>
-          println("Connections: " + SocialUserInfoCxRepo.all.size)
-        }
+        val socialRepo = inject[SocialUserInfoRepo]
+        val connectionRepo = inject[SocialConnectionRepo]
+        val connections = inject[SocialUserCreateConnections]
+        val userRepo = inject[UserRepo]
 
-        val eishaySocialUserInfo = CX.withConnection { implicit conn =>
-          SocialUserInfoCxRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(User(firstName = "Eishay", lastName = "Smith").save).save
+        val eishaySocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+          socialRepo.save(socialRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith"))))
         }
-        val andrewSocialUserInfo = CX.withConnection { implicit conn =>
-          SocialUserInfoCxRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(User(firstName = "Andrew", lastName = "Conner").save).save
+        val andrewSocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+          socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Andrew", lastName = "Conner"))))
         }
 
         val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay_min.json"))).mkString)
@@ -51,27 +53,27 @@ class SocialConnectionTest extends SpecificationWithJUnit {
 
 
         // Create FortyTwo accounts on certain users
-        val users = CX.withConnection { implicit conn =>
-          val users = User(firstName = "Igor", lastName = "Perisic").save ::
-            User(firstName = "Kelvin", lastName = "Jiang").save ::
-            User(firstName = "John", lastName = "Cochran").save :: Nil
+        val users = inject[DBConnection].readWrite{ implicit s =>
+          val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic")) ::
+            userRepo.save(User(firstName = "Kelvin", lastName = "Jiang")) ::
+            userRepo.save(User(firstName = "John", lastName = "Cochran")) :: Nil
 
           // These are friends of Eishay
-          SocialUserInfoCxRepo.get(SocialId("28779"), SocialNetworks.FACEBOOK).withUser(users(0)).save
-          SocialUserInfoCxRepo.get(SocialId("102113"), SocialNetworks.FACEBOOK).withUser(users(1)).save
+          socialRepo.save(socialRepo.get(SocialId("28779"), SocialNetworks.FACEBOOK).withUser(users(0)))
+          socialRepo.save(socialRepo.get(SocialId("102113"), SocialNetworks.FACEBOOK).withUser(users(1)))
 
           // Not Eishay's friend
-          SocialUserInfoCxRepo.get(SocialId("113102"), SocialNetworks.FACEBOOK).withUser(users(2)).save
+          socialRepo.save(socialRepo.get(SocialId("113102"), SocialNetworks.FACEBOOK).withUser(users(2)))
           users
         }
 
-        inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, Seq(eishayJson))
-        inject[SocialUserCreateConnections].createConnections(andrewSocialUserInfo, Seq(andrewJson))
+        connections.createConnections(eishaySocialUserInfo, Seq(eishayJson))
+        connections.createConnections(andrewSocialUserInfo, Seq(andrewJson))
 
-        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = CX.withConnection { implicit conn =>
-          SocialConnectionCxRepo.all.size === 18
-          (SocialConnectionCxRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
-          SocialConnectionCxRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
+        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[DBConnection].readOnly{ implicit s =>
+          connectionRepo.count === 18
+          (connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
+           connectionRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
         }
 
         eishayFortyTwoConnection.size === 3
@@ -98,15 +100,17 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         loadJsonImportFriends("facebook_graph_andrew_min.json")
         loadJsonImportFriends("facebook_graph_eishay_min.json")
 
-        CX.withConnection { implicit conn =>
-          println("Connections: " + SocialUserInfoCxRepo.all.size)
+        inject[DBConnection].readOnly{ implicit s =>
+          println("Connections: " + inject[SocialUserInfoRepo].all.size)
         }
 
-        val eishaySocialUserInfo = CX.withConnection { implicit conn =>
-          SocialUserInfoCxRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(User(firstName = "Eishay", lastName = "Smith").save).save
+        val userRepo = inject[UserRepo]
+        val socialRepo = inject[SocialUserInfoRepo]
+        val eishaySocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+          socialRepo.save(socialRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith"))))
         }
-        val andrewSocialUserInfo = CX.withConnection { implicit conn =>
-          SocialUserInfoCxRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(User(firstName = "Andrew", lastName = "Conner").save).save
+        val andrewSocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+          socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Andrew", lastName = "Conner"))))
         }
 
         val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay_min.json"))).mkString)
@@ -114,27 +118,29 @@ class SocialConnectionTest extends SpecificationWithJUnit {
 
 
         // Create FortyTwo accounts on certain users
-        val users = CX.withConnection { implicit conn =>
-          val users = User(firstName = "Igor", lastName = "Perisic").save ::
-            User(firstName = "Kelvin", lastName = "Jiang").save ::
-            User(firstName = "John", lastName = "Cochran").save :: Nil
+        val users = inject[DBConnection].readWrite{ implicit s =>
+          val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic")) ::
+            userRepo.save(User(firstName = "Kelvin", lastName = "Jiang")) ::
+            userRepo.save(User(firstName = "John", lastName = "Cochran")) :: Nil
 
           // These are friends of Eishay
-          SocialUserInfoCxRepo.get(SocialId("28779"), SocialNetworks.FACEBOOK).withUser(users(0)).save
-          SocialUserInfoCxRepo.get(SocialId("102113"), SocialNetworks.FACEBOOK).withUser(users(1)).save
+          socialRepo.save(socialRepo.get(SocialId("28779"), SocialNetworks.FACEBOOK).withUser(users(0)))
+          socialRepo.save(socialRepo.get(SocialId("102113"), SocialNetworks.FACEBOOK).withUser(users(1)))
 
           // Not Eishay's friend
-          SocialUserInfoCxRepo.get(SocialId("113102"), SocialNetworks.FACEBOOK).withUser(users(2)).save
+          socialRepo.save(socialRepo.get(SocialId("113102"), SocialNetworks.FACEBOOK).withUser(users(2)))
           users
         }
 
         inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, Seq(eishayJson))
         inject[SocialUserCreateConnections].createConnections(andrewSocialUserInfo, Seq(andrewJson))
 
-        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = CX.withConnection { implicit conn =>
-          SocialConnectionCxRepo.all.size === 18
-          (SocialConnectionCxRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
-            SocialConnectionCxRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
+        val connectionRepo = inject[SocialConnectionRepo]
+
+        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[DBConnection].readOnly{ implicit s =>
+          connectionRepo.all.size === 18
+          (connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
+           connectionRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
         }
 
         eishayFortyTwoConnection.size === 3
@@ -163,37 +169,41 @@ class SocialConnectionTest extends SpecificationWithJUnit {
 
         loadJsonImportFriends(Seq("facebook_graph_eishay_min_page1.json", "facebook_graph_eishay_min_page2.json"))
 
-        CX.withConnection { implicit conn =>
-          println("Connections: " + SocialUserInfoCxRepo.all.size)
+        inject[DBConnection].readOnly{ implicit s =>
+          println("Connections: " + inject[SocialUserInfoRepo].all.size)
         }
 
-        val eishaySocialUserInfo = CX.withConnection { implicit conn =>
-          val info = SocialUserInfo(fullName = "Eishay Smith", socialId = SocialId("646386018"), networkType = SocialNetworks.FACEBOOK).save
-          info.withUser(User(firstName = "Eishay", lastName = "Smith").save).save
+        val socialRepo = inject[SocialUserInfoRepo]
+        val connectionRepo = inject[SocialConnectionRepo]
+        val connections = inject[SocialUserCreateConnections]
+        val userRepo = inject[UserRepo]
+        val eishaySocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+          val info = socialRepo.save(SocialUserInfo(fullName = "Eishay Smith", socialId = SocialId("646386018"), networkType = SocialNetworks.FACEBOOK))
+          socialRepo.save(info.withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith"))))
         }
 
         val eishay1Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay_min_page1.json"))).mkString)
         val eishay2Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay_min_page2.json"))).mkString)
 
         // Create FortyTwo accounts on certain users
-        val users = CX.withConnection { implicit conn =>
-          val users = User(firstName = "Igor", lastName = "Perisic").save ::
-            User(firstName = "Kelvin", lastName = "Jiang").save ::
-            User(firstName = "John", lastName = "Cochran").save ::
-            User(firstName = "Andrew", lastName = "Conner").save :: Nil
+        val users = inject[DBConnection].readWrite{ implicit s =>
+          val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic")) ::
+            userRepo.save(User(firstName = "Kelvin", lastName = "Jiang")) ::
+            userRepo.save(User(firstName = "John", lastName = "Cochran")) ::
+            userRepo.save(User(firstName = "Andrew", lastName = "Conner")) :: Nil
 
           // These are friends of Eishay
-          SocialUserInfoCxRepo.get(SocialId("28779"), SocialNetworks.FACEBOOK).withUser(users(0)).save
-          SocialUserInfoCxRepo.get(SocialId("102113"), SocialNetworks.FACEBOOK).withUser(users(1)).save
-          SocialUserInfoCxRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(users(3)).save
+          socialRepo.save(socialRepo.get(SocialId("28779"), SocialNetworks.FACEBOOK).withUser(users(0)))
+          socialRepo.save(socialRepo.get(SocialId("102113"), SocialNetworks.FACEBOOK).withUser(users(1)))
+          socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(users(3)))
           users
         }
 
         inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, Seq(eishay1Json, eishay2Json))
 
-        val eishayFortyTwoConnection = CX.withConnection { implicit conn =>
-          SocialConnectionCxRepo.all.size === 12
-          SocialConnectionCxRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get)
+        val eishayFortyTwoConnection = inject[DBConnection].readOnly{ implicit s =>
+          connectionRepo.all.size === 12
+          connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get)
         }
 
         eishayFortyTwoConnection.size === 3
@@ -216,15 +226,16 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         loadJsonImportFriends("facebook_graph_andrew.json")
         loadJsonImportFriends("facebook_graph_eishay.json")
 
-        CX.withConnection { implicit conn =>
-          println("Connections: " + SocialUserInfoCxRepo.all.size)
-        }
+        val socialRepo = inject[SocialUserInfoRepo]
+        val connectionRepo = inject[SocialConnectionRepo]
+        val connections = inject[SocialUserCreateConnections]
+        val userRepo = inject[UserRepo]
 
-        val eishaySocialUserInfo = CX.withConnection { implicit conn =>
-            SocialUserInfoCxRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(User(firstName = "Eishay", lastName = "Smith").save).save
+        val eishaySocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+            socialRepo.save(socialRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith"))))
         }
-        val andrewSocialUserInfo = CX.withConnection { implicit conn =>
-            SocialUserInfoCxRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(User(firstName = "Andrew", lastName = "Conner").save).save
+        val andrewSocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+            socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Andrew", lastName = "Conner"))))
         }
 
         val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay.json"))).mkString)
@@ -234,26 +245,26 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         // Create FortyTwo accounts on certain users
         val users = scala.collection.mutable.MutableList[User]()
 
-        CX.withConnection { implicit conn =>
-          users += User(firstName = "Igor", lastName = "Perisic").save
-          users += User(firstName = "Kelvin", lastName = "Jiang").save
-          users += User(firstName = "John", lastName = "Cochran").save
+        inject[DBConnection].readWrite{ implicit s =>
+          users += userRepo.save(User(firstName = "Igor", lastName = "Perisic"))
+          users += userRepo.save(User(firstName = "Kelvin", lastName = "Jiang"))
+          users += userRepo.save(User(firstName = "John", lastName = "Cochran"))
 
           // These are friends of Eishay
-          SocialUserInfoCxRepo.get(SocialId("28779"), SocialNetworks.FACEBOOK).withUser(users(0)).save
-          SocialUserInfoCxRepo.get(SocialId("102113"), SocialNetworks.FACEBOOK).withUser(users(1)).save
+          socialRepo.save(socialRepo.get(SocialId("28779"), SocialNetworks.FACEBOOK).withUser(users(0)))
+          socialRepo.save(socialRepo.get(SocialId("102113"), SocialNetworks.FACEBOOK).withUser(users(1)))
 
           // Not Eishay's friend
-          SocialUserInfoCxRepo.get(SocialId("113102"), SocialNetworks.FACEBOOK).withUser(users(2)).save
+          socialRepo.save(socialRepo.get(SocialId("113102"), SocialNetworks.FACEBOOK).withUser(users(2)))
         }
 
         inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, Seq(eishayJson))
         inject[SocialUserCreateConnections].createConnections(andrewSocialUserInfo, Seq(andrewJson))
 
-        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = CX.withConnection { implicit conn =>
-          SocialConnectionCxRepo.all.size === 612
-          (SocialConnectionCxRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
-          SocialConnectionCxRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
+        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[DBConnection].readOnly{ implicit s =>
+          connectionRepo.all.size === 612
+          (connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
+           connectionRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
         }
 
         eishayFortyTwoConnection.size === 3

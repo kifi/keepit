@@ -1,7 +1,10 @@
 package com.keepit.model
 
-import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
-import com.keepit.common.db.NotFoundException
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
 import com.keepit.serializer.SocialUserSerializer
@@ -29,8 +32,9 @@ case class SocialUserInfo(
   networkType: SocialNetworkType,
   credentials: Option[SocialUser] = None,
   lastGraphRefresh: Option[DateTime] = Some(currentDateTime)
-) {
-
+) extends Model[SocialUserInfo] {
+  def withId(id: Id[SocialUserInfo]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def reset() = copy(state = SocialUserInfoStates.CREATED, credentials = None)
   def withUser(user: User) = copy(userId = Some(user.id.get))//want to make sure the user has an id, fail hard if not!
   def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials))//want to make sure the user has an id, fail hard if not!
@@ -41,6 +45,40 @@ case class SocialUserInfo(
     assert(1 == entity.save())
     entity.view
   }
+}
+
+@ImplementedBy(classOf[SocialUserInfoRepoImpl])
+trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
+  def getByUser(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
+  def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
+}
+
+@Singleton
+class SocialUserInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[SocialUserInfo] with SocialUserInfoRepo {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
+
+  override lazy val table = new RepoTable[SocialUserInfo](db, "social_user_info") {
+    def userId = column[Id[User]]("user_id", O.Nullable)
+    def fullName = column[String]("full_name", O.NotNull)
+    def socialId = column[SocialId]("social_id", O.NotNull)
+    def networkType = column[SocialNetworkType]("network_type", O.NotNull)
+    def credentials = column[SocialUser]("credentials", O.Nullable)
+    def lastGraphRefresh = column[DateTime]("last_graph_refresh", O.Nullable)
+    def * = id.? ~ createdAt ~ updatedAt ~ userId.? ~ fullName ~ state ~ socialId ~ networkType ~ credentials.? ~ lastGraphRefresh.? <> (SocialUserInfo, SocialUserInfo.unapply _)
+  }
+
+  def getByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
+    (for(f <- table if f.userId === userId) yield f).list
+
+  def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo =
+    (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).first
+
 }
 
 object SocialUserInfoCxRepo {
