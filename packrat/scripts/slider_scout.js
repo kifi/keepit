@@ -9,10 +9,6 @@ var slider, injected, t0 = +new Date;
 
 !function() {
   api.log("host:", location.host);
-  if (window !== top) {
-    api.log("not in top window");
-    return;
-  }
 
   document.addEventListener("keydown", function(e) {
     if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75) {  // cmd-shift-K or ctrl-shift-K
