@@ -105,7 +105,11 @@ abstract class StringMapperDelegate[T] extends TypeMapperDelegate[T] {
   override def valueToSQLLiteral(value: T) = delegate.valueToSQLLiteral(typeToString(value))
 
   def typeToString(value: T): String
-  def stringToType(str: String): T
+  def stringToType(str: String): T = Option(str) match {
+    case None => zero
+    case Some(value) => safeStringToType(value)
+  }
+  def safeStringToType(str: String): T
 }
 
 //************************************
@@ -144,53 +148,31 @@ class IdMapperDelegate[T] extends TypeMapperDelegate[Id[T]] {
 //************************************
 //       ExternalId -> String
 //************************************
-class ExternalIdMapperDelegate[T] extends TypeMapperDelegate[ExternalId[T]] {
-  private val delegate = new StringTypeMapperDelegate()
+class ExternalIdMapperDelegate[T] extends StringMapperDelegate[ExternalId[T]] {
   def zero = ExternalId[T]()
-  def sqlType = delegate.sqlType
-  def setValue(value: ExternalId[T], p: PositionedParameters) = delegate.setValue(value.id, p)
-  def setOption(valueOpt: Option[ExternalId[T]], p: PositionedParameters) = delegate.setOption(valueOpt map (_.id), p)
-  def nextValue(r: PositionedResult) = delegate.nextValueOrElse("", r) match {
-    case "" => zero
-    case some => ExternalId(some)
-  }
-  def updateValue(value: ExternalId[T], r: PositionedResult) = delegate.updateValue(value.id, r)
-  override def valueToSQLLiteral(value: ExternalId[T]) = delegate.valueToSQLLiteral(value.id)
+  def typeToString(value: ExternalId[T]): String = value.id
+  def safeStringToType(str: String): ExternalId[T] = ExternalId[T](str)
 }
 
 //************************************
 //       State -> String
 //************************************
-class StateMapperDelegate[T] extends TypeMapperDelegate[State[T]] {
-  private val delegate = new StringTypeMapperDelegate()
+class StateMapperDelegate[T] extends StringMapperDelegate[State[T]] {
   def zero = new State("")
-  def sqlType = delegate.sqlType
-  def setValue(value: State[T], p: PositionedParameters) = delegate.setValue(value.value, p)
-  def setOption(valueOpt: Option[State[T]], p: PositionedParameters) = delegate.setOption(valueOpt map (_.value), p)
-  def nextValue(r: PositionedResult) = State(delegate.nextValue(r))
-  def updateValue(value: State[T], r: PositionedResult) = delegate.updateValue(value.value, r)
-  override def valueToSQLLiteral(value: State[T]) = delegate.valueToSQLLiteral(value.value)
+  def typeToString(value: State[T]): String = value.value
+  def safeStringToType(str: String): State[T] = State[T](str)
 }
 
 //************************************
 //       Seq[URLHistory] -> String
 //************************************
-class URLHistorySeqMapperDelegate extends TypeMapperDelegate[Seq[URLHistory]] {
-  private val delegate = new StringTypeMapperDelegate()
+class URLHistorySeqMapperDelegate extends StringMapperDelegate[Seq[URLHistory]] {
   def zero = Nil
-  def sqlType = delegate.sqlType
-  def setValue(value: Seq[URLHistory], p: PositionedParameters) = delegate.setValue(historyToString(value), p)
-  def setOption(valueOpt: Option[Seq[URLHistory]], p: PositionedParameters) = delegate.setOption(valueOpt map historyToString, p)
-  def nextValue(r: PositionedResult) = historyFromString(delegate.nextValue(r))
-  def updateValue(value: Seq[URLHistory], r: PositionedResult) = delegate.updateValue(historyToString(value), r)
-  override def valueToSQLLiteral(value: Seq[URLHistory]) = delegate.valueToSQLLiteral(historyToString(value))
-
-  private def historyToString(history: Seq[URLHistory]) = {
+  def typeToString(history: Seq[URLHistory]) = {
     val serializer = URLHS.urlHistorySerializer
     Json.stringify(serializer.writes(history))
   }
-
-  private def historyFromString(history: String) = {
+  def safeStringToType(history: String) = {
     val json = Json.parse(history)
     val serializer = URLHS.urlHistorySerializer
     serializer.reads(json)
@@ -200,15 +182,10 @@ class URLHistorySeqMapperDelegate extends TypeMapperDelegate[Seq[URLHistory]] {
 //************************************
 //       BookmarkSource -> String
 //************************************
-class BookmarkSourceMapperDelegate extends TypeMapperDelegate[BookmarkSource] {
-  private val delegate = new StringTypeMapperDelegate()
+class BookmarkSourceMapperDelegate extends StringMapperDelegate[BookmarkSource] {
   def zero = BookmarkSource("")
-  def sqlType = delegate.sqlType
-  def setValue(value: BookmarkSource, p: PositionedParameters) = delegate.setValue(value.value, p)
-  def setOption(valueOpt: Option[BookmarkSource], p: PositionedParameters) = delegate.setOption(valueOpt.map(_.value), p)
-  def nextValue(r: PositionedResult) = BookmarkSource(delegate.nextValue(r))
-  def updateValue(value: BookmarkSource, r: PositionedResult) = delegate.updateValue(value.value, r)
-  override def valueToSQLLiteral(value: BookmarkSource) = delegate.valueToSQLLiteral(value.value)
+  def typeToString(value: BookmarkSource): String = value.value
+  def safeStringToType(str: String): BookmarkSource = BookmarkSource(str)
 }
 
 
@@ -218,7 +195,7 @@ class BookmarkSourceMapperDelegate extends TypeMapperDelegate[BookmarkSource] {
 class SocialNetworkTypeMapperDelegate extends StringMapperDelegate[SocialNetworkType] {
   def zero = SocialNetworks.FACEBOOK
   def typeToString(socialNetworkType: SocialNetworkType) = socialNetworkType.name
-  def stringToType(str: String) = str match {
+  def safeStringToType(str: String) = str match {
     case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK
     case _ => throw new RuntimeException("unknown network type %s".format(str))
   }
@@ -230,10 +207,7 @@ class SocialNetworkTypeMapperDelegate extends StringMapperDelegate[SocialNetwork
 class SocialUserMapperDelegate extends StringMapperDelegate[SocialUser] {
   def zero = SocialUser(id = UserId("", ""), displayName = "", email = None, avatarUrl = None, authMethod = AuthenticationMethod.OAuth2)
   def typeToString(socialUser: SocialUser) = SocialUserSerializer.userSerializer.writes(socialUser).toString
-  def stringToType(str: String) = Option(str) match {
-    case None => zero
-    case Some(value) => SocialUserSerializer.userSerializer.reads(Json.parse(value))
-  }
+  def safeStringToType(str: String) = SocialUserSerializer.userSerializer.reads(Json.parse(str))
 }
 
 //************************************
@@ -242,6 +216,6 @@ class SocialUserMapperDelegate extends StringMapperDelegate[SocialUser] {
 class SocialIdMapperDelegate extends StringMapperDelegate[SocialId] {
   def zero = SocialId("")
   def typeToString(socialId: SocialId) = socialId.id
-  def stringToType(str: String) = SocialId(str)
+  def safeStringToType(str: String) = SocialId(str)
 }
 
