@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import play.api.Play.current
+import org.scalaquery.util.{Node, WithOp, SimpleTypeName, ValueLinearizer}
 import org.scalaquery.simple.{GetResult, StaticQuery => Q}
 import org.scalaquery.simple.GetResult._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
@@ -40,6 +41,8 @@ case class SocialConnection(
 @ImplementedBy(classOf[SocialConnectionRepoImpl])
 trait SocialConnectionRepo extends Repo[SocialConnection] {
   def getFortyTwoUserConnections(id: Id[User])(implicit session: RSession): Set[Id[User]]
+  def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo] )(implicit session: RSession): Option[SocialConnection]
+  def getUserConnections(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
 }
 
 @Singleton
@@ -54,7 +57,7 @@ class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
 
   override lazy val table = new RepoTable[SocialConnection](db, "social_connection") {
     def socialUser1 = column[Id[SocialUserInfo]]("social_user_1", O.NotNull)
-    def socialUser2 = column[Id[SocialUserInfo]]("social_user_1", O.NotNull)
+    def socialUser2 = column[Id[SocialUserInfo]]("social_user_2", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ socialUser1 ~ socialUser2 ~ state <> (SocialConnection, SocialConnection.unapply _)
   }
 
@@ -113,26 +116,24 @@ class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
 //    }
 //  }
 //
-//  def getUserConnections(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo] = {
-//    val suis = SocialUserInfoCxRepo.getByUser(id).map(_.id.get)
-//    if(!suis.isEmpty) {
-//      val conns = (SocialConnectionEntity AS "sc").map { sc =>
-//        SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis))) AND (sc.state EQ SocialConnectionStates.ACTIVE)) list
-//      } map (_.view) map (s => if(suis.contains(s.socialUser1)) s.socialUser2 else s.socialUser1 ) toList
-//
-//      if(!conns.isEmpty) {
-//        (SocialUserInfoEntity AS "sui").map { sui =>
-//          SELECT (sui.*) FROM sui WHERE (sui.id IN(conns)) list
-//        } map (_.view)
-//      }
-//      else  {
-//        Nil
-//      }
-//    }
-//    else {
-//      Nil
-//    }
-//  }
+
+  def getUserConnections(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo] = {
+    val socialRepo = inject[SocialUserInfoRepoImpl]
+    socialRepo.getByUser(id).map(_.id.get) match {
+      case ids if !ids.isEmpty =>
+        val connections = (for {
+          t <- table if (In(Node(t.socialUser1), Node(ids)) || In(Node(t.socialUser2), Node(ids)) && t.state === SocialConnectionStates.ACTIVE)
+        } yield t ).list
+        connections map (s => if(ids.contains(s.socialUser1)) s.socialUser2 else s.socialUser1 ) match {
+          case users if !users.isEmpty =>
+            (for (t <- socialRepo.table if In(Node(t.id), Node(users))) yield t).list
+          case _ => Nil
+        }
+      case _ => Nil
+    }
+  }
+
+
 //
 //  def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo] = {
 //
