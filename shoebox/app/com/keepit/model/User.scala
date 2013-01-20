@@ -53,7 +53,6 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] wi
   override lazy val table = new RepoTable[User](db, "user") with ExternalIdColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
     def lastName = column[String]("last_name", O.NotNull)
-    def state = column[State[User]]("state", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state <> (User, User.unapply _)
   }
 }

@@ -50,7 +50,6 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[
 
   override lazy val table = new RepoTable[EmailAddress](db, "email_address") {
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def state = column[State[EmailAddress]]("state", O.NotNull)
     def address = column[String]("address", O.NotNull)
     def verifiedAt = column[DateTime]("verified_at", O.NotNull)
     def lastVerificationSent = column[DateTime]("last_verification_sent", O.Nullable)
