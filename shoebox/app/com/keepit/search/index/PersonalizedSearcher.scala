@@ -1,35 +1,55 @@
 package com.keepit.search.index
 
+import com.keepit.common.db.Id
+import com.keepit.model.User
 import com.keepit.search.SemanticVectorComposer
 import com.keepit.search.SemanticVector
+import com.keepit.search.BrowsingHistoryTracker
+import com.keepit.search.MultiHashFilter
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.SegmentReader
+import org.apache.lucene.search.Query
+import org.apache.lucene.search.Scorer
+import scala.collection.mutable.ArrayBuffer
 
-object PersonalizedSearcher{
-  def apply(searcher: Searcher, ids: Set[Long]) = new PersonalizedSearcher(searcher.indexReader, searcher.subReaderArray, searcher.idMappers, ids)
+object PersonalizedSearcher {
+  def apply(userId: Id[User], indexReader: WrappedIndexReader, ids: Set[Long],
+            browsingHistoryTracker: BrowsingHistoryTracker,
+            svWeightMyBookMarks: Int,
+            svWeightBrowsingHistory: Int) = {
+    new PersonalizedSearcher(indexReader, ids, browsingHistoryTracker.getMultiHashFilter(userId), svWeightMyBookMarks, svWeightBrowsingHistory)
+  }
+
+  def apply(searcher: Searcher, ids: Set[Long]) = {
+    new PersonalizedSearcher(searcher.indexReader, ids, MultiHashFilter.emptyFilter, 1, 0)
+  }
 }
 
-class PersonalizedSearcher(override val indexReader: IndexReader, override val subReaderArray: Array[SegmentReader], override val idMappers: Map[String, IdMapper], ids: Set[Long])
-extends Searcher(indexReader, subReaderArray, idMappers) {
-
+class PersonalizedSearcher(override val indexReader: WrappedIndexReader, ids: Set[Long], filter: MultiHashFilter, svWeightMyBookMarks: Int, svWeightBrowsingHistory: Int)
+extends Searcher(indexReader) {
   override protected def getSemanticVectorComposer(term: Term) = {
+    val subReaders = indexReader.wrappedSubReaders
     val composer = new SemanticVectorComposer
     var vector = new Array[Byte](SemanticVector.arraySize)
     var i = 0
-    while (i < subReaderArray.length) {
-      val subReader = subReaderArray(i)
-      val idMapper = idMappers(subReader.getSegmentName)
+    while (i < subReaders.length) {
+      val subReader = subReaders(i)
+      val idMapper = subReader.getIdMapper
       val tp = subReader.termPositions(term)
       try {
         while (tp.next) {
-          if (ids.contains(idMapper.getId(tp.doc()))) {
+          val id = idMapper.getId(tp.doc())
+          var weight = 0
+          if (ids.contains(id)) weight += svWeightMyBookMarks
+          if (filter.mayContain(id)) weight += svWeightBrowsingHistory
+          if (weight > 0) {
             var freq = tp.freq()
             while (freq > 0) {
               freq -= 1
               tp.nextPosition()
               vector = tp.getPayload(vector, 0)
-              composer.add(vector)
+              composer.add(vector, weight)
             }
           }
         }
