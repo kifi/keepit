@@ -204,35 +204,48 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val (graph, indexer) = initIndexes(store)
 
         graph.load() === users.size
-        indexer.run() === uris.size
 
-        val numHitsToReturn = 100
-        users.foreach{ user =>
-          val userId = user.id.get
-          //println("user:" + userId)
-          val friendIds = users.map(_.id.get).toSet - userId
-          val mainSearcher = new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, resultClickTracker, browsingHistoryTracker, allHitsConfig)
-          val graphSearcher = mainSearcher.uriGraphSearcher
-          val res = mainSearcher.search("personal", numHitsToReturn, None)
+        def run = {
+          val numHitsToReturn = 100
+          users.foreach{ user =>
+            val userId = user.id.get
+            //println("user:" + userId)
+            val friendIds = users.map(_.id.get).toSet - userId
+            val mainSearcher = new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, resultClickTracker, browsingHistoryTracker, allHitsConfig)
+            val graphSearcher = mainSearcher.uriGraphSearcher
+            val res = mainSearcher.search("personal", numHitsToReturn, None)
 
-          val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
-          var mCnt = 0
-          var fCnt = 0
-          var oCnt = 0
-          res.hits.foreach{ h =>
-            if (h.isMyBookmark) mCnt += 1
-            else if (! h.users.isEmpty) fCnt += 1
-            else {
-              oCnt += 1
-              h.bookmarkCount === graphSearcher.getUriToUserEdgeSet(h.uriId).size
+            val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
+            var mCnt = 0
+            var fCnt = 0
+            var oCnt = 0
+            res.hits.foreach{ h =>
+              if (h.isMyBookmark) mCnt += 1
+              else if (! h.users.isEmpty) fCnt += 1
+              else {
+                oCnt += 1
+                h.bookmarkCount === graphSearcher.getUriToUserEdgeSet(h.uriId).size
+              }
             }
+            //println(res.hits)
+            res.hits.map(h => h.uriId).toSet === myUriIds
+            mCnt === myUriIds.size
+            fCnt === 0
+            oCnt === 0
           }
-          //println(res.hits)
-          res.hits.map(h => h.uriId).toSet === myUriIds
-          mCnt === myUriIds.size
-          fCnt === 0
-          oCnt === 0
         }
+        // before main indexing
+        indexer.numDocs === 0
+        run
+        // after main indexing 3 docs
+        indexer.run(3, 3) === 3
+        run
+        // after main indexing 6 docs
+        indexer.run(3, 3) === 3
+        run
+        // after main indexing 9 docs
+        indexer.run(3, 3) === 3
+        run
         indexer.numDocs === uris.size
       }
     }

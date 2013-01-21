@@ -47,9 +47,10 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
   val commitBatchSize = 100
-  val fetchSize = commitBatchSize * 3
 
-  def run(): Int = {
+  def run(): Int = run(commitBatchSize, commitBatchSize * 3)
+
+  def run(commitBatchSize: Int, fetchSize: Int): Int = {
     log.info("starting a new indexing round")
     try {
       val uris = CX.withConnection { implicit c =>
