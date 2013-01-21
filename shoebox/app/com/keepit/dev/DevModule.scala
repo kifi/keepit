@@ -219,4 +219,15 @@ class DevModule() extends ScalaModule with Logging {
         ResultClickTracker(dir, numHashFuncs, syncEvery)
     }
   }
+
+  @Singleton
+  @Provides
+  def browsingHistoryTracker: BrowsingHistoryTracker = {
+    val conf = current.configuration.getConfig("browsing-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    BrowsingHistoryTracker(filterSize, numHashFuncs, minHits)
+  }
 }
