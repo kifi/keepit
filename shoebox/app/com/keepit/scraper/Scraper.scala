@@ -1,7 +1,11 @@
 package com.keepit.scraper
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.{Id, CX}
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.net.URI
 import com.keepit.search.{Article, ArticleStore}
@@ -30,8 +34,8 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
     log.info("starting a new scrape round")
-    val tasks = CX.withConnection { implicit c =>
-      ScrapeInfoCxRepo.getOverdueList().map{ info => (NormalizedURICxRepo.get(info.uriId), info) }
+    val tasks = inject[DBConnection].readOnly { implicit s =>
+      inject[ScrapeInfoRepo].getOverdueList().map{ info => (inject[NormalizedURIRepo].get(info.uriId), info) }
     }
     log.info("got %s uris to scrape".format(tasks.length))
     val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
@@ -42,7 +46,10 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
   }
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
-    val info = CX.withConnection { implicit c => ScrapeInfoCxRepo.ofUri(uri) }
+    val repo = inject[ScrapeInfoRepo]
+    val info = inject[DBConnection].readWrite { implicit s =>
+      repo.getByUri(uri.id.get).getOrElse(repo.save(ScrapeInfo(uriId = uri.id.get)))
+    }
     safeProcessURI(uri, info)
   }
 
@@ -51,15 +58,13 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     } catch {
       case e =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
-        val errorURI = CX.withConnection { implicit c =>
-          info.withFailure().save
-          uri.withState(NormalizedURIStates.SCRAPE_FAILED).save
+        val errorURI = inject[DBConnection].readWrite { implicit s =>
+          inject[ScrapeInfoRepo].save(info.withFailure())
+          inject[NormalizedURIRepo].save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         (errorURI, None)
     }
 
-  private val unscrapables = Seq("//www.facebook.com/login", "//accounts.google.com/ServiceLogin", "//www.google.com/accounts/ServiceLogin", "//app.asana.com/")
-  private def isUnscrapable(url: String): Boolean = !unscrapables.filter(url.contains).isEmpty
 
   private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
@@ -73,21 +78,28 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
         val docChanged = (newSig.similarTo(oldSig) < (1.0d - config.changeThreshold * (config.minInterval / info.interval)))
 
         val scrapedURI = CX.withConnection { implicit c =>
+
+          val isUnscrape = {
+            inject[DBConnection].readOnly { implicit conn =>
+              val uns = inject[UnscrapableRepo]
+              if (uns.contains(uri.url) || (article.destinationUrl.isDefined && uns.contains(article.destinationUrl.get))) true else false
+            }
+          }
+
           if (docChanged) {
             // update the scrape schedule and the uri state to SCRAPED
             info.withDestinationUrl(article.destinationUrl).withDocumentChanged(newSig.toBase64).save
-            if (isUnscrapable(uri.url)) {
-              uri.withTitle(article.title).withState(NormalizedURIStates.UNSCRAPABLE).save
-            } else {
+            if (isUnscrape)
+              uri.withState(NormalizedURIStates.UNSCRAPABLE).save
+            else
               uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED).save
-            }
           } else {
             // update the scrape schedule, uri is not changed
-            if (isUnscrapable(uri.url)) {
-              uri.withState(NormalizedURIStates.UNSCRAPABLE).save
-            }
             info.withDestinationUrl(article.destinationUrl).withDocumentUnchanged().save
-            uri
+            if (isUnscrape)
+              uri.withState(NormalizedURIStates.UNSCRAPABLE).save
+            else
+              uri
           }
         }
         log.info("fetched uri %s => %s".format(uri, article))

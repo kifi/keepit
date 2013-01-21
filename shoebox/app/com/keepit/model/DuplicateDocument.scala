@@ -39,7 +39,6 @@ case class DuplicateDocument (
 
 @ImplementedBy(classOf[DuplicateDocumentRepoImpl])
 trait DuplicateDocumentRepo extends Repo[DuplicateDocument] {
-  def all(userId: Id[User])(implicit session: RSession): Seq[DuplicateDocument]
   def getSimilarTo(id: Id[NormalizedURI])(implicit session: RSession): Seq[DuplicateDocument]
 }
 
@@ -54,16 +53,11 @@ class DuplicateDocumentRepoImpl @Inject() (val db: DataBaseComponent) extends Db
   import DBSession._
 
   override lazy val table = new RepoTable[DuplicateDocument](db, "duplicate_document") {
-    def userId = column[Id[User]]("user_id", O.NotNull)
     def uri1Id = column[Id[NormalizedURI]]("uri1_id", O.NotNull)
     def uri2Id = column[Id[NormalizedURI]]("uri2_id", O.NotNull)
     def percentMatch = column[Double]("percent_match", O.NotNull)
-    def state = column[State[DuplicateDocument]]("state", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ uri1Id ~ uri2Id ~ percentMatch ~ state <> (DuplicateDocument, DuplicateDocument.unapply _)
   }
-
-  def all(userId: Id[User])(implicit session: RSession): Seq[DuplicateDocument] =
-    (for(f <- table if f.userId === userId && f.state === DuplicateDocumentStates.ACTIVE) yield f).list
 
   def getSimilarTo(id: Id[NormalizedURI])(implicit session: RSession): Seq[DuplicateDocument] = {
     val q = for {

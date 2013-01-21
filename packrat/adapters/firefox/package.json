@@ -2,8 +2,41 @@
     "name": "kifi-beta",
     "license": "MPL 2.0",
     "author": "FortyTwo Inc.",
-    "version": "2.1.0",
+    "homepage": "http://www.keepitfindit.com/",
+    "version": "2.1.31",
     "fullName": "Keep It, Find It!",
-    "id": "jid1-njrbRwZb5BQlkQ",
-    "description": "The answer to life, the universe, and everything."
+    "id": "kifi@42go.com",
+    "icon": "data/icons/kifi.48.png",
+    "icon64": "data/icons/kifi.64.png",
+    "description": "The answer to life, the universe, and everything.",
+    "preferences": [
+        {
+            "title": "Environment",
+            "type": "radio",
+            "options": [
+                {"value": "production", "label": "Production"},
+                {"value": "development", "label": "Development"}],
+            "name": "env",
+            "value": "production"
+        },
+        {
+            "title": "Slider delay (sec)",
+            "description": "(0 to not show it automatically)",
+            "type": "integer",
+            "name": "sliderDelay",
+            "value": 30
+        },
+        {
+            "title": "Maximum search results",
+            "type": "integer",
+            "name": "maxResults",
+            "value": 5
+        },
+        {
+            "title": "Show search result scores",
+            "type": "bool",
+            "name": "showScores",
+            "value": false
+        }
+    ]
 }

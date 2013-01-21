@@ -1,23 +1,23 @@
 package com.keepit.model
 
+import play.api.Play.current
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
-import com.keepit.inject._
 import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
-import play.api.Play.current
 import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import play.api.libs.json._
-import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 case class Follow (
   id: Option[Id[Follow]] = None,
@@ -64,7 +64,6 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
     def userId = column[Id[User]]("user_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def urlId = column[Id[URL]]("url_id", O.Nullable)
-    def state = column[State[Follow]]("state", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ uriId ~ urlId.? ~ state <> (Follow, Follow.unapply _)
   }
 

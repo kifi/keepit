@@ -90,10 +90,14 @@
   color: #eee;
   -webkit-transform: translate(-100%,0);
   -webkit-transition: all .2s ease-in-out;
+  transform: translate(-100%,0);
+  transition: all .2s ease-in-out;
 }
 .kifi_comment_wrapper .comment-wrapper:hover .comment-meta {
   -webkit-transform: none;
-  -webkit-transition-delay: 3s;
+  -webkit-transition-delay: 2.5s;
+  transform: none;
+  transition-delay: 2.5s;
 }
 
 .kifi_comment_wrapper .comment-text {

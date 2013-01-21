@@ -5,7 +5,10 @@ import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
 import scala.util.Random
 import com.keepit.model._
-import com.keepit.common.db.CX
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import play.api.Play.current
 import play.api.test.Helpers._
 import com.keepit.test.EmptyApplication
@@ -27,26 +30,28 @@ class DuplicateDocumentDetectionTest extends SpecificationWithJUnit {
         val sig3 = builder1.add("uuu").build
         val sig4 = builder3.add("Completely unrelated to the others. In no way similar. These documents aren't even close.").build
 
-        val documentSignatures2 = CX.withConnection { implicit conn =>
-          val nuri1 = NormalizedURIFactory("http://google.com/1").save
-          val nuri2 = NormalizedURIFactory("http://google.com/2").save
-          val nuri3 = NormalizedURIFactory("http://google.com/3").save
-          val nuri4 = NormalizedURIFactory("http://google.com/4").save
-          val nuri5 = NormalizedURIFactory("http://google.com/5").save
+        val uriRepo = inject[NormalizedURIRepo]
+        val scrapeRepo = inject[ScrapeInfoRepo]
+        val documentSignatures2 = inject[DBConnection].readWrite { implicit s =>
+          val nuri1 = uriRepo.save(NormalizedURIFactory("http://google.com/1"))
+          val nuri2 = uriRepo.save(NormalizedURIFactory("http://google.com/2"))
+          val nuri3 = uriRepo.save(NormalizedURIFactory("http://google.com/3"))
+          val nuri4 = uriRepo.save(NormalizedURIFactory("http://google.com/4"))
+          val nuri5 = uriRepo.save(NormalizedURIFactory("http://google.com/5"))
 
           implicit val conf = com.keepit.scraper.ScraperConfig()
 
-          ScrapeInfoCxRepo.ofUri(nuri1).copy(signature = sig1.toBase64).save
-          ScrapeInfoCxRepo.ofUri(nuri2).copy(signature = sig1.toBase64).save
-          ScrapeInfoCxRepo.ofUri(nuri3).copy(signature = sig2.toBase64).save
-          ScrapeInfoCxRepo.ofUri(nuri4).copy(signature = sig3.toBase64).save
-          ScrapeInfoCxRepo.ofUri(nuri5).copy(signature = sig4.toBase64).save
+          scrapeRepo.save(scrapeRepo.getByUri(nuri1.id.get).get.copy(signature = sig1.toBase64))
+          scrapeRepo.save(scrapeRepo.getByUri(nuri2.id.get).get.copy(signature = sig1.toBase64))
+          scrapeRepo.save(scrapeRepo.getByUri(nuri3.id.get).get.copy(signature = sig2.toBase64))
+          scrapeRepo.save(scrapeRepo.getByUri(nuri4.id.get).get.copy(signature = sig3.toBase64))
+          scrapeRepo.save(scrapeRepo.getByUri(nuri5.id.get).get.copy(signature = sig4.toBase64))
 
-          ScrapeInfoCxRepo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
+          scrapeRepo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
         }
 
-        val documentSignatures = CX.withConnection { implicit conn =>
-          ScrapeInfoCxRepo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
+        val documentSignatures = inject[DBConnection].readOnly { implicit s =>
+          scrapeRepo.all.map(s => (s.uriId, parseBase64Binary(s.signature)))
         }
         val dupe = new DuplicateDocumentDetection(documentSignatures)
 

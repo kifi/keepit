@@ -13,16 +13,22 @@ function extend(a, b) {
 }
 
 // TODO: load some of these APIs on demand instead of up front
-var self = require("sdk/self"), data = self.data, load = data.load.bind(data), url = data.url.bind(url);
-var timers = require("sdk/timers");
-var privateBrowsing = require("sdk/private-browsing"); // TODO: if (!privateBrowsing.isActive) { ... }
-var xulApp = require("sdk/system/xul-app");
-let {deps} = require("./deps");
+const self = require("sdk/self"), data = self.data, load = data.load.bind(data), url = data.url.bind(url);
+const timers = require("sdk/timers");
+const xulApp = require("sdk/system/xul-app");
+const { Ci, Cc } = require("chrome");
+const WM = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
+const {deps} = require("./deps");
+const icon = require("./icon");
+const windows = require("sdk/windows").browserWindows;
+const tabs = require("sdk/tabs");
+const privateMode = require("sdk/private-browsing");
 
-var nextTabId = 1, pages = {}, workers = {};  // by tab.id
+var nextTabId = 1;
+const pages = {}, workers = {}, tabsById = {};  // all by tab.id
 function createPage(tab) {
   if (!tab || !tab.id) throw Error(tab ? "tab without id" : "tab required");
-  return pages[tab.id] = {id: tab.id, url: tab.url, active: tab.active};
+  return pages[tab.id] = {id: tab.id, url: tab.url, active: tab === tab.window.tabs.activeTab};
 }
 
 exports.bookmarks = require("./bookmarks");
@@ -32,11 +38,17 @@ exports.icon = {
   on: {click: []},
   set: function(tabId, path) {
     var page = pages[tabId];
+    exports.log("[icon.set]", tabId, path, page);
     if (page) {
       page.icon = path;
+      if (page.active) {
+        icon.show(tabsById[tabId].window, url(path));
+      }
     }
-    button.setImage(url(path));
   }};
+function onIconClick(win) {
+  dispatch.call(exports.icon.on.click, pages[win.tabs.activeTab.id]);
+}
 
 exports.loadReason = {upgrade: "update", downgrade: "update"}[self.loadReason] || self.loadReason;
 exports.log = function() {
@@ -86,6 +98,7 @@ exports.popup = {
     }
 
     // Below are some failed attempts at opening a popup window...
+    // UPDATE: see https://addons.mozilla.org/en-US/developers/docs/sdk/1.12/modules/sdk/frame/utils.html
 
     // win.window, win.document, win.getInterface
     // var win = require("api-utils/window/utils").open(options.url, {
@@ -117,6 +130,30 @@ exports.port = {
   on: function(handlers) {
     if (portHandlers) throw Error("api.port.on already called");
     portHandlers = handlers;
+  }};
+
+const {prefs} = require("sdk/simple-prefs");
+exports.prefs = {
+  get: function get(key) {
+    if (arguments.length > 1) {
+      for (var o = {}, i = 0; i < arguments.length; i++) {
+        key = arguments[i];
+        o[key] = get(key);
+      }
+      return o;
+    }
+    return prefs[key];
+  },
+  set: function set(key, value) {
+    if (typeof key === "object") {
+      Object.keys(key).forEach(function(k) {
+        set(k, key[k]);
+      });
+    } else if (value == null) {
+      delete prefs[key];
+    } else {
+      prefs[key] = value;
+    }
   }};
 
 exports.request = function(method, url, data, done, fail) {
@@ -171,55 +208,84 @@ exports.version = self.version;
 
 // initializing tabs and pages
 
-var tabs = require("sdk/tabs")
+tabs
 .on("open", function(tab) {
   tab.id = tab.id || nextTabId++;
   exports.log("[tabs.open]", tab.id, tab.url);
+  tabsById[tab.id] = tab;
 })
 .on("close", function(tab) {
   exports.log("[tabs.close]", tab.id, tab.url);
   delete pages[tab.id];
   delete workers[tab.id];
+  delete tabsById[tab.id];
 })
 .on("activate", function(tab) {
-  exports.log("[tabs.activate]", tab.id, tab.url);
-  tab.active = true;
-  if (tab.url !== "about:blank") {
-    var page = pages[tab.id] || createPage(tab);
-    dispatch.call(exports.tabs.on.activate, page);
+  var page = pages[tab.id];
+  if ((!page || !page.active) && !privateMode.isActive) {
+    exports.log("[tabs.activate]", tab.id, tab.url);
+    if (!/^about:/.test(tab.url)) {
+      if (page) {
+        page.active = true;
+        if (page.icon) {
+          icon.show(tab.window, url(page.icon));
+        } else {
+          icon.hide(tab.window);
+        }
+      } else {
+        page = createPage(tab);
+      }
+      dispatch.call(exports.tabs.on.activate, page);
+    }
   }
 })
 .on("deactivate", function(tab) {
-  exports.log("[tabs.deactivate]", tab.id, tab.url);
-  var active;
-  for (let win in windows) {
-    active |= tab === win.activeTab;
-  }
-  tab.active = !!active;
-  var page = pages[tab.id];
-  if (page) {
-    page.active = tab.active;
+  if (tab.window === windows.activeWindow) {
+    exports.log("[tabs.deactivate]", tab.id, tab.url);
+    var page = pages[tab.id];
+    if (page) {
+      page.active = false;
+    }
   }
 })
 .on("ready", function(tab) {
+  if (privateMode.isActive) return;
   exports.log("[tabs.ready]", tab.id, tab.url);
   var page = pages[tab.id] || createPage(tab);
-  page.ready = true;
   dispatch.call(exports.tabs.on.ready, page);  // TODO: ensure content scripts are fully injected before dispatch
 });
 
-var windows = require("windows").browserWindows;
-for (let win in windows) {
-  let activeTab = win.activeTab;
-  for (let tab in win.tabs) {
+windows
+.on("open", function(win) {
+  if (privateMode.isActive) return;
+  exports.log("[windows.open]", win.title);
+  win.removeIcon = icon.addToWindow(win, onIconClick);
+})
+.on("close", function(win) {
+  if (privateMode.isActive) return;
+  exports.log("[windows.close]", win.title);
+  removeFromWindow(win);
+});
+
+for each (let win in windows) {
+  if (privateMode.isActive) continue;
+  if (!win.removeIcon) {
+    exports.log("[windows] adding icon to window:", win.title);
+    win.removeIcon = icon.addToWindow(win, onIconClick);
+  }
+  for each (let tab in win.tabs) {
     if (!tab.id) {
       tab.id = nextTabId++;
-      tab.active = tab === activeTab;
-      exports.log("[windows]", tab.id, tab.url, tab.active ? "active" : "");
+      exports.log("[windows]", tab.id, tab.url);
+      tabsById[tab.id] = tab;
     }
-    let page = pages[tab.id] || createPage(tab);
-    page.active = tab.active;
-    // TODO: initialize page.ready somehow
+    let page = pages[tab.id];
+    if (page) {
+      page.active = tab === tab.window.tabs.activeTab;
+    } else {
+      createPage(tab);
+    }
+    // TODO: initialize page.complete somehow
   }
 };
 
@@ -232,6 +298,7 @@ PageMod({
   contentScriptWhen: "start",
   attachTo: ["existing", "top"],
   onAttach: function(worker) {
+    if (privateMode.isActive) return;
     var tab = worker.tab;
     tab.id = tab.id || nextTabId++;
     exports.log("[onAttach]", tab.id, "start.js", tab.url);
@@ -242,7 +309,7 @@ PageMod({
     worker.port.on("api:complete", function() {
       exports.log("[api:complete]", tab.id, tab.url);
       var page = pages[tab.id] || createPage(tab);
-      page.ready = true;
+      page.complete = true;
       dispatch.call(exports.tabs.on.complete, page);
     });
     worker.port.on("api:nav", function() {
@@ -264,6 +331,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       contentScriptOptions: {dataUriPrefix: url("")},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
+        if (privateMode.isActive) return; // TODO: tell script not to do anything if privateMode.isActive
         let tab = worker.tab, page = pages[tab.id];
         exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
         let injected = extend({}, o.injected);
@@ -292,8 +360,21 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
   });
 }, 0);
 
-let button = require("packages/barbutton/barbutton").BarButton({
-  id: "firefox-barbutton",
-  click: function() {
-    dispatch.call(exports.icon.on.click, pages[tabs.activeTab.id]);
-  }});
+function removeFromWindow(win) {
+  if (win.removeIcon) {
+    win.removeIcon();
+    delete win.removeIcon;
+  }
+}
+
+privateMode.on("start", function() {
+  for each (let win in windows) {
+    removeFromWindow(win);
+  }
+});
+
+exports.onUnload = function(reason) {
+  for each (let win in windows) {
+    removeFromWindow(win);
+  }
+};

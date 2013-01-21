@@ -1,6 +1,6 @@
 {
   "name": "Kifi Beta",
-  "version": "2.1.26",
+  "version": "2.1.31",
   "manifest_version": 2,
   "description": "Keep it, Find it!",
   "icons": {
@@ -20,15 +20,6 @@
     {
       "matches": ["*://*/*"],
       "js": ["scripts/ready.js"],
-      "run_at": "document_end"
-    },
-    {
-      "matches": [
-        "*://dev.ezkeep.com/r/*",
-        "*://*.keepitfindit.com/r/*",
-        "*://*.kifi.com/r/*"
-      ],
-      "js": ["scripts/deeplink.js"],
       "run_at": "document_end"
     }
   ],

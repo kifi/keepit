@@ -1,5 +1,8 @@
 package com.keepit.model
 
+import com.keepit.inject._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
 import com.keepit.common.db.NotFoundException
 import com.keepit.common.db.StateException
@@ -9,6 +12,7 @@ import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
+import play.api.Play.current
 import play.api.libs.json._
 import ru.circumflex.orm._
 import java.security.MessageDigest
@@ -49,7 +53,8 @@ case class NormalizedURI  (
     val entity = NormalizedURIEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
     val uri = entity.view
-    ScrapeInfoCxRepo.ofUri(uri).save
+    ScrapeInfoCxRepo.ofUriId(uri.id.get).save
+//    inject[ScrapeInfoRepo].getByUri(uri).getOrElse(inject[ScrapeInfoRepo].save(ScrapeInfo(uri = this.id.get)))
     uri
   }
 
@@ -63,7 +68,6 @@ case class NormalizedURI  (
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI]  {
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
-
 }
 
 @Singleton
@@ -80,7 +84,6 @@ class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo
     def externalId = column[ExternalId[NormalizedURI]]("external_id")
     def title = column[String]("title")
     def url = column[String]("url", O.NotNull)
-    def state = column[State[NormalizedURI]]("state", O.NotNull)
     def urlHash = column[String]("url_hash", O.NotNull)
     def domain = column[String]("domain", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ domain.? ~ url ~ urlHash ~ state <> (NormalizedURI, NormalizedURI.unapply _)
@@ -88,6 +91,13 @@ class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo
 
   def allActive()(implicit session: RSession): Seq[NormalizedURI] =
     (for(f <- table if f.state === NormalizedURIStates.ACTIVE) yield f).list
+
+  override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
+    val saved = super.save(uri)
+    val scrapeRepo = inject[ScrapeInfoRepo]
+    scrapeRepo.getByUri(saved.id.get).getOrElse(scrapeRepo.save(ScrapeInfo(uriId = saved.id.get)))
+    saved
+  }
 }
 
 object NormalizedURIFactory {

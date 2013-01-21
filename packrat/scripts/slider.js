@@ -270,15 +270,14 @@ slider = function() {
   }
 
   function slideIn() {
-    var $s = $(".kifi_hover").animate({
+    $(".kifi_hover").animate({
         right: '+=340',
         opacity: 1
       },
       400,
       "easeQuickSnapBounce",
       function() {
-        $s.css({right: "-10px", opacity: 1});
-        api.log("opened", $s[0], $s.css("right"))
+        $(this).css({right: "-10px", opacity: 1});
       });
   }
 
@@ -777,6 +776,17 @@ slider = function() {
         $selectable.add(".snapshot-bar-wrap").animate({opacity: 0}, 400, function() { $(this).remove(); });
         key.deleteScope("snapshot");
         slideIn();
+        $(".kifi_hover").find(".comment-compose").each(function() {
+          var el = this;
+          setTimeout(function() {
+            el.focus();
+            var r = document.createRange(), s = window.getSelection();
+            r.selectNodeContents(el);
+            r.collapse(false);
+            s.removeAllRanges();
+            s.addRange(r);
+          }, 0);
+        });
       }
       function updateSelection(clientX, clientY, scrollLeft, scrollTop) {
         $selectable.hide();
