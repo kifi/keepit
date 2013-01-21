@@ -7,6 +7,11 @@ object MultiHashFilter {
     val filter = new Array[Byte](tableSize)
     new MultiHashFilter(tableSize, filter, numHashFuncs, minHits)
   }
+
+  val emptyFilter = new MultiHashFilter(0, Array.empty[Byte], 0, 0) {
+    override def put(key: Long) = throw new UnsupportedOperationException
+    override def mayContain(key: Long) = false
+  }
 }
 
 class MultiHashFilter(tableSize: Int, filter: Array[Byte], numHashFuncs: Int, minHits: Int) {

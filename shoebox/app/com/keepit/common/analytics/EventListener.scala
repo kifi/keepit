@@ -4,6 +4,7 @@ import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.common.db._
+import com.keepit.common.net.URINormalizer
 import com.keepit.search.ArticleSearchResultRef
 import play.api.Play.current
 import java.sql.Connection
@@ -13,6 +14,7 @@ import java.util.{Set => JSet}
 import com.google.inject.Inject
 import scala.collection.JavaConversions._
 import com.keepit.search.ResultClickTracker
+import com.keepit.search.BrowsingHistoryTracker
 
 trait EventListenerPlugin extends Plugin {
   def onEvent: PartialFunction[Event,Unit]
@@ -48,21 +50,25 @@ class KifiResultClickedListener extends EventListenerPlugin {
         val bookmark = meta.normUrl.map(n => BookmarkCxRepo.getByUriAndUser(n.id.get,user.id.get)).flatten
         (user, meta, bookmark)
       }
-
       // handle KifiResultClicked
       meta.normUrl.foreach(n => resultClickTracker.add(user.id.get, meta.query, n.id.get))
   }
 }
 
 class UsefulPageListener extends EventListenerPlugin {
+  private lazy val browsingHistoryTracker = inject[BrowsingHistoryTracker]
+
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_,UserEventMetadata(EventFamilies.SLIDER,"usefulPage",externalUser,_,experiments,metaData,_),_,_) =>
-      val (user, url) = CX.withConnection { implicit conn =>
+      val (user, url, normUrl) = CX.withConnection { implicit conn =>
         val user = UserCxRepo.get(externalUser)
         val url = (metaData \ "url").asOpt[String].getOrElse("")
-        (user, url)
+        val normUrl = NormalizedURICxRepo.getByNormalizedUrl(URINormalizer.normalize(url))
+        (user, url, normUrl)
       }
       // handle UsefulPageListener
+      println("\n\n************************" + url + "\n\n")
+      normUrl.foreach(n => browsingHistoryTracker.add(user.id.get, n.id.get))
   }
 }
 
