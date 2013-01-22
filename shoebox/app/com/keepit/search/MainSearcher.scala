@@ -41,7 +41,7 @@ extends Logging {
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
 
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
-  val articleSearcher = articleIndexer.getArticleSearcher
+  val articleSearcher = articleIndexer.getSearcher
   val uriGraphSearcher = uriGraph.getURIGraphSearcher
   val NO_FRIEND_IDS = Set.empty[Id[User]]
 
