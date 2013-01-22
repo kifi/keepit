@@ -56,7 +56,7 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
   private[this] var termList = termIdfList.map{ case (term, idf) => (term, vector, idf) }
 
-
+  override def getQuery() = query
   override def getValue() = query.getBoost()
   override def scoresDocsOutOfOrder() = false
 
@@ -91,8 +91,6 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
     }
     result
   }
-
-  def getQuery() = query
 
   override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
     if (!termList.isEmpty) {
@@ -140,11 +138,7 @@ class DocAndVector(tp: TermPositions, vector: Array[Byte], weight: Float) {
       if (tp.isPayloadAvailable()) {
         curVec = tp.getPayload(curVec, 0)
       }
-      val halfDecay = SemanticVector.vectorSize.toFloat / 2.0f
-      var dist = SemanticVector.distance(vector, curVec).toFloat
-      dist *= dist
-      dist *= dist
-      (1.0f / (dist + halfDecay).toFloat) * weight
+      SemanticVector.similarity(vector, curVec) * weight
     } else {
       0.0f
     }
@@ -172,7 +166,7 @@ class SemanticVectorScorer(weight: SemanticVectorWeight, tps: List[DocAndVector]
         top.nextDoc()
         top = pq.updateTop()
       }
-      svScore = sum
+      if (sum > 0.0f) svScore = sum else svScore = Float.MinPositiveValue
       scoredDoc = doc
     }
     svScore
