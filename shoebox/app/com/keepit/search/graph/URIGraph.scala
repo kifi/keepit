@@ -10,9 +10,7 @@ import com.keepit.common.net.URI
 import com.keepit.model.{Bookmark, BookmarkRepo, BookmarkStates, BookmarkCxRepo, NormalizedURI, User, UserCxRepo}
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
-import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher, QueryParser}
-import com.keepit.search.query.ProximityQuery
-import com.keepit.search.query.QueryUtil
+import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher}
 import play.api.Play.current
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.TokenStream
@@ -21,9 +19,6 @@ import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.BooleanClause._
-import org.apache.lucene.search.Query
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
 import scala.collection.mutable.ArrayBuffer
@@ -59,7 +54,6 @@ trait URIGraph {
   def load(): Int
   def update(userId: Id[User]): Int
   def getURIGraphSearcher(): URIGraphSearcher
-  def getQueryParser(lang: Lang, proximityBoost: Float): QueryParser
   def close(): Unit
 }
 
@@ -111,22 +105,6 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       case ex: Throwable =>
         log.error("error in URIGraph update", ex)
         throw ex
-    }
-  }
-
-  def getQueryParser(lang: Lang): QueryParser = getQueryParser(lang, 0.0f)
-
-  def getQueryParser(lang: Lang, proximityBoost: Float) = {
-    val total = 1.0f + proximityBoost
-    val parser = new URIGraphQueryParser(DefaultAnalyzer.forParsing(lang), 1.0f/total, proximityBoost/total)
-    DefaultAnalyzer.forParsingWithStemmer(lang).foreach{ parser.setStemmingAnalyzer(_) }
-    parser
-  }
-
-  def search(queryText: String, lang: Lang = Lang("en")): Seq[Hit] = {
-    parseQuery(queryText, lang) match {
-      case Some(query) => searcher.search(query)
-      case None => Seq.empty[Hit]
     }
   }
 
@@ -237,51 +215,6 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
           }
         }
       )
-    }
-  }
-
-  class URIGraphQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Float) extends QueryParser(analyzer) {
-
-    super.setAutoGeneratePhraseQueries(true)
-
-    override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
-      field.toLowerCase match {
-        case "site" => getSiteQuery(queryText)
-        case _ => getTextQuery(queryText, quoted)
-      }
-    }
-
-    private def getTextQuery(queryText: String, quoted: Boolean) = {
-      val booleanQuery = new BooleanQuery(true)
-      var query = super.getFieldQuery(URIGraph.titleTerm.field(), queryText, quoted)
-      if (query != null) booleanQuery.add(query, Occur.SHOULD)
-
-      if (!quoted) {
-        super.getStemmedFieldQueryOpt(URIGraph.stemmedTerm.field(), queryText).foreach{ query => booleanQuery.add(query, Occur.SHOULD) }
-      }
-
-      val clauses = booleanQuery.clauses
-      if (clauses.size == 0) null
-      else if (clauses.size == 1) clauses.get(0).getQuery()
-      else booleanQuery
-    }
-
-    override def parseQuery(queryText: String) = {
-      super.parseQuery(queryText).map{ query =>
-        val terms = QueryUtil.getTermSeq(URIGraph.stemmedTerm.field(), query)
-        val termSize = terms.size
-        if (termSize > 1) {
-          val booleanQuery = new BooleanQuery(true)
-          query.setBoost(baseBoost)
-          booleanQuery.add(query, Occur.MUST)
-          val proxQ = ProximityQuery(terms)
-          proxQ.setBoost(proximityBoost)
-          booleanQuery.add(proxQ, Occur.SHOULD)
-          booleanQuery
-        } else {
-          query
-        }
-      }
     }
   }
 }
