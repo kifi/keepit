@@ -26,6 +26,7 @@ object SemanticVector {
     arr
   }
 
+  // hamming distance
   def distance(v1: Array[Byte], v2: Array[Byte]) = {
     var i = 0
     var dist = 0
@@ -34,6 +35,13 @@ object SemanticVector {
       i += 1
     }
     dist
+  }
+
+  private[this] var vectorSizeHalf: Float = vectorSize.toFloat / 2.0f
+
+  // similarity of two vectors (-1.0 to 1.0)
+  def similarity(v1: Array[Byte], v2: Array[Byte]): Float = {
+    1.0f - (distance(v1, v2).toFloat / vectorSizeHalf)
   }
 
   private val popCount = {
