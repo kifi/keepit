@@ -64,6 +64,11 @@ class MainSearcherTest extends SpecificationWithJUnit {
                                    "percentMatch" -> "0", "tailCutting" -> "0", "dumpingByRank" -> "false")
   val allHitsConfig = defaultConfig("tailCutting" -> "0")
 
+  val resultClickTracker = ResultClickTracker(8)
+  val browsingHistoryTracker = BrowsingHistoryTracker(3067, 2, 1)
+
+  implicit val lang = Lang("en")
+
   "MainSearcher" should {
     "search and categorize using social graph" in {
       running(new EmptyApplication()) {
@@ -80,7 +85,6 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
         val store = mkStore(uris)
         val (graph, indexer) = initIndexes(store)
-        val resultClickTracker = ResultClickTracker(8)
         val clickBoosts = resultClickTracker.getBoosts(Id[User](0), "", 1.0f)
         graph.load() === users.size
         indexer.run() === uris.size
@@ -90,7 +94,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           users.sliding(3).foreach{ friends =>
             val userId = user.id.get
             val friendIds = friends.map(_.id.get).toSet - userId
-            val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, resultClickTracker, allHitsConfig)
+            val mainSearcher = new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, resultClickTracker, browsingHistoryTracker, allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
             val (myHits, friendsHits, othersHits) = mainSearcher.searchText("alldocs", numHitsPerCategory, clickBoosts)(Lang("en"))
 
@@ -133,13 +137,13 @@ class MainSearcherTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-              BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save            }
+              BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
+            }
           }
         }
 
         val store = mkStore(uris)
         val (graph, indexer) = initIndexes(store)
-        val resultClickTracker = ResultClickTracker(8)
 
         graph.load() === users.size
         indexer.run() === uris.size
@@ -151,7 +155,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
           users.sliding(3).foreach{ friends =>
             val friendIds = friends.map(_.id.get).toSet - userId
 
-            val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, resultClickTracker, allHitsConfig)
+            val mainSearcher = new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, resultClickTracker, browsingHistoryTracker, allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
             val res = mainSearcher.search("alldocs", numHitsToReturn, None)
 
@@ -198,43 +202,55 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
         val store = mkStore(uris)
         val (graph, indexer) = initIndexes(store)
-        val resultClickTracker = ResultClickTracker(8)
 
         graph.load() === users.size
-        indexer.run() === uris.size
 
-        val numHitsToReturn = 100
-        users.foreach{ user =>
-          val userId = user.id.get
-          //println("user:" + userId)
-          val friendIds = users.map(_.id.get).toSet - userId
-          val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, resultClickTracker, allHitsConfig)
-          val graphSearcher = mainSearcher.uriGraphSearcher
-          val res = mainSearcher.search("personal", numHitsToReturn, None)
+        def run = {
+          val numHitsToReturn = 100
+          users.foreach{ user =>
+            val userId = user.id.get
+            //println("user:" + userId)
+            val friendIds = users.map(_.id.get).toSet - userId
+            val mainSearcher = new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, resultClickTracker, browsingHistoryTracker, allHitsConfig)
+            val graphSearcher = mainSearcher.uriGraphSearcher
+            val res = mainSearcher.search("personal", numHitsToReturn, None)
 
-          val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
-          var mCnt = 0
-          var fCnt = 0
-          var oCnt = 0
-          res.hits.foreach{ h =>
-            if (h.isMyBookmark) mCnt += 1
-            else if (! h.users.isEmpty) fCnt += 1
-            else {
-              oCnt += 1
-              h.bookmarkCount === graphSearcher.getUriToUserEdgeSet(h.uriId).size
+            val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
+            var mCnt = 0
+            var fCnt = 0
+            var oCnt = 0
+            res.hits.foreach{ h =>
+              if (h.isMyBookmark) mCnt += 1
+              else if (! h.users.isEmpty) fCnt += 1
+              else {
+                oCnt += 1
+                h.bookmarkCount === graphSearcher.getUriToUserEdgeSet(h.uriId).size
+              }
             }
+            //println(res.hits)
+            res.hits.map(h => h.uriId).toSet === myUriIds
+            mCnt === myUriIds.size
+            fCnt === 0
+            oCnt === 0
           }
-          //println(res.hits)
-          res.hits.map(h => h.uriId).toSet === myUriIds
-          mCnt === myUriIds.size
-          fCnt === 0
-          oCnt === 0
         }
+        // before main indexing
+        indexer.numDocs === 0
+        run
+        // after main indexing 3 docs
+        indexer.run(3, 3) === 3
+        run
+        // after main indexing 6 docs
+        indexer.run(3, 3) === 3
+        run
+        // after main indexing 9 docs
+        indexer.run(3, 3) === 3
+        run
         indexer.numDocs === uris.size
       }
     }
 
-    "blend a bookmark title score and an article score" in {
+    "score using matches in a bookmark title and an article" in {
       running(new EmptyApplication()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
@@ -249,7 +265,6 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
         val store = mkStore(uris)
         val (graph, indexer) = initIndexes(store)
-        val resultClickTracker = ResultClickTracker(8)
 
         graph.load() === users.size
         indexer.run() === uris.size
@@ -258,11 +273,11 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val userId = users(0).id.get
         //println("user:" + userId)
         val friendIds = users.map(_.id.get).toSet - userId
-        val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, resultClickTracker, noBoostConfig("myBookMarkBoost" -> "1.5"))
+        val mainSearcher = new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, resultClickTracker, browsingHistoryTracker, noBoostConfig("myBookMarkBoost" -> "1.5"))
         val graphSearcher = mainSearcher.uriGraphSearcher
 
         val expected = (uris(3) :: ((uris diff List(uris(3))).reverse)).map(_.id.get).toList
-        val res = mainSearcher.search("personal title3 content3", numHitsToReturn, None)
+        val res = mainSearcher.search("personal title3 content3 xyz", numHitsToReturn, None)
 
         val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
 
@@ -278,13 +293,13 @@ class MainSearcherTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
               val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-              BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save            }
+              BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
+            }
           }
         }
 
         val store = mkStore(uris)
         val (graph, indexer) = initIndexes(store)
-        val resultClickTracker = ResultClickTracker(8)
 
         graph.load() === users.size
         indexer.run() === uris.size
@@ -295,7 +310,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val friendIds = Set(Id[User](6))
         var uriSeen = Set.empty[Long]
 
-        val mainSearcher= new MainSearcher(userId, friendIds, uriSeen, indexer, graph, resultClickTracker, allHitsConfig)
+        val mainSearcher = new MainSearcher(userId, friendIds, uriSeen, indexer, graph, resultClickTracker, browsingHistoryTracker, allHitsConfig)
         val graphSearcher = mainSearcher.uriGraphSearcher
         val reachableUris = users.foldLeft(Set.empty[Long])((s, u) => s ++ graphSearcher.getUserToUriEdgeSet(u.id.get, publicOnly = true).destIdLongSet)
 
@@ -303,7 +318,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         var cnt = 0
         while (cnt < reachableUris.size && uriSeen.size < reachableUris.size) {
           cnt += 1
-          val mainSearcher= new MainSearcher(userId, friendIds, uriSeen, indexer, graph, resultClickTracker, allHitsConfig)
+          val mainSearcher = new MainSearcher(userId, friendIds, uriSeen, indexer, graph, resultClickTracker, browsingHistoryTracker, allHitsConfig)
           //println("---" + uriSeen + ":" + reachableUris)
           val res = mainSearcher.search("alldocs", numHitsToReturn, uuid)
           res.hits.foreach{ h =>
@@ -337,12 +352,11 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
         val store = mkStore(uris)
         val (graph, indexer) = initIndexes(store)
-        val resultClickTracker = ResultClickTracker(8)
 
         graph.load() === 1
         indexer.run() === uris.size
 
-        val mainSearcher= new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, resultClickTracker, noBoostConfig("recencyBoost" -> "1.0"))
+        val mainSearcher = new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, resultClickTracker, browsingHistoryTracker, noBoostConfig("recencyBoost" -> "1.0"))
         val res = mainSearcher.search("alldocs", uris.size, None)
 
         var lastTime = Long.MaxValue
@@ -375,12 +389,11 @@ class MainSearcherTest extends SpecificationWithJUnit {
           }
         }
         val (graph, indexer) = initIndexes(store)
-        val resultClickTracker = ResultClickTracker(8)
 
         graph.load() === 1
         indexer.run() === uris.size
 
-        var mainSearcher= new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, resultClickTracker, noBoostConfig)
+        var mainSearcher = new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, resultClickTracker, browsingHistoryTracker, noBoostConfig)
         var res = mainSearcher.search("alldocs", uris.size, None)
         //println("Scores: " + res.hits.map(_.score))
         val sz = res.hits.size
@@ -390,7 +403,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         (minScore < medianScore && medianScore < maxScore) === true // this is a sanity check of test data
 
         val tailCuttingConfig = noBoostConfig("tailCutting" -> medianScore.toString)
-        mainSearcher= new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, resultClickTracker, tailCuttingConfig)
+        mainSearcher = new MainSearcher(userId, Set.empty[Id[User]], Set.empty[Long], indexer, graph, resultClickTracker, browsingHistoryTracker, tailCuttingConfig)
         res = mainSearcher.search("alldocs", uris.size, None)
         //println("Scores: " + res.hits.map(_.score))
         res.hits.map(h => h.score).reduce((s1, s2) => min(s1, s2)) >= medianScore === true
@@ -410,17 +423,17 @@ class MainSearcherTest extends SpecificationWithJUnit {
           }
           publicUris.foreach{ uri =>
             val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-            BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source).save          }
+            BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source).save
+          }
         }
 
         val store = mkStore(uris)
         val (graph, indexer) = initIndexes(store)
-        val resultClickTracker = ResultClickTracker(8)
 
         graph.load() === users.size
         indexer.run() === uris.size
 
-        var mainSearcher= new MainSearcher(user1.id.get, Set(user2.id.get), Set.empty[Long], indexer, graph, resultClickTracker, noBoostConfig)
+        var mainSearcher = new MainSearcher(user1.id.get, Set(user2.id.get), Set.empty[Long], indexer, graph, resultClickTracker, browsingHistoryTracker, noBoostConfig)
         var res = mainSearcher.search("alldocs", uris.size, None)
 
         val publicSet = publicUris.map(u => u.id.get).toSet
@@ -449,12 +462,11 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
         val store = mkStore(uris)
         val (graph, indexer) = initIndexes(store)
-        val resultClickTracker = ResultClickTracker(8)
 
         graph.load() === users.size
         indexer.run() === uris.size
 
-        var mainSearcher= new MainSearcher(user1.id.get, Set(user2.id.get), Set.empty[Long], indexer, graph, resultClickTracker, noBoostConfig)
+        var mainSearcher = new MainSearcher(user1.id.get, Set(user2.id.get), Set.empty[Long], indexer, graph, resultClickTracker, browsingHistoryTracker, noBoostConfig)
         var res = mainSearcher.search("alldocs", uris.size, None)
 
         val publicSet = publicUris.map(u => u.id.get).toSet
@@ -483,7 +495,6 @@ class MainSearcherTest extends SpecificationWithJUnit {
 
         val store = mkStore(uris)
         val (graph, indexer) = initIndexes(store)
-        val resultClickTracker = ResultClickTracker(8)
 
         graph.load() === users.size
         indexer.run() === uris.size
@@ -491,7 +502,7 @@ class MainSearcherTest extends SpecificationWithJUnit {
         val numHitsToReturn = 100
         val userId = users(0).id.get
         val friendIds = users.map(_.id.get).toSet - userId
-        val mainSearcher= new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, resultClickTracker, noBoostConfig)
+        val mainSearcher = new MainSearcher(userId, friendIds, Set.empty[Long], indexer, graph, resultClickTracker, browsingHistoryTracker, noBoostConfig)
         val graphSearcher = mainSearcher.uriGraphSearcher
 
         var res = mainSearcher.search("document", numHitsToReturn, None)

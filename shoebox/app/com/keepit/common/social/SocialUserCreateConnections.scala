@@ -1,14 +1,17 @@
 package com.keepit.common.social
 
-import com.keepit.common.db.CX
+import play.api.Play.current
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.common.healthcheck.BabysitterTimeout
-
 import play.api.Play.current
 import play.api.libs.json.{JsArray, JsValue}
-
 import akka.util.duration._
+import com.keepit.common.db.slick.DBConnection
 
 
 class SocialUserCreateConnections() extends Logging {
@@ -24,14 +27,16 @@ class SocialUserCreateConnections() extends Logging {
 
     implicit val timeout = BabysitterTimeout(30 seconds, 2 minutes)
 
-    CX.withConnection { implicit conn =>
-      parentJson flatMap extractFriends map extractSocialId map { SocialUserInfoCxRepo.get(_, SocialNetworks.FACEBOOK)
+    inject[DBConnection].readWrite { implicit s =>
+      val socialRepo = inject[SocialUserInfoRepo]
+      val connectionRepo = inject[SocialConnectionRepo]
+      parentJson flatMap extractFriends map extractSocialId map { socialRepo.get(_, SocialNetworks.FACEBOOK)
       } map { sui =>
-        SocialConnectionCxRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get) match {
+        connectionRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get) match {
           case Some(c) => {
             if (c.state != SocialConnectionStates.ACTIVE) {
               log.info("activate connection between %s and %s".format(c.socialUser1, c.socialUser2))
-              c.withState(SocialConnectionStates.ACTIVE).save
+              connectionRepo.save(c.withState(SocialConnectionStates.ACTIVE))
             }
             else
             {
@@ -41,7 +46,7 @@ class SocialUserCreateConnections() extends Logging {
           }
           case None => {
             log.info("a new connection was created  between %s and %s".format(socialUserInfo.id.get, sui.id.get))
-            SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = sui.id.get).save
+            connectionRepo.save(SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = sui.id.get))
           }
         }
       }

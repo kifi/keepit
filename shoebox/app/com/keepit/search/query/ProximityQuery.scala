@@ -46,7 +46,7 @@ class ProximityQuery(val terms: Seq[Term]) extends Query {
 }
 
 class ProximityWeight(query: ProximityQuery) extends Weight {
-  var value = 0.0f
+  private[this] var value = 0.0f
 
   override def getValue() = value
   override def scoresDocsOutOfOrder() = false
@@ -155,6 +155,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
   private[this] def gapPenalty(distance: Int) = 0.05f * distance.toFloat // gap penalty
   private[this] val rl = new Array[Float](numTerms + 1) // run lengths
   private[this] val ls = new Array[Float](numTerms + 1) // local scores
+  private[this] val weightVal = weight.getValue
 
   private[this] val pq = new PriorityQueue[PositionAndMask] {
     super.initialize(numTerms)
@@ -220,7 +221,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
       }
       scoredDoc = doc
     }
-    (sqrt(proximityScore.toDouble + 1.0d) - 1.0d).toFloat
+    (sqrt(proximityScore.toDouble + 1.0d) - 1.0d).toFloat * weightVal
   }
 
   override def docID(): Int = curDoc
