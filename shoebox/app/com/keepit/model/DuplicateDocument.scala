@@ -40,7 +40,7 @@ case class DuplicateDocument (
 @ImplementedBy(classOf[DuplicateDocumentRepoImpl])
 trait DuplicateDocumentRepo extends Repo[DuplicateDocument] {
   def getSimilarTo(id: Id[NormalizedURI])(implicit session: RSession): Seq[DuplicateDocument]
-  def allActive(implicit session: RSession): Seq[DuplicateDocument]
+  def getActive(page: Int = 0, size: Int = 50)(implicit session: RSession): Seq[DuplicateDocument]
 }
 
 @Singleton
@@ -60,11 +60,8 @@ class DuplicateDocumentRepoImpl @Inject() (val db: DataBaseComponent) extends Db
     def * = id.? ~ createdAt ~ updatedAt ~ uri1Id ~ uri2Id ~ percentMatch ~ state <> (DuplicateDocument, DuplicateDocument.unapply _)
   }
 
-  def allActive(implicit session: RSession): Seq[DuplicateDocument] = {
-    val q = for {
-      f <- table if f.state === DuplicateDocumentStates.NEW
-    } yield f
-    q.list
+  def getActive(page: Int = 0, size: Int = 50)(implicit session: RSession): Seq[DuplicateDocument] = {
+    (for { f <- table if f.state === DuplicateDocumentStates.NEW } yield f).drop(page * size).take(size).list
   }
 
   def getSimilarTo(id: Id[NormalizedURI])(implicit session: RSession): Seq[DuplicateDocument] = {

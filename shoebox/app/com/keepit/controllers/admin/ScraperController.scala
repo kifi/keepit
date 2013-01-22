@@ -85,9 +85,28 @@ object ScraperController extends FortyTwoController {
     Redirect(com.keepit.controllers.admin.routes.ScraperController.documentIntegrity())
   }
 
-  def documentIntegrity = AdminHtmlAction { implicit request =>
+  case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
+  case class DisplayedDuplicates(normUriId: Id[NormalizedURI], url: String, dupes: Seq[DisplayedDuplicate])
 
-   Ok
+  def documentIntegrity(page: Int = 0, size: Int = 50) = AdminHtmlAction { implicit request =>
+    val dupes = inject[DBConnection].readOnly { implicit conn =>
+      inject[DuplicateDocumentRepo].getActive(page, size)
+    }
+
+    val normalUriRepo = inject[NormalizedURIRepo]
+
+    val groupedDupes = dupes.groupBy { case d => d.uri1Id }.toSeq.sortWith((a,b) => a._1.id < b._1.id)
+
+    val loadedDupes = inject[DBConnection].readOnly { implicit session =>
+      groupedDupes map  { d =>
+        val dupeRecords = d._2.map { sd =>
+          DisplayedDuplicate(sd.id.get, sd.uri2Id, normalUriRepo.get(sd.uri2Id).url, sd.percentMatch)
+        }
+        DisplayedDuplicates(d._1, normalUriRepo.get(d._1).url, dupeRecords)
+      }
+    }
+
+    Ok(views.html.documentIntegrity(loadedDupes))
   }
 
   def duplicateDocumentDetection = AdminHtmlAction { implicit request =>

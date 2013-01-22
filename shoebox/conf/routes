@@ -63,10 +63,13 @@ GET     /admin/bookmarks/page/:page com.keepit.controllers.BookmarksController.b
 GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scrape/:state        com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
 GET     /admin/scraped/:uriId       com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
-GET     /admin/unscrapable          com.keepit.controllers.admin.ScraperController.getUnscrapable()
-POST    /admin/unscrapable          com.keepit.controllers.admin.ScraperController.createUnscrapable()
+
+GET     /admin/data/integrity       com.keepit.controllers.admin.ScraperController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            com.keepit.controllers.admin.ScraperController.duplicateDocumentDetection
-GET     /admin/data/integrity       com.keepit.controllers.admin.ScraperController.documentIntegrity
+GET     /admin/data/orphan          com.keepit.controllers.admin.ScraperController.orphanCleanup
+GET     /admin/data/unscrapable     com.keepit.controllers.admin.ScraperController.getUnscrapable()
+POST    /admin/data/unscrapable     com.keepit.controllers.admin.ScraperController.createUnscrapable()
+GET     /admin/data/renormalize     com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 
 GET     /admin/article/index        com.keepit.controllers.admin.ArticleIndexerController.index
 GET     /admin/article/index/:state com.keepit.controllers.admin.ArticleIndexerController.indexByState(state: State[NormalizedURI])

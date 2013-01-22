@@ -86,36 +86,25 @@ class DuplicateDocumentDetection extends Logging {
 
      val docs = findDupeDocuments()
 
-     val elapsedTimeMs = System.currentTimeMillis - startTime
-
      val dupeDocumentsCount = docs.size
      val dupeRepo = inject[DuplicateDocumentRepo]
-     var resultStr = new StringBuilder
-
-     resultStr ++= "Runtime: %sms, Dupes found: %s<br>\n<br>\n<pre>".format(elapsedTimeMs, dupeDocumentsCount)
-
-     val normURIRepo = inject[NormalizedURIRepo]
      inject[DBConnection].readWrite { implicit conn =>
        docs.foreach { similarDoc =>
          val id = similarDoc._1
          val similars = similarDoc._2
-         val uri = normURIRepo.get(id)
-         resultStr ++= "*\t%s\t*\t%s\n".format(uri.id.getOrElse("x"), uri.url.take(100))
          similars.foreach { case (otherId, percentMatch) =>
-           val otherUri = normURIRepo.get(otherId)
            val dupeDoc = DuplicateDocument(uri1Id = id, uri2Id = otherId, percentMatch = percentMatch)
            dupeRepo.save(dupeDoc)
-           resultStr ++= "\t%s\t%s\t%s\n".format(otherUri.id.getOrElse("x"), percentMatch, otherUri.url.take(100))
          }
        }
      }
 
-     resultStr ++= "</pre>"
-
-     val result = resultStr.toString
+     val elapsedTimeMs = System.currentTimeMillis - startTime
+     val result = "Runtime: %sms, Dupes found: %s. See admin panel for details.".format(elapsedTimeMs, dupeDocumentsCount)
 
      val postOffice = inject[PostOffice]
-     postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = "Duplication Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
+     val toAddr = if (play.api.Play.isDev) EmailAddresses.ANDREW else EmailAddresses.ENG
+     postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = toAddr, subject = "Duplication Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
    }
  }
 

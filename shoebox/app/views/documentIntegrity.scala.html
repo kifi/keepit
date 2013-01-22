@@ -1,0 +1,56 @@
+@(dupes: Seq[com.keepit.controllers.admin.ScraperController.DisplayedDuplicates])(implicit flash: Flash)
+@import com.keepit.model.NormalizedURI
+
+@admin("Document Integrity") {
+
+    <div class="navbar">
+        <div class="navbar-inner">
+            <ul class="nav">
+                <li><a href="@com.keepit.controllers.admin.routes.ScraperController.getUnscrapable()">Unscrapables</a></li>
+                <li><a href="@com.keepit.controllers.admin.routes.ScraperController.orphanCleanup()">Clean up Orphans</a></li>
+                <li><a href="@com.keepit.controllers.admin.routes.UrlController.renormalize()">Renormalize</a></li>
+                <li><a href="@com.keepit.controllers.admin.routes.ScraperController.duplicateDocumentDetection()">De-duplicate Documents</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <table class="table table-bordered">
+            <tr>
+                <th>ID</th>
+                <th>URL</th>
+                <th>Match %</th>
+                <th></th>
+            </tr>
+            @for(dupeGroup <- dupes) {
+                <tr class="info">
+                    <td>@dupeGroup.normUriId</td>
+                    <td><a href="@dupeGroup.url">@dupeGroup.url</a></td>
+                    <td>@dupeGroup.dupes.size Duplicates</td>
+                    <td>
+                        <div class="btn-group">
+                            <div class="btn btn-info">Ignore All</div>
+                            <div class="btn btn-info">Merge All</div>
+                            <div class="btn btn-info">Unscrapable</div>
+                        </div>
+                    </td>
+                </tr>
+                @for(dupe <- dupeGroup.dupes) {
+                    <tr>
+                        <td>@dupe.normUriId</td>
+                        <td><a href="@dupeGroup.url">@dupeGroup.url</a></td>
+                        <td>@{dupe.percentMatch*100}%</td>
+                        <td>
+                            <div class="btn-group">
+                                <div class="btn">Ignore</div>
+                                <div class="btn">Merge</div>
+                                <div class="btn">Unscrapable</div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </table>
+    </div>
+
+}
