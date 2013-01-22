@@ -70,7 +70,7 @@ object URLFactory {
 trait URLRepo extends Repo[URL] {
   def get(url: String)(implicit session: RSession): Option[URL]
   def getByDomain(domain: String)(implicit session: RSession): List[URL]
-  def getByNormUri(normalizedUriId: Id[NormalizedURI]): Seq[URL]
+  def getByNormUri(normalizedUriId: Id[NormalizedURI])(implicit session: RSession): Seq[URL]
 }
 
 @Singleton

@@ -48,7 +48,7 @@ trait FollowRepo extends Repo[Follow] {
   def all(userId: Id[User])(implicit session: RSession): Seq[Follow]
   def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Follow]
   def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[Follow]
-  def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
+  def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Follow]
 }
 
 @Singleton
