@@ -34,13 +34,6 @@ object ScraperController extends FortyTwoController {
     Ok(views.html.scrape(articles))
   }
 
-  def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
-    val dupeDetect = new DuplicateDocumentDetection
-    dupeDetect.asyncProcessDocuments()
-
-    Ok("Dupe logging started. Expect an email :)")
-  }
-
   def scrapeByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
     transitionByAdmin(state -> Set(ACTIVE)) { newState =>
       CX.withConnection { implicit c =>
@@ -79,6 +72,29 @@ object ScraperController extends FortyTwoController {
       inject[UnscrapableRepo].save(Unscrapable(pattern = pattern))
     }
     Redirect(com.keepit.controllers.admin.routes.ScraperController.getUnscrapable())
+  }
+
+  def orphanCleanup() = AdminHtmlAction { implicit request =>
+    val orphanCleaner = new OrphanCleaner
+    Akka.future {
+      inject[DBConnection].readWrite { implicit session =>
+        orphanCleaner.cleanNormalizedURIs()
+        orphanCleaner.cleanScrapeInfo()
+      }
+    }
+    Redirect(com.keepit.controllers.admin.routes.ScraperController.documentIntegrity())
+  }
+
+  def documentIntegrity = AdminHtmlAction { implicit request =>
+
+   Ok
+  }
+
+  def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
+    val dupeDetect = new DuplicateDocumentDetection
+    dupeDetect.asyncProcessDocuments()
+
+    Redirect(com.keepit.controllers.admin.routes.ScraperController.documentIntegrity())
   }
 }
 
