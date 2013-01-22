@@ -24,7 +24,6 @@ extends Logging {
   // get config params
   val minMyBookmarks = config.asInt("minMyBookmarks")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
-  val personalTitleBoost = config.asFloat("personalTitleBoost")
   val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   val percentMatch = config.asFloat("percentMatch")
