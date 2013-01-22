@@ -88,7 +88,6 @@ class URLRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[URL] with
     def domain = column[String]("domain", O.Nullable)
     def normalizedUriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def history = column[Seq[URLHistory]]("history", O.NotNull)
-    def state = column[State[URL]]("state", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ url ~ domain.? ~ normalizedUriId ~ history ~ state <> (URL, URL.unapply _)
   }
 

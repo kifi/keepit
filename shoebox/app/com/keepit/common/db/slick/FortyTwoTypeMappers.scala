@@ -1,17 +1,19 @@
 package com.keepit.common.db.slick
 
+import securesocial.core.{SocialUser, UserId, AuthenticationMethod}
 import org.scalaquery.ql.{TypeMapper, TypeMapperDelegate, BaseTypeMapper}
 import org.scalaquery.ql.basic.BasicProfile
 import org.scalaquery.session.{PositionedParameters, PositionedResult}
 import com.keepit.common.db.{Id, State, Model, ExternalId}
 import com.keepit.common.time._
+import com.keepit.common.social._
 import com.keepit.model._
 import org.joda.time.DateTime
 import java.sql.Types.{TIMESTAMP, BIGINT, VARCHAR}
 import java.sql.Timestamp
 import play.api.libs.json._
 import org.scalaquery.ql.basic.BasicTypeMapperDelegates._
-import com.keepit.serializer.{URLHistorySerializer => URLHS}
+import com.keepit.serializer.{URLHistorySerializer => URLHS, SocialUserSerializer}
 
 object FortyTwoTypeMappers {
   // Time
@@ -58,53 +60,15 @@ object FortyTwoTypeMappers {
   }
 
   //States
-  implicit object SocialConnectionStateTypeMapper extends BaseTypeMapper[State[SocialConnection]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[SocialConnection]
-  }
-
-  implicit object FollowStateTypeMapper extends BaseTypeMapper[State[Follow]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[Follow]
-  }
-
-  implicit object ScrapeInfoStateTypeMapper extends BaseTypeMapper[State[ScrapeInfo]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[ScrapeInfo]
-  }
-
-  implicit object URLStateTypeMapper extends BaseTypeMapper[State[URL]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[URL]
-  }
-
-  implicit object UserStateTypeMapper extends BaseTypeMapper[State[User]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[User]
-  }
-
-  implicit object BookmarkStateTypeMapper extends BaseTypeMapper[State[Bookmark]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[Bookmark]
-  }
 
   implicit object NormalizedURIStateTypeMapper extends BaseTypeMapper[State[NormalizedURI]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[NormalizedURI]
-  }
-
-  implicit object DuplicateDocumentTypeMapper extends BaseTypeMapper[State[DuplicateDocument]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[DuplicateDocument]
   }
 
   implicit object ExperimentTypeStateTypeMapper extends BaseTypeMapper[State[ExperimentType]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[ExperimentType]
   }
 
-  implicit object EmailAddressStateTypeMapper extends BaseTypeMapper[State[EmailAddress]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[EmailAddress]
-  }
-
-  implicit object UserExperimentStateTypeMapper extends BaseTypeMapper[State[UserExperiment]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[UserExperiment]
-  }
-
-  implicit object UnscrapableStateTypeMapper extends BaseTypeMapper[State[Unscrapable]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[Unscrapable]
-  }
 
   //Other
   implicit object URLHistorySeqHistoryStateTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
@@ -114,6 +78,38 @@ object FortyTwoTypeMappers {
   implicit object BookmarkSourceHistoryStateTypeMapper extends BaseTypeMapper[BookmarkSource] {
     def apply(profile: BasicProfile) = new BookmarkSourceMapperDelegate
   }
+
+  implicit object SocialNetworkTypeHistoryStateTypeMapper extends BaseTypeMapper[SocialNetworkType] {
+    def apply(profile: BasicProfile) = new SocialNetworkTypeMapperDelegate
+  }
+
+  implicit object SocialUserHistoryStateTypeMapper extends BaseTypeMapper[SocialUser] {
+    def apply(profile: BasicProfile) = new SocialUserMapperDelegate
+  }
+
+  implicit object SocialIdHistoryStateTypeMapper extends BaseTypeMapper[SocialId] {
+    def apply(profile: BasicProfile) = new SocialIdMapperDelegate
+  }
+}
+
+//************************************
+//       Abstract string mapper
+//************************************
+abstract class StringMapperDelegate[T] extends TypeMapperDelegate[T] {
+  private val delegate = new StringTypeMapperDelegate()
+  def sqlType = delegate.sqlType
+  def setValue(value: T, p: PositionedParameters) = delegate.setValue(typeToString(value), p)
+  def setOption(valueOpt: Option[T], p: PositionedParameters) = delegate.setOption(valueOpt map typeToString, p)
+  def nextValue(r: PositionedResult) = stringToType(delegate.nextValue(r))
+  def updateValue(value: T, r: PositionedResult) = delegate.updateValue(typeToString(value), r)
+  override def valueToSQLLiteral(value: T) = delegate.valueToSQLLiteral(typeToString(value))
+
+  def typeToString(value: T): String
+  def stringToType(str: String): T = Option(str) match {
+    case None => zero
+    case Some(value) => safeStringToType(value)
+  }
+  def safeStringToType(str: String): T
 }
 
 //************************************
@@ -152,53 +148,31 @@ class IdMapperDelegate[T] extends TypeMapperDelegate[Id[T]] {
 //************************************
 //       ExternalId -> String
 //************************************
-class ExternalIdMapperDelegate[T] extends TypeMapperDelegate[ExternalId[T]] {
-  private val delegate = new StringTypeMapperDelegate()
+class ExternalIdMapperDelegate[T] extends StringMapperDelegate[ExternalId[T]] {
   def zero = ExternalId[T]()
-  def sqlType = delegate.sqlType
-  def setValue(value: ExternalId[T], p: PositionedParameters) = delegate.setValue(value.id, p)
-  def setOption(valueOpt: Option[ExternalId[T]], p: PositionedParameters) = delegate.setOption(valueOpt map (_.id), p)
-  def nextValue(r: PositionedResult) = delegate.nextValueOrElse("", r) match {
-    case "" => zero
-    case some => ExternalId(some)
-  }
-  def updateValue(value: ExternalId[T], r: PositionedResult) = delegate.updateValue(value.id, r)
-  override def valueToSQLLiteral(value: ExternalId[T]) = delegate.valueToSQLLiteral(value.id)
+  def typeToString(value: ExternalId[T]): String = value.id
+  def safeStringToType(str: String): ExternalId[T] = ExternalId[T](str)
 }
 
 //************************************
 //       State -> String
 //************************************
-class StateMapperDelegate[T] extends TypeMapperDelegate[State[T]] {
-  private val delegate = new StringTypeMapperDelegate()
+class StateMapperDelegate[T] extends StringMapperDelegate[State[T]] {
   def zero = new State("")
-  def sqlType = delegate.sqlType
-  def setValue(value: State[T], p: PositionedParameters) = delegate.setValue(value.value, p)
-  def setOption(valueOpt: Option[State[T]], p: PositionedParameters) = delegate.setOption(valueOpt map (_.value), p)
-  def nextValue(r: PositionedResult) = State(delegate.nextValue(r))
-  def updateValue(value: State[T], r: PositionedResult) = delegate.updateValue(value.value, r)
-  override def valueToSQLLiteral(value: State[T]) = delegate.valueToSQLLiteral(value.value)
+  def typeToString(value: State[T]): String = value.value
+  def safeStringToType(str: String): State[T] = State[T](str)
 }
 
 //************************************
 //       Seq[URLHistory] -> String
 //************************************
-class URLHistorySeqMapperDelegate extends TypeMapperDelegate[Seq[URLHistory]] {
-  private val delegate = new StringTypeMapperDelegate()
+class URLHistorySeqMapperDelegate extends StringMapperDelegate[Seq[URLHistory]] {
   def zero = Nil
-  def sqlType = delegate.sqlType
-  def setValue(value: Seq[URLHistory], p: PositionedParameters) = delegate.setValue(historyToString(value), p)
-  def setOption(valueOpt: Option[Seq[URLHistory]], p: PositionedParameters) = delegate.setOption(valueOpt map historyToString, p)
-  def nextValue(r: PositionedResult) = historyFromString(delegate.nextValue(r))
-  def updateValue(value: Seq[URLHistory], r: PositionedResult) = delegate.updateValue(historyToString(value), r)
-  override def valueToSQLLiteral(value: Seq[URLHistory]) = delegate.valueToSQLLiteral(historyToString(value))
-
-  private def historyToString(history: Seq[URLHistory]) = {
+  def typeToString(history: Seq[URLHistory]) = {
     val serializer = URLHS.urlHistorySerializer
     Json.stringify(serializer.writes(history))
   }
-
-  private def historyFromString(history: String) = {
+  def safeStringToType(history: String) = {
     val json = Json.parse(history)
     val serializer = URLHS.urlHistorySerializer
     serializer.reads(json)
@@ -208,14 +182,40 @@ class URLHistorySeqMapperDelegate extends TypeMapperDelegate[Seq[URLHistory]] {
 //************************************
 //       BookmarkSource -> String
 //************************************
-class BookmarkSourceMapperDelegate extends TypeMapperDelegate[BookmarkSource] {
-  private val delegate = new StringTypeMapperDelegate()
+class BookmarkSourceMapperDelegate extends StringMapperDelegate[BookmarkSource] {
   def zero = BookmarkSource("")
-  def sqlType = delegate.sqlType
-  def setValue(value: BookmarkSource, p: PositionedParameters) = delegate.setValue(value.value, p)
-  def setOption(valueOpt: Option[BookmarkSource], p: PositionedParameters) = delegate.setOption(valueOpt.map(_.value), p)
-  def nextValue(r: PositionedResult) = BookmarkSource(delegate.nextValue(r))
-  def updateValue(value: BookmarkSource, r: PositionedResult) = delegate.updateValue(value.value, r)
-  override def valueToSQLLiteral(value: BookmarkSource) = delegate.valueToSQLLiteral(value.value)
+  def typeToString(value: BookmarkSource): String = value.value
+  def safeStringToType(str: String): BookmarkSource = BookmarkSource(str)
+}
+
+
+//************************************
+//       SocialNetworkType -> String
+//************************************
+class SocialNetworkTypeMapperDelegate extends StringMapperDelegate[SocialNetworkType] {
+  def zero = SocialNetworks.FACEBOOK
+  def typeToString(socialNetworkType: SocialNetworkType) = socialNetworkType.name
+  def safeStringToType(str: String) = str match {
+    case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK
+    case _ => throw new RuntimeException("unknown network type %s".format(str))
+  }
+}
+
+//************************************
+//       SocialNetworkType -> String
+//************************************
+class SocialUserMapperDelegate extends StringMapperDelegate[SocialUser] {
+  def zero = SocialUser(id = UserId("", ""), displayName = "", email = None, avatarUrl = None, authMethod = AuthenticationMethod.OAuth2)
+  def typeToString(socialUser: SocialUser) = SocialUserSerializer.userSerializer.writes(socialUser).toString
+  def safeStringToType(str: String) = SocialUserSerializer.userSerializer.reads(Json.parse(str))
+}
+
+//************************************
+//       SocialId -> String
+//************************************
+class SocialIdMapperDelegate extends StringMapperDelegate[SocialId] {
+  def zero = SocialId("")
+  def typeToString(socialId: SocialId) = socialId.id
+  def safeStringToType(str: String) = SocialId(str)
 }
 

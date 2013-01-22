@@ -100,7 +100,6 @@ class BookmarkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Book
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def urlId = column[Id[URL]]("url_id", O.NotNull)
     def url =   column[String]("url", O.NotNull)
-    def state = column[State[Bookmark]]("state", O.NotNull)
     def bookmarkPath = column[String]("bookmark_path", O.NotNull)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def isPrivate = column[Boolean]("is_private", O.NotNull)

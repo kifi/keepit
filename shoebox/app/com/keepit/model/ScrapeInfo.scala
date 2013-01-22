@@ -101,7 +101,6 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
     def nextScrape = column[DateTime]("next_scrape", O.NotNull)
     def interval =   column[Double]("scrape_interval", O.NotNull)
     def failures =   column[Int]("failures", O.NotNull)
-    def state =      column[State[ScrapeInfo]]("state", O.NotNull)
     def signature =  column[String]("signature", O.NotNull)
     def destinationUrl = column[String]("destination_url", O.Nullable)
     def * = id.? ~ uriId ~ lastScrape ~ nextScrape ~ interval ~ failures ~ state ~ signature ~ destinationUrl.? <> (ScrapeInfo, ScrapeInfo.unapply _)

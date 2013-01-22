@@ -4,7 +4,6 @@ import play.api.data._
 import java.util.concurrent.TimeUnit
 import java.sql.Connection
 import play.api._
-import play.api.Play.current
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.ws.WS
@@ -15,10 +14,11 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
+import play.api.Play.current
 import com.keepit.inject._
-import com.keepit.common.db.Id
-import com.keepit.common.db.CX
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.logging.Logging
 import com.keepit.model.{User, UserCxRepo}
 import com.keepit.model._
@@ -43,9 +43,11 @@ object SocialUserController extends FortyTwoController {
 
   def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
 
-    val (socialUserInfo, socialConnections) = CX.withConnection { implicit conn =>
-      val socialUserInfo = SocialUserInfoCxRepo.get(socialUserId)
-      val socialConnections = SocialConnectionCxRepo.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName)
+    val (socialUserInfo, socialConnections) = inject[DBConnection].readOnly { implicit s =>
+      val socialRepo = inject[SocialUserInfoRepo]
+      val connectionRepo = inject[SocialConnectionRepo]
+      val socialUserInfo = socialRepo.get(socialUserId)
+      val socialConnections = connectionRepo.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName)
 
       (socialUserInfo, socialConnections)
     }

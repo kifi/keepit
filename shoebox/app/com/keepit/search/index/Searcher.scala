@@ -15,66 +15,13 @@ import scala.collection.mutable.ArrayBuffer
 
 
 object Searcher {
-  def apply(indexReader: IndexReader) = doOpen(indexReader, Map.empty[String, IdMapper])
-
-  def reopen(oldSearcher: Searcher) = {
-    val indexReader = IndexReader.openIfChanged(oldSearcher.indexReader)
-    if (indexReader != null) {
-      doOpen(indexReader, oldSearcher.idMappers)
-    } else {
-      oldSearcher
-    }
-  }
-
-  private def doOpen(indexReader: IndexReader, oldIdMappers: Map[String, IdMapper]) = {
-    var idMappers = Map.empty[String, IdMapper]
-    val subReaders = indexReader.getSequentialSubReaders
-    var i = 0
-    while (i < subReaders.length) {
-      subReaders(i) match {
-        case segmentReader: SegmentReader =>
-          val segmentName = segmentReader.getSegmentName
-          idMappers += (segmentName -> oldIdMappers.getOrElse(segmentName, ArrayIdMapper(segmentReader)))
-        case subReader => throw new IllegalStateException("not insance of %s but %s".format(classOf[SegmentReader].getName(), subReader.getClass.getName))
-      }
-      i += 1
-    }
-    new Searcher(indexReader, subReaders.map(_.asInstanceOf[SegmentReader]).toArray, idMappers)
-  }
+  def apply(indexReader: IndexReader) = new Searcher(WrappedIndexReader(indexReader))
+  def reopen(oldSearcher: Searcher) = new Searcher(WrappedIndexReader.reopen(oldSearcher.indexReader))
 }
 
-class Searcher(val indexReader: IndexReader, val subReaderArray: Array[SegmentReader], val idMappers: Map[String, IdMapper]) extends IndexSearcher(indexReader) {
+class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexReader) {
 
   def idf(term: Term) = getSimilarity.idf(docFreq(term), maxDoc)
-
-  val globalIdMapper = new IdMapper{
-    def getId(docid: Int): Long = {
-      var base = 0
-      var i = 0
-      while (i < subReaderArray.length) {
-        val subReader = subReaderArray(i)
-        val nextBase = base + subReader.maxDoc
-        if (docid < nextBase) return idMappers(subReader.getSegmentName).getId(docid - base)
-        base = nextBase
-        i += 1
-      }
-      throw new IllegalStateException("failed to find docid: %d".format(docid))
-    }
-
-    def getDocId(id: Long): Int = {
-      var base = 0
-      var i = 0
-      while (i < subReaderArray.length) {
-        val subReader = subReaderArray(i)
-        val nextBase = base + subReader.maxDoc
-        val docid = idMappers(subReader.getSegmentName).getDocId(id)
-        if (docid >= 0 && !subReader.isDeleted(docid)) return docid + base
-        base = nextBase
-        i += 1
-      }
-      -1
-    }
-  }
 
   // search: hits are ordered by score
   def search(query: Query): Seq[Hit] = {
@@ -95,11 +42,15 @@ class Searcher(val indexReader: IndexReader, val subReaderArray: Array[SegmentRe
     if (rewrittenQuery != null) {
       val weight = createNormalizedWeight(rewrittenQuery)
       if(weight != null) {
-        subReaderArray.foreach{ subReader =>
+        var i = 0
+        val subReaders = indexReader.wrappedSubReaders
+        while (i < subReaders.length) {
+          val subReader = subReaders(i)
           val scorer = weight.scorer(subReader, true, true)
           if (scorer != null) {
-            f(scorer, idMappers(subReader.getSegmentName))
+            f(scorer, subReader.getIdMapper)
           }
+          i += 1
         }
       }
     }
@@ -116,7 +67,7 @@ class Searcher(val indexReader: IndexReader, val subReaderArray: Array[SegmentRe
           freq -= 1
           tp.nextPosition()
           vector = tp.getPayload(vector, 0)
-          composer.add(vector)
+          composer.add(vector, 1)
         }
       }
     } finally {

@@ -2,19 +2,19 @@ package com.keepit.controllers
 
 import play.api.data._
 import play.api._
-import play.api.Play.current
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.http.ContentTypes
 import com.keepit.controllers.CommonActions._
-import com.keepit.common.db.CX
+import play.api.Play.current
+import com.keepit.inject._
 import com.keepit.common.db._
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.async._
 import com.keepit.model._
-import com.keepit.inject._
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import java.sql.Connection
 import com.keepit.common.logging.Logging
@@ -49,8 +49,8 @@ object SearchController extends FortyTwoController {
 
     val userId = request.userId
     log.info("searching with %s using userId id %s".format(term, userId))
-    val friendIds = CX.withConnection { implicit conn =>
-      SocialConnectionCxRepo.getFortyTwoUserConnections(userId)
+    val friendIds = inject[DBConnection].readOnly { implicit s =>
+      inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
     }
 
     val filterOut = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
@@ -59,7 +59,8 @@ object SearchController extends FortyTwoController {
     val articleIndexer = inject[ArticleIndexer]
     val uriGraph = inject[URIGraph]
     val resultClickTracker = inject[ResultClickTracker]
-    val searcher = new MainSearcher(userId, friendIds, filterOut, articleIndexer, uriGraph, resultClickTracker, config)
+    val browsingHistoryTracker = inject[BrowsingHistoryTracker]
+    val searcher = new MainSearcher(userId, friendIds, filterOut, articleIndexer, uriGraph, resultClickTracker, browsingHistoryTracker, config)
     val searchRes = searcher.search(term, maxHits, lastUUID, searchFilter)
     val realResults = toPersonalSearchResultPacket(userId, searchRes)
 
