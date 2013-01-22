@@ -43,6 +43,7 @@ trait SocialConnectionRepo extends Repo[SocialConnection] {
   def getFortyTwoUserConnections(id: Id[User])(implicit session: RSession): Set[Id[User]]
   def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo] )(implicit session: RSession): Option[SocialConnection]
   def getUserConnections(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
+  def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo]
 }
 
 @Singleton
@@ -104,67 +105,37 @@ class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
     } yield s).firstOption
 
 
-//  def getUserConnectionsCount(id: Id[User])(implicit session: RSession): Long = {
-//    val suis = inject[SocialUserInfoRepo].getByUser(id).map(_.id.get)
-//    if(!suis.isEmpty) {
-//      (SocialConnectionEntity AS "sc").map { sc =>
-//        SELECT (COUNT(sc.id)) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis)))
-//          AND (sc.state EQ SocialConnectionStates.ACTIVE) ) unique
-//      } get
-//    } else {
-//      0L
-//    }
-//  }
-//
-
   def getUserConnections(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo] = {
     val socialRepo = inject[SocialUserInfoRepoImpl]
     socialRepo.getByUser(id).map(_.id.get) match {
       case ids if !ids.isEmpty =>
         val connections = (for {
-          t <- table if (In(Node(t.socialUser1), Node(ids)) || In(Node(t.socialUser2), Node(ids)) && t.state === SocialConnectionStates.ACTIVE)
+          t <- table if ((t.socialUser1 inSet ids) || (t.socialUser2 inSet ids)) && t.state === SocialConnectionStates.ACTIVE
         } yield t ).list
         connections map (s => if(ids.contains(s.socialUser1)) s.socialUser2 else s.socialUser1 ) match {
           case users if !users.isEmpty =>
-            (for (t <- socialRepo.table if In(Node(t.id), Node(users))) yield t).list
+            (for (t <- socialRepo.table if t.id inSet users) yield t).list
           case _ => Nil
         }
       case _ => Nil
     }
   }
 
+  def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo] = {
+    val socialRepo = inject[SocialUserInfoRepoImpl]
+    val connections = (for {
+      t <- table if ((t.socialUser1 === id || t.socialUser2 === id) && t.state === SocialConnectionStates.ACTIVE)
+    } yield t ).list
+    connections map (s => if(id == s.socialUser1) s.socialUser2 else s.socialUser1 ) match {
+      case users if !users.isEmpty =>
+        (for (t <- socialRepo.table if t.id inSet users) yield t).list
+      case _ => Nil
+    }
+  }
 
-//
-//  def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo] = {
-//
-//    val conns = (SocialConnectionEntity AS "sc").map { sc =>
-//      SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 EQ id) OR (sc.socialUser2 EQ id)) AND (sc.state EQ SocialConnectionStates.ACTIVE) ) list
-//    } map (_.view) map (s => if(id == s.socialUser1) s.socialUser2 else s.socialUser1 ) toList
-//
-//    if(!conns.isEmpty) {
-//      (SocialUserInfoEntity AS "sui").map { sui =>
-//        SELECT (sui.*) FROM sui WHERE (sui.id IN(conns)) list
-//      } map (_.view)
-//    }
-//    else {
-//      Nil
-//    }
-//  }
 }
 
-
-
 object SocialConnectionCxRepo extends Logging {
-
-  def all(implicit conn: Connection): Seq[SocialConnection] =
-    SocialConnectionEntity.all.map(_.view)
-
-  def get(id: Id[SocialConnection])(implicit conn: Connection): SocialConnection =
-    getOpt(id).getOrElse(throw NotFoundException(id))
-
-  def getOpt(id: Id[SocialConnection])(implicit conn: Connection): Option[SocialConnection] =
-    SocialConnectionEntity.get(id).map(_.view)
-
 
   def getFortyTwoUserConnections(id: Id[User])(implicit conn: Connection): Set[Id[User]] = {
     val statement = conn.createStatement
@@ -204,24 +175,6 @@ object SocialConnectionCxRepo extends Logging {
     }
   }
 
-  def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo] )(implicit conn: Connection): Option[SocialConnection] = {
-    (SocialConnectionEntity AS "sc").map { sc => SELECT (sc.*) FROM sc WHERE (
-        (((sc.socialUser1 EQ u1) AND (sc.socialUser2 EQ u2)) OR
-        ((sc.socialUser1 EQ u2) AND (sc.socialUser2 EQ u1)))  ) unique } map ( _.view )
-  }
-
-  def getUserConnectionsCount(id: Id[User])(implicit conn: Connection): Long = {
-    val suis = SocialUserInfoCxRepo.getByUser(id).map(_.id.get)
-    if(!suis.isEmpty) {
-      (SocialConnectionEntity AS "sc").map { sc =>
-        SELECT (COUNT(sc.id)) FROM sc WHERE (((sc.socialUser1 IN (suis)) OR (sc.socialUser2 IN (suis)))
-          AND (sc.state EQ SocialConnectionStates.ACTIVE) ) unique
-      } get
-    } else {
-      0L
-    }
-  }
-
   def getUserConnections(id: Id[User])(implicit conn: Connection): Seq[SocialUserInfo] = {
     val suis = SocialUserInfoCxRepo.getByUser(id).map(_.id.get)
     if(!suis.isEmpty) {
@@ -243,21 +196,6 @@ object SocialConnectionCxRepo extends Logging {
     }
   }
 
-  def getSocialUserConnections(id: Id[SocialUserInfo])(implicit conn: Connection): Seq[SocialUserInfo] = {
-
-    val conns = (SocialConnectionEntity AS "sc").map { sc =>
-      SELECT (sc.*) FROM sc WHERE (((sc.socialUser1 EQ id) OR (sc.socialUser2 EQ id)) AND (sc.state EQ SocialConnectionStates.ACTIVE) ) list
-    } map (_.view) map (s => if(id == s.socialUser1) s.socialUser2 else s.socialUser1 ) toList
-
-    if(!conns.isEmpty) {
-      (SocialUserInfoEntity AS "sui").map { sui =>
-        SELECT (sui.*) FROM sui WHERE (sui.id IN(conns)) list
-      } map (_.view)
-    }
-    else {
-      Nil
-    }
-  }
 }
 
 object SocialConnectionStates {

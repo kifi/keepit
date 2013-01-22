@@ -55,21 +55,23 @@ class SocialUserCreateConnections() extends Logging {
 
   def disableConnectionsNotInJson(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
     log.info("looking for connections to disable for user %s".format(socialUserInfo.fullName))
-    CX.withConnection { implicit conn =>
+    inject[DBConnection].readWrite { implicit s =>
+      val socialRepo = inject[SocialUserInfoRepo]
+      val connectionRepo = inject[SocialConnectionRepo]
 	    val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends map extractSocialId
-	    val existingSocialUserInfoIds = SocialConnectionCxRepo.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
+	    val existingSocialUserInfoIds = connectionRepo.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
 	    log.info("socialUserInfoForAllFriendsIds = %s".format(socialUserInfoForAllFriendsIds))
 	    log.info("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
 	    log.info("size of diff =%s".format((existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds).length))
 	    existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds  map {
 	      socialId => {
-	        val friendSocialUserInfoId = SocialUserInfoCxRepo.get(socialId, SocialNetworks.FACEBOOK).id.get
+	        val friendSocialUserInfoId = socialRepo.get(socialId, SocialNetworks.FACEBOOK).id.get
 		      log.info("about to disbale connection between %s and for socialId = %s".format(socialUserInfo.id.get,friendSocialUserInfoId ));
-	        SocialConnectionCxRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
+	        connectionRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
             case Some(c) => {
               if (c.state != SocialConnectionStates.INACTIVE){
                 log.info("connection is disabled")
-            	  c.withState(SocialConnectionStates.INACTIVE).save
+            	  connectionRepo.save(c.withState(SocialConnectionStates.INACTIVE))
               }
               else {
                 log.info("connection is already disabled")
