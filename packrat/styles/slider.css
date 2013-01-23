@@ -91,11 +91,11 @@
   display: table;
 }
 /*Header*/
-.kifi-slider .kifihdr {
-  margin:0;
-  padding:9px 5px 9px 10px;
-  padding-left:40px;
-  padding-right:25px;
+.kifi-slider-title-bar {
+  margin: 0;
+  padding: 9px 5px 9px 10px;
+  padding-left: 40px;
+  padding-right: 25px;
   cursor: move;
 }
 /*footer*/

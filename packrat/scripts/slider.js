@@ -203,7 +203,7 @@ slider = function() {
     updateCommentCount("message", numMessages);
 
     // Event bindings
-    $(".kifi-slider").draggable({cursor: "move", axis: "y", distance: 10, handle: "div.kifihdr", containment: "body", scroll: false})
+    $(".kifi-slider").draggable({cursor: "move", axis: "y", distance: 10, handle: ".kifi-slider-title-bar", containment: "body", scroll: false})
     .on("click", ".xlink", function() {
       slideOut("x");
     })
@@ -955,18 +955,18 @@ slider = function() {
     $('.kifi-slider').css("top", "");
     $('.comment_body_view').stop().css({'max-height':$(window).height()-320});
     return; // for now, we'll do a rough fix
-    var kifiheader = $('.kifihdr');
+    var $bar = $(".kifi-slider-title-bar");
     if (resizeQuickly === true) {
       $('.comment_body_view').stop().css({'max-height':$(window).height()-320});
     } else {
-      if (kifiheader.length > 0) {
-        var offset = Math.round(kifiheader.offset().top - 30);
+      if ($bar.length) {
+        var offset = Math.round($bar.offset().top - 30);
         if(Math.abs(offset) > 20) {
           $('.comment_body_view').stop().animate({'max-height':'+='+offset},20, function() {
             if(Math.abs($('.comment_body_view').height() - offset) > 2) {
               return;
             }
-            var newOffset = Math.abs(kifiheader.offset().top - 30);
+            var newOffset = Math.abs($bar.offset().top - 30);
             if (newOffset > 20) {
               resizeCommentBodyView(false);
             }
