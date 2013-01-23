@@ -10,10 +10,11 @@ import java.io.FileOutputStream
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
+      "svWeightMyBookMarks" -> "1",
+      "svWeightBrowsingHistory" -> "5",
       "maxResultClickBoost" -> "10.0",
       "minMyBookmarks" -> "2",
       "myBookmarkBoost" -> "1.5",
-      "personalTitleBoost" -> "2.0",
       "sharingBoostInNetwork" -> "0.5",
       "sharingBoostOutOfNetwork" -> "0.1",
       "percentMatch" -> "75",
@@ -21,7 +22,7 @@ object SearchConfig {
       "recencyBoost" -> "1.0",
       "tailCutting" -> "0.20",
       "proximityBoost" -> "1.0",
-      "semanticBoost" -> "1.0",
+      "semanticBoost" -> "5.0",
       "dumpingByRank" -> "true",
       "dumpingHalfDecayMine" -> "8.0",
       "dumpingHalfDecayFriends" -> "6.0",
@@ -29,6 +30,8 @@ object SearchConfig {
     )
   private[this] val descriptions =
     Map[String, String](
+      "svWeightMyBookMarks" -> "semantics vector weight for my bookmarks",
+      "svWeightBrowsingHistory" -> "semantic vector weight for browsing history",
       "maxResultClickBoost" -> "boosting by recent result clicks",
       "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
       "myBookmarkBoost" -> "importance of my bookmark",
@@ -38,7 +41,7 @@ object SearchConfig {
       "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF)",
       "halfDecayHours" -> "the time the recency boost becomes half",
       "recencyBoost" -> "importance of the recent bookmarks",
-      "tailCutting" -> "after dumping a hit with a score below the high score multiplied by this will be removed",
+      "tailCutting" -> "after dumping, a hit with a score below the high score multiplied by this will be removed",
       "proximityBoost" -> "boosting by proximity",
       "semanticBoost" -> "boosting by semantic vector",
       "dumpingByRank" -> "enable score dumping by rank",

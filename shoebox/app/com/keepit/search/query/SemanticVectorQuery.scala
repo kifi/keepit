@@ -43,17 +43,33 @@ class SemanticVectorQuery(val terms: Set[Term]) extends Query {
 }
 
 class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) extends Weight {
-  var value = 0.0f
 
-  override def getValue() = value
+  private[this] val (vector, termIdfList) = {
+    val terms = query.terms
+    val vector = searcher.getSemanticVector(terms)
+    val list = terms.foldLeft(List.empty[(Term, Float)]){ (list, term) =>
+      val idf = searcher.idf(term)
+      (term, idf)::list
+    }
+    (vector, list)
+  }
+
+  private[this] var termList = termIdfList.map{ case (term, idf) => (term, vector, idf) }
+
+  override def getQuery() = query
+  override def getValue() = query.getBoost()
   override def scoresDocsOutOfOrder() = false
 
   override def sumOfSquaredWeights() = {
-    value = query.getBoost()
-    value * value
+    val sum = termIdfList.foldLeft(0.0f){ (s, t) => s + t._2 * t._2 }
+    val value = query.getBoost()
+    (sum * value * value)
   }
 
-  override def normalize(norm: Float) { value *= norm }
+  override def normalize(norm: Float) {
+    val n = norm * getValue()
+    termList = termIdfList.map{ case (term, idf) => (term, vector, idf * n) }
+  }
 
   override def explain(reader: IndexReader, doc: Int) = {
     val sc = scorer(reader, true, false);
@@ -76,15 +92,9 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
     result
   }
 
-  def getQuery() = query
-
   override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
-    val terms = query.terms
-    if (terms.size > 0) {
-      val vector = searcher.getSemanticVector(terms)
-      val tps = terms.map{
-        term => new DocAndVector(reader.termPositions(term), vector, searcher.idf(term) * value)
-      }
+    if (!termList.isEmpty) {
+      val tps = termList.map{ case (term, vector, value) => new DocAndVector(reader.termPositions(term), vector, value) }
       new SemanticVectorScorer(this, tps)
     } else {
       QueryUtil.emptyScorer(this)
@@ -92,7 +102,7 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   }
 }
 
-class DocAndVector(val tp: TermPositions, vector: Array[Byte], val weight: Float) {
+class DocAndVector(tp: TermPositions, vector: Array[Byte], weight: Float) {
   var doc = -1
   var posLeft = 0
 
@@ -121,26 +131,26 @@ class DocAndVector(val tp: TermPositions, vector: Array[Byte], val weight: Float
     doc
   }
 
-  def getDistance(): Float = {
+  def score(): Float = {
     if (posLeft > 0) {
       tp.nextPosition()
       posLeft -= 1
       if (tp.isPayloadAvailable()) {
         curVec = tp.getPayload(curVec, 0)
       }
-      SemanticVector.distance(vector, curVec).toFloat / SemanticVector.vectorSize
+      SemanticVector.similarity(vector, curVec) * weight
     } else {
-      1.0f
+      0.0f
     }
   }
 }
 
-class SemanticVectorScorer(weight: SemanticVectorWeight, tps: Set[DocAndVector]) extends Scorer(weight) {
-  private var curDoc = -1
-  private var svScore = 0.0f
-  private var scoredDoc = -1
+class SemanticVectorScorer(weight: SemanticVectorWeight, tps: List[DocAndVector]) extends Scorer(weight) {
+  private[this] var curDoc = -1
+  private[this] var svScore = 0.0f
+  private[this] var scoredDoc = -1
 
-  val pq = new PriorityQueue[DocAndVector] {
+  private[this] val pq = new PriorityQueue[DocAndVector] {
     super.initialize(tps.size)
     override def lessThan(nodeA: DocAndVector, nodeB: DocAndVector) = (nodeA.doc < nodeB.doc)
   }
@@ -152,11 +162,11 @@ class SemanticVectorScorer(weight: SemanticVectorWeight, tps: Set[DocAndVector])
     if (scoredDoc != doc) {
       var sum = 0.0f
       while (top.doc == doc) {
-        sum += (top.weight * (1.0f - top.getDistance()))
+        sum += top.score()
         top.nextDoc()
         top = pq.updateTop()
       }
-      svScore = (sqrt(sum.toDouble + 1.0d) - 1.0d).toFloat
+      if (sum > 0.0f) svScore = sum else svScore = Float.MinPositiveValue
       scoredDoc = doc
     }
     svScore

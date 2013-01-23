@@ -53,6 +53,8 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     Searcher(reader)
   }
 
+  def getSearcher = searcher
+
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
     try {
       indexWriter.synchronized{ f(indexWriter) }
@@ -120,9 +122,6 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     log.info("commit data =" + mutableMap)
     Map() ++ mutableMap
   }
-
-  def getQueryParser(lang: Lang): QueryParser
-  def parseQuery(queryText: String, lang: Lang = Lang("en")) = getQueryParser(lang).parseQuery(queryText)
 
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
 

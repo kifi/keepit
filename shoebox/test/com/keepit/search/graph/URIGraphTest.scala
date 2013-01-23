@@ -160,11 +160,11 @@ class URIGraphTest extends SpecificationWithJUnit {
           expectedUriToUserEdges.map{ case (uri, users) =>
             val expected = (users.map(_.id.get).toSet intersect friendIds)
             val answer = searcher.intersect(userToUserEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet
-            println("friends:"+ friendIds)
-            println("users:" + users.map(_.id.get))
-            println("expected:" + expected)
-            println("answer:" + answer)
-            println("---")
+            //println("friends:"+ friendIds)
+            //println("users:" + users.map(_.id.get))
+            //println("expected:" + expected)
+            //println("answer:" + answer)
+            //println("---")
             answer === expected
           }
         }

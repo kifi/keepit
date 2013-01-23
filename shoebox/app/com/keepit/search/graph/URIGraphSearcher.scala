@@ -3,12 +3,18 @@ package com.keepit.search.graph
 import com.keepit.common.db.Id
 import com.keepit.model.{NormalizedURI, User, UserCxRepo}
 import com.keepit.search.graph.EdgeSetUtil._
+import com.keepit.search.index.ArrayIdMapper
+import com.keepit.search.index.CachingIndexReader
+import com.keepit.search.index.IdMapper
 import com.keepit.search.index.Searcher
 import com.keepit.search.line.LineIndexReader
+import com.keepit.search.query.QueryUtil
+import org.apache.lucene.index.IndexReader
+import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.Query
-import scala.collection.immutable.LongMap
 import org.apache.lucene.search.IndexSearcher
+import scala.collection.immutable.LongMap
 
 class URIGraphSearcher(searcher: Searcher) {
 
@@ -46,7 +52,8 @@ class URIGraphSearcher(searcher: Searcher) {
 
   def intersect(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): UserToUserEdgeSet = {
     val iter = intersect(friends.getDestDocIdSetIterator(searcher), bookmarkUsers.getDestDocIdSetIterator(searcher))
-    val destIdSet = iter.map{ searcher.globalIdMapper.getId(_) }.map{ new Id[User](_) }.toSet
+    val idMapper = searcher.indexReader.getIdMapper
+    val destIdSet = iter.map{ idMapper.getId(_) }.map{ new Id[User](_) }.toSet
     new UserToUserEdgeSet(friends.sourceId, destIdSet)
   }
 
@@ -95,7 +102,7 @@ class URIGraphSearcher(searcher: Searcher) {
     uriList
   }
 
-  def getIndexReader(user: Id[User], uriList: URIList) = {
+  def getIndexReader(user: Id[User], uriList: URIList, terms: Set[Term]) = {
     val term = URIGraph.userTerm.createTerm(user.toString)
     val td = searcher.indexReader.termDocs(term)
     val userDocId = try {
@@ -103,7 +110,15 @@ class URIGraphSearcher(searcher: Searcher) {
     } finally {
       td.close()
     }
-    new LineIndexReader(searcher.indexReader, userDocId, uriList.publicListSize + uriList.privateListSize)
+    val numDocs = uriList.publicListSize + uriList.privateListSize
+    LineIndexReader(searcher.indexReader, userDocId, terms, numDocs)
+  }
+
+  def openPersonalIndex(user: Id[User], query: Query): Option[(CachingIndexReader, IdMapper)] = {
+    getURIList(user).map{ uriList =>
+      val terms = QueryUtil.getTerms(query)
+      (getIndexReader(user, uriList, terms), new ArrayIdMapper(uriList.publicList ++ uriList.privateList))
+    }
   }
 
   def search(user: Id[User], query: Query): Map[Long, Float] = {
@@ -112,7 +127,7 @@ class URIGraphSearcher(searcher: Searcher) {
       val publicList = uriList.publicList
       val privateList = uriList.privateList
 
-      val lineIndexReader = getIndexReader(user, uriList)
+      val lineIndexReader = getIndexReader(user, uriList, QueryUtil.getTerms(query))
       val rewrittenQuery = query.rewrite(lineIndexReader)
       val lineSearcher = new IndexSearcher(lineIndexReader)
       var weight = lineSearcher.createNormalizedWeight(rewrittenQuery)

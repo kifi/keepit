@@ -9,13 +9,14 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import org.apache.lucene.search.Query
 import org.apache.lucene.util.PriorityQueue
 import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
 
 class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], articleIndexer: ArticleIndexer, uriGraph: URIGraph,
-                   resultClickTracker: ResultClickTracker, config: SearchConfig)
+                   resultClickTracker: ResultClickTracker, browsingHistoryTracker: BrowsingHistoryTracker, config: SearchConfig)
 extends Logging {
   val currentTime = currentDateTime.getMillis()
   val isInitialSearch = filterOut.isEmpty
@@ -23,7 +24,6 @@ extends Logging {
   // get config params
   val minMyBookmarks = config.asInt("minMyBookmarks")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
-  val personalTitleBoost = config.asFloat("personalTitleBoost")
   val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   val percentMatch = config.asFloat("percentMatch")
@@ -37,9 +37,11 @@ extends Logging {
   val dumpingHalfDecayFriends = config.asFloat("dumpingHalfDecayFriends")
   val dumpingHalfDecayOthers = config.asFloat("dumpingHalfDecayOthers")
   val maxResultClickBoost = config.asFloat("maxResultClickBoost")
+  val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
+  val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
 
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
-  val articleSearcher = articleIndexer.getArticleSearcher
+  val articleSearcher = articleIndexer.getSearcher
   val uriGraphSearcher = uriGraph.getURIGraphSearcher
   val NO_FRIEND_IDS = Set.empty[Id[User]]
 
@@ -49,15 +51,14 @@ extends Logging {
   val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
   val friendlyUris = friendIds.foldLeft(myUris){ (s, f) => s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet }
 
-  val personalizedArticleSearcher = PersonalizedSearcher(articleSearcher, myUris)
-
-  def searchBookmarkTitle(queryString: String, initial: Boolean)(implicit lang: Lang) = {
-    val bookmarkTitleSearchParser = uriGraph.getQueryParser(lang, proximityBoost)
-    bookmarkTitleSearchParser.setPercentMatch(if (initial) 100.0f else percentMatch)
-    bookmarkTitleSearchParser.parseQuery(queryString).map{ bookmarkQuery =>
-      log.debug("bookmarkQuery: %s".format(bookmarkQuery.toString))
-      uriGraphSearcher.search(userId, bookmarkQuery)
-    }.getOrElse(Map.empty[Long, Float])
+  def getPersonalizedSearcher(query: Query) = {
+    val indexReader = uriGraphSearcher.openPersonalIndex(userId, query) match {
+      case Some((personalReader, personalIdMapper)) =>
+        articleSearcher.indexReader.add(personalReader, personalIdMapper)
+      case None =>
+        articleSearcher.indexReader
+    }
+    PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory)
   }
 
   def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts, initial: Boolean = true)(implicit lang: Lang) = {
@@ -72,13 +73,13 @@ extends Logging {
 
   private def searchTextSub(queryString: String, myHits: ArticleHitQueue, friendsHits: ArticleHitQueue, othersHits: ArticleHitQueue,
                             clickBoosts: ResultClickTracker.ResultClickBoosts, initial: Boolean)(implicit lang: Lang) {
-    var bookmarkTitleHits = searchBookmarkTitle(queryString, initial)
-
-    val articleParser = articleIndexer.getQueryParser(lang, proximityBoost, semanticBoost)
-    articleParser.setPercentMatch(if (initial) 100.0f else percentMatch)
-    articleParser.parseQuery(queryString).map{ articleQuery =>
+    val parser = MainQueryParser(lang, proximityBoost, semanticBoost)
+    parser.setPercentMatch(if (initial) 100.0f else percentMatch)
+    parser.parseQuery(queryString).map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
-      personalizedArticleSearcher.doSearch(articleQuery){ (scorer, mapper) =>
+
+      var personalizedSearcher = getPersonalizedSearcher(articleQuery)
+      personalizedSearcher.doSearch(articleQuery){ (scorer, mapper) =>
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
           val id = mapper.getId(doc)
@@ -87,10 +88,7 @@ extends Logging {
             val score = scorer.score()
             if (friendlyUris.contains(id)) {
               if (myUris.contains(id)) {
-                // blend with personal bookmark title score
-                val blendedScore = max(score, bookmarkTitleHits.getOrElse(id, 0.0f))
-                bookmarkTitleHits -= id
-                myHits.insert(id, blendedScore * clickBoost, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
+                myHits.insert(id, score * clickBoost, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
               } else {
                 friendsHits.insert(id, score * clickBoost, false, false, NO_FRIEND_IDS, 0)
               }
@@ -102,13 +100,8 @@ extends Logging {
         }
       }
     }
-    bookmarkTitleHits.foreach{ case (id, score) =>
-      val clickBoost = clickBoosts(id)
-      // boost scores by personalTitleBoost to compensate missing article match
-      if (!filterOut.contains(id)) myHits.insert(id, score * personalTitleBoost * clickBoost, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
-    }
 
-    if ((myHits.totalHits + friendsHits.totalHits) > 0 || !initial || !articleParser.isMultiClauseQuery) {
+    if ((myHits.totalHits + friendsHits.totalHits) > 0 || !initial || !parser.isMultiClauseQuery) {
       (myHits, friendsHits, othersHits)
     } else {
       myHits.clear()

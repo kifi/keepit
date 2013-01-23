@@ -22,11 +22,18 @@ object QueryUtil extends Logging {
     getTerms(query).filter{ _.field() == fieldName }
   }
 
+  def getTerms(fieldNames: Set[String], query: Query): Set[Term] = {
+    getTerms(query).filter{ term => fieldNames.contains(term.field()) }
+  }
+
   def getTerms(query: Query): Set[Term] = {
     query match {
       case q: TermQuery => fromTermQuery(q)
       case q: PhraseQuery => fromPhraseQuery(q)
       case q: BooleanQuery => fromBooleanQuery(q)
+      case q: ConditionalQuery => fromConditionalQuery(q)
+      case q: ProximityQuery => fromProximityQuery(q)
+      case q: SemanticVectorQuery => fromSemanticVectorQuery(q)
       case q: Query => fromOtherQuery(q)
       case null => Set.empty[Term]
     }
@@ -37,6 +44,9 @@ object QueryUtil extends Logging {
   private def fromBooleanQuery(query: BooleanQuery) = {
     query.getClauses.foldLeft(Set.empty[Term]){ (s, c) => if (!c.isProhibited) s ++ getTerms(c.getQuery) else s }
   }
+  private def fromConditionalQuery(query: ConditionalQuery) = getTerms(query.source) ++ getTerms(query.condition)
+  private def fromProximityQuery(query: ProximityQuery) = query.terms.toSet
+  private def fromSemanticVectorQuery(query: SemanticVectorQuery) = query.terms
   private def fromOtherQuery(query: Query) = {
     try {
       val terms = new JHashSet[Term]()
@@ -54,7 +64,7 @@ object QueryUtil extends Logging {
       case q: TermQuery => seqFromTermQuery(fieldName, q)
       case q: PhraseQuery => seqFromPhraseQuery(fieldName, q)
       case q: BooleanQuery => seqFromBooleanQuery(fieldName, q)
-      case _ => Seq.empty[Term]
+      case _ => Seq.empty[Term] // ignore all other types of queries
     }
   }
 
