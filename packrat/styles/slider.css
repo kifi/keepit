@@ -66,14 +66,14 @@
   font-size: 14px;
 }
 
-.kifi-slider .dtr {
+.kifi-table-row {
   display: table-row;
-  padding:0;
-  margin:0;
+  padding: 0;
+  margin: 0;
 }
 
-.kifi-slider .dtg {
-  display: table-group;
+.kifi-table-row-group {
+  display: table-row-group;
 }
 
 /*Rounded corner with shadow*/
