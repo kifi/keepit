@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -14,7 +15,6 @@ import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
-import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 case class BookmarkSource(value: String) {
   implicit def getValue = value
