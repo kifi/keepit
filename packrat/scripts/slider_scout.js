@@ -23,7 +23,7 @@ var slider, injected, t0 = +new Date;
     if (document.hasFocus() && document.body.scrollTop > 300) {
       logEvent("slider", "usefulPage", {url: document.location.href});
     } else {
-      setInterval(checkIfUseful, 5000);
+      setTimeout(checkIfUseful, 5000);
     }
   }, 60000);
 
