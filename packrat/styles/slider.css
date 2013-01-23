@@ -25,6 +25,9 @@
   box-sizing: content-box;
   text-align: left;
   direction: ltr;
+  -webkit-user-select: auto;
+  -moz-user-select: auto;
+  user-select: auto;
 }
 
 .kifi_hover div {
