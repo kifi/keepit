@@ -77,7 +77,7 @@
 }
 
 /*Rounded corner with shadow*/
-.kifi-slider .roundedbox {
+.kifi-slider-border {
   background-color: #faf9f9;
   border: 2px solid #414b52;
   border-right:0px;
@@ -91,7 +91,7 @@
   display: table;
 }
 /*Header*/
-.kifi-slider .roundedbox .kifihdr {
+.kifi-slider .kifihdr {
   margin:0;
   padding:9px 5px 9px 10px;
   padding-left:40px;
@@ -99,7 +99,7 @@
   cursor: move;
 }
 /*footer*/
-.kifi-slider .roundedbox .kififtr {
+.kifi-slider .kififtr {
   margin:0;
   bottom: 0px;
   border-top: 1px solid #E2E2E2;
@@ -117,7 +117,7 @@
 }
 
 /*content*/
-.kifi-slider .roundedbox .kifi-content {
+.kifi-slider .kifi-content {
   padding: 5px 5px 5px 10px;
   font-family: "helvetica neue", Helvetica, Arial, sans-serif;
   font-size: 12px;
