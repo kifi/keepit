@@ -24,7 +24,6 @@ extends Logging {
   // get config params
   val minMyBookmarks = config.asInt("minMyBookmarks")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
-  val personalTitleBoost = config.asFloat("personalTitleBoost")
   val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   val percentMatch = config.asFloat("percentMatch")
@@ -42,7 +41,7 @@ extends Logging {
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
 
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
-  val articleSearcher = articleIndexer.getArticleSearcher
+  val articleSearcher = articleIndexer.getSearcher
   val uriGraphSearcher = uriGraph.getURIGraphSearcher
   val NO_FRIEND_IDS = Set.empty[Id[User]]
 

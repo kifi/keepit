@@ -1,20 +1,14 @@
 package com.keepit.model
 
-import java.sql.Connection
-
+import java.sql.{Connection, Clob}
 import scala.annotation.elidable
-
 import org.joda.time.DateTime
-
-import com.keepit.common.db.Entity
-import com.keepit.common.db.EntityTable
-import com.keepit.common.db.ExternalId
-import com.keepit.common.db.Id
-import com.keepit.common.db.NotFoundException
-import com.keepit.common.db.State
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.common.time.currentDateTime
-
 import annotation.elidable.ASSERTION
 import ru.circumflex.orm.Predicate.toAggregateHelper
 import ru.circumflex.orm.Projection
@@ -35,12 +29,14 @@ case class Comment(
   uriId: Id[NormalizedURI],
   urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
   userId: Id[User],
-  text: String,
+  text: LargeString,
   pageTitle: String,
   parent: Option[Id[Comment]] = None,
   permissions: State[CommentPermission] = CommentPermissions.PUBLIC,
-  state: State[Comment] = CommentStates.ACTIVE) {
-
+  state: State[Comment] = CommentStates.ACTIVE
+) extends ModelWithExternalId[Comment] {
+  def withId(id: Id[Comment]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[Comment]) = copy(state = state)
 
   def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
@@ -51,6 +47,36 @@ case class Comment(
     val entity = CommentEntity(this.copy(updatedAt = currentDateTime))
     assert(1 == entity.save())
     entity.view
+  }
+}
+
+
+@ImplementedBy(classOf[CommentRepoImpl])
+trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
+//  def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
+}
+
+@Singleton
+class CommentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.TypeMapper._
+  import org.scalaquery.ql.TypeMapperDelegate._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
+
+  override lazy val table = new RepoTable[Comment](db, "comment") with ExternalIdColumn[Comment] {
+    def uriId = column[Id[NormalizedURI]]("normalized_uri_id", O.NotNull)
+    def urlId = column[Id[URL]]("url_id", O.Nullable)
+    def userId = column[Id[User]]("user_id", O.Nullable)
+    def text = column[LargeString]("text", O.NotNull)
+    def pageTitle = column[String]("page_title", O.NotNull)
+    def parent = column[Id[Comment]]("parent", O.Nullable)
+    def permissions = column[State[CommentPermission]]("permissions", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId ~ urlId.? ~ userId ~ text ~ pageTitle ~ parent.? ~ permissions ~ state <> (Comment, Comment.unapply _)
   }
 
 }
@@ -208,7 +234,7 @@ private[model] class CommentEntity extends Entity[Comment, CommentEntity] {
     urlId = urlId.value,
     userId = userId(),
     pageTitle = pageTitle(),
-    text = text(),
+    text = LargeString(text()),
     parent = parent.value,
     permissions = permissions(),
     state = state()

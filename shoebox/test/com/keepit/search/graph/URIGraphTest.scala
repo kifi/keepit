@@ -20,6 +20,9 @@ import play.api.test._
 import play.api.test.Helpers._
 import org.apache.lucene.index.Term
 import org.apache.lucene.store.RAMDirectory
+import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.BooleanQuery
 import scala.collection.JavaConversions._
@@ -64,6 +67,31 @@ class URIGraphTest extends SpecificationWithJUnit {
         titleLang = Some(Lang("en")),
         contentLang = Some(Lang("en")))
   }
+
+  class Searchable(uriGraphSearcher: URIGraphSearcher) {
+    def search(user: Id[User], query: Query): Map[Long, Float] = {
+      uriGraphSearcher.openPersonalIndex(user, query) match {
+        case Some((indexReader, idMapper)) =>
+          val rewrittenQuery = query.rewrite(indexReader)
+          val searcher = new IndexSearcher(indexReader)
+          var result = Map.empty[Long,Float]
+          var weight = searcher.createNormalizedWeight(rewrittenQuery)
+          if (weight != null) {
+            var scorer = weight.scorer(indexReader, true, true)
+            if (scorer != null) {
+              var doc = scorer.nextDoc()
+              while (doc < DocIdSetIterator.NO_MORE_DOCS) {
+                result += (idMapper.getId(doc) -> scorer.score())
+                doc = scorer.nextDoc()
+              }
+            }
+          }
+          result
+        case None => Map.empty[Long, Float]
+      }
+    }
+  }
+  implicit def toSearchable(uriGraphSearcher: URIGraphSearcher) = new Searchable(uriGraphSearcher: URIGraphSearcher)
 
   "URIGraph" should {
     "be able to generate UriToUsrEdgeSet" in {
