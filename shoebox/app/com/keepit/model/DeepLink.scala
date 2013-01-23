@@ -1,8 +1,11 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ CX, Id, Entity, EntityTable, ExternalId, State }
-import com.keepit.common.db.NotFoundException
-import com.keepit.common.db.StateException
+import play.api.Play.current
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
 import java.security.SecureRandom
@@ -19,8 +22,6 @@ import play.api.mvc.QueryStringBindable
 import play.api.mvc.JavascriptLitteral
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.inject.inject
-import play.api.Play.current
-
 
 case class DeepLinkToken(value: String)
 object DeepLinkToken {
@@ -44,7 +45,11 @@ case class DeepLink(
   urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
   deepLocator: DeepLocator,
   token: DeepLinkToken = DeepLinkToken(),
-  state: State[DeepLink] = DeepLinkStates.ACTIVE) extends Logging {
+  state: State[DeepLink] = DeepLinkStates.ACTIVE
+) extends Model[DeepLink] {
+  def withId(id: Id[DeepLink]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+
   lazy val baseUrl = inject[FortyTwoServices].baseUrl
   lazy val url = "%s/r/%s".format(baseUrl,token.value)
 
