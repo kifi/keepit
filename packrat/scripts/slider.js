@@ -744,7 +744,7 @@ slider = function() {
     }).on('click','.take-snapshot', function() {
       // make absolute positioning relative to document instead of viewport
       document.documentElement.style.position = "relative";
-
+      this.blur();
       slideOut();
 
       var sel = {}, cX, cY;
