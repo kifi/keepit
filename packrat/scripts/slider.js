@@ -182,7 +182,7 @@ slider = function() {
           "main_hover": "main_hover.html",
           "footer": "footer.html"
         }, function(template) {
-          if (document.querySelector(".kifi_hover")) {
+          if (document.querySelector(".kifi-slider")) {
             api.log("No need to inject, it's already here!");
           } else {
             drawKeepItHover(o.session, o.friends, o.numComments, o.numMessages, template, callback);
@@ -203,7 +203,7 @@ slider = function() {
     updateCommentCount("message", numMessages);
 
     // Event bindings
-    $(".kifi_hover").draggable({cursor: "move", axis: "y", distance: 10, handle: "div.kifihdr", containment: "body", scroll: false})
+    $(".kifi-slider").draggable({cursor: "move", axis: "y", distance: 10, handle: "div.kifihdr", containment: "body", scroll: false})
     .on("click", ".xlink", function() {
       slideOut("x");
     })
@@ -240,7 +240,7 @@ slider = function() {
   }
 
   function keptItslideOut() {
-    var $s = $(".kifi_hover");
+    var $s = $(".kifi-slider");
     $s.animate({
         bottom: '+=' + $s.position().top,
         opacity: 0
@@ -255,7 +255,7 @@ slider = function() {
 
   // trigger is for the event log (e.g. "key", "icon"). pass no trigger if just hiding slider temporarily.
   function slideOut(trigger) {
-    var $s = $(".kifi_hover").animate({
+    var $s = $(".kifi-slider").animate({
         opacity: 0,
         right: '-=340'
       },
@@ -270,7 +270,7 @@ slider = function() {
   }
 
   function slideIn() {
-    $(".kifi_hover").animate({
+    $(".kifi-slider").animate({
         right: '+=340',
         opacity: 1
       },
@@ -313,7 +313,7 @@ slider = function() {
   var badGlobalState = { }
 
   function isCommentPanelVisible() {
-    return $(".kifi_comment_wrapper").is(":visible");
+    return $(".kifi-comment-wrapper").is(":visible");
   }
 
   function refreshCommentsHack() {
@@ -350,14 +350,14 @@ slider = function() {
     badGlobalState["id"] = id;
 
     var isVisible = isCommentPanelVisible();
-    var showingType = $(".kifi_hover").data("view");
+    var showingType = $(".kifi-slider").data("view");
     var shouldRedrawFooter = !isVisible || (showingType && type != showingType)
 
     if (isVisible && !id && !keepOpen) { // already open!
       if (type == showingType) {
         $('.kifi-content').slideDown();
-        $('.kifi_comment_wrapper').slideUp(600, 'easeInOutBack');
-        $(".kifi_hover").removeClass(type);
+        $('.kifi-comment-wrapper').slideUp(600, 'easeInOutBack');
+        $(".kifi-slider").removeClass(type);
         redrawFooter(false);
         return;
       } else { // already open, yet showing a different type.
@@ -365,7 +365,7 @@ slider = function() {
       }
     }
 
-    $(".kifi_hover").data("view", type).removeClass("public message").addClass(type);
+    $(".kifi-slider").data("view", type).removeClass("public message").addClass(type);
 
     api.port.emit("get_comments", {kind: type, commentId: id}, function(comments) {
       api.log("[showComments] comments:", comments);
@@ -374,7 +374,7 @@ slider = function() {
           repositionScroll(false);
 
           $('.kifi-content').slideUp(); // hide main hover content
-          $('.kifi_comment_wrapper').slideDown(600, function() {
+          $('.kifi-comment-wrapper').slideDown(600, function() {
             repositionScroll(false);
           });
         }
@@ -603,7 +603,7 @@ slider = function() {
   function drawCommentView(renderedTemplate, session, type) {
     //api.log(renderedTemplate);
     repositionScroll(false);
-    $('.kifi_comment_wrapper').html(renderedTemplate).find("time").timeago();
+    $('.kifi-comment-wrapper').html(renderedTemplate).find("time").timeago();
     repositionScroll(false);
 
     createCommentBindings(type, session);
@@ -616,7 +616,7 @@ slider = function() {
       $(this).toggleClass("following", following);
     });
 
-    $(".kifi_comment_wrapper").on("mousedown", "a[href^='x-kifi-sel:']", function(e) {
+    $(".kifi-comment-wrapper").on("mousedown", "a[href^='x-kifi-sel:']", function(e) {
       if (e.which != 1) return;
       e.preventDefault();
       var el = snapshot.fuzzyFind(this.href.substring(11));
@@ -768,7 +768,7 @@ slider = function() {
       });
       $glass.click(function() {
         exitSnapshotMode();
-        $(".kifi_hover").find(".comment-compose")
+        $(".kifi-slider").find(".comment-compose")
           .find(".placeholder").remove().end()
           .append(" <a href='x-kifi-sel:" + snapshot.generateSelector(sel.el).replace("'", "&#39;") + "'>look here</a>");
       });
@@ -776,7 +776,7 @@ slider = function() {
         $selectable.add(".snapshot-bar-wrap").animate({opacity: 0}, 400, function() { $(this).remove(); });
         key.deleteScope("snapshot");
         slideIn();
-        $(".kifi_hover").find(".comment-compose").each(function() {
+        $(".kifi-slider").find(".comment-compose").each(function() {
           var el = this;
           setTimeout(function() {
             el.focus();
@@ -885,7 +885,7 @@ slider = function() {
         api.log("to: ", recipients);
       }
       else {
-        parent = $(this).parents(".kifi_comment_wrapper").find(".thread-wrapper").attr("data-externalid");
+        parent = $(this).parents(".kifi-comment-wrapper").find(".thread-wrapper").attr("data-externalid");
         api.log(parent)
       }
 
@@ -952,7 +952,7 @@ slider = function() {
 
   function resizeCommentBodyView(resizeQuickly) {
     api.log("[resizeCommentBodyView]");
-    $('.kifi_hover').css("top", "");
+    $('.kifi-slider').css("top", "");
     $('.comment_body_view').stop().css({'max-height':$(window).height()-320});
     return; // for now, we'll do a rough fix
     var kifiheader = $('.kifihdr');
@@ -1001,7 +1001,7 @@ slider = function() {
     return !!lastShownAt;
   },
   toggle: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
-    if (document.querySelector(".kifi_hover")) {
+    if (document.querySelector(".kifi-slider")) {
       slideOut(trigger);
     } else {
       this.show(trigger);

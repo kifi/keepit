@@ -1,6 +1,6 @@
 
 /* An attempt to normalize CSS */
-.kifi_hover * {
+.kifi-slider * {
   width:auto;
   line-height: 1;
   letter-spacing: normal;
@@ -30,22 +30,22 @@
   user-select: auto;
 }
 
-.kifi_hover div {
+.kifi-slider div {
   display: block;
 }
-.kifi_hover span {
+.kifi-slider span {
   display: inline;
 }
-.kifi_hover a:link,
-.kifi_hover a:visited,
-.kifi_hover a:link:hover,
-.kifi_hover a:visited:hover {
+.kifi-slider a:link,
+.kifi-slider a:visited,
+.kifi-slider a:link:hover,
+.kifi-slider a:visited:hover {
   color: -webkit-link;
   text-decoration: underline;
   cursor: pointer;
 }
 
-.kifi_hover {
+.kifi-slider {
   position: fixed;
   bottom:35px;
   right:-350px;
@@ -62,18 +62,18 @@
   font-size: 14px;
 }
 
-.kifi_hover .dtr {
+.kifi-slider .dtr {
   display: table-row;
   padding:0;
   margin:0;
 }
 
-.kifi_hover .dtg {
+.kifi-slider .dtg {
   display: table-group;
 }
 
 /*Rounded corner with shadow*/
-.kifi_hover .roundedbox {
+.kifi-slider .roundedbox {
   background-color: #faf9f9;
   border: 2px solid #414b52;
   border-right:0px;
@@ -87,7 +87,7 @@
   display: table;
 }
 /*Header*/
-.kifi_hover .roundedbox .kifihdr {
+.kifi-slider .roundedbox .kifihdr {
   margin:0;
   padding:9px 5px 9px 10px;
   padding-left:40px;
@@ -95,7 +95,7 @@
   cursor: move;
 }
 /*footer*/
-.kifi_hover .roundedbox .kififtr {
+.kifi-slider .roundedbox .kififtr {
   margin:0;
   bottom: 0px;
   border-top: 1px solid #E2E2E2;
@@ -107,19 +107,20 @@
   color: #8c8484;
 }
 
-.kifi_hover .kififtr .close-message, .kifi_hover .kififtr .keepit-message {
-    cursor: pointer;
+.kifi-slider .kififtr .close-message,
+.kifi-slider .kififtr .keepit-message {
+  cursor: pointer;
 }
 
 /*content*/
-.kifi_hover .roundedbox .kifi-content {
+.kifi-slider .roundedbox .kifi-content {
   padding: 5px 5px 5px 10px;
   font-family: "helvetica neue", Helvetica, Arial, sans-serif;
   font-size: 12px;
   padding-right:20px;
 }
 /*Color scheme*/
-.kifi_hover .color_a {
+.kifi-slider .color_a {
   font-family: "helvetica neue", Helvetica, Arial, sans-serif;
   background-color: #414b52;
   color: #faf9f9;
@@ -127,7 +128,7 @@
   font-weight:lighter;
 }
 
-.kifi_hover .kifilogo {
+.kifi-slider .kifilogo {
   margin-right: 20px;
   padding:10px 25px;
   background-position: top;
@@ -136,17 +137,17 @@
   float:right;
 }
 
-.kifi_hover .kept {
+.kifi-slider .kept {
   color: #a0a5a9;
 }
 
-.kifi_hover ul.interaction-bar {
+.kifi-slider ul.interaction-bar {
   margin: 0;
   padding: 0 20px 0 0;
   text-align: right;
   background: #E0E0E0;
 }
-.kifi_hover .interaction-bar li {
+.kifi-slider .interaction-bar li {
   list-style: none;
   display: inline-block;
   margin: 0;
@@ -157,29 +158,29 @@
   cursor: pointer;
   background-color: #E0E0E0;
 }
-.kifi_hover .interaction-bar li:hover {
+.kifi-slider .interaction-bar li:hover {
   background-color: #ECECEC;
 }
-.kifi_hover .interaction-bar li:active,
-.kifi_hover.public li.comments-label,
-.kifi_hover.message li.messages-label {
+.kifi-slider .interaction-bar li:active,
+.kifi-slider.public li.comments-label,
+.kifi-slider.message li.messages-label {
   background-color: #FAFAFA;
 }
-.kifi_hover .interaction-bar .notify-count {
+.kifi-slider .interaction-bar .notify-count {
   background-color: #666;
   border-radius: 5px;
   color: #FAFAFA;
   padding: 2px 6px;
   margin-right: 3px;
 }
-.kifi_hover .interaction-bar .comments-count {
+.kifi-slider .interaction-bar .comments-count {
   background-color: #6BB4DC;
 }
-.kifi_hover .interaction-bar .messages-count {
+.kifi-slider .interaction-bar .messages-count {
   background-color: #EF8299;
 }
 
-.kifi_hover .friendlist {
+.kifi-slider .friendlist {
   padding:5px;
   padding-left:0px;
   white-space: nowrap;
@@ -187,7 +188,7 @@
   width: 250px;
 }
 
-.kifi_hover .friendlist .friendlist_fade {
+.kifi-slider .friendlist .friendlist_fade {
   position:absolute;
   background: -webkit-gradient(linear, 0 0, 100% 0, from(rgba(255,255,255,0)), to(rgba(255,255,255,1)));
   background: -webkit-linear-gradient(left, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%);
@@ -200,7 +201,7 @@
   width: 36px;
 }
 
-.kifi_hover .kifi-header-actions {
+.kifi-slider .kifi-header-actions {
   position:relative;
   float:right;
   margin-top:-2px;
@@ -209,7 +210,7 @@
 }
 
 
-.kifi_hover .xlink {
+.kifi-slider .xlink {
   padding:1px;
   padding-right:5px;
   padding-left:5px;
@@ -225,17 +226,17 @@
 
 }
 
-.kifi_hover .xlink:hover {
+.kifi-slider .xlink:hover {
     background-color: #faf9f9;
     color: #414b52;
 }
 
-.kifi_hover .xlink:active {
+.kifi-slider .xlink:active {
     background-color: #e0e0e0;
     color: #414b52;
 }
 
-.kifi_hover .circular {
+.kifi-slider .circular {
   border: 2px solid white;
   width: 45px;
   height: 45px;
@@ -245,7 +246,7 @@
   top:-2px;
   left:-2px;
 }
-.kifi_hover .imageborder {
+.kifi-slider .imageborder {
   border: 5px solid #414b52;
   width: 45px;
   height: 45px;
@@ -255,7 +256,7 @@
   left:-20px;
 }
 
-.kifi_hover .socialinnerbox {
+.kifi-slider .socialinnerbox {
   padding:7px 10px;
   background-color: #FAFAFA;
   margin:10px;
@@ -265,13 +266,13 @@
 }
 
 
-.kifi_hover .social_friend {
+.kifi-slider .social_friend {
   width:36px;
   height:36px;
   border-radius: 2px;
 }
 
-.kifi_hover .innerbox {
+.kifi-slider .innerbox {
   padding:7px 10px;
   margin:10px;
   font-size:14px;
@@ -280,7 +281,7 @@
 }
 
 
-.kifi_hover .kbutton {
+.kifi-slider .kbutton {
   zoom: 1;
   outline: none;
   cursor: pointer;
@@ -306,7 +307,7 @@
 
 }
 
-.kifi_hover .kbutton:hover, .kbutton:active {
+.kifi-slider .kbutton:hover, .kbutton:active {
   -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2);
   -moz-box-shadow:  0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2);
   box-shadow:     0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2);
@@ -317,12 +318,12 @@
   background: linear-gradient(#ffffff, #ededed);
 }
 
-.kifi_hover .kbutton:active {
+.kifi-slider .kbutton:active {
   background: #f7f7f7;
 
 }
 
-.kifi_hover .keepitbtn {
+.kifi-slider .keepitbtn {
   padding:5px;
   padding-left:30px;
   padding-right:30px;
@@ -331,22 +332,22 @@
 }
 
 
-.kifi_hover .buttonwrapper {
+.kifi-slider .buttonwrapper {
   text-align: center;
   padding:10px;
 }
 
-.kifi_hover .dropdownbtn {
+.kifi-slider .dropdownbtn {
   border-radius: 0px 2px 2px 0px;
 }
 
-.kifi_hover .kifi_toggle,.kifi_toggle:hover {
+.kifi-slider .kifi_toggle,.kifi_toggle:hover {
   width: 100%;
   height: 100%;
   padding:10px 5px;
 }
 
-.kifi_hover .noselect {
+.kifi-slider .noselect {
   /*-webkit-touch-callout: none;
   -webkit-user-select: none;
   -khtml-user-select: none;
@@ -355,11 +356,11 @@
   user-select: none;*/
 }
 
-.kifi_hover .profilepic {
+.kifi-slider .profilepic {
   background-color: #fff;
 }
 
-.kifi_hover .moreinnerbox {
+.kifi-slider .moreinnerbox {
   padding:7px 10px;
   background-color:white;
   margin:10px;
@@ -372,7 +373,7 @@
 }
 
 
-.kifi_hover .friend_tooltip {
+.kifi-slider .friend_tooltip {
   display:none;
   position:absolute;
   top:-50px;
@@ -388,7 +389,7 @@
   border: 1px solid #2d2d2d;
 }
 
-.kifi_hover .friend_tooltip:before, .kifi_hover .friend_tooltip:after {
+.kifi-slider .friend_tooltip:before, .kifi-slider .friend_tooltip:after {
   top: 100%;
   border: solid transparent;
   content: " ";
@@ -398,7 +399,7 @@
   pointer-events: none;
 }
 
-.kifi_hover .friend_tooltip:after {
+.kifi-slider .friend_tooltip:after {
   border-color: rgba(255, 255, 255, 0);
   border-top-color: #fff;
   border-width: 8px;
@@ -406,7 +407,7 @@
   margin-left: -8px;
 }
 
-.kifi_hover .friend_tooltip:before {
+.kifi-slider .friend_tooltip:before {
   border-color: rgba(45, 45, 45, 0);
   border-top-color: #2d2d2d;
   border-width: 9px;
@@ -414,7 +415,7 @@
   margin-left: -9px;
 }
 
-.kifi_hover .keepit_private {
+.kifi-slider .keepit_private {
   display: inline;
   border: 1px solid #D9D9D9;
   margin: 9px 1px 0 0;
@@ -552,7 +553,7 @@
   background: rgba(50,100,150,.3) !important;
 }
 
-.kifi_hover .kifi_comment_wrapper {
+.kifi-slider .kifi-comment-wrapper {
   background-color: #faf9f9;
   color: #2d2d2d;
   font-size: 12px;
@@ -563,7 +564,7 @@
   font-family: "helvetica neue", Helvetica, Arial, sans-serif;
 }
 
-.kifi_comment_wrapper .kifi_comment {
+.kifi-comment-wrapper .kifi_comment {
   /*border-bottom:1px solid #B8B8B8;*/
   display: block;
   clear: both;
@@ -572,7 +573,7 @@
 }
 
 
-.kifi_comment_wrapper #comment_text {
+.kifi-comment-wrapper #comment_text {
   width:250px;
   margin: 0;
   height:35px;
@@ -585,7 +586,7 @@
   padding:5px;
 }
 
-.kifi_comment_wrapper .comment_user img {
+.kifi-comment-wrapper .comment_user img {
   width:30px;
   height:30px;
   border-radius: 2px;
@@ -595,21 +596,21 @@
   clear: both;
 }
 
-.kifi_comment_wrapper .kifi_comment {
+.kifi-comment-wrapper .kifi_comment {
   font-size: 12px;
   font-family: "helvetica neue", Helvetica, Arial, sans-serif;
   line-height: 13px;
 }
 
-.kifi_comment_wrapper .comment_body {
+.kifi-comment-wrapper .comment_body {
 
 }
 
-.kifi_comment_wrapper .comment_body b {
+.kifi-comment-wrapper .comment_body b {
   font-weight: 800;
 }
 
-.kifi_comment_wrapper .postbtn {
+.kifi-comment-wrapper .postbtn {
   padding:5px;
   padding-left:30px;
   padding-right:30px;
@@ -617,7 +618,7 @@
   margin-top:2px;
 }
 
-.kifi_comment_wrapper #comment_list {
+.kifi-comment-wrapper #comment_list {
   max-height: 270px;
   width:260px;
   border: 1px solid rgb(190, 190, 190);
@@ -657,7 +658,7 @@
 }
 
 @media print {
-  .kifi_hover {
+  .kifi-slider {
       display:none !important;
   }
 }
