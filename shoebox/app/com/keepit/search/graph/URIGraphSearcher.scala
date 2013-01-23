@@ -13,8 +13,6 @@ import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.Query
-import org.apache.lucene.search.IndexSearcher
-import scala.collection.immutable.LongMap
 
 class URIGraphSearcher(searcher: Searcher) {
 
@@ -82,7 +80,7 @@ class URIGraphSearcher(searcher: Searcher) {
     }
   }
 
-  def getURIList(user: Id[User]): Option[URIList] = {
+  private def getURIList(user: Id[User]): Option[URIList] = {
     val term = URIGraph.userTerm.createTerm(user.toString)
     var uriList: Option[URIList] = None
     val tp = searcher.indexReader.termPositions(term)
@@ -102,7 +100,7 @@ class URIGraphSearcher(searcher: Searcher) {
     uriList
   }
 
-  def getIndexReader(user: Id[User], uriList: URIList, terms: Set[Term]) = {
+  private def getIndexReader(user: Id[User], uriList: URIList, terms: Set[Term]) = {
     val term = URIGraph.userTerm.createTerm(user.toString)
     val td = searcher.indexReader.termDocs(term)
     val userDocId = try {
@@ -119,36 +117,6 @@ class URIGraphSearcher(searcher: Searcher) {
       val terms = QueryUtil.getTerms(query)
       (getIndexReader(user, uriList, terms), new ArrayIdMapper(uriList.publicList ++ uriList.privateList))
     }
-  }
-
-  def search(user: Id[User], query: Query): Map[Long, Float] = {
-    var result = LongMap.empty[Float]
-    getURIList(user).foreach{ uriList =>
-      val publicList = uriList.publicList
-      val privateList = uriList.privateList
-
-      val lineIndexReader = getIndexReader(user, uriList, QueryUtil.getTerms(query))
-      val rewrittenQuery = query.rewrite(lineIndexReader)
-      val lineSearcher = new IndexSearcher(lineIndexReader)
-      var weight = lineSearcher.createNormalizedWeight(rewrittenQuery)
-      if (weight != null) {
-        var scorer = weight.scorer(lineIndexReader, true, true)
-        if (scorer != null) {
-          var doc = scorer.nextDoc()
-          while (doc < DocIdSetIterator.NO_MORE_DOCS) {
-            if (doc < publicList.length) {
-              val id = publicList(doc)
-              result += (id -> scorer.score())
-            } else if (doc < publicList.length + privateList.length) {
-              val id = privateList(doc - publicList.length)
-              result += (id -> scorer.score())
-            }
-            doc = scorer.nextDoc()
-          }
-        }
-      }
-    }
-    result
   }
 }
 
