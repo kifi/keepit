@@ -4,16 +4,18 @@ import securesocial.core.{SocialUser, UserId, AuthenticationMethod}
 import org.scalaquery.ql.{TypeMapper, TypeMapperDelegate, BaseTypeMapper}
 import org.scalaquery.ql.basic.BasicProfile
 import org.scalaquery.session.{PositionedParameters, PositionedResult}
-import com.keepit.common.db.{Id, State, Model, ExternalId}
+import com.keepit.common.db.{Id, State, Model, ExternalId, LargeString}
 import com.keepit.common.time._
 import com.keepit.common.social._
 import com.keepit.model._
 import org.joda.time.DateTime
-import java.sql.Types.{TIMESTAMP, BIGINT, VARCHAR}
-import java.sql.Timestamp
+import java.sql.{Timestamp, Clob, Blob, PreparedStatement}
+import javax.sql.rowset.serial.{SerialBlob, SerialClob}
 import play.api.libs.json._
 import org.scalaquery.ql.basic.BasicTypeMapperDelegates._
 import com.keepit.serializer.{URLHistorySerializer => URLHS, SocialUserSerializer}
+import java.io.BufferedReader
+import java.io.StringReader
 
 object FortyTwoTypeMappers {
   // Time
@@ -69,6 +71,9 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new StateMapperDelegate[ExperimentType]
   }
 
+  implicit object CommentPermissionTypeStateTypeMapper extends BaseTypeMapper[State[CommentPermission]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[CommentPermission]
+  }
 
   //Other
   implicit object URLHistorySeqHistoryStateTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
@@ -90,59 +95,59 @@ object FortyTwoTypeMappers {
   implicit object SocialIdHistoryStateTypeMapper extends BaseTypeMapper[SocialId] {
     def apply(profile: BasicProfile) = new SocialIdMapperDelegate
   }
+
+  implicit object LargeStringStateTypeMapper extends BaseTypeMapper[LargeString] {
+    def apply(profile: BasicProfile) = new LargeStringMapperDelegate
+  }
+
+  implicit object ByteArrayStateTypeMapper extends BaseTypeMapper[Array[Byte]] {
+    def apply(profile: BasicProfile) = new ByteArrayMapperDelegate
+  }
 }
 
 //************************************
-//       Abstract string mapper
+//       Abstract mappers
 //************************************
-abstract class StringMapperDelegate[T] extends TypeMapperDelegate[T] {
-  private val delegate = new StringTypeMapperDelegate()
+abstract class DelegateMapperDelegate[S, D] extends TypeMapperDelegate[S] {
+  protected def delegate: TypeMapperDelegate[D]
   def sqlType = delegate.sqlType
-  def setValue(value: T, p: PositionedParameters) = delegate.setValue(typeToString(value), p)
-  def setOption(valueOpt: Option[T], p: PositionedParameters) = delegate.setOption(valueOpt map typeToString, p)
-  def nextValue(r: PositionedResult) = stringToType(delegate.nextValue(r))
-  def updateValue(value: T, r: PositionedResult) = delegate.updateValue(typeToString(value), r)
-  override def valueToSQLLiteral(value: T) = delegate.valueToSQLLiteral(typeToString(value))
+  def setValue(value: S, p: PositionedParameters) = delegate.setValue(sourceToDest(value), p)
+  def setOption(valueOpt: Option[S], p: PositionedParameters) = delegate.setOption(valueOpt map sourceToDest, p)
+  def nextValue(r: PositionedResult): S = destToSource(delegate.nextValue(r))
+  def updateValue(value: S, r: PositionedResult) = delegate.updateValue(sourceToDest(value), r)
+  override def valueToSQLLiteral(value: S) = delegate.valueToSQLLiteral(sourceToDest(value))
 
-  def typeToString(value: T): String
-  def stringToType(str: String): T = Option(str) match {
+  def destToSource(dest: D): S = Option(dest) match {
     case None => zero
-    case Some(value) => safeStringToType(value)
+    case Some(value) => safeDestToSource(dest)
   }
-  def safeStringToType(str: String): T
+
+  def sourceToDest(dest: S): D
+  def safeDestToSource(source: D): S
+}
+
+abstract class StringMapperDelegate[T] extends DelegateMapperDelegate[T, String] {
+  override val delegate = new StringTypeMapperDelegate()
 }
 
 //************************************
 //       DateTime -> Timestamp
 //************************************
-class DateTimeMapperDelegate extends TypeMapperDelegate[DateTime] {
-  private val delegate = new TimestampTypeMapperDelegate()
+class DateTimeMapperDelegate extends DelegateMapperDelegate[DateTime, Timestamp] {
+  protected val delegate = new TimestampTypeMapperDelegate()
   def zero = currentDateTime
-  def sqlType = delegate.sqlType
-  def setValue(value: DateTime, p: PositionedParameters) = delegate.setValue(timestamp(value), p)
-  def setOption(valueOpt: Option[DateTime], p: PositionedParameters) = delegate.setOption(valueOpt map timestamp, p)
-  def nextValue(r: PositionedResult): DateTime = Option(delegate.nextValue(r)) match {
-    case Some(date) => date
-    case None => START_OF_TIME
-  }
-  def updateValue(value: DateTime, r: PositionedResult) = delegate.updateValue(timestamp(value), r)
-  override def valueToSQLLiteral(value: DateTime) = delegate.valueToSQLLiteral(timestamp(value))
-
-  private def timestamp(value: DateTime) = new Timestamp(value.toDate.getTime)
+  def sourceToDest(value: DateTime): Timestamp = new Timestamp(value.toDate().getTime())
+  def safeDestToSource(value: Timestamp): DateTime = value
 }
 
 //************************************
 //       Id -> Long
 //************************************
-class IdMapperDelegate[T] extends TypeMapperDelegate[Id[T]] {
-  private val delegate = new LongTypeMapperDelegate()
+class IdMapperDelegate[T] extends DelegateMapperDelegate[Id[T], Long] {
+  protected val delegate = new LongTypeMapperDelegate()
   def zero = Id[T](0)
-  def sqlType = delegate.sqlType
-  def setValue(value: Id[T], p: PositionedParameters) = delegate.setValue(value.id, p)
-  def setOption(valueOpt: Option[Id[T]], p: PositionedParameters) = delegate.setOption(valueOpt map (_.id), p)
-  def nextValue(r: PositionedResult) = Id(delegate.nextValue(r))
-  def updateValue(value: Id[T], r: PositionedResult) = delegate.updateValue(value.id, r)
-  override def valueToSQLLiteral(value: Id[T]) = delegate.valueToSQLLiteral(value.id)
+  def sourceToDest(value: Id[T]): Long = value.id
+  def safeDestToSource(value: Long): Id[T] = Id[T](value)
 }
 
 //************************************
@@ -150,8 +155,8 @@ class IdMapperDelegate[T] extends TypeMapperDelegate[Id[T]] {
 //************************************
 class ExternalIdMapperDelegate[T] extends StringMapperDelegate[ExternalId[T]] {
   def zero = ExternalId[T]()
-  def typeToString(value: ExternalId[T]): String = value.id
-  def safeStringToType(str: String): ExternalId[T] = ExternalId[T](str)
+  def sourceToDest(value: ExternalId[T]): String = value.id
+  def safeDestToSource(str: String): ExternalId[T] = ExternalId[T](str)
 }
 
 //************************************
@@ -159,8 +164,8 @@ class ExternalIdMapperDelegate[T] extends StringMapperDelegate[ExternalId[T]] {
 //************************************
 class StateMapperDelegate[T] extends StringMapperDelegate[State[T]] {
   def zero = new State("")
-  def typeToString(value: State[T]): String = value.value
-  def safeStringToType(str: String): State[T] = State[T](str)
+  def sourceToDest(value: State[T]): String = value.value
+  def safeDestToSource(str: String): State[T] = State[T](str)
 }
 
 //************************************
@@ -168,11 +173,11 @@ class StateMapperDelegate[T] extends StringMapperDelegate[State[T]] {
 //************************************
 class URLHistorySeqMapperDelegate extends StringMapperDelegate[Seq[URLHistory]] {
   def zero = Nil
-  def typeToString(history: Seq[URLHistory]) = {
+  def sourceToDest(history: Seq[URLHistory]) = {
     val serializer = URLHS.urlHistorySerializer
     Json.stringify(serializer.writes(history))
   }
-  def safeStringToType(history: String) = {
+  def safeDestToSource(history: String) = {
     val json = Json.parse(history)
     val serializer = URLHS.urlHistorySerializer
     serializer.reads(json)
@@ -184,8 +189,8 @@ class URLHistorySeqMapperDelegate extends StringMapperDelegate[Seq[URLHistory]] 
 //************************************
 class BookmarkSourceMapperDelegate extends StringMapperDelegate[BookmarkSource] {
   def zero = BookmarkSource("")
-  def typeToString(value: BookmarkSource): String = value.value
-  def safeStringToType(str: String): BookmarkSource = BookmarkSource(str)
+  def sourceToDest(value: BookmarkSource): String = value.value
+  def safeDestToSource(str: String): BookmarkSource = BookmarkSource(str)
 }
 
 
@@ -194,8 +199,8 @@ class BookmarkSourceMapperDelegate extends StringMapperDelegate[BookmarkSource] 
 //************************************
 class SocialNetworkTypeMapperDelegate extends StringMapperDelegate[SocialNetworkType] {
   def zero = SocialNetworks.FACEBOOK
-  def typeToString(socialNetworkType: SocialNetworkType) = socialNetworkType.name
-  def safeStringToType(str: String) = str match {
+  def sourceToDest(socialNetworkType: SocialNetworkType) = socialNetworkType.name
+  def safeDestToSource(str: String) = str match {
     case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK
     case _ => throw new RuntimeException("unknown network type %s".format(str))
   }
@@ -206,8 +211,8 @@ class SocialNetworkTypeMapperDelegate extends StringMapperDelegate[SocialNetwork
 //************************************
 class SocialUserMapperDelegate extends StringMapperDelegate[SocialUser] {
   def zero = SocialUser(id = UserId("", ""), displayName = "", email = None, avatarUrl = None, authMethod = AuthenticationMethod.OAuth2)
-  def typeToString(socialUser: SocialUser) = SocialUserSerializer.userSerializer.writes(socialUser).toString
-  def safeStringToType(str: String) = SocialUserSerializer.userSerializer.reads(Json.parse(str))
+  def sourceToDest(socialUser: SocialUser) = SocialUserSerializer.userSerializer.writes(socialUser).toString
+  def safeDestToSource(str: String) = SocialUserSerializer.userSerializer.reads(Json.parse(str))
 }
 
 //************************************
@@ -215,7 +220,33 @@ class SocialUserMapperDelegate extends StringMapperDelegate[SocialUser] {
 //************************************
 class SocialIdMapperDelegate extends StringMapperDelegate[SocialId] {
   def zero = SocialId("")
-  def typeToString(socialId: SocialId) = socialId.id
-  def safeStringToType(str: String) = SocialId(str)
+  def sourceToDest(socialId: SocialId) = socialId.id
+  def safeDestToSource(str: String) = SocialId(str)
+}
+
+//************************************
+//       LargeString -> Clob
+//************************************
+class LargeStringMapperDelegate extends DelegateMapperDelegate[LargeString, Clob] {
+  protected val delegate = new ClobTypeMapperDelegate()
+  def zero = LargeString("")
+  def sourceToDest(value: LargeString): Clob = new SerialClob(value.value.toCharArray())
+  def safeDestToSource(value: Clob): LargeString = {
+    val clob = new SerialClob(value)
+    LargeString(clob.getSubString(1, clob.length().intValue()))
+  }
+}
+
+//************************************
+//       Array[Byte] -> Blob
+//************************************
+class ByteArrayMapperDelegate extends DelegateMapperDelegate[Array[Byte], Blob] {
+  protected val delegate = new BlobTypeMapperDelegate()
+  def zero = new Array[Byte](0)
+  def sourceToDest(value: Array[Byte]): Blob = new SerialBlob(value)
+  def safeDestToSource(value: Blob): Array[Byte] = {
+    val blob = new SerialBlob(value)
+    blob.getBytes(1, blob.length.toInt)
+  }
 }
 
