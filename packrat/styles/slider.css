@@ -94,10 +94,11 @@
 /*Header*/
 .kifi-slider-title-bar {
   margin: 0;
-  padding: 9px 5px 9px 10px;
-  padding-left: 40px;
-  padding-right: 25px;
+  padding: 9px 25px 9px 40px;
   cursor: move;
+  font: lighter 14px/14px "helvetica neue", Helvetica, Arial, sans-serif;
+  background-color: #414b52;
+  color: #faf9f9;
 }
 .kifi-slider-title-pic-border {
   position:absolute;
@@ -144,14 +145,6 @@
   font-family: "helvetica neue", Helvetica, Arial, sans-serif;
   font-size: 12px;
   padding-right:20px;
-}
-/*Color scheme*/
-.kifi-slider .color_a {
-  font-family: "helvetica neue", Helvetica, Arial, sans-serif;
-  background-color: #414b52;
-  color: #faf9f9;
-  font-size:14px;
-  font-weight:lighter;
 }
 
 .kifi-slider .kifilogo {
