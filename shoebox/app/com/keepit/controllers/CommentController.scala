@@ -3,10 +3,13 @@ package com.keepit.controllers
 import java.sql.Connection
 import scala.Option.option2Iterable
 import scala.math.BigDecimal.long2bigDecimal
+import play.api.Play.current
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.async.dispatch
 import com.keepit.common.controller.FortyTwoController
-import com.keepit.common.db.{CX, ExternalId, Id, State}
-import com.keepit.common.db.slick.{Repo, DBConnection}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
 import com.keepit.common.social.CommentWithSocialUser
@@ -21,7 +24,6 @@ import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
-import play.api.Play.current
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
@@ -74,13 +76,13 @@ object CommentController extends FortyTwoController {
 
       permissions.toLowerCase match {
         case "private" =>
-          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = text, permissions = CommentPermissions.PRIVATE, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PRIVATE, parent = parentIdOpt).save
         case "message" =>
-          val newComment = Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = text, permissions = CommentPermissions.MESSAGE, parent = parentIdOpt).save
+          val newComment = Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt).save
           createRecipients(newComment.id.get, recipients, parentIdOpt)
           newComment
         case "public" | "" =>
-          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = text, permissions = CommentPermissions.PUBLIC, parent = parentIdOpt).save
+          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = parentIdOpt).save
         case _ =>
           throw new Exception("Invalid comment permission")
       }
