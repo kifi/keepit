@@ -204,7 +204,7 @@ slider = function() {
 
     // Event bindings
     $(".kifi-slider").draggable({cursor: "move", axis: "y", distance: 10, handle: ".kifi-slider-title-bar", containment: "body", scroll: false})
-    .on("click", ".xlink", function() {
+    .on("click", ".kifi-slider-x", function() {
       slideOut("x");
     })
     .on("click", ".unkeepitbtn", function() {
