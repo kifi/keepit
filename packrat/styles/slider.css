@@ -585,10 +585,6 @@
   line-height: 13px;
 }
 
-.kifi-comment-wrapper .comment_body {
-
-}
-
 .kifi-comment-wrapper .comment_body b {
   font-weight: 800;
 }
@@ -621,27 +617,8 @@
   cursor: pointer;
 }
 
-.tabs li {
-  list-style:none;
-  display:inline;
-}
-
-.tabs span {
-  padding:5px 10px;
-  display:inline-block;
-  border: 1px solid rgb(190, 190, 190);
-  text-decoration:none;
-  top:1px;
-  position:relative;
-  border-radius: 5px 5px 0px 0px;
-}
-
-.tabs .active {
-    border-bottom: 1px solid #FAF9F9;
-}
-
 @media print {
   .kifi-slider {
-      display:none !important;
+    display: none !important;
   }
 }
