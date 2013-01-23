@@ -90,6 +90,7 @@
   position:relative;
   display: table;
 }
+
 /*Header*/
 .kifi-slider-title-bar {
   margin: 0;
@@ -98,6 +99,27 @@
   padding-right: 25px;
   cursor: move;
 }
+.kifi-slider-title-pic-border {
+  position:absolute;
+  top:-15px;
+  left:-20px;
+  width: 45px;
+  height: 45px;
+  border: 5px solid #414b52;
+  border-radius: 50px;
+  background-color: #fff;
+}
+.kifi-slider-title-pic {
+  border: 2px solid white;
+  width: 45px;
+  height: 45px;
+  border-radius: 50px;
+  background-color:#ff0000;
+  position:relative;
+  top:-2px;
+  left:-2px;
+}
+
 /*footer*/
 .kifi-slider .kififtr {
   margin:0;
@@ -240,26 +262,6 @@
     color: #414b52;
 }
 
-.kifi-slider .circular {
-  border: 2px solid white;
-  width: 45px;
-  height: 45px;
-  border-radius: 50px;
-  background-color:#ff0000;
-  position:relative;
-  top:-2px;
-  left:-2px;
-}
-.kifi-slider .imageborder {
-  border: 5px solid #414b52;
-  width: 45px;
-  height: 45px;
-  border-radius: 50px;
-  position:absolute;
-  top:-15px;
-  left:-20px;
-}
-
 .kifi-slider .socialinnerbox {
   padding:7px 10px;
   background-color: #FAFAFA;
@@ -268,7 +270,6 @@
   font-size:14px;
   color: #414b52;
 }
-
 
 .kifi-slider .social_friend {
   width:36px;
@@ -358,10 +359,6 @@
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;*/
-}
-
-.kifi-slider .profilepic {
-  background-color: #fff;
 }
 
 .kifi-slider .moreinnerbox {
