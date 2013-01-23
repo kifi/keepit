@@ -3,10 +3,15 @@ package com.keepit.model
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
-
-import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
 import com.keepit.test.EmptyApplication
+
+import play.api.Play.current
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.LargeString._
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
 
@@ -51,8 +56,8 @@ class CommentTest extends SpecificationWithJUnit {
     "add comments" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
-        CX.withConnection { implicit conn =>
-          CommentCxRepo.all.length === 9
+        inject[DBConnection].readOnly {implicit s =>
+          inject[CommentRepo].all.length === 9
         }
       }
     }

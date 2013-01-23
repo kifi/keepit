@@ -8,6 +8,7 @@ import play.api.test._
 import play.api.test.Helpers._
 import com.keepit.inject._
 import com.keepit.common.db.Id
+import com.keepit.common.db.LargeString._
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
 import com.keepit.test.EmptyApplication
