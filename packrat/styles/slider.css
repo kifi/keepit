@@ -36,11 +36,15 @@
 .kifi-slider span {
   display: inline;
 }
+.kifi-slider img {
+  display: inline-block;
+}
 .kifi-slider a:link,
 .kifi-slider a:visited,
 .kifi-slider a:link:hover,
 .kifi-slider a:visited:hover {
   color: -webkit-link;
+  color: -moz-hyperlinktext;
   text-decoration: underline;
   cursor: pointer;
 }
