@@ -67,7 +67,6 @@ class UsefulPageListener extends EventListenerPlugin {
         (user, url, normUrl)
       }
       // handle UsefulPageListener
-      println("\n\n************************" + url + "\n\n")
       normUrl.foreach(n => browsingHistoryTracker.add(user.id.get, n.id.get))
   }
 }
