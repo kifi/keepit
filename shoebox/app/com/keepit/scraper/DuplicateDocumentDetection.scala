@@ -86,15 +86,18 @@ class DuplicateDocumentDetection extends Logging {
 
      val docs = findDupeDocuments()
 
-     val dupeDocumentsCount = docs.size
+     var dupeDocumentsCount = 0
      val dupeRepo = inject[DuplicateDocumentRepo]
      inject[DBConnection].readWrite { implicit conn =>
        docs.foreach { similarDoc =>
          val id = similarDoc._1
          val similars = similarDoc._2
          similars.foreach { case (otherId, percentMatch) =>
-           val dupeDoc = DuplicateDocument(uri1Id = id, uri2Id = otherId, percentMatch = percentMatch)
-           dupeRepo.save(dupeDoc)
+           if(dupeRepo.getSimilarTo(otherId).isEmpty) {
+             val dupeDoc = DuplicateDocument(uri1Id = id, uri2Id = otherId, percentMatch = percentMatch)
+             dupeRepo.save(dupeDoc)
+             dupeDocumentsCount += 1
+           }
          }
        }
      }

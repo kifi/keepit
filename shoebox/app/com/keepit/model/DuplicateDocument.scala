@@ -70,6 +70,7 @@ class DuplicateDocumentRepoImpl @Inject() (val db: DataBaseComponent) extends Db
     } yield f
     q.list
   }
+
 }
 
 object DuplicateDocumentStates {

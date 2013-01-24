@@ -109,6 +109,48 @@ object ScraperController extends FortyTwoController {
     Ok(views.html.documentIntegrity(loadedDupes))
   }
 
+  def typedAction(action: String) = action match {
+    case "ignore" => DuplicateDocumentStates.IGNORED
+    case "merge" => DuplicateDocumentStates.MERGED
+    case "unscrapable" => DuplicateDocumentStates.UNSCRAPABLE
+  }
+
+  def handleDuplicate = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get
+    val action = typedAction(body("action").head)
+    val id = Id[DuplicateDocument](body("id").head.toLong)
+
+    val dupeRepo = inject[DuplicateDocumentRepo]
+    action match {
+      case DuplicateDocumentStates.MERGED =>
+        //val d = dupeRepo.get(id)
+        //mergeUris(d.uri1Id, d.uri2Id)
+      case _ =>
+    }
+
+    inject[DBConnection].readWrite { implicit session =>
+      dupeRepo.save(dupeRepo.get(id).withState(action))
+    }
+    Ok
+  }
+
+  def mergeUris(parentId: Id[NormalizedURI], childId: Id[NormalizedURI]) = {
+
+  }
+
+  def handleDuplicates = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get
+    val action = body("action").head
+    val id = Id[NormalizedURI](body("id").head.toLong)
+    inject[DBConnection].readWrite { implicit session =>
+      val dupeRepo = inject[DuplicateDocumentRepo]
+      dupeRepo.getSimilarTo(id) map { dupe =>
+        dupeRepo.save(dupe.withState(typedAction(action)))
+      }
+    }
+    Ok
+  }
+
   def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
     val dupeDetect = new DuplicateDocumentDetection
     dupeDetect.asyncProcessDocuments()
