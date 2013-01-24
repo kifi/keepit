@@ -587,34 +587,6 @@ ul.kifi-tab-bar {
   font-weight: 800;
 }
 
-.kifi-comment-wrapper .postbtn {
-  padding:5px;
-  padding-left:30px;
-  padding-right:30px;
-  border-radius: 2px 0px 0px 2px;
-  margin-top:2px;
-}
-
-.kifi-comment-wrapper #comment_list {
-  max-height: 270px;
-  width:260px;
-  border: 1px solid rgb(190, 190, 190);
-  overflow:auto;
-  border-bottom: 0px;
-}
-
-.kifi-content .comments_label, .kifi-content .messages_label {
-  margin-top: 6px;
-  font-size: 12px;
-  text-decoration: none;
-  color: #7E7E7E;
-}
-.kifi-content .comments_label:hover, .kifi-content .messages_label:hover {
-  text-decoration: underline;
-  color: #666;
-  cursor: pointer;
-}
-
 @media print {
   .kifi-slider {
     display: none !important;
