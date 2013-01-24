@@ -148,40 +148,74 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight {
 }
 
 class TopLevelScorer(weight: TopLevelWeight, textScorer: Scorer) extends Scorer(weight) {
-  override def docID(): Int = textScorer.docID()
-  override def nextDoc(): Int = textScorer.nextDoc()
-  override def advance(target: Int): Int = textScorer.advance(target)
-  override def score() = textScorer.score()
+  protected var doc = -1
+  protected var scoredDoc = -1
+  protected var scr = 0.0f
+  protected var textScore = 0.0f
+  protected var semanticVectorScore = 0.0f
+  protected var proximityScore = 0.0f
 
-  def textScore() = textScorer.score()
-  def semanticVectorScore() = 0.0f
-  def proximityScore() = 0.0f
-
+  override def docID(): Int = doc
+  override def nextDoc(): Int = {
+    doc = textScorer.nextDoc()
+    doc
+  }
+  override def advance(target: Int): Int = {
+    doc = textScorer.advance(target)
+    doc
+  }
+  override def score() = {
+    if (doc != scoredDoc) {
+      scoredDoc = doc
+      textScore = textScorer.score()
+      scr = textScore
+    }
+    scr
+  }
 }
 
 class TopLevelScorerNoProximity(weight: TopLevelWeight, textScorer: Scorer, semanticVectorScorer: Scorer) extends TopLevelScorer(weight, textScorer) {
   override def score(): Float = {
-    val doc = textScorer.docID()
-    var sum = textScorer.score()
-    if (semanticVectorScorer.docID() < doc) semanticVectorScorer.advance(doc)
-    if (semanticVectorScorer.docID() == doc) sum += semanticVectorScorer.score()
-    sum
+    if (doc != scoredDoc) {
+      scoredDoc = doc
+      textScore = textScorer.score()
+      var sum = textScore
+      if (semanticVectorScorer.docID() < doc) semanticVectorScorer.advance(doc)
+      if (semanticVectorScorer.docID() == doc) {
+        semanticVectorScore = semanticVectorScorer.score()
+        sum += semanticVectorScore
+      } else {
+        semanticVectorScore = 0.0f
+      }
+      scr = sum
+    }
+    scr
   }
-  override def semanticVectorScore() = semanticVectorScorer.score()
-  override def proximityScore() = 0.0f
 }
 
 class TopLevelScorerWithProximity(weight: TopLevelWeight, textScorer: Scorer, semanticVectorScorer: Scorer, proximityScorer: Scorer) extends TopLevelScorer(weight, textScorer) {
   override def score(): Float = {
-    val doc = textScorer.docID()
-    var sum = textScorer.score()
-    if (semanticVectorScorer.docID() < doc) semanticVectorScorer.advance(doc)
-    if (semanticVectorScorer.docID() == textScorer.docID()) sum += semanticVectorScorer.score()
-    if (proximityScorer.docID() < doc) proximityScorer.advance(doc)
-    if (proximityScorer.docID() == doc) sum += proximityScorer.score()
-    sum
+    if (doc != scoredDoc) {
+      scoredDoc = doc
+      textScore = textScorer.score()
+      var sum = textScore
+      if (semanticVectorScorer.docID() < doc) semanticVectorScorer.advance(doc)
+      if (semanticVectorScorer.docID() == doc) {
+        semanticVectorScore = semanticVectorScorer.score()
+        sum += semanticVectorScore
+      } else {
+        semanticVectorScore = 0.0f
+      }
+      if (proximityScorer.docID() < doc) proximityScorer.advance(doc)
+      if (proximityScorer.docID() == doc) {
+        proximityScore = proximityScorer.score()
+        sum += proximityScore
+      } else {
+        proximityScore = 0.0f
+      }
+      scr = sum
+    }
+    scr
   }
-  override def semanticVectorScore() = semanticVectorScorer.score()
-  override def proximityScore() = proximityScorer.score()
-}
+ }
 
