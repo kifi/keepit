@@ -146,20 +146,16 @@
 }
 
 /*footer*/
-.kifi-slider .kififtr {
-  margin:0;
-  bottom: 0px;
+.kifi-slider-footer {
   border-top: 1px solid #E2E2E2;
-  padding-top: 10px;
+  padding: 10px 0 0 20px;
   height: 20px;
-  padding-left:20px;
   font-family: "helvetica neue", Helvetica, Arial, sans-serif;
   font-size: 11px;
   color: #8c8484;
 }
-
-.kifi-slider .kififtr .close-message,
-.kifi-slider .kififtr .keepit-message {
+.kifi-slider-footer .close-message,
+.kifi-slider-footer .keepit-message {
   cursor: pointer;
 }
 

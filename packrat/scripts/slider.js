@@ -290,9 +290,9 @@ slider = function() {
     }
 
     renderTemplate("html/footer.html", footerParams, function(renderedTemplate) {
-      $('.kififtr').html(renderedTemplate);
+      $('.kifi-slider-footer').html(renderedTemplate);
 
-      $('.kififtr .footer-bar').on('mousedown','.close-message', function() {
+      $('.kifi-slider-footer .footer-bar').on('mousedown','.close-message', function() {
         showComments(); // called with no params, hides comments/messages
       })
       .on('mousedown', '.footer-keepit', function(e) {
