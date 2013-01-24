@@ -1,9 +1,11 @@
 package com.keepit.model
 
-import java.sql.{Connection, Clob}
+import java.sql.Connection
 import scala.annotation.elidable
 import org.joda.time.DateTime
+import play.api.Play.current
 import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
