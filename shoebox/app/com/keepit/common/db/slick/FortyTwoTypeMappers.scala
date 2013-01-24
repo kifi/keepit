@@ -37,6 +37,10 @@ object FortyTwoTypeMappers {
   }
 
   //Ids
+  implicit object CommentIdTypeMapper extends BaseTypeMapper[Id[Comment]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Comment]
+  }
+
   implicit object SocialUserInfoIdTypeMapper extends BaseTypeMapper[Id[SocialUserInfo]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[SocialUserInfo]
   }

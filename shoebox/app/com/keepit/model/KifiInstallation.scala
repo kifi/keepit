@@ -1,8 +1,11 @@
 package com.keepit.model
 
-import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
-import com.keepit.common.db.NotFoundException
-import com.keepit.common.db.StateException
+import play.api.Play.current
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
 import java.security.SecureRandom
@@ -81,7 +84,9 @@ case class KifiInstallation (
   version: KifiVersion,
   userAgent: UserAgent,
   state: State[KifiInstallation] = KifiInstallationStates.ACTIVE
-) extends Logging {
+) extends ModelWithExternalId[KifiInstallation] {
+  def withId(id: Id[KifiInstallation]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
   def save(implicit conn: Connection): KifiInstallation = {
     val entity = KifiInstallationEntity(this.copy(updatedAt = currentDateTime))
