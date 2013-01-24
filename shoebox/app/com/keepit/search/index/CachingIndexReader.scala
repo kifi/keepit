@@ -24,9 +24,7 @@ class CachingIndexReader(val invertedLists: Map[Term, InvertedList]) extends Ind
   var maxDoc: Int = 0
 
   def split(remappers: Map[String, DocIdRemapper]): Map[String, CachingIndexReader] = {
-    var subReaders = Map.empty[String, CachingIndexReader]
-
-    def split(invertedLists: Map[Term, InvertedList], name: String, remapper: DocIdRemapper) = {
+    val (subReaders, remainder) = remappers.foldLeft(Map.empty[String, CachingIndexReader], invertedLists){ case ((subReaders, invertedLists), (name, remapper)) =>
       var remapped = Map.empty[Term, InvertedList]
       var remainder = Map.empty[Term, InvertedList]
       invertedLists.foreach{ case (t, l) =>
@@ -34,15 +32,9 @@ class CachingIndexReader(val invertedLists: Map[Term, InvertedList]) extends Ind
         remapped += (t -> list1)
         remainder += (t -> list2)
       }
-      subReaders += (name -> new CachingIndexReader(remapped))
-      remainder
+      (subReaders + (name -> new CachingIndexReader(remapped)), remainder)
     }
-
-    val remainder = remappers.foldLeft(invertedLists){ case (remainder, (name, remapper)) =>
-      split(remainder, name, remapper)
-    }
-    subReaders += ("" -> new CachingIndexReader(remainder))
-    subReaders
+    if (remainder.isEmpty) subReaders else subReaders + ("" -> new CachingIndexReader(remainder))
   }
 
   override def docFreq(term: Term) = {
