@@ -24,9 +24,9 @@ object SemanticVectorQuery {
   def apply(fieldName: String, terms: Set[Term]) = new SemanticVectorQuery(terms.map{ term => new Term(fieldName, term.text) })
 }
 
-class SemanticVectorQuery(val terms: Set[Term]) extends Query {
+class SemanticVectorQuery(val terms: Set[Term]) extends Query2 {
 
-  override def createWeight(searcher: LuceneSearcher): Weight = new SemanticVectorWeight(this, searcher.asInstanceOf[Searcher])
+  override def createWeight2(searcher: Searcher): Weight = new SemanticVectorWeight(this, searcher)
 
   override def rewrite(reader: IndexReader): Query = this
 

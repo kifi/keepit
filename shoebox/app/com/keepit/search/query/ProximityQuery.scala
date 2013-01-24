@@ -1,12 +1,12 @@
 package com.keepit.search.query
 
+import com.keepit.search.index.Searcher
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.TermPositions
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
-import org.apache.lucene.search.Searcher
 import org.apache.lucene.search.ComplexExplanation
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.Similarity
@@ -23,13 +23,9 @@ object ProximityQuery {
   def apply(terms: Seq[Term]) = new ProximityQuery(terms)
 }
 
-class ProximityQuery(val terms: Seq[Term]) extends Query {
+class ProximityQuery(val terms: Seq[Term]) extends Query2 {
 
-  override def createWeight(searcher: Searcher): Weight = {
-    val similarity = searcher.getSimilarity
-    val numDocs = searcher.maxDoc()
-    new ProximityWeight(this)
-  }
+  override def createWeight2(searcher: Searcher): Weight = new ProximityWeight(this)
 
   override def rewrite(reader: IndexReader): Query = this
 

@@ -21,12 +21,12 @@ import org.apache.lucene.search.DefaultSimilarity
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
-import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
 import org.apache.lucene.document.Field
 import org.apache.lucene.search.DocIdSetIterator
+import com.keepit.search.index.Searcher
 
 @RunWith(classOf[JUnitRunner])
 class ProximityQueryTest extends SpecificationWithJUnit {
@@ -62,7 +62,7 @@ class ProximityQueryTest extends SpecificationWithJUnit {
     IndexReader.open(ramDir)
   }
 
-  val searcher = new IndexSearcher(indexReader)
+  val searcher = Searcher(indexReader)
 
   "ProximityQuery" should {
 
