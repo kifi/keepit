@@ -113,7 +113,7 @@ object UserController extends FortyTwoController {
   }
 
   def userStatistics(user: User)(implicit conn: Connection): UserStatistics = {
-    val kifiInstallations = KifiInstallationCxRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3).reverse
+    val kifiInstallations = KifiInstallationCxRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
     UserStatistics(user, UserWithSocial.toUserWithSocial(user), kifiInstallations)
   }
 
