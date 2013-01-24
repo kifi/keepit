@@ -37,7 +37,7 @@ import play.api.libs.json.JsArray
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail._
 
-case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConnectionCount: Long, kifiInstallations: Seq[KifiInstallation])
+case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstallations: Seq[KifiInstallation])
 
 object UserController extends FortyTwoController {
 
@@ -113,9 +113,8 @@ object UserController extends FortyTwoController {
   }
 
   def userStatistics(user: User)(implicit conn: Connection): UserStatistics = {
-    val socialConnectionCount = SocialConnectionCxRepo.getUserConnections(user.id.get).size
-    val kifiInstallations = KifiInstallationCxRepo.all(user.id.get).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
-    UserStatistics(user, UserWithSocial.toUserWithSocial(user), socialConnectionCount, kifiInstallations)
+    val kifiInstallations = KifiInstallationCxRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(2)
+    UserStatistics(user, UserWithSocial.toUserWithSocial(user), kifiInstallations)
   }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
