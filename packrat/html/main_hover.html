@@ -22,12 +22,12 @@
   </span>
 </div>
 {{/socialConnections}}
-<div class="buttonwrapper">
+<div class="kifi-buttons">
 {{#is_kept}}
-  <span class="kbutton unkeepitbtn">Un-Keep it</span> <span class="kbutton makeprivatebtn">Make it {{#private}}Public{{/private}}{{^private}}Private{{/private}}</span></span>
+  <span class="kifi-button kifi-button-unkeep">Un-Keep it</span> <span class="kifi-button kifi-button-private">Make it {{#private}}Public{{/private}}{{^private}}Private{{/private}}</span></span>
 {{/is_kept}}
 {{^is_kept}}
-  <span class="kbutton keepitbtn">Keep it</span><span class="kbutton dropdownbtn"><span class="kifi_toggle">&#9662;</span></span>
+  <span class="kifi-button kifi-button-keep">Keep it</span><span class="kifi-button kifi-button-dropdown"><span class="kifi_toggle">&#9662;</span></span>
 {{/is_kept}}
 </div>
 <div class="moreinnerbox"><label for="keepit_private"><input type='checkbox' id='keepit_private' class='keepit_private' value='private'> Keep this link private</label></div>

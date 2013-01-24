@@ -207,13 +207,13 @@ slider = function() {
     .on("click", ".kifi-slider-x", function() {
       slideOut("x");
     })
-    .on("click", ".unkeepitbtn", function() {
+    .on("click", ".kifi-button-unkeep", function() {
       unkeepPage(true);
     })
-    .on("click", ".keepitbtn", function() {
+    .on("click", ".kifi-button-keep", function() {
       keepPage(true);
     })
-    .on("click", ".makeprivatebtn", function() {
+    .on("click", ".kifi-button-private", function() {
       var $btn = $(this), priv = /private/i.test($btn.text());
       api.log("[setPrivate]", priv);
       api.port.emit("set_private", priv, function(o) {
@@ -221,7 +221,7 @@ slider = function() {
         $btn.text("Make it " + (priv ? "Public" : "Private"));
       });
     })
-    .on("click", ".dropdownbtn", function() {
+    .on("click", ".kifi-button-dropdown", function() {
       $('.moreinnerbox').slideToggle(150);
     })
     .on("click", ".kifi-tab-comments", function() {
