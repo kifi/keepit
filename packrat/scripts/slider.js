@@ -290,18 +290,17 @@ slider = function() {
     }
 
     renderTemplate("html/footer.html", footerParams, function(renderedTemplate) {
-      $('.kifi-slider-footer').html(renderedTemplate);
-
-      $('.kifi-slider-footer .footer-bar').on('mousedown','.close-message', function() {
+      $(".kifi-slider-footer").html(renderedTemplate)
+      .on("mousedown", ".kifi-footer-close", function() {
         showComments(); // called with no params, hides comments/messages
       })
-      .on('mousedown', '.footer-keepit', function(e) {
+      .on("mousedown", ".kifi-footer-keep", function(e) {
         e.preventDefault();
         keepPage(false);
         redrawFooter(showFooterNav, type);
         // TODO: update message/buttons on main panel
       })
-      .on('mousedown', '.footer-unkeepit', function(e) {
+      .on("mousedown", ".kifi-footer-unkeep", function(e) {
         e.preventDefault();
         unkeepPage(false);
         redrawFooter(showFooterNav, type);

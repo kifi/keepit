@@ -154,9 +154,18 @@
   font-size: 11px;
   color: #8c8484;
 }
-.kifi-slider-footer .close-message,
-.kifi-slider-footer .keepit-message {
+.kifi-footer-close,
+.kifi-footer-keep,
+.kifi-footer-unkeep {
   cursor: pointer;
+}
+.kifi-footer-logo {
+  margin-right: 20px;
+  padding: 10px 25px;
+  background-repeat: no-repeat;
+  background-position: top;
+  background-size: 25px;
+  float: right;
 }
 
 /*content*/
@@ -165,15 +174,6 @@
   font-family: "helvetica neue", Helvetica, Arial, sans-serif;
   font-size: 12px;
   padding-right:20px;
-}
-
-.kifi-slider .kifilogo {
-  margin-right: 20px;
-  padding:10px 25px;
-  background-position: top;
-  background-size: 25px;
-  position:relative;
-  float:right;
 }
 
 .kifi-slider .kept {
