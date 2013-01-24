@@ -32,25 +32,11 @@ object LineIndexReader {
       if (tp.skipTo(userDocId) && tp.doc() == userDocId) {
         val invertedList = new InvertedListBuilder
         val freq = tp.freq()
-        val list = new Array[Int](freq)
         var i = 0
-        var docFreq = 0
         var curDoc = -1
+        val plist = new ArrayBuffer[Int]
         while (i < freq) {
           val pos = tp.nextPosition()
-          val docid = pos / LineField.MAX_POSITION_PER_LINE
-          if (docid != curDoc) {
-            curDoc = docid
-            docFreq += 1
-          }
-          list(i) = pos
-          i += 1
-        }
-        val plist = new ArrayBuffer[Int]
-        i = 0
-        curDoc = -1
-        while (i < list.length) {
-          val pos = list(i)
           val docid = pos / LineField.MAX_POSITION_PER_LINE
           if (docid != curDoc) {
             if (curDoc >= 0) invertedList.add(curDoc, plist.toArray)
