@@ -224,10 +224,10 @@ slider = function() {
     .on("click", ".dropdownbtn", function() {
       $('.moreinnerbox').slideToggle(150);
     })
-    .on("click", ".comments-label", function() {
+    .on("click", ".kifi-tab-comments", function() {
       showComments(session, "public");
     })
-    .on("click", ".messages-label", function() {
+    .on("click", ".kifi-tab-messages", function() {
       showComments(session, "message", null, $('.thread-wrapper').length > 0);
     })
     .on("mousedown click keydown keypress keyup", function(e) {
@@ -365,7 +365,7 @@ slider = function() {
       }
     }
 
-    $(".kifi-slider").data("view", type).removeClass("public message").addClass(type);
+    $(".kifi-slider").data("view", type).removeClass("kifi-public kifi-message").addClass("kifi-" + type);
 
     api.port.emit("get_comments", {kind: type, commentId: id}, function(comments) {
       api.log("[showComments] comments:", comments);
@@ -451,7 +451,7 @@ slider = function() {
   function updateCommentCount(type, count) {
     count = count != null ? count : $(".real-comment").length; // if no count passed in, count DOM nodes
 
-    $({"public": ".comments-count", "message": ".messages-count"}[type])
+    $({"public": ".kifi-tab-count-comments", "message": ".kifi-tab-count-messages"}[type])
       .text(count)
       .toggleClass("zero_comments", count == 0);
   }
@@ -895,8 +895,8 @@ slider = function() {
         api.log("new message", newComment);
         // Clean up CSS
 
-        if(!isReply) {
-          updateCommentCount(type,parseInt($('.messages-count').text()) + 1)
+        if (!isReply) {
+          updateCommentCount(type, +$(".kifi-tab-count-messages").text() + 1);
           api.log("not a reply. redirecting to new message");
           showComments(session, type, newComment.message.externalId);
           return;

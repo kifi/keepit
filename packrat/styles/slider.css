@@ -184,13 +184,14 @@
   color: #a0a5a9;
 }
 
-.kifi-slider ul.interaction-bar {
+/* tab bar */
+ul.kifi-tab-bar {
   margin: 0;
   padding: 0 20px 0 0;
   text-align: right;
   background: #E0E0E0;
 }
-.kifi-slider .interaction-bar li {
+.kifi-tab-bar li {
   list-style: none;
   display: inline-block;
   margin: 0;
@@ -201,27 +202,28 @@
   cursor: pointer;
   background-color: #E0E0E0;
 }
-.kifi-slider .interaction-bar li:hover {
+.kifi-tab-bar li:hover {
   background-color: #ECECEC;
 }
-.kifi-slider .interaction-bar li:active,
-.kifi-slider.public li.comments-label,
-.kifi-slider.message li.messages-label {
+.kifi-tab-bar li:active,
+.kifi-public li.kifi-tab-comments,
+.kifi-message li.kifi-tab-messages {
   background-color: #FAFAFA;
 }
-.kifi-slider .interaction-bar .notify-count {
+.kifi-tab-bar .kifi-tab-count {
   background-color: #666;
   border-radius: 5px;
   color: #FAFAFA;
   padding: 2px 6px;
   margin-right: 3px;
 }
-.kifi-slider .interaction-bar .comments-count {
+.kifi-tab-bar .kifi-tab-count-comments {
   background-color: #6BB4DC;
 }
-.kifi-slider .interaction-bar .messages-count {
+.kifi-tab-bar .kifi-tab-count-messages {
   background-color: #EF8299;
 }
+
 
 .kifi-slider .friendlist {
   padding:5px;
@@ -570,10 +572,10 @@
 }
 
 .kifi-comment-wrapper .comment_user img {
-  width:30px;
-  height:30px;
+  width: 30px;
+  height: 30px;
   border-radius: 2px;
-  float:left;
+  float: left;
   position: relative;
   margin-right: 5px;
   clear: both;
