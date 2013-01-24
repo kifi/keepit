@@ -5,6 +5,7 @@ import com.keepit.search.index.QueryParser
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.ProximityQuery
 import com.keepit.search.query.SemanticVectorQuery
+import com.keepit.search.query.TopLevelQuery
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.analysis.Analyzer
@@ -59,13 +60,10 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
       val terms = QueryUtil.getTerms(query)
       if (terms.size <= 0) query
       else {
-        val booleanQuery = new BooleanQuery(true)
         query.setBoost(baseBoost)
-        booleanQuery.add(query, Occur.MUST)
 
         val svq = SemanticVectorQuery("sv", terms)
         svq.setBoost(semanticBoost)
-        booleanQuery.add(svq, Occur.SHOULD)
 
         val proxQ = new BooleanQuery(true)
         val csterms = QueryUtil.getTermSeq("cs", query)
@@ -75,13 +73,14 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
         if (tsterms.size > 1) proxQ.add(ProximityQuery(tsterms), Occur.SHOULD)
         if (psterms.size > 1) proxQ.add(ProximityQuery(psterms), Occur.SHOULD)
         val clauses = proxQ.getClauses()
-        if (clauses.length == 1) {
-          booleanQuery.add(clauses(0).getQuery(), Occur.SHOULD)
+        val proxOpt = if (clauses.length == 1) {
+          Some(clauses(0).getQuery)
         } else if (clauses.length > 1) {
-          booleanQuery.add(proxQ, Occur.SHOULD)
+          Some(proxQ)
+        } else {
+          None
         }
-
-        booleanQuery
+        new TopLevelQuery(query, svq, proxOpt)
       }
     }
   }

@@ -1,7 +1,11 @@
 package com.keepit.model
 
-import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
-import com.keepit.common.db.NotFoundException
+import play.api.Play.current
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
 import java.security.SecureRandom
@@ -20,8 +24,10 @@ case class CommentRecipient(
   socialUserId: Option[Id[SocialUserInfo]] = None,
   email: Option[String] = None, // change me?
   state: State[CommentRecipient] = CommentRecipientStates.ACTIVE
-) {
+) extends Model[CommentRecipient] {
   require(userId.isDefined || socialUserId.isDefined || email.isDefined)
+  def withId(id: Id[CommentRecipient]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
   def withState(state: State[CommentRecipient]) = copy(state = state)
   def withUser(userId: Id[User]) = copy(userId = Some(userId), socialUserId = None, email = None)
@@ -35,8 +41,49 @@ case class CommentRecipient(
     assert(1 == entity.save())
     entity.view
   }
-
 }
+
+@ImplementedBy(classOf[CommentRecipientRepoImpl])
+trait CommentRecipientRepo extends Repo[CommentRecipient] {
+  def getByComment(commentId: Id[Comment])(implicit session: RSession): Seq[CommentRecipient]
+  def getBySocialUser(socialUserId: Id[SocialUserInfo])(implicit session: RSession): Seq[CommentRecipient]
+  def getByUser(userId: Id[User])(implicit session: RSession): Seq[CommentRecipient]
+  def getByEmail(email: String)(implicit session: RSession): Seq[CommentRecipient]
+}
+
+@Singleton
+class CommentRecipientRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[CommentRecipient] with CommentRecipientRepo {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
+
+  override lazy val table = new RepoTable[CommentRecipient](db, "comment_recipient") {
+    def commentId = column[Id[Comment]]("comment_id", O.NotNull)
+    def userId = column[Id[User]]("user_id", O.Nullable)
+    def socialUserId = column[Id[SocialUserInfo]]("social_user_id", O.Nullable)
+    def email = column[String]("email", O.Nullable)
+    def * = id.? ~ createdAt ~ updatedAt ~ commentId ~ userId.? ~ socialUserId.? ~ email.? ~ state <> (CommentRecipient, CommentRecipient.unapply _)
+  }
+
+  def getByComment(commentId: Id[Comment])(implicit session: RSession): Seq[CommentRecipient] =
+    (for(f <- table if f.commentId === commentId && f.state === CommentRecipientStates.ACTIVE) yield f).list
+
+  def getBySocialUser(socialUserId: Id[SocialUserInfo])(implicit session: RSession): Seq[CommentRecipient] =
+    (for(f <- table if f.socialUserId === socialUserId && f.state === CommentRecipientStates.ACTIVE) yield f).list
+
+  def getByUser(userId: Id[User])(implicit session: RSession): Seq[CommentRecipient] =
+    (for(f <- table if f.userId === userId && f.state === CommentRecipientStates.ACTIVE) yield f).list
+
+  def getByEmail(email: String)(implicit session: RSession): Seq[CommentRecipient] =
+    (for(f <- table if f.email === email && f.state === CommentRecipientStates.ACTIVE) yield f).list
+}
+
+
+
 
 object CommentRecipientCxRepo {
 

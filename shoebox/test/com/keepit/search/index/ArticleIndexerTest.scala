@@ -23,6 +23,7 @@ import org.apache.lucene.store.RAMDirectory
 import com.keepit.search.graph.UserToUserEdgeSet
 import scala.math._
 import scala.collection.JavaConversions._
+import com.keepit.search.MainQueryParser
 
 @RunWith(classOf[JUnitRunner])
 class ArticleIndexerTest extends SpecificationWithJUnit {
@@ -44,6 +45,19 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
         titleLang = Some(Lang("en")),
         contentLang = Some(Lang("en")))
   }
+
+  class Searchable(indexer: ArticleIndexer) {
+    def search(queryString: String, percentMatch: Float = 0.0f): Seq[Hit] = {
+      val parser = MainQueryParser(Lang("en"), 0.0f, 0.0f)
+      parser.setPercentMatch(percentMatch)
+      val searcher = indexer.getSearcher
+      parser.parseQuery(queryString) match {
+        case Some(query) => searcher.search(query)
+        case None => Seq.empty[Hit]
+      }
+    }
+  }
+  implicit def toSearchable(indexer: ArticleIndexer) = new Searchable(indexer)
 
   "ArticleIndexer" should {
     "index scraped URIs" in {
@@ -163,58 +177,50 @@ class ArticleIndexerTest extends SpecificationWithJUnit {
     "limit the result by percentMatch" in {
       val indexer = ArticleIndexer(ramDir, store)
 
-      val parser = indexer.getQueryParser(Lang("en"))
-
-      var res = indexer.search("title1 alldocs")
+      var res = indexer.search("title1 alldocs", percentMatch = 0.0f)
       res.size === 3
 
-      parser.setPercentMatch(50)
-      res = indexer.getArticleSearcher.search(parser.parseQuery("title1 alldocs").get)
+      res = indexer.search("title1 alldocs", percentMatch = 50.0f)
       res.size === 3
 
-      parser.setPercentMatch(60)
-      res = indexer.getArticleSearcher.search(parser.parseQuery("title1 alldocs").get)
+      res = indexer.search("title1 alldocs", percentMatch = 60.0f)
       res.size === 1
 
-      parser.setPercentMatch(60)
-      res = indexer.getArticleSearcher.search(parser.parseQuery("title1 title2 alldocs").get)
+      res = indexer.search("title1 title2 alldocs", percentMatch = 60.0f)
       res.size === 2
 
-      parser.setPercentMatch(75)
-      res = indexer.getArticleSearcher.search(parser.parseQuery("title1 title2 alldocs").get)
+      res = indexer.search("title1 title2 alldocs", percentMatch = 75.0f)
       res.size === 0
     }
 
     "limit the result by site" in {
       val indexer = ArticleIndexer(ramDir, store)
 
-      val parser = indexer.getQueryParser(Lang("en"))
-
       var res = indexer.search("alldocs")
       res.size === 3
 
-      res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs site:com").get)
+      res = indexer.search("alldocs site:com")
       res.size === 2
 
-      res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs site:org").get)
+      res = indexer.search("alldocs site:org")
       res.size === 1
 
-      res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs site:keepit.com").get)
+      res = indexer.search("alldocs site:keepit.com")
       res.size === 1
 
-      res = indexer.getArticleSearcher.search(parser.parseQuery("site:com").get)
+      res = indexer.search("site:com")
       res.size === 2
 
-      res = indexer.getArticleSearcher.search(parser.parseQuery("site:keepit.com").get)
+      res = indexer.search("site:keepit.com")
       res.size === 1
 
-      res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs site:com -site:keepit.org").get)
+      res = indexer.search("alldocs site:com -site:keepit.org")
       res.size === 2
 
-      res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs site:com -site:keepit.com").get)
+      res = indexer.search("alldocs site:com -site:keepit.com")
       res.size === 1
 
-      res = indexer.getArticleSearcher.search(parser.parseQuery("alldocs -site:keepit.org").get)
+      res = indexer.search("alldocs -site:keepit.org")
       res.size === 2
     }
 

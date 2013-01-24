@@ -1,7 +1,10 @@
-<span class="footer-bar">
-  {{#showFooterNav}}
-  <span class="close-message">{{#isMessages}}Close Messages{{/isMessages}}{{^isMessages}}Close Comments{{/isMessages}}</span> &#183; 
-  <span class="keepit-message">{{#isKept}}<span class="footer-unkeepit">Un-keep it</span>{{/isKept}}{{^isKept}}<span class="footer-keepit">Keep it</span>{{/isKept}}</span>
-  {{/showFooterNav}}
-  <span class="kifilogo" style="background: url({{logo}}) no-repeat; background-position: top; background-size: 25px;"></span>
-</span>
+{{#showFooterNav}}
+  <span class="kifi-footer-close">Close {{#isMessages}}Messages{{/isMessages}}{{^isMessages}}Comments{{/isMessages}}</span> &#183;
+  {{#isKept}}
+    <span class="kifi-footer-unkeep">Un-keep it</span>
+  {{/isKept}}
+  {{^isKept}}
+    <span class="kifi-footer-keep">Keep it</span>
+  {{/isKept}}
+{{/showFooterNav}}
+<span class="kifi-footer-logo" style="background-image:url({{logo}})"></span>
