@@ -1,6 +1,33 @@
 package com.keepit.search.index
 
-class DocIdRemapper(srcMapper: IdMapper, dstMapper: IdMapper) {
+import org.apache.lucene.index.IndexReader
+
+object DocIdRemapper {
+  def apply(srcMapper: IdMapper, dstIdMapper: IdMapper, indexReader: IndexReader): DocIdRemapper = {
+    indexReader.hasDeletions match {
+      case true => new DocIdRemapperWithDeletionCheck(srcMapper, dstIdMapper, indexReader)
+      case false => new DocIdRemapperNoDeletionCheck(srcMapper, dstIdMapper)
+    }
+  }
+}
+
+abstract class DocIdRemapper {
+  def src2dst(docid: Int): Int
+  def dst2src(docid: Int): Int
+}
+
+class DocIdRemapperWithDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper, indexReader: IndexReader) extends DocIdRemapper {
+  def src2dst(docid: Int): Int = {
+    val newDocId = dstMapper.getDocId(srcMapper.getId(docid))
+    if (indexReader.isDeleted(newDocId)) -1 else newDocId
+   }
+  def dst2src(docid: Int) = {
+    val newDocId = srcMapper.getDocId(dstMapper.getId(docid))
+    if (indexReader.isDeleted(newDocId)) -1 else newDocId
+  }
+}
+
+class DocIdRemapperNoDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper) extends DocIdRemapper {
   def src2dst(docid: Int) = {
     dstMapper.getDocId(srcMapper.getId(docid))
   }

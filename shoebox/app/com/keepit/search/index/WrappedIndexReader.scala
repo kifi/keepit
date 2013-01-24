@@ -33,12 +33,11 @@ object WrappedIndexReader {
 
   private def doOpen(inner: IndexReader, oldIdMappers: Map[String, IdMapper]) = {
     val subReaders = inner.getSequentialSubReaders
-    var i = 0
     val newSubReaders = subReaders.foldLeft(new ArrayBuffer[WrappedSubReader]){
       case (buf, segmentReader: SegmentReader) =>
         val segmentName = segmentReader.getSegmentName
         buf += new WrappedSubReader(segmentName, segmentReader, oldIdMappers.getOrElse(segmentName, ArrayIdMapper(segmentReader)))
-      case (buf, subReader) => throw new IllegalStateException("not insance of %s but %s".format(classOf[SegmentReader].getName(), subReader.getClass.getName))
+      case (buf, subReader) => throw new IllegalStateException("not instance of %s but %s".format(classOf[SegmentReader].getName(), subReader.getClass.getName))
     }
     apply(inner, newSubReaders)
   }
@@ -80,7 +79,7 @@ extends MultiReader(sequentialSubReaders, false) {
   }
 
   def add(indexReader: CachingIndexReader, idMapper: IdMapper) = {
-    val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]){ (m, r) => m + (r.name -> new DocIdRemapper(idMapper, r.getIdMapper)) }
+    val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]){ (m, r) => m + (r.name -> DocIdRemapper(idMapper, r.getIdMapper, r.inner)) }
     val splitReaders = indexReader.split(remappers)
     var newSubReaders = ArrayBuffer.empty[WrappedSubReader]
     wrappedSubReaders.foreach{ r =>
