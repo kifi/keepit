@@ -280,8 +280,13 @@ div.more-recipient-list {
   vertical-align: middle;
   padding: 0 6px;
 }
+.kifi-comment-wrapper .submit-comment:focus,
 .kifi-comment-wrapper .submit-comment:hover {
   background: #515b62;
+  color: #fff;
+}
+.kifi-comment-wrapper .submit-comment:active {
+  background: #000;
 }
 
 .kifi-comment-wrapper .take-snapshot {
