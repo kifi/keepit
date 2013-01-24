@@ -348,14 +348,6 @@ input.kifi-keep-private {
   margin-left: -9px;
 }
 
-.kifi_social_hover div {
-  -display: block;
-}
-
-.kifi_social_hover span {
-  display: inline;
-}
-
 .kifi_social_hover .hover_friend {
   padding: 5px;
   clear: both;
