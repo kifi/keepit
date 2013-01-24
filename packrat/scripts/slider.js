@@ -97,7 +97,7 @@ slider = function() {
       var timeout;
       var timein;
 
-      var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').html(tmpl);
+      var friendTooltip = $("<div class=kifi-keeper-hovercard>").html(tmpl).appendTo(".kifi-keepers");
 
       var socialNetworks = api.url("images/social_icons.png");
       $(friendTooltip).find('.kn_social').css('background-image','url(' + socialNetworks + ')');
@@ -139,7 +139,7 @@ slider = function() {
     api.port.emit("add_bookmarks", {
       "url": document.location.href,
       "title": document.title,
-      "private": $("#keepit_private").is(":checked")
+      "private": $(".kifi-keep-private").is(":checked")
     }, function(response) {
       api.log("[keepPage] response:", response);
     });
@@ -195,7 +195,7 @@ slider = function() {
   function drawKeepItHover(session, friends, numComments, numMessages, renderedTemplate, callback) {
     $('body').append(renderedTemplate);
 
-    $('.social_friend').each(function(i,e) {
+    $('.kifi-keeper').each(function(i,e) {
       socialTooltip(friends[i],e);
     });
 
@@ -222,7 +222,7 @@ slider = function() {
       });
     })
     .on("click", ".kifi-button-dropdown", function() {
-      $('.moreinnerbox').slideToggle(150);
+      $(".kifi-keep-options").slideToggle(150);
     })
     .on("click", ".kifi-tab-comments", function() {
       showComments(session, "public");
