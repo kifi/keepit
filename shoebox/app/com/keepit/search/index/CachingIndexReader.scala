@@ -154,7 +154,8 @@ class CachedTermPositions(indexReader: CachingIndexReader) extends TermPositions
     seek(termEnum.term())
   }
 
-  def skipTo(did: Int): Boolean = {
+  def skipTo(target: Int): Boolean = {
+    val did = if (target <= docid) docid + 1 else target
     while (docid < did) {
       if (!next()) return false
     }
