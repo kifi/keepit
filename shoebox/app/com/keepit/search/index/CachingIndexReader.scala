@@ -77,7 +77,7 @@ class CachingIndexReader(val invertedLists: Map[Term, InvertedList]) extends Ind
   override def terms(term: Term) = throw new UnsupportedOperationException()
 }
 
-class InvertedList(val dlist: Array[Int], val plist: Array[Array[Int]]) {
+class InvertedList(val dlist: Array[(Int, Array[Int])]) {
   def docFreq = dlist.length
 
   def split(remapper: DocIdRemapper) = {
@@ -85,35 +85,37 @@ class InvertedList(val dlist: Array[Int], val plist: Array[Array[Int]]) {
     val remainder = new InvertedListBuilder()
     var i = 0
     while (i < dlist.length) {
-      val newDID = remapper.src2dst(dlist(i))
-      if (newDID >= 0) remapped.add(newDID, plist(i))
-      else remainder.add(dlist(i), plist(i))
+      val newDID = remapper.src2dst(dlist(i)._1)
+      if (newDID >= 0) remapped.add(newDID, dlist(i)._2)
+      else remainder.add(dlist(i))
       i += 1
     }
     (remapped.build, remainder.build)
   }
 }
 
-object EmptyInvertedList extends InvertedList(Array.empty[Int], Array.empty[Array[Int]])
+object EmptyInvertedList extends InvertedList(Array.empty[(Int, Array[Int])]) {
+  val emptyPositions = Array.empty[Int]
+}
 
 class InvertedListBuilder() {
-  private[this] lazy val dlist = new ArrayBuffer[Int]
-  private[this] lazy val plist = new ArrayBuffer[Array[Int]]
+  private[this] lazy val buf = new ArrayBuffer[(Int, Array[Int])]
 
   def add(docid: Int, positions: Array[Int]) {
-    dlist += docid
-    plist += positions
+    buf += ((docid, positions))
+  }
+  def add(doc: (Int, Array[Int])) {
+    buf += doc
   }
 
-  def build = new InvertedList(dlist.toArray, plist.toArray)
+  def build = new InvertedList(buf.sortBy(_._1).toArray)
 }
 
 class CachedTermPositions(indexReader: CachingIndexReader) extends TermPositions {
   private[this] var docFreq = 0
   private[this] var docid = -1
-  private[this] var dlist = Array.empty[Int]
-  private[this] var plist = Array.empty[Array[Int]]
-  private[this] var positions = Array.empty[Int]
+  private[this] var dlist = EmptyInvertedList.dlist
+  private[this] var positions = EmptyInvertedList.emptyPositions
   private[this] var ptrDoc = 0
   private[this] var ptrPos = 0
 
@@ -125,8 +127,8 @@ class CachedTermPositions(indexReader: CachingIndexReader) extends TermPositions
 
   def next() = {
     if (ptrDoc < docFreq) {
-      docid = dlist(ptrDoc)
-      positions = plist(ptrDoc)
+      docid = dlist(ptrDoc)._1
+      positions = dlist(ptrDoc)._2
       ptrPos = 0
       ptrDoc += 1
       true
@@ -153,7 +155,6 @@ class CachedTermPositions(indexReader: CachingIndexReader) extends TermPositions
   def seek(term: Term) {
     val invertedList = indexReader.invertedLists.getOrElse(term, EmptyInvertedList)
     dlist = invertedList.dlist
-    plist = invertedList.plist
     docFreq = invertedList.docFreq
   }
 
