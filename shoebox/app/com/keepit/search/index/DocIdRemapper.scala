@@ -19,11 +19,11 @@ abstract class DocIdRemapper {
 class DocIdRemapperWithDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper, indexReader: IndexReader) extends DocIdRemapper {
   def src2dst(docid: Int): Int = {
     val newDocId = dstMapper.getDocId(srcMapper.getId(docid))
-    if (indexReader.isDeleted(newDocId)) -1 else newDocId
+    if (newDocId < 0 || indexReader.isDeleted(newDocId)) -1 else newDocId
    }
   def dst2src(docid: Int) = {
     val newDocId = srcMapper.getDocId(dstMapper.getId(docid))
-    if (indexReader.isDeleted(newDocId)) -1 else newDocId
+    if (newDocId < 0 || indexReader.isDeleted(newDocId)) -1 else newDocId
   }
 }
 
