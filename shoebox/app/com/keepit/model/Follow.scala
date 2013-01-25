@@ -49,6 +49,7 @@ trait FollowRepo extends Repo[Follow] {
   def get(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Follow]
   def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[Follow]
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Follow]
+  def getByUriId(urlId: Id[NormalizedURI])(implicit session: RSession): Seq[Follow]
 }
 
 @Singleton
@@ -87,6 +88,9 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
 
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Follow] =
     (for(b <- table if b.urlId === urlId) yield b).list
+
+  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Follow] =
+    (for(b <- table if b.uriId === uriId) yield b).list
 
 }
 

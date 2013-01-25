@@ -26,8 +26,7 @@ import com.keepit.common.store.S3Bucket
 import com.keepit.inject.AppScoped
 import com.keepit.inject.FortyTwoModule
 import com.keepit.scraper.ScraperConfig
-import com.keepit.scraper.ScraperPlugin
-import com.keepit.scraper.ScraperPluginImpl
+import com.keepit.scraper._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.graph.URIGraphPluginImpl
@@ -62,6 +61,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
+    bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])

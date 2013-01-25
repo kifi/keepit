@@ -62,6 +62,25 @@ object ScraperController extends FortyTwoController {
     Ok(views.html.unscrapable(docs))
   }
 
+  def previewUnscrapable() = AdminHtmlAction { implicit request =>
+    val form = request.request.body.asFormUrlEncoded match {
+      case Some(req) => req.map(r => (r._1 -> r._2.head))
+      case None => throw new Exception("No form data given.")
+    }
+    val pattern = form.get("pattern").get
+    val numRecords = form.get("count").get.toInt
+    val records = {
+      val (destinSet, normSet) = inject[DBConnection].readWrite { implicit conn =>
+        val scrapeRepo = inject[ScrapeInfoRepo]
+        val normUriRepo = inject[NormalizedURIRepo]
+        val paged = scrapeRepo.page(0, numRecords)
+        (paged.map(si => si.destinationUrl).flatten, paged.map(si => normUriRepo.get(si.uriId).url))
+      }
+      destinSet.filter(_.matches(pattern)) ++ normSet.filter(_.matches(pattern))
+    }
+    Ok(views.html.unscrapablePreview(pattern, numRecords, records))
+  }
+
   def createUnscrapable() = AdminHtmlAction { implicit request =>
     val form = request.request.body.asFormUrlEncoded match {
       case Some(req) => req.map(r => (r._1 -> r._2.head))
@@ -121,10 +140,13 @@ object ScraperController extends FortyTwoController {
     val id = Id[DuplicateDocument](body("id").head.toLong)
 
     val dupeRepo = inject[DuplicateDocumentRepo]
+
     action match {
       case DuplicateDocumentStates.MERGED =>
-        //val d = dupeRepo.get(id)
-        //mergeUris(d.uri1Id, d.uri2Id)
+        inject[DBConnection].readOnly { implicit session =>
+          val d = dupeRepo.get(id)
+          mergeUris(d.uri1Id, d.uri2Id)
+        }
       case _ =>
     }
 
@@ -135,7 +157,32 @@ object ScraperController extends FortyTwoController {
   }
 
   def mergeUris(parentId: Id[NormalizedURI], childId: Id[NormalizedURI]) = {
+    // Collect all entities who refer to N2 and change the ref to N1.
+    // Update the URL db entity with state: manual fix
+    inject[DBConnection].readWrite { implicit session =>
+      // Bookmark
+      val bookmarkRepo = inject[BookmarkRepo]
+      bookmarkRepo.getByUri(childId).map { bookmark =>
+        bookmarkRepo.save(bookmark.withNormUriId(parentId))
+      }
+      // Comment
+      val commentRepo = inject[CommentRepo]
+      commentRepo.getByUri(childId).map { comment =>
+        commentRepo.save(comment.withNormUriId(parentId))
+      }
 
+      // DeepLink
+      val deeplinkRepo = inject[DeepLinkRepo]
+      deeplinkRepo.getByUri(childId).map { deeplink =>
+        deeplinkRepo.save(deeplink.withNormUriId(parentId))
+      }
+
+      // Follow
+      val followRepo = inject[FollowRepo]
+      followRepo.getByUriId(childId).map { follow =>
+        followRepo.save(follow.withNormUriId(parentId))
+      }
+    }
   }
 
   def handleDuplicates = AdminHtmlAction { implicit request =>
@@ -144,7 +191,13 @@ object ScraperController extends FortyTwoController {
     val id = Id[NormalizedURI](body("id").head.toLong)
     inject[DBConnection].readWrite { implicit session =>
       val dupeRepo = inject[DuplicateDocumentRepo]
+
       dupeRepo.getSimilarTo(id) map { dupe =>
+        action match {
+          case DuplicateDocumentStates.MERGED =>
+              mergeUris(dupe.uri1Id, dupe.uri2Id)
+          case _ =>
+        }
         dupeRepo.save(dupe.withState(typedAction(action)))
       }
     }

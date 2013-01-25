@@ -107,6 +107,14 @@ object FortyTwoTypeMappers {
   implicit object ByteArrayStateTypeMapper extends BaseTypeMapper[Array[Byte]] {
     def apply(profile: BasicProfile) = new ByteArrayMapperDelegate
   }
+
+  implicit object DeepLinkTokenTypeMapper extends BaseTypeMapper[DeepLinkToken] {
+    def apply(profile: BasicProfile) = new DeepLinkTokenMapperDelegate
+  }
+
+  implicit object DeepLocatorTypeMapper extends BaseTypeMapper[DeepLocator] {
+    def apply(profile: BasicProfile) = new DeepLocatorMapperDelegate
+  }
 }
 
 //************************************
@@ -170,6 +178,24 @@ class StateMapperDelegate[T] extends StringMapperDelegate[State[T]] {
   def zero = new State("")
   def sourceToDest(value: State[T]): String = value.value
   def safeDestToSource(str: String): State[T] = State[T](str)
+}
+
+//************************************
+//       DeepLocator -> String
+//************************************
+class DeepLocatorMapperDelegate[T] extends StringMapperDelegate[DeepLocator] {
+  def zero = DeepLocator("")
+  def sourceToDest(value: DeepLocator): String = value.value
+  def safeDestToSource(str: String): DeepLocator = DeepLocator(str)
+}
+
+//************************************
+//       DeepLinkToken -> String
+//************************************
+class DeepLinkTokenMapperDelegate[T] extends StringMapperDelegate[DeepLinkToken] {
+  def zero = DeepLinkToken("")
+  def sourceToDest(value: DeepLinkToken): String = value.value
+  def safeDestToSource(str: String): DeepLinkToken = DeepLinkToken(str)
 }
 
 //************************************

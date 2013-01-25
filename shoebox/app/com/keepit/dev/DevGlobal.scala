@@ -4,6 +4,7 @@ import play.api.Mode._
 import play.api.Application
 import play.api.Play.current
 import com.keepit.FortyTwoGlobal
+import com.keepit.scraper._
 import com.keepit.inject._
 import com.google.inject.Guice
 import com.google.inject.Injector
@@ -30,6 +31,7 @@ object DevGlobal extends FortyTwoGlobal(Dev) {
     inject[SocialGraphRefresher]
     inject[MailSenderPlugin].processOutbox()
     inject[ReportBuilderPlugin].enabled
+    inject[DataIntegrityPlugin].enabled
     log.info("shoebox started")
   }
 }

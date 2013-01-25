@@ -21,11 +21,18 @@
         });
         return true;
       }
+
       $(document).ready(function() {
           $(".table").on("click", ".ignore_all", function() {
             handleDuplicates("ignore", $(this).data("id"), this, function(element) { $(element).parents("tbody").hide(); });
           }).on("click", ".ignore", function() {
             handleDuplicate("ignore", $(this).data("id"), this, function(element) { $(element).parents("tr").hide(); });
+          }).on("click", ".merge_all", function() {
+            handleDuplicates("merge", $(this).data("id"), this, function(element) { $(element).parents("tbody").hide(); });
+          }).on("click", ".merge", function() {
+            handleDuplicate("merge", $(this).data("id"), this, function(element) { $(element).parents("tr").hide(); });
+          }).on("click", ".unscrapable", function() {
+            document.location = "@com.keepit.controllers.admin.routes.ScraperController.getUnscrapable"
           });
       });
     </script>

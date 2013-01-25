@@ -10,17 +10,61 @@ import com.keepit.common.time._
 import com.keepit.common.net.URI
 import com.keepit.search.{Article, ArticleStore}
 import com.keepit.model._
-import com.keepit.scraper.extractor.DefaultExtractor
-import com.keepit.scraper.extractor.DefaultExtractorFactory
-import com.keepit.scraper.extractor.Extractor
-import com.keepit.scraper.extractor.YoutubeExtractorFactory
-import com.keepit.search.LangDetector
 import com.google.inject.Inject
 import org.apache.http.HttpStatus
-import org.joda.time.Seconds
+import org.joda.time.{DateTime, Seconds}
 import play.api.Play.current
 import scala.collection.Seq
+import play.api.Plugin
+import akka.actor.{Actor, Cancellable, Props, ActorSystem}
+import com.keepit.model.NormalizedURI
+import com.keepit.model.ScrapeInfo
+import play.api.libs.concurrent.Akka
+import akka.util.duration._
 
+
+trait DataIntegrityPlugin extends Plugin {
+  def cron(): Unit
+}
+
+class DataIntegrityPluginImpl @Inject() (system: ActorSystem)
+  extends Logging with DataIntegrityPlugin {
+
+  private val actor = system.actorOf(Props { new DataIntegrityActor() })
+  // plugin lifecycle methods
+  private var _cancellables: Seq[Cancellable] = Nil
+  override def enabled: Boolean = true
+  override def onStart(): Unit = {
+    _cancellables = Seq(
+      system.scheduler.schedule(10 seconds, 1 hour, actor, CleanOrphans)
+    )
+  }
+
+  override def onStop(): Unit = {
+    _cancellables.map(_.cancel)
+  }
+
+  override def cron(): Unit = {
+    if (currentDateTime.hourOfDay().get() == 21) // 9pm PST
+      actor ! CleanOrphans
+  }
+}
+
+private[scraper] case object CleanOrphans
+
+private[scraper] class DataIntegrityActor() extends Actor with Logging {
+
+  def receive() = {
+    case CleanOrphans =>
+      val orphanCleaner = new OrphanCleaner
+      inject[DBConnection].readWrite { implicit session =>
+        orphanCleaner.cleanNormalizedURIs()
+        orphanCleaner.cleanScrapeInfo()
+      }
+    case unknown =>
+      throw new Exception("unknown message: %s".format(unknown))
+  }
+}
 
 class OrphanCleaner {
 
