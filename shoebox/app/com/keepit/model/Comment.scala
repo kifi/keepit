@@ -56,6 +56,7 @@ case class Comment(
 @ImplementedBy(classOf[CommentRepoImpl])
 trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
 //  def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
+  def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
 }
 
 @Singleton
@@ -80,6 +81,9 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Comme
     def permissions = column[State[CommentPermission]]("permissions", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId ~ urlId.? ~ userId ~ text ~ pageTitle ~ parent.? ~ permissions ~ state <> (Comment, Comment.unapply _)
   }
+
+  def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment] =
+    (for(b <- table if b.uriId === uriId && b.state === CommentStates.ACTIVE) yield b).list
 
 }
 
@@ -197,6 +201,10 @@ object CommentCxRepo {
 
   def count( permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit conn: Connection): Long =
     (CommentEntity AS "c").map(c => SELECT(COUNT(c.id)).FROM(c).WHERE (c.permissions EQ permissions).unique).get
+
+  def getByUrlId(urlId: Id[URL])(implicit conn: Connection): Seq[Comment] =
+    (CommentEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlId EQ urlId) list() }.map(_.view)
+
 }
 
 object CommentStates {

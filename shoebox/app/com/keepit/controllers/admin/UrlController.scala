@@ -45,7 +45,7 @@ object UrlController extends FortyTwoController {
 
   def renormalize(readOnly: Boolean = true, domain: Option[String] = None) = AdminHtmlAction { implicit request =>
     Akka.future {
-      val result = doRenormalize(readOnly, domain).replaceAll("\n","\n<br>");
+      val result = doRenormalize(readOnly, domain).replaceAll("\n","\n<br>")
       val postOffice = inject[PostOffice]
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = "Renormalization Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
     }
@@ -55,170 +55,81 @@ object UrlController extends FortyTwoController {
   def doRenormalize(readOnly: Boolean = true, domain: Option[String] = None) = {
     // Processes all models that reference a `NormalizedURI`, and renormalizes all URLs.
     val changedURIs = scala.collection.mutable.MutableList[ChangedNormURI]()
-    val (bookmarkCount, commentCount, followsCount, deepsCount) = CX.withConnection { implicit conn =>
+    val (urlsSize, changes) = CX.withConnection { implicit conn =>
 
-      val bookmarks = BookmarkCxRepo.all
-      val bookmarkCount = bookmarks.size
+      val urls = URLCxRepo.all
+      val urlsSize = urls.size
+      val changes = scala.collection.mutable.Map[String, Int]()
 
-      bookmarks map { bookmark =>
-        val currNormURI = NormalizedURICxRepo.get(bookmark.uriId)
-        val urlObj = bookmark.urlId match {
-          case Some(uu) => URLCxRepo.get(uu)
-          case None =>
-            val u = URLFactory(url = bookmark.url, normalizedUriId = currNormURI.id.get)
-            if (!readOnly) u.save
-            else u
-        }
-        (domain match {
-          case Some(d) if urlObj.domain.map(_.toString).getOrElse("") != domain.getOrElse("") => Some(d)
-          case _ => None
-        }) match {
-          case Some(d) =>
-          case None =>
-            val (renormURI,reason) = NormalizedURICxRepo.getByNormalizedUrl(urlObj.url) match {
-              case Some(u) => (u,URLHistoryCause.MERGE)
-              case None => (NormalizedURIFactory(urlObj.url),URLHistoryCause.SPLIT)
+      urls map { url =>
+        url.state match {
+          case URLStates.ACTIVE =>
+            val (normalizedUri, reason) = NormalizedURICxRepo.getByNormalizedUrl(url.url) match {
+              case Some(nuri) =>
+                (nuri,URLHistoryCause.MERGE)
+              case None =>
+                // No normalized URI exists for this url, create one
+                val nuri = NormalizedURIFactory.apply(url.url)
+                ({if(!readOnly)
+                  nuri.save
+                else
+                  nuri}, URLHistoryCause.SPLIT)
             }
 
-            if (currNormURI.url != renormURI.url) {
-              changedURIs += ChangedNormURI("bookmark-nuri", urlObj.url, currNormURI.url, currNormURI.id.map(_.id).getOrElse(0L), renormURI.id.map(_.id).getOrElse(0L), renormURI.url)
-              try {
-                if(!readOnly) {
-                  val savedNormURI = renormURI.save
-                  urlObj.withNormURI(savedNormURI.id.get).withHistory(URLHistory(savedNormURI.id.get,reason)).save
-                  bookmark.withNormUriId(renormURI.id.get).save
-                }
-              } catch {
-                case ex: Throwable =>
-                  log.error("URL Migration error",ex)
-              }
-
-            }
-        }
-      }
-
-      val comments = CommentCxRepo.all
-      val commentCount = comments.size
-
-      comments map { comment =>
-        val currNormURI = NormalizedURICxRepo.get(comment.uriId)
-        val urlObj = comment.urlId match {
-          case Some(uu) => URLCxRepo.get(uu)
-          case None =>
-            val u = URLFactory(url = currNormURI.url, normalizedUriId = currNormURI.id.get)
-            if (!readOnly) u.save
-            else u
-        }
-        (domain match {
-          case Some(d) if urlObj.domain.map(_.toString).getOrElse("") != domain.getOrElse("") => Some(d)
-          case _ => None
-        }) match {
-          case Some(d) =>
-          case None =>
-            val (renormURI,reason) = NormalizedURICxRepo.getByNormalizedUrl(urlObj.url) match {
-              case Some(u) => (u,URLHistoryCause.MERGE)
-              case None => (NormalizedURIFactory(urlObj.url),URLHistoryCause.SPLIT)
-            }
-            if (currNormURI.url != renormURI.url) {
-              changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.url, currNormURI.id.map(_.id).getOrElse(0L), renormURI.id.map(_.id).getOrElse(0L), renormURI.url)
+            changes += (("url", 0))
+            if(url.normalizedUriId != normalizedUri.id.get.id) {
+              changes("url") += 1
               if(!readOnly) {
-                try {
-                  val savedNormURI = renormURI.save
-                  urlObj.withHistory(URLHistory(savedNormURI.id.get,reason)).save
-                  comment.withNormUriId(renormURI.id.get).save
-                } catch {
-                  case ex: Throwable =>
-                    log.error("URL Migration error",ex)
-                }
+                url.withNormUriId(normalizedUri.id.get).withHistory(URLHistory(normalizedUri.id.get,reason)).save
               }
             }
-        }
-      }
 
-      val follows = FollowCxRepo.all
-      val followsCount = follows.size
-
-      follows map { follow =>
-        val currNormURI = NormalizedURICxRepo.get(follow.uriId)
-        val urlObj = follow.urlId match {
-          case Some(uu) => URLCxRepo.get(uu)
-          case None =>
-            val u = URLFactory(url = currNormURI.url, normalizedUriId = currNormURI.id.get)
-            if (!readOnly) u.save
-            else u
-        }
-        (domain match {
-          case Some(d) if urlObj.domain.map(_.toString).getOrElse("") != domain.getOrElse("") => Some(d)
-          case _ => None
-        }) match {
-          case Some(d) =>
-          case None =>
-            val (renormURI,reason) = NormalizedURICxRepo.getByNormalizedUrl(urlObj.url) match {
-              case Some(u) => (u,URLHistoryCause.MERGE)
-              case None => (NormalizedURIFactory(urlObj.url),URLHistoryCause.SPLIT)
-            }
-            if (currNormURI.url != renormURI.url) {
-              changedURIs += ChangedNormURI("follow-nuri", urlObj.url, currNormURI.url, currNormURI.id.map(_.id).getOrElse(0L), renormURI.id.map(_.id).getOrElse(0L), renormURI.url)
-              try {
+            changes += (("bookmark", 0))
+            BookmarkCxRepo.getByUrlId(url.id.get) map { s =>
+              if(s.uriId.id != normalizedUri.id.get.id) {
+                changes("bookmark") += 1
                 if(!readOnly) {
-                  val savedNormURI = renormURI.save
-                  urlObj.withHistory(URLHistory(savedNormURI.id.get,reason)).save
-                  follow.withNormUriId(renormURI.id.get).saveWithCx
+                  s.withNormUriId(normalizedUri.id.get).save
                 }
-              } catch {
-                case ex: Throwable =>
-                  log.error("URL Migration error",ex)
               }
             }
-        }
-      }
 
-
-      val deeps = DeepLinkCxRepo.all
-      val deepsCount = deeps.size
-
-      deeps map { deep =>
-        val currNormURI = NormalizedURICxRepo.get(deep.uriId.get)
-        val urlObj = deep.urlId match {
-          case Some(uu) => URLCxRepo.get(uu)
-          case None =>
-            val u = URLFactory(url = currNormURI.url, normalizedUriId = currNormURI.id.get)
-            if (!readOnly) u.save
-            else u
-        }
-        (domain match {
-          case Some(d) if urlObj.domain.map(_.toString).getOrElse("") != domain.getOrElse("") => Some(d)
-          case _ => None
-        }) match {
-          case Some(d) =>
-          case None =>
-            val (renormURI,reason) = NormalizedURICxRepo.getByNormalizedUrl(urlObj.url) match {
-              case Some(u) => (u,URLHistoryCause.MERGE)
-              case None => (NormalizedURIFactory(urlObj.url),URLHistoryCause.SPLIT)
-            }
-            if (currNormURI.url != renormURI.url) {
-              changedURIs += ChangedNormURI("comment-nuri", urlObj.url, currNormURI.url, currNormURI.id.map(_.id).getOrElse(0L), renormURI.id.map(_.id).getOrElse(0L), renormURI.url)
-              try {
+            changes += (("comment", 0))
+            CommentCxRepo.getByUrlId(url.id.get) map { s =>
+              if(s.uriId.id != normalizedUri.id.get.id) {
+                changes("comment") += 1
                 if(!readOnly) {
-                  val savedNormURI = renormURI.save
-                  urlObj.withHistory(URLHistory(savedNormURI.id.get,reason)).save
-                  deep.withNormUriId(renormURI.id.get).save
+                  s.withNormUriId(normalizedUri.id.get).save
                 }
-              } catch {
-                case ex: Throwable =>
-                  log.error("URL Migration error",ex)
               }
             }
+
+            changes += (("deeplink", 0))
+            DeepLinkCxRepo.getByUrlId(url.id.get) map { s =>
+              if(s.uriId.get.id != normalizedUri.id.get.id) {
+                changes("deeplink") += 1
+                if(!readOnly) {
+                  s.withNormUriId(normalizedUri.id.get).save
+                }
+              }
+            }
+
+            changes += (("follow", 0))
+            FollowCxRepo.getByUrlId(url.id.get) map { s =>
+              if(s.uriId.id != normalizedUri.id.get.id) {
+                changes("follow") += 1
+                if(!readOnly) {
+                  s.withNormUriId(normalizedUri.id.get).save
+                }
+              }
+            }
+
+          case _ => // ignore
         }
       }
 
-      (bookmarkCount, commentCount, followsCount, deepsCount)
+      (urlsSize, changes)
     }
-    val out = changedURIs.map { u =>
-      "%s, %s, %s, %s, %s, %s".format(u.context, u.url, u.currURI, u.from, u.to, u.toUri)
-    }
-    val header = "%s bookmarks, %s comments, %s follows, %s deeplinks processed. Found %s necessary updates.".format(bookmarkCount, commentCount, followsCount, deepsCount, out.size)
-    header + "\n\n\n" + out.mkString("\n")
   }
 
 }

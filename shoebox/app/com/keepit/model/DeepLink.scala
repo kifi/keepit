@@ -65,6 +65,38 @@ case class DeepLink(
 
 }
 
+@ImplementedBy(classOf[DeepLinkRepoImpl])
+trait DeepLinkRepo extends Repo[DeepLink] {
+  def getByUri(urlId: Id[NormalizedURI])(implicit session: RSession): Seq[DeepLink]
+}
+
+@Singleton
+class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[DeepLink] with DeepLinkRepo {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
+
+  override lazy val table = new RepoTable[DeepLink](db, "DeepLink") {
+    def initatorUserId = column[Id[User]]("initiator_user_id")
+    def recipientUserId = column[Id[User]]("recipient_user_id")
+    def uriId = column[Id[NormalizedURI]]("uri_id")
+    def urlId = column[Id[URL]]("url_id")
+    def deepLocator = column[DeepLocator]("deep_locator", O.NotNull)
+    def token = column[DeepLinkToken]("token", O.NotNull)
+
+    def * = id.? ~ createdAt ~ updatedAt ~ initatorUserId.? ~ recipientUserId.? ~ uriId.? ~ urlId.? ~ deepLocator ~ token ~ state <> (DeepLink, DeepLink.unapply _)
+  }
+
+  def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[DeepLink] =
+    (for(b <- table if b.uriId === uriId) yield b).list
+
+}
+
+
 object DeepLinkCxRepo {
 
   def all(implicit conn: Connection): Seq[DeepLink] =
@@ -81,6 +113,13 @@ object DeepLinkCxRepo {
 
   def getOpt(token: DeepLinkToken)(implicit conn: Connection): Option[DeepLink] =
     (DeepLinkEntity AS "i").map { i => SELECT(i.*) FROM i WHERE (i.token EQ token.value) unique }.map(_.view)
+
+  def getByUrlId(urlId: Id[URL])(implicit conn: Connection): Seq[DeepLink] =
+    (DeepLinkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlId EQ urlId) list() }.map(_.view)
+
+  def getByUriId(uri: NormalizedURI)(implicit conn: Connection): Seq[DeepLink] =
+    (DeepLinkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.uriId EQ uri.id.get) list }.map(_.view)
+
 }
 
 object DeepLinkStates {

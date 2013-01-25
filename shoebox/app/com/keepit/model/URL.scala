@@ -48,7 +48,7 @@ case class URL (
   def withId(id: Id[URL]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
-  def withNormURI(normUriId: Id[NormalizedURI]) = copy(normalizedUriId = normUriId)
+  def withNormUriId(normUriId: Id[NormalizedURI]) = copy(normalizedUriId = normUriId)
   def withHistory(historyItem: URLHistory): URL = copy(history = historyItem +: history)
 
   def save(implicit conn: Connection): URL = {
@@ -70,6 +70,7 @@ object URLFactory {
 trait URLRepo extends Repo[URL] {
   def get(url: String)(implicit session: RSession): Option[URL]
   def getByDomain(domain: String)(implicit session: RSession): List[URL]
+  def getByNormUri(normalizedUriId: Id[NormalizedURI])(implicit session: RSession): Seq[URL]
 }
 
 @Singleton
@@ -95,6 +96,9 @@ class URLRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[URL] with
 
   def getByDomain(domain: String)(implicit session: RSession): List[URL] =
     (for(u <- table if u.domain === domain && u.state === URLStates.ACTIVE) yield u).list
+
+  def getByNormUri(normalizedUriId: Id[NormalizedURI])(implicit session: RSession): Seq[URL] =
+    (for(u <- table if u.normalizedUriId === normalizedUriId && u.state === URLStates.ACTIVE) yield u).list
 }
 
 //slicked
@@ -117,11 +121,15 @@ object URLCxRepo {
 
   def getByDomain(domain: String)(implicit conn: Connection) =
     (URLEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.domain EQ domain) }.list.map( _.view )
+
+  def getByNormUri(normalizedUriId: Id[NormalizedURI])(implicit conn: Connection) =
+    (URLEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.normalizedUriId EQ normalizedUriId) }.list.map( _.view )
 }
 
 object URLStates {
   val ACTIVE = State[URL]("active")
   val INACTIVE = State[URL]("inactive")
+  val MERGED = State[URL]("merged")
 }
 
 private[model] class URLEntity extends Entity[URL, URLEntity] {

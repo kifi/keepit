@@ -1,0 +1,19 @@
+@(pattern: String, numRecords: Int, unscrapables: Seq[String])
+
+@admin("Unscrapable documents") {
+    <table class="table table-bordered">
+        <tr>
+            <th>Matched URL</th>
+        </tr>
+        @for(doc <- unscrapables) {
+          <tr>
+            <td>@doc</td>
+          </tr>
+        }
+    </table>
+    
+    <form action="@com.keepit.controllers.admin.routes.ScraperController.createUnscrapable()" method="POST" class="form-inline">
+        Pattern: <b>@pattern</b><input type="hidden" name="pattern" value="@pattern" placeholder="Regex pattern">
+        <input type="submit" value="Looks good!">
+    </form>
+}
