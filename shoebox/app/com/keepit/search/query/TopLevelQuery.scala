@@ -133,13 +133,13 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight {
   }
 
   override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
-    val textScorer = textWeight.scorer(reader, scoreDocsInOrder, topScorer)
+    val textScorer = textWeight.scorer(reader, true, false)
     if (textScorer == null) null
     else {
-      val semanticVectorScorer = semanticVectorWeight.scorer(reader, scoreDocsInOrder, topScorer)
+      val semanticVectorScorer = semanticVectorWeight.scorer(reader, true, false)
       proximityWeight match {
         case Some(proximityWeight) =>
-          new TopLevelScorerWithProximity(this, textScorer, semanticVectorScorer, proximityWeight.scorer(reader, scoreDocsInOrder, topScorer))
+          new TopLevelScorerWithProximity(this, textScorer, semanticVectorScorer, proximityWeight.scorer(reader, true, false))
         case None =>
           new TopLevelScorerNoProximity(this, textScorer, semanticVectorScorer)
       }
