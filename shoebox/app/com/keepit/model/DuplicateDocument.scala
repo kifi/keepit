@@ -26,7 +26,7 @@ case class DuplicateDocument (
   uri1Id: Id[NormalizedURI],
   uri2Id: Id[NormalizedURI],
   percentMatch: Double,
-  state: State[DuplicateDocument] = DuplicateDocumentStates.ACTIVE
+  state: State[DuplicateDocument] = DuplicateDocumentStates.NEW
 ) extends Model[DuplicateDocument] {
 
   assert(uri1Id.id < uri2Id.id, "uri1Id ≥ uri2Id")
@@ -40,6 +40,7 @@ case class DuplicateDocument (
 @ImplementedBy(classOf[DuplicateDocumentRepoImpl])
 trait DuplicateDocumentRepo extends Repo[DuplicateDocument] {
   def getSimilarTo(id: Id[NormalizedURI])(implicit session: RSession): Seq[DuplicateDocument]
+  def getActive(page: Int = 0, size: Int = 50)(implicit session: RSession): Seq[DuplicateDocument]
 }
 
 @Singleton
@@ -59,15 +60,22 @@ class DuplicateDocumentRepoImpl @Inject() (val db: DataBaseComponent) extends Db
     def * = id.? ~ createdAt ~ updatedAt ~ uri1Id ~ uri2Id ~ percentMatch ~ state <> (DuplicateDocument, DuplicateDocument.unapply _)
   }
 
+  def getActive(page: Int = 0, size: Int = 50)(implicit session: RSession): Seq[DuplicateDocument] = {
+    (for { f <- table if f.state === DuplicateDocumentStates.NEW } yield f).drop(page * size).take(size).list
+  }
+
   def getSimilarTo(id: Id[NormalizedURI])(implicit session: RSession): Seq[DuplicateDocument] = {
     val q = for {
-      f <- table if (f.uri1Id === id || f.uri2Id === id) && f.state === DuplicateDocumentStates.ACTIVE
+      f <- table if (f.uri1Id === id || f.uri2Id === id)
     } yield f
     q.list
   }
+
 }
 
 object DuplicateDocumentStates {
-  val ACTIVE = State[DuplicateDocument]("active")
-  val INACTIVE = State[DuplicateDocument]("inactive")
+  val NEW = State[DuplicateDocument]("new")
+  val MERGED = State[DuplicateDocument]("merged")
+  val IGNORED = State[DuplicateDocument]("ignored")
+  val UNSCRAPABLE = State[DuplicateDocument]("unscrapable")
 }

@@ -64,7 +64,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
 
   def all()(implicit session: RSession): Seq[M] = table.map(t => t).list
 
-  def page(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[M] = table.map(t => t).drop(page * size).take(page).list
+  def page(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[M] = table.map(t => t).drop(page * size).take(size).list
 
   private def insert(model: M)(implicit session: RWSession) = {
     assert(1 == table.insert(model))
