@@ -43,7 +43,6 @@ extends Logging {
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
   val articleSearcher = articleIndexer.getSearcher
   val uriGraphSearcher = uriGraph.getURIGraphSearcher
-  val NO_FRIEND_IDS = Set.empty[Id[User]]
 
   // initialize user's social graph info
   val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
@@ -88,12 +87,12 @@ extends Logging {
             val score = scorer.score()
             if (friendlyUris.contains(id)) {
               if (myUris.contains(id)) {
-                myHits.insert(id, score * clickBoost, true, !myPublicUris.contains(id), NO_FRIEND_IDS, 0)
+                myHits.insert(id, score * clickBoost, true, !myPublicUris.contains(id))
               } else {
-                friendsHits.insert(id, score * clickBoost, false, false, NO_FRIEND_IDS, 0)
+                friendsHits.insert(id, score * clickBoost, false, false)
               }
             } else {
-              othersHits.insert(id, score * clickBoost, false, false, NO_FRIEND_IDS, 0)
+              othersHits.insert(id, score * clickBoost, false, false)
             }
           }
           doc = scorer.nextDoc()
@@ -104,9 +103,9 @@ extends Logging {
     if ((myHits.totalHits + friendsHits.totalHits) > 0 || !initial || !parser.isMultiClauseQuery) {
       (myHits, friendsHits, othersHits)
     } else {
-      myHits.clear()
-      friendsHits.clear()
-      othersHits.clear()
+      myHits.reset()
+      friendsHits.reset()
+      othersHits.reset()
       searchTextSub(queryString, myHits, friendsHits, othersHits, clickBoosts, false)
     }
   }
@@ -217,6 +216,8 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
 
   super.initialize(sz)
 
+  val NO_FRIEND_IDS = Set.empty[Id[User]]
+
   var highScore = Float.MinValue
   var totalHits = 0
 
@@ -224,9 +225,7 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
 
   var overflow: MutableArticleHit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
 
-  def overflowed = (overflow != null)
-
-  def insert(id: Long, score: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]], bookmarkCount: Int) {
+  def insert(id: Long, score: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS, bookmarkCount: Int = 0) {
     if (overflow == null) overflow = new MutableArticleHit(id, score, isMyBookmark, isPrivate, friends, bookmarkCount, null)
     else overflow(id, score, isMyBookmark, isPrivate, friends, bookmarkCount)
 
@@ -253,25 +252,6 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
     res
   }
 
-  def addAll(otherQueue: ArticleHitQueue) {
-    val thisQueue = this
-    otherQueue.foreach{ h => thisQueue.insert(h) }
-  }
-
-  def iterator = {
-    val arr = getHeapArray()
-    val sz = size()
-
-    new Iterator[MutableArticleHit] {
-      var i = 0
-      def hasNext() = (i < sz)
-      def next() = {
-        i += 1
-        arr(i).asInstanceOf[MutableArticleHit]
-      }
-    }
-  }
-
   def foreach(f: MutableArticleHit => Unit) {
     val arr = getHeapArray()
     val sz = size()
@@ -290,6 +270,12 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
       i += 1
     }
     dropped
+  }
+
+  def reset() {
+    super.clear()
+    highScore = Float.MinValue
+    totalHits = 0
   }
 }
 
@@ -341,8 +327,6 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
     val prime = 41
     prime * (prime * (prime + textScore.hashCode) + normalizedTextScore.hashCode) + bookmarkScore.hashCode
   }
-
-
 }
 
 // mutable hit object for efficiency
