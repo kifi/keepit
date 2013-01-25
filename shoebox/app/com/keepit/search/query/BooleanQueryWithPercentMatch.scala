@@ -169,8 +169,8 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
 
   override def score(): Float = {
     if (scoredDoc != doc) {
-      scoreValue = required.score
-      if (optional.docID == doc) scoreValue += optional.score
+      scoreValue = required.score()
+      if (optional.docID == doc) scoreValue += optional.score()
       scoredDoc = doc
     }
     scoreValue
@@ -187,14 +187,15 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
 
 class BooleanAndScorer(weight: Weight, coord: Float, scorers: Array[Scorer]) extends Scorer(weight) {
 
-  private var doc = -1
-  private var scoredDoc = -1
-  private var scoreValue = 0.0f
+  private[this] var doc = -1
+  private[this] var scoredDoc = -1
+  private[this] var scoreValue = 0.0f
 
   override def docID() = doc
 
   override def score(): Float = {
-    if (doc > scoredDoc) {
+    if (doc != scoredDoc) {
+      scoredDoc = doc
       var sum = 0.0f
       var i = 0
       while (i < scorers.length) {
@@ -203,7 +204,6 @@ class BooleanAndScorer(weight: Weight, coord: Float, scorers: Array[Scorer]) ext
       }
       scoreValue = sum * coord
     }
-    scoredDoc = doc
     scoreValue
   }
 
@@ -232,8 +232,8 @@ class BooleanAndScorer(weight: Weight, coord: Float, scorers: Array[Scorer]) ext
 
 class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Array[Float], values: Array[Float], threshold: Float) extends Scorer(weight) {
 
-  private var doc = -1
-  private var scoreValue = 0.0f
+  private[this] var doc = -1
+  private[this] var scoreValue = 0.0f
 
   class ScorerDoc(val scorer: Scorer, var doc: Int, val value: Float)
 
@@ -273,13 +273,13 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
     }
     scoreValue = 0.0f
     var top = pq.top
+    while (top.doc < doc) {
+      top.doc = top.scorer.advance(doc)
+      top = pq.updateTop()
+    }
     while (scoreValue <= 0.0f && doc < DocIdSetIterator.NO_MORE_DOCS) {
-      while (top.doc < doc) {
-        top.doc = top.scorer.advance(doc)
-        top = pq.updateTop()
-      }
       doc = top.doc
-      scoreValue = doScore
+      scoreValue = doScore()
       top = pq.top
     }
     doc
@@ -288,11 +288,19 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
 
 class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]) extends Scorer(weight) {
 
-  private var doc = -1
+  private[this] var doc = -1
+  private[this] var scoredDoc = -1
+  private[this] var scoreValue = 0.0f
 
   override def docID() = doc
 
-  override def score(): Float = scorer.score()
+  override def score(): Float = {
+    if (doc != scoredDoc) {
+      scoredDoc = doc
+      scoreValue = scorer.score()
+    }
+    scoreValue
+  }
 
   override def nextDoc(): Int = advance(0)
 

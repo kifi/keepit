@@ -726,20 +726,19 @@ slider = function() {
     var placeholder = "<span class=\"placeholder\">Add a " + typeName + "…</span>";
     $('.comment-compose').html(placeholder);
     $('.comment_post_view').on('focus','.comment-compose',function() {
-      if ($('.comment-compose').html() == placeholder) { // unchanged text!
-        $('.comment-compose').html("");
-      }
-      $('.comment-compose').animate({'height': '85'}, 150, 'easeQuickSnapBounce');
+      $(this)
+        .find(".placeholder").remove().end()
+        .animate({'height': 85}, 150, 'easeQuickSnapBounce');
     }).on('blur', '.comment-compose', function() {
       editableFix[0].setSelectionRange(0, 0);
       editableFix.blur();
 
-      var value = $('.comment-compose').html()
+      var value = $(this).html();
       value = commentSerializer(value);
-      if (value == "") { // unchanged text!
-        $('.comment-compose').html(placeholder);
+      if (!value) { // unchanged text!
+        $(this).html(placeholder);
       }
-      $('.comment-compose').animate({'height': '35'}, 150, 'easeQuickSnapBounce');
+      $(this).animate({'height': 35}, 150, 'easeQuickSnapBounce');
     }).on('click','.take-snapshot', function() {
       // make absolute positioning relative to document instead of viewport
       document.documentElement.style.position = "relative";
@@ -826,12 +825,16 @@ slider = function() {
       }
     }).on('submit','.comment_form', function(e) {
       e.preventDefault();
-      var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
-      if (!text) return false;
+      var text = commentSerializer($(".comment-compose").find(".placeholder").remove().end().html());
+      if (!text) {
+        $(".comment-compose").html(placeholder);
+        return false;
+      }
+
       logEvent("slider", "comment");
 
       submitComment(text, type, session, null, null, function(newComment) {
-        $('.comment-compose').text("").html(placeholder).blur();
+        $('.comment-compose').html(placeholder).blur();
 
         api.log("new comment", newComment);
         // Clean up CSS
@@ -858,7 +861,10 @@ slider = function() {
     }).on('submit','.message_form', function(e) {
       e.preventDefault();
       var text = commentSerializer($('.comment-compose').find(".placeholder").remove().end().html());
-      if (!text) return false;
+      if (!text) {
+        $(".comment-compose").html(placeholder);
+        return false;
+      }
       logEvent("slider", "message");
 
       var isReply = $(this).is('.message-reply');
@@ -889,7 +895,7 @@ slider = function() {
       }
 
       submitComment(text, type, session, parent, recipients, function(newComment) {
-        $('.comment-compose').text("").html(placeholder).blur();
+        $(".comment-compose").html(placeholder).blur();
 
         api.log("new message", newComment);
         // Clean up CSS
