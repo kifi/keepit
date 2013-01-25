@@ -126,6 +126,7 @@ class CachedTermPositions(indexReader: CachingIndexReader) extends TermPositions
       true
     } else {
       docid = DocIdSetIterator.NO_MORE_DOCS
+      positions = EmptyInvertedList.emptyPositions
       false
     }
   }
@@ -155,11 +156,9 @@ class CachedTermPositions(indexReader: CachingIndexReader) extends TermPositions
   }
 
   def skipTo(target: Int): Boolean = {
-    val did = if (target <= docid) docid + 1 else target
-    while (docid < did) {
-      if (!next()) return false
-    }
-    docid < DocIdSetIterator.NO_MORE_DOCS
+    var ret = false
+    do { ret = next() } while (ret & docid < target)
+    ret
   }
 
   def nextPosition() = {

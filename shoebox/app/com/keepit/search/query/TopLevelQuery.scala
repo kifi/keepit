@@ -48,9 +48,9 @@ class TopLevelQuery(val textQuery: Query, val semanticVectorQuery: Query, val pr
 
 class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight {
 
-  private[this] val textWeight = query.textQuery.createWeight(searcher)
-  private[this] val semanticVectorWeight = query.semanticVectorQuery.createWeight(searcher)
-  private[this] val proximityWeight = query.proximityQuery.map(_.createWeight(searcher))
+  val textWeight = query.textQuery.createWeight(searcher)
+  val semanticVectorWeight = query.semanticVectorQuery.createWeight(searcher)
+  val proximityWeight = query.proximityQuery.map(_.createWeight(searcher))
 
   override def getQuery() = query
   override def getValue() = query.getBoost()
@@ -155,6 +155,13 @@ class TopLevelScorer(weight: TopLevelWeight, textScorer: Scorer) extends Scorer(
   protected var semanticVectorScore = 0.0f
   protected var proximityScore = 0.0f
 
+  private[this] val textBoost = weight.textWeight.getValue
+  private[this] val semanticVectorBoost = weight.semanticVectorWeight.getValue
+  private[this] val proximityBoost = weight.proximityWeight match {
+    case Some(proximityWeight) => proximityWeight.getValue
+    case None => 1.0f
+  }
+
   override def docID(): Int = doc
   override def nextDoc(): Int = {
     doc = textScorer.nextDoc()
@@ -172,6 +179,10 @@ class TopLevelScorer(weight: TopLevelWeight, textScorer: Scorer) extends Scorer(
     }
     scr
   }
+
+  def textRawScore = textScore / textBoost
+  def semanticVectorRawScore = semanticVectorScore / semanticVectorBoost
+  def proximityRawScore = proximityScore / proximityBoost
 }
 
 class TopLevelScorerNoProximity(weight: TopLevelWeight, textScorer: Scorer, semanticVectorScorer: Scorer) extends TopLevelScorer(weight, textScorer) {
@@ -217,5 +228,5 @@ class TopLevelScorerWithProximity(weight: TopLevelWeight, textScorer: Scorer, se
     }
     scr
   }
- }
+}
 
