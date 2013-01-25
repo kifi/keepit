@@ -1,5 +1,6 @@
 package com.keepit.search.query
 
+import com.keepit.common.logging.Logging
 import com.keepit.search.index.Searcher
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
@@ -147,7 +148,7 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight {
   }
 }
 
-class TopLevelScorer(weight: TopLevelWeight, textScorer: Scorer) extends Scorer(weight) {
+class TopLevelScorer(weight: TopLevelWeight, textScorer: Scorer) extends Scorer(weight) with Logging {
   protected var doc = -1
   protected var scoredDoc = -1
   protected var scr = 0.0f
@@ -173,9 +174,15 @@ class TopLevelScorer(weight: TopLevelWeight, textScorer: Scorer) extends Scorer(
   }
   override def score() = {
     if (doc != scoredDoc) {
+      try {
+        textScore = textScorer.score()
+        scr = textScore
+      } catch {
+        case e: Exception =>
+          log.error("scorer error: scoredDoc=%d doc=%doc textScorer.docID=%s exception=%s".format(scoredDoc, doc, textScorer.docID, e.toString))
+          textScore = 0.0f
+      }
       scoredDoc = doc
-      textScore = textScorer.score()
-      scr = textScore
     }
     scr
   }
