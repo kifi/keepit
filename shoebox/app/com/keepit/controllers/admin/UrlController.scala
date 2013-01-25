@@ -130,6 +130,8 @@ object UrlController extends FortyTwoController {
 
       (urlsSize, changes)
     }
+
+    "%s urls processed, %s changes.<br>\n<br>\n%s".format(urlsSize, changes.size, changes)
   }
 
 }
