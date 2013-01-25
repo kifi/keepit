@@ -8,13 +8,14 @@ import org.apache.lucene.search.Searcher
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Similarity
 import org.apache.lucene.search.Weight
-import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import scala.math._
 import java.util.{ArrayList, List => JList}
+import com.keepit.common.logging.Logging
 
 object BooleanQueryWithPercentMatch {
   def apply(clauses: JList[BooleanClause], percentMatch: Float, disableCoord: Boolean) = {
@@ -40,7 +41,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
         if (getBoost() != 1.0f) {
            // if rewrite was no-op then clone before boost
           if (query eq c.getQuery()) query = query.clone().asInstanceOf[Query]
-          query.setBoost(getBoost() * query.getBoost());
+          query.setBoost(getBoost() * query.getBoost())
         }
         query
       }
@@ -180,7 +181,7 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
 
   override def advance(target: Int): Int = {
     doc = required.advance(target)
-    if (doc < DocIdSetIterator.NO_MORE_DOCS) optional.advance(doc)
+    if (doc < NO_MORE_DOCS) optional.advance(doc)
     doc
   }
 }
@@ -210,12 +211,12 @@ class BooleanAndScorer(weight: Weight, coord: Float, scorers: Array[Scorer]) ext
   override def nextDoc(): Int = advance(0)
 
   override def advance(target: Int): Int = {
-    if (doc < DocIdSetIterator.NO_MORE_DOCS) {
+    if (doc < NO_MORE_DOCS) {
       doc = if (target <= doc) doc + 1 else target
     }
 
     var i = 0
-    while (doc < DocIdSetIterator.NO_MORE_DOCS && i < scorers.length) {
+    while (doc < NO_MORE_DOCS && i < scorers.length) {
       val sc = scorers(i)
       var scdoc = sc.docID()
       if (scdoc < doc) scdoc = sc.advance(doc)
@@ -230,19 +231,29 @@ class BooleanAndScorer(weight: Weight, coord: Float, scorers: Array[Scorer]) ext
   }
 }
 
-class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Array[Float], values: Array[Float], threshold: Float) extends Scorer(weight) {
+class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Array[Float], values: Array[Float], threshold: Float) extends Scorer(weight) with Logging {
 
   private[this] var doc = -1
   private[this] var scoreValue = 0.0f
 
-  class ScorerDoc(val scorer: Scorer, var doc: Int, val value: Float)
+  class ScorerDoc(val scorer: Scorer, val value: Float, var doc: Int, var scoredDoc: Int, var scoreValue: Float) {
+    def score = {
+      if (doc != scoredDoc) {
+        scoreValue = scorer.score()
+        scoredDoc = doc
+      } else {
+        log.info("score method called twice [docid=%d]".format(doc))
+      }
+      scoreValue
+    }
+  }
 
   private val pq = new PriorityQueue[ScorerDoc] {
     super.initialize(scorers.length)
     override def lessThan(a: ScorerDoc, b: ScorerDoc) = (a.doc < b.doc)
   }
 
-  scorers.zip(values).foreach{ case (s, v) => pq.insertWithOverflow(new ScorerDoc(s, -1, v)) }
+  scorers.zip(values).foreach{ case (s, v) => pq.insertWithOverflow(new ScorerDoc(s, v, -1, -1, 0.0f)) }
 
   override def docID() = doc
 
@@ -252,10 +263,10 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
     var sum = 0.0f
     var matchValue = 0.0f
     var cnt = 0
-    if (doc < DocIdSetIterator.NO_MORE_DOCS) {
+    if (doc < NO_MORE_DOCS) {
       var top = pq.top
       while (top.doc == doc) {
-        sum += top.scorer.score()
+        sum += top.score
         matchValue += top.value
         cnt += 1
         top.doc = top.scorer.nextDoc()
@@ -268,19 +279,20 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
   override def nextDoc(): Int = advance(0)
 
   override def advance(target: Int): Int = {
-    if (doc < DocIdSetIterator.NO_MORE_DOCS) {
+    if (doc < NO_MORE_DOCS) {
       doc = if (target <= doc) doc + 1 else target
-    }
-    scoreValue = 0.0f
-    var top = pq.top
-    while (top.doc < doc) {
-      top.doc = top.scorer.advance(doc)
-      top = pq.updateTop()
-    }
-    while (scoreValue <= 0.0f && doc < DocIdSetIterator.NO_MORE_DOCS) {
+      scoreValue = 0.0f
+      var top = pq.top
+      while (top.doc < doc) {
+        top.doc = top.scorer.advance(doc)
+        top = pq.updateTop()
+      }
       doc = top.doc
-      scoreValue = doScore()
-      top = pq.top
+      while (scoreValue <= 0.0f && doc < NO_MORE_DOCS) {
+        doc = top.doc
+        scoreValue = doScore()
+        top = pq.top
+      }
     }
     doc
   }
@@ -306,7 +318,7 @@ class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]
 
   override def advance(target: Int): Int = {
     doc = scorer.advance(target)
-    while (doc < DocIdSetIterator.NO_MORE_DOCS && isProhibited) {
+    while (doc < NO_MORE_DOCS && isProhibited) {
       doc = scorer.advance(0)
     }
     doc
