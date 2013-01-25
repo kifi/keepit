@@ -48,10 +48,10 @@ class DuplicateDocumentDetection extends Logging {
   }
 
   def alreadyDetected(nuriId: Id[NormalizedURI])(implicit session: RSession, dupeRepo: DuplicateDocumentRepo) = {
-    !dupeRepo.getSimilarTo(nuriId).filter(_.state != DuplicateDocumentStates.NEW).isEmpty
+    dupeRepo.getSimilarTo(nuriId).filter(_.state != DuplicateDocumentStates.NEW).nonEmpty
   }
 
-  def processDocument(currentDoc: (Id[NormalizedURI], Array[Byte]), threshold: Double = DEFAULT_THRESHOLD) = {
+  def processDocument(currentDoc: (Id[NormalizedURI], Array[Byte]), threshold: Double) = {
     implicit val dupeRepo = inject[DuplicateDocumentRepo]
     inject[DBConnection].readOnly { implicit session =>
       documentSignatures.map { case (otherId, otherSig) =>
