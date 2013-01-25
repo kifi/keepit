@@ -232,6 +232,10 @@ slider = function() {
     })
     .on("mousedown click keydown keypress keyup", function(e) {
       e.stopPropagation();
+    })
+    .on("mousewheel", ".comment_body_view,.comment-compose", function(e) {
+      this.scrollTop += e.originalEvent.wheelDeltaY / 3;
+      e.preventDefault();
     });
 
     slideIn();
