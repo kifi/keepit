@@ -501,7 +501,7 @@ function scheduleAutoShow(tab) {
           tab.autoShowOnReady = true;
         }
       }
-    }, 2000/*30000*/);
+    }, 30000);
   }
 }
 
