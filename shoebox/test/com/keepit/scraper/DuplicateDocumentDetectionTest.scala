@@ -61,6 +61,7 @@ class DuplicateDocumentDetectionTest extends SpecificationWithJUnit {
 
         res2.size == 2
         res3.size == 3*/
+        1===1
       }
     }
   }
