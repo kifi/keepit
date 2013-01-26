@@ -133,13 +133,14 @@ api.port.on({
     });
   },
   get_prefs: function(data, respond) {
-    respond({session: session, prefs: api.prefs.get("env", "sliderDelay", "maxResults", "showScores")});
+    respond({session: session, prefs: api.prefs.get("env", "showSlider", "maxResults", "showScores")});
   },
   set_prefs: function(data) {
     api.prefs.set(data);
   },
   set_page_icon: function(data, respond, tab) {
-    setIcon(tab.id, data);
+    tab.kept = data;
+    setIcon(tab);
   },
   get_slider_info: function(data, respond, tab) {
     if (session) {
@@ -383,41 +384,31 @@ api.icon.on.click.push(function(tab) {
   api.tabs.emit(tab, "button_click");
 });
 
-function checkWhetherKept(url, callback) {
-  api.log("[checkWhetherKept] url:", url);
+function checkKeepStatus(tab, callback) {
+  if (tab.hasOwnProperty("kept")) return;  // already in progress or done
+
   if (!session) {
-    api.log("[checkWhetherKept] no session");
+    api.log("[checkKeepStatus] no session");
     return;
   }
 
-  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: url}, function done(o) {
-    callback(o.user_has_bookmark);
+  api.log("[checkKeepStatus]", tab);
+  tab.kept = undefined;
+
+  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url}, function done(o) {
+    tab.kept = o.user_has_bookmark;
+    setIcon(tab);
+    callback && callback();
   }, function fail(xhr) {
-    api.log("[checkWhetherKept] error:", xhr.responseText);
-    callback(false);
+    api.log("[checkKeepStatus] error:", xhr.responseText);
+    delete tab.kept;
+    callback && callback();
   });
 }
 
-function setIconIfFaint(tab) {
-  api.log("[setIconIfFaint]", tab.id, tab.url, tab.icon);
-  if (tab.icon === "icons/keep.faint.png") {
-    checkWhetherKept(tab.url, function(isKept) {
-      setIconIfStillAt(tab.id, tab.url, isKept);
-    });
-  }
-}
-
-function setIconIfStillAt(tabId, url, kept, callback) {
-  var tab = api.tabs.get(tabId);  // tab may have navigated
-  if (tab && tab.url === url && tab.icon === "icons/keep.faint.png") {
-    setIcon(tabId, kept);
-    callback && callback(tab);
-  }
-}
-
-function setIcon(tabId, kept) {
-  api.log("[setIcon] tab:", tabId, "kept:", kept);
-  api.icon.set(tabId, kept == null ? "icons/keep.faint.png" : kept ? "icons/kept.png" : "icons/keep.png");
+function setIcon(tab) {
+  api.log("[setIcon] tab:", tab.id, "kept:", tab.kept);
+  api.icon.set(tab, tab.kept == null ? "icons/keep.faint.png" : tab.kept ? "icons/kept.png" : "icons/keep.png");
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
@@ -433,49 +424,84 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
   });
 }
 
-api.tabs.on.activate.push(setIconIfFaint);
+api.tabs.on.focus.push(function(tab) {
+  api.log("[tabs.on.focus]", tab);
+  if (tab.autoShowEligible && !tab.autoShowTimer) {
+    scheduleAutoShow(tab);
+  } else {
+    checkKeepStatus(tab);
+  }
+});
+
+api.tabs.on.blur.push(function(tab) {
+  api.log("[tabs.on.blur]", tab);
+  api.timers.clearTimeout(tab.autoShowTimer);
+  delete tab.autoShowTimer;
+});
 
 api.tabs.on.loading.push(function(tab) {
-  api.log("[tabs.on.loading]", tab.id, tab.url);
-  setIcon(tab.id);
+  api.log("[tabs.on.loading]", tab);
+  setIcon(tab);
 
-  checkWhetherKept(tab.url, function(isKept) {
-    setIconIfStillAt(tab.id, tab.url, isKept, function(tab) {
-      if (!isKept && tab.complete) {
-        handleSliderAutoShow(tab);
+  checkKeepStatus(tab, function() {
+    if (tab.kept === false) {  // false, not undefined
+      var url = tab.url;
+      if (restrictedUrlPatternsForHover.some(function(e) {return url.indexOf(e) >= 0})) {
+        api.log("[tabs.on.loading:2] restricted:", url);
+        return;
       }
-    });
+
+      if (userHistory.exists(url)) {
+        api.log("[tabs.on.loading:2] recently visited:", url);
+      } else {
+        userHistory.add(url);
+        tab.autoShowEligible = true;
+        if (api.tabs.isFocused(tab)) {
+          scheduleAutoShow(tab);
+        }
+      }
+    }
   });
 });
 
 api.tabs.on.ready.push(function(tab) {
   api.log("[tabs.on.ready]", tab);
   logEvent("extension", "pageLoad");
+
+  if (tab.autoShowOnReady) {
+    api.log("[tabs.on.ready] auto showing:", tab);
+    api.tabs.emit(tab, "auto_show");
+    delete tab.autoShowOnReady;
+  }
 });
 
 api.tabs.on.complete.push(function(tab) {
   api.log("[tabs.on.complete]", tab);
-  if (tab.icon === "icons/keep.png") {
-    handleSliderAutoShow(tab);
-  }
 });
 
-function handleSliderAutoShow(tab) {
-  // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
-  var url = tab.url;
-  if (restrictedUrlPatternsForHover.some(function(e) {return url.indexOf(e) >= 0})) {
-    api.log("[handleSliderAutoShow] restricted:", url);
-    return;
-  }
-  if (userHistory.exists(url)) {
-    api.log("[handleSliderAutoShow] recently visited:", url);
-    return;
-  }
-  userHistory.add(url);
+api.tabs.on.unload.push(function(tab) {
+  api.log("[tabs.on.unload]", tab);
+  api.timers.clearTimeout(tab.autoShowTimer);
+  delete tab.autoShowTimer;
+});
 
-  var sliderDelaySec = api.prefs.get("sliderDelay");
-  if (sliderDelaySec > 0) {
-    api.tabs.emit(tab, "auto_show_after", sliderDelaySec * 1000);
+function scheduleAutoShow(tab) {
+  api.log("[scheduleAutoShow] scheduling tab:", tab.id);
+  // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
+  if (api.prefs.get("showSlider") !== false) {
+    tab.autoShowTimer = api.timers.setTimeout(function() {
+      delete tab.autoShowEligible;
+      delete tab.autoShowTimer;
+      if (api.prefs.get("showSlider") !== false) {
+        if (tab.ready) {
+          api.log("[scheduleAutoShow:1] fired for tab:", tab.id);
+          api.tabs.emit(tab, "auto_show");
+        } else {
+          api.log("[scheduleAutoShow:1] fired but tab not ready:", tab.id);
+          tab.autoShowOnReady = true;
+        }
+      }
+    }, 2000/*30000*/);
   }
 }
 
@@ -585,18 +611,18 @@ logEvent("extension", "started");
 authenticate(function() {
   api.log("[main] authenticated");
   api.tabs.each(function(tab) {
-    setIcon(tab.id);
-    if (tab.active) {
-      setIconIfFaint(tab);
+    setIcon(tab);
+    if (api.tabs.isSelected(tab)) {
+      checkKeepStatus(tab);
     }
   });
 });
 
 // TODO: remove the temporary prefs storage migration code below after Jan 31.
 if (this.chrome) {
-  ["hover_timeout","max_res","show_score"].forEach(function(name) {
+  ["max_res","show_score"].forEach(function(name) {
     var val = api.storage["production_" + name] || api.storage["development_" + name];
-    if (val) api.prefs.set({hover_timeout: "sliderDelay", max_res: "maxResults", show_score: "showScores"}[name], val === "yes" ? true : val);
+    if (val) api.prefs.set({max_res: "maxResults", show_score: "showScores"}[name], val === "yes" ? true : val);
     delete api.storage["production_" + name];
     delete api.storage["development_" + name];
   });
@@ -606,4 +632,9 @@ if (api.storage.env) {
     api.prefs.set("env", "development");
   }
   delete api.storage.env;
+}
+
+// TODO: remove the temporary prefs storage migration code below after Feb 10.
+if (this.chrome) {
+  delete api.storage[":sliderDelay"];
 }
