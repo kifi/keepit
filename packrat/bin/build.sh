@@ -2,7 +2,7 @@
 
 pushd "$(dirname $0)/.." > /dev/null
 
-rm -rf out/*
+rm -rf out/*/* out/*.*
 mkdir -p out
 cp -R adapters/chrome out/
 cp -R adapters/firefox out/
