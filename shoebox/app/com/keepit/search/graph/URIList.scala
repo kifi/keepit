@@ -6,12 +6,32 @@ import org.apache.lucene.store.OutputStreamDataOutput
 import org.apache.lucene.store.DataInput
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import scala.collection.mutable.ArrayBuffer
 
 object URIList {
   def toByteArray(bookmarks: Seq[Bookmark]) = {
-    val (privateBookmarks, publicBookmarks) = bookmarks.partition(_.isPrivate)
-    val sortedPrivateBookmarks = privateBookmarks.sortBy(_.uriId.id)
-    val sortedPublicBookmarks = publicBookmarks.sortBy(_.uriId.id)
+    // sort bookmarks by uriid. if there are duplicate uriIds, take most recent one
+    val sortedBookmarks = bookmarks.sortWith{ (a, b) =>
+      (a.uriId.id < b.uriId.id) || (a.uriId.id == b.uriId.id && a.createdAt.getMillis > b.createdAt.getMillis)
+    }
+    val privateBookmarks = new ArrayBuffer[Bookmark]
+    val publicBookmarks = new ArrayBuffer[Bookmark]
+
+    sortedBookmarks.headOption match {
+      case Some(firstBookmark) =>
+        var prevUriId = firstBookmark.uriId
+        if (firstBookmark.isPrivate) privateBookmarks += firstBookmark
+        else publicBookmarks += firstBookmark
+
+        sortedBookmarks.tail.foreach{ b =>
+          if (b.uriId != prevUriId) {
+            if (b.isPrivate) privateBookmarks += b
+            else publicBookmarks += b
+            prevUriId = b.uriId
+          }
+        }
+      case None =>
+    }
     val baos = new ByteArrayOutputStream(publicBookmarks.size * 4)
     val out = new OutputStreamDataOutput(baos)
     // version
@@ -22,20 +42,20 @@ object URIList {
 
     // encode public list
     var current = 0L
-    sortedPublicBookmarks.foreach{ b =>
+    publicBookmarks.foreach{ b =>
       out.writeVLong(b.uriId.id - current)
       current = b.uriId.id
     }
     // encode private list
     current = 0L
-    sortedPrivateBookmarks.foreach{ b =>
+    privateBookmarks.foreach{ b =>
       out.writeVLong(b.uriId.id - current)
       current = b.uriId.id
     }
     // encode createAt (public)
-    sortedPublicBookmarks.foreach{ b => out.writeVLong(b.createdAt.getMillis / TIME_UNIT) }
+    publicBookmarks.foreach{ b => out.writeVLong(b.createdAt.getMillis / TIME_UNIT) }
     // encode createAt (private)
-    sortedPrivateBookmarks.foreach{ b => out.writeVLong(b.createdAt.getMillis / TIME_UNIT) }
+    privateBookmarks.foreach{ b => out.writeVLong(b.createdAt.getMillis / TIME_UNIT) }
 
     baos.flush()
     baos.toByteArray()
