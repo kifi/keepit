@@ -235,6 +235,8 @@ slider = function() {
     })
     .on("mousewheel", ".comment_body_view,.comment-compose", function(e) {
       this.scrollTop += e.originalEvent.wheelDeltaY / 3;
+    })
+    .on("mousewheel", function(e) {
       e.preventDefault();
     });
 
