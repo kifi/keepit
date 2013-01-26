@@ -310,12 +310,7 @@ for each (let win in windows) {
       exports.log("[windows]", tab.id, tab.url);
       tabsById[tab.id] = tab;
     }
-    let page = pages[tab.id];
-    if (page) {
-      //page.active = tab === tab.window.tabs.activeTab;
-    } else {
-      createPage(tab);
-    }
+    let page = pages[tab.id] || createPage(tab);
     // TODO: initialize page.complete somehow
   }
 };
