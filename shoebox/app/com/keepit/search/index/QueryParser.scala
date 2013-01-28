@@ -39,7 +39,7 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
     if (clauses.size ==0) {
       null; // all clause words were filtered away by the analyzer.
     }
-    val query = new BooleanQueryWithPercentMatch(disableCoord)
+    val query = new BooleanQueryWithPercentMatch(false) // ignore disableCoord. we always enable coord and control the behavior thru a Similarity instance
     query.setPercentMatch(percentMatch)
 
     val (siteClauses, otherClauses) = clauses.partition{ clause => clause.getQuery.isInstanceOf[SiteQuery] && !clause.isProhibited }

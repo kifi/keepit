@@ -39,6 +39,8 @@ extends Logging {
   val maxResultClickBoost = config.asFloat("maxResultClickBoost")
   val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
+  val similarity = Similarity(config.asString("similarity"))
+  val progressiveRelaxation = config.asBoolean("progressiveRelaxation")
 
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
   val articleSearcher = articleIndexer.getSearcher
@@ -78,6 +80,7 @@ extends Logging {
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       var personalizedSearcher = getPersonalizedSearcher(articleQuery)
+      personalizedSearcher.setSimilarity(similarity)
       personalizedSearcher.doSearch(articleQuery){ (scorer, mapper) =>
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
@@ -115,7 +118,7 @@ extends Logging {
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
-    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts, isInitialSearch)
+    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts, isInitialSearch && progressiveRelaxation)
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
