@@ -13,7 +13,7 @@ object MultiHashFilter {
     new MultiHashFilter(tableSize, filter, numHashFuncs, minHits)
   }
 
-  def emptyFilter = new MultiHashFilter(0, Array.empty[Byte], 0, 0) {
+  val emptyFilter = new MultiHashFilter(0, Array.empty[Byte], 0, 0) {
     override def put(key: Long) = throw new UnsupportedOperationException
     override def mayContain(key: Long) = false
   }
