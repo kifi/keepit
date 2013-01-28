@@ -65,7 +65,9 @@ class MainSearcherTest extends SpecificationWithJUnit {
   val allHitsConfig = defaultConfig("tailCutting" -> "0")
 
   val resultClickTracker = ResultClickTracker(8)
-  val browsingHistoryTracker = BrowsingHistoryTracker(3067, 2, 1)
+  val browsingHistoryTracker = running(new EmptyApplication()) {
+    BrowsingHistoryTracker(3067, 2, 1)
+  }
 
   implicit val lang = Lang("en")
 
