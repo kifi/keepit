@@ -26,7 +26,6 @@ import play.api.http.ContentTypes
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social._
-import com.keepit.common.social.UserWithSocial.toUserWithSocial
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.graph.URIGraph
@@ -53,7 +52,7 @@ object UserController extends FortyTwoController {
           val searcher = inject[URIGraph].getURIGraphSearcher
           val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
           val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
-          val socialUsers = sharingUserIds.map(u => UserWithSocial.toUserWithSocial(UserCxRepo.get(u))).toSeq
+          val socialUsers = sharingUserIds.map(u => UserWithSocial.toUserWithSocialCX(UserCxRepo.get(u))).toSeq
 
           val numComments = CommentCxRepo.getPublicCount(uri.id.get)
           val numMessages = CommentCxRepo.getMessageCount(uri.id.get, userId)
@@ -85,7 +84,7 @@ object UserController extends FortyTwoController {
           val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
           val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
 
-          sharingUserIds.map(u => UserWithSocial.toUserWithSocial(UserCxRepo.get(u))).toSeq
+          sharingUserIds.map(u => UserWithSocial.toUserWithSocialCX(UserCxRepo.get(u))).toSeq
 
         case None =>
           Seq[UserWithSocial]()
@@ -106,30 +105,35 @@ object UserController extends FortyTwoController {
   }
 
   def getUser(id: Id[User]) = AdminJsonAction { request =>
-    val user = CX.withConnection { implicit c =>
-      UserWithSocial.toUserWithSocial(UserCxRepo.get(id))
+    val user = inject[DBConnection].readOnly { implicit s =>
+      UserWithSocial.toUserWithSocial(inject[UserRepo].get(id))
     }
     Ok(userWithSocialSerializer.writes(user))
   }
 
-  def userStatistics(user: User)(implicit conn: Connection): UserStatistics = {
+  def userStatisticsCX(user: User)(implicit conn: Connection): UserStatistics = {
     val kifiInstallations = KifiInstallationCxRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
+    UserStatistics(user, UserWithSocial.toUserWithSocialCX(user), kifiInstallations)
+  }
+
+  def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
+    val kifiInstallations = inject[KifiInstallationRepo].all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
     UserStatistics(user, UserWithSocial.toUserWithSocial(user), kifiInstallations)
   }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = CX.withConnection { implicit conn =>
-      val userWithSocial = UserWithSocial.toUserWithSocial(UserCxRepo.get(userId))
+      val userWithSocial = UserWithSocial.toUserWithSocialCX(UserCxRepo.get(userId))
       val socialUserInfos = SocialUserInfoCxRepo.getByUser(userWithSocial.user.id.get)
       val follows = FollowCxRepo.all(userId) map {f => NormalizedURICxRepo.get(f.uriId)}
       val comments = CommentCxRepo.all(CommentPermissions.PUBLIC, userId) map {c =>
         (NormalizedURICxRepo.get(c.uriId), c)
       }
       val messages = CommentCxRepo.all(CommentPermissions.MESSAGE, userId) map {c =>
-        (NormalizedURICxRepo.get(c.uriId), c, CommentRecipientCxRepo.getByComment(c.id.get) map { r => toUserWithSocial(UserCxRepo.get(r.userId.get)) })
+        (NormalizedURICxRepo.get(c.uriId), c, CommentRecipientCxRepo.getByComment(c.id.get) map { r => UserWithSocial.toUserWithSocialCX(UserCxRepo.get(r.userId.get)) })
       }
       val sentElectronicMails = ElectronicMail.forSender(userId);
-      val mailAddresses = UserWithSocial.toUserWithSocial(UserCxRepo.get(userId)).emails.map(_.address)
+      val mailAddresses = UserWithSocial.toUserWithSocialCX(UserCxRepo.get(userId)).emails.map(_.address)
       val receivedElectronicMails = ElectronicMail.forRecipient(mailAddresses);
       (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails)
     }
@@ -141,10 +145,10 @@ object UserController extends FortyTwoController {
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = CX.withConnection { implicit conn =>
-      val userWithSocial = UserWithSocial.toUserWithSocial(UserCxRepo.get(userId))
+      val userWithSocial = UserWithSocial.toUserWithSocialCX(UserCxRepo.get(userId))
       val bookmarks = BookmarkCxRepo.ofUser(userWithSocial.user)
       val socialConnections = SocialConnectionCxRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
-      val fortyTwoConnections = (SocialConnectionCxRepo.getFortyTwoUserConnections(userId) map (UserCxRepo.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
+      val fortyTwoConnections = (SocialConnectionCxRepo.getFortyTwoUserConnections(userId) map (UserCxRepo.get(_)) map UserWithSocial.toUserWithSocialCX toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
       val kifiInstallations = KifiInstallationCxRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       (userWithSocial, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations)
     }
@@ -152,8 +156,8 @@ object UserController extends FortyTwoController {
   }
 
   def usersView = AdminHtmlAction { implicit request =>
-    val users = CX.withConnection { implicit c =>
-      UserCxRepo.all map userStatistics
+    val users = inject[DBConnection].readOnly { implicit s =>
+      inject[UserRepo].all map userStatistics
     }
     Ok(views.html.users(users))
   }

@@ -115,6 +115,14 @@ object FortyTwoTypeMappers {
   implicit object DeepLocatorTypeMapper extends BaseTypeMapper[DeepLocator] {
     def apply(profile: BasicProfile) = new DeepLocatorMapperDelegate
   }
+
+  implicit object KifiVersionTypeMapper extends BaseTypeMapper[KifiVersion] {
+    def apply(profile: BasicProfile) = new KifiVersionMapperDelegate
+  }
+
+  implicit object UserAgentTypeMapper extends BaseTypeMapper[UserAgent] {
+    def apply(profile: BasicProfile) = new UserAgentMapperDelegate
+  }
 }
 
 //************************************
@@ -252,6 +260,24 @@ class SocialIdMapperDelegate extends StringMapperDelegate[SocialId] {
   def zero = SocialId("")
   def sourceToDest(socialId: SocialId) = socialId.id
   def safeDestToSource(str: String) = SocialId(str)
+}
+
+//************************************
+//       KifiVersion -> String
+//************************************
+class KifiVersionMapperDelegate extends StringMapperDelegate[KifiVersion] {
+  def zero = KifiVersion(0, 0, 0)
+  def sourceToDest(version: KifiVersion) = version.toString
+  def safeDestToSource(str: String) = KifiVersion(str)
+}
+
+//************************************
+//       UserAgent -> String
+//************************************
+class UserAgentMapperDelegate extends StringMapperDelegate[UserAgent] {
+  def zero = UserAgent("")
+  def sourceToDest(value: UserAgent) = value.userAgent
+  def safeDestToSource(str: String) = UserAgent(str)
 }
 
 //************************************

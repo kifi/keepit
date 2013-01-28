@@ -13,9 +13,8 @@ import play.api.libs.json.{Json, JsArray, JsBoolean, JsNumber, JsObject, JsStrin
 import com.keepit.inject._
 import com.keepit.common.time._
 import com.keepit.common.net._
-import com.keepit.common.db.Id
-import com.keepit.common.db.CX
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
@@ -39,8 +38,8 @@ import com.keepit.search.SearchConfigManager
 
 object SearchConfigController extends FortyTwoController {
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val user = CX.withConnection { implicit conn =>
-      UserWithSocial.toUserWithSocial(UserCxRepo.get(userId))
+    val user = inject[DBConnection].readOnly { implicit s =>
+      UserWithSocial.toUserWithSocial(inject[UserRepo].get(userId))
     }
     Ok(views.html.searchConfig(user))
   }

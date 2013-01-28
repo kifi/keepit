@@ -89,22 +89,23 @@ object AuthController extends FortyTwoController {
          KifiVersion(params.get("version").get.head),
          params.get("installation").flatMap(_.headOption).filterNot(s => s.isEmpty || s == "undefined").map(id => ExternalId[KifiInstallation](id)))
     }
-    val (user, installation) = CX.withConnection { implicit c =>
+    val (user, installation) = inject[DBConnection].readWrite{implicit s =>
+      val repo = inject[KifiInstallationRepo]
       log.info("start. details: %s, %s, %s".format(userAgent, version, installationIdOpt))
       val installation: KifiInstallation = installationIdOpt flatMap { id =>
-        KifiInstallationCxRepo.getOpt(request.userId, id)
+        repo.getOpt(request.userId, id)
       } match {
         case None =>
-          KifiInstallation(userId = request.userId, userAgent = userAgent, version = version).save
+          repo.save(KifiInstallation(userId = request.userId, userAgent = userAgent, version = version))
         case Some(install) =>
           if (install.version != version || install.userAgent != userAgent) {
-            install.withUserAgent(userAgent).withVersion(version).save
+            repo.save(install.withUserAgent(userAgent).withVersion(version))
           } else {
             install
           }
       }
 
-      (UserCxRepo.get(request.userId), installation)
+      (inject[UserRepo].get(request.userId), installation)
     }
 
     Ok(JsObject(Seq(
