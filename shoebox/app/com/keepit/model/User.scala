@@ -1,10 +1,9 @@
 package com.keepit.model
 
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db._
-import com.keepit.common.db.NotFoundException
 import com.keepit.common.time._
 import com.keepit.common.crypto._
 import java.security.SecureRandom
@@ -13,7 +12,6 @@ import org.joda.time.DateTime
 import play.api._
 import ru.circumflex.orm._
 import play.api.libs.json._
-import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 case class User(
   id: Option[Id[User]] = None,

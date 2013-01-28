@@ -98,6 +98,28 @@ case class KifiInstallation (
   def withUserAgent(userAgent: UserAgent) = copy(userAgent = userAgent)
 }
 
+@ImplementedBy(classOf[KifiInstallationRepoImpl])
+trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnFunction[KifiInstallation] {
+}
+
+@Singleton
+class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[KifiInstallation] with KifiInstallationRepo with ExternalIdColumnDbFunction[KifiInstallation] {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
+
+  override lazy val table = new RepoTable[KifiInstallation](db, "kifi_installation") with ExternalIdColumn[KifiInstallation] {
+    def userId = column[Id[User]]("user_id", O.NotNull)
+    def version = column[KifiVersion]("version", O.NotNull)
+    def userAgent = column[UserAgent]("user_agent", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ externalId ~ version ~ userAgent ~ state <> (KifiInstallation, KifiInstallation.unapply _)
+  }
+}
+
 object KifiInstallationCxRepo {
 
   def all(implicit conn: Connection): Seq[KifiInstallation] =
