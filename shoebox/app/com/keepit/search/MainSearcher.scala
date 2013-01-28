@@ -46,9 +46,6 @@ extends Logging {
   val articleSearcher = articleIndexer.getSearcher
   val uriGraphSearcher = uriGraph.getURIGraphSearcher
 
-  // set similarity
-  articleSearcher.setSimilarity(similarity)
-
   // initialize user's social graph info
   val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
   val myUris = myUriEdges.destIdLongSet
@@ -83,6 +80,7 @@ extends Logging {
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       var personalizedSearcher = getPersonalizedSearcher(articleQuery)
+      personalizedSearcher.setSimilarity(similarity)
       personalizedSearcher.doSearch(articleQuery){ (scorer, mapper) =>
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
