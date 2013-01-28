@@ -1,4 +1,4 @@
-@(currentService: com.keepit.common.controller.ServiceType, currentVersion: com.keepit.common.controller.ServiceVersion, compilationTime: String, started: String, errorCount: Int)
+@(currentService: com.keepit.common.controller.ServiceType, currentVersion: com.keepit.common.controller.ServiceVersion, compilationTime: String, started: String, errorCount: Int, recentErrors: List[com.keepit.common.healthcheck.HealthcheckError])
 
 @admin(currentService + " service") {
    <table class="table table-bordered">
@@ -13,6 +13,9 @@
       </tr>
       <tr>
         <th>Error count (<a href="@com.keepit.common.healthcheck.routes.HealthController.resetErrorCount()">reset</a>)</th><td>@errorCount</td>
+      </tr>
+      <tr>
+        <th>Recent errors</th><td>@recentErrors.mkString("\n<br>")</td>
       </tr>
   </table>
 
