@@ -13,9 +13,11 @@ import com.keepit.common.controller.FortyTwoController
 object HealthController extends FortyTwoController {
 
   def serviceView = AdminHtmlAction { implicit request =>
-    val errorCount = inject[HealthcheckPlugin].errorCount
+    val healthcheckPlugin = inject[HealthcheckPlugin]
+    val errorCount = healthcheckPlugin.errorCount
+    val recentErrors = healthcheckPlugin.errors()
     val services = inject[FortyTwoServices]
-    Ok(views.html.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString, services.started.toStandardTimeString, errorCount))
+    Ok(views.html.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString, services.started.toStandardTimeString, errorCount, recentErrors))
   }
 
   def ping() = Action { implicit request =>

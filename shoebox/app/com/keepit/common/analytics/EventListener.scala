@@ -59,7 +59,7 @@ class UsefulPageListener extends EventListenerPlugin {
   private lazy val browsingHistoryTracker = inject[BrowsingHistoryTracker]
 
   def onEvent: PartialFunction[Event,Unit] = {
-    case Event(_,UserEventMetadata(EventFamilies.SLIDER,"usefulPage",externalUser,_,experiments,metaData,_),_,_) =>
+    case Event(_, UserEventMetadata(EventFamilies.SLIDER, "usefulPage", externalUser, _, experiments, metaData, _), _, _) =>
       val (user, url, normUrl) = CX.withConnection { implicit conn =>
         val user = UserCxRepo.get(externalUser)
         val url = (metaData \ "url").asOpt[String].getOrElse("")
