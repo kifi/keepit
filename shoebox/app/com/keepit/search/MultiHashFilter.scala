@@ -1,6 +1,11 @@
 package com.keepit.search
 
 import java.util.Random
+import com.keepit.inject._
+import play.api.Play.current
+import com.keepit.model.{User, BrowsingHistory,BrowsingHistoryRepo}
+import com.keepit.common.db.slick._
+import com.keepit.common.db.Id
 
 object MultiHashFilter {
   def apply(tableSize: Int, numHashFuncs: Int, minHits: Int) = {
@@ -8,13 +13,15 @@ object MultiHashFilter {
     new MultiHashFilter(tableSize, filter, numHashFuncs, minHits)
   }
 
-  val emptyFilter = new MultiHashFilter(0, Array.empty[Byte], 0, 0) {
+  def emptyFilter = new MultiHashFilter(0, Array.empty[Byte], 0, 0) {
     override def put(key: Long) = throw new UnsupportedOperationException
     override def mayContain(key: Long) = false
   }
 }
 
 class MultiHashFilter(tableSize: Int, filter: Array[Byte], numHashFuncs: Int, minHits: Int) {
+
+  def getFilter = filter
 
   def put(key: Long) {
     forAllPositionsFor(key){ (pos, fingerprint) =>
