@@ -116,7 +116,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
 
   def commitData: Map[String, String] = {
     // get the latest commit
-    val indexReader = Option(IndexReader.openIfChanged(searcher.indexReader)).getOrElse(searcher.indexReader)
+    val indexReader = Option(IndexReader.openIfChanged(searcher.indexReader.inner)).getOrElse(searcher.indexReader.inner)
     var indexCommit = indexReader.getIndexCommit()
     var mutableMap = indexCommit.getUserData()
     log.info("commit data =" + mutableMap)
