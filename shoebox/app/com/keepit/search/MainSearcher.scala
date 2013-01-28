@@ -39,10 +39,15 @@ extends Logging {
   val maxResultClickBoost = config.asFloat("maxResultClickBoost")
   val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
+  val similarity = Similarity(config.asString("similarity"))
+  val progressiveRelaxation = config.asBoolean("progressiveRelaxation")
 
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
   val articleSearcher = articleIndexer.getSearcher
   val uriGraphSearcher = uriGraph.getURIGraphSearcher
+
+  // set similarity
+  articleSearcher.setSimilarity(similarity)
 
   // initialize user's social graph info
   val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
@@ -115,7 +120,7 @@ extends Logging {
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
-    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts, isInitialSearch)
+    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts, isInitialSearch && progressiveRelaxation)
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
