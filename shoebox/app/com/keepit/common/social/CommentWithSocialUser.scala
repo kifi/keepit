@@ -11,13 +11,15 @@ object CommentWithSocialUser {
   // TODO: Major optimizations needed!
   def apply(comment: Comment)(implicit conn: Connection): CommentWithSocialUser = {
     CommentWithSocialUser(
-      UserWithSocial.toUserWithSocial(UserCxRepo.get(comment.userId)),
+      UserWithSocial.toUserWithSocialCX(UserCxRepo.get(comment.userId)),
       comment,
       CommentCxRepo.getChildCount(comment.id.get),
       if(comment.permissions != CommentPermissions.MESSAGE) {
         Nil
       } else {
-        CommentRecipientCxRepo.getByComment(comment.id.get) map { cr => UserWithSocial.toUserWithSocial(UserCxRepo.get(cr.userId.get)) }
+        CommentRecipientCxRepo.getByComment(comment.id.get) map { cr => 
+          UserWithSocial.toUserWithSocialCX(UserCxRepo.get(cr.userId.get)) 
+        }
       }
     )
   }

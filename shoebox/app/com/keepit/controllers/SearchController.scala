@@ -105,7 +105,7 @@ object SearchController extends FortyTwoController {
     val users = res.users.toSeq.map{ userId =>
       val user = UserCxRepo.get(userId)
       val info = SocialUserInfoCxRepo.getByUser(user.id.get).head
-      UserWithSocial(user, info, BookmarkCxRepo.count(user), Seq(), Seq())
+      UserWithSocial(user, info, BookmarkCxRepo.count(user).toInt, Seq(), Seq())
     }
     PersonalSearchResult(toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark, false, users, res.score)
   }

@@ -41,10 +41,10 @@ import com.keepit.common.analytics.EventFamilies
 object BookmarksController extends FortyTwoController {
 
   def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
-    CX.withConnection { implicit conn =>
-      val bookmark = BookmarkCxRepo.get(id)
-      val uri = NormalizedURICxRepo.get(bookmark.uriId)
-      val user = UserWithSocial.toUserWithSocial(UserCxRepo.get(bookmark.userId))
+    inject[DBConnection].readOnly { implicit conn =>
+      val bookmark = inject[BookmarkRepo].get(id)
+      val uri = inject[NormalizedURIRepo].get(bookmark.uriId)
+      val user = UserWithSocial.toUserWithSocial(inject[UserRepo].get(bookmark.userId))
       Ok(views.html.bookmark(bookmark, uri, user))
     }
   }
@@ -102,11 +102,14 @@ object BookmarksController extends FortyTwoController {
 
   def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 200
-    val (count, bookmarksAndUsers) = CX.withConnection { implicit conn =>
-      val bookmarks = BookmarkCxRepo.page(page, PAGE_SIZE)
-      val users = bookmarks map (_.userId) map UserCxRepo.get map UserWithSocial.toUserWithSocial
-      val uris = bookmarks map (_.uriId) map NormalizedURICxRepo.get map (_.stats)
-      val count = BookmarkCxRepo.count
+    val (count, bookmarksAndUsers) = inject[DBConnection].readOnly { implicit s =>
+      val userRepo = inject[UserRepo]
+      val bookmarkRepo = inject[BookmarkRepo]
+      val normalizedURIRepo = inject[NormalizedURIRepo]
+      val bookmarks = bookmarkRepo.page(page, PAGE_SIZE)
+      val users = bookmarks map (_.userId) map userRepo.get map UserWithSocial.toUserWithSocial
+      val uris = bookmarks map (_.uriId) map normalizedURIRepo.get map (_.uriStats)
+      val count = bookmarkRepo.count(s)
       (count, (bookmarks, uris, users).zipped.toList.seq)
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt

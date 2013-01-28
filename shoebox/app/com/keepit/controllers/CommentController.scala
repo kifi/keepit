@@ -16,7 +16,7 @@ import com.keepit.common.social.CommentWithSocialUser
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.social.UserWithSocial
-import com.keepit.common.social.UserWithSocial.toUserWithSocial
+import com.keepit.common.social.UserWithSocial._
 import com.keepit.inject.inject
 import com.keepit.model._
 import com.keepit.search.graph.URIGraph
@@ -301,8 +301,10 @@ object CommentController extends FortyTwoController {
         text, m => "[" + m.group(1).replaceAll("""\\(.)""", "$1") + "]")
 
   def followsView = AdminHtmlAction { implicit request =>
-    val uriAndUsers = CX.withConnection { implicit c =>
-      FollowCxRepo.all map {f => (toUserWithSocial(UserCxRepo.get(f.userId)), f, NormalizedURICxRepo.get(f.uriId))}
+    val uriAndUsers = inject[DBConnection].readOnly { implicit s =>
+      inject[FollowRepo].all() map {f => 
+        (toUserWithSocial(inject[UserRepo].get(f.userId)), f, inject[NormalizedURIRepo].get(f.uriId))
+      }
     }
     Ok(views.html.follows(uriAndUsers))
   }
@@ -314,7 +316,7 @@ object CommentController extends FortyTwoController {
     val (count, uriAndUsers) = CX.withConnection { implicit conn =>
       val comments = CommentCxRepo.page(page, PAGE_SIZE)
       val count = CommentCxRepo.count(CommentPermissions.PUBLIC)
-      (count, (comments map {co => (toUserWithSocial(UserCxRepo.get(co.userId)), co, NormalizedURICxRepo.get(co.uriId))} ))
+      (count, (comments map {co => (toUserWithSocialCX(UserCxRepo.get(co.userId)), co, NormalizedURICxRepo.get(co.uriId))} ))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.comments(uriAndUsers, page, count, pageCount))
@@ -328,7 +330,7 @@ object CommentController extends FortyTwoController {
       val messages = CommentCxRepo.page(page, PAGE_SIZE, CommentPermissions.MESSAGE)
       val count = CommentCxRepo.count(CommentPermissions.MESSAGE)
       (count, (messages map {co =>
-        (toUserWithSocial(UserCxRepo.get(co.userId)), co, NormalizedURICxRepo.get(co.uriId), CommentRecipientCxRepo.getByComment(co.id.get) map { r => toUserWithSocial(UserCxRepo.get(r.userId.get)) })
+        (toUserWithSocialCX(UserCxRepo.get(co.userId)), co, NormalizedURICxRepo.get(co.uriId), CommentRecipientCxRepo.getByComment(co.id.get) map { r => toUserWithSocialCX(UserCxRepo.get(r.userId.get)) })
       }))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt

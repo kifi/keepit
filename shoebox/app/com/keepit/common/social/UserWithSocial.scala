@@ -1,19 +1,32 @@
 package com.keepit.common.social
 
 import java.sql.Connection
+import play.api.Play.current
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.common.db.State
 
-case class UserWithSocial(user: User, socialUserInfo: SocialUserInfo, bookmarksCount: Long, emails: Seq[EmailAddress], experiments: Seq[State[ExperimentType]])
+case class UserWithSocial(user: User, socialUserInfo: SocialUserInfo, bookmarksCount: Int, emails: Seq[EmailAddress], experiments: Seq[State[ExperimentType]])
 
 object UserWithSocial {
-  def toUserWithSocial(user: User)(implicit conn: Connection) = {
+  def toUserWithSocialCX(user: User)(implicit conn: Connection) = {
     val socialInfos = SocialUserInfoCxRepo.getByUser(user.id.get)
     if (socialInfos.size != 1) throw new Exception("Expected to have exactly one social info for user %s, got %s. All social infos are: %s".
         format(user, socialInfos, SocialUserInfoCxRepo.all))
-    val bookmarksCount = BookmarkCxRepo.count(user)
+    val bookmarksCount = BookmarkCxRepo.count(user).intValue
     val emails = EmailAddressCxRepo.getByUser(user.id.get)
     val experiments = UserExperimentCxRepo.getByUser(user.id.get).map(_.experimentType)
+    UserWithSocial(user, socialInfos.head, bookmarksCount, emails, experiments)
+  }
+
+  def toUserWithSocial(user: User)(implicit s: RSession) = {
+    val socialInfos = inject[SocialUserInfoRepo].getByUser(user.id.get)
+    if (socialInfos.size != 1) throw new Exception("Expected to have exactly one social info for user %s, got %s. All social infos are: %s".
+        format(user, socialInfos, inject[SocialUserInfoRepo].all))
+    val bookmarksCount = inject[BookmarkRepo].count(user.id.get)
+    val emails = inject[EmailAddressRepo].getByUser(user.id.get)
+    val experiments = inject[UserExperimentRepo].getByUser(user.id.get).map(_.experimentType)
     UserWithSocial(user, socialInfos.head, bookmarksCount, emails, experiments)
   }
 }
