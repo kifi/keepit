@@ -10,6 +10,8 @@ import java.io.FileOutputStream
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
+      "progressiveRelaxation" -> "true",
+      "similarity" -> "default",
       "svWeightMyBookMarks" -> "1",
       "svWeightBrowsingHistory" -> "5",
       "maxResultClickBoost" -> "10.0",
@@ -30,6 +32,8 @@ object SearchConfig {
     )
   private[this] val descriptions =
     Map[String, String](
+      "progressiveRelaxation" -> "on/off progressiveRelaxation",
+      "similarity" -> "similarity characteristics",
       "svWeightMyBookMarks" -> "semantics vector weight for my bookmarks",
       "svWeightBrowsingHistory" -> "semantic vector weight for browsing history",
       "maxResultClickBoost" -> "boosting by recent result clicks",

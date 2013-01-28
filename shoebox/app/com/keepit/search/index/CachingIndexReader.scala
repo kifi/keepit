@@ -92,15 +92,18 @@ object EmptyInvertedList extends InvertedList(Array.empty[(Int, Array[Int])]) {
 
 class InvertedListBuilder() {
   private[this] lazy val buf = new ArrayBuffer[(Int, Array[Int])]
+  private[this] var isEmpty = true
 
   def add(docid: Int, positions: Array[Int]) {
     buf += ((docid, positions))
+    isEmpty = false
   }
   def add(doc: (Int, Array[Int])) {
     buf += doc
+    isEmpty = false
   }
 
-  def build = new InvertedList(buf.sortBy(_._1).toArray)
+  def build = if (isEmpty) EmptyInvertedList else new InvertedList(buf.sortBy(_._1).toArray)
 }
 
 class CachedTermPositions(indexReader: CachingIndexReader) extends TermPositions {
