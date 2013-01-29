@@ -68,6 +68,8 @@ case class DeepLink(
 @ImplementedBy(classOf[DeepLinkRepoImpl])
 trait DeepLinkRepo extends Repo[DeepLink] {
   def getByUri(urlId: Id[NormalizedURI])(implicit session: RSession): Seq[DeepLink]
+  def getByUrl(urlId: Id[URL])(implicit session: RSession): Seq[DeepLink]
+  def getByToken(token: DeepLinkToken)(implicit session: RSession): Option[DeepLink]
 }
 
 @Singleton
@@ -94,9 +96,14 @@ class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Deep
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[DeepLink] =
     (for(b <- table if b.uriId === uriId) yield b).list
 
+  def getByUrl(urlId: Id[URL])(implicit session: RSession): Seq[DeepLink] =
+    (for(b <- table if b.urlId === urlId) yield b).list
+
+  def getByToken(token: DeepLinkToken)(implicit session: RSession): Option[DeepLink] =
+    (for(b <- table if b.token === token) yield b).firstOption
 }
 
-
+//slicked!
 object DeepLinkCxRepo {
 
   def all(implicit conn: Connection): Seq[DeepLink] =

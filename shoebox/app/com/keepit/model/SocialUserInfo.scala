@@ -51,6 +51,8 @@ case class SocialUserInfo(
 trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
   def getByUser(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
+  def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo]
+  def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo]
 }
 
 @Singleton
@@ -79,8 +81,16 @@ class SocialUserInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRep
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo =
     (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).first
 
+  def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo] = {
+    val UNPROCESSED_STATE = SocialUserInfoStates.CREATED :: SocialUserInfoStates.FETCHED_USING_FRIEND :: Nil
+    (for(f <- table if f.state inSet UNPROCESSED_STATE) yield f).list
+  }
+
+  def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo] =
+    (for(f <- table if f.lastGraphRefresh isNull) yield f).list
 }
 
+//slicked
 object SocialUserInfoCxRepo {
 
   def all(implicit conn: Connection): Seq[SocialUserInfo] =

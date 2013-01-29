@@ -128,6 +128,7 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
     (for(k <- table if k.userId === userId && k.externalId === externalId) yield k).firstOption
 }
 
+//slicked!
 object KifiInstallationCxRepo {
 
   def all(implicit conn: Connection): Seq[KifiInstallation] =
