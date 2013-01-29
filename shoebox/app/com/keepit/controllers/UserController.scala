@@ -152,7 +152,11 @@ object UserController extends FortyTwoController {
       val kifiInstallations = KifiInstallationCxRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       (userWithSocial, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations)
     }
-    Ok(views.html.user(user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations))
+    // above needs slicking.
+    val historyUpdateCount = inject[DBConnection].readOnly { implicit session =>
+      inject[BrowsingHistoryRepo].getByUserId(userId).map(_.updatesCount).getOrElse(0)
+    }
+    Ok(views.html.user(user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations, historyUpdateCount))
   }
 
   def usersView = AdminHtmlAction { implicit request =>
