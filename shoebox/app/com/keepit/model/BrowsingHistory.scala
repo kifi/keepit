@@ -28,7 +28,8 @@ case class BrowsingHistory (
                     tableSize: Int,
                     filter: Array[Byte],
                     numHashFuncs: Int,
-                    minHits: Int
+                    minHits: Int,
+                    updatesCount: Int = 0
                     ) extends Model[BrowsingHistory] {
   def withFilter(filter: Array[Byte]) = this.copy(filter = filter)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -56,8 +57,13 @@ class BrowsingHistoryRepoImpl @Inject() (val db: DataBaseComponent) extends DbRe
     def filter = column[Array[Byte]]("filter", O.NotNull)
     def numHashFuncs = column[Int]("num_hash_funcs", O.NotNull)
     def minHits = column[Int]("min_hits", O.NotNull)
+    def updatesCount = column[Int]("updates_count", O.NotNull)
 
-    def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ tableSize ~ filter ~ numHashFuncs ~ minHits <> (BrowsingHistory, BrowsingHistory.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ tableSize ~ filter ~ numHashFuncs ~ minHits ~ updatesCount <> (BrowsingHistory, BrowsingHistory.unapply _)
+  }
+
+  override def save(model: BrowsingHistory)(implicit session: RWSession): BrowsingHistory = {
+    super.save(model.copy(updatesCount = model.updatesCount + 1))
   }
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[BrowsingHistory] =

@@ -21,7 +21,7 @@ class URLHistorySerializer extends Format[Seq[URLHistory]] {
     )))
 
   def reads(json: JsValue): Seq[URLHistory] = {
-    (json \ "history").as[List[JsObject]].map { h =>
+    (json \ "history").asOpt[List[JsObject]].getOrElse(Nil).map { h =>
       val date = parseStandardTime((h \ "date").as[String])
       val id = Id[NormalizedURI]((h \ "id").as[Int])
       val cause = URLHistoryCause((h \ "cause").as[String])

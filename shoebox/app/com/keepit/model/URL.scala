@@ -83,10 +83,10 @@ class URLRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[URL] with
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[URL](db, "follow") {
+  override lazy val table = new RepoTable[URL](db, "url") {
     def url = column[String]("url", O.NotNull)
     def domain = column[String]("domain", O.Nullable)
-    def normalizedUriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def normalizedUriId = column[Id[NormalizedURI]]("normalized_uri_id", O.NotNull)
     def history = column[Seq[URLHistory]]("history", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ url ~ domain.? ~ normalizedUriId ~ history ~ state <> (URL, URL.unapply _)
   }
