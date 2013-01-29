@@ -11,23 +11,7 @@ import com.keepit.model.CommentRecipient
 
 case class CommentWithSocialUser(user: UserWithSocial, comment: Comment, replyCount: Long, recipients: Seq[UserWithSocial])
 
-object CommentWithSocialUser {
-  // TODO: Major optimizations needed!
-  def loadCX(comment: Comment)(implicit conn: Connection): CommentWithSocialUser = {
-    CommentWithSocialUser(
-      UserWithSocial.toUserWithSocialCX(UserCxRepo.get(comment.userId)),
-      comment,
-      CommentCxRepo.getChildCount(comment.id.get),
-      if(comment.permissions != CommentPermissions.MESSAGE) {
-        Nil
-      } else {
-        CommentRecipientCxRepo.getByComment(comment.id.get) map { cr => 
-          UserWithSocial.toUserWithSocialCX(UserCxRepo.get(cr.userId.get)) 
-        }
-      }
-    )
-  }
-
+class CommentWithSocialUserRepo {
   def load(comment: Comment)(implicit session: RSession): CommentWithSocialUser = {
     val userRepo = inject[UserRepo]
     val commentRepo = inject[CommentRepo]
@@ -41,6 +25,24 @@ object CommentWithSocialUser {
       } else {
         commentRecipientRepo.getByComment(comment.id.get) map { cr => 
           UserWithSocial.toUserWithSocial(userRepo.get(cr.userId.get)) 
+        }
+      }
+    )
+  }
+}
+
+object CommentWithSocialUser {
+  // TODO: Major optimizations needed!
+  def loadCX(comment: Comment)(implicit conn: Connection): CommentWithSocialUser = {
+    CommentWithSocialUser(
+      UserWithSocial.toUserWithSocialCX(UserCxRepo.get(comment.userId)),
+      comment,
+      CommentCxRepo.getChildCount(comment.id.get),
+      if(comment.permissions != CommentPermissions.MESSAGE) {
+        Nil
+      } else {
+        CommentRecipientCxRepo.getByComment(comment.id.get) map { cr => 
+          UserWithSocial.toUserWithSocialCX(UserCxRepo.get(cr.userId.get)) 
         }
       }
     )
