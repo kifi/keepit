@@ -12,7 +12,7 @@ import com.keepit.common.async.dispatch
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
-import com.keepit.common.social.CommentWithSocialUser
+import com.keepit.common.social.{CommentWithSocialUser, CommentWithSocialUserRepo}
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.social.UserWithSocial
@@ -94,7 +94,7 @@ object CommentController extends FortyTwoController {
       case CommentPermissions.PUBLIC =>
         Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
       case CommentPermissions.MESSAGE =>
-        val threadInfo = CX.withConnection{ implicit c => CommentWithSocialUser(comment) }
+        val threadInfo = inject[DBConnection].readOnly(implicit s => inject[CommentWithSocialUserRepo].load(comment))
         Ok(JsObject(Seq("message" -> commentWithSocialUserSerializer.writes(threadInfo))))
       case _ =>
         Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
@@ -121,9 +121,9 @@ object CommentController extends FortyTwoController {
   }
 
   def getComments(url: String) = AuthenticatedJsonAction { request =>
-    val comments = CX.withConnection { implicit conn =>
-      NormalizedURICxRepo.getByNormalizedUrl(url) map { normalizedURI =>
-          publicComments(normalizedURI).map(CommentWithSocialUser(_))
+    val comments = inject[DBConnection].readOnly{ implicit session =>
+      inject[NormalizedURIRepo].getByNormalizedUrl(url) map { normalizedURI =>
+          publicComments(normalizedURI).map(inject[CommentWithSocialUserRepo].load(_))
         } getOrElse Nil
     }
     Ok(commentWithSocialUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
@@ -140,11 +140,12 @@ object CommentController extends FortyTwoController {
   }
 
   def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
-    val replies = CX.withConnection { implicit conn =>
-      val comment = CommentCxRepo.get(commentId)
-      val parent = comment.parent map (CommentCxRepo.get) getOrElse (comment)
+    val replies = inject[DBConnection].readOnly{ implicit session =>
+      val repo = inject[CommentRepo]
+      val comment = repo.get(commentId)
+      val parent = comment.parent map (repo.get) getOrElse (comment)
       if (true) // TODO: hasPermission(user.id.get, comment.id.get) ???????????????
-        (Seq(parent) ++ CommentCxRepo.getChildren(parent.id.get) map { child => CommentWithSocialUser(child) })
+        (Seq(parent) ++ repo.getChildren(parent.id.get) map { child => inject[CommentWithSocialUserRepo].load(child) })
       else
           Nil
     }
@@ -153,11 +154,12 @@ object CommentController extends FortyTwoController {
 
   // TODO: delete once no beta users have old plugin supporting replies
   def getReplies(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
-    val replies = CX.withConnection { implicit conn =>
-      val comment = CommentCxRepo.get(commentId)
-      val user = UserCxRepo.get(request.userId)
+    val replies = inject[DBConnection].readOnly{ implicit session =>
+      val repo = inject[CommentRepo]
+      val comment = repo.get(commentId)
+      val user = inject[UserRepo].get(request.userId)
       if (true) // TODO: hasPermission(user.id.get, comment.id.get) ??????????????
-        CommentCxRepo.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }
+        repo.getChildren(comment.id.get) map { child => inject[CommentWithSocialUserRepo].load(child) }
       else
           Nil
     }
@@ -226,11 +228,14 @@ object CommentController extends FortyTwoController {
   }
 
   private def allComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection): List[(State[CommentPermission],Seq[Comment])] =
-    (CommentPermissions.PUBLIC -> publicComments(normalizedURI)) ::
+    (CommentPermissions.PUBLIC -> publicCommentsCX(normalizedURI)) ::
     (CommentPermissions.MESSAGE -> messageComments(userId, normalizedURI)) ::
     (CommentPermissions.PRIVATE -> privateComments(userId, normalizedURI)) :: Nil
 
-  private def publicComments(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
+  private def publicComments(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit session: RSession) =
+    inject[CommentRepo].getPublic(normalizedURI.id.get)
+
+  private def publicCommentsCX(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
     CommentCxRepo.getPublic(normalizedURI.id.get)
 
   private def privateComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
