@@ -59,7 +59,8 @@ object ApplicationBuild extends Build {
       "javax.mail" % "mail" % "1.4.5",
       "org.mongodb" %% "casbah" % "2.4.1",
       "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
-      "org.jsoup" % "jsoup" % "1.7.1"
+      "org.jsoup" % "jsoup" % "1.7.1",
+      "com.github.mumoshu" %% "play2-memcached" % "0.2.4-SNAPSHOT"
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
