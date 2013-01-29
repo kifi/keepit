@@ -61,6 +61,8 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getPrivate(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
   def getPrivateCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
+  def getMessagesWithChildrenCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Int
+  def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
 }
 
 @Singleton
@@ -114,6 +116,28 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Comme
 
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment] =
     (for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b).list
+
+  def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] = {
+    // Get all messages *from* and/or *to* the user
+    // (side effect: User cannot be removed from own messages)
+    //selectMessages({c => c.*}, uriId, userId).list.map(_.view)
+    val q1 = for {
+      Join(c, cr) <- table innerJoin inject[CommentRecipientRepoImpl].table on (_.id is _.commentId) if (c.uriId === uriId && cr.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
+    } yield c
+    val q2 = for {
+      c <- table if (c.uriId === uriId && c.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
+    } yield c
+    val union = for {
+      c <- q1 union q2
+    } yield c
+    union.list.toSet.toSeq
+  }
+
+  def getMessagesWithChildrenCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Int = {
+    val comments = getMessages(uriId, userId)
+    val childrenCounts: Seq[Int] = (comments.toList map {c => getChildCount(c.id.get).toInt})
+    childrenCounts.foldLeft(0)((sum, count) => sum + count) + comments.size
+  }
 
 }
 
