@@ -169,13 +169,16 @@ object CommentController extends FortyTwoController {
   // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
   def startFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
     val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
-    CX.withConnection { implicit conn =>
-      val uriId = NormalizedURICxRepo.getByNormalizedUrl(url).getOrElse(NormalizedURIFactory(url = url).save).id.get
-      FollowCxRepo.get(request.userId, uriId) match {
-        case Some(follow) if !follow.isActive => Some(follow.activate.saveWithCx)
+    inject[DBConnection].readWrite { implicit session =>
+      val uriRepo = inject[NormalizedURIRepo]
+      val urlRepo = inject[URLRepo]
+      val followRepo = inject[FollowRepo]
+      val uriId = uriRepo.getByNormalizedUrl(url).getOrElse(uriRepo.save(NormalizedURIFactory(url = url))).id.get
+      followRepo.get(request.userId, uriId) match {
+        case Some(follow) if !follow.isActive => Some(followRepo.save(follow.activate))
         case None =>
-          val urlId = URLCxRepo.get(url).getOrElse(URLFactory(url = url, normalizedUriId = uriId).save).id
-          Some(Follow(userId = request.userId, urlId = urlId, uriId = uriId).saveWithCx)
+          val urlId = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uriId))).id
+          Some(followRepo.save(Follow(userId = request.userId, urlId = urlId, uriId = uriId)))
         case _ => None
       }
     }
@@ -186,10 +189,12 @@ object CommentController extends FortyTwoController {
   // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
   def stopFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
     val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
-    CX.withConnection { implicit conn =>
-      NormalizedURICxRepo.getByNormalizedUrl(url) match {
-        case Some(uri) => FollowCxRepo.get(request.userId, uri.id.get) match {
-          case Some(follow) => Some(follow.deactivate.saveWithCx)
+    inject[DBConnection].readWrite { implicit session =>
+      val uriRepo = inject[NormalizedURIRepo]
+      val followRepo = inject[FollowRepo]
+      uriRepo.getByNormalizedUrl(url) match {
+        case Some(uri) => followRepo.get(request.userId, uri.id.get) match {
+          case Some(follow) => Some(followRepo.save(follow.deactivate))
           case None => None
         }
         case None => None
@@ -227,19 +232,8 @@ object CommentController extends FortyTwoController {
     } flatten
   }
 
-  private def allComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection): List[(State[CommentPermission],Seq[Comment])] =
-    (CommentPermissions.PUBLIC -> publicCommentsCX(normalizedURI)) ::
-    (CommentPermissions.MESSAGE -> messageComments(userId, normalizedURI)) ::
-    (CommentPermissions.PRIVATE -> privateComments(userId, normalizedURI)) :: Nil
-
   private def publicComments(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit session: RSession) =
     inject[CommentRepo].getPublic(normalizedURI.id.get)
-
-  private def publicCommentsCX(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
-    CommentCxRepo.getPublic(normalizedURI.id.get)
-
-  private def privateComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
-    CommentCxRepo.getPrivate(normalizedURI.id.get, userId)
 
   private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
     CommentCxRepo.getMessages(normalizedURI.id.get, userId)
