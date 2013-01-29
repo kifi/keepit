@@ -1,11 +1,10 @@
 package com.keepit.model
 
 import com.keepit.inject._
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
-import com.keepit.common.db.NotFoundException
-import com.keepit.common.db.StateException
 import com.keepit.common.time._
 import com.keepit.common.crypto._
 import java.security.SecureRandom
@@ -69,6 +68,9 @@ case class NormalizedURI  (
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI]  {
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
+  def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
+  def getByDomain(domain: String)(implicit session: RSession): Seq[NormalizedURI]
+  def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI]
 }
 
 @Singleton
@@ -99,7 +101,25 @@ class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo
     scrapeRepo.getByUri(saved.id.get).getOrElse(scrapeRepo.save(ScrapeInfo(uriId = saved.id.get)))
     saved
   }
+
+  def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
+    val q = (for (t <- table if t.state === state) yield t)
+    val limited = limit match {
+      case some if some > 0 => q.take(some)
+      case _ => q
+    }
+    q.list
+  }
+
+  def getByDomain(domain: String)(implicit session: RSession) =
+    (for (t <- table if t.state === NormalizedURIStates.ACTIVE && t.domain === domain) yield t).list
+
+  def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI] = {
+    val hash = NormalizedURIFactory.hashUrl(NormalizedURIFactory.normalize(url))
+    (for (t <- table if t.urlHash === hash) yield t).firstOption
+  }
 }
+
 
 object NormalizedURIFactory {
 
@@ -125,6 +145,7 @@ object NormalizedURIFactory {
   }
 }
 
+//slicked out!
 object NormalizedURICxRepo {
 
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit conn: Connection): Seq[NormalizedURI] = {
