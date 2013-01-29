@@ -170,8 +170,8 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
   private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest => Result): Action[AnyContent] = {
     AuthenticatedAction(isApi, { implicit request =>
       val userId = request.adminUserId.getOrElse(request.userId)
-      val isAdmin = CX.withConnection { implicit conn =>
-        UserExperimentCxRepo.getExperiment(userId, ExperimentTypes.ADMIN).isDefined
+      val isAdmin = inject[DBConnection].readOnly{ implicit session =>
+        inject[UserExperimentRepo].getExperiment(userId, ExperimentTypes.ADMIN).isDefined
       }
       val authorizedDevUser = Play.isDev && userId.id == 1L
       if (authorizedDevUser || isAdmin) {
