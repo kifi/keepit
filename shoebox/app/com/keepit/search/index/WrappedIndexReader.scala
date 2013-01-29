@@ -15,6 +15,10 @@ object WrappedIndexReader {
     doOpen(inner, Map.empty[String, IdMapper])
   }
 
+  def apply(inner: IndexReader, idMapper: IdMapper): WrappedIndexReader = {
+    apply(inner, ArrayBuffer(new WrappedSubReader("", inner, idMapper)))
+  }
+
   def reopen(oldReader: WrappedIndexReader): WrappedIndexReader = {
     val oldInner = oldReader.inner
     val newInner = IndexReader.openIfChanged(oldInner)

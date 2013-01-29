@@ -41,6 +41,7 @@ extends Logging {
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
   val similarity = Similarity(config.asString("similarity"))
   val progressiveRelaxation = config.asBoolean("progressiveRelaxation")
+  val enableCoordinator = config.asBoolean("enableCoordinator")
 
   // get searchers. subsequent operations should use these for consistency since indexing may refresh them
   val articleSearcher = articleIndexer.getSearcher
@@ -76,6 +77,7 @@ extends Logging {
                             clickBoosts: ResultClickTracker.ResultClickBoosts, initial: Boolean)(implicit lang: Lang) {
     val parser = MainQueryParser(lang, proximityBoost, semanticBoost)
     parser.setPercentMatch(if (initial) 100.0f else percentMatch)
+    parser.enableCoord = enableCoordinator
     parser.parseQuery(queryString).map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 

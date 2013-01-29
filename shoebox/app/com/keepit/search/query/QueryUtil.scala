@@ -80,10 +80,17 @@ object QueryUtil extends Logging {
     query.getClauses.foldLeft(Seq.empty[Term]){ (s, c) => if (!c.isProhibited) s ++ getTerms(fieldName, c.getQuery) else s }
   }
 
-  def emptyScorer(weight: Weight) = new Scorer(weight) {
+  def emptyScorer(weight: Weight) = new Scorer(weight) with Coordinator {
     override def score(): Float = 0.0f
     override def docID() = DocIdSetIterator.NO_MORE_DOCS
     override def nextDoc(): Int = DocIdSetIterator.NO_MORE_DOCS
     override def advance(target: Int): Int = DocIdSetIterator.NO_MORE_DOCS
+  }
+
+  def toScorerWithCoordinator(scorer: Scorer) = new Scorer(null.asInstanceOf[Weight]) with Coordinator {
+    override def score() = scorer.score()
+    override def docID() = scorer.docID()
+    override def nextDoc() = scorer.nextDoc()
+    override def advance(target: Int) = scorer.advance(target)
   }
 }
