@@ -19,8 +19,18 @@ import com.keepit.common.analytics.PersistEventPlugin
 import com.keepit.common.analytics.reports.ReportBuilderPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
+  private var creatingInjector = false
+  override lazy val injector: Injector = {
+    if (creatingInjector) throw new Exception("Injector is being created!")
+    creatingInjector = true
+    try {
+      createInjector()
+    } finally {
+      creatingInjector = false
+    }
+  }
 
-  override lazy val injector: Injector = Guice.createInjector(Stage.PRODUCTION, new ShoeboxModule())
+  def createInjector(): Injector = Guice.createInjector(Stage.PRODUCTION, new ShoeboxModule())
 
   override def onStart(app: Application): Unit = {
     log.info("starting the shoebox")
