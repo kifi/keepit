@@ -17,9 +17,9 @@ object BrowsingHistoryTracker {
 }
 
 class BrowsingHistoryTracker(tableSize: Int, numHashFuncs: Int, minHits: Int) {
-  private[this] val browsingHistoryRepo = inject[BrowsingHistoryRepo]
 
   def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
+    val browsingHistoryRepo = inject[BrowsingHistoryRepo]
     val filter = getMultiHashFilter(userId)
     filter.put(uriId.id)
 
@@ -34,6 +34,7 @@ class BrowsingHistoryTracker(tableSize: Int, numHashFuncs: Int, minHits: Int) {
   }
 
   def getMultiHashFilter(userId: Id[User]) = {
+    val browsingHistoryRepo = inject[BrowsingHistoryRepo]
     inject[DBConnection].readOnly { implicit session =>
       browsingHistoryRepo.getByUserId(userId) match {
         case Some(browsingHistory) =>
