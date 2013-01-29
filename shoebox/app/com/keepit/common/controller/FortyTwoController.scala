@@ -19,7 +19,9 @@ import play.api.libs.json.JsNumber
 import com.keepit.inject._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.net._
-import com.keepit.common.db.{Id, CX, ExternalId, State}
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.controllers.CommonActions._
@@ -77,26 +79,27 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
   def AuthenticatedHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
     AuthenticatedAction(false, action)
 
-  private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit conn: Connection) = {
+  private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession) = {
+    val repo = inject[SocialUserInfoRepo]
     userIdOpt match {
       case None =>
-        val socialUser = SocialUserInfoCxRepo.get(socialId, SocialNetworks.FACEBOOK)
+        val socialUser = repo.get(socialId, SocialNetworks.FACEBOOK)
         val userId = socialUser.userId.get
         userId
       case Some(userId) =>
-        val socialUser = SocialUserInfoCxRepo.get(socialId, SocialNetworks.FACEBOOK)
+        val socialUser = repo.get(socialId, SocialNetworks.FACEBOOK)
         if (socialUser.userId.get != userId) log.error("Social user id %s does not match session user id %s".format(socialUser, userId))
         userId
     }
   }
 
-  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId) = CX.withConnection { implicit conn =>
+  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId) = inject[DBConnection].readOnly{ implicit session =>
     val userId = loadUserId(userIdOpt, socialId)
     (userId, getExperiments(userId))
   }
 
-  private def getExperiments(userId: Id[User])(implicit conn: Connection): Seq[State[ExperimentType]] =
-    UserExperimentCxRepo.getByUser(userId).map(_.experimentType)
+  private def getExperiments(userId: Id[User])(implicit session: RSession): Seq[State[ExperimentType]] =
+    inject[UserExperimentRepo].getByUser(userId).map(_.experimentType)
 
   private[controller] def AuthenticatedAction[A](isApi: Boolean, action: AuthenticatedRequest => Result) = {
     SecuredAction(isApi, parse.anyContent) { implicit request =>
@@ -108,11 +111,10 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
       val newSession = session + (FORTYTWO_USER_ID -> userId.toString)
       impersonatedUserIdOpt match {
         case Some(impExternalUserId) =>
-          val (impExperiments, impSocialUser, impUserId) = CX.withConnection { implicit conn =>
-            val impUserId = UserCxRepo.get(impExternalUserId).id.get
-
+          val (impExperiments, impSocialUser, impUserId) = inject[DBConnection].readOnly { implicit session =>
+            val impUserId = inject[UserRepo].get(impExternalUserId).id.get
             if (!isAdmin(experiments)) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
-            val impSocialUserInfo = SocialUserInfoCxRepo.getByUser(impUserId).head
+            val impSocialUserInfo = inject[SocialUserInfoRepo].getByUser(impUserId).head
             (getExperiments(impUserId), impSocialUserInfo.credentials.get, impUserId)
           }
           log.info("[IMPERSONATOR] admin user %s is impersonating user %s with request %s".format(userId, impSocialUser, request.request.path))

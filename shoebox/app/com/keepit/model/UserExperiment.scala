@@ -87,6 +87,7 @@ class UserExperimentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRep
 
 }
 
+//slicked
 object UserExperimentCxRepo {
 
   def get(id: Id[UserExperiment])(implicit conn: Connection): UserExperiment = UserExperimentEntity.get(id).get.view
