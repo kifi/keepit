@@ -2,7 +2,8 @@
   bookmarks: Seq[Bookmark], 
   socialConnections: Seq[SocialUserInfo], 
   fortyTwoConnections: Seq[UserWithSocial], 
-  kifiInstallations: Seq[KifiInstallation])
+  kifiInstallations: Seq[KifiInstallation],
+  historyUpdateCount: Int)
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
@@ -49,6 +50,10 @@
       </tr>
       <tr>
         <th>Experiments</th><td id="experiments">@userWithSocial.experiments.mkString(",")</td>
+      </tr>
+      <tr>
+        <th>Useful page update count</th>
+        <td>@historyUpdateCount</td>
       </tr>
   </table>
   <p>
