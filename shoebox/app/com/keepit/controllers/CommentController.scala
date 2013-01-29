@@ -63,26 +63,29 @@ object CommentController extends FortyTwoController {
 
 
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
-    val comment = CX.withConnection { implicit conn =>
+    val comment = inject[DBConnection].readWrite {implicit s =>
+      val uriRepo = inject[NormalizedURIRepo]
+      val urlRepo = inject[URLRepo]
+      val commentRepo = inject[CommentRepo]
       val userId = request.userId
-      val uri = NormalizedURICxRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr).save)
+      val uri = uriRepo.save(uriRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
 
       val parentIdOpt = parent match {
         case "" => None
-        case id => CommentCxRepo.get(ExternalId[Comment](id)).id
+        case id => commentRepo.get(ExternalId[Comment](id)).id
       }
 
-      val url: URL = URLCxRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get).save)
+      val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
 
       permissions.toLowerCase match {
         case "private" =>
-          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PRIVATE, parent = parentIdOpt).save
+          commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PRIVATE, parent = parentIdOpt))
         case "message" =>
-          val newComment = Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt).save
+          val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
           createRecipients(newComment.id.get, recipients, parentIdOpt)
           newComment
         case "public" | "" =>
-          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = parentIdOpt).save
+          commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = parentIdOpt))
         case _ =>
           throw new Exception("Invalid comment permission")
       }
@@ -206,19 +209,20 @@ object CommentController extends FortyTwoController {
 
   // Given a list of comma separated external user ids, side effects and creates all the necessary recipients
   // For comments with a parent comment, adds recipients to parent comment instead.
-  private def createRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit conn: Connection) = {
+  private def createRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit session: RWSession) = {
     recipients.split(",").map(_.trim()) map { recipientId =>
       // Split incoming list of externalIds
       try {
-        UserCxRepo.getOpt(ExternalId[User](recipientId)) match {
+        val repo = inject[CommentRecipientRepo]
+        inject[UserRepo].getOpt(ExternalId[User](recipientId)) match {
           case Some(recipientUser) =>
             log.info("Adding recipient %s to new comment %s".format(recipientUser.id.get, commentId))
             // When comment is a reply (has a parent), add recipient to parent if does not exist. Else, add to comment.
             parentIdOpt match {
               case Some(parentId) =>
-                Some(CommentRecipient(commentId = parentId, userId = recipientUser.id).save)
+                Some(repo.save(CommentRecipient(commentId = parentId, userId = recipientUser.id)))
               case None =>
-                Some(CommentRecipient(commentId = commentId, userId = recipientUser.id).save)
+                Some(repo.save(CommentRecipient(commentId = commentId, userId = recipientUser.id)))
             }
           case None =>
             // TODO: Add social User and email recipients as well
