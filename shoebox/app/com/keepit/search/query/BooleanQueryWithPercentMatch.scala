@@ -143,7 +143,7 @@ object BooleanScorer {
       val coordFactors = (0 to optional.length).map{ i => if (disableCoord) 1.0f else similarity.coord(i + required.length, maxCoord) }.toArray
       new BooleanOrScorer(weight, optional, coordFactors, valuesOnOptional, threshold)
     }
-    def prohibit(source: Scorer) = {
+    def prohibit(source: Scorer with Coordinator) = {
       new BooleanNotScorer(weight, source, prohibited)
     }
 
@@ -160,7 +160,7 @@ object BooleanScorer {
   }
 }
 
-class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer) extends Scorer(weight) {
+class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer) extends Scorer(weight) with Coordinator {
 
   private var doc = -1
   private var scoredDoc = -1
@@ -184,9 +184,11 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
     if (doc < NO_MORE_DOCS) optional.advance(doc)
     doc
   }
+
+  override def coord = optional.coord
 }
 
-class BooleanAndScorer(weight: Weight, coord: Float, scorers: Array[Scorer]) extends Scorer(weight) {
+class BooleanAndScorer(weight: Weight, coord: Float, scorers: Array[Scorer]) extends Scorer(weight) with Coordinator {
 
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -231,10 +233,13 @@ class BooleanAndScorer(weight: Weight, coord: Float, scorers: Array[Scorer]) ext
   }
 }
 
-class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Array[Float], values: Array[Float], threshold: Float) extends Scorer(weight) with Logging {
+class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Array[Float], values: Array[Float], threshold: Float) extends Scorer(weight) with Coordinator with Logging {
 
   private[this] var doc = -1
   private[this] var scoreValue = 0.0f
+  private[this] var overlapValue = 0.0f
+  private[this] val maxOverlapValue = values.sum
+  private[this] val overlapValueUnit = maxOverlapValue / values.length
 
   class ScorerDoc(val scorer: Scorer, val value: Float, var doc: Int, var scoredDoc: Int, var scoreValue: Float) {
     def score = {
@@ -248,7 +253,7 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
     }
   }
 
-  private val pq = new PriorityQueue[ScorerDoc] {
+  private[this] val pq = new PriorityQueue[ScorerDoc] {
     super.initialize(scorers.length)
     override def lessThan(a: ScorerDoc, b: ScorerDoc) = (a.doc < b.doc)
   }
@@ -260,8 +265,8 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
   override def score(): Float = scoreValue
 
   private def doScore(): Float = {
-    var sum = 0.0f
     var matchValue = 0.0f
+    var sum = 0.0f
     var cnt = 0
     if (doc < NO_MORE_DOCS) {
       var top = pq.top
@@ -273,6 +278,7 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
         top = pq.updateTop()
       }
     }
+    overlapValue = matchValue
     if (matchValue < threshold) 0.0f else sum * coordFactors(cnt)
   }
 
@@ -296,9 +302,11 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
     }
     doc
   }
+
+  override def coord = overlapValueUnit / (overlapValueUnit + (maxOverlapValue - overlapValue))
 }
 
-class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]) extends Scorer(weight) {
+class BooleanNotScorer(weight: Weight, scorer: Scorer with Coordinator, prohibited: Array[Scorer]) extends Scorer(weight) with Coordinator {
 
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -323,6 +331,8 @@ class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]
     }
     doc
   }
+
+  override def coord = scorer.coord
 
   private def isProhibited = {
     prohibited.exists{ n =>
