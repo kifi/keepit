@@ -14,6 +14,7 @@ import play.api.Play.current
 import org.scalaquery.ql.extended.ExtendedProfile
 import org.scalaquery.ql.extended.ExtendedColumnOptions
 import org.scalaquery.ql.extended.ExtendedImplicitConversions
+import org.scalaquery.ql.Ordering.Desc
 
 
 trait Repo[M <: Model[M]] {
@@ -64,7 +65,15 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
 
   def all()(implicit session: RSession): Seq[M] = table.map(t => t).list
 
-  def page(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[M] = table.map(t => t).drop(page * size).take(size).list
+  def page(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[M] =  {
+    val q = for {
+      t <- table
+      _ <- Query.orderBy(t.id desc)
+    } yield t
+    val q2 = q.drop(page * size).take(size)
+    println(q2.selectStatement)
+    q2.list
+  }
 
   private def insert(model: M)(implicit session: RWSession) = {
     assert(1 == table.insert(model))
