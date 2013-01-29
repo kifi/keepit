@@ -55,8 +55,8 @@ case class Comment(
 
 @ImplementedBy(classOf[CommentRepoImpl])
 trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
-//  def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
+  def getChildCount(commentId: Id[Comment])(implicit session: RSession): Int
 }
 
 @Singleton
@@ -85,6 +85,8 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Comme
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment] =
     (for(b <- table if b.uriId === uriId && b.state === CommentStates.ACTIVE) yield b).list
 
+  def getChildCount(commentId: Id[Comment])(implicit session: RSession): Int =
+    (for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b.id.count).first
 }
 
 object CommentCxRepo {

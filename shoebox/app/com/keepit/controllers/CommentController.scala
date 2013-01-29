@@ -94,7 +94,7 @@ object CommentController extends FortyTwoController {
       case CommentPermissions.PUBLIC =>
         Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
       case CommentPermissions.MESSAGE =>
-        val threadInfo = CX.withConnection{ implicit c => CommentWithSocialUser(comment) }
+        val threadInfo = CX.withConnection{ implicit c => CommentWithSocialUser.loadCX(comment) }
         Ok(JsObject(Seq("message" -> commentWithSocialUserSerializer.writes(threadInfo))))
       case _ =>
         Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
@@ -123,7 +123,7 @@ object CommentController extends FortyTwoController {
   def getComments(url: String) = AuthenticatedJsonAction { request =>
     val comments = CX.withConnection { implicit conn =>
       NormalizedURICxRepo.getByNormalizedUrl(url) map { normalizedURI =>
-          publicComments(normalizedURI).map(CommentWithSocialUser(_))
+          publicComments(normalizedURI).map(CommentWithSocialUser.loadCX(_))
         } getOrElse Nil
     }
     Ok(commentWithSocialUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
@@ -144,7 +144,7 @@ object CommentController extends FortyTwoController {
       val comment = CommentCxRepo.get(commentId)
       val parent = comment.parent map (CommentCxRepo.get) getOrElse (comment)
       if (true) // TODO: hasPermission(user.id.get, comment.id.get) ???????????????
-        (Seq(parent) ++ CommentCxRepo.getChildren(parent.id.get) map { child => CommentWithSocialUser(child) })
+        (Seq(parent) ++ CommentCxRepo.getChildren(parent.id.get) map { child => CommentWithSocialUser.loadCX(child) })
       else
           Nil
     }
@@ -157,7 +157,7 @@ object CommentController extends FortyTwoController {
       val comment = CommentCxRepo.get(commentId)
       val user = UserCxRepo.get(request.userId)
       if (true) // TODO: hasPermission(user.id.get, comment.id.get) ??????????????
-        CommentCxRepo.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }
+        CommentCxRepo.getChildren(comment.id.get) map { child => CommentWithSocialUser.loadCX(child) }
       else
           Nil
     }
