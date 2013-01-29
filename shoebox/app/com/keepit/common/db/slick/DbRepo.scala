@@ -70,9 +70,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
       t <- table
       _ <- Query.orderBy(t.id desc)
     } yield t
-    val q2 = q.drop(page * size).take(size)
-    println(q2.selectStatement)
-    q2.list
+    q.drop(page * size).take(size).list
   }
 
   private def insert(model: M)(implicit session: RWSession) = {
