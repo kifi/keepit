@@ -145,6 +145,7 @@ object NormalizedURIFactory {
   }
 }
 
+//slicked out!
 object NormalizedURICxRepo {
 
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit conn: Connection): Seq[NormalizedURI] = {
