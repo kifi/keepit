@@ -30,21 +30,3 @@ class CommentWithSocialUserRepo {
     )
   }
 }
-
-object CommentWithSocialUser {
-  // TODO: Major optimizations needed!
-  def loadCX(comment: Comment)(implicit conn: Connection): CommentWithSocialUser = {
-    CommentWithSocialUser(
-      UserWithSocial.toUserWithSocialCX(UserCxRepo.get(comment.userId)),
-      comment,
-      CommentCxRepo.getChildCount(comment.id.get),
-      if(comment.permissions != CommentPermissions.MESSAGE) {
-        Nil
-      } else {
-        CommentRecipientCxRepo.getByComment(comment.id.get) map { cr => 
-          UserWithSocial.toUserWithSocialCX(UserCxRepo.get(cr.userId.get)) 
-        }
-      }
-    )
-  }
-}

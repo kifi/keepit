@@ -140,11 +140,12 @@ object CommentController extends FortyTwoController {
   }
 
   def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
-    val replies = CX.withConnection { implicit conn =>
-      val comment = CommentCxRepo.get(commentId)
-      val parent = comment.parent map (CommentCxRepo.get) getOrElse (comment)
+    val replies = inject[DBConnection].readOnly{ implicit session =>
+      val repo = inject[CommentRepo]
+      val comment = repo.get(commentId)
+      val parent = comment.parent map (repo.get) getOrElse (comment)
       if (true) // TODO: hasPermission(user.id.get, comment.id.get) ???????????????
-        (Seq(parent) ++ CommentCxRepo.getChildren(parent.id.get) map { child => CommentWithSocialUser.loadCX(child) })
+        (Seq(parent) ++ repo.getChildren(parent.id.get) map { child => inject[CommentWithSocialUserRepo].load(child) })
       else
           Nil
     }
@@ -153,11 +154,12 @@ object CommentController extends FortyTwoController {
 
   // TODO: delete once no beta users have old plugin supporting replies
   def getReplies(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
-    val replies = CX.withConnection { implicit conn =>
-      val comment = CommentCxRepo.get(commentId)
-      val user = UserCxRepo.get(request.userId)
+    val replies = inject[DBConnection].readOnly{ implicit session =>
+      val repo = inject[CommentRepo]
+      val comment = repo.get(commentId)
+      val user = inject[UserRepo].get(request.userId)
       if (true) // TODO: hasPermission(user.id.get, comment.id.get) ??????????????
-        CommentCxRepo.getChildren(comment.id.get) map { child => CommentWithSocialUser.loadCX(child) }
+        repo.getChildren(comment.id.get) map { child => inject[CommentWithSocialUserRepo].load(child) }
       else
           Nil
     }

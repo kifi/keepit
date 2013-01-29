@@ -60,6 +60,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getPublicCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int
   def getPrivate(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
   def getPrivateCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int
+  def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
 }
 
 @Singleton
@@ -110,6 +111,10 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Comme
     (for {
       b <- table if b.uriId === uriId && b.permissions === CommentPermissions.PRIVATE  && b.state === CommentStates.ACTIVE
     } yield b.id.count).first
+
+  def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment] =
+    (for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b).list
+
 }
 
 object CommentCxRepo {
