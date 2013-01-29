@@ -12,7 +12,7 @@ import com.keepit.common.async.dispatch
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
-import com.keepit.common.social.CommentWithSocialUser
+import com.keepit.common.social.{CommentWithSocialUser, CommentWithSocialUserRepo}
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.social.UserWithSocial
@@ -63,26 +63,29 @@ object CommentController extends FortyTwoController {
 
 
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
-    val comment = CX.withConnection { implicit conn =>
+    val comment = inject[DBConnection].readWrite {implicit s =>
+      val uriRepo = inject[NormalizedURIRepo]
+      val urlRepo = inject[URLRepo]
+      val commentRepo = inject[CommentRepo]
       val userId = request.userId
-      val uri = NormalizedURICxRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr).save)
+      val uri = uriRepo.save(uriRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
 
       val parentIdOpt = parent match {
         case "" => None
-        case id => CommentCxRepo.get(ExternalId[Comment](id)).id
+        case id => commentRepo.get(ExternalId[Comment](id)).id
       }
 
-      val url: URL = URLCxRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get).save)
+      val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
 
       permissions.toLowerCase match {
         case "private" =>
-          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PRIVATE, parent = parentIdOpt).save
+          commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PRIVATE, parent = parentIdOpt))
         case "message" =>
-          val newComment = Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt).save
+          val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
           createRecipients(newComment.id.get, recipients, parentIdOpt)
           newComment
         case "public" | "" =>
-          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = parentIdOpt).save
+          commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = parentIdOpt))
         case _ =>
           throw new Exception("Invalid comment permission")
       }
@@ -94,7 +97,7 @@ object CommentController extends FortyTwoController {
       case CommentPermissions.PUBLIC =>
         Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
       case CommentPermissions.MESSAGE =>
-        val threadInfo = CX.withConnection{ implicit c => CommentWithSocialUser(comment) }
+        val threadInfo = inject[DBConnection].readOnly(implicit s => inject[CommentWithSocialUserRepo].load(comment))
         Ok(JsObject(Seq("message" -> commentWithSocialUserSerializer.writes(threadInfo))))
       case _ =>
         Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
@@ -121,9 +124,9 @@ object CommentController extends FortyTwoController {
   }
 
   def getComments(url: String) = AuthenticatedJsonAction { request =>
-    val comments = CX.withConnection { implicit conn =>
-      NormalizedURICxRepo.getByNormalizedUrl(url) map { normalizedURI =>
-          publicComments(normalizedURI).map(CommentWithSocialUser(_))
+    val comments = inject[DBConnection].readOnly{ implicit session =>
+      inject[NormalizedURIRepo].getByNormalizedUrl(url) map { normalizedURI =>
+          publicComments(normalizedURI).map(inject[CommentWithSocialUserRepo].load(_))
         } getOrElse Nil
     }
     Ok(commentWithSocialUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
@@ -140,11 +143,12 @@ object CommentController extends FortyTwoController {
   }
 
   def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
-    val replies = CX.withConnection { implicit conn =>
-      val comment = CommentCxRepo.get(commentId)
-      val parent = comment.parent map (CommentCxRepo.get) getOrElse (comment)
+    val replies = inject[DBConnection].readOnly{ implicit session =>
+      val repo = inject[CommentRepo]
+      val comment = repo.get(commentId)
+      val parent = comment.parent map (repo.get) getOrElse (comment)
       if (true) // TODO: hasPermission(user.id.get, comment.id.get) ???????????????
-        (Seq(parent) ++ CommentCxRepo.getChildren(parent.id.get) map { child => CommentWithSocialUser(child) })
+        (Seq(parent) ++ repo.getChildren(parent.id.get) map { child => inject[CommentWithSocialUserRepo].load(child) })
       else
           Nil
     }
@@ -153,11 +157,12 @@ object CommentController extends FortyTwoController {
 
   // TODO: delete once no beta users have old plugin supporting replies
   def getReplies(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
-    val replies = CX.withConnection { implicit conn =>
-      val comment = CommentCxRepo.get(commentId)
-      val user = UserCxRepo.get(request.userId)
+    val replies = inject[DBConnection].readOnly{ implicit session =>
+      val repo = inject[CommentRepo]
+      val comment = repo.get(commentId)
+      val user = inject[UserRepo].get(request.userId)
       if (true) // TODO: hasPermission(user.id.get, comment.id.get) ??????????????
-        CommentCxRepo.getChildren(comment.id.get) map { child => CommentWithSocialUser(child) }
+        repo.getChildren(comment.id.get) map { child => inject[CommentWithSocialUserRepo].load(child) }
       else
           Nil
     }
@@ -167,13 +172,16 @@ object CommentController extends FortyTwoController {
   // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
   def startFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
     val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
-    CX.withConnection { implicit conn =>
-      val uriId = NormalizedURICxRepo.getByNormalizedUrl(url).getOrElse(NormalizedURIFactory(url = url).save).id.get
-      FollowCxRepo.get(request.userId, uriId) match {
-        case Some(follow) if !follow.isActive => Some(follow.activate.saveWithCx)
+    inject[DBConnection].readWrite { implicit session =>
+      val uriRepo = inject[NormalizedURIRepo]
+      val urlRepo = inject[URLRepo]
+      val followRepo = inject[FollowRepo]
+      val uriId = uriRepo.getByNormalizedUrl(url).getOrElse(uriRepo.save(NormalizedURIFactory(url = url))).id.get
+      followRepo.get(request.userId, uriId) match {
+        case Some(follow) if !follow.isActive => Some(followRepo.save(follow.activate))
         case None =>
-          val urlId = URLCxRepo.get(url).getOrElse(URLFactory(url = url, normalizedUriId = uriId).save).id
-          Some(Follow(userId = request.userId, urlId = urlId, uriId = uriId).saveWithCx)
+          val urlId = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uriId))).id
+          Some(followRepo.save(Follow(userId = request.userId, urlId = urlId, uriId = uriId)))
         case _ => None
       }
     }
@@ -184,10 +192,12 @@ object CommentController extends FortyTwoController {
   // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
   def stopFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
     val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
-    CX.withConnection { implicit conn =>
-      NormalizedURICxRepo.getByNormalizedUrl(url) match {
-        case Some(uri) => FollowCxRepo.get(request.userId, uri.id.get) match {
-          case Some(follow) => Some(follow.deactivate.saveWithCx)
+    inject[DBConnection].readWrite { implicit session =>
+      val uriRepo = inject[NormalizedURIRepo]
+      val followRepo = inject[FollowRepo]
+      uriRepo.getByNormalizedUrl(url) match {
+        case Some(uri) => followRepo.get(request.userId, uri.id.get) match {
+          case Some(follow) => Some(followRepo.save(follow.deactivate))
           case None => None
         }
         case None => None
@@ -199,19 +209,20 @@ object CommentController extends FortyTwoController {
 
   // Given a list of comma separated external user ids, side effects and creates all the necessary recipients
   // For comments with a parent comment, adds recipients to parent comment instead.
-  private def createRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit conn: Connection) = {
+  private def createRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit session: RWSession) = {
     recipients.split(",").map(_.trim()) map { recipientId =>
       // Split incoming list of externalIds
       try {
-        UserCxRepo.getOpt(ExternalId[User](recipientId)) match {
+        val repo = inject[CommentRecipientRepo]
+        inject[UserRepo].getOpt(ExternalId[User](recipientId)) match {
           case Some(recipientUser) =>
             log.info("Adding recipient %s to new comment %s".format(recipientUser.id.get, commentId))
             // When comment is a reply (has a parent), add recipient to parent if does not exist. Else, add to comment.
             parentIdOpt match {
               case Some(parentId) =>
-                Some(CommentRecipient(commentId = parentId, userId = recipientUser.id).save)
+                Some(repo.save(CommentRecipient(commentId = parentId, userId = recipientUser.id)))
               case None =>
-                Some(CommentRecipient(commentId = commentId, userId = recipientUser.id).save)
+                Some(repo.save(CommentRecipient(commentId = commentId, userId = recipientUser.id)))
             }
           case None =>
             // TODO: Add social User and email recipients as well
@@ -225,16 +236,8 @@ object CommentController extends FortyTwoController {
     } flatten
   }
 
-  private def allComments(userId: Id[User], normalizedURI: NormalizedURI)(implicit conn: Connection): List[(State[CommentPermission],Seq[Comment])] =
-    (CommentPermissions.PUBLIC -> publicComments(normalizedURI)) ::
-    (CommentPermissions.MESSAGE -> messageComments(userId, normalizedURI)) ::
-    (CommentPermissions.PRIVATE -> privateComments(userId, normalizedURI)) :: Nil
-
-  private def publicComments(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
-    CommentCxRepo.getPublic(normalizedURI.id.get)
-
-  private def privateComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
-    CommentCxRepo.getPrivate(normalizedURI.id.get, userId)
+  private def publicComments(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit session: RSession) =
+    inject[CommentRepo].getPublic(normalizedURI.id.get)
 
   private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
     CommentCxRepo.getMessages(normalizedURI.id.get, userId)

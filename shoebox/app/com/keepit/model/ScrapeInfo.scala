@@ -127,6 +127,7 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
 
 }
 
+//slicked
 object ScrapeInfoCxRepo {
   def ofUriId(uriId: Id[NormalizedURI])(implicit conn: Connection) = {
     (ScrapeInfoEntity AS "s").map{ s => SELECT (s.*) FROM s WHERE (s.uriId EQ uriId) LIMIT 1 }.unique.map( _.view ) match {

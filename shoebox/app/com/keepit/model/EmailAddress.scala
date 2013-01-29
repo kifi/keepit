@@ -69,6 +69,7 @@ object EmailAddressStates {
   val INACTIVE = State[EmailAddress]("inactive")
 }
 
+//slicked!
 object EmailAddressCxRepo {
   def get(id: Id[EmailAddress])(implicit conn: Connection): EmailAddress = EmailAddressEntity.get(id).get.view
 

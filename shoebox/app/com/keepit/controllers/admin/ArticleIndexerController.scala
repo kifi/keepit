@@ -6,6 +6,8 @@ import play.api._
 import play.api.Play.current
 import play.api.mvc._
 import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
@@ -26,8 +28,9 @@ object ArticleIndexerController extends FortyTwoController {
 
   def indexByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
     transitionByAdmin(state -> Set(SCRAPED, SCRAPE_FAILED)) { newState =>
-      CX.withConnection { implicit c =>
-        NormalizedURICxRepo.getByState(state).foreach{ uri => uri.withState(newState).save }
+      inject[DBConnection].readWrite { implicit s =>
+        val repo = inject[NormalizedURIRepo]
+        repo.getByState(state).foreach{ uri => repo.save(uri.withState(newState)) }
       }
       val indexer = inject[ArticleIndexerPlugin]
       val cnt = indexer.index()
