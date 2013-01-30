@@ -13,7 +13,8 @@ import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.runner.JUnitRunner
-import com.keepit.common.db.CX
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
 
 @RunWith(classOf[JUnitRunner])
 class SendgridMailProviderTest extends Specification with TestAkkaSystem {
@@ -21,14 +22,14 @@ class SendgridMailProviderTest extends Specification with TestAkkaSystem {
   "SendgridMailProvider" should {
     "send email" in {
       running(new ShoeboxApplication().withFakeHealthcheck()) {
-        val mail = CX.withConnection{ implicit conn =>
-          ElectronicMail(
+        val mail = inject[DBConnection].readWrite { implicit s =>
+          inject[ElectronicMailRepo].save(ElectronicMail(
               from = EmailAddresses.ENG,
               fromName = Some("Marvin"),
               to = EmailAddresses.ENG,
               subject = "Email from test case",
               htmlBody = views.html.main("KiFi")(Html("<b>thanks</b>")).body,
-              category = PostOffice.Categories.HEALTHCHECK).save
+              category = PostOffice.Categories.HEALTHCHECK))
         }
         mail.htmlBody.trim === """<!DOCTYPE html>
 
@@ -46,8 +47,8 @@ class SendgridMailProviderTest extends Specification with TestAkkaSystem {
 
 //         usually using inject[PostOffice].sendMail(mail
 //        inject[SendgridMailProvider].sendMailToSendgrid(mail)
-        CX.withConnection{ implicit conn =>
-          val loaded = ElectronicMailCx.get(mail.id.get)
+        inject[DBConnection].readOnly { implicit s =>
+          val loaded = inject[ElectronicMailRepo].get(mail.id.get)
           loaded.from === mail.from
           loaded.fromName === mail.fromName
           loaded.state === ElectronicMailStates.PREPARING

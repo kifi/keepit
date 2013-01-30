@@ -57,7 +57,7 @@ class CommentTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
         inject[DBConnection].readOnly {implicit s =>
-          inject[CommentRepo].all.length === 9
+          inject[CommentRepo].all().length === 9
         }
       }
     }
