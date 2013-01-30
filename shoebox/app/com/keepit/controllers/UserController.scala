@@ -134,9 +134,9 @@ object UserController extends FortyTwoController {
       val messages = CommentCxRepo.all(CommentPermissions.MESSAGE, userId) map {c =>
         (NormalizedURICxRepo.get(c.uriId), c, CommentRecipientCxRepo.getByComment(c.id.get) map { r => UserWithSocial.toUserWithSocialCX(UserCxRepo.get(r.userId.get)) })
       }
-      val sentElectronicMails = ElectronicMail.forSender(userId);
+      val sentElectronicMails = ElectronicMailCx.forSender(userId);
       val mailAddresses = UserWithSocial.toUserWithSocialCX(UserCxRepo.get(userId)).emails.map(_.address)
-      val receivedElectronicMails = ElectronicMail.forRecipient(mailAddresses);
+      val receivedElectronicMails = ElectronicMailCx.forRecipient(mailAddresses);
       (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails)
     }
     val rawInfos = socialUserInfos map {info =>

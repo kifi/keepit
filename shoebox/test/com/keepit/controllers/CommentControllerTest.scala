@@ -46,7 +46,7 @@ class CommentControllerTest extends SpecificationWithJUnit {
         val mail = mails.head
         mail.senderUserId.get === comment.userId
         mail.subject === "Andrew Conner sent you a message using KiFi"
-        mail.htmlBody must contain("""Public Comment [look here] on Google1""")
+        mail.htmlBody.value must contain("""Public Comment [look here] on Google1""")
       }
     }
   }
