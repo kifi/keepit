@@ -342,7 +342,10 @@ class LargeStringMapperDelegate extends DelegateMapperDelegate[LargeString, Clob
   def sourceToDest(value: LargeString): Clob = new SerialClob(value.value.toCharArray())
   def safeDestToSource(value: Clob): LargeString = {
     val clob = new SerialClob(value)
-    LargeString(clob.getSubString(1, clob.length().intValue()))
+    clob.length match {
+      case empty if (empty <= 0) => zero
+      case length => LargeString(clob.getSubString(1, length.intValue()))
+    }
   }
 }
 
@@ -355,6 +358,9 @@ class ByteArrayMapperDelegate extends DelegateMapperDelegate[Array[Byte], Blob] 
   def sourceToDest(value: Array[Byte]): Blob = new SerialBlob(value)
   def safeDestToSource(value: Blob): Array[Byte] = {
     val blob = new SerialBlob(value)
-    blob.getBytes(1, blob.length.toInt)
+    blob.length match {
+      case empty if (empty <= 0) => zero
+      case length => blob.getBytes(1, length.toInt)
+    }
   }
 }
