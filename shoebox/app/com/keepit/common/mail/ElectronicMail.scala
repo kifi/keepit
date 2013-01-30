@@ -64,6 +64,11 @@ case class ElectronicMail (
 
 @ImplementedBy(classOf[ElectronicMailRepoImpl])
 trait ElectronicMailRepo extends Repo[ElectronicMail] with ExternalIdColumnFunction[ElectronicMail] {
+  def outbox()(implicit session: RSession): Seq[ElectronicMail]
+  def forSender(senderId: Id[User])(implicit session: RSession): Seq[ElectronicMail]
+  def forRecipient(mailAddresses: Seq[String])(implicit session: RSession): Seq[ElectronicMail]
+  def count(filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Int
+  def page(page: Int, size: Int, filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Seq[ElectronicMail]
 }
 
 @Singleton
@@ -90,6 +95,27 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent) extends DbRep
     def category = column[ElectronicMailCategory]("category", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ from ~ fromName.? ~ to ~ subject ~ state ~ htmlBody ~ textBody.? ~ responseMessage.? ~ timeSubmitted.? ~ messageId.? ~ category <> (ElectronicMail, ElectronicMail.unapply _)
   }
+
+  def outbox()(implicit session: RSession): Seq[ElectronicMail] =
+    (for (t <- table if t.state === ElectronicMailStates.READY_TO_SEND ) yield t).list()
+
+  def forSender(senderId: Id[User])(implicit session: RSession): Seq[ElectronicMail] =
+    (for (t <- table if t.senderUserId === senderId ) yield t).list()
+
+  def forRecipient(mailAddresses: Seq[String])(implicit session: RSession): Seq[ElectronicMail] =
+    mailAddresses.map {str => new EmailAddressHolder(){val address = str}} match {
+      case Nil => Nil
+      case addrs => (for (t <- table if t.to inSet addrs ) yield t).list()
+    }
+
+  def count(filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Int =
+    (for (t <- table if t.to =!= filterRecipeintNot) yield t.id.countDistinct).first
+
+  def page(page: Int, size: Int, filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Seq[ElectronicMail] =
+    (for {
+      t <- table if t.to =!= filterRecipeintNot
+      _ <- Query.orderBy(t.id desc)
+    } yield t).drop(page * size).take(size).list
 }
 
 object ElectronicMailStates {
@@ -101,12 +127,13 @@ object ElectronicMailStates {
 
 object ElectronicMailCx {
 
+  //slicked
   def all(implicit conn: Connection): Seq[ElectronicMail] =
     ElectronicMailEntity.all.map(_.view)
 
+  //slicked
   def get(id: Id[ElectronicMail])(implicit conn: Connection): ElectronicMail =
     ElectronicMailEntity.get(id).map(_.view).getOrElse(throw NotFoundException(id))
-
 
   def outbox()(implicit conn: Connection): Seq[ElectronicMail] =
     ((ElectronicMailEntity AS "p") map { p => SELECT (p.*) FROM p WHERE (p.state EQ ElectronicMailStates.READY_TO_SEND ) }).list() map (_.view)

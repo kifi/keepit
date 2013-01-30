@@ -54,6 +54,8 @@ case class Comment(
 
 @ImplementedBy(classOf[CommentRepoImpl])
 trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
+  def all(permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment]
+  def all(permissions: State[CommentPermission], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
   def getChildCount(commentId: Id[Comment])(implicit session: RSession): Int
   def getPublic(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
@@ -88,6 +90,12 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Comme
     def permissions = column[State[CommentPermission]]("permissions", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId ~ urlId.? ~ userId ~ text ~ pageTitle ~ parent.? ~ permissions ~ state <> (Comment, Comment.unapply _)
   }
+
+  def all(permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment] =
+    (for(b <- table if b.permissions === permissions && b.state === CommentStates.ACTIVE) yield b).list
+
+  def all(permissions: State[CommentPermission], userId: Id[User])(implicit session: RSession): Seq[Comment] =
+    (for(b <- table if b.permissions === permissions && b.userId === userId && b.state === CommentStates.ACTIVE) yield b).list
 
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment] =
     (for(b <- table if b.uriId === uriId && b.state === CommentStates.ACTIVE) yield b).list
