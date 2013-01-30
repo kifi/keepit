@@ -52,7 +52,7 @@ import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
 import com.google.inject.multibindings._
 import com.keepit.common.analytics._
-import com.keepit.common.cache.{ShoeboxCache, MemcachedCache, InMemoryCache}
+import com.keepit.common.cache._
 
 
 
@@ -69,7 +69,6 @@ class DevModule() extends ScalaModule with Logging {
     bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped] // if Events need to be persisted in a dev environment, use PersistEventPluginImpl instead
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
     bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
-    bind[ShoeboxCache].to[InMemoryCache].in[AppScoped]
 
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])

@@ -12,6 +12,10 @@ import org.joda.time.DateTime
 import play.api._
 import ru.circumflex.orm._
 import play.api.libs.json._
+import com.keepit.common.cache._
+import akka.util.Duration
+import akka.util.duration._
+import com.keepit.serializer.UserSerializer
 
 case class User(
   id: Option[Id[User]] = None,
@@ -38,6 +42,18 @@ case class User(
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
 }
 
+case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
+  val namespace = "user_by_externalId"
+  def toKey(): String = externalId.id
+}
+
+class UserExternalIdCache extends FortyTwoCache[UserExternalIdKey, User] {
+  val ttl = 24 hours
+
+  def deserialize(obj: Any): User = UserSerializer.userSerializer.reads(Json.parse(obj.asInstanceOf[String]))
+  def serialize(user: User) = UserSerializer.userSerializer.writes(user)
+}
+
 @Singleton
 class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] {
   import FortyTwoTypeMappers._
@@ -53,6 +69,16 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] wi
     def lastName = column[String]("last_name", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state <> (User, User.unapply _)
   }
+
+  val cache = new UserExternalIdCache
+  override def invalidateCache(user: User) = {
+    user
+  }
+
+  override def get(externalId: ExternalId[User])(implicit session: RSession): User = {
+    cache.get(UserExternalIdKey(externalId)).get
+  }
+
 }
 
 //slicked
