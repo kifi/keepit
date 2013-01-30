@@ -147,7 +147,7 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Comme
 
   def count(permissions: State[CommentPermission])(implicit session: RSession): Int =
     (for {
-      b <- table if b.permissions === permissions && b.parent.isNull && b.state === CommentStates.ACTIVE
+      b <- table if b.permissions === permissions && b.state === CommentStates.ACTIVE
     } yield b.id.count).first
 }
 
