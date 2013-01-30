@@ -75,17 +75,17 @@ object UserController extends FortyTwoController {
 
   // TODO: delete once no beta users have old plugin using this (replaced by getSliderInfo)
   def usersKeptUrl(url: String) = AuthenticatedJsonAction { request =>
-    val socialUsers = CX.withConnection { implicit c =>
-      NormalizedURICxRepo.getByNormalizedUrl(url) match {
+    val socialUsers = inject[DBConnection].readOnly {implicit s =>
+      inject[NormalizedURIRepo].getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
-          val friendIds = SocialConnectionCxRepo.getFortyTwoUserConnections(userId)
+          val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
 
           val searcher = inject[URIGraph].getURIGraphSearcher
           val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
           val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
 
-          sharingUserIds.map(u => UserWithSocial.toUserWithSocialCX(UserCxRepo.get(u))).toSeq
+          sharingUserIds.map(u => inject[UserWithSocialRepo].toUserWithSocial(inject[UserRepo].get(u))).toSeq
 
         case None =>
           Seq[UserWithSocial]()
@@ -96,8 +96,10 @@ object UserController extends FortyTwoController {
   }
 
   def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
-    val socialConnections = CX.withConnection { implicit c =>
-      SocialConnectionCxRepo.getFortyTwoUserConnections(authRequest.userId).map(uid => BasicUser(UserCxRepo.get(uid))).toSeq
+    val socialConnections = inject[DBConnection].readOnly {implicit s =>
+      val userRepo = inject[UserRepo]
+      val basicUserRepo = inject[BasicUserRepo]
+      inject[SocialConnectionRepo].getFortyTwoUserConnections(authRequest.userId).map(uid => basicUserRepo.load(userRepo.get(uid))).toSeq
     }
 
     Ok(JsObject(Seq(
@@ -111,11 +113,6 @@ object UserController extends FortyTwoController {
       repo.toUserWithSocial(inject[UserRepo].get(id))
     }
     Ok(userWithSocialSerializer.writes(user))
-  }
-
-  def userStatisticsCX(user: User)(implicit conn: Connection): UserStatistics = {
-    val kifiInstallations = KifiInstallationCxRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
-    UserStatistics(user, UserWithSocial.toUserWithSocialCX(user), kifiInstallations)
   }
 
   def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
@@ -155,12 +152,12 @@ object UserController extends FortyTwoController {
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = CX.withConnection { implicit conn =>
-      val userWithSocial = UserWithSocial.toUserWithSocialCX(UserCxRepo.get(userId))
-      val bookmarks = BookmarkCxRepo.ofUser(userWithSocial.user)
-      val socialConnections = SocialConnectionCxRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
-      val fortyTwoConnections = (SocialConnectionCxRepo.getFortyTwoUserConnections(userId) map (UserCxRepo.get(_)) map UserWithSocial.toUserWithSocialCX toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
-      val kifiInstallations = KifiInstallationCxRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
+    val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = inject[DBConnection].readOnly {implicit s =>
+      val userWithSocial = inject[UserWithSocialRepo].toUserWithSocial(inject[UserRepo].get(userId))
+      val bookmarks = inject[BookmarkRepo].getByUser(userId)
+      val socialConnections = inject[SocialConnectionRepo].getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
+      val fortyTwoConnections = (inject[SocialConnectionRepo].getFortyTwoUserConnections(userId) map (inject[UserRepo].get(_)) map inject[UserWithSocialRepo].toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
+      val kifiInstallations = inject[KifiInstallationRepo].all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       (userWithSocial, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations)
     }
     Ok(views.html.user(user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations))
@@ -221,9 +218,9 @@ object UserController extends FortyTwoController {
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val socialUserInfos = CX.withConnection { implicit c =>
-      val user = UserCxRepo.get(userId)
-      SocialUserInfoCxRepo.getByUser(user.id.get)
+    val socialUserInfos = inject[DBConnection].readOnly {implicit s =>
+      val user = inject[UserRepo].get(userId)
+      inject[SocialUserInfoRepo].getByUser(user.id.get)
     }
     val graph = inject[SocialGraphPlugin]
     socialUserInfos foreach { info =>
