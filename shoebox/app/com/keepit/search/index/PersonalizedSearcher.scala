@@ -5,6 +5,7 @@ import com.keepit.model.User
 import com.keepit.search.SemanticVectorComposer
 import com.keepit.search.SemanticVector
 import com.keepit.search.BrowsingHistoryTracker
+import com.keepit.search.ClickHistoryTracker
 import com.keepit.search.MultiHashFilter
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
@@ -16,17 +17,24 @@ import scala.collection.mutable.ArrayBuffer
 object PersonalizedSearcher {
   def apply(userId: Id[User], indexReader: WrappedIndexReader, ids: Set[Long],
             browsingHistoryTracker: BrowsingHistoryTracker,
+            clickHistoryTracker: ClickHistoryTracker,
             svWeightMyBookMarks: Int,
-            svWeightBrowsingHistory: Int) = {
-    new PersonalizedSearcher(indexReader, ids, browsingHistoryTracker.getMultiHashFilter(userId), svWeightMyBookMarks, svWeightBrowsingHistory)
+            svWeightBrowsingHistory: Int,
+            svWeightClickHistory: Int) = {
+    new PersonalizedSearcher(indexReader, ids,
+                             browsingHistoryTracker.getMultiHashFilter(userId),
+                             clickHistoryTracker.getMultiHashFilter(userId),
+                             svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
   }
 
   def apply(searcher: Searcher, ids: Set[Long]) = {
-    new PersonalizedSearcher(searcher.indexReader, ids, MultiHashFilter.emptyFilter, 1, 0)
+    new PersonalizedSearcher(searcher.indexReader, ids, MultiHashFilter.emptyFilter, MultiHashFilter.emptyFilter, 1, 0, 0)
   }
 }
 
-class PersonalizedSearcher(override val indexReader: WrappedIndexReader, ids: Set[Long], filter: MultiHashFilter, svWeightMyBookMarks: Int, svWeightBrowsingHistory: Int)
+class PersonalizedSearcher(override val indexReader: WrappedIndexReader, ids: Set[Long],
+                           browsingFilter: MultiHashFilter, clickFilter: MultiHashFilter,
+                           svWeightMyBookMarks: Int, svWeightBrowsingHistory: Int, svWeightClickHistory: Int)
 extends Searcher(indexReader) {
   override protected def getSemanticVectorComposer(term: Term) = {
     val subReaders = indexReader.wrappedSubReaders
@@ -42,7 +50,8 @@ extends Searcher(indexReader) {
           val id = idMapper.getId(tp.doc())
           var weight = 0
           if (ids.contains(id)) weight += svWeightMyBookMarks
-          if (filter.mayContain(id)) weight += svWeightBrowsingHistory
+          if (browsingFilter.mayContain(id)) weight += svWeightBrowsingHistory
+          if (clickFilter.mayContain(id)) weight += svWeightClickHistory
           if (weight > 0) {
             var freq = tp.freq()
             while (freq > 0) {

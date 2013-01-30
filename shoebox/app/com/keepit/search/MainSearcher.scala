@@ -15,9 +15,13 @@ import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
 
-class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], articleIndexer: ArticleIndexer, uriGraph: URIGraph,
-                   resultClickTracker: ResultClickTracker, browsingHistoryTracker: BrowsingHistoryTracker, config: SearchConfig)
-extends Logging {
+class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], config: SearchConfig)(implicit
+    articleIndexer: ArticleIndexer,
+    uriGraph: URIGraph,
+    resultClickTracker: ResultClickTracker,
+    browsingHistoryTracker: BrowsingHistoryTracker,
+    clickHistoryTracker: ClickHistoryTracker
+) extends Logging {
   val currentTime = currentDateTime.getMillis()
   val isInitialSearch = filterOut.isEmpty
 
@@ -39,6 +43,7 @@ extends Logging {
   val maxResultClickBoost = config.asFloat("maxResultClickBoost")
   val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
+  val svWeightClickHistory = config.asInt("svWeightClickHistory")
   val similarity = Similarity(config.asString("similarity"))
   val progressiveRelaxation = config.asBoolean("progressiveRelaxation")
   val enableCoordinator = config.asBoolean("enableCoordinator")
@@ -60,7 +65,7 @@ extends Logging {
       case None =>
         articleSearcher.indexReader
     }
-    PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory)
+    PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryTracker, clickHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
   }
 
   def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts, initial: Boolean = true)(implicit lang: Lang) = {
