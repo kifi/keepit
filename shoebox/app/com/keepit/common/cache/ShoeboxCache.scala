@@ -56,7 +56,7 @@ class InMemoryCache extends ShoeboxCache {
     }
 
   def getAs[T](key: String)(implicit m: ClassManifest[T]): Option[T] =
-    cache.get(key).map(_.asInstanceOf[T])
+    get(key).map(_.asInstanceOf[T])
 
   def remove(key: String): Unit =
     cache.remove(key)
@@ -74,24 +74,32 @@ package sandbox {
     override def toString: String = namespace + ":" + toKey()
   }
 
-  trait ObjectCache[Key[T], T] {
+  trait ObjectCache[K <: Key[T], T] {
     val ttl: Duration
   //    def serializer(obj: T): String
 //    def deserializer(s: String): Option[T]
 
-    def get(key: Key[T]): Option[T]
-    def set(key: Key[T], value: T): Unit
+    def get(key: K): Option[T]
+    def set(key: K, value: T): Unit
+
+    def getOrElse(key: K)(orElse: => T): T = {
+      get(key).getOrElse {
+        val value = orElse
+        set(key, value)
+        value
+      }
+    }
   }
 
-  trait AggressiveMemcached[Key[T], T] {
-    def get(key: Key[T]): Option[T] = throw new Exception
-    def set(key: Key[T], value: T): Unit = throw new Exception
+  trait AggressiveMemcached[K <: Key[T], T] {
+    def get(key: K): Option[T] = throw new Exception
+    def set(key: K, value: T): Unit = throw new Exception
   }
 
   case class CommentCount(count: Int)
 
   case class CommentCountKey(userId: String) extends Key[CommentCount] {
-    val namespace = "blah"
+    val namespace = "comment_count_by_userid"
     def toKey(): String = userId + ""
   }
 
@@ -99,6 +107,53 @@ package sandbox {
     val ttl = 1 minute
   }
 
+  package Transcoders {
+    import net.spy.memcached.transcoders._
+    import net.spy.memcached.CachedData
+    import net.spy.memcached.compat.SpyObject
+
+    class LongTranscoder extends SpyObject with net.spy.memcached.transcoders.Transcoder[Long] {
+      private val jLongTranscoder = new LongTranscoder
+
+      def asyncDecode(d: CachedData) = false
+      def encode(i: Long): CachedData = jLongTranscoder.encode(i)
+      def decode(d: CachedData): Long = jLongTranscoder.decode(d)
+      def getMaxSize() = jLongTranscoder.getMaxSize
+    }
+
+    class ByteArrayTranscoder extends SpyObject with net.spy.memcached.transcoders.Transcoder[Array[Byte]] {
+      private final val FLAGS = (8 << 8)
+
+      def asyncDecode(d: CachedData) = false
+      def encode(i: Array[Byte]): CachedData = new CachedData(FLAGS, i, getMaxSize())
+      def decode(d: CachedData): Array[Byte] = {
+        if (FLAGS == d.getFlags)
+          d.getData()
+        else {
+          getLogger().error("Unexpected flags for long:  " + d.getFlags() + " wanted " + FLAGS)
+          null
+        }
+      }
+      def getMaxSize() = CachedData.MAX_SIZE
+    }
+
+  class StringTranscoder extends SpyObject with net.spy.memcached.transcoders.Transcoder[Array[Byte]] {
+    private final val FLAGS = (8 << 8)
+    private final val tu = new TranscoderUtils(true)
+
+    def asyncDecode(d: CachedData) = false
+    def encode(i: Array[Byte]): CachedData = new CachedData(FLAGS, i, getMaxSize())
+    def decode(d: CachedData): Array[Byte] = {
+      if (FLAGS == d.getFlags)
+        d.getData()
+      else {
+        getLogger().error("Unexpected flags for long:  " + d.getFlags() + " wanted " + FLAGS)
+        null
+      }
+    }
+    def getMaxSize() = CachedData.MAX_SIZE
+  }
+  }
 
 
 }
