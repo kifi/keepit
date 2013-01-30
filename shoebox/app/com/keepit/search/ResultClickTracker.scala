@@ -26,9 +26,10 @@ object ResultClickTracker {
 class ResultClickTracker(lru: ProbablisticLRU) {
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
-  def add(userId: Id[User], query: String, uriId: Id[NormalizedURI]) = {
+  def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], isUserKeep: Boolean) = {
     val hash = QueryHash(userId, query, analyzer)
-    lru.put(hash, uriId.id)
+    val updateStrength = if (isUserKeep) 0.5d else 0.25d // user's keep => half the slots, others => quarter
+    lru.put(hash, uriId.id, updateStrength)
   }
 
   def getBoosts(userId: Id[User], query: String, maxBoost: Float) = {

@@ -61,6 +61,37 @@ class ProbablisticLRUTest extends SpecificationWithJUnit {
       ret(v1) must be_>= (4)
     }
 
+    "put with different updateStrength" in {
+      val lru = create(1000, 8)
+      val key = rand.nextLong()
+      val v1 = rand.nextLong()
+      val v2 = rand.nextLong()
+      val v3 = rand.nextLong()
+      val v4 = rand.nextLong()
+      val values = Seq(v1, v2, v3, v4)
+
+      lru.put(key, v1, 1.0d)
+      var ret = lru.get(key, values)
+      ret.get(v1) must beSome[Int]
+      ret(v1) === 8
+
+      lru.put(key, v2, 0.5d)
+      ret = lru.get(key, values)
+      ret = lru.get(key, values)
+
+      ret(v1) must be_<= (4)
+      ret = lru.get(key, values)
+      ret(v2) === 4
+
+      lru.put(key, v3, 0.25d)
+      ret = lru.get(key, values)
+      ret(v3) === 2
+
+      lru.put(key, v4, 0.1)
+      ret = lru.get(key, values)
+      ret.get(v4) must beNone
+    }
+
     "put/get multiple keys" in {
       val numPairs = 50
       val lru = create(1000, 10)

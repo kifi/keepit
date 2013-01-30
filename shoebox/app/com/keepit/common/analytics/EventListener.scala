@@ -51,7 +51,7 @@ class KifiResultClickedListener extends EventListenerPlugin {
         (user, meta, bookmark)
       }
       // handle KifiResultClicked
-      meta.normUrl.foreach(n => resultClickTracker.add(user.id.get, meta.query, n.id.get))
+      meta.normUrl.foreach(n => resultClickTracker.add(user.id.get, meta.query, n.id.get, !bookmark.isEmpty))
   }
 }
 
