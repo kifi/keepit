@@ -135,7 +135,7 @@ class SendgridMailProvider @Inject() () extends Logging {
     part1.setText(mail.textBody.map(_.value).getOrElse(""))
 
     val part2 = new MimeBodyPart()
-    part2.setContent(mail.htmlBody, ContentTypes.HTML)
+    part2.setContent(mail.htmlBody.value, ContentTypes.HTML)
 
     multipart.addBodyPart(part1)
     multipart.addBodyPart(part2)
