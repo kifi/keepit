@@ -16,15 +16,16 @@ class CommentWithSocialUserRepo {
     val userRepo = inject[UserRepo]
     val commentRepo = inject[CommentRepo]
     val commentRecipientRepo = inject[CommentRecipientRepo]
+    val userWithSocialRepo = inject[UserWithSocialRepo]
     CommentWithSocialUser(
-      UserWithSocial.toUserWithSocial(userRepo.get(comment.userId)),
+      userWithSocialRepo.toUserWithSocial(userRepo.get(comment.userId)),
       comment,
       commentRepo.getChildCount(comment.id.get),
       if(comment.permissions != CommentPermissions.MESSAGE) {
         Nil
       } else {
         commentRecipientRepo.getByComment(comment.id.get) map { cr => 
-          UserWithSocial.toUserWithSocial(userRepo.get(cr.userId.get)) 
+          userWithSocialRepo.toUserWithSocial(userRepo.get(cr.userId.get)) 
         }
       }
     )
