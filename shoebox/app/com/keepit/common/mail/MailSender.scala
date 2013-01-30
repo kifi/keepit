@@ -50,7 +50,7 @@ class MailSenderPluginImpl @Inject() (system: ActorSystem)
 
   override def processOutbox(): Unit = {
     CX.withConnection { implicit c =>
-      ElectronicMail.outbox()
+      ElectronicMailCx.outbox()
     } foreach { mail =>
       processMail(mail)
     }

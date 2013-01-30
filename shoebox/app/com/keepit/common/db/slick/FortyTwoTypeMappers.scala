@@ -8,6 +8,7 @@ import com.keepit.common.db.{Id, State, Model, ExternalId, LargeString}
 import com.keepit.common.time._
 import com.keepit.common.social._
 import com.keepit.model._
+import com.keepit.common.mail._
 import org.joda.time.DateTime
 import java.sql.{Timestamp, Clob, Blob, PreparedStatement}
 import javax.sql.rowset.serial.{SerialBlob, SerialClob}
@@ -80,31 +81,47 @@ object FortyTwoTypeMappers {
   }
 
   //Other
-  implicit object URLHistorySeqHistoryStateTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
+  implicit object URLHistorySeqHistoryTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
     def apply(profile: BasicProfile) = new URLHistorySeqMapperDelegate
   }
 
-  implicit object BookmarkSourceHistoryStateTypeMapper extends BaseTypeMapper[BookmarkSource] {
+  implicit object ElectronicMailMessageIdTypeMapper extends BaseTypeMapper[ElectronicMailMessageId] {
+    def apply(profile: BasicProfile) = new ElectronicMailMessageIdMapperDelegate
+  }
+
+  implicit object ElectronicMailCategoryTypeMapper extends BaseTypeMapper[ElectronicMailCategory] {
+    def apply(profile: BasicProfile) = new ElectronicMailCategoryMapperDelegate
+  }
+
+  implicit object SystemEmailAddressTypeMapper extends BaseTypeMapper[SystemEmailAddress] {
+    def apply(profile: BasicProfile) = new SystemEmailAddressMapperDelegate
+  }
+
+  implicit object EmailAddressHolderTypeMapper extends BaseTypeMapper[EmailAddressHolder] {
+    def apply(profile: BasicProfile) = new EmailAddressHolderMapperDelegate
+  }
+
+  implicit object BookmarkSourceHistoryTypeMapper extends BaseTypeMapper[BookmarkSource] {
     def apply(profile: BasicProfile) = new BookmarkSourceMapperDelegate
   }
 
-  implicit object SocialNetworkTypeHistoryStateTypeMapper extends BaseTypeMapper[SocialNetworkType] {
+  implicit object SocialNetworkTypeHistoryTypeMapper extends BaseTypeMapper[SocialNetworkType] {
     def apply(profile: BasicProfile) = new SocialNetworkTypeMapperDelegate
   }
 
-  implicit object SocialUserHistoryStateTypeMapper extends BaseTypeMapper[SocialUser] {
+  implicit object SocialUserHistoryTypeMapper extends BaseTypeMapper[SocialUser] {
     def apply(profile: BasicProfile) = new SocialUserMapperDelegate
   }
 
-  implicit object SocialIdHistoryStateTypeMapper extends BaseTypeMapper[SocialId] {
+  implicit object SocialIdHistoryTypeMapper extends BaseTypeMapper[SocialId] {
     def apply(profile: BasicProfile) = new SocialIdMapperDelegate
   }
 
-  implicit object LargeStringStateTypeMapper extends BaseTypeMapper[LargeString] {
+  implicit object LargeStringTypeMapper extends BaseTypeMapper[LargeString] {
     def apply(profile: BasicProfile) = new LargeStringMapperDelegate
   }
 
-  implicit object ByteArrayStateTypeMapper extends BaseTypeMapper[Array[Byte]] {
+  implicit object ByteArrayTypeMapper extends BaseTypeMapper[Array[Byte]] {
     def apply(profile: BasicProfile) = new ByteArrayMapperDelegate
   }
 
@@ -281,6 +298,42 @@ class UserAgentMapperDelegate extends StringMapperDelegate[UserAgent] {
 }
 
 //************************************
+//       ElectronicMailMessageId -> String
+//************************************
+class ElectronicMailMessageIdMapperDelegate extends StringMapperDelegate[ElectronicMailMessageId] {
+  def zero = ElectronicMailMessageId("")
+  def sourceToDest(value: ElectronicMailMessageId) = value.id
+  def safeDestToSource(str: String) = ElectronicMailMessageId(str)
+}
+
+//************************************
+//       ElectronicMailCategory -> String
+//************************************
+class ElectronicMailCategoryMapperDelegate extends StringMapperDelegate[ElectronicMailCategory] {
+  def zero = ElectronicMailCategory("")
+  def sourceToDest(value: ElectronicMailCategory) = value.category
+  def safeDestToSource(str: String) = ElectronicMailCategory(str)
+}
+
+//************************************
+//       SystemEmailAddress -> String
+//************************************
+class SystemEmailAddressMapperDelegate extends StringMapperDelegate[SystemEmailAddress] {
+  def zero = EmailAddresses.TEAM
+  def sourceToDest(value: SystemEmailAddress) = value.address
+  def safeDestToSource(str: String) = EmailAddresses(str)
+}
+
+//************************************
+//       EmailAddressHolder -> String
+//************************************
+class EmailAddressHolderMapperDelegate extends StringMapperDelegate[EmailAddressHolder] {
+  def zero = new EmailAddressHolder(){val address = ""}
+  def sourceToDest(value: EmailAddressHolder) = value.address
+  def safeDestToSource(str: String) = new EmailAddressHolder(){val address = str}
+}
+
+//************************************
 //       LargeString -> Clob
 //************************************
 class LargeStringMapperDelegate extends DelegateMapperDelegate[LargeString, Clob] {
@@ -305,7 +358,9 @@ class ByteArrayMapperDelegate extends DelegateMapperDelegate[Array[Byte], Blob] 
   def sourceToDest(value: Array[Byte]): Blob = new SerialBlob(value)
   def safeDestToSource(value: Blob): Array[Byte] = {
     val blob = new SerialBlob(value)
-    blob.getBytes(1, blob.length.toInt)
+    blob.length match {
+      case empty if (empty <= 0) => zero
+      case length => blob.getBytes(1, length.toInt)
+    }
   }
 }
-

@@ -41,25 +41,26 @@ case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstal
 object UserController extends FortyTwoController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
-    val (bookmark, following, socialUsers, numComments, numMessages) = CX.withConnection { implicit c =>
-      NormalizedURICxRepo.getByNormalizedUrl(url) match {
+    val (bookmark, following, socialUsers, numComments, numMessages) = inject[DBConnection].readOnly {implicit s =>
+      inject[NormalizedURIRepo].getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
-          val bookmark = BookmarkCxRepo.getByUriAndUser(uri.id.get, userId).filter(_.isActive)
-          val following = FollowCxRepo.get(userId, uri.id.get).filter(_.isActive).isDefined
+          val bookmark = inject[BookmarkRepo].getByUriAndUser(uri.id.get, userId).filter(_.isActive)
+          val following = inject[FollowRepo].get(userId, uri.id.get).filter(_.isActive).isDefined
 
-          val friendIds = SocialConnectionCxRepo.getFortyTwoUserConnections(userId)
+          val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
           val searcher = inject[URIGraph].getURIGraphSearcher
           val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
           val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
-          val socialUsers = sharingUserIds.map(u => UserWithSocial.toUserWithSocialCX(UserCxRepo.get(u))).toSeq
+          val socialUsers = sharingUserIds.map(u => inject[UserWithSocialRepo].toUserWithSocial(inject[UserRepo].get(u))).toSeq
 
-          val numComments = CommentCxRepo.getPublicCount(uri.id.get)
-          val numMessages = CommentCxRepo.getMessageCount(uri.id.get, userId)
+          val commentRepo = inject[CommentRepo]
+          val numComments = commentRepo.getPublicCount(uri.id.get)
+          val numMessages = commentRepo.getMessages(uri.id.get, userId).size
 
           (bookmark, following, socialUsers, numComments, numMessages)
         case None =>
-          (None, false, Nil, 0L, 0L)
+          (None, false, Nil, 0, 0)
       }
     }
 
@@ -106,7 +107,8 @@ object UserController extends FortyTwoController {
 
   def getUser(id: Id[User]) = AdminJsonAction { request =>
     val user = inject[DBConnection].readOnly { implicit s =>
-      UserWithSocial.toUserWithSocial(inject[UserRepo].get(id))
+      val repo = inject[UserWithSocialRepo]
+      repo.toUserWithSocial(inject[UserRepo].get(id))
     }
     Ok(userWithSocialSerializer.writes(user))
   }
@@ -118,23 +120,32 @@ object UserController extends FortyTwoController {
 
   def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
     val kifiInstallations = inject[KifiInstallationRepo].all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
-    UserStatistics(user, UserWithSocial.toUserWithSocial(user), kifiInstallations)
+    UserStatistics(user, inject[UserWithSocialRepo].toUserWithSocial(user), kifiInstallations)
   }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = CX.withConnection { implicit conn =>
-      val userWithSocial = UserWithSocial.toUserWithSocialCX(UserCxRepo.get(userId))
-      val socialUserInfos = SocialUserInfoCxRepo.getByUser(userWithSocial.user.id.get)
-      val follows = FollowCxRepo.all(userId) map {f => NormalizedURICxRepo.get(f.uriId)}
-      val comments = CommentCxRepo.all(CommentPermissions.PUBLIC, userId) map {c =>
-        (NormalizedURICxRepo.get(c.uriId), c)
+    val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = inject[DBConnection].readOnly { implicit s =>
+      val userWithSocialRepo = inject[UserWithSocialRepo]
+      val userRepo = inject[UserRepo]
+      val socialUserInfoRepo = inject[SocialUserInfoRepo]
+      val followRepo = inject[FollowRepo]
+      val normalizedURIRepo = inject[NormalizedURIRepo]
+      val commentRepo = inject[CommentRepo]
+      val mailRepo = inject[ElectronicMailRepo]
+      val userWithSocial = userWithSocialRepo.toUserWithSocial(userRepo.get(userId))
+      val socialUserInfos = socialUserInfoRepo.getByUser(userWithSocial.user.id.get)
+      val follows = followRepo.all(userId) map {f => normalizedURIRepo.get(f.uriId)}
+      val comments = commentRepo.all(CommentPermissions.PUBLIC, userId) map {c =>
+        (normalizedURIRepo.get(c.uriId), c)
       }
-      val messages = CommentCxRepo.all(CommentPermissions.MESSAGE, userId) map {c =>
-        (NormalizedURICxRepo.get(c.uriId), c, CommentRecipientCxRepo.getByComment(c.id.get) map { r => UserWithSocial.toUserWithSocialCX(UserCxRepo.get(r.userId.get)) })
+      val messages = commentRepo.all(CommentPermissions.MESSAGE, userId) map {c =>
+        (normalizedURIRepo.get(c.uriId), c, inject[CommentRecipientRepo].getByComment(c.id.get) map { 
+          r => userWithSocialRepo.toUserWithSocial(userRepo.get(r.userId.get)) 
+        })
       }
-      val sentElectronicMails = ElectronicMail.forSender(userId);
-      val mailAddresses = UserWithSocial.toUserWithSocialCX(UserCxRepo.get(userId)).emails.map(_.address)
-      val receivedElectronicMails = ElectronicMail.forRecipient(mailAddresses);
+      val sentElectronicMails = mailRepo.forSender(userId);
+      val mailAddresses = userWithSocialRepo.toUserWithSocial(userRepo.get(userId)).emails.map(_.address)
+      val receivedElectronicMails = mailRepo.forRecipient(mailAddresses);
       (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails)
     }
     val rawInfos = socialUserInfos map {info =>

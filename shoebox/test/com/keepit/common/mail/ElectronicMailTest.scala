@@ -12,7 +12,9 @@ import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.runner.JUnitRunner
-import com.keepit.common.db.CX
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 
 
 @RunWith(classOf[JUnitRunner])
@@ -21,16 +23,17 @@ class ElectronicMailTest extends Specification with TestAkkaSystem {
   "ElectronicMail" should {
     "user filters" in {
       running(new ShoeboxApplication().withFakeHealthcheck().withFakeMail()) {
-        CX.withConnection { implicit c =>
-          ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.ENG, subject = "foo 1", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK).save
-          ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.TEAM, subject = "foo 2", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK).save
-          ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.EISHAY, subject = "foo 3", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK).save
+        val repo = inject[ElectronicMailRepo]
+        inject[DBConnection].readWrite { implicit s => 
+          repo.save(ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.ENG, subject = "foo 1", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK))
+          repo.save(ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.TEAM, subject = "foo 2", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK))
+          repo.save(ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.EISHAY, subject = "foo 3", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK))
         }
-        CX.withConnection { implicit c =>
-          ElectronicMail.page(0, 10, EmailAddresses.ENG).size == 2
-          ElectronicMail.page(0, 2, EmailAddresses.ENG).size == 2
-          ElectronicMail.count(EmailAddresses.ANDREW) === 3
-          ElectronicMail.count(EmailAddresses.ENG) === 2
+        inject[DBConnection].readOnly { implicit s =>
+          repo.page(0, 10, EmailAddresses.ENG).size == 2
+          repo.page(0, 2, EmailAddresses.ENG).size == 2
+          repo.count(EmailAddresses.ANDREW) === 3
+          repo.count(EmailAddresses.ENG) === 2
         }
       }
     }

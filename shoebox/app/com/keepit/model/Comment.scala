@@ -54,13 +54,18 @@ case class Comment(
 
 @ImplementedBy(classOf[CommentRepoImpl])
 trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
+  def all(permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment]
+  def all(permissions: State[CommentPermission], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
   def getChildCount(commentId: Id[Comment])(implicit session: RSession): Int
   def getPublic(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
   def getPublicCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int
-  def getPrivate(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
-  def getPrivateCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int
+  def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
+  def getPrivateCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Int
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
+  def getMessagesWithChildrenCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Int
+  def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
+  def count(permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit session: RSession): Int
 }
 
 @Singleton
@@ -86,6 +91,12 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Comme
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId ~ urlId.? ~ userId ~ text ~ pageTitle ~ parent.? ~ permissions ~ state <> (Comment, Comment.unapply _)
   }
 
+  def all(permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment] =
+    (for(b <- table if b.permissions === permissions && b.state === CommentStates.ACTIVE) yield b).list
+
+  def all(permissions: State[CommentPermission], userId: Id[User])(implicit session: RSession): Seq[Comment] =
+    (for(b <- table if b.permissions === permissions && b.userId === userId && b.state === CommentStates.ACTIVE) yield b).list
+
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment] =
     (for(b <- table if b.uriId === uriId && b.state === CommentStates.ACTIVE) yield b).list
 
@@ -102,19 +113,42 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Comme
       b <- table if b.uriId === uriId && b.permissions === CommentPermissions.PUBLIC && b.parent.isNull && b.state === CommentStates.ACTIVE
     } yield b.id.count).first
 
-  def getPrivate(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment] =
+  def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] =
     (for {
-      b <- table if b.uriId === uriId && b.permissions === CommentPermissions.PRIVATE && b.state === CommentStates.ACTIVE
+      b <- table if b.uriId === uriId && b.userId === userId && b.permissions === CommentPermissions.PRIVATE && b.state === CommentStates.ACTIVE
     } yield b).list
   
-  def getPrivateCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int =
+  def getPrivateCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Int =
     (for {
-      b <- table if b.uriId === uriId && b.permissions === CommentPermissions.PRIVATE  && b.state === CommentStates.ACTIVE
+      b <- table if b.uriId === uriId && b.userId === userId && b.permissions === CommentPermissions.PRIVATE  && b.state === CommentStates.ACTIVE
     } yield b.id.count).first
 
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment] =
     (for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b).list
 
+  def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] = {
+    // Get all messages *from* and/or *to* the user
+    // (side effect: User cannot be removed from own messages)
+    //selectMessages({c => c.*}, uriId, userId).list.map(_.view)
+    val q1 = for {
+      Join(c, cr) <- table innerJoin inject[CommentRecipientRepoImpl].table on (_.id is _.commentId) if (c.uriId === uriId && cr.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
+    } yield (c.*)
+    val q2 = for {
+      c <- table if (c.uriId === uriId && c.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
+    } yield (c.*)
+    (q1.list ++ q2.list).toSet.toSeq
+  }
+
+  def getMessagesWithChildrenCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Int = {
+    val comments = getMessages(uriId, userId)
+    val childrenCounts: Seq[Int] = (comments.toList map {c => getChildCount(c.id.get).toInt})
+    childrenCounts.foldLeft(0)((sum, count) => sum + count) + comments.size
+  }
+
+  def count(permissions: State[CommentPermission])(implicit session: RSession): Int =
+    (for {
+      b <- table if b.permissions === permissions && b.state === CommentStates.ACTIVE
+    } yield b.id.count).first
 }
 
 object CommentCxRepo {
@@ -149,8 +183,8 @@ object CommentCxRepo {
   def getPublic(uriId: Id[NormalizedURI])(implicit conn: Connection): Seq[Comment] =
     selectPublic({c => c.*}, uriId).list.map(_.view)
   //slicked
-  def getPublicCount(uriId: Id[NormalizedURI])(implicit conn: Connection): Long =
-    selectPublic({c => COUNT(c.id)}, uriId).unique.get
+  def getPublicCount(uriId: Id[NormalizedURI])(implicit conn: Connection): Int =
+    selectPublic({c => COUNT(c.id)}, uriId).unique.get.intValue
   //slicked
   private def selectPublic[T](
       project: RelationNode[Id[Comment],CommentEntity] => Projection[T],
@@ -189,7 +223,7 @@ object CommentCxRepo {
     childrenCounts.foldLeft(0)((sum, count) => sum + count) + comments.size
   }
 
-  def getMessageCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Long =
+  def getMessageCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit conn: Connection): Int =
     selectMessages({c => c.id}, uriId, userId).list.size
 
   private def selectMessages[T](
@@ -216,8 +250,8 @@ object CommentCxRepo {
   def getChildren(commentId: Id[Comment])(implicit conn: Connection): Seq[Comment] =
     selectChildren({c => c.*}, commentId).list.map(_.view)
 
-  def getChildCount(commentId: Id[Comment])(implicit conn: Connection): Long =
-    selectChildren({c => COUNT(c.id)}, commentId).unique.get
+  def getChildCount(commentId: Id[Comment])(implicit conn: Connection): Int =
+    selectChildren({c => COUNT(c.id)}, commentId).unique.get.toInt
 
   private def selectChildren[T](
       project: RelationNode[Id[Comment],CommentEntity] => Projection[T],
@@ -229,8 +263,8 @@ object CommentCxRepo {
   def page(page: Int = 0, size: Int = 20, permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit conn: Connection): Seq[Comment] =
     (CommentEntity AS "c").map { c => SELECT (c.*) FROM c  WHERE (c.permissions EQ permissions)  LIMIT size OFFSET (page * size) ORDER_BY (c.id DESC) list }.map(_.view)
 
-  def count( permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit conn: Connection): Long =
-    (CommentEntity AS "c").map(c => SELECT(COUNT(c.id)).FROM(c).WHERE (c.permissions EQ permissions).unique).get
+  def count( permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit conn: Connection): Int =
+    (CommentEntity AS "c").map(c => SELECT(COUNT(c.id)).FROM(c).WHERE (c.permissions EQ permissions).unique).get.toInt
 
   def getByUrlId(urlId: Id[URL])(implicit conn: Connection): Seq[Comment] =
     (CommentEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlId EQ urlId) list() }.map(_.view)
@@ -301,5 +335,3 @@ private[model] object CommentEntity extends CommentEntity with EntityTable[Comme
     comment
   }
 }
-
-

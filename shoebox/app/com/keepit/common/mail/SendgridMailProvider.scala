@@ -132,10 +132,10 @@ class SendgridMailProvider @Inject() () extends Logging {
     val multipart = new MimeMultipart("alternative")
 
     val part1 = new MimeBodyPart()
-    part1.setText(mail.textBody.getOrElse(""))
+    part1.setText(mail.textBody.map(_.value).getOrElse(""))
 
     val part2 = new MimeBodyPart()
-    part2.setContent(mail.htmlBody, ContentTypes.HTML)
+    part2.setContent(mail.htmlBody.value, ContentTypes.HTML)
 
     multipart.addBodyPart(part1)
     multipart.addBodyPart(part2)
@@ -158,7 +158,7 @@ class SendgridMailProvider @Inject() () extends Logging {
 
   private def mailError(mailId: ExternalId[ElectronicMail], message: String, transport: Transport): ElectronicMail = {
     val mail = CX.withConnection { implicit c =>
-      ElectronicMail.get(mailId)
+      ElectronicMailCx.get(mailId)
     }
     mailError(mail, message, transport)
   }
