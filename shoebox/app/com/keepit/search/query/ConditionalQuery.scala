@@ -115,8 +115,15 @@ class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Wei
       } else {
         QueryUtil.toScorerWithCoordinator(sourceScorer)
       }
-      val conditionScorer = conditionWeight.scorer(reader, true, false)
-      new ConditionalScorer(this, mainScorer, conditionScorer)
+
+      if (mainScorer == null) null
+      else {
+        val conditionScorer = conditionWeight.scorer(reader, true, false)
+        if (conditionScorer == null) null
+        else {
+          new ConditionalScorer(this, mainScorer, conditionScorer)
+        }
+      }
     }
   }
 }
