@@ -24,29 +24,34 @@ import play.api.test.Helpers._
 class CommentTest extends SpecificationWithJUnit {
 
   def setup() = {
-    CX.withConnection { implicit conn =>
-      val user1 = User(firstName = "Andrew", lastName = "Conner").save
-      val user2 = User(firstName = "Eishay", lastName = "Smith").save
+    inject[DBConnection].readWrite {implicit s =>
+      val commentRepo = inject[CommentRepo]
+      val userRepo = inject[UserRepo]
+      val commentRecipientRepo = inject[CommentRecipientRepo]
+      val normalizedURIRepo = inject[NormalizedURIRepo]
 
-      val uri1 = NormalizedURIFactory("Google", "http://www.google.com/").save
-      val uri2 = NormalizedURIFactory("Bing", "http://www.bing.com/").save
+      val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
+      val user2 = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+
+      val uri1 = normalizedURIRepo.save(NormalizedURIFactory("Google", "http://www.google.com/"))
+      val uri2 = normalizedURIRepo.save(NormalizedURIFactory("Bing", "http://www.bing.com/"))
 
       // Public
-      Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Public Comment on Google1", permissions = CommentPermissions.PUBLIC).save
-      Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Public Comment on Google2", permissions = CommentPermissions.PUBLIC).save
-      Comment(uriId = uri2.id.get, userId = user1.id.get, pageTitle = uri2.title.get, text = "Public Comment on Bing", permissions = CommentPermissions.PUBLIC).save
+      commentRepo.save(Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Public Comment on Google1", permissions = CommentPermissions.PUBLIC))
+      commentRepo.save(Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Public Comment on Google2", permissions = CommentPermissions.PUBLIC))
+      commentRepo.save(Comment(uriId = uri2.id.get, userId = user1.id.get, pageTitle = uri2.title.get, text = "Public Comment on Bing", permissions = CommentPermissions.PUBLIC))
 
       // Private
-      Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Private Comment on Google1", permissions = CommentPermissions.PRIVATE).save
-      Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Private Comment on Google2", permissions = CommentPermissions.PRIVATE).save
+      commentRepo.save(Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Private Comment on Google1", permissions = CommentPermissions.PRIVATE))
+      commentRepo.save(Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Private Comment on Google2", permissions = CommentPermissions.PRIVATE))
 
       // Messages
-      val msg1 = Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Conversation on Google1", permissions = CommentPermissions.MESSAGE).save
-      CommentRecipient(commentId = msg1.id.get, userId = Some(user2.id.get)).save
-      val msg2 = Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google2", permissions = CommentPermissions.MESSAGE).save
-      CommentRecipient(commentId = msg2.id.get, userId = Some(user1.id.get)).save
-      val msg3 = Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google3", permissions = CommentPermissions.MESSAGE).save
-      val msg4 = Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Conversation on Google4", permissions = CommentPermissions.MESSAGE, parent = msg3.id).save
+      val msg1 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Conversation on Google1", permissions = CommentPermissions.MESSAGE))
+      commentRecipientRepo.save(CommentRecipient(commentId = msg1.id.get, userId = Some(user2.id.get)))
+      val msg2 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google2", permissions = CommentPermissions.MESSAGE))
+      commentRecipientRepo.save(CommentRecipient(commentId = msg2.id.get, userId = Some(user1.id.get)))
+      val msg3 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google3", permissions = CommentPermissions.MESSAGE))
+      val msg4 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Conversation on Google4", permissions = CommentPermissions.MESSAGE, parent = msg3.id))
 
       (user1, user2, uri1, uri2, msg3)
     }
@@ -64,62 +69,61 @@ class CommentTest extends SpecificationWithJUnit {
    "count" in {
       running(new EmptyApplication()) {
         setup()
-        CX.withConnection { implicit conn =>
-          CommentCxRepo.count(CommentPermissions.PUBLIC) === 3
-          CommentCxRepo.count(CommentPermissions.MESSAGE) === 4
+        inject[DBConnection].readOnly {implicit s =>
+          inject[CommentRepo].count(CommentPermissions.PUBLIC) === 3
+          inject[CommentRepo].count(CommentPermissions.MESSAGE) === 4
         }
       }
     }
     "count and load public comments by URI" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
-        CX.withConnection { implicit conn =>
-          CommentCxRepo.getPublicCount(uri1.id.get) === 2
-          CommentCxRepo.getPublicCount(uri2.id.get) === 1
-          CommentCxRepo.getPublic(uri1.id.get).length === 2
-          CommentCxRepo.getPublic(uri2.id.get).length === 1
+        inject[DBConnection].readOnly {implicit s =>
+          inject[CommentRepo].getPublicCount(uri1.id.get) === 2
+          inject[CommentRepo].getPublicCount(uri2.id.get) === 1
+          inject[CommentRepo].getPublic(uri1.id.get).length === 2
+          inject[CommentRepo].getPublic(uri2.id.get).length === 1
         }
       }
     }
     "count and load private comments by URI and UserId" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
-        CX.withConnection { implicit conn =>
-          CommentCxRepo.getPrivateCount(uri1.id.get, user1.id.get) === 2
-          CommentCxRepo.getPrivateCount(uri1.id.get, user2.id.get) === 0
-          CommentCxRepo.getPrivateCount(uri2.id.get, user1.id.get) === 0
-          CommentCxRepo.getPrivateCount(uri2.id.get, user2.id.get) === 0
-          CommentCxRepo.getPrivate(uri1.id.get, user1.id.get).length === 2
-          CommentCxRepo.getPrivate(uri1.id.get, user2.id.get).length === 0
-          CommentCxRepo.getPrivate(uri2.id.get, user1.id.get).length === 0
-          CommentCxRepo.getPrivate(uri2.id.get, user2.id.get).length === 0
+        inject[DBConnection].readOnly {implicit s =>
+          val repo = inject[CommentRepo]
+          repo.getPrivateCount(uri1.id.get, user1.id.get) === 2
+          repo.getPrivateCount(uri1.id.get, user2.id.get) === 0
+          repo.getPrivateCount(uri2.id.get, user1.id.get) === 0
+          repo.getPrivateCount(uri2.id.get, user2.id.get) === 0
+          repo.getPrivate(uri1.id.get, user1.id.get).length === 2
+          repo.getPrivate(uri1.id.get, user2.id.get).length === 0
+          repo.getPrivate(uri2.id.get, user1.id.get).length === 0
+          repo.getPrivate(uri2.id.get, user2.id.get).length === 0
         }
       }
     }
     "count and load messages by URI and UserId" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
-        CX.withConnection { implicit conn =>
-          CommentCxRepo.getMessageCount(uri1.id.get, user1.id.get) === 2
-          CommentCxRepo.getMessageCount(uri1.id.get, user2.id.get) === 3
-          CommentCxRepo.getMessageCount(uri2.id.get, user1.id.get) === 0
-          CommentCxRepo.getMessageCount(uri2.id.get, user2.id.get) === 0
-          CommentCxRepo.getMessages(uri1.id.get, user1.id.get).length === 2
-          CommentCxRepo.getMessages(uri1.id.get, user2.id.get).length === 3
-          CommentCxRepo.getMessages(uri2.id.get, user1.id.get).length === 0
-          CommentCxRepo.getMessages(uri2.id.get, user2.id.get).length === 0
+        inject[DBConnection].readOnly {implicit s =>
+          val repo = inject[CommentRepo]
+          repo.getMessages(uri1.id.get, user1.id.get).length === 2
+          repo.getMessages(uri1.id.get, user2.id.get).length === 3
+          repo.getMessages(uri2.id.get, user1.id.get).length === 0
+          repo.getMessages(uri2.id.get, user2.id.get).length === 0
         }
       }
     }
     "count messages AND comments by URI and UserId" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
-        CX.withConnection { implicit conn =>
-          CommentCxRepo.getChildCount(msg3.id.get) === 1
-          CommentCxRepo.getMessagesWithChildrenCount(uri1.id.get, user1.id.get) === 2
-          CommentCxRepo.getMessagesWithChildrenCount(uri1.id.get, user2.id.get) === 4
-          CommentCxRepo.getMessagesWithChildrenCount(uri2.id.get, user1.id.get) === 0
-          CommentCxRepo.getMessagesWithChildrenCount(uri2.id.get, user2.id.get) === 0
+        inject[DBConnection].readOnly {implicit s =>
+          val repo = inject[CommentRepo]
+          repo.getChildCount(msg3.id.get) === 1
+          repo.getMessagesWithChildrenCount(uri1.id.get, user1.id.get) === 2
+          repo.getMessagesWithChildrenCount(uri1.id.get, user2.id.get) === 4
+          repo.getMessagesWithChildrenCount(uri2.id.get, user1.id.get) === 0
+          repo.getMessagesWithChildrenCount(uri2.id.get, user2.id.get) === 0
         }
       }
     }
