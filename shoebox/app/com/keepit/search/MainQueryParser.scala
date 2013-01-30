@@ -9,10 +9,11 @@ import com.keepit.search.query.TopLevelQuery
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.analysis.Analyzer
+import com.keepit.search.query.Coordinator
 
 object MainQueryParser {
 
-  def apply(lang: Lang, proximityBoost: Float, semanticBoost: Float): QueryParser = {
+  def apply(lang: Lang, proximityBoost: Float, semanticBoost: Float): MainQueryParser = {
     val total = 1.0f + proximityBoost + semanticBoost
     val parser = new MainQueryParser(DefaultAnalyzer.forParsing(lang), 1.0f/total, proximityBoost/total, semanticBoost/total)
     DefaultAnalyzer.forParsingWithStemmer(lang).foreach{ parser.setStemmingAnalyzer(_) }
@@ -24,6 +25,8 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
 
   super.setAutoGeneratePhraseQueries(true)
 
+  var enableCoord = false
+
   override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
     field.toLowerCase match {
       case "site" => getSiteQuery(queryText)
@@ -32,7 +35,7 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
   }
 
   private def getTextQuery(queryText: String, quoted: Boolean) = {
-    val booleanQuery = new BooleanQuery(true)
+    val booleanQuery = new BooleanQuery(true) with Coordinator // add Coordinator trait for TopLevelQuery
 
     var query = super.getFieldQuery("t", queryText, quoted)
     if (query != null) booleanQuery.add(query, Occur.SHOULD)
@@ -80,7 +83,7 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
         } else {
           None
         }
-        new TopLevelQuery(query, svq, proxOpt)
+        new TopLevelQuery(query, svq, proxOpt, enableCoord)
       }
     }
   }

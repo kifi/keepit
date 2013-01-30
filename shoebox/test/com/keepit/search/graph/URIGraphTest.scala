@@ -4,6 +4,8 @@ import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
+import com.keepit.search.index.Searcher
+import com.keepit.search.index.WrappedIndexReader
 import com.keepit.search.query.SiteQuery
 import com.keepit.search.query.ConditionalQuery
 import com.keepit.model._
@@ -21,7 +23,6 @@ import play.api.test.Helpers._
 import org.apache.lucene.index.Term
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.search.DocIdSetIterator
-import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.BooleanQuery
@@ -72,18 +73,14 @@ class URIGraphTest extends SpecificationWithJUnit {
     def search(user: Id[User], query: Query): Map[Long, Float] = {
       uriGraphSearcher.openPersonalIndex(user, query) match {
         case Some((indexReader, idMapper)) =>
-          val rewrittenQuery = query.rewrite(indexReader)
-          val searcher = new IndexSearcher(indexReader)
+          val ir = WrappedIndexReader(indexReader, idMapper)
+          val searcher = new Searcher(ir)
           var result = Map.empty[Long,Float]
-          var weight = searcher.createNormalizedWeight(rewrittenQuery)
-          if (weight != null) {
-            var scorer = weight.scorer(indexReader, true, true)
-            if (scorer != null) {
-              var doc = scorer.nextDoc()
-              while (doc < DocIdSetIterator.NO_MORE_DOCS) {
-                result += (idMapper.getId(doc) -> scorer.score())
-                doc = scorer.nextDoc()
-              }
+          searcher.doSearch(query){ (scorer, idMapper) =>
+            var doc = scorer.nextDoc()
+            while (doc < DocIdSetIterator.NO_MORE_DOCS) {
+              result += (idMapper.getId(doc) -> scorer.score())
+              doc = scorer.nextDoc()
             }
           }
           result

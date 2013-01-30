@@ -72,8 +72,8 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
 
   def setSeed(seed: Long) = rnd.setSeed(seed)
 
-  def put(key: Long, value: Long) {
-    putValueHash(key, value)
+  def put(key: Long, value: Long, updateStrength: Double = 0.5d) {
+    putValueHash(key, value, updateStrength)
     val ins = inserts.incrementAndGet()
     if ((ins % syncEvery) == 0) sync
   }
@@ -103,7 +103,7 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
   def numInserts = inserts.get
   def numSyncs = syncs
 
-  private[this] def putValueHash(key: Long, value: Long) {
+  private[this] def putValueHash(key: Long, value: Long, updateStrength: Double) {
     var positions = new Array[Int](numHashFuncs)
     var i = 0
     foreachPosition(key){ pos =>
@@ -112,7 +112,8 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
     }
     // randomly overwrite the half of the positions
     i = 0
-    while (i < numHashFuncs/2) {
+    val numUpdatePositions = (numHashFuncs.toDouble * updateStrength).toInt
+    while (i < numUpdatePositions) {
       val index = rnd.nextInt(positions.length - i) + i
       val pos = positions(index)
       positions(index) = positions(i)
