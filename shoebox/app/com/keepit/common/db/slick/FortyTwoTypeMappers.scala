@@ -289,7 +289,10 @@ class LargeStringMapperDelegate extends DelegateMapperDelegate[LargeString, Clob
   def sourceToDest(value: LargeString): Clob = new SerialClob(value.value.toCharArray())
   def safeDestToSource(value: Clob): LargeString = {
     val clob = new SerialClob(value)
-    LargeString(clob.getSubString(1, clob.length().intValue()))
+    clob.length match {
+      case empty if (empty <= 0) => zero
+      case length => LargeString(clob.getSubString(1, length.intValue()))
+    }
   }
 }
 

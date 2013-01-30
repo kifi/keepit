@@ -92,7 +92,7 @@ trait ObjectCache[K <: Key[T], T] {
 }
 
 trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
-  val repo = inject[FortyTwoCachePlugin]
+  val repo: FortyTwoCachePlugin
   def get(key: K): Option[T] = repo.get(key.toString).map(deserialize)
   def set(key: K, value: T): Unit = repo.set(key.toString, serialize(value))
 }

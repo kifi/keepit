@@ -47,7 +47,7 @@ case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
   def toKey(): String = externalId.id
 }
 
-class UserExternalIdCache extends FortyTwoCache[UserExternalIdKey, User] {
+class UserExternalIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UserExternalIdKey, User] {
   val ttl = 24 hours
 
   def deserialize(obj: Any): User = UserSerializer.userSerializer.reads(Json.parse(obj.asInstanceOf[String]))
@@ -55,7 +55,7 @@ class UserExternalIdCache extends FortyTwoCache[UserExternalIdKey, User] {
 }
 
 @Singleton
-class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] {
+class UserRepoImpl @Inject() (val db: DataBaseComponent, val externalIdCache: UserExternalIdCache) extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] {
   import FortyTwoTypeMappers._
   import org.scalaquery.ql._
   import org.scalaquery.ql.ColumnOps._
@@ -70,7 +70,6 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[User] wi
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state <> (User, User.unapply _)
   }
 
-  val cache = new UserExternalIdCache
   override def invalidateCache(user: User) = {
     user
   }
