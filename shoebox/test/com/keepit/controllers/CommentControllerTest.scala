@@ -1,6 +1,7 @@
 package com.keepit.controllers
 
-import com.keepit.common.db.CX
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
 import com.keepit.test.EmptyApplication
 import org.junit.runner.RunWith
 import org.specs2.mutable.SpecificationWithJUnit
@@ -29,15 +30,18 @@ class CommentControllerTest extends SpecificationWithJUnit {
 
     "persist comment emails" in {
       running(new EmptyApplication().withFakeMail()) {
-        val comment = CX.withConnection { implicit conn =>
-          val user = User(firstName = "Andrew", lastName = "Conner").save
-          val recepient = User(firstName = "Eishay", lastName = "Smith").save
-          EmailAddress(userId = recepient.id.get, verifiedAt = Some(currentDateTime), address = "eishay@42go.com").save
-          val uri = NormalizedURIFactory("Google", "http://www.google.com/").save
-          val msg = Comment(uriId = uri.id.get, userId = user.id.get, pageTitle = "My Title",
+        val comment = inject[DBConnection].readWrite { implicit s =>
+          val userRepo = inject[UserRepo]
+          val emailRepo = inject[EmailAddressRepo]
+          val normalizedURIRepo = inject[NormalizedURIRepo]
+          val user = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
+          val recepient = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+          emailRepo.save(EmailAddress(userId = recepient.id.get, verifiedAt = Some(currentDateTime), address = "eishay@42go.com"))
+          val uri = normalizedURIRepo.save(NormalizedURIFactory("Google", "http://www.google.com/"))
+          val msg = inject[CommentRepo].save(Comment(uriId = uri.id.get, userId = user.id.get, pageTitle = "My Title",
             text = """Public Comment [look here](x-kifi-sel:body>div#page-container>div.column-container>div.left-container>div#module-post-detail.module-post-detail.__FIRST__.image>div.body-copy) on Google1""",
-            permissions = CommentPermissions.MESSAGE).save
-          CommentRecipient(commentId = msg.id.get, userId = Some(recepient.id.get)).save
+            permissions = CommentPermissions.MESSAGE))
+          inject[CommentRecipientRepo].save(CommentRecipient(commentId = msg.id.get, userId = Some(recepient.id.get)))
           msg
         }
         CommentController.notifyRecipients(comment)
@@ -46,9 +50,8 @@ class CommentControllerTest extends SpecificationWithJUnit {
         val mail = mails.head
         mail.senderUserId.get === comment.userId
         mail.subject === "Andrew Conner sent you a message using KiFi"
-        mail.htmlBody must contain("""Public Comment [look here] on Google1""")
+        mail.htmlBody.value must contain("""Public Comment [look here] on Google1""")
       }
     }
   }
-
 }

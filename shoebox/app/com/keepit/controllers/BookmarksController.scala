@@ -44,7 +44,8 @@ object BookmarksController extends FortyTwoController {
     inject[DBConnection].readOnly { implicit conn =>
       val bookmark = inject[BookmarkRepo].get(id)
       val uri = inject[NormalizedURIRepo].get(bookmark.uriId)
-      val user = UserWithSocial.toUserWithSocial(inject[UserRepo].get(bookmark.userId))
+      val repo = inject[UserWithSocialRepo]
+      val user = repo.toUserWithSocial(inject[UserRepo].get(bookmark.userId))
       Ok(views.html.bookmark(bookmark, uri, user))
     }
   }
@@ -107,7 +108,8 @@ object BookmarksController extends FortyTwoController {
       val bookmarkRepo = inject[BookmarkRepo]
       val normalizedURIRepo = inject[NormalizedURIRepo]
       val bookmarks = bookmarkRepo.page(page, PAGE_SIZE)
-      val users = bookmarks map (_.userId) map userRepo.get map UserWithSocial.toUserWithSocial
+      val repo = inject[UserWithSocialRepo]
+      val users = bookmarks map (_.userId) map userRepo.get map repo.toUserWithSocial
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get map (_.uriStats)
       val count = bookmarkRepo.count(s)
       (count, (bookmarks, uris, users).zipped.toList.seq)

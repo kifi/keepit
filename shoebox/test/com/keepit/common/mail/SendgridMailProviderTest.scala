@@ -47,7 +47,7 @@ class SendgridMailProviderTest extends Specification with TestAkkaSystem {
 //         usually using inject[PostOffice].sendMail(mail
 //        inject[SendgridMailProvider].sendMailToSendgrid(mail)
         CX.withConnection{ implicit conn =>
-          val loaded = ElectronicMail.get(mail.id.get)
+          val loaded = ElectronicMailCx.get(mail.id.get)
           loaded.from === mail.from
           loaded.fromName === mail.fromName
           loaded.state === ElectronicMailStates.PREPARING

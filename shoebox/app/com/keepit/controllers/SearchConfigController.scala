@@ -25,7 +25,6 @@ import play.api.http.ContentTypes
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social._
-import com.keepit.common.social.UserWithSocial.toUserWithSocial
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.graph.URIGraph
@@ -39,7 +38,8 @@ import com.keepit.search.SearchConfigManager
 object SearchConfigController extends FortyTwoController {
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val user = inject[DBConnection].readOnly { implicit s =>
-      UserWithSocial.toUserWithSocial(inject[UserRepo].get(userId))
+      val repo = inject[UserWithSocialRepo]
+      repo.toUserWithSocial(inject[UserRepo].get(userId))
     }
     Ok(views.html.searchConfig(user))
   }
