@@ -124,19 +124,28 @@ object UserController extends FortyTwoController {
   }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = CX.withConnection { implicit conn =>
-      val userWithSocial = UserWithSocial.toUserWithSocialCX(UserCxRepo.get(userId))
-      val socialUserInfos = SocialUserInfoCxRepo.getByUser(userWithSocial.user.id.get)
-      val follows = FollowCxRepo.all(userId) map {f => NormalizedURICxRepo.get(f.uriId)}
-      val comments = CommentCxRepo.all(CommentPermissions.PUBLIC, userId) map {c =>
-        (NormalizedURICxRepo.get(c.uriId), c)
+    val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = inject[DBConnection].readOnly { implicit s =>
+      val userWithSocialRepo = inject[UserWithSocialRepo]
+      val userRepo = inject[UserRepo]
+      val socialUserInfoRepo = inject[SocialUserInfoRepo]
+      val followRepo = inject[FollowRepo]
+      val normalizedURIRepo = inject[NormalizedURIRepo]
+      val commentRepo = inject[CommentRepo]
+      val mailRepo = inject[ElectronicMailRepo]
+      val userWithSocial = userWithSocialRepo.toUserWithSocial(userRepo.get(userId))
+      val socialUserInfos = socialUserInfoRepo.getByUser(userWithSocial.user.id.get)
+      val follows = followRepo.all(userId) map {f => normalizedURIRepo.get(f.uriId)}
+      val comments = commentRepo.all(CommentPermissions.PUBLIC, userId) map {c =>
+        (normalizedURIRepo.get(c.uriId), c)
       }
-      val messages = CommentCxRepo.all(CommentPermissions.MESSAGE, userId) map {c =>
-        (NormalizedURICxRepo.get(c.uriId), c, CommentRecipientCxRepo.getByComment(c.id.get) map { r => UserWithSocial.toUserWithSocialCX(UserCxRepo.get(r.userId.get)) })
+      val messages = commentRepo.all(CommentPermissions.MESSAGE, userId) map {c =>
+        (normalizedURIRepo.get(c.uriId), c, inject[CommentRecipientRepo].getByComment(c.id.get) map { 
+          r => userWithSocialRepo.toUserWithSocial(userRepo.get(r.userId.get)) 
+        })
       }
-      val sentElectronicMails = ElectronicMailCx.forSender(userId);
-      val mailAddresses = UserWithSocial.toUserWithSocialCX(UserCxRepo.get(userId)).emails.map(_.address)
-      val receivedElectronicMails = ElectronicMailCx.forRecipient(mailAddresses);
+      val sentElectronicMails = mailRepo.forSender(userId);
+      val mailAddresses = userWithSocialRepo.toUserWithSocial(userRepo.get(userId)).emails.map(_.address)
+      val receivedElectronicMails = mailRepo.forRecipient(mailAddresses);
       (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails)
     }
     val rawInfos = socialUserInfos map {info =>
