@@ -40,6 +40,7 @@ import com.keepit.search.S3ArticleStoreImpl
 import com.keepit.search.SearchConfigManager
 import com.keepit.search.ResultClickTracker
 import com.keepit.search.BrowsingHistoryTracker
+import com.keepit.search.ClickHistoryTracker
 import com.tzavellas.sse.guice.ScalaModule
 import akka.actor.ActorSystem
 import play.api.Play.current
@@ -193,6 +194,17 @@ class ShoeboxModule() extends ScalaModule with Logging {
       }
     }
     ResultClickTracker(dir, numHashFuncs, syncEvery)
+  }
+
+  @Singleton
+  @Provides
+  def clickHistoryTracker: ClickHistoryTracker = {
+    val conf = current.configuration.getConfig("click-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    ClickHistoryTracker(filterSize, numHashFuncs, minHits)
   }
 
   @Singleton
