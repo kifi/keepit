@@ -84,9 +84,10 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
     def apply(fieldName: String, term: String) = Option(getFieldQuery(fieldName, term, false))
   }
 
-  // disabling WildcardQuery, PrefixQuery, FuzzyQuery
+  // disabling WildcardQuery, PrefixQuery, FuzzyQuery, RangeQuery
   override def getWildcardQuery(field: String, termStr: String) = getFieldQuery(field, termStr, false)
   override def getPrefixQuery(field: String, termStr: String) = getFieldQuery(field, termStr, false)
   override def getFuzzyQuery(field: String, termStr: String, minSimilarity: Float) = getFieldQuery(field, termStr, false)
+  override def getRangeQuery(field: String, part1: String, part2: String, inclusive: Boolean) = getFieldQuery(field, "%s %s".format(part1, part2), false)
 }
 
