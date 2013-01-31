@@ -55,6 +55,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
     println("configuring ShoeboxModule")
     install(new FortyTwoModule())
+    install(new MemcachedCacheModule)
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
@@ -64,6 +65,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
     bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
+
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])

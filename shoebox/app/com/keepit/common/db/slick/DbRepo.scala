@@ -98,7 +98,7 @@ trait ExternalIdColumnFunction[M <: ModelWithExternalId[M]] {
 
 trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithExternalId[M] { self: DbRepo[M] =>
   import db.Driver.Implicit._
-  private def externalIdColumn: ExternalIdColumn[M] = table.asInstanceOf[ExternalIdColumn[M]]
+  protected def externalIdColumn: ExternalIdColumn[M] = table.asInstanceOf[ExternalIdColumn[M]]
 
   implicit val externalIdMapper = new BaseTypeMapper[ExternalId[M]] {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
