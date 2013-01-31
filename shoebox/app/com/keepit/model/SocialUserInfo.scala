@@ -7,7 +7,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
-import com.keepit.serializer.SocialUserSerializer
+import com.keepit.serializer.{SocialUserInfoSerializer, SocialUserSerializer}
 import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
@@ -20,6 +20,8 @@ import com.keepit.common.social.SocialNetworks
 import com.keepit.common.social.SocialUserRawInfo
 import com.keepit.common.social.SocialNetworks
 import com.keepit.common.social.SocialId
+import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
+import akka.util.duration._
 
 case class SocialUserInfo(
   id: Option[Id[SocialUserInfo]] = None,
@@ -55,8 +57,28 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo]
 }
 
+case class SocialUserInfoUserKey(userId: Id[User]) extends Key[List[SocialUserInfo]] {
+  val namespace = "social_user_info_by_userid"
+  def toKey(): String = userId.id.toString
+}
+class SocialUserInfoUserCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[SocialUserInfoUserKey, List[SocialUserInfo]] {
+  val ttl = 1 hour
+  def deserialize(obj: Any): List[SocialUserInfo] = SocialUserInfoSerializer.socialUserInfoSerializer.readsSeq(obj.asInstanceOf[JsArray])
+  def serialize(socialUsers: List[SocialUserInfo]) = SocialUserInfoSerializer.socialUserInfoSerializer.writesSeq(socialUsers)
+}
+
+case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId) extends Key[SocialUserInfo] {
+  val namespace = "social_user_info_by_network_and_id"
+  def toKey(): String = networkType.name.toString + "_" + id.id
+}
+class SocialUserInfoNetworkCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[SocialUserInfoNetworkKey, SocialUserInfo] {
+  val ttl = 1 hour
+  def deserialize(obj: Any): SocialUserInfo = SocialUserInfoSerializer.socialUserInfoSerializer.reads(obj.asInstanceOf[JsObject])
+  def serialize(socialUser: SocialUserInfo) = SocialUserInfoSerializer.socialUserInfoSerializer.writes(socialUser)
+}
+
 @Singleton
-class SocialUserInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[SocialUserInfo] with SocialUserInfoRepo {
+class SocialUserInfoRepoImpl @Inject() (val db: DataBaseComponent, userCache: SocialUserInfoUserCache, networkCache: SocialUserInfoNetworkCache) extends DbRepo[SocialUserInfo] with SocialUserInfoRepo {
   import FortyTwoTypeMappers._
   import org.scalaquery.ql._
   import org.scalaquery.ql.ColumnOps._
@@ -76,10 +98,14 @@ class SocialUserInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRep
   }
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
-    (for(f <- table if f.userId === userId) yield f).list
+    userCache.getOrElse(SocialUserInfoUserKey(userId)) {
+      (for(f <- table if f.userId === userId) yield f).list
+    }
 
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo =
-    (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).first
+    networkCache.getOrElse(SocialUserInfoNetworkKey(networkType, id)) {
+      (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).first
+    }
 
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo] = {
     val UNPROCESSED_STATE = SocialUserInfoStates.CREATED :: SocialUserInfoStates.FETCHED_USING_FRIEND :: Nil

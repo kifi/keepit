@@ -42,6 +42,12 @@ class SocialUserInfoSerializer extends Format[SocialUserInfo] {
       },
       lastGraphRefresh = ((json \ "lastGraphRefresh").asOpt[String]).map(parseStandardTime)
     )
+
+  def writesSeq(infos: Seq[SocialUserInfo]): JsValue =
+    JsArray(infos.map(writes))
+
+  def readsSeq(json: JsValue) =
+    json.as[List[JsObject]].map(reads)
 }
 
 object SocialUserInfoSerializer {
