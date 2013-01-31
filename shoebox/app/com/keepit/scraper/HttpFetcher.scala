@@ -6,6 +6,7 @@ import org.joda.time.DateTime
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.entity.GzipDecompressingEntity
 import org.apache.http.client.params.ClientPNames
+import org.apache.http.HttpHeaders.{CONTENT_TYPE, IF_MODIFIED_SINCE, LOCATION}
 import org.apache.http.HttpRequest
 import org.apache.http.HttpRequestInterceptor
 import org.apache.http.HttpResponse
@@ -38,8 +39,8 @@ class HttpFetcher extends Logging {
   // track redirects
   httpClient.addResponseInterceptor(new HttpResponseInterceptor() {
     override def process(response: HttpResponse, context: HttpContext) {
-      if (response.containsHeader("Location")) {
-        val locations = response.getHeaders("Location")
+      if (response.containsHeader(LOCATION)) {
+        val locations = response.getHeaders(LOCATION)
         if (locations.length > 0) context.setAttribute("scraper_destination_url", locations(0).getValue())
       }
     }
@@ -49,7 +50,7 @@ class HttpFetcher extends Logging {
     val httpGet = new HttpGet(url)
 
     ifModifiedSince.foreach{ ifModifiedSince =>
-      httpGet.addHeader("If-Modified-Since", ifModifiedSince.format)
+      httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.format)
     }
 
     log.info("executing request " + httpGet.getURI())
@@ -67,7 +68,7 @@ class HttpFetcher extends Logging {
 
       val input = new HttpInputStream(entity.getContent)
 
-      Option(response.getHeaders("Content-Type")).foreach{ headers =>
+      Option(response.getHeaders(CONTENT_TYPE)).foreach{ headers =>
         if (headers.length > 0) input.setContentType(headers(headers.length - 1).getValue())
       }
 
