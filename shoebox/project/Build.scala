@@ -60,7 +60,7 @@ object ApplicationBuild extends Build {
       "org.mongodb" %% "casbah" % "2.4.1",
       "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
       "org.jsoup" % "jsoup" % "1.7.1",
-      "com.github.mumoshu" %% "play2-memcached" % "0.2.4-SNAPSHOT"
+      "spy" % "spymemcached" % "2.8.1"
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
@@ -77,7 +77,8 @@ object ApplicationBuild extends Build {
         "kevoree Repository" at "http://maven2.kevoree.org/release/",
         //used for securesocial
         "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
-        "boilerpipe Repository" at "http://boilerpipe.googlecode.com/svn/repo/"
+        "boilerpipe Repository" at "http://boilerpipe.googlecode.com/svn/repo/",
+        "Spy Repository" at "http://files.couchbase.com/maven2"
       ),
       
       // add some imports to the templates files
