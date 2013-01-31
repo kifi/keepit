@@ -6,7 +6,7 @@ import org.specs2.runner.JUnitRunner
 
 import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
-import com.keepit.test.EmptyApplication
+import com.keepit.test._
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
 
@@ -17,28 +17,26 @@ import play.api.test._
 import play.api.test.Helpers._
 
 @RunWith(classOf[JUnitRunner])
-class SocialUserInfoTest extends SpecificationWithJUnit {
+class SocialUserInfoTest extends SpecificationWithJUnit with DbRepos {
 
   def setup() = {
-    CX.withConnection { implicit c =>
+    db.readWrite { implicit s =>
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
                                   tokenType = None, expiresIn = None, refreshToken = None)
       val socialUser = SocialUser(UserId("100004067535411", "facebook"), "Boaz Tal", Some("boaz.tal@gmail.com"),
         Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
 
-      val user = CX.withConnection { implicit c =>
-        User(firstName = "Eishay", lastName = "Smith").save
-      }
+      val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
 
       // Users that need to be processed
-      SocialUserInfo(userId = user.id, fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED, socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)).save
-      SocialUserInfo(userId = user.id, fullName = "Andrew Conner", state = SocialUserInfoStates.CREATED, socialId = SocialId("andrew.conner"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)).save
-      SocialUserInfo(userId = user.id, fullName = "Bob User", state = SocialUserInfoStates.FETCHED_USING_FRIEND, socialId = SocialId("bob.user"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)).save
+      socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED, socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)))
+      socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Andrew Conner", state = SocialUserInfoStates.CREATED, socialId = SocialId("andrew.conner"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)))
+      socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Bob User", state = SocialUserInfoStates.FETCHED_USING_FRIEND, socialId = SocialId("bob.user"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)))
 
       // Users that does not need to be processed
-      SocialUserInfo(userId = user.id, fullName = "Eishay Smith2", state = SocialUserInfoStates.CREATED, socialId = SocialId("eishay2"), networkType = SocialNetworks.FACEBOOK, credentials = None).save
-      SocialUserInfo(userId = user.id, fullName = "Bob User2", state = SocialUserInfoStates.FETCHED_USING_SELF, socialId = SocialId("bob.user2"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)).save
-      SocialUserInfo(userId = user.id, fullName = "Bob User3", state = SocialUserInfoStates.FETCHED_USING_FRIEND, socialId = SocialId("bob.user3"), networkType = SocialNetworks.FACEBOOK, credentials = None).save
+      socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Eishay Smith2", state = SocialUserInfoStates.CREATED, socialId = SocialId("eishay2"), networkType = SocialNetworks.FACEBOOK, credentials = None))
+      socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Bob User2", state = SocialUserInfoStates.FETCHED_USING_SELF, socialId = SocialId("bob.user2"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)))
+      socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Bob User3", state = SocialUserInfoStates.FETCHED_USING_FRIEND, socialId = SocialId("bob.user3"), networkType = SocialNetworks.FACEBOOK, credentials = None))
 
     }
   }
@@ -48,13 +46,13 @@ class SocialUserInfoTest extends SpecificationWithJUnit {
     "get pages" in {
       running(new EmptyApplication()) {
         setup()
-        val page0 = CX.withReadOnlyConnection { implicit c =>
-          SocialUserInfoCxRepo.page(0, 2)
+        val page0 = db.readOnly { implicit c =>
+          socialUserInfoRepo.page(0, 2)
         }
         page0.size === 2
         page0(0).fullName === "Bob User3"
-        val page2 = CX.withReadOnlyConnection { implicit c =>
-          SocialUserInfoCxRepo.page(2, 2)
+        val page2 = db.readOnly { implicit c =>
+          socialUserInfoRepo.page(2, 2)
         }
         page2.size === 2
         page2(1).fullName === "Eishay Smith"
@@ -64,8 +62,8 @@ class SocialUserInfoTest extends SpecificationWithJUnit {
     "get large page" in {
       running(new EmptyApplication()) {
         setup()
-        val page0 = CX.withReadOnlyConnection { implicit c =>
-        SocialUserInfoCxRepo.page(0, 2000)
+        val page0 = db.readOnly { implicit s =>
+          socialUserInfoRepo.page(0, 2000)
         }
         page0.size === 6
       }
@@ -74,13 +72,13 @@ class SocialUserInfoTest extends SpecificationWithJUnit {
     "get larger page" in {
       running(new EmptyApplication()) {
         setup()
-        val page0 = CX.withReadOnlyConnection { implicit c =>
-          SocialUserInfoCxRepo.page(0, 4)
+        val page0 = db.readOnly { implicit s =>
+          socialUserInfoRepo.page(0, 4)
         }
         page0(0).fullName === "Bob User3"
         page0.size === 4
-        val page1 = CX.withReadOnlyConnection { implicit c =>
-          SocialUserInfoCxRepo.page(1, 4)
+        val page1 = db.readOnly { implicit s =>
+          socialUserInfoRepo.page(1, 4)
         }
         page1.size === 2
       }
@@ -89,15 +87,15 @@ class SocialUserInfoTest extends SpecificationWithJUnit {
     "import friends" in {
       running(new EmptyApplication()) {
 
-        val none_unprocessed = CX.withConnection { implicit c =>
-          SocialUserInfoCxRepo.getUnprocessed()
+        val none_unprocessed = db.readOnly { implicit s =>
+          socialUserInfoRepo.getUnprocessed()
         }
 
         none_unprocessed.size === 0
 
         setup()
-        val unprocessed = CX.withConnection { implicit c =>
-          SocialUserInfoCxRepo.getUnprocessed()
+        val unprocessed = db.readOnly { implicit s => 
+          socialUserInfoRepo.getUnprocessed()
         }
 
         unprocessed.size === 3
