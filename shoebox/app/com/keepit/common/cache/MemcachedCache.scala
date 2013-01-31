@@ -94,11 +94,11 @@ class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
     }
 
     def set(key: String, value: Any, expiration: Int) {
-      client.set(namespace + key, expiration, value, tc)
+      client.set(namespace + "::" + key, expiration, value, tc)
     }
 
     def remove(key: String) {
-      client.delete(namespace + key)
+      client.delete(namespace + "#" + key)
     }
   }
 
