@@ -15,6 +15,7 @@ import com.google.inject.Inject
 import scala.collection.JavaConversions._
 import com.keepit.search.ResultClickTracker
 import com.keepit.search.BrowsingHistoryTracker
+import com.keepit.search.ClickHistoryTracker
 
 trait EventListenerPlugin extends Plugin {
   def onEvent: PartialFunction[Event,Unit]
@@ -42,6 +43,7 @@ class EventHelper @Inject() (listeners: JSet[EventListenerPlugin]) {
 
 class KifiResultClickedListener extends EventListenerPlugin {
   private lazy val resultClickTracker = inject[ResultClickTracker]
+  private lazy val clickHistoryTracker = inject[ClickHistoryTracker]
 
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_,UserEventMetadata(EventFamilies.SEARCH,"kifiResultClicked",externalUser,_,experiments,metaData,_),_,_) =>
@@ -51,7 +53,10 @@ class KifiResultClickedListener extends EventListenerPlugin {
         (user, meta, bookmark)
       }
       // handle KifiResultClicked
-      meta.normUrl.foreach(n => resultClickTracker.add(user.id.get, meta.query, n.id.get, !bookmark.isEmpty))
+      meta.normUrl.foreach{ n =>
+        resultClickTracker.add(user.id.get, meta.query, n.id.get, !bookmark.isEmpty)
+        clickHistoryTracker.add(user.id.get, n.id.get)
+      }
   }
 }
 

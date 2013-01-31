@@ -56,11 +56,8 @@ object SearchController extends FortyTwoController {
     val filterOut = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
     val config = inject[SearchConfigManager].getUserConfig(userId)
 
-    val articleIndexer = inject[ArticleIndexer]
-    val uriGraph = inject[URIGraph]
-    val resultClickTracker = inject[ResultClickTracker]
-    val browsingHistoryTracker = inject[BrowsingHistoryTracker]
-    val searcher = new MainSearcher(userId, friendIds, filterOut, articleIndexer, uriGraph, resultClickTracker, browsingHistoryTracker, config)
+    val mainSearcherFactory = inject[MainSearcherFactory]
+    val searcher = mainSearcherFactory(userId, friendIds, filterOut, config)
     val searchRes = searcher.search(term, maxHits, lastUUID, searchFilter)
     val realResults = toPersonalSearchResultPacket(userId, searchRes)
 

@@ -223,6 +223,17 @@ class DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
+  def clickHistoryTracker: ClickHistoryTracker = {
+    val conf = current.configuration.getConfig("click-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    ClickHistoryTracker(filterSize, numHashFuncs, minHits)
+  }
+
+  @Singleton
+  @Provides
   def browsingHistoryTracker: BrowsingHistoryTracker = {
     val conf = current.configuration.getConfig("browsing-history-tracker").get
     val filterSize = conf.getInt("filterSize").get

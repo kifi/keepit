@@ -1,8 +1,7 @@
 package com.keepit.search
 
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.graph.URIList
-import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.index.Searcher
 import com.keepit.search.index.PersonalizedSearcher
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.logging.Logging
@@ -15,9 +14,17 @@ import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
 
-class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], articleIndexer: ArticleIndexer, uriGraph: URIGraph,
-                   resultClickTracker: ResultClickTracker, browsingHistoryTracker: BrowsingHistoryTracker, config: SearchConfig)
-extends Logging {
+class MainSearcher(
+    userId: Id[User],
+    friendIds: Set[Id[User]],
+    filterOut: Set[Long],
+    config: SearchConfig,
+    articleSearcher: Searcher,
+    val uriGraphSearcher: URIGraphSearcher,
+    resultClickTracker: ResultClickTracker,
+    browsingHistoryTracker: BrowsingHistoryTracker,
+    clickHistoryTracker: ClickHistoryTracker
+) extends Logging {
   val currentTime = currentDateTime.getMillis()
   val isInitialSearch = filterOut.isEmpty
 
@@ -39,13 +46,10 @@ extends Logging {
   val maxResultClickBoost = config.asFloat("maxResultClickBoost")
   val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
+  val svWeightClickHistory = config.asInt("svWeightClickHistory")
   val similarity = Similarity(config.asString("similarity"))
   val progressiveRelaxation = config.asBoolean("progressiveRelaxation")
   val enableCoordinator = config.asBoolean("enableCoordinator")
-
-  // get searchers. subsequent operations should use these for consistency since indexing may refresh them
-  val articleSearcher = articleIndexer.getSearcher
-  val uriGraphSearcher = uriGraph.getURIGraphSearcher
 
   // initialize user's social graph info
   val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
@@ -60,7 +64,7 @@ extends Logging {
       case None =>
         articleSearcher.indexReader
     }
-    PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory)
+    PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryTracker, clickHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
   }
 
   def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts, initial: Boolean = true)(implicit lang: Lang) = {
