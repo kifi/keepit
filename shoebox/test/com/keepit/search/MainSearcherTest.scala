@@ -5,11 +5,12 @@ import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.search.graph.URIList
 import com.keepit.search.index.ArticleIndexer
-import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURIStates._
-import com.keepit.common.db.{Id, CX, ExternalId}
-import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.model.NormalizedURIStates._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.time._
+import com.keepit.inject._
 import com.keepit.test.EmptyApplication
 import org.junit.runner.RunWith
 import org.specs2.mutable._
