@@ -1,28 +1,11 @@
 package com.keepit.serializer
 
-import com.keepit.common.db.ExternalId
-import com.keepit.common.db.Id
+import com.keepit.common.db.{State, Id}
 import com.keepit.common.time._
-import com.keepit.common.social.{SocialNetworks, SocialId, SocialUserRawInfo}
-import com.keepit.search.Article
-import securesocial.core._
-import securesocial.core.AuthenticationMethod._
-import play.api.libs.json._
+import com.keepit.common.social.SocialNetworks
 import com.keepit.model.SocialUserInfo
-
-
-/*
-  id: Option[Id[SocialUserInfo]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  userId: Option[Id[User]] = None,
-  fullName: String,
-  state: State[SocialUserInfo] = SocialUserInfoStates.CREATED,
-  socialId: SocialId,
-  networkType: SocialNetworkType,
-  credentials: Option[SocialUser] = None,
-  lastGraphRefresh: Option[DateTime] = Some(currentDateTime)
- */
+import play.api.libs.json._
+import com.keepit.common.social.SocialId
 
 class SocialUserInfoSerializer extends Format[SocialUserInfo] {
 
@@ -32,32 +15,35 @@ class SocialUserInfoSerializer extends Format[SocialUserInfo] {
       "createdAt" -> JsString(info.createdAt.toStandardTimeString),
       "updatedAt" -> JsString(info.updatedAt.toStandardTimeString),
       "userId" -> (info.userId map { e => JsNumber(e.id) } getOrElse(JsNull)),
-      "socialUserInfoId" -> JsNumber(info.socialUserInfoId.get.id),
+      "fullName" -> JsString(info.fullName),
+      "state" -> JsString(info.state.value),
       "socialId" -> JsString(info.socialId.id),
       "networkType" -> JsString(info.networkType.name),
-      "fullName" -> JsString(info.fullName),
-      "jsons" -> JsArray(info.jsons)
+      "credentials" -> (info.credentials map { i => SocialUserSerializer.userSerializer.writes(i) } getOrElse (JsNull)),
+      "lastGraphRefresh" -> (info.lastGraphRefresh map { i => JsString(i.toStandardTimeString) } getOrElse (JsNull))
     )
     )
 
-  def reads(json: JsValue): SocialUserRawInfo = {
-    val jsons = (json \ "jsons") match {
-      case array: JsArray => array.value
-      case _ => Seq()
-    }
-    SocialUserRawInfo(
+  def reads(json: JsValue): SocialUserInfo =
+    SocialUserInfo(
+      id = (json \ "id").asOpt[Long].map(Id[SocialUserInfo]),
+      createdAt = parseStandardTime((json \ "createdAt").as[String]),
+      updatedAt = parseStandardTime((json \ "updatedAt").as[String]),
       userId = (json \ "userId").asOpt[Long].map(Id(_)),
-      socialUserInfoId = Some(Id[SocialUserInfo]((json \ "socialUserInfoId").as[Int])),
+      fullName = (json \ "fullName").as[String],
+      state = State[SocialUserInfo]((json \ "state").as[String]),
       socialId = SocialId((json \ "socialId").as[String]),
       networkType = (json \ "networkType").as[String] match {
         case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK
       },
-      fullName = (json \ "fullName").as[String],
-      jsons = jsons
+      credentials = (json \ "credentials") match {
+        case n: JsObject => Some(SocialUserSerializer.userSerializer.reads(n))
+        case n: JsValue => None
+      },
+      lastGraphRefresh = ((json \ "lastGraphRefresh").asOpt[String]).map(parseStandardTime)
     )
-  }
 }
 
-object SocialUserRawInfoSerializer {
-  implicit val SocialUserRawInfoSerializer = new SocialUserRawInfoSerializer
+object SocialUserInfoSerializer {
+  implicit val socialUserInfoSerializer = new SocialUserInfoSerializer
 }
