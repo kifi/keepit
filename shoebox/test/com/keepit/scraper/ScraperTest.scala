@@ -22,6 +22,8 @@ import play.api.test.Helpers._
 import org.apache.http.HttpStatus
 import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.common.db.slick.DBConnection
+import org.joda.time.DateTime
+import scala.annotation.unchecked
 
 @RunWith(classOf[JUnitRunner])
 class ScraperTest extends SpecificationWithJUnit {
@@ -35,9 +37,12 @@ class ScraperTest extends SpecificationWithJUnit {
       val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(33)))
       val result = scraper.fetchArticle(uri)
 
-      result.isLeft === true // Left is Article
-      result.left.get.title === "foo"
-      result.left.get.content === "bar"
+      result must beAnInstanceOf[Scraped] // Article
+      (result: @unchecked) match {
+        case Scraped(article) =>
+          article.title === "foo"
+          article.content === "bar"
+      }
     }
 
     "throw an error from a non-existing website" in {
@@ -46,8 +51,10 @@ class ScraperTest extends SpecificationWithJUnit {
       val url = "http://www.keepit.com/missing"
       val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(44)))
       val result = scraper.fetchArticle(uri)
-      result.isRight === true // Right is ScraperError
-      result.right.get.httpStatusCode === HttpStatus.SC_NOT_FOUND
+      result must beAnInstanceOf[Error]
+      (result: @unchecked) match {
+        case Error(httpStatus, _) => httpStatus === HttpStatus.SC_NOT_FOUND
+      }
     }
 
     "fetch allActive" in {
@@ -157,6 +164,51 @@ class ScraperTest extends SpecificationWithJUnit {
       }
     }
 
+    "not scrape a not-modified page" in {
+      // DEV should be using the default ScraperConfig
+      running(new EmptyApplication()) {
+        val uriRepo = inject[NormalizedURIRepo]
+        val scrapeRepo = inject[ScrapeInfoRepo]
+        var (uri1, info1) = inject[DBConnection].readWrite { implicit s =>
+          val uri1 = uriRepo.save(NormalizedURIFactory(title = "notModified", url = "http://www.keepit.com/notModified"))
+          val info1 = scrapeRepo.getByUri(uri1.id.get).get
+          (uri1, info1)
+        }
+        val store = new FakeArticleStore()
+        val scraper = getMockScraper(store)
+        scraper.run
+        store.size === 1
+
+        // get ScrapeInfo from db
+        val info1a = inject[DBConnection].readOnly { implicit s =>
+          scrapeRepo.getByUri(uri1.id.get).get
+        }
+
+        info1a.failures === 0
+        (info1a.interval < info1.interval) === true
+        ((info1a.lastScrape compareTo info1.lastScrape) > 0) === true
+        ((info1a.nextScrape compareTo info1.nextScrape) > 0) === true
+        (info1a.signature.length > 0) === true
+
+        val repo = inject[ScrapeInfoRepo]
+        inject[DBConnection].readWrite { implicit s => repo.save(info1a.withNextScrape(info1a.lastScrape)) }
+        scraper.run.head._2 must beNone // check the article
+
+        val info1b = inject[DBConnection].readOnly { implicit s => repo.getByUri(info1a.uriId).get }
+        ((info1b.lastScrape compareTo info1a.lastScrape) == 0) === true // last scrape should not be changed
+        (info1b.interval > info1a.interval) === true
+        ((info1b.nextScrape compareTo info1a.nextScrape) > 0) === true
+
+        inject[DBConnection].readWrite { implicit s => repo.save(info1b.withNextScrape(info1b.lastScrape)) }
+        scraper.run.head._2 must beNone // check the article
+
+        val info1c = inject[DBConnection].readOnly { implicit s => repo.getByUri(info1b.uriId).get }
+        ((info1c.lastScrape compareTo info1b.lastScrape) == 0) === true // last scrape should not be changed
+        (info1c.interval > info1b.interval) === true
+        ((info1c.nextScrape compareTo info1b.nextScrape) > 0) === true
+      }
+    }
+
     "update scrape schedule upon state change" in {
       running(new EmptyApplication()) {
         val uriRepo = inject[NormalizedURIRepo]
@@ -186,9 +238,9 @@ class ScraperTest extends SpecificationWithJUnit {
 
   def getMockScraper(articleStore: ArticleStore, suffix: String = "") = {
   	new Scraper(articleStore, ScraperConfig()) {
-  	  override def fetchArticle(uri: NormalizedURI): Either[Article, ScraperError]	 = {
+  	  override def fetchArticle(uri: NormalizedURI, ifModifiedSince: Option[DateTime] = None): ScraperResult = {
   	    uri.url match {
-  	      case "http://www.keepit.com/existing" => Left(Article(
+  	      case "http://www.keepit.com/existing" => Scraped(Article(
   	          id = uri.id.get,
   	          title = "foo" + suffix,
   	          content = "bar" + suffix,
@@ -199,7 +251,22 @@ class ScraperTest extends SpecificationWithJUnit {
   	          message = None,
   	          titleLang = Some(Lang("en")),
   	          contentLang = Some(Lang("en"))))
-  	      case "http://www.keepit.com/missing" => Right(ScraperError(uri, HttpStatus.SC_NOT_FOUND, "not found"))
+          case "http://www.keepit.com/missing" => Error(HttpStatus.SC_NOT_FOUND, "not found")
+          case "http://www.keepit.com/notModified" =>
+            ifModifiedSince match {
+              case Some(_) => NotModified
+              case None => Scraped(Article(
+                  id = uri.id.get,
+                  title = "foo" + suffix,
+                  content = "bar" + suffix,
+                  scrapedAt = currentDateTime,
+                  httpContentType = Option("text/html"),
+                  httpOriginalContentCharset = Option("UTF-8"),
+                  state = SCRAPED,
+                  message = None,
+                  titleLang = Some(Lang("en")),
+                  contentLang = Some(Lang("en"))))
+            }
   	    }
   	  }
   	}
