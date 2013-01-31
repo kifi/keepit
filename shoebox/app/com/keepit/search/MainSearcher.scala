@@ -1,8 +1,7 @@
 package com.keepit.search
 
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.graph.URIList
-import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.index.Searcher
 import com.keepit.search.index.PersonalizedSearcher
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.logging.Logging
@@ -15,9 +14,13 @@ import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
 
-class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], config: SearchConfig)(implicit
-    articleIndexer: ArticleIndexer,
-    uriGraph: URIGraph,
+class MainSearcher(
+    userId: Id[User],
+    friendIds: Set[Id[User]],
+    filterOut: Set[Long],
+    config: SearchConfig,
+    articleSearcher: Searcher,
+    val uriGraphSearcher: URIGraphSearcher,
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker
@@ -47,10 +50,6 @@ class MainSearcher(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Lo
   val similarity = Similarity(config.asString("similarity"))
   val progressiveRelaxation = config.asBoolean("progressiveRelaxation")
   val enableCoordinator = config.asBoolean("enableCoordinator")
-
-  // get searchers. subsequent operations should use these for consistency since indexing may refresh them
-  val articleSearcher = articleIndexer.getSearcher
-  val uriGraphSearcher = uriGraph.getURIGraphSearcher
 
   // initialize user's social graph info
   val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
