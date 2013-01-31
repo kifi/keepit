@@ -41,8 +41,8 @@ class MemcachedCacheModule() extends ScalaModule {
 
     lazy val singleHost = current.configuration.getString("memcached.host").map(AddrUtil.getAddresses)
     lazy val multipleHosts = current.configuration.getString("memcached.1.host").map { _ =>
-      def accumulate(nb: Int): String = {
-        current.configuration.getString("memcached." + nb + ".host").map { h => h + " " + accumulate(nb + 1) }.getOrElse("")
+      def accumulate(cacheNumber: Int): String = {
+        current.configuration.getString("memcached." + cacheNumber + ".host").map { h => h + " " + accumulate(cacheNumber + 1) }.getOrElse("")
       }
       AddrUtil.getAddresses(accumulate(1))
     }
