@@ -20,7 +20,7 @@ import org.specs2.internal.scalaz.FirstOption
 case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
   uriId: Id[NormalizedURI], // = NormalizedURI id
-  lastScrape: DateTime = currentDateTime,
+  lastScrape: DateTime = START_OF_TIME,
   nextScrape: DateTime = currentDateTime,
   interval: Double = 24.0d, // hours
   failures: Int = 0,
@@ -50,8 +50,7 @@ case class ScrapeInfo(
   def withDocumentUnchanged()(implicit config: ScraperConfig) = {
     val newInterval = min(config.maxInterval, (interval + config.intervalIncrement))
     val now = currentDateTime
-    copy(lastScrape = now,
-         nextScrape = now.plusSeconds(hoursToSeconds(newInterval)),
+    copy(nextScrape = now.plusSeconds(hoursToSeconds(newInterval)),
          interval = newInterval,
          failures = 0)
   }
