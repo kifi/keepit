@@ -130,9 +130,10 @@ object CommentController extends FortyTwoController {
   }
 
   def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
-    val comments = CX.withConnection { implicit conn =>
-      NormalizedURICxRepo.getByNormalizedUrl(url) map { normalizedURI =>
-          messageComments(request.userId, normalizedURI).map(ThreadInfo(_, Some(request.userId))).reverse
+    val threadInfoRepo = inject[ThreadInfoRepo]
+    val comments = inject[DBConnection].readOnly { implicit s =>
+      inject[NormalizedURIRepo].getByNormalizedUrl(url) map { normalizedURI =>
+          messageComments(request.userId, normalizedURI).map(threadInfoRepo.load(_, Some(request.userId))).reverse
         } getOrElse Nil
     }
     log.info("comments for url %s:\n%s".format(url, comments mkString "\n"))
@@ -236,8 +237,8 @@ object CommentController extends FortyTwoController {
   private def publicComments(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit session: RSession) =
     inject[CommentRepo].getPublic(normalizedURI.id.get)
 
-  private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit conn: Connection) =
-    CommentCxRepo.getMessages(normalizedURI.id.get, userId)
+  private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit session: RSession) =
+    inject[CommentRepo].getMessages(normalizedURI.id.get, userId)
 
   private[controllers] def notifyRecipients(comment: Comment): Unit = comment.permissions match {
       case CommentPermissions.PUBLIC =>
