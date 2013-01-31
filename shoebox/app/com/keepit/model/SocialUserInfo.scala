@@ -83,7 +83,7 @@ class SocialUserInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRep
 
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo] = {
     val UNPROCESSED_STATE = SocialUserInfoStates.CREATED :: SocialUserInfoStates.FETCHED_USING_FRIEND :: Nil
-    (for(f <- table if f.state inSet UNPROCESSED_STATE) yield f).list
+    (for(f <- table if (f.state.inSet(UNPROCESSED_STATE) && f.credentials.isNotNull)) yield f).list
   }
 
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo] =
