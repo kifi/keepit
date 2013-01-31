@@ -54,7 +54,7 @@ import com.keepit.inject._
 trait Key[T] {
   val namespace: String
   def toKey(): String
-  override final def toString: String = namespace + ":" + toKey()
+  override final def toString: String = namespace + "#" + toKey()
 }
 
 trait ObjectCache[K <: Key[T], T] {

@@ -65,8 +65,8 @@ class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
   lazy val api = new CacheAPI {
 
     def get(key: String) = {
-      logger.debug("Getting the cached for key " + namespace + key)
-      val future = client.asyncGet(namespace + key, tc)
+      logger.debug("Getting the cached for key " + key)
+      val future = client.asyncGet(key, tc)
       try {
         val any = future.get(1, TimeUnit.SECONDS)
         if (any != null) {
@@ -94,14 +94,13 @@ class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
     }
 
     def set(key: String, value: Any, expiration: Int) {
-      client.set(namespace + "::" + key, expiration, value, tc)
+      client.set(key, expiration, value, tc)
     }
 
     def remove(key: String) {
-      client.delete(namespace + "#" + key)
+      client.delete(key)
     }
   }
 
-  lazy val namespace: String = current.configuration.getString("memcached.namespace").getOrElse("")
 
 }
