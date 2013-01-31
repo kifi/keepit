@@ -48,13 +48,18 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat {
     val jsonSize = inStream.read()
     val filterSize = inStream.read()
 
+    assume(filterSize > 0, "Filter is empty!")
+
     val jsonBytes = new Array[Byte](jsonSize)
     assume(jsonSize == inStream.read(jsonBytes, 0, jsonSize), "Incorrectly sized JSON input in BrowsingHistory parsing")
 
     val filterBytes = new Array[Byte](filterSize)
-    assume(filterSize == inStream.read(filterBytes, 0, filterSize), "Incorrectly sized filter input in BrowsingHistory parsing")
+    val readBytes = inStream.read(filterBytes, 0, filterSize)
+    assume(filterSize == readBytes, "Incorrectly sized filter input in BrowsingHistory parsing. %s != %s".format(filterSize, readBytes))
 
     val historyNoFilter = historyJsonReads(Json.parse(new String(jsonBytes, ENCODING)))
+
+    assume(historyNoFilter.tableSize == filterSize, "Filter size is not tableSize")
 
     historyNoFilter.copy(filter = filterBytes)
   }
@@ -73,4 +78,8 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat {
       updatesCount = (json \ "updatesCount").as[Int]
     )
 
+}
+
+object BrowsingHistoryBinarySerializer {
+  implicit val browsingHistoryBinarySerializer = new BrowsingHistoryBinarySerializer
 }
