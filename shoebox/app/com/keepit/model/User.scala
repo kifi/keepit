@@ -80,9 +80,9 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent, val externalIdCache: Us
   }
 
   override def invalidateCache(user: User) = {
-    externalIdCache.remove(UserExternalIdKey(user.externalId))
+    externalIdCache.set(UserExternalIdKey(user.externalId), user)
     user.id match {
-      case Some(id) => idCache.remove(UserIdKey(id))
+      case Some(id) => idCache.set(UserIdKey(id), user)
       case None =>
     }
     user
@@ -90,6 +90,7 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent, val externalIdCache: Us
 
   override def get(id: Id[User])(implicit session: RSession): User = {
     idCache.getOrElse(UserIdKey(id)) {
+      println("THIS GOT HIT!")
       (for(f <- table if f.id is id) yield f).first
     }
   }

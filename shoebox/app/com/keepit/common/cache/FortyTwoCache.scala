@@ -9,6 +9,7 @@ import akka.util.Duration
 import akka.util.duration._
 import play.api.libs.json.JsValue
 import com.keepit.inject._
+import com.google.inject.Singleton
 
 // Abstraction around play2-memcached plugin
 trait FortyTwoCachePlugin extends Plugin {
@@ -19,6 +20,7 @@ trait FortyTwoCachePlugin extends Plugin {
   override def enabled = true
 }
 
+@Singleton
 class MemcachedCache extends FortyTwoCachePlugin {
   lazy val cache = inject[MemcachedPlugin]
   def get(key: String): Option[Any] =
@@ -31,6 +33,7 @@ class MemcachedCache extends FortyTwoCachePlugin {
     cache.api.set(key, value, expiration)
 }
 
+@Singleton
 class InMemoryCache extends FortyTwoCachePlugin {
   import play.api.cache.{EhCachePlugin, Cache}
   import play.api.Play
@@ -46,6 +49,21 @@ class InMemoryCache extends FortyTwoCachePlugin {
 
   def set(key: String, value: Any, expiration: Int = 0): Unit =
     Cache.set(key, value, expiration)
+}
+
+@Singleton
+class HashMapMemoryCache extends FortyTwoCachePlugin {
+
+  val cache = mutable.HashMap[String, Any]()
+
+  def get(key: String): Option[Any] =
+    cache.get(key)
+
+  def remove(key: String): Unit =
+    cache.remove(key)
+
+  def set(key: String, value: Any, expiration: Int = 0): Unit =
+    cache.+=((key, value))
 }
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
