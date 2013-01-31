@@ -62,7 +62,7 @@ case class SocialUserInfoUserKey(userId: Id[User]) extends Key[List[SocialUserIn
   def toKey(): String = userId.id.toString
 }
 class SocialUserInfoUserCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[SocialUserInfoUserKey, List[SocialUserInfo]] {
-  val ttl = 1 hour
+  val ttl = 30 days
   def deserialize(obj: Any): List[SocialUserInfo] = SocialUserInfoSerializer.socialUserInfoSerializer.readsSeq(obj.asInstanceOf[JsArray])
   def serialize(socialUsers: List[SocialUserInfo]) = SocialUserInfoSerializer.socialUserInfoSerializer.writesSeq(socialUsers)
 }
@@ -72,7 +72,7 @@ case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId
   def toKey(): String = networkType.name.toString + "_" + id.id
 }
 class SocialUserInfoNetworkCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[SocialUserInfoNetworkKey, SocialUserInfo] {
-  val ttl = 1 hour
+  val ttl = 30 days
   def deserialize(obj: Any): SocialUserInfo = SocialUserInfoSerializer.socialUserInfoSerializer.reads(obj.asInstanceOf[JsObject])
   def serialize(socialUser: SocialUserInfo) = SocialUserInfoSerializer.socialUserInfoSerializer.writes(socialUser)
 }
@@ -95,6 +95,14 @@ class SocialUserInfoRepoImpl @Inject() (val db: DataBaseComponent, userCache: So
     def credentials = column[SocialUser]("credentials", O.Nullable)
     def lastGraphRefresh = column[DateTime]("last_graph_refresh", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ userId.? ~ fullName ~ state ~ socialId ~ networkType ~ credentials.? ~ lastGraphRefresh.? <> (SocialUserInfo, SocialUserInfo.unapply _)
+  }
+
+  override def invalidateCache(socialUser: SocialUserInfo) = {
+    socialUser.userId match {
+      case Some(userId) => userCache.remove(SocialUserInfoUserKey(userId))
+    }
+    networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
+    socialUser
   }
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
