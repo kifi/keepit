@@ -17,7 +17,7 @@ import com.keepit.scraper.extractor.YoutubeExtractorFactory
 import com.keepit.search.LangDetector
 import com.google.inject.Inject
 import org.apache.http.HttpStatus
-import org.joda.time.Seconds
+import org.joda.time.{DateTime, Seconds}
 import play.api.Play.current
 
 object Scraper {
@@ -65,11 +65,18 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
         (errorURI, None)
     }
 
+  private def getIfModifiedSince(info: ScrapeInfo) = {
+    info.signature match {
+      case "" => None // no signature. this is the first time
+      case _ => Some(info.lastScrape)
+    }
+  }
 
   private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
-    fetchArticle(uri) match {
-      case Left(article) =>
+
+    fetchArticle(uri, getIfModifiedSince(info)) match {
+      case Scraped(article) =>
         // store a scraped article in a store map
         articleStore += (uri.id.get -> article)
         // the article is saved, now detect the document change. making the detection more strict as time goes by.
@@ -104,7 +111,11 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
         }
         log.info("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
-      case Right(error) =>
+      case NotModified =>
+        // update the scrape schedule, uri is not changed
+        CX.withConnection { implicit c => info.withDocumentUnchanged().save }
+        (uri, None)
+      case Error(httpStatus, msg) =>
         // store a fallback article in a store map
         val article = Article(
             id = uri.id.get,
@@ -114,7 +125,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
             httpContentType = None,
             httpOriginalContentCharset = None,
             state = NormalizedURIStates.SCRAPE_FAILED,
-            message = Option(error.msg),
+            message = Option(msg),
             titleLang = None,
             contentLang = None,
             destinationUrl = None)
@@ -146,27 +157,27 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     }
   }
 
-  def fetchArticle(normalizedUri: NormalizedURI): Either[Article, ScraperError] = {
+  def fetchArticle(normalizedUri: NormalizedURI, ifModifiedSince: Option[DateTime] = None): ScraperResult = {
     try {
       URI.parse(normalizedUri.url) match {
         case Some(uri) =>
           uri.scheme match {
-            case Some("file") => Right(ScraperError(normalizedUri, -1, "forbidden scheme: %s".format("file")))
-            case _ => fetchArticle(normalizedUri, httpFetcher)
+            case Some("file") => Error(-1, "forbidden scheme: %s".format("file"))
+            case _ => fetchArticle(normalizedUri, httpFetcher, ifModifiedSince)
           }
-        case _ => fetchArticle(normalizedUri, httpFetcher)
+        case _ => fetchArticle(normalizedUri, httpFetcher, ifModifiedSince)
       }
     } catch {
-      case _ => fetchArticle(normalizedUri, httpFetcher)
+      case _ => fetchArticle(normalizedUri, httpFetcher, ifModifiedSince)
     }
   }
 
-  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher): Either[Article, ScraperError] = {
+  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, ifModifiedSince: Option[DateTime]): ScraperResult = {
     val url = normalizedUri.url
     val extractor = getExtractor(url)
 
     try {
-      val fetchStatus = httpFetcher.fetch(url){ input => extractor.process(input) }
+      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince){ input => extractor.process(input) }
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
@@ -175,7 +186,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
           val title = extractor.getMetadata("title").getOrElse("")
           val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
           val destinationUrl = fetchStatus.destinationUrl
-          Left(Article(id = normalizedUri.id.get,
+          Scraped(Article(id = normalizedUri.id.get,
                        title = title,
                        content = content,
                        scrapedAt = currentDateTime,
@@ -186,11 +197,13 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
                        titleLang = Some(titleLang),
                        contentLang = Some(contentLang),
                        destinationUrl = destinationUrl))
+        case HttpStatus.SC_NOT_MODIFIED =>
+          NotModified
         case _ =>
-          Right(ScraperError(normalizedUri, fetchStatus.statusCode, fetchStatus.message.getOrElse("fetch failed")))
+          Error(fetchStatus.statusCode, fetchStatus.message.getOrElse("fetch failed"))
       }
     } catch {
-      case e => Right(ScraperError(normalizedUri, -1, "fetch failed: %s".format(e.toString)))
+      case e => Error(-1, "fetch failed: %s".format(e.toString))
     }
   }
 
@@ -200,4 +213,3 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     httpFetcher.close()
   }
 }
-
