@@ -172,10 +172,7 @@ class TopLevelScorer(weight: TopLevelWeight, textScorer: Scorer with Coordinator
 
   private[this] val textBoost = weight.textWeight.getValue
   private[this] val semanticVectorBoost = weight.semanticVectorWeight.getValue
-  private[this] val proximityBoost = weight.proximityWeight match {
-    case Some(proximityWeight) => proximityWeight.getValue
-    case None => 1.0f
-  }
+  private[this] val proximityBoost = weight.proximityWeight.map(_.getValue).getOrElse(1.0f)
 
   override def docID(): Int = doc
   override def nextDoc(): Int = {
