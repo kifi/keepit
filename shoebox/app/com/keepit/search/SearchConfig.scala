@@ -10,7 +10,7 @@ import java.io.FileOutputStream
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
-      "enableCoordinator" -> "false",
+      "enableCoordinator" -> "true",
       "similarity" -> "default",
       "svWeightMyBookMarks" -> "1",
       "svWeightBrowsingHistory" -> "3",
