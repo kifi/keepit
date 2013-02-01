@@ -17,6 +17,7 @@ import com.keepit.common.mail.MailSenderPlugin
 import com.keepit.common.healthcheck._
 import com.keepit.common.analytics.PersistEventPlugin
 import com.keepit.common.analytics.reports.ReportBuilderPlugin
+import com.keepit.common.cache.MemcachedPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
   private var creatingInjector = false
@@ -46,6 +47,7 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
     require(inject[PersistEventPlugin].enabled)
     require(inject[ReportBuilderPlugin].enabled)
     require(inject[DataIntegrityPlugin].enabled)
+    require(inject[MemcachedPlugin].enabled)
     log.info("shoebox started")
   }
 
