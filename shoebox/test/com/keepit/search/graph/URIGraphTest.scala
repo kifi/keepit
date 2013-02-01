@@ -10,9 +10,9 @@ import com.keepit.search.query.SiteQuery
 import com.keepit.search.query.ConditionalQuery
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.common.db.{Id, CX}
+import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.test.EmptyApplication
+import com.keepit.test._
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
@@ -29,22 +29,23 @@ import org.apache.lucene.search.BooleanQuery
 import scala.collection.JavaConversions._
 
 @RunWith(classOf[JUnitRunner])
-class URIGraphTest extends SpecificationWithJUnit {
+class URIGraphTest extends SpecificationWithJUnit with DbRepos {
 
   private def setupDB = {
-    CX.withConnection { implicit c =>
-      (List(User(firstName = "Agrajag", lastName = "").save,
-            User(firstName = "Barmen", lastName = "").save,
-            User(firstName = "Colin", lastName = "").save,
-            User(firstName = "Dan", lastName = "").save,
-            User(firstName = "Eccentrica", lastName = "").save,
-            User(firstName = "Hactar", lastName = "").save),
-       List(NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state=SCRAPED).save,
-            NormalizedURIFactory(title = "a2", url = "http://www.keepit.com/article2", state=SCRAPED).save,
-            NormalizedURIFactory(title = "a3", url = "http://www.keepit.org/article3", state=SCRAPED).save,
-            NormalizedURIFactory(title = "a4", url = "http://www.findit.com/article4", state=SCRAPED).save,
-            NormalizedURIFactory(title = "a5", url = "http://www.findit.com/article5", state=SCRAPED).save,
-            NormalizedURIFactory(title = "a6", url = "http://www.findit.org/article6", state=SCRAPED).save))
+    db.readWrite { implicit s =>
+      val users = List(userRepo.save(User(firstName = "Agrajag", lastName = "")),
+            userRepo.save(User(firstName = "Barmen", lastName = "")),
+            userRepo.save(User(firstName = "Colin", lastName = "")),
+            userRepo.save(User(firstName = "Dan", lastName = "")),
+            userRepo.save(User(firstName = "Eccentrica", lastName = "")),
+            userRepo.save(User(firstName = "Hactar", lastName = "")))
+      val uris = List(uriRepo.save(NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state = SCRAPED)),
+            uriRepo.save(NormalizedURIFactory(title = "a2", url = "http://www.keepit.com/article2", state = SCRAPED)),
+            uriRepo.save(NormalizedURIFactory(title = "a3", url = "http://www.keepit.org/article3", state = SCRAPED)),
+            uriRepo.save(NormalizedURIFactory(title = "a4", url = "http://www.findit.com/article4", state = SCRAPED)),
+            uriRepo.save(NormalizedURIFactory(title = "a5", url = "http://www.findit.com/article5", state = SCRAPED)),
+            uriRepo.save(NormalizedURIFactory(title = "a6", url = "http://www.findit.org/article6", state = SCRAPED)))
+      (users, uris)
     }
   }
 
@@ -98,11 +99,11 @@ class URIGraphTest extends SpecificationWithJUnit {
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
 
-        val bookmarks = CX.withConnection { implicit c =>
+        val bookmarks = db.readWrite { implicit s =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
-            users.map{ user =>
-              val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-              BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+            users.map { user =>
+              val url1 = urlRepo.get(uri.url).getOrElse( urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")))
             }
           }
         }
@@ -130,11 +131,11 @@ class URIGraphTest extends SpecificationWithJUnit {
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
 
-        val bookmarks = CX.withConnection { implicit c =>
+        val bookmarks = db.readWrite { implicit s =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-              BookmarkFactory(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+              val url1 = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")))
             }
           }
         }
@@ -163,11 +164,11 @@ class URIGraphTest extends SpecificationWithJUnit {
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
 
-        val bookmarks = CX.withConnection { implicit c =>
+        val bookmarks = db.readWrite { implicit s =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-              BookmarkFactory(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")).save
+              val url1 = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")))
             }
           }
         }
@@ -228,11 +229,11 @@ class URIGraphTest extends SpecificationWithJUnit {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
-        CX.withConnection { implicit c =>
+        db.readWrite { implicit s =>
           uris.foreach{ uri =>
             val uriId =  uri.id.get
-            val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-            BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users((uriId.id % 2L).toInt).id.get, source = BookmarkSource("test")).save
+            val url1 = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+            bookmarkRepo.save(BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users((uriId.id % 2L).toInt).id.get, source = BookmarkSource("test")))
           }
         }
 
@@ -261,11 +262,11 @@ class URIGraphTest extends SpecificationWithJUnit {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
-        CX.withConnection { implicit c =>
+        db.readWrite { implicit s =>
           uris.foreach{ uri =>
             val uriId =  uri.id.get
-            val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-            BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users(0).id.get, source = BookmarkSource("test")).save
+            val url1 = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+            bookmarkRepo.save(BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users(0).id.get, source = BookmarkSource("test")))
           }
         }
 
@@ -305,19 +306,19 @@ class URIGraphTest extends SpecificationWithJUnit {
         val ramDir = new RAMDirectory
         val store = new FakeArticleStore()
 
-        val (user, uris, bookmarks) = CX.withConnection { implicit c =>
-          val user = User(firstName = "Agrajag", lastName = "").save
+        val (user, uris, bookmarks) = db.readWrite { implicit s =>
+          val user = userRepo.save(User(firstName = "Agrajag", lastName = ""))
           val uris = Array(
-            NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article1", state=SCRAPED).save,
-            NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article2", state=SCRAPED).save
+            uriRepo.save(NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article1", state=SCRAPED)),
+            uriRepo.save(NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article2", state=SCRAPED))
           )
 
-          val url1 = URLFactory(url = uris(0).url, normalizedUriId = uris(0).id.get).save
-          val url2 = URLFactory(url = uris(1).url, normalizedUriId = uris(1).id.get).save
+          val url1 = urlRepo.save(URLFactory(url = uris(0).url, normalizedUriId = uris(0).id.get))
+          val url2 = urlRepo.save(URLFactory(url = uris(1).url, normalizedUriId = uris(1).id.get))
 
           val bookmarks = Array(
-            BookmarkFactory(title = "line1 titles", url = url1,  uriId = uris(0).id.get, userId = user.id.get, source = BookmarkSource("test")).save,
-            BookmarkFactory(title = "line2 titles", url = url2,  uriId = uris(1).id.get, userId = user.id.get, source = BookmarkSource("test")).save
+            bookmarkRepo.save(BookmarkFactory(title = "line1 titles", url = url1,  uriId = uris(0).id.get, userId = user.id.get, source = BookmarkSource("test"))),
+            bookmarkRepo.save(BookmarkFactory(title = "line2 titles", url = url2,  uriId = uris(1).id.get, userId = user.id.get, source = BookmarkSource("test")))
           )
           (user, uris, bookmarks)
         }
