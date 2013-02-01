@@ -214,9 +214,10 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
         }
         proximityScore += maxScore
       }
+      proximityScore *= weightVal
       scoredDoc = doc
     }
-    (sqrt(proximityScore.toDouble + 1.0d) - 1.0d).toFloat * weightVal
+    proximityScore
   }
 
   override def docID(): Int = curDoc
