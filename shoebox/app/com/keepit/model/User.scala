@@ -90,7 +90,6 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent, val externalIdCache: Us
 
   override def get(id: Id[User])(implicit session: RSession): User = {
     idCache.getOrElse(UserIdKey(id)) {
-      println("THIS GOT HIT!")
       (for(f <- table if f.id is id) yield f).first
     }
   }

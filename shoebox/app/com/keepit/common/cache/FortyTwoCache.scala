@@ -9,7 +9,7 @@ import akka.util.Duration
 import akka.util.duration._
 import play.api.libs.json.JsValue
 import com.keepit.inject._
-import com.google.inject.Singleton
+import com.google.inject.{Inject, Singleton}
 
 // Abstraction around play2-memcached plugin
 trait FortyTwoCachePlugin extends Plugin {
@@ -21,8 +21,7 @@ trait FortyTwoCachePlugin extends Plugin {
 }
 
 @Singleton
-class MemcachedCache extends FortyTwoCachePlugin {
-  lazy val cache = inject[MemcachedPlugin]
+class MemcachedCache @Inject() (val cache: MemcachedPlugin) extends FortyTwoCachePlugin {
   def get(key: String): Option[Any] =
     cache.api.get(key)
 
@@ -31,6 +30,10 @@ class MemcachedCache extends FortyTwoCachePlugin {
 
   def set(key: String, value: Any, expiration: Int = 0): Unit =
     cache.api.set(key, value, expiration)
+
+  override def onStop(): Unit = {
+    cache.onStop()
+  }
 }
 
 @Singleton
