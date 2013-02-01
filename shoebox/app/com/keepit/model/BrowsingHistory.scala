@@ -18,6 +18,9 @@ import java.security.MessageDigest
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import play.api.libs.json._
+import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
+import com.keepit.serializer.BrowsingHistoryBinarySerializer
+import akka.util.duration._
 
 case class BrowsingHistory (
                     id: Option[Id[BrowsingHistory]] = None,
@@ -41,8 +44,19 @@ trait BrowsingHistoryRepo extends Repo[BrowsingHistory] {
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[BrowsingHistory]
 }
 
+case class BrowsingHistoryUserIdKey(userId: Id[User]) extends Key[BrowsingHistory] {
+  val namespace = "browsing_history_by_userid"
+  def toKey(): String = userId.id.toString
+}
+class BrowsingHistoryUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[BrowsingHistoryUserIdKey, BrowsingHistory] {
+  val ttl = 24 hours
+  def deserialize(obj: Any): BrowsingHistory = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer.reads(obj.asInstanceOf[Array[Byte]])
+  def serialize(browsingHistory: BrowsingHistory) = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer.writes(browsingHistory)
+}
+
+
 @Singleton
-class BrowsingHistoryRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[BrowsingHistory] with BrowsingHistoryRepo {
+class BrowsingHistoryRepoImpl @Inject() (val db: DataBaseComponent, val browsingCache: BrowsingHistoryUserIdCache) extends DbRepo[BrowsingHistory] with BrowsingHistoryRepo {
   import FortyTwoTypeMappers._
   import org.scalaquery.ql._
   import org.scalaquery.ql.ColumnOps._
@@ -62,12 +76,19 @@ class BrowsingHistoryRepoImpl @Inject() (val db: DataBaseComponent) extends DbRe
     def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ tableSize ~ filter ~ numHashFuncs ~ minHits ~ updatesCount <> (BrowsingHistory, BrowsingHistory.unapply _)
   }
 
+  override def invalidateCache(browsingHistory: BrowsingHistory) = {
+    browsingCache.set(BrowsingHistoryUserIdKey(browsingHistory.userId), browsingHistory)
+    browsingHistory
+  }
+
   override def save(model: BrowsingHistory)(implicit session: RWSession): BrowsingHistory = {
     super.save(model.copy(updatesCount = model.updatesCount + 1))
   }
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[BrowsingHistory] =
-    (for(b <- table if b.userId === userId && b.state === BrowsingHistoryStates.ACTIVE) yield b).firstOption
+    browsingCache.getOrElseOpt(BrowsingHistoryUserIdKey(userId)) {
+      (for(b <- table if b.userId === userId && b.state === BrowsingHistoryStates.ACTIVE) yield b).firstOption
+    }
 
 }
 
