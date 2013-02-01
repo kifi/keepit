@@ -65,15 +65,17 @@ class AppScopeTest extends SpecificationWithJUnit {
     "start and stop injected plugins" in {
       val app = FakeApplication()
       val scope = new AppScope
-
-      val providerA = scope.scope(Key.get(classOf[PluginA]), provide(new PluginA))
+ 
+      val pluginAPrestart = new PluginA
+      val providerA = scope.scope(Key.get(classOf[PluginA]), provide(pluginAPrestart))
       val providerB = scope.scope(Key.get(classOf[PluginB]), provide(new PluginB))
 
       // providers refuse to provide instances before scope started
-      providerA.get must throwA[Exception]
-      providerB.get must throwA[Exception]
+      providerA.get === pluginAPrestart
+      scope.pluginsToStart.contains(pluginAPrestart) === true
 
       scope.onStart(app)
+      scope.pluginsToStart === Nil
 
       // providers return the same instance when called repeatedly
       val pluginA = providerA.get
