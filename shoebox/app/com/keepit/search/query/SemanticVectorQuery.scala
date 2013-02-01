@@ -77,7 +77,7 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
     val result = new ComplexExplanation()
     if (exists) {
-      result.setDescription("semantic vector (%), product of:".format(query.terms.mkString(",")))
+      result.setDescription("semantic vector (%s), product of:".format(query.terms.mkString(",")))
       val svScore = sc.score
       val boost = query.getBoost
       result.setValue(svScore * boost)
@@ -85,7 +85,7 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
       result.addDetail(new Explanation(svScore, "semantic vector score"))
       result.addDetail(new Explanation(boost, "boost"))
     } else {
-      result.setDescription("semantic vector (%), doesn't match id %d".format(query.terms.mkString(","), doc))
+      result.setDescription("semantic vector (%s), doesn't match id %d".format(query.terms.mkString(","), doc))
       result.setValue(0)
       result.setMatch(false)
     }

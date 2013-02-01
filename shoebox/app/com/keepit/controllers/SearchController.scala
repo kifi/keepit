@@ -115,6 +115,20 @@ object SearchController extends FortyTwoController {
     PersonalSearchHit(uri.id.get, uri.externalId, title, url)
   }
 
+  def explain(queryString: String, uriId: Id[NormalizedURI]) = AdminHtmlAction { request =>
+    val userId = request.userId
+    val friendIds = inject[DBConnection].readOnly { implicit s =>
+      inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
+    }
+    val config = inject[SearchConfigManager].getUserConfig(userId)
+
+    val mainSearcherFactory = inject[MainSearcherFactory]
+    val searcher = mainSearcherFactory(userId, friendIds, Set(), config)
+    val explanation = searcher.explain(queryString, uriId)
+
+    Ok(views.html.explainResult(queryString, userId, uriId, explanation))
+  }
+
   case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
 
   def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = AdminHtmlAction { implicit request =>
@@ -135,5 +149,4 @@ object SearchController extends FortyTwoController {
     }
     Ok(views.html.articleSearchResult(result, metas))
   }
-
 }
