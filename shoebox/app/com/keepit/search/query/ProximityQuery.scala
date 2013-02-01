@@ -167,10 +167,9 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
     // compute edit distance based proximity score
     val insertCost = 1.0f
     val baseEditCost = 1.0f
-
-    var top = pq.top
-    var doc = top.doc
+    val doc = curDoc
     if (scoredDoc != doc) {
+      var top = pq.top
       proximityScore = 0.0f
       var maxScore = 0.0f
       if (top.pos < Int.MaxValue) {

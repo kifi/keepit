@@ -157,9 +157,9 @@ class SemanticVectorScorer(weight: SemanticVectorWeight, tps: List[DocAndVector]
   tps.foreach{ tp => pq.insertWithOverflow(tp) }
 
   override def score(): Float = {
-    var top = pq.top
-    var doc = top.doc
+    val doc = curDoc
     if (scoredDoc != doc) {
+      var top = pq.top
       var sum = 0.0f
       while (top.doc == doc) {
         sum += top.score()
@@ -172,7 +172,7 @@ class SemanticVectorScorer(weight: SemanticVectorWeight, tps: List[DocAndVector]
     svScore
   }
 
-  override def docID(): Int = pq.top.doc
+  override def docID(): Int = curDoc
 
   override def nextDoc(): Int = advance(0)
 
