@@ -102,5 +102,9 @@ class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
     }
   }
 
+  override def onStop(): Unit = {
+    client.shutdown()
+  }
+
 
 }

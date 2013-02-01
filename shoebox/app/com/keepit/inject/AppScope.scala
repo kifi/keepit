@@ -16,13 +16,25 @@ class AppScope extends Scope with Logging {
 
   private var app: Application = _
   private var plugins: List[Plugin] = Nil
+  private var pluginsToStart: List[Plugin] = Nil
   private var instances: Map[Key[_], Any] = Map.empty
 
   def onStart(app: Application): Unit = synchronized {
     println("scope starting...")
     require(!started, "AppScope has already been started")
     this.app = app
+    pluginsToStart foreach startPlugin
+    pluginsToStart = Nil
     started = true
+  }
+
+  private[this] def startPlugin(plugin: Plugin): Unit = {
+    log.info("starting plugin: " + plugin)
+    // start plugin, explicitly using the app classloader
+    Threads.withContextClassLoader(app.classloader) {
+      plugin.onStart()
+    }
+    plugins = plugin :: plugins
   }
 
   def onStop(app: Application): Unit = synchronized {
@@ -57,13 +69,10 @@ class AppScope extends Scope with Logging {
             // if this instance is a plugin, start it and add to the list of plugins
             inst match {
               case plugin: Plugin =>
-                require(started, "Plugin injected before AppScope was started: " + plugin)
-                log.info("starting plugin: " + plugin)
-                // start plugin, explicitly using the app classloader
-                Threads.withContextClassLoader(app.classloader) {
-                  plugin.onStart()
+                started match {
+                  case true => startPlugin(plugin)
+                  case false => pluginsToStart = plugin :: pluginsToStart 
                 }
-                plugins = plugin :: plugins
               case _ =>
             }
             instances += key -> inst

@@ -23,7 +23,6 @@ class UserRepoTest extends SpecificationWithJUnit with DbRepos {
   "UserRepo" should {
     "Use the cache" in {
       running(new EmptyApplication()) {
-        println(inject[FortyTwoCachePlugin].getClass)
 
         val userRepo = inject[UserRepoImpl]
         userRepo.idCache.get(UserIdKey(Id[User](1))).isDefined === false

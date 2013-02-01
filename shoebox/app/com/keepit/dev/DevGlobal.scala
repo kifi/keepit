@@ -16,6 +16,7 @@ import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.common.social.SocialGraphRefresher
 import com.keepit.common.mail.MailSenderPlugin
 import com.keepit.common.analytics.reports.ReportBuilderPlugin
+import com.keepit.common.cache.{FortyTwoCachePlugin, MemcachedPlugin, MemcachedCache}
 
 object DevGlobal extends FortyTwoGlobal(Dev) {
 
@@ -32,6 +33,7 @@ object DevGlobal extends FortyTwoGlobal(Dev) {
     inject[MailSenderPlugin].processOutbox()
     inject[ReportBuilderPlugin].enabled
     inject[DataIntegrityPlugin].enabled
+    inject[FortyTwoCachePlugin].enabled
     log.info("shoebox started")
   }
 }
