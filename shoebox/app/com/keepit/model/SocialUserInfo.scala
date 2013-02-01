@@ -100,6 +100,7 @@ class SocialUserInfoRepoImpl @Inject() (val db: DataBaseComponent, userCache: So
   override def invalidateCache(socialUser: SocialUserInfo) = {
     socialUser.userId match {
       case Some(userId) => userCache.remove(SocialUserInfoUserKey(userId))
+      case None =>
     }
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
     socialUser
