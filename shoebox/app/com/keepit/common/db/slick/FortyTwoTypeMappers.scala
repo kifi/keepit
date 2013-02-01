@@ -8,6 +8,7 @@ import com.keepit.common.db.{Id, State, Model, ExternalId, LargeString}
 import com.keepit.common.time._
 import com.keepit.common.social._
 import com.keepit.model._
+import com.keepit.search._
 import com.keepit.common.mail._
 import org.joda.time.DateTime
 import java.sql.{Timestamp, Clob, Blob, PreparedStatement}
@@ -29,6 +30,10 @@ object FortyTwoTypeMappers {
   }
 
   //ExternalIds
+  implicit object ArticleSearchResultRefExternalIdTypeMapper extends BaseTypeMapper[ExternalId[ArticleSearchResultRef]] {
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[ArticleSearchResultRef]
+  }
+
   implicit object KifiInstallationExternalIdTypeMapper extends BaseTypeMapper[ExternalId[KifiInstallation]] {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[KifiInstallation]
   }
