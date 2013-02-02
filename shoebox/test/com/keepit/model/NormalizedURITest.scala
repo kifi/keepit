@@ -12,10 +12,10 @@ import ru.circumflex.orm._
 import com.keepit.controllers._
 import com.keepit.common.db.{CX, State}
 import com.keepit.common.db.CX._
-import com.keepit.test.EmptyApplication
+import com.keepit.test._
 
 @RunWith(classOf[JUnitRunner])
-class NormalizedURITest extends SpecificationWithJUnit {
+class NormalizedURITest extends SpecificationWithJUnit with DbRepos{
 
   def setup() = {
     CX.withConnection { implicit c =>
@@ -92,8 +92,8 @@ class NormalizedURITest extends SpecificationWithJUnit {
     "search gets nothing" in {
       running(new EmptyApplication()) {
         setup()
-        CX.withConnection { implicit c =>
-          NormalizedURICxRepo.getByNormalizedUrl("http://www.keepit.com/med") === None
+        db.readWrite { implicit s =>
+          uriRepo.getByNormalizedUrl("http://www.keepit.com/med") === None
         }
       }
     }
