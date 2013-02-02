@@ -60,7 +60,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
     val result = new ComplexExplanation()
     if (exists) {
-      result.setDescription("proximity(%), product of:".format(query.terms.mkString(",")))
+      result.setDescription("proximity(%s), product of:".format(query.terms.mkString(",")))
       val proxScore = sc.score
       val boost = query.getBoost
       result.setValue(proxScore * boost)
@@ -68,7 +68,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
       result.addDetail(new Explanation(proxScore, "proximity score"))
       result.addDetail(new Explanation(boost, "boost"))
     } else {
-      result.setDescription("proximity(%), doesn't match id %d".format(query.terms.mkString(","), doc))
+      result.setDescription("proximity(%s), doesn't match id %d".format(query.terms.mkString(","), doc))
       result.setValue(0)
       result.setMatch(false)
     }

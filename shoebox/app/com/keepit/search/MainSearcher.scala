@@ -13,6 +13,7 @@ import org.apache.lucene.util.PriorityQueue
 import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
+import org.apache.lucene.search.Explanation
 
 class MainSearcher(
     userId: Id[User],
@@ -202,6 +203,21 @@ class MainSearcher(
     val t = max(currentTime - createdAt, 0).toFloat / halfDecayMillis
     val t2 = t * t
     (1.0f/(1.0f + t2))
+  }
+
+  def explain(queryString: String, uriId: Id[NormalizedURI]): Option[Explanation] = {
+    val lang = Lang("en") // TODO: detect
+    val parser = MainQueryParser(lang, proximityBoost, semanticBoost)
+    parser.setPercentMatch(percentMatch)
+    parser.enableCoord = enableCoordinator
+
+    parser.parseQuery(queryString).map{ query =>
+      var personalizedSearcher = getPersonalizedSearcher(query)
+      personalizedSearcher.setSimilarity(similarity)
+      val idMapper = personalizedSearcher.indexReader.getIdMapper
+
+      personalizedSearcher.explain(query, idMapper.getDocId(uriId.id))
+    }
   }
 }
 
