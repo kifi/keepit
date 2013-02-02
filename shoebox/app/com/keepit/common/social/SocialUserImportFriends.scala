@@ -21,8 +21,8 @@ import com.google.inject.Inject
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.inject._
-import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
 import play.api.Play.current
 import play.api.libs.json.JsArray
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
@@ -36,8 +36,9 @@ class SocialUserImportFriends() extends Logging {
   def importFriends(parentJsons: Seq[JsValue]): Seq[SocialUserRawInfo] = parentJsons map importFriendsFromJson flatten
 
   private def importFriendsFromJson(parentJson: JsValue): Seq[SocialUserRawInfo] = {
-    val socialUserInfos = CX.withConnection { implicit conn =>
-      extractFriends(parentJson) filter infoNotInDb map createSocialUserInfo map {t => (t._1.save, t._2)}
+    val repo = inject[SocialUserInfoRepo]
+    val socialUserInfos = extractFriends(parentJson) filter infoNotInDb map createSocialUserInfo map { t => 
+      (inject[DBConnection].readWrite {implicit s => repo.save(t._1)}, t._2)
     }
 
     val socialUserRawInfos = socialUserInfos map { case (info, friend) => createSocialUserRawInfo(info, friend) }
@@ -53,7 +54,7 @@ class SocialUserImportFriends() extends Logging {
     socialUserRawInfos
   }
 
-  private[social] def infoNotInDb(friend: JsValue)(implicit conn: Connection): Boolean = {
+  private[social] def infoNotInDb(friend: JsValue): Boolean = {
     val socialId = try {
       SocialId((friend \ "id").as[String])
     } catch {
@@ -61,7 +62,9 @@ class SocialUserImportFriends() extends Logging {
         log.error("Can't parse username from friend json %s".format(friend))
         throw e
     }
-    SocialUserInfoCxRepo.getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here
+    inject[DBConnection].readOnly {implicit s =>
+      inject[SocialUserInfoRepo].getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here
+    }
   }
 
   private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
