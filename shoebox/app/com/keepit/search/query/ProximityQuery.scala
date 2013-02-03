@@ -60,7 +60,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
     val result = new ComplexExplanation()
     if (exists) {
-      result.setDescription("proximity(%), product of:".format(query.terms.mkString(",")))
+      result.setDescription("proximity(%s), product of:".format(query.terms.mkString(",")))
       val proxScore = sc.score
       val boost = query.getBoost
       result.setValue(proxScore * boost)
@@ -68,7 +68,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
       result.addDetail(new Explanation(proxScore, "proximity score"))
       result.addDetail(new Explanation(boost, "boost"))
     } else {
-      result.setDescription("proximity(%), doesn't match id %d".format(query.terms.mkString(","), doc))
+      result.setDescription("proximity(%s), doesn't match id %d".format(query.terms.mkString(","), doc))
       result.setValue(0)
       result.setMatch(false)
     }
@@ -167,10 +167,9 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
     // compute edit distance based proximity score
     val insertCost = 1.0f
     val baseEditCost = 1.0f
-
-    var top = pq.top
-    var doc = top.doc
+    val doc = curDoc
     if (scoredDoc != doc) {
+      var top = pq.top
       proximityScore = 0.0f
       var maxScore = 0.0f
       if (top.pos < Int.MaxValue) {
@@ -215,9 +214,10 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
         }
         proximityScore += maxScore
       }
+      proximityScore *= weightVal
       scoredDoc = doc
     }
-    (sqrt(proximityScore.toDouble + 1.0d) - 1.0d).toFloat * weightVal
+    proximityScore
   }
 
   override def docID(): Int = curDoc

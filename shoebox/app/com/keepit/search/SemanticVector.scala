@@ -13,8 +13,8 @@ import scala.math._
 object SemanticVector {
   val vectorSize = 128 // bits
   val arraySize = vectorSize / 8
-  private val gaussianSampleSize = 100000L
-  private val gaussianSample = {
+  private[this] val gaussianSampleSize = 100000L
+  private[this] val gaussianSample = {
     val rnd = new Random(123456)
     val arr = new Array[Float](gaussianSampleSize.toInt)
     var i = 0
@@ -25,36 +25,36 @@ object SemanticVector {
     Sorting.quickSort(arr)
     arr
   }
+  private[this] val similarityScore = {
+    val half = vectorSize.toFloat / 2.0f
+    (0 to vectorSize).map{ distance => 1.0f - (distance.toFloat / half) }.toArray
+  }
 
   // hamming distance
   def distance(v1: Array[Byte], v2: Array[Byte]) = {
     var i = 0
     var dist = 0
     while (i < arraySize) {
-      dist += popCount((v1(i) ^ v2(i)) & 0xFF).toInt
+      dist += popCount((v1(i) ^ v2(i)) & 0xFF)
       i += 1
     }
     dist
   }
 
-  private[this] var vectorSizeHalf: Float = vectorSize.toFloat / 2.0f
+  // similarity of two vectors (-1.0 to 1.0) ~ cosine distance
+  def similarity(v1: Array[Byte], v2: Array[Byte]) = similarityScore(distance(v1, v2))
 
-  // similarity of two vectors (-1.0 to 1.0)
-  def similarity(v1: Array[Byte], v2: Array[Byte]): Float = {
-    1.0f - (distance(v1, v2).toFloat / vectorSizeHalf)
-  }
-
-  private val popCount = {
-    val arr = new Array[Byte](256)
+  private[this] val popCount = {
+    val arr = new Array[Int](256)
     var i = 0
     while (i < 256) {
-      arr(i) = Integer.bitCount(i).toByte
+      arr(i) = Integer.bitCount(i)
       i += 1
     }
     arr
   }
 
-  private val MASK = 0x7FFFFFFFFFFFFFFFL // 63 bits
+  private[this] val MASK = 0x7FFFFFFFFFFFFFFFL // 63 bits
 
   def getSeed(term: String): Array[Float] = {
     var seed = (term.hashCode.toLong + (term.charAt(0).toLong << 31)) & MASK
