@@ -103,12 +103,14 @@ class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo
   }
 
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
-    val q = (for (t <- table if t.state === state) yield t)
-    val limited = limit match {
-      case some if some > 0 => q.take(some)
-      case _ => q
+    val limited = {
+      val q = (for (t <- table if t.state === state) yield t)
+      limit match {
+        case some if some > 0 => q.take(some)
+        case _ => q
+      }
     }
-    q.list
+    limited.list
   }
 
   def getByDomain(domain: String)(implicit session: RSession) =
