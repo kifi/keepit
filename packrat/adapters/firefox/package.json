@@ -3,7 +3,7 @@
     "license": "MPL 2.0",
     "author": "FortyTwo Inc.",
     "homepage": "http://www.keepitfindit.com/",
-    "version": "2.1.35",
+    "version": "2.1.36",
     "fullName": "Keep It, Find It!",
     "id": "kifi@42go.com",
     "icon": "data/icons/kifi.48.png",
@@ -20,11 +20,10 @@
             "value": "production"
         },
         {
-            "title": "Slider delay (sec)",
-            "description": "(0 to not show it automatically)",
-            "type": "integer",
-            "name": "sliderDelay",
-            "value": 30
+            "title": "Show slider automatically",
+            "type": "bool",
+            "name": "showSlider",
+            "value": true
         },
         {
             "title": "Maximum search results",

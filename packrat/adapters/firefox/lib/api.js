@@ -28,7 +28,7 @@ var nextTabId = 1;
 const pages = {}, workers = {}, tabsById = {};  // all by tab.id
 function createPage(tab) {
   if (!tab || !tab.id) throw Error(tab ? "tab without id" : "tab required");
-  return pages[tab.id] = {id: tab.id, url: tab.url, active: tab === tab.window.tabs.activeTab};
+  return pages[tab.id] = {id: tab.id, url: tab.url};
 }
 
 exports.bookmarks = require("./bookmarks");
@@ -36,13 +36,12 @@ exports.browserVersion = xulApp.name + "/" + xulApp.version;
 
 exports.icon = {
   on: {click: []},
-  set: function(tabId, path) {
-    var page = pages[tabId];
-    exports.log("[icon.set]", tabId, path, page);
-    if (page) {
+  set: function(page, path) {
+    if (page === pages[page.id]) {
       page.icon = path;
-      if (page.active) {
-        icon.show(tabsById[tabId].window, url(path));
+      var tab = tabsById[page.id], win = tab.window;
+      if (tab === win.tabs.activeTab) {
+        icon.show(win, url(path));
       }
     }
   }};
@@ -194,14 +193,24 @@ exports.tabs = {
       exports.log.error(Error("tab " + tab.id + " no longer at " + tab.url), "api.tabs.emit:" + type);
     }
   },
-  get: function(tabId) {
-    return pages[tabId];
+  get: function(pageId) {
+    return pages[pageId];
+  },
+  isFocused: function(page) {
+    var tab = tabsById[page.id], win = tab.window;
+    return win === windows.activeWindow && tab === win.tabs.activeTab;
+  },
+  isSelected: function(page) {
+    var tab = tabsById[page.id];
+    return tab === tab.window.tabs.activeTab;
   },
   on: {
-    activate: [],
+    focus: [],
+    blur: [],
     loading: [],
     ready: [],
-    complete: []}};
+    complete: [],
+    unload: []}};
 
 exports.timers = timers;
 exports.version = self.version;
@@ -216,9 +225,13 @@ tabs
 })
 .on("close", function(tab) {
   exports.log("[tabs.close]", tab.id, tab.url);
+  var page = pages[tab.id];
   delete pages[tab.id];
   delete workers[tab.id];
   delete tabsById[tab.id];
+  if (/^https?:/.test(page.url)) {
+    dispatch.call(exports.tabs.on.unload, page);
+  }
 })
 .on("activate", function(tab) {
   var page = pages[tab.id];
@@ -226,7 +239,6 @@ tabs
     exports.log("[tabs.activate]", tab.id, tab.url);
     if (!/^about:/.test(tab.url)) {
       if (page) {
-        page.active = true;
         if (page.icon) {
           icon.show(tab.window, url(page.icon));
         } else {
@@ -235,16 +247,18 @@ tabs
       } else {
         page = createPage(tab);
       }
-      dispatch.call(exports.tabs.on.activate, page);
+      if (tab.window === windows.activeWindow && /^https?:/.test(page.url)) {
+        dispatch.call(exports.tabs.on.focus, page);
+      }
     }
   }
 })
-.on("deactivate", function(tab) {
+.on("deactivate", function(tab) {  // note: can fire after "close"
+  exports.log("[tabs.deactivate]", tab.id, tab.url);
   if (tab.window === windows.activeWindow) {
-    exports.log("[tabs.deactivate]", tab.id, tab.url);
     var page = pages[tab.id];
-    if (page) {
-      page.active = false;
+    if (page && /^https?:/.test(page.url)) {
+      dispatch.call(exports.tabs.on.blur, page);
     }
   }
 })
@@ -252,7 +266,12 @@ tabs
   if (privateMode.isActive) return;
   exports.log("[tabs.ready]", tab.id, tab.url);
   var page = pages[tab.id] || createPage(tab);
-  dispatch.call(exports.tabs.on.ready, page);  // TODO: ensure content scripts are fully injected before dispatch
+  if (/^https?:/.test(page.url)) {
+    timers.setTimeout(function() {  // hoping any on-ready page mods will be injected by time this runs
+      page.ready = true;
+      dispatch.call(exports.tabs.on.ready, page);
+    }, 0);
+  }
 });
 
 windows
@@ -265,6 +284,18 @@ windows
   if (privateMode.isActive) return;
   exports.log("[windows.close]", win.title);
   removeFromWindow(win);
+})
+.on("activate", function(win) {
+  var page = pages[win.tabs.activeTab.id];
+  if (page && /^https?:/.test(page.url)) {
+    dispatch.call(exports.tabs.on.focus, page);
+  }
+})
+.on("deactivate", function(win) {
+  var page = pages[win.tabs.activeTab.id];
+  if (page && /^https?:/.test(page.url)) {
+    dispatch.call(exports.tabs.on.blur, page);
+  }
 });
 
 for each (let win in windows) {
@@ -279,12 +310,7 @@ for each (let win in windows) {
       exports.log("[windows]", tab.id, tab.url);
       tabsById[tab.id] = tab;
     }
-    let page = pages[tab.id];
-    if (page) {
-      page.active = tab === tab.window.tabs.activeTab;
-    } else {
-      createPage(tab);
-    }
+    let page = pages[tab.id] || createPage(tab);
     // TODO: initialize page.complete somehow
   }
 };
@@ -304,6 +330,10 @@ PageMod({
     exports.log("[onAttach]", tab.id, "start.js", tab.url);
     worker.port.on("api:start", function() {
       exports.log("[api:start]", tab.id, tab.url);
+      var oldPage = pages[tab.id];
+      if (oldPage && /^https?:/.test(oldPage.url)) {
+        dispatch.call(exports.tabs.on.unload, oldPage);
+      }
       dispatch.call(exports.tabs.on.loading, createPage(tab));
     });
     worker.port.on("api:complete", function() {
@@ -314,6 +344,10 @@ PageMod({
     });
     worker.port.on("api:nav", function() {
       exports.log("[api:nav]", tab.id, tab.url);
+      var oldPage = pages[tab.id];
+      if (oldPage) {
+        dispatch.call(exports.tabs.on.unload, oldPage);
+      }
       dispatch.call(exports.tabs.on.loading, createPage(tab));
     });
   }});
@@ -339,6 +373,10 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
         pw.push(worker);
         worker.on("detach", function() {
           pw.length = 0;
+        // }).on("pageshow", function() {
+        //   exports.log("[pageshow] tab:", tab.id, "url:", tab.url);
+        // }).on("pagehide", function() {
+        //   exports.log("[pagehide] tab:", tab.id, "url:", tab.url);
         });
         Object.keys(portHandlers).forEach(function(type) {
           worker.port.on(type, function(data, callbackId) {
