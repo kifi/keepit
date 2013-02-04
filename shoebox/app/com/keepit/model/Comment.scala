@@ -180,9 +180,6 @@ object CommentCxRepo {
     (CommentRecipientCxRepo.getByComment(head.id.get) map (_.userId)).flatten.toSet + head.userId
   }
   //slicked
-  def getPublic(uriId: Id[NormalizedURI])(implicit conn: Connection): Seq[Comment] =
-    selectPublic({c => c.*}, uriId).list.map(_.view)
-  //slicked
   def getPublicCount(uriId: Id[NormalizedURI])(implicit conn: Connection): Int =
     selectPublic({c => COUNT(c.id)}, uriId).unique.get.intValue
   //slicked
