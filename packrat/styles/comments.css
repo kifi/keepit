@@ -396,17 +396,15 @@ ul.token-input-list-kifi {
     color: #524d4d;
     list-style: none;
 }
-
 .comment_post_view #to-list {
   height: 24px;
   width: 247px;
   background-color: #fff;
   border: 1px solid #e2e2e2;
-  border-radius: 3px 3px 0px 0px;
-  border-bottom: 0px;
+  border-radius: 3px 3px 0 0;
+  border-bottom: 0;
   padding-left: 8px;
 }
-
 ul.token-input-list-kifi li input {
     border: 0;
     width: 100px;
@@ -415,7 +413,6 @@ ul.token-input-list-kifi li input {
     margin: 2px 0;
     -webkit-appearance: caret;
 }
-
 li.token-input-token-kifi {
     overflow: hidden;
     height: auto !important;
@@ -431,39 +428,33 @@ li.token-input-token-kifi {
     float: left;
     white-space: nowrap;
 }
-
 li.token-input-token-kifi p {
     display: inline;
     padding: 0;
     margin: 0;
 }
-
 li.token-input-token-kifi span {
     color: #524d4d;
     margin-left: 5px;
     font-weight: normal;
     cursor: pointer;
 }
-
 li.token-input-selected-token-kifi {
     background-color: #fafafa;
     border: 1px solid #e2e2e2;
     color: #414B52;
 }
-
 li.token-input-selected-token-kifi span {
     color: #414B52;
     margin-left: 5px;
     cursor: pointer;
 }
-
 li.token-input-input-token-kifi {
     float: left;
     margin: 0;
     padding: 0;
     list-style-type: none;
 }
-
 div.token-input-dropdown-kifi {
     position: absolute;
     width: 240px;
@@ -477,39 +468,27 @@ div.token-input-dropdown-kifi {
     font-family: "helvetica neue", Helvetica, Arial, sans-serif;
     z-index: 2147483641;
 }
-
 div.token-input-dropdown-kifi p {
     margin: 0;
     padding: 5px;
     font-weight: bold;
     color: #777;
 }
-
 div.token-input-dropdown-kifi ul {
     margin: 0;
     padding: 0;
 }
-
 div.token-input-dropdown-kifi ul li {
     background: #fff;
     padding: 3px;
     margin: 0;
     list-style-type: none;
+    text-align: left;
 }
-
-div.token-input-dropdown-kifi ul li.token-input-dropdown-item-kifi {
-    background-color: #fff;
-}
-
+div.token-input-dropdown-kifi ul li.token-input-dropdown-item-kifi,
 div.token-input-dropdown-kifi ul li.token-input-dropdown-item2-kifi {
     background-color: #fff;
 }
-
-div.token-input-dropdown-kifi ul li em {
-    font-weight: bold;
-    font-style: normal;
-}
-
 div.token-input-dropdown-kifi ul li.token-input-selected-dropdown-item-kifi {
     background-color: #FAF9F9;
     color: #414B52;
