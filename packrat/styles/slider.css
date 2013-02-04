@@ -5,6 +5,7 @@
   letter-spacing: normal;
   word-spacing: normal;
   position: static;
+  font-size: inherit;
   font-weight: normal;
   background: transparent;
   border: none;
