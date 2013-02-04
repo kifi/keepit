@@ -4,6 +4,8 @@ import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.net.URINormalizer
 import com.keepit.search.ArticleSearchResultRef
 import play.api.Play.current
@@ -21,11 +23,11 @@ trait EventListenerPlugin extends Plugin {
   def onEvent: PartialFunction[Event,Unit]
 
   case class SearchMeta(query: String, url: String, normUrl: Option[NormalizedURI], queryUUID: Option[ExternalId[ArticleSearchResultRef]])
-  def searchParser(externalUser: ExternalId[User], json: JsObject)(implicit conn: Connection) = {
+  def searchParser(externalUser: ExternalId[User], json: JsObject)(implicit s: RSession) = {
     val query = (json \ "query").asOpt[String].getOrElse("")
     val url = (json \ "url").asOpt[String].getOrElse("")
-    val user = UserCxRepo.get(externalUser)
-    val normUrl = NormalizedURICxRepo.getByNormalizedUrl(url)
+    val user = inject[UserRepo].get(externalUser)
+    val normUrl = inject[NormalizedURIRepo].getByNormalizedUrl(url)
     val queryUUID = ExternalId.asOpt[ArticleSearchResultRef]((json \ "queryUUID").asOpt[String].getOrElse(""))
     (user, SearchMeta(query, url, normUrl, queryUUID))
   }
@@ -47,9 +49,10 @@ class KifiResultClickedListener extends EventListenerPlugin {
 
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_,UserEventMetadata(EventFamilies.SEARCH,"kifiResultClicked",externalUser,_,experiments,metaData,_),_,_) =>
-      val (user, meta, bookmark) = CX.withConnection { implicit conn =>
+      val (user, meta, bookmark) = inject[DBConnection].readWrite {implicit s =>
         val (user, meta) = searchParser(externalUser, metaData)
-        val bookmark = meta.normUrl.map(n => BookmarkCxRepo.getByUriAndUser(n.id.get,user.id.get)).flatten
+        val bookmarkRepo = inject[BookmarkRepo]
+        val bookmark = meta.normUrl.map(n => bookmarkRepo.getByUriAndUser(n.id.get,user.id.get)).flatten
         (user, meta, bookmark)
       }
       // handle KifiResultClicked
