@@ -332,15 +332,11 @@ api.log("[google_inject.js]");
         return result;
       }
     }
-    var body = url.split(/^https?:\/\//);
-    if(body.length >= 1) {
-      url = body[body.length-1];
-    }
-    if (url.length > 60) {
+    url = url.replace(/^https?:\/\//, "");
+    if (url.length > 64) {
       url = url.substring(0, 60) + "...";
     }
-    $.each(resultsStore.query.split(" "), function(i, term) { url = boldSearchTerms(url,term,false); });
-    return url;
+    return boldSearchTerms(url, resultsStore.query);
   }
 
   var templateCache = {};
@@ -372,9 +368,7 @@ api.log("[google_inject.js]");
             formattedResult.displayUrl = displayURLFormatter(formattedResult.bookmark.url);
             api.log(formattedResult.bookmark.url, formattedResult.displayUrl);
 
-            var title = formattedResult.bookmark.title;
-            $.each(resultsStore.query.split(/[\s\W]/), function(i, term) { title = boldSearchTerms(title,term,true); });
-            formattedResult.bookmark.title = title;
+            formattedResult.bookmark.title = boldSearchTerms(formattedResult.bookmark.title, resultsStore.query);
 
             if (resultsStore.showScores === true) {
               formattedResult.displayScore = "[" + Math.round(result.score*100)/100 + "] ";
@@ -518,11 +512,9 @@ api.log("[google_inject.js]");
     socialBar.append("<div class='social_bar_action'>Share It</div>");
   }
 
-  function boldSearchTerms(input, needle, useSpaces) {
-    if (!needle) return input;
-    if (useSpaces === true)
-      return input.replace(new RegExp('(^|\\s)(' + needle + ')(\\s|$)','ig'), '$1<b>$2</b>$3');
-    else
-      return input.replace(new RegExp('(^|\\.?)(' + needle + ')(\\.?|$)','ig'), '$1<b>$2</b>$3');
+  function boldSearchTerms(text, query) {
+    return (query.match(/\w+/g) || []).reduce(function(text, term) {
+      return text.replace(new RegExp("(\\b" + term + "\\b)", "ig"), "<b>$1</b>");
+    }, text);
   }
 }();
