@@ -829,6 +829,8 @@ slider = function() {
           }
         }
       }
+    }).on('click', '.submit-comment', function() {
+      $(this).closest("form").submit();
     }).on('submit','.comment_form', function(e) {
       e.preventDefault();
       var text = commentSerializer($(".comment-compose").find(".placeholder").remove().end().html());
