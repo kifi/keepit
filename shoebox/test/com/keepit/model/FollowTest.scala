@@ -8,13 +8,13 @@ import com.keepit.common.db.CX
 import com.keepit.common.db.CX._
 import com.keepit.common.db.slick._
 import com.keepit.inject._
-import com.keepit.test.EmptyApplication
+import com.keepit.test._
 
 import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
 
-class FollowTest extends SpecificationWithJUnit {
+class FollowTest extends SpecificationWithJUnit with DbRepos {
 
   "Follow" should {
 
@@ -27,11 +27,11 @@ class FollowTest extends SpecificationWithJUnit {
           repo.count === 0
         }
 
-        val (user1, user2, uriA, uriB) = CX.withConnection { implicit c =>
-          (User(firstName = "User", lastName = "1").save,
-           User(firstName = "User", lastName = "2").save,
-           NormalizedURIFactory("Google", "http://www.google.com/").save,
-           NormalizedURIFactory("Amazon", "http://www.amazon.com/").save)
+        val (user1, user2, uriA, uriB) = inject[DBConnection].readWrite{ implicit session =>
+          (userRepo.save(User(firstName = "User", lastName = "1")),
+           userRepo.save(User(firstName = "User", lastName = "2")),
+           uriRepo.save(NormalizedURIFactory("Google", "http://www.google.com/")),
+           uriRepo.save(NormalizedURIFactory("Amazon", "http://www.amazon.com/")))
         }
 
         inject[DBConnection].readOnly{ implicit session =>

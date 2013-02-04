@@ -39,9 +39,7 @@ class EventHelper @Inject() (listeners: JSet[EventListenerPlugin]) {
     events.map(_.onEvent(event))
     events.map(_.getClass.getSimpleName.replaceAll("\\$","")).toSeq
   }
-
 }
-
 
 class KifiResultClickedListener extends EventListenerPlugin {
   private lazy val resultClickTracker = inject[ResultClickTracker]
@@ -68,10 +66,10 @@ class UsefulPageListener extends EventListenerPlugin {
 
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SLIDER, "usefulPage", externalUser, _, experiments, metaData, _), _, _) =>
-      val (user, url, normUrl) = CX.withConnection { implicit conn =>
-        val user = UserCxRepo.get(externalUser)
+      val (user, url, normUrl) = inject[DBConnection].readOnly {implicit s =>
+        val user = inject[UserRepo].get(externalUser)
         val url = (metaData \ "url").asOpt[String].getOrElse("")
-        val normUrl = NormalizedURICxRepo.getByNormalizedUrl(URINormalizer.normalize(url))
+        val normUrl = inject[NormalizedURIRepo].getByNormalizedUrl(URINormalizer.normalize(url))
         (user, url, normUrl)
       }
       // handle UsefulPageListener
@@ -83,11 +81,5 @@ class DeadQueryListener extends EventListenerPlugin {
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_,UserEventMetadata(EventFamilies.SEARCH,"searchUnload",externalUser,_,experiments,metaData,_),_,_)
       if (metaData \ "kifiClicked").asOpt[String].getOrElse("-1").toDouble.toInt == 0 =>
-        // Commenting to not waste queries while this isn't used. However, the pattern here can be used elsewhere.
-//      val (user, meta) = CX.withConnection { implicit conn =>
-//        val (user, meta) = EventHelper.searchParser(externalUser, metaData)
-//        (user, meta)
-//      }
-      // handle DeadQuery
   }
 }

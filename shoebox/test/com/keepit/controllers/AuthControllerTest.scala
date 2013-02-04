@@ -1,6 +1,6 @@
 package com.keepit.controllers
 
-import com.keepit.test.EmptyApplication
+import com.keepit.test._
 import org.junit.runner.RunWith
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.runner.JUnitRunner
@@ -36,7 +36,7 @@ import org.joda.time.DateTime
 import com.keepit.common.db.ExternalId
 
 @RunWith(classOf[JUnitRunner])
-class AuthControllerTest extends SpecificationWithJUnit {
+class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
 
   //todo(eishay) refactor commonalities out of this one and AdminDashboardController to make this test easy to write
   "AuthController" should {
@@ -129,8 +129,8 @@ class AuthControllerTest extends SpecificationWithJUnit {
         val authRequest1 = AuthController.AuthenticatedRequest(null, user.id.get, fakeRequest1)
         val result1 = AuthController.start(authRequest1)
         status(result1) must equalTo(OK)
-        val kifiInstallation1 = CX.withConnection { implicit c =>
-          val all = KifiInstallationCxRepo.all
+        val kifiInstallation1 = db.readOnly {implicit s =>
+          val all = installationRepo.all()(s)
           all.size === 1
           all.head
         }
@@ -143,8 +143,8 @@ class AuthControllerTest extends SpecificationWithJUnit {
         val authRequest2 = AuthController.AuthenticatedRequest(null, user.id.get, fakeRequest2)
         val result2 = AuthController.start(authRequest2)
         status(result2) must equalTo(OK)
-        val kifiInstallation2 = CX.withConnection { implicit c =>
-          val all = KifiInstallationCxRepo.all
+        val kifiInstallation2 = db.readOnly {implicit s =>
+          val all = installationRepo.all()(s)
           all.size === 1
           all.head
         }
