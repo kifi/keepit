@@ -17,12 +17,12 @@ class BrowsingHistorySerializerTest extends SpecificationWithJUnit {
   "BrowsingHistorySerializer" should {
     "do a basic serialization flow" in {
 
-      val filter = Array.fill[Byte](10)(0) ++ Array.fill[Byte](10)(1) ++ Array.fill[Byte](10)(2)
+      val filter = Array.fill[Byte](10)(0) ++ Array.fill[Byte](10)(1) ++ Array.fill[Byte](3047)(2)
 
       val browsingHistory = BrowsingHistory(
         id = Some(Id[BrowsingHistory](1)),
         userId = Id[User](1),
-        tableSize = 30,
+        tableSize = 3067,
         filter = filter,
         numHashFuncs = 5,
         minHits = 1,
@@ -68,8 +68,7 @@ class BrowsingHistorySerializerTest extends SpecificationWithJUnit {
         updatesCount = 42
       )
       val serializer = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer
-      val serializedHistory = serializer.writes(browsingHistory)
-      serializer.reads(serializedHistory) must throwA[AssertionError]
+      serializer.writes(browsingHistory) must throwA[AssertionError]
     }
   }
 
