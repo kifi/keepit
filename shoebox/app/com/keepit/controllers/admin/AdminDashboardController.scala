@@ -45,7 +45,7 @@ object AdminDashboardController extends FortyTwoController {
     val day0 = if(dates.isEmpty) currentDate else dates.min
     val dayCounts = dates.foldLeft(Map[LocalDate,Int]().withDefaultValue(0)){(m, d) => m + (d -> (1 + m(d)))}
     val userCounts = if (Play.isDev) {
-      Seq.fill(40)(math.round(math.pow((math.random*4), 2D).toFloat)-2)
+      Seq.fill(40)(math.round(math.pow((math.random * 4), 2D).toFloat) - 2)
     } else {
       (0 to Days.daysBetween(day0, inject[LocalDate]).getDays()) map {i => dayCounts(day0.plusDays(i))}
     }
