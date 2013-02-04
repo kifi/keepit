@@ -1,25 +1,21 @@
 package com.keepit.serializer
 
-import com.keepit.model.BrowsingHistory
 import play.api.libs.json._
 import com.keepit.common.time._
 import com.keepit.common.strings._
 import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArrayOutputStream}
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
-import com.keepit.model.BrowsingHistory
+import com.keepit.model.ClickHistory
 import play.api.libs.json.JsNumber
 import com.keepit.common.db._
 import com.keepit.model.User
 import com.keepit.common.logging.Logging
 
-trait BinaryFormat {
 
-}
+class ClickHistoryBinarySerializer extends BinaryFormat with Logging {
 
-class BrowsingHistoryBinarySerializer extends BinaryFormat with Logging {
-
-  def writes(history: BrowsingHistory): Array[Byte] = {
+  def writes(history: ClickHistory): Array[Byte] = {
     val json = historyJsonWrites(history).toString.getBytes(ENCODING)
     val filter = history.filter
 
@@ -36,7 +32,7 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat with Logging {
     byteStream.toByteArray
   }
 
-  def historyJsonWrites(history: BrowsingHistory): JsObject =
+  def historyJsonWrites(history: ClickHistory): JsObject =
     JsObject(List(
       "id"  -> history.id.map(u => JsNumber(u.id)).getOrElse(JsNull),
       "createdAt" -> JsString(history.createdAt.toStandardTimeString),
@@ -50,7 +46,7 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat with Logging {
     )
     )
 
-  def reads(bytes: Array[Byte]): BrowsingHistory = {
+  def reads(bytes: Array[Byte]): ClickHistory = {
     val inStream = new DataInputStream(new ByteArrayInputStream(bytes))
     val jsonSize = inStream.readInt()
     val filterSize = inStream.readInt()
@@ -59,11 +55,11 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat with Logging {
     assume(jsonSize > 0, "JSON is empty!")
 
     val jsonBytes = new Array[Byte](jsonSize)
-    assume(jsonSize == inStream.read(jsonBytes, 0, jsonSize), "Incorrectly sized JSON input in BrowsingHistory parsing")
+    assume(jsonSize == inStream.read(jsonBytes, 0, jsonSize), "Incorrectly sized JSON input in ClickHistory parsing")
 
     val filterBytes = new Array[Byte](filterSize)
     val readBytes = inStream.read(filterBytes, 0, filterSize)
-    assume(filterSize == readBytes, "Incorrectly sized filter input in BrowsingHistory parsing. %s != %s".format(filterSize, readBytes))
+    assume(filterSize == readBytes, "Incorrectly sized filter input in ClickHistory parsing. %s != %s".format(filterSize, readBytes))
 
     val historyNoFilter = historyJsonReads(Json.parse(new String(jsonBytes, ENCODING)))
 
@@ -72,12 +68,12 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat with Logging {
     historyNoFilter.copy(filter = filterBytes)
   }
 
-  def historyJsonReads(json: JsValue): BrowsingHistory =
-    BrowsingHistory(
-      id = (json \ "id").asOpt[Long].map(Id[BrowsingHistory](_)),
+  def historyJsonReads(json: JsValue): ClickHistory =
+    ClickHistory(
+      id = (json \ "id").asOpt[Long].map(Id[ClickHistory](_)),
       createdAt = parseStandardTime((json \ "createdAt").as[String]),
       updatedAt = parseStandardTime((json \ "updatedAt").as[String]),
-      state = State[BrowsingHistory]((json \ "state").as[String]),
+      state = State[ClickHistory]((json \ "state").as[String]),
       userId = Id[User]((json \ "userId").as[Long]),
       tableSize = (json \ "tableSize").as[Int],
       filter = Array.fill[Byte]((json \ "tableSize").as[Int])(0),
@@ -88,6 +84,6 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat with Logging {
 
 }
 
-object BrowsingHistoryBinarySerializer {
-  implicit val browsingHistoryBinarySerializer = new BrowsingHistoryBinarySerializer
+object ClickHistoryBinarySerializer {
+  implicit val clickHistoryBinarySerializer = new ClickHistoryBinarySerializer
 }
