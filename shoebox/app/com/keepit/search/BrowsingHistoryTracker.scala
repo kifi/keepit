@@ -26,7 +26,8 @@ class BrowsingHistoryTracker(tableSize: Int, numHashFuncs: Int, minHits: Int) {
     inject[DBConnection].readWrite { implicit session =>
       val browsingHistoryRepo = inject[BrowsingHistoryRepo]
       browsingHistoryRepo.save(browsingHistoryRepo.getByUserId(userId) match {
-        case Some(bh) => bh.withFilter(filter.getFilter)
+        case Some(bh) =>
+          bh.withFilter(filter.getFilter)
         case None =>
           BrowsingHistory(userId = userId, tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
       })

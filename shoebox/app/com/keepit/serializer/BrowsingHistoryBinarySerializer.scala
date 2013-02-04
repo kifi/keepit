@@ -4,29 +4,38 @@ import com.keepit.model.BrowsingHistory
 import play.api.libs.json._
 import com.keepit.common.time._
 import com.keepit.common.strings._
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArrayOutputStream}
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import com.keepit.model.BrowsingHistory
 import play.api.libs.json.JsNumber
 import com.keepit.common.db._
 import com.keepit.model.User
+import com.keepit.common.logging.Logging
 
 trait BinaryFormat {
 
 }
 
-class BrowsingHistoryBinarySerializer extends BinaryFormat {
+class BrowsingHistoryBinarySerializer extends BinaryFormat with Logging {
 
   def writes(history: BrowsingHistory): Array[Byte] = {
     val json = historyJsonWrites(history).toString.getBytes(ENCODING)
     val filter = history.filter
-    val outStream = new ByteArrayOutputStream(json.size + filter.size + 2)
-    outStream.write(json.size)
-    outStream.write(filter.size)
+
+    log.info(history.filter.size)
+
+    assume(filter.size == history.tableSize, "Filter is not tableSize: %s != %s".format(filter.size, history.tableSize))
+    val byteStream = new ByteArrayOutputStream(json.size + filter.size + 8)
+    val outStream = new DataOutputStream(byteStream)
+
+    outStream.writeInt(json.size)
+    outStream.writeInt(filter.size)
     outStream.write(json)
     outStream.write(filter)
-    outStream.toByteArray
+    outStream.close()
+
+    byteStream.toByteArray
   }
 
   def historyJsonWrites(history: BrowsingHistory): JsObject =
@@ -44,9 +53,9 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat {
     )
 
   def reads(bytes: Array[Byte]): BrowsingHistory = {
-    val inStream = new ByteArrayInputStream(bytes)
-    val jsonSize = inStream.read()
-    val filterSize = inStream.read()
+    val inStream = new DataInputStream(new ByteArrayInputStream(bytes))
+    val jsonSize = inStream.readInt()
+    val filterSize = inStream.readInt()
 
     assume(filterSize > 0, "Filter is empty!")
 
@@ -59,7 +68,7 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat {
 
     val historyNoFilter = historyJsonReads(Json.parse(new String(jsonBytes, ENCODING)))
 
-    assume(historyNoFilter.tableSize == filterSize, "Filter size is not tableSize")
+    assume(historyNoFilter.tableSize == filterSize, "Filter size is not tableSize, %s != %s".format(historyNoFilter.tableSize, filterSize))
 
     historyNoFilter.copy(filter = filterBytes)
   }
