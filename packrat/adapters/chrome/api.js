@@ -29,30 +29,39 @@ api = function() {
 
   chrome.tabs.onActivated.addListener(function(info) {
     api.log("[onActivated] tab info:", info);
-    var lastActivePage = activePages[info.windowId];
-    if (lastActivePage) { // ignore popups, etc.
-      lastActivePage.active = false;
+    var lastPage = selectedTabPages[info.windowId];
+    if (lastPage) { // ignore popups, etc.
+      if (/^https?:/.test(lastPage.url)) {
+        dispatch.call(api.tabs.on.blur, lastPage);
+      }
       var page = pages[info.tabId];
-      if (page && /^https?:/.test(page.url)) {
-        page.active = true;
-        activePages[info.windowId] = page;
-        dispatch.call(api.tabs.on.activate, page);
+      if (page) {
+        selectedTabPages[info.windowId] = page;
+        if (/^https?:/.test(page.url)) {
+          dispatch.call(api.tabs.on.focus, page);
+        }
       } else {
-        // new tab, no url yet
-        activePages[info.windowId] = {};
+        selectedTabPages[info.windowId] = pages[info.tabId] = {id: info.tabId};
       }
     }
   });
 
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     api.log("[onUpdated] tab:", tabId, "change:", change);
-    if (activePages[tab.windowId]) {
+    if (selectedTabPages[tab.windowId]) {  // window is "normal"
       if (change.url || change.status === "loading") {
-        var page = pages[tabId] = {
+        var page = pages[tabId];
+        if (page && /^https?:/.test(page.url)) {
+          dispatch.call(api.tabs.on.unload, page);
+        }
+        page = pages[tabId] = {
           id: tabId,
           url: tab.url,
-          active: tab.active,
+          ready: undefined,  // unknown (may be an in-page navigation)
           complete: tab.status === "complete"};
+        if (tab.active) {
+          selectedTabPages[tab.windowId] = page;
+        }
         if (/^https?:/.test(page.url)) {
           dispatch.call(api.tabs.on.loading, page);
         }
@@ -61,6 +70,8 @@ api = function() {
       if (change.status === "complete") {
         var page = pages[tabId];
         if (page) {
+          // TODO: dispatch ready handler here if !page.ready
+          // i.e. hide for API clients the fact that sometimes we get here before "api:dom_ready" arrives
           page.complete = true;
           if (/^https?:/.test(page.url)) {
             dispatch.call(api.tabs.on.complete, page);
@@ -73,42 +84,70 @@ api = function() {
   });
 
   chrome.tabs.onRemoved.addListener(function(tabId) {
-    delete pages[tabId];
+    var page = pages[tabId];
+    if (page) {
+      delete pages[tabId];
+      if (/^https?:/.test(page.url)) {
+        dispatch.call(api.tabs.on.unload, page);
+      }
+    }
   });
 
   chrome.windows.onCreated.addListener(function(win) {
     if (win.type === "normal") {
-      activePages[win.id] = {};
+      selectedTabPages[win.id] = {};
     }
   });
 
-  chrome.windows.onRemoved.addListener(function(windowId) {
-    delete activePages[windowId];
+  chrome.windows.onRemoved.addListener(function(winId) {
+    delete selectedTabPages[winId];
+  });
+
+  var focusedWinId;
+  chrome.windows.getLastFocused(null, function(win) {
+    focusedWinId = win.focused ? win.id : chrome.windows.WINDOW_ID_NONE;
+  });
+  chrome.windows.onFocusChanged.addListener(function(winId) {
+    api.log("[onFocusChanged] win:", winId, "was:", focusedWinId);
+    if (focusedWinId > 0) {
+      var page = selectedTabPages[focusedWinId];
+      if (page && /^https?:/.test(page.url)) {
+        dispatch.call(api.tabs.on.blur, page);
+      }
+    }
+    focusedWinId = winId;
+    if (winId !== chrome.windows.WINDOW_ID_NONE) {
+      var page = selectedTabPages[winId];
+      if (page && /^https?:/.test(page.url)) {
+        dispatch.call(api.tabs.on.focus, page);
+      }
+    }
   });
 
   var pages = {};  // by tab.id
-  var activePages = {};  // in "normal" windows only, by window.id (just to avoid calling chrome.windows.get async to check whether a window is "normal")
+  var selectedTabPages = {};  // in "normal" windows only, by window.id (allows us to avoid some async chrome API calls)
   chrome.tabs.query({windowType: "normal"}, function(tabs) {
     tabs.forEach(function(tab) {
       var page = pages[tab.id];
-      if (tab.url !== (page && page.url)) {
+      if (tab.url !== (page && page.url)) {   // TODO: simplify to just if (!page)?
         page = pages[tab.id] = {
           id: tab.id,
           url: tab.url,
-          active: tab.active,
+          ready: tab.status === "complete" || undefined,
           complete: tab.status === "complete"};
       }
-      if (page.active) {
-        activePages[tab.windowId] = page;
+      if (tab.active) {
+        selectedTabPages[tab.windowId] = page;
       }
       if (/^https?:/.test(tab.url)) {
         // Note: intentionally not dispatching api.tabs.on.ready after injecting content scripts
-        if (page.complete) {
+        if (page.ready) {
           injectContentScripts(page, api.noop);
         } else if (tab.status === "loading") {
           chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
             page.complete = arr[0] === "complete";
-            if (~["interactive","complete"].indexOf(arr[0])) {
+            page.ready = page.complete || arr[0] === "interactive";
+            if (page.ready) {
               injectContentScripts(page, api.noop);
             }
           });
@@ -126,6 +165,7 @@ api = function() {
     if (msg === "api:dom_ready") {
       if (page) {
         injectContentScripts(tab, function() {
+          page.ready = true;
           dispatch.call(api.tabs.on.ready, page);
         });
       }
@@ -234,10 +274,12 @@ api = function() {
     browserVersion: navigator.userAgent.replace(/^.*(Chrom[ei][^ ]*).*$/, "$1"),
     icon: {
       on: {click: []},
-      set: function(tabId, path) {
-        pages[tabId].icon = path;
-        chrome.pageAction.setIcon({tabId: tabId, path: path});
-        chrome.pageAction.show(tabId);
+      set: function(tab, path) {
+        if (tab === pages[tab.id]) {
+          tab.icon = path;
+          chrome.pageAction.setIcon({tabId: tab.id, path: path});
+          chrome.pageAction.show(tab.id);
+        }
       }},
     loadReason: "enable",  // assuming "enable" by elimination
     log: function() {
@@ -293,7 +335,7 @@ api = function() {
         if (v != null) try {
           return JSON.parse(v);
         } catch (e) {}
-        return {sliderDelay: 30, maxResults: 5, showScores: false}[key] || v;  // TODO: factor our default settings out of this API
+        return {showSlider: true, maxResults: 5, showScores: false}[key] || v;  // TODO: factor our default settings out of this API
       },
       set: function set(key, value) {
         if (typeof key === "object") {
@@ -332,17 +374,31 @@ api = function() {
         .forEach(callback);
       },
       emit: function(tab, type, data) {
-        api.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data);
-        chrome.tabs.sendMessage(tab.id, [t0, type, data]);
+        if (tab === pages[tab.id]) {
+          api.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data);
+          chrome.tabs.sendMessage(tab.id, [t0, type, data]);
+        } else {
+          api.log("[api.tabs.emit] IGNORING:", type, "data:", data, "because page", tab, "replaced by", pages[tab.id]);
+        }
       },
       get: function(tabId) {
         return pages[tabId];
       },
+      isFocused: function(tab) {
+        return selectedTabPages[focusedWinId] === tab;
+      },
+      isSelected: function(tab) {
+        return Object.keys(selectedTabPages).some(function(winId) {
+          return selectedTabPages[winId] === tab;
+        });
+      },
       on: {
-        activate: [],
+        focus: [],
+        blur: [],
         loading: [],
         ready: [],
-        complete: []}
+        complete: [],
+        unload: []}
     },
     timers: window,
     version: chrome.app.getDetails().version};
