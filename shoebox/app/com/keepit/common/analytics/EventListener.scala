@@ -49,7 +49,7 @@ class KifiResultClickedListener extends EventListenerPlugin {
 
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_,UserEventMetadata(EventFamilies.SEARCH,"kifiResultClicked",externalUser,_,experiments,metaData,_),_,_) =>
-      val (user, meta, bookmark) = inject[DBConnection].readWrite {implicit s =>
+      val (user, meta, bookmark) = inject[DBConnection].readOnly {implicit s =>
         val (user, meta) = searchParser(externalUser, metaData)
         val bookmarkRepo = inject[BookmarkRepo]
         val bookmark = meta.normUrl.map(n => bookmarkRepo.getByUriAndUser(n.id.get,user.id.get)).flatten
