@@ -25,8 +25,33 @@
           adminHelper.dateDisplay(si.lastScrape) + " - " + adminHelper.timeDisplay(si.lastScrape)
         }.mkString}</td>
       </tr>
+      <tr>
+        <th>Next scrape</th><td>@{scrapeInfo.map { si =>
+          adminHelper.dateDisplay(si.nextScrape) + " - " + adminHelper.timeDisplay(si.nextScrape)
+        }.mkString}</td>
+      </tr>
    </table>
- 	 @helper.form(action = com.keepit.controllers.routes.BookmarksController.delete(bookmark.id.get)) {
-	   <input type="submit" value="Delete"></input>
-	 }
+   <p><input type="button" id="rescrape" value="Rescrape"></p>
+   <script>
+     $("#rescrape").click(function () {
+       var button = $(this);
+       var val = button.val();
+       button.val("Scraping...");
+       $.ajax({
+         type: "POST",
+         url: "/bookmarks/rescrape",
+         contentType: "application/json; charset=utf-8",
+         data: JSON.stringify({ id: @bookmark.id.get.id }),
+         complete: function (jqXHR, status) {
+           button.val(status == "success" ? val : "Error!");
+           window.location.reload();
+         }
+       });
+     });
+   </script>
+   <p>
+     @helper.form(action = com.keepit.controllers.routes.BookmarksController.delete(bookmark.id.get)) {
+       <input type="submit" value="Delete">
+     }
+   </p>
 }
