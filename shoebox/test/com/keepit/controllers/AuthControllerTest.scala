@@ -15,7 +15,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
 import com.keepit.inject._
 import com.keepit.common.social.SocialId
-import com.keepit.common.db.CX
+import com.keepit.common.db._
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
 import com.keepit.common.controller.FortyTwoController
@@ -33,7 +33,6 @@ import securesocial.core.UserId
 import securesocial.core.AuthenticationMethod
 import org.joda.time.LocalDate
 import org.joda.time.DateTime
-import com.keepit.common.db.ExternalId
 
 @RunWith(classOf[JUnitRunner])
 class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
@@ -43,11 +42,11 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
 
     "impersonate" in {
       running(new EmptyApplication().withFakeSecureSocialUserService()) {
-        val (admin, impersonate) = CX.withConnection { implicit c =>
-          val admin = User(firstName = "A", lastName = "1").save
-          SocialUserInfo(userId = admin.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK, credentials = Some(SocialUser(UserId("111", "facebook"), "A 1", Some("a1@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(OAuth2Info(accessToken = "A")), None))).save
-          val impersonate = User(firstName = "B", lastName = "1").save
-          SocialUserInfo(userId = impersonate.id, fullName = "B 1", socialId = SocialId("222"), networkType = FACEBOOK, credentials = Some(SocialUser(UserId("222", "facebook"), "B 1", Some("b1@gmail.com"), Some("http://www.fb.com/him"), AuthenticationMethod.OAuth2, true, None, Some(OAuth2Info(accessToken = "B")), None))).save
+        val (admin, impersonate) = db.readWrite {implicit s =>
+          val admin = userRepo.save(User(firstName = "A", lastName = "1"))
+          socialUserInfoRepo.save(SocialUserInfo(userId = admin.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK, credentials = Some(SocialUser(UserId("111", "facebook"), "A 1", Some("a1@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(OAuth2Info(accessToken = "A")), None))))
+          val impersonate = userRepo.save(User(firstName = "B", lastName = "1"))
+          socialUserInfoRepo.save(SocialUserInfo(userId = impersonate.id, fullName = "B 1", socialId = SocialId("222"), networkType = FACEBOOK, credentials = Some(SocialUser(UserId("222", "facebook"), "B 1", Some("b1@gmail.com"), Some("http://www.fb.com/him"), AuthenticationMethod.OAuth2, true, None, Some(OAuth2Info(accessToken = "B")), None))))
           (admin, impersonate)
         }
         val startRequest = FakeRequest("POST", "/kifi/start").
@@ -108,17 +107,16 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
         val today = now.toDateTime
         inject[FakeClock].push(today)
 
-        val user = CX.withConnection { implicit c =>
-          val user = User(createdAt = now.minusDays(3), firstName = "A", lastName = "1").save
+        val user = db.readWrite {implicit s =>
+          val user = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1"))
 
           val oAuth2Info = OAuth2Info(accessToken = "A",
             tokenType = None, expiresIn = None, refreshToken = None)
           val su = SocialUser(UserId("111", "facebook"), "A 1", Some("a1@gmail.com"),
             Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
-          val sui = SocialUserInfo(
+          val sui = socialUserInfoRepo.save(SocialUserInfo(
               userId = user.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK,
-              credentials = Some(su))
-            .save
+              credentials = Some(su)))
           user
         }
 
