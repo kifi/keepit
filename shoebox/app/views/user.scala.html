@@ -1,9 +1,11 @@
 @(userWithSocial: UserWithSocial, 
-  bookmarks: Seq[Bookmark], 
+  totalBookmarks: Int,
+  bookmarks: Seq[(Bookmark, NormalizedURI)], 
   socialConnections: Seq[SocialUserInfo], 
   fortyTwoConnections: Seq[UserWithSocial], 
   kifiInstallations: Seq[KifiInstallation],
-  historyUpdateCount: Int)
+  historyUpdateCount: Int,
+  bookmarkSearch: Option[String])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
@@ -85,8 +87,16 @@
 	  </ul>
 	</div>
   
-  <h2>User kept @bookmarks.size Bookmarks</h2>
-
+  <h2>User kept @totalBookmarks Bookmarks</h2>
+  <h3>Showing @bookmarks.size Bookmarks of total @totalBookmarks</h3>
+  <form class="form-inline" action="@com.keepit.controllers.routes.UserController.userView(userWithSocial.user.id.get)" method="POST">
+    @if(bookmarkSearch.isDefined){
+      <input type="text" name="bookmarkSearch" value="@{bookmarkSearch.get}"/>
+    } else {
+      <input type="text" name="bookmarkSearch" placeholder="query"/>
+    }
+    <input type="submit" value="Search"/>
+  </form>
   <form class="navbar-form" action="/bookmarks/update" method="POST">
     <button type="submit" class="btn">Update</button><br/><br/>
 			<table class="table table-bordered">
@@ -97,9 +107,10 @@
 		      <th>Active</th>
 		      <th>Bookmark</th>
 		      <th>Source</th>
-		      <th>Created At</th>
+          <th>Created At</th>
+          <th>State</th>
 		    </tr>
-			 @for((bookmark, i) <- bookmarks.zipWithIndex) {
+			 @for(((bookmark, uri), i) <- bookmarks.zipWithIndex) {
 			   <tr>
 		        <td>@{i+1}</td>
 		        <td><span class="badge">@bookmark.id.get.id</span></td>
@@ -114,6 +125,7 @@
 		        <td>@adminHelper.bookmarkDisplay(bookmark)</td>
 		        <td>@bookmark.source</td>
             <td>@adminHelper.dateDisplay(bookmark.createdAt) @adminHelper.timeDisplay(bookmark.createdAt)</td>
+            <td>@adminHelper.uriStateDisplay(uri)</td>
 			   </tr>
 			 }
 			</table>
