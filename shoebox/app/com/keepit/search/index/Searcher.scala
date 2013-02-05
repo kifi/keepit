@@ -16,6 +16,8 @@ import scala.collection.mutable.ArrayBuffer
 
 object Searcher {
   def apply(indexReader: IndexReader) = new Searcher(WrappedIndexReader(indexReader))
+  def apply(indexReader: IndexReader, idMapper: IdMapper) = new Searcher(WrappedIndexReader(indexReader, idMapper))
+
   def reopen(oldSearcher: Searcher) = new Searcher(WrappedIndexReader.reopen(oldSearcher.indexReader))
 }
 
@@ -37,7 +39,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     hitBuf.sortWith((a, b) => a.score >= b.score).toSeq
   }
 
-  def doSearch[R](query: Query)(f: (Scorer, IdMapper) => Unit) = {
+  def doSearch(query: Query)(f: (Scorer, IdMapper) => Unit) {
     val rewrittenQuery = rewrite(query)
     if (rewrittenQuery != null) {
       val weight = createNormalizedWeight(rewrittenQuery)

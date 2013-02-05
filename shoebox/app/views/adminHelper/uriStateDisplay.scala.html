@@ -1,0 +1,22 @@
+@(uri: NormalizedURI)
+
+@{uri.state.value match {
+  case "indexed" => {
+    <span class="label label-success">{uri.state.value}</span>
+  }
+  case "active" => {
+    <span class="label label-important">{uri.state.value}</span>
+  }
+  case "fallbacked" => {
+    <span class="label label-warning">{uri.state.value}</span>
+  }
+  case "scraped" => {
+    <span class="label label-info">{uri.state.value}</span>
+  }
+  case "fallback_failed" => {
+    <span class="label label-inverse">{uri.state.value}</span>
+  }
+  case _ => {
+    <span class="label">{uri.state.value}</span>
+  }
+}}
