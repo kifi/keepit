@@ -46,7 +46,8 @@ object BookmarksController extends FortyTwoController {
       val uri = inject[NormalizedURIRepo].get(bookmark.uriId)
       val repo = inject[UserWithSocialRepo]
       val user = repo.toUserWithSocial(inject[UserRepo].get(bookmark.userId))
-      Ok(views.html.bookmark(bookmark, uri, user))
+      val scrapeInfo = inject[ScrapeInfoRepo].getByUri(bookmark.uriId)
+      Ok(views.html.bookmark(user, bookmark, uri, scrapeInfo))
     }
   }
 
@@ -107,12 +108,14 @@ object BookmarksController extends FortyTwoController {
       val userRepo = inject[UserRepo]
       val bookmarkRepo = inject[BookmarkRepo]
       val normalizedURIRepo = inject[NormalizedURIRepo]
+      val scrapeInfoRepo = inject[ScrapeInfoRepo]
       val bookmarks = bookmarkRepo.page(page, PAGE_SIZE)
       val repo = inject[UserWithSocialRepo]
       val users = bookmarks map (_.userId) map userRepo.get map repo.toUserWithSocial
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get map (_.uriStats)
+      val scrapes = bookmarks map (_.uriId) map scrapeInfoRepo.getByUri
       val count = bookmarkRepo.count(s)
-      (count, (bookmarks, uris, users).zipped.toList.seq)
+      (count, (users, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq)
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.bookmarks(bookmarksAndUsers, page, count, pageCount))
