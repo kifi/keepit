@@ -44,31 +44,28 @@ class SemanticVectorQuery(val terms: Set[Term]) extends Query2 {
 
 class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) extends Weight {
 
-  private[this] val (vector, termIdfList) = {
+  private[this] var termList = {
     val terms = query.terms
-    val vector = searcher.getSemanticVector(terms)
-    val list = terms.foldLeft(List.empty[(Term, Float)]){ (list, term) =>
+    terms.foldLeft(List.empty[(Term, Array[Byte], Float)]){ (list, term) =>
+      val vector = searcher.getSemanticVector(term)
       val idf = searcher.idf(term)
-      (term, idf)::list
+      (term, vector, idf)::list
     }
-    (vector, list)
   }
-
-  private[this] var termList = termIdfList.map{ case (term, idf) => (term, vector, idf) }
 
   override def getQuery() = query
   override def getValue() = query.getBoost()
   override def scoresDocsOutOfOrder() = false
 
   override def sumOfSquaredWeights() = {
-    val sum = termIdfList.foldLeft(0.0f){ (s, t) => s + t._2 * t._2 }
+    val sum = termList.foldLeft(0.0f){ case (sum, (_, _, idf)) => sum + idf * idf }
     val value = query.getBoost()
     (sum * value * value)
   }
 
   override def normalize(norm: Float) {
     val n = norm * getValue()
-    termList = termIdfList.map{ case (term, idf) => (term, vector, idf * n) }
+    termList = termList.map{ case (term, vector, idf) => (term, vector, idf * n) }
   }
 
   override def explain(reader: IndexReader, doc: Int) = {
@@ -77,19 +74,37 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
     val result = new ComplexExplanation()
     if (exists) {
-      result.setDescription("semantic vector (%s), product of:".format(query.terms.mkString(",")))
-      val svScore = sc.score
-      val boost = query.getBoost
-      result.setValue(svScore)
+      result.setDescription("semantic vector (%s), sum of:".format(query.terms.mkString(",")))
+      result.setValue(sc.score)
       result.setMatch(true)
-      result.addDetail(new Explanation(svScore, "semantic vector score"))
-      result.addDetail(new Explanation(boost, "boost"))
+
+      termList.map{ case (term, vector, value) =>
+        explainTerm(term, reader, vector, value, doc) match {
+          case Some(detail) => result.addDetail(detail)
+          case None =>
+        }
+      }
     } else {
       result.setDescription("semantic vector (%s), doesn't match id %d".format(query.terms.mkString(","), doc))
       result.setValue(0)
       result.setMatch(false)
     }
     result
+  }
+
+  private def explainTerm(term: Term, reader: IndexReader, vector: Array[Byte], value: Float, doc: Int) = {
+    val dv = new DocAndVector(reader.termPositions(term), vector, value)
+    if (dv.fetchDoc(doc) == doc && value > 0.0f) {
+      val sc = dv.score()
+      val expl = new ComplexExplanation()
+      expl.setDescription("term(%s)".format(term.toString))
+      expl.addDetail(new Explanation(value, "boost"))
+      expl.addDetail(new Explanation(sc/value, "similarity"))
+      expl.setValue(sc)
+      Some(expl)
+    } else {
+      None
+    }
   }
 
   override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
