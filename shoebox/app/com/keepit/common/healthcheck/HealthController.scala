@@ -19,8 +19,6 @@ object HealthController extends FortyTwoController {
     val recentErrors = healthcheckPlugin.errors()
     val services = inject[FortyTwoServices]
     val cacheStats = inject[CacheStatistics].getStatistics
-    log.info("\n\n\n\n")
-    log.info(cacheStats)
     val (totalHits, totalMisses, totalSets) = (cacheStats.map(_._2).sum, cacheStats.map(_._3).sum, cacheStats.map(_._4).sum)
     Ok(views.html.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString, services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
   }

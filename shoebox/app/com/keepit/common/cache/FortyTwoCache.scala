@@ -28,8 +28,6 @@ class CacheStatistics @Inject() () {
 
   def getStatistics: Seq[(String, Int, Int, Int)] = {
     val keys = (hitsMap.keySet ++ missesMap.keySet ++ setsMap.keySet).toSeq.sortWith { case (a: String, b: String) => a < b }
-    println(hitsMap)
-    println(missesMap)
     keys map { key =>
       (key, hitsMap.getOrElse(key, 0), missesMap.getOrElse(key, 0), setsMap.getOrElse(key, 0))
     }
