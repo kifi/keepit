@@ -273,7 +273,7 @@ api = function() {
       search: chrome.bookmarks.search.bind(chrome.bookmarks)},
     browserVersion: navigator.userAgent.replace(/^.*(Chrom[ei][^ ]*).*$/, "$1"),
     icon: {
-      on: {click: []},
+      on: {click: new Listeners},
       set: function(tab, path) {
         if (tab === pages[tab.id]) {
           tab.icon = path;
@@ -287,9 +287,9 @@ api = function() {
       console.log.apply(console, Array.prototype.concat.apply(["[" + ds.substring(0, 2) + ds.substring(15,24) + "." + String(+d).substring(10) + "]"], arguments));
     },
     on: {
-      install: [],
-      update: [],
-      startup: []},
+      install: new Listeners,
+      update: new Listeners,
+      startup: new Listeners},
     noop: function() {},
     popup: {
       open: function(options, handlers) {
@@ -393,12 +393,12 @@ api = function() {
         });
       },
       on: {
-        focus: [],
-        blur: [],
-        loading: [],
-        ready: [],
-        complete: [],
-        unload: []}
+        focus: new Listeners,
+        blur: new Listeners,
+        loading: new Listeners,
+        ready: new Listeners,
+        complete: new Listeners,
+        unload: new Listeners}
     },
     timers: window,
     version: chrome.app.getDetails().version};
