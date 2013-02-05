@@ -11,6 +11,31 @@ import play.api.libs.json.JsValue
 import com.keepit.inject._
 import com.google.inject.{Inject, Singleton}
 
+
+@Singleton
+class CacheStatistics @Inject() () {
+  private var hits = 0
+  private var misses = 0
+  private var sets = 0
+
+  private val hitsMap = mutable.HashMap[String, Int]()
+  private val missesMap = mutable.HashMap[String, Int]()
+  private val setsMap = mutable.HashMap[String, Int]()
+
+  def incrHits(className: String) { hitsMap += ((className, hitsMap.getOrElse(className, 0) + 1)) }
+  def incrMisses(className: String) { missesMap += ((className, missesMap.getOrElse(className, 0) + 1)) }
+  def incrSets(className: String) { setsMap += ((className, setsMap.getOrElse(className, 0) + 1)) }
+
+  def getStatistics: Seq[(String, Int, Int, Int)] = {
+    val keys = (hitsMap.keySet ++ missesMap.keySet ++ setsMap.keySet).toSeq.sortWith { case (a: String, b: String) => a < b }
+    println(hitsMap)
+    println(missesMap)
+    keys map { key =>
+      (key, hitsMap.getOrElse(key, 0), missesMap.getOrElse(key, 0), setsMap.getOrElse(key, 0))
+    }
+  }
+}
+
 // Abstraction around play2-memcached plugin
 trait FortyTwoCachePlugin extends Plugin {
   def get(key: String): Option[Any]
@@ -109,7 +134,17 @@ trait ObjectCache[K <: Key[T], T] {
 
 trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   val repo: FortyTwoCachePlugin
-  def get(key: K): Option[T] = repo.get(key.toString).map(deserialize)
-  def set(key: K, value: T): Unit = repo.set(key.toString, serialize(value), ttl.toSeconds.toInt)
+  def get(key: K): Option[T] = {
+    val objOpt = repo.get(key.toString).map(deserialize)
+    objOpt match {
+      case Some(_) => inject[CacheStatistics].incrHits(key.getClass.getSimpleName)
+      case None => inject[CacheStatistics].incrMisses(key.getClass.getSimpleName)
+    }
+    objOpt
+  }
+  def set(key: K, value: T): Unit = {
+    repo.set(key.toString, serialize(value), ttl.toSeconds.toInt)
+    inject[CacheStatistics].incrSets(key.getClass.getSimpleName)
+  }
   def remove(key: K) = repo.remove(key.toString)
 }

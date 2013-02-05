@@ -27,8 +27,9 @@ import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social._
 import com.keepit.common.controller.FortyTwoController
-import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.graph.URIGraph
+import com.keepit.search.Lang
+import com.keepit.search.MainSearcherFactory
 import views.html.defaultpages.unauthorized
 import org.joda.time.LocalDate
 import scala.collection.immutable.Map
@@ -136,8 +137,8 @@ object UserController extends FortyTwoController {
         (normalizedURIRepo.get(c.uriId), c)
       }
       val messages = commentRepo.all(CommentPermissions.MESSAGE, userId) map {c =>
-        (normalizedURIRepo.get(c.uriId), c, inject[CommentRecipientRepo].getByComment(c.id.get) map { 
-          r => userWithSocialRepo.toUserWithSocial(userRepo.get(r.userId.get)) 
+        (normalizedURIRepo.get(c.uriId), c, inject[CommentRecipientRepo].getByComment(c.id.get) map {
+          r => userWithSocialRepo.toUserWithSocial(userRepo.get(r.userId.get))
         })
       }
       val sentElectronicMails = mailRepo.forSender(userId);
@@ -155,16 +156,32 @@ object UserController extends FortyTwoController {
     val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = inject[DBConnection].readOnly {implicit s =>
       val userWithSocial = inject[UserWithSocialRepo].toUserWithSocial(inject[UserRepo].get(userId))
       val bookmarks = inject[BookmarkRepo].getByUser(userId)
+      val normalizedURIRepo = inject[NormalizedURIRepo]
+      val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       val socialConnections = inject[SocialConnectionRepo].getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = (inject[SocialConnectionRepo].getFortyTwoUserConnections(userId) map (inject[UserRepo].get(_)) map inject[UserWithSocialRepo].toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
       val kifiInstallations = inject[KifiInstallationRepo].all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
-      (userWithSocial, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations)
+      (userWithSocial, (bookmarks, uris).zipped.toList.seq, socialConnections, fortyTwoConnections, kifiInstallations)
     }
     // above needs slicking.
     val historyUpdateCount = inject[DBConnection].readOnly { implicit session =>
       inject[BrowsingHistoryRepo].getByUserId(userId).map(_.updatesCount).getOrElse(0)
     }
-    Ok(views.html.user(user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations, historyUpdateCount))
+
+    val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
+
+    val bookmarkSearch = form.flatMap{ _.get("bookmarkSearch") }
+    val filteredBookmarks = bookmarkSearch.map{ query =>
+      if (query.trim.length == 0) bookmarks
+      else {
+        val searcherFactory = inject[MainSearcherFactory]
+        val searcher = searcherFactory.bookmarkSearcher(userId)
+        val uris = searcher.search(query, Lang("en"))
+        bookmarks.filter{ case (b, u) => uris.contains(u.id.get.id) }
+      }
+    }
+
+    Ok(views.html.user(user, bookmarks.size, filteredBookmarks.getOrElse(bookmarks), socialConnections, fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch))
   }
 
   def usersView = AdminHtmlAction { implicit request =>

@@ -101,22 +101,20 @@ object CommentController extends FortyTwoController {
   }
 
   def getUpdates(url: String) = AuthenticatedJsonAction { request =>
-    val (messageCount, privateCount, publicCount) = inject[DBConnection].readOnly{ implicit s => 
+    val (messageCount, publicCount) = inject[DBConnection].readOnly{ implicit s =>
       val commentRepo = inject[CommentRepo]
       inject[NormalizedURIRepo].getByNormalizedUrl(url) map {uri =>
         val uriId = uri.id.get
         val userId = request.userId
         val messageCount = commentRepo.getMessagesWithChildrenCount(uriId, userId)
-        val privateCount = commentRepo.getPrivateCount(uriId, userId)
         val publicCount = commentRepo.getPublicCount(uriId)
-        (messageCount, privateCount, publicCount)
-      } getOrElse (0, 0, 0)
+        (messageCount, publicCount)
+      } getOrElse (0, 0)
     }
     Ok(JsObject(List(
         "publicCount" -> JsNumber(publicCount),
-        "privateCount" -> JsNumber(privateCount),
         "messageCount" -> JsNumber(messageCount),
-        "countSum" -> JsNumber(publicCount + privateCount + messageCount)
+        "countSum" -> JsNumber(publicCount + messageCount)
     )))
   }
 
@@ -331,11 +329,18 @@ object CommentController extends FortyTwoController {
 
   def messagesView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 200
-    val (count, uriAndUsers) = CX.withConnection { implicit conn =>
-      val messages = CommentCxRepo.page(page, PAGE_SIZE, CommentPermissions.MESSAGE)
-      val count = CommentCxRepo.count(CommentPermissions.MESSAGE)
+    val (count, uriAndUsers) = inject[DBConnection].readOnly { implicit s => 
+      val commentRepo = inject[CommentRepo]
+      val userRepo = inject[UserRepo]
+      val uriRepo = inject[NormalizedURIRepo]
+      val socialRepo = inject[UserWithSocialRepo]
+      val commentRecipientRepo = inject[CommentRecipientRepo]
+      val messages = commentRepo.page(page, PAGE_SIZE, CommentPermissions.MESSAGE)
+      val count = commentRepo.count(CommentPermissions.MESSAGE)
       (count, (messages map {co =>
-        (UserWithSocial.toUserWithSocialCX(UserCxRepo.get(co.userId)), co, NormalizedURICxRepo.get(co.uriId), CommentRecipientCxRepo.getByComment(co.id.get) map { r => UserWithSocial.toUserWithSocialCX(UserCxRepo.get(r.userId.get)) })
+        (socialRepo.toUserWithSocial(userRepo.get(co.userId)), co, uriRepo.get(co.uriId), commentRecipientRepo.getByComment(co.id.get) map { r => 
+          socialRepo.toUserWithSocial(userRepo.get(r.userId.get)) 
+        })
       }))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt

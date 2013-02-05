@@ -49,7 +49,7 @@ case class BrowsingHistoryUserIdKey(userId: Id[User]) extends Key[BrowsingHistor
   def toKey(): String = userId.id.toString
 }
 class BrowsingHistoryUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[BrowsingHistoryUserIdKey, BrowsingHistory] {
-  val ttl = 24 hours
+  val ttl = 7 days
   def deserialize(obj: Any): BrowsingHistory = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer.reads(obj.asInstanceOf[Array[Byte]])
   def serialize(browsingHistory: BrowsingHistory) = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer.writes(browsingHistory)
 }
@@ -76,7 +76,7 @@ class BrowsingHistoryRepoImpl @Inject() (val db: DataBaseComponent, val browsing
     def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ tableSize ~ filter ~ numHashFuncs ~ minHits ~ updatesCount <> (BrowsingHistory, BrowsingHistory.unapply _)
   }
 
-  override def invalidateCache(browsingHistory: BrowsingHistory) = {
+  override def invalidateCache(browsingHistory: BrowsingHistory)(implicit session: RSession) = {
     browsingCache.set(BrowsingHistoryUserIdKey(browsingHistory.userId), browsingHistory)
     browsingHistory
   }
