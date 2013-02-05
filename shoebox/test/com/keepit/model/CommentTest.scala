@@ -86,22 +86,6 @@ class CommentTest extends SpecificationWithJUnit {
         }
       }
     }
-    "count and load private comments by URI and UserId" in {
-      running(new EmptyApplication()) {
-        val (user1, user2, uri1, uri2, msg3) = setup()
-        inject[DBConnection].readOnly {implicit s =>
-          val repo = inject[CommentRepo]
-          repo.getPrivateCount(uri1.id.get, user1.id.get) === 2
-          repo.getPrivateCount(uri1.id.get, user2.id.get) === 0
-          repo.getPrivateCount(uri2.id.get, user1.id.get) === 0
-          repo.getPrivateCount(uri2.id.get, user2.id.get) === 0
-          repo.getPrivate(uri1.id.get, user1.id.get).length === 2
-          repo.getPrivate(uri1.id.get, user2.id.get).length === 0
-          repo.getPrivate(uri2.id.get, user1.id.get).length === 0
-          repo.getPrivate(uri2.id.get, user2.id.get).length === 0
-        }
-      }
-    }
     "count and load messages by URI and UserId" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
