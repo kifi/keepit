@@ -69,28 +69,7 @@
       </td>
       <td>@uriStat.bookmarks.size</td>
       <td>@adminHelper.dateDisplay(bookmark.createdAt) @adminHelper.timeDisplay(bookmark.createdAt)</td>
-      <td>
-        @{uriStat.uri.state.value match {
-          case "indexed" => {
-            <span class="label label-success">{uriStat.uri.state.value}</span>
-          }
-          case "active" => {
-            <span class="label label-important">{uriStat.uri.state.value}</span>
-          }
-          case "fallbacked" => {
-            <span class="label label-warning">{uriStat.uri.state.value}</span>
-          }
-          case "scraped" => {
-            <span class="label label-info">{uriStat.uri.state.value}</span>
-          }
-          case "fallback_failed" => {
-            <span class="label label-inverse">{uriStat.uri.state.value}</span>
-          }
-          case _ => {
-           <span class="label">{uriStat.uri.state.value}</span>
-          }
-        }}
-      </td>
+      <td>@adminHelper.uriStateDisplay(uriStat.uri)</td>
     </tr>
   }
   </table>

@@ -41,4 +41,10 @@ class MainSearcherFactory @Inject() (
         clickHistoryTracker
     )
   }
+
+  def bookmarkSearcher(userId: Id[User]) = {
+    val articleSearcher = articleIndexer.getSearcher
+    val uriGraphSearcher = uriGraph.getURIGraphSearcher
+    new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
+  }
 }
