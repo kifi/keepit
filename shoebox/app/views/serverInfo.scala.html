@@ -1,4 +1,8 @@
-@(currentService: com.keepit.common.controller.ServiceType, currentVersion: com.keepit.common.controller.ServiceVersion, compilationTime: String, started: String, errorCount: Int, recentErrors: List[com.keepit.common.healthcheck.HealthcheckError], cacheStats: com.keepit.common.cache.CacheStatistics)
+@(currentService: com.keepit.common.controller.ServiceType,
+  currentVersion: com.keepit.common.controller.ServiceVersion,
+  compilationTime: String, started: String, errorCount: Int,
+  recentErrors: List[com.keepit.common.healthcheck.HealthcheckError],
+  cacheStats: Seq[(String, Int, Int, Int)], totalHits: Int, totalMisses: Int, totalSets: Int)
 
 @admin(currentService + " service") {
    <table class="table table-bordered">
@@ -18,7 +22,29 @@
         <th>Recent errors</th><td>@recentErrors.mkString("\n<br>")</td>
       </tr>
       <tr>
-        <th>Cache Health</th><td>Since start: @cacheStats.getHits hits, @cacheStats.getMisses misses, @cacheStats.getSets updates</td>
+        <th>Cache Health</th>
+        <td>Since start: @totalHits hits, @totalMisses misses, @totalSets updates
+        <table>
+          <thead>
+            <tr>
+              <td>Name</td>
+              <td>Hits</td>
+              <td>Misses</td>
+              <td>Updates</td>
+            </tr>
+          </thead>
+          <tbody>
+          @for(stat <- cacheStats) {
+            <tr>
+              <th>@stat._1</th>
+              <td>@stat._2</td>
+              <td>@stat._3</td>
+              <td>@stat._4</td>
+            </tr>
+          }
+          </tbody>
+        </table>
+        </td>
       </tr>
   </table>
 

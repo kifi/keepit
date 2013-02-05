@@ -14,17 +14,26 @@ import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class CacheStatistics @Inject() () {
-  var hits = 0
-  var misses = 0
-  var sets = 0
+  private var hits = 0
+  private var misses = 0
+  private var sets = 0
 
-  def incrHits() = (hits = hits + 1)
-  def incrMisses() = (misses = misses + 1)
-  def incrSets() = (sets = sets + 1)
+  private val hitsMap = mutable.HashMap[String, Int]()
+  private val missesMap = mutable.HashMap[String, Int]()
+  private val setsMap = mutable.HashMap[String, Int]()
 
-  def getHits = hits
-  def getMisses = misses
-  def getSets = sets
+  def incrHits(className: String) { hitsMap += ((className, hitsMap.getOrElse(className, 0) + 1)) }
+  def incrMisses(className: String) { missesMap += ((className, missesMap.getOrElse(className, 0) + 1)) }
+  def incrSets(className: String) { setsMap += ((className, setsMap.getOrElse(className, 0) + 1)) }
+
+  def getStatistics: Seq[(String, Int, Int, Int)] = {
+    val keys = (hitsMap.keySet ++ missesMap.keySet ++ setsMap.keySet).toSeq.sortWith { case (a: String, b: String) => a < b }
+    println(hitsMap)
+    println(missesMap)
+    keys map { key =>
+      (key, hitsMap.getOrElse(key, 0), missesMap.getOrElse(key, 0), setsMap.getOrElse(key, 0))
+    }
+  }
 }
 
 // Abstraction around play2-memcached plugin
@@ -128,14 +137,14 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   def get(key: K): Option[T] = {
     val objOpt = repo.get(key.toString).map(deserialize)
     objOpt match {
-      case Some(_) => inject[CacheStatistics].incrHits()
-      case None => inject[CacheStatistics].incrMisses()
+      case Some(_) => inject[CacheStatistics].incrHits(key.getClass.getSimpleName)
+      case None => inject[CacheStatistics].incrMisses(key.getClass.getSimpleName)
     }
     objOpt
   }
   def set(key: K, value: T): Unit = {
     repo.set(key.toString, serialize(value), ttl.toSeconds.toInt)
-    inject[CacheStatistics].incrSets()
+    inject[CacheStatistics].incrSets(key.getClass.getSimpleName)
   }
   def remove(key: K) = repo.remove(key.toString)
 }
