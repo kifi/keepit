@@ -32,10 +32,26 @@ import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.analytics.reports._
 
+
 object DeepLinkController extends FortyTwoController {
 
-  def handle(token: String) = Action(parse.anyContent) { request =>
-    Ok("<html data-kifi-deep-link='{\"locator\":\"/messages/201fe7f1-aed6-4711-af7e-926118763b96\",\"uri\":\"http://www.mozilla.org/en-US/firefox/fx/\"}'><script>setTimeout(function(){window.location=\"http://www.mozilla.org/en-US/firefox/fx/\"},1000);</script><span class=kifi-deep-link-no-extension>Hi!</span></html>").as(ContentTypes.HTML)
+  def handle(token: String) = AuthenticatedHtmlAction { request =>
+    val deepLink = CX.withConnection { implicit conn => DeepLinkCxRepo.getOpt(DeepLinkToken(token)) }
+
+    deepLink match {
+      case Some(deep) =>
+        deep.recipientUserId match {
+          case Some(recip) if request.userId != recip =>
+            Forbidden
+          case _ =>
+            val uri = deep.uriId.map(uri => CX.withConnection{ implicit conn => NormalizedURICxRepo.get(uri).url }) getOrElse ("")
+            val locator = deep.deepLocator.value
+            val isSecure = deep.recipientUserId.isDefined
+            Ok(views.html.deeplink(uri, locator, isSecure))
+        }
+      case None =>
+        NotFound
+    }
   }
 
 }
