@@ -58,7 +58,12 @@ object SearchController extends FortyTwoController {
 
     val mainSearcherFactory = inject[MainSearcherFactory]
     val searcher = mainSearcherFactory(userId, friendIds, filterOut, config)
-    val searchRes = searcher.search(term, maxHits, lastUUID, searchFilter)
+    val searchRes = if (maxHits > 0) {
+      searcher.search(term, maxHits, lastUUID, searchFilter)
+    } else {
+      log.warn("maxHits is zero")
+      ArticleSearchResult(lastUUID, term, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], filterOut, 0, Int.MaxValue)
+    }
     val realResults = toPersonalSearchResultPacket(userId, searchRes)
 
     val res = if (kifiVersion.getOrElse(KifiVersion(0,0,0)) >= KifiVersion(2,0,8)) {
