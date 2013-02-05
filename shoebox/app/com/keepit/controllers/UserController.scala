@@ -1,41 +1,23 @@
 package com.keepit.controllers
 
-import play.api.data._
-import java.util.concurrent.TimeUnit
-import java.sql.Connection
-import play.api._
-import play.api.Play.current
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.libs.ws.WS
-import play.api.mvc._
-import play.api.libs.json.{Json, JsArray, JsBoolean, JsNumber, JsObject, JsString, JsValue}
 import com.keepit.inject._
-import com.keepit.common.time._
-import com.keepit.common.net._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
-import com.keepit.serializer.UserWithSocialSerializer
 import com.keepit.serializer.BasicUserSerializer
-import com.keepit.controllers.CommonActions._
-import play.api.http.ContentTypes
-import securesocial.core._
-import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social._
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.Lang
 import com.keepit.search.MainSearcherFactory
-import views.html.defaultpages.unauthorized
-import org.joda.time.LocalDate
-import scala.collection.immutable.Map
-import play.api.libs.json.JsArray
-import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail._
+
+import akka.dispatch.Await
+import akka.util.duration._
+import play.api.Play.current
+import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
 
 case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstallations: Seq[KifiInstallation])
 
@@ -228,14 +210,14 @@ object UserController extends FortyTwoController {
 
   def addExperiment(userId: Id[User], experimentType: String) = AdminJsonAction { request =>
     val repo = inject[UserExperimentRepo]
-    val experimants = inject[DBConnection].readWrite{ implicit session =>
+    val experiments = inject[DBConnection].readWrite{ implicit session =>
       val existing = repo.getByUser(userId)
       val experiment = ExperimentTypes(experimentType)
       if (existing contains(experimentType)) throw new Exception("user %s already has an experiment %s".format(experimentType))
       repo.save(UserExperiment(userId = userId, experimentType = experiment))
       repo.getByUser(userId)
     }
-    Ok(JsArray(experimants map {e => JsString(e.experimentType.value) }))
+    Ok(JsArray(experiments map {e => JsString(e.experimentType.value) }))
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -245,7 +227,7 @@ object UserController extends FortyTwoController {
     }
     val graph = inject[SocialGraphPlugin]
     socialUserInfos foreach { info =>
-      graph.asyncFetch(info)
+      Await.result(graph.asyncFetch(info), 5 minutes)
     }
     Redirect(com.keepit.controllers.routes.UserController.userView(userId))
   }
