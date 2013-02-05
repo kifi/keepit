@@ -186,7 +186,7 @@ exports.tabs = {
   },
   emit: function(tab, type, data) {
     if (tab === pages[tab.id]) {
-      exports.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data);
+      exports.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data, "url:", tab.url);
       workers[tab.id].forEach(function(worker) {
         worker.port.emit(type, data);
       });
@@ -266,13 +266,7 @@ tabs
 .on("ready", function(tab) {
   if (privateMode.isActive) return;
   exports.log("[tabs.ready]", tab.id, tab.url);
-  var page = pages[tab.id] || createPage(tab);
-  if (/^https?:/.test(page.url)) {
-    timers.setTimeout(function() {  // hoping any on-ready page mods will be injected by time this runs
-      page.ready = true;
-      dispatch.call(exports.tabs.on.ready, page);
-    }, 0);
-  }
+  pages[tab.id] || createPage(tab);
 });
 
 windows
@@ -372,12 +366,22 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
         let injected = extend({}, o.injected);
         let pw = workers[tab.id] || (workers[tab.id] = []);
         pw.push(worker);
-        worker.on("detach", function() {
+        worker.on("pageshow", function() {
+          if (!page.ready && /^https?:/.test(page.url)) {
+            exports.log("[pageshow] tab:", tab.id, "url:", tab.url);
+            // marking and dispatching ready here instead of when tabs "ready" fires because:
+            //  1. content scripts are not necessarily attached yet when tabs "ready" fires
+            //  2. certain calls from content scripts fail if page is not yet visible
+            //     (see https://bugzilla.mozilla.org/show_bug.cgi?id=766088#c2)
+            page.ready = true;
+            dispatch.call(exports.tabs.on.ready, page);  // must run only once per page, not per content script on page
+          }
+        }).on("pagehide", function() {
+          exports.log("[pagehide] tab:", tab.id);
           pw.length = 0;
-        // }).on("pageshow", function() {
-        //   exports.log("[pageshow] tab:", tab.id, "url:", tab.url);
-        // }).on("pagehide", function() {
-        //   exports.log("[pagehide] tab:", tab.id, "url:", tab.url);
+        }).on("detach", function() {
+          exports.log("[detach] tab:", tab.id);
+          pw.length = 0;
         });
         Object.keys(portHandlers).forEach(function(type) {
           worker.port.on(type, function(data, callbackId) {
