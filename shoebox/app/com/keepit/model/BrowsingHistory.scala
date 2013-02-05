@@ -76,7 +76,7 @@ class BrowsingHistoryRepoImpl @Inject() (val db: DataBaseComponent, val browsing
     def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ tableSize ~ filter ~ numHashFuncs ~ minHits ~ updatesCount <> (BrowsingHistory, BrowsingHistory.unapply _)
   }
 
-  override def invalidateCache(browsingHistory: BrowsingHistory) = {
+  override def invalidateCache(browsingHistory: BrowsingHistory)(implicit session: RWSession) = {
     browsingCache.set(BrowsingHistoryUserIdKey(browsingHistory.userId), browsingHistory)
     browsingHistory
   }

@@ -101,22 +101,20 @@ object CommentController extends FortyTwoController {
   }
 
   def getUpdates(url: String) = AuthenticatedJsonAction { request =>
-    val (messageCount, privateCount, publicCount) = inject[DBConnection].readOnly{ implicit s => 
+    val (messageCount, publicCount) = inject[DBConnection].readOnly{ implicit s =>
       val commentRepo = inject[CommentRepo]
       inject[NormalizedURIRepo].getByNormalizedUrl(url) map {uri =>
         val uriId = uri.id.get
         val userId = request.userId
         val messageCount = commentRepo.getMessagesWithChildrenCount(uriId, userId)
-        val privateCount = commentRepo.getPrivateCount(uriId, userId)
         val publicCount = commentRepo.getPublicCount(uriId)
-        (messageCount, privateCount, publicCount)
-      } getOrElse (0, 0, 0)
+        (messageCount, publicCount)
+      } getOrElse (0, 0)
     }
     Ok(JsObject(List(
         "publicCount" -> JsNumber(publicCount),
-        "privateCount" -> JsNumber(privateCount),
         "messageCount" -> JsNumber(messageCount),
-        "countSum" -> JsNumber(publicCount + privateCount + messageCount)
+        "countSum" -> JsNumber(publicCount + messageCount)
     )))
   }
 

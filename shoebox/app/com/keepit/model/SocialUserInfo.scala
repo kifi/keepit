@@ -97,7 +97,7 @@ class SocialUserInfoRepoImpl @Inject() (val db: DataBaseComponent, userCache: So
     def * = id.? ~ createdAt ~ updatedAt ~ userId.? ~ fullName ~ state ~ socialId ~ networkType ~ credentials.? ~ lastGraphRefresh.? <> (SocialUserInfo, SocialUserInfo.unapply _)
   }
 
-  override def invalidateCache(socialUser: SocialUserInfo) = {
+  override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RWSession) = {
     socialUser.userId match {
       case Some(userId) => userCache.remove(SocialUserInfoUserKey(userId))
       case None =>
