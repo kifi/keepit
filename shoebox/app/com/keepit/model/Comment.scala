@@ -80,7 +80,7 @@ class CommentCountUriIdCache @Inject() (val repo: FortyTwoCachePlugin) extends F
 }
 case class MessageWithChildrenCountUriIdUserIdKey(normUriId: Id[NormalizedURI], userId: Id[User]) extends Key[Int] {
   val namespace = "comment_by_normurlid_userid"
-  def toKey(): String = normUriId.id.toString
+  def toKey(): String = normUriId.id.toString + "_" + userId.id.toString
 }
 class MessageWithChildrenCountUriIdUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[MessageWithChildrenCountUriIdUserIdKey, Int] {
   val ttl = 1 hour
@@ -122,6 +122,7 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
             case None =>
           }
         }
+      case CommentPermissions.PRIVATE =>
     }
     comment
   }

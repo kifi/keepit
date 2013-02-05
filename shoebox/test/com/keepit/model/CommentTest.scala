@@ -58,6 +58,26 @@ class CommentTest extends SpecificationWithJUnit {
   }
 
   "Comment" should {
+    "use caching for counts" in {
+      running(new EmptyApplication()) {
+
+        val commentRepo = inject[CommentRepoImpl]
+        commentRepo.commentCountCache.get(CommentCountUriIdKey(Id[NormalizedURI](1))).isDefined === false
+        commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(Id[NormalizedURI](1), Id[User](1))).isDefined === false
+
+        setup()
+
+        inject[DBConnection].readOnly { implicit s =>
+          commentRepo.getPublicCount(Id[NormalizedURI](1))
+          commentRepo.getMessagesWithChildrenCount(Id[NormalizedURI](1), Id[User](1))
+          commentRepo.getMessagesWithChildrenCount(Id[NormalizedURI](2), Id[User](1))
+        }
+
+        commentRepo.commentCountCache.get(CommentCountUriIdKey(Id[NormalizedURI](1))).get === 2
+        commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(Id[NormalizedURI](1), Id[User](1))).get === 2
+        commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(Id[NormalizedURI](2), Id[User](1))).get === 0
+      }
+    }
     "add comments" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
