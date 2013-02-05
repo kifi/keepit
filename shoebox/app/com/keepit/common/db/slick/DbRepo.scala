@@ -36,7 +36,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   val db: DataBaseComponent
   import db.Driver.Implicit._ // here's the driver, abstracted away
 
-  def invalidateCache(model: M): M = model
+  def invalidateCache(model: M)(implicit session: RSession): M = model
 
   implicit val idMapper = new BaseTypeMapper[Id[M]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[M]
