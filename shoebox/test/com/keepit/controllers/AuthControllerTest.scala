@@ -72,8 +72,8 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
         val impersonateResultFail = routeAndCall(impersonateRequest).get
         status(impersonateResultFail) must equalTo(401)
 
-        CX.withConnection { implicit c =>
-          UserExperiment(experimentType = ExperimentTypes.ADMIN, userId = admin.id.get).save
+        db.readWrite {implicit s =>
+          inject[UserExperimentRepo].save(UserExperiment(experimentType = ExperimentTypes.ADMIN, userId = admin.id.get))
         }
         val impersonateResult = routeAndCall(impersonateRequest).get
         val imprSessionCookie = session(impersonateResult)
