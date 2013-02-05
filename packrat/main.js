@@ -186,17 +186,17 @@ function getSliderInfo(tab, respond) {
 
 function createDeepLinkListener(link, linkTabId, respond) {
   var createdTime = new Date();
-  api.tabs.on.ready.add(function deepLinkListener(tabId, changeInfo, tab) {
+  api.tabs.on.ready.add(function deepLinkListener(tab) {
     var now = new Date();
     if (now - createdTime > 15000) {
       api.tabs.on.ready.remove(deepLinkListener);
       api.log("[createDeepLinkListener] Listener timed out.");
       return;
     }
-    if (linkTabId == tabId) {
+    if (linkTabId == tab.id) {
       var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") < 0 && tab.url.indexOf("dev.ezkeep.com") < 0;
       if (hasForwarded) {
-        api.log("[createDeepLinkListener] Sending deep link to tab " + tabId, link.locator);
+        api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
         api.tabs.emit(tab, "deep_link", link.locator);
         api.tabs.on.ready.remove(deepLinkListener);
         return;
