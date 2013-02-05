@@ -60,7 +60,11 @@ trait DbRepos {
   def db = inject[DBConnection]
   def userRepo = inject[UserRepo]
   def uriRepo = inject[NormalizedURIRepo]
+  def urlRepo = inject[URLRepo]
+  def bookmarkRepo = inject[BookmarkRepo]
   def socialUserInfoRepo = inject[SocialUserInfoRepo]
+  def installationRepo = inject[KifiInstallationRepo]
+  def userExperimentRepo = inject[UserExperimentRepo]
 }
 
 case class TestModule() extends ScalaModule {

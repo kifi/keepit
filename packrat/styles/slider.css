@@ -1,27 +1,19 @@
-
-/* An attempt to normalize CSS */
+/* a weak blank-slate (insulation) attempt */
 .kifi-slider * {
-  width:auto;
+  width: auto;
   line-height: 1;
   letter-spacing: normal;
   word-spacing: normal;
   position: static;
-  font-weight:normal;
-
-  background-position: 0% 0%;
-  background-size: auto;
-  background-origin: padding-box;
-  background-clip: border-box;
-  background-attachment: scroll;
-  background-image: none;
-  border: 0px;
-  border-top: 0px;
-  margin: 0px;
-  padding: 0px;
-  box-shadow: none;
-  border-radius: 0px;
+  font-size: inherit;
+  font-weight: normal;
   background: transparent;
-  min-width: 0px;
+  border: none;
+  margin: 0;
+  padding: 0;
+  box-shadow: none;
+  border-radius: 0;
+  min-width: 0;
   box-sizing: content-box;
   text-align: left;
   direction: ltr;
@@ -29,10 +21,11 @@
   -moz-user-select: auto;
   user-select: auto;
 }
-
 .kifi-slider div {
   display: block;
 }
+.kifi-slider a,
+.kifi-slider b,
 .kifi-slider span {
   display: inline;
 }
@@ -49,6 +42,7 @@
   cursor: pointer;
 }
 
+/* slider widget */
 .kifi-slider {
   position: fixed;
   bottom:35px;
@@ -65,33 +59,28 @@
   min-width: 0px;
   font-size: 14px;
 }
-
+.kifi-slider-border {
+  background-color: #faf9f9;
+  border: 2px solid #414b52;
+  border-right: 0;
+  border-radius: 12px 0 0 12px;
+  -webkit-box-shadow: 2px 2px 2px rgba(50,50,50,.5);
+  -moz-box-shadow: 2px 2px 2px rgba(50,50,50,.5);
+  box-shadow: 2px 2px 2px rgba(50,50,50,.5);
+  width: 330px;
+  position: relative;
+  display: table;
+}
+.kifi-table-row-group {
+  display: table-row-group;
+}
 .kifi-table-row {
   display: table-row;
   padding: 0;
   margin: 0;
 }
 
-.kifi-table-row-group {
-  display: table-row-group;
-}
-
-/*Rounded corner with shadow*/
-.kifi-slider-border {
-  background-color: #faf9f9;
-  border: 2px solid #414b52;
-  border-right:0px;
-  border-radius: 12px 0px 0px 12px;
-  -moz-box-shadow: 2px 2px 2px rgba(50,50,50,0.5);
-  -webkit-box-shadow: 2px 2px 2px rgba(50,50,50,0.5);
-  box-shadow: 2px 2px 2px rgba(50,50,50,0.5);
-
-  width: 330px;
-  position:relative;
-  display: table;
-}
-
-/*Header*/
+/* header */
 .kifi-slider-title-bar {
   margin: 0;
   padding: 9px 16px 9px 40px;
@@ -145,7 +134,7 @@
   vertical-align: 2px;
 }
 
-/*footer*/
+/* footer */
 .kifi-slider-footer {
   border-top: 1px solid #E2E2E2;
   padding: 10px 0 0 20px;
@@ -168,7 +157,7 @@
   float: right;
 }
 
-/*content*/
+/* content */
 .kifi-slider .kifi-content {
   padding: 5px 5px 5px 10px;
   font-family: "helvetica neue", Helvetica, Arial, sans-serif;

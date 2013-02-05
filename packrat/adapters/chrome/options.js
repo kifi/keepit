@@ -2,7 +2,7 @@ $(function() {
   chrome.extension.sendMessage(["get_prefs"], function init(o) {
     console.log("[init] prefs:", o.prefs);
     $("[name=env][value=" + o.prefs.env + "]").prop("checked", true);
-    $("#slider-delay").val(o.prefs.sliderDelay);
+    $("#show-slider").prop("checked", o.prefs.showSlider);
     $("#max-results").val(o.prefs.maxResults);
     $("#show-scores").prop("checked", o.prefs.showScores);
     showSession(o.session);
@@ -10,7 +10,7 @@ $(function() {
   $("#save").click(function() {
     chrome.extension.sendMessage(["set_prefs", {
       env: $("input[name=env][value=development]").is(":checked") ? "development" : "production",
-      sliderDelay: $("#slider-delay").val(),
+      showSlider: $("#show-slider").is(":checked"),
       maxResults: $("#max-results").val(),
       showScores: $("#show-scores").is(":checked")}]);
     window.close();

@@ -128,28 +128,6 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
     (for(k <- table if k.userId === userId && k.externalId === externalId) yield k).firstOption
 }
 
-//slicked!
-object KifiInstallationCxRepo {
-
-  def all(implicit conn: Connection): Seq[KifiInstallation] =
-    KifiInstallationEntity.all.map(_.view)
-
-  def all(userId: Id[User])(implicit conn: Connection): Seq[KifiInstallation] =
-    (KifiInstallationEntity AS "i").map { i => SELECT (i.*) FROM i WHERE (i.userId EQ userId) list }.map(_.view)
-
-  def getOpt(id: Id[KifiInstallation])(implicit conn: Connection): Option[KifiInstallation] =
-    KifiInstallationEntity.get(id).map(_.view)
-
-  def get(id: Id[KifiInstallation])(implicit conn: Connection): KifiInstallation =
-    getOpt(id).getOrElse(throw NotFoundException(id))
-
-  def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): Option[KifiInstallation] =
-    (KifiInstallationEntity AS "i").map { i => SELECT (i.*) FROM i WHERE (i.userId EQ userId).AND (i.externalId EQ externalId) unique }.map(_.view)
-
-  def get(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): KifiInstallation =
-    getOpt(userId, externalId).getOrElse(throw NotFoundException(classOf[KifiInstallation], userId, externalId))
-}
-
 object KifiInstallationStates {
   val ACTIVE = State[KifiInstallation]("active")
   val INACTIVE = State[KifiInstallation]("inactive")

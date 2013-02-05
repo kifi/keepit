@@ -10,8 +10,7 @@ import java.io.FileOutputStream
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
-      "enableCoordinator" -> "false",
-      "progressiveRelaxation" -> "true",
+      "enableCoordinator" -> "true",
       "similarity" -> "default",
       "svWeightMyBookMarks" -> "1",
       "svWeightBrowsingHistory" -> "3",
@@ -35,7 +34,6 @@ object SearchConfig {
   private[this] val descriptions =
     Map[String, String](
       "enableCoordinator" -> "enables the IDF based coordinator",
-      "progressiveRelaxation" -> "on/off progressiveRelaxation",
       "similarity" -> "similarity characteristics",
       "svWeightMyBookMarks" -> "semantics vector weight for my bookmarks",
       "svWeightBrowsingHistory" -> "semantic vector weight for browsing history",

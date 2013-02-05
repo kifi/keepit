@@ -83,6 +83,8 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
         } else {
           None
         }
+        proxOpt.foreach(_.setBoost(proximityBoost))
+
         new TopLevelQuery(query, svq, proxOpt, enableCoord)
       }
     }

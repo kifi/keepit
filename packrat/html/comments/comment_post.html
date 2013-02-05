@@ -2,7 +2,7 @@
   <div class="comment-box compose-comment">
     <img src="{{kifiuser.avatar}}" class="user-avatar comment-avatar">
     <div class="compose-wrapper">
-      <div class="comment-compose" contenteditable="true"></div>
+      <div class="comment-compose" contenteditable></div>
       <div class="compose-social">Post to:
         <span class="post_to_network">
           <span class="kn_social kn_facebook" style="background-image:url({{connected_networks}}); "> </span>
@@ -13,7 +13,7 @@
       </div>
       <div class="submit-bar">
         <a href="javascript:" class="take-snapshot" style="background-image:url({{snapshotUri}})" tabindex="-1"></a>
-        <input type="submit" class="submit-comment" value="Comment">
+        <a href="javascript:" class="submit-comment" tabindex="0">Comment</a>
       </div>
     </div>
   </div>

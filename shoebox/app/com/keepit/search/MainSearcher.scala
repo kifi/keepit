@@ -13,6 +13,7 @@ import org.apache.lucene.util.PriorityQueue
 import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
+import org.apache.lucene.search.Explanation
 
 class MainSearcher(
     userId: Id[User],
@@ -48,7 +49,6 @@ class MainSearcher(
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
   val svWeightClickHistory = config.asInt("svWeightClickHistory")
   val similarity = Similarity(config.asString("similarity"))
-  val progressiveRelaxation = config.asBoolean("progressiveRelaxation")
   val enableCoordinator = config.asBoolean("enableCoordinator")
 
   // initialize user's social graph info
@@ -67,20 +67,13 @@ class MainSearcher(
     PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryTracker, clickHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
   }
 
-  def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts, initial: Boolean = true)(implicit lang: Lang) = {
+  def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts)(implicit lang: Lang) = {
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
-    searchTextSub(queryString, myHits, friendsHits, othersHits, clickBoosts, initial)
-
-    (myHits, friendsHits, othersHits)
-  }
-
-  private def searchTextSub(queryString: String, myHits: ArticleHitQueue, friendsHits: ArticleHitQueue, othersHits: ArticleHitQueue,
-                            clickBoosts: ResultClickTracker.ResultClickBoosts, initial: Boolean)(implicit lang: Lang) {
     val parser = MainQueryParser(lang, proximityBoost, semanticBoost)
-    parser.setPercentMatch(if (initial) 100.0f else percentMatch)
+    parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
     parser.parseQuery(queryString).map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
@@ -109,14 +102,7 @@ class MainSearcher(
       }
     }
 
-    if ((myHits.totalHits + friendsHits.totalHits) > 0 || !initial || !parser.isMultiClauseQuery) {
-      (myHits, friendsHits, othersHits)
-    } else {
-      myHits.reset()
-      friendsHits.reset()
-      othersHits.reset()
-      searchTextSub(queryString, myHits, friendsHits, othersHits, clickBoosts, false)
-    }
+    (myHits, friendsHits, othersHits)
   }
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter(None)): ArticleSearchResult = {
@@ -124,11 +110,10 @@ class MainSearcher(
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
-    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts, isInitialSearch && progressiveRelaxation)
+    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
-
 
     val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds ++ Set(userId))
 
@@ -218,6 +203,21 @@ class MainSearcher(
     val t = max(currentTime - createdAt, 0).toFloat / halfDecayMillis
     val t2 = t * t
     (1.0f/(1.0f + t2))
+  }
+
+  def explain(queryString: String, uriId: Id[NormalizedURI]): Option[Explanation] = {
+    val lang = Lang("en") // TODO: detect
+    val parser = MainQueryParser(lang, proximityBoost, semanticBoost)
+    parser.setPercentMatch(percentMatch)
+    parser.enableCoord = enableCoordinator
+
+    parser.parseQuery(queryString).map{ query =>
+      var personalizedSearcher = getPersonalizedSearcher(query)
+      personalizedSearcher.setSimilarity(similarity)
+      val idMapper = personalizedSearcher.indexReader.getIdMapper
+
+      personalizedSearcher.explain(query, idMapper.getDocId(uriId.id))
+    }
   }
 }
 

@@ -10,7 +10,7 @@ import play.api.test.Helpers._
 import scala.math._
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
-import com.keepit.test.EmptyApplication
+import com.keepit.test._
 import com.keepit.common.db.Id
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
 import com.keepit.model._
@@ -19,20 +19,20 @@ import play.api.Play.current
 import com.keepit.inject.inject
 
 @RunWith(classOf[JUnitRunner])
-class EventListenerTest extends SpecificationWithJUnit {
+class EventListenerTest extends SpecificationWithJUnit with DbRepos {
 
   def setup() = {
-    CX.withConnection { implicit conn =>
-      val normUrlId = NormalizedURIFactory("http://www.google.com/").save.id.get
-      val url = URLFactory(url = "http://www.google.com/", normalizedUriId = normUrlId).save
-      val user = User(firstName = "Andrew", lastName = "Conner").save
-      val bookmark = BookmarkFactory(
+    db.readWrite {implicit s =>
+      val normUrlId = uriRepo.save(NormalizedURIFactory("http://www.google.com/")).id.get
+      val url = urlRepo.save(URLFactory(url = "http://www.google.com/", normalizedUriId = normUrlId))
+      val user = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
+      val bookmark = bookmarkRepo.save(BookmarkFactory(
         title = "test",
         url = url,
         uriId = normUrlId,
         userId = user.id.get,
         source = BookmarkSource("HOVER_KEEP")
-      ).save
+      ))
       (normUrlId, url, user, bookmark)
     }
   }
@@ -44,7 +44,10 @@ class EventListenerTest extends SpecificationWithJUnit {
         val listener = new EventListenerPlugin {
          def onEvent: PartialFunction[Event,Unit] = { case _ => }
         }
-        val (user2, result) = CX.withConnection { implicit conn => listener.searchParser(user.externalId, JsObject(Seq("url" -> JsString("http://google.com/"), "query" -> JsString("potatoes")))) }
+        val (user2, result) = db.readWrite {implicit s => 
+          listener.searchParser(user.externalId, 
+            JsObject(Seq("url" -> JsString("http://google.com/"), "query" -> JsString("potatoes")))) 
+        }
 
         user2.id === user.id
         result.url === "http://google.com/"

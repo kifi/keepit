@@ -55,6 +55,7 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo]
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo]
+  def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo]
 }
 
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[List[SocialUserInfo]] {
@@ -123,6 +124,9 @@ class SocialUserInfoRepoImpl @Inject() (val db: DataBaseComponent, userCache: So
 
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo] =
     (for(f <- table if f.lastGraphRefresh isNull) yield f).list
+
+  def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo] =
+    (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).firstOption
 }
 
 //slicked

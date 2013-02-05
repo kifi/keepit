@@ -33,12 +33,10 @@ var slider, injected, t0 = +new Date;
         slider.toggle("button");
       });
     },
-    auto_show_after: function(ms) {
-      setTimeout(function() {
-        withSlider(function() {
-          slider.shown() || slider.show("auto");
-        });
-      }, ms);
+    auto_show: function() {
+      withSlider(function() {
+        slider.shown() || slider.show("auto");
+      });
     },
     deep_link: function(link) {
       withSlider(function() {
