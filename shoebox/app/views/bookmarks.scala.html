@@ -47,6 +47,7 @@
       <th>Source</th>
       <th>Shares</th>
       <th>Creation</th>
+      <th>Updated</th>
       <th>State</th>
     </tr>
   @for(((bookmark, uriStat, user), i) <- bookmarksAndUsers.zipWithIndex) {
@@ -69,6 +70,7 @@
       </td>
       <td>@uriStat.bookmarks.size</td>
       <td>@adminHelper.dateDisplay(bookmark.createdAt) @adminHelper.timeDisplay(bookmark.createdAt)</td>
+      <td>@adminHelper.dateDisplay(bookmark.updatedAt) @adminHelper.timeDisplay(bookmark.updatedAt)</td>
       <td>
         @{uriStat.uri.state.value match {
           case "indexed" => {
