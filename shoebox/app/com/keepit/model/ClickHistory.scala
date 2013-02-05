@@ -65,7 +65,7 @@ class ClickHistoryRepoImpl @Inject() (val db: DataBaseComponent, val clickCache:
     def * = id.? ~ createdAt ~ updatedAt ~ state ~ userId ~ tableSize ~ filter ~ numHashFuncs ~ minHits ~ updatesCount <> (ClickHistory, ClickHistory.unapply _)
   }
 
-  override def invalidateCache(clickHistory: ClickHistory)(implicit session: RWSession) = {
+  override def invalidateCache(clickHistory: ClickHistory)(implicit session: RSession) = {
     clickCache.set(ClickHistoryUserIdKey(clickHistory.userId), clickHistory)
     clickHistory
   }

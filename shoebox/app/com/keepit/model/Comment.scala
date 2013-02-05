@@ -111,7 +111,7 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId ~ urlId.? ~ userId ~ text ~ pageTitle ~ parent.? ~ permissions ~ state <> (Comment, Comment.unapply _)
   }
 
-  override def invalidateCache(comment: Comment)(implicit session: RWSession) = {
+  override def invalidateCache(comment: Comment)(implicit session: RSession) = {
     comment.permissions match {
       case CommentPermissions.PUBLIC =>
         commentCountCache.remove(CommentCountUriIdKey(comment.uriId))
