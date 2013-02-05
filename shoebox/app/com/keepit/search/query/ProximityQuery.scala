@@ -63,7 +63,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
       result.setDescription("proximity(%s), product of:".format(query.terms.mkString(",")))
       val proxScore = sc.score
       val boost = query.getBoost
-      result.setValue(proxScore * boost)
+      result.setValue(proxScore)
       result.setMatch(true)
       result.addDetail(new Explanation(proxScore, "proximity score"))
       result.addDetail(new Explanation(boost, "boost"))

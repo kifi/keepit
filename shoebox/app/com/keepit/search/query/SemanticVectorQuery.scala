@@ -80,7 +80,7 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
       result.setDescription("semantic vector (%s), product of:".format(query.terms.mkString(",")))
       val svScore = sc.score
       val boost = query.getBoost
-      result.setValue(svScore * boost)
+      result.setValue(svScore)
       result.setMatch(true)
       result.addDetail(new Explanation(svScore, "semantic vector score"))
       result.addDetail(new Explanation(boost, "boost"))
