@@ -1,4 +1,5 @@
-@(bookmarksAndUsers: Seq[(Bookmark, NormalizedURIStats, UserWithSocial)], page: Int, count: Long, pageCount: Int)
+@(bookmarksAndUsers: Seq[(UserWithSocial, (Bookmark, NormalizedURIStats, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)
+@import com.keepit.common.social.UserWithSocial
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -48,8 +49,9 @@
       <th>Shares</th>
       <th>Creation</th>
       <th>State</th>
+      <th>Last Scraped</th>
     </tr>
-  @for(((bookmark, uriStat, user), i) <- bookmarksAndUsers.zipWithIndex) {
+  @for(((user, (bookmark, uriStat, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
       <td>@adminHelper.userDisplay(user)</td>
@@ -70,6 +72,11 @@
       <td>@uriStat.bookmarks.size</td>
       <td>@adminHelper.dateDisplay(bookmark.createdAt) @adminHelper.timeDisplay(bookmark.createdAt)</td>
       <td>@adminHelper.uriStateDisplay(uriStat.uri)</td>
+      <td>
+        @{scrapeInfo.map { si =>
+          adminHelper.dateDisplay(si.lastScrape) + " - " + adminHelper.timeDisplay(si.lastScrape)
+        }.mkString}
+      </td>
     </tr>
   }
   </table>

@@ -19,6 +19,7 @@ const xulApp = require("sdk/system/xul-app");
 const { Ci, Cc } = require("chrome");
 const WM = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
 const {deps} = require("./deps");
+const {Listeners} = require("./listeners");
 const icon = require("./icon");
 const windows = require("sdk/windows").browserWindows;
 const tabs = require("sdk/tabs");
@@ -35,7 +36,7 @@ exports.bookmarks = require("./bookmarks");
 exports.browserVersion = xulApp.name + "/" + xulApp.version;
 
 exports.icon = {
-  on: {click: []},
+  on: {click: new Listeners},
   set: function(page, path) {
     if (page === pages[page.id]) {
       page.icon = path;
@@ -73,9 +74,9 @@ exports.log.error = function(exception, context) {
 exports.noop = function() {};
 
 exports.on = {
-  install: [],
-  update: [],
-  startup: []};
+  install: new Listeners,
+  update: new Listeners,
+  startup: new Listeners};
 
 // Call handlers for load reason async (after main.js has finished).
 timers.setTimeout(dispatch.bind(exports.on[exports.loadReason]), 0);
@@ -205,12 +206,12 @@ exports.tabs = {
     return tab === tab.window.tabs.activeTab;
   },
   on: {
-    focus: [],
-    blur: [],
-    loading: [],
-    ready: [],
-    complete: [],
-    unload: []}};
+    focus: new Listeners,
+    blur: new Listeners,
+    loading: new Listeners,
+    ready: new Listeners,
+    complete: new Listeners,
+    unload: new Listeners}};
 
 exports.timers = timers;
 exports.version = self.version;

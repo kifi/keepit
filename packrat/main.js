@@ -186,19 +186,19 @@ function getSliderInfo(tab, respond) {
 
 function createDeepLinkListener(link, linkTabId, respond) {
   var createdTime = new Date();
-  chrome.tabs.onUpdated.addListener(function deepLinkListener(tabId, changeInfo, tab) {
+  api.tabs.on.ready.add(function deepLinkListener(tab) {
     var now = new Date();
     if (now - createdTime > 15000) {
-      chrome.tabs.onUpdated.removeListener(deepLinkListener);
+      api.tabs.on.ready.remove(deepLinkListener);
       api.log("[createDeepLinkListener] Listener timed out.");
       return;
     }
-    if (linkTabId == tabId && changeInfo.status == "complete") {
-      var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") == -1 && tab.url.indexOf("dev.ezkeep.com") == -1;
+    if (linkTabId == tab.id) {
+      var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") < 0 && tab.url.indexOf("dev.ezkeep.com") < 0;
       if (hasForwarded) {
-        api.log("[createDeepLinkListener] Sending deep link to tab " + tabId, link.locator);
+        api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
         api.tabs.emit(tab, "deep_link", link.locator);
-        chrome.tabs.onUpdated.removeListener(deepLinkListener);
+        api.tabs.on.ready.remove(deepLinkListener);
         return;
       }
     }
@@ -380,7 +380,7 @@ var restrictedUrlPatternsForHover = [
   "google.com"];
 
 // Kifi icon in location bar
-api.icon.on.click.push(function(tab) {
+api.icon.on.click.add(function(tab) {
   api.tabs.emit(tab, "button_click");
 });
 
@@ -424,7 +424,7 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
   });
 }
 
-api.tabs.on.focus.push(function(tab) {
+api.tabs.on.focus.add(function(tab) {
   api.log("[tabs.on.focus]", tab);
   if (tab.autoShowEligible && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
@@ -433,13 +433,13 @@ api.tabs.on.focus.push(function(tab) {
   }
 });
 
-api.tabs.on.blur.push(function(tab) {
+api.tabs.on.blur.add(function(tab) {
   api.log("[tabs.on.blur]", tab);
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
 });
 
-api.tabs.on.loading.push(function(tab) {
+api.tabs.on.loading.add(function(tab) {
   api.log("[tabs.on.loading]", tab);
   setIcon(tab);
 
@@ -464,7 +464,7 @@ api.tabs.on.loading.push(function(tab) {
   });
 });
 
-api.tabs.on.ready.push(function(tab) {
+api.tabs.on.ready.add(function(tab) {
   api.log("[tabs.on.ready]", tab);
   logEvent("extension", "pageLoad");
 
@@ -475,11 +475,11 @@ api.tabs.on.ready.push(function(tab) {
   }
 });
 
-api.tabs.on.complete.push(function(tab) {
+api.tabs.on.complete.add(function(tab) {
   api.log("[tabs.on.complete]", tab);
 });
 
-api.tabs.on.unload.push(function(tab) {
+api.tabs.on.unload.add(function(tab) {
   api.log("[tabs.on.unload]", tab);
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
@@ -528,10 +528,10 @@ function getConfigs() {
     "bookmark_id": api.storage[getFullyQualifiedKey("bookmark_id")]};
 }
 
-api.on.install.push(function() {
+api.on.install.add(function() {
   logEvent("extension", "install");
 });
-api.on.update.push(function() {
+api.on.update.add(function() {
   logEvent("extension", "update");
   removeFromConfigs("user"); // remove this line in early Feb or so
 });
