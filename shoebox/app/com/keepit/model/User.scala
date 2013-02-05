@@ -79,7 +79,7 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent, val externalIdCache: Us
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state <> (User, User.unapply _)
   }
 
-  override def invalidateCache(user: User) = {
+  override def invalidateCache(user: User)(implicit session: RWSession) = {
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
     user.id match {
       case Some(id) => idCache.set(UserIdKey(id), user)
