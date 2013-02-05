@@ -362,7 +362,7 @@ slider = function() {
       if (type == showingType) {
         $('.kifi-content').slideDown();
         $('.kifi-comment-wrapper').slideUp(600, 'easeInOutBack');
-        $(".kifi-slider").removeClass(type);
+        $(".kifi-slider").removeClass("kifi-" + type);
         redrawFooter(false);
         return;
       } else { // already open, yet showing a different type.
