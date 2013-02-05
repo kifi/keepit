@@ -1,42 +1,30 @@
 package com.keepit.controllers
 
-import play.api.data._
-import play.api._
+import java.sql.Connection
+
+import com.keepit.common.analytics.EventFamilies
+import com.keepit.common.analytics.Events
+import com.keepit.common.async._
+import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.net._
+import com.keepit.common.social._
+import com.keepit.inject._
+import com.keepit.model._
+import com.keepit.scraper.ScraperPlugin
+import com.keepit.search.graph.URIGraphPlugin
+import com.keepit.serializer.BookmarkSerializer
+
+import akka.dispatch.Await
+import akka.util.duration._
 import play.api.Play.current
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.libs.ws.WS
-import play.api.mvc._
 import play.api.libs.json.JsArray
-import play.api.libs.json.Json
+import play.api.libs.json.JsBoolean
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
-import play.api.libs.json.JsNumber
-import play.api.libs.json.JsArray
-import play.api.http.ContentTypes
-import play.api.http.ContentTypes
-import com.keepit.controllers.CommonActions._
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.model._
-import com.keepit.inject._
-import com.keepit.serializer.BookmarkSerializer
-import com.keepit.common.logging.Logging
-import com.keepit.common.social._
-import java.util.concurrent.TimeUnit
-import java.sql.Connection
-import securesocial.core._
-import com.keepit.scraper.ScraperPlugin
-import com.keepit.common.net._
-import com.keepit.common.async._
-import com.keepit.search.graph.URIGraphPlugin
-import play.api.libs.json.{JsBoolean, JsNull}
-import com.keepit.common.controller.FortyTwoController
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
-import com.keepit.common.analytics.Events
-import com.keepit.common.analytics.EventFamilies
 
 object BookmarksController extends FortyTwoController {
 
@@ -44,10 +32,19 @@ object BookmarksController extends FortyTwoController {
     inject[DBConnection].readOnly { implicit conn =>
       val bookmark = inject[BookmarkRepo].get(id)
       val uri = inject[NormalizedURIRepo].get(bookmark.uriId)
-      val repo = inject[UserWithSocialRepo]
-      val user = repo.toUserWithSocial(inject[UserRepo].get(bookmark.userId))
+      val user = inject[UserWithSocialRepo].toUserWithSocial(inject[UserRepo].get(bookmark.userId))
       val scrapeInfo = inject[ScrapeInfoRepo].getByUri(bookmark.uriId)
       Ok(views.html.bookmark(user, bookmark, uri, scrapeInfo))
+    }
+  }
+
+  def rescrape = AuthenticatedJsonAction { request =>
+    val id = Id[Bookmark]((request.body.asJson.get \ "id").as[Int])
+    inject[DBConnection].readOnly { implicit conn =>
+      val bookmark = inject[BookmarkRepo].get(id)
+      val uri = inject[NormalizedURIRepo].get(bookmark.uriId)
+      Await.result(inject[ScraperPlugin].asyncScrape(uri), 1 minutes)
+      Ok(JsObject(Seq("status" -> JsString("ok"))))
     }
   }
 
@@ -117,7 +114,7 @@ object BookmarksController extends FortyTwoController {
       val count = bookmarkRepo.count(s)
       (count, (users, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq)
     }
-    val pageCount: Int = (count / PAGE_SIZE + 1).toInt
+    val pageCount: Int = count / PAGE_SIZE + 1
     Ok(views.html.bookmarks(bookmarksAndUsers, page, count, pageCount))
   }
 
@@ -207,7 +204,7 @@ object BookmarksController extends FortyTwoController {
   private def internBookmark(json: JsObject, user: User, experiments: Seq[State[ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = {
     val title = (json \ "title").as[String]
     val url = (json \ "url").as[String]
-    val isPrivate = try { (json \ "isPrivate").as[Boolean] } catch { case e => true }
+    val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
 
     if (!url.toLowerCase.startsWith("javascript:")) {
       log.debug("interning bookmark %s with title [%s]".format(json, title))
