@@ -8,6 +8,42 @@ api = function() {
     this.forEach(function(f) {f.apply(null, args)});
   }
 
+  function newPage(tab) {
+    return {
+      id: tab.id,
+      url: tab.url,
+      ready: undefined,  // only set when we know for sure whether content scripts are in the page
+      complete: tab.status === "complete"};
+  }
+
+  function createPageAndInjectContentScripts(tab, dispatchOnReady) {
+    var page = pages[tab.id] = newPage(tab);
+    if (tab.active) {
+      selectedTabPages[tab.windowId] = page;
+    }
+    if (/^https?:/.test(tab.url)) {
+      if (page.complete) {
+        injectContentScripts(page, callback);
+      } else if (tab.status === "loading") {
+        // we might want to dispatch on.loading here.
+        chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
+          page.complete = arr[0] === "complete";
+          if (page.complete || arr[0] === "interactive") {
+            injectContentScripts(page, callback);
+          }
+        });
+      }
+    }
+    return page;
+
+    function callback() {
+      page.ready = true;
+      if (dispatchOnReady) {
+        dispatch.call(api.tabs.on.ready, page);
+      }
+    }
+  }
+
   chrome.pageAction.onClicked.addListener(function(tab) {
     api.log("[pageAction.onClicked]", tab);
     dispatch.call(api.icon.on.click, pages[tab.id]);
@@ -33,6 +69,14 @@ api = function() {
     if (lastPage) { // ignore popups, etc.
       if (/^https?:/.test(lastPage.url)) {
         dispatch.call(api.tabs.on.blur, lastPage);
+      } else {
+        // Chrome Instant search feature sometimes silently destroys chrome://newtab tabs (crbug.com/88458)
+        chrome.tabs.get(lastPage.id, function(tab) {
+          if (!tab) {
+            api.log("[onActivated] freeing lost tab page:", lastPage.id, lastPage.url);
+            delete pages[lastPage.id];
+          }
+        });
       }
       var page = pages[info.tabId];
       if (page) {
@@ -41,7 +85,13 @@ api = function() {
           dispatch.call(api.tabs.on.focus, page);
         }
       } else {
-        selectedTabPages[info.windowId] = pages[info.tabId] = {id: info.tabId};
+        // selectedTabPages[info.windowId] = page = pages[info.tabId] = {id: info.tabId};
+        chrome.tabs.get(info.tabId, function(tab) {
+          if (/^https?:\/\/www.google.com\/webhp\?sourceid=chrome-instant&/.test(tab && tab.url)) {  // TODO: support all Google domains/locales
+            api.log("[onActivated] Instant results page:", tab.id, "url:", tab.url);
+            createPageAndInjectContentScripts(tab, true);
+          }
+        });
       }
     }
   });
@@ -49,16 +99,12 @@ api = function() {
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     api.log("[onUpdated] tab:", tabId, "change:", change);
     if (selectedTabPages[tab.windowId]) {  // window is "normal"
-      if (change.url || change.status === "loading") {
+      if (change.status === "loading") {
         var page = pages[tabId];
         if (page && /^https?:/.test(page.url)) {
           dispatch.call(api.tabs.on.unload, page);
         }
-        page = pages[tabId] = {
-          id: tabId,
-          url: tab.url,
-          ready: undefined,  // unknown (may be an in-page navigation)
-          complete: tab.status === "complete"};
+        page = pages[tabId] = newPage(tab);
         if (tab.active) {
           selectedTabPages[tab.windowId] = page;
         }
@@ -128,30 +174,8 @@ api = function() {
   var selectedTabPages = {};  // in "normal" windows only, by window.id (allows us to avoid some async chrome API calls)
   chrome.tabs.query({windowType: "normal"}, function(tabs) {
     tabs.forEach(function(tab) {
-      var page = pages[tab.id];
-      if (tab.url !== (page && page.url)) {   // TODO: simplify to just if (!page)?
-        page = pages[tab.id] = {
-          id: tab.id,
-          url: tab.url,
-          ready: tab.status === "complete" || undefined,
-          complete: tab.status === "complete"};
-      }
-      if (tab.active) {
-        selectedTabPages[tab.windowId] = page;
-      }
-      if (/^https?:/.test(tab.url)) {
-        // Note: intentionally not dispatching api.tabs.on.ready after injecting content scripts
-        if (page.ready) {
-          injectContentScripts(page, api.noop);
-        } else if (tab.status === "loading") {
-          chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
-            page.complete = arr[0] === "complete";
-            page.ready = page.complete || arr[0] === "interactive";
-            if (page.ready) {
-              injectContentScripts(page, api.noop);
-            }
-          });
-        }
+      if (!pages[tab.id]) {
+        createPageAndInjectContentScripts(tab, false);
       }
     });
   });
@@ -191,6 +215,8 @@ api = function() {
     }
   });
 
+  // TODO: Use another property (besides .ready) on page to indicate that content script injection has begun,
+  // to prevent starting it again before the first one is done.
   function injectContentScripts(tab, callback) {
     // for ignoring messages from future updates/installs/reloads of this extension
     chrome.tabs.executeScript(tab.id, {
