@@ -1,24 +1,17 @@
 package com.keepit.scraper
 
-import scala.collection.mutable.MutableList
-import com.keepit.common.logging.Logging
-import com.keepit.search.Article
-import com.keepit.model.NormalizedURI
-import play.api.Plugin
-import play.api.templates.Html
-import akka.util.Timeout
-import akka.actor._
-import akka.actor.Actor._
-import akka.actor.ActorRef
-import akka.util.duration._
-import akka.pattern.ask
-import akka.dispatch.Await
-import play.api.libs.concurrent._
-import org.joda.time.DateTime
-import akka.dispatch.Future
 import com.google.inject.Inject
-import com.google.inject.Provider
-import scala.collection.mutable.{Map => MutableMap}
+import com.keepit.common.logging.Logging
+import com.keepit.model.NormalizedURI
+import com.keepit.search.Article
+
+import akka.actor._
+import akka.dispatch.Await
+import akka.dispatch.Future
+import akka.pattern.ask
+import akka.util.Timeout
+import akka.util.duration._
+import play.api.Plugin
 
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
@@ -26,14 +19,14 @@ case class ScrapeInstance(uri: NormalizedURI)
 private[scraper] class ScraperActor(scraper: Scraper) extends Actor with Logging {
   def receive() = {
     case Scrape => sender ! scraper.run()
-    case ScrapeInstance(uri) => scraper.safeProcessURI(uri)
+    case ScrapeInstance(uri) => sender ! scraper.safeProcessURI(uri)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
 
 trait ScraperPlugin extends Plugin {
   def scrape(): Seq[(NormalizedURI, Option[Article])]
-  def asyncScrape(uri: NormalizedURI): Unit
+  def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])]
 }
 
 class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extends ScraperPlugin with Logging {
@@ -62,5 +55,7 @@ class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extend
     Await.result(future, 1 minutes)
   }
 
-  override def asyncScrape(uri: NormalizedURI): Unit = actor ! ScrapeInstance(uri)
+  override def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = {
+    actor.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
+  }
 }

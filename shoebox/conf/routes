@@ -10,6 +10,7 @@ POST    /bookmarks/add              com.keepit.controllers.BookmarksController.a
 POST    /bookmarks/update           com.keepit.controllers.BookmarksController.updateBookmarks
 GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all
 GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
+POST    /bookmarks/rescrape         com.keepit.controllers.BookmarksController.rescrape
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
 GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(uri: String)
 POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.remove(uri: Option[String] ?= None)
