@@ -329,11 +329,18 @@ object CommentController extends FortyTwoController {
 
   def messagesView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 200
-    val (count, uriAndUsers) = CX.withConnection { implicit conn =>
-      val messages = CommentCxRepo.page(page, PAGE_SIZE, CommentPermissions.MESSAGE)
-      val count = CommentCxRepo.count(CommentPermissions.MESSAGE)
+    val (count, uriAndUsers) = inject[DBConnection].readOnly { implicit s => 
+      val commentRepo = inject[CommentRepo]
+      val userRepo = inject[UserRepo]
+      val uriRepo = inject[NormalizedURIRepo]
+      val socialRepo = inject[UserWithSocialRepo]
+      val commentRecipientRepo = inject[CommentRecipientRepo]
+      val messages = commentRepo.page(page, PAGE_SIZE, CommentPermissions.MESSAGE)
+      val count = commentRepo.count(CommentPermissions.MESSAGE)
       (count, (messages map {co =>
-        (UserWithSocial.toUserWithSocialCX(UserCxRepo.get(co.userId)), co, NormalizedURICxRepo.get(co.uriId), CommentRecipientCxRepo.getByComment(co.id.get) map { r => UserWithSocial.toUserWithSocialCX(UserCxRepo.get(r.userId.get)) })
+        (socialRepo.toUserWithSocial(userRepo.get(co.userId)), co, uriRepo.get(co.uriId), commentRecipientRepo.getByComment(co.id.get) map { r => 
+          socialRepo.toUserWithSocial(userRepo.get(r.userId.get)) 
+        })
       }))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt

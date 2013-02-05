@@ -1,4 +1,5 @@
-@(bookmarksAndUsers: Seq[(Bookmark, NormalizedURIStats, UserWithSocial)], page: Int, count: Long, pageCount: Int)
+@(bookmarksAndUsers: Seq[(UserWithSocial, (Bookmark, NormalizedURIStats, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)
+@import com.keepit.common.social.UserWithSocial
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -47,10 +48,10 @@
       <th>Source</th>
       <th>Shares</th>
       <th>Creation</th>
-      <th>Updated</th>
       <th>State</th>
+      <th>Last Scraped</th>
     </tr>
-  @for(((bookmark, uriStat, user), i) <- bookmarksAndUsers.zipWithIndex) {
+  @for(((user, (bookmark, uriStat, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
       <td>@adminHelper.userDisplay(user)</td>
@@ -70,7 +71,6 @@
       </td>
       <td>@uriStat.bookmarks.size</td>
       <td>@adminHelper.dateDisplay(bookmark.createdAt) @adminHelper.timeDisplay(bookmark.createdAt)</td>
-      <td>@adminHelper.dateDisplay(bookmark.updatedAt) @adminHelper.timeDisplay(bookmark.updatedAt)</td>
       <td>
         @{uriStat.uri.state.value match {
           case "indexed" => {
@@ -92,6 +92,11 @@
            <span class="label">{uriStat.uri.state.value}</span>
           }
         }}
+      </td>
+      <td>
+        @{scrapeInfo.map { si =>
+          adminHelper.dateDisplay(si.lastScrape) + " - " + adminHelper.timeDisplay(si.lastScrape)
+        }.mkString}
       </td>
     </tr>
   }
