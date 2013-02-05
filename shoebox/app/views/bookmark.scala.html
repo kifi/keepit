@@ -1,4 +1,4 @@
-@(bookmark: Bookmark, normalizedUri: NormalizedURI, userWithSocial: UserWithSocial)
+@(userWithSocial: UserWithSocial, bookmark: Bookmark, normalizedUri: NormalizedURI, scrapeInfo: Option[ScrapeInfo])
 
 @admin("Bookmark: " + bookmark.title) {
    <table class="table table-bordered">
@@ -19,6 +19,11 @@
       </tr>
       <tr>
         <th>Creation time</th><td>@adminHelper.dateDisplay(bookmark.createdAt) - @adminHelper.timeDisplay(bookmark.createdAt)</td>
+      </tr>
+      <tr>
+        <th>Last scrape</th><td>@{scrapeInfo.map { si =>
+          adminHelper.dateDisplay(si.lastScrape) + " - " + adminHelper.timeDisplay(si.lastScrape)
+        }.mkString}</td>
       </tr>
    </table>
  	 @helper.form(action = com.keepit.controllers.routes.BookmarksController.delete(bookmark.id.get)) {
