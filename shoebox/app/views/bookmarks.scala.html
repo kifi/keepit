@@ -70,13 +70,9 @@
         }}
       </td>
       <td>@uriStat.bookmarks.size</td>
-      <td>@adminHelper.dateDisplay(bookmark.createdAt) @adminHelper.timeDisplay(bookmark.createdAt)</td>
+      <td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
       <td>@adminHelper.uriStateDisplay(uriStat.uri)</td>
-      <td>
-        @{scrapeInfo.map { si =>
-          adminHelper.dateDisplay(si.lastScrape) + " - " + adminHelper.timeDisplay(si.lastScrape)
-        }.mkString}
-      </td>
+      <td>@scrapeInfo.map(si => adminHelper.dateTimeDisplay(si.lastScrape)).mkString</td>
     </tr>
   }
   </table>
