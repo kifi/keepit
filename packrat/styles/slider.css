@@ -42,6 +42,12 @@
   text-decoration: underline;
   cursor: pointer;
 }
+.kifi-slider input:not([type]),
+.kifi-slider input[type=text] {
+  background: #fff;
+  box-shadow: none;
+  outline: none;
+}
 
 /* slider widget */
 .kifi-slider {
