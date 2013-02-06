@@ -93,7 +93,7 @@ object SearchController extends FortyTwoController {
       })
 
   private[controllers] def toPersonalSearchResultPacket(userId: Id[User], res: ArticleSearchResult) = {
-    val hits = CX.withConnection { implicit conn =>
+    val hits = inject[DBConnection].readOnly { implicit s => 
       res.hits.map(toPersonalSearchResult(userId, _))
     }
     log.debug(hits mkString "\n")
@@ -101,16 +101,18 @@ object SearchController extends FortyTwoController {
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, filter)
   }
-  private[controllers] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit conn: Connection): PersonalSearchResult = {
-    val uri = NormalizedURICxRepo.get(res.uriId)
-    val bookmark = if (res.isMyBookmark) BookmarkCxRepo.getByUriAndUser(uri.id.get, userId) else None
+
+  private[controllers] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
+    val uri = inject[NormalizedURIRepo].get(res.uriId)
+    val bookmark = if (res.isMyBookmark) inject[BookmarkRepo].getByUriAndUser(uri.id.get, userId) else None
     val users = res.users.toSeq.map{ userId =>
-      val user = UserCxRepo.get(userId)
-      val info = SocialUserInfoCxRepo.getByUser(user.id.get).head
-      UserWithSocial(user, info, BookmarkCxRepo.count(user).toInt, Seq(), Seq())
+      val user = inject[UserRepo].get(userId)
+      val info = inject[SocialUserInfoRepo].getByUser(userId).head
+      UserWithSocial(user, info, inject[BookmarkRepo].count(userId).toInt, Nil, Nil)
     }
     PersonalSearchResult(toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark, false, users, res.score)
   }
+
   private[controllers] def toPersonalSearchHit(uri: NormalizedURI, bookmark: Option[Bookmark]) = {
     val (title, url) = bookmark match {
       case Some(bookmark) => (Some(bookmark.title), bookmark.url)
@@ -141,13 +143,15 @@ object SearchController extends FortyTwoController {
       ArticleSearchResultRef.getOpt(id).get
     }
     val result = inject[ArticleSearchResultStore].get(ref.externalId).get
-    val metas: Seq[ArticleSearchResultHitMeta] = CX.withConnection { implicit conn =>
+    val uriRepo = inject[NormalizedURIRepo]
+    val userRepo = inject[UserRepo]
+    val metas: Seq[ArticleSearchResultHitMeta] = inject[DBConnection].readOnly { implicit s => 
       result.hits.zip(result.scorings) map { tuple =>
         val hit = tuple._1
         val scoring = tuple._2
-        val uri = NormalizedURICxRepo.get(hit.uriId)
+        val uri = uriRepo.get(hit.uriId)
         val users = hit.users.map { userId =>
-          UserCxRepo.get(userId)
+          userRepo.get(userId)
         }
         ArticleSearchResultHitMeta(uri, users.toSeq, scoring, hit)
       }

@@ -35,12 +35,6 @@ case class Follow (
   def isActive = state == FollowStates.ACTIVE
   def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
   def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
-
-  def saveWithCx(implicit conn: Connection) = {
-    val entity = FollowEntity(this.copy(updatedAt = currentDateTime))
-    assert(1 == entity.save())
-    entity.view
-  }
 }
 
 @ImplementedBy(classOf[FollowRepoImpl])
@@ -94,67 +88,7 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
 
 }
 
-object FollowCxRepo {
-
-  //slicked
-  def all(implicit conn: Connection): Seq[Follow] =
-    FollowEntity.all.map(_.view)
-
-  //slicked
-  def all(userId: Id[User])(implicit conn: Connection): Seq[Follow] =
-    (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId) list }.map(_.view)
-
-  //slicked
-  def get(uriId: Id[NormalizedURI])(implicit conn: Connection): Seq[Follow] =
-    (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.uriId EQ uriId AND (f.state EQ FollowStates.ACTIVE)) list }.map(_.view)
-
-  //slicked
-  def get(userId: Id[User], uriId: Id[NormalizedURI])(implicit conn: Connection): Option[Follow] =
-    (FollowEntity AS "f").map { f => SELECT (f.*) FROM f WHERE (f.userId EQ userId AND (f.uriId EQ uriId)) unique }.map(_.view)
-
-  //slicked
-  def getByUrlId(urlId: Id[URL])(implicit conn: Connection): Seq[Comment] =
-    (CommentEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlId EQ urlId) list() }.map(_.view)
-}
-
 object FollowStates {
   val ACTIVE = State[Follow]("active")
   val INACTIVE = State[Follow]("inactive")
-}
-
-private[model] class FollowEntity extends Entity[Follow, FollowEntity] {
-  val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val userId = "user_id".ID[User].NOT_NULL
-  val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
-  val urlId = "url_id".ID[URL]
-  val state = "state".STATE[Follow].NOT_NULL(FollowStates.ACTIVE)
-
-  def relation = FollowEntity
-
-  def view(implicit conn: Connection): Follow = Follow(
-    id = id.value,
-    createdAt = createdAt(),
-    updatedAt = updatedAt(),
-    userId = userId(),
-    uriId = uriId(),
-    urlId = urlId.value,
-    state = state()
-  )
-}
-
-private[model] object FollowEntity extends FollowEntity with EntityTable[Follow, FollowEntity] {
-  override def relationName = "follow"
-
-  def apply(view: Follow): FollowEntity = {
-    val uri = new FollowEntity
-    uri.id.set(view.id)
-    uri.createdAt := view.createdAt
-    uri.updatedAt := view.updatedAt
-    uri.userId := view.userId
-    uri.uriId := view.uriId
-    uri.urlId.set(view.urlId)
-    uri.state := view.state
-    uri
-  }
 }

@@ -32,12 +32,6 @@ case class User(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
   def withExternalId(id: ExternalId[User]) = copy(externalId = id)
-
-  def save(implicit conn: Connection) = {
-    val entity = UserEntity(this.copy(updatedAt = currentDateTime))
-    assert(1 == entity.save())
-    entity.view
-  }
 }
 
 @ImplementedBy(classOf[UserRepoImpl])
@@ -102,67 +96,7 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent, val externalIdCache: Us
 
 }
 
-//slicked
-object UserCxRepo {
-
-  //slicked
-  def all(implicit conn: Connection): Seq[User] =
-    UserEntity.all.map(_.view)
-
-  //slicked
-  def get(id: Id[User])(implicit conn: Connection): User =
-    UserEntity.get(id).get.view
-
-  //slicked
-  def get(externalId: ExternalId[User])(implicit conn: Connection): User =
-    getOpt(externalId).getOrElse(throw NotFoundException(externalId))
-
-  //slicked
-  def getOpt(externalId: ExternalId[User])(implicit conn: Connection): Option[User] =
-    (UserEntity AS "u").map { u => SELECT (u.*) FROM u WHERE (u.externalId EQ externalId) unique }.map(_.view)
-
-}
-
 object UserStates {
   val ACTIVE = State[User]("active")
   val INACTIVE = State[User]("inactive")
 }
-
-private[model] class UserEntity extends Entity[User, UserEntity] {
-  val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val externalId = "external_id".EXTERNAL_ID[User].NOT_NULL(ExternalId())
-  val firstName = "first_name".VARCHAR(256).NOT_NULL
-  val lastName = "last_name".VARCHAR(256).NOT_NULL
-  val state = "state".STATE[User].NOT_NULL(UserStates.ACTIVE)
-
-  def relation = UserEntity
-
-  def view(implicit conn: Connection): User = User(
-    id = id.value,
-    createdAt = createdAt(),
-    updatedAt = updatedAt(),
-    externalId = externalId(),
-    firstName = firstName(),
-    lastName = lastName(),
-    state = state()
-  )
-}
-
-private[model] object UserEntity extends UserEntity with EntityTable[User, UserEntity] {
-  override def relationName = "user"
-
-  def apply(view: User): UserEntity = {
-    val user = new UserEntity
-    user.id.set(view.id)
-    user.createdAt := view.createdAt
-    user.updatedAt := view.updatedAt
-    user.externalId := view.externalId
-    user.firstName := view.firstName
-    user.lastName := view.lastName
-    user.state := view.state
-    user
-  }
-}
-
-

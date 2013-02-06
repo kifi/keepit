@@ -33,30 +33,15 @@ import akka.util.duration._
 
 object CommentController extends FortyTwoController {
 
-  // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
-  def createComment(urlOpt: Option[String],
-                    titleOpt: Option[String],
-                    textOpt: Option[String],
-                    permissionsOpt: Option[String],
-                    recipientsOpt: Option[String],
-                    parentOpt: Option[String]) = AuthenticatedJsonAction { request =>
-    val (urlStr, title, text, permissions, recipients, parent) = request.body.asJson match {
-      case Some(o) => (
-        (o \ "url").as[String],
-        (o \ "title") match { case JsString(s) => s; case _ => ""},
-        (o \ "text").as[String].trim,
-        (o \ "permissions").as[String],
-        (o \ "recipients") match { case JsString(s) => s; case _ => ""},
-        (o \ "parent") match { case JsString(s) => s; case _ => ""})
-      case _ => (
-        urlOpt.get,
-        titleOpt.getOrElse(""),
-        textOpt.get.trim,
-        permissionsOpt.get,
-        recipientsOpt.getOrElse(""),
-        parentOpt.getOrElse(""))
-    }
-
+  def createComment() = AuthenticatedJsonAction { request =>
+    val o = request.body.asJson.get
+    val (urlStr, title, text, permissions, recipients, parent) = (
+      (o \ "url").as[String],
+      (o \ "title") match { case JsString(s) => s; case _ => ""},
+      (o \ "text").as[String].trim,
+      (o \ "permissions").as[String],
+      (o \ "recipients") match { case JsString(s) => s; case _ => ""},
+      (o \ "parent") match { case JsString(s) => s; case _ => ""})
 
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val comment = inject[DBConnection].readWrite {implicit s =>
@@ -151,30 +136,16 @@ object CommentController extends FortyTwoController {
     Ok(commentWithSocialUserSerializer.writes(CommentPermissions.MESSAGE -> replies))
   }
 
-  // TODO: delete once no beta users have old plugin supporting replies
-  def getReplies(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
-    val replies = inject[DBConnection].readOnly{ implicit session =>
-      val repo = inject[CommentRepo]
-      val comment = repo.get(commentId)
-      val user = inject[UserRepo].get(request.userId)
-      if (true) // TODO: hasPermission(user.id.get, comment.id.get) ??????????????
-        repo.getChildren(comment.id.get) map { child => inject[CommentWithSocialUserRepo].load(child) }
-      else
-          Nil
-    }
-    Ok(commentWithSocialUserSerializer.writes(replies))
-  }
-
-  // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
-  def startFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
-    val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
+  def startFollowing() = AuthenticatedJsonAction { request =>
+    val url = (request.body.asJson.get \ "url").as[String]
     inject[DBConnection].readWrite { implicit session =>
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val followRepo = inject[FollowRepo]
       val uriId = uriRepo.getByNormalizedUrl(url).getOrElse(uriRepo.save(NormalizedURIFactory(url = url))).id.get
       followRepo.get(request.userId, uriId) match {
-        case Some(follow) if !follow.isActive => Some(followRepo.save(follow.activate))
+        case Some(follow) if !follow.isActive =>
+          Some(followRepo.save(follow.activate))
         case None =>
           val urlId = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uriId))).id
           Some(followRepo.save(Follow(userId = request.userId, urlId = urlId, uriId = uriId)))
@@ -185,18 +156,15 @@ object CommentController extends FortyTwoController {
     Ok(JsObject(Seq("following" -> JsBoolean(true))))
   }
 
-  // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
-  def stopFollowing(urlOpt: Option[String]) = AuthenticatedJsonAction { request =>
-    val url = urlOpt.getOrElse((request.body.asJson.get \ "url").as[String])
+  def stopFollowing() = AuthenticatedJsonAction { request =>
+    val url = (request.body.asJson.get \ "url").as[String]
     inject[DBConnection].readWrite { implicit session =>
       val uriRepo = inject[NormalizedURIRepo]
       val followRepo = inject[FollowRepo]
-      uriRepo.getByNormalizedUrl(url) match {
-        case Some(uri) => followRepo.get(request.userId, uri.id.get) match {
-          case Some(follow) => Some(followRepo.save(follow.deactivate))
-          case None => None
+      uriRepo.getByNormalizedUrl(url).map { uri =>
+        followRepo.get(request.userId, uri.id.get).map { follow =>
+          followRepo.save(follow.deactivate)
         }
-        case None => None
       }
     }
 
@@ -312,7 +280,7 @@ object CommentController extends FortyTwoController {
   def followsView = AdminHtmlAction { implicit request =>
     val repo = inject[UserWithSocialRepo]
     val uriAndUsers = inject[DBConnection].readOnly { implicit s =>
-      inject[FollowRepo].all() map {f => 
+      inject[FollowRepo].all() map {f =>
         (repo.toUserWithSocial(inject[UserRepo].get(f.userId)), f, inject[NormalizedURIRepo].get(f.uriId))
       }
     }
@@ -323,7 +291,7 @@ object CommentController extends FortyTwoController {
 
   def commentsView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 200
-    val (count, uriAndUsers) = inject[DBConnection].readOnly { implicit s => 
+    val (count, uriAndUsers) = inject[DBConnection].readOnly { implicit s =>
       val commentRepo = inject[CommentRepo]
       val comments = commentRepo.page(page, PAGE_SIZE)
       val count = commentRepo.count(CommentPermissions.PUBLIC)
@@ -339,7 +307,7 @@ object CommentController extends FortyTwoController {
 
   def messagesView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 200
-    val (count, uriAndUsers) = inject[DBConnection].readOnly { implicit s => 
+    val (count, uriAndUsers) = inject[DBConnection].readOnly { implicit s =>
       val commentRepo = inject[CommentRepo]
       val userRepo = inject[UserRepo]
       val uriRepo = inject[NormalizedURIRepo]
@@ -348,8 +316,8 @@ object CommentController extends FortyTwoController {
       val messages = commentRepo.page(page, PAGE_SIZE, CommentPermissions.MESSAGE)
       val count = commentRepo.count(CommentPermissions.MESSAGE)
       (count, (messages map {co =>
-        (socialRepo.toUserWithSocial(userRepo.get(co.userId)), co, uriRepo.get(co.uriId), commentRecipientRepo.getByComment(co.id.get) map { r => 
-          socialRepo.toUserWithSocial(userRepo.get(r.userId.get)) 
+        (socialRepo.toUserWithSocial(userRepo.get(co.userId)), co, uriRepo.get(co.uriId), commentRecipientRepo.getByComment(co.id.get) map { r =>
+          socialRepo.toUserWithSocial(userRepo.get(r.userId.get))
         })
       }))
     }

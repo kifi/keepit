@@ -11,7 +11,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.inject._
-import com.keepit.test.EmptyApplication
+import com.keepit.test._
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
@@ -24,7 +24,7 @@ import scala.math._
 import scala.util.Random
 
 @RunWith(classOf[JUnitRunner])
-class MainSearcherTest extends SpecificationWithJUnit {
+class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
 
   val resultClickTracker = ResultClickTracker(8)
   val browsingHistoryTracker = running(new EmptyApplication()) {
@@ -34,9 +34,9 @@ class MainSearcherTest extends SpecificationWithJUnit {
     ClickHistoryTracker(307, 2, 1)
   }
 
-  def initData(numUsers: Int, numUris: Int) = CX.withConnection { implicit c =>
-    ((0 until numUsers).map(n => User(firstName = "foo" + n, lastName = "").save).toList,
-     (0 until numUris).map(n => NormalizedURIFactory(title = "a" + n, url = "http://www.keepit.com/article" + n, state = SCRAPED).save).toList)
+  def initData(numUsers: Int, numUris: Int) = db.readWrite { implicit s =>
+    ((0 until numUsers).map(n => userRepo.save(User(firstName = "foo" + n, lastName = ""))).toList,
+     (0 until numUris).map(n => uriRepo.save(NormalizedURIFactory(title = "a" + n, url = "http://www.keepit.com/article" + n, state = SCRAPED))).toList)
   }
 
   def initIndexes(store: ArticleStore) = {
@@ -86,11 +86,11 @@ class MainSearcherTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
-        val bookmarks = CX.withConnection { implicit c =>
+        val bookmarks = db.readWrite { implicit s =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-              BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              val url1 = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source))
             }
           }
         }

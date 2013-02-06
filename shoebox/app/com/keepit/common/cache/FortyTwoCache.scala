@@ -1,33 +1,24 @@
 package com.keepit.common.cache
 
-import play.api.cache._
-import collection.mutable
-import play.api.Play.current
-import scala.reflect.ClassManifest
-import play.api.Plugin
 import akka.util.Duration
-import akka.util.duration._
-import play.api.libs.json.JsValue
-import com.keepit.inject._
 import com.google.inject.{Inject, Singleton}
-
+import com.keepit.inject._
+import play.api.Play.current
+import play.api.Plugin
+import scala.collection.mutable
 
 @Singleton
-class CacheStatistics @Inject() () {
-  private var hits = 0
-  private var misses = 0
-  private var sets = 0
-
+class CacheStatistics {
   private val hitsMap = mutable.HashMap[String, Int]()
   private val missesMap = mutable.HashMap[String, Int]()
   private val setsMap = mutable.HashMap[String, Int]()
 
-  def incrHits(className: String) { hitsMap += ((className, hitsMap.getOrElse(className, 0) + 1)) }
-  def incrMisses(className: String) { missesMap += ((className, missesMap.getOrElse(className, 0) + 1)) }
-  def incrSets(className: String) { setsMap += ((className, setsMap.getOrElse(className, 0) + 1)) }
+  def incrHits(className: String) { hitsMap += className -> (hitsMap.getOrElse(className, 0) + 1) }
+  def incrMisses(className: String) { missesMap += className -> (missesMap.getOrElse(className, 0) + 1) }
+  def incrSets(className: String) { setsMap += className -> (setsMap.getOrElse(className, 0) + 1) }
 
   def getStatistics: Seq[(String, Int, Int, Int)] = {
-    val keys = (hitsMap.keySet ++ missesMap.keySet ++ setsMap.keySet).toSeq.sortWith { case (a: String, b: String) => a < b }
+    val keys = (hitsMap.keySet ++ missesMap.keySet ++ setsMap.keySet).toSeq.sorted
     keys map { key =>
       (key, hitsMap.getOrElse(key, 0), missesMap.getOrElse(key, 0), setsMap.getOrElse(key, 0))
     }
@@ -48,33 +39,38 @@ class MemcachedCache @Inject() (val cache: MemcachedPlugin) extends FortyTwoCach
   def get(key: String): Option[Any] =
     cache.api.get(key)
 
-  def remove(key: String): Unit =
+  def remove(key: String) {
     cache.api.remove(key) // Play 2.0 does not support remove. 2.1 does!
+  }
 
-  def set(key: String, value: Any, expiration: Int = 0): Unit =
+  def set(key: String, value: Any, expiration: Int = 0) {
     cache.api.set(key, value, expiration)
+  }
 
-  override def onStop(): Unit = {
+  override def onStop() {
     cache.onStop()
   }
 }
 
 @Singleton
 class InMemoryCache extends FortyTwoCachePlugin {
-  import play.api.cache.{EhCachePlugin, Cache}
+
   import play.api.Play
+  import play.api.cache.{EhCachePlugin, Cache}
 
   def get(key: String): Option[Any] =
     Cache.get(key)
 
-  def remove(key: String): Unit =
+  def remove(key: String) {
     Play.current.plugin[EhCachePlugin].map {
       ehcache =>
         ehcache.cache.remove(key)
     }
+  }
 
-  def set(key: String, value: Any, expiration: Int = 0): Unit =
+  def set(key: String, value: Any, expiration: Int = 0) {
     Cache.set(key, value, expiration)
+  }
 }
 
 @Singleton
@@ -85,15 +81,15 @@ class HashMapMemoryCache extends FortyTwoCachePlugin {
   def get(key: String): Option[Any] =
     cache.get(key)
 
-  def remove(key: String): Unit =
+  def remove(key: String) {
     cache.remove(key)
+  }
 
-  def set(key: String, value: Any, expiration: Int = 0): Unit =
-    cache.+=((key, value))
+  def set(key: String, value: Any, expiration: Int = 0) {
+    cache += key -> value
+  }
 }
 
-import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
 
 trait Key[T] {
   val namespace: String
@@ -140,9 +136,9 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     }
     objOpt
   }
-  def set(key: K, value: T): Unit = {
+  def set(key: K, value: T) {
     repo.set(key.toString, serialize(value), ttl.toSeconds.toInt)
     inject[CacheStatistics].incrSets(key.getClass.getSimpleName)
   }
-  def remove(key: K) = repo.remove(key.toString)
+  def remove(key: K) { repo.remove(key.toString) }
 }

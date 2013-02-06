@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.db.Id
-import com.keepit.model.{User, UserCxRepo}
+import com.keepit.model.User
 import java.io.File
 import java.io.FileInputStream
 import java.util.Properties
@@ -13,8 +13,8 @@ object SearchConfig {
       "enableCoordinator" -> "true",
       "similarity" -> "default",
       "svWeightMyBookMarks" -> "1",
-      "svWeightBrowsingHistory" -> "3",
-      "svWeightClickHistory" -> "2",
+      "svWeightBrowsingHistory" -> "2",
+      "svWeightClickHistory" -> "3",
       "maxResultClickBoost" -> "10.0",
       "minMyBookmarks" -> "2",
       "myBookmarkBoost" -> "1.5",

@@ -78,9 +78,7 @@ class ClickHistoryRepoImpl @Inject() (val db: DataBaseComponent, val clickCache:
     clickCache.getOrElseOpt(ClickHistoryUserIdKey(userId)) {
       (for(b <- table if b.userId === userId && b.state === ClickHistoryStates.ACTIVE) yield b).firstOption
     }
-
 }
-
 
 object ClickHistoryStates {
   val ACTIVE = State[ClickHistory]("active")

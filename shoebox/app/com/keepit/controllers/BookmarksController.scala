@@ -170,7 +170,7 @@ object BookmarksController extends FortyTwoController {
           case _ =>
             log.info("adding bookmarks of user %s".format(userId))
             val experiments = request.experimants
-            val user = CX.withConnection { implicit conn => UserCxRepo.get(userId) }
+            val user = inject[DBConnection].readOnly { implicit s => inject[UserRepo].get(userId) }
             internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
             inject[URIGraphPlugin].update(userId)
             Ok(JsObject(Seq()))

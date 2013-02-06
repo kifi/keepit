@@ -48,10 +48,12 @@ extends Searcher(indexReader) {
       try {
         while (tp.next) {
           val id = idMapper.getId(tp.doc())
-          var weight = 0
-          if (ids.contains(id)) weight += svWeightMyBookMarks
-          if (browsingFilter.mayContain(id)) weight += svWeightBrowsingHistory
-          if (clickFilter.mayContain(id)) weight += svWeightClickHistory
+          val weight = {
+            if (clickFilter.mayContain(id)) svWeightClickHistory
+            else if (browsingFilter.mayContain(id)) svWeightBrowsingHistory
+            else if (ids.contains(id)) svWeightMyBookMarks
+            else 0
+          }
           if (weight > 0) {
             var freq = tp.freq()
             while (freq > 0) {
