@@ -1,27 +1,29 @@
 package com.keepit.common.social
 
+import scala.Some
+
+import java.io.File
+
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
+
+import com.keepit.common.db.CX
+import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.net.FakeHttpClient
+import com.keepit.inject._
+import com.keepit.model.SocialUserInfo
+import com.keepit.model.SocialUserInfoRepo
+import com.keepit.model.User
+import com.keepit.test.EmptyApplication
+
 import play.api.Play.current
 import play.api.libs.json.Json
-import play.api.test._
 import play.api.test.Helpers._
-import ru.circumflex.orm._
-import java.util.concurrent.TimeUnit
-import com.keepit.controllers._
-import com.keepit.common.db.Id
-import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
-import com.keepit.test.EmptyApplication
-import com.keepit.common.net.HttpClientImpl
-import com.keepit.model.{User, UserCxRepo}
-import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
-import com.keepit.common.net.FakeHttpClient
-import com.keepit.model.SocialUserInfo
-import play.api.Play
-import java.net.URL
-import java.io.File
+import securesocial.core.AuthenticationMethod
+import securesocial.core.OAuth2Info
+import securesocial.core.SocialUser
+import securesocial.core.UserId
 
 @RunWith(classOf[JUnitRunner])
 class FacebookSocialGraphTest extends SpecificationWithJUnit {
@@ -56,10 +58,9 @@ class FacebookSocialGraphTest extends SpecificationWithJUnit {
           User(firstName = "Eishay", lastName = "Smith").save
         }
         val unsaved = SocialUserInfo(userId = user.id, fullName = "Eishay Smith", socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
-        val socialUserInfo = CX.withConnection { implicit c =>
-          unsaved.save
+        val socialUserInfo = inject[DBConnection].readWrite { implicit s =>
+          inject[SocialUserInfoRepo].save(unsaved)
         }
-
         unsaved.userId === user.id
         socialUserInfo.userId === user.id
         socialUserInfo.fullName === "Eishay Smith"
