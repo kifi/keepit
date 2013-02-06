@@ -348,7 +348,13 @@ slider = function() {
   }, 5000);
 
   function showComments(session, type, id, keepOpen, partialRender) {
-    var type = type || "public";
+    if (showComments.inProgress) {
+      api.log("[showComments]", "ignoring (already in progress)");
+      return;
+    }
+    showComments.inProgress = true;
+
+    type = type || "public";
 
     badGlobalState["session"] = session;
     badGlobalState["type"] = type;
@@ -361,12 +367,13 @@ slider = function() {
     if (isVisible && !id && !keepOpen) { // already open!
       if (type == showingType) {
         $('.kifi-content').slideDown();
-        $('.kifi-comment-wrapper').slideUp(600, 'easeInOutBack');
+        $('.kifi-comment-wrapper').slideUp(600, 'easeInOutBack', function() {
+          showComments.inProgress = false;
+        });
         $(".kifi-slider").removeClass("kifi-" + type);
         redrawFooter(false);
         return;
-      } else { // already open, yet showing a different type.
-        // For now, nothing. Eventually, some slick animation for a quick change?
+      } else { // already open, yet showing a different type
       }
     }
 
@@ -375,12 +382,15 @@ slider = function() {
     api.port.emit("get_comments", {kind: type, commentId: id}, function(comments) {
       api.log("[showComments] comments:", comments);
       renderComments(session, comments, type, id, function() {
-        if (!isVisible) {
+        if (isVisible) {
+          showComments.inProgress = false;
+        } else {
           repositionScroll(false);
 
           $('.kifi-content').slideUp(); // hide main hover content
           $('.kifi-comment-wrapper').slideDown(600, function() {
             repositionScroll(false);
+            showComments.inProgress = false;
           });
         }
         if(shouldRedrawFooter) {
@@ -596,32 +606,56 @@ slider = function() {
         // Hacky solution for a partial refresh. Needs to be refactored.
         renderTemplate("html/comments/" + partials.comment_body_view, params, partials, function(renderedTemplate) {
           $('.comment_body_view').html(renderedTemplate).find("time").timeago();
+          showComments.inProgress = false;
         });
       } else {
         renderTemplate("html/comments/comments_view.html", params, partials, function(renderedTemplate) {
-          drawCommentView(renderedTemplate, session, type);
-          onComplete();
+          drawCommentView(renderedTemplate, session, type, id, onComplete);
         });
       }
   }
 
-  function drawCommentView(renderedTemplate, session, type) {
+  function drawCommentView(renderedTemplate, session, type, id, onComplete) {
+    onComplete = onComplete || $.noop;
     //api.log(renderedTemplate);
     repositionScroll(false);
-    $('.kifi-comment-wrapper').html(renderedTemplate).find("time").timeago();
+
+    var $w1 = $(".kifi-comment-wrapper");
+    if ($w1[0].firstChild && (id || type == "message" && $w1.find(".back-button").length)) {
+      var $p = $w1.wrap("<div>").parent();
+      var $w2 = $($w1[0].cloneNode()).html(renderedTemplate).appendTo($p);
+      var r1 = $w1[0].getBoundingClientRect();
+      var r2 = $w2[0].getBoundingClientRect();
+      $p.css({position: "relative", height: r1.height, overflow: "hidden"}).animate({height: r2.height});
+      $w1.css({position: "absolute", width: r1.width, left: "0%", bottom: 0})
+      .animate({left: (id ? "-" : "") + "100%"})
+      $w2.css({position: "absolute", width: r2.width, left: (id ? "" : "-") + "100%", bottom: 0})
+      .animate({left: "0%"}, function() {
+        $w1.remove();
+        $w2.css({position: "", width: "", left: "", bottom: ""}).unwrap().find("time").timeago();
+        onComplete();
+      });
+    } else {
+      $w1.html(renderedTemplate).find("time").timeago();
+      onComplete();
+    }
+
     repositionScroll(false);
 
-    createCommentBindings(type, session);
+    createCommentBindings($w2 || $w1, type, session);
   }
 
-  function createCommentBindings(type, session) {
-    $(".control-bar").on("click", ".follow", function() {
+  function createCommentBindings($container, type, session) {
+    // Note: The same $container may be passed to this function multiple times. To avoid duplicated
+    // bindings (repeated execution of same handlers), attach all bindings to descendants of $container,
+    // which are guaranteed to be fresh. Also be sure to use $container to scope all element searches.
+    $container.find(".control-bar").on("click", ".follow", function() {
       following = !following;  // TODO: server should return whether following along with the comments
       api.port.emit("follow", following);
       $(this).toggleClass("following", following);
     });
 
-    $(".kifi-comment-wrapper").on("mousedown", "a[href^='x-kifi-sel:']", function(e) {
+    $container.children(".comment_body_view .comment_post_view").on("mousedown", "a[href^='x-kifi-sel:']", function(e) {
       if (e.which != 1) return;
       e.preventDefault();
       var el = snapshot.fuzzyFind(this.href.substring(11));
@@ -695,15 +729,15 @@ slider = function() {
       e.preventDefault();
     });
 
-    $('.comment_body_view').on("hover", ".more-recipients", function(event) {
+    $container.find(".comment_body_view").on("hover", ".more-recipients", function(event) {
       //$(this).parent().find('.more-recipient-list')[event.type == 'mouseenter' ? "show" : "hide"]();
     }).on('click', '.thread-info', function() {
       showComments(session, type, $(this).parent().data("externalid"));
     }).on('click', '.back-button', function() {
       showComments(session, type, null, true);
-    });
+    })
 
-    $('.comment_post_view').on("mousedown", ".post_to_network .kn_social", function() {
+    var $cpv = $container.find(".comment_post_view").on("mousedown", ".post_to_network .kn_social", function() {
       alert("Not yet implemented. Coming soon!");
       return;
     });
@@ -716,8 +750,8 @@ slider = function() {
           var f = friends[i];
           f.name = f.firstName + " " + f.lastName;
         }
-        $(".kifi-to-list").tokenInput(friends, {theme: "kifi"});
-        $("#token-input-to-list").keypress(function(e) {
+        $container.find(".kifi-to-list").tokenInput(friends, {theme: "kifi"});
+        $container.find("#token-input-to-list").keypress(function(e) {
           return e.which !== 13;
         });
       });
@@ -728,12 +762,12 @@ slider = function() {
 
     var typeName = type == "public" ? "comment" : "message";
     var placeholder = "<span class=\"placeholder\">Add a " + typeName + "…</span>";
-    $('.comment-compose').html(placeholder);
-    $('.comment_post_view').on('focus','.comment-compose',function() {
+    $cpv.find(".comment-compose").html(placeholder);
+    $cpv.on("focus", ".comment-compose", function() {
       $(this)
         .find(".placeholder").remove().end()
         .animate({'height': 85}, 150, 'easeQuickSnapBounce');
-    }).on('blur', '.comment-compose', function() {
+    }).on("blur", ".comment-compose", function() {
       editableFix[0].setSelectionRange(0, 0);
       editableFix.blur();
 
@@ -743,7 +777,7 @@ slider = function() {
         $(this).html(placeholder);
       }
       $(this).animate({'height': 35}, 150, 'easeQuickSnapBounce');
-    }).on('click','.take-snapshot', function() {
+    }).on("click", ".take-snapshot", function() {
       // make absolute positioning relative to document instead of viewport
       document.documentElement.style.position = "relative";
       this.blur();
