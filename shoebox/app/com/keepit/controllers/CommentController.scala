@@ -33,30 +33,15 @@ import akka.util.duration._
 
 object CommentController extends FortyTwoController {
 
-  // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
-  def createComment(urlOpt: Option[String],
-                    titleOpt: Option[String],
-                    textOpt: Option[String],
-                    permissionsOpt: Option[String],
-                    recipientsOpt: Option[String],
-                    parentOpt: Option[String]) = AuthenticatedJsonAction { request =>
-    val (urlStr, title, text, permissions, recipients, parent) = request.body.asJson match {
-      case Some(o) => (
-        (o \ "url").as[String],
-        (o \ "title") match { case JsString(s) => s; case _ => ""},
-        (o \ "text").as[String].trim,
-        (o \ "permissions").as[String],
-        (o \ "recipients") match { case JsString(s) => s; case _ => ""},
-        (o \ "parent") match { case JsString(s) => s; case _ => ""})
-      case _ => (
-        urlOpt.get,
-        titleOpt.getOrElse(""),
-        textOpt.get.trim,
-        permissionsOpt.get,
-        recipientsOpt.getOrElse(""),
-        parentOpt.getOrElse(""))
-    }
-
+  def createComment() = AuthenticatedJsonAction { request =>
+    val o = request.body.asJson.get
+    val (urlStr, title, text, permissions, recipients, parent) = (
+      (o \ "url").as[String],
+      (o \ "title") match { case JsString(s) => s; case _ => ""},
+      (o \ "text").as[String].trim,
+      (o \ "permissions").as[String],
+      (o \ "recipients") match { case JsString(s) => s; case _ => ""},
+      (o \ "parent") match { case JsString(s) => s; case _ => ""})
 
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val comment = inject[DBConnection].readWrite {implicit s =>
