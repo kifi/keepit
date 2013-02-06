@@ -16,7 +16,7 @@ GET     /bookmarks/check            com.keepit.controllers.BookmarksController.c
 POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.remove(uri: Option[String] ?= None)
 POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy(uri: Option[String] ?= None, isPrivate: Option[Boolean] ?= None)
 
-POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: Option[String] ?= None, title: Option[String] ?= None, text: Option[String] ?= None, permissions: Option[String] ?= None, recipients: Option[String] ?= None, parent: Option[String] ?= None)
+POST    /comments/add               com.keepit.controllers.CommentController.createComment()
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
 POST    /comments/follow            com.keepit.controllers.CommentController.startFollowing()
 POST    /comments/unfollow          com.keepit.controllers.CommentController.stopFollowing()
@@ -25,7 +25,7 @@ DELETE  /comments/follow            com.keepit.controllers.CommentController.sto
 
 GET     /messages/threads/:id       com.keepit.controllers.CommentController.getMessageThread(id: ExternalId[Comment])
 GET     /messages/threads           com.keepit.controllers.CommentController.getMessageThreadList(url: String)
-POST    /messages                   com.keepit.controllers.CommentController.createComment(url: Option[String] ?= None, title: Option[String] ?= None, text: Option[String] ?= None, permissions: Option[String] = Some("message"), recipients: Option[String] ?= None, parent: Option[String] ?= None)
+POST    /messages                   com.keepit.controllers.CommentController.createComment()
 
 GET     /r/:id                      com.keepit.controllers.DeepLinkController.handle(id: String)
 
