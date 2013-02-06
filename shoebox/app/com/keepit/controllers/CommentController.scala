@@ -188,12 +188,10 @@ object CommentController extends FortyTwoController {
     inject[DBConnection].readWrite { implicit session =>
       val uriRepo = inject[NormalizedURIRepo]
       val followRepo = inject[FollowRepo]
-      uriRepo.getByNormalizedUrl(url) match {
-        case Some(uri) => followRepo.get(request.userId, uri.id.get) match {
-          case Some(follow) => Some(followRepo.save(follow.deactivate))
-          case None => None
+      uriRepo.getByNormalizedUrl(url).map { uri =>
+        followRepo.get(request.userId, uri.id.get).map { follow =>
+          followRepo.save(follow.deactivate)
         }
-        case None => None
       }
     }
 
