@@ -151,20 +151,6 @@ object CommentController extends FortyTwoController {
     Ok(commentWithSocialUserSerializer.writes(CommentPermissions.MESSAGE -> replies))
   }
 
-  // TODO: delete once no beta users have old plugin supporting replies
-  def getReplies(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
-    val replies = inject[DBConnection].readOnly{ implicit session =>
-      val repo = inject[CommentRepo]
-      val comment = repo.get(commentId)
-      val user = inject[UserRepo].get(request.userId)
-      if (true) // TODO: hasPermission(user.id.get, comment.id.get) ??????????????
-        repo.getChildren(comment.id.get) map { child => inject[CommentWithSocialUserRepo].load(child) }
-      else
-          Nil
-    }
-    Ok(commentWithSocialUserSerializer.writes(replies))
-  }
-
   def startFollowing() = AuthenticatedJsonAction { request =>
     val url = (request.body.asJson.get \ "url").as[String]
     inject[DBConnection].readWrite { implicit session =>

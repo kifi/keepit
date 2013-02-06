@@ -18,7 +18,6 @@ POST    /bookmarks/private          com.keepit.controllers.BookmarksController.u
 
 POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: Option[String] ?= None, title: Option[String] ?= None, text: Option[String] ?= None, permissions: Option[String] ?= None, recipients: Option[String] ?= None, parent: Option[String] ?= None)
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
-GET     /comments/reply             com.keepit.controllers.CommentController.getReplies(commentId: ExternalId[Comment])
 POST    /comments/follow            com.keepit.controllers.CommentController.startFollowing()
 POST    /comments/unfollow          com.keepit.controllers.CommentController.stopFollowing()
 DELETE  /comments/follow            com.keepit.controllers.CommentController.stopFollowing()
