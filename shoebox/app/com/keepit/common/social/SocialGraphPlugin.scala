@@ -2,6 +2,7 @@ package com.keepit.common.social
 
 import com.google.inject.Inject
 import com.keepit.common.db.CX
+import com.keepit.common.db.slick.DBConnection
 import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.model._
@@ -43,16 +44,17 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
         inject[SocialUserImportFriends].importFriends(rawInfo.jsons)
         val connections = inject[SocialUserCreateConnections].createConnections(socialUserInfo, rawInfo.jsons)
         inject[SocialUserImportEmail].importEmail(socialUserInfo.userId.get, rawInfo.jsons)
-
-        CX.withConnection { implicit c =>
-          socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh().save
+        inject[DBConnection].readWrite { implicit c =>
+          inject[SocialUserInfoRepo].save(
+            socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }
         sender ! Right(connections)
       } catch {
         //todo(yonatan): healthcheck event, granular exception catching, frontend should be notified.
         case ex: Exception =>
-          CX.withConnection { implicit c =>
-            socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).save
+          inject[DBConnection].readWrite { implicit c =>
+            inject[SocialUserInfoRepo].save(
+              socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
           }
           log.error("Problem Fetching User Info for %s".format(socialUserInfo), ex)
           sender ! Left(ex)

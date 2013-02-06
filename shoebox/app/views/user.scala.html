@@ -42,6 +42,13 @@
         <th>Last Update</th><td>@adminHelper.dateDisplay(userWithSocial.user.updatedAt) @adminHelper.timeDisplay(userWithSocial.user.updatedAt)</td>
       </tr>
       <tr>
+        <th>Last Social User Update</th><td>@{
+          userWithSocial.socialUserInfo.lastGraphRefresh.map {
+            d => adminHelper.dateDisplay(d) + " " + adminHelper.timeDisplay(d)
+          }.getOrElse("")
+        }</td>
+      </tr>
+      <tr>
         <th>Email</th>
         <td>
           <form action="@com.keepit.controllers.routes.UserController.updateUser(userWithSocial.user.id.get)" method="POST" class="form-inline">
