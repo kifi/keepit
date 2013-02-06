@@ -87,13 +87,6 @@ case class KifiInstallation (
 ) extends ModelWithExternalId[KifiInstallation] {
   def withId(id: Id[KifiInstallation]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-
-  def save(implicit conn: Connection): KifiInstallation = {
-    val entity = KifiInstallationEntity(this.copy(updatedAt = currentDateTime))
-    assert(1 == entity.save())
-    entity.view
-  }
-
   def withVersion(version: KifiVersion) = copy(version = version)
   def withUserAgent(userAgent: UserAgent) = copy(userAgent = userAgent)
 }
