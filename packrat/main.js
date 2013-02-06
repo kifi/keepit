@@ -128,7 +128,7 @@ api.port.on({
     return true;
   },
   follow: function(data, respond, tab) {
-    ajax(data ? "POST" : "DELETE", "http://" + getConfigs().server + "/comments/follow", {url: tab.url}, function(o) {
+    ajax("POST", "http://" + getConfigs().server + "/comments/" + (data ? "follow" : "unfollow"), {url: tab.url}, function(o) {
       api.log("[follow] resp:", o);
     });
   },
