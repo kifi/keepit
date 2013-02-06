@@ -9,9 +9,8 @@ import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.http.ContentTypes
 import com.keepit.controllers.CommonActions._
-import com.keepit.common.db.CX
 import com.keepit.common.db._
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.slick._
 import com.keepit.common.async._
 import com.keepit.model._
 import com.keepit.inject._
@@ -36,7 +35,8 @@ import com.keepit.common.analytics.reports._
 object DeepLinkController extends FortyTwoController {
 
   def handle(token: String) = AuthenticatedHtmlAction { request =>
-    val deepLink = CX.withConnection { implicit conn => DeepLinkCxRepo.getOpt(DeepLinkToken(token)) }
+    val db = inject[DBConnection]
+    val deepLink = db.readOnly { implicit session => inject[DeepLinkRepo].getByToken(DeepLinkToken(token)) }
 
     deepLink match {
       case Some(deep) =>
@@ -44,7 +44,7 @@ object DeepLinkController extends FortyTwoController {
           case Some(recip) if request.userId != recip =>
             Forbidden
           case _ =>
-            val uri = deep.uriId.map(uri => CX.withConnection{ implicit conn => NormalizedURICxRepo.get(uri).url }) getOrElse ("")
+            val uri = deep.uriId.map(uri => db.readOnly { implicit session => inject[NormalizedURIRepo].get(uri).url }) getOrElse ("")
             val locator = deep.deepLocator.value
             val isSecure = deep.recipientUserId.isDefined
             Ok(views.html.deeplink(uri, locator, isSecure))

@@ -62,7 +62,6 @@ case class DeepLink(
     assert(1 == entity.save())
     entity.view
   }
-
 }
 
 @ImplementedBy(classOf[DeepLinkRepoImpl])
