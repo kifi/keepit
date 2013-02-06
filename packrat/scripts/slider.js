@@ -134,12 +134,14 @@ slider = function() {
     isKept = true;
     if (shouldSlideOut) keptItslideOut();
 
-    logEvent("slider", "keep");
+    var isPrivate = $(".kifi-keep-private").is(":checked");
+
+    logEvent("slider", "keep", {"isPrivate": isPrivate});
 
     api.port.emit("add_bookmarks", {
       "url": document.location.href,
       "title": document.title,
-      "private": $(".kifi-keep-private").is(":checked")
+      "private": isPrivate
     }, function(response) {
       api.log("[keepPage] response:", response);
     });
@@ -905,11 +907,12 @@ slider = function() {
         $(".comment-compose").html(placeholder);
         return false;
       }
-      logEvent("slider", "message");
 
       var isReply = $(this).is('.message-reply');
       var recipients;
       var parent;
+
+      logEvent("slider", "message", {"newThread": !isReply});
 
       badGlobalState["updates"].messageCount++;
       badGlobalState["updates"].countSum++;
