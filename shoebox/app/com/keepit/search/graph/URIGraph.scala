@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.inject._
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
-import com.keepit.model.{Bookmark, BookmarkRepo, BookmarkStates, BookmarkCxRepo, NormalizedURI, User, UserCxRepo}
+import com.keepit.model._
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher}
@@ -79,7 +79,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   def load(): Int = {
     log.info("loading URIGraph")
     try {
-      val users = CX.withConnection { implicit c => UserCxRepo.all }
+      val users = inject[DBConnection].readOnly { implicit s => inject[UserRepo].all }
       var cnt = 0
       indexDocuments(users.iterator.map{ user => buildIndexable(user) }, commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
@@ -95,7 +95,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   def update(userId: Id[User]): Int = {
     log.info("updating a URIGraph for user=%d".format(userId.id))
     try {
-      val user = CX.withConnection { implicit c => UserCxRepo.get(userId) }
+      val user = inject[DBConnection].readOnly { implicit s => inject[UserRepo].get(userId) }
       var cnt = 0
       indexDocuments(Iterator(buildIndexable(user)), commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
@@ -110,8 +110,8 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
 
   def getURIGraphSearcher() = new URIGraphSearcher(searcher)
 
-  def buildIndexable(id: Id[User]) = {
-    val user = CX.withConnection{ implicit c => UserCxRepo.get(id) }
+  def buildIndexable(userId: Id[User]) = {
+    val user = inject[DBConnection].readOnly { implicit s => inject[UserRepo].get(userId) }
     buildIndexable(user)
   }
 
@@ -188,9 +188,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     }
 
     def buildBookmarkSiteField(fieldName: String, uriList: URIList, bookmarks: Seq[Bookmark]) = {
-      val domainMap = CX.withConnection { implicit conn =>
-        bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.url) }
-      }
+      val domainMap = bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.url) }
 
       val publicList = uriList.publicList
       val privateList = uriList.privateList

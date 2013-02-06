@@ -15,7 +15,7 @@ import com.keepit.inject._
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.SocialUserInfoRepo
 import com.keepit.model.User
-import com.keepit.test.EmptyApplication
+import com.keepit.test._
 
 import play.api.Play.current
 import play.api.libs.json.Json
@@ -26,7 +26,7 @@ import securesocial.core.SocialUser
 import securesocial.core.UserId
 
 @RunWith(classOf[JUnitRunner])
-class FacebookSocialGraphTest extends SpecificationWithJUnit {
+class FacebookSocialGraphTest extends SpecificationWithJUnit with DbRepos {
 
   "FacebookSocialGraph" should {
 
@@ -54,8 +54,8 @@ class FacebookSocialGraphTest extends SpecificationWithJUnit {
         val socialUser = SocialUser(UserId("100004067535411", "facebook"), "Boaz Tal", Some("boaz.tal@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
 
-        val user = CX.withConnection { implicit c =>
-          User(firstName = "Eishay", lastName = "Smith").save
+        val user = inject[DBConnection].readWrite { implicit s => 
+          userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
         }
         val unsaved = SocialUserInfo(userId = user.id, fullName = "Eishay Smith", socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
         val socialUserInfo = inject[DBConnection].readWrite { implicit s =>

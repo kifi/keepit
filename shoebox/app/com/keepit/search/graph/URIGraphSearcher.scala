@@ -1,7 +1,7 @@
 package com.keepit.search.graph
 
 import com.keepit.common.db.Id
-import com.keepit.model.{NormalizedURI, User, UserCxRepo}
+import com.keepit.model.{NormalizedURI, User}
 import com.keepit.search.graph.EdgeSetUtil._
 import com.keepit.search.index.ArrayIdMapper
 import com.keepit.search.index.CachingIndexReader
