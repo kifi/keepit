@@ -64,7 +64,7 @@
        <td rowspan="2">@{i+1}</td>
        <td>@comment.pageTitle</td>
        <td>@adminHelper.articleDisplay(uri)</td>
-       <td>@adminHelper.dateDisplay(comment.createdAt) @adminHelper.timeDisplay(comment.createdAt)</td>
+       <td>@adminHelper.dateTimeDisplay(comment.createdAt)</td>
      </tr>
      <tr>
        <td colspan="2">@comment.text</td>
@@ -89,7 +89,7 @@
        <td>@for(recipient <- recipients) { 
          @adminHelper.userDisplay(recipient)
        }</td>
-       <td>@adminHelper.dateDisplay(message.createdAt) @adminHelper.timeDisplay(message.createdAt)</td>
+       <td>@adminHelper.dateTimeDisplay(message.createdAt)</td>
      </tr>
      <tr>
        <td colspan="3">@message.text</td>
@@ -114,7 +114,7 @@
        <td>@for(recipient <- recipients) { 
          @adminHelper.userDisplay(recipient)
        }</td>
-       <td>@adminHelper.dateDisplay(message.createdAt) @adminHelper.timeDisplay(message.createdAt)</td>
+       <td>@adminHelper.dateTimeDisplay(message.createdAt)</td>
      </tr>
      <tr>
        <td colspan="3">@message.text</td>
@@ -137,7 +137,7 @@
       <td>@electronicMail.fromName</td>
       <td>@electronicMail.to.address</td>
       <td>@electronicMail.subject</td>
-      <td>@adminHelper.dateDisplay(electronicMail.createdAt) @adminHelper.timeDisplay(electronicMail.createdAt)</td>
+      <td>@adminHelper.dateTimeDisplay(electronicMail.createdAt)</td>
     </tr>
     <tr>
       <td colspan="4">@electronicMail.htmlBody</td>
@@ -160,7 +160,7 @@
       <td>@electronicMail.fromName</td>
       <td>@electronicMail.to.address</td>
       <td>@electronicMail.subject</td>
-      <td>@adminHelper.dateDisplay(electronicMail.createdAt) @adminHelper.timeDisplay(electronicMail.createdAt)</td>
+      <td>@adminHelper.dateTimeDisplay(electronicMail.createdAt)</td>
     </tr>
     <tr>
       <td colspan="4">@electronicMail.htmlBody</td>
