@@ -2,7 +2,7 @@ package com.keepit.serializer
 
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
-import com.keepit.model.{User, UserCxRepo}
+import com.keepit.model.User
 import play.api.libs.json._
 import com.keepit.common.social.UserWithSocial
 import com.keepit.common.db._
