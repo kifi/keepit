@@ -15,6 +15,7 @@ import akka.util.duration._
 import java.util.concurrent.TimeUnit
 
 import com.keepit.common.db._
+import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.CommonActions._
 import com.keepit.inject._
@@ -55,23 +56,30 @@ object UrlController extends FortyTwoController {
   def doRenormalize(readOnly: Boolean = true, domain: Option[String] = None) = {
     // Processes all models that reference a `NormalizedURI`, and renormalizes all URLs.
     val changedURIs = scala.collection.mutable.MutableList[ChangedNormURI]()
-    val (urlsSize, changes) = CX.withConnection { implicit conn =>
+    val (urlsSize, changes) = inject[DBConnection].readWrite {implicit session =>
 
-      val urls = URLCxRepo.all
+      val uriRepo = inject[NormalizedURIRepo]
+      val urlRepo = inject[URLRepo]
+      val userRepo = inject[UserRepo]
+      val bookmarkRepo = inject[BookmarkRepo]
+      val commentRepo = inject[CommentRepo]
+      val deepLinkRepo = inject[DeepLinkRepo]
+      val followRepo = inject[FollowRepo]
+      val urls = urlRepo.all
       val urlsSize = urls.size
       val changes = scala.collection.mutable.Map[String, Int]()
 
       urls map { url =>
         url.state match {
           case URLStates.ACTIVE =>
-            val (normalizedUri, reason) = NormalizedURICxRepo.getByNormalizedUrl(url.url) match {
+            val (normalizedUri, reason) = uriRepo.getByNormalizedUrl(url.url) match {
               case Some(nuri) =>
-                (nuri,URLHistoryCause.MERGE)
+                (nuri, URLHistoryCause.MERGE)
               case None =>
                 // No normalized URI exists for this url, create one
-                val nuri = NormalizedURIFactory.apply(url.url)
+                val nuri = NormalizedURIFactory(url.url)
                 ({if(!readOnly)
-                  nuri.save
+                  uriRepo.save(nuri)
                 else
                   nuri}, URLHistoryCause.SPLIT)
             }
@@ -80,46 +88,46 @@ object UrlController extends FortyTwoController {
             if(url.normalizedUriId != normalizedUri.id.get.id) {
               changes("url") += 1
               if(!readOnly) {
-                url.withNormUriId(normalizedUri.id.get).withHistory(URLHistory(normalizedUri.id.get,reason)).save
+                urlRepo.save(url.withNormUriId(normalizedUri.id.get).withHistory(URLHistory(normalizedUri.id.get,reason)))
               }
             }
 
             changes += (("bookmark", 0))
-            BookmarkCxRepo.getByUrlId(url.id.get) map { s =>
+            bookmarkRepo.getByUrlId(url.id.get) map { s =>
               if(s.uriId.id != normalizedUri.id.get.id) {
                 changes("bookmark") += 1
                 if(!readOnly) {
-                  s.withNormUriId(normalizedUri.id.get).save
+                  bookmarkRepo.save(s.withNormUriId(normalizedUri.id.get))
                 }
               }
             }
 
             changes += (("comment", 0))
-            CommentCxRepo.getByUrlId(url.id.get) map { s =>
+            commentRepo.getByUrlId(url.id.get) map { s =>
               if(s.uriId.id != normalizedUri.id.get.id) {
                 changes("comment") += 1
                 if(!readOnly) {
-                  s.withNormUriId(normalizedUri.id.get).save
+                  commentRepo.save(s.withNormUriId(normalizedUri.id.get))
                 }
               }
             }
 
             changes += (("deeplink", 0))
-            DeepLinkCxRepo.getByUrlId(url.id.get) map { s =>
+            deepLinkRepo.getByUrl(url.id.get) map { s =>
               if(s.uriId.get.id != normalizedUri.id.get.id) {
                 changes("deeplink") += 1
                 if(!readOnly) {
-                  s.withNormUriId(normalizedUri.id.get).save
+                  deepLinkRepo.save(s.withNormUriId(normalizedUri.id.get))
                 }
               }
             }
 
             changes += (("follow", 0))
-            FollowCxRepo.getByUrlId(url.id.get) map { s =>
+            followRepo.getByUrlId(url.id.get) map { s =>
               if(s.uriId.id != normalizedUri.id.get.id) {
                 changes("follow") += 1
                 if(!readOnly) {
-                  s.withNormUriId(normalizedUri.id.get).save
+                  followRepo.save(s.withNormUriId(normalizedUri.id.get))
                 }
               }
             }
