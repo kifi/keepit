@@ -144,10 +144,12 @@ object CommentController extends FortyTwoController {
       val followRepo = inject[FollowRepo]
       val uriId = uriRepo.getByNormalizedUrl(url).getOrElse(uriRepo.save(NormalizedURIFactory(url = url))).id.get
       followRepo.get(request.userId, uriId) match {
-        case Some(follow) if !follow.isActive => Some(followRepo.save(follow.activate))
+        case Some(follow) if !follow.isActive =>
+          Some(followRepo.save(follow.activate))
         case None =>
           val urlId = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uriId))).id
           Some(followRepo.save(Follow(userId = request.userId, urlId = urlId, uriId = uriId)))
+        case _ => None
       }
     }
 
