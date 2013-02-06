@@ -56,12 +56,6 @@ case class DeepLink(
   def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
 
   def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = Some(normUriId))
-
-  def save(implicit conn: Connection): DeepLink = {
-    val entity = DeepLinkEntity(this.copy(updatedAt = currentDateTime))
-    assert(1 == entity.save())
-    entity.view
-  }
 }
 
 @ImplementedBy(classOf[DeepLinkRepoImpl])
@@ -102,78 +96,7 @@ class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Deep
     (for(b <- table if b.token === token) yield b).firstOption
 }
 
-//slicked!
-object DeepLinkCxRepo {
-
-  def all(implicit conn: Connection): Seq[DeepLink] =
-    DeepLinkEntity.all.map(_.view)
-
-  def all(userId: Id[User])(implicit conn: Connection): Seq[DeepLink] =
-    (DeepLinkEntity AS "i").map { i => SELECT(i.*) FROM i WHERE (i.initatorUserId EQ userId) list }.map(_.view)
-
-  def getOpt(id: Id[DeepLink])(implicit conn: Connection): Option[DeepLink] =
-    DeepLinkEntity.get(id).map(_.view)
-
-  def get(id: Id[DeepLink])(implicit conn: Connection): DeepLink =
-    getOpt(id).getOrElse(throw NotFoundException(id))
-
-  def getOpt(token: DeepLinkToken)(implicit conn: Connection): Option[DeepLink] =
-    (DeepLinkEntity AS "i").map { i => SELECT(i.*) FROM i WHERE (i.token EQ token.value) unique }.map(_.view)
-
-  def getByUrlId(urlId: Id[URL])(implicit conn: Connection): Seq[DeepLink] =
-    (DeepLinkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlId EQ urlId) list() }.map(_.view)
-
-  def getByUriId(uri: NormalizedURI)(implicit conn: Connection): Seq[DeepLink] =
-    (DeepLinkEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.uriId EQ uri.id.get) list }.map(_.view)
-
-}
-
 object DeepLinkStates {
   val ACTIVE = State[DeepLink]("active")
   val INACTIVE = State[DeepLink]("inactive")
-}
-
-private[model] class DeepLinkEntity extends Entity[DeepLink, DeepLinkEntity] {
-  val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val initatorUserId = "initiator_user_id".ID[User]
-  val recipientUserId = "recipient_user_id".ID[User]
-  val uriId = "uri_id".ID[NormalizedURI]
-  val urlId = "url_id".ID[URL]
-  val deepLocator = "deep_locator".VARCHAR(512).NOT_NULL
-  val token = "token".VARCHAR(16).NOT_NULL
-  val state = "state".STATE[DeepLink].NOT_NULL(DeepLinkStates.ACTIVE)
-
-  def relation = DeepLinkEntity
-
-  def view(implicit conn: Connection): DeepLink = DeepLink(
-    id = id.value,
-    createdAt = createdAt(),
-    updatedAt = updatedAt(),
-    initatorUserId = initatorUserId.value,
-    recipientUserId = recipientUserId.value,
-    uriId = uriId.value,
-    urlId = urlId.value,
-    deepLocator = DeepLocator(deepLocator()),
-    token = DeepLinkToken(token()),
-    state = state())
-}
-
-private[model] object DeepLinkEntity extends DeepLinkEntity with EntityTable[DeepLink, DeepLinkEntity] {
-  override def relationName = "deep_link"
-
-  def apply(view: DeepLink): DeepLinkEntity = {
-    val uri = new DeepLinkEntity
-    uri.id.set(view.id)
-    uri.createdAt := view.createdAt
-    uri.updatedAt := view.updatedAt
-    uri.initatorUserId.set(view.initatorUserId)
-    uri.recipientUserId.set(view.recipientUserId)
-    uri.uriId.set(view.uriId)
-    uri.urlId.set(view.urlId)
-    uri.deepLocator := view.deepLocator.value
-    uri.token := view.token.value
-    uri.state := view.state
-    uri
-  }
 }
