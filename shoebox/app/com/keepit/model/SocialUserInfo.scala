@@ -79,7 +79,9 @@ class SocialUserInfoNetworkCache @Inject() (val repo: FortyTwoCachePlugin) exten
 }
 
 @Singleton
-class SocialUserInfoRepoImpl @Inject() (val db: DataBaseComponent, userCache: SocialUserInfoUserCache, networkCache: SocialUserInfoNetworkCache) extends DbRepo[SocialUserInfo] with SocialUserInfoRepo {
+class SocialUserInfoRepoImpl @Inject() (
+    val db: DataBaseComponent, val userCache: SocialUserInfoUserCache, val networkCache: SocialUserInfoNetworkCache)
+    extends DbRepo[SocialUserInfo] with SocialUserInfoRepo {
   import FortyTwoTypeMappers._
   import org.scalaquery.ql._
   import org.scalaquery.ql.ColumnOps._
