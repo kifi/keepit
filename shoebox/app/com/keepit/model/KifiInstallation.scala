@@ -87,13 +87,6 @@ case class KifiInstallation (
 ) extends ModelWithExternalId[KifiInstallation] {
   def withId(id: Id[KifiInstallation]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-
-  def save(implicit conn: Connection): KifiInstallation = {
-    val entity = KifiInstallationEntity(this.copy(updatedAt = currentDateTime))
-    assert(1 == entity.save())
-    entity.view
-  }
-
   def withVersion(version: KifiVersion) = copy(version = version)
   def withUserAgent(userAgent: UserAgent) = copy(userAgent = userAgent)
 }
@@ -131,44 +124,4 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
 object KifiInstallationStates {
   val ACTIVE = State[KifiInstallation]("active")
   val INACTIVE = State[KifiInstallation]("inactive")
-}
-
-private[model] class KifiInstallationEntity extends Entity[KifiInstallation, KifiInstallationEntity] {
-  val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val userId = "user_id".ID[User].NOT_NULL
-  val externalId = "external_id".EXTERNAL_ID[KifiInstallation].NOT_NULL
-  val version = "version".VARCHAR(16).NOT_NULL
-  val userAgent = "user_agent".VARCHAR(512).NOT_NULL //could be more, I think we can trunk it at that
-  val state = "state".STATE[KifiInstallation].NOT_NULL(KifiInstallationStates.ACTIVE)
-
-  def relation = KifiInstallationEntity
-
-  def view(implicit conn: Connection): KifiInstallation = KifiInstallation(
-    id = id.value,
-    createdAt = createdAt(),
-    updatedAt = updatedAt(),
-    userId = userId(),
-    externalId = externalId(),
-    version = KifiVersion(version()),
-    userAgent = UserAgent(userAgent()),
-    state = state()
-  )
-}
-
-private[model] object KifiInstallationEntity extends KifiInstallationEntity with EntityTable[KifiInstallation, KifiInstallationEntity] {
-  override def relationName = "kifi_installation"
-
-  def apply(view: KifiInstallation): KifiInstallationEntity = {
-    val uri = new KifiInstallationEntity
-    uri.id.set(view.id)
-    uri.createdAt := view.createdAt
-    uri.updatedAt := view.updatedAt
-    uri.userId := view.userId
-    uri.externalId := view.externalId
-    uri.version := view.version.toString
-    uri.userAgent := view.userAgent.userAgent
-    uri.state := view.state
-    uri
-  }
 }

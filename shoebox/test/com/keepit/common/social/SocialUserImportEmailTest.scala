@@ -19,11 +19,9 @@ import com.keepit.common.net.HttpClientImpl
 import com.keepit.model._
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
 import com.keepit.common.net.FakeHttpClient
-import com.keepit.model.SocialUserInfo
 import play.api.Play
 import java.net.URL
 import java.io.File
-import com.keepit.model.{EmailAddress, EmailAddressCxRepo}
 
 @RunWith(classOf[JUnitRunner])
 class SocialUserImportEmailTest extends SpecificationWithJUnit with DbRepos {
