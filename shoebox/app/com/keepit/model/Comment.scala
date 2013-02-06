@@ -68,6 +68,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def count(permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit session: RSession): Int
   def page(page: Int, size: Int, permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment]
+  def getParticipantsUserIds(commentId: Id[Comment])(implicit session: RSession): Set[Id[User]]
 }
 
 case class CommentCountUriIdKey(normUriId: Id[NormalizedURI]) extends Key[Int] {
@@ -191,6 +192,11 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
     q.drop(page * size).take(size).list
   }
 
+  def getParticipantsUserIds(commentId: Id[Comment])(implicit session: RSession): Set[Id[User]] = {
+    val comment = get(commentId)
+    val head = comment.parent map get getOrElse(comment)
+    (inject[CommentRecipientRepo].getByComment(head.id.get) map (_.userId)).flatten.toSet + head.userId
+  }
 }
 
 object CommentCxRepo {
