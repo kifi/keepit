@@ -83,7 +83,6 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
       for(f <- table if f.uriId === uriId && f.state === state.get) yield f
     else
       for(f <- table if f.uriId === uriId) yield f
-    println(q.selectStatement)
     q.list
   }
 
