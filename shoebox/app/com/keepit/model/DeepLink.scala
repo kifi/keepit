@@ -62,7 +62,6 @@ case class DeepLink(
     assert(1 == entity.save())
     entity.view
   }
-
 }
 
 @ImplementedBy(classOf[DeepLinkRepoImpl])
@@ -82,7 +81,7 @@ class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Deep
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[DeepLink](db, "DeepLink") {
+  override lazy val table = new RepoTable[DeepLink](db, "deep_link") {
     def initatorUserId = column[Id[User]]("initiator_user_id")
     def recipientUserId = column[Id[User]]("recipient_user_id")
     def uriId = column[Id[NormalizedURI]]("uri_id")
