@@ -32,6 +32,8 @@ class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
          */
         val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay.json")).mkString)
 
+        val result = inject[SocialUserImportFriends].importFriends(Seq(json))
+
         val socialUserInfo = inject[DBConnection].readWrite { implicit c =>
           val user = inject[UserRepo].save(User(firstName = "fn1", lastName = "ln1"))
           inject[SocialUserInfoRepo].save(SocialUserInfo(
