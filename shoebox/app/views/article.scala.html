@@ -3,7 +3,7 @@
 @admin("Article: " + article.title) {
    <table class="table table-bordered">
       <tr>
-        <th>First introduced</th><td>@adminHelper.dateDisplay(uri.updatedAt) @adminHelper.timeDisplay(uri.updatedAt)</td>
+        <th>First introduced</th><td>@adminHelper.dateTimeDisplay(uri.updatedAt)</td>
       </tr>
       <tr>
         <th>URL</th><td><a href="@uri.url">@uri.url</a></td>
