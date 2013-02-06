@@ -4,22 +4,19 @@ import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
 
-import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
-import com.keepit.test._
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
-
-import securesocial.core._
+import com.keepit.inject._
+import com.keepit.test._
 
 import play.api.Play.current
-import play.api.test._
 import play.api.test.Helpers._
+import securesocial.core._
 
 @RunWith(classOf[JUnitRunner])
 class SocialUserInfoTest extends SpecificationWithJUnit with DbRepos {
 
-  def setup() = {
+  def setup(): User = {
     db.readWrite { implicit s =>
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
                                   tokenType = None, expiresIn = None, refreshToken = None)
@@ -38,10 +35,28 @@ class SocialUserInfoTest extends SpecificationWithJUnit with DbRepos {
       socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Bob User2", state = SocialUserInfoStates.FETCHED_USING_SELF, socialId = SocialId("bob.user2"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)))
       socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Bob User3", state = SocialUserInfoStates.FETCHED_USING_FRIEND, socialId = SocialId("bob.user3"), networkType = SocialNetworks.FACEBOOK, credentials = None))
 
+      user
     }
   }
 
   "SocialUserInfo" should {
+
+    "use cache properly" in {
+      running(new EmptyApplication()) {
+        val user = setup()
+        db.readWrite { implicit c =>
+          def isInCache =
+            inject[SocialUserInfoRepoImpl].userCache.get(SocialUserInfoUserKey(user.id.get)).isDefined
+          val origSocialUser = socialUserInfoRepo.getByUser(user.id.get).head
+          isInCache === true
+          socialUserInfoRepo.save(origSocialUser.copy(fullName = "John Smith"))
+          isInCache === false
+          val newSocialUser = socialUserInfoRepo.getByUser(user.id.get).head
+          isInCache === true
+          newSocialUser.fullName === "John Smith"
+        }
+      }
+    }
 
     "get pages" in {
       running(new EmptyApplication()) {
