@@ -48,9 +48,9 @@ object AuthController extends FortyTwoController {
 		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)).withNewSession
 	    case Some(socialUser) =>
 	      log.info("facebook id %s".format(socialUser.id.id))
-	      val user = CX.withConnection { implicit c =>
-  	    	val userId = SocialUserInfoCxRepo.get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).userId.get
-  	    	UserCxRepo.get(userId)
+	      val user = inject[DBConnection].readOnly { implicit s =>
+  	    	val userId = inject[SocialUserInfoRepo].get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).userId.get
+  	    	inject[UserRepo].get(userId)
   	  	}
         Ok(JsObject(Seq(
           "status" -> JsString("loggedin"),
@@ -137,8 +137,8 @@ object AuthController extends FortyTwoController {
   }
 
   def impersonate(id: Id[User]) = AdminJsonAction { request =>
-    val user = CX.withConnection { implicit c =>
-      UserCxRepo.get(id)
+    val user = inject[DBConnection].readOnly { implicit s =>
+      inject[UserRepo].get(id)
     }
     log.info("impersonating user %s".format(user)) //todo(eishay) add event & email
     Ok(JsObject(Seq("userId" -> JsString(id.toString)))).withCookies(ImpersonateCookie.encodeAsCookie(Some(user.externalId)))
