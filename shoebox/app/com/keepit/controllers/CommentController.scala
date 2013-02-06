@@ -238,21 +238,30 @@ object CommentController extends FortyTwoController {
   private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit session: RSession) =
     inject[CommentRepo].getMessages(normalizedURI.id.get, userId)
 
-  private[controllers] def notifyRecipients(comment: Comment): Unit = comment.permissions match {
+  private[controllers] def notifyRecipients(comment: Comment): Unit = {
+    val commentRepo = inject[CommentRepo]
+    val userRepo = inject[UserRepo]
+    val uriRepo = inject[NormalizedURIRepo]
+    val socialRepo = inject[UserWithSocialRepo]
+    val commentRecipientRepo = inject[CommentRecipientRepo]
+    val followRepo = inject[FollowRepo]
+    val deepLinkRepo = inject[DeepLinkRepo]
+    val mailAddressRepo = inject[EmailAddressRepo]
+    comment.permissions match {
       case CommentPermissions.PUBLIC =>
-        CX.withConnection { implicit c =>
-          val author = UserCxRepo.get(comment.userId)
-          val uri = NormalizedURICxRepo.get(comment.uriId)
-          val follows = FollowCxRepo.get(uri.id.get)
+        inject[DBConnection].readWrite { implicit s =>
+          val author = userRepo.get(comment.userId)
+          val uri = uriRepo.get(comment.uriId)
+          val follows = followRepo.get(uri.id.get)
           for (userId <- follows.map(_.userId).toSet - comment.userId) {
-            val recipient = UserCxRepo.get(userId)
-            val deepLink = DeepLink(
+            val recipient = userRepo.get(userId)
+            val deepLink = deepLinkRepo.save(DeepLink(
                 initatorUserId = Option(comment.userId),
                 recipientUserId = Some(userId),
                 uriId = Some(comment.uriId),
                 urlId = comment.urlId,
-                deepLocator = DeepLocator.ofComment(comment)).save
-            val addrs = EmailAddressCxRepo.getByUser(userId)
+                deepLocator = DeepLocator.ofComment(comment)))
+            val addrs = mailAddressRepo.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
                   senderUserId = Option(comment.userId),
@@ -265,20 +274,20 @@ object CommentController extends FortyTwoController {
           }
         }
       case CommentPermissions.MESSAGE =>
-        CX.withConnection { implicit c =>
+        inject[DBConnection].readWrite { implicit s =>
           val senderId = comment.userId
-          val sender = UserCxRepo.get(senderId)
-          val uri = NormalizedURICxRepo.get(comment.uriId)
-          val participants = CommentCxRepo.getParticipantsUserIds(comment)
+          val sender = userRepo.get(senderId)
+          val uri = uriRepo.get(comment.uriId)
+          val participants = commentRepo.getParticipantsUserIds(comment.id.get)
           for (userId <- participants - senderId) {
-            val recipient = UserCxRepo.get(userId)
-            val deepLink = DeepLink(
+            val recipient = userRepo.get(userId)
+            val deepLink = deepLinkRepo.save(DeepLink(
                 initatorUserId = Option(comment.userId),
                 recipientUserId = Some(userId),
                 uriId = Some(comment.uriId),
                 urlId = comment.urlId,
-                deepLocator = DeepLocator.ofMessageThread(comment)).save
-            val addrs = EmailAddressCxRepo.getByUser(userId)
+                deepLocator = DeepLocator.ofMessageThread(comment)))
+            val addrs = mailAddressRepo.getByUser(userId)
             for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
               inject[PostOffice].sendMail(ElectronicMail(
                   senderUserId = Option(comment.userId),
@@ -293,6 +302,7 @@ object CommentController extends FortyTwoController {
       case unsupported =>
         log.error("unsupported comment type for email %s".format(unsupported))
     }
+  }
 
   //e.g. [look here](x-kifi-sel:body>div#page.watch>div:nth-child(4\)>div#watch7-video-container)
   def replaceLookHereLinks(text: String): String =
