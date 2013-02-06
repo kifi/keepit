@@ -1,31 +1,19 @@
 package com.keepit.common.social
 
-import scala.collection.mutable.MutableList
-import com.keepit.search.ArticleStore
-import com.keepit.common.logging.Logging
-import com.keepit.search.Article
-import com.keepit.model._
-import play.api.Plugin
-import play.api.templates.Html
-import akka.util.Timeout
-import akka.actor._
-import akka.actor.Actor._
-import akka.actor.ActorRef
-import akka.util.duration._
-import akka.pattern.ask
-import akka.dispatch.Await
-import play.api.libs.concurrent._
-import org.joda.time.DateTime
-import akka.dispatch.Future
 import com.google.inject.Inject
-import com.google.inject.Provider
-import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.inject._
 import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
+import com.keepit.common.logging.Logging
+import com.keepit.inject._
+import com.keepit.model._
+
+import akka.actor._
+import akka.dispatch.Await
+import akka.dispatch.Future
+import akka.pattern.ask
+import akka.util.Timeout
+import akka.util.duration._
 import play.api.Play.current
-import play.api.libs.json.JsArray
-import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
+import play.api.Plugin
 
 //case object FetchAll
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
@@ -44,27 +32,30 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
 
     case FetchUserInfo(socialUserInfo) =>
       try {
-        require(socialUserInfo.credentials.isDefined, "social user info's credentias is not defined: %s".format(socialUserInfo))
+        require(socialUserInfo.credentials.isDefined,
+          "social user info's credentials are not defined: %s".format(socialUserInfo))
         log.info("fetching raw info for %s".format(socialUserInfo))
         val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo)
         log.info("fetched raw info %s for %s".format(rawInfo, socialUserInfo))
-        CX.withConnection { implicit c =>
-          socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh().save
-        }
         val store = inject[SocialUserRawInfoStore]
         store += (socialUserInfo.id.get -> rawInfo)
 
         inject[SocialUserImportFriends].importFriends(rawInfo.jsons)
-        inject[SocialUserCreateConnections].createConnections(socialUserInfo, rawInfo.jsons)
+        val connections = inject[SocialUserCreateConnections].createConnections(socialUserInfo, rawInfo.jsons)
         inject[SocialUserImportEmail].importEmail(socialUserInfo.userId.get, rawInfo.jsons)
-      }
-      catch {
+
+        CX.withConnection { implicit c =>
+          socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh().save
+        }
+        sender ! Right(connections)
+      } catch {
         //todo(yonatan): healthcheck event, granular exception catching, frontend should be notified.
-        case ex =>
+        case ex: Exception =>
           CX.withConnection { implicit c =>
-            socialUserInfo.withState(SocialUserInfoStates.FETCHE_FAIL).save
+            socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).save
           }
           log.error("Problem Fetching User Info for %s".format(socialUserInfo), ex)
+          sender ! Left(ex)
       }
 
 
@@ -73,7 +64,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
 }
 
 trait SocialGraphPlugin extends Plugin {
-  def asyncFetch(socialUserInfo: SocialUserInfo): Unit
+  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Either[Seq[SocialConnection], Exception]]
   def fetchAll(): Unit
 }
 
@@ -102,9 +93,10 @@ class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: Faceboo
     Await.result(future, 1 minutes)
   }
 
-  override def asyncFetch(socialUserInfo: SocialUserInfo): Unit = {
-    require(socialUserInfo.credentials.isDefined, "social user info's credentias is not defined: %s".format(socialUserInfo))
-    actor ! FetchUserInfo(socialUserInfo)
+  override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Either[Seq[SocialConnection], Exception]] = {
+    require(socialUserInfo.credentials.isDefined,
+      "social user info's credentials are not defined: %s".format(socialUserInfo))
+    actor.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Either[Seq[SocialConnection], Exception]]
   }
 }
 

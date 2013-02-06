@@ -170,7 +170,7 @@ object SocialUserInfoStates {
   val CREATED = State[SocialUserInfo]("created")
   val FETCHED_USING_FRIEND = State[SocialUserInfo]("fetched_using_friend")
   val FETCHED_USING_SELF = State[SocialUserInfo]("fetched_using_self")
-  val FETCHE_FAIL = State[SocialUserInfo]("fetch_fail")
+  val FETCH_FAIL = State[SocialUserInfo]("fetch_fail")
   val INACTIVE = State[SocialUserInfo]("inactive")
 }
 
