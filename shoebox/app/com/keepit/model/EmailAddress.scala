@@ -22,13 +22,7 @@ case class EmailAddress (
 ) extends Model[EmailAddress] with EmailAddressHolder {
   def withId(id: Id[EmailAddress]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def save(implicit conn: Connection): EmailAddress = {
-    val entity = EmailAddressEntity(this.copy(updatedAt = currentDateTime))
-    assert(1 == entity.save())
-    entity.view
-  }
   def sameAddress(otherAddress: String) = otherAddress == address
-
   def withState(state: State[EmailAddress]) = copy(state = state)
 }
 
