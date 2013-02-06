@@ -60,7 +60,7 @@ api.log("[google_inject.js]");
     }
 
     if(isKifi && href && queryUUID && whichResult != -1)
-      logEvent("search", "kifiResultClicked", {"url": href, "whichResult": whichResult, "query": query, "queryUUID": queryUUID});
+      logEvent("search", "kifiResultClicked", {"url": href, "whichResult": whichResult, "query": query, "queryUUID": queryUUID, "kifiResultsCount": kifiResults.length});
     else if(!isKifi && href && whichResult != -1) {
       logEvent("search", "googleResultClicked", {"url": href, "whichResult": whichResult, "query": query, "kifiResultsCount": kifiResults.length});
     }
