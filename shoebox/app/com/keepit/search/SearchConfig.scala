@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.db.Id
-import com.keepit.model.{User, UserCxRepo}
+import com.keepit.model.User
 import java.io.File
 import java.io.FileInputStream
 import java.util.Properties

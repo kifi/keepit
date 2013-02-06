@@ -3,7 +3,7 @@ package com.keepit.search.graph
 import scala.collection.mutable.MutableList
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
-import com.keepit.model.{User, UserCxRepo}
+import com.keepit.model.User
 import play.api.Play.current
 import play.api.Plugin
 import play.api.templates.Html
