@@ -716,9 +716,7 @@ slider = function() {
           var f = friends[i];
           f.name = f.firstName + " " + f.lastName;
         }
-        $("#to-list").tokenInput(friends, {
-          theme: "kifi"
-        });
+        $(".kifi-to-list").tokenInput(friends, {theme: "kifi"});
         $("#token-input-to-list").keypress(function(e) {
           return e.which !== 13;
         });
