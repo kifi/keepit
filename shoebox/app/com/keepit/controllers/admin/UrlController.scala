@@ -123,7 +123,7 @@ object UrlController extends FortyTwoController {
             }
 
             changes += (("follow", 0))
-            followRepo.getByUrlId(url.id.get) map { s =>
+            followRepo.getByUrl(url.id.get, state = None) map { s =>
               if(s.uriId.id != normalizedUri.id.get.id) {
                 changes("follow") += 1
                 if(!readOnly) {
