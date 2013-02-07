@@ -7,7 +7,6 @@
 api.log("[google_inject.js]");
 
 !function() {
-  var lastInjected;
   var restrictedGoogleInject = [
     "tbm=isch"
   ];
