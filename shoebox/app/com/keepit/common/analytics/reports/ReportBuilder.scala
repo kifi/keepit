@@ -10,7 +10,6 @@ import play.api.libs.json._
 import play.api.libs.ws._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError}
-import com.keepit.common.db.CX
 import com.keepit.inject._
 import akka.actor.ActorSystem
 import akka.actor.Actor

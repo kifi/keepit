@@ -36,8 +36,9 @@ object ScraperController extends FortyTwoController {
 
   def scrapeByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
     transitionByAdmin(state -> Set(ACTIVE)) { newState =>
-      CX.withConnection { implicit c =>
-        NormalizedURICxRepo.getByState(state).foreach{ uri => uri.withState(newState).save }
+      inject[DBConnection].readWrite { implicit s =>
+        val repo = inject[NormalizedURIRepo]
+        repo.getByState(state).foreach{ uri => repo.save(uri.withState(newState)) }
       }
       val scraper = inject[ScraperPlugin]
       val articles = scraper.scrape()
@@ -48,8 +49,8 @@ object ScraperController extends FortyTwoController {
   def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction { implicit request =>
     val store = inject[ArticleStore]
     val article = store.get(id).get
-    val uri = CX.withConnection { implicit c =>
-      NormalizedURICxRepo.get(article.id)
+    val uri = inject[DBConnection].readOnly { implicit s =>
+      inject[NormalizedURIRepo].get(article.id)
     }
     Ok(views.html.article(article, uri))
   }
@@ -179,7 +180,7 @@ object ScraperController extends FortyTwoController {
 
       // Follow
       val followRepo = inject[FollowRepo]
-      followRepo.getByUriId(childId).map { follow =>
+      followRepo.getByUri(childId, excludeState = None).map { follow =>
         followRepo.save(follow.withNormUriId(parentId))
       }
     }

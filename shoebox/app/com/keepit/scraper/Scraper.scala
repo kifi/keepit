@@ -74,7 +74,9 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
 
   private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
-
+    val db = inject[DBConnection]
+    val uriRepo = inject[NormalizedURIRepo]
+    val scrapeInfoRepo = inject[ScrapeInfoRepo]
     fetchArticle(uri, getIfModifiedSince(info)) match {
       case Scraped(article) =>
         // store a scraped article in a store map
@@ -84,27 +86,24 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
         val newSig = computeSignature(article)
         val docChanged = (newSig.similarTo(oldSig) < (1.0d - config.changeThreshold * (config.minInterval / info.interval)))
 
-        val scrapedURI = CX.withConnection { implicit c =>
-
+        val scrapedURI = db.readWrite { implicit s =>
           val isUnscrape = {
-            inject[DBConnection].readOnly { implicit conn =>
-              val uns = inject[UnscrapableRepo]
-              if (uns.contains(uri.url) || (article.destinationUrl.isDefined && uns.contains(article.destinationUrl.get))) true else false
-            }
+            val uns = inject[UnscrapableRepo]
+            if (uns.contains(uri.url) || (article.destinationUrl.isDefined && uns.contains(article.destinationUrl.get))) true else false
           }
 
           if (docChanged) {
             // update the scrape schedule and the uri state to SCRAPED
-            info.withDestinationUrl(article.destinationUrl).withDocumentChanged(newSig.toBase64).save
+            scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(newSig.toBase64))
             if (isUnscrape)
-              uri.withState(NormalizedURIStates.UNSCRAPABLE).save
+              uriRepo.save(uri.withState(NormalizedURIStates.UNSCRAPABLE))
             else
-              uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED).save
+              uriRepo.save(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
           } else {
             // update the scrape schedule, uri is not changed
-            info.withDestinationUrl(article.destinationUrl).withDocumentUnchanged().save
+            scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentUnchanged())
             if (isUnscrape)
-              uri.withState(NormalizedURIStates.UNSCRAPABLE).save
+              uriRepo.save(uri.withState(NormalizedURIStates.UNSCRAPABLE))
             else
               uri
           }
@@ -113,7 +112,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
         (scrapedURI, Some(article))
       case NotModified =>
         // update the scrape schedule, uri is not changed
-        CX.withConnection { implicit c => info.withDocumentUnchanged().save }
+        db.readWrite { implicit s => scrapeInfoRepo.save(info.withDocumentUnchanged()) }
         (uri, None)
       case Error(httpStatus, msg) =>
         // store a fallback article in a store map
@@ -131,9 +130,9 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
             destinationUrl = None)
         articleStore += (uri.id.get -> article)
         // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
-        val errorURI = CX.withConnection { implicit c =>
-          info.withFailure().save
-          uri.withState(NormalizedURIStates.SCRAPE_FAILED).save
+        val errorURI = db.readWrite { implicit s =>
+          scrapeInfoRepo.save(info.withFailure())
+          uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         (errorURI, None)
     }

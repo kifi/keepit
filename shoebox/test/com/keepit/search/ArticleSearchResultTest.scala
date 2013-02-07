@@ -4,11 +4,11 @@ import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.search.index.ArticleIndexer
-import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.common.db.{Id, CX, ExternalId}
+import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.inject._
 import com.keepit.test._
 import org.junit.runner.RunWith
 import org.specs2.mutable._
@@ -48,6 +48,7 @@ class ArticleSearchResultTest extends SpecificationWithJUnit with DbRepos {
 
     "persisting to db" in {
       running(new EmptyApplication()) {
+        val repo = inject[ArticleSearchResultRefRepo]
          val user = db.readWrite { implicit s =>
            userRepo.save(User(firstName = "Shachaf", lastName = "Smith"))
          }
@@ -63,14 +64,14 @@ class ArticleSearchResultTest extends SpecificationWithJUnit with DbRepos {
               uuid = ExternalId[ArticleSearchResultRef](),
               pageNumber = 4,
               millisPassed = 24)
-         val model = CX.withConnection { implicit c =>
-           ArticleSearchResultRef(res).save
+         val model = db.readWrite { implicit s =>
+           repo.save(ArticleSearchResultFactory(res))
          }
          model.externalId === res.uuid
-         val loaded = CX.withConnection { implicit c =>
-           ArticleSearchResultRef.get(model.id.get)
+         val loaded = db.readWrite { implicit s =>
+           repo.save(repo.get(model.id.get))
          }
-         loaded === model
+         loaded === model.copy(updatedAt = loaded.updatedAt)
          loaded.createdAt === res.time
          loaded.externalId === res.uuid
          loaded.millisPassed === res.millisPassed

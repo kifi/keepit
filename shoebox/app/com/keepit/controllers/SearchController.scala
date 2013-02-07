@@ -23,7 +23,6 @@ import com.keepit.search.index.Hit
 import com.keepit.search.graph._
 import com.keepit.search._
 import com.keepit.common.social.UserWithSocial
-import org.apache.commons.lang3.StringEscapeUtils
 import com.keepit.search.ArticleSearchResultStore
 import com.keepit.common.controller.FortyTwoController
 
@@ -39,8 +38,10 @@ case class PersonalSearchResultPacket(
 
 object SearchController extends FortyTwoController {
 
-  def search(escapedTerm: String, maxHits: Int, lastUUIDStr: Option[String], filter: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
-    val term = StringEscapeUtils.unescapeHtml4(escapedTerm)
+  def search(q: Option[String], term: Option[String], maxHits: Int, lastUUIDStr: Option[String], filter: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
+    // TODO: remove term parameter and require q after all KiFi installations >= 2.1.46
+    val query = q.orElse(term).get
+
     val lastUUID = lastUUIDStr.flatMap{
         case "" => None
         case str => Some(ExternalId[ArticleSearchResultRef](str))
@@ -48,7 +49,7 @@ object SearchController extends FortyTwoController {
     val searchFilter = SearchFilter(filter)
 
     val userId = request.userId
-    log.info("searching with %s using userId id %s".format(term, userId))
+    log.info("searching with %s using userId id %s".format(query, userId))
     val friendIds = inject[DBConnection].readOnly { implicit s =>
       inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
     }
@@ -59,10 +60,10 @@ object SearchController extends FortyTwoController {
     val mainSearcherFactory = inject[MainSearcherFactory]
     val searcher = mainSearcherFactory(userId, friendIds, filterOut, config)
     val searchRes = if (maxHits > 0) {
-      searcher.search(term, maxHits, lastUUID, searchFilter)
+      searcher.search(query, maxHits, lastUUID, searchFilter)
     } else {
       log.warn("maxHits is zero")
-      ArticleSearchResult(lastUUID, term, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], filterOut, 0, Int.MaxValue)
+      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], filterOut, 0, Int.MaxValue)
     }
     val realResults = toPersonalSearchResultPacket(userId, searchRes)
 
@@ -84,8 +85,8 @@ object SearchController extends FortyTwoController {
   }
 
   private def reportArticleSearchResult(res: ArticleSearchResult) = dispatch ({
-        CX.withConnection { implicit c =>
-          ArticleSearchResultRef(res).save
+        inject[DBConnection].readWrite { implicit s =>
+          inject[ArticleSearchResultRefRepo].save(ArticleSearchResultFactory(res))
         }
         inject[ArticleSearchResultStore] += (res.uuid -> res)
       }, { e =>
@@ -93,7 +94,7 @@ object SearchController extends FortyTwoController {
       })
 
   private[controllers] def toPersonalSearchResultPacket(userId: Id[User], res: ArticleSearchResult) = {
-    val hits = inject[DBConnection].readOnly { implicit s => 
+    val hits = inject[DBConnection].readOnly { implicit s =>
       res.hits.map(toPersonalSearchResult(userId, _))
     }
     log.debug(hits mkString "\n")
@@ -139,13 +140,13 @@ object SearchController extends FortyTwoController {
   case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
 
   def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = AdminHtmlAction { implicit request =>
-    val ref = CX.withConnection { implicit conn =>
-      ArticleSearchResultRef.getOpt(id).get
+    val ref = inject[DBConnection].readWrite { implicit s =>
+      inject[ArticleSearchResultRefRepo].get(id)
     }
     val result = inject[ArticleSearchResultStore].get(ref.externalId).get
     val uriRepo = inject[NormalizedURIRepo]
     val userRepo = inject[UserRepo]
-    val metas: Seq[ArticleSearchResultHitMeta] = inject[DBConnection].readOnly { implicit s => 
+    val metas: Seq[ArticleSearchResultHitMeta] = inject[DBConnection].readOnly { implicit s =>
       result.hits.zip(result.scorings) map { tuple =>
         val hit = tuple._1
         val scoring = tuple._2

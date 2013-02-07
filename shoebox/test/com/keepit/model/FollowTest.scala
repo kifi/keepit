@@ -4,8 +4,6 @@ import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
 
-import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
 import com.keepit.common.db.slick._
 import com.keepit.inject._
 import com.keepit.test._
@@ -49,9 +47,9 @@ class FollowTest extends SpecificationWithJUnit with DbRepos {
           repo.get(f1.id.get) === f1
           repo.get(f2.id.get) === f2
           repo.all().size === 2
-          repo.all(user1.id.get).size === 1
-          repo.all(user2.id.get).size === 0 //inactive
-          repo.all(user1.id.get).head === f1
+          repo.getByUser(user1.id.get).size === 1
+          repo.getByUser(user2.id.get).size === 0 //inactive
+          repo.getByUser(user1.id.get).head === f1
 
           repo.get(user1.id.get, uriA.id.get).isDefined === false
           repo.get(user1.id.get, uriB.id.get).isDefined === true

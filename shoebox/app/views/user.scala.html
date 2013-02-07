@@ -36,17 +36,15 @@
         <th>Facebook Account</th><td>@userWithFacebookDisplay(userWithSocial)</td>
       </tr>
       <tr>
-        <th>Created At</th><td>@adminHelper.dateDisplay(userWithSocial.user.createdAt) @adminHelper.timeDisplay(userWithSocial.user.createdAt)</td>
+        <th>Created At</th><td>@adminHelper.dateTimeDisplay(userWithSocial.user.createdAt)</td>
       </tr>
       <tr>
-        <th>Last Update</th><td>@adminHelper.dateDisplay(userWithSocial.user.updatedAt) @adminHelper.timeDisplay(userWithSocial.user.updatedAt)</td>
+        <th>Last Update</th><td>@adminHelper.dateTimeDisplay(userWithSocial.user.updatedAt)</td>
       </tr>
       <tr>
-        <th>Last Social User Update</th><td>@{
-          userWithSocial.socialUserInfo.lastGraphRefresh.map {
-            d => adminHelper.dateDisplay(d) + " " + adminHelper.timeDisplay(d)
-          }.getOrElse("")
-        }</td>
+        <th>Last Social User Update</th><td>
+          @userWithSocial.socialUserInfo.lastGraphRefresh.map(adminHelper.dateTimeDisplay(_)).mkString
+        </td>
       </tr>
       <tr>
         <th>Email</th>
@@ -131,7 +129,7 @@
 		        </td>
 		        <td>@adminHelper.bookmarkDisplay(bookmark)</td>
 		        <td>@bookmark.source</td>
-            <td>@adminHelper.dateDisplay(bookmark.createdAt) @adminHelper.timeDisplay(bookmark.createdAt)</td>
+            <td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
             <td>@adminHelper.uriStateDisplay(uri)</td>
 			   </tr>
 			 }

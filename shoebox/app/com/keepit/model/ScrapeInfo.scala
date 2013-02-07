@@ -11,7 +11,6 @@ import com.keepit.scraper.ScraperConfig
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
-import ru.circumflex.orm._
 import play.api.libs.json._
 import scala.math._
 import org.joda.time.Hours
@@ -66,14 +65,7 @@ case class ScrapeInfo(
   }
 
   private[this] def hoursToSeconds(hours: Double) = (hours * 60.0d * 60.0d).toInt
-
   def withNextScrape(nextScrape: DateTime) = copy(nextScrape = nextScrape)
-
-  def save(implicit conn: Connection): ScrapeInfo = {
-    val entity = ScrapeInfoEntity(this)
-    assert(1 == entity.save())
-    entity.view
-  }
 }
 
 @ImplementedBy(classOf[ScrapeInfoRepoImpl])
@@ -126,60 +118,7 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
 
 }
 
-//slicked
-object ScrapeInfoCxRepo {
-  def ofUriId(uriId: Id[NormalizedURI])(implicit conn: Connection) = {
-    (ScrapeInfoEntity AS "s").map{ s => SELECT (s.*) FROM s WHERE (s.uriId EQ uriId) LIMIT 1 }.unique.map( _.view ) match {
-      case Some(info) => info
-      case None => ScrapeInfo(uriId = uriId).save
-    }
-  }
-}
-
 object ScrapeInfoStates {
   val ACTIVE = State[ScrapeInfo]("active")
   val INACTIVE = State[ScrapeInfo]("inactive")
-}
-
-private[model] class ScrapeInfoEntity extends Entity[ScrapeInfo, ScrapeInfoEntity] {
-  val uriId = "uri_id".ID[NormalizedURI].NOT_NULL
-  val lastScrape = "last_scrape".JODA_TIMESTAMP.NOT_NULL
-  val nextScrape = "next_scrape".JODA_TIMESTAMP.NOT_NULL
-  val interval = "scrape_interval".DOUBLE().NOT_NULL
-  val failures = "failures".INTEGER.NOT_NULL
-  val state = "state".STATE[ScrapeInfo].NOT_NULL
-  val signature = "signature".VARCHAR(2046).NOT_NULL
-  val destinationUrl = "destination_url".VARCHAR(2048)
-
-  def relation = ScrapeInfoEntity
-
-  def view(implicit conn: Connection): ScrapeInfo = ScrapeInfo(
-    id = id.value,
-    uriId = uriId(),
-    lastScrape = lastScrape(),
-    nextScrape = nextScrape(),
-    interval = interval(),
-    failures = failures(),
-    state = state(),
-    signature = signature(),
-    destinationUrl = destinationUrl.value
-  )
-}
-
-private[model] object ScrapeInfoEntity extends ScrapeInfoEntity with EntityTable[ScrapeInfo, ScrapeInfoEntity] {
-  override def relationName = "scrape_info"
-
-  def apply(view: ScrapeInfo): ScrapeInfoEntity = {
-    val entity = new ScrapeInfoEntity
-    entity.id.set(view.id)
-    entity.uriId := view.uriId
-    entity.lastScrape := view.lastScrape
-    entity.nextScrape := view.nextScrape
-    entity.interval := view.interval
-    entity.failures := view.failures
-    entity.state := view.state
-    entity.signature := view.signature
-    entity.destinationUrl.set(view.destinationUrl)
-    entity
-  }
 }

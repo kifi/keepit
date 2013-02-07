@@ -18,17 +18,13 @@
         <th>Saved by</th><td>@adminHelper.userDisplay(userWithSocial)</td>
       </tr>
       <tr>
-        <th>Creation time</th><td>@adminHelper.dateDisplay(bookmark.createdAt) - @adminHelper.timeDisplay(bookmark.createdAt)</td>
+        <th>Creation time</th><td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
       </tr>
       <tr>
-        <th>Last scrape</th><td>@{scrapeInfo.map { si =>
-          adminHelper.dateDisplay(si.lastScrape) + " - " + adminHelper.timeDisplay(si.lastScrape)
-        }.mkString}</td>
+        <th>Last scrape</th><td>@scrapeInfo.map(si => adminHelper.dateTimeDisplay(si.lastScrape)).mkString</td>
       </tr>
       <tr>
-        <th>Next scrape</th><td>@{scrapeInfo.map { si =>
-          adminHelper.dateDisplay(si.nextScrape) + " - " + adminHelper.timeDisplay(si.nextScrape)
-        }.mkString}</td>
+        <th>Next scrape</th><td>@scrapeInfo.map(si => adminHelper.dateTimeDisplay(si.nextScrape)).mkString</td>
       </tr>
    </table>
    <p><input type="button" id="rescrape" value="Rescrape"></p>

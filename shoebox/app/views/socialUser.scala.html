@@ -17,8 +17,8 @@
    State: @socialUserInfo.state<br/>
    Credentials:<br/><textarea rows="3" cols="400">@socialUserInfo.credentials</textarea><br/>
    Social Raw info: <br/><textarea rows="7" cols="400">@rawInfo</textarea><br/>
-   Account created at: @adminHelper.dateDisplay(socialUserInfo.createdAt) @adminHelper.timeDisplay(socialUserInfo.createdAt)<br/>
-   Last updated: @adminHelper.dateDisplay(socialUserInfo.updatedAt) @adminHelper.timeDisplay(socialUserInfo.updatedAt)
+   Account created at: @adminHelper.dateTimeDisplay(socialUserInfo.createdAt)<br/>
+   Last updated: @adminHelper.dateTimeDisplay(socialUserInfo.updatedAt)
 
    @if(socialUserInfo.userId.isDefined) {
      <h3>Forty Two User: @adminHelper.socialUserDisplay(socialUserInfo)</h3>

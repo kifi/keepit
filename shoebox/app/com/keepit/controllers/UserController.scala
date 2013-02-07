@@ -29,7 +29,7 @@ object UserController extends FortyTwoController {
         case Some(uri) =>
           val userId = request.userId
           val bookmark = inject[BookmarkRepo].getByUriAndUser(uri.id.get, userId).filter(_.isActive)
-          val following = inject[FollowRepo].get(userId, uri.id.get).filter(_.isActive).isDefined
+          val following = inject[FollowRepo].get(userId, uri.id.get).isDefined
 
           val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
           val searcher = inject[URIGraph].getURIGraphSearcher
@@ -114,7 +114,7 @@ object UserController extends FortyTwoController {
       val mailRepo = inject[ElectronicMailRepo]
       val userWithSocial = userWithSocialRepo.toUserWithSocial(userRepo.get(userId))
       val socialUserInfos = socialUserInfoRepo.getByUser(userWithSocial.user.id.get)
-      val follows = followRepo.all(userId) map {f => normalizedURIRepo.get(f.uriId)}
+      val follows = followRepo.getByUser(userId) map {f => normalizedURIRepo.get(f.uriId)}
       val comments = commentRepo.all(CommentPermissions.PUBLIC, userId) map {c =>
         (normalizedURIRepo.get(c.uriId), c)
       }

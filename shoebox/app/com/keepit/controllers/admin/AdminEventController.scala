@@ -9,7 +9,6 @@ import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.http.ContentTypes
 import com.keepit.controllers.CommonActions._
-import com.keepit.common.db.CX
 import com.keepit.common.db._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.async._
@@ -23,7 +22,6 @@ import com.keepit.search.index.Hit
 import com.keepit.search.graph._
 import com.keepit.search._
 import com.keepit.common.social.UserWithSocial
-import org.apache.commons.lang3.StringEscapeUtils
 import com.keepit.search.ArticleSearchResultStore
 import com.keepit.common.controller.FortyTwoController
 import play.api.libs.json._
