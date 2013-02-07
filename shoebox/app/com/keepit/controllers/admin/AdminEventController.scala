@@ -9,7 +9,6 @@ import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.http.ContentTypes
 import com.keepit.controllers.CommonActions._
-import com.keepit.common.db.CX
 import com.keepit.common.db._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.async._

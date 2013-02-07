@@ -12,7 +12,6 @@ import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
-import ru.circumflex.orm._
 import securesocial.core.SocialUser
 import play.api.libs.json._
 import com.keepit.common.social.SocialNetworkType

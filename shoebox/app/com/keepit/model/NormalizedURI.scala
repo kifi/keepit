@@ -13,7 +13,6 @@ import org.joda.time.DateTime
 import play.api._
 import play.api.Play.current
 import play.api.libs.json._
-import ru.circumflex.orm._
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable

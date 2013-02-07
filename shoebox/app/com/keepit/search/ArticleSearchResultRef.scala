@@ -7,7 +7,6 @@ import com.keepit.common.time._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import java.sql.Connection
 import org.joda.time.DateTime
-import ru.circumflex.orm._
 import com.keepit.model._
 
 case class ArticleSearchResultRef (
