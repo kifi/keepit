@@ -84,8 +84,8 @@ object SearchController extends FortyTwoController {
   }
 
   private def reportArticleSearchResult(res: ArticleSearchResult) = dispatch ({
-        CX.withConnection { implicit c =>
-          ArticleSearchResultRef(res).save
+        inject[DBConnection].readWrite { implicit s =>
+          inject[ArticleSearchResultRefRepo].save(ArticleSearchResultFactory(res))
         }
         inject[ArticleSearchResultStore] += (res.uuid -> res)
       }, { e =>
@@ -139,8 +139,8 @@ object SearchController extends FortyTwoController {
   case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
 
   def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = AdminHtmlAction { implicit request =>
-    val ref = CX.withConnection { implicit conn =>
-      ArticleSearchResultRef.getOpt(id).get
+    val ref = inject[DBConnection].readWrite { implicit s =>
+      inject[ArticleSearchResultRefRepo].get(id)
     }
     val result = inject[ArticleSearchResultStore].get(ref.externalId).get
     val uriRepo = inject[NormalizedURIRepo]
