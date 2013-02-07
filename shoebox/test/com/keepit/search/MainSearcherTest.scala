@@ -89,7 +89,7 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
         val bookmarks = db.readWrite { implicit s =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              val url1 = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+              val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))))
               bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source))
             }
           }
@@ -145,11 +145,11 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
       running(new EmptyApplication()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
-        val bookmarks = CX.withConnection { implicit c =>
+        val bookmarks = db.readWrite { implicit session =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-              BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))))
+              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source))
             }
           }
         }
@@ -203,11 +203,11 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
       running(new EmptyApplication()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
-        val bookmarks = CX.withConnection { implicit c =>
+        val bookmarks = db.readWrite {implicit s =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-              BookmarkFactory(title = "personal title", url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))))
+              bookmarkRepo.save(BookmarkFactory(title = "personal title", url = url1,  uriId = uri.id.get, userId = user.id.get, source = source))
             }
           }
         }
@@ -266,11 +266,11 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
       running(new EmptyApplication()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
-        val bookmarks = CX.withConnection { implicit c =>
+        val bookmarks = db.readWrite { implicit s =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-              BookmarkFactory(title = "personal title", url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))))
+              bookmarkRepo.save(BookmarkFactory(title = "personal title", url = url1,  uriId = uri.id.get, userId = user.id.get, source = source))
             }
           }
         }
@@ -301,11 +301,11 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
       running(new EmptyApplication()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
-        val bookmarks = CX.withConnection { implicit c =>
+        val bookmarks = db.readWrite { implicit s =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-              BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source).save
+              val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))))
+              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source))
             }
           }
         }
@@ -352,12 +352,12 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
         val now = currentDateTime
         val rand = new Random
 
-        val bookmarkMap = CX.withConnection { implicit c =>
+        val bookmarkMap = db.readWrite { implicit s =>
           uris.foldLeft(Map.empty[Id[NormalizedURI], Bookmark]){ (m, uri) =>
             val createdAt = now.minusHours(rand.nextInt(100))
             val uriId = uri.id.get
-            val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-            val bookmark = BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = userId, source = source).save
+            val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+            val bookmark = bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = userId, source = source))
             m + (uriId -> bookmark)
           }
         }
@@ -386,10 +386,10 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
         val (users, uris) = initData(numUsers = 1, numUris = 10)
         val userId = users.head.id.get
 
-        val bookmarks = CX.withConnection { implicit c =>
+        val bookmarks = db.readWrite { implicit s =>
           uris.map{ uri =>
-            val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-            BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = userId, source = source).save
+            val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = userId, source = source))
           }
         }
 
@@ -428,14 +428,14 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
         val user1 = users(0)
         val user2 = users(1)
         val (privateUris, publicUris) = uris.partition(_.id.get.id % 3 == 0)
-        CX.withConnection { implicit c =>
+        db.readWrite { implicit s =>
           privateUris.foreach{ uri =>
-            val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-            BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source).save
+            val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source))
           }
           publicUris.foreach{ uri =>
-            val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-            BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source).save
+            val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source))
           }
         }
 
@@ -461,14 +461,14 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
         val user1 = users(0)
         val user2 = users(1)
         val (privateUris, publicUris) = uris.partition(_.id.get.id % 3 == 0)
-        CX.withConnection { implicit c =>
+        db.readWrite { implicit s =>
           privateUris.foreach{ uri =>
-            val url = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-            BookmarkFactory(title = uri.title.get, url = url, uriId = uri.id.get, userId = user2.id.get, source = source).withPrivate(true).save // wtf??
+            val url = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url, uriId = uri.id.get, userId = user2.id.get, source = source).withPrivate(true)) // wtf??
           }
           publicUris.foreach{ uri =>
-            val url = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-            BookmarkFactory(title = uri.title.get, url = url, uriId = uri.id.get, userId = user2.id.get, source = source).save
+            val url = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url, uriId = uri.id.get, userId = user2.id.get, source = source))
           }
         }
 
@@ -496,11 +496,11 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
       running(new EmptyApplication()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
-        val bookmarks = CX.withConnection { implicit c =>
+        val bookmarks = db.readWrite { implicit s =>
           expectedUriToUserEdges.flatMap{ case (uri, users) =>
             users.map{ user =>
-              val url1 = URLCxRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get).save)
-              BookmarkFactory(title = "my books", url = url1, uriId = uri.id.get, userId = user.id.get, source = source).save
+              val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))))
+              bookmarkRepo.save(BookmarkFactory(title = "my books", url = url1, uriId = uri.id.get, userId = user.id.get, source = source))
             }
           }
         }

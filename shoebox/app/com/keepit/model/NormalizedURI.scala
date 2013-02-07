@@ -59,10 +59,6 @@ case class NormalizedURI  (
 
   def loadUsingHash(implicit conn: Connection): Option[NormalizedURI] =
     (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlHash EQ urlHash) unique}.map(_.view)
-
-  def stats()(implicit conn: Connection): NormalizedURIStats = NormalizedURIStats(this, BookmarkCxRepo.ofUri(this))
-
-  def uriStats()(implicit s: RSession): NormalizedURIStats = NormalizedURIStats(this, inject[BookmarkRepo].getByUri(id.get))
 }
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
