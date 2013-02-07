@@ -46,19 +46,6 @@ case class NormalizedURI  (
 
   def withState(state: State[NormalizedURI]) = copy(state = state)
   def withTitle(title: String) = if(title.isEmpty()) this else copy(title = Some(title))
-
-  def save(implicit conn: Connection): NormalizedURI = {
-    log.info("saving new uri %s with hash %s".format(url, urlHash))
-    val entity = NormalizedURIEntity(this.copy(updatedAt = currentDateTime))
-    assert(1 == entity.save())
-    val uri = entity.view
-    ScrapeInfoCxRepo.ofUriId(uri.id.get).save
-//    inject[ScrapeInfoRepo].getByUri(uri).getOrElse(inject[ScrapeInfoRepo].save(ScrapeInfo(uri = this.id.get)))
-    uri
-  }
-
-  def loadUsingHash(implicit conn: Connection): Option[NormalizedURI] =
-    (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlHash EQ urlHash) unique}.map(_.view)
 }
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
@@ -143,41 +130,6 @@ object NormalizedURIFactory {
   }
 }
 
-//slicked out!
-object NormalizedURICxRepo {
-
-  def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit conn: Connection): Seq[NormalizedURI] = {
-    if (limit <= 0) {
-      (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.state EQ state) }.list.map( _.view )
-    } else {
-      (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.state EQ state) LIMIT limit }.list.map( _.view )
-    }
-  }
-
-  def getByDomain(domain: String)(implicit conn: Connection) =
-    (NormalizedURIEntity AS "n").map { n => SELECT (n.*) FROM n WHERE (n.domain EQ domain) }.list.map( _.view )
-
-  def getByNormalizedUrl(url: String)(implicit conn: Connection): Option[NormalizedURI] = {
-    val hash = NormalizedURIFactory.hashUrl(NormalizedURIFactory.normalize(url))
-    (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.urlHash EQ hash) unique }.map( _.view )
-  }
-
-  def all(implicit conn: Connection): Seq[NormalizedURI] =
-    NormalizedURIEntity.all.map(_.view)
-
-  def get(id: Id[NormalizedURI])(implicit conn: Connection): NormalizedURI =
-    getOpt(id).getOrElse(throw NotFoundException(id))
-
-  def getOpt(id: Id[NormalizedURI])(implicit conn: Connection): Option[NormalizedURI] =
-    NormalizedURIEntity.get(id).map(_.view)
-
-  def get(externalId: ExternalId[NormalizedURI])(implicit conn: Connection): NormalizedURI =
-    getOpt(externalId).getOrElse(throw NotFoundException(externalId))
-
-  def getOpt(externalId: ExternalId[NormalizedURI])(implicit conn: Connection): Option[NormalizedURI] =
-    (NormalizedURIEntity AS "b").map { b => SELECT (b.*) FROM b WHERE (b.externalId EQ externalId) unique }.map(_.view)
-}
-
 object NormalizedURIStates {
   val ACTIVE = State[NormalizedURI]("active")
   val SCRAPED	= State[NormalizedURI]("scraped")
@@ -236,47 +188,3 @@ object NormalizedURIStates {
     }
   }
 }
-
-private[model] class NormalizedURIEntity extends Entity[NormalizedURI, NormalizedURIEntity] {
-  val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val externalId = "external_id".EXTERNAL_ID[NormalizedURI].NOT_NULL(ExternalId())
-  val title = "title".VARCHAR(2048)
-  val url = "url".VARCHAR(2048).NOT_NULL
-  val state = "state".STATE[NormalizedURI].NOT_NULL(NormalizedURIStates.ACTIVE)
-  val urlHash = "url_hash".VARCHAR(512).NOT_NULL
-  val domain = "domain".VARCHAR(512)
-
-  def relation = NormalizedURIEntity
-
-  def view(implicit conn: Connection): NormalizedURI = NormalizedURI(
-    id = id.value,
-    createdAt = createdAt(),
-    updatedAt = updatedAt(),
-    externalId = externalId(),
-    title = title.value,
-    url = url(),
-    state = state(),
-    urlHash = urlHash()
-  )
-}
-
-private[model] object NormalizedURIEntity extends NormalizedURIEntity with EntityTable[NormalizedURI, NormalizedURIEntity] {
-  override def relationName = "normalized_uri"
-
-  def apply(view: NormalizedURI): NormalizedURIEntity = {
-    val uri = new NormalizedURIEntity
-    uri.id.set(view.id)
-    uri.createdAt := view.createdAt
-    uri.updatedAt := view.updatedAt
-    uri.externalId := view.externalId
-    uri.title.set(view.title)
-    uri.url := view.url
-    uri.state := view.state
-    uri.urlHash := view.urlHash
-    uri.domain.set(view.domain.map(_.toString))
-    uri
-  }
-}
-
-
