@@ -961,7 +961,7 @@ slider = function() {
         renderTemplate("html/comments/comment.html", params, function(renderedComment) {
           //drawCommentView(renderedTemplate, session, type);
           $('.comment_body_view').find('.no-comment').parent().detach();
-          $('.thread-wrapper').append(renderedComment).find("time.timeago").timeago();
+          $('.thread-wrapper').append(renderedComment).find("time").timeago();
           repositionScroll(false);
         });
 
