@@ -120,7 +120,4 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
     (for(k <- table if k.userId === userId && k.externalId === externalId) yield k).firstOption
 }
 
-object KifiInstallationStates {
-  val ACTIVE = State[KifiInstallation]("active")
-  val INACTIVE = State[KifiInstallation]("inactive")
-}
+object KifiInstallationStates extends States[KifiInstallation]

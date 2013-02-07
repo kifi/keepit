@@ -6,6 +6,18 @@ case class State[T](val value: String) {
   override def toString = value
 }
 
+/**
+ * A mixin trait for state objects, e.g.
+ * {{{
+ *   object FollowStates extends States[Follow]
+ * }}}
+ * @tparam T the type of the model
+ */
+trait States[T] {
+  val ACTIVE = State[T]("active")
+  val INACTIVE = State[T]("inactive")
+}
+
 class StateException(message: String) extends Exception(message)
 
 object State {

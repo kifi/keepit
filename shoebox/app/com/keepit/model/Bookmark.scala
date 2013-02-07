@@ -135,7 +135,4 @@ object BookmarkFactory {
     BookmarkFactory(title = title, urlId = urlId, uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
 }
 
-object BookmarkStates {
-  val ACTIVE = State[Bookmark]("active")
-  val INACTIVE = State[Bookmark]("inactive")
-}
+object BookmarkStates extends States[Bookmark]
