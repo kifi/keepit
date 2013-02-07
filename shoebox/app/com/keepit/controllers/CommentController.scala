@@ -143,7 +143,7 @@ object CommentController extends FortyTwoController {
       val urlRepo = inject[URLRepo]
       val followRepo = inject[FollowRepo]
       val uriId = uriRepo.getByNormalizedUrl(url).getOrElse(uriRepo.save(NormalizedURIFactory(url = url))).id.get
-      followRepo.get(request.userId, uriId) match {
+      followRepo.get(request.userId, uriId, excludeState = None) match {
         case Some(follow) if !follow.isActive =>
           Some(followRepo.save(follow.activate))
         case None =>
@@ -220,7 +220,7 @@ object CommentController extends FortyTwoController {
         inject[DBConnection].readWrite { implicit s =>
           val author = userRepo.get(comment.userId)
           val uri = uriRepo.get(comment.uriId)
-          val follows = followRepo.get(uri.id.get)
+          val follows = followRepo.getByUri(uri.id.get)
           for (userId <- follows.map(_.userId).toSet - comment.userId) {
             val recipient = userRepo.get(userId)
             val deepLink = deepLinkRepo.save(DeepLink(
