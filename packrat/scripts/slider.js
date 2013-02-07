@@ -657,7 +657,7 @@ slider = function() {
       $(this).toggleClass("following", following);
     });
 
-    $container.children(".comment_body_view .comment_post_view").on("mousedown", "a[href^='x-kifi-sel:']", function(e) {
+    $container.children(".comment_body_view,.comment_post_view").on("mousedown", "a[href^='x-kifi-sel:']", function(e) {
       if (e.which != 1) return;
       e.preventDefault();
       var el = snapshot.fuzzyFind(this.href.substring(11));
