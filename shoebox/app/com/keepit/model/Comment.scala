@@ -112,6 +112,7 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
               case None =>
             }
           }
+          messageWithChildrenCountCache.remove(MessageWithChildrenCountUriIdUserIdKey(comment.uriId, comment.userId))
         }
       case CommentPermissions.PRIVATE =>
     }
