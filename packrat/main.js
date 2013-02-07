@@ -354,7 +354,7 @@ function searchOnServer(request, respond) {
 
   var config = getConfigs(), maxResults = api.prefs.get("maxResults");
   ajax("GET", "http://" + config.server + "/search", {
-      term: request.query,
+      q: request.query,
       maxHits: maxResults * 2,
       lastUUI: request.lastUUID,
       context: request.context,
