@@ -607,7 +607,9 @@ slider = function() {
       if (partialRender) {
         // Hacky solution for a partial refresh. Needs to be refactored.
         renderTemplate("html/comments/" + partials.comment_body_view, params, partials, function(renderedTemplate) {
-          $('.comment_body_view').html(renderedTemplate).find("time").timeago();
+          var $b = $('.comment_body_view').html(renderedTemplate);
+          $b.animate({scrollTop: $b[0].scrollHeight - $b[0].clientHeight})
+          $b.find("time").timeago();
           showComments.inProgress = false;
         });
       } else {
