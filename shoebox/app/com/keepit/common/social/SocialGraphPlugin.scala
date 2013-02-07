@@ -1,7 +1,6 @@
 package com.keepit.common.social
 
 import com.google.inject.Inject
-import com.keepit.common.db.CX
 import com.keepit.common.db.slick.DBConnection
 import com.keepit.common.logging.Logging
 import com.keepit.inject._
@@ -20,11 +19,11 @@ import play.api.Plugin
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case object FetchAll
 
-private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor with Logging {
+private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: DBConnection, socialRepo: SocialUserInfoRepo) extends Actor with Logging {
   def receive() = {
     case FetchAll =>
-      val unprocessedUsers = CX.withConnection { implicit c =>
-        SocialUserInfoCxRepo.getUnprocessed()
+      val unprocessedUsers = db.readOnly {implicit s =>
+        socialRepo.getUnprocessed()
       }
       unprocessedUsers foreach { user =>
         self ! FetchUserInfo(user)
@@ -44,17 +43,15 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph) extends Actor
         inject[SocialUserImportFriends].importFriends(rawInfo.jsons)
         val connections = inject[SocialUserCreateConnections].createConnections(socialUserInfo, rawInfo.jsons)
         inject[SocialUserImportEmail].importEmail(socialUserInfo.userId.get, rawInfo.jsons)
-        inject[DBConnection].readWrite { implicit c =>
-          inject[SocialUserInfoRepo].save(
-            socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
+        db.readWrite { implicit c =>
+          socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }
         sender ! Right(connections)
       } catch {
         //todo(yonatan): healthcheck event, granular exception catching, frontend should be notified.
         case ex: Exception =>
-          inject[DBConnection].readWrite { implicit c =>
-            inject[SocialUserInfoRepo].save(
-              socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
+          db.readWrite { implicit c =>
+            socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
           }
           log.error("Problem Fetching User Info for %s".format(socialUserInfo), ex)
           sender ! Left(ex)
@@ -70,11 +67,12 @@ trait SocialGraphPlugin extends Plugin {
   def fetchAll(): Unit
 }
 
-class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: FacebookSocialGraph) extends SocialGraphPlugin with Logging {
+class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: FacebookSocialGraph, db: DBConnection, socialRepo: SocialUserInfoRepo) 
+    extends SocialGraphPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = system.actorOf(Props { new SocialGraphActor(socialGraph) })
+  private val actor = system.actorOf(Props { new SocialGraphActor(socialGraph, db, socialRepo) })
 
   // plugin lifecycle methods
   private var _cancellables: Seq[Cancellable] = Nil
