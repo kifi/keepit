@@ -64,12 +64,6 @@ case class Bookmark(
     entity.view
   }
 
-  def delete()(implicit conn: Connection): Unit = {
-    val res = (BookmarkEntity AS "b").map { b => DELETE (b) WHERE (b.id EQ this.id.get) execute }
-    if (res != 1) {
-      throw new Exception("[%s] did not delete %s".format(res, this))
-    }
-  }
 }
 
 @ImplementedBy(classOf[BookmarkRepoImpl])
@@ -81,6 +75,8 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def count(userId: Id[User])(implicit session: RSession): Int
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
+  def uriStats(uri: NormalizedURI)(implicit sesion: RSession): NormalizedURIStats
+  def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit
 }
 
 @Singleton
@@ -128,6 +124,11 @@ class BookmarkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Book
 
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.urlId === urlId) yield b).list
+
+  def uriStats(uri: NormalizedURI)(implicit sesion: RSession): NormalizedURIStats = 
+    NormalizedURIStats(uri, getByUri(uri.id.get))
+
+  def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit = (for(b <- table if b.id === id) yield b).delete
 }
 
 object BookmarkFactory {
