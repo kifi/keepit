@@ -7,14 +7,11 @@
 api.log("[google_inject.js]");
 
 !function() {
-  var restrictedGoogleInject = [
-    "tbm=isch"
-  ];
+  var $q = $("#gbqfq");  // a stable identifier: "Google Bar Query Form Query"
   var resultsStore = {
     "showDefault": 5
   };
   var inprogressSearchQuery = "";
-  var timeSinceLastSearch;
   var kifiResultsClicked = 0;
   var googleResultsClicked = 0;
 
@@ -22,58 +19,44 @@ api.log("[google_inject.js]");
     api.port.emit("log_event", Array.prototype.slice.call(arguments));
   }
 
-  function logSearchEvent() {
+  // "main" div always stays in the page, so only need to bind listener once.
+  // TODO: also detect result selection via keyboard
+  $("#main").on("mousedown", "#search h3.r a", function logSearchEvent() {
     var href = this.href, $li = $(this).closest("li.g");
     var $kifiRes = $("#kifi_reslist"), $kifiLi = $kifiRes.children("li.g");
     var resIdx = $li.parent().children("li.g").index($li);
-    var query = $("#sftab").find("input[name=q]").val();
+    var query = $q.val();
 
     if ($li[0].parentNode === $kifiRes[0]) {
       kifiResultsClicked++;
       var queryUUID = resultsStore.lastRemoteResults.uuid;
       if (href && resIdx >= 0 && queryUUID) {
-        logEvent("search", "kifiResultClicked", {"url": href, "whichResult": resIdx, "query": query, "kifiResultsCount": $kifiLi.length, "queryUUID": queryUUID});
+        logEvent("search", "kifiResultClicked",
+          {"url": href, "whichResult": resIdx, "query": query, "kifiResultsCount": $kifiLi.length, "queryUUID": queryUUID});
       }
     } else {
       googleResultsClicked++;
       if (href && resIdx >= 0) {
-        logEvent("search", "googleResultClicked", {"url": href, "whichResult": resIdx, "query": query, "kifiResultsCount": $kifiLi.length});
+        logEvent("search", "googleResultClicked",
+          {"url": href, "whichResult": resIdx, "query": query, "kifiResultsCount": $kifiLi.length});
       }
     }
-  }
-
-  function bindSearchLogger() {
-    var $res = $("#res");
-    if (!$res.data("kifi-mousedown")) {
-      $res.data("kifi-mousedown", true).on("mousedown", "h3.r a", logSearchEvent);
-    }
-  }
+  });
 
   function updateQuery(calledTimes) {
-    api.log("updating query...");
+    api.log("[updateQuery] times:", calledTimes);
 
-    var restrictedElements = $.grep(restrictedGoogleInject, function(e, i){
-      return document.location.toString().indexOf(e) >= 0;
-    });
-    if (restrictedElements.length > 0) {
-      api.log("restricted hover page: " + restrictedElements);
+    if (~document.location.href.indexOf("tbm=isch")) {
+      api.log("[updateQuery] bailing (image search)");
       return;
     }
 
     if (inprogressSearchQuery) {
-      api.log("Another search is in progress. Ignoring query " + inprogressSearchQuery);
+      api.log("[updateQuery] already in progress:", inprogressSearchQuery);
       return;
     }
 
-    if ($("body").length === 0) {
-      api.log("no body yet...");
-      setTimeout(function(){ updateQuery(); }, 10);
-      return;
-    }
-
-    bindSearchLogger();
-
-    var query = $("input[name='q']").val();
+    var query = $q.val();
     if (!query) {
       if (typeof calledTimes !== 'undefined' && calledTimes <= 10) {
         setTimeout(function(){ updateQuery(++calledTimes); }, 200);
@@ -102,13 +85,14 @@ api.log("[google_inject.js]");
         api.log("No user info. Stopping search.")
         return;
       }
-      if ($("input[name='q']").val() !== query || query !== resp.searchResults.query) { // query changed
+      if ($q.val() !== query || query !== resp.searchResults.query) { // query changed
         api.log("Query changed. Re-loading...");
         updateQuery(0);
         return;
       }
       $("#keepit").detach(); // get rid of old results
       resultsStore = {
+        "arrivalTime": +new Date,
         "lastRemoteResults": resp.searchResults,
         "results": resp.searchResults.hits,
         "query": query,
@@ -123,8 +107,6 @@ api.log("[google_inject.js]");
       if (query === '') {
         return;
       }
-
-      timeSinceLastSearch = new Date().getTime();
 
       api.log("kifi results recieved for " + resultsStore.query);
       api.log(resultsStore);
@@ -186,7 +168,7 @@ api.log("[google_inject.js]");
         api.log("Old keepit exists.");
         setTimeout(function(){ drawResults(++times); }, 100);
       } else {
-        api.log("Drawing results", resultsStore, $("input[name='q']").val());
+        api.log("Drawing results", resultsStore, $q.val());
         addResults();
       }
     } catch (e) {
@@ -196,66 +178,46 @@ api.log("[google_inject.js]");
 
   updateQuery();
 
-  /*$('#main').change(function() {
-    api.log("Search results changed! Updating kifi results...");
+  $("#gbqf").submit(function() {  // stable identifier: "Google Bar Query Form"
+    api.log("[formSubmit]");
     updateQuery();
-  });*/
-
-  setTimeout(function() {
-    $("input[name='q']").parents("form").submit(function(){
-      api.log("Input box changed (submit)! Updating kifi results...");
-      updateQuery();
-    });
-    //updateQuery();
-  },500);
+  });
 
   // The only reliable way to detect spelling clicks.
   // For some reason, spelling doesn't fire a blur()
-  $(window).bind('hashchange', function() {
+  $(window).bind("hashchange", function() {
     api.log("URL has changed! Updating kifi results...");
     resultsStore.show = resultsStore.showDefault;
     updateQuery();
     setTimeout(function(){ updateQuery(0); }, 300); // sanity check
-  });
-
-  $(window).bind('unload', function() {
-    var now = new Date().getTime();
-    var inputQuery = $("input[name='q']").val();
+  }).bind("unload", function() {
+    var inputQuery = $q.val();
     var kifiQuery = resultsStore.lastRemoteResults.query;
 
-    if(inputQuery == kifiQuery && timeSinceLastSearch && now-timeSinceLastSearch > 2000) {
-      logEvent("search", "searchUnload", {"query": kifiQuery, "queryUUID": resultsStore.lastRemoteResults.queryUUID, "kifiResultsClicked": kifiResultsClicked, "googleResultsClicked": googleResultsClicked});
+    if (inputQuery === kifiQuery && new Date - resultsStore.arrivalTime > 2000) {
+      logEvent("search", "searchUnload", {
+        "query": kifiQuery,
+        "queryUUID": resultsStore.lastRemoteResults.queryUUID,
+        "kifiResultsClicked": kifiResultsClicked,
+        "googleResultsClicked": googleResultsClicked});
     }
   });
 
   function cleanupKifiResults() {
-    var currentQuery = "";
-    if (!resultsStore.query || !resultsStore.results.length) {
+    var kifiQuery = (resultsStore.query || "").replace(/\s+/g, "");
+    if (!kifiQuery || !resultsStore.results.length) {
       $("#keepit").remove();
-      if (resultsStore.query) {
-        currentQuery = resultsStore.query;
-      }
-    } else {
-      currentQuery = resultsStore.query.replace(/\s+/g, '');
     }
-    var googleSearch = '';
-    var pos = document.title.indexOf(" - Google Search");
+    var title = document.title, pos = title.indexOf(" - Google Search");
     if (pos > 0) {
-      googleSearch = document.title.substr(0, pos).replace(/\s+/g, '');
-      if (currentQuery !== googleSearch) {
-        api.log("Title difference...");
+      var titleQuery = title.substr(0, pos).replace(/\s+/g, "");
+      if (kifiQuery !== titleQuery) {
+        api.log("Query difference. kifi:", kifiQuery, "title:", titleQuery);
         //updateQuery(0);
       }
     }
   }
-
-  function cleanupCron() {
-    cleanupKifiResults();
-    setTimeout(cleanupCron, 1000);
-  }
-
-  cleanupCron();
-
+  setInterval(cleanupKifiResults, 1000);
 
   /*******************************************************/
 
@@ -403,7 +365,7 @@ api.log("[google_inject.js]");
               return;
             } else if ($("#keepit:visible").length == 0) {
               api.log("Google isn't ready. Trying to injecting again...");
-              if($('#ires').length > 0) {
+              if ($('#ires').length > 0) {
                 $('#ires').before(tb);
                 $('.kifi_more_button').click(function() {
                   showMoreResults();
@@ -427,10 +389,9 @@ api.log("[google_inject.js]");
             }
           }
 
-          if(resultsStore.query !== $("input[name='q']").val()) { // the query changed!
+          if (resultsStore.query !== $q.val()) { // the query changed!
             updateQuery(0);
-          }
-          else {
+          } else {
             injectResults(100);
           }
           //updateQuery(0);
@@ -442,45 +403,6 @@ api.log("[google_inject.js]");
 
   function plural(n, term) {
     return n + " " + term + (n == 1 ? "" : "s");
-  }
-
-  function socialTooltip(friend, element) {
-     // disabled for now
-    getTemplate("html/social_hover.html",{"friend": friend}, function(tmpl) {
-      var timeout;
-      var timein;
-
-      var friendTooltip = $('.friend_tooltip').first().clone().appendTo('.friendlist').html(tmpl);
-
-      var socialNetworks = api.url("images/social_icons.png");
-      $(friendTooltip).find('.kn_social').css('background-image','url(' + socialNetworks + ')');
-
-      function hide() {
-          timeout = setTimeout(function () {
-              $(friendTooltip).fadeOut(100);
-          }, 600);
-          clearTimeout(timein);
-      };
-
-      function show() {
-        timein = setTimeout(function() {
-          $(friendTooltip).stop().fadeIn(100);
-        }, 500)
-      }
-
-      $(element).mouseover(function () {
-          clearTimeout(timeout);
-          show();
-      }).mouseout(hide);
-
-      $(friendTooltip).mouseover(function () {
-          clearTimeout(timeout);
-      }).mouseout(hide);
-    });
-  }
-
-  function addActionToSocialBar(socialBar) {
-    socialBar.append("<div class='social_bar_action'>Share It</div>");
   }
 
   function boldSearchTerms(text, query) {
