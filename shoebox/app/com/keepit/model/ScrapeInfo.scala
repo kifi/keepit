@@ -11,7 +11,6 @@ import com.keepit.scraper.ScraperConfig
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
-import ru.circumflex.orm._
 import play.api.libs.json._
 import scala.math._
 import org.joda.time.Hours

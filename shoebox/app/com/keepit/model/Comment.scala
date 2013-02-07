@@ -12,13 +12,6 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.common.time.currentDateTime
 import annotation.elidable.ASSERTION
-import ru.circumflex.orm.Predicate.toAggregateHelper
-import ru.circumflex.orm.Projection
-import ru.circumflex.orm.RelationNode
-import ru.circumflex.orm.RelationNode.toRelation
-import ru.circumflex.orm.SELECT
-import ru.circumflex.orm.str2expr
-import ru.circumflex.orm.COUNT
 import play.api.libs.json._
 import com.keepit.inject._
 import com.keepit.common.healthcheck._

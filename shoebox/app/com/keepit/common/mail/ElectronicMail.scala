@@ -11,7 +11,6 @@ import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api.Play.current
-import ru.circumflex.orm._
 import com.keepit.model.User
 
 case class ElectronicMailMessageId(val id: String)

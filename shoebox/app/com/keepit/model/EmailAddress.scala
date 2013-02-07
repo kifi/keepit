@@ -7,7 +7,6 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import java.sql.Connection
 import org.joda.time.DateTime
-import ru.circumflex.orm._
 import com.keepit.common.mail.EmailAddressHolder
 
 case class EmailAddress (

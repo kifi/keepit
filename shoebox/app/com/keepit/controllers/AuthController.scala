@@ -29,7 +29,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.controller.FortyTwoController._
-import com.keepit.common.db.{CX, ExternalId, Id}
+import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.logging.Logging

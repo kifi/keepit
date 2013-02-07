@@ -13,7 +13,6 @@ import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
 import play.api.libs.json._
-import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable

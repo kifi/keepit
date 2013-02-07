@@ -7,13 +7,10 @@ import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
-import ru.circumflex.orm._
 import java.util.concurrent.TimeUnit
 import com.keepit.inject._
 import com.keepit.controllers._
 import com.keepit.common.db.Id
-import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
 import com.keepit.test.EmptyApplication
 import com.keepit.common.net.HttpClientImpl
 import com.keepit.model.User
