@@ -11,7 +11,7 @@ trait DomainTagImporter {
 }
 
 class DomainTagImporterImpl @Inject()
-    (domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo)
+    (domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo, updater: SensitivityUpdater)
     extends DomainTagImporter {
 
   def removeTag(tagName: DomainTagName)(implicit session: RWSession): Option[DomainTag] = {
@@ -65,20 +65,6 @@ class DomainTagImporterImpl @Inject()
     })
 
     // update the sensitivity for all changed domains
-    (domainsAppliedTo ++ removedDomains).foreach { domain =>
-      domainRepo.save(domain.withAutoSensitive(calculateSensitivity(domain)))
-    }
-  }
-
-  private def calculateSensitivity(domain: Domain)(implicit session: RSession): Option[Boolean] = {
-    val tags = tagRepo.getTags(domainToTagRepo.getByDomain(domain.id.get).map(_.tagId))
-    tags.map(_.sensitive).foldLeft(Some(false): Option[Boolean]) {
-      // if any tags are sensitive, assume the domain is sensitive
-      case (Some(true), _) | (_, Some(true)) => Some(true)
-      // else if any are unknown, assume unknown (could be sensitive)
-      case (None, _) | (_, None) => None
-      // otherwise if all are not sensitive, assume not sensitive
-      case _ => Some(false)
-    }
+    updater.updateSensitivity(domainsAppliedTo.toSeq ++ removedDomains)
   }
 }
