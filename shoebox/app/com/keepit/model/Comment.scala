@@ -111,10 +111,13 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
       case CommentPermissions.PUBLIC =>
         commentCountCache.remove(CommentCountUriIdKey(comment.uriId))
       case CommentPermissions.MESSAGE =>
-        inject[CommentRecipientRepo].getByComment(comment.id.get) foreach { cr =>
-          cr.userId match {
-            case Some(user) => messageWithChildrenCountCache.remove(MessageWithChildrenCountUriIdUserIdKey(comment.uriId, user))
-            case None =>
+        val comments = (comment.id :: comment.parent :: Nil).flatten
+        comments foreach { com =>
+          inject[CommentRecipientRepo].getByComment(com) foreach { cr =>
+            cr.userId match {
+              case Some(user) => messageWithChildrenCountCache.remove(MessageWithChildrenCountUriIdUserIdKey(comment.uriId, user))
+              case None =>
+            }
           }
         }
       case CommentPermissions.PRIVATE =>
