@@ -35,8 +35,9 @@ import com.keepit.common.controller.FortyTwoController
 object SocialUserController extends FortyTwoController {
 
   def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
-    val socialUserInfo = CX.withConnection { implicit conn =>
-      SocialUserInfoCxRepo.get(socialUserId).reset().save
+    val socialUserInfo = inject[DBConnection].readWrite { implicit s =>
+      val repo = inject[SocialUserInfoRepo]
+      repo.save(repo.get(socialUserId).reset())
     }
     Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfo.id.get))
   }
@@ -59,8 +60,9 @@ object SocialUserController extends FortyTwoController {
 
   def socialUsersView(page: Int) = AdminHtmlAction { implicit request =>
     val PAGE_SIZE = 300
-    val (socialUsers, count) = CX.withConnection { implicit c =>
-      (SocialUserInfoCxRepo.page(page, PAGE_SIZE), SocialUserInfoCxRepo.count)
+    val (socialUsers, count) = inject[DBConnection].readOnly { implicit s =>
+      val repo = inject[SocialUserInfoRepo]
+      (repo.page(page, PAGE_SIZE), repo.count)
     }
     val pageCount = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.socialUsers(socialUsers, page, count, pageCount))
@@ -68,7 +70,7 @@ object SocialUserController extends FortyTwoController {
 
   def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
     val graph = inject[SocialGraphPlugin]
-    val socialUserInfo = CX.withConnection { implicit conn => SocialUserInfoCxRepo.get(socialUserInfoId) }
+    val socialUserInfo = inject[DBConnection].readOnly { implicit s => inject[SocialUserInfoRepo].get(socialUserInfoId) }
     if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))
     graph.asyncFetch(socialUserInfo)
     Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfoId))
