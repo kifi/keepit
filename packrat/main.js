@@ -12,7 +12,9 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
     for (var key in data) {
       if (data.hasOwnProperty(key)) {
         var val = data[key];
-        a.push(encodeURIComponent(key) + "=" + encodeURIComponent(val == null ? "" : val));
+        if (val != null) {
+          a.push(encodeURIComponent(key) + "=" + encodeURIComponent(val));
+        }
       }
     }
     uri = uri + (uri.indexOf("?") < 0 ? "?" : "&") + a.join("&").replace(/%20/g, "+");
