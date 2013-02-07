@@ -35,7 +35,8 @@ GET     /users/keepurl              com.keepit.controllers.UserController.usersK
 GET     /users/friends              com.keepit.controllers.UserController.getSocialConnections()
 POST    /users/events               com.keepit.controllers.EventController.logUserEvents
 
-GET     /search                     com.keepit.controllers.SearchController.search(query: String, maxHits:Int, lastUUID: Option[String], filter: Option[String] ?= None, context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
+GET     /search                     com.keepit.controllers.SearchController.search(q: Option[String] ?= None, term: Option[String] ?= None, maxHits:Int, lastUUID: Option[String], filter: Option[String] ?= None, context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
+# TODO: remove term parameter above and require q after all KiFi installations >= 2.1.46
 
 POST    /kifi/start                 com.keepit.controllers.AuthController.start
 GET     /welcome                    com.keepit.controllers.AuthController.welcome

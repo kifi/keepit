@@ -38,7 +38,10 @@ case class PersonalSearchResultPacket(
 
 object SearchController extends FortyTwoController {
 
-  def search(query: String, maxHits: Int, lastUUIDStr: Option[String], filter: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
+  def search(q: Option[String], term: Option[String], maxHits: Int, lastUUIDStr: Option[String], filter: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
+    // TODO: remove term parameter and require q after all KiFi installations >= 2.1.46
+    val query = q.orElse(term).get
+
     val lastUUID = lastUUIDStr.flatMap{
         case "" => None
         case str => Some(ExternalId[ArticleSearchResultRef](str))
