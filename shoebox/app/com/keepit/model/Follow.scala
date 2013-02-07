@@ -39,10 +39,10 @@ case class Follow (
 
 @ImplementedBy(classOf[FollowRepoImpl])
 trait FollowRepo extends Repo[Follow] {
-  def get(userId: Id[User], uriId: Id[NormalizedURI], state: Option[State[Follow]] = Some(FollowStates.ACTIVE))(implicit session: RSession): Option[Follow]
-  def getByUser(userId: Id[User], state: Option[State[Follow]] = Some(FollowStates.ACTIVE))(implicit session: RSession): Seq[Follow]
-  def getByUri(uriId: Id[NormalizedURI], state: Option[State[Follow]] = Some(FollowStates.ACTIVE))(implicit session: RSession): Seq[Follow]
-  def getByUrl(urlId: Id[URL], state: Option[State[Follow]] = Some(FollowStates.ACTIVE))(implicit session: RSession): Seq[Follow]
+  def get(userId: Id[User], uriId: Id[NormalizedURI], excludeState: Option[State[Follow]] = Some(FollowStates.INACTIVE))(implicit session: RSession): Option[Follow]
+  def getByUser(userId: Id[User], excludeState: Option[State[Follow]] = Some(FollowStates.INACTIVE))(implicit session: RSession): Seq[Follow]
+  def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Follow]] = Some(FollowStates.INACTIVE))(implicit session: RSession): Seq[Follow]
+  def getByUrl(urlId: Id[URL], excludeState: Option[State[Follow]] = Some(FollowStates.INACTIVE))(implicit session: RSession): Seq[Follow]
 }
 
 @Singleton
@@ -62,37 +62,17 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ uriId ~ urlId.? ~ state <> (Follow, Follow.unapply _)
   }
 
-  def get(userId: Id[User], uriId: Id[NormalizedURI], state: Option[State[Follow]])(implicit session: RSession): Option[Follow] = {
-    val q = if (state.isEmpty)
-      for (f <- table if f.uriId === uriId && f.userId === userId) yield f
-    else
-      for (f <- table if f.uriId === uriId && f.userId === userId && f.state === state.get) yield f
-    q.firstOption
-  }
+  def get(userId: Id[User], uriId: Id[NormalizedURI], excludeState: Option[State[Follow]])(implicit session: RSession): Option[Follow] =
+    (for (f <- table if f.uriId === uriId && f.userId === userId && f.state =!= excludeState.getOrElse(null)) yield f).firstOption
 
-  def getByUser(userId: Id[User], state: Option[State[Follow]])(implicit session: RSession): Seq[Follow] = {
-    val q = if (state.isEmpty)
-      for (f <- table if f.userId === userId) yield f
-    else
-      for (f <- table if f.userId === userId && f.state === state.get) yield f
-    q.list
-  }
+  def getByUser(userId: Id[User], excludeState: Option[State[Follow]])(implicit session: RSession): Seq[Follow] =
+    (for (f <- table if f.userId === userId && f.state =!= excludeState.getOrElse(null)) yield f).list
 
-  def getByUri(uriId: Id[NormalizedURI], state: Option[State[Follow]])(implicit session: RSession): Seq[Follow] = {
-    val q = if (state.isEmpty)
-      for(f <- table if f.uriId === uriId && f.state === state.get) yield f
-    else
-      for(f <- table if f.uriId === uriId) yield f
-    q.list
-  }
+  def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Follow]])(implicit session: RSession): Seq[Follow] =
+    (for (f <- table if f.uriId === uriId && f.state =!= excludeState.getOrElse(null)) yield f).list
 
-  def getByUrl(urlId: Id[URL], state: Option[State[Follow]])(implicit session: RSession): Seq[Follow] = {
-    val q = if (state.isEmpty)
-      for(f <- table if f.urlId === urlId) yield f
-    else
-      for(f <- table if f.urlId === urlId && f.state === state.get) yield f
-    q.list
-  }
+  def getByUrl(urlId: Id[URL], excludeState: Option[State[Follow]])(implicit session: RSession): Seq[Follow] =
+    (for (f <- table if f.urlId === urlId && f.state =!= excludeState.getOrElse(null)) yield f).list
 }
 
 object FollowStates {

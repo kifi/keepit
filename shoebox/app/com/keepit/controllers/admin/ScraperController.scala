@@ -179,7 +179,7 @@ object ScraperController extends FortyTwoController {
 
       // Follow
       val followRepo = inject[FollowRepo]
-      followRepo.getByUri(childId, state = None).map { follow =>
+      followRepo.getByUri(childId, excludeState = None).map { follow =>
         followRepo.save(follow.withNormUriId(parentId))
       }
     }
