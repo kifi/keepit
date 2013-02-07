@@ -15,7 +15,7 @@ class CompleteReportSerializer extends Format[CompleteReport] {
         "reportName" -> JsString(report.reportName),
         "reportVersion" -> JsString(report.reportVersion),
         "createdAt" -> JsString(report.createdAt.toStandardTimeString),
-        "report" -> JsObject(report.list map (r => r.date.toStandardTimeString -> JsObject((r.fields map (s => s._1 -> JsString(s._2))).toSeq)))
+        "report" -> JsObject(report.list map (r => r.date.toStandardTimeString -> JsObject((r.fields map (s => s._1 -> JsArray(Seq(JsString(s._2.value), JsNumber(s._2.ordering))))).toSeq)))
       )
     )
 
@@ -23,7 +23,10 @@ class CompleteReportSerializer extends Format[CompleteReport] {
     val list = (json \ "report").as[JsObject].fields.map { case (dateVal, row) =>
       val date = parseStandardTime(dateVal)
       val fields = (row.as[JsObject].fields map { case (key, value) =>
-        key -> value.as[String]
+        key -> value.asOpt[String].map(ValueOrdering(_, 0)).getOrElse {
+          val valueOrdering = value.as[List[JsValue]]
+          ValueOrdering(valueOrdering(0).as[String], valueOrdering(1).as[Int])
+        }
       }).toMap
       ReportRow(date, fields)
     }
