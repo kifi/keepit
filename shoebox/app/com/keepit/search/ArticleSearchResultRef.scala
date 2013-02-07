@@ -53,10 +53,7 @@ class ArticleSearchResultRefRepoImpl @Inject() (val db: DataBaseComponent) exten
   }
 }
 
-object ArticleSearchResultRefStates {
-  val ACTIVE = State[ArticleSearchResultRef]("active")
-  val INACTIVE = State[ArticleSearchResultRef]("inactive")
-}
+object ArticleSearchResultRefStates extends States[ArticleSearchResultRef]
 
 object ArticleSearchResultFactory {
   def apply(res: ArticleSearchResult): ArticleSearchResultRef =

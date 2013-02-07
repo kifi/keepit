@@ -74,7 +74,4 @@ class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow
     (for (f <- table if f.urlId === urlId && f.state =!= excludeState.getOrElse(null)) yield f).list
 }
 
-object FollowStates {
-  val ACTIVE = State[Follow]("active")
-  val INACTIVE = State[Follow]("inactive")
-}
+object FollowStates extends States[Follow]

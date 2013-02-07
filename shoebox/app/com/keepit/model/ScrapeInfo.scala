@@ -118,7 +118,4 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
 
 }
 
-object ScrapeInfoStates {
-  val ACTIVE = State[ScrapeInfo]("active")
-  val INACTIVE = State[ScrapeInfo]("inactive")
-}
+object ScrapeInfoStates extends States[ScrapeInfo]

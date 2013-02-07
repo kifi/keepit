@@ -95,7 +95,4 @@ class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Deep
     (for(b <- table if b.token === token) yield b).firstOption
 }
 
-object DeepLinkStates {
-  val ACTIVE = State[DeepLink]("active")
-  val INACTIVE = State[DeepLink]("inactive")
-}
+object DeepLinkStates extends States[DeepLink]
