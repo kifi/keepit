@@ -4,8 +4,6 @@ import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
 
-import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
 import com.keepit.common.db.slick._
 import com.keepit.inject._
 import com.keepit.test._
