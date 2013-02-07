@@ -22,59 +22,32 @@ api.log("[google_inject.js]");
     api.port.emit("log_event", Array.prototype.slice.call(arguments));
   }
 
-  function logSearchEvent(t) {
-    //$("li.g .vsc a").mousedown(function(t) { console.log($(this).parents('.kifi_reslist').length); });
-    function countWhichResult(elem, selector) {
-      var results = selector.find('.g .vsc h3.r a');
-      var res = -1;
-      for(var i = 0;i<results.length;i++) {
-        if(results[i] == elem) {
-          res = i;
-          break;
-        }
+  function logSearchEvent() {
+    var href = this.href, $li = $(this).closest("li.g");
+    var $kifiRes = $("#kifi_reslist"), $kifiLi = $kifiRes.children("li.g");
+    var resIdx = $li.parent().children("li.g").index($li);
+    var query = $("#sftab").find("input[name=q]").val();
+
+    if ($li[0].parentNode === $kifiRes[0]) {
+      kifiResultsClicked++;
+      var queryUUID = resultsStore.lastRemoteResults.uuid;
+      if (href && resIdx >= 0 && queryUUID) {
+        logEvent("search", "kifiResultClicked", {"url": href, "whichResult": resIdx, "query": query, "kifiResultsCount": $kifiLi.length, "queryUUID": queryUUID});
       }
-      return res;
-    }
-    var $this = $(t);
-    var kifi_reslist = $this.parents('#kifi_reslist')
-    var isKifi = kifi_reslist.length == 1;
-    var kifiResults = $('#kifi_reslist li').length;
-    var href = $this.attr("href");
-    var whichResult = -1;
-    if(isKifi) {
-      whichResult = countWhichResult($this[0], kifi_reslist);
-    }
-    else {
-      whichResult = countWhichResult($this[0], $("#ires"));
-    }
-    whichResult = whichResult.toString();
-    var query = $("input[name='q']").val();
-    var queryUUID = resultsStore.lastRemoteResults.uuid;
-
-    if(whichResult != -1) {
-      if(isKifi)
-        kifiResultsClicked++;
-      else
-        googleResultsClicked++;
-    }
-
-    if(isKifi && href && queryUUID && whichResult != -1)
-      logEvent("search", "kifiResultClicked", {"url": href, "whichResult": whichResult, "query": query, "queryUUID": queryUUID, "kifiResultsCount": kifiResults.length});
-    else if(!isKifi && href && whichResult != -1) {
-      logEvent("search", "googleResultClicked", {"url": href, "whichResult": whichResult, "query": query, "kifiResultsCount": kifiResults.length});
+    } else {
+      googleResultsClicked++;
+      if (href && resIdx >= 0) {
+        logEvent("search", "googleResultClicked", {"url": href, "whichResult": resIdx, "query": query, "kifiResultsCount": $kifiLi.length});
+      }
     }
   }
 
   function bindSearchLogger() {
-    if(!$("#main").data("kgr-l")) {
-      $("#main").data("kgr-l", true);
-      $("#main").on('mousedown','.g .vsc h3.r a', function() {
-        logSearchEvent(this);
-      });
+    var $res = $("#res");
+    if (!$res.data("kifi-mousedown")) {
+      $res.data("kifi-mousedown", true).on("mousedown", "h3.r a", logSearchEvent);
     }
   }
-
-  api.log("injecting keep it to google search result page");
 
   function updateQuery(calledTimes) {
     api.log("updating query...");
@@ -87,8 +60,7 @@ api.log("[google_inject.js]");
       return;
     }
 
-    if (inprogressSearchQuery !== '') {
-      // something else is running it.
+    if (inprogressSearchQuery) {
       api.log("Another search is in progress. Ignoring query " + inprogressSearchQuery);
       return;
     }
