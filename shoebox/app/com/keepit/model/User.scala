@@ -15,7 +15,6 @@ import com.keepit.common.cache._
 import akka.util.Duration
 import akka.util.duration._
 import com.keepit.serializer.UserSerializer
-import javax.swing.plaf.OptionPaneUI
 import com.keepit.common.logging.Logging
 
 case class User(
