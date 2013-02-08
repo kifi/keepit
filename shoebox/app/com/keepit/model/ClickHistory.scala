@@ -80,7 +80,4 @@ class ClickHistoryRepoImpl @Inject() (val db: DataBaseComponent, val clickCache:
     }
 }
 
-object ClickHistoryStates {
-  val ACTIVE = State[ClickHistory]("active")
-  val INACTIVE = State[ClickHistory]("inactive")
-}
+object ClickHistoryStates extends States[ClickHistory]

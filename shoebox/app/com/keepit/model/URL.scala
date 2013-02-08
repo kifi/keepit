@@ -91,8 +91,6 @@ class URLRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[URL] with
     (for(u <- table if u.normalizedUriId === normalizedUriId && u.state === URLStates.ACTIVE) yield u).list
 }
 
-object URLStates {
-  val ACTIVE = State[URL]("active")
-  val INACTIVE = State[URL]("inactive")
+object URLStates extends States[URL] {
   val MERGED = State[URL]("merged")
 }

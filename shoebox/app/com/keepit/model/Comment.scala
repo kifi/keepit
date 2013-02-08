@@ -192,10 +192,7 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
     (for(b <- table if b.urlId === urlId && b.state === CommentStates.ACTIVE) yield b).list
 }
 
-object CommentStates {
-  val ACTIVE = State[Comment]("active")
-  val INACTIVE = State[Comment]("inactive")
-}
+object CommentStates extends States[Comment]
 
 sealed trait CommentPermission
 
