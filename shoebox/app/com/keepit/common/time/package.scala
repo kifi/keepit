@@ -75,6 +75,7 @@ package object time {
     def toLocalTimeInZone(implicit zone: DateTimeZone): LocalTime = date.withZone(zone).toLocalTime
     def toHttpHeaderString: String = HTTP_HEADER_DATETIME_FORMAT.print(date)
     def toStandardTimeString: String = STANDARD_DATETIME_FORMAT.print(date)
+    def toStandardDateString: String = STANDARD_DATE_FORMAT.print(date)
 
     def isSameDay(otherDate: DateTime)(implicit zone: DateTimeZone): Boolean = {
       val z = date.withZone(zone)
