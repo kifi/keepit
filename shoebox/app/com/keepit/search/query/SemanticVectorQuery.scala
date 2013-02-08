@@ -98,8 +98,8 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
       val sc = dv.score()
       val expl = new ComplexExplanation()
       expl.setDescription("term(%s)".format(term.toString))
-      expl.addDetail(new Explanation(value, "boost"))
       expl.addDetail(new Explanation(sc/value, "similarity"))
+      expl.addDetail(new Explanation(value, "boost"))
       expl.setValue(sc)
       Some(expl)
     } else {
