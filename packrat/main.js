@@ -339,34 +339,27 @@ function postComment(request, respond) {
 }
 
 function searchOnServer(request, respond) {
-  logEvent("search", "newSearch", {"query": request.query});
+  logEvent("search", "newSearch", {query: request.query});
 
   if (!session) {
     api.log("[searchOnServer] no session");
-    respond({"session": null, "searchResults": []});
+    respond({});
     return;
   }
 
-  if (request.query === '') {
-    respond({"session": session, "searchResults": [], "maxResults": 0});
-    return;
-  }
-
-  var config = getConfigs(), maxResults = api.prefs.get("maxResults");
+  var config = getConfigs();
   ajax("GET", "http://" + config.server + "/search", {
       q: request.query,
-      maxHits: maxResults * 2,
+      maxHits: request.lastUUID ? 5 : api.prefs.get("maxResults"),
       lastUUID: request.lastUUID,
       context: request.context,
       kifiVersion: api.version},
-    function(results) {
-      api.log("[searchOnServer] results:", results);
-      respond({
-        "session": session,
-        "searchResults": results,
-        "maxResults": maxResults,
-        "showScores": api.prefs.get("showScores"),
-        "server": config.server});
+    function(resp) {
+      api.log("[searchOnServer] response:", resp);
+      resp.session = session;
+      resp.server = config.server;
+      resp.showScores = api.prefs.get("showScores");
+      respond(resp);
     });
   return true;
 }
