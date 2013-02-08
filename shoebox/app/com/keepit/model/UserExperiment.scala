@@ -34,10 +34,7 @@ object ExperimentTypes {
   }
 }
 
-object UserExperimentStates {
-  val ACTIVE = State[UserExperiment]("active")
-  val INACTIVE = State[UserExperiment]("inactive")
-}
+object UserExperimentStates extends States[UserExperiment]
 
 @ImplementedBy(classOf[UserExperimentRepoImpl])
 trait UserExperimentRepo extends Repo[UserExperiment] {

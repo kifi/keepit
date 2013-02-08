@@ -129,8 +129,7 @@ object NormalizedURIFactory {
   }
 }
 
-object NormalizedURIStates {
-  val ACTIVE = State[NormalizedURI]("active")
+object NormalizedURIStates extends States[NormalizedURI] {
   val SCRAPED	= State[NormalizedURI]("scraped")
   val SCRAPE_FAILED = State[NormalizedURI]("scrape_failed")
   val UNSCRAPABLE = State[NormalizedURI]("unscrapable")
@@ -140,7 +139,6 @@ object NormalizedURIStates {
   val FALLBACK_FAILED = State[NormalizedURI]("fallback_failed")
   val UNSCRAPE_FALLBACK = State[NormalizedURI]("unscrape_fallback")
   val UNSCRAPE_FALLBACK_FAILED = State[NormalizedURI]("unscrape_fallback_failed")
-  val INACTIVE = State[NormalizedURI]("inactive")
 
   type Transitions = Map[State[NormalizedURI], Set[State[NormalizedURI]]]
 
