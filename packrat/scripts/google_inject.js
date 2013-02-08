@@ -152,7 +152,7 @@ api.load("html/google_inject.html", function(tmpl) {
     var prefix = "^https?://w{0,3}\\.?";
     for (var i = 0; i < urlAutoFormatters.length; i++) {
       if (urlAutoFormatters[i].match.test(url)) {
-        iconUrl = api.url("images/results/" + urlAutoFormatters[i].icon);
+        var iconUrl = api.url("images/results/" + urlAutoFormatters[i].icon);
         return "<span class=formatted_site style='background:url(" + iconUrl + ") no-repeat;background-size:15px'></span>" +
           urlAutoFormatters[i].template;
       }
