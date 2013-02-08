@@ -174,16 +174,16 @@
 
 /* tab bar */
 ul.kifi-tab-bar {
-  margin: 0;
-  padding: 0 20px 0 0;
+  margin: 0 !important;
+  padding: 0 20px 0 0 !important;
   text-align: right;
   background: #E0E0E0;
 }
 .kifi-tab-bar li {
   list-style: none;
   display: inline-block;
-  margin: 0;
-  padding: 10px;
+  margin: 0 !important;
+  padding: 10px !important;
   font: 11px "helvetica neue", Helvetica, Arial, sans-serif;
   color: #8c8484;
   text-decoration: none;
@@ -344,119 +344,63 @@ input.kifi-keep-private {
   margin-left: -9px;
 }
 
-.kifi_social_hover .hover_friend {
+.kifi-social-hover .kifi-hover-friend {
   padding: 5px;
   clear: both;
   position:relative;
 }
 
-.kifi_social_hover .hover_friend_picture {
+.kifi-social-hover .kifi-hover-friend-picture {
   position:relative;
   float:left;
 }
 
-.kifi_social_hover .hover_friend_description {
+.kifi-social-hover .kifi-hover-friend-info {
   position:relative;
   float:left;
   padding:10px;
 }
 
-.kifi_social_hover .hover_friend_view_keeps {
+.kifi-social-hover .kifi-hover-friend-view-keeps {
   position:relative;
   float:right;
   margin-top:30px;
   width: 80px;
 }
 
-.kifi_social_hover .hover_picture_frame {
+.kifi-social-hover .kifi-hover-pic-frame {
   border: 1px solid #c2c2c2;
   border-radius: 4px;
 }
 
-.kifi_social_hover .hover_picture_frame img {
+.kifi-social-hover .kifi-hover-pic-frame img {
   margin: 3px;
   height: 70px;
   width: 70px;
   background-color: #ccc;
 }
 
-.hover_friend_name {
+.kifi-hover-friend-name {
   font-size: 16px;
   color: #2d2d2d;
 }
 
-.hover_connected_message {
+.kifi-hover-connected {
   font-size: 12px;
   color: #808080;
   margin:6px 0px 4px 0px;
 }
 
-.post_to_network span.kn_facebook {
-  background-position: 0px 17px;
-}
-
-.post_to_network span.kn_linkedin {
-  background-position: -17px 17px;
-}
-
-.post_to_network span.kn_twitter {
-  background-position: -34px 17px;
-}
-
-.post_to_network span.kn_pinterest {
-  background-position: -51px 17px;
-}
-
-.post_to_network span.kn_facebook:hover {
-  background-position: 0px 0px;
-}
-
-.post_to_network span.kn_linkedin:hover {
-  background-position: -17px 0px;
-}
-
-.post_to_network span.kn_twitter:hover {
-  background-position: -34px 0px;
-}
-
-.post_to_network span.kn_pinterest:hover {
-  background-position: -51px 0px;
-}
-
-.post_to_network span.kn_social {
-  width: 17px;
-  height: 17px;
-  display: inline-block;
-  background-size: 68px;
-  margin-bottom: -3px;
-}
-
-.post_to_network span.kn_social:hover {
-  cursor: pointer;
-}
-
-.hover_connected_networks span.kn_social {
+.kifi-hover-networks span.kifi-network {
   width: 34px;
   height: 34px;
   display: inline-block;
   background-size: 136px !important;
 }
-
-.hover_connected_networks span.kn_facebook {
-  background-position: 0px 0px !important;
-}
-
-.hover_connected_networks span.kn_linkedin {
-  background-position: -34px 34px !important;
-}
-
-.hover_connected_networks span.kn_twitter {
-  background-position: -68px 34px !important;
-}
-
-.hover_connected_networks span.kn_pinterest {
-  background-position: -102px 34px !important;
-}
+.kifi-hover-networks span.kifi-network-fb {background-position: 0px 0px !important}
+.kifi-hover-networks span.kifi-network-in {background-position: -34px 34px !important}
+.kifi-hover-networks span.kifi-network-tw {background-position: -68px 34px !important}
+.kifi-hover-networks span.kifi-network-pn {background-position: -102px 34px !important}
 
 .kifi-slider .kifi-comment-wrapper {
   position: relative;

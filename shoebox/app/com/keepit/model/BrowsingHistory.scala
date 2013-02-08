@@ -91,7 +91,4 @@ class BrowsingHistoryRepoImpl @Inject() (val db: DataBaseComponent, val browsing
 
 }
 
-object BrowsingHistoryStates {
-  val ACTIVE = State[BrowsingHistory]("active")
-  val INACTIVE = State[BrowsingHistory]("inactive")
-}
+object BrowsingHistoryStates extends States[BrowsingHistory]

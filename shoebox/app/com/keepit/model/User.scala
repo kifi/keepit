@@ -94,7 +94,4 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent, val externalIdCache: Us
 
 }
 
-object UserStates {
-  val ACTIVE = State[User]("active")
-  val INACTIVE = State[User]("inactive")
-}
+object UserStates extends States[User]

@@ -74,7 +74,4 @@ class CommentRecipientRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
     (for(f <- table if f.email === email && f.state === CommentRecipientStates.ACTIVE) yield f).list
 }
 
-object CommentRecipientStates {
-  val ACTIVE = State[CommentRecipient]("active")
-  val INACTIVE = State[CommentRecipient]("inactive")
-}
+object CommentRecipientStates extends States[CommentRecipient]
