@@ -58,14 +58,16 @@ class CommentTest extends SpecificationWithJUnit {
   }
 
   "Comment" should {
-    "use caching for counts" in {
+    "use caching for counts (with proper invalidation)" in {
       running(new EmptyApplication()) {
 
         val commentRepo = inject[CommentRepoImpl]
+        val commentRecipientRepo = inject[CommentRecipientRepo]
+
         commentRepo.commentCountCache.get(CommentCountUriIdKey(Id[NormalizedURI](1))).isDefined === false
         commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(Id[NormalizedURI](1), Id[User](1))).isDefined === false
 
-        setup()
+        val (user1, user2, uri1, uri2, msg3) = setup()
 
         inject[DBConnection].readOnly { implicit s =>
           commentRepo.getPublicCount(Id[NormalizedURI](1))
@@ -76,6 +78,20 @@ class CommentTest extends SpecificationWithJUnit {
         commentRepo.commentCountCache.get(CommentCountUriIdKey(Id[NormalizedURI](1))).get === 2
         commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(Id[NormalizedURI](1), Id[User](1))).get === 2
         commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(Id[NormalizedURI](2), Id[User](1))).get === 0
+
+        // Caching invalidation
+        inject[DBConnection].readWrite { implicit s =>
+          commentRecipientRepo.save(CommentRecipient(commentId = msg3.id.get, userId = Some(user1.id.get)))
+          commentRepo.save(Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "New message on msg3 to user2!", permissions = CommentPermissions.MESSAGE, parent = msg3.id))
+          commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(uri1.id.get, user1.id.get)).isDefined === false
+          commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(uri1.id.get, user2.id.get)).isDefined === false
+          commentRepo.getMessagesWithChildrenCount(uri1.id.get, user1.id.get)
+          commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(uri1.id.get, user1.id.get)).isDefined === true
+          commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(uri1.id.get, user2.id.get)).isDefined === false
+          commentRepo.getMessagesWithChildrenCount(uri1.id.get, user2.id.get)
+          commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(uri1.id.get, user2.id.get)).isDefined === true
+        }
+
       }
     }
     "add comments" in {
