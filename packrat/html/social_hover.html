@@ -1,23 +1,23 @@
 {{#friend}}
-<div class="kifi_social_hover">
+<div class="kifi-social-hover">
   <!-- n -->
-  <div class="hover_friend">
-    <div class="hover_friend_picture">
-      <div class="hover_picture_frame">
+  <div class="kifi-hover-friend">
+    <div class="kifi-hover-friend-picture">
+      <div class="kifi-hover-pic-frame">
         <img src="https://graph.facebook.com/{{facebookId}}/picture?type=square">
       </div>
     </div>
-    <div class="hover_friend_description">
-      <div class="hover_friend_name">{{firstName}} {{lastName}}</div>
-      <div class="hover_connected_message">Connected to you through:</div>
-      <div class="hover_connected_networks">
-        <span class="kn_social kn_facebook" style="background:url({{connected_networks}})"> </span>
-        <span class="kn_social kn_linkedin" style="background:url({{connected_networks}})"> </span>
-        <span class="kn_social kn_twitter" style="background:url({{connected_networks}})"> </span>
-        <span class="kn_social kn_pinterest" style="background:url({{connected_networks}})"> </span>
+    <div class="kifi-hover-friend-info">
+      <div class="kifi-hover-friend-name">{{firstName}} {{lastName}}</div>
+      <div class="kifi-hover-connected">Connected to you through:</div>
+      <div class="kifi-hover-networks">
+        <span class="kifi-network kifi-network-fb" style="background:url({{connected_networks}})"> </span>
+        <span class="kifi-network kifi-network-in" style="background:url({{connected_networks}})"> </span>
+        <span class="kifi-network kifi-network-tw" style="background:url({{connected_networks}})"> </span>
+        <span class="kifi-network kifi-network-pn" style="background:url({{connected_networks}})"> </span>
       </div>
     </div>
-    <div class="hover_friend_view_keeps kifi-button">View keeps</div>
+    <div class="kifi-hover-friend-view-keeps kifi-button">View keeps</div>
   </div>
 </div>
 {{/friend}}
