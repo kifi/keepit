@@ -127,8 +127,4 @@ class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
   }
 }
 
-object SocialConnectionStates {
-  val ACTIVE = State[SocialConnection]("active")
-  val INACTIVE = State[SocialConnection]("inactive")
-}
-
+object SocialConnectionStates extends States[SocialConnection]

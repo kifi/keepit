@@ -104,11 +104,11 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
       case CommentPermissions.PUBLIC =>
         commentCountCache.remove(CommentCountUriIdKey(comment.uriId))
       case CommentPermissions.MESSAGE =>
-        inject[CommentRecipientRepo].getByComment(comment.id.get) foreach { cr =>
-          cr.userId match {
-            case Some(user) => messageWithChildrenCountCache.remove(MessageWithChildrenCountUriIdUserIdKey(comment.uriId, user))
-            case None =>
-          }
+        val comments = (comment.id :: comment.parent :: Nil).flatten
+        val parentUserId = comment.parent.map(inject[CommentRepo].get(_).userId)
+        val usersToInvalidate = (Some(comment.userId) :: parentUserId :: Nil).flatten ++ comments.flatMap(inject[CommentRecipientRepo].getByComment(_).map(_.userId).flatten)
+        usersToInvalidate foreach { user =>
+          messageWithChildrenCountCache.remove(MessageWithChildrenCountUriIdUserIdKey(comment.uriId, user))
         }
       case CommentPermissions.PRIVATE =>
     }
@@ -188,10 +188,7 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
     (for(b <- table if b.urlId === urlId && b.state === CommentStates.ACTIVE) yield b).list
 }
 
-object CommentStates {
-  val ACTIVE = State[Comment]("active")
-  val INACTIVE = State[Comment]("inactive")
-}
+object CommentStates extends States[Comment]
 
 sealed trait CommentPermission
 

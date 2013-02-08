@@ -64,7 +64,4 @@ class UnscrapableRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[U
   }
 }
 
-object UnscrapableStates {
-  val ACTIVE = State[Unscrapable]("active")
-  val INACTIVE = State[Unscrapable]("inactive")
-}
+object UnscrapableStates extends States[Unscrapable]
