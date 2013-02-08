@@ -323,7 +323,7 @@ slider = function() {
     });
   }
 
-  var badGlobalState = {};
+  var badGlobalState = {}, viewTransitionInProgress;
 
   function isCommentPanelVisible() {
     return $(".kifi-comment-wrapper").is(":visible");
@@ -352,26 +352,26 @@ slider = function() {
   }
 
   function hideComments() {
-    if (showComments.inProgress) {
-      api.log("[hideComments]", "ignoring (already in progress)");
+    if (viewTransitionInProgress) {
+      api.log("[hideComments]", "ignoring (transition already in progress)");
       return;
     }
-    showComments.inProgress = true;
+    viewTransitionInProgress = true;
 
     $('.kifi-content').slideDown();
     $('.kifi-comment-wrapper').slideUp(600, 'easeInOutBack', function() {
-      showComments.inProgress = false;
+      viewTransitionInProgress = false;
     });
     $(".kifi-slider").removeClass("kifi-public kifi-message").removeData("view");
     redrawFooter(false);
   }
 
   function showComments(session, type, id, partialRender) {
-    if (showComments.inProgress) {
-      api.log("[showComments]", "ignoring (already in progress)");
+    if (viewTransitionInProgress) {
+      api.log("[showComments]", "ignoring (transition already in progress)");
       return;
     }
-    showComments.inProgress = true;
+    viewTransitionInProgress = true;
 
     badGlobalState["session"] = session;
     badGlobalState["type"] = type;
@@ -384,14 +384,14 @@ slider = function() {
       api.log("[showComments] comments:", comments);
       renderComments(session, comments, type, id, function() {
         if (typeBefore) {  // .kifi-comment-wrapper already visible
-          showComments.inProgress = false;
+          viewTransitionInProgress = false;
         } else {
           repositionScroll(false);
 
           $('.kifi-content').slideUp(); // hide main hover content
           $('.kifi-comment-wrapper').slideDown(600, function() {
             repositionScroll(false);
-            showComments.inProgress = false;
+            viewTransitionInProgress = false;
           });
         }
         if (type !== typeBefore) {
@@ -609,7 +609,7 @@ slider = function() {
           var $b = $(".kifi-comments-body").html(renderedTemplate);
           $b.animate({scrollTop: $b[0].scrollHeight - $b[0].clientHeight})
           $b.find("time").timeago();
-          showComments.inProgress = false;
+          viewTransitionInProgress = false;
         });
       } else {
         renderTemplate("html/comments/comments_view.html", params, partials, function(renderedTemplate) {
