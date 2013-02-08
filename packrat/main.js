@@ -356,7 +356,7 @@ function searchOnServer(request, respond) {
   ajax("GET", "http://" + config.server + "/search", {
       q: request.query,
       maxHits: maxResults * 2,
-      lastUUI: request.lastUUID,
+      lastUUID: request.lastUUID,
       context: request.context,
       kifiVersion: api.version},
     function(results) {
