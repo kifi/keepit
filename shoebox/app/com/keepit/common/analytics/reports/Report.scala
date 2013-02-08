@@ -195,16 +195,6 @@ class DailyGoogleResultClicked extends BasicDailyAggregationReport with Logging 
   }
 }
 
-class DailyKifiAtLeastOneResult extends BasicDailyAggregationReport with Logging {
-  override val reportName = "DailyKifiAtLeastOneResult"
-  override val ordering = 60
-
-  def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
-    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("kifiAtLeastOneResult").build
-    super.get(selector, startDate, endDate)
-  }
-}
-
 class DailyKifiResultClicked extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailyKifiResultClicked"
   override val ordering = 70
@@ -494,6 +484,17 @@ class DailyKifiLoadedReport extends BasicDailyAggregationReport with Logging {
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("kifiLoaded").build
+    super.get(selector, startDate, endDate)
+  }
+}
+
+
+class DailyKifiAtLeastOneResult extends BasicDailyAggregationReport with Logging {
+  override val reportName = "DailyKifiAtLeastOneResult"
+  override val ordering = 260
+
+  def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
+    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("kifiAtLeastOneResult").build
     super.get(selector, startDate, endDate)
   }
 }
