@@ -362,7 +362,7 @@ class DailyPrivateKeeps extends Report with Logging {
       val sql =
         """
           select count(*) as sum, CONCAT(YEAR(created_at), "-", MONTH(created_at), "-", DAY(created_at)) as day
-          from bookmarks
+          from bookmark
           where source="HOVER_KEEP" and is_private=true and created_at > STR_TO_DATE("%s","%%Y-%%m-%%d") and created_at < STR_TO_DATE("%s","%%Y-%%m-%%d") group by day;
         """.format(startDate.toStandardDateString, endDate.toStandardDateString)
       val rs = st.executeQuery(sql)
@@ -388,7 +388,7 @@ class DailyPublicKeeps extends Report with Logging {
       val sql =
         """
           select count(*) as sum, CONCAT(YEAR(created_at), "-", MONTH(created_at), "-", DAY(created_at)) as day
-          from bookmarks
+          from bookmark
           where source="HOVER_KEEP" and is_private=false and created_at > STR_TO_DATE("%s","%%Y-%%m-%%d") and created_at < STR_TO_DATE("%s","%%Y-%%m-%%d") group by day;
         """.format(startDate.toStandardDateString, endDate.toStandardDateString)
       val rs = st.executeQuery(sql)
