@@ -70,14 +70,14 @@ object QueryUtil extends Logging {
 
   private def seqFromTermQuery(fieldName: String, query: TermQuery) = {
     val term = query.getTerm
-    if (term.text() == fieldName) Seq(term) else Seq.empty[Term]
+    if (term.field() == fieldName) Seq(term) else Seq.empty[Term]
   }
   private def seqFromPhraseQuery(fieldName: String, query: PhraseQuery) = {
     val terms = query.getTerms()
-    terms.filter{ _.text() == fieldName }.toSeq
+    terms.filter{ _.field() == fieldName }.toSeq
   }
   private def seqFromBooleanQuery(fieldName: String, query: BooleanQuery) = {
-    query.getClauses.foldLeft(Seq.empty[Term]){ (s, c) => if (!c.isProhibited) s ++ getTerms(fieldName, c.getQuery) else s }
+    query.getClauses.foldLeft(Seq.empty[Term]){ (s, c) => if (!c.isProhibited) s ++ getTermSeq(fieldName, c.getQuery) else s }
   }
 
   def emptyScorer(weight: Weight) = new Scorer(weight) with Coordinator {
@@ -92,5 +92,24 @@ object QueryUtil extends Logging {
     override def docID() = scorer.docID()
     override def nextDoc() = scorer.nextDoc()
     override def advance(target: Int) = scorer.advance(target)
+  }
+
+  def copy(query: TermQuery, field: String): Query = {
+    if (query == null) null
+    else {
+      val term = new Term(field, query.getTerm().text())
+      new TermQuery(term)
+    }
+  }
+
+  def copy(query: PhraseQuery, field: String): Query = {
+    if (query == null) null
+    else {
+      val newQuery = new PhraseQuery()
+      val positions = query.getPositions()
+      val terms = query.getTerms()
+      val newTerms = terms.zip(positions).map{ case (t, p) => newQuery.add(new Term(field, t.text()), p) }
+      newQuery
+    }
   }
 }
