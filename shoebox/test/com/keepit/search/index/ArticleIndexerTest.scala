@@ -25,6 +25,8 @@ import com.keepit.search.graph.UserToUserEdgeSet
 import scala.math._
 import scala.collection.JavaConversions._
 import com.keepit.search.MainQueryParser
+import com.keepit.search.MainQueryParserFactory
+import com.keepit.search.phrasedetector._
 
 @RunWith(classOf[JUnitRunner])
 class ArticleIndexerTest extends SpecificationWithJUnit with DbRepos {
@@ -32,6 +34,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit with DbRepos {
   val ramDir = new RAMDirectory
   val store = new FakeArticleStore()
   val uriIdArray = new Array[Long](3)
+  val parserFactory = new MainQueryParserFactory(new PhraseDetector(PhraseIndexer()))
 
   def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
     Article(
@@ -49,7 +52,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit with DbRepos {
 
   class Searchable(indexer: ArticleIndexer) {
     def search(queryString: String, percentMatch: Float = 0.0f): Seq[Hit] = {
-      val parser = MainQueryParser(Lang("en"), 0.0f, 0.0f)
+      val parser = parserFactory(Lang("en"))
       parser.setPercentMatch(percentMatch)
       val searcher = indexer.getSearcher
       parser.parseQuery(queryString) match {

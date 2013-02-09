@@ -5,6 +5,7 @@ import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.search.graph.URIList
 import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.phrasedetector._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
@@ -45,6 +46,7 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
     val mainSearcherFactory = new MainSearcherFactory(
         articleIndexer,
         uriGraph,
+        new MainQueryParserFactory(new PhraseDetector(PhraseIndexer())),
         resultClickTracker,
         browsingHistoryTracker,
         clickHistoryTracker)

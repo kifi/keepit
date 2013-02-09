@@ -37,8 +37,8 @@ object Indexer {
   }
 }
 
-abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, fieldDecoders: Map[String, FieldDecoder] = Map.empty) extends Logging {
-
+abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, fieldDecoders: Map[String, FieldDecoder]) extends Logging {
+  def this(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
 
   protected var searcher: Searcher = {
@@ -141,6 +141,14 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
       }
     }
   }
-}
 
+  def deleteAllDocuments() {
+    if (IndexReader.indexExists(indexDirectory)) {
+      doWithIndexWriter{ indexWriter =>
+        indexWriter.deleteAll()
+        indexWriter.commit(Map(Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString))
+      }
+    }
+  }
+}
 

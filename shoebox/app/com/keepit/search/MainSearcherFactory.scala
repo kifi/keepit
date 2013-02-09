@@ -21,6 +21,7 @@ import com.keepit.inject._
 class MainSearcherFactory @Inject() (
     articleIndexer: ArticleIndexer,
     uriGraph: URIGraph,
+    parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker
@@ -36,6 +37,7 @@ class MainSearcherFactory @Inject() (
         config,
         articleSearcher,
         uriGraphSearcher,
+        parserFactory,
         resultClickTracker,
         browsingHistoryTracker,
         clickHistoryTracker
