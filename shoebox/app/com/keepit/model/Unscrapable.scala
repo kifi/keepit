@@ -47,7 +47,7 @@ case class UnscrapableAllKey() extends Key[List[Unscrapable]] {
 }
 class UnscrapableAllCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UnscrapableAllKey, List[Unscrapable]] {
   val ttl = 0 seconds
-  def deserialize(obj: Any): List[Unscrapable] = UnscrapableSerializer.unscrapableSerializer.readsSeq(obj.asInstanceOf[JsObject])
+  def deserialize(obj: Any): List[Unscrapable] = UnscrapableSerializer.unscrapableSerializer.readsSeq(obj.asInstanceOf[JsArray])
   def serialize(unscrapable: List[Unscrapable]) = UnscrapableSerializer.unscrapableSerializer.writesSeq(unscrapable)
 }
 
