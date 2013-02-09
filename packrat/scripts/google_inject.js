@@ -119,47 +119,42 @@ api.load("html/google_inject.html", function(tmpl) {
   /*******************************************************/
 
   var urlAutoFormatters = [{
-      "match": "docs\\.google\\.com",
-      "template": "A file in Google Docs",
-      "icon": "gdocs.gif"
+      match: /^https?:\/\/docs\.google\.com\//,
+      template: "A file in Google Docs",
+      icon: "gdocs.gif"
     }, {
-      "match": "drive\\.google\\.com",
-      "template": "A folder in your Google Drive",
-      "icon": "gdrive.png"
+      match: /^https?:\/\/drive\.google\.com\//,
+      template: "A folder in your Google Drive",
+      icon: "gdrive.png"
     }, {
-      "match": "dropbox\\.com/home",
-      "template": "A folder in your Dropbox",
-      "icon": "dropbox.png"
+      match: /^https?:\/\/www.dropbox\.com\/home/,
+      template: "A folder in your Dropbox",
+      icon: "dropbox.png"
     }, {
-      "match": "dl-web\\.dropbox\\.com",
-      "template": "A file from Dropbox",
-      "icon": "dropbox.png"
+      match: /^https?:\/\/dl-web\.dropbox\.com\//,
+      template: "A file from Dropbox",
+      icon: "dropbox.png"
     }, {
-      "match": "dropbox\\.com/sh/",
-      "template": "A shared file on Dropbox",
-      "icon": "dropbox.png"
+      match: /^https?:\/\/www.dropbox\.com\/s\//,
+      template: "A shared file on Dropbox",
+      icon: "dropbox.png"
+    }, {  // TODO: add support for Gmail labels like inbox/starred?
+      match: /^https?:\/\/mail\.google\.com\/mail\/.*#.*\/[0-9a-f]{10,}$/,
+      template: "An email on Gmail",
+      icon: "gmail.png"
     }, {
-      "match": "mail\\.google\\.com/mail/.*/[\\w]{0,}",
-      "template": "An email on Gmail",
-      "icon": "gmail.png"
-    }, {
-      "match": "facebook\\.com/messages/[\\w\\-\\.]{4,}",
-      "template": "A conversation on Facebook",
-      "icon": "facebook.png"
+      match: /^https?:\/\/www.facebook\.com\/messages\/\w[\w.-]{2,}$/,
+      template: "A conversation on Facebook",
+      icon: "facebook.png"
     }];
 
   function displayURLFormatter(url) {
     var prefix = "^https?://w{0,3}\\.?";
     for (var i = 0; i < urlAutoFormatters.length; i++) {
-      var regex = new RegExp(prefix + urlAutoFormatters[i].match, "ig");
-      if (regex.test(url)) {
-        var result = "";
-        if (urlAutoFormatters[i].icon) {
-          var url = api.url("images/results/" + urlAutoFormatters[i].icon);
-          result += "<span class=formatted_site style='background:url(" + url + ") no-repeat;background-size:15px'></span>";
-        }
-        result += urlAutoFormatters[i].template;
-        return result;
+      if (urlAutoFormatters[i].match.test(url)) {
+        var iconUrl = api.url("images/results/" + urlAutoFormatters[i].icon);
+        return "<span class=formatted_site style='background:url(" + iconUrl + ") no-repeat;background-size:15px'></span>" +
+          urlAutoFormatters[i].template;
       }
     }
     url = url.replace(/^https?:\/\//, "");
