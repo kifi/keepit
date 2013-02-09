@@ -13,7 +13,6 @@ import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
 import play.api.libs.json._
-import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
@@ -96,7 +95,4 @@ class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Deep
     (for(b <- table if b.token === token) yield b).firstOption
 }
 
-object DeepLinkStates {
-  val ACTIVE = State[DeepLink]("active")
-  val INACTIVE = State[DeepLink]("inactive")
-}
+object DeepLinkStates extends States[DeepLink]

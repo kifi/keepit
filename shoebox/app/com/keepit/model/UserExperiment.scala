@@ -7,7 +7,6 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import java.sql.Connection
 import org.joda.time.DateTime
-import ru.circumflex.orm._
 
 case class UserExperiment (
   id: Option[Id[UserExperiment]] = None,
@@ -35,10 +34,7 @@ object ExperimentTypes {
   }
 }
 
-object UserExperimentStates {
-  val ACTIVE = State[UserExperiment]("active")
-  val INACTIVE = State[UserExperiment]("inactive")
-}
+object UserExperimentStates extends States[UserExperiment]
 
 @ImplementedBy(classOf[UserExperimentRepoImpl])
 trait UserExperimentRepo extends Repo[UserExperiment] {

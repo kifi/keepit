@@ -11,13 +11,15 @@ import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
 import play.api.Play.current
-import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.common.cache._
+import akka.util.duration._
+import com.keepit.serializer.UnscrapableSerializer
 
 case class Unscrapable(
   id: Option[Id[Unscrapable]] = None,
@@ -39,8 +41,19 @@ trait UnscrapableRepo extends Repo[Unscrapable] {
   def contains(url: String)(implicit session: RSession): Boolean
 }
 
+case class UnscrapableAllKey() extends Key[List[Unscrapable]] {
+  val namespace = "unscrapable_all"
+  def toKey(): String = "all"
+}
+class UnscrapableAllCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UnscrapableAllKey, List[Unscrapable]] {
+  val ttl = 0 seconds
+  def deserialize(obj: Any): List[Unscrapable] = UnscrapableSerializer.unscrapableSerializer.readsSeq(obj.asInstanceOf[JsArray])
+  def serialize(unscrapable: List[Unscrapable]) = UnscrapableSerializer.unscrapableSerializer.writesSeq(unscrapable)
+}
+
+
 @Singleton
-class UnscrapableRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Unscrapable] with UnscrapableRepo {
+class UnscrapableRepoImpl @Inject() (val db: DataBaseComponent, val unscrapableCache: UnscrapableAllCache) extends DbRepo[Unscrapable] with UnscrapableRepo {
   import FortyTwoTypeMappers._
   import org.scalaquery.ql._
   import org.scalaquery.ql.ColumnOps._
@@ -55,8 +68,22 @@ class UnscrapableRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[U
     def * = id.? ~ createdAt ~ updatedAt ~ pattern ~ state <> (Unscrapable, Unscrapable.unapply _)
   }
 
+  private var allMemCache: Option[Seq[Unscrapable]] = None
+
+  override def invalidateCache(unscrapable: Unscrapable)(implicit session: RSession) = {
+    unscrapableCache.remove(UnscrapableAllKey())
+    allMemCache = None
+    unscrapable
+  }
+
   def allActive()(implicit session: RSession): Seq[Unscrapable] =
-    (for(f <- table if f.state === UnscrapableStates.ACTIVE) yield f).list
+    allMemCache.getOrElse {
+      val result = unscrapableCache.getOrElse(UnscrapableAllKey()) {
+        (for(f <- table if f.state === UnscrapableStates.ACTIVE) yield f).list
+      }
+      allMemCache = Some(result)
+      result
+    }
 
   def contains(url: String)(implicit session: RSession): Boolean = {
     !allActive().forall { s =>
@@ -65,7 +92,4 @@ class UnscrapableRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[U
   }
 }
 
-object UnscrapableStates {
-  val ACTIVE = State[Unscrapable]("active")
-  val INACTIVE = State[Unscrapable]("inactive")
-}
+object UnscrapableStates extends States[Unscrapable]

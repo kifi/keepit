@@ -15,7 +15,6 @@ import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
-import ru.circumflex.orm._
 import play.api.libs.json._
 import com.keepit.common.logging.Logging
 
@@ -128,8 +127,4 @@ class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
   }
 }
 
-object SocialConnectionStates {
-  val ACTIVE = State[SocialConnection]("active")
-  val INACTIVE = State[SocialConnection]("inactive")
-}
-
+object SocialConnectionStates extends States[SocialConnection]

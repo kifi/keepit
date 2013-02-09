@@ -21,8 +21,7 @@ import com.google.inject.Inject
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.inject._
-import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
+import com.keepit.common.db.slick._
 import play.api.Play.current
 import play.api.libs.json.JsArray
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
@@ -30,11 +29,11 @@ import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
 private case class RefreshUserInfo(socialUserInfo: SocialUserInfo)
 private case object RefreshAll
 
-private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphPlugin) extends Actor with Logging {
+private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphPlugin, db: DBConnection, socialRepo: SocialUserInfoRepo) extends Actor with Logging {
   def receive() = {
     case RefreshAll => {
       log.info("going to check which SocilaUserInfo Was not fetched Lately")
-      val needToBeRefreshed = CX.withConnection { implicit conn => SocialUserInfoCxRepo.getNeedToBeRefreshed }
+      val needToBeRefreshed = db.readOnly { implicit s => socialRepo.getNeedToBeRefreshed }
       log.info("find %s users that need to be refreshed".format(needToBeRefreshed.size))
       needToBeRefreshed.foreach(self ! RefreshUserInfo(_))
     }
@@ -47,14 +46,12 @@ private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphP
 }
 
 
-trait SocialGraphRefresher extends Plugin {
+trait SocialGraphRefresher extends Plugin {}
 
-}
-
-class SocialGraphRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin : SocialGraphPlugin) extends SocialGraphRefresher with Logging {
+class SocialGraphRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin : SocialGraphPlugin, db: DBConnection, socialRepo: SocialUserInfoRepo) extends SocialGraphRefresher with Logging {
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = system.actorOf(Props { new SocialGraphRefresherActor(socialGraphPlugin) })
+  private val actor = system.actorOf(Props { new SocialGraphRefresherActor(socialGraphPlugin, db, socialRepo) })
 
   // plugin lifecycle methods
   private var _cancellables: Seq[Cancellable] = Nil
@@ -67,8 +64,4 @@ class SocialGraphRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin
   override def onStop(): Unit = {
     _cancellables.map(_.cancel)
   }
-
 }
-
-
-

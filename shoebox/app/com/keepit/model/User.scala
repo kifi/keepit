@@ -10,13 +10,11 @@ import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
-import ru.circumflex.orm._
 import play.api.libs.json._
 import com.keepit.common.cache._
 import akka.util.Duration
 import akka.util.duration._
 import com.keepit.serializer.UserSerializer
-import javax.swing.plaf.OptionPaneUI
 import com.keepit.common.logging.Logging
 
 case class User(
@@ -96,7 +94,4 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent, val externalIdCache: Us
 
 }
 
-object UserStates {
-  val ACTIVE = State[User]("active")
-  val INACTIVE = State[User]("inactive")
-}
+object UserStates extends States[User]

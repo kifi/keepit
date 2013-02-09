@@ -1,8 +1,8 @@
 package com.keepit.common.mail
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.CX
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckError
@@ -28,7 +28,7 @@ object SendgridMailProvider {
 }
 
 @Singleton
-class SendgridMailProvider @Inject() () extends Logging {
+class SendgridMailProvider @Inject() (db: DBConnection, mailRepo: ElectronicMailRepo, healthcheck: HealthcheckPlugin) extends Logging {
 
   private class SMTPAuthenticator extends Authenticator {
     override def getPasswordAuthentication(): PasswordAuthentication = {
@@ -116,8 +116,8 @@ class SendgridMailProvider @Inject() () extends Logging {
       transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
       val messageId = message.getHeader(SendgridMailProvider.MESSAGE_ID)(0).trim
       log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
-      CX.withConnection { implicit c =>
-        mail.sent("message sent", ElectronicMailMessageId(messageId.substring(1, messageId.length - 1))).save
+      db.readWrite { implicit s =>
+        mailRepo.save(mail.sent("message sent", ElectronicMailMessageId(messageId.substring(1, messageId.length - 1))))
       }
     } catch {
       case e =>
@@ -157,19 +157,19 @@ class SendgridMailProvider @Inject() () extends Logging {
   }
 
   private def mailError(mailId: ExternalId[ElectronicMail], message: String, transport: Transport): ElectronicMail = {
-    val mail = CX.withConnection { implicit c =>
-      ElectronicMailCx.get(mailId)
+    val mail = db.readOnly {implicit s =>
+      mailRepo.get(mailId)
     }
     mailError(mail, message, transport)
   }
 
   private def mailError(mail: ElectronicMail, message: String, transport: Transport): ElectronicMail = {
     nullifyTransport(transport)
-    val error = inject[HealthcheckPlugin].addError(HealthcheckError(callType = Healthcheck.EMAIL,
+    val error = healthcheck.addError(HealthcheckError(callType = Healthcheck.EMAIL,
       errorMessage = Some("Can't send email from %s to %s: %s. Error message: %s".format(mail.from, mail.to, mail.subject, message))))
     log.error(error.errorMessage)
-    CX.withConnection { implicit c =>
-      mail.errorSending("Error: %s".format(error)).save
+    db.readWrite { implicit s =>
+      mailRepo.save(mail.errorSending("Error: %s".format(error)))
     }
   }
 }

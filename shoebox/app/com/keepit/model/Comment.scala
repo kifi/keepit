@@ -12,13 +12,6 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.common.time.currentDateTime
 import annotation.elidable.ASSERTION
-import ru.circumflex.orm.Predicate.toAggregateHelper
-import ru.circumflex.orm.Projection
-import ru.circumflex.orm.RelationNode
-import ru.circumflex.orm.RelationNode.toRelation
-import ru.circumflex.orm.SELECT
-import ru.circumflex.orm.str2expr
-import ru.circumflex.orm.COUNT
 import play.api.libs.json._
 import com.keepit.inject._
 import com.keepit.common.healthcheck._
@@ -111,11 +104,11 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
       case CommentPermissions.PUBLIC =>
         commentCountCache.remove(CommentCountUriIdKey(comment.uriId))
       case CommentPermissions.MESSAGE =>
-        inject[CommentRecipientRepo].getByComment(comment.id.get) foreach { cr =>
-          cr.userId match {
-            case Some(user) => messageWithChildrenCountCache.remove(MessageWithChildrenCountUriIdUserIdKey(comment.uriId, user))
-            case None =>
-          }
+        val comments = (comment.id :: comment.parent :: Nil).flatten
+        val parentUserId = comment.parent.map(inject[CommentRepo].get(_).userId)
+        val usersToInvalidate = (Some(comment.userId) :: parentUserId :: Nil).flatten ++ comments.flatMap(inject[CommentRecipientRepo].getByComment(_).map(_.userId).flatten)
+        usersToInvalidate foreach { user =>
+          messageWithChildrenCountCache.remove(MessageWithChildrenCountUriIdUserIdKey(comment.uriId, user))
         }
       case CommentPermissions.PRIVATE =>
     }
@@ -195,10 +188,7 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
     (for(b <- table if b.urlId === urlId && b.state === CommentStates.ACTIVE) yield b).list
 }
 
-object CommentStates {
-  val ACTIVE = State[Comment]("active")
-  val INACTIVE = State[Comment]("inactive")
-}
+object CommentStates extends States[Comment]
 
 sealed trait CommentPermission
 

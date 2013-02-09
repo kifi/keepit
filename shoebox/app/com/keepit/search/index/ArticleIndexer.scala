@@ -10,7 +10,9 @@ import com.keepit.search.Lang
 import com.keepit.search.SearchConfig
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.common.db.CX
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
 import play.api.Play.current
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.document.Document
@@ -45,12 +47,14 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
 
   def run(commitBatchSize: Int, fetchSize: Int): Int = {
     log.info("starting a new indexing round")
+    val db = inject[DBConnection]
+    val repo = inject[NormalizedURIRepo]
     try {
-      val uris = CX.withConnection { implicit c =>
-        val uris = NormalizedURICxRepo.getByState(SCRAPE_FAILED, fetchSize)
+      val uris = db.readOnly {implicit s =>
+        val uris = repo.getByState(SCRAPE_FAILED, fetchSize)
         if (uris.size < fetchSize) {
-          val combo = uris ++ NormalizedURICxRepo.getByState(SCRAPED, fetchSize - uris.size)
-          if (uris.size < fetchSize) combo ++ NormalizedURICxRepo.getByState(UNSCRAPABLE, fetchSize - uris.size)
+          val combo = uris ++ repo.getByState(SCRAPED, fetchSize - uris.size)
+          if (uris.size < fetchSize) combo ++ repo.getByState(UNSCRAPABLE, fetchSize - uris.size)
           else combo
         }
         else uris
@@ -58,7 +62,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       var cnt = 0
       indexDocuments(uris.iterator.map{ uri => buildIndexable(uri) }, commitBatchSize){ commitBatch =>
         commitBatch.foreach{ case (indexable, indexError)  =>
-          CX.withConnection { implicit c =>
+          db.readWrite { implicit s =>
             val articleIndexable = indexable.asInstanceOf[ArticleIndexable]
             val state = indexError match {
               case Some(error) =>
@@ -67,7 +71,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
                 cnt += 1
                 findNextState(articleIndexable.uri.state -> Set(INDEXED, FALLBACKED, UNSCRAPE_FALLBACK))
             }
-            NormalizedURICxRepo.get(indexable.id).withState(state).save
+            repo.save(repo.get(indexable.id).withState(state))
           }
         }
       }
@@ -80,7 +84,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   }
 
   def buildIndexable(id: Id[NormalizedURI]) = {
-    val uri = CX.withConnection{ implicit c => NormalizedURICxRepo.get(id) }
+    val uri = inject[DBConnection].readOnly { implicit c => inject[NormalizedURIRepo].get(id) }
     buildIndexable(uri)
   }
 

@@ -12,7 +12,6 @@ import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
-import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
@@ -92,7 +91,4 @@ class BrowsingHistoryRepoImpl @Inject() (val db: DataBaseComponent, val browsing
 
 }
 
-object BrowsingHistoryStates {
-  val ACTIVE = State[BrowsingHistory]("active")
-  val INACTIVE = State[BrowsingHistory]("inactive")
-}
+object BrowsingHistoryStates extends States[BrowsingHistory]

@@ -12,7 +12,6 @@ import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
-import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
@@ -121,7 +120,4 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
     (for(k <- table if k.userId === userId && k.externalId === externalId) yield k).firstOption
 }
 
-object KifiInstallationStates {
-  val ACTIVE = State[KifiInstallation]("active")
-  val INACTIVE = State[KifiInstallation]("inactive")
-}
+object KifiInstallationStates extends States[KifiInstallation]

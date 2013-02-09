@@ -12,8 +12,6 @@ import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.runner.JUnitRunner
-import com.keepit.common.db.CX
-
 
 @RunWith(classOf[JUnitRunner])
 class PostOfficeTest extends Specification with TestAkkaSystem {

@@ -10,7 +10,6 @@ import play.api.libs.json._
 import play.api.libs.ws._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError}
-import com.keepit.common.db.CX
 import com.keepit.inject._
 import akka.actor.ActorSystem
 import akka.actor.Actor
@@ -32,7 +31,7 @@ object Reports {
   lazy val dailySearchQueriesReport = new DailySearchQueriesReport
   lazy val dailyGoogleResultClicked = new DailyGoogleResultClicked
   lazy val dailyKifiResultClicked = new DailyKifiResultClicked
-  lazy val dailyGoogleResultClickedOverKifi = new DailyGoogleResultClickedOverKifi
+  lazy val dailyKifiAtLeastOneResult = new DailyKifiAtLeastOneResult
   lazy val dailySliderShownByAuto = new DailySliderShownByAuto
   lazy val dailySliderShownByIcon = new DailySliderShownByIcon
   lazy val dailySliderShownByKey = new DailySliderShownByKey
@@ -45,6 +44,14 @@ object Reports {
   lazy val dailyKeep = new DailyKeep
   lazy val dailyUniqueDepricatedAddBookmarks = new DailyUniqueDepricatedAddBookmarks
   lazy val dailyUsefulPage = new DailyUsefulPage
+  lazy val dailyTotalUsers = new DailyTotalUsers
+  lazy val dailyPrivateKeeps = new DailyPrivateKeeps
+  lazy val dailyPublicKeeps = new DailyPublicKeeps
+  lazy val dailyNewThread = new DailyNewThread
+  lazy val dailyUniqueUsersKeeping = new DailyUniqueUsersKeeping
+  lazy val dailyUniqueUsersMessaging = new DailyUniqueUsersMessaging
+  lazy val dailyUniqueUsersCommenting = new DailyUniqueUsersCommenting
+  lazy val dailyKifiLoadedReport = new DailyKifiLoadedReport
 
   case class ReportGroup(name: String, reports: Seq[Report])
 
@@ -54,7 +61,7 @@ object Reports {
       dailySearchQueriesReport,
       dailyGoogleResultClicked,
       dailyKifiResultClicked,
-      dailyGoogleResultClickedOverKifi,
+      dailyKifiAtLeastOneResult,
       dailySliderShownByAuto,
       dailySliderShownByIcon,
       dailySliderShownByKey,
@@ -65,7 +72,16 @@ object Reports {
       dailyMessage,
       dailyUnkeep,
       dailyKeep,
-      dailyUsefulPage)
+      dailyUsefulPage,
+      dailyTotalUsers,
+      dailyTotalUsers,
+      dailyPrivateKeeps,
+      dailyPublicKeeps,
+      dailyNewThread,
+      dailyUniqueUsersKeeping,
+      dailyUniqueUsersMessaging,
+      dailyUniqueUsersCommenting,
+      dailyKifiLoadedReport)
   )
 
   lazy val DailyAdminReports = ReportGroup("DailyAdminReport",

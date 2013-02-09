@@ -3,8 +3,6 @@ package com.keepit.model
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
-import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
 import com.keepit.test.EmptyApplication
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
