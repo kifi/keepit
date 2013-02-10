@@ -1,7 +1,5 @@
 package com.keepit.classify
 
-import scala.io.Source
-
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.DBConnection
@@ -101,38 +99,6 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
           domainRepo.get("cnn.com").get.sensitive === Some(true)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(None))
           domainRepo.get("cnn.com").get.sensitive === None
-        }
-      }
-    }
-
-    "work with domain tags loaded from a file" in {
-      running(new EmptyApplication()) {
-        val tagRepo = inject[DomainTagRepo]
-        val domainRepo = inject[DomainRepo]
-        val domainTagImporter = inject[DomainTagImporter]
-
-        val db = inject[DBConnection]
-        db.readWrite { implicit s =>
-          tagRepo.save(DomainTag(name = DomainTagName("Humor"), sensitive = Option(false)))
-          tagRepo.save(DomainTag(name = DomainTagName("Drugs"), sensitive = Option(true)))
-          tagRepo.save(DomainTag(name = DomainTagName("Jobs"), sensitive = None))
-          val path = "test/com/keepit/classify/"
-          val drugsDomains = Source.fromFile(path + "drugs_domains.txt")
-            .getLines().map(_.trim).filter(!_.isEmpty).toSet
-          val humorDomains = Source.fromFile(path + "humor_domains.txt")
-            .getLines().map(_.trim).filter(!_.isEmpty).toSet
-          val jobsDomains = Source.fromFile(path + "jobs_domains.txt")
-            .getLines().map(_.trim).filter(!_.isEmpty).toSet
-          domainTagImporter.applyTagToDomains(DomainTagName("Drugs"), drugsDomains)
-          domainTagImporter.applyTagToDomains(DomainTagName("Humor"), humorDomains)
-          domainTagImporter.applyTagToDomains(DomainTagName("Jobs"), jobsDomains)
-          domainRepo.all().map { domain =>
-            // assume these are lists of disjoint domains
-            if (drugsDomains contains domain.hostname) domain.sensitive === Some(true)
-            if (humorDomains contains domain.hostname) domain.sensitive === Some(false)
-            if (jobsDomains contains domain.hostname) domain.sensitive === None
-          }
-          true
         }
       }
     }
