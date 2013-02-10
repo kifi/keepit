@@ -23,17 +23,11 @@ case class DomainTag(
   def withState(state: State[DomainTag]) = this.copy(state = state)
 }
 
-class DomainTagName private (val name: String) {
-  override def equals(o: Any): Boolean = o match {
-    case DomainTagName(name) => name == this.name
-    case _ => false
-  }
-  override def hashCode = name.hashCode
-  override def toString = "DomainTagName(" + name + ")"
-}
+sealed trait DomainTagName { def name: String }
+private final case class DomainTagNameImpl(name: String) extends DomainTagName
 
 object DomainTagName {
-  def apply(name: String): DomainTagName = new DomainTagName(name.toLowerCase.trim)
+  def apply(name: String): DomainTagName = DomainTagNameImpl(name.toLowerCase.trim)
   def unapply(dtn: DomainTagName): Option[String] = Some(dtn.name)
 }
 
