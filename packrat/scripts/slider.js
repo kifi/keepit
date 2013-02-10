@@ -189,7 +189,9 @@ slider = function() {
           } else {
             drawKeepItHover(o.session, o.friends, o.numComments, o.numMessages, template, callback);
             logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0)});
-            idleTimer[hideIfIdle ? "start" : "clear"]();
+            if (hideIfIdle) {
+              idleTimer.start();
+            }
           }
         });
     });
@@ -242,7 +244,7 @@ slider = function() {
       }
     })
     .on("mousedown click keydown keypress keyup", function(e) {
-      idleTimer.clear();
+      idleTimer.kill();
       e.stopPropagation();
     })
     .on("mousewheel", ".kifi-comments-body,.kifi-comment-compose", function(e) {
@@ -259,6 +261,7 @@ slider = function() {
 
   var idleTimer = {
     start: function() {
+      api.log("[idleTimer.start]");
       var t = idleTimer;
       clearTimeout(t.timeout);
       t.timeout = setTimeout(function slideOutIdle() {
@@ -270,6 +273,13 @@ slider = function() {
         .off("mouseleave", t.start).on("mouseleave", t.start);
     },
     clear: function() {
+      api.log("[idleTimer.clear]");
+      var t = idleTimer;
+      clearTimeout(t.timeout);
+      delete t.timeout;
+    },
+    kill: function() {
+      api.log("[idleTimer.kill]");
       var t = idleTimer;
       clearTimeout(t.timeout);
       delete t.timeout;
@@ -294,7 +304,7 @@ slider = function() {
 
   // trigger is for the event log (e.g. "key", "icon"). pass no trigger if just hiding slider temporarily.
   function slideOut(trigger) {
-    idleTimer.clear();
+    idleTimer.kill();
     var $s = $(".kifi-slider").animate({
         opacity: 0,
         right: '-=340'
