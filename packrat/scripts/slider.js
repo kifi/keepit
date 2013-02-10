@@ -132,7 +132,7 @@ slider = function() {
 
     api.port.emit("set_page_icon", true);
     isKept = true;
-    if (shouldSlideOut) keptItslideOut();
+    if (shouldSlideOut) slideOutKept();
 
     var isPrivate = $(".kifi-keep-private").is(":checked");
 
@@ -161,13 +161,13 @@ slider = function() {
     });
   }
 
-  function showKeepItHover(trigger, callback) {
+  function showSlider(trigger, hideIfIdle, callback) {
     api.port.emit("get_slider_info", function(o) {
       api.log("slider info:", o);
 
       isKept = o.kept;
       following = o.following;
-      lastShownAt = new Date().getTime();
+      lastShownAt = +new Date;
 
       renderTemplate('html/kept_hover.html', {
           "logo": api.url('images/kifilogo.png'),
@@ -189,6 +189,9 @@ slider = function() {
           } else {
             drawKeepItHover(o.session, o.friends, o.numComments, o.numMessages, template, callback);
             logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0)});
+            if (hideIfIdle) {
+              idleTimer.start();
+            }
           }
         });
     });
@@ -241,6 +244,7 @@ slider = function() {
       }
     })
     .on("mousedown click keydown keypress keyup", function(e) {
+      idleTimer.kill();
       e.stopPropagation();
     })
     .on("mousewheel", ".kifi-comments-body,.kifi-comment-compose", function(e) {
@@ -255,7 +259,36 @@ slider = function() {
     callback && callback(session);
   }
 
-  function keptItslideOut() {
+  var idleTimer = {
+    start: function() {
+      api.log("[idleTimer.start]");
+      var t = idleTimer;
+      clearTimeout(t.timeout);
+      t.timeout = setTimeout(function slideOutIdle() {
+        api.log("[slideOutIdle]");
+        slideOut("idle");
+      }, 10000);
+      $(".kifi-slider")
+        .off("mouseenter", t.clear).on("mouseenter", t.clear)
+        .off("mouseleave", t.start).on("mouseleave", t.start);
+    },
+    clear: function() {
+      api.log("[idleTimer.clear]");
+      var t = idleTimer;
+      clearTimeout(t.timeout);
+      delete t.timeout;
+    },
+    kill: function() {
+      api.log("[idleTimer.kill]");
+      var t = idleTimer;
+      clearTimeout(t.timeout);
+      delete t.timeout;
+      $(".kifi-slider")
+        .off("mouseenter", t.clear)
+        .off("mouseleave", t.start);
+    }};
+
+  function slideOutKept() {
     var $s = $(".kifi-slider");
     $s.animate({
         bottom: '+=' + $s.position().top,
@@ -271,6 +304,7 @@ slider = function() {
 
   // trigger is for the event log (e.g. "key", "icon"). pass no trigger if just hiding slider temporarily.
   function slideOut(trigger) {
+    idleTimer.kill();
     var $s = $(".kifi-slider").animate({
         opacity: 0,
         right: '-=340'
@@ -1044,7 +1078,7 @@ slider = function() {
   // defining the slider API
   return {
   show: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
-    showKeepItHover(trigger);
+    showSlider(trigger, true);
   },
   shown: function() {
     return !!lastShownAt;
@@ -1057,7 +1091,7 @@ slider = function() {
     }
   },
   openDeepLink: function(locator) {
-    showKeepItHover("deepLink", function(session) {
+    showSlider("deepLink", false, function(session) {
       openDeepLink(session, locator);
     });
   }};
