@@ -28,15 +28,13 @@ class DomainTagName private (val name: String) {
     case DomainTagName(name) => name == this.name
     case _ => false
   }
-
-  override def hashCode() = name.hashCode
-
+  override def hashCode = name.hashCode
   override def toString = "DomainTagName(" + name + ")"
 }
 
 object DomainTagName {
   def apply(name: String): DomainTagName = new DomainTagName(name.toLowerCase.trim)
-  def unapply(dtn: DomainTagName): Option[String] = if (dtn eq null) None else Some(dtn.name)
+  def unapply(dtn: DomainTagName): Option[String] = Some(dtn.name)
 }
 
 @ImplementedBy(classOf[DomainTagRepoImpl])
