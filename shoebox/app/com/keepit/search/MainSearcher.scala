@@ -205,7 +205,7 @@ class MainSearcher(
     (1.0f/(1.0f + t2))
   }
 
-  def explain(queryString: String, uriId: Id[NormalizedURI]): Option[Explanation] = {
+  def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     val lang = Lang("en") // TODO: detect
     val parser = MainQueryParser(lang, proximityBoost, semanticBoost)
     parser.setPercentMatch(percentMatch)
@@ -216,7 +216,7 @@ class MainSearcher(
       personalizedSearcher.setSimilarity(similarity)
       val idMapper = personalizedSearcher.indexReader.getIdMapper
 
-      personalizedSearcher.explain(query, idMapper.getDocId(uriId.id))
+      (query, personalizedSearcher.explain(query, idMapper.getDocId(uriId.id)))
     }
   }
 }

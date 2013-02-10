@@ -40,7 +40,7 @@ class MemcachedCache @Inject() (val cache: MemcachedPlugin) extends FortyTwoCach
     cache.api.get(key)
 
   def remove(key: String) {
-    cache.api.remove(key) // Play 2.0 does not support remove. 2.1 does!
+    cache.api.remove(key)
   }
 
   def set(key: String, value: Any, expiration: Int = 0) {

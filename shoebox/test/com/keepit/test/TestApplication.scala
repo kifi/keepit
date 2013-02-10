@@ -66,6 +66,7 @@ trait DbRepos {
   def installationRepo = inject[KifiInstallationRepo]
   def userExperimentRepo = inject[UserExperimentRepo]
   def emailAddressRepo = inject[EmailAddressRepo]
+  def unscrapableRepo = inject[UnscrapableRepo]
 }
 
 case class TestModule() extends ScalaModule {
