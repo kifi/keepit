@@ -74,7 +74,7 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[NormalizedURI]
   }
 
-  implicit object DomainTagIdTypeMapper extends BaseTypeMapper[Id[DomainToTag]] {
+  implicit object DomainToTagIdTypeMapper extends BaseTypeMapper[Id[DomainToTag]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[DomainToTag]
   }
 
@@ -82,7 +82,7 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Domain]
   }
 
-  implicit object TagIdTypeMapper extends BaseTypeMapper[Id[DomainTag]] {
+  implicit object DomainTagIdTypeMapper extends BaseTypeMapper[Id[DomainTag]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[DomainTag]
   }
 
@@ -173,8 +173,8 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new UserAgentMapperDelegate
   }
 
-  implicit object TagNameTypeMapper extends BaseTypeMapper[DomainTagName] {
-    def apply(profile: BasicProfile) = new TagNameMapperDelegate
+  implicit object DomainTagNameTypeMapper extends BaseTypeMapper[DomainTagName] {
+    def apply(profile: BasicProfile) = new DomainTagNameMapperDelegate
   }
 }
 
@@ -372,7 +372,7 @@ class EmailAddressHolderMapperDelegate extends StringMapperDelegate[EmailAddress
 //************************************
 //       DomainTagName -> String
 //************************************
-class TagNameMapperDelegate extends StringMapperDelegate[DomainTagName] {
+class DomainTagNameMapperDelegate extends StringMapperDelegate[DomainTagName] {
   def zero = DomainTagName("")
   def sourceToDest(value: DomainTagName) = value.name
   def safeDestToSource(str: String) = DomainTagName(str)
