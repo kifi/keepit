@@ -70,7 +70,7 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
   private def tryAddPhraseQueries(query: BooleanQuery) {
     val terms = stemmedSeqs.toArray
     phraseDetector.detectAll(terms).foreach{ phrase =>
-      val phraseQueries = List("ts", "cs", "title_Stemmed").foldLeft(new BooleanQuery()){ (bq, field) =>
+      val phraseQueries = List("ts", "cs", "title_stemmed").foldLeft(new BooleanQuery()){ (bq, field) =>
         val phraseQuery = terms.slice(phrase._1, phrase._1 + phrase._2).foldLeft(new PhraseQuery()){ (phraseQuery, term) =>
             phraseQuery.add(new Term(field, term.text()))
             phraseQuery
@@ -109,7 +109,7 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
           val proxQ = new BooleanQuery(true)
           val csterms = stemmedSeqs.map(t => new Term("cs", t.text()))
           val tsterms = stemmedSeqs.map(t => new Term("ts", t.text()))
-          val psterms = stemmedSeqs.map(t => new Term("ps", t.text()))
+          val psterms = stemmedSeqs.map(t => new Term("title_stemmed", t.text()))
           proxQ.add(ProximityQuery(csterms), Occur.SHOULD)
           proxQ.add(ProximityQuery(tsterms), Occur.SHOULD)
           proxQ.add(ProximityQuery(psterms), Occur.SHOULD)
