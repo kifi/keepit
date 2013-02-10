@@ -12,7 +12,7 @@ CREATE TABLE domain_tag (
 );
 
 CREATE UNIQUE INDEX domain_tag_name_index ON domain_tag (name);
-CREATE UNIQUE INDEX domain_tag_name_status_index ON domain_tag (name, state);
+CREATE UNIQUE INDEX domain_tag_name_state_index ON domain_tag (name, state);
 
 CREATE TABLE domain (
     id bigint(20) NOT NULL AUTO_INCREMENT,
@@ -27,7 +27,7 @@ CREATE TABLE domain (
 );
 
 CREATE UNIQUE INDEX domain_hostname_index ON domain (hostname);
-CREATE UNIQUE INDEX domain_hostname_status_index ON domain (hostname, state);
+CREATE UNIQUE INDEX domain_hostname_state_index ON domain (hostname, state);
 
 CREATE TABLE domain_to_tag (
     id bigint(20) NOT NULL AUTO_INCREMENT,
@@ -42,8 +42,8 @@ CREATE TABLE domain_to_tag (
     CONSTRAINT domain_to_tag_tag_id FOREIGN KEY (tag_id) REFERENCES domain_tag(id)
 );
 
-CREATE UNIQUE INDEX domain_to_tag_index ON domain_to_tag (domain_id, tag_id);
-CREATE UNIQUE INDEX domain_to_tag_status_index ON domain_to_tag (domain_id, tag_id, state);
+CREATE INDEX domain_to_tag_tag_id_index ON domain_to_tag (tag_id, state);
+CREATE INDEX domain_to_tag_domain_id_index ON domain_to_tag (domain_id, state);
 
 insert into evolutions (name, description) values('31.sql', 'adding domain tag tables');
 
