@@ -33,6 +33,7 @@ import com.keepit.search.graph.URIGraphPluginImpl
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexerPluginImpl
+import com.keepit.search.phrasedetector.PhraseIndexer
 import com.keepit.search.ArticleSearchResultStore
 import com.keepit.search.ArticleStore
 import com.keepit.search.S3ArticleSearchResultStoreImpl
@@ -154,6 +155,24 @@ class ShoeboxModule() extends ScalaModule with Logging {
     log.info("storing URIGraph in %s".format(dir.getAbsolutePath()))
     URIGraph(new MMapDirectory(dir))
   }
+
+  @Singleton
+  @Provides
+  def phraseIndexer: PhraseIndexer = {
+    val dirPath = current.configuration.getString("index.phrase.directory").get
+    val dir = new File(dirPath).getCanonicalFile()
+    if (!dir.exists()) {
+      if (!dir.mkdirs()) {
+        throw new Exception("could not create dir %s".format(dir))
+      }
+    }
+    val dataDir = current.configuration.getString("index.config").map{ path =>
+      val configDir = new File(path).getCanonicalFile()
+      new File(configDir, "phrase")
+    }
+    PhraseIndexer(new MMapDirectory(dir), dataDir)
+  }
+
 
   @Provides
   @AppScoped
