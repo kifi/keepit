@@ -12,7 +12,6 @@ CREATE TABLE domain_tag (
 );
 
 CREATE UNIQUE INDEX domain_tag_name_index ON domain_tag (name);
-CREATE UNIQUE INDEX domain_tag_name_state_index ON domain_tag (name, state);
 
 CREATE TABLE domain (
     id bigint(20) NOT NULL AUTO_INCREMENT,
@@ -27,7 +26,6 @@ CREATE TABLE domain (
 );
 
 CREATE UNIQUE INDEX domain_hostname_index ON domain (hostname);
-CREATE UNIQUE INDEX domain_hostname_state_index ON domain (hostname, state);
 
 CREATE TABLE domain_to_tag (
     id bigint(20) NOT NULL AUTO_INCREMENT,
