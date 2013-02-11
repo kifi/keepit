@@ -1,23 +1,26 @@
 package com.keepit.common.db.slick
 
-import securesocial.core.{SocialUser, UserId, AuthenticationMethod}
-import org.scalaquery.ql.{TypeMapper, TypeMapperDelegate, BaseTypeMapper}
+import java.sql.{Timestamp, Clob, Blob}
+
+import org.joda.time.DateTime
 import org.scalaquery.ql.basic.BasicProfile
+import org.scalaquery.ql.basic.BasicTypeMapperDelegates._
+import org.scalaquery.ql.{TypeMapperDelegate, BaseTypeMapper}
 import org.scalaquery.session.{PositionedParameters, PositionedResult}
+
+import com.keepit.classify.{DomainTagName, DomainTag, Domain, DomainToTag}
 import com.keepit.common.db.{Id, State, Model, ExternalId, LargeString}
-import com.keepit.common.time._
+import com.keepit.common.mail._
 import com.keepit.common.social._
+import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.common.mail._
-import org.joda.time.DateTime
-import java.sql.{Timestamp, Clob, Blob, PreparedStatement}
+import com.keepit.serializer.{URLHistorySerializer => URLHS, SocialUserSerializer}
+
 import javax.sql.rowset.serial.{SerialBlob, SerialClob}
 import play.api.libs.json._
-import org.scalaquery.ql.basic.BasicTypeMapperDelegates._
-import com.keepit.serializer.{URLHistorySerializer => URLHS, SocialUserSerializer}
-import java.io.BufferedReader
-import java.io.StringReader
+import securesocial.core.{SocialUser, UserId, AuthenticationMethod}
+
 
 object FortyTwoTypeMappers {
   // Time
@@ -71,6 +74,18 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[NormalizedURI]
   }
 
+  implicit object DomainToTagIdTypeMapper extends BaseTypeMapper[Id[DomainToTag]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[DomainToTag]
+  }
+
+  implicit object DomainIdTypeMapper extends BaseTypeMapper[Id[Domain]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Domain]
+  }
+
+  implicit object DomainTagIdTypeMapper extends BaseTypeMapper[Id[DomainTag]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[DomainTag]
+  }
+
   //States
 
   implicit object NormalizedURIStateTypeMapper extends BaseTypeMapper[State[NormalizedURI]] {
@@ -83,6 +98,18 @@ object FortyTwoTypeMappers {
 
   implicit object CommentPermissionTypeStateTypeMapper extends BaseTypeMapper[State[CommentPermission]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[CommentPermission]
+  }
+
+  implicit object DomainTagStateTypeMapper extends BaseTypeMapper[State[DomainTag]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[DomainTag]
+  }
+
+  implicit object DomainStateTypeMapper extends BaseTypeMapper[State[Domain]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[Domain]
+  }
+
+  implicit object DomainToTagStateTypeMapper extends BaseTypeMapper[State[DomainToTag]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[DomainToTag]
   }
 
   //Other
@@ -144,6 +171,10 @@ object FortyTwoTypeMappers {
 
   implicit object UserAgentTypeMapper extends BaseTypeMapper[UserAgent] {
     def apply(profile: BasicProfile) = new UserAgentMapperDelegate
+  }
+
+  implicit object DomainTagNameTypeMapper extends BaseTypeMapper[DomainTagName] {
+    def apply(profile: BasicProfile) = new DomainTagNameMapperDelegate
   }
 }
 
@@ -336,6 +367,15 @@ class EmailAddressHolderMapperDelegate extends StringMapperDelegate[EmailAddress
   def zero = new EmailAddressHolder(){val address = ""}
   def sourceToDest(value: EmailAddressHolder) = value.address
   def safeDestToSource(str: String) = new EmailAddressHolder(){val address = str}
+}
+
+//************************************
+//       DomainTagName -> String
+//************************************
+class DomainTagNameMapperDelegate extends StringMapperDelegate[DomainTagName] {
+  def zero = DomainTagName("")
+  def sourceToDest(value: DomainTagName) = value.name
+  def safeDestToSource(str: String) = DomainTagName(str)
 }
 
 //************************************
