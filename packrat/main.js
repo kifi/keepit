@@ -144,6 +144,11 @@ api.port.on({
     tab.kept = data;
     setIcon(tab);
   },
+  check_auto_show_eligible: function(data, respond, tab) {
+    if (tab.autoShowEligible && api.prefs.get("showSlider")) {
+      api.tabs.emit(tab, "auto_show_eligible");
+    }
+  },
   get_slider_info: function(data, respond, tab) {
     if (session) {
       getSliderInfo(tab, respond);
@@ -454,6 +459,9 @@ api.tabs.on.loading.add(function(tab) {
         if (api.tabs.isFocused(tab)) {
           scheduleAutoShow(tab);
         }
+        if (api.prefs.get("showSlider")) {
+          api.tabs.emit(tab, "auto_show_eligible");
+        }
       }
     }
   });
@@ -483,11 +491,11 @@ api.tabs.on.unload.add(function(tab) {
 function scheduleAutoShow(tab) {
   api.log("[scheduleAutoShow] scheduling tab:", tab.id);
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
-  if (api.prefs.get("showSlider") !== false) {
+  if (api.prefs.get("showSlider")) {
     tab.autoShowTimer = api.timers.setTimeout(function() {
       delete tab.autoShowEligible;
       delete tab.autoShowTimer;
-      if (api.prefs.get("showSlider") !== false) {
+      if (api.prefs.get("showSlider")) {
         if (tab.ready) {
           api.log("[scheduleAutoShow:1] fired for tab:", tab.id);
           api.tabs.emit(tab, "auto_show");
