@@ -40,32 +40,29 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
         val tp = reader.termPositions(pterm)
         if (tp.next()) pq.insertWithOverflow(new Word(index, tp))
       }
+      var top = pq.top
       while (pq.size > 1) {
-        var top = pq.top
         val doc = top.doc
         val phraseIndex = top.index
-        var position = 0
-        while (top.doc == doc) {
-          if (top.index == (phraseIndex + position) && top.hasPosition(position)) {
-            position += 1
-            if (top.isEndOfPhrase) {
-              result += ((phraseIndex, position)) // one phrase found
-            }
-            top = if (top.next()) {
-              pq.updateTop()
-            } else {
-              if (pq.size > 1) pq.pop()
-              pq.top
-            }
+        var phraseLength = 0
+        while (top != null && top.doc == doc && top.index == (phraseIndex + phraseLength) && top.hasPosition(phraseLength)) {
+          phraseLength += 1
+          if (top.isEndOfPhrase) {
+            result += ((phraseIndex, phraseLength)) // one phrase found
+          }
+          top = if (top.next()) {
+            pq.updateTop()
           } else {
-            while (top.doc == doc) {
-              top = if (top.next()) {
-                pq.updateTop()
-              } else {
-                if (pq.size > 1) pq.pop()
-                pq.top
-              }
-            }
+            pq.pop()
+            pq.top
+          }
+        }
+        while (top != null && top.doc == doc) {
+          top = if (top.next()) {
+            pq.updateTop()
+          } else {
+            pq.pop()
+            pq.top
           }
         }
       }
@@ -76,29 +73,25 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
 
   private class Word(val index: Int, tp: TermPositions) {
     var doc = tp.doc()
-    private[this] var pos = 0
     private[this] var end = 0
-    private[this] var freq = tp.freq()
 
     def next() = {
       if (tp.next()) {
-        freq = tp.freq()
         doc = tp.doc()
         true
       } else {
-        freq = 0
         doc = NO_MORE_DOCS
         false
       }
     }
 
     def hasPosition(target: Int): Boolean = {
+      var freq = tp.freq()
       while (freq > 0) {
-        pos = tp.nextPosition()
+        var pos = tp.nextPosition()
         end = pos & 1
         pos = pos >> 1
-        if (pos == target) return true
-        if (pos > target) return false
+        if (pos >= target) return (pos == target)
         freq -= 1
       }
       false
@@ -127,35 +120,38 @@ object PhraseIndexer {
 
 class PhraseIndexer(indexDirectory: Directory, dataDirectory: Option[File], indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase](indexDirectory, indexWriterConfig)  {
 
-  def reload(): Unit = dataDirectory.foreach{ dir =>
-    var id = -1
-    if (dir.exists) {
-      deleteAllDocuments()
-      log.info("loading phrases from: %s".format(dir.toString))
-      val indexableItertor = dir.listFiles.iterator.flatMap{ file =>
-      val lang = Lang(file.getName)
-      val reader = new LineNumberReader(new FileReader(file))
-      new Iterator[PhraseIndexable] {
-        var line = reader.readLine
-        def hasNext() = (line != null)
-        def next() = {
-          val cur = line
-            line = reader.readLine()
-            id += 1
-            new PhraseIndexable(Id[Phrase](id), cur, lang)
+  def reload() {
+    dataDirectory.foreach{ dir =>
+      var id = -1
+      if (dir.exists) {
+        log.info("loading phrases from: %s".format(dir.toString))
+        val indexableItertor = dir.listFiles.iterator.flatMap{ file =>
+        val lang = Lang(file.getName)
+        val reader = new LineNumberReader(new FileReader(file))
+        new Iterator[PhraseIndexable] {
+          var line = reader.readLine
+          def hasNext() = (line != null)
+          def next() = {
+            val cur = line
+              line = reader.readLine()
+              id += 1
+              new PhraseIndexable(Id[Phrase](id), cur, lang)
+            }
           }
         }
+        reload(indexableItertor, refresh = false)
+        log.info("finished loading from: %s".format(dir.toString))
+      } else {
+        throw new IOException("no such directory: %s".format(dir.toString))
       }
-      reload(indexableItertor)
-      log.info("finished loading from: %s".format(dir.toString))
-    } else {
-      throw new IOException("no such directory: %s".format(dir.toString))
+      refreshSearcher()
     }
   }
 
-  def reload(indexableItertor: Iterator[PhraseIndexable]): Unit = {
-    deleteAllDocuments()
-    indexDocuments(indexableItertor, 100000){ s => /* nothing */ }
+  def reload(indexableItertor: Iterator[PhraseIndexable], refresh: Boolean = true) {
+    deleteAllDocuments(refresh = false)
+    indexDocuments(indexableItertor, 100000, refresh = false){ s => /* nothing */ }
+    if (refresh) refreshSearcher()
   }
 
   def buildIndexable(data: Phrase): Indexable[Phrase] = throw new UnsupportedOperationException
