@@ -244,7 +244,7 @@ slider = function() {
       }
     })
     .on("mousedown click keydown keypress keyup", function(e) {
-      idleTimer.kill();
+      idleTimer.dead || idleTimer.kill();
       e.stopPropagation();
     })
     .on("mousewheel", ".kifi-comments-body,.kifi-comment-compose", function(e) {
@@ -271,6 +271,7 @@ slider = function() {
       $(".kifi-slider")
         .off("mouseenter", t.clear).on("mouseenter", t.clear)
         .off("mouseleave", t.start).on("mouseleave", t.start);
+      delete t.dead;
     },
     clear: function() {
       api.log("[idleTimer.clear]");
@@ -279,13 +280,15 @@ slider = function() {
       delete t.timeout;
     },
     kill: function() {
-      api.log("[idleTimer.kill]");
       var t = idleTimer;
+      if (t.dead) return;
+      api.log("[idleTimer.kill]");
       clearTimeout(t.timeout);
       delete t.timeout;
       $(".kifi-slider")
         .off("mouseenter", t.clear)
         .off("mouseleave", t.start);
+      t.dead = true;
     }};
 
   function slideOutKept() {
