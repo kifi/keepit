@@ -1,0 +1,60 @@
+package com.keepit.search.phrasedetector
+
+import com.keepit.common.db.Id
+import com.keepit.search.Lang
+import com.keepit.search.index.DefaultAnalyzer
+import org.apache.lucene.index.Term
+import org.apache.lucene.store.RAMDirectory
+import org.junit.runner.RunWith
+import org.specs2.mutable._
+import org.specs2.runner.JUnitRunner
+import play.api.Play.current
+import play.api.libs.json.Json
+import play.api.test._
+import play.api.test.Helpers._
+
+@RunWith(classOf[JUnitRunner])
+class PhraseDetectorTest extends SpecificationWithJUnit {
+
+  "PhraseDetectorTest" should {
+    "detects phrases in input text" in {
+      val ramDir = new RAMDirectory
+      val indexer = PhraseIndexer(new RAMDirectory())
+      val lang = Lang("en")
+      val phrases = List(
+        "classroom project",
+        "pilot project",
+        "product research",
+        "operations research",
+        "test pilot",
+        "research project",
+        "human genome",
+        "human genome project",
+        "genome research project")
+      val testcases = List(
+        ("human genome", Set((0,2))),
+        ("human genome research", Set((0,2))),
+        ("human genome research project", Set((0,2),(2,2),(1,3))),
+        ("human genome project", Set((0,2),(0,3))),
+        ("product research project", Set((0,2),(1,2))),
+        ("large classroom project", Set((1,2))))
+
+      indexer.reload(phrases.zipWithIndex.map{ case (p, i) => new PhraseIndexable(Id[Phrase](i), p, lang) }.iterator)
+
+      val detector = new PhraseDetector(indexer)
+      val analyzer = DefaultAnalyzer.forIndexingWithStemmer(Lang("en")).get
+
+      def toTerms(text: String) = {
+        indexer.getFieldDecoder("b").decodeTokenStream(analyzer.tokenStream("b", new java.io.StringReader(text))).map{ case (t, _, _) => new Term("b", t) }.toArray
+      }
+
+      val ok = testcases.forall{ case (text, expected) =>
+        var input = toTerms(text)
+        val output = detector.detectAll(input)
+        output === expected
+        true
+      }
+      ok === true
+    }
+  }
+}
