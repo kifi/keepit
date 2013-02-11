@@ -91,42 +91,6 @@ slider = function() {
     return "To quickly find this page later...";
   }
 
-  function socialTooltip(friend, element) {
-     // disabled for now
-    renderTemplate("html/social_hover.html", {"friend": friend}, function(tmpl) {
-      var timeout;
-      var timein;
-
-      var friendTooltip = $("<div class=kifi-keeper-hovercard>").html(tmpl).appendTo(".kifi-keepers");
-
-      var socialNetworks = api.url("images/social_icons.png");
-      $(friendTooltip).find('.kifi-network').css('background-image','url(' + socialNetworks + ')');
-
-      function hide() {
-        timeout = setTimeout(function () {
-          $(friendTooltip).fadeOut(100);
-        }, 600);
-        clearTimeout(timein);
-      };
-
-      function show() {
-        timein = setTimeout(function() {
-          $(friendTooltip).stop().fadeIn(100);
-        }, 500)
-      }
-
-      $(element).mouseover(function() {
-        clearTimeout(timeout);
-        show();
-      }).mouseout(hide);
-
-      $(friendTooltip).mouseover(function() {
-        clearTimeout(timeout);
-      }).mouseout(hide);
-
-    });
-  }
-
   function keepPage(shouldSlideOut) {
     api.log("[keepPage]", document.location.href);
 
@@ -200,10 +164,6 @@ slider = function() {
   function drawKeepItHover(session, friends, numComments, numMessages, renderedTemplate, callback) {
     $('body').append(renderedTemplate);
 
-    $('.kifi-keeper').each(function(i,e) {
-      socialTooltip(friends[i],e);
-    });
-
     updateCommentCount("public", numComments);
     updateCommentCount("message", numMessages);
 
@@ -225,6 +185,42 @@ slider = function() {
         api.log("[setPrivate] response:", o);
         $btn.text("Make it " + (priv ? "Public" : "Private"));
       });
+    })
+    .on("mouseover", ".kifi-keeper", function() {
+      var $img = $(this), data = $img.data();
+
+      clearTimeout(data.tHide);
+      data.tShow = setTimeout(function() {
+        if (data.$card) {
+          data.$card.stop().fadeIn(100);
+        } else {
+          renderTemplate("html/social_hover.html", {friend: friends[$img.index(".kifi-keeper")]}, function(html) {
+            if (!data.$card) {
+              data.$card = $("<div class=kifi-keeper-hovercard>").html(html)
+              .find(".kifi-network").css("background-image", "url(" + api.url("images/social_icons.png") + ")").end()
+              .appendTo($img.parent()).fadeIn(100)
+              .on("mouseenter", function() {
+                clearTimeout(data.tHide);
+              })
+              .on("mouseleave", function() {
+                $img.mouseout();
+              });
+            }
+          });
+        }
+      }, 500);
+    })
+    .on("mouseout", ".kifi-keeper", function(e) {
+      var data = $(this).data();
+
+      clearTimeout(data.tShow);
+      data.tHide = setTimeout(function() {
+        if (data.$card) {
+          data.$card.stop().fadeOut(100);
+        }
+      }, 600);
+
+      if (e.isTrigger) e.stopPropagation();  // avoid triggering mouseleave on .kifi-slider (jquery bug?)
     })
     .on("click", ".kifi-button-dropdown", function() {
       $(".kifi-keep-options").slideToggle(150);
