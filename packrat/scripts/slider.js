@@ -187,40 +187,10 @@ slider = function() {
       });
     })
     .on("mouseover", ".kifi-keeper", function() {
-      var $img = $(this), data = $img.data();
-
-      clearTimeout(data.tHide);
-      data.tShow = setTimeout(function() {
-        if (data.$card) {
-          data.$card.stop().fadeIn(100);
-        } else {
-          renderTemplate("html/social_hover.html", {friend: friends[$img.index(".kifi-keeper")]}, function(html) {
-            if (!data.$card) {
-              data.$card = $("<div class=kifi-keeper-hovercard>").html(html)
-              .find(".kifi-network").css("background-image", "url(" + api.url("images/social_icons.png") + ")").end()
-              .appendTo($img.parent()).fadeIn(100)
-              .on("mouseenter", function() {
-                clearTimeout(data.tHide);
-              })
-              .on("mouseleave", function() {
-                $img.mouseout();
-              });
-            }
-          });
-        }
-      }, 500);
+      onMouseoverKeeper(this, friends);
     })
-    .on("mouseout", ".kifi-keeper", function(e) {
-      var data = $(this).data();
-
-      clearTimeout(data.tShow);
-      data.tHide = setTimeout(function() {
-        if (data.$card) {
-          data.$card.stop().fadeOut(100);
-        }
-      }, 600);
-
-      if (e.isTrigger) e.stopPropagation();  // avoid triggering mouseleave on .kifi-slider (jquery bug?)
+    .on("mouseout", ".kifi-keeper", function() {
+      onMouseoutKeeper(this);
     })
     .on("click", ".kifi-button-dropdown", function() {
       $(".kifi-keep-options").slideToggle(150);
@@ -286,6 +256,40 @@ slider = function() {
         .off("mouseleave", t.start);
       t.dead = true;
     }};
+
+  function onMouseoverKeeper(img, friends) {
+    var $img = $(img), data = $img.data();
+
+    clearTimeout(data.tHide);
+    data.tShow = setTimeout(function() {
+      if (data.$card) {
+        data.$card.stop().fadeIn(100);
+      } else {
+        renderTemplate("html/social_hover.html", {friend: friends[$img.index(".kifi-keeper")]}, function(html) {
+          if (!data.$card) {
+            data.$card = $("<div class=kifi-keeper-hovercard>").html(html)
+            .find(".kifi-network").css("background-image", "url(" + api.url("images/social_icons.png") + ")").end()
+            .appendTo($img.parent()).fadeIn(100)
+            .on("mouseenter", function() {
+              clearTimeout(data.tHide);
+            })
+            .on("mouseleave", onMouseoutKeeper.bind(null, img));
+          }
+        });
+      }
+    }, 500);
+  }
+
+  function onMouseoutKeeper(img) {
+    var data = $(img).data();
+
+    clearTimeout(data.tShow);
+    data.tHide = setTimeout(function() {
+      if (data.$card) {
+        data.$card.stop().fadeOut(100);
+      }
+    }, 600);
+  }
 
   function slideOutKept() {
     var $s = $(".kifi-slider");
