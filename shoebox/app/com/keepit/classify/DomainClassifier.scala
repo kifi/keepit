@@ -33,9 +33,9 @@ private[classify] class DomainClassificationActor(db: DBConnection, client: Http
     result.split("~", 2).toList match {
       case ("FM" | "FR") :: tagString :: Nil =>
         // response is comma separated, but includes commas inside parentheses
-        """\(([^)]*)\)""".r.replaceAllIn(tagString, _.group(0).replace(',', '/'))
+        """\(([^)]*)\)""".r.replaceAllIn(tagString, _.group(0).replace(',', '\u02bd'))
           .split(",")
-          .map(_.replace('/', ','))
+          .map(_.replace('\u02bd', ','))
           .map(DomainTagName(_))
           .toSeq
       case _ => Seq()
