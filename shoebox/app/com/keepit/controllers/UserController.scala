@@ -28,7 +28,7 @@ object UserController extends FortyTwoController {
       inject[NormalizedURIRepo].getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
-          val bookmark = inject[BookmarkRepo].getByUriAndUser(uri.id.get, userId).filter(_.isActive)
+          val bookmark = inject[BookmarkRepo].getByUriAndUser(uri.id.get, userId)
           val following = inject[FollowRepo].get(userId, uri.id.get).isDefined
 
           val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)

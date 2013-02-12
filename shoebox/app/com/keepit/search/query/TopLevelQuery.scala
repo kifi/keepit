@@ -79,11 +79,8 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
     if (exists) {
       result.setDescription("top level, sum of:")
       val score = sc.score
-      val boost = query.getBoost
-      result.setValue(score * boost)
+      result.setValue(score)
       result.setMatch(true)
-      result.addDetail(new Explanation(score, "top level score"))
-      result.addDetail(new Explanation(boost, "boost"))
     } else {
       result.setDescription("top level, doesn't match id %d".format(doc))
       result.setValue(0)

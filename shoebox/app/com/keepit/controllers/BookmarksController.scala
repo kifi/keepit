@@ -1,15 +1,15 @@
 package com.keepit.controllers
 
-import java.sql.Connection
-
+import com.keepit.classify.DomainClassifier
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
 import com.keepit.common.async._
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.net._
 import com.keepit.common.social._
 import com.keepit.inject._
@@ -22,11 +22,8 @@ import com.keepit.serializer.BookmarkSerializer
 import akka.dispatch.Await
 import akka.util.duration._
 import play.api.Play.current
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsBoolean
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
-import play.api.libs.json.JsValue
+import play.api.libs.json._
+
 
 object BookmarksController extends FortyTwoController {
 
@@ -125,16 +122,20 @@ object BookmarksController extends FortyTwoController {
 
   def checkIfExists(uri: String) = AuthenticatedJsonAction { request =>
     val userId = request.userId
-    val (uriIdOpt, bookmarkOpt, friendIds) = inject[DBConnection].readOnly { implicit s =>
-      val uriIdOpt = inject[NormalizedURIRepo].getByNormalizedUrl(uri).flatMap(_.id)
-      val bookmarkOpt = uriIdOpt.flatMap { uriId =>
+    val (uriId, bookmark, sensitive, friendIds) = inject[DBConnection].readOnly { implicit s =>
+      val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
+      val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
+      val sensitive: Option[Boolean] = nUri.flatMap(_.domain).map { domain =>
+        inject[DomainClassifier].isSensitive(domain).flatMap(_.right.getOrElse(None))
+      }
+      val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
         inject[BookmarkRepo].getByUriAndUser(uriId, userId)
       }
       val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
-      (uriIdOpt, bookmarkOpt, friendIds)
+      (uriId, bookmark, sensitive, friendIds)
     }
 
-    val keptByAnyFriends = uriIdOpt.map { uriId =>
+    val keptByAnyFriends = uriId.map { uriId =>
       val searcher = inject[URIGraph].getURIGraphSearcher
       searcher.intersectAny(
         searcher.getUserToUserEdgeSet(userId, friendIds),
@@ -142,9 +143,10 @@ object BookmarksController extends FortyTwoController {
     }.getOrElse(false)
 
     Ok(JsObject(Seq(
-      "user_has_bookmark" -> JsBoolean(bookmarkOpt.isDefined), // TODO: remove this key after all installations >= 2.1.49
-      "kept" -> JsBoolean(bookmarkOpt.isDefined),
-      "keptByAnyFriends" -> JsBoolean(keptByAnyFriends))))
+      "user_has_bookmark" -> JsBoolean(bookmark.isDefined), // TODO: remove this key after all installations >= 2.1.49
+      "kept" -> JsBoolean(bookmark.isDefined),
+      "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
+      "sensitive" -> sensitive.map(JsBoolean(_)).getOrElse(JsNull))))
   }
 
   // TODO: Remove parameter and only check request body once all installations are 2.1.6 or later.
@@ -153,7 +155,7 @@ object BookmarksController extends FortyTwoController {
     val repo = inject[BookmarkRepo]
     val bookmark = inject[DBConnection].readWrite { implicit s =>
       inject[NormalizedURIRepo].getByNormalizedUrl(url).flatMap { uri =>
-        repo.getByUriAndUser(uri.id.get, request.userId).filter(_.isActive).map { b =>
+        repo.getByUriAndUser(uri.id.get, request.userId).map { b =>
           repo.save(b.withActive(false))
         }
       }

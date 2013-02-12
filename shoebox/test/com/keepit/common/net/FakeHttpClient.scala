@@ -1,26 +1,26 @@
 package com.keepit.common.net
 
 import play.api.libs.json._
-import org.specs2.mutable.Specification
 import play.api.libs.concurrent.Promise
 
-class FakeHttpClient(expectedUrl: Option[String] = None,
-                     expectedResponse: Option[String] = None) extends HttpClient {
+class FakeHttpClient(requestToResponse: Option[PartialFunction[String, String]] = None) extends HttpClient {
 
   override def get(url: String): ClientResponse = assertUrl(url)
 
   override def post(url: String, body: JsValue): ClientResponse = throw new Exception("this is a GET client")
-  def posting(payload: String): FakeHttpPostClient = new FakeHttpPostClient(expectedUrl, expectedResponse, {body =>
+  def posting(payload: String): FakeHttpPostClient = new FakeHttpPostClient(requestToResponse, {body =>
     if(payload != body.toString()) throw new Exception("expected %s doesn't match payload %s".format(payload, body))
   })
-  def posting(assertion: String => Unit): FakeHttpPostClient = new FakeHttpPostClient(expectedUrl, expectedResponse, assertion)
+  def posting(assertion: String => Unit): FakeHttpPostClient = new FakeHttpPostClient(requestToResponse, assertion)
 
   var callCount = 0
 
   protected def assertUrl(url: String): ClientResponse = {
     callCount += 1
-    expectedUrl map { expected => if(expected != url) throw new Exception("expected %s doesn't match url %s".format(expected, url)) }
-    new FakeClientResponse(expectedResponse)
+    val rtr: PartialFunction[String, String] = requestToResponse.getOrElse({ case _ => "" })
+    new FakeClientResponse(rtr.lift(url).getOrElse {
+      throw new Exception("url %s did not match".format(url))
+    })
   }
 
   override def longTimeout(): HttpClient = this
@@ -30,9 +30,8 @@ class FakeHttpClient(expectedUrl: Option[String] = None,
   override def withHeaders(hdrs: (String, String)*): HttpClient = throw new Exception("not supported")
 }
 
-class FakeHttpPostClient(expectedUrl: Option[String] = None,
-                     expectedResponse: Option[String] = None,
-                     assertion: String => Unit) extends FakeHttpClient(expectedUrl, expectedResponse) {
+class FakeHttpPostClient(requestToResponse: Option[PartialFunction[String, String]],
+                     assertion: String => Unit) extends FakeHttpClient(requestToResponse) {
   override def post(url: String, body: JsValue): ClientResponse = {
     assertion(body.toString())
     assertUrl(url)
@@ -40,10 +39,10 @@ class FakeHttpPostClient(expectedUrl: Option[String] = None,
   override def get(url: String): ClientResponse = throw new Exception("this is a POST client")
 }
 
-class FakeClientResponse(expectedResponse: Option[String] = None) extends ClientResponse {
+class FakeClientResponse(expectedResponse: String) extends ClientResponse {
 
-  override def body: String = expectedResponse.getOrElse(throw new Exception("no text body provided"))
-  override def json: JsValue = Json.parse(expectedResponse.getOrElse(throw new Exception("no text json provided")))
+  override def body: String = expectedResponse
+  override def json: JsValue = Json.parse(expectedResponse)
   override def status: Int = 200
 
 }

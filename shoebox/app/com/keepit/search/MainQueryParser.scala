@@ -1,37 +1,32 @@
 package com.keepit.search
 
+import com.keepit.search.phrasedetector.PhraseDetector
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.QueryParser
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.ProximityQuery
 import com.keepit.search.query.SemanticVectorQuery
 import com.keepit.search.query.TopLevelQuery
+import com.keepit.search.query.Coordinator
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause.Occur
-import org.apache.lucene.index.Term
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.analysis.Analyzer
-import com.keepit.search.query.Coordinator
+import org.apache.lucene.index.Term
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import scala.collection.mutable.ArrayBuffer
 
-object MainQueryParser {
-
-  def apply(lang: Lang, proximityBoost: Float, semanticBoost: Float): MainQueryParser = {
-    val total = 1.0f + proximityBoost + semanticBoost
-    val parser = new MainQueryParser(DefaultAnalyzer.forParsing(lang), 1.0f/total, proximityBoost/total, semanticBoost/total)
-    DefaultAnalyzer.forParsingWithStemmer(lang).foreach{ parser.setStemmingAnalyzer(_) }
-    parser
-  }
-}
-
-class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Float, semanticBoost: Float) extends QueryParser(analyzer) {
+class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Float, semanticBoost: Float, phraseBoost: Float, phraseDetector: PhraseDetector) extends QueryParser(analyzer) {
 
   super.setAutoGeneratePhraseQueries(true)
 
   var enableCoord = false
 
-  private[this] var stemmedSeqs = Seq.empty[Term]
+  private[this] val stemmedSeqs = new ArrayBuffer[Term]
+  private[this] val stemmedQuery = new ArrayBuffer[Query]
 
   override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
     field.toLowerCase match {
@@ -60,7 +55,11 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
 
     if(!quoted) {
       super.getStemmedFieldQueryOpt("ts", queryText).foreach{ query =>
-        stemmedSeqs ++= getTermSeq("ts", query)
+        val termSeq = getTermSeq("ts", query)
+        termSeq.foreach{ term =>
+          stemmedSeqs += term
+          stemmedQuery += query
+        }
 
         booleanQuery.add(query, Occur.SHOULD)
         booleanQuery.add(copyFieldQuery(query, "cs"), Occur.SHOULD)
@@ -74,11 +73,47 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
     else booleanQuery
   }
 
+  private def tryAddPhraseQueries(query: BooleanQuery) {
+    phraseDetector.detectAll(stemmedSeqs.toArray).foreach{ phrase =>
+      val phraseQueries = List("ts", "cs", "title_stemmed").foldLeft(new BooleanQuery()){ (bq, field) =>
+        val phraseStart = phrase._1
+        val phraseEnd = phraseStart + phrase._2
+
+        // discount subqueries that are deemed as a part of the detected phrase
+        var i = phraseStart
+        var prevQuery = null
+        while (i < phraseEnd) {
+          val curQuery = stemmedQuery(i)
+          // don't discount the same query again (in case the query is PhraseQuery)
+          if (!(curQuery eq prevQuery)) curQuery.setBoost(curQuery.getBoost * (1.0f - phraseBoost))
+          i += 1
+        }
+
+        // construct a phrase query
+        val phraseQuery = stemmedSeqs.slice(phraseStart, phraseEnd).foldLeft(new PhraseQuery()){ (phraseQuery, term) =>
+            phraseQuery.add(new Term(field, term.text()))
+            phraseQuery
+        }
+        bq.add(phraseQuery, Occur.SHOULD)
+        bq
+      }
+      phraseQueries.setBoost(phraseBoost)
+      query.add(phraseQueries, Occur.SHOULD)
+    }
+  }
+
   override def parseQuery(queryText: String) = {
     super.parseQuery(queryText).map{ query =>
       val terms = getTerms(query)
       if (terms.size <= 0) query
       else {
+        if (phraseBoost > 0.0f) {
+          query match {
+            case query: BooleanQuery => tryAddPhraseQueries(query)
+            case _ =>
+          }
+        }
+
         query.setBoost(baseBoost)
 
         val svq = if (semanticBoost > 0.0f) {
@@ -93,7 +128,7 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
           val proxQ = new BooleanQuery(true)
           val csterms = stemmedSeqs.map(t => new Term("cs", t.text()))
           val tsterms = stemmedSeqs.map(t => new Term("ts", t.text()))
-          val psterms = stemmedSeqs.map(t => new Term("ps", t.text()))
+          val psterms = stemmedSeqs.map(t => new Term("title_stemmed", t.text()))
           proxQ.add(ProximityQuery(csterms), Occur.SHOULD)
           proxQ.add(ProximityQuery(tsterms), Occur.SHOULD)
           proxQ.add(ProximityQuery(psterms), Occur.SHOULD)
