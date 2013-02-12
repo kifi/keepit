@@ -128,7 +128,7 @@ object BookmarksController extends FortyTwoController {
     val (uriIdOpt, bookmarkOpt, friendIds) = inject[DBConnection].readOnly { implicit s =>
       val uriIdOpt = inject[NormalizedURIRepo].getByNormalizedUrl(uri).flatMap(_.id)
       val bookmarkOpt = uriIdOpt.flatMap { uriId =>
-        inject[BookmarkRepo].getByUriAndUser(uriId, userId).filter(_.isActive)
+        inject[BookmarkRepo].getByUriAndUser(uriId, userId)
       }
       val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
       (uriIdOpt, bookmarkOpt, friendIds)
