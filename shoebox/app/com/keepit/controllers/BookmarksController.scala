@@ -150,9 +150,8 @@ object BookmarksController extends FortyTwoController {
       "sensitive" -> JsBoolean(sensitive.getOrElse(false)))))
   }
 
-  // TODO: Remove parameter and only check request body once all installations are 2.1.6 or later.
-  def remove(uri: Option[String]) = AuthenticatedJsonAction { request =>
-    val url = uri.getOrElse((request.body.asJson.get \ "url").as[String])
+  def remove() = AuthenticatedJsonAction { request =>
+    val url = (request.body.asJson.get \ "url").as[String]
     val repo = inject[BookmarkRepo]
     val bookmark = inject[DBConnection].readWrite { implicit s =>
       inject[NormalizedURIRepo].getByNormalizedUrl(url).flatMap { uri =>
@@ -168,12 +167,8 @@ object BookmarksController extends FortyTwoController {
     }
   }
 
-  // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
-  def updatePrivacy(uri: Option[String], isPrivate: Option[Boolean]) = AuthenticatedJsonAction { request =>
-    val (url, priv) = request.body.asJson match {
-      case Some(o) => ((o \ "url").as[String], (o \ "private").as[Boolean])
-      case _ => (uri.get, isPrivate.get)
-    }
+  def updatePrivacy() = AuthenticatedJsonAction { request =>
+    val (url, priv) = request.body.asJson.map{o => ((o \ "url").as[String], (o \ "private").as[Boolean])}.get
     val repo = inject[BookmarkRepo]
     inject[DBConnection].readWrite { implicit s =>
       inject[NormalizedURIRepo].getByNormalizedUrl(url).flatMap { uri =>
@@ -191,8 +186,8 @@ object BookmarksController extends FortyTwoController {
     val userId = request.userId
     val installationId = request.kifiInstallationId
     request.body.asJson match {
-      case Some(json) =>  // TODO: remove bookmark_source check after everyone is at v2.1.6 or later.
-        val bookmarkSource = (json \ "bookmark_source").asOpt[String].orElse((json \ "source").asOpt[String])
+      case Some(json) =>
+        val bookmarkSource = (json \ "source").asOpt[String]
         bookmarkSource match {
           case Some("PLUGIN_START") => Forbidden
           case _ =>
