@@ -2,7 +2,7 @@ package com.keepit.search.graph
 
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.{Article, ArticleStore, Lang}
-import com.keepit.search.index.{ArrayIdMapper, Searcher, WrappedIndexReader}
+import com.keepit.search.index.{Searcher, WrappedIndexReader}
 import com.keepit.search.query.SiteQuery
 import com.keepit.search.query.ConditionalQuery
 import com.keepit.model._
