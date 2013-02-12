@@ -87,7 +87,7 @@ class DomainClassifierImpl @Inject()(system: ActorSystem, db: DBConnection, clie
     db.readOnly { implicit s =>
       domainRepo.get(domainName) match {
         case Some(domain) => Right(domain.sensitive)
-        case None => Left(actor.ask(FetchDomainInfo(domainName))(5 seconds).mapTo[Option[Boolean]])
+        case None => Left(actor.ask(FetchDomainInfo(domainName))(1 minute).mapTo[Option[Boolean]])
       }
     }
   }
