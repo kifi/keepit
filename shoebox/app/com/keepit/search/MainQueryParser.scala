@@ -58,7 +58,7 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
         val termSeq = getTermSeq("ts", query)
         termSeq.foreach{ term =>
           stemmedSeqs += term
-          stemmedQuery += query
+          stemmedQuery += booleanQuery
         }
 
         booleanQuery.add(query, Occur.SHOULD)
@@ -67,10 +67,7 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
       }
     }
 
-    val clauses = booleanQuery.clauses
-    if (clauses.size == 0) null
-    else if (clauses.size == 1) clauses.get(0).getQuery()
-    else booleanQuery
+    booleanQuery
   }
 
   private def tryAddPhraseQueries(query: BooleanQuery) {
@@ -91,8 +88,8 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
 
         // construct a phrase query
         val phraseQuery = stemmedSeqs.slice(phraseStart, phraseEnd).foldLeft(new PhraseQuery()){ (phraseQuery, term) =>
-            phraseQuery.add(new Term(field, term.text()))
-            phraseQuery
+          phraseQuery.add(new Term(field, term.text()))
+          phraseQuery
         }
         bq.add(phraseQuery, Occur.SHOULD)
         bq
