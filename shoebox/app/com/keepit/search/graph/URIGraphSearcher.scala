@@ -86,6 +86,8 @@ class URIGraphSearcher(searcher: Searcher) {
   }
 
   def intersectAny(i: DocIdSetIterator, j: DocIdSetIterator): Boolean = {
+    // Note: This implementation is only more efficient than intersect(i, j).nextDoc() != NO_MORE_DOCS when the
+    // intersection is empty. This code returns as soon as either iterator is exhausted instead of when both are.
     var di = i.nextDoc()
     var dj = j.nextDoc()
     while (di != dj) {
