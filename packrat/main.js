@@ -400,7 +400,6 @@ function checkKeepStatus(tab, callback) {
   }, function fail(xhr) {
     api.log("[checkKeepStatus] error:", xhr.responseText);
     delete tab.keepStatusKnown;
-    callback && callback({});
   });
 }
 
@@ -442,7 +441,7 @@ api.tabs.on.loading.add(function(tab) {
   setIcon(tab);
 
   checkKeepStatus(tab, function(resp) {
-    if (resp.kept === false) {  // false, not undefined
+    if (!resp.kept && !resp.sensitive) {
       var url = tab.url;
       if (restrictedUrlPatternsForHover.some(function(e) {return url.indexOf(e) >= 0})) {
         api.log("[tabs.on.loading:2] restricted:", url);
