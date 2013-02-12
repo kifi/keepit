@@ -152,7 +152,7 @@ slider = function() {
             api.log("No need to inject, it's already here!");
           } else {
             drawKeepItHover(o.session, o.friends, o.numComments, o.numMessages, template, callback);
-            logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0)});
+            logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: location.href});
             if (hideIfIdle) {
               idleTimer.start();
             }
