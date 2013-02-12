@@ -120,17 +120,17 @@ object SemanticVector {
 class SemanticVectorBuilder(windowSize: Int) {
   import SemanticVector._
 
-  var termSketches = Map.empty[String, Array[Float]]
-  private var termSeeds = Map.empty[String, Array[Float]]
+  private[this] var termSketches = Map.empty[String, Array[Float]]
+  private[this] var termSeeds = Map.empty[String, Array[Float]]
 
-  private val termQueue = new Array[String](windowSize)
-  private val seedQueue = new Array[Array[Float]](windowSize)
+  private[this] val termQueue = new Array[String](windowSize)
+  private[this] val seedQueue = new Array[Array[Float]](windowSize)
 
-  private var headPos = 0
-  private var tailPos = - windowSize
-  private var midPos = - (windowSize / 2)
-  private var headSketch = emptySketch
-  private var tailSketch = emptySketch
+  private[this] var headPos = 0
+  private[this] var tailPos = - windowSize
+  private[this] var midPos = - (windowSize / 2)
+  private[this] var headSketch = emptySketch
+  private[this] var tailSketch = emptySketch
 
   def load(tokenStream: TokenStream) {
     val termAttr = tokenStream.getAttribute(classOf[CharTermAttribute])
@@ -233,8 +233,8 @@ class SemanticVectorBuilder(windowSize: Int) {
 class SemanticVectorComposer {
   import SemanticVector._
 
-  var cnt = 0
-  val counters = new Array[Int](vectorSize)
+  private[this] var cnt = 0
+  private[this] val counters = new Array[Int](vectorSize)
 
   def add(vector: Array[Byte], weight: Int) = {
     var i = 0

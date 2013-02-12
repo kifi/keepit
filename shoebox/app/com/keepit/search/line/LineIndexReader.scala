@@ -52,9 +52,6 @@ object LineIndexReader {
         invertedLists + (term -> EmptyInvertedList)
       }
     }
-    val reader = new CachingIndexReader(invertedLists)
-    reader.numDocs = numLines
-    reader.maxDoc = numLines
-    reader
+    new CachingIndexReader(invertedLists, numLines)
   }
 }
