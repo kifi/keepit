@@ -17,6 +17,7 @@ import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.index.Term
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
+import scala.collection.mutable.ArrayBuffer
 
 class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Float, semanticBoost: Float, phraseBoost: Float, phraseDetector: PhraseDetector) extends QueryParser(analyzer) {
 
@@ -24,7 +25,8 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
 
   var enableCoord = false
 
-  private[this] var stemmedSeqs = Seq.empty[Term]
+  private[this] val stemmedSeqs = new ArrayBuffer[Term]
+  private[this] val stemmedQuery = new ArrayBuffer[Query]
 
   override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
     field.toLowerCase match {
@@ -53,7 +55,11 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
 
     if(!quoted) {
       super.getStemmedFieldQueryOpt("ts", queryText).foreach{ query =>
-        stemmedSeqs ++= getTermSeq("ts", query)
+        val termSeq = getTermSeq("ts", query)
+        termSeq.foreach{ term =>
+          stemmedSeqs += term
+          stemmedQuery += query
+        }
 
         booleanQuery.add(query, Occur.SHOULD)
         booleanQuery.add(copyFieldQuery(query, "cs"), Occur.SHOULD)
@@ -68,10 +74,23 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
   }
 
   private def tryAddPhraseQueries(query: BooleanQuery) {
-    val terms = stemmedSeqs.toArray
-    phraseDetector.detectAll(terms).foreach{ phrase =>
+    phraseDetector.detectAll(stemmedSeqs.toArray).foreach{ phrase =>
       val phraseQueries = List("ts", "cs", "title_stemmed").foldLeft(new BooleanQuery()){ (bq, field) =>
-        val phraseQuery = terms.slice(phrase._1, phrase._1 + phrase._2).foldLeft(new PhraseQuery()){ (phraseQuery, term) =>
+        val phraseStart = phrase._1
+        val phraseEnd = phraseStart + phrase._2
+
+        // discount subqueries that are deemed as a part of the detected phrase
+        var i = phraseStart
+        var prevQuery = null
+        while (i < phraseEnd) {
+          val curQuery = stemmedQuery(i)
+          // don't discount the same query again (in case the query is PhraseQuery)
+          if (!(curQuery eq prevQuery)) curQuery.setBoost(curQuery.getBoost * (1.0f - phraseBoost))
+          i += 1
+        }
+
+        // construct a phrase query
+        val phraseQuery = stemmedSeqs.slice(phraseStart, phraseEnd).foldLeft(new PhraseQuery()){ (phraseQuery, term) =>
             phraseQuery.add(new Term(field, term.text()))
             phraseQuery
         }
