@@ -77,7 +77,7 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
           classifier.isSensitive("playboy.com").left.get,
           classifier.isSensitive("porn.com").left.get
         ).foreach { future =>
-          Await.result(future, intToDurationInt(10).seconds)
+          Await.result(future, intToDurationInt(10).millis)
         }
 
         classifier.isSensitive("yahoo.com") === Right(Some(false))
