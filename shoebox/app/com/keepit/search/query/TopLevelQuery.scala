@@ -93,10 +93,11 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
     eTxt.isMatch() match {
       case false =>
         val r = new Explanation(0.0f, "no match in (" + textWeight.getQuery.toString() + ")")
+        r.addDetail(eTxt)
         result.addDetail(r)
         result.setMatch(false)
         result.setValue(sum)
-        result.setDescription("Failure to meet condition of textQuery");
+        result.setDescription("Failure to meet condition of textQuery")
       case true =>
         result.addDetail(eTxt)
 
