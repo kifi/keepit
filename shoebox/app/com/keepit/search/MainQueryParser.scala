@@ -26,7 +26,7 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
   var enableCoord = false
 
   private[this] val stemmedSeqs = new ArrayBuffer[Term]
-  private[this] val stemmedQuery = new ArrayBuffer[Query]()
+  private[this] val stemmedQuery = new ArrayBuffer[Query]
 
   override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
     field.toLowerCase match {
