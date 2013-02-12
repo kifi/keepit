@@ -25,6 +25,7 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
 
   var enableCoord = false
 
+  private[this] val phraseDiscount = (1.0f - phraseBoost)
   private[this] val stemmedSeqs = new ArrayBuffer[Term]
   private[this] val stemmedQuery = new ArrayBuffer[Query]
 
@@ -71,6 +72,7 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
   }
 
   private def tryAddPhraseQueries(query: BooleanQuery) {
+    var discountedQuery = Set.empty[Query]
     phraseDetector.detectAll(stemmedSeqs.toArray).foreach{ phrase =>
       val phraseQueries = List("ts", "cs", "title_stemmed").foldLeft(new BooleanQuery()){ (bq, field) =>
         val phraseStart = phrase._1
@@ -78,11 +80,10 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
 
         // discount subqueries that are deemed as a part of the detected phrase
         var i = phraseStart
-        var prevQuery = null
         while (i < phraseEnd) {
           val curQuery = stemmedQuery(i)
-          // don't discount the same query again (in case the query is PhraseQuery)
-          if (!(curQuery eq prevQuery)) curQuery.setBoost(curQuery.getBoost * (1.0f - phraseBoost))
+          // don't discount the same query again
+          if (!discountedQuery.contains(curQuery)) curQuery.setBoost(phraseDiscount)
           i += 1
         }
 
