@@ -15,6 +15,7 @@ import com.keepit.common.social._
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper.ScraperPlugin
+import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.serializer.BookmarkSerializer
 
@@ -71,7 +72,7 @@ object BookmarksController extends FortyTwoController {
       bookmark.userId
     }
 
-    val uniqueUsers = inject[DBConnection].readWrite { implicit s => 
+    val uniqueUsers = inject[DBConnection].readWrite { implicit s =>
       val modifiedUserIds = request.body.asFormUrlEncoded.get map { case (key, values) =>
         key.split("_") match {
           case Array("private", id) => setIsPrivate(Id[Bookmark](id.toInt), toBoolean(values.last))
@@ -89,7 +90,7 @@ object BookmarksController extends FortyTwoController {
 
   //this is an admin only task!!!
   def delete(id: Id[Bookmark]) = AdminHtmlAction { request =>
-    inject[DBConnection].readWrite { implicit s => 
+    inject[DBConnection].readWrite { implicit s =>
       val repo = inject[BookmarkRepo]
       val bookmark = repo.get(id)
       repo.delete(id)
@@ -123,23 +124,37 @@ object BookmarksController extends FortyTwoController {
   }
 
   def checkIfExists(uri: String) = AuthenticatedJsonAction { request =>
-    val bookmark = inject[DBConnection].readOnly { implicit s => 
-      inject[NormalizedURIRepo].getByNormalizedUrl(uri).flatMap { uri =>
-        inject[BookmarkRepo].getByUriAndUser(uri.id.get, request.userId).filter(_.isActive)
+    val userId = request.userId
+    val (uriIdOpt, bookmarkOpt, friendIds) = inject[DBConnection].readOnly { implicit s =>
+      val uriIdOpt = inject[NormalizedURIRepo].getByNormalizedUrl(uri).flatMap(_.id)
+      val bookmarkOpt = uriIdOpt.flatMap { uriId =>
+        inject[BookmarkRepo].getByUriAndUser(uriId, userId).filter(_.isActive)
       }
+      val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
+      (uriIdOpt, bookmarkOpt, friendIds)
     }
 
-    Ok(JsObject(Seq("user_has_bookmark" -> JsBoolean(bookmark.isDefined))))
+    val keptByAnyFriends = uriIdOpt.map { uriId =>
+      val searcher = inject[URIGraph].getURIGraphSearcher
+      searcher.intersectAny(
+        searcher.getUserToUserEdgeSet(userId, friendIds),
+        searcher.getUriToUserEdgeSet(uriId))
+    }.getOrElse(false)
+
+    Ok(JsObject(Seq(
+      "user_has_bookmark" -> JsBoolean(bookmarkOpt.isDefined), // TODO: remove this key after all installations >= 2.1.49
+      "kept" -> JsBoolean(bookmarkOpt.isDefined),
+      "keptByAnyFriends" -> JsBoolean(keptByAnyFriends))))
   }
 
   // TODO: Remove parameter and only check request body once all installations are 2.1.6 or later.
   def remove(uri: Option[String]) = AuthenticatedJsonAction { request =>
     val url = uri.getOrElse((request.body.asJson.get \ "url").as[String])
     val repo = inject[BookmarkRepo]
-    val bookmark = inject[DBConnection].readWrite { implicit s => 
+    val bookmark = inject[DBConnection].readWrite { implicit s =>
       inject[NormalizedURIRepo].getByNormalizedUrl(url).flatMap { uri =>
-        repo.getByUriAndUser(uri.id.get, request.userId).filter(_.isActive).map { b => 
-          repo.save(b.withActive(false)) 
+        repo.getByUriAndUser(uri.id.get, request.userId).filter(_.isActive).map { b =>
+          repo.save(b.withActive(false))
         }
       }
     }
@@ -157,9 +172,9 @@ object BookmarksController extends FortyTwoController {
       case _ => (uri.get, isPrivate.get)
     }
     val repo = inject[BookmarkRepo]
-    inject[DBConnection].readWrite { implicit s => 
+    inject[DBConnection].readWrite { implicit s =>
       inject[NormalizedURIRepo].getByNormalizedUrl(url).flatMap { uri =>
-        repo.getByUriAndUser(uri.id.get, request.userId).filter(_.isPrivate != priv).map {b => 
+        repo.getByUriAndUser(uri.id.get, request.userId).filter(_.isPrivate != priv).map {b =>
           repo.save(b.withPrivate(priv))
         }
       }
@@ -218,7 +233,7 @@ object BookmarksController extends FortyTwoController {
 
     if (!url.toLowerCase.startsWith("javascript:")) {
       log.debug("interning bookmark %s with title [%s]".format(json, title))
-      val (uri, isNewURI) = inject[DBConnection].readWrite { implicit s => 
+      val (uri, isNewURI) = inject[DBConnection].readWrite { implicit s =>
         inject[NormalizedURIRepo].getByNormalizedUrl(url) match {
           case Some(uri) => (uri, false)
           case None => (createNewURI(title, url), true)
@@ -227,7 +242,7 @@ object BookmarksController extends FortyTwoController {
       if (isNewURI) inject[ScraperPlugin].asyncScrape(uri)
       val repo = inject[BookmarkRepo]
       val urlRepo = inject[URLRepo]
-      inject[DBConnection].readWrite { implicit s => 
+      inject[DBConnection].readWrite { implicit s =>
         repo.getByUriAndUser(uri.id.get, user.id.get) match {
           case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
           case Some(bookmark) => Some(repo.save(bookmark.withActive(true).withPrivate(isPrivate)))
@@ -242,6 +257,6 @@ object BookmarksController extends FortyTwoController {
     }
   }
 
-  private def createNewURI(title: String, url: String)(implicit session: RWSession) = 
+  private def createNewURI(title: String, url: String)(implicit session: RWSession) =
     inject[NormalizedURIRepo].save(NormalizedURIFactory(title = title, url = url))
 }

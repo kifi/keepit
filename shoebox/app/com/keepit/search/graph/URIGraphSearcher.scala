@@ -80,6 +80,20 @@ class URIGraphSearcher(searcher: Searcher) {
     }
   }
 
+  def intersectAny(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): Boolean = {
+    intersectAny(friends.getDestDocIdSetIterator(searcher), bookmarkUsers.getDestDocIdSetIterator(searcher))
+  }
+
+  def intersectAny(i: DocIdSetIterator, j: DocIdSetIterator): Boolean = {
+    var di = i.nextDoc()
+    var dj = j.nextDoc()
+    while (di != dj) {
+      if (di < dj) di = i.advance(dj)
+      else dj = j.advance(di)
+    }
+    i.docID() != DocIdSetIterator.NO_MORE_DOCS
+  }
+
   private def getURIList(user: Id[User]): Option[URIList] = {
     val term = URIGraph.userTerm.createTerm(user.toString)
     var uriList: Option[URIList] = None

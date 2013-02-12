@@ -1,11 +1,8 @@
 package com.keepit.search.graph
 
 import com.keepit.scraper.FakeArticleStore
-import com.keepit.search.Article
-import com.keepit.search.ArticleStore
-import com.keepit.search.Lang
-import com.keepit.search.index.Searcher
-import com.keepit.search.index.WrappedIndexReader
+import com.keepit.search.{Article, ArticleStore, Lang}
+import com.keepit.search.index.{ArrayIdMapper, Searcher, WrappedIndexReader}
 import com.keepit.search.query.SiteQuery
 import com.keepit.search.query.ConditionalQuery
 import com.keepit.model._
@@ -23,6 +20,7 @@ import play.api.test.Helpers._
 import org.apache.lucene.index.Term
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.BooleanQuery
@@ -33,13 +31,15 @@ class URIGraphTest extends SpecificationWithJUnit with DbRepos {
 
   private def setupDB = {
     db.readWrite { implicit s =>
-      val users = List(userRepo.save(User(firstName = "Agrajag", lastName = "")),
+      val users = List(
+            userRepo.save(User(firstName = "Agrajag", lastName = "")),
             userRepo.save(User(firstName = "Barmen", lastName = "")),
             userRepo.save(User(firstName = "Colin", lastName = "")),
             userRepo.save(User(firstName = "Dan", lastName = "")),
             userRepo.save(User(firstName = "Eccentrica", lastName = "")),
             userRepo.save(User(firstName = "Hactar", lastName = "")))
-      val uris = List(uriRepo.save(NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state = SCRAPED)),
+      val uris = List(
+            uriRepo.save(NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state = SCRAPED)),
             uriRepo.save(NormalizedURIFactory(title = "a2", url = "http://www.keepit.com/article2", state = SCRAPED)),
             uriRepo.save(NormalizedURIFactory(title = "a3", url = "http://www.keepit.org/article3", state = SCRAPED)),
             uriRepo.save(NormalizedURIFactory(title = "a4", url = "http://www.findit.com/article4", state = SCRAPED)),
@@ -79,7 +79,7 @@ class URIGraphTest extends SpecificationWithJUnit with DbRepos {
           var result = Map.empty[Long,Float]
           searcher.doSearch(query){ (scorer, idMapper) =>
             var doc = scorer.nextDoc()
-            while (doc < DocIdSetIterator.NO_MORE_DOCS) {
+            while (doc < NO_MORE_DOCS) {
               result += (idMapper.getId(doc) -> scorer.score())
               doc = scorer.nextDoc()
             }
@@ -91,8 +91,29 @@ class URIGraphTest extends SpecificationWithJUnit with DbRepos {
   }
   implicit def toSearchable(uriGraphSearcher: URIGraphSearcher) = new Searchable(uriGraphSearcher: URIGraphSearcher)
 
+  class TestDocIdSetIterator(ids: Array[Int]) extends DocIdSetIterator {
+    var i = -1
+    def docID(): Int = {
+      if (i < 0) -1
+      else if (i < ids.length) ids(i)
+      else NO_MORE_DOCS
+    }
+    def nextDoc(): Int = {
+      if (i < ids.length) i += 1
+      if (i < ids.length) ids(i) else NO_MORE_DOCS
+    }
+    def advance(target: Int): Int = {
+      if (i < ids.length) i += 1
+      while (i < ids.length) {
+        if (ids(i) < target) i += 1
+        else return ids(i)
+      }
+      NO_MORE_DOCS
+    }
+  }
+
   "URIGraph" should {
-    "be able to generate UriToUsrEdgeSet" in {
+    "generate UriToUsrEdgeSet" in {
       running(new EmptyApplication()) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
@@ -124,7 +145,7 @@ class URIGraphTest extends SpecificationWithJUnit with DbRepos {
       }
     }
 
-    "be able to generate UserToUriEdgeSet" in {
+    "generate UserToUriEdgeSet" in {
       running(new EmptyApplication()) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
@@ -157,7 +178,7 @@ class URIGraphTest extends SpecificationWithJUnit with DbRepos {
       }
     }
 
-    "be able to intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
+    "intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
       running(new EmptyApplication()) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
@@ -197,31 +218,46 @@ class URIGraphTest extends SpecificationWithJUnit with DbRepos {
 
         graph.numDocs === users.size
       }
+    }
 
-      "handle empty sets" in {
-        running(new EmptyApplication()) {
-          val (users, uris) = setupDB
+    "intersect empty sets" in {
+      running(new EmptyApplication()) {
+        val (users, uris) = setupDB
 
-          val graphDir = new RAMDirectory
-          val graph = URIGraph(graphDir)
-          val searcher = graph.getURIGraphSearcher()
+        val graphDir = new RAMDirectory
+        val graph = URIGraph(graphDir)
+        val searcher = graph.getURIGraphSearcher()
 
-          searcher.getUserToUriEdgeSet(Id[User](10000)).destIdSet.isEmpty === true
+        searcher.getUserToUriEdgeSet(Id[User](10000)).destIdSet.isEmpty === true
 
-          searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000)).destIdSet.isEmpty === true
+        searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000)).destIdSet.isEmpty === true
 
-          val emptyUserToUserEdgeSet = new UserToUserEdgeSet(Id[User](10000), Set())
+        val emptyUserToUserEdgeSet = new UserToUserEdgeSet(Id[User](10000), Set())
 
-          emptyUserToUserEdgeSet.destIdSet.isEmpty === true
+        emptyUserToUserEdgeSet.destIdSet.isEmpty === true
 
-          searcher.intersect(emptyUserToUserEdgeSet, searcher.getUriToUserEdgeSet(uris.head.id.get)).destIdSet.isEmpty === true
+        searcher.intersect(emptyUserToUserEdgeSet, searcher.getUriToUserEdgeSet(uris.head.id.get)).destIdSet.isEmpty === true
 
-          searcher.intersect(emptyUserToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
+        searcher.intersect(emptyUserToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
 
-          val userToUserEdgeSet = new UserToUserEdgeSet(Id[User](10000), users.map(_.id.get).toSet)
-          searcher.intersect(userToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
-        }
+        val userToUserEdgeSet = new UserToUserEdgeSet(Id[User](10000), users.map(_.id.get).toSet)
+        searcher.intersect(userToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
       }
+    }
+
+    "determine whether intersection is empty" in {
+      new URIGraphSearcher(null).intersectAny(
+        new TestDocIdSetIterator(Array(1, 2, 3)),
+        new TestDocIdSetIterator(Array(2, 4, 6))) === true
+      new URIGraphSearcher(null).intersectAny(
+        new TestDocIdSetIterator(Array()),
+        new TestDocIdSetIterator(Array(2, 4, 6))) === false
+      new URIGraphSearcher(null).intersectAny(
+        new TestDocIdSetIterator(Array(1, 2, 3)),
+        new TestDocIdSetIterator(Array())) === false
+      new URIGraphSearcher(null).intersectAny(
+        new TestDocIdSetIterator(Array(1, 3, 5)),
+        new TestDocIdSetIterator(Array(2, 4, 6))) === false
     }
 
     "search personal bookmark titles" in {
@@ -301,7 +337,7 @@ class URIGraphTest extends SpecificationWithJUnit with DbRepos {
       }
     }
 
-    "be able to dump Lucene Document" in {
+    "dump Lucene Document" in {
       running(new EmptyApplication()) {
         val ramDir = new RAMDirectory
         val store = new FakeArticleStore()
