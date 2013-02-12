@@ -331,7 +331,7 @@ class DailyTotalUsers extends Report with Logging {
         """.format(startDate.toStandardDateString, endDate.toStandardDateString)
       val rs = st.executeQuery(sql)
       while(rs.next) {
-        val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay.plusHours(24) // timezone issues, need to fix
+        val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay
         val sum = rs.getInt("sum")
         fields +:= ReportRow(day, Map(reportName -> ValueOrdering(sum.toString, ordering)))
       }
@@ -357,7 +357,7 @@ class DailyPrivateKeeps extends Report with Logging {
         """.format(startDate.toStandardDateString, endDate.toStandardDateString)
       val rs = st.executeQuery(sql)
       while(rs.next) {
-        val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay.plusHours(24) // timezone issues, need to fix
+        val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay
         val sum = rs.getInt("sum")
         fields +:= ReportRow(day, Map(reportName -> ValueOrdering(sum.toString, ordering)))
       }
@@ -383,7 +383,7 @@ class DailyPublicKeeps extends Report with Logging {
         """.format(startDate.toStandardDateString, endDate.toStandardDateString)
       val rs = st.executeQuery(sql)
       while(rs.next) {
-        val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay.plusHours(24) // timezone issues, need to fix
+        val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay
         val sum = rs.getInt("sum")
         fields +:= ReportRow(day, Map(reportName -> ValueOrdering(sum.toString, ordering)))
       }
@@ -409,7 +409,7 @@ class DailyNewThread extends Report with Logging {
         """.format(startDate.toStandardDateString, endDate.toStandardDateString)
       val rs = st.executeQuery(sql)
       while(rs.next) {
-        val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay.plusHours(24) // timezone issues, need to fix
+        val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay
         val sum = rs.getInt("sum")
         fields +:= ReportRow(day, Map(reportName -> ValueOrdering(sum.toString, ordering)))
       }
