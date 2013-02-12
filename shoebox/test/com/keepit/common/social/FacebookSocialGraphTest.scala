@@ -1,7 +1,5 @@
 package com.keepit.common.social
 
-import scala.Some
-
 import java.io.File
 
 import org.junit.runner.RunWith
@@ -45,8 +43,8 @@ class FacebookSocialGraphTest extends SpecificationWithJUnit with DbRepos {
       running(new EmptyApplication()) {
         //val httpClient = HttpClientImpl(timeout = 1, timeoutUnit = TimeUnit.MINUTES)
         val httpClient = new FakeHttpClient(
-            expectedUrl = Some("https://graph.facebook.com/eishay?access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&fields=link,name,first_name,middle_name,last_name,location,locale,gender,username,languages,third_party_id,installed,timezone,updated_time,verified,bio,birthday,devices,education,email,picture,significant_other,website,work,friends.fields(link,name,first_name,middle_name,last_name,location,locale,gender,username,languages,third_party_id,installed,timezone,updated_time,verified,bio,birthday,devices,education,email,picture,significant_other,website,work)"),
-            expectedResponse = Some(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay.json")).mkString)
+            Some(Map("https://graph.facebook.com/eishay?access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&fields=link,name,first_name,middle_name,last_name,location,locale,gender,username,languages,third_party_id,installed,timezone,updated_time,verified,bio,birthday,devices,education,email,picture,significant_other,website,work,friends.fields(link,name,first_name,middle_name,last_name,location,locale,gender,username,languages,third_party_id,installed,timezone,updated_time,verified,bio,birthday,devices,education,email,picture,significant_other,website,work)" ->
+            io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay.json")).mkString))
         )
         val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
           tokenType = None, expiresIn = None, refreshToken = None)
@@ -78,9 +76,8 @@ class FacebookSocialGraphTest extends SpecificationWithJUnit with DbRepos {
     "fetch from facebook using jennifer_hirsch" in {
       running(new EmptyApplication()) {
         //val httpClient = HttpClientImpl(timeout = 1, timeoutUnit = TimeUnit.MINUTES)
-        val httpClient = new FakeHttpClient(
-            expectedResponse = Some(io.Source.fromFile(new File("test/com/keepit/common/social/jennifer_hirsch.min.json")).mkString)
-        )
+        val data = io.Source.fromFile(new File("test/com/keepit/common/social/jennifer_hirsch.min.json")).mkString
+        val httpClient = new FakeHttpClient(Some({ case _ => data}))
         val info = SocialUserInfo(userId = None, fullName = "", socialId = SocialId(""), networkType = SocialNetworks.FACEBOOK, credentials = None)
 
         val graph = new FacebookSocialGraph(httpClient) {

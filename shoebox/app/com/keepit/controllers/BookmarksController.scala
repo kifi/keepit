@@ -1,15 +1,15 @@
 package com.keepit.controllers
 
-import java.sql.Connection
-
+import com.keepit.classify.DomainClassifier
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
 import com.keepit.common.async._
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.net._
 import com.keepit.common.social._
 import com.keepit.inject._
@@ -21,11 +21,8 @@ import com.keepit.serializer.BookmarkSerializer
 import akka.dispatch.Await
 import akka.util.duration._
 import play.api.Play.current
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsBoolean
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
-import play.api.libs.json.JsValue
+import play.api.libs.json._
+
 
 object BookmarksController extends FortyTwoController {
 
@@ -123,13 +120,22 @@ object BookmarksController extends FortyTwoController {
   }
 
   def checkIfExists(uri: String) = AuthenticatedJsonAction { request =>
-    val bookmark = inject[DBConnection].readOnly { implicit s =>
-      inject[NormalizedURIRepo].getByNormalizedUrl(uri).flatMap { uri =>
-        inject[BookmarkRepo].getByUriAndUser(uri.id.get, request.userId)
+    val (bookmark, sensitive) = inject[DBConnection].readOnly { implicit s =>
+      val normalizedUri = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
+      val bookmark = normalizedUri.flatMap { uri =>
+        inject[BookmarkRepo].getByUriAndUser(uri.id.get, request.userId).filter(_.isActive)
       }
+      val sensitive = normalizedUri.flatMap(_.domain).map(inject[DomainClassifier].isSensitive).flatMap {
+        case Left(_) => None
+        case Right(opt) => opt
+      }
+      (bookmark, sensitive)
     }
 
-    Ok(JsObject(Seq("user_has_bookmark" -> JsBoolean(bookmark.isDefined))))
+    Ok(JsObject(Seq(
+      "user_has_bookmark" -> JsBoolean(bookmark.isDefined),
+      "sensitive" -> sensitive.map(JsBoolean(_)).getOrElse(JsNull)
+    )))
   }
 
   // TODO: Remove parameter and only check request body once all installations are 2.1.6 or later.
