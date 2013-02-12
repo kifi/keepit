@@ -15,6 +15,7 @@ import com.keepit.common.social._
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper.ScraperPlugin
+import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.serializer.BookmarkSerializer
 
@@ -120,22 +121,32 @@ object BookmarksController extends FortyTwoController {
   }
 
   def checkIfExists(uri: String) = AuthenticatedJsonAction { request =>
-    val (bookmark, sensitive) = inject[DBConnection].readOnly { implicit s =>
-      val normalizedUri = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
-      val bookmark = normalizedUri.flatMap { uri =>
-        inject[BookmarkRepo].getByUriAndUser(uri.id.get, request.userId).filter(_.isActive)
+    val userId = request.userId
+    val (uriId, bookmark, sensitive, friendIds) = inject[DBConnection].readOnly { implicit s =>
+      val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
+      val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
+      val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>
+        inject[DomainClassifier].isSensitive(domain).right.getOrElse(None)
       }
-      val sensitive = normalizedUri.flatMap(_.domain).map(inject[DomainClassifier].isSensitive).flatMap {
-        case Left(_) => None
-        case Right(opt) => opt
+      val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
+        inject[BookmarkRepo].getByUriAndUser(uriId, userId)
       }
-      (bookmark, sensitive)
+      val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
+      (uriId, bookmark, sensitive, friendIds)
     }
 
+    val keptByAnyFriends = uriId.map { uriId =>
+      val searcher = inject[URIGraph].getURIGraphSearcher
+      searcher.intersectAny(
+        searcher.getUserToUserEdgeSet(userId, friendIds),
+        searcher.getUriToUserEdgeSet(uriId))
+    }.getOrElse(false)
+
     Ok(JsObject(Seq(
-      "user_has_bookmark" -> JsBoolean(bookmark.isDefined),
-      "sensitive" -> sensitive.map(JsBoolean(_)).getOrElse(JsNull)
-    )))
+      "user_has_bookmark" -> JsBoolean(bookmark.isDefined), // TODO: remove this key after all installations >= 2.1.49
+      "kept" -> JsBoolean(bookmark.isDefined),
+      "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
+      "sensitive" -> sensitive.map(JsBoolean(_)).getOrElse(JsNull))))
   }
 
   // TODO: Remove parameter and only check request body once all installations are 2.1.6 or later.
