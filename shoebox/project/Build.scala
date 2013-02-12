@@ -52,7 +52,7 @@ object ApplicationBuild extends Build {
       "org.apache.tika" % "tika-parsers" % "1.2",
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       //used for securesocial
-      //"com.typesafe" %% "play-plugins-util" % "2.1",
+      "com.typesafe" %% "play-plugins-util" % "2.1",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
       "javax.mail" % "mail" % "1.4.5",
