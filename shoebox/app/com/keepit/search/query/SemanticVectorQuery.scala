@@ -94,8 +94,9 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
   private def explainTerm(term: Term, reader: IndexReader, vector: Array[Byte], value: Float, doc: Int) = {
     val dv = new DocAndVector(reader.termPositions(term), vector, value)
-    if (dv.fetchDoc(doc) == doc && value > 0.0f) {
-      val sc = dv.score()
+    dv.fetchDoc(doc)
+    if (dv.doc == doc && value > 0.0f) {
+      val sc = dv.scoreAndNext()
       val expl = new ComplexExplanation()
       expl.setDescription("term(%s)".format(term.toString))
       expl.addDetail(new Explanation(sc/value, "similarity"))
@@ -117,46 +118,35 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   }
 }
 
-class DocAndVector(tp: TermPositions, vector: Array[Byte], weight: Float) {
+private[query] final class DocAndVector(tp: TermPositions, vector: Array[Byte], weight: Float) {
   var doc = -1
-  var posLeft = 0
 
-  private var curVec = new Array[Byte](SemanticVector.arraySize)
-  var distance = 0.0f
+  private[this] var curVec = new Array[Byte](SemanticVector.arraySize)
 
-  def fetchDoc(target: Int): Int = {
-    if (tp.skipTo(target)) {
-      doc = tp.doc()
-      posLeft = tp.freq()
-    } else {
-      doc = DocIdSetIterator.NO_MORE_DOCS
-      posLeft = 0
-    }
-    doc
+  def fetchDoc(target: Int) {
+    doc = if (tp.skipTo(target)) tp.doc() else DocIdSetIterator.NO_MORE_DOCS
   }
 
-  def nextDoc(): Int = {
-    if (tp.next()) {
-      doc = tp.doc()
-      posLeft = tp.freq()
-    } else {
-      doc = DocIdSetIterator.NO_MORE_DOCS
-      posLeft = 0
-    }
-    doc
-  }
-
-  def score(): Float = {
-    if (posLeft > 0) {
+  def scoreAndNext(): Float = {
+    val score = if (tp.freq() > 0) {
       tp.nextPosition()
-      posLeft -= 1
       if (tp.isPayloadAvailable()) {
         curVec = tp.getPayload(curVec, 0)
+        SemanticVector.similarity(vector, curVec) * weight
+      } else {
+        0.0f
       }
-      SemanticVector.similarity(vector, curVec) * weight
     } else {
       0.0f
     }
+
+    if (tp.next()) {
+      doc = tp.doc()
+    } else {
+      doc = DocIdSetIterator.NO_MORE_DOCS
+    }
+
+    score
   }
 }
 
@@ -177,8 +167,7 @@ class SemanticVectorScorer(weight: SemanticVectorWeight, tps: List[DocAndVector]
       var top = pq.top
       var sum = 0.0f
       while (top.doc == doc) {
-        sum += top.score()
-        top.nextDoc()
+        sum += top.scoreAndNext()
         top = pq.updateTop()
       }
       if (sum > 0.0f) svScore = sum else svScore = Float.MinPositiveValue
