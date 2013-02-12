@@ -91,7 +91,8 @@ class URIGraphTest extends SpecificationWithJUnit with DbRepos {
   }
   implicit def toSearchable(uriGraphSearcher: URIGraphSearcher) = new Searchable(uriGraphSearcher: URIGraphSearcher)
 
-  class TestDocIdSetIterator(ids: Array[Int]) extends DocIdSetIterator {
+  class TestDocIdSetIterator(docIds: Int*) extends DocIdSetIterator {
+    val ids = docIds.toArray.sortWith(_ < _).distinct
     var i = -1
     def docID(): Int = {
       if (i < 0) -1
@@ -246,21 +247,12 @@ class URIGraphTest extends SpecificationWithJUnit with DbRepos {
     }
 
     "determine whether intersection is empty" in {
-      new URIGraphSearcher(null).intersectAny(
-        new TestDocIdSetIterator(Array(1, 2, 3)),
-        new TestDocIdSetIterator(Array(2, 4, 6))) === true
-      new URIGraphSearcher(null).intersectAny(
-        new TestDocIdSetIterator(Array()),
-        new TestDocIdSetIterator(Array())) === false
-      new URIGraphSearcher(null).intersectAny(
-        new TestDocIdSetIterator(Array()),
-        new TestDocIdSetIterator(Array(2, 4, 6))) === false
-      new URIGraphSearcher(null).intersectAny(
-        new TestDocIdSetIterator(Array(1, 2, 3)),
-        new TestDocIdSetIterator(Array())) === false
-      new URIGraphSearcher(null).intersectAny(
-        new TestDocIdSetIterator(Array(1, 3, 5)),
-        new TestDocIdSetIterator(Array(2, 4, 6))) === false
+      val searcher = new URIGraphSearcher(null)
+      searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(2, 4, 6)) === true
+      searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(       )) === false
+      searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(2, 4, 6)) === false
+      searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(       )) === false
+      searcher.intersectAny(new TestDocIdSetIterator(1, 3, 5), new TestDocIdSetIterator(2, 4, 6)) === false
     }
 
     "search personal bookmark titles" in {
