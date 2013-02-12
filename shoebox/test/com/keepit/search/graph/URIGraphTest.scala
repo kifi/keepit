@@ -251,6 +251,9 @@ class URIGraphTest extends SpecificationWithJUnit with DbRepos {
         new TestDocIdSetIterator(Array(2, 4, 6))) === true
       new URIGraphSearcher(null).intersectAny(
         new TestDocIdSetIterator(Array()),
+        new TestDocIdSetIterator(Array())) === false
+      new URIGraphSearcher(null).intersectAny(
+        new TestDocIdSetIterator(Array()),
         new TestDocIdSetIterator(Array(2, 4, 6))) === false
       new URIGraphSearcher(null).intersectAny(
         new TestDocIdSetIterator(Array(1, 2, 3)),

@@ -12,6 +12,7 @@ import com.keepit.search.query.QueryUtil
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 
 class URIGraphSearcher(searcher: Searcher) {
@@ -90,8 +91,9 @@ class URIGraphSearcher(searcher: Searcher) {
     while (di != dj) {
       if (di < dj) di = i.advance(dj)
       else dj = j.advance(di)
+      if (di == NO_MORE_DOCS || dj == NO_MORE_DOCS) return false
     }
-    i.docID() != DocIdSetIterator.NO_MORE_DOCS
+    di != NO_MORE_DOCS
   }
 
   private def getURIList(user: Id[User]): Option[URIList] = {
@@ -118,7 +120,7 @@ class URIGraphSearcher(searcher: Searcher) {
     val term = URIGraph.userTerm.createTerm(user.toString)
     val td = searcher.indexReader.termDocs(term)
     val userDocId = try {
-      if (td.next()) td.doc else DocIdSetIterator.NO_MORE_DOCS
+      if (td.next()) td.doc else NO_MORE_DOCS
     } finally {
       td.close()
     }
