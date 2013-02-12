@@ -125,8 +125,8 @@ object BookmarksController extends FortyTwoController {
     val (uriId, bookmark, sensitive, friendIds) = inject[DBConnection].readOnly { implicit s =>
       val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
       val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
-      val sensitive: Option[Boolean] = nUri.flatMap(_.domain).map { domain =>
-        inject[DomainClassifier].isSensitive(domain).flatMap(_.right.getOrElse(None))
+      val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>
+        inject[DomainClassifier].isSensitive(domain).right.getOrElse(None)
       }
       val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
         inject[BookmarkRepo].getByUriAndUser(uriId, userId)
