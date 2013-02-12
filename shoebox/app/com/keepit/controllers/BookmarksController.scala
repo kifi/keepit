@@ -147,7 +147,7 @@ object BookmarksController extends FortyTwoController {
       "user_has_bookmark" -> JsBoolean(bookmark.isDefined), // TODO: remove this key after all installations >= 2.1.49
       "kept" -> JsBoolean(bookmark.isDefined),
       "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
-      "sensitive" -> sensitive.map(JsBoolean(_)).getOrElse(JsNull))))
+      "sensitive" -> JsBoolean(sensitive.getOrElse(false)))))
   }
 
   // TODO: Remove parameter and only check request body once all installations are 2.1.6 or later.
