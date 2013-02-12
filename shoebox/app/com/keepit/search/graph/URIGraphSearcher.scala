@@ -89,9 +89,13 @@ class URIGraphSearcher(searcher: Searcher) {
     var di = i.nextDoc()
     var dj = j.nextDoc()
     while (di != dj) {
-      if (di < dj) di = i.advance(dj)
-      else dj = j.advance(di)
-      if (di == NO_MORE_DOCS || dj == NO_MORE_DOCS) return false
+      if (di < dj) {
+        di = i.advance(dj)
+        if (di == NO_MORE_DOCS) return false
+      } else {
+        dj = j.advance(di)
+        if (dj == NO_MORE_DOCS) return false
+      }
     }
     di != NO_MORE_DOCS
   }
