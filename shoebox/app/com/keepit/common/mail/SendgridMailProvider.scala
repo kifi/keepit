@@ -139,8 +139,9 @@ class SendgridMailProvider @Inject() (db: DBConnection, mailRepo: ElectronicMail
 
     multipart.addBodyPart(part1)
     multipart.addBodyPart(part2)
-
-    message.setHeader("X-SMTPAPI", JsObject(List("category" -> JsString(mail.category.category))).toString)
+ 
+    val uniqueArgs = "unique_args" -> JsObject(List("mail_id" -> JsString(mail.externalId.id)))
+    message.setHeader("X-SMTPAPI", JsObject(List("category" -> JsString(mail.category.category), uniqueArgs)).toString)
 
     message.setContent(multipart)
 

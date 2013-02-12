@@ -19,7 +19,8 @@ object ElectronicMailLoggingController extends FortyTwoController  {
       case Some(b) =>
         val event = b.get("event").get.head
         val email = b.get("email").get.head
-        log.info("got mail event:%s, %s".format(event, email))
+        val mail_id = b.get("mail_id").get.head
+        log.info("got mail event:%s, %s, %s".format(event, email, mail_id))
         Ok
       case None =>
         BadRequest
