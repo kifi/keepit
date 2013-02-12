@@ -65,30 +65,23 @@ object AuthController extends FortyTwoController {
   def start = AuthenticatedJsonAction { implicit request =>
     val socialUser = request.socialUser
     log.info("facebook id %s".format(socialUser.id))
-    val (userAgent, version, installationIdOpt) = request.body.asJson match {
-      case Some(json) =>
-        (UserAgent((json \ "agent").as[String]),
-         KifiVersion((json \ "version").as[String]),
-         (json \ "installation").asOpt[String].flatMap { id =>
-           val kiId = ExternalId.asOpt[KifiInstallation](id)
-           kiId match {
-             case Some(_) =>
-             case None =>
-               // They sent an invalid id. Bug on client side?
-               inject[HealthcheckPlugin].addError(HealthcheckError(
-                 method = Some(request.method.toUpperCase()),
-                 path = Some(request.path),
-                 callType = Healthcheck.API,
-                 errorMessage = Some("Invalid ExternalId passed in \"%s\" for userId %s".format(id, request.userId))))
-           }
-           kiId
-         })
-      case _ =>  // TODO: remove this form encoding branch after everyone at v2.1.6 or later.
-        val params = request.body.asFormUrlEncoded.get
-        (UserAgent(params.get("agent").get.head),
-         KifiVersion(params.get("version").get.head),
-         params.get("installation").flatMap(_.headOption).filterNot(s => s.isEmpty || s == "undefined").map(id => ExternalId[KifiInstallation](id)))
-    }
+    val (userAgent, version, installationIdOpt) = request.body.asJson.map { json =>
+      (UserAgent((json \ "agent").as[String]),
+       KifiVersion((json \ "version").as[String]),
+       (json \ "installation").asOpt[String].flatMap { id =>
+         val kiId = ExternalId.asOpt[KifiInstallation](id)
+         kiId match {
+           case Some(_) =>
+           case None =>
+             // They sent an invalid id. Bug on client side?
+             inject[HealthcheckPlugin].addError(HealthcheckError(
+               method = Some(request.method.toUpperCase()),
+               path = Some(request.path),
+               callType = Healthcheck.API,
+               errorMessage = Some("Invalid ExternalId passed in \"%s\" for userId %s".format(id, request.userId))))
+         }
+         kiId
+       })}.get
     val (user, installation) = inject[DBConnection].readWrite{implicit s =>
       val repo = inject[KifiInstallationRepo]
       log.info("start. details: %s, %s, %s".format(userAgent, version, installationIdOpt))

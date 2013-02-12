@@ -13,8 +13,8 @@ GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.e
 POST    /bookmarks/rescrape         com.keepit.controllers.BookmarksController.rescrape
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
 GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(uri: String)
-POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.remove(uri: Option[String] ?= None)
-POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy(uri: Option[String] ?= None, isPrivate: Option[Boolean] ?= None)
+POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.remove()
+POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy()
 
 POST    /comments/add               com.keepit.controllers.CommentController.createComment()
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
