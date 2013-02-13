@@ -51,6 +51,8 @@ import com.keepit.common.analytics.reports._
 import com.google.inject.multibindings.Multibinder
 import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
 import com.keepit.common.cache._
+import com.keepit.classify.DomainTagImportSettings
+import com.google.common.io.Files
 
 
 class ShoeboxModule() extends ScalaModule with Logging {
@@ -247,5 +249,13 @@ class ShoeboxModule() extends ScalaModule with Logging {
     val minHits = conf.getInt("minHits").get
 
     BrowsingHistoryTracker(filterSize, numHashFuncs, minHits)
+  }
+
+  @Singleton
+  @Provides
+  def domainTagImportSettings: DomainTagImportSettings = {
+    // TODO(greg): find a good place to put these files
+    val dirPath = Files.createTempDir().getAbsolutePath
+    DomainTagImportSettings(localDir = dirPath, url = "http://www.komodia.com/clients/42.zip")
   }
 }

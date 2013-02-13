@@ -29,6 +29,15 @@ private final case class DomainTagNameImpl(name: String) extends DomainTagName
 object DomainTagName {
   def apply(name: String): DomainTagName = DomainTagNameImpl(name.toLowerCase.trim)
   def unapply(dtn: DomainTagName): Option[String] = Some(dtn.name)
+
+  private val blacklist = Seq(
+    "dns error site can't be resolved",
+    "empty site",
+    "error site can't be accessed",
+    "local ip",
+    "site under construction or not available"
+  ).map(DomainTagName(_))
+  def isBlacklisted(dt: DomainTagName): Boolean = blacklist contains dt
 }
 
 @ImplementedBy(classOf[DomainTagRepoImpl])
