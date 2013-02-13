@@ -35,11 +35,11 @@ class ScraperTest extends SpecificationWithJUnit {
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/existing"
       val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(33)))
-      val result = scraper.fetchArticle(uri)
+      val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
 
       result must beAnInstanceOf[Scraped] // Article
       (result: @unchecked) match {
-        case Scraped(article) =>
+        case Scraped(article, signature) =>
           article.title === "foo"
           article.content === "bar"
       }
@@ -50,7 +50,7 @@ class ScraperTest extends SpecificationWithJUnit {
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/missing"
       val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(44)))
-      val result = scraper.fetchArticle(uri)
+      val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
       result must beAnInstanceOf[Error]
       (result: @unchecked) match {
         case Error(httpStatus, _) => httpStatus === HttpStatus.SC_NOT_FOUND
@@ -237,25 +237,32 @@ class ScraperTest extends SpecificationWithJUnit {
   }
 
   def getMockScraper(articleStore: ArticleStore, suffix: String = "") = {
-  	new Scraper(articleStore, ScraperConfig()) {
-  	  override def fetchArticle(uri: NormalizedURI, ifModifiedSince: Option[DateTime] = None): ScraperResult = {
-  	    uri.url match {
-  	      case "http://www.keepit.com/existing" => Scraped(Article(
-  	          id = uri.id.get,
-  	          title = "foo" + suffix,
-  	          content = "bar" + suffix,
-  	          scrapedAt = currentDateTime,
-  	          httpContentType = Option("text/html"),
-  	          httpOriginalContentCharset = Option("UTF-8"),
-  	          state = SCRAPED,
-  	          message = None,
-  	          titleLang = Some(Lang("en")),
-  	          contentLang = Some(Lang("en"))))
+    new Scraper(articleStore, ScraperConfig()) {
+      override def fetchArticle(uri: NormalizedURI, info: ScrapeInfo): ScraperResult = {
+        uri.url match {
+          case "http://www.keepit.com/existing" =>
+            val article = Article(
+              id = uri.id.get,
+              title = "foo" + suffix,
+              content = "bar" + suffix,
+              scrapedAt = currentDateTime,
+              httpContentType = Option("text/html"),
+              httpOriginalContentCharset = Option("UTF-8"),
+              state = SCRAPED,
+              message = None,
+              titleLang = Some(Lang("en")),
+              contentLang = Some(Lang("en")))
+            val signature = computeSignature(article.title, article.content)
+            if (signature.similarTo(Signature(info.signature)) < 0.8d) {
+              Scraped(article, signature)
+            } else {
+              NotModified
+            }
           case "http://www.keepit.com/missing" => Error(HttpStatus.SC_NOT_FOUND, "not found")
           case "http://www.keepit.com/notModified" =>
-            ifModifiedSince match {
-              case Some(_) => NotModified
-              case None => Scraped(Article(
+            info.signature match {
+              case "" =>
+                val article = Article(
                   id = uri.id.get,
                   title = "foo" + suffix,
                   content = "bar" + suffix,
@@ -265,10 +272,14 @@ class ScraperTest extends SpecificationWithJUnit {
                   state = SCRAPED,
                   message = None,
                   titleLang = Some(Lang("en")),
-                  contentLang = Some(Lang("en"))))
+                  contentLang = Some(Lang("en")))
+                Scraped(article, computeSignature(article.title, article.content))
+              case _ => NotModified
             }
-  	    }
-  	  }
-  	}
+        }
+      }
+
+      private def computeSignature(fields: String*) = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build
+    }
   }
 }
