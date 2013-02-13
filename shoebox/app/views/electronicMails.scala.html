@@ -35,8 +35,8 @@
   </div>
 }
 
-@admin("There are " + count + " electronicMails (displaying " + electronicMails.size + ")") {
-  <h2>Showing @electronicMails.size electronicMails of total @count (Page @{page + 1})</h2>
+@admin(count + " Total Emails") {
+  <h2>showing @electronicMails.size (page @{page + 1})</h2>
   @pagination(page, pageCount)
   <table class="table table-bordered">
     <tr>
