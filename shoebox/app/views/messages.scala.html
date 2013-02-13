@@ -35,8 +35,8 @@
   </div>
 }
 
-@admin("There are " + count + " messages (displaying " + uriAndUsers.size + ")") {
-  <h2>Showing @uriAndUsers.size messages of total @count (Page @{page + 1})</h2>
+@admin(count + " Total Messages") {
+  <h2>showing @uriAndUsers.size (page @{page + 1})</h2>
   @pagination(page, pageCount)
   <table class="table table-bordered">
     <tr>
@@ -51,7 +51,7 @@
     <tr>
       <td rowspan="2">@{i+1}</td>
       <td>@adminHelper.userDisplay(user)</td>
-      <td>@for(recipient <- recipients) { 
+      <td>@for(recipient <- recipients) {
         @adminHelper.userDisplay(recipient)
       }</td>
       <td>@comment.pageTitle</td>

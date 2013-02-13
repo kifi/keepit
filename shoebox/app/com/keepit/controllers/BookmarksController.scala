@@ -15,6 +15,7 @@ import com.keepit.common.social._
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper.ScraperPlugin
+import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.serializer.BookmarkSerializer
 
@@ -120,27 +121,37 @@ object BookmarksController extends FortyTwoController {
   }
 
   def checkIfExists(uri: String) = AuthenticatedJsonAction { request =>
-    val (bookmark, sensitive) = inject[DBConnection].readOnly { implicit s =>
-      val normalizedUri = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
-      val bookmark = normalizedUri.flatMap { uri =>
-        inject[BookmarkRepo].getByUriAndUser(uri.id.get, request.userId).filter(_.isActive)
+    val userId = request.userId
+    // TODO: Optimize by not checking sensitivity and keptByAnyFriends if kept by user.
+    val (uriId, bookmark, sensitive, friendIds) = inject[DBConnection].readOnly { implicit s =>
+      val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
+      val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
+      val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>
+        inject[DomainClassifier].isSensitive(domain).right.getOrElse(None)
       }
-      val sensitive = normalizedUri.flatMap(_.domain).map(inject[DomainClassifier].isSensitive).flatMap {
-        case Left(_) => None
-        case Right(opt) => opt
+      val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
+        inject[BookmarkRepo].getByUriAndUser(uriId, userId)
       }
-      (bookmark, sensitive)
+      val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
+      (uriId, bookmark, sensitive, friendIds)
     }
 
+    val keptByAnyFriends = uriId.map { uriId =>
+      val searcher = inject[URIGraph].getURIGraphSearcher
+      searcher.intersectAny(
+        searcher.getUserToUserEdgeSet(userId, friendIds),
+        searcher.getUriToUserEdgeSet(uriId))
+    }.getOrElse(false)
+
     Ok(JsObject(Seq(
-      "user_has_bookmark" -> JsBoolean(bookmark.isDefined),
-      "sensitive" -> sensitive.map(JsBoolean(_)).getOrElse(JsNull)
-    )))
+      "user_has_bookmark" -> JsBoolean(bookmark.isDefined), // TODO: remove this key after all installations >= 2.1.49
+      "kept" -> JsBoolean(bookmark.isDefined),
+      "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
+      "sensitive" -> JsBoolean(sensitive.getOrElse(false)))))
   }
 
-  // TODO: Remove parameter and only check request body once all installations are 2.1.6 or later.
-  def remove(uri: Option[String]) = AuthenticatedJsonAction { request =>
-    val url = uri.getOrElse((request.body.asJson.get \ "url").as[String])
+  def remove() = AuthenticatedJsonAction { request =>
+    val url = (request.body.asJson.get \ "url").as[String]
     val repo = inject[BookmarkRepo]
     val bookmark = inject[DBConnection].readWrite { implicit s =>
       inject[NormalizedURIRepo].getByNormalizedUrl(url).flatMap { uri =>
@@ -156,12 +167,8 @@ object BookmarksController extends FortyTwoController {
     }
   }
 
-  // TODO: Remove parameters and only check request body once all installations are 2.1.6 or later.
-  def updatePrivacy(uri: Option[String], isPrivate: Option[Boolean]) = AuthenticatedJsonAction { request =>
-    val (url, priv) = request.body.asJson match {
-      case Some(o) => ((o \ "url").as[String], (o \ "private").as[Boolean])
-      case _ => (uri.get, isPrivate.get)
-    }
+  def updatePrivacy() = AuthenticatedJsonAction { request =>
+    val (url, priv) = request.body.asJson.map{o => ((o \ "url").as[String], (o \ "private").as[Boolean])}.get
     val repo = inject[BookmarkRepo]
     inject[DBConnection].readWrite { implicit s =>
       inject[NormalizedURIRepo].getByNormalizedUrl(url).flatMap { uri =>
@@ -179,8 +186,8 @@ object BookmarksController extends FortyTwoController {
     val userId = request.userId
     val installationId = request.kifiInstallationId
     request.body.asJson match {
-      case Some(json) =>  // TODO: remove bookmark_source check after everyone is at v2.1.6 or later.
-        val bookmarkSource = (json \ "bookmark_source").asOpt[String].orElse((json \ "source").asOpt[String])
+      case Some(json) =>
+        val bookmarkSource = (json \ "source").asOpt[String]
         bookmarkSource match {
           case Some("PLUGIN_START") => Forbidden
           case _ =>

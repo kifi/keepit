@@ -1,8 +1,6 @@
 package com.keepit.search
 
 import com.keepit.scraper.FakeArticleStore
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
