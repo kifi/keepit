@@ -1,4 +1,5 @@
-   @(uriAndUsers: Seq[(UserWithSocial, Comment, NormalizedURI, Seq[com.keepit.common.social.UserWithSocial])], page: Int, count: Long, pageCount: Int))
+@(uriAndUsers: Seq[(UserWithSocial, Comment, NormalizedURI, Seq[com.keepit.common.social.UserWithSocial])], page: Int, count: Long, pageCount: Int))
+
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
     <ul>
