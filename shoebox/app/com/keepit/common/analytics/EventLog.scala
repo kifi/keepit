@@ -7,11 +7,10 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.State
 import com.keepit.common.db.Id
 import com.keepit.inject.inject
-import com.keepit.model.KifiInstallation
-import com.keepit.model.User
-import com.keepit.model.UserExperiment
+import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.controller.FortyTwoServices
+import java.util.{Set => JSet}
 
 import play.api.Play.current
 import play.api.libs.json._
@@ -64,11 +63,14 @@ trait EventMetadata {
   val prevEvents: Seq[ExternalId[Event]]
 }
 
-case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: String, userExperiments: Seq[State[UserExperiment.ExperimentType]], metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
+case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: String, userExperiments: Seq[State[ExperimentType]], metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 
 case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime,
     serverVersion: String = inject[FortyTwoServices].currentService + ":" + inject[FortyTwoServices].currentVersion) {
+
+  inject[EventHelper].newEvent(this)
+
   def persistToS3(): Event = {
     inject[S3EventStore] += (externalId -> this)
     this
@@ -77,7 +79,7 @@ case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: 
 }
 
 object Events {
-  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[UserExperiment.ExperimentType]], installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime) =
+  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[ExperimentType]], installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime) =
     Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = createdAt)
 
   def serverEvent(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime) =

@@ -9,9 +9,10 @@ import play.api.libs.json._
 import play.api.libs.ws._
 import play.api.http.ContentTypes
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.db.CX
+import com.keepit.common.healthcheck.{HealthcheckPlugin, Healthcheck, HealthcheckError}
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.LargeString._
 import com.keepit.inject._
 import akka.actor.ActorSystem
 import akka.actor.Actor
@@ -26,7 +27,7 @@ import com.keepit.common.net.HttpClient
 import play.api.libs.concurrent.Promise
 import com.keepit.common.net.ClientResponse
 import play.api.Mode
-import com.google.inject.ImplementedBy
+import com.google.inject.{ImplementedBy, Inject}
 
 @ImplementedBy(classOf[PostOfficeImpl])
 trait PostOffice {
@@ -38,16 +39,27 @@ object PostOffice {
     val HEALTHCHECK = ElectronicMailCategory("HEALTHCHECK")
     val COMMENT = ElectronicMailCategory("COMMENT")
     val MESSAGE = ElectronicMailCategory("MESSAGE")
+    val ADMIN = ElectronicMailCategory("ADMIN")
   }
+
+  val BODY_MAX_SIZE = 524288
 }
 
-class PostOfficeImpl extends PostOffice with Logging {
+class PostOfficeImpl @Inject() (db: DBConnection, mailRepo: ElectronicMailRepo, healthcheck: HealthcheckPlugin, mailer: MailSenderPlugin) extends PostOffice with Logging {
 
   def sendMail(mail: ElectronicMail): ElectronicMail = {
-    val prepared = CX.withConnection { implicit c =>
-      mail.prepareToSend().save
+    val prepared = db.readWrite { implicit s =>
+      val newMail = if(mail.htmlBody.value.size > PostOffice.BODY_MAX_SIZE || (mail.textBody.isDefined && mail.textBody.get.value.size > 524288)) {
+        val newMail = mail.copy(htmlBody = mail.htmlBody.value.take(PostOffice.BODY_MAX_SIZE), textBody = mail.textBody.map(_.value.take(PostOffice.BODY_MAX_SIZE)))
+        val ex = new Exception("PostOffice attempted to send an email (%s) longer than %s bytes. Too big!".format(newMail.externalId, PostOffice.BODY_MAX_SIZE))
+        healthcheck.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        mailRepo.save(newMail)
+      } else {
+        mailRepo.save(mail)
+      }
+      newMail.prepareToSend()
     }
-    inject[MailSenderPlugin].processMail(prepared)
+    mailer.processMail(prepared)
     prepared
   }
 }

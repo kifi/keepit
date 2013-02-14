@@ -41,7 +41,6 @@ object ApplicationBuild extends Build {
      * http://stackoverflow.com/questions/10958215/how-to-exclude-commons-logging-from-a-scala-sbt-slf4j-project 
      */
     val appDependencies = Seq(
-      "ru.circumflex" % "circumflex-orm" % "2.1" % "compile->default",
       "mysql" % "mysql-connector-java" % "5.1.10",
       "org.clapper" %% "grizzled-slf4j" % "0.6.9",
       "com.typesafe.akka" % "akka-testkit" % "2.0.2",
@@ -53,11 +52,14 @@ object ApplicationBuild extends Build {
       "org.apache.tika" % "tika-parsers" % "1.2",
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       //used for securesocial
-      "com.typesafe" %% "play-plugins-util" % "2.0.1",
+      "com.typesafe" %% "play-plugins-util" % "2.0.4",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
       "javax.mail" % "mail" % "1.4.5",
-      "org.mongodb" %% "casbah" % "2.4.1" 
+      "org.mongodb" %% "casbah" % "2.4.1",
+      "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
+      "org.jsoup" % "jsoup" % "1.7.1",
+      "spy" % "spymemcached" % "2.8.1"
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
@@ -73,7 +75,9 @@ object ApplicationBuild extends Build {
         "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
         "kevoree Repository" at "http://maven2.kevoree.org/release/",
         //used for securesocial
-        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/"
+        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
+        "boilerpipe Repository" at "http://boilerpipe.googlecode.com/svn/repo/",
+        "Spy Repository" at "http://files.couchbase.com/maven2"
       ),
       
       // add some imports to the templates files
@@ -86,7 +90,11 @@ object ApplicationBuild extends Build {
       
       libraryDependencies ++= Seq(
         "com.google.inject" % "guice" % "3.0",
-        "org.scalatest" %% "scalatest" % "2.0.M4" % "test"
+        "com.google.inject.extensions" % "guice-multibindings" % "3.0",
+        "com.tzavellas" % "sse-guice" % "0.6.1",
+        "org.scalatest" %% "scalatest" % "2.0.M4" % "test",
+        //"com.typesafe" % "slick_2.10" % "1.0.0-RC1"
+        "org.scalaquery" % "scalaquery_2.9.1" % "0.10.0-M1"
       )
     )
 }

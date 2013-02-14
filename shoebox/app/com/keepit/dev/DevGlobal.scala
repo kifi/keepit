@@ -4,6 +4,7 @@ import play.api.Mode._
 import play.api.Application
 import play.api.Play.current
 import com.keepit.FortyTwoGlobal
+import com.keepit.scraper._
 import com.keepit.inject._
 import com.google.inject.Guice
 import com.google.inject.Injector
@@ -14,10 +15,12 @@ import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.common.social.SocialGraphRefresher
 import com.keepit.common.mail.MailSenderPlugin
+import com.keepit.common.analytics.reports.ReportBuilderPlugin
+import com.keepit.common.cache.{FortyTwoCachePlugin, MemcachedPlugin, MemcachedCache}
 
 object DevGlobal extends FortyTwoGlobal(Dev) {
 
-  override lazy val injector: Injector = Guice.createInjector(Stage.DEVELOPMENT, DevModule())
+  override lazy val injector: Injector = Guice.createInjector(Stage.DEVELOPMENT, new DevModule())
 
   override def onStart(app: Application): Unit = {
     require(inject[FortyTwoServices].currentService == ServiceType.DEV_MODE,
@@ -28,6 +31,9 @@ object DevGlobal extends FortyTwoGlobal(Dev) {
     inject[ArticleIndexerPlugin].index()
     inject[SocialGraphRefresher]
     inject[MailSenderPlugin].processOutbox()
+    inject[ReportBuilderPlugin].enabled
+    inject[DataIntegrityPlugin].enabled
+    inject[FortyTwoCachePlugin].enabled
     log.info("shoebox started")
   }
 }

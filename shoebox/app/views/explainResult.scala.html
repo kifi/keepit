@@ -1,0 +1,7 @@
+@(query: String, userId: Id[User], uriId: Id[NormalizedURI], explanation: Option[(org.apache.lucene.search.Query, org.apache.lucene.search.Explanation)])
+
+@admin("Explanation") {
+  <h3>Explaining [@query] for User:@userId, URI=@uriId </h3>
+  <h4>@explanation.map(_._1.toString).getOrElse("none")</h4>
+  @Html(explanation.map(_._2.toHtml).getOrElse("<ul><li>none</li></ul>"))
+}

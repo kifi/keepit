@@ -1,9 +1,12 @@
 package com.keepit.scraper
 
 import com.keepit.common.logging.Logging
+import com.keepit.common.time._
+import org.joda.time.DateTime
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.entity.GzipDecompressingEntity
 import org.apache.http.client.params.ClientPNames
+import org.apache.http.HttpHeaders.{CONTENT_TYPE, IF_MODIFIED_SINCE, LOCATION}
 import org.apache.http.HttpRequest
 import org.apache.http.HttpRequestInterceptor
 import org.apache.http.HttpResponse
@@ -22,34 +25,45 @@ import java.io.InputStream
 import java.io.IOException
 import java.net.URL
 
-class HttpFetcher extends Logging {
-  val userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17"
+trait HttpFetcher {
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus
+  def close()
+}
+
+class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int) extends HttpFetcher with Logging {
   val cm = new PoolingClientConnectionManager
   cm.setMaxTotal(100);
 
   val httpParams = new BasicHttpParams
-  HttpConnectionParams.setConnectionTimeout(httpParams, 30000);
-  HttpConnectionParams.setSoTimeout(httpParams, 30000);
+  HttpConnectionParams.setConnectionTimeout(httpParams, connectionTimeout)
+  HttpConnectionParams.setSoTimeout(httpParams, soTimeOut);
   HttpProtocolParams.setUserAgent(httpParams, userAgent)
   val httpClient = new DefaultHttpClient(cm, httpParams)
 
   // track redirects
   httpClient.addResponseInterceptor(new HttpResponseInterceptor() {
     override def process(response: HttpResponse, context: HttpContext) {
-      if (response.containsHeader("Location")) {
-        val locations = response.getHeaders("Location")
+      if (response.containsHeader(LOCATION)) {
+        val locations = response.getHeaders(LOCATION)
         if (locations.length > 0) context.setAttribute("scraper_destination_url", locations(0).getValue())
       }
     }
   })
 
-  def fetch(url: String)(f: HttpInputStream => Unit): HttpFetchStatus = {
-    val httpget = new HttpGet(url)
-    log.info("executing request " + httpget.getURI())
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
+    val httpGet = new HttpGet(url)
 
-    val httpContext = new BasicHttpContext();
-    val response = httpClient.execute(httpget, httpContext)
+    ifModifiedSince.foreach{ ifModifiedSince =>
+      httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.format)
+    }
+
+    log.info("executing request " + httpGet.getURI())
+
+    val httpContext = new BasicHttpContext()
+    val response = httpClient.execute(httpGet, httpContext)
     log.info(response.getStatusLine);
+
+    val statusCode = response.getStatusLine.getStatusCode
 
     val entity = response.getEntity
 
@@ -58,15 +72,16 @@ class HttpFetcher extends Logging {
 
       val input = new HttpInputStream(entity.getContent)
 
-      Option(response.getHeaders("Content-Type")).foreach{ headers =>
+      Option(response.getHeaders(CONTENT_TYPE)).foreach{ headers =>
         if (headers.length > 0) input.setContentType(headers(headers.length - 1).getValue())
       }
 
       try {
-        val statusCode = response.getStatusLine.getStatusCode
         statusCode match {
           case HttpStatus.SC_OK =>
             f(input)
+            HttpFetchStatus(statusCode, None, httpContext)
+          case HttpStatus.SC_NOT_MODIFIED =>
             HttpFetchStatus(statusCode, None, httpContext)
           case _ =>
             log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
@@ -78,7 +93,7 @@ class HttpFetcher extends Logging {
           throw ex
         case ex :Exception =>
           // unexpected exception. abort the request in order to shut down the underlying connection immediately.
-          httpget.abort();
+          httpGet.abort();
           throw ex;
       } finally {
         try {
@@ -93,8 +108,17 @@ class HttpFetcher extends Logging {
         }
       }
     } else {
-      httpget.abort();
-      HttpFetchStatus(-1, Some("no entity found"), httpContext)
+      httpGet.abort()
+      statusCode match {
+        case HttpStatus.SC_OK =>
+          log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
+          HttpFetchStatus(-1, Some("no entity found"), httpContext)
+        case HttpStatus.SC_NOT_MODIFIED =>
+          HttpFetchStatus(statusCode, None, httpContext)
+        case _ =>
+          log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
+          HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), httpContext)
+      }
     }
   }
 

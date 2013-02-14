@@ -9,17 +9,16 @@ import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import com.keepit.search.SearchConfig
 import com.keepit.model._
-import com.keepit.model.NormalizedURI.States._
-import com.keepit.common.db.CX
+import com.keepit.model.NormalizedURIStates._
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
 import play.api.Play.current
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import org.apache.lucene.util.PriorityQueue
@@ -28,10 +27,6 @@ import java.io.File
 import java.io.IOException
 import java.io.StringReader
 import scala.math._
-import com.keepit.search.query.ProximityQuery
-import com.keepit.search.query.QueryUtil
-import com.keepit.search.query.SemanticVectorQuery
-import com.keepit.search.query.BooleanQueryWithPercentMatch
 
 object ArticleIndexer {
 
@@ -47,29 +42,36 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
   val commitBatchSize = 100
-  val fetchSize = commitBatchSize * 3
 
-  def run(): Int = {
+  def run(): Int = run(commitBatchSize, commitBatchSize * 3)
+
+  def run(commitBatchSize: Int, fetchSize: Int): Int = {
     log.info("starting a new indexing round")
+    val db = inject[DBConnection]
+    val repo = inject[NormalizedURIRepo]
     try {
-      val uris = CX.withConnection { implicit c =>
-        val uris = NormalizedURI.getByState(SCRAPE_FAILED, fetchSize)
-        if (uris.size < fetchSize) uris ++ NormalizedURI.getByState(SCRAPED, fetchSize - uris.size)
+      val uris = db.readOnly {implicit s =>
+        val uris = repo.getByState(SCRAPE_FAILED, fetchSize)
+        if (uris.size < fetchSize) {
+          val combo = uris ++ repo.getByState(SCRAPED, fetchSize - uris.size)
+          if (uris.size < fetchSize) combo ++ repo.getByState(UNSCRAPABLE, fetchSize - uris.size)
+          else combo
+        }
         else uris
       }
       var cnt = 0
       indexDocuments(uris.iterator.map{ uri => buildIndexable(uri) }, commitBatchSize){ commitBatch =>
         commitBatch.foreach{ case (indexable, indexError)  =>
-          CX.withConnection { implicit c =>
+          db.readWrite { implicit s =>
             val articleIndexable = indexable.asInstanceOf[ArticleIndexable]
             val state = indexError match {
               case Some(error) =>
-                findNextState(articleIndexable.uri.state -> Set(INDEX_FAILED, FALLBACK_FAILED))
+                findNextState(articleIndexable.uri.state -> Set(INDEX_FAILED, FALLBACK_FAILED, UNSCRAPE_FALLBACK_FAILED))
               case None =>
                 cnt += 1
-                findNextState(articleIndexable.uri.state -> Set(INDEXED, FALLBACKED))
+                findNextState(articleIndexable.uri.state -> Set(INDEXED, FALLBACKED, UNSCRAPE_FALLBACK))
             }
-            NormalizedURI.get(indexable.id).withState(state).save
+            repo.save(repo.get(indexable.id).withState(state))
           }
         }
       }
@@ -81,30 +83,8 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
   }
 
-  def getQueryParser(lang: Lang): QueryParser = getQueryParser(lang, 0.0f, 0.0f)
-
-  def getQueryParser(lang: Lang, proximityBoost: Float, semanticBoost: Float): QueryParser = {
-    val total = 1.0f + proximityBoost + semanticBoost
-    val parser = new ArticleQueryParser(DefaultAnalyzer.forParsing(lang), 1.0f/total, proximityBoost/total, semanticBoost/total)
-    DefaultAnalyzer.forParsingWithStemmer(lang).foreach{ parser.setStemmingAnalyzer(_) }
-    parser
-  }
-
-  def getArticleSearcher() = searcher
-
-  def getPersonalizedArticleSearcher(uris: Set[Id[NormalizedURI]]) = {
-    new PersonalizedSearcher(searcher.indexReader, searcher.idMapper, uris.map(id => id.id))
-  }
-
-  def search(queryText: String): Seq[Hit] = {
-    parseQuery(queryText) match {
-      case Some(query) => searcher.search(query)
-      case None => Seq.empty[Hit]
-    }
-  }
-
   def buildIndexable(id: Id[NormalizedURI]) = {
-    val uri = CX.withConnection{ implicit c => NormalizedURI.get(id) }
+    val uri = inject[DBConnection].readOnly { implicit c => inject[NormalizedURIRepo].get(id) }
     buildIndexable(uri)
   }
 
@@ -152,63 +132,6 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
 
           doc
         case None => doc
-      }
-    }
-  }
-
-  class ArticleQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Float, semanticBoost: Float) extends QueryParser(analyzer) {
-
-    super.setAutoGeneratePhraseQueries(true)
-
-    override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
-      field.toLowerCase match {
-        case "site" => getSiteQuery(queryText)
-        case _ => getTextQuery(queryText, quoted)
-      }
-    }
-
-    private def getTextQuery(queryText: String, quoted: Boolean) = {
-      val booleanQuery = new BooleanQuery(true)
-
-      var query = super.getFieldQuery("t", queryText, quoted)
-      if (query != null) booleanQuery.add(query, Occur.SHOULD)
-
-      query = super.getFieldQuery("c", queryText, quoted)
-      if (query != null) booleanQuery.add(query, Occur.SHOULD)
-
-      if(!quoted) {
-        super.getStemmedFieldQueryOpt("ts", queryText).foreach{ query => booleanQuery.add(query, Occur.SHOULD) }
-        super.getStemmedFieldQueryOpt("cs", queryText).foreach{ query => booleanQuery.add(query, Occur.SHOULD) }
-      }
-
-      val clauses = booleanQuery.clauses
-      if (clauses.size == 0) null
-      else if (clauses.size == 1) clauses.get(0).getQuery()
-      else booleanQuery
-    }
-
-    override def parseQuery(queryText: String) = {
-      super.parseQuery(queryText).map{ query =>
-        val terms = QueryUtil.getTerms(query)
-        if (terms.size <= 0) query
-        else {
-          val booleanQuery = new BooleanQuery(true)
-          query.setBoost(baseBoost)
-          booleanQuery.add(query, Occur.MUST)
-          val svq = SemanticVectorQuery("sv", terms)
-          svq.setBoost(semanticBoost)
-          booleanQuery.add(svq, Occur.SHOULD)
-          val csterms = QueryUtil.getTermSeq("cs", query)
-          val tsterms = QueryUtil.getTermSeq("ts", query)
-          if (csterms.size + tsterms.size > 1) {
-            val proxQ = new BooleanQuery(true)
-            proxQ.add(ProximityQuery(csterms), Occur.SHOULD)
-            proxQ.add(ProximityQuery(tsterms), Occur.SHOULD)
-            proxQ.setBoost(proximityBoost)
-            booleanQuery.add(proxQ, Occur.SHOULD)
-          }
-          booleanQuery
-        }
       }
     }
   }

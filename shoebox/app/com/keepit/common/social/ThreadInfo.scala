@@ -1,22 +1,22 @@
 package com.keepit.common.social
 
-import com.keepit.model.Comment
-import com.keepit.model.User
-import java.sql.Connection
-import com.keepit.common.db.ExternalId
-import com.keepit.model.CommentRecipient
 import org.joda.time.DateTime
-import com.keepit.common.db.Id
+import java.sql.Connection
+import play.api.Play.current
+import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.inject._
+import com.keepit.model._
 import com.keepit.common.logging.Logging
 
 case class ThreadInfo(externalId: ExternalId[Comment], recipients: Seq[BasicUser], digest: String, lastAuthor: ExternalId[User], messageCount: Long, hasAttachments: Boolean, createdAt: DateTime, lastCommentedAt: DateTime)
 
-object ThreadInfo extends Logging {
+class ThreadInfoRepo extends Logging {
   // TODO: Major optimizations needed!
-  def apply(comment: Comment, sessionUserOpt: Option[Id[User]] = None)(implicit conn: Connection): ThreadInfo = {
-    val children = Comment.getChildren(comment.id.get).reverse
+  def load(comment: Comment, sessionUserOpt: Option[Id[User]] = None)(implicit session: RSession): ThreadInfo = {
+    val children = inject[CommentRepo].getChildren(comment.id.get).reverse
     val childrenUsers = children map (c => c.userId)
-    val allRecipients = CommentRecipient.getByComment(comment.id.get) map (cu => cu.userId.get)
+    val allRecipients = inject[CommentRecipientRepo].getByComment(comment.id.get) map (cu => cu.userId.get)
 
     // We want to list recent commenters first, and then general recipients
     val recipients = filteredRecipients(comment.userId :: (childrenUsers ++ allRecipients).toList, sessionUserOpt)
@@ -29,7 +29,7 @@ object ThreadInfo extends Logging {
       externalId = comment.externalId,
       recipients = recipients,
       digest = lastComment.text, // todo: make smarter
-      lastAuthor = User.get(lastComment.userId).externalId,
+      lastAuthor = inject[UserRepo].get(lastComment.userId).externalId,
       messageCount = children.size + 1,
       hasAttachments = false, // todo fix
       createdAt = comment.createdAt,
@@ -37,6 +37,9 @@ object ThreadInfo extends Logging {
     )
   }
 
-  def filteredRecipients(userIds: Seq[Id[User]], sessionUser: Option[Id[User]])(implicit conn: Connection): Seq[BasicUser] =
-    userIds.filterNot(recepientUserId => sessionUser map (_ == recepientUserId) getOrElse(false)).distinct map (u => BasicUser(User.get(u)))
+  private def filteredRecipients(userIds: Seq[Id[User]], sessionUser: Option[Id[User]])(implicit session: RSession): Seq[BasicUser] = {
+    val basicUserRepo = inject[BasicUserRepo]
+    val userRepo = inject[UserRepo]
+    userIds.filterNot(recepientUserId => sessionUser map (_ == recepientUserId) getOrElse(false)).distinct map (u => basicUserRepo.load(userRepo.get(u)))
+  }
 }

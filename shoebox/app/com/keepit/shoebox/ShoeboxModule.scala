@@ -26,28 +26,38 @@ import com.keepit.common.store.S3Bucket
 import com.keepit.inject.AppScoped
 import com.keepit.inject.FortyTwoModule
 import com.keepit.scraper.ScraperConfig
-import com.keepit.scraper.ScraperPlugin
-import com.keepit.scraper.ScraperPluginImpl
+import com.keepit.scraper._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.graph.URIGraphPluginImpl
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexerPluginImpl
+import com.keepit.search.phrasedetector.PhraseIndexer
 import com.keepit.search.ArticleSearchResultStore
 import com.keepit.search.ArticleStore
 import com.keepit.search.S3ArticleSearchResultStoreImpl
 import com.keepit.search.S3ArticleStoreImpl
+import com.keepit.search.SearchConfigManager
+import com.keepit.search.ResultClickTracker
+import com.keepit.search.BrowsingHistoryTracker
+import com.keepit.search.ClickHistoryTracker
 import com.tzavellas.sse.guice.ScalaModule
 import akka.actor.ActorSystem
 import play.api.Play.current
 import com.mongodb.casbah.MongoConnection
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
+import com.google.inject.multibindings.Multibinder
+import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
+import com.keepit.common.cache._
 
-case class ShoeboxModule() extends ScalaModule with Logging {
+
+class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
-    install(FortyTwoModule())
+    println("configuring ShoeboxModule")
+    install(new FortyTwoModule())
+    install(new MemcachedCacheModule)
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
@@ -55,6 +65,13 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
+    bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
+    bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
+
+
+    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
+    listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
+    listenerBinder.addBinding().to(classOf[UsefulPageListener])
   }
 
   @Singleton
@@ -139,6 +156,24 @@ case class ShoeboxModule() extends ScalaModule with Logging {
     URIGraph(new MMapDirectory(dir))
   }
 
+  @Singleton
+  @Provides
+  def phraseIndexer: PhraseIndexer = {
+    val dirPath = current.configuration.getString("index.phrase.directory").get
+    val dir = new File(dirPath).getCanonicalFile()
+    if (!dir.exists()) {
+      if (!dir.mkdirs()) {
+        throw new Exception("could not create dir %s".format(dir))
+      }
+    }
+    val dataDir = current.configuration.getString("index.config").map{ path =>
+      val configDir = new File(path).getCanonicalFile()
+      new File(configDir, "phrase")
+    }
+    PhraseIndexer(new MMapDirectory(dir), dataDir)
+  }
+
+
   @Provides
   @AppScoped
   def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-actor-system")
@@ -156,4 +191,61 @@ case class ShoeboxModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def scraperConfig: ScraperConfig = ScraperConfig()
+
+  @Singleton
+  @Provides
+  def httpFetcher: HttpFetcher = new HttpFetcherImpl(
+    userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17",
+    connectionTimeout = 30000,
+    soTimeOut = 30000
+  )
+
+  @Singleton
+  @Provides
+  def searchConfigManager: SearchConfigManager = {
+    current.configuration.getString("index.config") match {
+      case None => new SearchConfigManager(None)
+      case Some(dirPath) =>
+        val dir = new File(dirPath).getCanonicalFile()
+        new SearchConfigManager(if (dir.exists) Some(dir) else None)
+    }
+  }
+
+  @Singleton
+  @Provides
+  def resultClickTracker: ResultClickTracker = {
+    val conf = current.configuration.getConfig("result-click-tracker").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val syncEvery = conf.getInt("syncEvery").get
+    val dirPath = conf.getString("dir").get
+    val dir = new File(dirPath).getCanonicalFile()
+    if (!dir.exists()) {
+      if (!dir.mkdirs()) {
+        throw new Exception("could not create dir %s".format(dir))
+      }
+    }
+    ResultClickTracker(dir, numHashFuncs, syncEvery)
+  }
+
+  @Singleton
+  @Provides
+  def clickHistoryTracker: ClickHistoryTracker = {
+    val conf = current.configuration.getConfig("click-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    ClickHistoryTracker(filterSize, numHashFuncs, minHits)
+  }
+
+  @Singleton
+  @Provides
+  def browsingHistoryTracker: BrowsingHistoryTracker = {
+    val conf = current.configuration.getConfig("browsing-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    BrowsingHistoryTracker(filterSize, numHashFuncs, minHits)
+  }
 }

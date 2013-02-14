@@ -3,6 +3,7 @@ package com.keepit.controllers.admin
 import play.api.Play.current
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.db.Id
+import com.keepit.common.db.LargeString._
 import com.keepit.model.{Comment, NormalizedURI, User}
 
 object AdminEmailPreviewController extends FortyTwoController {

@@ -29,13 +29,16 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.controller.FortyTwoController._
-import com.keepit.common.db.{CX, ExternalId, Id}
+import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
-import com.keepit.model.{KifiInstallation, KifiVersion, SocialUserInfo, User, UserAgent}
+import com.keepit.model._
 import com.keepit.common.controller.FortyTwoController
+import com.keepit.inject._
+import com.keepit.common.healthcheck._
+import com.keepit.common.db.slick._
 
 object AuthController extends FortyTwoController {
   // TODO: remove when all beta users are on 2.0.2+
@@ -45,9 +48,9 @@ object AuthController extends FortyTwoController {
 		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)).withNewSession
 	    case Some(socialUser) =>
 	      log.info("facebook id %s".format(socialUser.id.id))
-	      val user = CX.withConnection { implicit c =>
-  	    	val userId = SocialUserInfo.get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).userId.get
-  	    	User.get(userId)
+	      val user = inject[DBConnection].readOnly { implicit s =>
+  	    	val userId = inject[SocialUserInfoRepo].get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).userId.get
+  	    	inject[UserRepo].get(userId)
   	  	}
         Ok(JsObject(Seq(
           "status" -> JsString("loggedin"),
@@ -62,33 +65,40 @@ object AuthController extends FortyTwoController {
   def start = AuthenticatedJsonAction { implicit request =>
     val socialUser = request.socialUser
     log.info("facebook id %s".format(socialUser.id))
-    val (userAgent, version, installationIdOpt) = request.body.asJson match {
-      case Some(json) =>
-        (UserAgent((json \ "agent").as[String]),
-         KifiVersion((json \ "version").as[String]),
-         (json \ "installation").asOpt[String].map(id => ExternalId[KifiInstallation](id)))
-      case _ =>  // TODO: remove this form encoding branch after everyone at v2.1.6 or later.
-        val params = request.body.asFormUrlEncoded.get
-        (UserAgent(params.get("agent").get.head),
-         KifiVersion(params.get("version").get.head),
-         params.get("installation").flatMap(_.headOption).filterNot(s => s.isEmpty || s == "undefined").map(id => ExternalId[KifiInstallation](id)))
-    }
-    val (user, installation) = CX.withConnection { implicit c =>
+    val (userAgent, version, installationIdOpt) = request.body.asJson.map { json =>
+      (UserAgent((json \ "agent").as[String]),
+       KifiVersion((json \ "version").as[String]),
+       (json \ "installation").asOpt[String].flatMap { id =>
+         val kiId = ExternalId.asOpt[KifiInstallation](id)
+         kiId match {
+           case Some(_) =>
+           case None =>
+             // They sent an invalid id. Bug on client side?
+             inject[HealthcheckPlugin].addError(HealthcheckError(
+               method = Some(request.method.toUpperCase()),
+               path = Some(request.path),
+               callType = Healthcheck.API,
+               errorMessage = Some("Invalid ExternalId passed in \"%s\" for userId %s".format(id, request.userId))))
+         }
+         kiId
+       })}.get
+    val (user, installation, sliderRuleGroup) = inject[DBConnection].readWrite{implicit s =>
+      val repo = inject[KifiInstallationRepo]
       log.info("start. details: %s, %s, %s".format(userAgent, version, installationIdOpt))
       val installation: KifiInstallation = installationIdOpt flatMap { id =>
-        KifiInstallation.getOpt(request.userId, id)
+        repo.getOpt(request.userId, id)
       } match {
         case None =>
-          KifiInstallation(userId = request.userId, userAgent = userAgent, version = version).save
+          repo.save(KifiInstallation(userId = request.userId, userAgent = userAgent, version = version))
         case Some(install) =>
           if (install.version != version || install.userAgent != userAgent) {
-            install.withUserAgent(userAgent).withVersion(version).save
+            repo.save(install.withUserAgent(userAgent).withVersion(version))
           } else {
             install
           }
       }
 
-      (User.get(request.userId), installation)
+      (inject[UserRepo].get(request.userId), installation, inject[SliderRuleRepo].getGroup("default"))
     }
 
     Ok(JsObject(Seq(
@@ -97,7 +107,9 @@ object AuthController extends FortyTwoController {
       "facebookId" -> JsString(socialUser.id.id),
       "provider" -> JsString(socialUser.id.providerId),
       "userId" -> JsString(user.externalId.id),
-      "installationId" -> JsString(installation.externalId.id)))).withCookies(KifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
+      "installationId" -> JsString(installation.externalId.id),
+      "rules" -> sliderRuleGroup.compactJson)))
+    .withCookies(KifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)
@@ -106,14 +118,12 @@ object AuthController extends FortyTwoController {
     Redirect(com.keepit.controllers.routes.HomeController.home())
   }
 
-  def logOut = AuthenticatedHtmlAction { implicit request =>
-    Ok(views.html.logOut())
+  def logOut = UserAwareAction { implicit request =>
+    Ok(views.html.logOut(request.user)).withNewSession
   }
 
   def whois = AuthenticatedJsonAction { request =>
-    val user = CX.withConnection { implicit c =>
-      User.get(request.userId)
-    }
+    val user = inject[DBConnection].readOnly(implicit s => inject[UserRepo].get(request.userId))
     Ok(JsObject(Seq("externalUserId" -> JsString(user.externalId.toString))))
   }
 
@@ -122,8 +132,8 @@ object AuthController extends FortyTwoController {
   }
 
   def impersonate(id: Id[User]) = AdminJsonAction { request =>
-    val user = CX.withConnection { implicit c =>
-      User.get(id)
+    val user = inject[DBConnection].readOnly { implicit s =>
+      inject[UserRepo].get(id)
     }
     log.info("impersonating user %s".format(user)) //todo(eishay) add event & email
     Ok(JsObject(Seq("userId" -> JsString(id.toString)))).withCookies(ImpersonateCookie.encodeAsCookie(Some(user.externalId)))

@@ -34,6 +34,7 @@ var snapshot = {
   // id (if present), and any classes on the element and all ancestors between it and the body.
   // e.g. "body>section#content>div.wrap>div#content-main.full>article.article>div#wikiArticle.page-content.boxed>table.standard-table>tbody>tr:nth-child(1)>td:nth-child(2)"
   generateSelector: function(el) {
+    var matchesSelector = el.mozMatchesSelector ? "mozMatchesSelector" : "webkitMatchesSelector";
     for (var parts = []; el; el = el.parentNode) {
       var sel = el.localName.toLowerCase();
       if (sel === "body") break;
@@ -44,7 +45,7 @@ var snapshot = {
       sel += toArray(el.classList).map(function(c) {return "." + snapshot.escape(c)}).join("");
 
       var children = toArray(el.parentNode.children);
-      if (children.some(function(ch) {return ch !== el && ch.webkitMatchesSelector(sel)})) {
+      if (children.some(function(ch) {return ch !== el && ch[matchesSelector](sel)})) {
         sel += ":nth-child(" + (1 + children.indexOf(el)) + ")";
       }
 
@@ -62,7 +63,7 @@ var snapshot = {
   // using some aribitrarily chosen fuzzy match heuristics. It would be fun to measure how each heuristic
   // performs and to collect information about real failures to gain insight into how to improve this.
   fuzzyFind: function(sel, doc) {
-    doc = doc || document; //{querySelectorAll: function(s) { console.log("TRIED: " + s); return []}};
+    doc = doc || document; //{querySelectorAll: function(s) { api.log("TRIED: " + s); return []}};
     var els = doc.querySelectorAll(sel);
     switch (els.length) {
       case 0: break;

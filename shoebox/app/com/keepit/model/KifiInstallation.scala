@@ -1,15 +1,17 @@
 package com.keepit.model
 
-import com.keepit.common.db.{CX, Id, Entity, EntityTable, ExternalId, State}
-import com.keepit.common.db.NotFoundException
-import com.keepit.common.db.StateException
+import play.api.Play.current
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
 import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
-import ru.circumflex.orm._
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
@@ -80,82 +82,42 @@ case class KifiInstallation (
   externalId: ExternalId[KifiInstallation] = ExternalId(),
   version: KifiVersion,
   userAgent: UserAgent,
-  state: State[KifiInstallation] = KifiInstallation.States.ACTIVE
-) extends Logging {
-
-  def save(implicit conn: Connection): KifiInstallation = {
-    val entity = KifiInstallationEntity(this.copy(updatedAt = currentDateTime))
-    assert(1 == entity.save())
-    entity.view
-  }
-
+  state: State[KifiInstallation] = KifiInstallationStates.ACTIVE
+) extends ModelWithExternalId[KifiInstallation] {
+  def withId(id: Id[KifiInstallation]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withVersion(version: KifiVersion) = copy(version = version)
   def withUserAgent(userAgent: UserAgent) = copy(userAgent = userAgent)
 }
 
-object KifiInstallation {
+@ImplementedBy(classOf[KifiInstallationRepoImpl])
+trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnFunction[KifiInstallation] {
+  def all(userId: Id[User])(implicit session: RSession): Seq[KifiInstallation]
+  def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation]
+}
 
-  def all(implicit conn: Connection): Seq[KifiInstallation] =
-    KifiInstallationEntity.all.map(_.view)
+@Singleton
+class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[KifiInstallation] with KifiInstallationRepo with ExternalIdColumnDbFunction[KifiInstallation] {
+  import FortyTwoTypeMappers._
+  import org.scalaquery.ql._
+  import org.scalaquery.ql.ColumnOps._
+  import org.scalaquery.ql.basic.BasicProfile
+  import org.scalaquery.ql.extended.ExtendedTable
+  import db.Driver.Implicit._
+  import DBSession._
 
-  def all(userId: Id[User])(implicit conn: Connection): Seq[KifiInstallation] =
-    (KifiInstallationEntity AS "i").map { i => SELECT (i.*) FROM i WHERE (i.userId EQ userId) list }.map(_.view)
-
-  def getOpt(id: Id[KifiInstallation])(implicit conn: Connection): Option[KifiInstallation] =
-    KifiInstallationEntity.get(id).map(_.view)
-
-  def get(id: Id[KifiInstallation])(implicit conn: Connection): KifiInstallation =
-    getOpt(id).getOrElse(throw NotFoundException(id))
-
-  def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): Option[KifiInstallation] =
-    (KifiInstallationEntity AS "i").map { i => SELECT (i.*) FROM i WHERE (i.userId EQ userId).AND (i.externalId EQ externalId) unique }.map(_.view)
-
-  def get(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit conn: Connection): KifiInstallation =
-    getOpt(userId, externalId).getOrElse(throw NotFoundException(classOf[KifiInstallation], userId, externalId))
-
-  object States {
-    val ACTIVE = State[KifiInstallation]("active")
-    val INACTIVE = State[KifiInstallation]("inactive")
+  override lazy val table = new RepoTable[KifiInstallation](db, "kifi_installation") with ExternalIdColumn[KifiInstallation] {
+    def userId = column[Id[User]]("user_id", O.NotNull)
+    def version = column[KifiVersion]("version", O.NotNull)
+    def userAgent = column[UserAgent]("user_agent", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ externalId ~ version ~ userAgent ~ state <> (KifiInstallation, KifiInstallation.unapply _)
   }
 
+  def all(userId: Id[User])(implicit session: RSession): Seq[KifiInstallation] = 
+    (for(k <- table if k.userId === userId) yield k).list
+
+  def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation] = 
+    (for(k <- table if k.userId === userId && k.externalId === externalId) yield k).firstOption
 }
 
-private[model] class KifiInstallationEntity extends Entity[KifiInstallation, KifiInstallationEntity] {
-  val createdAt = "created_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val updatedAt = "updated_at".JODA_TIMESTAMP.NOT_NULL(currentDateTime)
-  val userId = "user_id".ID[User].NOT_NULL
-  val externalId = "external_id".EXTERNAL_ID[KifiInstallation].NOT_NULL
-  val version = "version".VARCHAR(16).NOT_NULL
-  val userAgent = "user_agent".VARCHAR(512).NOT_NULL //could be more, I think we can trunk it at that
-  val state = "state".STATE[KifiInstallation].NOT_NULL(KifiInstallation.States.ACTIVE)
-
-  def relation = KifiInstallationEntity
-
-  def view(implicit conn: Connection): KifiInstallation = KifiInstallation(
-    id = id.value,
-    createdAt = createdAt(),
-    updatedAt = updatedAt(),
-    userId = userId(),
-    externalId = externalId(),
-    version = KifiVersion(version()),
-    userAgent = UserAgent(userAgent()),
-    state = state()
-  )
-}
-
-private[model] object KifiInstallationEntity extends KifiInstallationEntity with EntityTable[KifiInstallation, KifiInstallationEntity] {
-  override def relationName = "kifi_installation"
-
-  def apply(view: KifiInstallation): KifiInstallationEntity = {
-    val uri = new KifiInstallationEntity
-    uri.id.set(view.id)
-    uri.createdAt := view.createdAt
-    uri.updatedAt := view.updatedAt
-    uri.userId := view.userId
-    uri.externalId := view.externalId
-    uri.version := view.version.toString
-    uri.userAgent := view.userAgent.userAgent
-    uri.state := view.state
-    uri
-  }
-}
+object KifiInstallationStates extends States[KifiInstallation]

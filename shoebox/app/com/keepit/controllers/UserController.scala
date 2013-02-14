@@ -1,64 +1,49 @@
 package com.keepit.controllers
 
-import play.api.data._
-import java.util.concurrent.TimeUnit
-import java.sql.Connection
-import play.api._
-import play.api.Play.current
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.libs.ws.WS
-import play.api.mvc._
-import play.api.libs.json.{Json, JsArray, JsBoolean, JsNumber, JsObject, JsString, JsValue}
 import com.keepit.inject._
-import com.keepit.common.time._
-import com.keepit.common.net._
-import com.keepit.common.db.Id
-import com.keepit.common.db.CX
-import com.keepit.common.db.ExternalId
-import com.keepit.common.logging.Logging
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
-import com.keepit.serializer.UserWithSocialSerializer
 import com.keepit.serializer.BasicUserSerializer
-import com.keepit.controllers.CommonActions._
-import play.api.http.ContentTypes
-import securesocial.core._
-import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social._
-import com.keepit.common.social.UserWithSocial.toUserWithSocial
 import com.keepit.common.controller.FortyTwoController
-import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.graph.URIGraph
-import views.html.defaultpages.unauthorized
-import org.joda.time.LocalDate
-import scala.collection.immutable.Map
-import play.api.libs.json.JsArray
+import com.keepit.search.Lang
+import com.keepit.search.MainSearcherFactory
+import com.keepit.common.mail._
 
-case class UserStatistics(user: User, userWithSocial: UserWithSocial, socialConnectionCount: Long, kifiInstallations: Seq[KifiInstallation])
+import akka.dispatch.Await
+import akka.util.duration._
+import play.api.Play.current
+import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
+
+case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstallations: Seq[KifiInstallation])
 
 object UserController extends FortyTwoController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
-    val (bookmark, following, socialUsers, numComments, numMessages) = CX.withConnection { implicit c =>
-      NormalizedURI.getByNormalizedUrl(url) match {
+    val (bookmark, following, socialUsers, numComments, numMessages) = inject[DBConnection].readOnly {implicit s =>
+      inject[NormalizedURIRepo].getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
-          val bookmark = Bookmark.load(uri, userId).filter(_.isActive)
-          val following = Follow.get(userId, uri.id.get).filter(_.isActive).isDefined
+          val bookmark = inject[BookmarkRepo].getByUriAndUser(uri.id.get, userId)
+          val following = inject[FollowRepo].get(userId, uri.id.get).isDefined
 
-          val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
+          val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
           val searcher = inject[URIGraph].getURIGraphSearcher
           val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
           val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
-          val socialUsers = sharingUserIds.map(u => UserWithSocial.toUserWithSocial(User.get(u))).toSeq
+          val socialUsers = sharingUserIds.map(u => inject[UserWithSocialRepo].toUserWithSocial(inject[UserRepo].get(u))).toSeq
 
-          val numComments = Comment.getPublicCount(uri.id.get)
-          val numMessages = Comment.getMessageCount(uri.id.get, userId)
+          val commentRepo = inject[CommentRepo]
+          val numComments = commentRepo.getPublicCount(uri.id.get)
+          val numMessages = commentRepo.getMessages(uri.id.get, userId).size
 
           (bookmark, following, socialUsers, numComments, numMessages)
         case None =>
-          (None, false, Nil, 0L, 0L)
+          (None, false, Nil, 0, 0)
       }
     }
 
@@ -73,17 +58,17 @@ object UserController extends FortyTwoController {
 
   // TODO: delete once no beta users have old plugin using this (replaced by getSliderInfo)
   def usersKeptUrl(url: String) = AuthenticatedJsonAction { request =>
-    val socialUsers = CX.withConnection { implicit c =>
-      NormalizedURI.getByNormalizedUrl(url) match {
+    val socialUsers = inject[DBConnection].readOnly {implicit s =>
+      inject[NormalizedURIRepo].getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
-          val friendIds = SocialConnection.getFortyTwoUserConnections(userId)
+          val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
 
           val searcher = inject[URIGraph].getURIGraphSearcher
           val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
           val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
 
-          sharingUserIds.map(u => UserWithSocial.toUserWithSocial(User.get(u))).toSeq
+          sharingUserIds.map(u => inject[UserWithSocialRepo].toUserWithSocial(inject[UserRepo].get(u))).toSeq
 
         case None =>
           Seq[UserWithSocial]()
@@ -94,8 +79,10 @@ object UserController extends FortyTwoController {
   }
 
   def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
-    val socialConnections = CX.withConnection { implicit c =>
-      SocialConnection.getFortyTwoUserConnections(authRequest.userId).map(uid => BasicUser(User.get(uid))).toSeq
+    val socialConnections = inject[DBConnection].readOnly {implicit s =>
+      val userRepo = inject[UserRepo]
+      val basicUserRepo = inject[BasicUserRepo]
+      inject[SocialConnectionRepo].getFortyTwoUserConnections(authRequest.userId).map(uid => basicUserRepo.load(userRepo.get(uid))).toSeq
     }
 
     Ok(JsObject(Seq(
@@ -104,52 +91,84 @@ object UserController extends FortyTwoController {
   }
 
   def getUser(id: Id[User]) = AdminJsonAction { request =>
-    val user = CX.withConnection { implicit c =>
-      UserWithSocial.toUserWithSocial(User.get(id))
+    val user = inject[DBConnection].readOnly { implicit s =>
+      val repo = inject[UserWithSocialRepo]
+      repo.toUserWithSocial(inject[UserRepo].get(id))
     }
     Ok(userWithSocialSerializer.writes(user))
   }
 
-  def userStatistics(user: User)(implicit conn: Connection): UserStatistics = {
-    val socialConnectionCount = SocialConnection.getUserConnectionsCount(user.id.get)
-    val kifiInstallations = KifiInstallation.all(user.id.get).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
-    UserStatistics(user, UserWithSocial.toUserWithSocial(user), socialConnectionCount, kifiInstallations)
+  def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
+    val kifiInstallations = inject[KifiInstallationRepo].all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
+    UserStatistics(user, inject[UserWithSocialRepo].toUserWithSocial(user), kifiInstallations)
   }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, socialUserInfos, follows, comments, messages) = CX.withConnection { implicit conn =>
-      val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
-      val socialUserInfos = SocialUserInfo.getByUser(userWithSocial.user.id.get)
-      val follows = Follow.all(userId) map {f => NormalizedURI.get(f.uriId)}
-      val comments = Comment.all(Comment.Permissions.PUBLIC, userId) map {c =>
-        (NormalizedURI.get(c.uriId), c)
+    val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = inject[DBConnection].readOnly { implicit s =>
+      val userWithSocialRepo = inject[UserWithSocialRepo]
+      val userRepo = inject[UserRepo]
+      val socialUserInfoRepo = inject[SocialUserInfoRepo]
+      val followRepo = inject[FollowRepo]
+      val normalizedURIRepo = inject[NormalizedURIRepo]
+      val commentRepo = inject[CommentRepo]
+      val mailRepo = inject[ElectronicMailRepo]
+      val userWithSocial = userWithSocialRepo.toUserWithSocial(userRepo.get(userId))
+      val socialUserInfos = socialUserInfoRepo.getByUser(userWithSocial.user.id.get)
+      val follows = followRepo.getByUser(userId) map {f => normalizedURIRepo.get(f.uriId)}
+      val comments = commentRepo.all(CommentPermissions.PUBLIC, userId) map {c =>
+        (normalizedURIRepo.get(c.uriId), c)
       }
-      val messages = Comment.all(Comment.Permissions.MESSAGE, userId) map {c =>
-        (NormalizedURI.get(c.uriId), c, CommentRecipient.getByComment(c.id.get) map { r => toUserWithSocial(User.get(r.userId.get)) })
+      val messages = commentRepo.all(CommentPermissions.MESSAGE, userId) map {c =>
+        (normalizedURIRepo.get(c.uriId), c, inject[CommentRecipientRepo].getByComment(c.id.get) map {
+          r => userWithSocialRepo.toUserWithSocial(userRepo.get(r.userId.get))
+        })
       }
-      (userWithSocial, socialUserInfos, follows, comments, messages)
+      val sentElectronicMails = mailRepo.forSender(userId);
+      val mailAddresses = userWithSocialRepo.toUserWithSocial(userRepo.get(userId)).emails.map(_.address)
+      val receivedElectronicMails = mailRepo.forRecipient(mailAddresses);
+      (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails)
     }
     val rawInfos = socialUserInfos map {info =>
       inject[SocialUserRawInfoStore].get(info.id.get)
     }
-    Ok(views.html.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages))
+    Ok(views.html.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails))
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = CX.withConnection { implicit conn =>
-      val userWithSocial = UserWithSocial.toUserWithSocial(User.get(userId))
-      val bookmarks = Bookmark.ofUser(userWithSocial.user)
-      val socialConnections = SocialConnection.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
-      val fortyTwoConnections = (SocialConnection.getFortyTwoUserConnections(userId) map (User.get(_)) map UserWithSocial.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
-      val kifiInstallations = KifiInstallation.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
-      (userWithSocial, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations)
+    val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = inject[DBConnection].readOnly {implicit s =>
+      val userWithSocial = inject[UserWithSocialRepo].toUserWithSocial(inject[UserRepo].get(userId))
+      val bookmarks = inject[BookmarkRepo].getByUser(userId)
+      val normalizedURIRepo = inject[NormalizedURIRepo]
+      val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
+      val socialConnections = inject[SocialConnectionRepo].getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
+      val fortyTwoConnections = (inject[SocialConnectionRepo].getFortyTwoUserConnections(userId) map (inject[UserRepo].get(_)) map inject[UserWithSocialRepo].toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
+      val kifiInstallations = inject[KifiInstallationRepo].all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
+      (userWithSocial, (bookmarks, uris).zipped.toList.seq, socialConnections, fortyTwoConnections, kifiInstallations)
     }
-    Ok(views.html.user(user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations))
+    // above needs slicking.
+    val historyUpdateCount = inject[DBConnection].readOnly { implicit session =>
+      inject[BrowsingHistoryRepo].getByUserId(userId).map(_.updatesCount).getOrElse(0)
+    }
+
+    val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
+
+    val bookmarkSearch = form.flatMap{ _.get("bookmarkSearch") }
+    val filteredBookmarks = bookmarkSearch.map{ query =>
+      if (query.trim.length == 0) bookmarks
+      else {
+        val searcherFactory = inject[MainSearcherFactory]
+        val searcher = searcherFactory.bookmarkSearcher(userId)
+        val uris = searcher.search(query, Lang("en"))
+        bookmarks.filter{ case (b, u) => uris.contains(u.id.get.id) }
+      }
+    }
+
+    Ok(views.html.user(user, bookmarks.size, filteredBookmarks.getOrElse(bookmarks), socialConnections, fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch))
   }
 
   def usersView = AdminHtmlAction { implicit request =>
-    val users = CX.withConnection { implicit c =>
-      User.all map userStatistics
+    val users = inject[DBConnection].readOnly { implicit s =>
+      inject[UserRepo].all map userStatistics
     }
     Ok(views.html.users(users))
   }
@@ -158,7 +177,6 @@ object UserController extends FortyTwoController {
     val form = request.request.body.asFormUrlEncoded match {
       case Some(req) => req.map(r => (r._1 -> r._2.head))
       case None => throw new Exception("whoops")
-
     }
 
     // We want to throw an exception (.get) if `emails' was not passed in. As we expand this, we should add Play! form validation
@@ -167,22 +185,23 @@ object UserController extends FortyTwoController {
       case _ => None
     }).flatten
 
-    CX.withConnection { implicit conn =>
-      val oldEmails = EmailAddress.getByUser(userId).toSet
+    inject[DBConnection].readWrite{ implicit session =>
+      val emailRepo = inject[EmailAddressRepo]
+      val oldEmails = emailRepo.getByUser(userId).toSet
       val newEmails = (emailList map { address =>
-        val email = EmailAddress.getByAddressOpt(address)
+        val email = emailRepo.getByAddressOpt(address)
         email match {
           case Some(addr) => addr // We're good! It already exists
           case None => // Create a new one
             log.info("Adding email address %s to userId %s".format(address, userId.toString))
-            EmailAddress(address,userId).save
+            emailRepo.save(EmailAddress(address = address, userId = userId))
         }
       }).toSet
 
       // Set state of removed email addresses to INACTIVE
       (oldEmails -- newEmails) map { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        removedEmail.withState(EmailAddress.States.INACTIVE).save
+        emailRepo.save(removedEmail.withState(EmailAddressStates.INACTIVE))
       }
     }
 
@@ -190,24 +209,25 @@ object UserController extends FortyTwoController {
   }
 
   def addExperiment(userId: Id[User], experimentType: String) = AdminJsonAction { request =>
-    val experimants = CX.withConnection { implicit c =>
-      val existing = UserExperiment.getByUser(userId)
-      val experiment = UserExperiment.ExperimentTypes(experimentType)
+    val repo = inject[UserExperimentRepo]
+    val experiments = inject[DBConnection].readWrite{ implicit session =>
+      val existing = repo.getByUser(userId)
+      val experiment = ExperimentTypes(experimentType)
       if (existing contains(experimentType)) throw new Exception("user %s already has an experiment %s".format(experimentType))
-      UserExperiment(userId = userId, experimentType = experiment).save
-      UserExperiment.getByUser(userId)
+      repo.save(UserExperiment(userId = userId, experimentType = experiment))
+      repo.getByUser(userId)
     }
-    Ok(JsArray(experimants map {e => JsString(e.experimentType.value) }))
+    Ok(JsArray(experiments map {e => JsString(e.experimentType.value) }))
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val socialUserInfos = CX.withConnection { implicit c =>
-      val user = User.get(userId)
-      SocialUserInfo.getByUser(user.id.get)
+    val socialUserInfos = inject[DBConnection].readOnly {implicit s =>
+      val user = inject[UserRepo].get(userId)
+      inject[SocialUserInfoRepo].getByUser(user.id.get)
     }
     val graph = inject[SocialGraphPlugin]
     socialUserInfos foreach { info =>
-      graph.asyncFetch(info)
+      Await.result(graph.asyncFetch(info), 5 minutes)
     }
     Redirect(com.keepit.controllers.routes.UserController.userView(userId))
   }

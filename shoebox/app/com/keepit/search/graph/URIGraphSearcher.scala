@@ -3,12 +3,17 @@ package com.keepit.search.graph
 import com.keepit.common.db.Id
 import com.keepit.model.{NormalizedURI, User}
 import com.keepit.search.graph.EdgeSetUtil._
+import com.keepit.search.index.ArrayIdMapper
+import com.keepit.search.index.CachingIndexReader
+import com.keepit.search.index.IdMapper
 import com.keepit.search.index.Searcher
-import com.keepit.search.line.LineQuery
-import com.keepit.search.line.LineQueryBuilder
+import com.keepit.search.line.LineIndexReader
+import com.keepit.search.query.QueryUtil
+import org.apache.lucene.index.IndexReader
+import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
-import scala.collection.immutable.LongMap
 
 class URIGraphSearcher(searcher: Searcher) {
 
@@ -46,7 +51,8 @@ class URIGraphSearcher(searcher: Searcher) {
 
   def intersect(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): UserToUserEdgeSet = {
     val iter = intersect(friends.getDestDocIdSetIterator(searcher), bookmarkUsers.getDestDocIdSetIterator(searcher))
-    val destIdSet = iter.map{ searcher.idMapper.getId(_) }.map{ new Id[User](_) }.toSet
+    val idMapper = searcher.indexReader.getIdMapper
+    val destIdSet = iter.map{ idMapper.getId(_) }.map{ new Id[User](_) }.toSet
     new UserToUserEdgeSet(friends.sourceId, destIdSet)
   }
 
@@ -75,7 +81,28 @@ class URIGraphSearcher(searcher: Searcher) {
     }
   }
 
-  def getURIList(user: Id[User]): Option[URIList] = {
+  def intersectAny(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): Boolean = {
+    intersectAny(friends.getDestDocIdSetIterator(searcher), bookmarkUsers.getDestDocIdSetIterator(searcher))
+  }
+
+  def intersectAny(i: DocIdSetIterator, j: DocIdSetIterator): Boolean = {
+    // Note: This implementation is only more efficient than intersect(i, j).nextDoc() != NO_MORE_DOCS when the
+    // intersection is empty. This code returns as soon as either iterator is exhausted instead of when both are.
+    var di = i.nextDoc()
+    var dj = j.nextDoc()
+    while (di != dj) {
+      if (di < dj) {
+        di = i.advance(dj)
+        if (di == NO_MORE_DOCS) return false
+      } else {
+        dj = j.advance(di)
+        if (dj == NO_MORE_DOCS) return false
+      }
+    }
+    di != NO_MORE_DOCS
+  }
+
+  private def getURIList(user: Id[User]): Option[URIList] = {
     val term = URIGraph.userTerm.createTerm(user.toString)
     var uriList: Option[URIList] = None
     val tp = searcher.indexReader.termPositions(term)
@@ -95,39 +122,23 @@ class URIGraphSearcher(searcher: Searcher) {
     uriList
   }
 
-  def search(user: Id[User], query: Query, percentMatch: Float): Map[Long, Float] = {
-    var result = LongMap.empty[Float]
-    getURIList(user).foreach{ uriList =>
-      val publicList = uriList.publicList
-      val privateList = uriList.privateList
-
-      val term = URIGraph.userTerm.createTerm(user.toString)
-      val td = searcher.indexReader.termDocs(term)
-      val docid = try {
-        if (td.next()) td.doc else LineQuery.NO_MORE_DOCS
-      } finally {
-        td.close()
-      }
-
-      val rewrittenQuery = query.rewrite(searcher.indexReader)
-      val queryBuilder = new LineQueryBuilder(searcher.getSimilarity, percentMatch)
-      val plan = queryBuilder.build(rewrittenQuery)(searcher.indexReader)
-
-      if (plan.fetchDoc(docid) == docid) {
-        var line = plan.fetchLine(0)
-        while (line < LineQuery.NO_MORE_LINES) {
-          if (line < publicList.length) {
-            val id = publicList(line)
-            result += (id -> plan.score)
-          } else if (line < publicList.length + privateList.length) {
-            val id = privateList(line - publicList.length)
-            result += (id -> plan.score)
-          }
-          line = plan.fetchLine(0)
-        }
-      }
+  private def getIndexReader(user: Id[User], uriList: URIList, terms: Set[Term]) = {
+    val term = URIGraph.userTerm.createTerm(user.toString)
+    val td = searcher.indexReader.termDocs(term)
+    val userDocId = try {
+      if (td.next()) td.doc else NO_MORE_DOCS
+    } finally {
+      td.close()
     }
-    result
+    val numDocs = uriList.publicListSize + uriList.privateListSize
+    LineIndexReader(searcher.indexReader, userDocId, terms, numDocs)
+  }
+
+  def openPersonalIndex(user: Id[User], query: Query): Option[(CachingIndexReader, IdMapper)] = {
+    getURIList(user).map{ uriList =>
+      val terms = QueryUtil.getTerms(query)
+      (getIndexReader(user, uriList, terms), new ArrayIdMapper(uriList.publicList ++ uriList.privateList))
+    }
   }
 }
 

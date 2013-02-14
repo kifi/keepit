@@ -1,30 +1,29 @@
 package com.keepit.common.social
 
+import java.io.File
+
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
+
+import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.net.FakeHttpClient
+import com.keepit.inject._
+import com.keepit.model.SocialUserInfo
+import com.keepit.model.SocialUserInfoRepo
+import com.keepit.model.User
+import com.keepit.test._
+
 import play.api.Play.current
 import play.api.libs.json.Json
-import play.api.test._
 import play.api.test.Helpers._
-import ru.circumflex.orm._
-import java.util.concurrent.TimeUnit
-import com.keepit.controllers._
-import com.keepit.common.db.Id
-import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
-import com.keepit.test.EmptyApplication
-import com.keepit.common.net.HttpClientImpl
-import com.keepit.model.User
-import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
-import com.keepit.common.net.FakeHttpClient
-import com.keepit.model.SocialUserInfo
-import play.api.Play
-import java.net.URL
-import java.io.File
+import securesocial.core.AuthenticationMethod
+import securesocial.core.OAuth2Info
+import securesocial.core.SocialUser
+import securesocial.core.UserId
 
 @RunWith(classOf[JUnitRunner])
-class FacebookSocialGraphTest extends SpecificationWithJUnit {
+class FacebookSocialGraphTest extends SpecificationWithJUnit with DbRepos {
 
   "FacebookSocialGraph" should {
 
@@ -44,22 +43,21 @@ class FacebookSocialGraphTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         //val httpClient = HttpClientImpl(timeout = 1, timeoutUnit = TimeUnit.MINUTES)
         val httpClient = new FakeHttpClient(
-            expectedUrl = Some("https://graph.facebook.com/eishay?access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&fields=link,name,first_name,middle_name,last_name,location,locale,gender,username,languages,third_party_id,installed,timezone,updated_time,verified,bio,birthday,devices,education,email,picture,significant_other,website,work,friends.fields(link,name,first_name,middle_name,last_name,location,locale,gender,username,languages,third_party_id,installed,timezone,updated_time,verified,bio,birthday,devices,education,email,picture,significant_other,website,work)"),
-            expectedResponse = Some(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay.json")).mkString)
+            Some(Map("https://graph.facebook.com/eishay?access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&fields=link,name,first_name,middle_name,last_name,location,locale,gender,username,languages,third_party_id,installed,timezone,updated_time,verified,bio,birthday,devices,education,email,picture,significant_other,website,work,friends.fields(link,name,first_name,middle_name,last_name,location,locale,gender,username,languages,third_party_id,installed,timezone,updated_time,verified,bio,birthday,devices,education,email,picture,significant_other,website,work)" ->
+            io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay.json")).mkString))
         )
         val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
           tokenType = None, expiresIn = None, refreshToken = None)
         val socialUser = SocialUser(UserId("100004067535411", "facebook"), "Boaz Tal", Some("boaz.tal@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
 
-        val user = CX.withConnection { implicit c =>
-          User(firstName = "Eishay", lastName = "Smith").save
+        val user = inject[DBConnection].readWrite { implicit s => 
+          userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
         }
         val unsaved = SocialUserInfo(userId = user.id, fullName = "Eishay Smith", socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
-        val socialUserInfo = CX.withConnection { implicit c =>
-          unsaved.save
+        val socialUserInfo = inject[DBConnection].readWrite { implicit s =>
+          inject[SocialUserInfoRepo].save(unsaved)
         }
-
         unsaved.userId === user.id
         socialUserInfo.userId === user.id
         socialUserInfo.fullName === "Eishay Smith"
@@ -78,9 +76,8 @@ class FacebookSocialGraphTest extends SpecificationWithJUnit {
     "fetch from facebook using jennifer_hirsch" in {
       running(new EmptyApplication()) {
         //val httpClient = HttpClientImpl(timeout = 1, timeoutUnit = TimeUnit.MINUTES)
-        val httpClient = new FakeHttpClient(
-            expectedResponse = Some(io.Source.fromFile(new File("test/com/keepit/common/social/jennifer_hirsch.min.json")).mkString)
-        )
+        val data = io.Source.fromFile(new File("test/com/keepit/common/social/jennifer_hirsch.min.json")).mkString
+        val httpClient = new FakeHttpClient(Some({ case _ => data}))
         val info = SocialUserInfo(userId = None, fullName = "", socialId = SocialId(""), networkType = SocialNetworks.FACEBOOK, credentials = None)
 
         val graph = new FacebookSocialGraph(httpClient) {

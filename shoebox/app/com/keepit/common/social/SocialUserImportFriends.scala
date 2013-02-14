@@ -4,8 +4,7 @@ import scala.collection.mutable.MutableList
 import com.keepit.search.ArticleStore
 import com.keepit.common.logging.Logging
 import com.keepit.search.Article
-import com.keepit.model.SocialUserInfo
-import com.keepit.model.NormalizedURI
+import com.keepit.model._
 import play.api.Plugin
 import play.api.templates.Html
 import akka.util.Timeout
@@ -21,10 +20,9 @@ import akka.dispatch.Future
 import com.google.inject.Inject
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.model.User
 import com.keepit.inject._
-import com.keepit.common.db.CX
-import com.keepit.common.db.CX._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
 import play.api.Play.current
 import play.api.libs.json.JsArray
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
@@ -38,8 +36,9 @@ class SocialUserImportFriends() extends Logging {
   def importFriends(parentJsons: Seq[JsValue]): Seq[SocialUserRawInfo] = parentJsons map importFriendsFromJson flatten
 
   private def importFriendsFromJson(parentJson: JsValue): Seq[SocialUserRawInfo] = {
-    val socialUserInfos = CX.withConnection { implicit conn =>
-      extractFriends(parentJson) filter infoNotInDb map createSocialUserInfo map {t => (t._1.save, t._2)}
+    val repo = inject[SocialUserInfoRepo]
+    val socialUserInfos = extractFriends(parentJson) filter infoNotInDb map createSocialUserInfo map { t => 
+      (inject[DBConnection].readWrite {implicit s => repo.save(t._1)}, t._2)
     }
 
     val socialUserRawInfos = socialUserInfos map { case (info, friend) => createSocialUserRawInfo(info, friend) }
@@ -55,7 +54,7 @@ class SocialUserImportFriends() extends Logging {
     socialUserRawInfos
   }
 
-  private[social] def infoNotInDb(friend: JsValue)(implicit conn: Connection): Boolean = {
+  private[social] def infoNotInDb(friend: JsValue): Boolean = {
     val socialId = try {
       SocialId((friend \ "id").as[String])
     } catch {
@@ -63,13 +62,15 @@ class SocialUserImportFriends() extends Logging {
         log.error("Can't parse username from friend json %s".format(friend))
         throw e
     }
-    SocialUserInfo.getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here
+    inject[DBConnection].readOnly {implicit s =>
+      inject[SocialUserInfoRepo].getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here
+    }
   }
 
   private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
 
   private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) = (SocialUserInfo(fullName = (friend \ "name").as[String], socialId = SocialId((friend \ "id").as[String]),
-                                                networkType = SocialNetworks.FACEBOOK, state = SocialUserInfo.States.FETCHED_USING_FRIEND), friend)
+                                                networkType = SocialNetworks.FACEBOOK, state = SocialUserInfoStates.FETCHED_USING_FRIEND), friend)
 
   private def createSocialUserRawInfo(socialUserInfo: SocialUserInfo, friend: JsValue) = SocialUserRawInfo(socialUserInfo = socialUserInfo, json = friend)
 

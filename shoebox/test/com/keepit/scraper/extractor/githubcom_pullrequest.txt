@@ -1,0 +1,1527 @@
+
+  
+
+
+<!DOCTYPE html>
+<html>
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# githubog: http://ogp.me/ns/fb/githubog#">
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Bugfix for controlsAboveOverlay (issue #380) by Kienz · Pull Request #381 · kangax/fabric.js</title>
+    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="GitHub" />
+    <link rel="fluid-icon" href="https://github.com/fluidicon.png" title="GitHub" />
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="apple-touch-icon-114.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="apple-touch-icon-114.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="apple-touch-icon-144.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="apple-touch-icon-144.png" />
+    <meta name="msapplication-TileImage" content="/windows-tile.png">
+    <meta name="msapplication-TileColor" content="#ffffff">
+
+    
+    
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+    <meta content="authenticity_token" name="csrf-param" />
+<meta content="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" name="csrf-token" />
+
+    <link href="https://a248.e.akamai.net/assets.github.com/assets/github-7ef703df15129d3b898830277d50fc760ca91cbc.css" media="screen" rel="stylesheet" type="text/css" />
+    <link href="https://a248.e.akamai.net/assets.github.com/assets/github2-204e28c07493b8ba6089c49791ed7ab61ecb6581.css" media="screen" rel="stylesheet" type="text/css" />
+    
+
+
+      <script src="https://a248.e.akamai.net/assets.github.com/assets/frameworks-cc4895cbb610429d2ce48e7c2392822c33db2dfe.js" type="text/javascript"></script>
+      <script src="https://a248.e.akamai.net/assets.github.com/assets/github-e539dcf1e3c93f4acda64d064d3f30a39afabae0.js" type="text/javascript"></script>
+      
+
+        <link rel='alternate' type='text/x-diff' href='/kangax/fabric.js/pull/381.diff' />
+  <link rel='alternate' type='text/x-patch' href='/kangax/fabric.js/pull/381.patch' />
+    <meta property="og:title" content="fabric.js"/>
+    <meta property="og:type" content="githubog:gitrepository"/>
+    <meta property="og:url" content="https://github.com/kangax/fabric.js"/>
+    <meta property="og:image" content="https://secure.gravatar.com/avatar/f1fcf834ddad415f60d29c87cc10d4d4?s=420&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png"/>
+    <meta property="og:site_name" content="GitHub"/>
+    <meta property="og:description" content="Only if pointer is over targetCorner lastRenderedObjectWithControlsAboveOverlay is used as targetObject.
+
+See issue #380."/>
+
+    <meta name="description" content="Only if pointer is over targetCorner lastRenderedObjectWithControlsAboveOverlay is used as targetObject.
+
+See issue #380." />
+
+  <link href="https://github.com/kangax/fabric.js/commits/master.atom" rel="alternate" title="Recent Commits to fabric.js:master" type="application/atom+xml" />
+
+  </head>
+
+
+  <body class="logged_in page-pullrequest macintosh vis-public env-production ">
+    <div id="wrapper">
+
+      
+
+      
+
+      
+
+
+        <div class="header header-logged-in true">
+          <div class="container clearfix">
+
+            <a class="header-logo-blacktocat" href="https://github.com/">
+  <span class="mega-icon mega-icon-blacktocat"></span>
+</a>
+
+            <div class="divider-vertical"></div>
+
+            
+  <a href="/notifications" class="notification-indicator tooltipped downwards" title="You have unread notifications">
+    <span class="mail-status unread"></span>
+  </a>
+  <div class="divider-vertical"></div>
+
+
+              
+  <div class="topsearch command-bar-activated">
+    <form accept-charset="UTF-8" action="/search" class="command_bar_form" id="top_search_form" method="get">
+  <a href="/search/advanced" class="advanced-search tooltipped downwards command-bar-search" id="advanced_search" title="Advanced search"><span class="mini-icon mini-icon-advanced-search "></span></a>
+
+  <input type="text" name="q" id="command-bar" placeholder="Search or type a command" tabindex="1" data-username="andrewconner" autocapitalize="off">
+
+  <span class="mini-icon help tooltipped downwards" title="Show command bar help">
+    <span class="mini-icon mini-icon-help"></span>
+  </span>
+
+  <input type="hidden" name="ref" value="commandbar">
+
+  <div class="divider-vertical"></div>
+</form>
+
+    <ul class="top-nav">
+        <li class="explore"><a href="https://github.com/explore">Explore</a></li>
+        <li><a href="https://gist.github.com">Gist</a></li>
+        <li><a href="/blog">Blog</a></li>
+      <li><a href="http://help.github.com">Help</a></li>
+    </ul>
+  </div>
+
+
+            
+
+  
+    <ul id="user-links">
+      <li>
+        <a href="https://github.com/andrewconner" class="name">
+          <img height="20" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="20" /> andrewconner
+        </a>
+      </li>
+      <li>
+        <a href="/new" id="new_repo" class="tooltipped downwards" title="Create a new repo">
+          <span class="mini-icon mini-icon-create"></span>
+        </a>
+      </li>
+      <li>
+        <a href="/settings/profile" id="account_settings"
+          class="tooltipped downwards"
+          title="Account settings ">
+          <span class="mini-icon mini-icon-account-settings"></span>
+        </a>
+      </li>
+      <li>
+          <a href="/logout" data-method="post" id="logout" class="tooltipped downwards" title="Sign out">
+            <span class="mini-icon mini-icon-logout"></span>
+          </a>
+      </li>
+    </ul>
+
+
+
+            
+          </div>
+        </div>
+
+
+      
+
+      
+
+
+            <div class="site hfeed" itemscope itemtype="http://schema.org/WebPage">
+      <div class="hentry">
+        
+        <div class="pagehead repohead instapaper_ignore readability-menu">
+          <div class="container">
+            <div class="title-actions-bar">
+              
+
+
+                  <ul class="pagehead-actions">
+
+          <li class="subscription">
+              <form accept-charset="UTF-8" action="/notifications/subscribe" data-autosubmit="true" data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="authenticity_token" type="hidden" value="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" /></div>  <input id="repository_id" name="repository_id" type="hidden" value="712530" />
+  <div class="context-menu-container js-menu-container js-context-menu">
+    <span class="minibutton switcher bigger js-menu-target">
+      <span class="js-context-button">
+          <span class="mini-icon mini-icon-watching"></span>Watch
+      </span>
+    </span>
+
+    <div class="context-pane js-menu-content">
+      <a href="#" class="close js-menu-close"><span class="mini-icon mini-icon-remove-close"></span></a>
+      <div class="context-title">Notification status</div>
+
+      <div class="context-body pane-selector">
+        <ul class="js-navigation-container">
+          <li class="selector-item js-navigation-item js-navigation-target selected">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input checked="checked" id="do_included" name="do" type="radio" value="included" />
+              <h4>Not watching</h4>
+              <p>You will only receive notifications when you participate or are mentioned.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-watching"></span>
+              Watch
+            </span>
+          </li>
+          <li class="selector-item js-navigation-item js-navigation-target ">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input id="do_subscribed" name="do" type="radio" value="subscribed" />
+              <h4>Watching</h4>
+              <p>You will receive all notifications for this repository.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-unwatch"></span>
+              Unwatch
+            </span>
+          </li>
+          <li class="selector-item js-navigation-item js-navigation-target ">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input id="do_ignore" name="do" type="radio" value="ignore" />
+              <h4>Ignored</h4>
+              <p>You will not receive notifications for this repository.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-mute"></span>
+              Stop ignoring
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</form>
+          </li>
+
+          <li class="js-toggler-container js-social-container starring-container on">
+            <a href="/kangax/fabric.js/unstar" class="minibutton js-toggler-target starred" data-remote="true" data-method="post" rel="nofollow">
+              <span class="mini-icon mini-icon-star"></span>Unstar
+            </a><a href="/kangax/fabric.js/star" class="minibutton js-toggler-target unstarred" data-remote="true" data-method="post" rel="nofollow">
+              <span class="mini-icon mini-icon-star"></span>Star
+            </a><a class="social-count js-social-count" href="/kangax/fabric.js/stargazers">1,534</a>
+          </li>
+
+              <li>
+                <a href="/kangax/fabric.js/fork_select" class="minibutton js-toggler-target lighter" rel="facebox nofollow"><span class="mini-icon mini-icon-fork"></span>Fork</a><a href="/kangax/fabric.js/network" class="social-count">190</a>
+              </li>
+
+
+    </ul>
+
+              <h1 itemscope itemtype="http://data-vocabulary.org/Breadcrumb" class="entry-title public">
+                <span class="repo-label"><span>public</span></span>
+                <span class="mega-icon mega-icon-public-repo"></span>
+                <span class="author vcard">
+                  <a href="/kangax" class="url fn" itemprop="url" rel="author">
+                  <span itemprop="title">kangax</span>
+                  </a></span> /
+                <strong><a href="/kangax/fabric.js" class="js-current-repository">fabric.js</a></strong>
+              </h1>
+            </div>
+
+            
+
+  <ul class="tabs">
+    <li><a href="/kangax/fabric.js" highlight="repo_sourcerepo_downloadsrepo_commitsrepo_tagsrepo_branches">Code</a></li>
+    <li><a href="/kangax/fabric.js/network" highlight="repo_network">Network</a></li>
+    <li><a href="/kangax/fabric.js/pulls" class="selected" highlight="repo_pulls">Pull Requests <span class='counter'>3</span></a></li>
+
+      <li><a href="/kangax/fabric.js/issues" highlight="repo_issues">Issues <span class='counter'>31</span></a></li>
+
+      <li><a href="/kangax/fabric.js/wiki" highlight="repo_wiki">Wiki</a></li>
+
+
+    <li><a href="/kangax/fabric.js/graphs" highlight="repo_graphsrepo_contributors">Graphs</a></li>
+
+
+  </ul>
+  
+  
+  
+  
+
+
+            
+          </div>
+        </div><!-- /.repohead -->
+
+        <div id="js-repo-pjax-container" class="container context-loader-container" data-pjax-container>
+          
+
+
+<!-- base sha1: &quot;1f206d039eab833baef0703e748a8177903f6413&quot; -->
+<!-- head sha1: &quot;2715ef306cc9605fa6881e3608fd97b5e92f0eb7&quot; -->
+
+<div class='view-pull-request clearfix'>
+
+  <div class="pull-head" id="pull-head">
+    
+<div class="pull-description">
+  <span class="pull-state">
+      <span class="state-indicator open">Open</span>
+  </span>
+
+  <p>  <a href='/Kienz' class='pull-header-username  css-truncate css-truncate-target expandable'>Kienz</a>
+   wants to merge 1 commit into
+
+<span class="commit-ref js-selectable-text css-truncate expandable">
+  <span class="css-truncate-target user"><span class="css-truncate-target">kangax</span></span>:<span class="css-truncate-target">master</span>
+</span>
+  from
+<span class="commit-ref js-selectable-text css-truncate expandable">
+  <span class="css-truncate-target user"><span class="css-truncate-target">Kienz</span></span>:<span class="css-truncate-target">patch-1</span>
+</span>
+
+
+</p>
+
+
+
+    <div class="pull-head-meta">
+      <span class="diffstat tooltipped downwards" title="3 additions &amp; 2 deletions">
+        5
+        <span class="diffstat-bar"><i class='plus'>&#xf053;&#xf053;&#xf053;</i><i class='minus'>&#xf053;&#xf053;</i></span>
+      </span>
+      <span class="pull-number">
+          <a href="/kangax/fabric.js/issues/381">#381</a>
+      </span>
+    </div>
+
+</div>
+
+  </div>
+
+  <div class="tabnav">
+    <ul class="tabnav-tabs js-hard-tabs">
+      <li>
+        <a href="/kangax/fabric.js/pull/381" data-container-id="discussion_bucket" class="tabnav-tab selected">
+          <span class="mini-icon mini-icon-discussion"></span>
+          Discussion
+        </a>
+      </li>
+      <li>
+        <a href="/kangax/fabric.js/pull/381/commits" data-container-id="commits_bucket" class="tabnav-tab ">
+          <span class="mini-icon mini-icon-commit"></span>
+          Commits 
+
+          <span class='counter'>
+            1
+          </span>
+        </a>
+      </li>
+      <li>
+        <a href="/kangax/fabric.js/pull/381/files" data-container-id="files_bucket" class="tabnav-tab ">
+          <span class="mini-icon mini-icon-diff"></span>
+          Files Changed 
+
+          <span class='counter'>
+            1
+          </span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+    <div id="discussion_bucket" class="tab-content" >
+
+  <div class="discussion-sidebar">
+    <div class="discussion-stats">
+      
+<span class="state-indicator open">
+  Open
+</span>
+
+<ul class="changes">
+  <li>
+    <p>
+      <span class="addition">+</span>
+      <strong>
+        3 additions
+      </strong>
+    </p>
+  </li>
+
+  <li>
+    <p>
+      <span class="deletion">-</span>
+      <strong>
+        2 deletions
+      </strong>
+    </p>
+  </li>
+</ul>
+
+<time id="js-discussion-last-modified" datetime="Mon, 14 Jan 2013 16:09:50 GMT"></time>
+<span class="js-socket-channel js-comment-channel" data-channel="pull_request:3665646" data-url="/kangax/fabric.js/pull/381/poll"></span>
+
+
+    </div>
+  </div>
+
+  <div class="discussion-timeline">
+
+    <div class="js-discussion">
+      
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" height="48" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="48" />
+
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+      <div class="js-comment comment discussion-topic starting-comment" id="issue-9947059">
+        <div class="discussion-topic-header">
+          <span class="discussion-topic-author"><a href="/Kienz">Kienz</a> opened this pull request <time class="js-relative-date" datetime="2013-01-14T08:11:19-08:00" title="2013-01-14 08:11:19">January 14, 2013</time></span>
+          <h2 class="discussion-topic-title">Bugfix for controlsAboveOverlay (issue #380)</h2>
+        </div> <!-- /.topic-comment-header -->
+        <div class="discusion-topic-infobar">
+          <div class="milestone infobar-widget">
+  <span class="text js-milestone-infobar-item-wrapper">
+      No milestone
+
+  </span>
+
+</div>
+
+<form accept-charset="UTF-8" action="/kangax/fabric.js/issues/381" class="edit_issue" data-remote="true" id="edit_issue_9947059" method="post"><div style="margin:0;padding:0;display:inline"><input name="_method" type="hidden" value="put" /><input name="authenticity_token" type="hidden" value="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" /></div>
+  
+
+<div class="assignee js-context-menu infobar-widget">
+  <span class="text js-context-button">
+      No one is assigned
+  </span>
+
+</div>
+
+</form>
+        </div> <!-- /.discusion-topic-infobar -->
+
+        <div class="comment-content">
+
+          <div class="edit-comment-hide">
+            <div class="js-comment-body comment-body markdown-body markdown-format" data-body-version="241cd91f8e8cfd0ea8ae6bc8c2d8523d">
+                <p>Only if pointer is over targetCorner lastRenderedObjectWithControlsAboveOverlay is used as targetObject.</p>
+
+<p>See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-link" title="fabric.StaticCanvas#controlsAboveOverlay = true bug">#380</a>.</p>
+            </div>
+          </div>
+
+          
+
+        </div> <!-- /.comment-content -->
+      </div> <!-- /.comment -->
+    </div> <!-- /.discussion-bubble-content -->
+  </div> <!-- /.discussion-bubble-inner -->
+</div> <!-- /.discussion-bubble -->
+
+
+      <div class="pull-participation">
+  <p class="quickstat"><a href="#pr_contributors_box" rel="facebox"><strong>1</strong> participant</a></p>
+
+    <a class="avatar tooltipped downwards" title="Kienz" href="/Kienz"><img height="24" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="24" /></a>
+</div>
+
+<div id="pr_contributors_box" style="display:none">
+  <h2>People who have participated in this pull request</h2>
+  <ul class="facebox-user-list">
+    <li>
+      <img height="24" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="24" />
+      <a href="/Kienz">Kienz</a>
+    </li>
+  </ul>
+</div>
+
+
+      
+    <div class="discussion-bubble js-comment-container">
+    <img class="discussion-bubble-avatar" height="48" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="48" />
+    <div class="discussion-bubble-content bubble">
+      <div class="discussion-bubble-inner">
+        
+
+
+<div id="commits-pushed-2715ef3" class="js-comment comment">
+  <div class="comment-header">
+      <span class="comment-type-icon mini-icon mini-icon-commit"></span>
+    <strong class="comment-header-author">
+      <a href="/Kienz" rel="author" truncate="true">Kienz</a>
+    </strong>
+
+    <span class='comment-header-action-text'>
+      <a href="#commits-pushed-2715ef3">
+        added
+          a commit
+      </a>
+    </span>
+
+    <span class="comment-header-right">
+      <a href="#commits-pushed-2715ef3" class="comment-header-date"><time class="js-relative-date" datetime="2013-01-14T08:09:50-08:00" title="2013-01-14 08:09:50">January 14, 2013</time></a>
+    </span>
+  </div> <!-- /.comment-header -->
+
+  <div class="comment-content">
+    <table class='commits commits-condensed' cellspacing='0' width="100%">
+      
+<tr class="commit js-details-container" id="commit-2715ef306cc9605fa6881e3608fd97b5e92f0eb7">
+  <td class="gravatar">
+    <span class="gravatar"><a href="/Kienz"><img height="16" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="16" /></a></span>
+  </td>
+  <td class="author">
+    <span class="commit-author" title="Kienz"><a href="/Kienz">Kienz</a></span>
+  </td>
+  <td class="message">
+      <code>
+          <a href="/Kienz/fabric.js/commit/2715ef306cc9605fa6881e3608fd97b5e92f0eb7" class="message">Bugfix for controlsAboveOverlay (issue</a> <a class="issue-link" href="https://github.com/kangax/fabric.js/issues/380" title="fabric.StaticCanvas#controlsAboveOverlay = true bug">#380</a><a href="/Kienz/fabric.js/commit/2715ef306cc9605fa6881e3608fd97b5e92f0eb7" class="message">)</a>
+      </code>
+        <span class="hidden-text-expander inline"><a href="#" class="js-details-target">…</a></span>
+        <div class="commit-desc"><pre>Only if pointer is over targetCorner lastRenderedObjectWithControlsAboveOverlay is used as targetObject.
+
+See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-link" title="fabric.StaticCanvas#controlsAboveOverlay = true bug">#380</a>.</pre></div>
+  </td>
+  <td class="commit-meta">
+        <span class="js-status"></span>
+
+
+      
+    <code>
+        <a href="/Kienz/fabric.js/commit/2715ef306cc9605fa6881e3608fd97b5e92f0eb7">2715ef3</a>
+    </code>
+  </td>
+</tr>
+
+    </table>
+  </div> <!-- /.comment-content -->
+
+
+
+</div> <!-- /.comment -->
+
+      </div>
+    </div>
+  </div><!-- /.discussion-bubble -->
+
+
+
+
+    </div>
+
+
+      <div id="js-pull-merging">
+        
+  <div class="merge-pr">
+
+  </div>
+
+
+      </div>
+
+      
+
+<div class="discussion-bubble js-comment-container">
+  <img class="discussion-bubble-avatar" height="48" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="48" />
+
+  <form accept-charset="UTF-8" action="/kangax/fabric.js/pull/381/comment" class="js-new-comment-form js-discussion-update" data-remote="true" data-type="json" method="post"><div style="margin:0;padding:0;display:inline"><input name="authenticity_token" type="hidden" value="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" /></div>
+  <div class="discussion-bubble-content bubble">
+    <div class="discussion-bubble-inner">
+      <input type="hidden" name="issue" value="381" />
+      
+
+<div class="js-previewable-comment-form previewable-comment-form write-selected" data-preview-url="/preview?repository=712530">
+  <div class="comment-form-head tabnav">
+    <ul class="js-preview-tabs tabnav-tabs">
+      <li><a href="#write_bucket_606" class="tabnav-tab write-tab selected" action="write">Write</a></li>
+      <li><a href="#preview_bucket_606" class="tabnav-tab preview-tab" action="preview">Preview</a></li>
+    </ul>
+    <span class="tabnav-right">
+      <span class="tabnav-widget text">Comments are parsed with <a href="http://github.github.com/github-flavored-markdown/" class="gfm-help" target="_blank">GitHub Flavored Markdown</a></span>
+    </span>
+  </div>
+  <div class="comment-form-error" style="display:none;"></div>
+
+  <div id="write_bucket_606" class="write-content js-write-bucket js-uploadable-container upload-enabled is-default" data-model="asset">
+    
+    <textarea name="comment[body]"
+              tabindex="1"
+              id="comment_body_606"
+              placeholder="Leave a comment"
+              class="js-comment-field js-size-to-fit "
+              data-suggester="606_new_preview_suggester"
+              ></textarea>
+
+    
+  <p class="drag-and-drop">
+    <span class="default">
+      Attach images by dragging &amp; dropping them or
+      <input type="file" multiple="multiple" class="manual-file-chooser js-manual-file-chooser">
+      <a class="manual-file-chooser-text" href="#">choose an image</a>
+    </span>
+    <span class="loading">
+      <img alt="Octocat-spinner-32" height="16" src="https://a248.e.akamai.net/assets.github.com/images/spinners/octocat-spinner-32.gif?1338956357" width="16" /> Uploading your images now…
+    </span>
+    <span class="error bad-file">
+      Unfortunately we don't support that file type yet. Try image files less than 5MB.
+    </span>
+    <span class="error failed-request">
+      Something went really wrong and we can't process that image.
+    </span>
+  </p>
+
+  </div>
+  <div id="preview_bucket_606" class="preview-content js-preview-bucket">
+    
+<div id="openstruct-226613940" class="js-comment comment">
+  <div class="comment-header normal-comment-header">
+      <img class="comment-header-gravatar" height="22" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="22" />
+    <a href="/andrewconner" class="comment-header-author">andrewconner</a>
+    <span class='comment-header-action-text'>
+      <a href="#openstruct-226613940">
+      commented
+      </a>
+    </span>
+
+    <span class="comment-header-right">
+      <a href="#openstruct-226613940" class="comment-header-date"><time class="js-relative-date" datetime="2013-01-14T10:59:17-08:00" title="2013-01-14 10:59:17">January 14, 2013</time></a>
+    </span>
+  </div> <!-- /.comment-header -->
+
+
+  <div class="comment-content">
+    <div class="edit-comment-hide">
+      <div class="js-comment-body comment-body markdown-body " data-body-version="">
+          <p>Nothing to preview</p>
+      </div>
+    </div>
+  </div> <!-- /.comment-content -->
+</div> <!-- /.comment -->
+
+  </div>
+
+  <div class="suggester-container">
+    <div class="suggester js-navigation-container" id="606_new_preview_suggester" 
+         data-url="/kangax/fabric.js/suggestions/pullrequest/3665646">
+    </div>
+  </div>
+</div>
+
+    </div>
+  </div>
+  <div class="form-actions">
+    
+
+  <div class="tip">
+    <img alt="Commit_comment_tip" height="35" src="https://a248.e.akamai.net/assets.github.com/images/modules/commit/commit_comment_tip.gif?1347524281" width="95" />
+    <p>
+      <strong>Tip:</strong>
+      You can also add notes to lines changed in
+      a file under
+      <a href="/kangax/fabric.js/pull/381/files"><strong>Diff</strong></a>
+    </p>
+  </div>
+
+
+<button type="submit" class="button primary" tabindex="2" data-disable-with>
+  Comment
+</button>
+
+  </div>
+  </form> <!-- /.discussion-bubble-content -->
+</div><!-- /.discussion-bubble -->
+
+
+
+    
+
+<div class="thread-subscription-status clearfix">
+  <span class="mega-icon mega-icon-notifications"></span>
+
+  <form accept-charset="UTF-8" action="/notifications/thread" data-autosubmit="true" data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="authenticity_token" type="hidden" value="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" /></div>  <input id="repository_id" name="repository_id" type="hidden" value="712530" />
+  <input id="thread_id" name="thread_id" type="hidden" value="9947059" />
+  <input id="thread_class" name="thread_class" type="hidden" value="i" />
+
+  <div class="context-menu-container js-menu-container js-context-menu">
+
+    <span class="minibutton switcher js-menu-target">
+      <span class="js-context-button">
+          <span class="mini-icon mini-icon-mail-status read"></span>
+          Not watching thread
+      </span>
+    </span>
+
+    <div class="context-pane js-menu-content">
+      <a href="#" class="close js-menu-close"><span class="mini-icon mini-icon-remove-close"></span></a>
+      <div class="context-title">Thread notifications</div>
+
+      <div class="context-body pane-selector">
+        <ul class="js-navigation-container">
+
+          <li class="selector-item js-navigation-item js-navigation-target">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input checked="checked" id="id_subscribe" name="id" type="radio" value="subscribe" />
+              <h4>Watch</h4>
+              <p>Receive notifications for this thread.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-mail-status unread"></span>
+              Watching thread
+            </span>
+          </li>
+
+            <li class="selector-item js-navigation-item js-navigation-target">
+              <span class="mini-icon mini-icon-confirm"></span>
+              <label>
+                <input checked="checked" id="id_unsubscribe" name="id" type="radio" value="unsubscribe" />
+                <h4>Unwatch</h4>
+                <p>Stop receiving notifications unless you are @mentioned or you participate.</p>
+              </label>
+              <span class="context-button-text js-context-button-text">
+                <span class="mini-icon mini-icon-mail-status read"></span>
+                Unwatch thread
+              </span>
+            </li>
+
+          <li class="selector-item js-navigation-item js-navigation-target">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input checked="checked" id="id_mute" name="id" type="radio" value="mute" />
+              <h4>Mute</h4>
+              <p>Ignore all notifications from this thread.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-mute ignored"></span>
+              Thread muted
+            </span>
+          </li>
+
+        </ul>
+      </div>
+
+    </div><!-- /.context-pane -->
+  </div><!-- /.context-menu-container -->
+</form>
+</div>
+
+
+  </div><!-- /.discussion-timeline -->
+
+</div><!-- /#discussion_bucket -->
+
+
+
+
+    
+      <div id="commits_bucket" class="tab-content" style='display:none'>
+
+
+    <p class="explain"><span class="mini-icon mini-icon-commit"></span>Showing <strong>1 unique commit</strong> by <strong>1 author</strong>.</p>
+
+
+    <div class="boxed-group condensed">
+      <h3><span class="mini-icon mini-icon-calendar"></span>Jan 14, 2013</h3>
+      <div class="body boxed-group-inner">
+        <table class='commits commits-condensed' cellspacing='0' width="100%">
+          
+<tr class="commit js-details-container" id="commit-2715ef306cc9605fa6881e3608fd97b5e92f0eb7">
+  <td class="gravatar">
+    <span class="gravatar"><a href="/Kienz"><img height="16" src="https://secure.gravatar.com/avatar/88861bf8bf53faebb1f724d711602428?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="16" /></a></span>
+  </td>
+  <td class="author">
+    <span class="commit-author" title="Kienz"><a href="/Kienz">Kienz</a></span>
+  </td>
+  <td class="message">
+      <code>
+          <a href="/Kienz/fabric.js/commit/2715ef306cc9605fa6881e3608fd97b5e92f0eb7" class="message">Bugfix for controlsAboveOverlay (issue</a> <a class="issue-link" href="https://github.com/kangax/fabric.js/issues/380" title="fabric.StaticCanvas#controlsAboveOverlay = true bug">#380</a><a href="/Kienz/fabric.js/commit/2715ef306cc9605fa6881e3608fd97b5e92f0eb7" class="message">)</a>
+      </code>
+        <span class="hidden-text-expander inline"><a href="#" class="js-details-target">…</a></span>
+        <div class="commit-desc"><pre>Only if pointer is over targetCorner lastRenderedObjectWithControlsAboveOverlay is used as targetObject.
+
+See issue <a href="https://github.com/kangax/fabric.js/issues/380" class="issue-link" title="fabric.StaticCanvas#controlsAboveOverlay = true bug">#380</a>.</pre></div>
+  </td>
+  <td class="commit-meta">
+        <span class="js-status"></span>
+
+
+      
+    <code>
+        <a href="/Kienz/fabric.js/commit/2715ef306cc9605fa6881e3608fd97b5e92f0eb7">2715ef3</a>
+    </code>
+  </td>
+</tr>
+
+        </table>
+      </div>
+    </div>
+
+</div>
+
+
+
+
+
+    
+      
+<div id="files_bucket" class="tab-content" style='display:none'>
+
+
+    <div id='diff' class="uncommentable">
+      
+<div id='toc' class="details-collapse js-details-container ">
+  <p class="explain">
+    <span class="mini-icon mini-icon-diff"></span>Showing <strong>1 changed file</strong>
+    with <strong>3 additions</strong>
+    and <strong>2 deletions</strong>.
+  <a href="#" class="minibutton show-diff-stats js-details-target">Show Diff Stats</a>
+  <a href="#" class="minibutton hide-diff-stats js-details-target">Hide Diff Stats</a></p>
+
+  <ol class="content collapse js-transitionable">
+    <li>
+      <span class="diffstat">
+          <a href="#diff-0" class="tooltipped leftwards" title="3 additions &amp; 2 deletions">
+            5
+            <span class="diffstat-bar"> <i class='plus'>&#xf053;&#xf053;&#xf053;</i><i class='minus'>&#xf053;&#xf053;</i> </span>
+          </a>
+      </span>
+      <span class='mini-icon mini-icon-modified' title='modified'></span> <a href="#diff-0">src/canvas.class.js</a>
+    </li>
+  </ol>
+</div>
+
+      <div class="breakout">
+        
+<div id="files" class="diff-view commentable">
+    <div id="diff-0" class="file js-details-container">
+      <div class="meta" data-path="src/canvas.class.js">
+        <div class="info">
+            <span class="diffstat tooltipped rightwards" title="3 additions &amp; 2 deletions">5 <span class="diffstat-bar"><i class='plus'>&#xf053;&#xf053;&#xf053;</i><i class='minus'>&#xf053;&#xf053;</i></span></span>
+
+          <span class="js-selectable-text css-truncate css-truncate-target">src/canvas.class.js</span>
+          
+        </div>
+        <div class="actions">
+          <span class="show-inline-notes">
+            <label>
+              <input type="checkbox" checked="checked" class="js-show-inline-comments-toggle">
+              show inline notes
+            </label>
+          </span>
+          <ul class="button-group">
+              <li>
+                <a href="/Kienz/fabric.js/blob/2715ef306cc9605fa6881e3608fd97b5e92f0eb7/src/canvas.class.js" class="grouped-button minibutton bigger lighter" rel="nofollow">View file @ <code>2715ef3</code></a>
+              </li>
+          </ul>
+        </div>
+      </div>
+
+          <div class="data highlight ">
+            <table class="diff-table">
+                <tr id="src-canvas-class-js-P0" data-position='0'>
+                  <td id="L0L1215" class="line_numbers linkable-line-number">
+                    ...
+                  </td>
+                  <td id="L0R1215" class="line_numbers linkable-line-number">
+                    ...
+                  </td>
+                  <td class="gc diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=0&amp;line=1215"></b>
+                    <pre class="line">@@&nbsp;-1216,7&nbsp;+1216,8&nbsp;@@</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P1" data-position='1'>
+                  <td id="L0L1216" class="line_numbers linkable-line-number">
+                    1216
+                  </td>
+                  <td id="L0R1216" class="line_numbers linkable-line-number">
+                    1216
+                  </td>
+                  <td class=" diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=1&amp;line=1216"></b>
+                    <pre class="line">&nbsp;</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P2" data-position='2'>
+                  <td id="L0L1217" class="line_numbers linkable-line-number">
+                    1217
+                  </td>
+                  <td id="L0R1217" class="line_numbers linkable-line-number">
+                    1217
+                  </td>
+                  <td class=" diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=2&amp;line=1217"></b>
+                    <pre class="line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;(this.controlsAboveOverlay&nbsp;&amp;&amp;</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P3" data-position='3'>
+                  <td id="L0L1218" class="line_numbers linkable-line-number">
+                    1218
+                  </td>
+                  <td id="L0R1218" class="line_numbers linkable-line-number">
+                    1218
+                  </td>
+                  <td class=" diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=3&amp;line=1218"></b>
+                    <pre class="line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;this.lastRenderedObjectWithControlsAboveOverlay&nbsp;&amp;&amp;</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P4" data-position='4'>
+                  <td id="L0L1219" class="line_numbers linkable-line-number">
+                    1219
+                  </td>
+                  <td id="L0R1218" class="line_numbers linkable-line-number empty-cell">
+                    &nbsp;
+                  </td>
+                  <td class="gd diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=4&amp;line=1219"></b>
+                    <pre class="line">-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;this.containsPoint(e,&nbsp;this.lastRenderedObjectWithControlsAboveOverlay))&nbsp;{</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P5" data-position='5'>
+                  <td id="L0L1219" class="line_numbers linkable-line-number empty-cell">
+                    &nbsp;
+                  </td>
+                  <td id="L0R1219" class="line_numbers linkable-line-number">
+                    1219
+                  </td>
+                  <td class="gi diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=5&amp;line=1219"></b>
+                    <pre class="line">+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;this.containsPoint(e,&nbsp;this.lastRenderedObjectWithControlsAboveOverlay)&nbsp;&amp;&amp;</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P6" data-position='6'>
+                  <td id="L0L1219" class="line_numbers linkable-line-number empty-cell">
+                    &nbsp;
+                  </td>
+                  <td id="L0R1220" class="line_numbers linkable-line-number">
+                    1220
+                  </td>
+                  <td class="gi diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=6&amp;line=1220"></b>
+                    <pre class="line">+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;this.lastRenderedObjectWithControlsAboveOverlay._findTargetCorner(e,&nbsp;this._offset))&nbsp;{</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P7" data-position='7'>
+                  <td id="L0L1220" class="line_numbers linkable-line-number">
+                    1220
+                  </td>
+                  <td id="L0R1221" class="line_numbers linkable-line-number">
+                    1221
+                  </td>
+                  <td class=" diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=7&amp;line=1221"></b>
+                    <pre class="line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;target&nbsp;=&nbsp;this.lastRenderedObjectWithControlsAboveOverlay;</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P8" data-position='8'>
+                  <td id="L0L1221" class="line_numbers linkable-line-number">
+                    1221
+                  </td>
+                  <td id="L0R1222" class="line_numbers linkable-line-number">
+                    1222
+                  </td>
+                  <td class=" diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=8&amp;line=1222"></b>
+                    <pre class="line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return&nbsp;target;</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P9" data-position='9'>
+                  <td id="L0L1222" class="line_numbers linkable-line-number">
+                    1222
+                  </td>
+                  <td id="L0R1223" class="line_numbers linkable-line-number">
+                    1223
+                  </td>
+                  <td class=" diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=9&amp;line=1223"></b>
+                    <pre class="line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P10" data-position='10'>
+                  <td id="L0L1538" class="line_numbers linkable-line-number">
+                    ...
+                  </td>
+                  <td id="L0R1539" class="line_numbers linkable-line-number">
+                    ...
+                  </td>
+                  <td class="gc diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=10&amp;line=1539"></b>
+                    <pre class="line">@@&nbsp;-1539,4&nbsp;+1540,4&nbsp;@@</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P11" data-position='11'>
+                  <td id="L0L1539" class="line_numbers linkable-line-number">
+                    1539
+                  </td>
+                  <td id="L0R1540" class="line_numbers linkable-line-number">
+                    1540
+                  </td>
+                  <td class=" diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=11&amp;line=1540"></b>
+                    <pre class="line">&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@constructor</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P12" data-position='12'>
+                  <td id="L0L1540" class="line_numbers linkable-line-number">
+                    1540
+                  </td>
+                  <td id="L0R1541" class="line_numbers linkable-line-number">
+                    1541
+                  </td>
+                  <td class=" diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=12&amp;line=1541"></b>
+                    <pre class="line">&nbsp;&nbsp;&nbsp;&nbsp;*/</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P13" data-position='13'>
+                  <td id="L0L1541" class="line_numbers linkable-line-number">
+                    1541
+                  </td>
+                  <td id="L0R1542" class="line_numbers linkable-line-number">
+                    1542
+                  </td>
+                  <td class=" diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=13&amp;line=1542"></b>
+                    <pre class="line">&nbsp;&nbsp;&nbsp;fabric.Element&nbsp;=&nbsp;fabric.Canvas;</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P14" data-position='14'>
+                  <td id="L0L1542" class="line_numbers linkable-line-number">
+                    1542
+                  </td>
+                  <td id="L0R1542" class="line_numbers linkable-line-number empty-cell">
+                    &nbsp;
+                  </td>
+                  <td class="gd diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=14&amp;line=1542"></b>
+                    <pre class="line">-})();</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P15" data-position='15'>
+                  <td id="L0L1542" class="line_numbers linkable-line-number empty-cell">
+                    &nbsp;
+                  </td>
+                  <td id="L0R1542" class="line_numbers linkable-line-number empty-cell">
+                    &nbsp;
+                  </td>
+                  <td class=" diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=15&amp;line=1542"></b>
+                    <pre class="line">\&nbsp;No&nbsp;newline&nbsp;at&nbsp;end&nbsp;of&nbsp;file</pre>
+                  </td>
+                </tr>
+                <tr id="src-canvas-class-js-P16" data-position='16'>
+                  <td id="L0L1542" class="line_numbers linkable-line-number empty-cell">
+                    &nbsp;
+                  </td>
+                  <td id="L0R1543" class="line_numbers linkable-line-number">
+                    1543
+                  </td>
+                  <td class="gi diff-line">
+                      <b class="add-bubble mini-icon mini-icon-add-comment" data-remote="/kangax/fabric.js/pull/381/review_comment/form?commit_id=2715ef306cc9605fa6881e3608fd97b5e92f0eb7&amp;path=src/canvas.class.js&amp;position=16&amp;line=1543"></b>
+                    <pre class="line">+})();</pre>
+                  </td>
+                </tr>
+            </table>
+          </div>
+
+      <div class="file-comments-place-holder" data-path="src/canvas.class.js"></div>
+    </div>
+</div>
+
+      </div><!-- /.breakout -->
+    </div>
+
+    <div class='form-actions'>
+    <div class="tip">
+      <img alt="Commit_comment_tip" height="35" src="https://a248.e.akamai.net/assets.github.com/images/modules/commit/commit_comment_tip.gif?1347524280" width="95" />
+      <p><strong>Tip:</strong> You can add notes to lines in a file. Hover to the left of a line to make a note</p>
+    </div>
+    </div>
+    <div class="clearfix"></div>
+
+</div>
+
+    
+<!-- COMMENTS -->
+<div id='diff-comment-data' style='display:none'>
+</div>
+
+
+
+</div>
+
+        </div>
+      </div>
+      <div class="context-overlay"></div>
+    </div>
+
+      <div id="footer-push"></div><!-- hack for sticky footer -->
+    </div><!-- end of wrapper - hack for sticky footer -->
+
+      <!-- footer -->
+      <div id="footer">
+  <div class="container clearfix">
+
+      <dl class="footer_nav">
+        <dt>GitHub</dt>
+        <dd><a href="https://github.com/about">About us</a></dd>
+        <dd><a href="https://github.com/blog">Blog</a></dd>
+        <dd><a href="https://github.com/contact">Contact &amp; support</a></dd>
+        <dd><a href="http://enterprise.github.com/">GitHub Enterprise</a></dd>
+        <dd><a href="http://status.github.com/">Site status</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>Applications</dt>
+        <dd><a href="http://mac.github.com/">GitHub for Mac</a></dd>
+        <dd><a href="http://windows.github.com/">GitHub for Windows</a></dd>
+        <dd><a href="http://eclipse.github.com/">GitHub for Eclipse</a></dd>
+        <dd><a href="http://mobile.github.com/">GitHub mobile apps</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>Services</dt>
+        <dd><a href="http://get.gaug.es/">Gauges: Web analytics</a></dd>
+        <dd><a href="http://speakerdeck.com">Speaker Deck: Presentations</a></dd>
+        <dd><a href="https://gist.github.com">Gist: Code snippets</a></dd>
+        <dd><a href="http://jobs.github.com/">Job board</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>Documentation</dt>
+        <dd><a href="http://help.github.com/">GitHub Help</a></dd>
+        <dd><a href="http://developer.github.com/">Developer API</a></dd>
+        <dd><a href="http://github.github.com/github-flavored-markdown/">GitHub Flavored Markdown</a></dd>
+        <dd><a href="http://pages.github.com/">GitHub Pages</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>More</dt>
+        <dd><a href="http://training.github.com/">Training</a></dd>
+        <dd><a href="https://github.com/edu">Students &amp; teachers</a></dd>
+        <dd><a href="http://shop.github.com">The Shop</a></dd>
+        <dd><a href="/plans">Plans &amp; pricing</a></dd>
+        <dd><a href="http://octodex.github.com/">The Octodex</a></dd>
+      </dl>
+
+      <hr class="footer-divider">
+
+
+    <p class="right">&copy; 2013 <span title="0.22467s from fe1.rs.github.com">GitHub</span> Inc. All rights reserved.</p>
+    <a class="left" href="https://github.com/">
+      <span class="mega-icon mega-icon-invertocat"></span>
+    </a>
+    <ul id="legal">
+        <li><a href="https://github.com/site/terms">Terms of Service</a></li>
+        <li><a href="https://github.com/site/privacy">Privacy</a></li>
+        <li><a href="https://github.com/security">Security</a></li>
+    </ul>
+
+  </div><!-- /.container -->
+
+</div><!-- /.#footer -->
+
+
+    
+
+    
+
+<div id="keyboard_shortcuts_pane" class="instapaper_ignore readability-extra" style="display:none">
+  <h2>Keyboard Shortcuts <small><a href="#" class="js-see-all-keyboard-shortcuts">(see all)</a></small></h2>
+
+  <div class="columns threecols">
+    <div class="column first">
+      <h3>Site wide shortcuts</h3>
+      <dl class="keyboard-mappings">
+        <dt>s</dt>
+        <dd>Focus command bar</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>?</dt>
+        <dd>Bring up this help dialog</dd>
+      </dl>
+    </div><!-- /.column.first -->
+
+    <div class="column middle" style='display:none'>
+      <h3>Commit list</h3>
+      <dl class="keyboard-mappings">
+        <dt>j</dt>
+        <dd>Move selection down</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>k</dt>
+        <dd>Move selection up</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>c <em>or</em> o <em>or</em> enter</dt>
+        <dd>Open commit</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>y</dt>
+        <dd>Expand URL to its canonical form</dd>
+      </dl>
+    </div><!-- /.column.first -->
+
+    <div class="column last js-hidden-pane" >
+      <h3>Pull request list</h3>
+      <dl class="keyboard-mappings">
+        <dt>j</dt>
+        <dd>Move selection down</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>k</dt>
+        <dd>Move selection up</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>o <em>or</em> enter</dt>
+        <dd>Open issue</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> enter</dt>
+        <dd>Submit comment</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> shift p</dt>
+        <dd>Preview comment</dd>
+      </dl>
+    </div><!-- /.columns.last -->
+
+  </div><!-- /.columns.equacols -->
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+
+    <h3>Issues</h3>
+
+    <div class="columns threecols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt>j</dt>
+          <dd>Move selection down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>k</dt>
+          <dd>Move selection up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>x</dt>
+          <dd>Toggle selection</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o <em>or</em> enter</dt>
+          <dd>Open issue</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> enter</dt>
+          <dd>Submit comment</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> shift p</dt>
+          <dd>Preview comment</dd>
+        </dl>
+      </div><!-- /.column.first -->
+      <div class="column last">
+        <dl class="keyboard-mappings">
+          <dt>c</dt>
+          <dd>Create issue</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>l</dt>
+          <dd>Create label</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>i</dt>
+          <dd>Back to inbox</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>u</dt>
+          <dd>Back to issues</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>/</dt>
+          <dd>Focus issues search</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+
+    <h3>Issues Dashboard</h3>
+
+    <div class="columns threecols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt>j</dt>
+          <dd>Move selection down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>k</dt>
+          <dd>Move selection up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o <em>or</em> enter</dt>
+          <dd>Open issue</dd>
+        </dl>
+      </div><!-- /.column.first -->
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+
+    <h3>Network Graph</h3>
+    <div class="columns equacols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">←</span> <em>or</em> h</dt>
+          <dd>Scroll left</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">→</span> <em>or</em> l</dt>
+          <dd>Scroll right</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">↑</span> <em>or</em> k</dt>
+          <dd>Scroll up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">↓</span> <em>or</em> j</dt>
+          <dd>Scroll down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>t</dt>
+          <dd>Toggle visibility of head labels</dd>
+        </dl>
+      </div><!-- /.column.first -->
+      <div class="column last">
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">←</span> <em>or</em> shift h</dt>
+          <dd>Scroll all the way left</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">→</span> <em>or</em> shift l</dt>
+          <dd>Scroll all the way right</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">↑</span> <em>or</em> shift k</dt>
+          <dd>Scroll all the way up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">↓</span> <em>or</em> shift j</dt>
+          <dd>Scroll all the way down</dd>
+        </dl>
+      </div><!-- /.column.last -->
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+    <div class="columns threecols">
+      <div class="column first js-hidden-pane" style='display:none'>
+        <h3>Source Code Browsing</h3>
+        <dl class="keyboard-mappings">
+          <dt>t</dt>
+          <dd>Activates the file finder</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>l</dt>
+          <dd>Jump to line</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>w</dt>
+          <dd>Switch branch/tag</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>y</dt>
+          <dd>Expand URL to its canonical form</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+    <div class="columns threecols">
+      <div class="column first">
+        <h3>Browsing Commits</h3>
+        <dl class="keyboard-mappings">
+          <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> enter</dt>
+          <dd>Submit comment</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>escape</dt>
+          <dd>Close form</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>p</dt>
+          <dd>Parent commit</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o</dt>
+          <dd>Other parent commit</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+    <h3>Notifications</h3>
+
+    <div class="columns threecols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt>j</dt>
+          <dd>Move selection down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>k</dt>
+          <dd>Move selection up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o <em>or</em> enter</dt>
+          <dd>Open notification</dd>
+        </dl>
+      </div><!-- /.column.first -->
+
+      <div class="column second">
+        <dl class="keyboard-mappings">
+          <dt>e <em>or</em> shift i <em>or</em> y</dt>
+          <dd>Mark as read</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift m</dt>
+          <dd>Mute thread</dd>
+        </dl>
+      </div><!-- /.column.first -->
+    </div>
+  </div>
+
+</div>
+
+    <div id="markdown-help" class="instapaper_ignore readability-extra">
+  <h2>Markdown Cheat Sheet</h2>
+
+  <div class="cheatsheet-content">
+
+  <div class="mod">
+    <div class="col">
+      <h3>Format Text</h3>
+      <p>Headers</p>
+      <pre>
+# This is an &lt;h1&gt; tag
+## This is an &lt;h2&gt; tag
+###### This is an &lt;h6&gt; tag</pre>
+     <p>Text styles</p>
+     <pre>
+*This text will be italic*
+_This will also be italic_
+**This text will be bold**
+__This will also be bold__
+
+*You **can** combine them*
+</pre>
+    </div>
+    <div class="col">
+      <h3>Lists</h3>
+      <p>Unordered</p>
+      <pre>
+* Item 1
+* Item 2
+  * Item 2a
+  * Item 2b</pre>
+     <p>Ordered</p>
+     <pre>
+1. Item 1
+2. Item 2
+3. Item 3
+   * Item 3a
+   * Item 3b</pre>
+    </div>
+    <div class="col">
+      <h3>Miscellaneous</h3>
+      <p>Images</p>
+      <pre>
+![GitHub Logo](/images/logo.png)
+Format: ![Alt Text](url)
+</pre>
+     <p>Links</p>
+     <pre>
+http://github.com - automatic!
+[GitHub](http://github.com)</pre>
+<p>Blockquotes</p>
+     <pre>
+As Kanye West said:
+
+> We're living the future so
+> the present is our past.
+</pre>
+    </div>
+  </div>
+  <div class="rule"></div>
+
+  <h3>Code Examples in Markdown</h3>
+  <div class="col">
+      <p>Syntax highlighting with <a href="http://github.github.com/github-flavored-markdown/" title="GitHub Flavored Markdown" target="_blank">GFM</a></p>
+      <pre>
+```javascript
+function fancyAlert(arg) {
+  if(arg) {
+    $.facebox({div:'#foo'})
+  }
+}
+```</pre>
+    </div>
+    <div class="col">
+      <p>Or, indent your code 4 spaces</p>
+      <pre>
+Here is a Python code example
+without syntax highlighting:
+
+    def foo:
+      if not bar:
+        return true</pre>
+    </div>
+    <div class="col">
+      <p>Inline code for comments</p>
+      <pre>
+I think you should use an
+`&lt;addr&gt;` element here instead.</pre>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+
+    <div id="ajax-error-message" class="flash flash-error">
+      <span class="mini-icon mini-icon-exclamation"></span>
+      Something went wrong with that request. Please try again.
+      <a href="#" class="mini-icon mini-icon-remove-close ajax-error-dismiss"></a>
+    </div>
+
+    
+    
+    <span id='server_response_time' data-time='0.22616' data-host='fe1'></span>
+    
+  </body>
+</html>
+

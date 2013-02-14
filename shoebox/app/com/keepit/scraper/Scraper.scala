@@ -1,13 +1,15 @@
 package com.keepit.scraper
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.{Id, CX}
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.net.URI
 import com.keepit.search.{Article, ArticleStore}
-import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
-import com.keepit.model.ScrapeInfo
+import com.keepit.model._
 import com.keepit.scraper.extractor.DefaultExtractor
 import com.keepit.scraper.extractor.DefaultExtractorFactory
 import com.keepit.scraper.extractor.Extractor
@@ -15,7 +17,7 @@ import com.keepit.scraper.extractor.YoutubeExtractorFactory
 import com.keepit.search.LangDetector
 import com.google.inject.Inject
 import org.apache.http.HttpStatus
-import org.joda.time.Seconds
+import org.joda.time.{DateTime, Seconds}
 import play.api.Play.current
 
 object Scraper {
@@ -24,16 +26,15 @@ object Scraper {
   val maxContentChars = 100000 // 100K chars
 }
 
-class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfig) extends Logging {
+class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, scraperConfig: ScraperConfig) extends Logging {
 
   implicit val config = scraperConfig
-  val httpFetcher = new HttpFetcher
 
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
     log.info("starting a new scrape round")
-    val tasks = CX.withConnection { implicit c =>
-      ScrapeInfo.getOverdueList().map{ info => (NormalizedURI.get(info.uriId), info) }
+    val tasks = inject[DBConnection].readOnly { implicit s =>
+      inject[ScrapeInfoRepo].getOverdueList().map{ info => (inject[NormalizedURIRepo].get(info.uriId), info) }
     }
     log.info("got %s uris to scrape".format(tasks.length))
     val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
@@ -44,7 +45,10 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
   }
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
-    val info = CX.withConnection { implicit c => ScrapeInfo.ofUri(uri) }
+    val repo = inject[ScrapeInfoRepo]
+    val info = inject[DBConnection].readWrite { implicit s =>
+      repo.getByUri(uri.id.get).getOrElse(repo.save(ScrapeInfo(uriId = uri.id.get)))
+    }
     safeProcessURI(uri, info)
   }
 
@@ -53,39 +57,50 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     } catch {
       case e =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
-        val errorURI = CX.withConnection { implicit c =>
-          info.withFailure().save
-          uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
+        val errorURI = inject[DBConnection].readWrite { implicit s =>
+          inject[ScrapeInfoRepo].save(info.withFailure())
+          inject[NormalizedURIRepo].save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         (errorURI, None)
     }
 
+  private def getIfModifiedSince(info: ScrapeInfo) = {
+    info.signature match {
+      case "" => None // no signature. this is the first time
+      case _ => Some(info.lastScrape)
+    }
+  }
+
 
   private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
-    fetchArticle(uri) match {
-      case Left(article) =>
+    val db = inject[DBConnection]
+    val uriRepo = inject[NormalizedURIRepo]
+    val scrapeInfoRepo = inject[ScrapeInfoRepo]
+
+    fetchArticle(uri, info) match {
+      case Scraped(article, signature) =>
         // store a scraped article in a store map
         articleStore += (uri.id.get -> article)
-        // the article is saved, now detect the document change. making the detection more strict as time goes by.
-        val oldSig = Signature(info.signature)
-        val newSig = computeSignature(article)
-        val docChanged = (newSig.similarTo(oldSig) < (1.0d - config.changeThreshold * (config.minInterval / info.interval)))
 
-        val scrapedURI = CX.withConnection { implicit c =>
-          if (docChanged) {
-            // update the scrape schedule and the uri state to SCRAPED
-            info.withDocumentChanged(newSig.toBase64).save
-            uri.withTitle(article.title).withState(NormalizedURI.States.SCRAPED).save
-          } else {
-            // update the scrape schedule, uri is not changed
-            info.withDocumentUnchanged().save
-            uri
-          }
+        val scrapedURI = db.readWrite { implicit s =>
+          // update the scrape schedule and the uri state to SCRAPED
+          scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
+          uriRepo.save(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
         }
         log.info("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
-      case Right(error) =>
+      case NotScrapable(destinationUrl) =>
+        val unscrapableURI = db.readWrite { implicit s =>
+          scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
+          uriRepo.save(uri.withState(NormalizedURIStates.UNSCRAPABLE))
+        }
+        (unscrapableURI, None)
+      case NotModified =>
+        // update the scrape schedule, uri is not changed
+        db.readWrite { implicit s => scrapeInfoRepo.save(info.withDocumentUnchanged()) }
+        (uri, None)
+      case Error(httpStatus, msg) =>
         // store a fallback article in a store map
         val article = Article(
             id = uri.id.get,
@@ -94,21 +109,22 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
             scrapedAt = currentDateTime,
             httpContentType = None,
             httpOriginalContentCharset = None,
-            state = NormalizedURI.States.SCRAPE_FAILED,
-            message = Option(error.msg),
+            state = NormalizedURIStates.SCRAPE_FAILED,
+            message = Option(msg),
             titleLang = None,
-            contentLang = None)
+            contentLang = None,
+            destinationUrl = None)
         articleStore += (uri.id.get -> article)
         // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
-        val errorURI = CX.withConnection { implicit c =>
-          info.withFailure().save
-          uri.withState(NormalizedURI.States.SCRAPE_FAILED).save
+        val errorURI = db.readWrite { implicit s =>
+          scrapeInfoRepo.save(info.withFailure())
+          uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         (errorURI, None)
     }
   }
 
-  private def getExtractor(url: String): Extractor = {
+  protected def getExtractor(url: String): Extractor = {
     try {
       URI.parse(url) match {
         case Some(uri) =>
@@ -126,56 +142,80 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     }
   }
 
-  def fetchArticle(normalizedUri: NormalizedURI): Either[Article, ScraperError] = {
+  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo): ScraperResult = {
     try {
       URI.parse(normalizedUri.url) match {
         case Some(uri) =>
           uri.scheme match {
-            case Some("file") => Right(ScraperError(normalizedUri, -1, "forbidden scheme: %s".format("file")))
-            case _ => fetchArticle(normalizedUri, httpFetcher)
+            case Some("file") => Error(-1, "forbidden scheme: %s".format("file"))
+            case _ => fetchArticle(normalizedUri, httpFetcher, info)
           }
-        case _ => fetchArticle(normalizedUri, httpFetcher)
+        case _ => fetchArticle(normalizedUri, httpFetcher, info)
       }
     } catch {
-      case _ => fetchArticle(normalizedUri, httpFetcher)
+      case _ => fetchArticle(normalizedUri, httpFetcher, info)
     }
   }
 
-  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher): Either[Article, ScraperError] = {
+  private def isUnscrapable(url: String, destinationUrl: Option[String]) = {
+    inject[DBConnection].readOnly { implicit s =>
+      val uns = inject[UnscrapableRepo]
+      (uns.contains(url) || (destinationUrl.isDefined && uns.contains(destinationUrl.get)))
+    }
+  }
+
+  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo): ScraperResult = {
     val url = normalizedUri.url
     val extractor = getExtractor(url)
+    val ifModifiedSince = getIfModifiedSince(info)
 
     try {
-      val fetchStatus = httpFetcher.fetch(url){ input => extractor.process(input) }
+      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince){ input => extractor.process(input) }
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
-          val content = extractor.getContent
-          val contentLang = LangDetector.detect(content)
-          val title = extractor.getMetadata("title").getOrElse("")
-          val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
-          Left(Article(id = normalizedUri.id.get,
-                       title = title,
-                       content = content,
-                       scrapedAt = currentDateTime,
-                       httpContentType = extractor.getMetadata("Content-Type"),
-                       httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
-                       state = SCRAPED,
-                       message = None,
-                       titleLang = Some(titleLang),
-                       contentLang = Some(contentLang)))
+          if (isUnscrapable(url, fetchStatus.destinationUrl)) {
+            NotScrapable(fetchStatus.destinationUrl)
+          } else {
+            val content = extractor.getContent
+            val title = extractor.getMetadata("title").getOrElse("")
+            val signature = computeSignature(title, content)
+
+            // now detect the document change
+            val docChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
+
+            if (!docChanged) {
+              NotModified
+            } else {
+              val contentLang = LangDetector.detect(content)
+              val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
+              Scraped(Article(id = normalizedUri.id.get,
+                              title = title,
+                              content = content,
+                              scrapedAt = currentDateTime,
+                              httpContentType = extractor.getMetadata("Content-Type"),
+                              httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
+                              state = NormalizedURIStates.SCRAPED,
+                              message = None,
+                              titleLang = Some(titleLang),
+                              contentLang = Some(contentLang),
+                              destinationUrl = fetchStatus.destinationUrl),
+                      signature)
+            }
+          }
+        case HttpStatus.SC_NOT_MODIFIED =>
+          NotModified
         case _ =>
-          Right(ScraperError(normalizedUri, fetchStatus.statusCode, fetchStatus.message.getOrElse("fetch failed")))
+          Error(fetchStatus.statusCode, fetchStatus.message.getOrElse("fetch failed"))
       }
     } catch {
-      case e => Right(ScraperError(normalizedUri, -1, "fetch failed: %s".format(e.toString)))
+      case e => Error(-1, "fetch failed: %s".format(e.toString))
     }
   }
 
-  private[this] def computeSignature(article: Article) = new SignatureBuilder().add(article.title).add(article.content).build
+  private[this] def computeSignature(fields: String*) = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build
 
   def close() {
     httpFetcher.close()
   }
 }
-

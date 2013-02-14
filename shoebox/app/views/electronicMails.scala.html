@@ -35,8 +35,8 @@
   </div>
 }
 
-@admin("There are " + count + " electronicMails (displaying " + electronicMails.size + ")") {
-  <h2>Showing @electronicMails.size electronicMails of total @count (Page @{page + 1})</h2>
+@admin(count + " Total Emails") {
+  <h2>showing @electronicMails.size (page @{page + 1})</h2>
   @pagination(page, pageCount)
   <table class="table table-bordered">
     <tr>
@@ -52,10 +52,10 @@
       <td>@electronicMail.fromName</td>
       <td>@electronicMail.to.address</td>
       <td>@electronicMail.subject</td>
-      <td>@adminHelper.dateDisplay(electronicMail.createdAt) @adminHelper.timeDisplay(electronicMail.createdAt)</td>
+      <td>@adminHelper.dateTimeDisplay(electronicMail.createdAt)</td>
     </tr>
     <tr>
-      <td colspan="4">@electronicMail.htmlBody</td>
+      <td colspan="4">@Html(electronicMail.htmlBody)</td>
     </tr>
   }
   </table>

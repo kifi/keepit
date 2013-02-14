@@ -3,7 +3,9 @@
   socialUserInfos: Seq[SocialUserInfo], 
   follows: Seq[NormalizedURI], 
   comments: Seq[(NormalizedURI, Comment)], 
-  messages: Seq[(NormalizedURI, Comment, Seq[UserWithSocial])])
+  messages: Seq[(NormalizedURI, Comment, Seq[UserWithSocial])],
+  sentElectronicMails: Seq[com.keepit.common.mail.ElectronicMail], 
+  receivedElectronicMails: Seq[com.keepit.common.mail.ElectronicMail])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
@@ -62,7 +64,7 @@
        <td rowspan="2">@{i+1}</td>
        <td>@comment.pageTitle</td>
        <td>@adminHelper.articleDisplay(uri)</td>
-       <td>@adminHelper.dateDisplay(comment.createdAt) @adminHelper.timeDisplay(comment.createdAt)</td>
+       <td>@adminHelper.dateTimeDisplay(comment.createdAt)</td>
      </tr>
      <tr>
        <td colspan="2">@comment.text</td>
@@ -87,11 +89,83 @@
        <td>@for(recipient <- recipients) { 
          @adminHelper.userDisplay(recipient)
        }</td>
-       <td>@adminHelper.dateDisplay(message.createdAt) @adminHelper.timeDisplay(message.createdAt)</td>
+       <td>@adminHelper.dateTimeDisplay(message.createdAt)</td>
      </tr>
      <tr>
        <td colspan="3">@message.text</td>
      </tr>
    }
+   </table>
+   
+  <h2>User has @messages.size messages</h2>
+  <table class="table table-bordered">
+   <tr>
+     <th>#</th>
+     <th>Page Title</th>
+     <th>Page</th>
+     <th>Recipients</th>
+     <th>Creation</th>
+   </tr>
+   @for(((uri, message, recipients), i) <- messages.zipWithIndex) {
+     <tr>
+       <td rowspan="2">@{i+1}</td>
+       <td>@message.pageTitle</td>
+       <td>@adminHelper.articleDisplay(uri)</td>
+       <td>@for(recipient <- recipients) { 
+         @adminHelper.userDisplay(recipient)
+       }</td>
+       <td>@adminHelper.dateTimeDisplay(message.createdAt)</td>
+     </tr>
+     <tr>
+       <td colspan="3">@message.text</td>
+     </tr>
+   }
+   </table>
+
+   <h2>User has sent @sentElectronicMails.size emails</h2>
+   <table class="table table-bordered">
+    <tr>
+      <th>#</th>
+      <th>From</th>
+      <th>To</th>
+      <th>Subject</th>
+      <th>Creation</th>
+    </tr>
+  @for((electronicMail, i) <- sentElectronicMails.zipWithIndex) {
+    <tr>
+      <td rowspan="2">@{i+1}</td>
+      <td>@electronicMail.fromName</td>
+      <td>@electronicMail.to.address</td>
+      <td>@electronicMail.subject</td>
+      <td>@adminHelper.dateTimeDisplay(electronicMail.createdAt)</td>
+    </tr>
+    <tr>
+      <td colspan="4">@electronicMail.htmlBody</td>
+    </tr>
+  }
   </table>
+   
+   <h2>User had received @receivedElectronicMails.size emails</h2>
+   <table class="table table-bordered">
+    <tr>
+      <th>#</th>
+      <th>From</th>
+      <th>To</th>
+      <th>Subject</th>
+      <th>Creation</th>
+    </tr>
+  @for((electronicMail, i) <- receivedElectronicMails.zipWithIndex) {
+    <tr>
+      <td rowspan="2">@{i+1}</td>
+      <td>@electronicMail.fromName</td>
+      <td>@electronicMail.to.address</td>
+      <td>@electronicMail.subject</td>
+      <td>@adminHelper.dateTimeDisplay(electronicMail.createdAt)</td>
+    </tr>
+    <tr>
+      <td colspan="4">@electronicMail.htmlBody</td>
+    </tr>
+  }
+  </table>
+
 }

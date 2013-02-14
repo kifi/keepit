@@ -67,11 +67,15 @@ package object time {
   def parseStandardTime(timeString: String) = STANDARD_DATETIME_FORMAT.parseDateTime(timeString)
   def parseStandardDate(timeString: String) = STANDARD_DATE_FORMAT.parseLocalDate(timeString)
 
+  lazy val START_OF_TIME = parseStandardTime("0000-01-01 00:00:00.000 -0800")
+  lazy val END_OF_TIME = parseStandardTime("9999-01-01 00:00:00.000 -0800")
+
   class RichDateTime(date: DateTime) {
     def toLocalDateInZone(implicit zone: DateTimeZone): LocalDate = date.withZone(zone).toLocalDate
     def toLocalTimeInZone(implicit zone: DateTimeZone): LocalTime = date.withZone(zone).toLocalTime
     def toHttpHeaderString: String = HTTP_HEADER_DATETIME_FORMAT.print(date)
     def toStandardTimeString: String = STANDARD_DATETIME_FORMAT.print(date)
+    def toStandardDateString: String = STANDARD_DATE_FORMAT.print(date)
 
     def isSameDay(otherDate: DateTime)(implicit zone: DateTimeZone): Boolean = {
       val z = date.withZone(zone)

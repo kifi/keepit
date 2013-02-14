@@ -12,7 +12,7 @@ import com.keepit.search.Article
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.Lang
 
 @RunWith(classOf[JUnitRunner])

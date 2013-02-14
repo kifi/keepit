@@ -1,0 +1,1312 @@
+
+
+
+
+<!DOCTYPE html>
+<html>
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# githubog: http://ogp.me/ns/fb/githubog#">
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>kangax/fabric.js</title>
+    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="GitHub" />
+    <link rel="fluid-icon" href="https://github.com/fluidicon.png" title="GitHub" />
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="apple-touch-icon-114.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="apple-touch-icon-114.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="apple-touch-icon-144.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="apple-touch-icon-144.png" />
+    <meta name="msapplication-TileImage" content="/windows-tile.png">
+    <meta name="msapplication-TileColor" content="#ffffff">
+
+
+
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+    <meta content="authenticity_token" name="csrf-param" />
+<meta content="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" name="csrf-token" />
+
+    <link href="https://a248.e.akamai.net/assets.github.com/assets/github-7ef703df15129d3b898830277d50fc760ca91cbc.css" media="screen" rel="stylesheet" type="text/css" />
+    <link href="https://a248.e.akamai.net/assets.github.com/assets/github2-204e28c07493b8ba6089c49791ed7ab61ecb6581.css" media="screen" rel="stylesheet" type="text/css" />
+
+
+
+      <script src="https://a248.e.akamai.net/assets.github.com/assets/frameworks-cc4895cbb610429d2ce48e7c2392822c33db2dfe.js" type="text/javascript"></script>
+      <script src="https://a248.e.akamai.net/assets.github.com/assets/github-e539dcf1e3c93f4acda64d064d3f30a39afabae0.js" type="text/javascript"></script>
+
+
+        <link rel='permalink' href='/kangax/fabric.js/tree/1f206d039eab833baef0703e748a8177903f6413'>
+    <meta property="og:title" content="fabric.js"/>
+    <meta property="og:type" content="githubog:gitrepository"/>
+    <meta property="og:url" content="https://github.com/kangax/fabric.js"/>
+    <meta property="og:image" content="https://secure.gravatar.com/avatar/f1fcf834ddad415f60d29c87cc10d4d4?s=420&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png"/>
+    <meta property="og:site_name" content="GitHub"/>
+    <meta property="og:description" content="fabric.js - Fabric.js — Object Model for HTML5 Canvas + SVG-to-Canvas (&amp; canvas-to-SVG) Parser."/>
+
+    <meta name="description" content="fabric.js - Fabric.js — Object Model for HTML5 Canvas + SVG-to-Canvas (&amp; canvas-to-SVG) Parser." />
+
+  <link href="https://github.com/kangax/fabric.js/commits/master.atom" rel="alternate" title="Recent Commits to fabric.js:master" type="application/atom+xml" />
+
+  </head>
+
+
+  <body class="logged_in  macintosh vis-public env-production ">
+    <div id="wrapper">
+
+
+
+
+
+
+
+
+        <div class="header header-logged-in true">
+          <div class="container clearfix">
+
+            <a class="header-logo-blacktocat" href="https://github.com/">
+  <span class="mega-icon mega-icon-blacktocat"></span>
+</a>
+
+            <div class="divider-vertical"></div>
+
+
+  <a href="/notifications" class="notification-indicator tooltipped downwards" title="You have unread notifications">
+    <span class="mail-status unread"></span>
+  </a>
+  <div class="divider-vertical"></div>
+
+
+
+  <div class="topsearch command-bar-activated">
+    <form accept-charset="UTF-8" action="/search" class="command_bar_form" id="top_search_form" method="get">
+  <a href="/search/advanced" class="advanced-search tooltipped downwards command-bar-search" id="advanced_search" title="Advanced search"><span class="mini-icon mini-icon-advanced-search "></span></a>
+
+  <input type="text" name="q" id="command-bar" placeholder="Search or type a command" tabindex="1" data-username="andrewconner" autocapitalize="off">
+
+  <span class="mini-icon help tooltipped downwards" title="Show command bar help">
+    <span class="mini-icon mini-icon-help"></span>
+  </span>
+
+  <input type="hidden" name="ref" value="commandbar">
+
+  <div class="divider-vertical"></div>
+</form>
+
+    <ul class="top-nav">
+        <li class="explore"><a href="https://github.com/explore">Explore</a></li>
+        <li><a href="https://gist.github.com">Gist</a></li>
+        <li><a href="/blog">Blog</a></li>
+      <li><a href="http://help.github.com">Help</a></li>
+    </ul>
+  </div>
+
+
+
+
+
+    <ul id="user-links">
+      <li>
+        <a href="https://github.com/andrewconner" class="name">
+          <img height="20" src="https://secure.gravatar.com/avatar/2d294fa145fd71d028923b2615334715?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="20" /> andrewconner
+        </a>
+      </li>
+      <li>
+        <a href="/new" id="new_repo" class="tooltipped downwards" title="Create a new repo">
+          <span class="mini-icon mini-icon-create"></span>
+        </a>
+      </li>
+      <li>
+        <a href="/settings/profile" id="account_settings"
+          class="tooltipped downwards"
+          title="Account settings ">
+          <span class="mini-icon mini-icon-account-settings"></span>
+        </a>
+      </li>
+      <li>
+          <a href="/logout" data-method="post" id="logout" class="tooltipped downwards" title="Sign out">
+            <span class="mini-icon mini-icon-logout"></span>
+          </a>
+      </li>
+    </ul>
+
+
+
+
+          </div>
+        </div>
+
+
+
+
+
+
+
+            <div class="site hfeed" itemscope itemtype="http://schema.org/WebPage">
+      <div class="hentry">
+
+        <div class="pagehead repohead instapaper_ignore readability-menu">
+          <div class="container">
+            <div class="title-actions-bar">
+
+
+
+                  <ul class="pagehead-actions">
+
+          <li class="subscription">
+              <form accept-charset="UTF-8" action="/notifications/subscribe" data-autosubmit="true" data-remote="true" method="post"><div style="margin:0;padding:0;display:inline"><input name="authenticity_token" type="hidden" value="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" /></div>  <input id="repository_id" name="repository_id" type="hidden" value="712530" />
+  <div class="context-menu-container js-menu-container js-context-menu">
+    <span class="minibutton switcher bigger js-menu-target">
+      <span class="js-context-button">
+          <span class="mini-icon mini-icon-watching"></span>Watch
+      </span>
+    </span>
+
+    <div class="context-pane js-menu-content">
+      <a href="#" class="close js-menu-close"><span class="mini-icon mini-icon-remove-close"></span></a>
+      <div class="context-title">Notification status</div>
+
+      <div class="context-body pane-selector">
+        <ul class="js-navigation-container">
+          <li class="selector-item js-navigation-item js-navigation-target selected">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input checked="checked" id="do_included" name="do" type="radio" value="included" />
+              <h4>Not watching</h4>
+              <p>You will only receive notifications when you participate or are mentioned.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-watching"></span>
+              Watch
+            </span>
+          </li>
+          <li class="selector-item js-navigation-item js-navigation-target ">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input id="do_subscribed" name="do" type="radio" value="subscribed" />
+              <h4>Watching</h4>
+              <p>You will receive all notifications for this repository.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-unwatch"></span>
+              Unwatch
+            </span>
+          </li>
+          <li class="selector-item js-navigation-item js-navigation-target ">
+            <span class="mini-icon mini-icon-confirm"></span>
+            <label>
+              <input id="do_ignore" name="do" type="radio" value="ignore" />
+              <h4>Ignored</h4>
+              <p>You will not receive notifications for this repository.</p>
+            </label>
+            <span class="context-button-text js-context-button-text">
+              <span class="mini-icon mini-icon-mute"></span>
+              Stop ignoring
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</form>
+          </li>
+
+          <li class="js-toggler-container js-social-container starring-container on">
+            <a href="/kangax/fabric.js/unstar" class="minibutton js-toggler-target starred" data-remote="true" data-method="post" rel="nofollow">
+              <span class="mini-icon mini-icon-star"></span>Unstar
+            </a><a href="/kangax/fabric.js/star" class="minibutton js-toggler-target unstarred" data-remote="true" data-method="post" rel="nofollow">
+              <span class="mini-icon mini-icon-star"></span>Star
+            </a><a class="social-count js-social-count" href="/kangax/fabric.js/stargazers">1,534</a>
+          </li>
+
+              <li>
+                <a href="/kangax/fabric.js/fork_select" class="minibutton js-toggler-target lighter" rel="facebox nofollow"><span class="mini-icon mini-icon-fork"></span>Fork</a><a href="/kangax/fabric.js/network" class="social-count">190</a>
+              </li>
+
+
+    </ul>
+
+              <h1 itemscope itemtype="http://data-vocabulary.org/Breadcrumb" class="entry-title public">
+                <span class="repo-label"><span>public</span></span>
+                <span class="mega-icon mega-icon-public-repo"></span>
+                <span class="author vcard">
+                  <a href="/kangax" class="url fn" itemprop="url" rel="author">
+                  <span itemprop="title">kangax</span>
+                  </a></span> /
+                <strong><a href="/kangax/fabric.js" class="js-current-repository">fabric.js</a></strong>
+              </h1>
+            </div>
+
+
+
+  <ul class="tabs">
+    <li><a href="/kangax/fabric.js" class="selected" highlight="repo_sourcerepo_downloadsrepo_commitsrepo_tagsrepo_branches">Code</a></li>
+    <li><a href="/kangax/fabric.js/network" highlight="repo_network">Network</a></li>
+    <li><a href="/kangax/fabric.js/pulls" highlight="repo_pulls">Pull Requests <span class='counter'>3</span></a></li>
+
+      <li><a href="/kangax/fabric.js/issues" highlight="repo_issues">Issues <span class='counter'>31</span></a></li>
+
+      <li><a href="/kangax/fabric.js/wiki" highlight="repo_wiki">Wiki</a></li>
+
+
+    <li><a href="/kangax/fabric.js/graphs" highlight="repo_graphsrepo_contributors">Graphs</a></li>
+
+
+  </ul>
+
+  <div id="repo_details" class="metabox clearfix
+        not-editable">
+      <div id="repo_details_loader" class="metabox-loader" style="display:none">Sending Request&hellip;</div>
+
+        <div class="repo-desc-homepage">
+
+    <div class="repository-lang-stats">
+      <div class="repository-lang-stats-graph">
+      <span class="language-color" style="width:100%; background-color:#f15501;" itemprop="keywords">JavaScript</span>
+      </div>
+      <ol class="list-tip">
+        <li>
+            <a href="/languages/JavaScript">
+              <span class="color-block language-color" style="background-color:#f15501;"></span>
+              <span class="lang">JavaScript</span>
+              <span class="percent">100%</span>
+            </a>
+        </li>
+      </ol>
+    </div>
+
+<div id="repository_description" class="repository-description">
+    <p>Fabric.js — Object Model for HTML5 Canvas + SVG-to-Canvas (&amp; canvas-to-SVG) Parser.
+      <span id="read_more" style="display:none">&mdash; <a href="#readme">Read more</a></span>
+    </p>
+</div>
+
+
+<div class="repository-homepage" id="repository_homepage">
+  <p><a href="http://fabricjs.com" rel="nofollow">http://fabricjs.com</a></p>
+</div>
+
+
+        </div>
+
+      <div class="edit-repo-desc-homepage" style="display:none">
+        <form accept-charset="UTF-8" action="/kangax/fabric.js/settings/update_meta" id="js-update-repo-meta-form" method="post"><div style="margin:0;padding:0;display:inline"><input name="_method" type="hidden" value="put" /><input name="authenticity_token" type="hidden" value="vXvzxBut4kFLtyB3ubwatfLXFV/Ni77tOuaF+S5X+Rs=" /></div>
+          <p class="error" style="display:none">Sorry, but there was a problem saving your changes.</p>
+          <input type="text" id="repository-description-field" class="description-field" name="repo_description" value="Fabric.js — Object Model for HTML5 Canvas + SVG-to-Canvas (&amp; canvas-to-SVG) Parser." placeholder="Add a description to this repository">
+          <input type="text" id="repository-homepage-field" class="homepage-field" name="repo_homepage" value="http://fabricjs.com" placeholder="Add a website to this repository">
+
+          <div class="edit-repo-actions">
+            <button type="submit" class="button save-button">Save changes</button>
+            <span class="cancel">
+              <a href="#" class="button danger">Cancel</a>
+            </span>
+          </div>
+</form>      </div>
+
+
+<div class="url-box">
+  <ul class="native-clones">
+      <li><a href="http://mac.github.com" class="button minibutton " icon_class="mini-icon-apple"><span class="mini-icon mini-icon-apple"></span>Clone in Mac</a></li>
+      <li><a href="/kangax/fabric.js/archive/master.zip" class="button minibutton " icon_class="mini-icon-download" rel="nofollow" title="Download this repository as a zip file"><span class="mini-icon mini-icon-download"></span>ZIP</a>
+  </ul>
+
+  <ul class="clone-urls">
+    <li class="http_clone_url"><a href="https://github.com/kangax/fabric.js.git" class="js-git-protocol-selector" data-permission="Read-Only" data-url="/users/set_protocol?protocol_selector=http&amp;protocol_type=clone">HTTP</a></li>
+<li class="public_clone_url"><a href="git@github.com:kangax/fabric.js.git" class="js-git-protocol-selector" data-permission="Read-Only" data-url="/users/set_protocol?protocol_selector=ssh&amp;protocol_type=clone">SSH</a></li>
+<li class="public_clone_url selected"><a href="git://github.com/kangax/fabric.js.git" class="js-git-protocol-selector" data-permission="Read-Only" data-url="/users/set_protocol?protocol_selector=gitweb&amp;protocol_type=clone">Git Read-Only</a></li>
+  </ul>
+  <input type="text" spellcheck="false" class="url-field" value="git://github.com/kangax/fabric.js.git">
+  <span class="js-zeroclipboard url-box-clippy zeroclipboard-button" data-clipboard-text="git://github.com/kangax/fabric.js.git" data-copied-hint="copied!" title="copy to clipboard"><span class="mini-icon mini-icon-clipboard"></span></span>
+  <p class="url-description"><span class="bold js-clone-url-permission">Read-Only</span> access</p>
+</div>
+
+        </div>
+
+<div class="tabnav">
+
+  <span class="tabnav-right">
+    <ul class="tabnav-tabs">
+          <li><a href="/kangax/fabric.js/tags" class="tabnav-tab" highlight="repo_tags">Tags <span class="counter blank">0</span></a></li>
+    </ul>
+
+  </span>
+
+  <div class="tabnav-widget scope">
+
+
+    <div class="select-menu js-menu-container js-select-menu js-branch-menu">
+      <a class="minibutton select-menu-button js-menu-target" data-hotkey="w" data-ref="master">
+        <span class="mini-icon mini-icon-branch"></span>
+        <i>branch:</i>
+        <span class="js-select-button">master</span>
+      </a>
+
+      <div class="select-menu-modal-holder js-menu-content js-navigation-container js-select-menu-pane">
+
+        <div class="select-menu-modal js-select-menu-pane">
+          <div class="select-menu-header">
+            <span class="select-menu-title">Switch branches/tags</span>
+            <span class="mini-icon mini-icon-remove-close js-menu-close"></span>
+          </div> <!-- /.select-menu-header -->
+
+          <div class="select-menu-filters">
+            <div class="select-menu-text-filter">
+              <input type="text" id="commitish-filter-field" class="js-select-menu-text-filter js-filterable-field js-navigation-enable" placeholder="Find or create a branch…">
+            </div> <!-- /.select-menu-text-filter -->
+            <div class="select-menu-tabs">
+              <ul>
+                <li class="select-menu-tab">
+                  <a href="#" data-filter="branches" class="js-select-menu-tab selected">Branches</a>
+                </li>
+                <li class="select-menu-tab">
+                  <a href="#" data-filter="tags" class="js-select-menu-tab">Tags</a>
+                </li>
+              </ul>
+            </div><!-- /.select-menu-tabs -->
+          </div><!-- /.select-menu-filters -->
+
+          <div class="select-menu-list js-filter-tab js-filter-branches" data-filterable-for="commitish-filter-field" data-filterable-type="substring">
+
+
+
+              <div class="select-menu-item js-navigation-item js-navigation-target ">
+                <span class="select-menu-checkmark mini-icon mini-icon-confirm"></span>
+
+                    <a href="/kangax/fabric.js/tree/feature/dynamic_origin" class="js-navigation-open select-menu-item-text js-select-button-text" data-name="feature/dynamic_origin" rel="nofollow">feature/dynamic_origin</a>
+
+              </div> <!-- /.select-menu-item -->
+
+
+
+              <div class="select-menu-item js-navigation-item js-navigation-target ">
+                <span class="select-menu-checkmark mini-icon mini-icon-confirm"></span>
+
+                    <a href="/kangax/fabric.js/tree/feature/patterns" class="js-navigation-open select-menu-item-text js-select-button-text" data-name="feature/patterns" rel="nofollow">feature/patterns</a>
+
+              </div> <!-- /.select-menu-item -->
+
+
+
+              <div class="select-menu-item js-navigation-item js-navigation-target selected">
+                <span class="select-menu-checkmark mini-icon mini-icon-confirm"></span>
+
+                    <a href="/kangax/fabric.js/tree/master" class="js-navigation-open select-menu-item-text js-select-button-text" data-name="master" rel="nofollow">master</a>
+
+              </div> <!-- /.select-menu-item -->
+
+
+              <div class="select-menu-no-results js-not-filterable">Nothing to show</div>
+          </div> <!-- /.select-menu-list -->
+
+
+          <div class="select-menu-list js-filter-tab js-filter-tags" data-filterable-for="commitish-filter-field" data-filterable-type="substring" style="display:none;">
+
+
+            <div class="select-menu-no-results js-not-filterable">Nothing to show</div>
+
+          </div> <!-- /.select-menu-list -->
+
+        </div> <!-- /.select-menu-modal -->
+      </div> <!-- /.select-menu-modal-holder -->
+    </div> <!-- /.select-menu -->
+
+  </div> <!-- /.scope -->
+
+  <ul class="tabnav-tabs">
+    <li><a href="/kangax/fabric.js" class="selected tabnav-tab" highlight="repo_source">Files</a></li>
+    <li><a href="/kangax/fabric.js/commits/master" class="tabnav-tab" highlight="repo_commits">Commits</a></li>
+    <li><a href="/kangax/fabric.js/branches" class="tabnav-tab" highlight="repo_branches" rel="nofollow">Branches <span class="counter ">3</span></a></li>
+  </ul>
+
+</div>
+
+
+
+
+
+
+
+          </div>
+        </div><!-- /.repohead -->
+
+        <div id="js-repo-pjax-container" class="container context-loader-container" data-pjax-container>
+
+
+
+<!-- tree commit key: views10/v8/tree:v21:acad207c3b2b6ce986ad56ecacbfe453 -->
+
+  <div id="slider">
+
+      <div class="frame-meta">
+
+
+          <p class="history-link js-history-link-replace">
+<a href="/kangax/fabric.js/commits/master">                <span class="mini-icon mini-icon-history tooltipped" title="Browse commits for this branch"></span>
+                841 commits
+</a>          </p>
+
+        <div class="breadcrumb">
+          <span class='bold'><span itemscope="" itemtype="http://data-vocabulary.org/Breadcrumb"><a href="/kangax/fabric.js" class="js-slide-to" data-direction="back" itemscope="url"><span itemprop="title">fabric.js</span></a></span></span> / <form action="/kangax/fabric.js/new/master" class="js-new-blob-form tooltipped rightwards new-file-link" method="post" title="Fork this project and create a new file"><span class="js-new-blob-submit mini-icon mini-icon-new-file"></span></form>
+        </div>
+
+        <a href="/kangax/fabric.js/find/master"
+           class="js-slide-to" data-hotkey="t" style="display:none">Show File Finder</a>
+
+      </div><!-- ./.frame-meta -->
+
+
+
+  <div class="frames">
+    <div class="frame" data-permalink-url="/kangax/fabric.js/tree/1f206d039eab833baef0703e748a8177903f6413" data-title="kangax/fabric.js · GitHub" data-type="tree">
+
+      <div class="bubble tree-browser-wrapper">
+
+      <table class="tree-browser css-truncate" cellpadding="0" cellspacing="0">
+        <thead>
+
+  <div class="commit commit-tease js-details-container">
+    <p class="commit-title ">
+        <a href="/kangax/fabric.js/commit/1f206d039eab833baef0703e748a8177903f6413" class="message">Move gesture-based logic into a separate module</a>
+
+    </p>
+    <div class="commit-meta">
+      <span class="js-zeroclipboard zeroclipboard-link" data-clipboard-text="1f206d039eab833baef0703e748a8177903f6413" data-copied-hint="copied!" title="Copy SHA"><span class="mini-icon mini-icon-clipboard"></span></span>
+      <a href="/kangax/fabric.js/commit/1f206d039eab833baef0703e748a8177903f6413" class="sha-block">latest commit <span class="sha">1f206d039e</span></a>
+
+      <div class="authorship">
+        <img class="gravatar" height="20" src="https://secure.gravatar.com/avatar/f1fcf834ddad415f60d29c87cc10d4d4?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="20" />
+        <span class="author-name"><a href="/kangax" rel="author">kangax</a></span>
+        authored <time class="js-relative-date updated" datetime="2013-01-10T09:23:23-08:00" title="2013-01-10 09:23:23">January 10, 2013</time>
+
+      </div>
+    </div>
+  </div>
+
+        </thead>
+
+
+
+<tbody class="tree-entries "
+    data-url="/kangax/fabric.js/tree-commits/master">
+
+
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-directory"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/tree/master/dist" class="js-slide-to css-truncate-target" id="2a6d07eef8b10b84129b42424ed99327-481badbc5c3c19ff42145e65f26ce52f13a9e57a" title="dist">dist</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2013-01-10T09:23:23-08:00" title="2013-01-10 09:23:23">January 10, 2013</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/1f206d039eab833baef0703e748a8177903f6413" class="message">Move gesture-based logic into a separate module</a> [<a href="/kangax" rel="author">kangax</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-directory"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/tree/master/lib" class="js-slide-to css-truncate-target" id="e8acc63b1e238f3255c900eed37254b8-59f1e07b74fae772087c98c089d49dbee02a5fa1" title="lib">lib</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2013-01-08T03:04:38-08:00" title="2013-01-08 03:04:38">January 08, 2013</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/20a87c66098e2328e7f60b94a33f52f1055bc451" class="message">Support for pinch gesture to scale and rotate objects using Event.js.</a> [<a href="/jafferhaider" rel="author">jafferhaider</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-directory"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/tree/master/src" class="js-slide-to css-truncate-target" id="25d902c24283ab8cfbac54dfa101ad31-c20232f2d80a452a52f20ca2bfbb3cd283d76d63" title="src">src</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2013-01-10T09:23:23-08:00" title="2013-01-10 09:23:23">January 10, 2013</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/1f206d039eab833baef0703e748a8177903f6413" class="message">Move gesture-based logic into a separate module</a> [<a href="/kangax" rel="author">kangax</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-directory"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/tree/master/test" class="js-slide-to css-truncate-target" id="098f6bcd4621d373cade4e832627b4f6-9a18d1d03438a4f9f3fbf7ef925ec433f4794d07" title="test">test</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2013-01-02T14:33:21-08:00" title="2013-01-02 14:33:21">January 02, 2013</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/15eee3b8615d23939460aab1aab5ea3fdf72b53c" class="message">Fix tests</a> [<a href="/kangax" rel="author">kangax</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-text-file"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/blob/master/.gitignore" class="js-slide-to css-truncate-target" id="a084b794bc0759e7a6b77810e01874f2-28f1ba7565f46fb5074ad9a4f07c4cfc86dff4cc" title=".gitignore">.gitignore</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2012-08-08T13:02:20-07:00" title="2012-08-08 13:02:20">August 08, 2012</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/1a28e9217216cec0f6952b1fe25662bf963cb699" class="message">Ignore .DS_Store files</a> [<a href="/davidjrice" rel="author">davidjrice</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-text-file"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/blob/master/.jshintrc" class="js-slide-to css-truncate-target" id="4d5aa81bf4f18104bb6ea53a8b5d1f43-bfc27aca21b27dec1d28c0ff546d244587421cbf" title=".jshintrc">.jshintrc</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2013-01-10T09:23:23-08:00" title="2013-01-10 09:23:23">January 10, 2013</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/1f206d039eab833baef0703e748a8177903f6413" class="message">Move gesture-based logic into a separate module</a> [<a href="/kangax" rel="author">kangax</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-text-file"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/blob/master/.npmignore" class="js-slide-to css-truncate-target" id="0fd4ef892d9d4990033701887c2f9bcc-8882ec6f625aa73d53ba90d845c0366d6825eb4d" title=".npmignore">.npmignore</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2012-08-10T08:20:04-07:00" title="2012-08-10 08:20:04">August 10, 2012</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/fe9d927d47e1c77b26382dddb4a5542fe210a651" class="message">Move site into a different repository.</a> [<a href="/kangax" rel="author">kangax</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-text-file"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/blob/master/.sublime-project" class="js-slide-to css-truncate-target" id="2e355224d2d553bf1bfad37e1ae18220-59a21f568978b3a83f13cb8e4ef75ba50ea351d9" title=".sublime-project">.sublime-project</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2012-11-15T05:21:18-08:00" title="2012-11-15 05:21:18">November 15, 2012</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/93360451037783b82f5da8398d1a11272200eb66" class="message">Add few more ignore dirs to .sublime-project.</a> [<a href="/kangax" rel="author">kangax</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-text-file"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/blob/master/.travis.yml" class="js-slide-to css-truncate-target" id="354f30a63fb0907d4ad57269548329e3-012217c41cb97dc058e4d4636007e9749103fffe" title=".travis.yml">.travis.yml</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2012-08-13T07:15:09-07:00" title="2012-08-13 07:15:09">August 13, 2012</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/562c81b0f68a57f3b20a414b4c037d4773936985" class="message">Specify all of node-canvas apt dependencies for travis ci</a> [<a href="/davidjrice" rel="author">davidjrice</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-text-file"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/blob/master/HEADER.js" class="js-slide-to css-truncate-target" id="f38f28902dcbc587be375ebd446c5341-a223052c7a2f5da0eb1c9e25d5187df1d00dfc60" title="HEADER.js">HEADER.js</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2012-12-29T11:04:24-08:00" title="2012-12-29 11:04:24">December 29, 2012</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/7121830ca6a987baf81f9fb2effc010a7de8d320" class="message">Merge dynamic origin branch into master. Version 1.0.0</a> [<a href="/kangax" rel="author">kangax</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-text-file"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/blob/master/LICENSE" class="js-slide-to css-truncate-target" id="9879d6db96fd29134fc802214163b95a-09467c74406c2153dfea910dced87fe111481501" title="LICENSE">LICENSE</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2012-04-23T09:43:17-07:00" title="2012-04-23 09:43:17">April 23, 2012</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/dbdf32ddff919fecde2e945f3dcb16b78e9dbd44" class="message">Update year in LICENSE and change copyright to Printio.</a> [<a href="/kangax" rel="author">kangax</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-text-file"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/blob/master/README.md" class="js-slide-to css-truncate-target" id="04c6e90faac2675aa89e2176d2eec7d8-dd6cf32316678670043e9457937441aea73fe4a0" title="README.md">README.md</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2012-12-13T05:08:58-08:00" title="2012-12-13 05:08:58">December 13, 2012</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/531267fcceba7731f7d538da354b7d75dc11b21b" class="message">Update README.md</a> [<a href="/kangax" rel="author">kangax</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-text-file"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/blob/master/build.js" class="js-slide-to css-truncate-target" id="efd59cd1bdc5c9ac6d0eaa368f1e149f-ec74159f2f66b3d416d805477b1e0ca64de32869" title="build.js">build.js</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2013-01-10T09:23:23-08:00" title="2013-01-10 09:23:23">January 10, 2013</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/1f206d039eab833baef0703e748a8177903f6413" class="message">Move gesture-based logic into a separate module</a> [<a href="/kangax" rel="author">kangax</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-text-file"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/blob/master/package.json" class="js-slide-to css-truncate-target" id="b9cfc7f2cdf78a7f4b91a753d10865a2-0549acd8e9625c9285dcc0e1ecefb473c46b5e4f" title="package.json">package.json</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2012-12-29T11:04:24-08:00" title="2012-12-29 11:04:24">December 29, 2012</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/7121830ca6a987baf81f9fb2effc010a7de8d320" class="message">Merge dynamic origin branch into master. Version 1.0.0</a> [<a href="/kangax" rel="author">kangax</a>]
+
+      </td>
+    </tr>
+    <tr>
+      <td class="icon"><span class="mini-icon mini-icon-text-file"></span></td>
+      <td class="content"><a href="/kangax/fabric.js/blob/master/test.js" class="js-slide-to css-truncate-target" id="1dd241c4cd3fd1dd89c570cee98b79dd-c8cbda5b91286781a9426f9bf8dcd5354dfb364a" title="test.js">test.js</a></td>
+      <td class="age"><time class="js-relative-date" datetime="2012-08-20T09:23:53-07:00" title="2012-08-20 09:23:53">August 20, 2012</time></td>
+
+      <td class="message">
+          <a href="/kangax/fabric.js/commit/9a7d40d7d7d72268f82b9fe5ed82041365205b2a" class="message">Change the way gradients are initialized.</a> [<a href="/kangax" rel="author">kangax</a>]
+
+      </td>
+    </tr>
+</tbody>
+
+      </table>
+      </div>
+
+        <div id="readme" class="clearfix announce instapaper_body md">
+          <span class="name"><span class="mini-icon mini-icon-readme"></span> README.md</span><article class="markdown-body entry-content" itemprop="mainContentOfPage"><h3>
+<a name="fabric-" class="anchor" href="#fabric-"><span class="mini-icon mini-icon-link"></span></a>Fabric <a href="http://travis-ci.org/#!/kangax/fabric.js"><img src="https://secure.travis-ci.org/kangax/fabric.js.png?branch=master" alt="Build Status" style="max-width:100%;"></a>
+</h3>
+
+<p><strong>Fabric.js</strong> is a framework that makes it easy to work with HTML5 canvas element. It is an <strong>interactive object model</strong> on top of canvas element. It is also an <strong>SVG-to-canvas parser</strong>.</p>
+
+<p><a href="http://fabricjs.com/kitchensink/" target="_blank"><img src="https://github.com/kangax/fabric.js/raw/master/lib/screenshot.png" style="max-width:100%;"></a></p>
+
+<p>Using Fabric.js, you can create and populate objects on canvas; objects like simple geometrical shapes — rectangles, circles, ellipses, polygons, or more complex shapes consisting of hundreds or thousands of simple paths. You can then scale, move, and rotate these objects with the mouse; modify their properties — color, transparency, z-index, etc. You can also manipulate these objects altogether — grouping them with a simple mouse selection.</p>
+
+<p>Contributions are very much welcome!</p>
+
+<h3>
+<a name="goals" class="anchor" href="#goals"><span class="mini-icon mini-icon-link"></span></a>Goals</h3>
+
+<ul>
+<li>Unit tested (1400+ tests at the moment)</li>
+<li>Modular (~20 small "classes" and modules)</li>
+<li>Cross-browser</li>
+<li><a href="https://github.com/kangax/fabric.js/wiki/Focus-on-speed">Fast</a></li>
+<li>Encapsulated in one object</li>
+<li>No browser sniffing for critical functionality</li>
+<li>Runs under ES5 strict mode</li>
+<li>Runs on a server under <a href="http://nodejs.org/">Node.js</a>
+</li>
+</ul><h3>
+<a name="supported-browsers" class="anchor" href="#supported-browsers"><span class="mini-icon mini-icon-link"></span></a>Supported browsers</h3>
+
+<ul>
+<li>Firefox 2+</li>
+<li>Safari 3+</li>
+<li>Opera 9.64+</li>
+<li>Chrome (all versions should work)</li>
+<li>IE9+</li>
+</ul><h4>
+<a name="with-help-of-explorer-canvas" class="anchor" href="#with-help-of-explorer-canvas"><span class="mini-icon mini-icon-link"></span></a>With help of <a href="http://code.google.com/p/explorercanvas/">Explorer Canvas</a>
+</h4>
+
+<ul>
+<li>IE8 (incomplete — about 17 failing tests at the moment)</li>
+<li>IE7,6 (incomplete - about 27 failing tests at the moment)</li>
+</ul><p>You can <a href="http://kangax.github.com/fabric.js/test/unit/">run automated unit tests</a> right in the browser.</p>
+
+<h3>
+<a name="history" class="anchor" href="#history"><span class="mini-icon mini-icon-link"></span></a>History</h3>
+
+<p>Fabric.js started as a foundation for design editor on <a href="http://printio.ru">printio.ru</a> — interactive online store with ability to create your own designs. The idea was to create <a href="http://printio.ru/ringer_man_tees/new">Javascript-based editor</a>, which would make it easy to manipulate vector shapes and images on T-Shirts. Since performance was one of the most critical requirements, we chose canvas over SVG. While SVG is excellent with static shapes, it's not as performant as canvas when it comes to dynamic manipulation of objects (movement, scaling, rotation, etc.). Fabric.js was heavily inspired by <a href="http://www.ernestdelgado.com/public-tests/canvasphoto/demo/canvas.html">Ernest Delgado's canvas experiment</a>. In fact, code from Ernest's experiment was the foundation of an entire framework. Later, Fabric.js grew into a collection of distinct object types and got an SVG-to-canvas parser.</p>
+
+<h3>
+<a name="building" class="anchor" href="#building"><span class="mini-icon mini-icon-link"></span></a>Building</h3>
+
+<ol>
+<li><p><a href="https://github.com/joyent/node/wiki/Installation">Install Node.js</a></p></li>
+<li>
+<p>Build distribution file  <strong>[~76K minified, ~22K gzipped]</strong></p>
+
+<pre><code>$ node build.js
+</code></pre>
+</li>
+</ol><pre><code>- Or build a custom distribution file, by passing (comma separated) module names to be included.&lt;br&gt;
+
+        $ node build.js modules=text,serialization,parser
+        // or
+        $ node build.js modules=text
+        // or
+        $ node build.js modules=parser,text
+        // etc.
+
+  By default (when none of the modules are specified) only basic functionality is included.
+  See the list of modules below for more information on each one of them.
+  Note that default distribution has support for **static canvases** only.
+
+  To get minimal distribution with interactivity, make sure to include corresponding module:
+
+        $ node build.js modules=interaction
+
+- You can also include all modules like so:
+
+        $ node build.js modules=ALL
+</code></pre>
+
+<ol>
+<li>
+<p>Create a minified distribution file</p>
+
+<pre><code># Using YUICompressor (default option)
+$ node build.js modules=... minifier=yui
+
+# or Google Closure Compiler
+$ node build.js modules=... minifier=closure
+</code></pre>
+</li>
+<li>
+<p>Optionally, you can build documentation</p>
+
+<pre><code>$ node build_docs.js
+</code></pre>
+</li>
+</ol><h3>
+<a name="demos" class="anchor" href="#demos"><span class="mini-icon mini-icon-link"></span></a>Demos</h3>
+
+<ul>
+<li><a href="http://fabricjs.com/demos/">Demos</a></li>
+<li><a href="http://fabricjs.com/kitchensink/">Kitchensink demo</a></li>
+<li><a href="http://fabricjs.com/benchmarks/">Benchmarks</a></li>
+</ul><h3>
+<a name="documentation" class="anchor" href="#documentation"><span class="mini-icon mini-icon-link"></span></a>Documentation</h3>
+
+<p>Documentation is always available at <a href="http://fabricjs.com/docs/">http://fabricjs.com/docs/</a>. You can also build it locally, following step 4 from the "Building" section of this README.</p>
+
+<p>Also see <a href="http://www.slideshare.net/kangax/fabricjs-building-acanvaslibrarybk">presentation from BK.js</a> and <a href="http://www.slideshare.net/kangax/fabric-falsy-values-8067834">presentation from Falsy Values</a> for an overview of fabric.js, how it works, and its features.</p>
+
+<h3>
+<a name="optional-modules" class="anchor" href="#optional-modules"><span class="mini-icon mini-icon-link"></span></a>Optional modules</h3>
+
+<p>These are the optional modules that could be specified for inclusion, when building custom version of fabric:</p>
+
+<ul>
+<li>
+<strong>text</strong> — Adds support for <code>fabric.Text</code>
+</li>
+<li>
+<strong>serialization</strong> — Adds support for <code>loadFromJSON</code>, <code>loadFromDatalessJSON</code>, and <code>clone</code> methods on <code>fabric.Canvas</code>
+</li>
+<li>
+<strong>interaction</strong> — Adds support for interactive features of fabric — selecting/transforming objects/groups via mouse/touch devices.</li>
+<li>
+<strong>parser</strong> — Adds support for <code>fabric.parseSVGDocument</code>, <code>fabric.loadSVGFromURL</code>, and <code>fabric.loadSVGFromString</code>
+</li>
+<li>
+<strong>image_filters</strong> — Adds support for image filters, such as grayscale of white removal.</li>
+<li>
+<strong>easing</strong> - Adds support for animation easing functions</li>
+<li>
+<strong>node</strong> — Adds support for running fabric under node.js, with help of <a href="https://github.com/tmpvar/jsdom">jsdom</a> and <a href="https://github.com/learnboost/node-canvas">node-canvas</a> libraries.</li>
+<li>
+<strong>freedrawing</strong> - Adds support for free drawing</li>
+</ul><h3>
+<a name="examples-of-use" class="anchor" href="#examples-of-use"><span class="mini-icon mini-icon-link"></span></a>Examples of use</h3>
+
+<h4>
+<a name="adding-red-rectangle-to-canvas" class="anchor" href="#adding-red-rectangle-to-canvas"><span class="mini-icon mini-icon-link"></span></a>Adding red rectangle to canvas</h4>
+
+<pre><code>&lt;canvas id="canvas" width="300" height="300"&gt;&lt;/canvas&gt;
+...
+var canvas = new fabric.Canvas('canvas');
+
+var rect = new fabric.Rect({
+  top: 100,
+  left: 100,
+  width: 60,
+  height: 70,
+  fill: 'red'
+});
+
+canvas.add(rect);
+</code></pre>
+
+<h3>
+<a name="staying-in-touch" class="anchor" href="#staying-in-touch"><span class="mini-icon mini-icon-link"></span></a>Staying in touch</h3>
+
+<p>Follow <a href="http://twitter.com/fabricjs">@fabric.js</a> or <a href="http://twitter.com/kangax">@kangax</a> on twitter. Questions, suggestions — <a href="http://groups.google.com/group/fabricjs">fabric.js on Google Groups</a>.</p>
+
+<h3>
+<a name="credits" class="anchor" href="#credits"><span class="mini-icon mini-icon-link"></span></a>Credits</h3>
+
+<ul>
+<li>Ernest Delgado for the original idea of <a href="http://www.ernestdelgado.com/archive/canvas/">manipulating images on canvas</a>.</li>
+<li>
+<a href="http://twitter.com/hakunin">Maxim "hakunin" Chernyak</a> for ideas, and help with various parts of the library throughout its life.</li>
+<li>
+<a href="http://nisnya.com">Sergey Nisnevich</a> for help with geometry logic.</li>
+<li>Github contributors: @Kingsquare, @cleercode, @jarek-itmore, @sunrei, @khronnuz, @ollym, @Kienz, @willmcneilly, @davidjrice</li>
+</ul><h3>
+<a name="mit-license" class="anchor" href="#mit-license"><span class="mini-icon mini-icon-link"></span></a>MIT License</h3>
+
+<p>Copyright (c) 2008-2012 Printio (Juriy Zaytsev, Maxim Chernyak)</p>
+
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:</p>
+
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</p></article>
+        </div>
+    </div>
+  </div>
+  <br style="clear:both;">
+
+
+<br style="clear:both;">
+
+<div id="js-frame-loading-template" class="frame frame-loading large-loading-area" style="display:none;">
+  <img class="js-frame-loading-spinner" src="https://a248.e.akamai.net/assets.github.com/images/spinners/octocat-spinner-128.gif?1347543527" height="64" width="64">
+</div>
+
+
+
+  </div>
+
+        </div>
+      </div>
+      <div class="context-overlay"></div>
+    </div>
+
+      <div id="footer-push"></div><!-- hack for sticky footer -->
+    </div><!-- end of wrapper - hack for sticky footer -->
+
+      <!-- footer -->
+      <div id="footer">
+  <div class="container clearfix">
+
+      <dl class="footer_nav">
+        <dt>GitHub</dt>
+        <dd><a href="https://github.com/about">About us</a></dd>
+        <dd><a href="https://github.com/blog">Blog</a></dd>
+        <dd><a href="https://github.com/contact">Contact &amp; support</a></dd>
+        <dd><a href="http://enterprise.github.com/">GitHub Enterprise</a></dd>
+        <dd><a href="http://status.github.com/">Site status</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>Applications</dt>
+        <dd><a href="http://mac.github.com/">GitHub for Mac</a></dd>
+        <dd><a href="http://windows.github.com/">GitHub for Windows</a></dd>
+        <dd><a href="http://eclipse.github.com/">GitHub for Eclipse</a></dd>
+        <dd><a href="http://mobile.github.com/">GitHub mobile apps</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>Services</dt>
+        <dd><a href="http://get.gaug.es/">Gauges: Web analytics</a></dd>
+        <dd><a href="http://speakerdeck.com">Speaker Deck: Presentations</a></dd>
+        <dd><a href="https://gist.github.com">Gist: Code snippets</a></dd>
+        <dd><a href="http://jobs.github.com/">Job board</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>Documentation</dt>
+        <dd><a href="http://help.github.com/">GitHub Help</a></dd>
+        <dd><a href="http://developer.github.com/">Developer API</a></dd>
+        <dd><a href="http://github.github.com/github-flavored-markdown/">GitHub Flavored Markdown</a></dd>
+        <dd><a href="http://pages.github.com/">GitHub Pages</a></dd>
+      </dl>
+
+      <dl class="footer_nav">
+        <dt>More</dt>
+        <dd><a href="http://training.github.com/">Training</a></dd>
+        <dd><a href="https://github.com/edu">Students &amp; teachers</a></dd>
+        <dd><a href="http://shop.github.com">The Shop</a></dd>
+        <dd><a href="/plans">Plans &amp; pricing</a></dd>
+        <dd><a href="http://octodex.github.com/">The Octodex</a></dd>
+      </dl>
+
+      <hr class="footer-divider">
+
+
+    <p class="right">&copy; 2013 <span title="0.19025s from fe18.rs.github.com">GitHub</span> Inc. All rights reserved.</p>
+    <a class="left" href="https://github.com/">
+      <span class="mega-icon mega-icon-invertocat"></span>
+    </a>
+    <ul id="legal">
+        <li><a href="https://github.com/site/terms">Terms of Service</a></li>
+        <li><a href="https://github.com/site/privacy">Privacy</a></li>
+        <li><a href="https://github.com/security">Security</a></li>
+    </ul>
+
+  </div><!-- /.container -->
+
+</div><!-- /.#footer -->
+
+
+
+
+
+
+<div id="keyboard_shortcuts_pane" class="instapaper_ignore readability-extra" style="display:none">
+  <h2>Keyboard Shortcuts <small><a href="#" class="js-see-all-keyboard-shortcuts">(see all)</a></small></h2>
+
+  <div class="columns threecols">
+    <div class="column first">
+      <h3>Site wide shortcuts</h3>
+      <dl class="keyboard-mappings">
+        <dt>s</dt>
+        <dd>Focus command bar</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>?</dt>
+        <dd>Bring up this help dialog</dd>
+      </dl>
+    </div><!-- /.column.first -->
+
+    <div class="column middle" style='display:none'>
+      <h3>Commit list</h3>
+      <dl class="keyboard-mappings">
+        <dt>j</dt>
+        <dd>Move selection down</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>k</dt>
+        <dd>Move selection up</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>c <em>or</em> o <em>or</em> enter</dt>
+        <dd>Open commit</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>y</dt>
+        <dd>Expand URL to its canonical form</dd>
+      </dl>
+    </div><!-- /.column.first -->
+
+    <div class="column last js-hidden-pane" style='display:none'>
+      <h3>Pull request list</h3>
+      <dl class="keyboard-mappings">
+        <dt>j</dt>
+        <dd>Move selection down</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>k</dt>
+        <dd>Move selection up</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt>o <em>or</em> enter</dt>
+        <dd>Open issue</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> enter</dt>
+        <dd>Submit comment</dd>
+      </dl>
+      <dl class="keyboard-mappings">
+        <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> shift p</dt>
+        <dd>Preview comment</dd>
+      </dl>
+    </div><!-- /.columns.last -->
+
+  </div><!-- /.columns.equacols -->
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+
+    <h3>Issues</h3>
+
+    <div class="columns threecols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt>j</dt>
+          <dd>Move selection down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>k</dt>
+          <dd>Move selection up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>x</dt>
+          <dd>Toggle selection</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o <em>or</em> enter</dt>
+          <dd>Open issue</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> enter</dt>
+          <dd>Submit comment</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> shift p</dt>
+          <dd>Preview comment</dd>
+        </dl>
+      </div><!-- /.column.first -->
+      <div class="column last">
+        <dl class="keyboard-mappings">
+          <dt>c</dt>
+          <dd>Create issue</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>l</dt>
+          <dd>Create label</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>i</dt>
+          <dd>Back to inbox</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>u</dt>
+          <dd>Back to issues</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>/</dt>
+          <dd>Focus issues search</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+
+    <h3>Issues Dashboard</h3>
+
+    <div class="columns threecols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt>j</dt>
+          <dd>Move selection down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>k</dt>
+          <dd>Move selection up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o <em>or</em> enter</dt>
+          <dd>Open issue</dd>
+        </dl>
+      </div><!-- /.column.first -->
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+
+    <h3>Network Graph</h3>
+    <div class="columns equacols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">←</span> <em>or</em> h</dt>
+          <dd>Scroll left</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">→</span> <em>or</em> l</dt>
+          <dd>Scroll right</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">↑</span> <em>or</em> k</dt>
+          <dd>Scroll up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt><span class="badmono">↓</span> <em>or</em> j</dt>
+          <dd>Scroll down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>t</dt>
+          <dd>Toggle visibility of head labels</dd>
+        </dl>
+      </div><!-- /.column.first -->
+      <div class="column last">
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">←</span> <em>or</em> shift h</dt>
+          <dd>Scroll all the way left</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">→</span> <em>or</em> shift l</dt>
+          <dd>Scroll all the way right</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">↑</span> <em>or</em> shift k</dt>
+          <dd>Scroll all the way up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift <span class="badmono">↓</span> <em>or</em> shift j</dt>
+          <dd>Scroll all the way down</dd>
+        </dl>
+      </div><!-- /.column.last -->
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" >
+    <div class="rule"></div>
+    <div class="columns threecols">
+      <div class="column first js-hidden-pane" >
+        <h3>Source Code Browsing</h3>
+        <dl class="keyboard-mappings">
+          <dt>t</dt>
+          <dd>Activates the file finder</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>l</dt>
+          <dd>Jump to line</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>w</dt>
+          <dd>Switch branch/tag</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>y</dt>
+          <dd>Expand URL to its canonical form</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+    <div class="columns threecols">
+      <div class="column first">
+        <h3>Browsing Commits</h3>
+        <dl class="keyboard-mappings">
+          <dt><span class="platform-mac">⌘</span><span class="platform-other">ctrl</span> <em>+</em> enter</dt>
+          <dd>Submit comment</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>escape</dt>
+          <dd>Close form</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>p</dt>
+          <dd>Parent commit</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o</dt>
+          <dd>Other parent commit</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="js-hidden-pane" style='display:none'>
+    <div class="rule"></div>
+    <h3>Notifications</h3>
+
+    <div class="columns threecols">
+      <div class="column first">
+        <dl class="keyboard-mappings">
+          <dt>j</dt>
+          <dd>Move selection down</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>k</dt>
+          <dd>Move selection up</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>o <em>or</em> enter</dt>
+          <dd>Open notification</dd>
+        </dl>
+      </div><!-- /.column.first -->
+
+      <div class="column second">
+        <dl class="keyboard-mappings">
+          <dt>e <em>or</em> shift i <em>or</em> y</dt>
+          <dd>Mark as read</dd>
+        </dl>
+        <dl class="keyboard-mappings">
+          <dt>shift m</dt>
+          <dd>Mute thread</dd>
+        </dl>
+      </div><!-- /.column.first -->
+    </div>
+  </div>
+
+</div>
+
+    <div id="markdown-help" class="instapaper_ignore readability-extra">
+  <h2>Markdown Cheat Sheet</h2>
+
+  <div class="cheatsheet-content">
+
+  <div class="mod">
+    <div class="col">
+      <h3>Format Text</h3>
+      <p>Headers</p>
+      <pre>
+# This is an &lt;h1&gt; tag
+## This is an &lt;h2&gt; tag
+###### This is an &lt;h6&gt; tag</pre>
+     <p>Text styles</p>
+     <pre>
+*This text will be italic*
+_This will also be italic_
+**This text will be bold**
+__This will also be bold__
+
+*You **can** combine them*
+</pre>
+    </div>
+    <div class="col">
+      <h3>Lists</h3>
+      <p>Unordered</p>
+      <pre>
+* Item 1
+* Item 2
+  * Item 2a
+  * Item 2b</pre>
+     <p>Ordered</p>
+     <pre>
+1. Item 1
+2. Item 2
+3. Item 3
+   * Item 3a
+   * Item 3b</pre>
+    </div>
+    <div class="col">
+      <h3>Miscellaneous</h3>
+      <p>Images</p>
+      <pre>
+![GitHub Logo](/images/logo.png)
+Format: ![Alt Text](url)
+</pre>
+     <p>Links</p>
+     <pre>
+http://github.com - automatic!
+[GitHub](http://github.com)</pre>
+<p>Blockquotes</p>
+     <pre>
+As Kanye West said:
+
+> We're living the future so
+> the present is our past.
+</pre>
+    </div>
+  </div>
+  <div class="rule"></div>
+
+  <h3>Code Examples in Markdown</h3>
+  <div class="col">
+      <p>Syntax highlighting with <a href="http://github.github.com/github-flavored-markdown/" title="GitHub Flavored Markdown" target="_blank">GFM</a></p>
+      <pre>
+```javascript
+function fancyAlert(arg) {
+  if(arg) {
+    $.facebox({div:'#foo'})
+  }
+}
+```</pre>
+    </div>
+    <div class="col">
+      <p>Or, indent your code 4 spaces</p>
+      <pre>
+Here is a Python code example
+without syntax highlighting:
+
+    def foo:
+      if not bar:
+        return true</pre>
+    </div>
+    <div class="col">
+      <p>Inline code for comments</p>
+      <pre>
+I think you should use an
+`&lt;addr&gt;` element here instead.</pre>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+
+    <div id="ajax-error-message" class="flash flash-error">
+      <span class="mini-icon mini-icon-exclamation"></span>
+      Something went wrong with that request. Please try again.
+      <a href="#" class="mini-icon mini-icon-remove-close ajax-error-dismiss"></a>
+    </div>
+
+
+
+    <span id='server_response_time' data-time='0.19185' data-host='fe18'></span>
+
+  </body>
+</html>
+

@@ -1,5 +1,5 @@
 <!doctype html>
-<title>Keep It Extension Configs</title>
+<title>KiFi Extension Options</title>
 <style>
 fieldset,
 #session {
@@ -30,25 +30,21 @@ button {padding: 4px 10px; margin-top: 6px}
 
 <fieldset>
   Environment:
-    <label><input type="radio" name="env" value="development"> <span>Development</span></label>
-    <label><input type="radio" name="env" value="production"> <span>Production</span></label><br>
-  <label>
-    Slider Delay (sec):
-    <input id="hover_timeout" name="hover_timeout" value="10">
-  </label>
-  <span style="font-size:10px">("0" to not show it automatically)</span><br>
+    <label><input type="radio" name="env" value="production"> <span>Production</span></label>
+    <label><input type="radio" name="env" value="development"> <span>Development</span></label><br>
+  <label><input type="checkbox" id="show-slider" name="show_slider"> <span>Show Slider Automatically</span></label><br>
   <label>
     Max Search Results:
-    <input id="max_search_results" name="max_search_results" value="10">
+    <input id="max-results" name="max_results">
   </label><br>
-  <label><input type="checkbox" name="scores"> <span>Show Search Result Scores</span></label><br>
+  <label><input type="checkbox" id="show-scores" name="show_scores"> <span>Show Search Result Scores</span></label><br>
   <button id="save">Save</button>
 </fieldset>
 
 <div id="session">
   <div id="identity"><div id="name"></div></div>
-  <a id="log-out" href="">Log out of Kifi and Facebook</a>
-  <a id="log-in" href="">Log into Kifi via Facebook</a>
+  <a id="log-out" href="">Log out of KiFi and Facebook</a>
+  <a id="log-in" href="">Log into KiFi via Facebook</a>
 </div>
 <div id="fb-root"></div>
 

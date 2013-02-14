@@ -1,33 +1,30 @@
-<div class="kifi_hover">
-  <div class="roundedbox">
-    <div class="kifi_header dtr">
-      <div class="holidays_hat" style="background:url({{holidays_hat}});  background-size:65px;"></div>
-      <div class="imageborder"><div class="circular profilepic" style="background:url({{profilepic}}) center no-repeat"></div></div>
-      <div class="kifihdr color_a">
+<div class="kifi-slider">
+  <div class="kifi-slider-border">
+    <div class="kifi-table-row">
+      <div class="kifi-slider-title-pic-border"><div class="kifi-slider-title-pic" style="background:url({{profilepic}}) center no-repeat"></div></div>
+      <div class="kifi-slider-title-bar">
         {{name}}
-        <span class="kifi-header-actions">
-          <span class="xlink">&times;</span>
-        </span>
+        <span class="kifi-slider-x"></span>
       </div>
     </div>
-    
-    <div class="dtr">
-      <ul class="interaction-bar">
-        <li class="comments-label"><span class="notify-count comments-count">0</span>Comments
-        <li class="messages-label"><span class="notify-count messages-count">0</span>Messages
+
+    <div class="kifi-table-row">
+      <ul class="kifi-tab-bar">
+        <li class="kifi-tab-comments"><span class="kifi-tab-count kifi-tab-count-comments">0</span>Comments
+        <li class="kifi-tab-messages"><span class="kifi-tab-count kifi-tab-count-messages">0</span>Messages
       </ul>
     </div>
 
-    <div class="dtr">
+    <div class="kifi-table-row">
       <div class="kifi-content">
         {{> main_hover}}
       </div>
     </div>
 
-    <div class="kifi_comment_wrapper dtg"></div>
+    <div class="kifi-table-row-group kifi-comment-wrapper"></div>
 
-    <div class="dtr">
-      <div class="kififtr">
+    <div class="kifi-table-row">
+      <div class="kifi-slider-footer">
         {{> footer}}
       </div>
     </div>

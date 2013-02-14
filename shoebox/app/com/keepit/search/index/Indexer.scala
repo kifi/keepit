@@ -37,8 +37,8 @@ object Indexer {
   }
 }
 
-abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, fieldDecoders: Map[String, FieldDecoder] = Map.empty) extends Logging {
-
+abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, fieldDecoders: Map[String, FieldDecoder]) extends Logging {
+  def this(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
 
   protected var searcher: Searcher = {
@@ -50,8 +50,10 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
       indexWriter.commit()
     }
     val reader = IndexReader.open(indexDirectory)
-    new Searcher(reader, ArrayIdMapper(reader))
+    Searcher(reader)
   }
+
+  def getSearcher = searcher
 
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
     try {
@@ -73,7 +75,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     indexWriter.close()
   }
 
-  def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int)(afterCommit: Seq[(Indexable[T], Option[IndexError])]=>Unit): Unit = {
+  def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int, refresh: Boolean = true)(afterCommit: Seq[(Indexable[T], Option[IndexError])]=>Unit): Unit = {
     doWithIndexWriter{ indexWriter =>
       indexables.grouped(commitBatchSize).foreach{ indexableBatch =>
         val commitBatch = indexableBatch.map{ indexable =>
@@ -109,26 +111,32 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
         afterCommit(commitBatch)
       }
     }
-    refreshSearcher()
+    if (refresh) refreshSearcher()
+  }
+
+  def deleteAllDocuments(refresh: Boolean = true) {
+    if (IndexReader.indexExists(indexDirectory)) {
+      doWithIndexWriter{ indexWriter =>
+        indexWriter.deleteAll()
+        indexWriter.commit(Map(Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString))
+      }
+    }
+    if (refresh) refreshSearcher()
   }
 
   def commitData: Map[String, String] = {
     // get the latest commit
-    val indexReader = Option(IndexReader.openIfChanged(searcher.indexReader)).getOrElse(searcher.indexReader)
+    val indexReader = Option(IndexReader.openIfChanged(searcher.indexReader.inner)).getOrElse(searcher.indexReader.inner)
     var indexCommit = indexReader.getIndexCommit()
     var mutableMap = indexCommit.getUserData()
     log.info("commit data =" + mutableMap)
     Map() ++ mutableMap
   }
 
-  def getQueryParser(lang: Lang): QueryParser
-  def parseQuery(queryText: String, lang: Lang = Lang("en")) = getQueryParser(lang).parseQuery(queryText)
-
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
 
   def refreshSearcher() {
-    val reader = IndexReader.openIfChanged(searcher.indexReader) // this may return null
-    if (reader != null) searcher = new Searcher(reader, ArrayIdMapper(reader))
+    searcher = Searcher.reopen(searcher)
   }
 
   def buildIndexable(data: T): Indexable[T]
@@ -144,5 +152,4 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     }
   }
 }
-
 

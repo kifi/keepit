@@ -1,30 +1,73 @@
 package com.keepit.search.index
 
+import com.keepit.common.db.Id
+import com.keepit.model.User
 import com.keepit.search.SemanticVectorComposer
 import com.keepit.search.SemanticVector
+import com.keepit.search.BrowsingHistoryTracker
+import com.keepit.search.ClickHistoryTracker
+import com.keepit.search.MultiHashFilter
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
+import org.apache.lucene.index.SegmentReader
+import org.apache.lucene.search.Query
+import org.apache.lucene.search.Scorer
+import scala.collection.mutable.ArrayBuffer
 
-class PersonalizedSearcher(override val indexReader: IndexReader, override val idMapper: IdMapper, ids: Set[Long]) extends Searcher(indexReader, idMapper) {
+object PersonalizedSearcher {
+  def apply(userId: Id[User], indexReader: WrappedIndexReader, ids: Set[Long],
+            browsingHistoryTracker: BrowsingHistoryTracker,
+            clickHistoryTracker: ClickHistoryTracker,
+            svWeightMyBookMarks: Int,
+            svWeightBrowsingHistory: Int,
+            svWeightClickHistory: Int) = {
+    new PersonalizedSearcher(indexReader, ids,
+                             browsingHistoryTracker.getMultiHashFilter(userId),
+                             clickHistoryTracker.getMultiHashFilter(userId),
+                             svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
+  }
 
+  def apply(searcher: Searcher, ids: Set[Long]) = {
+    new PersonalizedSearcher(searcher.indexReader, ids, MultiHashFilter.emptyFilter, MultiHashFilter.emptyFilter, 1, 0, 0)
+  }
+}
+
+class PersonalizedSearcher(override val indexReader: WrappedIndexReader, ids: Set[Long],
+                           browsingFilter: MultiHashFilter, clickFilter: MultiHashFilter,
+                           svWeightMyBookMarks: Int, svWeightBrowsingHistory: Int, svWeightClickHistory: Int)
+extends Searcher(indexReader) {
   override protected def getSemanticVectorComposer(term: Term) = {
+    val subReaders = indexReader.wrappedSubReaders
     val composer = new SemanticVectorComposer
-    val tp = indexReader.termPositions(term)
     var vector = new Array[Byte](SemanticVector.arraySize)
-    try {
-      while (tp.next) {
-        if (ids.contains(idMapper.getId(tp.doc()))) {
-          var freq = tp.freq()
-          while (freq > 0) {
-            freq -= 1
-            tp.nextPosition()
-            vector = tp.getPayload(vector, 0)
-            composer.add(vector)
+    var i = 0
+    while (i < subReaders.length) {
+      val subReader = subReaders(i)
+      val idMapper = subReader.getIdMapper
+      val tp = subReader.termPositions(term)
+      try {
+        while (tp.next) {
+          val id = idMapper.getId(tp.doc())
+          val weight = {
+            if (clickFilter.mayContain(id)) svWeightClickHistory
+            else if (browsingFilter.mayContain(id)) svWeightBrowsingHistory
+            else if (ids.contains(id)) svWeightMyBookMarks
+            else 0
+          }
+          if (weight > 0) {
+            var freq = tp.freq()
+            while (freq > 0) {
+              freq -= 1
+              tp.nextPosition()
+              vector = tp.getPayload(vector, 0)
+              composer.add(vector, weight)
+            }
           }
         }
+      } finally {
+        tp.close()
       }
-    } finally {
-      tp.close()
+      i += 1
     }
     composer
   }

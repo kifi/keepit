@@ -9,13 +9,18 @@ import play.api.mvc.Action
 import play.api.mvc.Controller
 import securesocial.core.SecureSocial
 import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.cache.CacheStatistics
 
 object HealthController extends FortyTwoController {
 
   def serviceView = AdminHtmlAction { implicit request =>
-    val errorCount = inject[HealthcheckPlugin].errorCount
+    val healthcheckPlugin = inject[HealthcheckPlugin]
+    val errorCount = healthcheckPlugin.errorCount
+    val recentErrors = healthcheckPlugin.errors()
     val services = inject[FortyTwoServices]
-    Ok(views.html.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString, services.started.toStandardTimeString, errorCount))
+    val cacheStats = inject[CacheStatistics].getStatistics
+    val (totalHits, totalMisses, totalSets) = (cacheStats.map(_._2).sum, cacheStats.map(_._3).sum, cacheStats.map(_._4).sum)
+    Ok(views.html.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString, services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
   }
 
   def ping() = Action { implicit request =>
@@ -34,6 +39,10 @@ object HealthController extends FortyTwoController {
   def causeError() = Action { implicit request =>
     0/0 // The realest fake error imaginable // Technically, this error is ∉ ℝ
     Ok("You cannot see this.")
+  }
+
+  def getErrors() = AdminHtmlAction { implicit request =>
+    Ok(inject[HealthcheckPlugin].errors().mkString("\n"))
   }
 
   def resetErrorCount() = AdminHtmlAction { implicit request =>

@@ -4,7 +4,7 @@ import org.junit.runner.RunWith
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.runner.JUnitRunner
 import com.keepit.inject._
-import com.keepit.model.UserExperiment.ExperimentTypes.ADMIN
+import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.social.SecureSocialUserService
 import com.keepit.test.EmptyApplication
 import com.keepit.test.FakeClock

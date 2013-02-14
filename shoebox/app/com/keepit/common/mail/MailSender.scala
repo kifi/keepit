@@ -9,7 +9,8 @@ import play.api.libs.json._
 import play.api.libs.ws._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError}
-import com.keepit.common.db.CX
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
 import com.keepit.inject._
 import akka.actor.ActorSystem
 import akka.actor.Actor
@@ -29,7 +30,7 @@ trait MailSenderPlugin extends Plugin {
   def processOutbox(): Unit
 }
 
-class MailSenderPluginImpl @Inject() (system: ActorSystem)
+class MailSenderPluginImpl @Inject() (system: ActorSystem, db: DBConnection, mailRepo: ElectronicMailRepo)
   extends Logging with MailSenderPlugin {
 
   override def processMail(mail: ElectronicMail): Unit = actor ! ProcessMail(mail, this)
@@ -49,8 +50,8 @@ class MailSenderPluginImpl @Inject() (system: ActorSystem)
   }
 
   override def processOutbox(): Unit = {
-    CX.withConnection { implicit c =>
-      ElectronicMail.outbox()
+    db.readOnly { implicit s =>
+      mailRepo.outbox
     } foreach { mail =>
       processMail(mail)
     }

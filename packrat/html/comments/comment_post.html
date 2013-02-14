@@ -1,19 +1,19 @@
-<form class="comment_form">
-  <div class="comment-box compose-comment">
-    <img src="{{kifiuser.avatar}}" class="user-avatar comment-avatar">
-    <div class="compose-wrapper">
-      <div class="comment-compose" contenteditable="true"></div>
-      <div class="compose-social">Post to:
-        <span class="post_to_network">
-          <span class="kn_social kn_facebook" style="background-image:url({{connected_networks}}); "> </span>
-          <span class="kn_social kn_linkedin" style="background-image:url({{connected_networks}})"> </span>
-          <span class="kn_social kn_twitter" style="background-image:url({{connected_networks}})"> </span>
-          <span class="kn_social kn_pinterest" style="background-image:url({{connected_networks}})"> </span>
+<form class="kifi-comment-form">
+  <div class="kifi-comment-box">
+    <img src="{{kifiuser.avatar}}" class="kifi-user-avatar kifi-comment-avatar">
+    <div class="kifi-compose-wrapper">
+      <div class="kifi-comment-compose" contenteditable></div>
+      <div class="kifi-compose-social">Post to:
+        <span class="kifi-post-to-network">
+          <span class="kifi-network kifi-network-fb" style="background-image:url({{connected_networks}})"> </span>
+          <span class="kifi-network kifi-network-in" style="background-image:url({{connected_networks}})"> </span>
+          <span class="kifi-network kifi-network-tw" style="background-image:url({{connected_networks}})"> </span>
+          <span class="kifi-network kifi-network-pn" style="background-image:url({{connected_networks}})"> </span>
         </span>
       </div>
-      <div class="submit-bar">
-        <a href="javascript:" class="take-snapshot" style="background-image:url({{snapshotUri}})"></a>
-        <input type="submit" class="submit-comment" value="Comment">
+      <div class="kifi-submit-bar">
+        <a href="javascript:" class="kifi-take-snapshot" style="background-image:url({{snapshotUri}})" tabindex="-1"></a>
+        <a href="javascript:" class="kifi-submit-comment" tabindex="0">Comment</a>
       </div>
     </div>
   </div>

@@ -5,6 +5,7 @@ import com.keepit.search.SemanticVectorComposer
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.Payload
+import org.apache.lucene.index.SegmentReader
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Query
@@ -12,12 +13,22 @@ import org.apache.lucene.search.Scorer
 import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
 
-class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends IndexSearcher(indexReader) {
+
+object Searcher {
+  def apply(indexReader: IndexReader) = new Searcher(WrappedIndexReader(indexReader))
+  def apply(indexReader: IndexReader, idMapper: IdMapper) = new Searcher(WrappedIndexReader(indexReader, idMapper))
+
+  def reopen(oldSearcher: Searcher) = new Searcher(WrappedIndexReader.reopen(oldSearcher.indexReader))
+}
+
+class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexReader) {
+
+  def idf(term: Term) = getSimilarity.idf(docFreq(term), maxDoc)
 
   // search: hits are ordered by score
   def search(query: Query): Seq[Hit] = {
     val hitBuf = new ArrayBuffer[Hit]()
-    doSearch(query){ scorer =>
+    doSearch(query){ (scorer, idMapper) =>
       var doc = scorer.nextDoc()
       while (doc != NO_MORE_DOCS) {
         var score = scorer.score()
@@ -28,14 +39,20 @@ class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends Ind
     hitBuf.sortWith((a, b) => a.score >= b.score).toSeq
   }
 
-  def doSearch[R](query: Query)(f: Scorer => Unit) = {
+  def doSearch(query: Query)(f: (Scorer, IdMapper) => Unit) {
     val rewrittenQuery = rewrite(query)
     if (rewrittenQuery != null) {
       val weight = createNormalizedWeight(rewrittenQuery)
       if(weight != null) {
-        val scorer = weight.scorer(indexReader, true, true)
-        if (scorer != null) {
-          f(scorer)
+        var i = 0
+        val subReaders = indexReader.wrappedSubReaders
+        while (i < subReaders.length) {
+          val subReader = subReaders(i)
+          val scorer = weight.scorer(subReader, true, true)
+          if (scorer != null) {
+            f(scorer, subReader.getIdMapper)
+          }
+          i += 1
         }
       }
     }
@@ -52,7 +69,7 @@ class Searcher(val indexReader: IndexReader, val idMapper: IdMapper) extends Ind
           freq -= 1
           tp.nextPosition()
           vector = tp.getPayload(vector, 0)
-          composer.add(vector)
+          composer.add(vector, 1)
         }
       }
     } finally {

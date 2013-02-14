@@ -1,34 +1,29 @@
 $(function() {
-  var config;
-  chrome.extension.sendMessage({type: "get_conf"}, function init(o) {
-    console.log("[init] config:", o.config);
-    config = o.config;
-    var env = o.config.env;
-    $("[name=env][value=" + env + "]").attr("checked", true);
-    $("#max_search_results").val(o.config["max_res"]);
-    $("#hover_timeout").val(o.config["hover_timeout"]);
-    $("input[name=scores]").attr("checked", o.config["show_score"] == "true");
+  chrome.extension.sendMessage(["get_prefs"], function init(o) {
+    console.log("[init] prefs:", o.prefs);
+    $("[name=env][value=" + o.prefs.env + "]").prop("checked", true);
+    $("#show-slider").prop("checked", o.prefs.showSlider);
+    $("#max-results").val(o.prefs.maxResults);
+    $("#show-scores").prop("checked", o.prefs.showScores);
     showSession(o.session);
   });
   $("#save").click(function() {
-    localStorage.env = $("input[name=env][value=development]").is(":checked") ? "development" : "production";
-    set("max_res", $("#max_search_results").val());
-    set("hover_timeout", $("#hover_timeout").val());
-    set("show_score", $("input[name=scores]").is(":checked"));
+    chrome.extension.sendMessage(["set_prefs", {
+      env: $("input[name=env][value=development]").is(":checked") ? "development" : "production",
+      showSlider: $("#show-slider").is(":checked"),
+      maxResults: $("#max-results").val(),
+      showScores: $("#show-scores").is(":checked")}]);
     window.close();
-    function set(key, value) {
-      chrome.extension.sendMessage({type: "set_conf", key: key, value: value});
-    }
   });
   $("#log-out").click(function(e) {
     e.preventDefault();
-    chrome.extension.sendMessage({type: "log_out"}, function() {
+    chrome.extension.sendMessage(["log_out"], function() {
       showSession();
     });
   });
   $("#log-in").click(function(e) {
     e.preventDefault();
-    chrome.extension.sendMessage({type: "log_in"}, function(session) {
+    chrome.extension.sendMessage(["log_in"], function(session) {
       showSession(session);
     });
   });

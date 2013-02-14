@@ -1,12 +1,12 @@
 package com.keepit.search.query
 
+import com.keepit.search.index.Searcher
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.TermPositions
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
-import org.apache.lucene.search.Searcher
 import org.apache.lucene.search.ComplexExplanation
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.Similarity
@@ -23,13 +23,9 @@ object ProximityQuery {
   def apply(terms: Seq[Term]) = new ProximityQuery(terms)
 }
 
-class ProximityQuery(val terms: Seq[Term]) extends Query {
+class ProximityQuery(val terms: Seq[Term]) extends Query2 {
 
-  override def createWeight(searcher: Searcher): Weight = {
-    val similarity = searcher.getSimilarity
-    val numDocs = searcher.maxDoc()
-    new ProximityWeight(this)
-  }
+  override def createWeight2(searcher: Searcher): Weight = new ProximityWeight(this)
 
   override def rewrite(reader: IndexReader): Query = this
 
@@ -46,7 +42,7 @@ class ProximityQuery(val terms: Seq[Term]) extends Query {
 }
 
 class ProximityWeight(query: ProximityQuery) extends Weight {
-  var value = 0.0f
+  private[this] var value = 0.0f
 
   override def getValue() = value
   override def scoresDocsOutOfOrder() = false
@@ -64,15 +60,15 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
     val result = new ComplexExplanation()
     if (exists) {
-      result.setDescription("proximity(%), product of:".format(query.terms.mkString(",")))
+      result.setDescription("proximity(%s), product of:".format(query.terms.mkString(",")))
       val proxScore = sc.score
-      val boost = query.getBoost
-      result.setValue(proxScore * boost)
+      val boost = getValue
+      result.setValue(proxScore)
       result.setMatch(true)
-      result.addDetail(new Explanation(proxScore, "proximity score"))
+      result.addDetail(new Explanation(proxScore/boost, "proximity score"))
       result.addDetail(new Explanation(boost, "boost"))
     } else {
-      result.setDescription("proximity(%), doesn't match id %d".format(query.terms.mkString(","), doc))
+      result.setDescription("proximity(%s), doesn't match id %d".format(query.terms.mkString(","), doc))
       result.setValue(0)
       result.setMatch(false)
     }
@@ -97,7 +93,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
   }
 }
 
-class PositionAndMask(val tp: TermPositions, val termText: String) {
+private[query] final class PositionAndMask(val tp: TermPositions, val termText: String) {
   var doc = -1
   var pos = -1
 
@@ -110,7 +106,7 @@ class PositionAndMask(val tp: TermPositions, val termText: String) {
     this
   }
 
-  def fetchDoc(target: Int): Int = {
+  def fetchDoc(target: Int) {
     pos = -1
     if (tp.skipTo(target)) {
       doc = tp.doc()
@@ -119,22 +115,9 @@ class PositionAndMask(val tp: TermPositions, val termText: String) {
       doc = DocIdSetIterator.NO_MORE_DOCS
       posLeft = 0
     }
-    doc
   }
 
-  def nextDoc(): Int = {
-    pos = -1
-    if (tp.next()) {
-      doc = tp.doc()
-      posLeft = tp.freq()
-    } else {
-      doc = DocIdSetIterator.NO_MORE_DOCS
-      posLeft = 0
-    }
-    doc
-  }
-
-  def nextPos(): Int = {
+  def nextPos() {
     if (posLeft > 0) {
       pos = tp.nextPosition()
       posLeft -= 1
@@ -142,7 +125,6 @@ class PositionAndMask(val tp: TermPositions, val termText: String) {
     else {
       pos = Int.MaxValue
     }
-    pos
   }
 }
 
@@ -155,6 +137,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
   private[this] def gapPenalty(distance: Int) = 0.05f * distance.toFloat // gap penalty
   private[this] val rl = new Array[Float](numTerms + 1) // run lengths
   private[this] val ls = new Array[Float](numTerms + 1) // local scores
+  private[this] val weightVal = weight.getValue
 
   private[this] val pq = new PriorityQueue[PositionAndMask] {
     super.initialize(numTerms)
@@ -170,10 +153,9 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
     // compute edit distance based proximity score
     val insertCost = 1.0f
     val baseEditCost = 1.0f
-
-    var top = pq.top
-    var doc = top.doc
+    val doc = curDoc
     if (scoredDoc != doc) {
+      var top = pq.top
       proximityScore = 0.0f
       var maxScore = 0.0f
       if (top.pos < Int.MaxValue) {
@@ -184,7 +166,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
         // start fetching position for all terms, and cumulate term presence scores as the base score
         while (top.doc == doc && top.pos == -1) {
           proximityScore += termPresenceScore
-          val pos = top.nextPos()
+          top.nextPos()
           top = pq.updateTop()
         }
 
@@ -218,9 +200,10 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
         }
         proximityScore += maxScore
       }
+      proximityScore *= weightVal
       scoredDoc = doc
     }
-    (sqrt(proximityScore.toDouble + 1.0d) - 1.0d).toFloat
+    proximityScore
   }
 
   override def docID(): Int = curDoc

@@ -13,8 +13,8 @@ import scala.math._
 object SemanticVector {
   val vectorSize = 128 // bits
   val arraySize = vectorSize / 8
-  private val gaussianSampleSize = 100000L
-  private val gaussianSample = {
+  private[this] val gaussianSampleSize = 100000L
+  private[this] val gaussianSample = {
     val rnd = new Random(123456)
     val arr = new Array[Float](gaussianSampleSize.toInt)
     var i = 0
@@ -25,28 +25,36 @@ object SemanticVector {
     Sorting.quickSort(arr)
     arr
   }
+  private[this] val similarityScore = {
+    val half = vectorSize.toFloat / 2.0f
+    (0 to vectorSize).map{ distance => 1.0f - (distance.toFloat / half) }.toArray
+  }
 
+  // hamming distance
   def distance(v1: Array[Byte], v2: Array[Byte]) = {
     var i = 0
     var dist = 0
     while (i < arraySize) {
-      dist += popCount((v1(i) ^ v2(i)) & 0xFF).toInt
+      dist += popCount((v1(i) ^ v2(i)) & 0xFF)
       i += 1
     }
     dist
   }
 
-  private val popCount = {
-    val arr = new Array[Byte](256)
+  // similarity of two vectors (-1.0 to 1.0) ~ cosine distance
+  def similarity(v1: Array[Byte], v2: Array[Byte]) = similarityScore(distance(v1, v2))
+
+  private[this] val popCount = {
+    val arr = new Array[Int](256)
     var i = 0
     while (i < 256) {
-      arr(i) = Integer.bitCount(i).toByte
+      arr(i) = Integer.bitCount(i)
       i += 1
     }
     arr
   }
 
-  private val MASK = 0x7FFFFFFFFFFFFFFFL // 63 bits
+  private[this] val MASK = 0x7FFFFFFFFFFFFFFFL // 63 bits
 
   def getSeed(term: String): Array[Float] = {
     var seed = (term.hashCode.toLong + (term.charAt(0).toLong << 31)) & MASK
@@ -112,17 +120,17 @@ object SemanticVector {
 class SemanticVectorBuilder(windowSize: Int) {
   import SemanticVector._
 
-  var termSketches = Map.empty[String, Array[Float]]
-  private var termSeeds = Map.empty[String, Array[Float]]
+  private[this] var termSketches = Map.empty[String, Array[Float]]
+  private[this] var termSeeds = Map.empty[String, Array[Float]]
 
-  private val termQueue = new Array[String](windowSize)
-  private val seedQueue = new Array[Array[Float]](windowSize)
+  private[this] val termQueue = new Array[String](windowSize)
+  private[this] val seedQueue = new Array[Array[Float]](windowSize)
 
-  private var headPos = 0
-  private var tailPos = - windowSize
-  private var midPos = - (windowSize / 2)
-  private var headSketch = emptySketch
-  private var tailSketch = emptySketch
+  private[this] var headPos = 0
+  private[this] var tailPos = - windowSize
+  private[this] var midPos = - (windowSize / 2)
+  private[this] var headSketch = emptySketch
+  private[this] var tailSketch = emptySketch
 
   def load(tokenStream: TokenStream) {
     val termAttr = tokenStream.getAttribute(classOf[CharTermAttribute])
@@ -225,26 +233,26 @@ class SemanticVectorBuilder(windowSize: Int) {
 class SemanticVectorComposer {
   import SemanticVector._
 
-  var cnt = 0
-  val counters = new Array[Int](vectorSize)
+  private[this] var cnt = 0
+  private[this] val counters = new Array[Int](vectorSize)
 
-  def add(vector: Array[Byte]) = {
+  def add(vector: Array[Byte], weight: Int) = {
     var i = 0
     var b = 0
     while (i < vector.length) {
       val b = vector(i)
       val j = i * 8
-      counters(j    ) += (b >> 7) & 0x1
-      counters(j + 1) += (b >> 6) & 0x1
-      counters(j + 2) += (b >> 5) & 0x1
-      counters(j + 3) += (b >> 4) & 0x1
-      counters(j + 4) += (b >> 3) & 0x1
-      counters(j + 5) += (b >> 2) & 0x1
-      counters(j + 6) += (b >> 1) & 0x1
-      counters(j + 7) += (b     ) & 0x1
+      counters(j    ) += ((b >> 7) & 0x1) * weight
+      counters(j + 1) += ((b >> 6) & 0x1) * weight
+      counters(j + 2) += ((b >> 5) & 0x1) * weight
+      counters(j + 3) += ((b >> 4) & 0x1) * weight
+      counters(j + 4) += ((b >> 3) & 0x1) * weight
+      counters(j + 5) += ((b >> 2) & 0x1) * weight
+      counters(j + 6) += ((b >> 1) & 0x1) * weight
+      counters(j + 7) += ((b     ) & 0x1) * weight
       i += 1
     }
-    cnt += 1
+    cnt += weight
     this
   }
 

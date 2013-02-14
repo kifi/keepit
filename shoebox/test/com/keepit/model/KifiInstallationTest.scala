@@ -2,15 +2,14 @@ package com.keepit.model
 
 import org.specs2.mutable._
 
-import com.keepit.common.db.CX._
 import com.keepit.common.db._
 import com.keepit.common.time.zones.PT
-import com.keepit.test.EmptyApplication
+import com.keepit.test._
 
 import play.api.Play.current
 import play.api.test.Helpers._
 
-class KifiInstallationTest extends SpecificationWithJUnit {
+class KifiInstallationTest extends SpecificationWithJUnit with DbRepos {
 
   "KifiInstallation" should {
     "parse version strings and order correctly" in {
@@ -32,22 +31,20 @@ class KifiInstallationTest extends SpecificationWithJUnit {
     }
     "persist" in {
       running(new EmptyApplication()) {
-        val (user, install) = CX.withConnection { implicit conn =>
-          val user = User(firstName = "Dafna", lastName = "Smith").save
-          val install = KifiInstallation(userId = user.id.get, version = KifiVersion("1.1.1"), externalId = ExternalId[KifiInstallation](), userAgent = UserAgent.fromString("my browser")).save
+        val (user, install) = db.readWrite {implicit s =>
+          val user = userRepo.save(User(firstName = "Dafna", lastName = "Smith"))
+          val install = installationRepo.save(KifiInstallation(userId = user.id.get, version = KifiVersion("1.1.1"), externalId = ExternalId[KifiInstallation](), userAgent = UserAgent.fromString("my browser")))
           (user, install)
         }
 
-        CX.withConnection { implicit conn =>
-          KifiInstallation.get(install.id.get) === install
-          val all = KifiInstallation.all(user.id.get)
+        db.readOnly {implicit s =>
+          installationRepo.get(install.id.get) === install
+          val all = installationRepo.all(user.id.get)
           all.size === 1
           all.head === install
-          KifiInstallation.get(user.id.get, install.externalId) === install
+          installationRepo.getOpt(user.id.get, install.externalId) === Some(install)
         }
       }
     }
-
   }
-
 }

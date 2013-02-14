@@ -1,0 +1,25 @@
+@(unscrapables: Seq[Unscrapable])
+
+@admin("Unscrapable documents") {
+    <form action="@com.keepit.controllers.admin.routes.ScraperController.previewUnscrapable()" method="POST" class="form-inline">
+        Pattern: <input type="text" name="pattern" value="" placeholder="Regex pattern">
+        Records to check: <input type="text" name="count" value="1000">
+        <input type="submit" value="Add pattern">
+    </form>
+    <table class="table table-bordered">
+        <tr>
+            <th>#</th>
+            <th>Regex</th>
+            <th>Created At</th>
+            <th>State</th>
+        </tr>
+        @for(doc <- unscrapables) {
+          <tr>
+            <td>@doc.id</td>
+            <td>@doc.pattern</td>
+            <td>@doc.createdAt</td>
+            <td>@doc.state.value</td>
+          </tr>
+        }
+    </table>
+}

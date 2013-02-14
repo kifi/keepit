@@ -1,23 +1,22 @@
 package com.keepit.common.social
 
-import java.sql.Connection
-import com.keepit.model.{User, SocialUserInfo}
-import com.keepit.model.Bookmark
-import com.keepit.model.EmailAddress
-import com.keepit.model.UserExperiment.ExperimentType
-import com.keepit.common.db.State
-import com.keepit.model.UserExperiment
-import com.keepit.common.db.ExternalId
+
+import play.api.Play.current
+import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.model._
+import com.keepit.inject._
 
 case class BasicUser(externalId: ExternalId[User], firstName: String, lastName: String, avatar: String) // todo: avatar is a URL
 
-object BasicUser {
-  def apply(user: User)(implicit conn: Connection): BasicUser = {
+class BasicUserRepo {
+  def load(user: User)(implicit session: RSession): BasicUser = {
+  	val socialUserInfo = inject[SocialUserInfoRepo].getByUser(user.id.get)
     BasicUser(
       externalId = user.externalId,
       firstName = user.firstName,
       lastName = user.lastName,
-      avatar = "https://graph.facebook.com/" + SocialUserInfo.getByUser(user.id.get).head.socialId.id + "/picture?type=square" // todo: fix?
+      avatar = "https://graph.facebook.com/" + socialUserInfo.head.socialId.id + "/picture?type=square" // todo: fix?
     )
   }
 }

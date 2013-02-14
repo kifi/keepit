@@ -11,19 +11,26 @@ import akka.dispatch.ExecutionContext
 
 case class FakeHealthcheck() extends HealthcheckPlugin {
 
-  val errors = MutableList[HealthcheckError]()
+  val _errors = MutableList[HealthcheckError]()
 
-  def errorCountFuture(): Future[Int] = Promise.successful(errors.size)(new ExecutionContext() {
+  def errorCountFuture(): Future[Int] = Promise.successful(_errors.size)(new ExecutionContext() {
     def execute(runnable: Runnable): Unit = {}
     def reportFailure(t: Throwable): Unit = {}
   })
 
   def errorCount(): Int = errors.size
 
-  def resetErrorCount(): Unit = errors.clear
+  def resetErrorCount(): Unit = _errors.clear
+
+  def errorsFuture(): Future[List[HealthcheckError]] = Promise.successful(_errors.toList)(new ExecutionContext() {
+    def execute(runnable: Runnable): Unit = {}
+    def reportFailure(t: Throwable): Unit = {}
+  })
+
+  def errors(): List[HealthcheckError] = _errors.toList
 
   def addError(error: HealthcheckError): HealthcheckError = {
-    errors += error
+    _errors += error
     error
   }
 

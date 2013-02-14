@@ -10,20 +10,22 @@ POST    /bookmarks/add              com.keepit.controllers.BookmarksController.a
 POST    /bookmarks/update           com.keepit.controllers.BookmarksController.updateBookmarks
 GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all
 GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
+POST    /bookmarks/rescrape         com.keepit.controllers.BookmarksController.rescrape
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
-GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(uri: String)
-POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.remove(uri: Option[String] ?= None)
-POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy(uri: Option[String] ?= None, isPrivate: Option[Boolean] ?= None)
+GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(uri: String, ver: Option[String] ?= None)
+POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.remove()
+POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy()
 
-POST    /comments/add               com.keepit.controllers.CommentController.createComment(url: Option[String] ?= None, title: Option[String] ?= None, text: Option[String] ?= None, permissions: Option[String] ?= None, recipients: Option[String] ?= None, parent: Option[String] ?= None)
+POST    /comments/add               com.keepit.controllers.CommentController.createComment()
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
-GET     /comments/reply             com.keepit.controllers.CommentController.getReplies(commentId: ExternalId[Comment])
-POST    /comments/follow            com.keepit.controllers.CommentController.startFollowing(url: Option[String] ?= None)
-DELETE  /comments/follow            com.keepit.controllers.CommentController.stopFollowing(url: Option[String] ?= None)
+POST    /comments/follow            com.keepit.controllers.CommentController.startFollowing()
+POST    /comments/unfollow          com.keepit.controllers.CommentController.stopFollowing()
+DELETE  /comments/follow            com.keepit.controllers.CommentController.stopFollowing()
+# TODO: remove DELETE route above (Firefox Addon SDK does not support DELETE requests) after all KiFi installations >= 2.1.45
 
 GET     /messages/threads/:id       com.keepit.controllers.CommentController.getMessageThread(id: ExternalId[Comment])
 GET     /messages/threads           com.keepit.controllers.CommentController.getMessageThreadList(url: String)
-POST    /messages                   com.keepit.controllers.CommentController.createComment(url: Option[String] ?= None, title: Option[String] ?= None, text: Option[String] ?= None, permissions: Option[String] = Some("message"), recipients: Option[String] ?= None, parent: Option[String] ?= None)
+POST    /messages                   com.keepit.controllers.CommentController.createComment()
 
 GET     /r/:id                      com.keepit.controllers.DeepLinkController.handle(id: String)
 
@@ -33,7 +35,8 @@ GET     /users/keepurl              com.keepit.controllers.UserController.usersK
 GET     /users/friends              com.keepit.controllers.UserController.getSocialConnections()
 POST    /users/events               com.keepit.controllers.EventController.logUserEvents
 
-GET     /search                     com.keepit.controllers.SearchController.search(term: String, maxHits:Int, lastUUID: Option[String], filter: Option[String] ?= None, context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
+GET     /search                     com.keepit.controllers.SearchController.search(q: Option[String] ?= None, term: Option[String] ?= None, maxHits:Int, lastUUID: Option[String], filter: Option[String] ?= None, context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
+# TODO: remove term parameter above and require q after all KiFi installations >= 2.1.46
 
 POST    /kifi/start                 com.keepit.controllers.AuthController.start
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
@@ -58,13 +61,21 @@ GET     /admin/events               com.keepit.controllers.admin.AdminEventContr
 POST    /admin/events/buildReport   com.keepit.controllers.admin.AdminEventController.buildReport
 GET     /admin/events/report        com.keepit.controllers.admin.AdminEventController.getReport(reportName: String)
 
-GET     /bookmarks                  com.keepit.controllers.BookmarksController.bookmarksFirstPageView
-GET     /admin/bookmarks            com.keepit.controllers.BookmarksController.bookmarksFirstPageView
 GET     /admin/bookmarks/page/:page com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
 
 GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scrape/:state        com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
 GET     /admin/scraped/:uriId       com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
+
+GET     /admin/data/integrity       com.keepit.controllers.admin.ScraperController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
+GET     /admin/data/dupe            com.keepit.controllers.admin.ScraperController.duplicateDocumentDetection
+GET     /admin/data/orphan          com.keepit.controllers.admin.ScraperController.orphanCleanup
+GET     /admin/data/unscrapable     com.keepit.controllers.admin.ScraperController.getUnscrapable()
+POST     /admin/data/previewUnscrapable     com.keepit.controllers.admin.ScraperController.previewUnscrapable()
+POST    /admin/data/unscrapable     com.keepit.controllers.admin.ScraperController.createUnscrapable()
+GET     /admin/data/renormalize     com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
+POST    /admin/data/handleDuplicate com.keepit.controllers.admin.ScraperController.handleDuplicate
+POST    /admin/data/handleDuplicates com.keepit.controllers.admin.ScraperController.handleDuplicates
 
 GET     /admin/article/index        com.keepit.controllers.admin.ArticleIndexerController.index
 GET     /admin/article/index/:state com.keepit.controllers.admin.ArticleIndexerController.indexByState(state: State[NormalizedURI])
@@ -78,6 +89,7 @@ GET     /admin/uriGraph/dumpDoc/:userId  com.keepit.controllers.admin.URIGraphCo
 
 GET     /admin/users                com.keepit.controllers.UserController.usersView
 GET     /admin/user/:id             com.keepit.controllers.UserController.userView(id: Id[User])
+POST    /admin/user/:id             com.keepit.controllers.UserController.userView(id: Id[User])
 GET     /admin/user/:id/more-info   com.keepit.controllers.UserController.moreUserInfoView(id: Id[User])
 POST    /admin/user/:id/experiment/add/:exp  com.keepit.controllers.UserController.addExperiment(id: Id[User], exp: String)
 POST    /admin/user/:id/update      com.keepit.controllers.UserController.updateUser(id: Id[User])
@@ -110,10 +122,20 @@ GET     /admin/searchConfig/:id     com.keepit.controllers.SearchConfigControlle
 POST    /admin/searchConfig/:id/set   com.keepit.controllers.SearchConfigController.setUserConfig(id: Id[User])
 GET     /admin/searchConfig/:id/reset com.keepit.controllers.SearchConfigController.resetUserConfig(id: Id[User])
 
+GET     /admin/explainResult        com.keepit.controllers.SearchController.explain(query: String, uriId: Id[NormalizedURI])
+
+GET     /admin/slider               com.keepit.controllers.admin.SliderAdminController.index
+POST    /admin/slider               com.keepit.controllers.admin.SliderAdminController.save
+
 GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
 GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()
+GET     /admin/healthcheck/errors   com.keepit.common.healthcheck.HealthController.getErrors()
 GET     /admin/healthcheck/isHealthy    com.keepit.common.healthcheck.HealthController.isHealthy()
 GET     /admin/healthcheck/resetErrorCount    com.keepit.common.healthcheck.HealthController.resetErrorCount()
+
+POST    /admin/logging/emails       com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
+
+GET     /admin/url/renormalize      com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 
 ##########################################
 # Secure social routes

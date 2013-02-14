@@ -1,14 +1,16 @@
 package com.keepit.search.graph
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.CX
-import com.keepit.common.db.Id
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.inject._
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
-import com.keepit.model.{Bookmark, NormalizedURI, User}
+import com.keepit.model._
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
-import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher, QueryParser}
+import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher}
 import play.api.Play.current
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.TokenStream
@@ -17,9 +19,6 @@ import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.BooleanClause._
-import org.apache.lucene.search.Query
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
 import scala.collection.mutable.ArrayBuffer
@@ -55,7 +54,6 @@ trait URIGraph {
   def load(): Int
   def update(userId: Id[User]): Int
   def getURIGraphSearcher(): URIGraphSearcher
-  def getQueryParser(lang: Lang): QueryParser
   def close(): Unit
 }
 
@@ -81,7 +79,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   def load(): Int = {
     log.info("loading URIGraph")
     try {
-      val users = CX.withConnection { implicit c => User.all }
+      val users = inject[DBConnection].readOnly { implicit s => inject[UserRepo].all }
       var cnt = 0
       indexDocuments(users.iterator.map{ user => buildIndexable(user) }, commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
@@ -97,7 +95,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   def update(userId: Id[User]): Int = {
     log.info("updating a URIGraph for user=%d".format(userId.id))
     try {
-      val user = CX.withConnection { implicit c => User.get(userId) }
+      val user = inject[DBConnection].readOnly { implicit s => inject[UserRepo].get(userId) }
       var cnt = 0
       indexDocuments(Iterator(buildIndexable(user)), commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
@@ -110,30 +108,15 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     }
   }
 
-  def getQueryParser(lang: Lang) = {
-    val parser = new URIGraphQueryParser(DefaultAnalyzer.forParsing(lang))
-    DefaultAnalyzer.forParsingWithStemmer(lang).foreach{ parser.setStemmingAnalyzer(_) }
-    parser
-  }
-
-  def search(queryText: String, lang: Lang = Lang("en")): Seq[Hit] = {
-    parseQuery(queryText, lang) match {
-      case Some(query) => searcher.search(query)
-      case None => Seq.empty[Hit]
-    }
-  }
-
   def getURIGraphSearcher() = new URIGraphSearcher(searcher)
 
-  def buildIndexable(id: Id[User]) = {
-    val user = CX.withConnection{ implicit c => User.get(id) }
+  def buildIndexable(userId: Id[User]) = {
+    val user = inject[DBConnection].readOnly { implicit s => inject[UserRepo].get(userId) }
     buildIndexable(user)
   }
 
   def buildIndexable(user: User) = {
-    val bookmarks = CX.withConnection { implicit c =>
-        Bookmark.ofUser(user).filter{ b => b.state == Bookmark.States.ACTIVE }
-    }
+    val bookmarks = inject[DBConnection].readOnly(implicit session => inject[BookmarkRepo].getByUser(user.id.get))
     new URIListIndexable(user.id.get, bookmarks)
   }
 
@@ -230,33 +213,6 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
           }
         }
       )
-    }
-  }
-
-  class URIGraphQueryParser(analyzer: Analyzer) extends QueryParser(analyzer) {
-
-    super.setAutoGeneratePhraseQueries(true)
-
-    override def getFieldQuery(field: String, queryText: String, quoted: Boolean) = {
-      field.toLowerCase match {
-        case "site" => getSiteQuery(queryText)
-        case _ => getTextQuery(queryText, quoted)
-      }
-    }
-
-    private def getTextQuery(queryText: String, quoted: Boolean) = {
-      val booleanQuery = new BooleanQuery(true)
-      var query = super.getFieldQuery(URIGraph.titleTerm.field(), queryText, quoted)
-      if (query != null) booleanQuery.add(query, Occur.SHOULD)
-
-      if (!quoted) {
-        super.getStemmedFieldQueryOpt(URIGraph.stemmedTerm.field(), queryText).foreach{ query => booleanQuery.add(query, Occur.SHOULD) }
-      }
-
-      val clauses = booleanQuery.clauses
-      if (clauses.size == 0) null
-      else if (clauses.size == 1) clauses.get(0).getQuery()
-      else booleanQuery
     }
   }
 }

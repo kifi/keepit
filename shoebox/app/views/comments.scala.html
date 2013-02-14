@@ -35,8 +35,8 @@
   </div>
 }
 
-@admin("There are " + count + " comments (displaying " + uriAndUsers.size + ")") {
-  <h2>Showing @uriAndUsers.size comments of total @count (Page @{page + 1})</h2>
+@admin(count + " Total Comments") {
+  <h2>showing @uriAndUsers.size (page @{page + 1})</h2>
   @pagination(page, pageCount)
   <table class="table table-bordered">
     <tr>
@@ -52,7 +52,7 @@
       <td>@adminHelper.userDisplay(user)</td>
       <td>@comment.pageTitle</td>
       <td>@adminHelper.articleDisplay(article)</td>
-      <td>@adminHelper.dateDisplay(comment.createdAt) @adminHelper.timeDisplay(comment.createdAt)</td>
+      <td>@adminHelper.dateTimeDisplay(comment.createdAt)</td>
     </tr>
     <tr>
       <td colspan="4">@comment.text</td>

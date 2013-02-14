@@ -22,14 +22,6 @@ import com.keepit.common.store.S3Bucket
 import play.api.libs.json.Format
 import com.keepit.serializer.ArticleSearchResultSerializer
 import com.keepit.common.db.ExternalId
-import akka.util.Timeout
-import akka.actor._
-import akka.actor.Actor._
-import akka.actor.ActorRef
-import akka.util.duration._
-import akka.pattern.ask
-import akka.dispatch.Await
-import com.keepit.common.db.CX
 import com.keepit.model.SocialUserInfo
 
 

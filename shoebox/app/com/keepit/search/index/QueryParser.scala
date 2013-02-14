@@ -19,6 +19,9 @@ import scala.collection.JavaConversions._
 
 class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_36, "b", analyzer) {
 
+  private[this] var booleanUsed = false
+  def isMultiClauseQuery = booleanUsed
+
   def parseQuery(queryText: String) = {
     val query = try {
       if (queryText == null || queryText.trim.length == 0) null
@@ -36,14 +39,14 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
     if (clauses.size ==0) {
       null; // all clause words were filtered away by the analyzer.
     }
-    val query = new BooleanQueryWithPercentMatch(disableCoord)
+    val query = new BooleanQueryWithPercentMatch(false) // ignore disableCoord. we always enable coord and control the behavior thru a Similarity instance
     query.setPercentMatch(percentMatch)
 
     val (siteClauses, otherClauses) = clauses.partition{ clause => clause.getQuery.isInstanceOf[SiteQuery] && !clause.isProhibited }
     otherClauses.foreach{ clause => query.add(clause) }
 
     if (siteClauses.isEmpty) {
-      query
+      reduceBooleanQueryWithPercentMatch(query)
     } else {
       val siteQuery = {
         if (siteClauses.size == 1) siteClauses(0).getQuery
@@ -51,7 +54,17 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
       }
 
       if (otherClauses.isEmpty) siteQuery
-      else new ConditionalQuery(query, siteQuery)
+      else new ConditionalQuery(reduceBooleanQueryWithPercentMatch(query), siteQuery)
+    }
+  }
+
+  private[this] def reduceBooleanQueryWithPercentMatch(query: BooleanQuery) = {
+    val clauses = query.getClauses
+    if (clauses.length == 1) {
+      clauses(0).getQuery
+    } else {
+      booleanUsed = true
+      query
     }
   }
 
@@ -71,9 +84,10 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
     def apply(fieldName: String, term: String) = Option(getFieldQuery(fieldName, term, false))
   }
 
-  // disabling WildcardQuery, PrefixQuery, FuzzyQuery
+  // disabling WildcardQuery, PrefixQuery, FuzzyQuery, RangeQuery
   override def getWildcardQuery(field: String, termStr: String) = getFieldQuery(field, termStr, false)
   override def getPrefixQuery(field: String, termStr: String) = getFieldQuery(field, termStr, false)
   override def getFuzzyQuery(field: String, termStr: String, minSimilarity: Float) = getFieldQuery(field, termStr, false)
+  override def getRangeQuery(field: String, part1: String, part2: String, inclusive: Boolean) = getFieldQuery(field, "%s %s".format(part1, part2), false)
 }
 

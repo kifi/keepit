@@ -1,15 +1,13 @@
 package com.keepit.search
 
 import com.keepit.scraper.FakeArticleStore
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.search.index.ArticleIndexer
-import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURI.States._
-import com.keepit.common.db.{Id, CX, ExternalId}
+import com.keepit.model.NormalizedURIStates._
+import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.test.EmptyApplication
+import com.keepit.inject._
+import com.keepit.test._
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
@@ -22,7 +20,7 @@ import scala.math._
 import com.keepit.serializer.ArticleSearchResultSerializer
 
 @RunWith(classOf[JUnitRunner])
-class ArticleSearchResultTest extends SpecificationWithJUnit {
+class ArticleSearchResultTest extends SpecificationWithJUnit with DbRepos {
 
   "ArticleSearchResult" should {
     "be serialized" in {
@@ -48,8 +46,9 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
 
     "persisting to db" in {
       running(new EmptyApplication()) {
-         val user = CX.withConnection { implicit conn =>
-           User(firstName = "Shachaf", lastName = "Smith").save
+        val repo = inject[ArticleSearchResultRefRepo]
+         val user = db.readWrite { implicit s =>
+           userRepo.save(User(firstName = "Shachaf", lastName = "Smith"))
          }
          val res = ArticleSearchResult(
               last = Some(ExternalId[ArticleSearchResultRef]()),
@@ -63,14 +62,14 @@ class ArticleSearchResultTest extends SpecificationWithJUnit {
               uuid = ExternalId[ArticleSearchResultRef](),
               pageNumber = 4,
               millisPassed = 24)
-         val model = CX.withConnection { implicit conn =>
-           ArticleSearchResultRef(res).save
+         val model = db.readWrite { implicit s =>
+           repo.save(ArticleSearchResultFactory(res))
          }
          model.externalId === res.uuid
-         val loaded = CX.withConnection { implicit conn =>
-           ArticleSearchResultRef.get(model.id.get)
+         val loaded = db.readWrite { implicit s =>
+           repo.save(repo.get(model.id.get))
          }
-         loaded === model
+         loaded === model.copy(updatedAt = loaded.updatedAt)
          loaded.createdAt === res.time
          loaded.externalId === res.uuid
          loaded.millisPassed === res.millisPassed

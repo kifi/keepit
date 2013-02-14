@@ -35,10 +35,10 @@ class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destId
   def destIdLongSet = destIdSet.map(_.id)
   def size = destIdSet.size
 
-  def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = getDestDocIdSetIterator(searcher.idMapper)
+  def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = getDestDocIdSetIterator(searcher.indexReader.getIdMapper)
 
   private def getDestDocIdSetIterator(mapper: IdMapper): DocIdSetIterator = {
-    val docids = destIdSet.flatMap{ id => mapper.getDocId(id.id) }.toArray
+    val docids = destIdSet.map{ id => mapper.getDocId(id.id) }.filter{ _ >= 0 }.toArray
     Sorting.quickSort(docids)
     new DocIdSetIterator {
       var curDoc = NO_MORE_DOCS
@@ -64,7 +64,7 @@ class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destId
 abstract class LuceneBackedEdgeSet[S, D](override val sourceId: Id[S], searcher: Searcher) extends EdgeSet[S, D] {
   import EdgeSetUtil._
 
-  lazy val lazyDestIdLongSet = getDestDocIdSetIterator(searcher).map(docid => searcher.idMapper.getId(docid)).toSet
+  lazy val lazyDestIdLongSet = getDestDocIdSetIterator(searcher).map(docid => searcher.indexReader.getIdMapper.getId(docid)).toSet
   lazy val lazyDestIdSet = lazyDestIdLongSet.map(toId(_))
 
   override def destIdLongSet = lazyDestIdLongSet

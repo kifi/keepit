@@ -14,5 +14,6 @@ case class Article(
     state: State[NormalizedURI],
     message: Option[String],
     titleLang: Option[Lang],
-    contentLang: Option[Lang])
+    contentLang: Option[Lang],
+    destinationUrl: Option[String] = None)
 

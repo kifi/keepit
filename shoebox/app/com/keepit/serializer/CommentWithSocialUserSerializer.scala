@@ -25,13 +25,13 @@ class CommentWithSocialUserSerializer extends Writes[CommentWithSocialUser] {
       CommentWithSocialUserSerializer.commentWithSocialUserSerializer.writes(comment)
     })
 
-  def writes(commentsGroups: List[(State[Comment.Permission], Seq[CommentWithSocialUser])]): JsValue =
+  def writes(commentsGroups: List[(State[CommentPermission], Seq[CommentWithSocialUser])]): JsValue =
     JsObject(commentsGroups map { commentsGroup =>
       commentsGroup._1.value -> writes(commentsGroup._2)
     })
 
 
-  def writes(commentsGroup: (State[Comment.Permission], Seq[CommentWithSocialUser])): JsValue = writes(commentsGroup :: Nil)
+  def writes(commentsGroup: (State[CommentPermission], Seq[CommentWithSocialUser])): JsValue = writes(commentsGroup :: Nil)
 }
 
 object CommentWithSocialUserSerializer {
