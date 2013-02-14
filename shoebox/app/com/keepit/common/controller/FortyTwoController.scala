@@ -41,7 +41,7 @@ object FortyTwoController {
     val emptyCookie = None
     override val isSigned = true
     override val secure = false
-    override val maxAge = -1
+    override val maxAge = None
     override val httpOnly = true
     def deserialize(data: Map[String, String]) = data.get(COOKIE_NAME).map(ExternalId[User](_))
     def serialize(data: Option[ExternalId[User]]) = data.map(id => Map(COOKIE_NAME -> id.id.toString())).getOrElse(Map.empty)

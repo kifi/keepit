@@ -43,7 +43,7 @@ private[classify] class DomainClassificationActor(db: DBConnection, client: Http
     }
   }
 
-  protected def receive = {
+  def receive = {
     case FetchDomainInfo(hostname) =>
       val tagNames = getTagNames(hostname)
       db.readWrite { implicit s =>

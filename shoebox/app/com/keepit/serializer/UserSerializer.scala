@@ -17,18 +17,17 @@ class UserSerializer extends Format[User] {
       "externalId" -> JsString(user.externalId.id),
       "firstName"  -> JsString(user.firstName),
       "lastName"  -> JsString(user.lastName)
-    )
-    )
+    ))
 
-  def reads(json: JsValue): User =
-    User(
+  def reads(json: JsValue): JsResult[User] = 
+    JsSuccess(User(
       id = (json \ "id").asOpt[Long].map(Id[User](_)),
       createdAt = parseStandardTime((json \ "createdAt").as[String]),
       updatedAt = parseStandardTime((json \ "updatedAt").as[String]),
       externalId = ExternalId[User]((json \ "externalId").as[String]),
       firstName = (json \ "firstName").as[String],
       lastName = (json \ "lastName").as[String]
-    )
+    ))
 }
 
 object UserSerializer {
