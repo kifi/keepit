@@ -61,7 +61,7 @@
       <td>small viewport
       <td>
         <span class="input-append">
-          <input type="number" class="span1" name="viewportParams" value="@rules("viewport").parameters.get(0)" min="0" step="10">
+          <input type="number" name="viewportParams" value="@rules("viewport").parameters.get(0)" min="0" step="10">
           <span class="add-on">px</span>
         </span>
         <span class="help-inline">min width</span>
@@ -71,12 +71,12 @@
       <td>scrolled on page
       <td>
         <div style="margin-bottom:3px">
-          <input type="number" class="span1" name="scrollParams" value="@rules("scroll").parameters.get(0)" min="1" step=".1">
+          <input type="number" name="scrollParams" value="@rules("scroll").parameters.get(0)" min="1" step=".1">
           <span class="help-inline">min page height : viewport height ratio</span>
         </div>
         <div>
           <span class="input-append">
-            <input type="number" class="span1" name="scrollParams" value="@rules("scroll").parameters.get(1)" min="0">
+            <input type="number" name="scrollParams" value="@rules("scroll").parameters.get(1)" min="0">
             <span class="add-on">%</span>
           </span>
           <span class="help-inline">of page revealed</span>
@@ -87,7 +87,7 @@
       <td>on page friend kept
       <td>
         <span class="input-append">
-          <input type="number" class="span1" name="friendKeptParams" value="@rules("friendKept").parameters.get(0)" min="0">
+          <input type="number" name="friendKeptParams" value="@rules("friendKept").parameters.get(0)" min="0">
           <span class="add-on">sec</span>
         </span>
         <span class="help-inline">consecutive focus</span>
@@ -97,7 +97,7 @@
       <td>on page
       <td>
         <span class="input-append">
-          <input type="number" class="span1" name="focusParams" value="@rules("focus").parameters.get(0)" min="0">
+          <input type="number" name="focusParams" value="@rules("focus").parameters.get(0)" min="0">
           <span class="add-on">sec</span>
         </span>
         <span class="help-inline">consecutive focus</span>
