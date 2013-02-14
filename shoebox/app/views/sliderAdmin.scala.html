@@ -4,7 +4,7 @@
   <input type="checkbox" class="checkbox" name="@name" @if(rules(name).isActive) {checked}>
 }
 
-@admin("Slider Admin", scripts = List("bootstrap")) {
+@admin("Slider Admin", stylesheets = List("admin_slider")) {
 <h3>Rules for Automatically Showing the Slider</h3>
 <form class="slider-rules" action="@com.keepit.controllers.admin.routes.SliderAdminController.save" method="POST">
   <input type="hidden" name="group" value="@groupName">
