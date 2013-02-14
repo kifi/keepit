@@ -129,7 +129,15 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
           all.size === 1
           all.head
         }
-        Json.parse(contentAsString(result1)) === Json.parse("""{"avatarUrl":"http://www.fb.com/me","name":"A 1","facebookId":"111","provider":"facebook","userId":"%s","installationId":"%s"}""".format(user.externalId, kifiInstallation1.externalId.id))
+        val json1 = Json.parse(contentAsString(result1)).asInstanceOf[JsObject]
+        json1 \ "avatarUrl" === JsString("http://www.fb.com/me")
+        json1 \ "name" === JsString("A 1")
+        json1 \ "facebookId" === JsString("111")
+        json1 \ "provider" === JsString("facebook")
+        json1 \ "userId" === JsString(user.externalId.id)
+        json1 \ "installationId" === JsString(kifiInstallation1.externalId.id)
+        json1 \ "rules" \ "version" must beAnInstanceOf[JsString]
+        json1 \ "rules" \ "rules" must beAnInstanceOf[JsObject]
 
         //second round
         val fakeRequest2 = FakeRequest().
@@ -143,7 +151,8 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
           all.size === 1
           all.head
         }
-        Json.parse(contentAsString(result2)) === Json.parse("""{"avatarUrl":"http://www.fb.com/me","name":"A 1","facebookId":"111","provider":"facebook","userId":"%s","installationId":"%s"}""".format(user.externalId, kifiInstallation2.externalId.id))
+        val json2 = Json.parse(contentAsString(result2))
+        json2 === json1
         kifiInstallation1 === kifiInstallation2
       }
     }

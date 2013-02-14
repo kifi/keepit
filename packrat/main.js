@@ -394,8 +394,9 @@ function checkKeepStatus(tab, callback) {
   api.log("[checkKeepStatus]", tab);
 
   tab.keepStatusKnown = true;  // setting before request to avoid making two overlapping requests
-  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url}, function done(o) {
+  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url, ver: session.rules.version}, function done(o) {
     setIcon(tab, o.kept);
+    session.rules = o.rules || session.rules;
     callback && callback(o);
   }, function fail(xhr) {
     api.log("[checkKeepStatus] error:", xhr.responseText);

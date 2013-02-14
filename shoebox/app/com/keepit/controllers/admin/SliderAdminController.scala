@@ -13,10 +13,10 @@ object SliderAdminController extends FortyTwoController {
 
   def index = AdminHtmlAction { implicit request =>
     val groupName = "default"
-    val rules = inject[DBConnection].readOnly { implicit session =>
+    val group = inject[DBConnection].readOnly { implicit session =>
       inject[SliderRuleRepo].getGroup(groupName)
     }
-    Ok(views.html.sliderAdmin(groupName, rules.map(r => r.name -> r).toMap))
+    Ok(views.html.sliderAdmin(groupName, group.rules.map(r => r.name -> r).toMap))
   }
 
   def save = AdminHtmlAction { implicit request =>
@@ -24,7 +24,7 @@ object SliderAdminController extends FortyTwoController {
     val groupName = body("group").head
     inject[DBConnection].readWrite { implicit session =>
       val repo = inject[SliderRuleRepo]
-      repo.getGroup(groupName).foreach { rule =>
+      repo.getGroup(groupName).rules.foreach { rule =>
         val newRule = rule
           .withState(if (body.contains(rule.name)) ACTIVE else INACTIVE)
           .withParameters(body.get(rule.name + "Params").map { arr => JsArray(arr.map(Json.parse)) })
