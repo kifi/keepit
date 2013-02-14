@@ -120,10 +120,11 @@ object BookmarksController extends FortyTwoController {
     Ok(views.html.bookmarks(bookmarksAndUsers, page, count, pageCount))
   }
 
-  def checkIfExists(uri: String) = AuthenticatedJsonAction { request =>
+  // TODO: require ver parameter after all installations >= 2.1.51
+  def checkIfExists(uri: String, ver: Option[String]) = AuthenticatedJsonAction { request =>
     val userId = request.userId
     // TODO: Optimize by not checking sensitivity and keptByAnyFriends if kept by user.
-    val (uriId, bookmark, sensitive, friendIds) = inject[DBConnection].readOnly { implicit s =>
+    val (uriId, bookmark, sensitive, friendIds, ruleGroup) = inject[DBConnection].readOnly { implicit s =>
       val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
       val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
       val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>
@@ -133,7 +134,11 @@ object BookmarksController extends FortyTwoController {
         inject[BookmarkRepo].getByUriAndUser(uriId, userId)
       }
       val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
-      (uriId, bookmark, sensitive, friendIds)
+      val ruleGroup: Option[SliderRuleGroup] = ver.flatMap { v =>
+        val repo = inject[SliderRuleRepo]
+        if (v == repo.getGroupVersion("default")) None else Some(repo.getGroup("default"))
+      }
+      (uriId, bookmark, sensitive, friendIds, ruleGroup)
     }
 
     val keptByAnyFriends = uriId.map { uriId =>
@@ -147,7 +152,8 @@ object BookmarksController extends FortyTwoController {
       "user_has_bookmark" -> JsBoolean(bookmark.isDefined), // TODO: remove this key after all installations >= 2.1.49
       "kept" -> JsBoolean(bookmark.isDefined),
       "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
-      "sensitive" -> JsBoolean(sensitive.getOrElse(false)))))
+      "sensitive" -> JsBoolean(sensitive.getOrElse(false))) ++
+      ruleGroup.map{g => Seq("rules" -> g.compactJson)}.getOrElse(Nil)))
   }
 
   def remove() = AuthenticatedJsonAction { request =>
