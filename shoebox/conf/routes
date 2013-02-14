@@ -12,7 +12,7 @@ GET     /bookmarks/all              com.keepit.controllers.BookmarksController.a
 GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
 POST    /bookmarks/rescrape         com.keepit.controllers.BookmarksController.rescrape
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
-GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(uri: String)
+GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(uri: String, ver: Option[String] ?= None)
 POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.remove()
 POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy()
 
@@ -124,16 +124,18 @@ GET     /admin/searchConfig/:id/reset com.keepit.controllers.SearchConfigControl
 
 GET     /admin/explainResult        com.keepit.controllers.SearchController.explain(query: String, uriId: Id[NormalizedURI])
 
+GET     /admin/slider               com.keepit.controllers.admin.SliderAdminController.index
+POST    /admin/slider               com.keepit.controllers.admin.SliderAdminController.save
+
 GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
 GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()
-GET     /admin/healthcheck/errors    com.keepit.common.healthcheck.HealthController.getErrors()
+GET     /admin/healthcheck/errors   com.keepit.common.healthcheck.HealthController.getErrors()
 GET     /admin/healthcheck/isHealthy    com.keepit.common.healthcheck.HealthController.isHealthy()
 GET     /admin/healthcheck/resetErrorCount    com.keepit.common.healthcheck.HealthController.resetErrorCount()
 
-POST    /admin/logging/emails    com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
+POST    /admin/logging/emails       com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
 
-
-GET     /admin/url/renormalize         com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
+GET     /admin/url/renormalize      com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 
 ##########################################
 # Secure social routes

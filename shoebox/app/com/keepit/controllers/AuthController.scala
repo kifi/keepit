@@ -82,7 +82,7 @@ object AuthController extends FortyTwoController {
          }
          kiId
        })}.get
-    val (user, installation) = inject[DBConnection].readWrite{implicit s =>
+    val (user, installation, sliderRuleGroup) = inject[DBConnection].readWrite{implicit s =>
       val repo = inject[KifiInstallationRepo]
       log.info("start. details: %s, %s, %s".format(userAgent, version, installationIdOpt))
       val installation: KifiInstallation = installationIdOpt flatMap { id =>
@@ -98,7 +98,7 @@ object AuthController extends FortyTwoController {
           }
       }
 
-      (inject[UserRepo].get(request.userId), installation)
+      (inject[UserRepo].get(request.userId), installation, inject[SliderRuleRepo].getGroup("default"))
     }
 
     Ok(JsObject(Seq(
@@ -107,7 +107,9 @@ object AuthController extends FortyTwoController {
       "facebookId" -> JsString(socialUser.id.id),
       "provider" -> JsString(socialUser.id.providerId),
       "userId" -> JsString(user.externalId.id),
-      "installationId" -> JsString(installation.externalId.id)))).withCookies(KifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
+      "installationId" -> JsString(installation.externalId.id),
+      "rules" -> sliderRuleGroup.compactJson)))
+    .withCookies(KifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)

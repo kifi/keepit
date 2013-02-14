@@ -9,6 +9,7 @@ var slider, injected, t0 = +new Date;
 
 !function() {
   api.log("host:", location.host);
+  var viewportEl = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"];
 
   document.addEventListener("keydown", function(e) {
     if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75) {  // cmd-shift-K or ctrl-shift-K
@@ -24,13 +25,11 @@ var slider, injected, t0 = +new Date;
     if (t - (onScrollMaybeShow.t || 0) > 100) {  // throttling to avoid measuring DOM too freq
       onScrollMaybeShow.t = t;
       var hPage = document.body.scrollHeight;
-      var hViewport = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"].clientHeight;
+      var hViewport = viewportEl.clientHeight;
       var hSeen = window.pageYOffset + hViewport;
       if (hPage > 2 * hViewport && hSeen > .8 * hPage) {
         api.log("[onScrollMaybeShow] showing");
-        withSlider(function() {
-          slider.shown() || slider.show("scroll");
-        });
+        autoShowSlider("scroll");
       } else {
         api.log("[onScrollMaybeShow] seen:", hSeen, "/", hPage, "viewport:", hViewport);
       }
@@ -51,11 +50,7 @@ var slider, injected, t0 = +new Date;
         slider.toggle("button");
       });
     },
-    auto_show: function() {
-      withSlider(function() {
-        slider.shown() || slider.show("auto");
-      });
-    },
+    auto_show: autoShowSlider.bind(null, "auto"),
     auto_show_eligible: function() {
       document.addEventListener("scroll", onScrollMaybeShow);
     },
@@ -65,6 +60,17 @@ var slider, injected, t0 = +new Date;
       });
     }});
   api.port.emit("check_auto_show_eligible");
+
+  function autoShowSlider(trigger) {
+    var width = viewportEl.clientWidth;
+    if (width < 800) {
+      api.log("[autoShowSlider] viewport too narrow:", width);
+    } else {
+      withSlider(function() {
+        slider.shown() || slider.show(trigger);
+      });
+    }
+  }
 
   function withSlider(callback) {
     document.removeEventListener("scroll", onScrollMaybeShow);
