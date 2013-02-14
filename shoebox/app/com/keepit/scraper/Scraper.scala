@@ -26,10 +26,9 @@ object Scraper {
   val maxContentChars = 100000 // 100K chars
 }
 
-class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfig) extends Logging {
+class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, scraperConfig: ScraperConfig) extends Logging {
 
   implicit val config = scraperConfig
-  val httpFetcher = new HttpFetcher
 
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
@@ -125,7 +124,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     }
   }
 
-  private def getExtractor(url: String): Extractor = {
+  protected def getExtractor(url: String): Extractor = {
     try {
       URI.parse(url) match {
         case Some(uri) =>
