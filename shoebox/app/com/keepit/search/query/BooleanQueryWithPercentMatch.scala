@@ -28,7 +28,7 @@ object BooleanQueryWithPercentMatch {
 
 class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LBooleanQuery(disableCoord) {
 
-  private var percentMatch = 0.0f
+  private[this] var percentMatch = 0.0f
 
   def setPercentMatch(pctMatch: Float) { percentMatch = pctMatch }
   def getPercentMatch() = percentMatch
@@ -162,9 +162,9 @@ object BooleanScorer {
 
 class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer) extends Scorer(weight) with Coordinator {
 
-  private var doc = -1
-  private var scoredDoc = -1
-  private var scoreValue = 0.0f
+  private[this] var doc = -1
+  private[this] var scoredDoc = -1
+  private[this] var scoreValue = 0.0f
 
   override def docID() = doc
 
@@ -241,15 +241,17 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
   private[this] val maxOverlapValue = values.sum
   private[this] val overlapValueUnit = maxOverlapValue / values.length
 
-  class ScorerDoc(val scorer: Scorer, val value: Float, var doc: Int, var scoredDoc: Int, var scoreValue: Float) {
+  private[this] class ScorerDoc(val scorer: Scorer, val value: Float, var doc: Int, var scoredDoc: Int) {
+    private[this] var scoreVal = 0.0f
+
     def score = {
       if (doc != scoredDoc) {
-        scoreValue = scorer.score()
+        scoreVal = scorer.score()
         scoredDoc = doc
       } else {
         log.info("score method called twice [docid=%d]".format(doc))
       }
-      scoreValue
+      scoreVal
     }
   }
 
@@ -258,7 +260,7 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
     override def lessThan(a: ScorerDoc, b: ScorerDoc) = (a.doc < b.doc)
   }
 
-  scorers.zip(values).foreach{ case (s, v) => pq.insertWithOverflow(new ScorerDoc(s, v, -1, -1, 0.0f)) }
+  scorers.zip(values).foreach{ case (s, v) => pq.insertWithOverflow(new ScorerDoc(s, v, -1, -1)) }
 
   override def docID() = doc
 

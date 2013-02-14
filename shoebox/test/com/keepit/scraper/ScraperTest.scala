@@ -1,6 +1,5 @@
 package com.keepit.scraper
 
-import com.keepit.search.Article
 import play.api.Play.current
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
@@ -13,6 +12,8 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import com.keepit.test.EmptyApplication
+import com.keepit.scraper.extractor.Extractor
+import com.keepit.scraper.extractor.TikaBasedExtractor
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
@@ -20,37 +21,40 @@ import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import org.apache.http.HttpStatus
-import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.common.db.slick.DBConnection
+import org.apache.http.protocol.BasicHttpContext
+import org.apache.tika.sax.BodyContentHandler
 import org.joda.time.DateTime
 import scala.annotation.unchecked
+import java.io.ByteArrayOutputStream
+import java.io.ByteArrayInputStream
+import java.io.OutputStreamWriter
 
 @RunWith(classOf[JUnitRunner])
 class ScraperTest extends SpecificationWithJUnit {
   implicit val config = ScraperConfig()
 
   "Scraper" should {
-    "get a article from an existing website" in {
+    "get a article from an existing website" in running(new EmptyApplication()) {
       val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/existing"
       val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(33)))
-      val result = scraper.fetchArticle(uri)
+      val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
 
       result must beAnInstanceOf[Scraped] // Article
       (result: @unchecked) match {
-        case Scraped(article) =>
+        case Scraped(article, signature) =>
           article.title === "foo"
-          article.content === "bar"
+          article.content === "this is a body text. bar."
       }
     }
 
-    "throw an error from a non-existing website" in {
+    "throw an error from a non-existing website" in running(new EmptyApplication()) {
       val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/missing"
       val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(44)))
-      val result = scraper.fetchArticle(uri)
+      val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
       result must beAnInstanceOf[Error]
       (result: @unchecked) match {
         case Error(httpStatus, _) => httpStatus === HttpStatus.SC_NOT_FOUND
@@ -236,39 +240,47 @@ class ScraperTest extends SpecificationWithJUnit {
     inject[DBConnection].readOnly { implicit s => repo.getByUri(info.uriId).get }
   }
 
+  private def toHttpInputStream(text: String) = {
+    val baos = new ByteArrayOutputStream
+    val writer = new OutputStreamWriter(baos)
+    writer.write(text)
+    writer.close()
+    new HttpInputStream(new ByteArrayInputStream(baos.toByteArray))
+  }
+
   def getMockScraper(articleStore: ArticleStore, suffix: String = "") = {
-  	new Scraper(articleStore, ScraperConfig()) {
-  	  override def fetchArticle(uri: NormalizedURI, ifModifiedSince: Option[DateTime] = None): ScraperResult = {
-  	    uri.url match {
-  	      case "http://www.keepit.com/existing" => Scraped(Article(
-  	          id = uri.id.get,
-  	          title = "foo" + suffix,
-  	          content = "bar" + suffix,
-  	          scrapedAt = currentDateTime,
-  	          httpContentType = Option("text/html"),
-  	          httpOriginalContentCharset = Option("UTF-8"),
-  	          state = SCRAPED,
-  	          message = None,
-  	          titleLang = Some(Lang("en")),
-  	          contentLang = Some(Lang("en"))))
-          case "http://www.keepit.com/missing" => Error(HttpStatus.SC_NOT_FOUND, "not found")
+    val mockHttpFetcher = new HttpFetcher {
+      def fetch(url: String , ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
+        val httpContext = new BasicHttpContext()
+        val htmlTemplate = "<html> <head><title>foo%s</title></head> <body>this is a body text. bar%s.</body> </html>"
+        url match {
+          case "http://www.keepit.com/existing" =>
+            val input = toHttpInputStream(htmlTemplate.format(suffix, suffix))
+            input.setContentType("text/html")
+            f(input)
+            HttpFetchStatus(HttpStatus.SC_OK, None, httpContext)
           case "http://www.keepit.com/notModified" =>
             ifModifiedSince match {
-              case Some(_) => NotModified
-              case None => Scraped(Article(
-                  id = uri.id.get,
-                  title = "foo" + suffix,
-                  content = "bar" + suffix,
-                  scrapedAt = currentDateTime,
-                  httpContentType = Option("text/html"),
-                  httpOriginalContentCharset = Option("UTF-8"),
-                  state = SCRAPED,
-                  message = None,
-                  titleLang = Some(Lang("en")),
-                  contentLang = Some(Lang("en"))))
+              case None =>
+                val input = toHttpInputStream(htmlTemplate.format(suffix, suffix))
+                input.setContentType("text/html")
+                f(input)
+                HttpFetchStatus(HttpStatus.SC_OK, None, httpContext)
+              case Some(_) =>
+                HttpFetchStatus(HttpStatus.SC_NOT_MODIFIED, None, httpContext)
             }
-  	    }
-  	  }
-  	}
+          case _ =>
+            HttpFetchStatus(HttpStatus.SC_NOT_FOUND, Some("not found"), httpContext)
+        }
+      }
+      def close() {}
+    }
+    new Scraper(mockHttpFetcher, articleStore, ScraperConfig()) {
+      override protected def getExtractor(url: String): Extractor = {
+        new TikaBasedExtractor(url, 10000) {
+          protected def getContentHandler = new BodyContentHandler(output)
+        }
+      }
+    }
   }
 }

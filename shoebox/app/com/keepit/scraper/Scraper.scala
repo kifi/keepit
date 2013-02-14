@@ -26,10 +26,9 @@ object Scraper {
   val maxContentChars = 100000 // 100K chars
 }
 
-class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfig) extends Logging {
+class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, scraperConfig: ScraperConfig) extends Logging {
 
   implicit val config = scraperConfig
-  val httpFetcher = new HttpFetcher
 
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
@@ -72,44 +71,31 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     }
   }
 
+
   private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
     log.info("scraping %s".format(uri))
     val db = inject[DBConnection]
     val uriRepo = inject[NormalizedURIRepo]
     val scrapeInfoRepo = inject[ScrapeInfoRepo]
-    fetchArticle(uri, getIfModifiedSince(info)) match {
-      case Scraped(article) =>
+
+    fetchArticle(uri, info) match {
+      case Scraped(article, signature) =>
         // store a scraped article in a store map
         articleStore += (uri.id.get -> article)
-        // the article is saved, now detect the document change. making the detection more strict as time goes by.
-        val oldSig = Signature(info.signature)
-        val newSig = computeSignature(article)
-        val docChanged = (newSig.similarTo(oldSig) < (1.0d - config.changeThreshold * (config.minInterval / info.interval)))
 
         val scrapedURI = db.readWrite { implicit s =>
-          val isUnscrape = {
-            val uns = inject[UnscrapableRepo]
-            if (uns.contains(uri.url) || (article.destinationUrl.isDefined && uns.contains(article.destinationUrl.get))) true else false
-          }
-
-          if (docChanged) {
-            // update the scrape schedule and the uri state to SCRAPED
-            scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(newSig.toBase64))
-            if (isUnscrape)
-              uriRepo.save(uri.withState(NormalizedURIStates.UNSCRAPABLE))
-            else
-              uriRepo.save(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
-          } else {
-            // update the scrape schedule, uri is not changed
-            scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentUnchanged())
-            if (isUnscrape)
-              uriRepo.save(uri.withState(NormalizedURIStates.UNSCRAPABLE))
-            else
-              uri
-          }
+          // update the scrape schedule and the uri state to SCRAPED
+          scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
+          uriRepo.save(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
         }
         log.info("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
+      case NotScrapable(destinationUrl) =>
+        val unscrapableURI = db.readWrite { implicit s =>
+          scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
+          uriRepo.save(uri.withState(NormalizedURIStates.UNSCRAPABLE))
+        }
+        (unscrapableURI, None)
       case NotModified =>
         // update the scrape schedule, uri is not changed
         db.readWrite { implicit s => scrapeInfoRepo.save(info.withDocumentUnchanged()) }
@@ -138,7 +124,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     }
   }
 
-  private def getExtractor(url: String): Extractor = {
+  protected def getExtractor(url: String): Extractor = {
     try {
       URI.parse(url) match {
         case Some(uri) =>
@@ -156,46 +142,67 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     }
   }
 
-  def fetchArticle(normalizedUri: NormalizedURI, ifModifiedSince: Option[DateTime] = None): ScraperResult = {
+  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo): ScraperResult = {
     try {
       URI.parse(normalizedUri.url) match {
         case Some(uri) =>
           uri.scheme match {
             case Some("file") => Error(-1, "forbidden scheme: %s".format("file"))
-            case _ => fetchArticle(normalizedUri, httpFetcher, ifModifiedSince)
+            case _ => fetchArticle(normalizedUri, httpFetcher, info)
           }
-        case _ => fetchArticle(normalizedUri, httpFetcher, ifModifiedSince)
+        case _ => fetchArticle(normalizedUri, httpFetcher, info)
       }
     } catch {
-      case _ => fetchArticle(normalizedUri, httpFetcher, ifModifiedSince)
+      case _ => fetchArticle(normalizedUri, httpFetcher, info)
     }
   }
 
-  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, ifModifiedSince: Option[DateTime]): ScraperResult = {
+  private def isUnscrapable(url: String, destinationUrl: Option[String]) = {
+    inject[DBConnection].readOnly { implicit s =>
+      val uns = inject[UnscrapableRepo]
+      (uns.contains(url) || (destinationUrl.isDefined && uns.contains(destinationUrl.get)))
+    }
+  }
+
+  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo): ScraperResult = {
     val url = normalizedUri.url
     val extractor = getExtractor(url)
+    val ifModifiedSince = getIfModifiedSince(info)
 
     try {
       val fetchStatus = httpFetcher.fetch(url, ifModifiedSince){ input => extractor.process(input) }
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
-          val content = extractor.getContent
-          val contentLang = LangDetector.detect(content)
-          val title = extractor.getMetadata("title").getOrElse("")
-          val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
-          val destinationUrl = fetchStatus.destinationUrl
-          Scraped(Article(id = normalizedUri.id.get,
-                       title = title,
-                       content = content,
-                       scrapedAt = currentDateTime,
-                       httpContentType = extractor.getMetadata("Content-Type"),
-                       httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
-                       state = NormalizedURIStates.SCRAPED,
-                       message = None,
-                       titleLang = Some(titleLang),
-                       contentLang = Some(contentLang),
-                       destinationUrl = destinationUrl))
+          if (isUnscrapable(url, fetchStatus.destinationUrl)) {
+            NotScrapable(fetchStatus.destinationUrl)
+          } else {
+            val content = extractor.getContent
+            val title = extractor.getMetadata("title").getOrElse("")
+            val signature = computeSignature(title, content)
+
+            // now detect the document change
+            val docChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
+
+            if (!docChanged) {
+              NotModified
+            } else {
+              val contentLang = LangDetector.detect(content)
+              val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
+              Scraped(Article(id = normalizedUri.id.get,
+                              title = title,
+                              content = content,
+                              scrapedAt = currentDateTime,
+                              httpContentType = extractor.getMetadata("Content-Type"),
+                              httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
+                              state = NormalizedURIStates.SCRAPED,
+                              message = None,
+                              titleLang = Some(titleLang),
+                              contentLang = Some(contentLang),
+                              destinationUrl = fetchStatus.destinationUrl),
+                      signature)
+            }
+          }
         case HttpStatus.SC_NOT_MODIFIED =>
           NotModified
         case _ =>
@@ -206,7 +213,7 @@ class Scraper @Inject() (articleStore: ArticleStore, scraperConfig: ScraperConfi
     }
   }
 
-  private[this] def computeSignature(article: Article) = new SignatureBuilder().add(article.title).add(article.content).build
+  private[this] def computeSignature(fields: String*) = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build
 
   def close() {
     httpFetcher.close()
