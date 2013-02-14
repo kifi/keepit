@@ -24,15 +24,20 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
         val classifier = new DomainClassifierImpl(system, inject[DBConnection], client,
           inject[SensitivityUpdater], inject[DomainRepo], inject[DomainTagRepo], inject[DomainToTagRepo])
         val tagRepo = inject[DomainTagRepo]
-        val importer = inject[DomainTagImporter]
+        val domainRepo = inject[DomainRepo]
+        val domainToTagRepo = inject[DomainToTagRepo]
+        val importer = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
+          inject[SensitivityUpdater], system, db)
         inject[DBConnection].readWrite { implicit s =>
           tagRepo.save(DomainTag(name = DomainTagName("Search Engines"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("Technology and computers"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("Porn"), sensitive = Some(true)))
 
-          importer.applyTagToDomains(DomainTagName("search engines"), Seq("google.com", "yahoo.com"))
-          importer.applyTagToDomains(DomainTagName("Technology and Computers"), Seq("42go.com", "google.com"))
-          importer.applyTagToDomains(DomainTagName("Porn"), Seq("playboy.com"))
+          Seq(
+            importer.applyTagToDomains(DomainTagName("search engines"), Seq("google.com", "yahoo.com")),
+            importer.applyTagToDomains(DomainTagName("Technology and Computers"), Seq("42go.com", "google.com")),
+            importer.applyTagToDomains(DomainTagName("Porn"), Seq("playboy.com"))
+          ).foreach { Await.result(_, intToDurationInt(1).second ) }
         }
 
         classifier.isSensitive("google.com") === Right(Some(false))

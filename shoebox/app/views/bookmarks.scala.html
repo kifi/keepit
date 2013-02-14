@@ -37,8 +37,8 @@
   </div>
 }
 
-@admin("There are " + count + " bookmarks (displaying " + bookmarksAndUsers.size + ")") {
-  <h2>Showing @bookmarksAndUsers.size Bookmarks of total @count (Page @{page + 1})</h2>
+@admin(count + " Total Keeps") {
+  <h2>showing @bookmarksAndUsers.size (page @{page + 1})</h2>
   @pagination(page, pageCount)
   <table class="table table-bordered">
     <tr>

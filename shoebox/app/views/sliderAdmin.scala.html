@@ -1,0 +1,117 @@
+@(groupName: String, rules: Map[String, SliderRule])
+
+@checkbox(name: String) = {
+  <input type="checkbox" class="checkbox" name="@name" @if(rules(name).isActive) {checked}>
+}
+
+@admin("Slider Admin", stylesheets = List("admin_slider")) {
+<h3>Rules for Automatically Showing the Slider</h3>
+<form class="slider-rules" action="@com.keepit.controllers.admin.routes.SliderAdminController.save" method="POST">
+  <input type="hidden" name="group" value="@groupName">
+  <table class="table table-condensed table-striped">
+    <thead>
+      <tr>
+        <th>On
+        <th>Show
+        <th>Rule
+        <th>Parameters
+    </thead>
+    <tr>
+      <td>@checkbox("message")
+      <td class="y">
+      <td>new message
+      <td>
+    <tr>
+      <td>&check;
+      <td class="n">
+      <td>clicked never for this site
+      <td>
+    <tr>
+      <td>@checkbox("comment")
+      <td class="y">
+      <td>new comment
+      <td>
+        <select name="commentParams" style="width:90px">
+          <option value='"friend"' @if(rules("comment").parameters.get(0).as[String] == "friend") {selected}>friend</option>
+          <option value='"anyone"' @if(rules("comment").parameters.get(0).as[String] == "anyone") {selected}>anyone</option>
+        </select>
+    <tr>
+      <td>@checkbox("sensitive")
+      <td class="n">
+      <td>sensitive domain
+      <td>
+    <tr>
+      <td>@checkbox("url")
+      <td class="n">
+      <td>URL pattern
+      <td>
+    <tr>
+      <td>@checkbox("shown")
+      <td class="n">
+      <td>shown recently (~90 days)
+      <td>
+    <tr>
+      <td>&check;
+      <td class="n">
+      <td>kept
+      <td>
+    <tr>
+      <td>@checkbox("viewport")
+      <td class="n">
+      <td>small viewport
+      <td>
+        <span class="input-append">
+          <input type="number" name="viewportParams" value="@rules("viewport").parameters.get(0)" min="0" step="10">
+          <span class="add-on">px</span>
+        </span>
+        <span class="help-inline">min width</span>
+    <tr>
+      <td>@checkbox("scroll")
+      <td class="y">
+      <td>scrolled on page
+      <td>
+        <div style="margin-bottom:3px">
+          <input type="number" name="scrollParams" value="@rules("scroll").parameters.get(0)" min="1" step=".1">
+          <span class="help-inline">min page height : viewport height ratio</span>
+        </div>
+        <div>
+          <span class="input-append">
+            <input type="number" name="scrollParams" value="@rules("scroll").parameters.get(1)" min="0">
+            <span class="add-on">%</span>
+          </span>
+          <span class="help-inline">of page revealed</span>
+        </div>
+    <tr>
+      <td>@checkbox("friendKept")
+      <td class="y">
+      <td>on page friend kept
+      <td>
+        <span class="input-append">
+          <input type="number" name="friendKeptParams" value="@rules("friendKept").parameters.get(0)" min="0">
+          <span class="add-on">sec</span>
+        </span>
+        <span class="help-inline">consecutive focus</span>
+    <tr>
+      <td>@checkbox("focus")
+      <td class="y">
+      <td>on page
+      <td>
+        <span class="input-append">
+          <input type="number" name="focusParams" value="@rules("focus").parameters.get(0)" min="0">
+          <span class="add-on">sec</span>
+        </span>
+        <span class="help-inline">consecutive focus</span>
+  </table>
+  <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
+  <button type="reset" class="btn">Clear unsaved changes</button>
+</form>
+}
+
+<script src="@routes.Assets.at("bootstrap/js/bootstrap.min.js")"></script>
+<script>
+$(function() {
+  $(".slider-rules").submit(function() {
+    $(this).find("button[type=submit]").button("loading");
+  });
+});
+</script>
