@@ -93,7 +93,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
   }
 }
 
-class PositionAndMask(val tp: TermPositions, val termText: String) {
+private[query] final class PositionAndMask(val tp: TermPositions, val termText: String) {
   var doc = -1
   var pos = -1
 
@@ -106,7 +106,7 @@ class PositionAndMask(val tp: TermPositions, val termText: String) {
     this
   }
 
-  def fetchDoc(target: Int): Int = {
+  def fetchDoc(target: Int) {
     pos = -1
     if (tp.skipTo(target)) {
       doc = tp.doc()
@@ -115,22 +115,9 @@ class PositionAndMask(val tp: TermPositions, val termText: String) {
       doc = DocIdSetIterator.NO_MORE_DOCS
       posLeft = 0
     }
-    doc
   }
 
-  def nextDoc(): Int = {
-    pos = -1
-    if (tp.next()) {
-      doc = tp.doc()
-      posLeft = tp.freq()
-    } else {
-      doc = DocIdSetIterator.NO_MORE_DOCS
-      posLeft = 0
-    }
-    doc
-  }
-
-  def nextPos(): Int = {
+  def nextPos() {
     if (posLeft > 0) {
       pos = tp.nextPosition()
       posLeft -= 1
@@ -138,7 +125,6 @@ class PositionAndMask(val tp: TermPositions, val termText: String) {
     else {
       pos = Int.MaxValue
     }
-    pos
   }
 }
 
@@ -180,7 +166,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
         // start fetching position for all terms, and cumulate term presence scores as the base score
         while (top.doc == doc && top.pos == -1) {
           proximityScore += termPresenceScore
-          val pos = top.nextPos()
+          top.nextPos()
           top = pq.updateTop()
         }
 

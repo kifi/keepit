@@ -94,7 +94,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
     try {
       val jsonString = scala.io.Source.fromInputStream(is, ENCODING).getLines().mkString("\n")
       val json = Json.parse(jsonString)
-      formatter.reads(json)
+      formatter.reads(json).get
     } finally {
       is.close
     }

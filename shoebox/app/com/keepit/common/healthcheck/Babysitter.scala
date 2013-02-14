@@ -6,17 +6,18 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.ExternalId
 import com.keepit.inject._
 import com.google.inject._
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import akka.actor.Scheduler
 import org.joda.time.DateTime
 import java.util.concurrent.atomic.AtomicReference
+import scala.concurrent.duration.FiniteDuration
 
 @ImplementedBy(classOf[BabysitterImpl])
 trait Babysitter {
   def watch[A](timeout: BabysitterTimeout)(block: => A)(implicit app: Application): A
 }
 
-case class BabysitterTimeout(warnTimeout: akka.util.FiniteDuration, errorTimeout: akka.util.FiniteDuration)
+case class BabysitterTimeout(warnTimeout: FiniteDuration, errorTimeout: FiniteDuration)
 
 class BabysitterImpl extends Babysitter with Logging {
   def watch[A](timeout: BabysitterTimeout)(block: => A)(implicit app: Application): A = {

@@ -8,7 +8,7 @@ import play.api.data.validation.Constraints._
 import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.http.ContentTypes
-import com.keepit.controllers.CommonActions._
+
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.db._
@@ -35,15 +35,10 @@ import com.keepit.common.analytics.reports._
 object EventController extends FortyTwoController {
 
   def logUserEvents = AuthenticatedJsonAction { request =>
-    val params = request.body.asJson match {
-      case Some(json) => json  // TODO: remove form encoding branch after everyone at v2.1.6 or later
-      case _ => Json.parse(request.body.asFormUrlEncoded.get.get("payload").get.head)
-    }
     val userId = request.userId
-    val version = (params \ "version").as[Int]
-
-    version match {
-      case 1 => createEventsFromPayload(params, userId)
+    val json = request.body.asJson.get
+    (json \ "version").as[Int] match {
+      case 1 => createEventsFromPayload(json, userId)
       case i => throw new Exception("Unknown events version: %s".format(i))
     }
 

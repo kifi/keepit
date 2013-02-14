@@ -12,6 +12,7 @@ import com.keepit.search.query.QueryUtil
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 
 class URIGraphSearcher(searcher: Searcher) {
@@ -80,6 +81,27 @@ class URIGraphSearcher(searcher: Searcher) {
     }
   }
 
+  def intersectAny(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): Boolean = {
+    intersectAny(friends.getDestDocIdSetIterator(searcher), bookmarkUsers.getDestDocIdSetIterator(searcher))
+  }
+
+  def intersectAny(i: DocIdSetIterator, j: DocIdSetIterator): Boolean = {
+    // Note: This implementation is only more efficient than intersect(i, j).nextDoc() != NO_MORE_DOCS when the
+    // intersection is empty. This code returns as soon as either iterator is exhausted instead of when both are.
+    var di = i.nextDoc()
+    var dj = j.nextDoc()
+    while (di != dj) {
+      if (di < dj) {
+        di = i.advance(dj)
+        if (di == NO_MORE_DOCS) return false
+      } else {
+        dj = j.advance(di)
+        if (dj == NO_MORE_DOCS) return false
+      }
+    }
+    di != NO_MORE_DOCS
+  }
+
   private def getURIList(user: Id[User]): Option[URIList] = {
     val term = URIGraph.userTerm.createTerm(user.toString)
     var uriList: Option[URIList] = None
@@ -104,7 +126,7 @@ class URIGraphSearcher(searcher: Searcher) {
     val term = URIGraph.userTerm.createTerm(user.toString)
     val td = searcher.indexReader.termDocs(term)
     val userDocId = try {
-      if (td.next()) td.doc else DocIdSetIterator.NO_MORE_DOCS
+      if (td.next()) td.doc else NO_MORE_DOCS
     } finally {
       td.close()
     }

@@ -13,9 +13,10 @@ import play.api._
 import play.api.libs.json._
 import com.keepit.common.cache._
 import akka.util.Duration
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.serializer.UserSerializer
 import com.keepit.common.logging.Logging
+import scala.concurrent.duration._
 
 case class User(
   id: Option[Id[User]] = None,

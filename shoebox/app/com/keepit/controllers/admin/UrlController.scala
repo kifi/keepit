@@ -11,13 +11,13 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import java.util.concurrent.TimeUnit
 
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
-import com.keepit.controllers.CommonActions._
+
 import com.keepit.inject._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.model._
@@ -30,6 +30,7 @@ import org.joda.time.DateTimeZone
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.mail._
 import play.api.libs.concurrent.Akka
+import scala.concurrent.duration._
 
 /**
  * Charts, etc.

@@ -20,7 +20,9 @@ import play.api.{Application, Logger}
 import play.api.libs.json.JsObject
 import securesocial.core._
 import play.api.libs.ws.{Response, WS}
-
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.Await
 
 /**
  * A Facebook Provider
@@ -54,10 +56,7 @@ class FacebookProvider(application: Application) extends OAuth2Provider(applicat
     val accessToken = user.oAuth2Info.get.accessToken
     val promise = WS.url(MeApi + accessToken).get()
 
-    promise.await(10000).fold( error => {
-      Logger.error( "Error retrieving profile information", error)
-      throw new AuthenticationException()
-    }, response => {
+    Await.result(promise.transform(response => {
       val me = response.json
       (me \ Error).asOpt[JsObject] match {
         case Some(error) =>
@@ -78,7 +77,10 @@ class FacebookProvider(application: Application) extends OAuth2Provider(applicat
             email = Some(email)
           )
       }
-    })
+    }, error => {
+      Logger.error( "Error retrieving profile information", error)
+      throw new AuthenticationException()
+    }), 10 seconds)
   }
 }
 

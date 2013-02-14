@@ -20,6 +20,9 @@ import play.api.libs.ws.WS
 import play.api.{Application, Logger}
 import play.api.libs.json.JsObject
 import securesocial.core._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.Await
 
 
 /**
@@ -43,10 +46,7 @@ class GoogleProvider(application: Application) extends OAuth2Provider(applicatio
     val accessToken = user.oAuth2Info.get.accessToken
     val promise = WS.url(UserInfoApi + accessToken).get()
 
-    promise.await(10000).fold( error => {
-      Logger.error( "Error retrieving profile information", error)
-      throw new AuthenticationException()
-    }, response => {
+    Await.result(promise.transform(response => {
       val me = response.json
       (me \ Error).asOpt[JsObject] match {
         case Some(error) =>
@@ -67,7 +67,10 @@ class GoogleProvider(application: Application) extends OAuth2Provider(applicatio
             email = Some(email)
           )
       }
-    })
+    }, error => {
+      Logger.error( "Error retrieving profile information", error)
+      throw new AuthenticationException()
+    }), 10 seconds)
   }
 }
 

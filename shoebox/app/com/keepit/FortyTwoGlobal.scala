@@ -1,7 +1,6 @@
 package com.keepit
 
 import com.google.inject.Injector
-import com.keepit.common.controller.CommonActions._
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.controller.ServiceType
 import com.keepit.common.db.ExternalId

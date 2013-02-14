@@ -16,7 +16,7 @@ trait LineFieldBuilder {
   }
 }
 
-class LineTokenStream[A](fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>Option[TokenStream]) extends TokenStream {
+class LineTokenStream(fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>Option[TokenStream]) extends TokenStream {
   val termAttr = addAttribute(classOf[CharTermAttribute])
   val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
   val lineIter = lines.sortBy(_._1).iterator

@@ -16,7 +16,8 @@ import play.api.libs.json._
 import com.keepit.inject._
 import com.keepit.common.healthcheck._
 import com.keepit.common.cache._
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 
 case class Comment(
   id: Option[Id[Comment]] = None,

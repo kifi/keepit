@@ -10,7 +10,8 @@ import org.joda.time.DateTime
 import play.api._
 import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
 import com.keepit.serializer.ClickHistoryBinarySerializer
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 
 case class ClickHistory (
                     id: Option[Id[ClickHistory]] = None,

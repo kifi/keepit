@@ -8,7 +8,7 @@ import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.social.SecureSocialUserService
 import com.keepit.test.EmptyApplication
 import com.keepit.test.FakeClock
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.test.Helpers._

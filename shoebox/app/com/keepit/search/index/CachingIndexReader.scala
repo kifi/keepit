@@ -18,10 +18,7 @@ import org.apache.lucene.index.TermDocs
 import org.apache.lucene.index.TermPositions
 import scala.collection.mutable.ArrayBuffer
 
-class CachingIndexReader(val invertedLists: Map[Term, InvertedList]) extends IndexReader with Logging {
-
-  var numDocs: Int = 0
-  var maxDoc: Int = 0
+class CachingIndexReader(val invertedLists: Map[Term, InvertedList], numOfDocs: Int) extends IndexReader with Logging {
 
   def split(remappers: Map[String, DocIdRemapper]): Map[String, CachingIndexReader] = {
     val (subReaders, remainder) = remappers.foldLeft(Map.empty[String, CachingIndexReader], invertedLists){ case ((subReaders, invertedLists), (name, remapper)) =>
@@ -32,10 +29,13 @@ class CachingIndexReader(val invertedLists: Map[Term, InvertedList]) extends Ind
         remapped += (t -> list1)
         remainder += (t -> list2)
       }
-      (subReaders + (name -> new CachingIndexReader(remapped)), remainder)
+      (subReaders + (name -> new CachingIndexReader(remapped, -1)), remainder)
     }
-    if (remainder.isEmpty) subReaders else subReaders + ("" -> new CachingIndexReader(remainder))
+    if (remainder.isEmpty) subReaders else subReaders + ("" -> new CachingIndexReader(remainder, numOfDocs))
   }
+
+  override def numDocs() = numOfDocs
+  override def maxDoc() = numOfDocs
 
   override def docFreq(term: Term) = {
     val list = invertedLists.get(term) match {

@@ -11,9 +11,9 @@ import akka.util.Timeout
 import akka.actor._
 import akka.actor.Actor._
 import akka.actor.ActorRef
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import akka.pattern.ask
-import akka.dispatch.Await
+import scala.concurrent.Await
 import play.api.libs.concurrent._
 import org.joda.time.DateTime
 import akka.dispatch.Future
@@ -21,6 +21,7 @@ import com.google.inject.Inject
 import com.google.inject.Provider
 import com.keepit.inject._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import scala.concurrent.duration._
 
 case object Load
 case class Update(userId: Id[User])

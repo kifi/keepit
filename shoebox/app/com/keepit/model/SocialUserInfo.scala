@@ -20,7 +20,8 @@ import com.keepit.common.social.SocialUserRawInfo
 import com.keepit.common.social.SocialNetworks
 import com.keepit.common.social.SocialId
 import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 
 case class SocialUserInfo(
   id: Option[Id[SocialUserInfo]] = None,

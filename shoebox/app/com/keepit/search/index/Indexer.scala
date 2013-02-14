@@ -37,8 +37,8 @@ object Indexer {
   }
 }
 
-abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, fieldDecoders: Map[String, FieldDecoder] = Map.empty) extends Logging {
-
+abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, fieldDecoders: Map[String, FieldDecoder]) extends Logging {
+  def this(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
 
   protected var searcher: Searcher = {
@@ -75,7 +75,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     indexWriter.close()
   }
 
-  def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int)(afterCommit: Seq[(Indexable[T], Option[IndexError])]=>Unit): Unit = {
+  def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int, refresh: Boolean = true)(afterCommit: Seq[(Indexable[T], Option[IndexError])]=>Unit): Unit = {
     doWithIndexWriter{ indexWriter =>
       indexables.grouped(commitBatchSize).foreach{ indexableBatch =>
         val commitBatch = indexableBatch.map{ indexable =>
@@ -111,7 +111,17 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
         afterCommit(commitBatch)
       }
     }
-    refreshSearcher()
+    if (refresh) refreshSearcher()
+  }
+
+  def deleteAllDocuments(refresh: Boolean = true) {
+    if (IndexReader.indexExists(indexDirectory)) {
+      doWithIndexWriter{ indexWriter =>
+        indexWriter.deleteAll()
+        indexWriter.commit(Map(Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString))
+      }
+    }
+    if (refresh) refreshSearcher()
   }
 
   def commitData: Map[String, String] = {
@@ -142,5 +152,4 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     }
   }
 }
-
 

@@ -15,7 +15,7 @@ import akka.actor.ActorSystem
 import akka.actor.Actor
 import akka.actor.Props
 import akka.actor.Props
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import akka.actor.ActorRef
 import akka.actor.Cancellable
 import com.google.inject.Provider
@@ -24,6 +24,7 @@ import com.google.inject.Inject
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.analytics.reports.Reports.ReportGroup
+import scala.concurrent.duration._
 
 object Reports {
   lazy val dailyActiveUniqueUserReport = new DailyActiveUniqueUserReport

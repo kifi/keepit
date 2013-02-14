@@ -22,6 +22,7 @@ class MainSearcher(
     config: SearchConfig,
     articleSearcher: Searcher,
     val uriGraphSearcher: URIGraphSearcher,
+    parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker
@@ -50,6 +51,7 @@ class MainSearcher(
   val svWeightClickHistory = config.asInt("svWeightClickHistory")
   val similarity = Similarity(config.asString("similarity"))
   val enableCoordinator = config.asBoolean("enableCoordinator")
+  val phraseBoost = config.asFloat("phraseBoost")
 
   // initialize user's social graph info
   val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
@@ -72,7 +74,7 @@ class MainSearcher(
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
-    val parser = MainQueryParser(lang, proximityBoost, semanticBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
     parser.parseQuery(queryString).map{ articleQuery =>
@@ -205,9 +207,9 @@ class MainSearcher(
     (1.0f/(1.0f + t2))
   }
 
-  def explain(queryString: String, uriId: Id[NormalizedURI]): Option[Explanation] = {
+  def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     val lang = Lang("en") // TODO: detect
-    val parser = MainQueryParser(lang, proximityBoost, semanticBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 
@@ -216,7 +218,7 @@ class MainSearcher(
       personalizedSearcher.setSimilarity(similarity)
       val idMapper = personalizedSearcher.indexReader.getIdMapper
 
-      personalizedSearcher.explain(query, idMapper.getDocId(uriId.id))
+      (query, personalizedSearcher.explain(query, idMapper.getDocId(uriId.id)))
     }
   }
 }

@@ -29,7 +29,7 @@ import securesocial.core.SecureSocial
 import securesocial.core.java.SecureSocial.SecuredAction
 import com.keepit.common.social.ThreadInfo
 import com.keepit.common.healthcheck.BabysitterTimeout
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 
 object CommentController extends FortyTwoController {
 

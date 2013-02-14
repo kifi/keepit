@@ -91,48 +91,12 @@ slider = function() {
     return "To quickly find this page later...";
   }
 
-  function socialTooltip(friend, element) {
-     // disabled for now
-    renderTemplate("html/social_hover.html", {"friend": friend}, function(tmpl) {
-      var timeout;
-      var timein;
-
-      var friendTooltip = $("<div class=kifi-keeper-hovercard>").html(tmpl).appendTo(".kifi-keepers");
-
-      var socialNetworks = api.url("images/social_icons.png");
-      $(friendTooltip).find('.kifi-network').css('background-image','url(' + socialNetworks + ')');
-
-      function hide() {
-        timeout = setTimeout(function () {
-          $(friendTooltip).fadeOut(100);
-        }, 600);
-        clearTimeout(timein);
-      };
-
-      function show() {
-        timein = setTimeout(function() {
-          $(friendTooltip).stop().fadeIn(100);
-        }, 500)
-      }
-
-      $(element).mouseover(function() {
-        clearTimeout(timeout);
-        show();
-      }).mouseout(hide);
-
-      $(friendTooltip).mouseover(function() {
-        clearTimeout(timeout);
-      }).mouseout(hide);
-
-    });
-  }
-
   function keepPage(shouldSlideOut) {
     api.log("[keepPage]", document.location.href);
 
     api.port.emit("set_page_icon", true);
     isKept = true;
-    if (shouldSlideOut) keptItslideOut();
+    if (shouldSlideOut) slideOutKept();
 
     var isPrivate = $(".kifi-keep-private").is(":checked");
 
@@ -161,13 +125,13 @@ slider = function() {
     });
   }
 
-  function showKeepItHover(trigger, callback) {
+  function showSlider(trigger, hideIfIdle, callback) {
     api.port.emit("get_slider_info", function(o) {
       api.log("slider info:", o);
 
       isKept = o.kept;
       following = o.following;
-      lastShownAt = new Date().getTime();
+      lastShownAt = +new Date;
 
       renderTemplate('html/kept_hover.html', {
           "logo": api.url('images/kifilogo.png'),
@@ -188,7 +152,10 @@ slider = function() {
             api.log("No need to inject, it's already here!");
           } else {
             drawKeepItHover(o.session, o.friends, o.numComments, o.numMessages, template, callback);
-            logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0)});
+            logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: location.href});
+            if (hideIfIdle) {
+              idleTimer.start();
+            }
           }
         });
     });
@@ -196,10 +163,6 @@ slider = function() {
 
   function drawKeepItHover(session, friends, numComments, numMessages, renderedTemplate, callback) {
     $('body').append(renderedTemplate);
-
-    $('.kifi-keeper').each(function(i,e) {
-      socialTooltip(friends[i],e);
-    });
 
     updateCommentCount("public", numComments);
     updateCommentCount("message", numMessages);
@@ -223,6 +186,12 @@ slider = function() {
         $btn.text("Make it " + (priv ? "Public" : "Private"));
       });
     })
+    .on("mouseover", ".kifi-keeper", function() {
+      onMouseoverKeeper(this, friends);
+    })
+    .on("mouseout", ".kifi-keeper", function() {
+      onMouseoutKeeper(this);
+    })
     .on("click", ".kifi-button-dropdown", function() {
       $(".kifi-keep-options").slideToggle(150);
     })
@@ -241,6 +210,7 @@ slider = function() {
       }
     })
     .on("mousedown click keydown keypress keyup", function(e) {
+      idleTimer.dead || idleTimer.kill();
       e.stopPropagation();
     })
     .on("mousewheel", ".kifi-comments-body,.kifi-comment-compose", function(e) {
@@ -255,7 +225,73 @@ slider = function() {
     callback && callback(session);
   }
 
-  function keptItslideOut() {
+  var idleTimer = {
+    start: function() {
+      api.log("[idleTimer.start]");
+      var t = idleTimer;
+      clearTimeout(t.timeout);
+      t.timeout = setTimeout(function slideOutIdle() {
+        api.log("[slideOutIdle]");
+        slideOut("idle");
+      }, 10000);
+      $(".kifi-slider")
+        .off("mouseenter", t.clear).on("mouseenter", t.clear)
+        .off("mouseleave", t.start).on("mouseleave", t.start);
+      delete t.dead;
+    },
+    clear: function() {
+      api.log("[idleTimer.clear]");
+      var t = idleTimer;
+      clearTimeout(t.timeout);
+      delete t.timeout;
+    },
+    kill: function() {
+      var t = idleTimer;
+      if (t.dead) return;
+      api.log("[idleTimer.kill]");
+      clearTimeout(t.timeout);
+      delete t.timeout;
+      $(".kifi-slider")
+        .off("mouseenter", t.clear)
+        .off("mouseleave", t.start);
+      t.dead = true;
+    }};
+
+  function onMouseoverKeeper(img, friends) {
+    var $img = $(img), data = $img.data();
+
+    clearTimeout(data.tHide);
+    data.tShow = setTimeout(function() {
+      if (data.$card) {
+        data.$card.stop().fadeIn(100);
+      } else {
+        renderTemplate("html/social_hover.html", {friend: friends[$img.index(".kifi-keeper")]}, function(html) {
+          if (!data.$card) {
+            data.$card = $("<div class=kifi-keeper-hovercard>").html(html)
+            .find(".kifi-network").css("background-image", "url(" + api.url("images/social_icons.png") + ")").end()
+            .appendTo($img.parent()).fadeIn(100)
+            .on("mouseenter", function() {
+              clearTimeout(data.tHide);
+            })
+            .on("mouseleave", onMouseoutKeeper.bind(null, img));
+          }
+        });
+      }
+    }, 500);
+  }
+
+  function onMouseoutKeeper(img) {
+    var data = $(img).data();
+
+    clearTimeout(data.tShow);
+    data.tHide = setTimeout(function() {
+      if (data.$card) {
+        data.$card.stop().fadeOut(100);
+      }
+    }, 600);
+  }
+
+  function slideOutKept() {
     var $s = $(".kifi-slider");
     $s.animate({
         bottom: '+=' + $s.position().top,
@@ -271,6 +307,7 @@ slider = function() {
 
   // trigger is for the event log (e.g. "key", "icon"). pass no trigger if just hiding slider temporarily.
   function slideOut(trigger) {
+    idleTimer.kill();
     var $s = $(".kifi-slider").animate({
         opacity: 0,
         right: '-=340'
@@ -1044,7 +1081,7 @@ slider = function() {
   // defining the slider API
   return {
   show: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
-    showKeepItHover(trigger);
+    showSlider(trigger, true);
   },
   shown: function() {
     return !!lastShownAt;
@@ -1057,7 +1094,7 @@ slider = function() {
     }
   },
   openDeepLink: function(locator) {
-    showKeepItHover("deepLink", function(session) {
+    showSlider("deepLink", false, function(session) {
       openDeepLink(session, locator);
     });
   }};

@@ -14,10 +14,11 @@ import com.keepit.search.Lang
 import com.keepit.search.MainSearcherFactory
 import com.keepit.common.mail._
 
-import akka.dispatch.Await
-import akka.util.duration._
+import scala.concurrent.Await
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
+import scala.concurrent.duration._
 
 case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstallations: Seq[KifiInstallation])
 
@@ -28,7 +29,7 @@ object UserController extends FortyTwoController {
       inject[NormalizedURIRepo].getByNormalizedUrl(url) match {
         case Some(uri) =>
           val userId = request.userId
-          val bookmark = inject[BookmarkRepo].getByUriAndUser(uri.id.get, userId).filter(_.isActive)
+          val bookmark = inject[BookmarkRepo].getByUriAndUser(uri.id.get, userId)
           val following = inject[FollowRepo].get(userId, uri.id.get).isDefined
 
           val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)

@@ -41,6 +41,7 @@ object ApplicationBuild extends Build {
      * http://stackoverflow.com/questions/10958215/how-to-exclude-commons-logging-from-a-scala-sbt-slf4j-project 
      */
     val appDependencies = Seq(
+      jdbc,
       "mysql" % "mysql-connector-java" % "5.1.10",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" % "akka-testkit" % "2.0.2",
@@ -52,7 +53,7 @@ object ApplicationBuild extends Build {
       "org.apache.tika" % "tika-parsers" % "1.2",
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       //used for securesocial
-      "com.typesafe" %% "play-plugins-util" % "2.1",
+      //"com.typesafe" %% "play-plugins-util" % "2.1",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
       "javax.mail" % "mail" % "1.4.5",

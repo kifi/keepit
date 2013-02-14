@@ -19,7 +19,7 @@ import java.lang.{Float => JFloat}
 import scala.collection.JavaConversions._
 import scala.math._
 
-class TopLevelQuery(val textQuery: Query, val semanticVectorQuery: Query, val proximityQuery: Option[Query], val enableCoord: Boolean) extends Query2 {
+class TopLevelQuery(val textQuery: Query, val semanticVectorQuery: Option[Query], val proximityQuery: Option[Query], val enableCoord: Boolean) extends Query2 {
 
   override def createWeight2(searcher: Searcher): Weight = new TopLevelWeight(this, searcher)
 
@@ -31,16 +31,13 @@ class TopLevelQuery(val textQuery: Query, val semanticVectorQuery: Query, val pr
 
   override def extractTerms(out: JSet[Term]): Unit = {
     textQuery.extractTerms(out)
-    semanticVectorQuery.extractTerms(out)
-    proximityQuery.foreach( _.extractTerms(out) )
+    semanticVectorQuery.foreach(_.extractTerms(out))
+    proximityQuery.foreach(_.extractTerms(out))
 
   }
 
   override def toString(s: String) = {
-    proximityQuery match {
-      case Some(proximityQuery) => "TopLevel(%s, %s, %s)".format(textQuery.toString(s), semanticVectorQuery.toString(s), proximityQuery.toString(s))
-      case None => "TopLevel(%s, %s)".format(textQuery.toString(s), semanticVectorQuery.toString(s))
-    }
+    "TopLevel(%s, %s, %s)".format(textQuery.toString(s), semanticVectorQuery.map(_.toString(s)), proximityQuery.map(_.toString(s)))
   }
 
   override def equals(obj: Any): Boolean = obj match {
@@ -54,7 +51,7 @@ class TopLevelQuery(val textQuery: Query, val semanticVectorQuery: Query, val pr
 class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight with Logging {
 
   val textWeight = query.textQuery.createWeight(searcher)
-  val semanticVectorWeight = query.semanticVectorQuery.createWeight(searcher)
+  val semanticVectorWeight = query.semanticVectorQuery.map(_.createWeight(searcher))
   val proximityWeight = query.proximityQuery.map(_.createWeight(searcher))
 
   override def getQuery() = query
@@ -62,11 +59,7 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
   override def scoresDocsOutOfOrder() = false
 
   override def sumOfSquaredWeights() = {
-    var sum = textWeight.sumOfSquaredWeights + semanticVectorWeight.sumOfSquaredWeights
-    proximityWeight match {
-      case Some(proximityWeight) => sum += proximityWeight.sumOfSquaredWeights
-      case None =>
-    }
+    val sum = textWeight.sumOfSquaredWeights + semanticVectorWeight.map(_.sumOfSquaredWeights).getOrElse(0.0f) + proximityWeight.map(_.sumOfSquaredWeights).getOrElse(0.0f)
     val value = query.getBoost()
     (sum * value * value)
   }
@@ -74,7 +67,7 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
   override def normalize(norm: Float) {
     val n = norm * getValue()
     textWeight.normalize(n)
-    semanticVectorWeight.normalize(n)
+    semanticVectorWeight.foreach(_.normalize(n))
     proximityWeight.foreach(_.normalize(n))
   }
 
@@ -86,11 +79,8 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
     if (exists) {
       result.setDescription("top level, sum of:")
       val score = sc.score
-      val boost = query.getBoost
-      result.setValue(score * boost)
+      result.setValue(score)
       result.setMatch(true)
-      result.addDetail(new Explanation(score, "top level score"))
-      result.addDetail(new Explanation(boost, "boost"))
     } else {
       result.setDescription("top level, doesn't match id %d".format(doc))
       result.setValue(0)
@@ -103,22 +93,25 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
     eTxt.isMatch() match {
       case false =>
         val r = new Explanation(0.0f, "no match in (" + textWeight.getQuery.toString() + ")")
+        r.addDetail(eTxt)
         result.addDetail(r)
         result.setMatch(false)
         result.setValue(sum)
-        result.setDescription("Failure to meet condition of textQuery");
+        result.setDescription("Failure to meet condition of textQuery")
       case true =>
         result.addDetail(eTxt)
 
-        val eSV = semanticVectorWeight.explain(reader, doc)
-        eSV.isMatch() match {
-          case true =>
-            result.addDetail(eSV)
-            sum += eSV.getValue
-          case false =>
-            val r = new Explanation(0.0f, "no match in (" + semanticVectorWeight.getQuery.toString() + ")")
-            r.addDetail(eSV)
-            result.addDetail(r)
+        semanticVectorWeight.map{ semanticVectorWeight =>
+          val eSV = semanticVectorWeight.explain(reader, doc)
+          eSV.isMatch() match {
+            case true =>
+              result.addDetail(eSV)
+              sum += eSV.getValue
+            case false =>
+              val r = new Explanation(0.0f, "no match in (" + semanticVectorWeight.getQuery.toString() + ")")
+              r.addDetail(eSV)
+              result.addDetail(r)
+          }
         }
 
         proximityWeight.map{ proximityWeight =>
@@ -151,12 +144,17 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
       } else {
         QueryUtil.toScorerWithCoordinator(textScorer)
       }
-      val semanticVectorScorer = semanticVectorWeight.scorer(reader, true, false)
-      proximityWeight match {
-        case Some(proximityWeight) =>
-          new TopLevelScorerWithProximity(this, mainScorer, semanticVectorScorer, proximityWeight.scorer(reader, true, false))
-        case None =>
-          new TopLevelScorerNoProximity(this, mainScorer, semanticVectorScorer)
+      val semanticVectorScorer = semanticVectorWeight.map(_.scorer(reader, true, false))
+      val proximityScorer = proximityWeight.map(_.scorer(reader, true, false))
+      (semanticVectorScorer, proximityScorer) match {
+        case (Some(semanticVectorScorer), Some(proximityScorer)) =>
+          new TopLevelScorer2(this, mainScorer, semanticVectorScorer, proximityScorer)
+        case (Some(semanticVectorScorer), None) =>
+          new TopLevelScorer1(this, mainScorer, semanticVectorScorer)
+        case (None, Some(proximityScorer)) =>
+          new TopLevelScorer1(this, mainScorer, proximityScorer)
+        case (None, None) =>
+          new TopLevelScorer(this, mainScorer)
       }
     }
   }
@@ -191,15 +189,15 @@ class TopLevelScorer(weight: TopLevelWeight, textScorer: Scorer with Coordinator
   }
 }
 
-class TopLevelScorerNoProximity(weight: TopLevelWeight, textScorer: Scorer with Coordinator, semanticVectorScorer: Scorer) extends TopLevelScorer(weight, textScorer) {
+class TopLevelScorer1(weight: TopLevelWeight, textScorer: Scorer with Coordinator, auxScorer: Scorer) extends TopLevelScorer(weight, textScorer) {
   override def score(): Float = {
     if (doc != scoredDoc) {
       try {
         var sum = textScorer.score()
 
-        if (semanticVectorScorer.docID() < doc) semanticVectorScorer.advance(doc)
-        if (semanticVectorScorer.docID() == doc) {
-          sum += semanticVectorScorer.score()
+        if (auxScorer.docID() < doc) auxScorer.advance(doc)
+        if (auxScorer.docID() == doc) {
+          sum += auxScorer.score()
         }
         scr = sum * textScorer.coord
       } catch {
@@ -213,21 +211,21 @@ class TopLevelScorerNoProximity(weight: TopLevelWeight, textScorer: Scorer with 
   }
 }
 
-class TopLevelScorerWithProximity(weight: TopLevelWeight, textScorer: Scorer with Coordinator, semanticVectorScorer: Scorer, proximityScorer: Scorer) extends TopLevelScorer(weight, textScorer) {
+class TopLevelScorer2(weight: TopLevelWeight, textScorer: Scorer with Coordinator, auxScorer1: Scorer, auxScorer2: Scorer ) extends TopLevelScorer(weight, textScorer) {
   override def score(): Float = {
     if (doc != scoredDoc) {
       try {
         var sum = textScorer.score()
 
-        if (semanticVectorScorer.docID() < doc) semanticVectorScorer.advance(doc)
-        if (semanticVectorScorer.docID() == doc) {
-          sum += semanticVectorScorer.score()
+        if (auxScorer1.docID() < doc) auxScorer1.advance(doc)
+        if (auxScorer1.docID() == doc) {
+          sum += auxScorer1.score()
+        }
+        if (auxScorer2.docID() < doc) auxScorer2.advance(doc)
+        if (auxScorer2.docID() == doc) {
+          sum += auxScorer2.score()
         }
 
-        if (proximityScorer.docID() < doc) proximityScorer.advance(doc)
-        if (proximityScorer.docID() == doc) {
-          sum += proximityScorer.score()
-        }
         scr = sum * textScorer.coord
       } catch {
         case e: Exception =>

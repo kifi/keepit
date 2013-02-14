@@ -21,6 +21,9 @@ import play.api.mvc.{Request, Results, Result}
 import play.api.libs.oauth.{RequestToken, OAuthCalculator}
 import play.api.libs.ws.{Response, WS}
 import play.api.{Application, Logger}
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.Await
 
 
 /**
@@ -33,12 +36,8 @@ class LinkedInProvider(application: Application) extends OAuth1Provider(applicat
 
   override def fillProfile(user: SocialUser): SocialUser = {
     val oauthInfo = user.oAuth1Info.get
-    WS.url(LinkedInProvider.Api).sign(OAuthCalculator(oauthInfo.serviceInfo.key,
-      RequestToken(oauthInfo.token, oauthInfo.secret))).get().await(10000).fold(
-      onError => {
-        Logger.error("timed out waiting for LinkedIn")
-        throw new AuthenticationException()
-      },
+    Await.result(WS.url(LinkedInProvider.Api).sign(OAuthCalculator(oauthInfo.serviceInfo.key,
+      RequestToken(oauthInfo.token, oauthInfo.secret))).get().transform(
       response =>
       {
         val me = response.json
@@ -62,8 +61,12 @@ class LinkedInProvider(application: Application) extends OAuth1Provider(applicat
             user.copy(id = UserId(id, providerId), displayName = fullName, avatarUrl = avatarUrl)
           }
         }
+      },
+      onError => {
+        Logger.error("timed out waiting for LinkedIn")
+        throw new AuthenticationException()
       }
-    )
+    ), 10 seconds)
   }
 }
 

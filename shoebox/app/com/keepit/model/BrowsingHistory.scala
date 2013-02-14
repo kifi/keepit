@@ -19,7 +19,8 @@ import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
 import com.keepit.serializer.BrowsingHistoryBinarySerializer
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 
 case class BrowsingHistory (
                     id: Option[Id[BrowsingHistory]] = None,

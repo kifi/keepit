@@ -84,9 +84,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   }
 
   private def update(model: M)(implicit session: RWSession) = {
-    implicit val mapper = new BaseTypeMapper[Id[M]] {
-      def apply(profile: BasicProfile) = new IdMapperDelegate[M]
-    }
     assert(1 == table.where(r => Is(r.id, model.id.get)).update(model))
     model
   }

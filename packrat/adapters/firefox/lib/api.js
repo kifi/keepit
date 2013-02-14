@@ -29,6 +29,7 @@ var nextTabId = 1;
 const pages = {}, workers = {}, tabsById = {};  // all by tab.id
 function createPage(tab) {
   if (!tab || !tab.id) throw Error(tab ? "tab without id" : "tab required");
+  (workers[tab.id] || (workers[tab.id] = [])).length = 0;
   return pages[tab.id] = {id: tab.id, url: tab.url};
 }
 
@@ -364,7 +365,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
         let tab = worker.tab, page = pages[tab.id];
         exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
         let injected = extend({}, o.injected);
-        let pw = workers[tab.id] || (workers[tab.id] = []);
+        let pw = workers[tab.id];
         pw.push(worker);
         worker.on("pageshow", function() {
           if (!page.ready && /^https?:/.test(page.url)) {

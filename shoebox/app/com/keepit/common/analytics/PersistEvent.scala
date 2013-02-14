@@ -1,6 +1,6 @@
 package com.keepit.common.analytics
 
-import akka.dispatch.Await
+import scala.concurrent.Await
 import akka.actor.ActorSystem
 import com.keepit.common.db.Id
 import play.api.Plugin
@@ -12,7 +12,7 @@ import com.keepit.search.graph.URIGraph
 import akka.util.Timeout
 import akka.actor.Props
 import com.keepit.model.User
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 import com.keepit.common.healthcheck._
 import com.keepit.inject._

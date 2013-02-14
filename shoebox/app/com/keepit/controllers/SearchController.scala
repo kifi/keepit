@@ -7,7 +7,7 @@ import play.api.data.validation.Constraints._
 import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.http.ContentTypes
-import com.keepit.controllers.CommonActions._
+
 import play.api.Play.current
 import com.keepit.inject._
 import com.keepit.common.db._
