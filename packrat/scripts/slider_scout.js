@@ -27,7 +27,8 @@ var slider, injected, t0 = +new Date;
       var hPage = document.body.scrollHeight;
       var hViewport = viewportEl.clientHeight;
       var hSeen = window.pageYOffset + hViewport;
-      api.log("[onScrollMaybeShow] seen:", hSeen, "/", hPage, "=", hSeen / hPage * 100, "%, page:viewport:", hViewport);
+      api.log("[onScrollMaybeShow]", Math.round(hSeen / hPage * 10000) / 100, ">", rules.scroll[1], "% and",
+        hPage, ">", rules.scroll[0] * hViewport, "?");
       if (hPage > rules.scroll[0] * hViewport && hSeen > (rules.scroll[1] / 100) * hPage) {
         api.log("[onScrollMaybeShow] showing");
         autoShow("scroll");
