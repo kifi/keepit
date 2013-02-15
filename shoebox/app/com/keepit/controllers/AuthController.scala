@@ -41,27 +41,6 @@ import com.keepit.common.healthcheck._
 import com.keepit.common.db.slick._
 
 object AuthController extends FortyTwoController {
-  // TODO: remove when all beta users are on 2.0.2+
-  def isLoggedIn = AuthenticatedJsonAction { implicit request =>
-	  UserService.find(request.socialUser.id) match {
-	    case None =>
-		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)).withNewSession
-	    case Some(socialUser) =>
-	      log.info("facebook id %s".format(socialUser.id.id))
-	      val user = inject[DBConnection].readOnly { implicit s =>
-  	    	val userId = inject[SocialUserInfoRepo].get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).userId.get
-  	    	inject[UserRepo].get(userId)
-  	  	}
-        Ok(JsObject(Seq(
-          "status" -> JsString("loggedin"),
-          "avatarUrl" -> JsString(socialUser.avatarUrl.get),
-          "name" -> JsString(socialUser.displayName),
-          "facebookId" -> JsString(socialUser.id.id),
-          "provider" -> JsString(socialUser.id.providerId),
-          "externalId" -> JsString(user.externalId.id))))
-    }
-  }
-
   def start = AuthenticatedJsonAction { implicit request =>
     val socialUser = request.socialUser
     log.info("facebook id %s".format(socialUser.id))

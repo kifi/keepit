@@ -40,7 +40,6 @@ GET     /search                     com.keepit.controllers.SearchController.sear
 
 POST    /kifi/start                 com.keepit.controllers.AuthController.start
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
-GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
 GET     /whois                      com.keepit.controllers.AuthController.whois
 GET     /session/end                com.keepit.controllers.AuthController.logOut
 
