@@ -33,6 +33,12 @@ class NormalizedURITest extends SpecificationWithJUnit with DbRepos {
     }
   }
 
+  "NormalizedURIFactory" should {
+    "initialize domain properly" in {
+      NormalizedURIFactory("http://www.42go.com").domain === Some("www.42go.com")
+    }
+  }
+
   "bookmark pagination" should {
     "get all" in {
       running(new EmptyApplication()) {
