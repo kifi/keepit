@@ -42,6 +42,7 @@ object ApplicationBuild extends Build {
      */
     val appDependencies = Seq(
       jdbc,
+      "ru.circumflex" % "circumflex-orm" % "2.1" % "compile->default",
       "mysql" % "mysql-connector-java" % "5.1.10",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" % "akka-testkit" % "2.0.2",
@@ -64,6 +65,7 @@ object ApplicationBuild extends Build {
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
     val main = play.Project(appName, appVersion, appDependencies).settings(
+      //scalacOptions ++= Seq("-deprecation", "-unchecked","-feature"),
       // add some imports to the routes file
       routesImport ++= Seq(
         "com.keepit.common.db.{ExternalId, Id, State}",

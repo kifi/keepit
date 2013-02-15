@@ -45,7 +45,7 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int) extends Ext
     try {
       parser.parse(input, contentHandler, metadata, context)
     } catch {
-      case e =>
+      case e: Throwable =>
         // check if we hit our content size limit (maxContentChars)
         if (output.isWriteLimitReached(e))
           log.warn("max number of characters reached: " + url)

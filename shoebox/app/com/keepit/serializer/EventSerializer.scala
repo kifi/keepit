@@ -23,10 +23,10 @@ class EventSerializer extends Format[Event] {
      "metaData" -> EventSerializer.eventMetadataSerializer.writes(event.metaData)
     ))
 
-  def reads(json: JsValue): Event =
-    Event(
+  def reads(json: JsValue): JsResult[Event] =
+    JsSuccess(Event(
       externalId = ExternalId[Event]((json \ "id").as[String]),
-      metaData = EventSerializer.eventMetadataSerializer.reads(json \ "metaData"),
+      metaData = EventSerializer.eventMetadataSerializer.reads(json \ "metaData").get,
       createdAt = (json \ "createdAt") match {
         case s: JsString => parseStandardTime(s.as[String])
         case s: JsObject =>
@@ -35,7 +35,7 @@ class EventSerializer extends Format[Event] {
         case s: JsValue => parseStandardTime(s.toString)
       },
       serverVersion = (json \ "serverVersion").as[String]
-    )
+    ))
 
   // MongoDb Casbah serializer
   RegisterJodaTimeConversionHelpers()
@@ -125,8 +125,8 @@ class EventMetadataSerializer extends Format[EventMetadata] {
     }
   }
 
-  def reads(json: JsValue): EventMetadata = {
-    EventFamilies((json \ "eventFamily").as[String]) match {
+  def reads(json: JsValue): JsResult[EventMetadata] = 
+    JsSuccess(EventFamilies((json \ "eventFamily").as[String]) match {
       case UserEventFamily(name) =>
         UserEventMetadata(
           eventFamily = EventFamilies((json \ "eventFamily").as[String]),
@@ -148,7 +148,7 @@ class EventMetadataSerializer extends Format[EventMetadata] {
           prevEvents = (json \ "prevEvents").as[Seq[String]] map { i => ExternalId[Event](i) }
         )
     }
-  }
+  )
 
 }
 

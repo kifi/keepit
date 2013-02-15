@@ -28,7 +28,7 @@ object GravatarHelper {
   val Md5 = "MD5"
 
   def avatarFor(email: String): Option[String] = {
-    hash(email).map( hash => {
+    hash(email).map(hash => {
       val url = GravatarUrl.format(hash)
       try {
         val result = Await.result(WS.url(url).get(), 10 seconds)
@@ -41,7 +41,7 @@ object GravatarHelper {
 
   private def hash(email: String): Option[String] = {
     val s = email.trim.toLowerCase
-    if ( s.length > 0 ) {
+    if (s.length > 0) {
       val out = MessageDigest.getInstance(Md5).digest(s.getBytes)
       Some(BigInt(1, out).toString(16))
     } else {

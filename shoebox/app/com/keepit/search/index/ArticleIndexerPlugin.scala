@@ -15,13 +15,13 @@ import akka.pattern.ask
 import scala.concurrent.Await
 import play.api.libs.concurrent._
 import org.joda.time.DateTime
-import akka.dispatch.Future
 import com.google.inject.Inject
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.inject._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import scala.concurrent.duration._
+import scala.concurrent.Future
 
 case object Index
 

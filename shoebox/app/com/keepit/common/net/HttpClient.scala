@@ -11,6 +11,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent._
+import scala.concurrent.Future
+import scala.concurrent.Await
 
 trait HttpClient {
 
@@ -28,6 +30,8 @@ trait HttpClient {
 }
 
 case class HttpClientImpl(val timeout: Long = 2, val timeoutUnit: TimeUnit = TimeUnit.SECONDS, val headers: Seq[(String, String)] = List()) extends HttpClient {
+
+  implicit val duration = Duration(timeout, timeoutUnit)
 
   def withHeaders(hdrs: (String, String)*): HttpClient = this.copy(headers = headers ++ hdrs)
 
@@ -77,7 +81,7 @@ class ClientResponseImpl(val request: WSRequestHolder, val response: Response) e
     try {
       response.json
     } catch {
-      case e =>
+      case e: Throwable =>
         println("bad response: %s".format(response.body.toString()))
         throw e
     }

@@ -19,7 +19,7 @@ object QueryHash {
       if (queryText == null || queryText.trim.length == 0) null
       else parser.parse(queryText)
     } catch {
-      case e => parser.parse(LuceneQueryParser.escape(queryText))
+      case e: Throwable => parser.parse(LuceneQueryParser.escape(queryText))
     }
     if (query != null) hash.update(query.toString)
     hash.get

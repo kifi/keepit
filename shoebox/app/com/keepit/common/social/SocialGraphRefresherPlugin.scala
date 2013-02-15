@@ -14,6 +14,7 @@ import akka.actor.ActorRef
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.pattern.ask
 import scala.concurrent.Await
+import akka.pattern.ask
 import play.api.libs.concurrent._
 import org.joda.time.DateTime
 import akka.dispatch.Future
@@ -25,7 +26,9 @@ import com.keepit.common.db.slick._
 import play.api.Play.current
 import play.api.libs.json.JsArray
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
+import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
+import scala.concurrent.Await
 
 private case class RefreshUserInfo(socialUserInfo: SocialUserInfo)
 private case object RefreshAll

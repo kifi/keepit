@@ -284,7 +284,7 @@ class URLHistorySeqMapperDelegate extends StringMapperDelegate[Seq[URLHistory]] 
   def safeDestToSource(history: String) = {
     val json = Json.parse(history)
     val serializer = URLHS.urlHistorySerializer
-    serializer.reads(json)
+    serializer.reads(json).get
   }
 }
 
@@ -316,7 +316,7 @@ class SocialNetworkTypeMapperDelegate extends StringMapperDelegate[SocialNetwork
 class SocialUserMapperDelegate extends StringMapperDelegate[SocialUser] {
   def zero = SocialUser(id = UserId("", ""), displayName = "", email = None, avatarUrl = None, authMethod = AuthenticationMethod.OAuth2)
   def sourceToDest(socialUser: SocialUser) = SocialUserSerializer.userSerializer.writes(socialUser).toString
-  def safeDestToSource(str: String) = SocialUserSerializer.userSerializer.reads(Json.parse(str))
+  def safeDestToSource(str: String) = SocialUserSerializer.userSerializer.reads(Json.parse(str)).get
 }
 
 //************************************

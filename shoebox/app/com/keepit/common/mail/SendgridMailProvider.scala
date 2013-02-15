@@ -120,7 +120,7 @@ class SendgridMailProvider @Inject() (db: DBConnection, mailRepo: ElectronicMail
         mailRepo.save(mail.sent("message sent", ElectronicMailMessageId(messageId.substring(1, messageId.length - 1))))
       }
     } catch {
-      case e =>
+      case e: Throwable =>
         log.error(e)
         mailError(mail, e.toString(), transport)
     }

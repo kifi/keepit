@@ -74,7 +74,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
       if (app.mode != Mode.Test && app.mode != Mode.Dev) injector.inject[HealthcheckPlugin].reportStop()
       injector.inject[AppScope].onStop(app)
     } catch {
-      case e => log.error("====================== error during onStop ===============================", e)
+      case e: Throwable => log.error("====================== error during onStop ===============================", e)
     }
   }
 

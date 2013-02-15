@@ -1,6 +1,7 @@
 package com.keepit.common.cache
 
-import akka.util.Duration
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 import com.google.inject.{Inject, Singleton}
 import com.keepit.inject._
 import play.api.Play.current

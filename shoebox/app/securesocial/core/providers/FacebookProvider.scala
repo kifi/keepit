@@ -16,13 +16,14 @@
  */
 package securesocial.core.providers
 
-import play.api.{Application, Logger}
+import play.api.{ Application, Logger }
 import play.api.libs.json.JsObject
 import securesocial.core._
 import play.api.libs.ws.{Response, WS}
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import scala.concurrent.Await
+import scala.concurrent.Future
 
 /**
  * A Facebook Provider
@@ -52,9 +53,9 @@ class FacebookProvider(application: Application) extends OAuth2Provider(applicat
   }
 
   def fillProfile(user: SocialUser) = {
-    Logger.debug("in fillProfile for "+user);
+    Logger.debug("in fillProfile for " + user);
     val accessToken = user.oAuth2Info.get.accessToken
-    val promise = WS.url(MeApi + accessToken).get()
+    val promise = WS.url(MeApi + accessToken).withTimeout(10000).get()
 
     Await.result(promise.transform(response => {
       val me = response.json

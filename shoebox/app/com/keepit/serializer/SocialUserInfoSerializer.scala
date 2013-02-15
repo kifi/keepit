@@ -24,8 +24,8 @@ class SocialUserInfoSerializer extends Format[SocialUserInfo] {
     )
     )
 
-  def reads(json: JsValue): SocialUserInfo =
-    SocialUserInfo(
+  def reads(json: JsValue): JsResult[SocialUserInfo] =
+    JsSuccess(SocialUserInfo(
       id = (json \ "id").asOpt[Long].map(Id[SocialUserInfo]),
       createdAt = parseStandardTime((json \ "createdAt").as[String]),
       updatedAt = parseStandardTime((json \ "updatedAt").as[String]),
@@ -37,17 +37,17 @@ class SocialUserInfoSerializer extends Format[SocialUserInfo] {
         case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK
       },
       credentials = (json \ "credentials") match {
-        case n: JsObject => Some(SocialUserSerializer.userSerializer.reads(n))
+        case n: JsObject => Some(SocialUserSerializer.userSerializer.reads(n).get)
         case n: JsValue => None
       },
       lastGraphRefresh = ((json \ "lastGraphRefresh").asOpt[String]).map(parseStandardTime)
-    )
+    ))
 
   def writesSeq(infos: Seq[SocialUserInfo]): JsValue =
     JsArray(infos.map(writes))
 
-  def readsSeq(json: JsValue) =
-    json.as[List[JsObject]].map(reads)
+  def readsSeq(json: JsValue): List[SocialUserInfo] =
+    json.as[List[JsObject]].map(reads).map(_.get)
 }
 
 object SocialUserInfoSerializer {

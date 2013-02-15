@@ -3,11 +3,12 @@ package com.keepit.classify
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.db.slick.DBConnection
 
+import scala.concurrent.{Await, Future}
 import akka.actor.{ActorSystem, Props, Actor}
-import akka.dispatch.Future
 import akka.japi.Option
 import akka.pattern.ask
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 
 private case class ApplyTag(tagName: DomainTagName, domainNames: Iterable[String])
 private case class RemoveTag(tagName: DomainTagName)
@@ -15,7 +16,7 @@ private case class RemoveTag(tagName: DomainTagName)
 private[classify] class DomainTagImportActor(db: DBConnection, updater: SensitivityUpdater,
     domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo) extends Actor {
 
-  protected def receive = {
+  def receive = {
     case ApplyTag(tagName, domainNames) =>
       sender ! applyTagToDomains(tagName, domainNames)
     case RemoveTag(tagName) =>

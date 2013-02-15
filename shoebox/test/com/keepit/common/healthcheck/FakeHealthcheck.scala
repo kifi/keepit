@@ -4,10 +4,10 @@ import com.keepit.common.mail._
 import com.keepit.common.mail.EmailAddresses.ENG
 import akka.actor.Actor._
 import akka.actor._
-import akka.dispatch.Future
 import scala.collection.mutable.MutableList
-import akka.dispatch.Promise
-import akka.dispatch.ExecutionContext
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 case class FakeHealthcheck() extends HealthcheckPlugin {
 

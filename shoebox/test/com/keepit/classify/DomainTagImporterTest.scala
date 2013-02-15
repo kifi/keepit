@@ -7,7 +7,8 @@ import com.keepit.inject._
 import com.keepit.test._
 import akka.actor.ActorSystem
 import akka.dispatch.Await
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 import play.api.Play.current
 import play.api.test.Helpers._
 

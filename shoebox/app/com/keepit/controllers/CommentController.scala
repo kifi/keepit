@@ -195,7 +195,7 @@ object CommentController extends FortyTwoController {
         }
       }
       catch {
-        case _ => None // It throws an exception if it fails ExternalId[User]. Just return None.
+        case e: Throwable => None // It throws an exception if it fails ExternalId[User]. Just return None.
       }
     } flatten
   }

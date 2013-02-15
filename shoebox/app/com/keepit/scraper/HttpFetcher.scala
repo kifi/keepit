@@ -95,12 +95,12 @@ class HttpFetcher extends Logging {
         try {
           EntityUtils.consumeQuietly(entity);
         } catch {
-          case _ => // ignore any exception
+          case _: Throwable => // ignore any exception
         }
         try {
           input.close() // closing the input stream will trigger connection release
         } catch {
-          case _ => // ignore any exception
+          case _: Throwable => // ignore any exception
         }
       }
     } else {

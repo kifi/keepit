@@ -11,6 +11,8 @@ import akka.actor.Scheduler
 import org.joda.time.DateTime
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.duration.FiniteDuration
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.duration._
 
 @ImplementedBy(classOf[BabysitterImpl])
 trait Babysitter {
