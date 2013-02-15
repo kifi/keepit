@@ -157,7 +157,8 @@ object Host {
   def unapplySeq(host: Host) = Some(host.domain)
 }
 class Host(val domain: Seq[String]) {
-  override def toString = domain.reverse.mkString(".")
+  def fqdn: String = domain.reverse.mkString(".")
+  override def toString = fqdn
 }
 
 object Query {

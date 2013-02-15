@@ -67,8 +67,8 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
         booleanQuery.add(copyFieldQuery(query, "title_stemmed"), Occur.SHOULD)
       }
     }
-
-    booleanQuery
+    if (booleanQuery.clauses().size == 0) null
+    else booleanQuery
   }
 
   private def tryAddPhraseQueries(query: BooleanQuery) {

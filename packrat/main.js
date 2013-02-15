@@ -143,9 +143,9 @@ api.port.on({
   set_page_icon: function(data, respond, tab) {
     setIcon(tab, data);
   },
-  check_auto_show_eligible: function(data, respond, tab) {
-    if (tab.autoShowSec && api.prefs.get("showSlider")) {
-      api.tabs.emit(tab, "auto_show_eligible");
+  get_slider_rules: function(data, respond, tab) {
+    if (api.prefs.get("showSlider")) {
+      api.tabs.emit(tab, "slider_rules", session.rules.rules, tab.showOnScroll);
     }
   },
   get_slider_info: function(data, respond, tab) {
@@ -424,7 +424,7 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
 
 api.tabs.on.focus.add(function(tab) {
   api.log("[tabs.on.focus]", tab);
-  if (tab.autoShowSec && !tab.autoShowTimer) {
+  if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
   } else {
     checkKeepStatus(tab);
@@ -442,7 +442,7 @@ api.tabs.on.loading.add(function(tab) {
   setIcon(tab);
 
   checkKeepStatus(tab, function(resp) {
-    if (!resp.kept && !resp.sensitive) {
+    if (!resp.kept && (!resp.sensitive || !session.rules.rules.sensitive)) {
       var url = tab.url;
       if (restrictedUrlPatternsForHover.some(function(e) {return url.indexOf(e) >= 0})) {
         api.log("[tabs.on.loading:2] restricted:", url);
@@ -453,12 +453,13 @@ api.tabs.on.loading.add(function(tab) {
         api.log("[tabs.on.loading:2] recently visited:", url);
       } else {
         userHistory.add(url);
-        tab.autoShowSec = resp.keptByAnyFriends ? 10 : 30;
-        if (api.tabs.isFocused(tab)) {
+        tab.showOnScroll = !!session.rules.rules.scroll;
+        tab.autoShowSec = (session.rules.rules[resp.keptByAnyFriends ? "friendKept" : "focus"] || [])[0];
+        if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
           scheduleAutoShow(tab);
         }
         if (api.prefs.get("showSlider")) {
-          api.tabs.emit(tab, "auto_show_eligible");
+          api.tabs.emit(tab, "slider_rules", session.rules.rules, tab.showOnScroll);
         }
       }
     }
