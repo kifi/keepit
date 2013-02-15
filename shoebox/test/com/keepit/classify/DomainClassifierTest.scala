@@ -1,10 +1,11 @@
 package com.keepit.classify
 
+import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationWithJUnit
 
 import com.keepit.common.db.slick.DBConnection
 import com.keepit.common.net.FakeHttpClient
-import com.keepit.inject.inject
+import com.keepit.inject.{provide, inject}
 import com.keepit.test.{DbRepos, EmptyApplication}
 
 import akka.actor.ActorSystem
@@ -27,7 +28,7 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
         val domainRepo = inject[DomainRepo]
         val domainToTagRepo = inject[DomainToTagRepo]
         val importer = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], system, db)
+          inject[SensitivityUpdater], provide(new DateTime), system, db, DomainTagImportSettings())
         inject[DBConnection].readWrite { implicit s =>
           tagRepo.save(DomainTag(name = DomainTagName("Search Engines"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("Technology and computers"), sensitive = Some(false)))
