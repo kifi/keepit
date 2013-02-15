@@ -6,8 +6,10 @@ import com.keepit.inject.inject
 import com.keepit.model.SliderRuleRepo
 import com.keepit.model.SliderRuleStates._
 
-import play.api.libs.json.{Json, JsArray}
+import play.api.libs.json.{JsObject, Json, JsArray}
 import play.api.Play.current
+import play.api.mvc.Action
+import com.keepit.classify.DomainTagImporter
 
 object SliderAdminController extends FortyTwoController {
 
@@ -34,4 +36,8 @@ object SliderAdminController extends FortyTwoController {
     Redirect(routes.SliderAdminController.index)
   }
 
+  def refetchClassifications = Action { implicit request =>
+    inject[DomainTagImporter].refetchClassifications()
+    Ok(JsObject(Seq()))
+  }
 }

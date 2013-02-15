@@ -30,7 +30,7 @@ private[classify] class DomainClassificationActor(db: DBConnection, client: Http
     val encodedUrl = URLEncoder.encode(url, "UTF-8")
     val result =
       client.get("http://thor.komodia.com/url.php?version=w11&guid=" + guid + "&id=" + id + "&url=" + encodedUrl).body
-    result.split("~", 2).toList match {
+    (result.split("~", 2).toList match {
       case ("FM" | "FR") :: tagString :: Nil =>
         // response is comma separated, but includes commas inside parentheses
         """\(([^)]*)\)""".r.replaceAllIn(tagString, _.group(0).replace(',', '\u02bd'))
@@ -39,7 +39,7 @@ private[classify] class DomainClassificationActor(db: DBConnection, client: Http
           .map(DomainTagName(_))
           .toSeq
       case _ => Seq()
-    }
+    }).filterNot(DomainTagName.isBlacklisted)
   }
 
   protected def receive = {
@@ -59,13 +59,13 @@ private[classify] class DomainClassificationActor(db: DBConnection, client: Http
           }).id.get
         }.toSet
         val existingTagRelationships = domainToTagRepo.getByDomain(domain.id.get, excludeState = None)
-        for (r <- existingTagRelationships if r.state != DomainTagStates.ACTIVE) {
+        for (r <- existingTagRelationships.toSeq if r.state != DomainTagStates.ACTIVE) {
           domainToTagRepo.save(r.withState(DomainToTagStates.ACTIVE))
         }
         domainToTagRepo.insertAll((tagIds -- existingTagRelationships.map(_.tagId)).map { tagId =>
           DomainToTag(domainId = domain.id.get, tagId = tagId)
         }.toSeq)
-        sender ! updater.updateSensitivity(Seq(domain)).head.sensitive
+        sender ! updater.updateSensitivity(domain)
       }
   }
 }

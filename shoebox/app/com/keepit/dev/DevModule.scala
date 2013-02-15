@@ -54,7 +54,8 @@ import com.keepit.common.analytics.reports._
 import com.google.inject.multibindings._
 import com.keepit.common.analytics._
 import com.keepit.common.cache._
-
+import com.keepit.classify.DomainTagImportSettings
+import com.google.common.io.Files
 
 
 class DevModule() extends ScalaModule with Logging {
@@ -278,4 +279,11 @@ class DevModule() extends ScalaModule with Logging {
 
     BrowsingHistoryTracker(filterSize, numHashFuncs, minHits)
   }
+
+  @Singleton
+  @Provides
+  def domainTagImportSettings: DomainTagImportSettings = {
+    DomainTagImportSettings(localDir = Files.createTempDir().getAbsolutePath, url = "http://localhost:8000/42.zip")
+  }
+
 }

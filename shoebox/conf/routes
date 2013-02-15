@@ -125,6 +125,7 @@ GET     /admin/explainResult        com.keepit.controllers.SearchController.expl
 
 GET     /admin/slider               com.keepit.controllers.admin.SliderAdminController.index
 POST    /admin/slider               com.keepit.controllers.admin.SliderAdminController.save
+POST    /refetch_classifications    com.keepit.controllers.admin.SliderAdminController.refetchClassifications
 
 GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
 GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()
