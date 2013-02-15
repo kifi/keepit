@@ -22,29 +22,12 @@
       <link rel="stylesheet" href="@routes.Assets.at("stylesheets/" + stylesheet + ".css")">
     }
     @defining(if (play.api.Play.isDev(play.api.Play.current)) ".js" else ".min.js") { ext =>
-      @for(script <- "jquery-1.7.1" :: scripts) {
+      <script src="@routes.Assets.at("javascripts/jquery-1.7.1" + ext)"></script>
+      <script src="@routes.Assets.at("bootstrap/js/bootstrap" + ext)"></script>
+      @for(script <- scripts) {
         <script src="@routes.Assets.at("javascripts/" + script + ext)"></script>
       }
     }
-    <script>
-       $(function () {
-           $("#scrlBotm").click(function() {
-               $("html, body").animate({
-                   scrollTop: $(document).height()
-               },
-               500);
-               return false;
-           });
-
-           $("#scrlTop").click(function() {
-               $("html, body").animate({
-                   scrollTop: "0px"
-               },
-               500);
-               return false;
-           });
-       });
-    </script>
   </head>
   <body>
 		<a id="scrlTop" title="Top" href="#" style="position: fixed; top: 100px; right: 20px;"><i class="icon-chevron-up"></i></a>
@@ -52,19 +35,24 @@
 		<div class="navbar navbar-inverse navbar-fixed-top">
 		  <div class="navbar-inner">
 		    <ul class="nav">
-		      <li><a href="@com.keepit.controllers.admin.routes.AdminDashboardController.index">Dashboard</a></li>
-		      <li><a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(0)">Keeps</a></li>
-		      <li><a href="@com.keepit.controllers.routes.UserController.usersView">Users</a></li>
-		      <li><a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(0)">Social Users</a></li>
-		      <li><a href="@com.keepit.controllers.routes.CommentController.followsView">Follows</a></li>
-		      <li><a href="@com.keepit.controllers.routes.CommentController.commentsView(0)">Comments</a></li>
-		      <li><a href="@com.keepit.controllers.routes.CommentController.messagesView(0)">Messages</a></li>
-		      <li><a href="@com.keepit.controllers.admin.routes.ElectronicMailController.electronicMailsView(0)">Emails</a></li>
-		      <li class="divider-vertical"></li>
-          <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.index">Slider</a></li>
-          <li><a href="@com.keepit.controllers.admin.routes.ArticleIndexerController.indexInfo">Index</a></li>
-		      <li><a href="@com.keepit.controllers.admin.routes.AdminEventController.reportList">Reports</a></li>
-		      <li><a href="@com.keepit.common.healthcheck.routes.HealthController.serviceView">Service</a></li>
+		      <li><a href="@com.keepit.controllers.admin.routes.AdminDashboardController.index">Dashboard</a>
+		      <li><a href="@com.keepit.controllers.routes.BookmarksController.bookmarksView(0)">Keeps</a>
+		      <li><a href="@com.keepit.controllers.routes.UserController.usersView">Users</a>
+		      <li><a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(0)">Social Users</a>
+		      <li><a href="@com.keepit.controllers.routes.CommentController.followsView">Follows</a>
+		      <li><a href="@com.keepit.controllers.routes.CommentController.commentsView(0)">Comments</a>
+		      <li><a href="@com.keepit.controllers.routes.CommentController.messagesView(0)">Messages</a>
+		      <li><a href="@com.keepit.controllers.admin.routes.ElectronicMailController.electronicMailsView(0)">Emails</a>
+		      <li class="divider-vertical">
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" href="#">Slider</a>
+            <ul class="dropdown-menu" role="menu">
+              <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getRules">Rules for Showing</a>
+              <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getPatterns">URL Exclude Patterns</a>
+            </ul>
+          <li><a href="@com.keepit.controllers.admin.routes.ArticleIndexerController.indexInfo">Index</a>
+		      <li><a href="@com.keepit.controllers.admin.routes.AdminEventController.reportList">Reports</a>
+		      <li><a href="@com.keepit.common.healthcheck.routes.HealthController.serviceView">Service</a>
 		    </ul>
 		  </div>
 		</div>
@@ -77,5 +65,25 @@
 	    @content
 	    @quote(com.keepit.common.admin.DouglasAdamsQuotes.random)
 		</div>
+    <script>
+    $(function() {
+      $("#scrlBotm").click(function() {
+        $("html,body").animate({scrollTop: $(document).height()}, 500);
+        return false;
+      });
+      $("#scrlTop").click(function() {
+        $("html,body").animate({scrollTop: 0}, 500);
+        return false;
+      });
+      $(".navbar").on("mouseenter mouseleave", ".dropdown", function(e) {
+        if ($(this).hasClass("open") != (e.type == "mouseenter")) {
+          var $a = $(this).find(".dropdown-toggle").dropdown("toggle");
+          if (e.type == "mouseleave") {
+            $a.blur();
+          }
+        }
+      });
+    });
+    </script>
   </body>
 </html>

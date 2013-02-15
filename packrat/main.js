@@ -373,9 +373,6 @@ var restrictedUrlPatternsForHover = [
   "keepitfindit.com",
   "ezkeep.com",
   "localhost:",
-  "maps.google.com",
-  "google.com*tbm=isch",
-  "www.google.com",
   "google.com"];
 
 // Kifi icon in location bar
