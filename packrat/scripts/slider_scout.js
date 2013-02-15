@@ -9,7 +9,7 @@ var slider, injected, t0 = +new Date;
 
 !function() {
   api.log("host:", location.host);
-  var viewportEl = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"];
+  var viewportEl = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"], rules;
 
   document.addEventListener("keydown", function(e) {
     if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75) {  // cmd-shift-K or ctrl-shift-K
@@ -27,11 +27,11 @@ var slider, injected, t0 = +new Date;
       var hPage = document.body.scrollHeight;
       var hViewport = viewportEl.clientHeight;
       var hSeen = window.pageYOffset + hViewport;
-      if (hPage > 2 * hViewport && hSeen > .8 * hPage) {
+      api.log("[onScrollMaybeShow]", Math.round(hSeen / hPage * 10000) / 100, ">", rules.scroll[1], "% and",
+        hPage, ">", rules.scroll[0] * hViewport, "?");
+      if (hPage > rules.scroll[0] * hViewport && hSeen > (rules.scroll[1] / 100) * hPage) {
         api.log("[onScrollMaybeShow] showing");
-        autoShowSlider("scroll");
-      } else {
-        api.log("[onScrollMaybeShow] seen:", hSeen, "/", hPage, "viewport:", hViewport);
+        autoShow("scroll");
       }
     }
   }
@@ -50,21 +50,24 @@ var slider, injected, t0 = +new Date;
         slider.toggle("button");
       });
     },
-    auto_show: autoShowSlider.bind(null, "auto"),
-    auto_show_eligible: function() {
-      document.addEventListener("scroll", onScrollMaybeShow);
+    auto_show: autoShow.bind(null, "auto"),
+    slider_rules: function(sliderRules, showOnScroll) {
+      rules = sliderRules;
+      if (showOnScroll) {
+        document.addEventListener("scroll", onScrollMaybeShow);
+      }
     },
     deep_link: function(link) {
       withSlider(function() {
         slider.openDeepLink(link);
       });
     }});
-  api.port.emit("check_auto_show_eligible");
+  api.port.emit("get_slider_rules");
 
-  function autoShowSlider(trigger) {
-    var width = viewportEl.clientWidth;
-    if (width < 800) {
-      api.log("[autoShowSlider] viewport too narrow:", width);
+  function autoShow(trigger) {
+    var width;
+    if (rules.viewport && (width = viewportEl.clientWidth) < rules.viewport[0]) {
+      api.log("[autoShow] viewport too narrow:", width, "<", rules.viewport[0]);
     } else {
       withSlider(function() {
         slider.shown() || slider.show(trigger);
