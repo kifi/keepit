@@ -1,0 +1,57 @@
+@(patterns: Seq[URLPattern])
+
+@admin("Slider Exclude Patterns", stylesheets = List("admin_slider")) {
+<h3>URLs at which the Slider Should Not Slide In Automatically</h3>
+<form class="slider-patterns" action="@com.keepit.controllers.admin.routes.SliderAdminController.savePatterns" method="POST">
+  <table class="table table-condensed table-striped">
+    <thead>
+      <tr>
+        <th>Active
+        <th>Pattern
+        <th>Test It
+        <th>Match?
+    </thead>
+    @for(pattern <- patterns) {
+    <tr id="pattern-@pattern.id.get">
+      <td><input type="checkbox" class="checkbox" name="active_@pattern.id.get" @if(pattern.isActive) {checked}>
+      <td class="control-group"><input type="text" class="url-pattern" name="pattern_@pattern.id.get" value="@pattern.pattern">
+      <td class="control-group"><input type="text" class="url-example" name="example_@pattern.id.get" value="@pattern.example.getOrElse("")">
+      <td class="url-match">
+    }
+    <tr id="pattern-new">
+      <td><input type="checkbox" class="checkbox" name="active_new">
+      <td class="control-group"><input type="text" class="url-pattern" name="pattern_new">
+      <td class="control-group"><input type="text" class="url-example" name="example_new">
+      <td class="url-match">
+  </table>
+  <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
+  <button type="reset" class="btn">Clear unsaved changes</button>
+</form>
+}
+
+<script>
+$(function() {
+  $(".slider-patterns")
+  .on("keydown keypress keyup blur", ".url-pattern,.url-example", function() {
+    var $tr = $(this).closest("tr");
+    var $pat = $tr.find(".url-pattern"), pat = $pat.val(), $patGrp = $pat.closest(".control-group"), re;
+    var $url = $tr.find(".url-example"), url = $url.val();
+    var $match = $tr.find(".url-match").removeClass("match-y match-n");
+    if (pat) {
+      try {
+        re = new RegExp(pat)
+      } catch (e) {
+        $patGrp.addClass("error");
+        return;
+      }
+    }
+    $patGrp.removeClass("error");
+    if (!/^\s*$/.test(url)) {
+      $match.addClass(re.test(url) ? "match-y" : "match-n");
+    }
+  })
+  .submit(function() {
+    $(this).find("button[type=submit]").button("loading");
+  });
+});
+</script>
