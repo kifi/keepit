@@ -1,21 +1,22 @@
 # --- !Ups
-
-CREATE TABLE comment_read (
+CREATE TABLE url_pattern (
     id bigint(20) NOT NULL AUTO_INCREMENT,
-    user_id bigint(20) NOT NULL,
-    uri_id bigint(20) NOT NULL,
-    parent_id bigint(20),
-    last_read_id bigint(20) NOT NULL,
+    pattern varchar(2048) NOT NULL,
+    example varchar(2048),
     state varchar(20) NOT NULL,
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT comment_read_user_id FOREIGN KEY (user_id) REFERENCES user(id),
-    CONSTRAINT comment_read_uri_id FOREIGN KEY (uri_id) REFERENCES normalized_uri(id),
-    /*CONSTRAINT comment_read_parent_id FOREIGN KEY (parent_id) REFERENCES comment(id),*/
-    CONSTRAINT comment_read_last_read_id FOREIGN KEY (last_read_id) REFERENCES comment(id)
-);
+    PRIMARY KEY (id));
 
-insert into evolutions (name, description) values('32.sql', 'adding comment_read table');
+CREATE INDEX url_pattern__pattern_index ON url_pattern (pattern);
+
+INSERT INTO url_pattern (pattern, example, state, created_at, updated_at) VALUES
+    ('^https?://(www\.)?keepitfindit\.com', 'http://www.keepitfindit.com/', 'active', now(), now()),
+    ('^https?://www\.facebook\.com', 'https://www.facebook.com/zuck', 'active', now(), now()),
+    ('^https?://((www|drive|mail|maps|news|plus)\.)?google\.com', 'https://www.google.com/webhp?sourceid=chrome-instant&ion=1#hl=en&q=42', 'active', now(), now()),
+    ('^https?://dev\.ezkeep\.com', 'http://dev.ezkeep.com:9000/admin/slider/patterns#_=_', 'active', now(), now()),
+    ('^https?://localhost', 'http://localhost:3000/', 'active', now(), now());
+
+INSERT INTO evolutions (name, description) VALUES ('33.sql', 'adding table for URL regular expression patterns');
 
 # --- !Downs

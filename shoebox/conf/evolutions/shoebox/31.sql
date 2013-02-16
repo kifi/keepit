@@ -3,7 +3,7 @@
 CREATE TABLE domain_tag (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     name varchar(128) NOT NULL,
-    sensitive tinyint(1),
+    `sensitive` tinyint(1),
     state varchar(20) NOT NULL,
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,

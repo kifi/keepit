@@ -25,14 +25,18 @@ import java.io.InputStream
 import java.io.IOException
 import java.net.URL
 
-class HttpFetcher extends Logging {
-  val userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17"
+trait HttpFetcher {
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus
+  def close()
+}
+
+class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int) extends HttpFetcher with Logging {
   val cm = new PoolingClientConnectionManager
   cm.setMaxTotal(100);
 
   val httpParams = new BasicHttpParams
-  HttpConnectionParams.setConnectionTimeout(httpParams, 30000);
-  HttpConnectionParams.setSoTimeout(httpParams, 30000);
+  HttpConnectionParams.setConnectionTimeout(httpParams, connectionTimeout)
+  HttpConnectionParams.setSoTimeout(httpParams, soTimeOut);
   HttpProtocolParams.setUserAgent(httpParams, userAgent)
   val httpClient = new DefaultHttpClient(cm, httpParams)
 

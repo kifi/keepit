@@ -165,6 +165,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new DeepLocatorMapperDelegate
   }
 
+  implicit object JsArrayTypeMapper extends BaseTypeMapper[JsArray] {
+    def apply(profile: BasicProfile) = new JsArrayMapperDelegate
+  }
+
   implicit object KifiVersionTypeMapper extends BaseTypeMapper[KifiVersion] {
     def apply(profile: BasicProfile) = new KifiVersionMapperDelegate
   }
@@ -257,6 +261,15 @@ class DeepLinkTokenMapperDelegate[T] extends StringMapperDelegate[DeepLinkToken]
   def zero = DeepLinkToken("")
   def sourceToDest(value: DeepLinkToken): String = value.value
   def safeDestToSource(str: String): DeepLinkToken = DeepLinkToken(str)
+}
+
+//************************************
+//       JsArray -> String
+//************************************
+class JsArrayMapperDelegate[T] extends StringMapperDelegate[JsArray] {
+  def zero = JsArray()
+  def sourceToDest(value: JsArray): String = Json.stringify(value)
+  def safeDestToSource(str: String): JsArray = Json.parse(str).asInstanceOf[JsArray]
 }
 
 //************************************

@@ -141,12 +141,11 @@ api.port.on({
     api.prefs.set(data);
   },
   set_page_icon: function(data, respond, tab) {
-    tab.kept = data;
-    setIcon(tab);
+    setIcon(tab, data);
   },
-  check_auto_show_eligible: function(data, respond, tab) {
-    if (tab.autoShowEligible && api.prefs.get("showSlider")) {
-      api.tabs.emit(tab, "auto_show_eligible");
+  get_slider_rules: function(data, respond, tab) {
+    if (api.prefs.get("showSlider")) {
+      api.tabs.emit(tab, "slider_rules", session.rules.rules, tab.showOnScroll);
     }
   },
   get_slider_info: function(data, respond, tab) {
@@ -374,9 +373,6 @@ var restrictedUrlPatternsForHover = [
   "keepitfindit.com",
   "ezkeep.com",
   "localhost:",
-  "maps.google.com",
-  "google.com*tbm=isch",
-  "www.google.com",
   "google.com"];
 
 // Kifi icon in location bar
@@ -385,7 +381,7 @@ api.icon.on.click.add(function(tab) {
 });
 
 function checkKeepStatus(tab, callback) {
-  if (tab.hasOwnProperty("kept")) return;  // already in progress or done
+  if (tab.keepStatusKnown) return;  // already in progress or done
 
   if (!session) {
     api.log("[checkKeepStatus] no session");
@@ -393,22 +389,21 @@ function checkKeepStatus(tab, callback) {
   }
 
   api.log("[checkKeepStatus]", tab);
-  tab.kept = undefined;
 
-  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url}, function done(o) {
-    tab.kept = o.user_has_bookmark;
-    setIcon(tab);
-    callback && callback();
+  tab.keepStatusKnown = true;  // setting before request to avoid making two overlapping requests
+  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url, ver: session.rules.version}, function done(o) {
+    setIcon(tab, o.kept);
+    session.rules = o.rules || session.rules;
+    callback && callback(o);
   }, function fail(xhr) {
     api.log("[checkKeepStatus] error:", xhr.responseText);
-    delete tab.kept;
-    callback && callback();
+    delete tab.keepStatusKnown;
   });
 }
 
-function setIcon(tab) {
-  api.log("[setIcon] tab:", tab.id, "kept:", tab.kept);
-  api.icon.set(tab, tab.kept == null ? "icons/keep.faint.png" : tab.kept ? "icons/kept.png" : "icons/keep.png");
+function setIcon(tab, kept) {
+  api.log("[setIcon] tab:", tab.id, "kept:", kept);
+  api.icon.set(tab, kept == null ? "icons/keep.faint.png" : kept ? "icons/kept.png" : "icons/keep.png");
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
@@ -426,7 +421,7 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
 
 api.tabs.on.focus.add(function(tab) {
   api.log("[tabs.on.focus]", tab);
-  if (tab.autoShowEligible && !tab.autoShowTimer) {
+  if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
   } else {
     checkKeepStatus(tab);
@@ -443,8 +438,8 @@ api.tabs.on.loading.add(function(tab) {
   api.log("[tabs.on.loading]", tab);
   setIcon(tab);
 
-  checkKeepStatus(tab, function() {
-    if (tab.kept === false) {  // false, not undefined
+  checkKeepStatus(tab, function(resp) {
+    if (!resp.kept && (!resp.sensitive || !session.rules.rules.sensitive)) {
       var url = tab.url;
       if (restrictedUrlPatternsForHover.some(function(e) {return url.indexOf(e) >= 0})) {
         api.log("[tabs.on.loading:2] restricted:", url);
@@ -455,12 +450,13 @@ api.tabs.on.loading.add(function(tab) {
         api.log("[tabs.on.loading:2] recently visited:", url);
       } else {
         userHistory.add(url);
-        tab.autoShowEligible = true;
-        if (api.tabs.isFocused(tab)) {
+        tab.showOnScroll = !!session.rules.rules.scroll;
+        tab.autoShowSec = (session.rules.rules[resp.keptByAnyFriends ? "friendKept" : "focus"] || [])[0];
+        if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
           scheduleAutoShow(tab);
         }
         if (api.prefs.get("showSlider")) {
-          api.tabs.emit(tab, "auto_show_eligible");
+          api.tabs.emit(tab, "slider_rules", session.rules.rules, tab.showOnScroll);
         }
       }
     }
@@ -493,7 +489,7 @@ function scheduleAutoShow(tab) {
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
   if (api.prefs.get("showSlider")) {
     tab.autoShowTimer = api.timers.setTimeout(function() {
-      delete tab.autoShowEligible;
+      delete tab.autoShowSec;
       delete tab.autoShowTimer;
       if (api.prefs.get("showSlider")) {
         if (tab.ready) {
@@ -504,7 +500,7 @@ function scheduleAutoShow(tab) {
           tab.autoShowOnReady = true;
         }
       }
-    }, 30000);
+    }, tab.autoShowSec * 1000);
   }
 }
 
@@ -614,9 +610,11 @@ logEvent("extension", "started");
 authenticate(function() {
   api.log("[main] authenticated");
   api.tabs.each(function(tab) {
-    setIcon(tab);
-    if (api.tabs.isSelected(tab)) {
-      checkKeepStatus(tab);
+    if (!tab.keepStatusKnown) {
+      setIcon(tab);
+      if (api.tabs.isSelected(tab)) {
+        checkKeepStatus(tab);
+      }
     }
   });
 });

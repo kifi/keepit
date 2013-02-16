@@ -5,14 +5,11 @@ import org.junit.runner.RunWith
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.runner.JUnitRunner
 import play.api.Play.current
+import play.api.libs.json._
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.FakeRequest
 import play.api.test.FakeHeaders
-import play.api.libs.json.Json
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsValue
 import com.keepit.inject._
 import com.keepit.common.social.SocialId
 import com.keepit.common.db._
@@ -51,7 +48,7 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
         }
         val startRequest = FakeRequest("POST", "/kifi/start").
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
-            withFormUrlEncodedBody(("agent" -> "test agent"), ("version" -> "0.0.0"))
+            withJsonBody(JsObject(Seq("agent" -> JsString("test agent"), "version" -> JsString("0.0.0"))))
         val startResult = routeAndCall(startRequest).get
         status(startResult) must equalTo(200)
         val sessionCookie = session(startResult)
@@ -123,7 +120,7 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
         //first round
         val fakeRequest1 = FakeRequest().
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
-            withFormUrlEncodedBody(("agent" -> "crome agent"), ("version" -> "1.1.1"), ("installation" -> ""))
+            withJsonBody(JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"))))
         val authRequest1 = AuthController.AuthenticatedRequest(null, user.id.get, fakeRequest1)
         val result1 = AuthController.start(authRequest1)
         status(result1) must equalTo(OK)
@@ -132,12 +129,20 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
           all.size === 1
           all.head
         }
-        Json.parse(contentAsString(result1)) === Json.parse("""{"avatarUrl":"http://www.fb.com/me","name":"A 1","facebookId":"111","provider":"facebook","userId":"%s","installationId":"%s"}""".format(user.externalId, kifiInstallation1.externalId.id))
+        val json1 = Json.parse(contentAsString(result1)).asInstanceOf[JsObject]
+        json1 \ "avatarUrl" === JsString("http://www.fb.com/me")
+        json1 \ "name" === JsString("A 1")
+        json1 \ "facebookId" === JsString("111")
+        json1 \ "provider" === JsString("facebook")
+        json1 \ "userId" === JsString(user.externalId.id)
+        json1 \ "installationId" === JsString(kifiInstallation1.externalId.id)
+        json1 \ "rules" \ "version" must beAnInstanceOf[JsString]
+        json1 \ "rules" \ "rules" must beAnInstanceOf[JsObject]
 
         //second round
         val fakeRequest2 = FakeRequest().
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
-            withFormUrlEncodedBody(("agent" -> "crome agent"), ("version" -> "1.1.1"), ("installation" -> kifiInstallation1.externalId.id))
+            withJsonBody(JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"), "installation" -> JsString(kifiInstallation1.externalId.id))))
         val authRequest2 = AuthController.AuthenticatedRequest(null, user.id.get, fakeRequest2)
         val result2 = AuthController.start(authRequest2)
         status(result2) must equalTo(OK)
@@ -146,7 +151,8 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
           all.size === 1
           all.head
         }
-        Json.parse(contentAsString(result2)) === Json.parse("""{"avatarUrl":"http://www.fb.com/me","name":"A 1","facebookId":"111","provider":"facebook","userId":"%s","installationId":"%s"}""".format(user.externalId, kifiInstallation2.externalId.id))
+        val json2 = Json.parse(contentAsString(result2))
+        json2 === json1
         kifiInstallation1 === kifiInstallation2
       }
     }
