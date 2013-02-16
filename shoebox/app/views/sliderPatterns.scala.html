@@ -12,16 +12,16 @@
         <th>Match?
     </thead>
     @for(pattern <- patterns) {
-    <tr id="pattern-@pattern.id.get">
+    <tr>
       <td><input type="checkbox" class="checkbox" name="active_@pattern.id.get" @if(pattern.isActive) {checked}>
       <td class="control-group"><input type="text" class="url-pattern" name="pattern_@pattern.id.get" value="@pattern.pattern">
       <td class="control-group"><input type="text" class="url-example" name="example_@pattern.id.get" value="@pattern.example.getOrElse("")">
       <td class="url-match">
     }
-    <tr id="pattern-new">
-      <td><input type="checkbox" class="checkbox" name="active_new">
-      <td class="control-group"><input type="text" class="url-pattern" name="pattern_new">
-      <td class="control-group"><input type="text" class="url-example" name="example_new">
+    <tr data-new="true">
+      <td><input type="checkbox" class="checkbox" name="new_active">
+      <td class="control-group"><input type="text" class="url-pattern" name="new_pattern">
+      <td class="control-group"><input type="text" class="url-example" name="new_example">
       <td class="url-match">
   </table>
   <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
@@ -32,7 +32,17 @@
 <script>
 $(function() {
   $(".slider-patterns")
-  .on("keydown keypress keyup blur", ".url-pattern,.url-example", function() {
+  .on("keydown keypress keyup mousedown mouseup blur", ".url-pattern,.url-example", updateRow)
+  .submit(function(e) {
+    if ($(this).find(".error").focus().select().length) {
+      e.preventDefault();
+    } else {
+      $(this).find("button[type=submit]").button("loading");
+    }
+  })
+  .find(".url-pattern").each(updateRow);
+
+  function updateRow() {
     var $tr = $(this).closest("tr");
     var $pat = $tr.find(".url-pattern"), pat = $pat.val(), $patGrp = $pat.closest(".control-group"), re;
     var $url = $tr.find(".url-example"), url = $url.val();
@@ -44,14 +54,14 @@ $(function() {
         $patGrp.addClass("error");
         return;
       }
+    } else if (!$tr.data("new")) {
+      $patGrp.addClass("error");
+      return;
     }
     $patGrp.removeClass("error");
     if (!/^\s*$/.test(url)) {
       $match.addClass(re.test(url) ? "match-y" : "match-n");
     }
-  })
-  .submit(function() {
-    $(this).find("button[type=submit]").button("loading");
-  });
+  }
 });
 </script>
