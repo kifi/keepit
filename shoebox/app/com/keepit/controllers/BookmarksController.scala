@@ -124,7 +124,7 @@ object BookmarksController extends FortyTwoController {
   def checkIfExists(uri: String, ver: Option[String]) = AuthenticatedJsonAction { request =>
     val userId = request.userId
     // TODO: Optimize by not checking sensitivity and keptByAnyFriends if kept by user.
-    val (uriId, bookmark, sensitive, friendIds, ruleGroup) = inject[DBConnection].readOnly { implicit s =>
+    val (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns) = inject[DBConnection].readOnly { implicit s =>
       val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
       val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
       val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>
@@ -135,10 +135,11 @@ object BookmarksController extends FortyTwoController {
       }
       val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
       val ruleGroup: Option[SliderRuleGroup] = ver.flatMap { v =>
-        val repo = inject[SliderRuleRepo]
-        if (v == repo.getGroupVersion("default")) None else Some(repo.getGroup("default"))
+        val group = inject[SliderRuleRepo].getGroup("default")
+        if (v == group.version) None else Some(group)
       }
-      (uriId, bookmark, sensitive, friendIds, ruleGroup)
+      val patterns: Option[Seq[String]] = ruleGroup.map(_ => inject[URLPatternRepo].getActivePatterns)
+      (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns)
     }
 
     val keptByAnyFriends = uriId.map { uriId =>
@@ -153,7 +154,10 @@ object BookmarksController extends FortyTwoController {
       "kept" -> JsBoolean(bookmark.isDefined),
       "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
       "sensitive" -> JsBoolean(sensitive.getOrElse(false))) ++
-      ruleGroup.map{g => Seq("rules" -> g.compactJson)}.getOrElse(Nil)))
+      ruleGroup.map { g => Seq(
+        "rules" -> g.compactJson,
+        "patterns" -> JsArray(patterns.get.map(JsString)))
+      }.getOrElse(Nil)))
   }
 
   def remove() = AuthenticatedJsonAction { request =>

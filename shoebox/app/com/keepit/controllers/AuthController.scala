@@ -25,8 +25,7 @@ import play.api.mvc.{CookieBaker, Session}
 import play.api.data._
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
+import play.api.libs.json.{JsArray, JsObject, JsString}
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.controller.FortyTwoController._
 import com.keepit.common.db._
@@ -61,7 +60,7 @@ object AuthController extends FortyTwoController {
          }
          kiId
        })}.get
-    val (user, installation, sliderRuleGroup) = inject[DBConnection].readWrite{implicit s =>
+    val (user, installation, sliderRuleGroup, urlPatterns) = inject[DBConnection].readWrite{implicit s =>
       val repo = inject[KifiInstallationRepo]
       log.info("start. details: %s, %s, %s".format(userAgent, version, installationIdOpt))
       val installation: KifiInstallation = installationIdOpt flatMap { id =>
@@ -77,7 +76,7 @@ object AuthController extends FortyTwoController {
           }
       }
 
-      (inject[UserRepo].get(request.userId), installation, inject[SliderRuleRepo].getGroup("default"))
+      (inject[UserRepo].get(request.userId), installation, inject[SliderRuleRepo].getGroup("default"), inject[URLPatternRepo].getActivePatterns)
     }
 
     Ok(JsObject(Seq(
@@ -87,7 +86,8 @@ object AuthController extends FortyTwoController {
       "provider" -> JsString(socialUser.id.providerId),
       "userId" -> JsString(user.externalId.id),
       "installationId" -> JsString(installation.externalId.id),
-      "rules" -> sliderRuleGroup.compactJson)))
+      "rules" -> sliderRuleGroup.compactJson,
+      "patterns" -> JsArray(urlPatterns.map(JsString)))))
     .withCookies(KifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 
