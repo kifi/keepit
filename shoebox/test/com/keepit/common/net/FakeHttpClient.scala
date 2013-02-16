@@ -26,8 +26,8 @@ class FakeHttpClient(requestToResponse: Option[PartialFunction[String, String]] 
 
   override def longTimeout(): HttpClient = this
 
-  override def postPromise(url: String, body: JsValue): Future[ClientResponse] = throw new Exception("not supported")
-  override def getPromise(url: String): Future[ClientResponse] = throw new Exception("not supported")
+  override def postFuture(url: String, body: JsValue): Future[ClientResponse] = throw new Exception("not supported")
+  override def getFuture(url: String): Future[ClientResponse] = throw new Exception("not supported")
   override def withHeaders(hdrs: (String, String)*): HttpClient = throw new Exception("not supported")
 }
 
