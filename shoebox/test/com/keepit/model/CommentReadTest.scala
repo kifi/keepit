@@ -3,7 +3,7 @@ package com.keepit.model
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
-import com.keepit.test.EmptyApplication
+import com.keepit.test.{DbRepos, EmptyApplication}
 
 import play.api.Play.current
 import com.google.inject.{Inject, ImplementedBy, Singleton}
@@ -20,8 +20,11 @@ import securesocial.core._
 import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
+import com.keepit.controllers.admin.AdminDashboardController
+import com.keepit.controllers.CommentController
+import com.keepit.common.social.SocialNetworks.FACEBOOK
 
-class CommentReadTest extends SpecificationWithJUnit {
+class CommentReadTest extends SpecificationWithJUnit with DbRepos {
 
   def setup() = {
     inject[DBConnection].readWrite {implicit s =>
@@ -112,7 +115,6 @@ class CommentReadTest extends SpecificationWithJUnit {
 
           val messages = commentReadRepo.getUnreadMessages(user1.id.get, uri1.id.get)
           messages.size === 2
-          println(commentReadRepo.getUnreadMessages(user1.id.get, uri1.id.get))
           commentReadRepo.save(CommentRead(userId = user1.id.get, uriId = uri1.id.get, lastReadId = Some(msg1.id.get), parentId = Some(msg1.id.get)))
           commentReadRepo.getUnreadMessages(user1.id.get, uri1.id.get).size === 1
           commentReadRepo.save(CommentRead(userId = user1.id.get, uriId = uri1.id.get, lastReadId = Some(msg2.id.get), parentId = Some(msg2.id.get)))
@@ -130,6 +132,49 @@ class CommentReadTest extends SpecificationWithJUnit {
         }
       }
     }
+    "update lastreadid when viewing thread" in {
+      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck()) {
+
+        import com.keepit.common.time._
+        val (user1, user2, uri1, uri2, comment1, comment2, comment3, msg1, msg2, msg3, msg4) = setup()
+
+        db.readWrite { implicit s =>
+
+          val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
+            tokenType = None, expiresIn = None, refreshToken = None)
+          val su = SocialUser(UserId("111", "facebook"), "A 1", Some("a1@gmail.com"),
+            Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
+          val sui = socialUserInfoRepo.save(SocialUserInfo(
+            userId = user1.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK,
+            credentials = Some(su)))
+          val sui2 = socialUserInfoRepo.save(SocialUserInfo(
+            userId = user2.id, fullName = "B 2", socialId = SocialId("222"), networkType = FACEBOOK,
+            credentials = Some(su)))
+          socialUserInfoRepo.get(sui.id.get) === sui
+        }
+
+        val commentReadRepo = inject[CommentReadRepo]
+
+        val externalId = inject[DBConnection].readOnly {implicit session =>
+          val messages = commentReadRepo.getUnreadMessages(user2.id.get, uri1.id.get)
+          messages.size === 3
+          messages.head.externalId
+        }
+
+
+        val fakeRequest = FakeRequest().withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
+        val authRequest = CommentController.AuthenticatedRequest(null, user1.id.get, fakeRequest)
+        authRequest.session.get(SecureSocial.ProviderKey) === Some("facebook")
+        val result = CommentController.getMessageThread(externalId)(authRequest)
+        status(result) must equalTo(OK)
+
+        inject[DBConnection].readOnly {implicit session =>
+          val messages = commentReadRepo.getUnreadMessages(user1.id.get, uri1.id.get)
+          messages.size === 1
+        }
+      }
+    }
+
   }
 
 }
