@@ -129,7 +129,42 @@ object BookmarksController extends FortyTwoController {
       }
     }
 
-    Ok(JsObject(Seq("user_has_bookmark" -> JsBoolean(bookmark.isDefined))))
+    val (hasUnreadComments, unreadMessages) = inject[DBConnection].readOnly { implicit s =>
+      val commentRepo = inject[CommentRepo]
+      val commentReadRepo = inject[CommentReadRepo]
+
+      inject[NormalizedURIRepo].getByNormalizedUrl(uri) map {uri =>
+        val uriId = uri.id.get
+        val userId = request.userId
+
+        val hasUnreadComments = commentReadRepo.hasUnreadComments(userId, uriId)
+        val unreadMessages = commentReadRepo.getUnreadMessages(userId, uriId)
+
+        (hasUnreadComments, unreadMessages)
+      } getOrElse (false, Nil)
+    }
+
+    println("\n\n"+ unreadMessages)
+    val locator = unreadMessages match {
+      case Nil =>
+        hasUnreadComments match {
+          case true =>
+            Some(DeepLocator.ofCommentList)
+          case false =>
+            None
+        }
+      case message :: Nil =>
+        Some(DeepLocator.ofMessageThread(message))
+      case messages =>
+        Some(DeepLocator.ofMessageThreadList)
+    }
+
+    Ok(JsObject(Seq(
+      "user_has_bookmark" -> JsBoolean(bookmark.isDefined),
+      "hasUnreadComments" -> JsBoolean(hasUnreadComments),
+      "unreadMessages" -> JsArray(unreadMessages.map(msg => JsString(msg.externalId.id))),
+      "locator" -> JsString(locator.map(_.value).getOrElse(""))
+    )))
   }
 
   // TODO: Remove parameter and only check request body once all installations are 2.1.6 or later.
