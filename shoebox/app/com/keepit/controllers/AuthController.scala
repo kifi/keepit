@@ -41,27 +41,6 @@ import com.keepit.common.healthcheck._
 import com.keepit.common.db.slick._
 
 object AuthController extends FortyTwoController {
-  // TODO: remove when all beta users are on 2.0.2+
-  def isLoggedIn = AuthenticatedJsonAction { implicit request =>
-	  UserService.find(request.socialUser.id) match {
-	    case None =>
-		    Ok(JsObject(("status" -> JsString("loggedout")) :: Nil)).withNewSession
-	    case Some(socialUser) =>
-	      log.info("facebook id %s".format(socialUser.id.id))
-	      val user = inject[DBConnection].readOnly { implicit s =>
-  	    	val userId = inject[SocialUserInfoRepo].get(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK).userId.get
-  	    	inject[UserRepo].get(userId)
-  	  	}
-        Ok(JsObject(Seq(
-          "status" -> JsString("loggedin"),
-          "avatarUrl" -> JsString(socialUser.avatarUrl.get),
-          "name" -> JsString(socialUser.displayName),
-          "facebookId" -> JsString(socialUser.id.id),
-          "provider" -> JsString(socialUser.id.providerId),
-          "externalId" -> JsString(user.externalId.id))))
-    }
-  }
-
   def start = AuthenticatedJsonAction { implicit request =>
     val socialUser = request.socialUser
     log.info("facebook id %s".format(socialUser.id))
@@ -82,7 +61,7 @@ object AuthController extends FortyTwoController {
          }
          kiId
        })}.get
-    val (user, installation) = inject[DBConnection].readWrite{implicit s =>
+    val (user, installation, sliderRuleGroup) = inject[DBConnection].readWrite{implicit s =>
       val repo = inject[KifiInstallationRepo]
       log.info("start. details: %s, %s, %s".format(userAgent, version, installationIdOpt))
       val installation: KifiInstallation = installationIdOpt flatMap { id =>
@@ -98,7 +77,7 @@ object AuthController extends FortyTwoController {
           }
       }
 
-      (inject[UserRepo].get(request.userId), installation)
+      (inject[UserRepo].get(request.userId), installation, inject[SliderRuleRepo].getGroup("default"))
     }
 
     Ok(JsObject(Seq(
@@ -107,7 +86,9 @@ object AuthController extends FortyTwoController {
       "facebookId" -> JsString(socialUser.id.id),
       "provider" -> JsString(socialUser.id.providerId),
       "userId" -> JsString(user.externalId.id),
-      "installationId" -> JsString(installation.externalId.id)))).withCookies(KifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
+      "installationId" -> JsString(installation.externalId.id),
+      "rules" -> sliderRuleGroup.compactJson)))
+    .withCookies(KifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)

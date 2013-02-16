@@ -26,10 +26,18 @@ case class Domain(
   val sensitive: Option[Boolean] = manualSensitive orElse autoSensitive
 }
 
+object Domain {
+  private val domainRegex = """^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]+$""".r
+
+  def isValid(s: String): Boolean = domainRegex.findFirstIn(s).isDefined
+}
+
 @ImplementedBy(classOf[DomainRepoImpl])
 trait DomainRepo extends Repo[Domain] {
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Option[Domain]
+  def getAll(domains: Seq[Id[Domain]], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
+      (implicit session: RSession): Seq[Domain]
 }
 
 @Singleton
@@ -42,12 +50,16 @@ class DomainRepoImpl @Inject()(val db: DataBaseComponent) extends DbRepo[Domain]
     def manualSensitive = column[Option[Boolean]]("manual_sensitive", O.Nullable)
     def hostname = column[String]("hostname", O.NotNull)
     def * = id.? ~ hostname ~ autoSensitive ~ manualSensitive ~ state ~ createdAt ~ updatedAt <>
-      (Domain, Domain.unapply _)
+      (Domain.apply _, Domain.unapply _)
   }
 
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Option[Domain] =
     (for (d <- table if d.hostname === domain && d.state =!= excludeState.getOrElse(null)) yield d).firstOption
+
+  def getAll(domains: Seq[Id[Domain]], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
+      (implicit session: RSession): Seq[Domain] =
+    (for (d <- table if d.id.inSet(domains) && d.state =!= excludeState.getOrElse(null)) yield d).list
 }
 
 object DomainStates extends States[Domain]

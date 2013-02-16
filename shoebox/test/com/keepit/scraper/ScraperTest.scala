@@ -1,6 +1,5 @@
 package com.keepit.scraper
 
-import com.keepit.search.Article
 import play.api.Play.current
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
@@ -13,6 +12,8 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import com.keepit.test.EmptyApplication
+import com.keepit.scraper.extractor.Extractor
+import com.keepit.scraper.extractor.TikaBasedExtractor
 import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
@@ -20,17 +21,20 @@ import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import org.apache.http.HttpStatus
-import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.common.db.slick.DBConnection
+import org.apache.http.protocol.BasicHttpContext
+import org.apache.tika.sax.BodyContentHandler
 import org.joda.time.DateTime
 import scala.annotation.unchecked
+import java.io.ByteArrayOutputStream
+import java.io.ByteArrayInputStream
+import java.io.OutputStreamWriter
 
 @RunWith(classOf[JUnitRunner])
 class ScraperTest extends SpecificationWithJUnit {
   implicit val config = ScraperConfig()
 
   "Scraper" should {
-    "get a article from an existing website" in {
+    "get a article from an existing website" in running(new EmptyApplication()) {
       val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/existing"
@@ -41,11 +45,11 @@ class ScraperTest extends SpecificationWithJUnit {
       (result: @unchecked) match {
         case Scraped(article, signature) =>
           article.title === "foo"
-          article.content === "bar"
+          article.content === "this is a body text. bar."
       }
     }
 
-    "throw an error from a non-existing website" in {
+    "throw an error from a non-existing website" in running(new EmptyApplication()) {
       val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/missing"
@@ -236,50 +240,47 @@ class ScraperTest extends SpecificationWithJUnit {
     inject[DBConnection].readOnly { implicit s => repo.getByUri(info.uriId).get }
   }
 
+  private def toHttpInputStream(text: String) = {
+    val baos = new ByteArrayOutputStream
+    val writer = new OutputStreamWriter(baos)
+    writer.write(text)
+    writer.close()
+    new HttpInputStream(new ByteArrayInputStream(baos.toByteArray))
+  }
+
   def getMockScraper(articleStore: ArticleStore, suffix: String = "") = {
-    new Scraper(articleStore, ScraperConfig()) {
-      override def fetchArticle(uri: NormalizedURI, info: ScrapeInfo): ScraperResult = {
-        uri.url match {
+    val mockHttpFetcher = new HttpFetcher {
+      def fetch(url: String , ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
+        val httpContext = new BasicHttpContext()
+        val htmlTemplate = "<html> <head><title>foo%s</title></head> <body>this is a body text. bar%s.</body> </html>"
+        url match {
           case "http://www.keepit.com/existing" =>
-            val article = Article(
-              id = uri.id.get,
-              title = "foo" + suffix,
-              content = "bar" + suffix,
-              scrapedAt = currentDateTime,
-              httpContentType = Option("text/html"),
-              httpOriginalContentCharset = Option("UTF-8"),
-              state = SCRAPED,
-              message = None,
-              titleLang = Some(Lang("en")),
-              contentLang = Some(Lang("en")))
-            val signature = computeSignature(article.title, article.content)
-            if (signature.similarTo(Signature(info.signature)) < 0.8d) {
-              Scraped(article, signature)
-            } else {
-              NotModified
-            }
-          case "http://www.keepit.com/missing" => Error(HttpStatus.SC_NOT_FOUND, "not found")
+            val input = toHttpInputStream(htmlTemplate.format(suffix, suffix))
+            input.setContentType("text/html")
+            f(input)
+            HttpFetchStatus(HttpStatus.SC_OK, None, httpContext)
           case "http://www.keepit.com/notModified" =>
-            info.signature match {
-              case "" =>
-                val article = Article(
-                  id = uri.id.get,
-                  title = "foo" + suffix,
-                  content = "bar" + suffix,
-                  scrapedAt = currentDateTime,
-                  httpContentType = Option("text/html"),
-                  httpOriginalContentCharset = Option("UTF-8"),
-                  state = SCRAPED,
-                  message = None,
-                  titleLang = Some(Lang("en")),
-                  contentLang = Some(Lang("en")))
-                Scraped(article, computeSignature(article.title, article.content))
-              case _ => NotModified
+            ifModifiedSince match {
+              case None =>
+                val input = toHttpInputStream(htmlTemplate.format(suffix, suffix))
+                input.setContentType("text/html")
+                f(input)
+                HttpFetchStatus(HttpStatus.SC_OK, None, httpContext)
+              case Some(_) =>
+                HttpFetchStatus(HttpStatus.SC_NOT_MODIFIED, None, httpContext)
             }
+          case _ =>
+            HttpFetchStatus(HttpStatus.SC_NOT_FOUND, Some("not found"), httpContext)
         }
       }
-
-      private def computeSignature(fields: String*) = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build
+      def close() {}
+    }
+    new Scraper(mockHttpFetcher, articleStore, ScraperConfig()) {
+      override protected def getExtractor(url: String): Extractor = {
+        new TikaBasedExtractor(url, 10000) {
+          protected def getContentHandler = new BodyContentHandler(output)
+        }
+      }
     }
   }
 }

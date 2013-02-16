@@ -12,7 +12,7 @@ GET     /bookmarks/all              com.keepit.controllers.BookmarksController.a
 GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
 POST    /bookmarks/rescrape         com.keepit.controllers.BookmarksController.rescrape
 POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
-GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(uri: String)
+GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(uri: String, ver: Option[String] ?= None)
 POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.remove()
 POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy()
 
@@ -40,7 +40,6 @@ GET     /search                     com.keepit.controllers.SearchController.sear
 
 POST    /kifi/start                 com.keepit.controllers.AuthController.start
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
-GET     /isLoggedIn                 com.keepit.controllers.AuthController.isLoggedIn
 GET     /whois                      com.keepit.controllers.AuthController.whois
 GET     /session/end                com.keepit.controllers.AuthController.logOut
 
@@ -71,7 +70,7 @@ GET     /admin/data/integrity       com.keepit.controllers.admin.ScraperControll
 GET     /admin/data/dupe            com.keepit.controllers.admin.ScraperController.duplicateDocumentDetection
 GET     /admin/data/orphan          com.keepit.controllers.admin.ScraperController.orphanCleanup
 GET     /admin/data/unscrapable     com.keepit.controllers.admin.ScraperController.getUnscrapable()
-POST     /admin/data/previewUnscrapable     com.keepit.controllers.admin.ScraperController.previewUnscrapable()
+POST    /admin/data/previewUnscrapable     com.keepit.controllers.admin.ScraperController.previewUnscrapable()
 POST    /admin/data/unscrapable     com.keepit.controllers.admin.ScraperController.createUnscrapable()
 GET     /admin/data/renormalize     com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 POST    /admin/data/handleDuplicate com.keepit.controllers.admin.ScraperController.handleDuplicate
@@ -124,8 +123,11 @@ GET     /admin/searchConfig/:id/reset com.keepit.controllers.SearchConfigControl
 
 GET     /admin/explainResult        com.keepit.controllers.SearchController.explain(query: String, uriId: Id[NormalizedURI])
 
-GET     /admin/slider               com.keepit.controllers.admin.SliderAdminController.index
-POST    /admin/slider               com.keepit.controllers.admin.SliderAdminController.save
+GET     /admin/slider/rules         com.keepit.controllers.admin.SliderAdminController.getRules
+POST    /admin/slider/rules         com.keepit.controllers.admin.SliderAdminController.saveRules
+GET     /admin/slider/patterns      com.keepit.controllers.admin.SliderAdminController.getPatterns
+POST    /admin/slider/patterns      com.keepit.controllers.admin.SliderAdminController.savePatterns
+POST    /admin/slider/domains/fetch com.keepit.controllers.admin.SliderAdminController.refetchClassifications
 
 GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
 GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()

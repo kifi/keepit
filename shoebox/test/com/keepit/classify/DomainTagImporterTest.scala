@@ -1,10 +1,12 @@
 package com.keepit.classify
 
+import org.joda.time.DateTime
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.DBConnection
 import com.keepit.inject._
 import com.keepit.test._
+
 import akka.actor.ActorSystem
 import scala.concurrent.{Await, Future}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -13,8 +15,10 @@ import play.api.Play.current
 import play.api.test.Helpers._
 import java.util.concurrent.TimeUnit
 
+
 class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
   val system = ActorSystem("system")
+  val settings = DomainTagImportSettings()
   "The domain tag importer" should {
     "load domain sensitivity from a map of tags to domains" in {
       running(new EmptyApplication()) {
@@ -23,7 +27,7 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
         val domainToTagRepo = inject[DomainToTagRepo]
         val db = inject[DBConnection]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], system, db)
+          inject[SensitivityUpdater], provide(new DateTime), system,  db, settings)
         db.readWrite { implicit s =>
           // add some existing tags
           tagRepo.save(DomainTag(name = DomainTagName("t1"), sensitive = Option(false)))
@@ -32,14 +36,14 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
 
           Seq(
             domainTagImporter.applyTagToDomains(
-              DomainTagName("t1"), Set("cnn.com", "yahoo.com", "google.com")),
+              DomainTagName("t1"), Seq("cnn.com", "yahoo.com", "google.com")),
             domainTagImporter.applyTagToDomains(
-              DomainTagName("t2"), Set("cnn.com", "amazon.com", "apple.com")),
+              DomainTagName("t2"), Seq("cnn.com", "amazon.com", "apple.com")),
             domainTagImporter.applyTagToDomains(
-              DomainTagName("t3"), Set("apple.com", "42go.com", "methvin.net")),
+              DomainTagName("t3"), Seq("apple.com", "42go.com", "methvin.net")),
             // add a new tag (unknown sensitivity)
             domainTagImporter.applyTagToDomains(
-              DomainTagName("t4"), Set("42go.com", "amazon.com", "wikipedia.org"))
+              DomainTagName("t4"), Seq("42go.com", "amazon.com", "wikipedia.org"))
           ).foreach { future =>
             Await.result(future, pairIntToDuration((100, TimeUnit.MILLISECONDS)))
           }
@@ -62,7 +66,7 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
         val domainToTagRepo = inject[DomainToTagRepo]
         val db = inject[DBConnection]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], system, db)
+          inject[SensitivityUpdater], provide(new DateTime), system, db, settings)
 
         db.readWrite { implicit s =>
         // add some existing tags
@@ -72,13 +76,13 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
 
           Seq(
             domainTagImporter.applyTagToDomains(
-              DomainTagName("t1"), Set("cnn.com", "yahoo.com", "google.com")),
+              DomainTagName("t1"), Seq("cnn.com", "yahoo.com", "google.com")),
             domainTagImporter.applyTagToDomains(
-              DomainTagName("t2"), Set("cnn.com", "amazon.com", "apple.com")),
+              DomainTagName("t2"), Seq("cnn.com", "amazon.com", "apple.com")),
             domainTagImporter.applyTagToDomains(
-              DomainTagName("t2"), Set("cnn.com", "amazon.com", "apple.com")),
+              DomainTagName("t2"), Seq("cnn.com", "amazon.com", "apple.com")),
             domainTagImporter.applyTagToDomains(
-              DomainTagName("t3"), Set("apple.com", "42go.com", "methvin.net")),
+              DomainTagName("t3"), Seq("apple.com", "42go.com", "methvin.net")),
             // remove a tag
             domainTagImporter.removeTag(DomainTagName("t3"))
           ).foreach { future =>
@@ -102,7 +106,7 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
         val domainToTagRepo = inject[DomainToTagRepo]
         val db = inject[DBConnection]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], system, db)
+          inject[SensitivityUpdater], provide(new DateTime), system, db, settings)
 
         db.readWrite { implicit s =>
           tagRepo.save(DomainTag(name = DomainTagName("things"), sensitive = Some(false)))
