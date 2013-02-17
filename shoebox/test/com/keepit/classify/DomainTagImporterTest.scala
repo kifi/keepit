@@ -113,14 +113,14 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
           tagRepo.save(DomainTag(name = DomainTagName("stuff"), sensitive = None))
 
           Await.result(domainTagImporter.applyTagToDomains(
-            DomainTagName("things"), Set("cnn.com", "yahoo.com", "google.com")), pairIntToDuration(100, TimeUnit.MILLISECONDS))
+            DomainTagName("things"), Set("cnn.com", "yahoo.com", "google.com").toSeq), pairIntToDuration(100, TimeUnit.MILLISECONDS))
 
           domainRepo.get("cnn.com").get.sensitive === Some(false)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(Some(true)))
           domainRepo.get("cnn.com").get.sensitive === Some(true)
 
           Await.result(domainTagImporter.applyTagToDomains(
-            DomainTagName("stuff"), Set("apple.com", "microsoft.com", "cnn.com")), pairIntToDuration(100, TimeUnit.MILLISECONDS))
+            DomainTagName("stuff"), Set("apple.com", "microsoft.com", "cnn.com").toSeq), pairIntToDuration(100, TimeUnit.MILLISECONDS))
 
           domainRepo.get("cnn.com").get.sensitive === Some(true)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(None))

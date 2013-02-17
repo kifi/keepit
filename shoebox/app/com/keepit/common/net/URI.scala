@@ -43,7 +43,7 @@ object URI extends Logging {
       val fragment = normalizeFragment(Option(uri.getRawFragment))
       Some((scheme, userInfo, host, port, path, query, fragment))
     } catch {
-      case _ => None
+      case _: Throwable => None
     }
   }
 

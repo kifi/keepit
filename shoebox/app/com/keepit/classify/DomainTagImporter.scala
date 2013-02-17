@@ -47,7 +47,7 @@ private[classify] class DomainTagImportActor(db: DBConnection, updater: Sensitiv
       val outputFilename = FILE_FORMAT.format(clock.get().toString(DATE_FORMAT))
       val outputPath = new URI("%s/%s".format(settings.localDir, outputFilename)).normalize.getPath
       log.info("refetching all domains to %s".format(outputPath))
-      WS.url(settings.url).get().onRedeem { res =>
+      WS.url(settings.url).get() map { res =>
         val s = new FileOutputStream(outputPath)
         try {
           IOUtils.copy(res.getAHCResponse.getResponseBodyAsStream, s)
