@@ -21,9 +21,9 @@ import org.apache.http.params.HttpProtocolParams
 import org.apache.http.protocol.BasicHttpContext
 import org.apache.http.protocol.HttpContext
 import org.apache.http.util.EntityUtils
-import java.io.InputStream
-import java.io.IOException
+import java.io.{InputStream, IOException}
 import java.net.URL
+import scala.util.Try
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -32,11 +32,11 @@ trait HttpFetcher {
 
 class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int) extends HttpFetcher with Logging {
   val cm = new PoolingClientConnectionManager
-  cm.setMaxTotal(100);
+  cm.setMaxTotal(100)
 
   val httpParams = new BasicHttpParams
   HttpConnectionParams.setConnectionTimeout(httpParams, connectionTimeout)
-  HttpConnectionParams.setSoTimeout(httpParams, soTimeOut);
+  HttpConnectionParams.setSoTimeout(httpParams, soTimeOut)
   HttpProtocolParams.setUserAgent(httpParams, userAgent)
   val httpClient = new DefaultHttpClient(cm, httpParams)
 
@@ -61,7 +61,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int)
 
     val httpContext = new BasicHttpContext()
     val response = httpClient.execute(httpGet, httpContext)
-    log.info(response.getStatusLine);
+    log.info(response.getStatusLine)
 
     val statusCode = response.getStatusLine.getStatusCode
 
@@ -93,19 +93,11 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int)
           throw ex
         case ex :Exception =>
           // unexpected exception. abort the request in order to shut down the underlying connection immediately.
-          httpGet.abort();
-          throw ex;
+          httpGet.abort()
+          throw ex
       } finally {
-        try {
-          EntityUtils.consumeQuietly(entity);
-        } catch {
-          case _: Throwable => // ignore any exception
-        }
-        try {
-          input.close() // closing the input stream will trigger connection release
-        } catch {
-          case _: Throwable => // ignore any exception
-        }
+        Try(EntityUtils.consumeQuietly(entity))
+        Try(input.close())
       }
     } else {
       httpGet.abort()
@@ -126,7 +118,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int)
     // When HttpClient instance is no longer needed,
     // shut down the connection manager to ensure
     // immediate deallocation of all system resources
-    httpClient.getConnectionManager().shutdown();
+    httpClient.getConnectionManager().shutdown()
   }
 }
 

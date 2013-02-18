@@ -102,6 +102,8 @@ object ApplicationBuild extends Build {
         //"org.scalatest" %% "scalatest" % "2.0.M4" % "test",
         //"org.scalaquery" % "scalaquery_2.9.1" % "0.10.0-M1"
         //"com.typesafe.slick" %% "slick" % "1.0.0"
-      )
+      ),
+
+      javaOptions in test ++= Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=1024m")
     )
 }
