@@ -5,10 +5,9 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
 import com.keepit.TestAkkaSystem
 import com.keepit.inject._
-import org.scalaquery.ql._
-import org.scalaquery.ql.TypeMapper._
-import org.scalaquery.ql.extended.H2Driver.Implicit._
-import org.scalaquery.ql.extended.ExtendedTable
+import scala.slick.lifted._
+import scala.slick.driver.H2Driver.Implicit._
+import scala.slick.driver._
 import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.test.Helpers._
@@ -18,10 +17,9 @@ import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.runner.JUnitRunner
-import org.scalaquery.ql.basic.BasicProfile
+import scala.slick.lifted.Query
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
-import com.keepit.common.db.slick.ExternalIdColumn
 
 @RunWith(classOf[JUnitRunner])
 class SlickTest extends SpecificationWithJUnit {
@@ -50,7 +48,7 @@ class SlickTest extends SpecificationWithJUnit {
           import db.Driver.Implicit._ // here's the driver, abstracted away
 
           implicit object BarIdTypeMapper extends BaseTypeMapper[Id[Bar]] {
-            def apply(profile: BasicProfile) = new IdMapperDelegate[Bar]
+            def apply(profile: BasicProfile) = new IdMapperDelegate[Bar](profile)
           }
 
           override lazy val table = new RepoTable[Bar](db, "foo") {
@@ -110,7 +108,7 @@ class SlickTest extends SpecificationWithJUnit {
           import db.Driver.Implicit._ // here's the driver, abstracted away
 
           implicit object BarIdTypeMapper extends BaseTypeMapper[Id[Bar]] {
-            def apply(profile: BasicProfile) = new IdMapperDelegate[Bar]
+            def apply(profile: BasicProfile) = new IdMapperDelegate[Bar](profile)
           }
 
           override lazy val table = new RepoTable[Bar](db, "foo") with ExternalIdColumn[Bar] {

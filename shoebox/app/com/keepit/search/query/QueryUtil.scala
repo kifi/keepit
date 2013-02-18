@@ -53,7 +53,7 @@ object QueryUtil extends Logging {
       query.extractTerms(terms)
       terms.toSet
     } catch {
-      case _ =>
+      case _: Throwable =>
         log.warn("term extraction failed: %s".format(query.getClass.toString))
         Set.empty[Term]
     }

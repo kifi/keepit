@@ -61,7 +61,8 @@ object ApplicationBuild extends Build {
       "org.mongodb" %% "casbah" % "2.5.0",
       "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
       "org.jsoup" % "jsoup" % "1.7.1",
-      "spy" % "spymemcached" % "2.8.1"
+      "spy" % "spymemcached" % "2.8.1",
+      "com.typesafe.slick" %% "slick" % "1.0.0"
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
     val main = play.Project(appName, appVersion, appDependencies).settings(
@@ -97,10 +98,10 @@ object ApplicationBuild extends Build {
       libraryDependencies ++= Seq(
         "com.google.inject" % "guice" % "3.0",
         "com.google.inject.extensions" % "guice-multibindings" % "3.0",
-        "com.tzavellas" % "sse-guice" % "0.6.1",
+        "com.tzavellas" % "sse-guice" % "0.6.1"
         //"org.scalatest" %% "scalatest" % "2.0.M4" % "test",
-        //"com.typesafe" % "slick_2.10" % "1.0.0-RC1"
-        "org.scalaquery" % "scalaquery_2.9.1" % "0.10.0-M1"
+        //"org.scalaquery" % "scalaquery_2.9.1" % "0.10.0-M1"
+        //"com.typesafe.slick" %% "slick" % "1.0.0"
       )
     )
 }

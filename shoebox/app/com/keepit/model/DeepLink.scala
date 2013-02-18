@@ -67,10 +67,7 @@ trait DeepLinkRepo extends Repo[DeepLink] {
 @Singleton
 class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[DeepLink] with DeepLinkRepo {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 

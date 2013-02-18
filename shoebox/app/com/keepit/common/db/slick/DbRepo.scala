@@ -3,18 +3,11 @@ package com.keepit.common.db.slick
 import com.keepit.common.db._
 import com.keepit.inject._
 import org.joda.time.DateTime
-import org.scalaquery.ql._
-import org.scalaquery.ql.ColumnOps._
-import org.scalaquery.ql.TypeMapper._
-import org.scalaquery.ql.basic.BasicProfile
-import org.scalaquery.ql.extended.ExtendedTable
-import org.scalaquery.util.{Node, UnaryNode, BinaryNode}
 import DBSession._
 import play.api.Play.current
-import org.scalaquery.ql.extended.ExtendedProfile
-import org.scalaquery.ql.extended.ExtendedColumnOptions
-import org.scalaquery.ql.extended.ExtendedImplicitConversions
-import org.scalaquery.ql.Ordering.Desc
+import scala.slick.driver._
+import scala.slick.session._
+import scala.slick.lifted._
 
 
 trait Repo[M <: Model[M]] {
@@ -35,17 +28,18 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   import FortyTwoTypeMappers._
   val db: DataBaseComponent
   import db.Driver.Implicit._ // here's the driver, abstracted away
+  import db.Driver.Table
+  import db.Driver.Table
 
   def invalidateCache(model: M)(implicit session: RSession): M = model
 
   implicit val idMapper = new BaseTypeMapper[Id[M]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[M]
+    def apply(profile: BasicProfile) = new IdMapperDelegate[M](profile)
   }
 
   implicit val stateTypeMapper = new BaseTypeMapper[State[M]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[M]
+    def apply(profile: BasicProfile) = new StateMapperDelegate[M](profile)
   }
-
 
   protected def table: RepoTable[M]
 
@@ -64,7 +58,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
     case t: Throwable => throw new Exception("error persisting %s".format(model), t)
   }
 
-  def count(implicit session: RSession): Int = Query(table.count).first
+  def count(implicit session: RSession): Int = Query(table.length).first
 
   def get(id: Id[M])(implicit session: RSession): M = (for(f <- table if f.id is id) yield f).first
 
@@ -84,10 +78,45 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   }
 
   private def update(model: M)(implicit session: RWSession) = {
-    assert(1 == table.where(r => Is(r.id, model.id.get)).update(model))
+    val target = for(t <- table if t.id === model.id.get) yield t
+    val count = target.update(model)
+    assert(1 == count)
     model
   }
 
+  /**
+   * The toUpperCase is per an H2 "bug?"
+   * http://stackoverflow.com/a/8722814/81698
+   */
+  abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, name: String) extends Table[M](db.entityName(name)) {
+    import FortyTwoTypeMappers._
+
+    implicit val idMapper = new BaseTypeMapper[Id[M]] {
+      def apply(profile: BasicProfile) = new IdMapperDelegate[M](profile)
+    }
+
+    implicit def stateMapper = new BaseTypeMapper[State[M]] {
+      def apply(profile: BasicProfile) = new StateMapperDelegate[M](profile)
+    }
+
+    def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
+
+    def createdAt = column[DateTime]("created_at", O.NotNull)
+    def updatedAt = column[DateTime]("updated_at", O.NotNull)
+
+    def state = column[State[M]]("state", O.NotNull)
+
+    override def column[C : TypeMapper](name: String, options: ColumnOption[C]*) =
+      super.column(db.entityName(name), options:_*)
+  }
+
+  trait ExternalIdColumn[M <: ModelWithExternalId[M]] extends RepoTable[M] {
+    implicit val externalIdMapper = new BaseTypeMapper[ExternalId[M]] {
+      def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M](profile)
+    }
+
+    def externalId = column[ExternalId[M]]("external_id", O.NotNull)
+  }
 }
 
 trait ExternalIdColumnFunction[M <: ModelWithExternalId[M]] {
@@ -99,46 +128,14 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithEx
   import db.Driver.Implicit._
   protected def externalIdColumn: ExternalIdColumn[M] = table.asInstanceOf[ExternalIdColumn[M]]
 
-  implicit val externalIdMapper = new BaseTypeMapper[ExternalId[M]] {
-    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
+  implicit val ExternalIdMapperDelegate = new BaseTypeMapper[ExternalId[M]] {
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M](profile)
   }
 
   def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id).get
-  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = (for(f <- externalIdColumn if Is(f.externalId, id)) yield f).firstOption
-}
 
-/**
- * The toUpperCase is per an H2 "bug?"
- * http://stackoverflow.com/a/8722814/81698
- */
-abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, name: String) extends ExtendedTable[M](db.entityName(name)) {
-  import FortyTwoTypeMappers._
-
-  implicit val idMapper = new BaseTypeMapper[Id[M]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[M]
-  }
-
-  implicit def stateMapper = new BaseTypeMapper[State[M]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[M]
-  }
-
-  def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
-
-  def createdAt = column[DateTime]("created_at", O.NotNull)
-  def updatedAt = column[DateTime]("updated_at", O.NotNull)
-
-  def state = column[State[M]]("state", O.NotNull)
-
-  override def column[C : TypeMapper](name: String, options: ColumnOption[C, ProfileType]*) =
-    super.column(db.entityName(name), options:_*)
-}
-
-trait ExternalIdColumn[M <: ModelWithExternalId[M]] extends RepoTable[M] {
-  implicit val externalIdMapper = new BaseTypeMapper[ExternalId[M]] {
-    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[M]
-  }
-
-  def externalId = column[ExternalId[M]]("external_id", O.NotNull)
+  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = 
+    (for(f <- externalIdColumn if f.externalId === id) yield f).firstOption
 }
 
 

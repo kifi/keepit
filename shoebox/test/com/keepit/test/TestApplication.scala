@@ -27,7 +27,7 @@ import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTime
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.DbInfo
 import com.keepit.common.db.slick._
-import org.scalaquery.session.Database
+import scala.slick.session.Database
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import akka.actor.{Scheduler, Cancellable, ActorRef}

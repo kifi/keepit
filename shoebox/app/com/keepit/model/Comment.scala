@@ -80,12 +80,7 @@ class MessageWithChildrenCountUriIdUserIdCache @Inject() (val repo: FortyTwoCach
 @Singleton
 class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCache: CommentCountUriIdCache, val messageWithChildrenCountCache: MessageWithChildrenCountUriIdUserIdCache) extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.TypeMapper._
-  import org.scalaquery.ql.TypeMapperDelegate._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 
@@ -150,7 +145,7 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
 
   def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] = {
     val q1 = for {
-      Join(c, cr) <- table innerJoin inject[CommentRecipientRepoImpl].table on (_.id is _.commentId) if (c.uriId === uriId && cr.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
+      (c, cr) <- table innerJoin inject[CommentRecipientRepoImpl].table on (_.id is _.commentId) if (c.uriId === uriId && cr.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
     } yield (c.*)
     val q2 = for {
       c <- table if (c.uriId === uriId && c.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)

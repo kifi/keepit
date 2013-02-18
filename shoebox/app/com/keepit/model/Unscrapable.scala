@@ -56,10 +56,7 @@ class UnscrapableAllCache @Inject() (val repo: FortyTwoCachePlugin) extends Fort
 @Singleton
 class UnscrapableRepoImpl @Inject() (val db: DataBaseComponent, val unscrapableCache: UnscrapableAllCache) extends DbRepo[Unscrapable] with UnscrapableRepo {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
   import scala.util.matching.Regex

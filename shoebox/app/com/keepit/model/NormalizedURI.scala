@@ -58,10 +58,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI]  {
 @Singleton
 class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[NormalizedURI] with NormalizedURIRepo {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 

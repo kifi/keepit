@@ -59,10 +59,7 @@ class UserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCach
 @Singleton
 class UserRepoImpl @Inject() (val db: DataBaseComponent, val externalIdCache: UserExternalIdCache, val idCache: UserIdCache) extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 
@@ -89,7 +86,7 @@ class UserRepoImpl @Inject() (val db: DataBaseComponent, val externalIdCache: Us
 
   override def getOpt(id: ExternalId[User])(implicit session: RSession): Option[User] = {
     externalIdCache.getOrElseOpt(UserExternalIdKey(id)) {
-      (for(f <- externalIdColumn if Is(f.externalId, id)) yield f).firstOption
+      (for(f <- externalIdColumn if f.externalId === id) yield f).firstOption
     }
   }
 
