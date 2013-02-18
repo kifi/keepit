@@ -36,7 +36,6 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
 
   //todo(eishay) refactor commonalities out of this one and AdminDashboardController to make this test easy to write
   "AuthController" should {
-/** todo(eishay): make test pass
     "impersonate" in {
       running(new EmptyApplication().withFakeSecureSocialUserService()) {
         val (admin, impersonate) = db.readWrite {implicit s =>
@@ -49,7 +48,7 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
         val startRequest = FakeRequest("POST", "/kifi/start").
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
             withJsonBody(JsObject(Seq("agent" -> JsString("test agent"), "version" -> JsString("0.0.0"))))
-        val startResult = routeAndCall(startRequest).get
+        val startResult = route(startRequest).get
         status(startResult) must equalTo(200)
         val sessionCookie = session(startResult)
         sessionCookie(FortyTwoController.FORTYTWO_USER_ID) === admin.id.get.toString
@@ -60,18 +59,18 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
 
         val whoisRequest1 = FakeRequest("GET", "/whois").
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook", "userId" -> admin.id.get.toString)
-        val whoisResult1 = routeAndCall(whoisRequest1).get
+        val whoisResult1 = route(whoisRequest1).get
         (Json.parse(contentAsString(whoisResult1)) \ "externalUserId").as[String] === admin.externalId.toString
 
         val impersonateRequest = FakeRequest("POST", "/admin/user/%s/impersonate".format(impersonate.id.get.toString)).
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook", "userId" -> admin.id.get.toString)
-        val impersonateResultFail = routeAndCall(impersonateRequest).get
+        val impersonateResultFail = route(impersonateRequest).get
         status(impersonateResultFail) must equalTo(401)
 
         db.readWrite {implicit s =>
           inject[UserExperimentRepo].save(UserExperiment(experimentType = ExperimentTypes.ADMIN, userId = admin.id.get))
         }
-        val impersonateResult = routeAndCall(impersonateRequest).get
+        val impersonateResult = route(impersonateRequest).get
         val imprSessionCookie = session(impersonateResult)
         imprSessionCookie(FortyTwoController.FORTYTWO_USER_ID) === admin.id.get.toString
         imprSessionCookie("securesocial.user") === "111"
@@ -81,23 +80,23 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
         val whoisRequest2 = FakeRequest("GET", "/whois").
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook", "userId" -> admin.id.get.toString).
             withCookies(cookies(impersonateResult)(ImpersonateCookie.COOKIE_NAME))
-        val whoisResult2 = routeAndCall(whoisRequest2).get
+        val whoisResult2 = route(whoisRequest2).get
         (Json.parse(contentAsString(whoisResult2)) \ "externalUserId").as[String] === impersonate.externalId.toString
 
         val unimpersonateRequest = FakeRequest("POST", "/admin/unimpersonate").
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook", "userId" -> admin.id.get.toString)
-        val unimpersonateResult = routeAndCall(unimpersonateRequest).get
+        val unimpersonateResult = route(unimpersonateRequest).get
         ImpersonateCookie.decodeFromCookie(cookies(unimpersonateResult).get(ImpersonateCookie.COOKIE_NAME)) === None
 
         val whoisRequest3 = FakeRequest("GET", "/whois").
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook", "userId" -> admin.id.get.toString).
             withCookies(cookies(unimpersonateResult)(ImpersonateCookie.COOKIE_NAME))
-        val whoisResult3 = routeAndCall(whoisRequest3).get
+        val whoisResult3 = route(whoisRequest3).get
         (Json.parse(contentAsString(whoisResult3)) \ "externalUserId").as[String] === admin.externalId.toString
 
       }
     }
-*/
+
     "start" in {
       running(new EmptyApplication().withFakeSecureSocialUserService()) {
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
