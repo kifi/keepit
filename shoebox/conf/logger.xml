@@ -15,7 +15,7 @@
   <logger name="com.keepit" level="INFO"/>
   <logger name="securesocial.core" level="INFO"/>
 
-  <root level="INFO">
+  <root level="ERROR">
     <appender-ref ref="STDOUT" />
   </root>
 </configuration>

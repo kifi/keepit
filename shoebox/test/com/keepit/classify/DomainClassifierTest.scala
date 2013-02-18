@@ -39,7 +39,7 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
             importer.applyTagToDomains(DomainTagName("search engines"), Seq("google.com", "yahoo.com")),
             importer.applyTagToDomains(DomainTagName("Technology and Computers"), Seq("42go.com", "google.com")),
             importer.applyTagToDomains(DomainTagName("Porn"), Seq("playboy.com"))
-          ).foreach { Await.result(_, pairIntToDuration(100, TimeUnit.MILLISECONDS) ) }
+          ).foreach { Await.result(_, pairIntToDuration(100, TimeUnit.SECONDS) ) }
         }
 
         classifier.isSensitive("google.com") === Right(Some(false))
