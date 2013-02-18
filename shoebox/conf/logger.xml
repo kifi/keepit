@@ -12,8 +12,8 @@
 
   <logger name="com.mysql" level="ERROR"/>
   <logger name="com.ning.http" level="INFO"/>
-  <logger name="com.keepit" level="DEBUG"/>
-  <logger name="securesocial.core" level="DEBUG"/>
+  <logger name="com.keepit" level="INFO"/>
+  <logger name="securesocial.core" level="INFO"/>
 
   <root level="INFO">
     <appender-ref ref="STDOUT" />
