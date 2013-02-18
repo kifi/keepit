@@ -21,7 +21,7 @@ class SocialUserSerializerTest extends SpecificationWithJUnit {
       val serializer = new SocialUserSerializer()
       val json = serializer.writes(user)
       println(json)
-      val newUser = serializer.reads(json)
+      val newUser = serializer.reads(json).get
       user === newUser
     }
   }

@@ -34,7 +34,7 @@ class ArticleSerializerTest extends SpecificationWithJUnit {
       val serializer = new ArticleSerializer()
       val json = serializer.writes(article)
       println(json)
-      val newArticle = serializer.reads(json)
+      val newArticle = serializer.reads(json).get
       article === newArticle
     }
 
@@ -57,7 +57,7 @@ class ArticleSerializerTest extends SpecificationWithJUnit {
       val serializer = new ArticleSerializer()
       val json = serializer.writes(article)
       println(json)
-      val newArticle = serializer.reads(json)
+      val newArticle = serializer.reads(json).get
       article === newArticle
     }
   }
