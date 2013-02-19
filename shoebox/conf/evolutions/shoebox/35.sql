@@ -19,7 +19,7 @@ CREATE TABLE comment_read (
     INDEX comment_read_i_comment (user_id,uri_id,state,parent_id)
 );
 
-insert into evolutions (name, description) values('34.sql', 'adding comment_read table');
+insert into evolutions (name, description) values('35.sql', 'adding comment_read table');
 
 # --- !Downs
 
