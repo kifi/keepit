@@ -77,6 +77,22 @@ class UsefulPageListener extends EventListenerPlugin {
   }
 }
 
+class SliderShownListener extends EventListenerPlugin {
+  private lazy val sliderHistoryTracker = inject[SliderHistoryTracker]
+
+  def onEvent: PartialFunction[Event,Unit] = {
+    case Event(_, UserEventMetadata(EventFamilies.SLIDER, "sliderShown", externalUser, _, experiments, metaData, _), _, _) =>
+      val (user, url, normUrl) = inject[DBConnection].readOnly {implicit s =>
+        val user = inject[UserRepo].get(externalUser)
+        val url = (metaData \ "url").asOpt[String].getOrElse("")
+        val normUrl = inject[NormalizedURIRepo].getByNormalizedUrl(URINormalizer.normalize(url))
+        (user, url, normUrl)
+      }
+      // handle UsefulPageListener
+      normUrl.foreach(n => sliderHistoryTracker.add(user.id.get, n.id.get))
+  }
+}
+
 class DeadQueryListener extends EventListenerPlugin {
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_,UserEventMetadata(EventFamilies.SEARCH,"searchUnload",externalUser,_,experiments,metaData,_),_,_)
