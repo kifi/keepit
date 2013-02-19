@@ -82,6 +82,7 @@ case class TestModule() extends ScalaModule {
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
+    listenerBinder.addBinding().to(classOf[SliderShownListener])
   }
 
   @Provides @Singleton
