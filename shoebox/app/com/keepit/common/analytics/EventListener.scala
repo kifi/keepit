@@ -53,7 +53,6 @@ class KifiResultClickedListener extends EventListenerPlugin {
         val bookmark = meta.normUrl.map(n => bookmarkRepo.getByUriAndUser(n.id.get,user.id.get)).flatten
         (user, meta, bookmark)
       }
-      // handle KifiResultClicked
       meta.normUrl.foreach{ n =>
         resultClickTracker.add(user.id.get, meta.query, n.id.get, !bookmark.isEmpty)
         clickHistoryTracker.add(user.id.get, n.id.get)
@@ -69,10 +68,9 @@ class UsefulPageListener extends EventListenerPlugin {
       val (user, url, normUrl) = inject[DBConnection].readOnly {implicit s =>
         val user = inject[UserRepo].get(externalUser)
         val url = (metaData \ "url").asOpt[String].getOrElse("")
-        val normUrl = inject[NormalizedURIRepo].getByNormalizedUrl(URINormalizer.normalize(url))
+        val normUrl = inject[NormalizedURIRepo].getByNormalizedUrl(url)
         (user, url, normUrl)
       }
-      // handle UsefulPageListener
       normUrl.foreach(n => browsingHistoryTracker.add(user.id.get, n.id.get))
   }
 }
@@ -85,10 +83,9 @@ class SliderShownListener extends EventListenerPlugin {
       val (user, url, normUrl) = inject[DBConnection].readOnly {implicit s =>
         val user = inject[UserRepo].get(externalUser)
         val url = (metaData \ "url").asOpt[String].getOrElse("")
-        val normUrl = inject[NormalizedURIRepo].getByNormalizedUrl(URINormalizer.normalize(url))
+        val normUrl = inject[NormalizedURIRepo].getByNormalizedUrl(url)
         (user, url, normUrl)
       }
-      // handle UsefulPageListener
       normUrl.foreach(n => sliderHistoryTracker.add(user.id.get, n.id.get))
   }
 }

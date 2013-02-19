@@ -23,17 +23,17 @@ import akka.util.duration._
 import com.keepit.search.MultiHashFilter
 
 case class SliderHistory (
-                             id: Option[Id[SliderHistory]] = None,
-                             createdAt: DateTime = currentDateTime,
-                             updatedAt: DateTime = currentDateTime,
-                             state: State[SliderHistory] = SliderHistoryStates.ACTIVE,
-                             userId: Id[User],
-                             tableSize: Int,
-                             filter: Array[Byte],
-                             numHashFuncs: Int,
-                             minHits: Int,
-                             updatesCount: Int = 0
-                             ) extends Model[SliderHistory] {
+  id: Option[Id[SliderHistory]] = None,
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
+  state: State[SliderHistory] = SliderHistoryStates.ACTIVE,
+  userId: Id[User],
+  tableSize: Int,
+  filter: Array[Byte],
+  numHashFuncs: Int,
+  minHits: Int,
+  updatesCount: Int = 0
+  ) extends Model[SliderHistory] {
   def withFilter(filter: Array[Byte]) = this.copy(filter = filter)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withId(id: Id[SliderHistory]) = this.copy(id = Some(id))
@@ -100,8 +100,7 @@ object SliderHistoryTracker {
 
 class SliderHistoryTracker(tableSize: Int, numHashFuncs: Int, minHits: Int) {
 
-  def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
-    val sliderHistoryRepo = inject[SliderHistoryRepo]
+  def add(userId: Id[User], uriId: Id[NormalizedURI]): SliderHistory = {
     val filter = getMultiHashFilter(userId)
     filter.put(uriId.id)
 
@@ -123,8 +122,7 @@ class SliderHistoryTracker(tableSize: Int, numHashFuncs: Int, minHits: Int) {
         case Some(sliderHistory) =>
           new MultiHashFilter(sliderHistory.tableSize, sliderHistory.filter, sliderHistory.numHashFuncs, sliderHistory.minHits)
         case None =>
-          val filter = MultiHashFilter(tableSize, numHashFuncs, minHits)
-          filter
+          MultiHashFilter(tableSize, numHashFuncs, minHits)
       }
     }
   }
