@@ -80,13 +80,15 @@ class SliderShownListener extends EventListenerPlugin {
 
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SLIDER, "sliderShown", externalUser, _, experiments, metaData, _), _, _) =>
-      val (user, url, normUrl) = inject[DBConnection].readOnly {implicit s =>
+      val (user, normUri) = inject[DBConnection].readWrite {implicit s =>
         val user = inject[UserRepo].get(externalUser)
-        val url = (metaData \ "url").asOpt[String].getOrElse("")
-        val normUrl = inject[NormalizedURIRepo].getByNormalizedUrl(url)
-        (user, url, normUrl)
+        val normUri = (metaData \ "url").asOpt[String].map { url =>
+          val repo = inject[NormalizedURIRepo]
+          repo.getByNormalizedUrl(url).getOrElse(repo.save(NormalizedURIFactory(url)))
+        }
+        (user, normUri)
       }
-      normUrl.foreach(n => sliderHistoryTracker.add(user.id.get, n.id.get))
+      normUri.foreach(n => sliderHistoryTracker.add(user.id.get, n.id.get))
   }
 }
 

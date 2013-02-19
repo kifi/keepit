@@ -75,6 +75,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
+    listenerBinder.addBinding().to(classOf[SliderShownListener])
   }
 
   @Singleton
