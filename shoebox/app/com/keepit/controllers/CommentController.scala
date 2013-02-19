@@ -71,7 +71,7 @@ object CommentController extends FortyTwoController {
               assert(commentRead.parentId.isDefined)
               commentRead.withLastReadId(newComment.id.get)
             case None =>
-              CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(parentIdOpt.getOrElse(newComment.id.get)), lastReadId = Some(newComment.id.get))
+              CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(parentIdOpt.getOrElse(newComment.id.get)), lastReadId = newComment.id.get)
           }
           commentReadRepo.save(newCommentRead)
           newComment
@@ -81,7 +81,7 @@ object CommentController extends FortyTwoController {
             case Some(commentRead) => // existing CommentRead entry for this message thread
               commentRead.withLastReadId(newComment.id.get)
             case None =>
-              CommentRead(userId = userId, uriId = uri.id.get, lastReadId = Some(newComment.id.get))
+              CommentRead(userId = userId, uriId = uri.id.get, lastReadId = newComment.id.get)
           })
           newComment
         case _ =>
@@ -144,13 +144,14 @@ object CommentController extends FortyTwoController {
         lastCommentId.map { lastCom =>
           commentReadRepo.getCommentRead(request.userId, normUri.id.get) match {
             case Some(commentRead) => // existing CommentRead entry for this user/url
-              commentRead.withLastReadId(lastCom)
+              if (commentRead.lastReadId.id < lastCom.id) Some(commentRead.withLastReadId(lastCom))
+              else None
             case None =>
-              CommentRead(userId = request.userId, uriId = normUri.id.get, lastReadId = Some(lastCom))
+              Some(CommentRead(userId = request.userId, uriId = normUri.id.get, lastReadId = lastCom))
           }
         }
       }
-      (comments, commentRead)
+      (comments, commentRead.flatten)
     }
 
     commentRead.map { cr =>
@@ -190,12 +191,12 @@ object CommentController extends FortyTwoController {
 
       val commentRead = lastMessageId.flatMap { lastMessage =>
         commentReadRepo.getMessagesRead(request.userId, parent.id.get).map{ msg =>
-          if(msg.lastReadId.isDefined && msg.lastReadId.get.id == lastMessage.id)
+          if(msg.lastReadId.id == lastMessage.id)
             None
           else
             Some(msg.withLastReadId(lastMessage))
         }.getOrElse{
-          Some(CommentRead(userId = request.userId, uriId = parent.uriId, parentId = parent.id, lastReadId = Some(lastMessage)))
+          Some(CommentRead(userId = request.userId, uriId = parent.uriId, parentId = parent.id, lastReadId = lastMessage))
         }
       }
       (replies, commentRead)

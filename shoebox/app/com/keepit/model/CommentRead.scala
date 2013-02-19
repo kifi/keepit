@@ -25,14 +25,14 @@ case class CommentRead (
   userId: Id[User],
   uriId: Id[NormalizedURI],
   parentId: Option[Id[Comment]] = None,
-  lastReadId: Option[Id[Comment]],
+  lastReadId: Id[Comment],
   state: State[CommentRead] = CommentReadStates.ACTIVE
 ) extends Model[CommentRead] {
   def withId(id: Id[CommentRead]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[CommentRead]) = copy(state = state)
   def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
-  def withLastReadId(commentId: Id[Comment]) = copy(lastReadId = Some(commentId))
+  def withLastReadId(commentId: Id[Comment]) = copy(lastReadId = commentId)
 }
 
 @ImplementedBy(classOf[CommentReadRepoImpl])
@@ -58,11 +58,11 @@ class CommentReadRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[C
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def parentId = column[Id[Comment]]("parent_id", O.Nullable)
     def lastReadId = column[Id[Comment]]("last_read_id", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ uriId ~ parentId.? ~ lastReadId.? ~ state <> (CommentRead, CommentRead.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ uriId ~ parentId.? ~ lastReadId ~ state <> (CommentRead, CommentRead.unapply _)
   }
 
   def getMessagesRead(userId: Id[User], parentId: Id[Comment])(implicit session: RSession): Option[CommentRead] =
-    (for (f <- table if f.userId === userId && f.parentId.isNotNull && f.parentId === parentId && f.state === CommentReadStates.ACTIVE) yield f).firstOption
+    (for (f <- table if f.userId === userId && f.parentId === parentId && f.state === CommentReadStates.ACTIVE) yield f).firstOption
 
   private def getLatestChildId(parentId: Id[Comment])(implicit session: RSession): Id[Comment] = {
     (inject[CommentRepo].getChildren(parentId).map(_.id.get) :+ parentId).maxBy(_.id)
@@ -73,12 +73,10 @@ class CommentReadRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[C
 
     messages.map { message =>
       getMessagesRead(userId, message.id.get) match {
-        case Some(commentRead) if commentRead.lastReadId.isDefined && commentRead.lastReadId.get.id < getLatestChildId(message.id.get).id =>
+        case Some(commentRead) if commentRead.lastReadId.id < getLatestChildId(message.id.get).id =>
           Some(message)
-        case Some(commentRead) if commentRead.lastReadId.isDefined =>
+        case Some(commentRead)=>
           None
-        case Some(commentRead) =>
-          throw new Exception("lastReadId not set")
         case None =>
           Some(message)
       }
@@ -93,8 +91,8 @@ class CommentReadRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[C
     lastCommentIdOpt match {
       case Some(lastCommentId) =>
         getCommentRead(userId, uriId) match {
-          case Some(commentRead) if commentRead.lastReadId.isDefined => // ∃ messages, ∃ CommentRead
-            commentRead.lastReadId.get.id < lastCommentId.id
+          case Some(commentRead)  => // ∃ messages, ∃ CommentRead
+            commentRead.lastReadId.id < lastCommentId.id
           case None => // ∃ messages, !∃ CommentRead
             true
         }

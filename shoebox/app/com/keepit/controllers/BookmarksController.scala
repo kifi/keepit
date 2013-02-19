@@ -160,17 +160,10 @@ object BookmarksController extends FortyTwoController {
     }.getOrElse(false)
 
     val locator = unreadMessages.size match {
-      case 0 =>
-        hasUnreadComments match {
-          case true =>
-            Some(DeepLocator.ofCommentList)
-          case false =>
-            None
-        }
-      case 1 =>
-        Some(DeepLocator.ofMessageThread(unreadMessages.head))
-      case _ =>
-        Some(DeepLocator.ofMessageThreadList)
+      case 0 if hasUnreadComments => Some(DeepLocator.ofCommentList)
+      case 0 => None
+      case 1 => Some(DeepLocator.ofMessageThread(unreadMessages.head))
+      case _ => Some(DeepLocator.ofMessageThreadList)
     }
 
     Ok(JsObject(Seq(
