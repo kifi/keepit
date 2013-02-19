@@ -1,0 +1,61 @@
+@(domains: Seq[com.keepit.classify.Domain])
+
+@admin("Domain Overrides", stylesheets = List("admin_slider")) {
+<form class="domain-overrides" action="@com.keepit.controllers.admin.routes.SliderAdminController.saveDomainOverrides" method="POST">
+  <table class="table table-condensed table-striped">
+    <thead>
+      <tr>
+        <th>Sensitive?</th>
+        <th>Domain Name</th>
+        <th>Remove</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for(domain <- domains) {
+        <tr>
+          <td><input type="checkbox" class="checkbox" @if(domain.manualSensitive == Some(true)) { checked } value="1"></td>
+          <td><em>@domain.hostname</em><input type="hidden" class="domain-name" value="@domain.hostname"></td>
+          <td><input type="button" class="remove" value="remove"></td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
+  <button type="reset" class="btn">Clear unsaved changes</button>
+  <button type="button" class="btn" id="add-domain">Add new domain</button>
+</form>
+}
+
+<script type="text/html" id="domain-row-template">
+ <td><input type="checkbox" class="checkbox" value="1"></td>
+ <td><input type="text" class="domain-name"></td>
+ <td><input type="button" class="remove" value="remove"></td>
+</script>
+<script>
+$(function() {
+  $(".domain-overrides").on("click", ".remove", function() {
+    $(this).closest("tr").remove();
+  });
+  $("#add-domain").click(function() {
+    $("<tr>").html($("#domain-row-template").html())
+      .appendTo(".domain-overrides tbody")
+      .find('.domain-name').focus();
+  });
+  $(".domain-overrides").submit(function() {
+    var data = {};
+    $(".domain-overrides").find("tr").each(function() {
+      var domain = $(this).find(".domain-name").val();
+      var enabled = $(this).find("input:checkbox").prop("checked");
+      if (domain) {
+        data[domain] = enabled;
+      }
+    });
+    $(this).find("button[type=submit]").button("loading");
+    $.post($(this).prop("action"), data, function() {
+      window.location.reload();
+    });
+    return false;
+  });
+});
+</script>

@@ -94,6 +94,36 @@ class CommentTest extends SpecificationWithJUnit {
 
       }
     }
+    "give all comments by friends" in {
+      running(new EmptyApplication()) {
+        val (user1, user2, uri1, uri2, msg3) = setup()
+
+        inject[DBConnection].readWrite { implicit s =>
+          val userRepo = inject[UserRepo]
+          val user3 = userRepo.save(User(firstName = "Other", lastName = "User"))
+
+          val commentRepo = inject[CommentRepo]
+          commentRepo.getLastPublicIdByConnection(user1.id.get, uri1.id.get).isEmpty === true
+          commentRepo.getLastPublicIdByConnection(user2.id.get, uri1.id.get).isEmpty === true
+          commentRepo.getLastPublicIdByConnection(user3.id.get, uri1.id.get).isEmpty === true
+
+
+          val socialUserInfoRepo = inject[SocialUserInfoRepo]
+          val socialUser1 = socialUserInfoRepo.save(SocialUserInfo(userId = user1.id, fullName = "Andrew Conner", socialId = SocialId("1111111"), networkType = SocialNetworks.FACEBOOK))
+          val socialUser2 = socialUserInfoRepo.save(SocialUserInfo(userId = user2.id, fullName = "Eishay Smith", socialId = SocialId("2222222"), networkType = SocialNetworks.FACEBOOK))
+          val socialConnRepo = inject[SocialConnectionRepo]
+          socialConnRepo.save(SocialConnection(socialUser1 = socialUser1.id.get, socialUser2 = socialUser2.id.get))
+
+          commentRepo.getLastPublicIdByConnection(user1.id.get, uri1.id.get).size === 1
+          commentRepo.getLastPublicIdByConnection(user2.id.get, uri1.id.get).size === 1
+          commentRepo.getLastPublicIdByConnection(user1.id.get, uri2.id.get).size === 0
+          commentRepo.getLastPublicIdByConnection(user2.id.get, uri2.id.get).size === 1
+
+          commentRepo.save(Comment(uriId = uri2.id.get, userId = user2.id.get, pageTitle = uri2.title.get, text = "New comment on Google1", permissions = CommentPermissions.PUBLIC))
+          commentRepo.getLastPublicIdByConnection(user1.id.get, uri2.id.get).size === 1
+        }
+      }
+    }
     "add comments" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
