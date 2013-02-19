@@ -24,30 +24,6 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
   api.request(method, uri, data, done, fail);
 }
 
-// ===== User history
-
-var userHistory = new UserHistory();
-
-function UserHistory() {
-  var HISTORY_SIZE = 200;
-  this.history = [];
-  this.add = function(uri) {
-    api.log("[UserHistory.add]", uri);
-    this.history.unshift(uri);
-    if (this.history.length > HISTORY_SIZE) {
-      this.history.pop();
-    }
-  }
-  this.exists = function(uri) {
-    for (var i = 0; i < this.history.length; i++) {
-      if (this.history[i] === uri) {
-        return true;
-      }
-    }
-    return false;
-  }
-}
-
 // ===== Event logging
 
 var _eventLog = [];
@@ -442,9 +418,10 @@ api.tabs.on.loading.add(function(tab) {
   setIcon(tab);
 
   checkKeepStatus(tab, function gotKeptStatus(resp) {
-    if (resp.locator) {
+    if (session.rules.rules.message && /^\/messages/.test(resp.locator) ||
+        session.rules.rules.comment && /^\/comments/.test(resp.locator)) {
       var emission = ["open_slider_to", {
-        trigger: /^messages/.test(resp.locator) ? "message" : "comment",
+        trigger: resp.locator.substr(1, 7), // "message" or "comment"
         locator: resp.locator}];
       if (tab.ready) {
         api.log("[gotKeptStatus] got locator:", tab.id);
@@ -460,10 +437,9 @@ api.tabs.on.loading.add(function(tab) {
         return;
       }
 
-      if (userHistory.exists(url)) {
-        api.log("[gotKeptStatus] recently visited:", url);
+      if (session.rules.rules.shown && resp.shown) {
+        api.log("[gotKeptStatus] shown before:", url);
       } else {
-        userHistory.add(url);
         tab.showOnScroll = !!session.rules.rules.scroll;
         tab.autoShowSec = (session.rules.rules[resp.keptByAnyFriends ? "friendKept" : "focus"] || [])[0];
         if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
