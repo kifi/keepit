@@ -38,6 +38,8 @@ trait DomainRepo extends Repo[Domain] {
       (implicit session: RSession): Option[Domain]
   def getAll(domains: Seq[Id[Domain]], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain]
+  def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
+      (implicit session: RSession): Seq[Domain]
 }
 
 @Singleton
@@ -55,11 +57,15 @@ class DomainRepoImpl @Inject()(val db: DataBaseComponent) extends DbRepo[Domain]
 
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Option[Domain] =
-    (for (d <- table if d.hostname === domain && d.state =!= excludeState.getOrElse(null)) yield d).firstOption
+    (for (d <- table if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
 
   def getAll(domains: Seq[Id[Domain]], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain] =
-    (for (d <- table if d.id.inSet(domains) && d.state =!= excludeState.getOrElse(null)) yield d).list
+    (for (d <- table if d.id.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
+
+  def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
+      (implicit session: RSession): Seq[Domain] =
+    (for (d <- table if d.state =!= excludeState.orNull && d.manualSensitive.isNotNull) yield d).list
 }
 
 object DomainStates extends States[Domain]
