@@ -22,26 +22,27 @@ class SliderRuleTest extends SpecificationWithJUnit with DbRepos {
         val repo = inject[SliderRuleRepo]
         inject[SliderRuleRepo] must be(repo) // singleton
 
-        val (r1, r2, r3, r4, vFoo, vBar) = inject[DBConnection].readWrite{ implicit session =>
+        val (r1, r2, r3, r4, foo, bar) = inject[DBConnection].readWrite{ implicit session =>
           (repo.save(SliderRule(None, "foo", "rule1", None)),
            repo.save(SliderRule(None, "foo", "rule2", Some(JsArray(Seq(JsNumber(8)))))),
            repo.save(SliderRule(None, "bar", "rule1", None)),
            repo.save(SliderRule(None, "bar", "rule2", Some(JsArray(Seq(JsNumber(9)))))),
-           repo.asInstanceOf[SliderRuleRepoImpl].groupVersionCache("foo"),
-           repo.asInstanceOf[SliderRuleRepoImpl].groupVersionCache("bar"))
+           repo.getGroup("foo"),
+           repo.getGroup("bar"))
         }
 
+        foo.rules.map(_.id) === Seq(r1.id, r2.id)
+        bar.rules.map(_.id) === Seq(r3.id, r4.id)
+
         inject[DBConnection].readOnly{ implicit session =>
-          repo.getGroup("foo").rules.map(_.id) === Seq(r1.id, r2.id)
-          repo.getGroup("bar").rules.map(_.id) === Seq(r3.id, r4.id)
-          repo.getGroupVersion("foo") === vFoo
-          repo.getGroupVersion("bar") === vBar
+          repo.getGroup("foo") must be(foo)  // in-memory cache should work
+          repo.getGroup("bar") must be(bar)
         }
 
         inject[DBConnection].readWrite{ implicit session =>
-          repo.save(repo.getGroup("foo").rules(1).withParameters(None))
-          repo.getGroupVersion("foo") must be_>(vFoo)
-          repo.getGroupVersion("bar") === vBar
+          repo.save(foo.rules(1).withParameters(None))
+          repo.getGroup("foo").version must be_>(foo.version)
+          repo.getGroup("bar") must be(bar)  // still in memory cache
         }
       }
     }

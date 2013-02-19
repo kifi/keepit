@@ -51,9 +51,9 @@ var slider, injected, t0 = +new Date;
       });
     },
     auto_show: autoShow.bind(null, "auto"),
-    slider_rules: function(sliderRules, showOnScroll) {
+    slider_rules: function(sliderRules) {
       rules = sliderRules;
-      if (showOnScroll) {
+      if (rules.scroll) {
         document.addEventListener("scroll", onScrollMaybeShow);
       }
     },
