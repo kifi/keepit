@@ -1,5 +1,4 @@
 # --- !Ups
-
 CREATE TABLE url_pattern (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     pattern varchar(2048) NOT NULL,
