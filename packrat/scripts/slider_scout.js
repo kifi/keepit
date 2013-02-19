@@ -59,7 +59,7 @@ var slider, injected, t0 = +new Date;
     },
     deep_link: function(link) {
       withSlider(function() {
-        slider.openDeepLink(link);
+        slider.open("deepLink", link);
       });
     }});
   api.port.emit("get_slider_rules");

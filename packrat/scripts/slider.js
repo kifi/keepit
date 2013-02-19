@@ -125,7 +125,7 @@ slider = function() {
     });
   }
 
-  function showSlider(trigger, hideIfIdle, callback) {
+  function showSlider(trigger, locator) {
     api.port.emit("get_slider_info", function(o) {
       api.log("slider info:", o);
 
@@ -151,9 +151,11 @@ slider = function() {
           if (document.querySelector(".kifi-slider")) {
             api.log("No need to inject, it's already here!");
           } else {
-            drawKeepItHover(o.session, o.friends, o.numComments, o.numMessages, template, callback);
+            drawKeepItHover(o.session, o.friends, o.numComments, o.numMessages, template, !locator ? $.noop : function() {
+              openDeepLink(o.session, locator);
+            });
             logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: location.href});
-            if (hideIfIdle) {
+            if (!locator) {
               idleTimer.start();
             }
           }
@@ -1063,7 +1065,7 @@ slider = function() {
   }
 
   function openDeepLink(session, locator) {
-    var loc = locator.split("/").filter(function(s) { return s != ""; });
+    var loc = locator.split("/");
     switch (loc[0]) {
       case "messages":
         showComments(session, "message", loc[1] || null);
@@ -1080,8 +1082,8 @@ slider = function() {
 
   // defining the slider API
   return {
-  show: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
-    showSlider(trigger, true);
+  show: function(trigger, locator) {  // trigger is for the event log (e.g. "auto", "key", "icon")
+    showSlider(trigger, locator);
   },
   shown: function() {
     return !!lastShownAt;
@@ -1092,10 +1094,5 @@ slider = function() {
     } else {
       this.show(trigger);
     }
-  },
-  openDeepLink: function(locator) {
-    showSlider("deepLink", false, function(session) {
-      openDeepLink(session, locator);
-    });
   }};
 }();
