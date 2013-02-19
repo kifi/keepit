@@ -29,7 +29,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   val db: DataBaseComponent
   import db.Driver.Implicit._ // here's the driver, abstracted away
   import db.Driver.Table
-  import db.Driver.Table
 
   def invalidateCache(model: M)(implicit session: RSession): M = model
 

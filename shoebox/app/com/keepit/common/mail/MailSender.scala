@@ -16,7 +16,6 @@ import akka.actor.ActorSystem
 import akka.actor.Actor
 import akka.actor.Props
 import akka.actor.Props
-import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.actor.ActorRef
 import akka.actor.Cancellable
