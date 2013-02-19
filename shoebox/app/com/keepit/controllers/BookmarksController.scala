@@ -171,10 +171,10 @@ object BookmarksController extends FortyTwoController {
       "user_has_bookmark" -> JsBoolean(bookmark.isDefined), // TODO: remove this key after all installations >= 2.1.49
       "kept" -> JsBoolean(bookmark.isDefined),
       "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
-      "sensitive" -> JsBoolean(sensitive.getOrElse(false)),
-      "hasUnreadComments" -> JsBoolean(hasUnreadComments),
-      "unreadMessages" -> JsArray(unreadMessages.map(msg => JsString(msg.externalId.id))),
-      "locator" -> JsString(locator.map(_.value).getOrElse(""))) ++
+      "sensitive" -> JsBoolean(sensitive.getOrElse(false))) ++
+      locator.map { l => Seq(
+        "locator" -> JsString(l.value))
+      }.getOrElse(Nil) ++
       ruleGroup.map { g => Seq(
         "rules" -> g.compactJson,
         "patterns" -> JsArray(patterns.get.map(JsString)))
