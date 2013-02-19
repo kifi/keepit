@@ -29,6 +29,7 @@ class URLPatternTest extends SpecificationWithJUnit with DbRepos {
           repo.get(p2.id.get) === p2
           repo.get(p1.pattern) === Some(p1)
           repo.get(p2.pattern) === Some(p2)
+          repo.getActivePatterns.length must be_>(0)
         }
       }
     }
