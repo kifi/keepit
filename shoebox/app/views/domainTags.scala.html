@@ -1,0 +1,32 @@
+@(tags: Seq[com.keepit.classify.DomainTag])
+
+@admin("Domain Tags", stylesheets = List("admin_slider")) {
+<form class="domain-tags" action="@com.keepit.controllers.admin.routes.SliderAdminController.saveDomainTags" method="POST">
+  <table class="table table-condensed table-striped">
+    <thead>
+      <tr>
+        <th>Sensitive?</th>
+        <th>Tag Name</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for(tag <- tags) {
+        <tr id="tag_@tag.id.get">
+          <td><input type="checkbox" class="checkbox" name="sensitive_@tag.id.get" @if(tag.sensitive.isDefined && tag.sensitive.get) {checked="checked"} value="1"></td>
+          <td><em>@tag.name.name</em></td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
+  <button type="reset" class="btn">Clear unsaved changes</button>
+</form>
+}
+
+<script>
+$(function() {
+  $(".domain-tags").submit(function() {
+    $(this).find("button[type=submit]").button("loading");
+  });
+});
+</script>
