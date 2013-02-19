@@ -124,7 +124,7 @@ object BookmarksController extends FortyTwoController {
   def checkIfExists(uri: String, ver: Option[String]) = AuthenticatedJsonAction { request =>
     val userId = request.userId
     // TODO: Optimize by not checking sensitivity and keptByAnyFriends if kept by user.
-    val (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, hasUnreadComments, unreadMessages) = inject[DBConnection].readOnly { implicit s =>
+    val (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, locator) = inject[DBConnection].readOnly { implicit s =>
       val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
       val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
       val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>
@@ -140,17 +140,17 @@ object BookmarksController extends FortyTwoController {
       }
       val patterns: Option[Seq[String]] = ruleGroup.map(_ => inject[URLPatternRepo].getActivePatterns)
 
-      val commentReadRepo = inject[CommentReadRepo]
-      val (hasUnreadComments, unreadMessages) = uriId match {
-        case Some(uri) =>
-          val hasUnreadComments = commentReadRepo.hasUnreadComments(userId, uri)
-          val unreadMessages = commentReadRepo.getUnreadMessages(userId, uri)
-          (hasUnreadComments, unreadMessages)
-        case None =>
-          (false, Nil)
+      val locator: Option[DeepLocator] = uriId.flatMap { uriId =>
+        val repo = inject[CommentReadRepo]
+        val messages = repo.getUnreadMessages(userId, uriId)
+        messages.size match {
+          case 0 => if (repo.hasUnreadComments(userId, uriId)) Some(DeepLocator.ofCommentList) else None
+          case 1 => Some(DeepLocator.ofMessageThread(messages.head))
+          case _ => Some(DeepLocator.ofMessageThreadList)
+        }
       }
 
-      (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, hasUnreadComments, unreadMessages)
+      (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, locator)
     }
 
     val keptByAnyFriends = uriId.map { uriId =>
@@ -159,13 +159,6 @@ object BookmarksController extends FortyTwoController {
         searcher.getUserToUserEdgeSet(userId, friendIds),
         searcher.getUriToUserEdgeSet(uriId))
     }.getOrElse(false)
-
-    val locator = unreadMessages.size match {
-      case 0 if hasUnreadComments => Some(DeepLocator.ofCommentList)
-      case 0 => None
-      case 1 => Some(DeepLocator.ofMessageThread(unreadMessages.head))
-      case _ => Some(DeepLocator.ofMessageThreadList)
-    }
 
     Ok(JsObject(Seq(
       "user_has_bookmark" -> JsBoolean(bookmark.isDefined), // TODO: remove this key after all installations >= 2.1.49
