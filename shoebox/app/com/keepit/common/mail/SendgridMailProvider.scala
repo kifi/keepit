@@ -76,7 +76,7 @@ class SendgridMailProvider @Inject() (db: DBConnection, mailRepo: ElectronicMail
     })
 
     transport.addConnectionListener(new ConnectionListener() {
-      def opened(e: ConnectionEvent)  { log.info(e) }
+      def opened(e: ConnectionEvent)  { log.info(e.toString) }
       def closed(e: ConnectionEvent) {
         log.info("got event %s".format(e))
         nullifyTransport(transport)
@@ -121,7 +121,7 @@ class SendgridMailProvider @Inject() (db: DBConnection, mailRepo: ElectronicMail
       }
     } catch {
       case e: Throwable =>
-        log.error(e)
+        log.error(e.toString)
         mailError(mail, e.toString(), transport)
     }
   }
@@ -168,7 +168,7 @@ class SendgridMailProvider @Inject() (db: DBConnection, mailRepo: ElectronicMail
     nullifyTransport(transport)
     val error = healthcheck.addError(HealthcheckError(callType = Healthcheck.EMAIL,
       errorMessage = Some("Can't send email from %s to %s: %s. Error message: %s".format(mail.from, mail.to, mail.subject, message))))
-    log.error(error.errorMessage)
+    log.error(error.errorMessage.toString)
     db.readWrite { implicit s =>
       mailRepo.save(mail.errorSending("Error: %s".format(error)))
     }

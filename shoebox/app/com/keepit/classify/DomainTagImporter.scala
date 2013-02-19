@@ -97,7 +97,7 @@ private[classify] class DomainTagImportActor(db: DBConnection, updater: Sensitiv
       result
     } catch {
       case e: Throwable =>
-        log.error(e)
+        log.error("eror setting sensetive info", e)
         throw e
     }
   }

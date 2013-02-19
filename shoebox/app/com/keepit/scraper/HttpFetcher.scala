@@ -61,7 +61,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int)
 
     val httpContext = new BasicHttpContext()
     val response = httpClient.execute(httpGet, httpContext)
-    log.info(response.getStatusLine)
+    log.info(response.getStatusLine.toString)
 
     val statusCode = response.getStatusLine.getStatusCode
 
