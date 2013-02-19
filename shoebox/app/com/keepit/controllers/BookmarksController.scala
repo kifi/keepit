@@ -179,7 +179,6 @@ object BookmarksController extends FortyTwoController {
         "rules" -> g.compactJson,
         "patterns" -> JsArray(patterns.get.map(JsString)))
       }.getOrElse(Nil)))
-    )
   }
 
   def remove() = AuthenticatedJsonAction { request =>
