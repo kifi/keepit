@@ -124,7 +124,7 @@ object BookmarksController extends FortyTwoController {
   def checkIfExists(uri: String, ver: Option[String]) = AuthenticatedJsonAction { request =>
     val userId = request.userId
     // TODO: Optimize by not checking sensitivity and keptByAnyFriends if kept by user.
-    val (uriId, bookmark, sensitive, friendIds, ruleGroup) = inject[DBConnection].readOnly { implicit s =>
+    val (uriId, bookmark, sensitive, friendIds, ruleGroup, hasUnreadComments, unreadMessages) = inject[DBConnection].readOnly { implicit s =>
       val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
       val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
       val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>
@@ -138,7 +138,18 @@ object BookmarksController extends FortyTwoController {
         val repo = inject[SliderRuleRepo]
         if (v == repo.getGroupVersion("default")) None else Some(repo.getGroup("default"))
       }
-      (uriId, bookmark, sensitive, friendIds, ruleGroup)
+
+      val commentReadRepo = inject[CommentReadRepo]
+      val (hasUnreadComments, unreadMessages) = uriId match {
+        case Some(uri) =>
+          val hasUnreadComments = commentReadRepo.hasUnreadComments(userId, uri)
+          val unreadMessages = commentReadRepo.getUnreadMessages(userId, uri)
+          (hasUnreadComments, unreadMessages)
+        case None =>
+          (false, Nil)
+      }
+
+      (uriId, bookmark, sensitive, friendIds, ruleGroup, hasUnreadComments, unreadMessages)
     }
 
     val keptByAnyFriends = uriId.map { uriId =>
@@ -148,12 +159,23 @@ object BookmarksController extends FortyTwoController {
         searcher.getUriToUserEdgeSet(uriId))
     }.getOrElse(false)
 
+    val locator = unreadMessages.size match {
+      case 0 if hasUnreadComments => Some(DeepLocator.ofCommentList)
+      case 0 => None
+      case 1 => Some(DeepLocator.ofMessageThread(unreadMessages.head))
+      case _ => Some(DeepLocator.ofMessageThreadList)
+    }
+
     Ok(JsObject(Seq(
       "user_has_bookmark" -> JsBoolean(bookmark.isDefined), // TODO: remove this key after all installations >= 2.1.49
       "kept" -> JsBoolean(bookmark.isDefined),
       "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
-      "sensitive" -> JsBoolean(sensitive.getOrElse(false))) ++
-      ruleGroup.map{g => Seq("rules" -> g.compactJson)}.getOrElse(Nil)))
+      "sensitive" -> JsBoolean(sensitive.getOrElse(false)),
+      "hasUnreadComments" -> JsBoolean(hasUnreadComments),
+      "unreadMessages" -> JsArray(unreadMessages.map(msg => JsString(msg.externalId.id))),
+      "locator" -> JsString(locator.map(_.value).getOrElse(""))) ++
+      ruleGroup.map{g => Seq("rules" -> g.compactJson)}.getOrElse(Nil))
+    )
   }
 
   def remove() = AuthenticatedJsonAction { request =>
