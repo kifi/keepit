@@ -57,9 +57,9 @@ var slider, injected, t0 = +new Date;
         document.addEventListener("scroll", onScrollMaybeShow);
       }
     },
-    deep_link: function(link) {
+    open_slider_to: function(data) {
       withSlider(function() {
-        slider.open("deepLink", link);
+        slider.shown() || slider.show(data.trigger, data.locator);
       });
     }});
   api.port.emit("get_slider_rules");

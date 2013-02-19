@@ -1066,9 +1066,9 @@ slider = function() {
 
   function openDeepLink(session, locator) {
     var loc = locator.split("/");
-    switch (loc[0]) {
+    switch (loc[1]) {
       case "messages":
-        showComments(session, "message", loc[1] || null);
+        showComments(session, "message", loc[2] || null);
         break;
       case "comments":
         showComments(session, "public");
