@@ -124,10 +124,10 @@ object BookmarksController extends FortyTwoController {
   def checkIfExists(uri: String, ver: Option[String]) = AuthenticatedJsonAction { request =>
     val userId = request.userId
     // TODO: Optimize by not checking sensitivity and keptByAnyFriends if kept by user.
-    val (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, locator) = inject[DBConnection].readOnly { implicit s =>
+    val (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, locator, shown) = inject[DBConnection].readOnly { implicit s =>
       val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
       val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
-      val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>
+      val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>  // TODO: check domain even if nUri is None
         inject[DomainClassifier].isSensitive(domain).right.getOrElse(None)
       }
       val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
@@ -150,7 +150,11 @@ object BookmarksController extends FortyTwoController {
         }
       }
 
-      (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, locator)
+      val shown: Option[Boolean] = if (locator.isDefined) None else uriId.map { uriId =>
+        inject[SliderHistoryTracker].getMultiHashFilter(userId).mayContain(uriId.id)
+      }
+
+      (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, locator, shown)
     }
 
     val keptByAnyFriends = uriId.map { uriId =>
@@ -167,6 +171,9 @@ object BookmarksController extends FortyTwoController {
       "sensitive" -> JsBoolean(sensitive.getOrElse(false))) ++
       locator.map { l => Seq(
         "locator" -> JsString(l.value))
+      }.getOrElse(Nil) ++
+      shown.map { s => Seq(
+        "shown" -> JsBoolean(s))
       }.getOrElse(Nil) ++
       ruleGroup.map { g => Seq(
         "rules" -> g.compactJson,
