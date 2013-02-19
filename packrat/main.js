@@ -144,9 +144,7 @@ api.port.on({
     setIcon(tab, data);
   },
   get_slider_rules: function(data, respond, tab) {
-    if (api.prefs.get("showSlider")) {
-      api.tabs.emit(tab, "slider_rules", session.rules.rules, tab.showOnScroll);
-    }
+    emitSliderRules(tab);
   },
   get_slider_info: function(data, respond, tab) {
     if (session) {
@@ -182,6 +180,14 @@ api.port.on({
     createDeepLinkListener(data, tab.id, respond);
     return true;
   }});
+
+function emitSliderRules(tab) {
+  if (session && api.prefs.get("showSlider")) {
+    api.tabs.emit(tab, "slider_rules", {  // only the relevant rules
+      viewport: session.rules.rules.viewport,
+      scroll: session.rules.rules[tab.showOnScroll && "scroll"]});
+  }
+}
 
 function getSliderInfo(tab, respond) {
   ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
@@ -368,13 +374,6 @@ function searchOnServer(request, respond) {
   return true;
 }
 
-var restrictedUrlPatternsForHover = [
-  "www.facebook.com",
-  "keepitfindit.com",
-  "ezkeep.com",
-  "localhost:",
-  "google.com"];
-
 // Kifi icon in location bar
 api.icon.on.click.add(function(tab) {
   api.tabs.emit(tab, "button_click");
@@ -393,7 +392,11 @@ function checkKeepStatus(tab, callback) {
   tab.keepStatusKnown = true;  // setting before request to avoid making two overlapping requests
   ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url, ver: session.rules.version}, function done(o) {
     setIcon(tab, o.kept);
-    session.rules = o.rules || session.rules;
+    if (o.rules) {
+      session.rules = o.rules;
+      session.patterns = o.patterns;
+      compilePatterns(session);
+    }
     callback && callback(o);
   }, function fail(xhr) {
     api.log("[checkKeepStatus] error:", xhr.responseText);
@@ -441,7 +444,7 @@ api.tabs.on.loading.add(function(tab) {
   checkKeepStatus(tab, function(resp) {
     if (!resp.kept && (!resp.sensitive || !session.rules.rules.sensitive)) {
       var url = tab.url;
-      if (restrictedUrlPatternsForHover.some(function(e) {return url.indexOf(e) >= 0})) {
+      if (session.rules.rules.url && session.patterns.some(function(re) {return re.test(url)})) {
         api.log("[tabs.on.loading:2] restricted:", url);
         return;
       }
@@ -455,9 +458,7 @@ api.tabs.on.loading.add(function(tab) {
         if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
           scheduleAutoShow(tab);
         }
-        if (api.prefs.get("showSlider")) {
-          api.tabs.emit(tab, "slider_rules", session.rules.rules, tab.showOnScroll);
-        }
+        emitSliderRules(tab);
       }
     }
   });
@@ -502,6 +503,13 @@ function scheduleAutoShow(tab) {
       }
     }, tab.autoShowSec * 1000);
   }
+}
+
+function compilePatterns(o) {
+  for (var i = 0; i < o.patterns.length; i++) {
+    o.patterns[i] = new RegExp(o.patterns[i], "");
+  }
+  return o;
 }
 
 function getFullyQualifiedKey(key) {
@@ -556,7 +564,7 @@ function authenticate(callback) {
       api.log("[startSession] done, loadReason:", api.loadReason, "session:", data);
       logEvent("extension", "authenticated");
 
-      session = data;
+      session = compilePatterns(data);
       setConfigs("kifi_installation_id", data.installationId);
 
       // Locate or create KeepIt bookmark folder.
