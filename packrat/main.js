@@ -209,7 +209,7 @@ function createDeepLinkListener(link, linkTabId, respond) {
       var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") < 0 && tab.url.indexOf("dev.ezkeep.com") < 0;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
-        api.tabs.emit(tab, "deep_link", link.locator);
+        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator});
         api.tabs.on.ready.remove(deepLinkListener);
         return;
       }
@@ -441,16 +441,27 @@ api.tabs.on.loading.add(function(tab) {
   api.log("[tabs.on.loading]", tab);
   setIcon(tab);
 
-  checkKeepStatus(tab, function(resp) {
-    if (!resp.kept && (!resp.sensitive || !session.rules.rules.sensitive)) {
+  checkKeepStatus(tab, function gotKeptStatus(resp) {
+    if (resp.locator) {
+      var emission = ["open_slider_to", {
+        trigger: /^messages/.test(resp.locator) ? "message" : "comment",
+        locator: resp.locator}];
+      if (tab.ready) {
+        api.log("[gotKeptStatus] got locator:", tab.id);
+        api.tabs.emit(tab, emission[0], emission[1]);
+      } else {
+        api.log("[gotKeptStatus] got locator but tab not ready:", tab.id);
+        tab.emitOnReady = emission;
+      }
+    } else if (!resp.kept && (!resp.sensitive || !session.rules.rules.sensitive)) {
       var url = tab.url;
       if (session.rules.rules.url && session.patterns.some(function(re) {return re.test(url)})) {
-        api.log("[tabs.on.loading:2] restricted:", url);
+        api.log("[gotKeptStatus] restricted:", url);
         return;
       }
 
       if (userHistory.exists(url)) {
-        api.log("[tabs.on.loading:2] recently visited:", url);
+        api.log("[gotKeptStatus] recently visited:", url);
       } else {
         userHistory.add(url);
         tab.showOnScroll = !!session.rules.rules.scroll;
@@ -468,10 +479,11 @@ api.tabs.on.ready.add(function(tab) {
   api.log("[tabs.on.ready]", tab);
   logEvent("extension", "pageLoad");
 
-  if (tab.autoShowOnReady) {
-    api.log("[tabs.on.ready] auto showing:", tab);
-    api.tabs.emit(tab, "auto_show");
-    delete tab.autoShowOnReady;
+  var emission = tab.emitOnReady;  // TODO: promote emitOnReady to API layer
+  if (emission) {
+    api.log("[tabs.on.ready] emitting:", tab.id, emission);
+    api.tabs.emit(tab, emission[0], emission[1]);
+    delete tab.emitOnReady;
   }
 });
 
@@ -498,7 +510,7 @@ function scheduleAutoShow(tab) {
           api.tabs.emit(tab, "auto_show");
         } else {
           api.log("[scheduleAutoShow:1] fired but tab not ready:", tab.id);
-          tab.autoShowOnReady = true;
+          tab.emitOnReady = ["auto_show"];
         }
       }
     }, tab.autoShowSec * 1000);
