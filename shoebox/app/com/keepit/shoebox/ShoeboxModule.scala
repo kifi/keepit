@@ -53,6 +53,7 @@ import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListene
 import com.keepit.common.cache._
 import com.keepit.classify.DomainTagImportSettings
 import com.google.common.io.Files
+import com.keepit.model.SliderHistoryTracker
 
 
 class ShoeboxModule() extends ScalaModule with Logging {
@@ -249,6 +250,17 @@ class ShoeboxModule() extends ScalaModule with Logging {
     val minHits = conf.getInt("minHits").get
 
     BrowsingHistoryTracker(filterSize, numHashFuncs, minHits)
+  }
+
+  @Singleton
+  @Provides
+  def sliderHistoryTracker: SliderHistoryTracker = {
+    val conf = current.configuration.getConfig("slider-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    SliderHistoryTracker(filterSize, numHashFuncs, minHits)
   }
 
   @Singleton
