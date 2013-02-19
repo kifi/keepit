@@ -29,6 +29,7 @@ shoebox/modules/securesocial/.target
 shoebox/modules/securesocial/.settings
 shoebox/modules/securesocial/bin/*
 shoebox/shoebox.sublime-project
+shoebox/shoebox.sublime-workspace
 *.swp
 
 # Compiled source #
