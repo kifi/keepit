@@ -73,7 +73,9 @@ class CommentReadRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[C
     val parents = inject[CommentRepo].getMessages(uriId, userId) // all message threads with this user
 
     parents.filter { parent =>
-      getByUserAndParent(userId, parent.id.get).map(_.lastReadId.id < getLatestChildId(parent.id.get).id).getOrElse(true)
+      getByUserAndParent(userId, parent.id.get)
+        .map(_.lastReadId.id < getLatestChildId(parent.id.get).id)
+        .getOrElse(true)
     }
   }
 
