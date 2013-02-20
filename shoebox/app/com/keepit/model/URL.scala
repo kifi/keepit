@@ -52,8 +52,10 @@ case class URL (
 }
 
 object URLFactory {
-  def apply(url: String, normalizedUriId: Id[NormalizedURI]) =
-    URL(url = url, normalizedUriId = normalizedUriId, domain = URI.parse(url).map(_.host.toString))
+  def apply(url: String, normalizedUriId: Id[NormalizedURI],
+      createdAt: DateTime = inject[DateTime], updatedAt: DateTime = inject[DateTime]) =
+    URL(url = url, normalizedUriId = normalizedUriId, domain = URI.parse(url).flatMap(_.host).map(_.name),
+      createdAt = createdAt, updatedAt = updatedAt)
 }
 
 @ImplementedBy(classOf[URLRepoImpl])

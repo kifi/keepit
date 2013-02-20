@@ -143,7 +143,7 @@ object BookmarksController extends FortyTwoController {
 
       val locator: Option[DeepLocator] = uriId.flatMap { uriId =>
         val repo = inject[CommentReadRepo]
-        val messages = repo.getUnreadMessages(userId, uriId)
+        val messages = repo.getParentsOfUnreadMessages(userId, uriId)
         messages.size match {
           case 0 => if (repo.hasUnreadComments(userId, uriId)) Some(DeepLocator.ofCommentList) else None
           case 1 => Some(DeepLocator.ofMessageThread(messages.head))

@@ -66,7 +66,7 @@ object CommentController extends FortyTwoController {
           val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
           createRecipients(newComment.id.get, recipients, parentIdOpt)
 
-          val newCommentRead = commentReadRepo.getMessagesRead(userId, parentIdOpt.getOrElse(newComment.id.get)) match {
+          val newCommentRead = commentReadRepo.getByUserAndParent(userId, parentIdOpt.getOrElse(newComment.id.get)) match {
             case Some(commentRead) => // existing CommentRead entry for this message thread
               assert(commentRead.parentId.isDefined)
               commentRead.withLastReadId(newComment.id.get)
@@ -77,7 +77,7 @@ object CommentController extends FortyTwoController {
           newComment
         case "public" | "" =>
           val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = None))
-          commentReadRepo.save(commentReadRepo.getCommentRead(userId, uri.id.get) match {
+          commentReadRepo.save(commentReadRepo.getByUserAndUri(userId, uri.id.get) match {
             case Some(commentRead) => // existing CommentRead entry for this message thread
               commentRead.withLastReadId(newComment.id.get)
             case None =>
@@ -142,7 +142,7 @@ object CommentController extends FortyTwoController {
 
       val commentRead = normUriOpt.flatMap { normUri =>
         lastCommentId.map { lastCom =>
-          commentReadRepo.getCommentRead(request.userId, normUri.id.get) match {
+          commentReadRepo.getByUserAndUri(request.userId, normUri.id.get) match {
             case Some(commentRead) => // existing CommentRead entry for this user/url
               if (commentRead.lastReadId.id < lastCom.id) Some(commentRead.withLastReadId(lastCom))
               else None
@@ -178,37 +178,36 @@ object CommentController extends FortyTwoController {
     val repo = inject[CommentRepo]
     val commentReadRepo = inject[CommentReadRepo]
 
-    val (replies, commentReadOpt) = inject[DBConnection].readOnly{ implicit session =>
+    val (messages, commentReadToSave) = inject[DBConnection].readOnly{ implicit session =>
       val comment = repo.get(commentId)
-      val parent = comment.parent map (repo.get) getOrElse (comment)
+      val parent = comment.parent.map(repo.get).getOrElse(comment)
 
-      val replies = (Seq(parent) ++ repo.getChildren(parent.id.get) map { child => inject[CommentWithSocialUserRepo].load(child) })
-
-      val lastMessageId = replies match {
-        case Nil => None
-        case repliesList => Some(repliesList.map(_.comment.id.get).maxBy(_.id))
+      val messages: Seq[CommentWithSocialUser] = parent +: repo.getChildren(parent.id.get) map { msg =>
+        inject[CommentWithSocialUserRepo].load(msg)
       }
 
-      val commentRead = lastMessageId.flatMap { lastMessage =>
-        commentReadRepo.getMessagesRead(request.userId, parent.id.get).map{ msg =>
-          if(msg.lastReadId.id == lastMessage.id)
-            None
-          else
-            Some(msg.withLastReadId(lastMessage))
-        }.getOrElse{
-          Some(CommentRead(userId = request.userId, uriId = parent.uriId, parentId = parent.id, lastReadId = lastMessage))
-        }
+      // mark latest message as read for viewer
+
+      val lastMessageId = messages.map(_.comment.id.get).maxBy(_.id)
+
+      val commentReadToSave = commentReadRepo.getByUserAndParent(request.userId, parent.id.get) match {
+        case Some(cr) if cr.lastReadId == lastMessageId =>
+          None
+        case Some(cr) =>
+          Some(cr.withLastReadId(lastMessageId))
+        case None =>
+          Some(CommentRead(userId = request.userId, uriId = parent.uriId, parentId = parent.id, lastReadId = lastMessageId))
       }
-      (replies, commentRead)
+      (messages, commentReadToSave)
     }
 
-    commentReadOpt.map { commentRead =>
+    commentReadToSave.map { cr =>
       inject[DBConnection].readWrite{ implicit session =>
-        commentReadRepo.save(commentRead)
+        commentReadRepo.save(cr)
       }
     }
 
-    Ok(commentWithSocialUserSerializer.writes(CommentPermissions.MESSAGE -> replies))
+    Ok(commentWithSocialUserSerializer.writes(CommentPermissions.MESSAGE -> messages))
   }
 
   def startFollowing() = AuthenticatedJsonAction { request =>

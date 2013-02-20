@@ -37,10 +37,10 @@ case class CommentRead (
 
 @ImplementedBy(classOf[CommentReadRepoImpl])
 trait CommentReadRepo extends Repo[CommentRead] {
-  def getUnreadMessages(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
+  def getParentsOfUnreadMessages(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
   def hasUnreadComments(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
-  def getCommentRead(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[CommentRead]
-  def getMessagesRead(userId: Id[User], parentId: Id[Comment])(implicit session: RSession): Option[CommentRead]
+  def getByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[CommentRead]
+  def getByUserAndParent(userId: Id[User], parentId: Id[Comment])(implicit session: RSession): Option[CommentRead]
 }
 
 @Singleton
@@ -58,36 +58,32 @@ class CommentReadRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[C
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ uriId ~ parentId.? ~ lastReadId ~ state <> (CommentRead, CommentRead.unapply _)
   }
 
-  def getMessagesRead(userId: Id[User], parentId: Id[Comment])(implicit session: RSession): Option[CommentRead] =
+  def getByUserAndParent(userId: Id[User], parentId: Id[Comment])(implicit session: RSession): Option[CommentRead] =
     (for (f <- table if f.userId === userId && f.parentId === parentId && f.state === CommentReadStates.ACTIVE) yield f).firstOption
 
   private def getLatestChildId(parentId: Id[Comment])(implicit session: RSession): Id[Comment] = {
     (inject[CommentRepo].getChildren(parentId).map(_.id.get) :+ parentId).maxBy(_.id)
   }
 
-  def getUnreadMessages(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment] = {
-    val messages = inject[CommentRepo].getMessages(uriId, userId) // all message threads with this user
+  def getParentsOfUnreadMessages(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment] = {
+    // TODO: optimize this method down to 1 or 2 efficient SQL queries (no in-memory filtering or unnecessary object creation)
+    val parents = inject[CommentRepo].getMessages(uriId, userId) // all message threads with this user
 
-    messages.map { message =>
-      getMessagesRead(userId, message.id.get) match {
-        case Some(commentRead) if commentRead.lastReadId.id < getLatestChildId(message.id.get).id =>
-          Some(message)
-        case Some(commentRead)=>
-          None
-        case None =>
-          Some(message)
-      }
-    }.flatten
+    parents.filter { parent =>
+      getByUserAndParent(userId, parent.id.get)
+        .map(_.lastReadId.id < getLatestChildId(parent.id.get).id)
+        .getOrElse(true)
+    }
   }
 
-  def getCommentRead(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[CommentRead] =
+  def getByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[CommentRead] =
     (for (f <- table if f.userId === userId && f.uriId === uriId && f.parentId.isNull && f.state === CommentReadStates.ACTIVE) yield f).firstOption
 
   def hasUnreadComments(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
     val lastCommentIdOpt = inject[CommentRepo].getLastPublicIdByConnection(userId, uriId)
     lastCommentIdOpt match {
       case Some(lastCommentId) =>
-        getCommentRead(userId, uriId) match {
+        getByUserAndUri(userId, uriId) match {
           case Some(commentRead)  => // ∃ messages, ∃ CommentRead
             commentRead.lastReadId.id < lastCommentId.id
           case None => // ∃ messages, !∃ CommentRead

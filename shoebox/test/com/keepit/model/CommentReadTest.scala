@@ -83,7 +83,7 @@ class CommentReadTest extends SpecificationWithJUnit with DbRepos {
           commentReadRepo.hasUnreadComments(user3.id.get, uri1.id.get) === false
           commentReadRepo.hasUnreadComments(user3.id.get, uri2.id.get) === false
 
-          commentReadRepo.getCommentRead(user1.id.get, uri1.id.get).isDefined == false
+          commentReadRepo.getByUserAndUri(user1.id.get, uri1.id.get).isDefined == false
 
           commentReadRepo.save(CommentRead(userId = user1.id.get, uriId = uri1.id.get, lastReadId = comment2.id.get))
 
@@ -113,21 +113,21 @@ class CommentReadTest extends SpecificationWithJUnit with DbRepos {
 
           // Initially, all messages should be unread
 
-          val messages = commentReadRepo.getUnreadMessages(user1.id.get, uri1.id.get)
+          val messages = commentReadRepo.getParentsOfUnreadMessages(user1.id.get, uri1.id.get)
           messages.size === 2
           commentReadRepo.save(CommentRead(userId = user1.id.get, uriId = uri1.id.get, lastReadId = msg1.id.get, parentId = Some(msg1.id.get)))
-          commentReadRepo.getUnreadMessages(user1.id.get, uri1.id.get).size === 1
+          commentReadRepo.getParentsOfUnreadMessages(user1.id.get, uri1.id.get).size === 1
           commentReadRepo.save(CommentRead(userId = user1.id.get, uriId = uri1.id.get, lastReadId = msg2.id.get, parentId = Some(msg2.id.get)))
-          commentReadRepo.getUnreadMessages(user1.id.get, uri1.id.get).size === 0
+          commentReadRepo.getParentsOfUnreadMessages(user1.id.get, uri1.id.get).size === 0
 
-          commentReadRepo.getUnreadMessages(user2.id.get, uri1.id.get).size === 3
+          commentReadRepo.getParentsOfUnreadMessages(user2.id.get, uri1.id.get).size === 3
           commentReadRepo.save(CommentRead(userId = user2.id.get, uriId = uri1.id.get, lastReadId = messages(1).id.get, parentId = Some(messages(1).id.get)))
-          commentReadRepo.getUnreadMessages(user2.id.get, uri1.id.get).size === 2
+          commentReadRepo.getParentsOfUnreadMessages(user2.id.get, uri1.id.get).size === 2
           commentReadRepo.save(CommentRead(userId = user2.id.get, uriId = uri1.id.get, lastReadId = msg4.id.get, parentId = Some(msg3.id.get)))
-          commentReadRepo.getUnreadMessages(user2.id.get, uri1.id.get).size === 1
+          commentReadRepo.getParentsOfUnreadMessages(user2.id.get, uri1.id.get).size === 1
 
           val msg5 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google5", permissions = CommentPermissions.MESSAGE, parent = msg1.id))
-          commentReadRepo.getUnreadMessages(user1.id.get, uri1.id.get).size === 1
+          commentReadRepo.getParentsOfUnreadMessages(user1.id.get, uri1.id.get).size === 1
 
         }
       }
@@ -156,7 +156,7 @@ class CommentReadTest extends SpecificationWithJUnit with DbRepos {
         val commentReadRepo = inject[CommentReadRepo]
 
         val externalId = inject[DBConnection].readOnly {implicit session =>
-          val messages = commentReadRepo.getUnreadMessages(user2.id.get, uri1.id.get)
+          val messages = commentReadRepo.getParentsOfUnreadMessages(user2.id.get, uri1.id.get)
           messages.size === 3
           messages.head.externalId
         }
@@ -169,7 +169,7 @@ class CommentReadTest extends SpecificationWithJUnit with DbRepos {
         status(result) must equalTo(OK)
 
         inject[DBConnection].readOnly {implicit session =>
-          val messages = commentReadRepo.getUnreadMessages(user1.id.get, uri1.id.get)
+          val messages = commentReadRepo.getParentsOfUnreadMessages(user1.id.get, uri1.id.get)
           messages.size === 1
         }
       }
