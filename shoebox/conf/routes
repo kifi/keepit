@@ -30,8 +30,8 @@ POST    /messages                   com.keepit.controllers.CommentController.cre
 GET     /r/:id                      com.keepit.controllers.DeepLinkController.handle(id: String)
 
 GET     /users/slider               com.keepit.controllers.UserController.getSliderInfo(url: String)
+POST    /users/slider/suppress      com.keepit.controllers.UserController.suppressSliderForSite
 GET     /users/slider/updates       com.keepit.controllers.CommentController.getUpdates(url: String)
-GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
 GET     /users/friends              com.keepit.controllers.UserController.getSocialConnections()
 POST    /users/events               com.keepit.controllers.EventController.logUserEvents
 
