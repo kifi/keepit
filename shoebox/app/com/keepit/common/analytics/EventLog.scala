@@ -1,16 +1,13 @@
 package com.keepit.common.analytics
 
-import java.sql.Connection
-import com.keepit.common.time._
 import org.joda.time.DateTime
+
+import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.State
-import com.keepit.common.db.Id
+import com.keepit.common.time._
 import com.keepit.inject.inject
 import com.keepit.model._
-import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoServices
-import java.util.{Set => JSet}
 
 import play.api.Play.current
 import play.api.libs.json._
@@ -42,6 +39,7 @@ object EventFamilies {
   // Server
   val GENERIC_SERVER = ServerEventFamily("")
   val EXCEPTION = ServerEventFamily("exception")
+  val DOMAIN_TAG_IMPORT = ServerEventFamily("domain_tag_import")
 
   def apply(event: String): EventFamily = {
     event.toLowerCase.trim match {
