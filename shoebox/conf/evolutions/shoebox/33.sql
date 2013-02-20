@@ -1,5 +1,4 @@
 # --- !Ups
-
 CREATE TABLE url_pattern (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     pattern varchar(2048) NOT NULL,
@@ -11,6 +10,7 @@ CREATE TABLE url_pattern (
 
 CREATE INDEX url_pattern__pattern_index ON url_pattern (pattern);
 
+-- Note: escape backslashes below as \\ before running in MySQL
 INSERT INTO url_pattern (pattern, example, state, created_at, updated_at) VALUES
     ('^https?://(www\.)?keepitfindit\.com', 'http://www.keepitfindit.com/', 'active', now(), now()),
     ('^https?://www\.facebook\.com', 'https://www.facebook.com/zuck', 'active', now(), now()),

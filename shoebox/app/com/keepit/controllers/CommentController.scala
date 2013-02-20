@@ -48,6 +48,7 @@ object CommentController extends FortyTwoController {
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val commentRepo = inject[CommentRepo]
+      val commentReadRepo = inject[CommentReadRepo]
       val userId = request.userId
       val uri = uriRepo.save(uriRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
 
@@ -64,9 +65,25 @@ object CommentController extends FortyTwoController {
         case "message" =>
           val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
           createRecipients(newComment.id.get, recipients, parentIdOpt)
+
+          val newCommentRead = commentReadRepo.getMessagesRead(userId, parentIdOpt.getOrElse(newComment.id.get)) match {
+            case Some(commentRead) => // existing CommentRead entry for this message thread
+              assert(commentRead.parentId.isDefined)
+              commentRead.withLastReadId(newComment.id.get)
+            case None =>
+              CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(parentIdOpt.getOrElse(newComment.id.get)), lastReadId = newComment.id.get)
+          }
+          commentReadRepo.save(newCommentRead)
           newComment
         case "public" | "" =>
-          commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = parentIdOpt))
+          val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = None))
+          commentReadRepo.save(commentReadRepo.getCommentRead(userId, uri.id.get) match {
+            case Some(commentRead) => // existing CommentRead entry for this message thread
+              commentRead.withLastReadId(newComment.id.get)
+            case None =>
+              CommentRead(userId = userId, uriId = uri.id.get, lastReadId = newComment.id.get)
+          })
+          newComment
         case _ =>
           throw new Exception("Invalid comment permission")
       }
@@ -86,16 +103,21 @@ object CommentController extends FortyTwoController {
   }
 
   def getUpdates(url: String) = AuthenticatedJsonAction { request =>
-    val (messageCount, publicCount) = inject[DBConnection].readOnly{ implicit s =>
+    val (messageCount, publicCount) = inject[DBConnection].readOnly { implicit s =>
       val commentRepo = inject[CommentRepo]
+      val commentReadRepo = inject[CommentReadRepo]
+
       inject[NormalizedURIRepo].getByNormalizedUrl(url) map {uri =>
         val uriId = uri.id.get
         val userId = request.userId
+
         val messageCount = commentRepo.getMessagesWithChildrenCount(uriId, userId)
         val publicCount = commentRepo.getPublicCount(uriId)
+
         (messageCount, publicCount)
       } getOrElse (0, 0)
     }
+
     Ok(JsObject(List(
         "publicCount" -> JsNumber(publicCount),
         "messageCount" -> JsNumber(messageCount),
@@ -104,11 +126,40 @@ object CommentController extends FortyTwoController {
   }
 
   def getComments(url: String) = AuthenticatedJsonAction { request =>
-    val comments = inject[DBConnection].readOnly{ implicit session =>
-      inject[NormalizedURIRepo].getByNormalizedUrl(url) map { normalizedURI =>
+    val commentReadRepo = inject[CommentReadRepo]
+
+    val (comments, commentRead) = inject[DBConnection].readOnly { implicit session =>
+      val normUriOpt = inject[NormalizedURIRepo].getByNormalizedUrl(url)
+
+      val comments = normUriOpt map { normalizedURI =>
           publicComments(normalizedURI).map(inject[CommentWithSocialUserRepo].load(_))
         } getOrElse Nil
+
+      val lastCommentId = comments match {
+        case Nil => None
+        case commentList => Some(commentList.map(_.comment.id.get).maxBy(_.id))
+      }
+
+      val commentRead = normUriOpt.flatMap { normUri =>
+        lastCommentId.map { lastCom =>
+          commentReadRepo.getCommentRead(request.userId, normUri.id.get) match {
+            case Some(commentRead) => // existing CommentRead entry for this user/url
+              if (commentRead.lastReadId.id < lastCom.id) Some(commentRead.withLastReadId(lastCom))
+              else None
+            case None =>
+              Some(CommentRead(userId = request.userId, uriId = normUri.id.get, lastReadId = lastCom))
+          }
+        }
+      }
+      (comments, commentRead.flatten)
     }
+
+    commentRead.map { cr =>
+      inject[DBConnection].readWrite { implicit session =>
+        commentReadRepo.save(cr)
+      }
+    }
+
     Ok(commentWithSocialUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
   }
 
@@ -124,15 +175,39 @@ object CommentController extends FortyTwoController {
   }
 
   def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
-    val replies = inject[DBConnection].readOnly{ implicit session =>
-      val repo = inject[CommentRepo]
+    val repo = inject[CommentRepo]
+    val commentReadRepo = inject[CommentReadRepo]
+
+    val (replies, commentReadOpt) = inject[DBConnection].readOnly{ implicit session =>
       val comment = repo.get(commentId)
       val parent = comment.parent map (repo.get) getOrElse (comment)
-      if (true) // TODO: hasPermission(user.id.get, comment.id.get) ???????????????
-        (Seq(parent) ++ repo.getChildren(parent.id.get) map { child => inject[CommentWithSocialUserRepo].load(child) })
-      else
-          Nil
+
+      val replies = (Seq(parent) ++ repo.getChildren(parent.id.get) map { child => inject[CommentWithSocialUserRepo].load(child) })
+
+      val lastMessageId = replies match {
+        case Nil => None
+        case repliesList => Some(repliesList.map(_.comment.id.get).maxBy(_.id))
+      }
+
+      val commentRead = lastMessageId.flatMap { lastMessage =>
+        commentReadRepo.getMessagesRead(request.userId, parent.id.get).map{ msg =>
+          if(msg.lastReadId.id == lastMessage.id)
+            None
+          else
+            Some(msg.withLastReadId(lastMessage))
+        }.getOrElse{
+          Some(CommentRead(userId = request.userId, uriId = parent.uriId, parentId = parent.id, lastReadId = lastMessage))
+        }
+      }
+      (replies, commentRead)
     }
+
+    commentReadOpt.map { commentRead =>
+      inject[DBConnection].readWrite{ implicit session =>
+        commentReadRepo.save(commentRead)
+      }
+    }
+
     Ok(commentWithSocialUserSerializer.writes(CommentPermissions.MESSAGE -> replies))
   }
 
@@ -174,7 +249,7 @@ object CommentController extends FortyTwoController {
   // Given a list of comma separated external user ids, side effects and creates all the necessary recipients
   // For comments with a parent comment, adds recipients to parent comment instead.
   private def createRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit session: RWSession) = {
-    recipients.split(",").map(_.trim()) map { recipientId =>
+    recipients.split(",").map(_.trim()).map { recipientId =>
       // Split incoming list of externalIds
       try {
         val repo = inject[CommentRecipientRepo]

@@ -8,6 +8,7 @@ import com.keepit.common.time._
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api.libs.json._
+import scala.collection.mutable
 
 case class SliderRule (
   id: Option[Id[SliderRule]] = None,
@@ -42,7 +43,8 @@ object SliderRuleGroup {
 @ImplementedBy(classOf[SliderRuleRepoImpl])
 trait SliderRuleRepo extends Repo[SliderRule] {
   def getGroup(groupName: String)(implicit session: RSession): SliderRuleGroup
-  def getGroupVersion(groupName: String)(implicit session: RSession): String
+  def getByName(name: String, excludeState: Option[State[SliderRule]] = Some(SliderRuleStates.INACTIVE))
+    (implicit session: RSession): Seq[SliderRule]
 }
 
 @Singleton
@@ -59,24 +61,19 @@ class SliderRuleRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sl
     def * = id.? ~ groupName ~ name ~ parameters.? ~ state ~ createdAt ~ updatedAt <> (SliderRule, SliderRule.unapply _)
   }
 
-  val groupVersionCache = collection.mutable.Map[String, String]()  // name -> version
+  val groupCache: mutable.Map[String, SliderRuleGroup] =   // name -> group TODO: memcache?
+     new mutable.HashMap[String, SliderRuleGroup] with mutable.SynchronizedMap[String, SliderRuleGroup] {}
 
   override def save(rule: SliderRule)(implicit session: RWSession): SliderRule = {
     val newRule = super.save(rule)
-    groupVersionCache(rule.groupName) = SliderRuleGroup.version(newRule.updatedAt)
+    groupCache -= rule.groupName
     newRule
   }
 
-  def getGroup(groupName: String)(implicit session: RSession): SliderRuleGroup = {
-    val group = SliderRuleGroup((for(f <- table if f.groupName === groupName) yield f).list)
-    if (!groupVersionCache.contains(groupName)) {
-      groupVersionCache(groupName) = group.version
-    }
-    group
-  }
+  def getGroup(groupName: String)(implicit session: RSession): SliderRuleGroup =
+    groupCache.getOrElseUpdate(groupName, SliderRuleGroup((for(r <- table if r.groupName === groupName) yield r).list))
 
-  def getGroupVersion(groupName: String)(implicit session: RSession): String =
-    groupVersionCache.getOrElseUpdate(
-      groupName,
-      SliderRuleGroup.version((for(f <- table if f.groupName === groupName) yield f.updatedAt).list.max)) // TODO: remove .list
+  def getByName(name: String, excludeState: Option[State[SliderRule]] = Some(SliderRuleStates.INACTIVE))
+      (implicit session: RSession): Seq[SliderRule] =
+    (for(r <- table if r.name === name && r.state =!= excludeState.getOrElse(null)) yield r).list
 }

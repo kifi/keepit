@@ -16,8 +16,12 @@ import play.api.libs.json._
 import com.keepit.inject._
 import com.keepit.common.healthcheck._
 import com.keepit.common.cache._
+
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
+
+import collection.SeqProxy
+
 
 case class Comment(
   id: Option[Id[Comment]] = None,
@@ -47,6 +51,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
   def getChildCount(commentId: Id[Comment])(implicit session: RSession): Int
   def getPublic(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
+  def getLastPublicIdByConnection(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[Id[Comment]]
   def getPublicCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int
   def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
@@ -127,6 +132,18 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
     (for {
       b <- table if b.uriId === uriId && b.permissions === CommentPermissions.PUBLIC && b.parent.isNull && b.state === CommentStates.ACTIVE
     } yield b).list
+
+  def getLastPublicIdByConnection(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[Id[Comment]] = {
+    val friends = inject[SocialConnectionRepoImpl].getFortyTwoUserConnections(userId)
+    val commentsOnPage = (for {
+      c <- table  if c.uriId === uriId && c.permissions === CommentPermissions.PUBLIC && c.state === CommentStates.ACTIVE
+    } yield c).list
+    commentsOnPage.filter(c => friends.contains(c.userId)).map(_.id.get) match {
+      case Nil => None
+      case commentList => Some(commentList.maxBy(_.id))
+    }
+  }
+
   
   def getPublicCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int =
     commentCountCache.getOrElse(CommentCountUriIdKey(uriId)) {

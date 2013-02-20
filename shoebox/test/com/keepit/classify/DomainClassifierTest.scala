@@ -3,6 +3,7 @@ package com.keepit.classify
 import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationWithJUnit
 
+import com.keepit.common.analytics.{FakePersistEventPluginImpl, PersistEventPlugin}
 import com.keepit.common.db.slick.DBConnection
 import com.keepit.common.net.FakeHttpClient
 import com.keepit.inject.{provide, inject}
@@ -12,6 +13,7 @@ import akka.actor.ActorSystem
 import scala.concurrent.Await
 import play.api.Play.current
 import play.api.test.Helpers.running
+
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import java.util.concurrent.TimeUnit
@@ -29,7 +31,8 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
         val domainRepo = inject[DomainRepo]
         val domainToTagRepo = inject[DomainToTagRepo]
         val importer = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], provide(new DateTime), system, db, DomainTagImportSettings())
+          inject[SensitivityUpdater], provide(new DateTime), system, db,
+          new FakePersistEventPluginImpl(system), DomainTagImportSettings())
         inject[DBConnection].readWrite { implicit s =>
           tagRepo.save(DomainTag(name = DomainTagName("Search Engines"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("Technology and computers"), sensitive = Some(false)))

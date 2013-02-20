@@ -24,6 +24,7 @@ case class Domain(
   def withManualSensitive(sensitive: Option[Boolean]) = this.copy(manualSensitive = sensitive)
   def withState(state: State[Domain]) = this.copy(state = state)
   val sensitive: Option[Boolean] = manualSensitive orElse autoSensitive
+  def isActive: Boolean = state == DomainStates.ACTIVE
 }
 
 object Domain {
@@ -37,6 +38,8 @@ trait DomainRepo extends Repo[Domain] {
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Option[Domain]
   def getAll(domains: Seq[Id[Domain]], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
+      (implicit session: RSession): Seq[Domain]
+  def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain]
 }
 
@@ -55,11 +58,15 @@ class DomainRepoImpl @Inject()(val db: DataBaseComponent) extends DbRepo[Domain]
 
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Option[Domain] =
-    (for (d <- table if d.hostname === domain && d.state =!= excludeState.getOrElse(null)) yield d).firstOption
+    (for (d <- table if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
 
   def getAll(domains: Seq[Id[Domain]], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain] =
-    (for (d <- table if d.id.inSet(domains) && d.state =!= excludeState.getOrElse(null)) yield d).list
+    (for (d <- table if d.id.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
+
+  def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
+      (implicit session: RSession): Seq[Domain] =
+    (for (d <- table if d.state =!= excludeState.orNull && d.manualSensitive.isNotNull) yield d).list
 }
 
 object DomainStates extends States[Domain]

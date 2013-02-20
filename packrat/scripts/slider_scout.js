@@ -51,15 +51,15 @@ var slider, injected, t0 = +new Date;
       });
     },
     auto_show: autoShow.bind(null, "auto"),
-    slider_rules: function(sliderRules, showOnScroll) {
+    slider_rules: function(sliderRules) {
       rules = sliderRules;
-      if (showOnScroll) {
+      if (rules.scroll) {
         document.addEventListener("scroll", onScrollMaybeShow);
       }
     },
-    deep_link: function(link) {
+    open_slider_to: function(data) {
       withSlider(function() {
-        slider.openDeepLink(link);
+        slider.shown() || slider.show(data.trigger, data.locator);
       });
     }});
   api.port.emit("get_slider_rules");

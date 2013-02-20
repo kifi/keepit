@@ -125,10 +125,10 @@ object BookmarksController extends FortyTwoController {
   def checkIfExists(uri: String, ver: Option[String]) = AuthenticatedJsonAction { request =>
     val userId = request.userId
     // TODO: Optimize by not checking sensitivity and keptByAnyFriends if kept by user.
-    val (uriId, bookmark, sensitive, friendIds, ruleGroup) = inject[DBConnection].readOnly { implicit s =>
+    val (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, locator, shown) = inject[DBConnection].readOnly { implicit s =>
       val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
       val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
-      val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>
+      val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>  // TODO: check domain even if nUri is None
         inject[DomainClassifier].isSensitive(domain).right.getOrElse(None)
       }
       val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
@@ -136,10 +136,26 @@ object BookmarksController extends FortyTwoController {
       }
       val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
       val ruleGroup: Option[SliderRuleGroup] = ver.flatMap { v =>
-        val repo = inject[SliderRuleRepo]
-        if (v == repo.getGroupVersion("default")) None else Some(repo.getGroup("default"))
+        val group = inject[SliderRuleRepo].getGroup("default")
+        if (v == group.version) None else Some(group)
       }
-      (uriId, bookmark, sensitive, friendIds, ruleGroup)
+      val patterns: Option[Seq[String]] = ruleGroup.map(_ => inject[URLPatternRepo].getActivePatterns)
+
+      val locator: Option[DeepLocator] = uriId.flatMap { uriId =>
+        val repo = inject[CommentReadRepo]
+        val messages = repo.getUnreadMessages(userId, uriId)
+        messages.size match {
+          case 0 => if (repo.hasUnreadComments(userId, uriId)) Some(DeepLocator.ofCommentList) else None
+          case 1 => Some(DeepLocator.ofMessageThread(messages.head))
+          case _ => Some(DeepLocator.ofMessageThreadList)
+        }
+      }
+
+      val shown: Option[Boolean] = if (locator.isDefined) None else uriId.map { uriId =>
+        inject[SliderHistoryTracker].getMultiHashFilter(userId).mayContain(uriId.id)
+      }
+
+      (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, locator, shown)
     }
 
     val keptByAnyFriends = uriId.map { uriId =>
@@ -154,7 +170,16 @@ object BookmarksController extends FortyTwoController {
       "kept" -> JsBoolean(bookmark.isDefined),
       "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
       "sensitive" -> JsBoolean(sensitive.getOrElse(false))) ++
-      ruleGroup.map{g => Seq("rules" -> g.compactJson)}.getOrElse(Nil)))
+      locator.map { l => Seq(
+        "locator" -> JsString(l.value))
+      }.getOrElse(Nil) ++
+      shown.map { s => Seq(
+        "shown" -> JsBoolean(s))
+      }.getOrElse(Nil) ++
+      ruleGroup.map { g => Seq(
+        "rules" -> g.compactJson,
+        "patterns" -> JsArray(patterns.get.map(JsString)))
+      }.getOrElse(Nil)))
   }
 
   def remove() = AuthenticatedJsonAction { request =>

@@ -5,19 +5,23 @@ import akka.actor.ActorSystem
 import com.keepit.common.db.Id
 import play.api.Plugin
 import akka.actor.Cancellable
+import org.joda.time._
+
 import com.google.inject.Inject
-import akka.actor.Actor
+import com.keepit.common.db.Id
+import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
-import com.keepit.search.graph.URIGraph
-import akka.util.Timeout
-import akka.actor.Props
+import com.keepit.common.time._
+import com.keepit.inject._
 import com.keepit.model.User
 import play.api.libs.concurrent.Execution.Implicits._
+
+import akka.actor.Actor
+import akka.actor.ActorSystem
+import akka.actor.Props
+
 import play.api.Play.current
-import com.keepit.common.healthcheck._
-import com.keepit.inject._
-import com.keepit.common.time._
-import org.joda.time._
+import play.api.Plugin
 
 case object Load
 case class Update(userId: Id[User])
@@ -36,10 +40,10 @@ private[analytics] class PersistEventActor extends Actor with Logging {
         // If we get this, use parallel actors.
       }
       else {
-        try { event.persistToS3 } catch { case ex: Throwable =>
+        try { event.persistToS3() } catch { case ex: Throwable =>
           inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         }
-        try { event.persistToMongo } catch { case ex: Throwable =>
+        try { event.persistToMongo() } catch { case ex: Throwable =>
           inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         }
       }

@@ -137,6 +137,7 @@ class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
         json1 \ "installationId" === JsString(kifiInstallation1.externalId.id)
         json1 \ "rules" \ "version" must beAnInstanceOf[JsString]
         json1 \ "rules" \ "rules" must beAnInstanceOf[JsObject]
+        json1 \ "patterns" must beAnInstanceOf[JsArray]
 
         //second round
         val fakeRequest2 = FakeRequest().

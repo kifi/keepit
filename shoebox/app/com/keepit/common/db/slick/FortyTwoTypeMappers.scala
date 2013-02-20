@@ -111,6 +111,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new StateMapperDelegate[DomainToTag](profile)
   }
 
+  implicit object UserToDomainKindTypeMapper extends BaseTypeMapper[State[UserToDomainKind]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[UserToDomainKind](profile)
+  }
+
   //Other
   implicit object URLHistorySeqHistoryTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
     def apply(profile: BasicProfile) = new URLHistorySeqMapperDelegate(profile)

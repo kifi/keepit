@@ -34,7 +34,7 @@ import akka.actor.{Scheduler, Cancellable, ActorRef}
 import akka.util.Duration
 import scala.collection.mutable.{Stack => MutableStack}
 import com.google.inject.multibindings.Multibinder
-import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
+import com.keepit.common.analytics.{SliderShownListener, UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
 import akka.actor.Scheduler
 import akka.actor.Cancellable
@@ -92,6 +92,7 @@ case class TestModule() extends ScalaModule {
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
+    listenerBinder.addBinding().to(classOf[SliderShownListener])
   }
 
   @Provides @Singleton

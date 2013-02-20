@@ -24,8 +24,7 @@ import com.keepit.common.net.HttpClientImpl
 import com.keepit.common.social._
 import com.keepit.common.store.S3Bucket
 import com.keepit.inject._
-import com.keepit.model.NormalizedURI
-import com.keepit.model.SocialUserInfo
+import com.keepit.model.{SliderHistoryTracker, NormalizedURI, SocialUserInfo}
 import com.keepit.scraper._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
@@ -77,6 +76,7 @@ class DevModule() extends ScalaModule with Logging {
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
+    listenerBinder.addBinding().to(classOf[SliderShownListener])
   }
 
   @Singleton
@@ -278,6 +278,17 @@ class DevModule() extends ScalaModule with Logging {
     val minHits = conf.getInt("minHits").get
 
     BrowsingHistoryTracker(filterSize, numHashFuncs, minHits)
+  }
+
+  @Singleton
+  @Provides
+  def sliderHistoryTracker: SliderHistoryTracker = {
+    val conf = current.configuration.getConfig("slider-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    SliderHistoryTracker(filterSize, numHashFuncs, minHits)
   }
 
   @Singleton

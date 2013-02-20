@@ -12,6 +12,7 @@ CREATE TABLE slider_rule (
 );
 
 CREATE INDEX slider_rule_group_name_index ON slider_rule (group_name);
+CREATE INDEX slider_rule_name_index ON slider_rule (name);
 
 INSERT INTO slider_rule (group_name, name, parameters, state, created_at, updated_at) VALUES
     ('default', 'message', null, 'active', now(), now()),
