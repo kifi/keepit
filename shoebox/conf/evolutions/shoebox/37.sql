@@ -13,9 +13,6 @@ CREATE TABLE user_to_domain (
     CONSTRAINT user_to_domain__domain_id FOREIGN KEY (domain_id) REFERENCES domain(id),
     UNIQUE INDEX user_to_domain__user_id_domain_id_kind (user_id, domain_id, kind));
 
-CREATE INDEX user_to_domain_tag_id_index ON user_to_domain (tag_id, state);
-CREATE INDEX user_to_domain_domain_id_index ON user_to_domain (domain_id, state);
-
 insert into evolutions (name, description) values('37.sql', 'adding user_to_domain table');
 
 # --- !Downs
