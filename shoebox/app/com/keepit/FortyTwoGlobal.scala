@@ -45,16 +45,13 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
     if (app.mode != Mode.Test) {
       require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
     }
-    println("Starting %s".format(this))
     val services = injector.inject[FortyTwoServices]
-    val baseUrl: String = services.baseUrl
-    val startMessage = "FortyTwo %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
-        services.currentService, services.currentVersion, services.compilationTime, baseUrl)
+    val startMessage = ">>>>>>>>>> FortyTwo [%s] service %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
+        this, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
     log.info(startMessage)
     println(startMessage)
     injector.inject[AppScope].onStart(app)
-    println("%s started".format(this))
-    if (app.mode != Mode.Test   && app.mode != Mode.Dev) injector.inject[HealthcheckPlugin].reportStart()
+    if (app.mode != Mode.Test && app.mode != Mode.Dev) injector.inject[HealthcheckPlugin].reportStart()
   }
 
   override def onError(request: RequestHeader, ex: Throwable): Result = {
@@ -69,12 +66,18 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
   }
 
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
-    log.info(">>>>> Stopping " + this)
+    val stopMessage = "<<<<<<<<<< Stopping " + this
+    println(stopMessage)
+    log.info(stopMessage)
     try {
       if (app.mode != Mode.Test && app.mode != Mode.Dev) injector.inject[HealthcheckPlugin].reportStop()
       injector.inject[AppScope].onStop(app)
     } catch {
-      case e: Throwable => log.error("====================== error during onStop ===============================", e)
+      case e: Throwable => 
+        val errorMessage = "====================== error during onStop ==============================="
+        println(errorMessage)
+        e.printStackTrace
+        log.error(errorMessage, e)
     }
   }
 

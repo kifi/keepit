@@ -78,6 +78,9 @@ trait DbRepos {
 
 case class TestModule() extends ScalaModule {
   def configure(): Unit = {
+    val appScope = new AppScope
+    bindScope(classOf[AppScoped], appScope)
+    bind[AppScope].toInstance(appScope)
     bind[Babysitter].to[FakeBabysitter]
     install(new SlickModule(new DbInfo() {
       //later on we can customize it by the application name
