@@ -119,7 +119,7 @@ object NormalizedURIFactory {
   def apply(title: Option[String], url: String, state: State[NormalizedURI]): NormalizedURI = {
     val normalized = normalize(url)
     NormalizedURI(title = title, url = normalized,
-      domain = URI.parse(normalized).flatMap(_.host).map(_.fqdn),
+      domain = URI.parse(normalized).flatMap(_.host).map(_.name),
       urlHash = hashUrl(normalized), state = state)
   }
 

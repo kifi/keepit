@@ -1,15 +1,13 @@
 package com.keepit.model
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
 import com.keepit.inject._
 import com.keepit.test.EmptyApplication
 
 import play.api.Play.current
-import play.api.test._
 import play.api.test.Helpers._
 
 class URLTest extends SpecificationWithJUnit {
@@ -45,6 +43,10 @@ class URLTest extends SpecificationWithJUnit {
         }
 
       }
+    }
+    "correctly parse domains when using the factory" in {
+      val uri = URLFactory("https://mail.google.com/mail/u/1/", Id[NormalizedURI](42), null, null)
+      uri.domain === Some("mail.google.com")
     }
   }
 }
