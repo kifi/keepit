@@ -60,7 +60,7 @@ object UserController extends FortyTwoController {
 
   def suppressSliderForSite() = AuthenticatedJsonAction { request =>
     val json = request.body.asJson.get
-    val host: String = URI.parse((json \ "url").as[String]).get.host.get.fqdn
+    val host: String = URI.parse((json \ "url").as[String]).get.host.get.name
     val suppress: Boolean = (json \ "suppress").as[Boolean]
     val utd = inject[DBConnection].readWrite {implicit s =>
       val domainRepo = inject[DomainRepo]
