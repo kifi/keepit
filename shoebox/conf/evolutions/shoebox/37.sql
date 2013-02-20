@@ -16,6 +16,6 @@ CREATE TABLE user_to_domain (
 CREATE INDEX user_to_domain_tag_id_index ON user_to_domain (tag_id, state);
 CREATE INDEX user_to_domain_domain_id_index ON user_to_domain (domain_id, state);
 
-insert into evolutions (name, description) values('31.sql', 'adding user_to_domain table');
+insert into evolutions (name, description) values('37.sql', 'adding user_to_domain table');
 
 # --- !Downs
