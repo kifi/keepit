@@ -19,7 +19,7 @@ import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
 import com.keepit.serializer.SliderHistoryBinarySerializer
-import akka.util.duration._
+import scala.concurrent.duration._
 import com.keepit.search.MultiHashFilter
 
 case class SliderHistory (
