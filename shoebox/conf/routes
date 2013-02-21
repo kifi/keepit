@@ -132,6 +132,7 @@ POST    /admin/slider/domainTags    com.keepit.controllers.admin.SliderAdminCont
 GET     /admin/slider/domains       com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
 POST    /admin/slider/domains       com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
 POST    /admin/slider/domains/fetch com.keepit.controllers.admin.SliderAdminController.refetchClassifications
+GET     /admin/slider/importEvents  com.keepit.controllers.admin.SliderAdminController.getImportEvents
 
 GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
 GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()

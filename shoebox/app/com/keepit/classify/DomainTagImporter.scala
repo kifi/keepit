@@ -32,10 +32,26 @@ private case object RefetchAll
 private case class ApplyTag(tagName: DomainTagName, domainNames: Seq[String])
 private case class RemoveTag(tagName: DomainTagName)
 
+object DomainTagImportEvents {
+  // success
+  val IMPORT_START = "importStart"
+  val IMPORT_TAG_SUCCESS = "importTagSuccess"
+  val IMPORT_SUCCESS = "importSuccess"
+  val REMOVE_TAG_SUCCESS = "removeTagSuccess"
+
+  // exceptions
+  val IMPORT_TAG_FAILURE = "importTagFailure"
+  val IMPORT_FAILURE = "importFailure"
+  val APPLY_TAG_FAILURE = "applyTagFailure"
+  val REMOVE_TAG_FAILURE = "removeTagFailure"
+}
+
 private[classify] class DomainTagImportActor(db: DBConnection, updater: SensitivityUpdater, clock: Provider[DateTime],
     domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo,
     persistEventPlugin: PersistEventPlugin, settings: DomainTagImportSettings)
     extends Actor with Logging {
+
+  import DomainTagImportEvents._
 
   private val FILE_FORMAT = "domains_%s.zip"
 
@@ -51,7 +67,7 @@ private[classify] class DomainTagImportActor(db: DBConnection, updater: Sensitiv
         val outputFilename = FILE_FORMAT.format(clock.get().toString(DATE_FORMAT))
         val outputPath = new URI("%s/%s".format(settings.localDir, outputFilename)).normalize.getPath
         log.info("refetching all domains to %s".format(outputPath))
-        persistEvent("importStart", JsObject(Seq()))
+        persistEvent(IMPORT_START, JsObject(Seq()))
         WS.url(settings.url).get().onRedeem { res =>
           val s = new FileOutputStream(outputPath)
           try {
@@ -75,21 +91,21 @@ private[classify] class DomainTagImportActor(db: DBConnection, updater: Sensitiv
               Some(withSensitivityUpdate(applyTagToDomains(tagName, domains)))
             } else None
           }).flatten
-          persistEvent("importSuccess", JsObject(Seq(
+          persistEvent(IMPORT_SUCCESS, JsObject(Seq(
             "numDomainsAdded" -> JsNumber(results.map(_.added).sum),
             "numDomainsRemoved" -> JsNumber(results.map(_.removed).sum),
             "totalDomains" -> JsNumber(results.map(_.total).sum)
           )))
         }
       } catch {
-        case e: Exception => failWithException("importFailure", e)
+        case e: Exception => failWithException(IMPORT_FAILURE, e)
       }
     case ApplyTag(tagName, domainNames) =>
       try {
         val TagApplyResult(tag, _, _, _) = withSensitivityUpdate(applyTagToDomains(tagName, domainNames))
         sender ! tag
       } catch {
-        case e: Exception => failWithException("applyTagFailure", e)
+        case e: Exception => failWithException(APPLY_TAG_FAILURE, e)
       }
     case RemoveTag(tagName) =>
       try {
@@ -102,14 +118,14 @@ private[classify] class DomainTagImportActor(db: DBConnection, updater: Sensitiv
           }
         }
         result.foreach { tag =>
-          persistEvent("removeTagSuccess", JsObject(Seq(
+          persistEvent(REMOVE_TAG_SUCCESS, JsObject(Seq(
             "tagId" -> JsNumber(tag.id.get.id),
             "tagName" -> JsString(tag.name.name)
           )))
         }
         sender ! result
       } catch {
-        case e: Exception => failWithException("removeTagFailure", e)
+        case e: Exception => failWithException(REMOVE_TAG_FAILURE, e)
       }
   }
 
@@ -220,7 +236,7 @@ private[classify] class DomainTagImportActor(db: DBConnection, updater: Sensitiv
     findRelationshipsToUpdate()
     addNewRelationships()
 
-    persistEvent("importTagSuccess", JsObject(Seq(
+    persistEvent(IMPORT_TAG_SUCCESS, JsObject(Seq(
       "tagId" -> JsNumber(tag.id.get.id),
       "tagName" -> JsString(tag.name.name),
       "numDomainsAdded" -> JsNumber(added),
