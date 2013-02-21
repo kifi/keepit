@@ -151,7 +151,7 @@ slider = function() {
           if (document.querySelector(".kifi-slider")) {
             api.log("No need to inject, it's already here!");
           } else {
-            drawKeepItHover(o.session, o.friends, o.numComments, o.numMessages, template, !locator ? $.noop : function() {
+            drawKeepItHover(o.session, o.friends, o.numComments, o.numMessages, o.neverOnSite, template, !locator ? $.noop : function() {
               openDeepLink(o.session, locator);
             });
             logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: location.href});
@@ -163,7 +163,7 @@ slider = function() {
     });
   }
 
-  function drawKeepItHover(session, friends, numComments, numMessages, renderedTemplate, callback) {
+  function drawKeepItHover(session, friends, numComments, numMessages, neverOnSite, renderedTemplate, callback) {
     $('body').append(renderedTemplate);
 
     updateCommentCount("public", numComments);
@@ -173,6 +173,38 @@ slider = function() {
     var $slider = $(".kifi-slider").draggable({cursor: "move", axis: "y", distance: 10, handle: ".kifi-slider-title-bar", containment: "body", scroll: false})
     .on("click", ".kifi-slider-x", function() {
       slideOut("x");
+    })
+    .on("mousedown", ".kifi-slider-▾", function(e) {
+      e.preventDefault();
+      var $box = $(this).siblings(".kifi-slider-▾-box").fadeIn(50);
+      var $nev = $box.find(".kifi-slider-never")
+        .toggleClass("kifi-checked", !!neverOnSite)
+        .on("mouseenter", enterItem)
+        .on("mouseleave", leaveItem);
+      var $act = $box.closest(".kifi-slider-title-actions")
+        .addClass("kifi-active")
+        .on("mouseleave", function onLeave(e) {
+          $act.removeClass("kifi-active").off("mouseleave", onLeave);
+          $nev.off("mouseenter", enterItem)
+              .off("mouseleave", leaveItem);
+          $box.fadeOut(50);
+        });
+      // .kifi-hover class needed because :hover does not work during drag
+      function enterItem() { $(this).addClass("kifi-hover"); }
+      function leaveItem() { $(this).removeClass("kifi-hover"); }
+    })
+    .on("mouseup", ".kifi-slider-never", function(e) {
+      e.preventDefault();
+      var $nev = $(this).toggleClass("kifi-checked");
+      var never = $nev.hasClass("kifi-checked");
+      api.port.emit("suppress_on_site", never);
+      setTimeout(function() {
+        if (never) {
+          slideOut("never");
+        } else {
+          $nev.closest(".kifi-slider-▾-box").fadeOut(50);
+        }
+      }, 150);
     })
     .on("click", ".kifi-button-unkeep", function() {
       unkeepPage(true);
