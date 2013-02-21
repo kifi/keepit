@@ -1,9 +1,11 @@
 package com.keepit.controllers
 
 import com.keepit.inject._
+import com.keepit.classify.{Domain, DomainRepo, DomainStates}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.net.URI
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
 import com.keepit.serializer.BasicUserSerializer
@@ -24,10 +26,16 @@ case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstal
 object UserController extends FortyTwoController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
-    val (bookmark, following, socialUsers, numComments, numMessages) = inject[DBConnection].readOnly {implicit s =>
-      inject[NormalizedURIRepo].getByNormalizedUrl(url) match {
+    val userId = request.userId
+    val (bookmark, following, socialUsers, numComments, numMessages, neverOnSite) = inject[DBConnection].readOnly {implicit s =>
+      val nUri = inject[NormalizedURIRepo].getByNormalizedUrl(url)
+      val host: String = nUri.flatMap(_.domain).getOrElse(URI.parse(url).get.host.get.name)
+      val neverOnSite: Option[Boolean] = inject[DomainRepo].get(host).flatMap { domain =>
+        inject[UserToDomainRepo].get(userId, domain.id.get, UserToDomainKinds.NEVER_SHOW)
+      }.map(_ => true)
+
+      nUri match {
         case Some(uri) =>
-          val userId = request.userId
           val bookmark = inject[BookmarkRepo].getByUriAndUser(uri.id.get, userId)
           val following = inject[FollowRepo].get(userId, uri.id.get).isDefined
 
@@ -41,9 +49,9 @@ object UserController extends FortyTwoController {
           val numComments = commentRepo.getPublicCount(uri.id.get)
           val numMessages = commentRepo.getMessages(uri.id.get, userId).size
 
-          (bookmark, following, socialUsers, numComments, numMessages)
+          (bookmark, following, socialUsers, numComments, numMessages, neverOnSite)
         case None =>
-          (None, false, Nil, 0, 0)
+          (None, false, Nil, 0, 0, neverOnSite)
       }
     }
 
@@ -53,29 +61,32 @@ object UserController extends FortyTwoController {
         "following" -> JsBoolean(following),
         "friends" -> userWithSocialSerializer.writes(socialUsers),
         "numComments" -> JsNumber(numComments),
-        "numMessages" -> JsNumber(numMessages))))
+        "numMessages" -> JsNumber(numMessages),
+        "neverOnSite" -> JsBoolean(neverOnSite.getOrElse(false)))))
   }
 
-  // TODO: delete once no beta users have old plugin using this (replaced by getSliderInfo)
-  def usersKeptUrl(url: String) = AuthenticatedJsonAction { request =>
-    val socialUsers = inject[DBConnection].readOnly {implicit s =>
-      inject[NormalizedURIRepo].getByNormalizedUrl(url) match {
-        case Some(uri) =>
-          val userId = request.userId
-          val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
-
-          val searcher = inject[URIGraph].getURIGraphSearcher
-          val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
-          val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
-
-          sharingUserIds.map(u => inject[UserWithSocialRepo].toUserWithSocial(inject[UserRepo].get(u))).toSeq
-
+  def suppressSliderForSite() = AuthenticatedJsonAction { request =>
+    val json = request.body.asJson.get
+    val host: String = URI.parse((json \ "url").as[String]).get.host.get.name
+    val suppress: Boolean = (json \ "suppress").as[Boolean]
+    val utd = inject[DBConnection].readWrite {implicit s =>
+      val domainRepo = inject[DomainRepo]
+      val domain = domainRepo.get(host, excludeState = None) match {
+        case Some(d) if d.isActive => d
+        case Some(d) => domainRepo.save(d.withState(DomainStates.ACTIVE))
+        case None => domainRepo.save(Domain(hostname = host))
+      }
+      val utdRepo = inject[UserToDomainRepo]
+      utdRepo.get(request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW) match {
+        case Some(utd) if (utd.isActive != suppress) =>
+          utdRepo.save(utd.withState(if (suppress) UserToDomainStates.ACTIVE else UserToDomainStates.INACTIVE))
+        case Some(utd) => utd
         case None =>
-          Seq[UserWithSocial]()
+          utdRepo.save(UserToDomain(None, request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW))
       }
     }
 
-    Ok(userWithSocialSerializer.writes(socialUsers))
+    Ok(JsObject(Seq("host" -> JsString(host), "suppressed" -> JsBoolean(suppress))))
   }
 
   def getSocialConnections() = AuthenticatedJsonAction { authRequest =>

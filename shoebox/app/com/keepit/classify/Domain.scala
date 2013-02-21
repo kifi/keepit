@@ -24,6 +24,7 @@ case class Domain(
   def withManualSensitive(sensitive: Option[Boolean]) = this.copy(manualSensitive = sensitive)
   def withState(state: State[Domain]) = this.copy(state = state)
   val sensitive: Option[Boolean] = manualSensitive orElse autoSensitive
+  def isActive: Boolean = state == DomainStates.ACTIVE
 }
 
 object Domain {

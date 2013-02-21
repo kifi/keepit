@@ -24,30 +24,6 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
   api.request(method, uri, data, done, fail);
 }
 
-// ===== User history
-
-var userHistory = new UserHistory();
-
-function UserHistory() {
-  var HISTORY_SIZE = 200;
-  this.history = [];
-  this.add = function(uri) {
-    api.log("[UserHistory.add]", uri);
-    this.history.unshift(uri);
-    if (this.history.length > HISTORY_SIZE) {
-      this.history.pop();
-    }
-  }
-  this.exists = function(uri) {
-    for (var i = 0; i < this.history.length; i++) {
-      if (this.history[i] === uri) {
-        return true;
-      }
-    }
-    return false;
-  }
-}
-
 // ===== Event logging
 
 var _eventLog = [];
@@ -158,6 +134,9 @@ api.port.on({
     ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, respond);
     return true;
   },
+  suppress_on_site: function(data, respond, tab) {
+    ajax("POST", "http://" + getConfigs().server + "/users/slider/suppress", {url: tab.url, suppress: data});
+  },
   log_event: function(data) {
     logEvent.apply(null, data);
   },
@@ -209,7 +188,7 @@ function createDeepLinkListener(link, linkTabId, respond) {
       var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") < 0 && tab.url.indexOf("dev.ezkeep.com") < 0;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
-        api.tabs.emit(tab, "deep_link", link.locator);
+        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator});
         api.tabs.on.ready.remove(deepLinkListener);
         return;
       }
@@ -441,18 +420,29 @@ api.tabs.on.loading.add(function(tab) {
   api.log("[tabs.on.loading]", tab);
   setIcon(tab);
 
-  checkKeepStatus(tab, function(resp) {
-    if (!resp.kept && (!resp.sensitive || !session.rules.rules.sensitive)) {
+  checkKeepStatus(tab, function gotKeptStatus(resp) {
+    if (session.rules.rules.message && /^\/messages/.test(resp.locator) ||
+        session.rules.rules.comment && /^\/comments/.test(resp.locator) && !resp.neverOnSite) {
+      var emission = ["open_slider_to", {
+        trigger: resp.locator.substr(1, 7), // "message" or "comment"
+        locator: resp.locator}];
+      if (tab.ready) {
+        api.log("[gotKeptStatus] got locator:", tab.id);
+        api.tabs.emit(tab, emission[0], emission[1]);
+      } else {
+        api.log("[gotKeptStatus] got locator but tab not ready:", tab.id);
+        tab.emitOnReady = emission;
+      }
+    } else if (!resp.kept && !resp.neverOnSite && (!resp.sensitive || !session.rules.rules.sensitive)) {
       var url = tab.url;
       if (session.rules.rules.url && session.patterns.some(function(re) {return re.test(url)})) {
-        api.log("[tabs.on.loading:2] restricted:", url);
+        api.log("[gotKeptStatus] restricted:", url);
         return;
       }
 
-      if (userHistory.exists(url)) {
-        api.log("[tabs.on.loading:2] recently visited:", url);
+      if (session.rules.rules.shown && resp.shown) {
+        api.log("[gotKeptStatus] shown before:", url);
       } else {
-        userHistory.add(url);
         tab.showOnScroll = !!session.rules.rules.scroll;
         tab.autoShowSec = (session.rules.rules[resp.keptByAnyFriends ? "friendKept" : "focus"] || [])[0];
         if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
@@ -468,10 +458,11 @@ api.tabs.on.ready.add(function(tab) {
   api.log("[tabs.on.ready]", tab);
   logEvent("extension", "pageLoad");
 
-  if (tab.autoShowOnReady) {
-    api.log("[tabs.on.ready] auto showing:", tab);
-    api.tabs.emit(tab, "auto_show");
-    delete tab.autoShowOnReady;
+  var emission = tab.emitOnReady;  // TODO: promote emitOnReady to API layer
+  if (emission) {
+    api.log("[tabs.on.ready] emitting:", tab.id, emission);
+    api.tabs.emit(tab, emission[0], emission[1]);
+    delete tab.emitOnReady;
   }
 });
 
@@ -498,7 +489,7 @@ function scheduleAutoShow(tab) {
           api.tabs.emit(tab, "auto_show");
         } else {
           api.log("[scheduleAutoShow:1] fired but tab not ready:", tab.id);
-          tab.autoShowOnReady = true;
+          tab.emitOnReady = ["auto_show"];
         }
       }
     }, tab.autoShowSec * 1000);

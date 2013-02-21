@@ -30,8 +30,8 @@ POST    /messages                   com.keepit.controllers.CommentController.cre
 GET     /r/:id                      com.keepit.controllers.DeepLinkController.handle(id: String)
 
 GET     /users/slider               com.keepit.controllers.UserController.getSliderInfo(url: String)
+POST    /users/slider/suppress      com.keepit.controllers.UserController.suppressSliderForSite
 GET     /users/slider/updates       com.keepit.controllers.CommentController.getUpdates(url: String)
-GET     /users/keepurl              com.keepit.controllers.UserController.usersKeptUrl(url: String)
 GET     /users/friends              com.keepit.controllers.UserController.getSocialConnections()
 POST    /users/events               com.keepit.controllers.EventController.logUserEvents
 
@@ -132,6 +132,7 @@ POST    /admin/slider/domainTags    com.keepit.controllers.admin.SliderAdminCont
 GET     /admin/slider/domains       com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
 POST    /admin/slider/domains       com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
 POST    /admin/slider/domains/fetch com.keepit.controllers.admin.SliderAdminController.refetchClassifications
+GET     /admin/slider/importEvents  com.keepit.controllers.admin.SliderAdminController.getImportEvents
 
 GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
 GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()

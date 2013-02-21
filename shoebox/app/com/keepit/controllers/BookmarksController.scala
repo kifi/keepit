@@ -1,6 +1,6 @@
 package com.keepit.controllers
 
-import com.keepit.classify.DomainClassifier
+import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
 import com.keepit.common.async._
@@ -124,12 +124,17 @@ object BookmarksController extends FortyTwoController {
   def checkIfExists(uri: String, ver: Option[String]) = AuthenticatedJsonAction { request =>
     val userId = request.userId
     // TODO: Optimize by not checking sensitivity and keptByAnyFriends if kept by user.
-    val (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, hasUnreadComments, unreadMessages) = inject[DBConnection].readOnly { implicit s =>
+    val (uriId, bookmark, sensitive, neverOnSite, friendIds, ruleGroup, patterns, locator, shown) = inject[DBConnection].readOnly { implicit s =>
       val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
       val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
-      val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>
-        inject[DomainClassifier].isSensitive(domain).right.getOrElse(None)
-      }
+
+      val host: String = nUri.flatMap(_.domain).getOrElse(URI.parse(uri).get.host.get.name)
+      val domain: Option[Domain] = inject[DomainRepo].get(host)
+      val neverOnSite: Option[Boolean] = domain.flatMap { dom =>
+        inject[UserToDomainRepo].get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
+      }.map(_ => true)
+      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(inject[DomainClassifier].isSensitive(host).right.getOrElse(None))
+
       val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
         inject[BookmarkRepo].getByUriAndUser(uriId, userId)
       }
@@ -140,17 +145,21 @@ object BookmarksController extends FortyTwoController {
       }
       val patterns: Option[Seq[String]] = ruleGroup.map(_ => inject[URLPatternRepo].getActivePatterns)
 
-      val commentReadRepo = inject[CommentReadRepo]
-      val (hasUnreadComments, unreadMessages) = uriId match {
-        case Some(uri) =>
-          val hasUnreadComments = commentReadRepo.hasUnreadComments(userId, uri)
-          val unreadMessages = commentReadRepo.getUnreadMessages(userId, uri)
-          (hasUnreadComments, unreadMessages)
-        case None =>
-          (false, Nil)
+      val locator: Option[DeepLocator] = uriId.flatMap { uriId =>
+        val repo = inject[CommentReadRepo]
+        val messages = repo.getParentsOfUnreadMessages(userId, uriId)
+        messages.size match {
+          case 0 => if (repo.hasUnreadComments(userId, uriId)) Some(DeepLocator.ofCommentList) else None
+          case 1 => Some(DeepLocator.ofMessageThread(messages.head))
+          case _ => Some(DeepLocator.ofMessageThreadList)
+        }
       }
 
-      (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, hasUnreadComments, unreadMessages)
+      val shown: Option[Boolean] = if (locator.isDefined) None else uriId.map { uriId =>
+        inject[SliderHistoryTracker].getMultiHashFilter(userId).mayContain(uriId.id)
+      }
+
+      (uriId, bookmark, sensitive, neverOnSite, friendIds, ruleGroup, patterns, locator, shown)
     }
 
     val keptByAnyFriends = uriId.map { uriId =>
@@ -160,21 +169,20 @@ object BookmarksController extends FortyTwoController {
         searcher.getUriToUserEdgeSet(uriId))
     }.getOrElse(false)
 
-    val locator = unreadMessages.size match {
-      case 0 if hasUnreadComments => Some(DeepLocator.ofCommentList)
-      case 0 => None
-      case 1 => Some(DeepLocator.ofMessageThread(unreadMessages.head))
-      case _ => Some(DeepLocator.ofMessageThreadList)
-    }
-
     Ok(JsObject(Seq(
       "user_has_bookmark" -> JsBoolean(bookmark.isDefined), // TODO: remove this key after all installations >= 2.1.49
       "kept" -> JsBoolean(bookmark.isDefined),
       "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
-      "sensitive" -> JsBoolean(sensitive.getOrElse(false)),
-      "hasUnreadComments" -> JsBoolean(hasUnreadComments),
-      "unreadMessages" -> JsArray(unreadMessages.map(msg => JsString(msg.externalId.id))),
-      "locator" -> JsString(locator.map(_.value).getOrElse(""))) ++
+      "sensitive" -> JsBoolean(sensitive.getOrElse(false))) ++
+      neverOnSite.map { s => Seq(
+        "neverOnSite" -> JsBoolean(s))
+      }.getOrElse(Nil) ++
+      locator.map { l => Seq(
+        "locator" -> JsString(l.value))
+      }.getOrElse(Nil) ++
+      shown.map { s => Seq(
+        "shown" -> JsBoolean(s))
+      }.getOrElse(Nil) ++
       ruleGroup.map { g => Seq(
         "rules" -> g.compactJson,
         "patterns" -> JsArray(patterns.get.map(JsString)))
