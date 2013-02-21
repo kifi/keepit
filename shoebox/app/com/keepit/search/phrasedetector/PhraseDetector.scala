@@ -22,6 +22,9 @@ import scala.collection.mutable.ArrayBuffer
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
 import org.apache.lucene.store.RAMDirectory
+import com.keepit.common.db.slick.DBConnection
+import com.keepit.model.{PhraseRepo, Phrase}
+import org.scalaquery.util.CloseableIterator
 
 object PhraseDetector {
   val termTemplate = new Term("p", "")
@@ -106,52 +109,33 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
   }
 }
 
-class Phrase
 
 object PhraseIndexer {
-  def apply(): PhraseIndexer = apply(new RAMDirectory, None)
+  def apply(): PhraseIndexer = apply(new RAMDirectory, inject[DBConnection], inject[PhraseRepo])
 
-  def apply(indexDirectory: Directory, dataDirectory: Option[File] = None): PhraseIndexer  = {
+  def apply(indexDirectory: Directory, db: DBConnection, phraseRepo: PhraseRepo): PhraseIndexer  = {
     val analyzer = DefaultAnalyzer.forIndexing
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
-    new PhraseIndexer(indexDirectory, dataDirectory, config)
+    new PhraseIndexer(indexDirectory, db, phraseRepo, config)
   }
 }
 
-class PhraseIndexer(indexDirectory: Directory, dataDirectory: Option[File], indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase](indexDirectory, indexWriterConfig)  {
+class PhraseIndexer(indexDirectory: Directory, db: DBConnection, phraseRepo: PhraseRepo, indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase](indexDirectory, indexWriterConfig)  {
 
   def reload() {
-    dataDirectory.foreach{ dir =>
-      var id = -1
-      if (dir.exists) {
-        log.info("loading phrases from: %s".format(dir.toString))
-        val indexableIterator = dir.listFiles.iterator.flatMap{ file =>
-          val lang = Lang(file.getName)
-          val reader = new LineNumberReader(new FileReader(file))
-          new Iterator[PhraseIndexable] {
-            var line = reader.readLine
-            def hasNext() = (line != null)
-            def next() = {
-              val cur = line
-              line = reader.readLine()
-              id += 1
-              new PhraseIndexable(Id[Phrase](id), cur, lang)
-            }
-          }
-        }
-        reload(indexableIterator, refresh = false)
-        log.info("finished loading from: %s".format(dir.toString))
-      } else {
-        throw new IOException("no such directory: %s".format(dir.toString))
-      }
+    db.readOnly { implicit session =>
+      log.info("reloading phrase index")
+      val indexableIterator = phraseRepo.allIterator.map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
+      reload(indexableIterator, refresh = false)
       refreshSearcher()
     }
   }
 
-  def reload(indexableItertor: Iterator[PhraseIndexable], refresh: Boolean = true) {
+  def reload(indexableIterator: CloseableIterator[PhraseIndexable], refresh: Boolean = true) {
     deleteAllDocuments(refresh = false)
-    indexDocuments(indexableItertor, 100000, refresh = false){ s => /* nothing */ }
+    indexDocuments(indexableIterator, 100000, refresh = false){ s => /* nothing */ }
     if (refresh) refreshSearcher()
+    indexableIterator.close
   }
 
   def buildIndexable(data: Phrase): Indexable[Phrase] = throw new UnsupportedOperationException
