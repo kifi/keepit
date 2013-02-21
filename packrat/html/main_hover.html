@@ -8,24 +8,24 @@
     </div>
   {{/socialConnections}}
   {{^socialConnections}}
-    {{#is_kept}}
+    {{#isKept}}
       You kept this!
-    {{/is_kept}}
-    {{^is_kept}}
+    {{/isKept}}
+    {{^isKept}}
       To quickly find this page later...
-    {{/is_kept}}
+    {{/isKept}}
   {{/socialConnections}}
 </div>
 <div class="kifi-buttons">
-  {{#is_kept}}
+  {{#isKept}}
     <span class="kifi-button kifi-button-unkeep">Un-Keep it</span> <span class="kifi-button kifi-button-private">Make it {{#private}}Public{{/private}}{{^private}}Private{{/private}}</span></span>
-  {{/is_kept}}
-  {{^is_kept}}
+  {{/isKept}}
+  {{^isKept}}
     <span class="kifi-button kifi-button-keep">Keep it</span><span class="kifi-button kifi-button-dropdown">&#9662;</span>
-  {{/is_kept}}
+  {{/isKept}}
 </div>
-<div class="kifi-keep-options">
+<div class="kifi-keep-options"{{#sensitive}}{{^isKept}} style="display:block"{{/isKept}}{{/sensitive}}>
   <label>
-    <input type="checkbox" class="kifi-keep-private" value="private"> Keep this link private
+    <input type="checkbox" class="kifi-keep-private" value="private"{{#sensitive}} checked{{/sensitive}}> Keep this link private
   </label>
 </div>

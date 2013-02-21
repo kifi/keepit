@@ -138,8 +138,13 @@ slider = function() {
           "arrow": api.url('images/triangle_down.31x16.png'),
           "profilepic": o.session.avatarUrl,
           "name": o.session.name,
-          "is_kept": o.kept,
+          "isKept": o.kept,
           "private": o.private,
+          "sensitive": o.sensitive,
+          "site": document.location.host,
+          "neverOnSite": o.neverOnSite,
+          "numComments": o.numComments,
+          "numMessages": o.numMessages,
           "connected_networks": api.url("images/networks.png"),
           "socialConnections": o.friends.length == 0 ? null : {
             countText: summaryText(o.friends.length, o.kept),
@@ -165,16 +170,6 @@ slider = function() {
 
   function drawKeepItHover(o, renderedTemplate, callback) {  // o is the get_slider_info response
     var $slider = $(renderedTemplate).appendTo("body");
-
-    updateCommentCount("public", o.numComments);
-    updateCommentCount("message", o.numMessages);
-    if (o.sensitive) {
-      $slider.find(".kifi-keep-private").prop("checked", true);
-      if (!o.kept) {
-        $slider.find(".kifi-keep-options").show();
-      }
-    }
-    $slider.find(".kifi-slider-never").toggleClass("kifi-checked", !!o.neverOnSite)
 
     // Event bindings
     $slider.draggable({cursor: "move", axis: "y", distance: 10, handle: ".kifi-slider-title-bar", containment: "body", scroll: false})
@@ -262,7 +257,7 @@ slider = function() {
 
     slideIn();
 
-    callback && callback(o.session);
+    callback && callback();
   }
 
   var idleTimer = {
@@ -544,9 +539,7 @@ slider = function() {
   function updateCommentCount(type, count) {
     count = count != null ? count : $(".kifi-comment-real").length; // if no count passed in, count DOM nodes
 
-    $({"public": ".kifi-tab-count-comments", "message": ".kifi-tab-count-messages"}[type])
-      .text(count)
-      .toggleClass("zero_comments", count == 0);
+    $({"public": ".kifi-tab-count-comments", "message": ".kifi-tab-count-messages"}[type]).text(count);
   }
 
   function renderComments(session, comments, type, id, onComplete, partialRender) {
@@ -554,7 +547,6 @@ slider = function() {
     comments = comments || {};
     comments["public"] = comments["public"] || [];
     comments["message"] = comments["message"] || [];
-    //comments["private"] = comments["private"] || []; // Removed, not for MVP
 
     var visibleComments = comments[type] || [];
 
