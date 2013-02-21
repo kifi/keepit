@@ -92,7 +92,7 @@ slider = function() {
   }
 
   function keepPage(shouldSlideOut) {
-    api.log("[keepPage]", document.location.href);
+    api.log("[keepPage]", document.URL);
 
     api.port.emit("set_page_icon", true);
     isKept = true;
@@ -103,7 +103,7 @@ slider = function() {
     logEvent("slider", "keep", {"isPrivate": isPrivate});
 
     api.port.emit("add_bookmarks", {
-      "url": document.location.href,
+      "url": document.URL,
       "title": document.title,
       "private": isPrivate
     }, function(response) {
@@ -112,7 +112,7 @@ slider = function() {
   }
 
   function unkeepPage(shouldSlideOut) {
-    api.log("[unkeepPage]", document.location.href);
+    api.log("[unkeepPage]", document.URL);
 
     api.port.emit("set_page_icon", false);
     isKept = false;
@@ -141,7 +141,7 @@ slider = function() {
           "isKept": o.kept,
           "private": o.private,
           "sensitive": o.sensitive,
-          "site": document.location.host,
+          "site": location.hostname,
           "neverOnSite": o.neverOnSite,
           "numComments": o.numComments,
           "numMessages": o.numMessages,
@@ -1041,7 +1041,7 @@ slider = function() {
   function submitComment(text, type, session, parent, recipients, callback) {
     api.log("[submitComment] parent:", parent);
     api.port.emit("post_comment", {
-      "url": document.location.href,
+      "url": document.URL,
       "title": document.title,
       "text": text,
       "permissions": type,
