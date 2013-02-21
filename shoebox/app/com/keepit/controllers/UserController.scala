@@ -80,7 +80,7 @@ object UserController extends FortyTwoController {
         case None => domainRepo.save(Domain(hostname = host))
       }
       val utdRepo = inject[UserToDomainRepo]
-      utdRepo.get(request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW) match {
+      utdRepo.get(request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW, excludeState = None) match {
         case Some(utd) if (utd.isActive != suppress) =>
           utdRepo.save(utd.withState(if (suppress) UserToDomainStates.ACTIVE else UserToDomainStates.INACTIVE))
         case Some(utd) => utd
