@@ -180,6 +180,10 @@ object FortyTwoTypeMappers {
   implicit object DomainTagNameTypeMapper extends BaseTypeMapper[DomainTagName] {
     def apply(profile: BasicProfile) = new DomainTagNameMapperDelegate
   }
+
+  implicit object LangTypeMapper extends BaseTypeMapper[Lang] {
+    def apply(profile: BasicProfile) = new LangMapperDelegate
+  }
 }
 
 //************************************
@@ -422,3 +426,23 @@ class ByteArrayMapperDelegate extends DelegateMapperDelegate[Array[Byte], Blob] 
     }
   }
 }
+
+//************************************
+//       Lang -> String
+//************************************
+class LangMapperDelegate extends StringMapperDelegate[Lang] {
+  def zero = Lang("")
+  def sourceToDest(value: Lang) = value.lang
+  def safeDestToSource(str: String) = Lang(str)
+}
+
+//************************************
+//       Lang -> String
+//************************************
+class PhraseMapperDelegate extends StringMapperDelegate[Lang] {
+  def zero = Lang("")
+  def sourceToDest(value: Lang) = value.lang
+  def safeDestToSource(str: String) = Lang(str)
+}
+
+

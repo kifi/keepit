@@ -125,21 +125,21 @@ class PhraseIndexer(indexDirectory: Directory, dataDirectory: Option[File], inde
       var id = -1
       if (dir.exists) {
         log.info("loading phrases from: %s".format(dir.toString))
-        val indexableItertor = dir.listFiles.iterator.flatMap{ file =>
-        val lang = Lang(file.getName)
-        val reader = new LineNumberReader(new FileReader(file))
-        new Iterator[PhraseIndexable] {
-          var line = reader.readLine
-          def hasNext() = (line != null)
-          def next() = {
-            val cur = line
+        val indexableIterator = dir.listFiles.iterator.flatMap{ file =>
+          val lang = Lang(file.getName)
+          val reader = new LineNumberReader(new FileReader(file))
+          new Iterator[PhraseIndexable] {
+            var line = reader.readLine
+            def hasNext() = (line != null)
+            def next() = {
+              val cur = line
               line = reader.readLine()
               id += 1
               new PhraseIndexable(Id[Phrase](id), cur, lang)
             }
           }
         }
-        reload(indexableItertor, refresh = false)
+        reload(indexableIterator, refresh = false)
         log.info("finished loading from: %s".format(dir.toString))
       } else {
         throw new IOException("no such directory: %s".format(dir.toString))
