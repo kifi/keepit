@@ -69,7 +69,7 @@ class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGra
     val termAttr = ts.getAttribute(classOf[CharTermAttribute])
     val buf = new ArrayBuffer[Term]
     while (ts.incrementToken()) {
-      buf += new Term("b", new String(termAttr.buffer(), 0, termAttr.length()))
+      buf += new Term("sv", new String(termAttr.buffer(), 0, termAttr.length()))
     }
     buf.toSet
   }
