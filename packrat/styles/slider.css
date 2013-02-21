@@ -196,6 +196,7 @@ div.kifi-slider-▾-box {
 .kifi-slider-never:hover,
 .kifi-slider-never.kifi-hover {
   background: -moz-linear-gradient(top, #6389f8, #1f60f6);
+  background: -webkit-linear-gradient(#6389f8, #1f60f6);
   background: linear-gradient(#6389f8, #1f60f6);
   border-top-color: #5980ef;
   border-bottom-color: #0a54ec;
@@ -319,8 +320,8 @@ ul.kifi-tab-bar {
   border: solid 1px #B8B8B8;
   color: #4F4F4F;
   border-color: #E0E0E0 #D7D7D7 #CCC;
-  background: -webkit-gradient(linear, left top, left bottom, from(white), to(#E9E9E9));
   background: -moz-linear-gradient(top, white, #E9E9E9);
+  background: -webkit-linear-gradient(white, #E9E9E9);
   background: linear-gradient(white, #E9E9E9);
   -webkit-border-radius: 2px;
   -moz-border-radius: 2px;
@@ -338,8 +339,8 @@ ul.kifi-tab-bar {
   box-shadow: 0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.2);
   border-color: #d5d5d5 #cccccc #c2c2c2;
   background: #f7f7f7;
-  background: -webkit-gradient(linear, left top, left bottom, from(#ffffff), to(#ededed));
   background: -moz-linear-gradient(top, #ffffff,  #ededed);
+  background: -webkit-linear-gradient(#ffffff, #ededed);
   background: linear-gradient(#ffffff, #ededed);
 }
 .kifi-slider .kifi-button:active {
