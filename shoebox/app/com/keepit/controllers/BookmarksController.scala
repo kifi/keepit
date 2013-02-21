@@ -130,9 +130,9 @@ object BookmarksController extends FortyTwoController {
 
       val host: String = nUri.flatMap(_.domain).getOrElse(URI.parse(uri).get.host.get.name)
       val domain: Option[Domain] = inject[DomainRepo].get(host)
-      val neverOnSite: Option[Boolean] = domain.flatMap { dom =>
+      val neverOnSite: Option[UserToDomain] = domain.flatMap { dom =>
         inject[UserToDomainRepo].get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
-      }.map(_ => true)
+      }
       val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(inject[DomainClassifier].isSensitive(host).right.getOrElse(None))
 
       val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
@@ -174,8 +174,8 @@ object BookmarksController extends FortyTwoController {
       "kept" -> JsBoolean(bookmark.isDefined),
       "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
       "sensitive" -> JsBoolean(sensitive.getOrElse(false))) ++
-      neverOnSite.map { s => Seq(
-        "neverOnSite" -> JsBoolean(s))
+      neverOnSite.map { _ => Seq(
+        "neverOnSite" -> JsBoolean(true))
       }.getOrElse(Nil) ++
       locator.map { l => Seq(
         "locator" -> JsString(l.value))
