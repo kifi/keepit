@@ -174,6 +174,7 @@ slider = function() {
         $slider.find(".kifi-keep-options").show();
       }
     }
+    $slider.find(".kifi-slider-never").toggleClass("kifi-checked", !!o.neverOnSite)
 
     // Event bindings
     $slider.draggable({cursor: "move", axis: "y", distance: 10, handle: ".kifi-slider-title-bar", containment: "body", scroll: false})
@@ -184,7 +185,6 @@ slider = function() {
       e.preventDefault();
       var $box = $(this).siblings(".kifi-slider-▾-box").fadeIn(50);
       var $nev = $box.find(".kifi-slider-never")
-        .toggleClass("kifi-checked", !!o.neverOnSite)
         .on("mouseenter", enterItem)
         .on("mouseleave", leaveItem);
       var $act = $box.closest(".kifi-slider-title-actions")
