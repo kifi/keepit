@@ -164,8 +164,7 @@ slider = function() {
   }
 
   function drawKeepItHover(o, renderedTemplate, callback) {  // o is the get_slider_info response
-    $("body").append(renderedTemplate);
-    var $slider = $(".kifi-slider");
+    var $slider = $(renderedTemplate).appendTo("body");
 
     updateCommentCount("public", o.numComments);
     updateCommentCount("message", o.numMessages);
