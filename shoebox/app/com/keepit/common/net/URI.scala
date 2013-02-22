@@ -70,7 +70,7 @@ object URI extends Logging {
 
   def encodeSymbols(uriString: String): String = {
     uriString.map(_ match {
-      case ch if "@$^*()[]{}".contains(ch) => java.net.URLEncoder.encode(ch.toString, "UTF-8")
+      case ch if "@$^*()[]{}|".contains(ch) => java.net.URLEncoder.encode(ch.toString, "UTF-8")
       case ch => ch
     }).mkString("")
   }
