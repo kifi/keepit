@@ -1,0 +1,22 @@
+@(events: Seq[com.keepit.controllers.admin.ImportEvent])
+
+@admin("Domain Import Events", stylesheets = List("admin_slider")) {
+<table class="table table-condensed table-striped">
+<thead>
+  <tr>
+    <th>Event Type</th>
+    <th>Date</th>
+    <th>Description</th>
+  </tr>
+</thead>
+<tbody>
+  @for(event <- events) {
+    <tr>
+      <td>@event.eventType</td>
+      <td>@adminHelper.dateTimeDisplay(event.createdAt)</td>
+      <td>@event.description</td>
+    </tr>
+  }
+</tbody>
+</table>
+}

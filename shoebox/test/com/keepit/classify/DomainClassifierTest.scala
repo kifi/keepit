@@ -3,6 +3,7 @@ package com.keepit.classify
 import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationWithJUnit
 
+import com.keepit.common.analytics.{FakePersistEventPluginImpl, PersistEventPlugin}
 import com.keepit.common.db.slick.DBConnection
 import com.keepit.common.net.FakeHttpClient
 import com.keepit.inject.{provide, inject}
@@ -13,7 +14,6 @@ import akka.dispatch.Await
 import akka.util.duration._
 import play.api.Play.current
 import play.api.test.Helpers.running
-
 
 class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
   val system = ActorSystem("system")
@@ -28,7 +28,8 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
         val domainRepo = inject[DomainRepo]
         val domainToTagRepo = inject[DomainToTagRepo]
         val importer = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], provide(new DateTime), system, db, DomainTagImportSettings())
+          inject[SensitivityUpdater], provide(new DateTime), system, db,
+          new FakePersistEventPluginImpl(system), DomainTagImportSettings())
         inject[DBConnection].readWrite { implicit s =>
           tagRepo.save(DomainTag(name = DomainTagName("Search Engines"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("Technology and computers"), sensitive = Some(false)))
@@ -83,7 +84,7 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
           classifier.isSensitive("playboy.com").left.get,
           classifier.isSensitive("porn.com").left.get
         ).foreach { future =>
-          Await.result(future, intToDurationInt(100).millis)
+          Await.result(future, intToDurationInt(1).second)
         }
 
         classifier.isSensitive("yahoo.com") === Right(Some(false))

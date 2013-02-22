@@ -1,6 +1,6 @@
 package com.keepit.controllers
 
-import com.keepit.classify.DomainClassifier
+import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
 import com.keepit.common.async._
@@ -124,12 +124,17 @@ object BookmarksController extends FortyTwoController {
   def checkIfExists(uri: String, ver: Option[String]) = AuthenticatedJsonAction { request =>
     val userId = request.userId
     // TODO: Optimize by not checking sensitivity and keptByAnyFriends if kept by user.
-    val (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, locator, shown) = inject[DBConnection].readOnly { implicit s =>
+    val (uriId, bookmark, sensitive, neverOnSite, friendIds, ruleGroup, patterns, locator, shown) = inject[DBConnection].readOnly { implicit s =>
       val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
       val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
-      val sensitive: Option[Boolean] = nUri.flatMap(_.domain).flatMap { domain =>  // TODO: check domain even if nUri is None
-        inject[DomainClassifier].isSensitive(domain).right.getOrElse(None)
+
+      val host: String = nUri.flatMap(_.domain).getOrElse(URI.parse(uri).get.host.get.name)
+      val domain: Option[Domain] = inject[DomainRepo].get(host)
+      val neverOnSite: Option[UserToDomain] = domain.flatMap { dom =>
+        inject[UserToDomainRepo].get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
       }
+      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(inject[DomainClassifier].isSensitive(host).right.getOrElse(None))
+
       val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
         inject[BookmarkRepo].getByUriAndUser(uriId, userId)
       }
@@ -142,7 +147,7 @@ object BookmarksController extends FortyTwoController {
 
       val locator: Option[DeepLocator] = uriId.flatMap { uriId =>
         val repo = inject[CommentReadRepo]
-        val messages = repo.getUnreadMessages(userId, uriId)
+        val messages = repo.getParentsOfUnreadMessages(userId, uriId)
         messages.size match {
           case 0 => if (repo.hasUnreadComments(userId, uriId)) Some(DeepLocator.ofCommentList) else None
           case 1 => Some(DeepLocator.ofMessageThread(messages.head))
@@ -154,7 +159,7 @@ object BookmarksController extends FortyTwoController {
         inject[SliderHistoryTracker].getMultiHashFilter(userId).mayContain(uriId.id)
       }
 
-      (uriId, bookmark, sensitive, friendIds, ruleGroup, patterns, locator, shown)
+      (uriId, bookmark, sensitive, neverOnSite, friendIds, ruleGroup, patterns, locator, shown)
     }
 
     val keptByAnyFriends = uriId.map { uriId =>
@@ -169,6 +174,9 @@ object BookmarksController extends FortyTwoController {
       "kept" -> JsBoolean(bookmark.isDefined),
       "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
       "sensitive" -> JsBoolean(sensitive.getOrElse(false))) ++
+      neverOnSite.map { _ => Seq(
+        "neverOnSite" -> JsBoolean(true))
+      }.getOrElse(Nil) ++
       locator.map { l => Seq(
         "locator" -> JsString(l.value))
       }.getOrElse(Nil) ++

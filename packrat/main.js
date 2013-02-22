@@ -134,6 +134,9 @@ api.port.on({
     ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, respond);
     return true;
   },
+  suppress_on_site: function(data, respond, tab) {
+    ajax("POST", "http://" + getConfigs().server + "/users/slider/suppress", {url: tab.url, suppress: data});
+  },
   log_event: function(data) {
     logEvent.apply(null, data);
   },
@@ -419,7 +422,7 @@ api.tabs.on.loading.add(function(tab) {
 
   checkKeepStatus(tab, function gotKeptStatus(resp) {
     if (session.rules.rules.message && /^\/messages/.test(resp.locator) ||
-        session.rules.rules.comment && /^\/comments/.test(resp.locator)) {
+        session.rules.rules.comment && /^\/comments/.test(resp.locator) && !resp.neverOnSite) {
       var emission = ["open_slider_to", {
         trigger: resp.locator.substr(1, 7), // "message" or "comment"
         locator: resp.locator}];
@@ -430,7 +433,7 @@ api.tabs.on.loading.add(function(tab) {
         api.log("[gotKeptStatus] got locator but tab not ready:", tab.id);
         tab.emitOnReady = emission;
       }
-    } else if (!resp.kept && (!resp.sensitive || !session.rules.rules.sensitive)) {
+    } else if (!resp.kept && !resp.neverOnSite && (!resp.sensitive || !session.rules.rules.sensitive)) {
       var url = tab.url;
       if (session.rules.rules.url && session.patterns.some(function(re) {return re.test(url)})) {
         api.log("[gotKeptStatus] restricted:", url);

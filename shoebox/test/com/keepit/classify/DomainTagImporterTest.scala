@@ -3,6 +3,7 @@ package com.keepit.classify
 import org.joda.time.DateTime
 import org.specs2.mutable._
 
+import com.keepit.common.analytics.FakePersistEventPluginImpl
 import com.keepit.common.db.slick.DBConnection
 import com.keepit.inject._
 import com.keepit.test._
@@ -12,7 +13,6 @@ import akka.dispatch.Await
 import akka.util.duration._
 import play.api.Play.current
 import play.api.test.Helpers._
-
 
 class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
   val system = ActorSystem("system")
@@ -25,7 +25,8 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
         val domainToTagRepo = inject[DomainToTagRepo]
         val db = inject[DBConnection]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], provide(new DateTime), system,  db, settings)
+          inject[SensitivityUpdater], provide(new DateTime), system, db,
+          new FakePersistEventPluginImpl(system), settings)
         db.readWrite { implicit s =>
           // add some existing tags
           tagRepo.save(DomainTag(name = DomainTagName("t1"), sensitive = Option(false)))
@@ -64,7 +65,8 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
         val domainToTagRepo = inject[DomainToTagRepo]
         val db = inject[DBConnection]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], provide(new DateTime), system, db, settings)
+          inject[SensitivityUpdater], provide(new DateTime), system, db,
+          new FakePersistEventPluginImpl(system), settings)
 
         db.readWrite { implicit s =>
         // add some existing tags
@@ -104,7 +106,8 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
         val domainToTagRepo = inject[DomainToTagRepo]
         val db = inject[DBConnection]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], provide(new DateTime), system, db, settings)
+          inject[SensitivityUpdater], provide(new DateTime), system, db,
+          new FakePersistEventPluginImpl(system), settings)
 
         db.readWrite { implicit s =>
           tagRepo.save(DomainTag(name = DomainTagName("things"), sensitive = Some(false)))

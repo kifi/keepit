@@ -33,7 +33,7 @@ api.load("html/google_inject.html", function(tmpl) {
   });
 
   function updateQuery(numPrevAttempts) {
-    if (~document.location.href.indexOf("tbm=isch")) {
+    if (~document.URL.indexOf("tbm=isch")) {
       api.log("[updateQuery] bailing (image search)");
       return;
     }
