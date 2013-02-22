@@ -6,6 +6,9 @@
 
 @admin("Slider Rules", stylesheets = List("admin_slider")) {
 <h3>Rules for Automatically Showing the Slider</h3>
+
+<div><i class="icon-info-sign"></i> Note: Changes take effect immediately for all kifi users when you click <b>Save</b> below.</div>
+
 <form class="slider-rules" action="@com.keepit.controllers.admin.routes.SliderAdminController.saveRules" method="POST">
   <input type="hidden" name="group" value="@groupName">
   <table class="table table-condensed table-striped">
@@ -31,10 +34,11 @@
       <td class="y">
       <td>new comment
       <td>
-        <select name="commentParams" style="width:90px">
+        <select name="commentParams" style="width:90px" disabled>
           <option value='"friend"' @if(rules("comment").parameters.get(0).as[String] == "friend") {selected}>friend</option>
           <option value='"anyone"' @if(rules("comment").parameters.get(0).as[String] == "anyone") {selected}>anyone</option>
         </select>
+        <i style="color:#999;font-size:10px;margin-left:10px">Ask Jared if you want to change this parameter.</i>
     <tr>
       <td>@checkbox("sensitive")
       <td class="n">
