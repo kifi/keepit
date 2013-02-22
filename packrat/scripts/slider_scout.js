@@ -8,7 +8,7 @@ function logEvent() {  // parameters defined in main.js
 var slider, injected, t0 = +new Date;
 
 !function() {
-  api.log("host:", location.host);
+  api.log("host:", location.hostname);
   var viewportEl = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"], rules;
 
   document.addEventListener("keydown", function(e) {
@@ -38,7 +38,7 @@ var slider, injected, t0 = +new Date;
 
   setTimeout(function checkIfUseful() {
     if (document.hasFocus() && document.body.scrollTop > 300) {
-      logEvent("slider", "usefulPage", {url: document.location.href});
+      logEvent("slider", "usefulPage", {url: document.URL});
     } else {
       setTimeout(checkIfUseful, 5000);
     }
