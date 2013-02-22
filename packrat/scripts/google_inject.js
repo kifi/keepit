@@ -28,7 +28,7 @@ api.load("html/google_inject.html", function(tmpl) {
 
     if (href && resIdx >= 0) {
       logEvent("search", isKifi ? "kifiResultClicked" : "googleResultClicked",
-        {"url": href, "whichResult": resIdx, "query": response.query, "kifiResultsCount": $kifiLi.length});
+        {"url": href, "whichResult": resIdx, "query": response.query, "experimentId": response.experimentId, "kifiResultsCount": $kifiLi.length});
     }
   });
 
@@ -81,7 +81,7 @@ api.load("html/google_inject.html", function(tmpl) {
 
       logEvent("search", "kifiLoaded", {"query": query, "queryUUID": resp.uuid});
       if (resp.hits.length) {
-        logEvent("search", "kifiAtLeastOneResult", {"query": query, "queryUUID": resp.uuid});
+        logEvent("search", "kifiAtLeastOneResult", {"query": query, "queryUUID": resp.uuid, experimentId: response.experimentId});
         showResultsAndPrefetchMore();
       }
     });

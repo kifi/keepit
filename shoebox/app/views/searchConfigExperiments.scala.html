@@ -1,0 +1,129 @@
+@(experiments: Seq[com.keepit.search.SearchConfigExperiment], defaultConfig: Map[String,String])
+
+
+@paramValue(parameter: String, value: String, description: Option[String], editable: Boolean, showDefault: Boolean) = {
+  <tr>
+    <td>@parameter</td>
+    <td>
+      @if(editable) {
+        <input type="text" size="10" class="search-param" name="@parameter" value="@value">
+      } else {
+        <input type="hidden" class="search-param" name="@parameter" value="@value">@value
+      }
+      @if(showDefault) { (default @{defaultConfig.get(parameter)}) }
+    </td>
+    <td>@description.getOrElse("")</td>
+  </tr>
+}
+
+@admin("Search Experiments", stylesheets = List("admin_search_config")) {
+  <h2>Experiment config</h2>
+  <ul class="experiments">
+    @experiments.map { experiment =>
+    <li class="@if(experiment.isActive) { active-experiment }" data-id="@experiment.id">
+      <div class="experiment-desc">
+        <input class="experiment-description" value="@experiment.description">
+        @if(experiment.isPausable) { <button type="button" class="btn pause-experiment">Pause</button> }
+        @if(experiment.isStartable) { <button type="button" class="btn start-experiment">Start</button> }
+        (currently @experiment.state.value)
+        <div class="basic-settings">
+          <strong><input class="experiment-weight" value="@{(experiment.weight * 100).toInt}">%</strong>
+          <button class="btn show-settings">Show settings</button>
+          <button type="button" class="btn update-experiment">Update</button>
+          <button type="button" class="btn delete-experiment">Delete</button>
+        </div>
+      </div>
+      <table class="table table-bordered experiment-settings">
+        <tr> <th>Parameter</th><th>Value</th><th>Description</th> </tr>
+        @defining((experiment.config.toSet -- defaultConfig.toSet).toSeq.sortBy(_._1)) { nonDefaults =>
+          @nonDefaults.map { case (p, v) =>
+            @paramValue(p, v, com.keepit.search.SearchConfig.getDescription(p), experiment.isEditable, true)
+          }
+          @{(defaultConfig -- nonDefaults.map(_._1)).toSeq.sortBy(_._1).map { case (p, v) =>
+            paramValue(p, v, com.keepit.search.SearchConfig.getDescription(p), experiment.isEditable, false)
+          }}
+        }
+      </table>
+    </li>
+    }
+    <li class="default">
+      <div class="experiment-desc">
+        <strong>Default Values</strong>
+        <div class="basic-settings">
+          <button class="btn show-settings">Show settings</button>
+        </div>
+      </div>
+      <table class="table table-bordered experiment-settings">
+        <tr> <th>Parameter</th><th>Value</th><th>Description</th> </tr>
+        @defaultConfig.map { case (p, v) =>
+          @paramValue(p, v, com.keepit.search.SearchConfig.getDescription(p), false, false)
+        }
+      </table>
+    </li>
+  </ul>
+  <button type="button" class="btn" id="save-all-experiments">Save All Changes</button>
+  <button type="submit" class="btn" id="add-new-experiment">Add New Experiment</button><br/>
+}
+<script>
+$(function() {
+  function updateExperiment(element, callback) {
+    var $li = $(element).closest("li");
+    var data = {
+      id: +$li.data("id"),
+      description: $li.find(".experiment-description").val(),
+      weight: (parseFloat($li.find(".experiment-weight").val()) || 0) / 100
+    };
+    if ($(element).hasClass("pause-experiment")) {
+      data["state"] = "paused";
+    } else if ($(element).hasClass("start-experiment")) {
+      data["state"] = "active";
+    }
+    $li.find(".search-param").each(function() {
+      data["param_" + $(this).attr("name")] = $(this).val();
+    });
+    $.post("@com.keepit.controllers.routes.SearchConfigController.updateExperiment()", data, callback);
+  }
+
+  $(".experiments").on("change", ".experiment-weight", function() {
+    var max = 100;
+    $(".experiment-weight").not(this).each(function() {
+      max -= parseFloat($(this).val()) || 0;
+    });
+    var value = parseFloat($(this).val()) || 0;
+    $(this).val(Math.min(value, max));
+  });
+  $(".experiments").on("click", ".delete-experiment", function() {
+    var $li = $(this).closest("li")
+    var data = {
+      id: +$li.data("id")
+    };
+    $.post("@com.keepit.controllers.routes.SearchConfigController.deleteExperiment()", data, function() {
+      window.location.reload();
+    });
+  });
+  $(".experiments").on("click", ".update-experiment, .pause-experiment, .start-experiment", function() {
+    updateExperiment(this, function() {
+      window.location.reload();
+    });
+  });
+  $(".experiments").on("click", ".show-settings", function() {
+    $(this).closest("li").find(".experiment-settings").toggle();
+  });
+  $("#save-all-experiments").on("click", function() {
+    var updating = 0;
+    $(".experiments").find(".update-experiment").each(function() {
+      updating++;
+      updateExperiment(this, function() {
+        console.log(updating);
+        if (!--updating) window.location.reload();
+      });
+    });
+    $(this).closest("li").find(".experiment-settings").toggle();
+  });
+  $("#add-new-experiment").on("click", function() {
+    $.post("@com.keepit.controllers.routes.SearchConfigController.addNewExperiment()", function() {
+      window.location.reload();
+    });
+  });
+});
+</script>

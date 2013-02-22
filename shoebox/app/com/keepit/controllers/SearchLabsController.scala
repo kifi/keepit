@@ -42,7 +42,7 @@ object SearchLabsController extends FortyTwoController {
     val topN = 50
     val fakeUserId = Id[User](-1)
     val mainSearcherFactory = inject[MainSearcherFactory]
-    val config = inject[SearchConfigManager].getDefaultConfig
+    val config = inject[SearchConfigManager].defaultConfig
     val searcher = mainSearcherFactory(fakeUserId, Set.empty[Id[User]], Set.empty[Long], config)
     val hits = new HitQueue(topN)
     val nullClickBoost = new ResultClickBoosts{ def apply(value: Long) = 1.0f }
