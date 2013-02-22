@@ -144,6 +144,11 @@ POST    /admin/logging/emails       com.keepit.controllers.admin.ElectronicMailL
 
 GET     /admin/url/renormalize      com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 
+GET     /admin/labs/rankVsScore     com.keepit.controllers.SearchLabsController.rankVsScore(q: Option[String] ?= None)
+GET     /admin/labs/rankVsScore.json com.keepit.controllers.SearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
+GET     /admin/labs/friendMap       com.keepit.controllers.SearchLabsController.friendMap(q: Option[String] ?= None)
+GET     /admin/labs/friendMap.json  com.keepit.controllers.SearchLabsController.friendMapJson(q: Option[String] ?= None)
+
 ##########################################
 # Secure social routes
 ##########################################

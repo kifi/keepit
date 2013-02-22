@@ -49,4 +49,10 @@ class MainSearcherFactory @Inject() (
     val uriGraphSearcher = uriGraph.getURIGraphSearcher
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
+
+  def semanticVectorSearcher() = {
+    val articleSearcher = articleIndexer.getSearcher
+    val uriGraphSearcher = uriGraph.getURIGraphSearcher
+    new SemanticVectorSearcher(articleSearcher, uriGraphSearcher)
+  }
 }
