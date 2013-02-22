@@ -174,6 +174,46 @@ slider = function() {
     .on("click", ".kifi-slider-x", function() {
       slideOut("x");
     })
+    .on("mousedown", ".kifi-slider-▾", function(e) {
+      e.preventDefault();
+      var $arr = $(this);
+      var $box = $arr.siblings(".kifi-slider-▾-box").fadeIn(50);
+      var $nev = $box.find(".kifi-slider-never")
+        .on("mouseenter", enterItem)
+        .on("mouseleave", leaveItem);
+      var $act = $box.closest(".kifi-slider-title-actions").addClass("kifi-active");
+      document.addEventListener("mousedown", function onDown(e) {
+        if (!$box[0].contains(e.target)) {
+          document.removeEventListener("mousedown", onDown, true);
+          $box.triggerHandler("kifi:hide");
+          if ($arr[0] === e.target) {
+            e.stopPropagation();
+          }
+        }
+      }, true);
+      $box.on("kifi:hide", function hide() {
+        $act.removeClass("kifi-active");
+        $nev.off("mouseenter", enterItem)
+            .off("mouseleave", leaveItem);
+        $box.off("kifi:hide", hide).fadeOut(50);
+      });
+      // .kifi-hover class needed because :hover does not work during drag
+      function enterItem() { $(this).addClass("kifi-hover"); }
+      function leaveItem() { $(this).removeClass("kifi-hover"); }
+    })
+    .on("mouseup", ".kifi-slider-never", function(e) {
+      e.preventDefault();
+      var $nev = $(this).toggleClass("kifi-checked");
+      var never = $nev.hasClass("kifi-checked");
+      api.port.emit("suppress_on_site", never);
+      setTimeout(function() {
+        if (never) {
+          slideOut("never");
+        } else {
+          $nev.closest(".kifi-slider-▾-box").triggerHandler("kifi:hide");
+        }
+      }, 150);
+    })
     .on("click", ".kifi-button-unkeep", function() {
       unkeepPage(true);
     })
