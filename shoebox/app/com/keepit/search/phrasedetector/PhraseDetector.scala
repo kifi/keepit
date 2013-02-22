@@ -25,6 +25,7 @@ import org.apache.lucene.store.RAMDirectory
 import com.keepit.common.db.slick.DBConnection
 import com.keepit.model.{PhraseRepo, Phrase}
 import org.scalaquery.util.CloseableIterator
+import play.api.Play.current
 
 object PhraseDetector {
   val termTemplate = new Term("p", "")
@@ -132,10 +133,14 @@ class PhraseIndexer(indexDirectory: Directory, db: DBConnection, phraseRepo: Phr
   }
 
   def reload(indexableIterator: CloseableIterator[PhraseIndexable], refresh: Boolean = true) {
-    deleteAllDocuments(refresh = false)
-    indexDocuments(indexableIterator, 100000, refresh = false){ s => /* nothing */ }
-    if (refresh) refreshSearcher()
-    indexableIterator.close
+    try {
+      deleteAllDocuments(refresh = false)
+      indexDocuments(indexableIterator, 100000, refresh = false){ s => /* nothing */ }
+      if (refresh) refreshSearcher()
+    }
+    finally {
+      indexableIterator.close
+    }
   }
 
   def buildIndexable(data: Phrase): Indexable[Phrase] = throw new UnsupportedOperationException

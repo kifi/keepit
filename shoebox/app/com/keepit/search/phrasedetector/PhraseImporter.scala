@@ -20,19 +20,19 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBConnection
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-
 import play.api.Play.current
-import com.keepit.common.db.slick.DBSession.RSession
+
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 
 object PhraseImporter {
   private var inProgress = false
-  def startImport(implicit session: RSession) {
+  def startImport(implicit session: RWSession) {
     val st = session.conn.createStatement()
     val sql = """DROP INDEX phrase_i_phrase(phrase) ON phrase;"""
     st.executeQuery(sql)
     inProgress = true
   }
-  def endImport(implicit session: RSession) {
+  def endImport(implicit session: RWSession) {
     val st = session.conn.createStatement()
     val sql = """CREATE INDEX phrase_i_phrase(phrase) ON phrase;"""
     st.executeQuery(sql)
@@ -51,12 +51,12 @@ private[phrasedetector] class PhraseImporterActor(dbConnection: DBConnection, ph
 
   def receive = {
     case ImportFile(file) =>
-      PhraseImporter.startImport
+      dbConnection.readWrite(implicit s => PhraseImporter.startImport)
       try {
         importFromFile(file)
       }
       finally {
-        PhraseImporter.endImport
+        dbConnection.readWrite(implicit s => PhraseImporter.endImport)
       }
   }
 
