@@ -123,7 +123,7 @@ object SliderAdminController extends FortyTwoController {
     Ok(views.html.domains(domains))
   }
 
-  def saveDomainOverrides = AuthenticatedJsonAction { implicit request =>
+  def saveDomainOverrides = AdminJsonAction { implicit request =>
     val domainRepo = inject[DomainRepo]
 
     val domainSensitiveMap = request.body.asFormUrlEncoded.flatten.map {
@@ -150,7 +150,7 @@ object SliderAdminController extends FortyTwoController {
     Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
   }
 
-  def refetchClassifications = Action { implicit request =>
+  def refetchClassifications = /* TODO: AdminJson */Action { implicit request =>
     inject[DomainTagImporter].refetchClassifications()
     Ok(JsObject(Seq()))
   }

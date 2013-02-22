@@ -92,7 +92,7 @@ slider = function() {
   }
 
   function keepPage(shouldSlideOut) {
-    api.log("[keepPage]", document.location.href);
+    api.log("[keepPage]", document.URL);
 
     api.port.emit("set_page_icon", true);
     isKept = true;
@@ -103,7 +103,7 @@ slider = function() {
     logEvent("slider", "keep", {"isPrivate": isPrivate});
 
     api.port.emit("add_bookmarks", {
-      "url": document.location.href,
+      "url": document.URL,
       "title": document.title,
       "private": isPrivate
     }, function(response) {
@@ -112,7 +112,7 @@ slider = function() {
   }
 
   function unkeepPage(shouldSlideOut) {
-    api.log("[unkeepPage]", document.location.href);
+    api.log("[unkeepPage]", document.URL);
 
     api.port.emit("set_page_icon", false);
     isKept = false;
@@ -138,8 +138,13 @@ slider = function() {
           "arrow": api.url('images/triangle_down.31x16.png'),
           "profilepic": o.session.avatarUrl,
           "name": o.session.name,
-          "is_kept": o.kept,
+          "isKept": o.kept,
           "private": o.private,
+          "sensitive": o.sensitive,
+          "site": location.hostname,
+          "neverOnSite": o.neverOnSite,
+          "numComments": o.numComments,
+          "numMessages": o.numMessages,
           "connected_networks": api.url("images/networks.png"),
           "socialConnections": o.friends.length == 0 ? null : {
             countText: summaryText(o.friends.length, o.kept),
@@ -166,15 +171,6 @@ slider = function() {
   function drawKeepItHover(o, renderedTemplate, callback) {  // o is the get_slider_info response
     var $slider = $(renderedTemplate).appendTo("body");
 
-    updateCommentCount("public", o.numComments);
-    updateCommentCount("message", o.numMessages);
-    if (o.sensitive) {
-      $slider.find(".kifi-keep-private").prop("checked", true);
-      if (!o.kept) {
-        $slider.find(".kifi-keep-options").show();
-      }
-    }
-
     // Event bindings
     $slider.draggable({cursor: "move", axis: "y", distance: 10, handle: ".kifi-slider-title-bar", containment: "body", scroll: false})
     .on("click", ".kifi-slider-x", function() {
@@ -182,19 +178,27 @@ slider = function() {
     })
     .on("mousedown", ".kifi-slider-▾", function(e) {
       e.preventDefault();
-      var $box = $(this).siblings(".kifi-slider-▾-box").fadeIn(50);
+      var $arr = $(this);
+      var $box = $arr.siblings(".kifi-slider-▾-box").fadeIn(50);
       var $nev = $box.find(".kifi-slider-never")
-        .toggleClass("kifi-checked", !!o.neverOnSite)
         .on("mouseenter", enterItem)
         .on("mouseleave", leaveItem);
-      var $act = $box.closest(".kifi-slider-title-actions")
-        .addClass("kifi-active")
-        .on("mouseleave", function onLeave(e) {
-          $act.removeClass("kifi-active").off("mouseleave", onLeave);
-          $nev.off("mouseenter", enterItem)
-              .off("mouseleave", leaveItem);
-          $box.fadeOut(50);
-        });
+      var $act = $box.closest(".kifi-slider-title-actions").addClass("kifi-active");
+      document.addEventListener("mousedown", function onDown(e) {
+        if (!$box[0].contains(e.target)) {
+          document.removeEventListener("mousedown", onDown, true);
+          $box.triggerHandler("kifi:hide");
+          if ($arr[0] === e.target) {
+            e.stopPropagation();
+          }
+        }
+      }, true);
+      $box.on("kifi:hide", function hide() {
+        $act.removeClass("kifi-active");
+        $nev.off("mouseenter", enterItem)
+            .off("mouseleave", leaveItem);
+        $box.off("kifi:hide", hide).fadeOut(50);
+      });
       // .kifi-hover class needed because :hover does not work during drag
       function enterItem() { $(this).addClass("kifi-hover"); }
       function leaveItem() { $(this).removeClass("kifi-hover"); }
@@ -208,7 +212,7 @@ slider = function() {
         if (never) {
           slideOut("never");
         } else {
-          $nev.closest(".kifi-slider-▾-box").fadeOut(50);
+          $nev.closest(".kifi-slider-▾-box").triggerHandler("kifi:hide");
         }
       }, 150);
     })
@@ -262,7 +266,7 @@ slider = function() {
 
     slideIn();
 
-    callback && callback(o.session);
+    callback && callback();
   }
 
   var idleTimer = {
@@ -544,9 +548,7 @@ slider = function() {
   function updateCommentCount(type, count) {
     count = count != null ? count : $(".kifi-comment-real").length; // if no count passed in, count DOM nodes
 
-    $({"public": ".kifi-tab-count-comments", "message": ".kifi-tab-count-messages"}[type])
-      .text(count)
-      .toggleClass("zero_comments", count == 0);
+    $({"public": ".kifi-tab-count-comments", "message": ".kifi-tab-count-messages"}[type]).text(count);
   }
 
   function renderComments(session, comments, type, id, onComplete, partialRender) {
@@ -554,7 +556,6 @@ slider = function() {
     comments = comments || {};
     comments["public"] = comments["public"] || [];
     comments["message"] = comments["message"] || [];
-    //comments["private"] = comments["private"] || []; // Removed, not for MVP
 
     var visibleComments = comments[type] || [];
 
@@ -1049,7 +1050,7 @@ slider = function() {
   function submitComment(text, type, session, parent, recipients, callback) {
     api.log("[submitComment] parent:", parent);
     api.port.emit("post_comment", {
-      "url": document.location.href,
+      "url": document.URL,
       "title": document.title,
       "text": text,
       "permissions": type,
