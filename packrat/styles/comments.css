@@ -425,6 +425,10 @@ form.kifi-message-form div.kifi-compose-wrapper input.kifi-to-list { /* shown te
   border-bottom: none;
   border-radius: 3px 3px 0 0;
 }
+input.kifi-to-list:-moz-placeholder,
+#token-input-to-list:-moz-placeholder {
+  color: #a9a9a9 !important;
+}
 li.token-input-token-kifi {
   overflow: hidden;
   margin: 3px !important;
