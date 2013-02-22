@@ -159,8 +159,10 @@
 }
 .kifi-slider-x::before {
   content: "\00D7";
-  font: 14px serif;
-  vertical-align: -2px;
+  font: 14px/14px serif;
+  vertical-align: text-bottom;
+  position: relative;
+  top: 1px;
 }
 .kifi-slider-▾ {
   border-left: 1px solid #6b7d8a;
