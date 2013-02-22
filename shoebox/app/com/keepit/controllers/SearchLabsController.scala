@@ -94,7 +94,7 @@ object SearchLabsController extends FortyTwoController {
           val m = Array.tabulate(size, size){ (i, j) =>
             if (i == j) 0.0d else SemanticVector.similarity(vectors(i), vectors(j)).toDouble
           }
-          (0 until size).foreach{ i => m(i)(i) = (0 until size).foldLeft(0.0d){ (sum, j) => sum + m(i)(j) } }
+          (0 until size).foreach{ i => m(i)(i) = (0 until size).foldLeft(0.0d){ (sum, j) => sum + m(i)(j) } * 2 }
           new Array2DRowRealMatrix(m)
         }
         val decomposition = new EigenDecomposition(matrix)
