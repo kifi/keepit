@@ -148,9 +148,9 @@ class PhraseIndexer(indexDirectory: Directory, dataDirectory: Option[File], inde
     }
   }
 
-  def reload(indexableItertor: Iterator[PhraseIndexable], refresh: Boolean = true) {
+  def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true) {
     deleteAllDocuments(refresh = false)
-    indexDocuments(indexableItertor, 100000, refresh = false){ s => /* nothing */ }
+    indexDocuments(indexableIterator, 100000, refresh = false){ s => /* nothing */ }
     if (refresh) refreshSearcher()
   }
 

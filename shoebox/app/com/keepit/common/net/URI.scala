@@ -52,15 +52,15 @@ object URI extends Logging {
 
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
   val encodedPercent = java.net.URLEncoder.encode("%", "UTF-8")
-  val encodedHash = java.net.URLEncoder.encode("%", "UTF-8")
+  val encodedHash = java.net.URLEncoder.encode("#", "UTF-8")
 
   def fixMalformedEscape(uriString: String) = {
     (uriString.split("%", -1) match {
       case Array(first, rest @ _*) =>
         rest.foldLeft(first){ (str, piece) => str + twoHexDigits.findPrefixOf(piece).map(_ => "%").getOrElse(encodedPercent) + piece }
-    }).split("#",-1) match {
+    }).split("\\#",-1) match {
       case Array(first, rest @ _*) =>
-        rest.foldLeft(first){ (str, piece) => str + twoHexDigits.findPrefixOf(piece).map(_ => "#").getOrElse(encodedHash) + piece }
+        first + "#" + rest.mkString(encodedHash)
     }
   }
 
