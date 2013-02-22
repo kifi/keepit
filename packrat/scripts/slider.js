@@ -178,18 +178,27 @@ slider = function() {
     })
     .on("mousedown", ".kifi-slider-▾", function(e) {
       e.preventDefault();
-      var $box = $(this).siblings(".kifi-slider-▾-box").fadeIn(50);
+      var $arr = $(this);
+      var $box = $arr.siblings(".kifi-slider-▾-box").fadeIn(50);
       var $nev = $box.find(".kifi-slider-never")
         .on("mouseenter", enterItem)
         .on("mouseleave", leaveItem);
-      var $act = $box.closest(".kifi-slider-title-actions")
-        .addClass("kifi-active")
-        .on("mouseleave", function onLeave(e) {
-          $act.removeClass("kifi-active").off("mouseleave", onLeave);
-          $nev.off("mouseenter", enterItem)
-              .off("mouseleave", leaveItem);
-          $box.fadeOut(50);
-        });
+      var $act = $box.closest(".kifi-slider-title-actions").addClass("kifi-active");
+      document.addEventListener("mousedown", function onDown(e) {
+        if (!$box[0].contains(e.target)) {
+          document.removeEventListener("mousedown", onDown, true);
+          $box.triggerHandler("kifi:hide");
+          if ($arr[0] === e.target) {
+            e.stopPropagation();
+          }
+        }
+      }, true);
+      $box.on("kifi:hide", function hide() {
+        $act.removeClass("kifi-active");
+        $nev.off("mouseenter", enterItem)
+            .off("mouseleave", leaveItem);
+        $box.off("kifi:hide", hide).fadeOut(50);
+      });
       // .kifi-hover class needed because :hover does not work during drag
       function enterItem() { $(this).addClass("kifi-hover"); }
       function leaveItem() { $(this).removeClass("kifi-hover"); }
@@ -203,7 +212,7 @@ slider = function() {
         if (never) {
           slideOut("never");
         } else {
-          $nev.closest(".kifi-slider-▾-box").fadeOut(50);
+          $nev.closest(".kifi-slider-▾-box").triggerHandler("kifi:hide");
         }
       }, 150);
     })
