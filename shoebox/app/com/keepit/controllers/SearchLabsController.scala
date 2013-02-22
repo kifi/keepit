@@ -94,13 +94,27 @@ object SearchLabsController extends FortyTwoController {
           val m = Array.tabulate(size, size){ (i, j) =>
             if (i == j) 0.0d else SemanticVector.similarity(vectors(i), vectors(j)).toDouble
           }
-          (0 until size).foreach{ i => m(i)(i) = (0 until size).foldLeft(0.0d){ (sum, j) => sum + m(i)(j) } * 2 }
+          (0 until size).foreach{ i => m(i)(i) = (0 until size).foldLeft(0.0d){ (sum, j) => sum + m(i)(j) } }
           new Array2DRowRealMatrix(m)
         }
         val decomposition = new EigenDecomposition(matrix)
+
         try {
-          val x = decomposition.getEigenvector(0).toArray()
-          val y = decomposition.getEigenvector(1).toArray()
+          val eigenVals = decomposition.getRealEigenvalues()
+          val minEigenVal = eigenVals(eigenVals.length - 2)
+
+          def getValues(n: Int) = {
+            val vec = decomposition.getEigenvector(n).toArray
+            val eigenVal = eigenVals(n)
+            val avg = vec.sum/vec.length
+            val diff = eigenVal - minEigenVal
+            val norm = sqrt(abs(diff)) * (if (diff > 0) 1 else -1)
+            vec.map(v => (v - avg) * norm)
+          }
+
+          val x = getValues(0)
+          val y = getValues(1)
+
           val norm = {
             val n = Seq(abs(x.max), abs(x.min), abs(y.max), abs(y.min)).max * 1.1
             if (n == 0 || n.isNaN()) 1.0 else n
@@ -115,6 +129,7 @@ object SearchLabsController extends FortyTwoController {
           }
         } catch {
           case e: ArrayIndexOutOfBoundsException => // ignore. not enough eigenvectors
+          case e: Exception => log.error("friend mapping failed", e)
         }
       }
     }
