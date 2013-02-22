@@ -94,3 +94,16 @@ class PhraseImporterImpl @Inject()(system: ActorSystem, db: DBConnection, phrase
     actor ! ImportFile(file)
   }
 }
+
+trait PhraseFormatter
+class WikipediaFormatter extends PhraseFormatter {
+  def format(phrase: String) = {
+    def removeParenths(str: String, groupingSymbol: (String, String)) = {
+      val begin = str.indexOf(groupingSymbol._1)
+      val end = str.indexOf(groupingSymbol._2, begin)
+      if(begin>=0 && end>0) str.substring(0,begin) + str.substring(end+1)
+      else str
+    }
+    removeParenths(phrase.replaceAll("_"," "),("(",")")).trim
+  }
+}

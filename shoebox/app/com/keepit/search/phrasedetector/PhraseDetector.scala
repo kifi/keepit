@@ -112,12 +112,12 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
 
 
 object PhraseIndexer {
-  def apply(): PhraseIndexer = apply(new RAMDirectory, inject[DBConnection], inject[PhraseRepo])
+  def apply(): PhraseIndexer = apply(new RAMDirectory)
 
-  def apply(indexDirectory: Directory, db: DBConnection, phraseRepo: PhraseRepo): PhraseIndexer  = {
+  def apply(indexDirectory: Directory): PhraseIndexer  = {
     val analyzer = DefaultAnalyzer.forIndexing
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
-    new PhraseIndexer(indexDirectory, db, phraseRepo, config)
+    new PhraseIndexer(indexDirectory, inject[DBConnection], inject[PhraseRepo], config)
   }
 }
 
@@ -132,15 +132,15 @@ class PhraseIndexer(indexDirectory: Directory, db: DBConnection, phraseRepo: Phr
     }
   }
 
-  def reload(indexableIterator: CloseableIterator[PhraseIndexable], refresh: Boolean = true) {
-    try {
-      deleteAllDocuments(refresh = false)
-      indexDocuments(indexableIterator, 100000, refresh = false){ s => /* nothing */ }
-      if (refresh) refreshSearcher()
-    }
-    finally {
-      indexableIterator.close
-    }
+  def reload(indexableIterator: CloseableIterator[PhraseIndexable], refresh: Boolean) {
+    try { reload(indexableIterator, refresh) }
+    finally { indexableIterator.close }
+  }
+
+  def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true) {
+    deleteAllDocuments(refresh = false)
+    indexDocuments(indexableIterator, 500000, refresh = false){ s => /* nothing */ }
+    if (refresh) refreshSearcher()
   }
 
   def buildIndexable(data: Phrase): Indexable[Phrase] = throw new UnsupportedOperationException

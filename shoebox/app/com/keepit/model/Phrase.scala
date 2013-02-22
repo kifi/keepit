@@ -19,7 +19,8 @@ case class Phrase (
   state: State[Phrase] = PhraseStates.ACTIVE
   ) extends Model[Phrase] {
   def withId(id: Id[Phrase]): Phrase = copy(id = Some(id))
-  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withUpdateTime(now: DateTime): Phrase = this.copy(updatedAt = now)
+  def isActive: Boolean = state == PhraseStates.ACTIVE
 }
 
 @ImplementedBy(classOf[PhraseRepoImpl])

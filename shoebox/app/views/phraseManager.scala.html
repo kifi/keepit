@@ -1,32 +1,88 @@
-@(pharses: Seq[Phrase])
+@(phrasesOpt: Option[Seq[Phrase]], phraseFiles: Seq[String], page: Int, count: Int, numPages: Int)
+
+@pagination(page: Int, pageCount: Int) = {
+  <div class="pagination pagination-centered pagination-mini">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases(page - 1)">
+        } else {
+         <a href="#">
+        }
+        Prev
+        </a>
+      </li>
+      @for(i <- 0 to (pageCount - 1)) {
+        @if(i == page) {
+          <li class="disabled">
+            <a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases(i)">@{i + 1}</a>
+          </li>
+        } else {
+          <li class="active">
+            <a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases(i)">@{i + 1}</a>
+          </li>
+        }
+      }
+      <li>
+        @if(count > 0) {
+          <a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases(page + 1)">
+        } else {
+         <a href="#">
+        }
+        Next
+        </a>
+      </li>
+    </ul>
+  </div>
+}
 
 @admin("Phrases") {
-<h3>Phrases Used in Searching and Classification</h3>
-<form class="slider-patterns" action="@com.keepit.controllers.admin.routes.SliderAdminController.savePatterns" method="POST">
-  <table class="table table-condensed table-striped">
-    <thead>
-      <tr>
-        <th>Phrase
-        <th>Language
-        <th>Source
-        <th>Added Date
-    </thead>
-    @for(pattern <- patterns) {
-    <tr>
-      <td><input type="checkbox" class="checkbox" name="active_@pattern.id.get" @if(pattern.isActive) {checked}>
-      <td class="control-group"><input type="text" class="url-pattern" name="pattern_@pattern.id.get" value="@pattern.pattern">
-      <td class="control-group"><input type="text" class="url-example" name="example_@pattern.id.get" value="@pattern.example.getOrElse("")">
-      <td class="url-match">
+  <h3>Phrases Used in Searching and Classification</h3>
+
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.PhraseController.addPhrase" method="POST">
+    <label>Phrase: </label>
+    <input type="text" name="phrase" placeholder="Phrase">
+    <label>Language: </label>
+    <input type="text" name="lang" value="en">
+    <label>Source: </label>
+    <input type="text" name="source" value="manual">
+    <button type="submit" class="btn btn-primary">Add</button>
+  </form>
+
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.PhraseController.refreshPhrases" method="POST">
+    <select name="importFile">
+    @for(file <- phraseFiles) {
+      <option value="@file">@file</option>
     }
-    <tr data-new="true">
-      <td><input type="checkbox" class="checkbox" name="new_active">
-      <td class="control-group"><input type="text" class="url-pattern" name="new_pattern">
-      <td class="control-group"><input type="text" class="url-example" name="new_example">
-      <td class="url-match">
-  </table>
-  <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
-  <button type="reset" class="btn">Clear unsaved changes</button>
-</form>
+    </select>
+    <button type="submit" class="btn">Import file</button>
+    <p><small>Note: This disables this page until the import is finished.</small></p>
+  </form>
+
+  @if(phrasesOpt.isDefined) {
+  <form action="@com.keepit.controllers.admin.routes.PhraseController.savePhrases" method="POST">
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>
+          <th>Phrase
+          <th>Language
+          <th>Source
+          <th>Added Date
+      </thead>
+      @for(phrase <- phrasesOpt.get) {
+      <tr>
+        <td><input type="checkbox" class="checkbox" name="active_@phrase.id.get" @if(phrase.isActive) {checked}>
+        <td>@phrase.phrase
+        <td>@phrase.lang.lang
+        <td>@phrase.source
+        <td>@adminHelper.dateTimeDisplay(phrase.createdAt)
+      }
+    </table>
+    <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
+    <button type="reset" class="btn">Clear unsaved changes</button>
+  </form>
+  }
 }
 
 <script>

@@ -174,7 +174,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
       val configDir = new File(path).getCanonicalFile()
       new File(configDir, "phrase")
     }
-    PhraseIndexer(new MMapDirectory(dir), dataDir)
+    PhraseIndexer(new MMapDirectory(dir))
   }
 
 

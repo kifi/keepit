@@ -134,6 +134,11 @@ POST    /admin/slider/domains       com.keepit.controllers.admin.SliderAdminCont
 POST    /admin/slider/domains/fetch com.keepit.controllers.admin.SliderAdminController.refetchClassifications
 GET     /admin/slider/importEvents  com.keepit.controllers.admin.SliderAdminController.getImportEvents
 
+GET     /admin/phrases              com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
+POST    /admin/phrases/add          com.keepit.controllers.admin.PhraseController.addPhrase
+POST    /admin/phrases/refresh      com.keepit.controllers.admin.PhraseController.refreshPhrases
+POST    /admin/phrases/save         com.keepit.controllers.admin.PhraseController.savePhrases
+
 GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
 GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()
 GET     /admin/healthcheck/errors   com.keepit.common.healthcheck.HealthController.getErrors()

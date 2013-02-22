@@ -201,7 +201,7 @@ class DevModule() extends ScalaModule with Logging {
       new File(configDir, "phrase")
     }
 
-    PhraseIndexer(indexDir, dataDir)
+    PhraseIndexer(indexDir)
   }
 
   @Provides
