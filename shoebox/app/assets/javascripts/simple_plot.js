@@ -22,16 +22,15 @@ $(function() {
 
     function scale(a) { return d3.scale[o[a+"scale"] == "log" ? "log" : "linear"](); }
     function domain(a) { return [o[a+"start"], o[a+"end"]]; }
-    function drawAxes() {
+
+    !function drawAxes() {
       var xAxis = d3.svg.axis().scale(xScale).ticks(8).orient(o.xaxis == "top" ? "top" : "bottom");
       var yAxis = d3.svg.axis().scale(yScale).ticks(8).orient(o.yaxis == "right" ? "right" : "left");
-      var xpos = {bottom: yDomain[0], top: yDomain[1]}[o.xaxis] || 0;
-      var ypos = {left: xDomain[0], right: xDomain[1]}[o.yaxis] || 0;
+      var xpos = yDomain[o.xaxis == "top" ? 1 : 0];
+      var ypos = xDomain[o.yaxis == "right" ? 1 : 0];
       svg.append("svg:g").attr("class", "axis").attr("transform", "translate(0,"+ yScale(xpos) +")").call(xAxis);
       svg.append("svg:g").attr("class", "axis").attr("transform", "translate("+ xScale(ypos) +",0)").call(yAxis);
-    }
-
-    drawAxes();
+    }();
 
     $.getJSON(o.uri, function draw(obj) {
       svg.selectAll("circle")
