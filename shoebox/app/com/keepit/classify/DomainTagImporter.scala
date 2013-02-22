@@ -17,15 +17,18 @@ import com.google.inject.{Provider, ImplementedBy, Inject}
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.inject.inject
 
 import akka.actor.Status.Failure
 import akka.actor.{ActorSystem, Props, Actor}
 import akka.dispatch.Future
 import akka.pattern.ask
 import akka.util.duration._
-import play.api.libs.json.{JsArray, JsNumber, JsString, JsObject}
+import play.api.Play.current
+import play.api.libs.json.{JsNumber, JsString, JsObject}
 import play.api.libs.ws.WS
 
 private case object RefetchAll
@@ -135,6 +138,7 @@ private[classify] class DomainTagImportActor(db: DBConnection, updater: Sensitiv
 
   private def failWithException(eventName: String, e: Exception) {
     log.error(e)
+    inject[HealthcheckPlugin].addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(e.getMessage)))
     persistEventPlugin.persist(Events.serverEvent(
       EventFamilies.EXCEPTION,
       eventName,
