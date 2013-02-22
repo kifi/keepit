@@ -91,10 +91,8 @@ object SearchLabsController extends FortyTwoController {
       // use the Quantification Method IV to map friends onto 2D space
       if (size > 2) {
         val matrix = {
-          val m = Array.tabulate(size, size){ (i, j) =>
-            if (i == j) 0.0d else SemanticVector.similarity(vectors(i), vectors(j)).toDouble
-          }
-          (0 until size).foreach{ i => m(i)(i) = (0 until size).foldLeft(0.0d){ (sum, j) => sum + m(i)(j) } }
+          val m = Array.tabulate(size, size){ (i, j) => if (i == j) 0.0d else similarity(vectors(i), vectors(j)) }
+          (0 until size).foreach{ i => m(i)(i) = (0 until size).foldLeft(0.0d){ (sum, j) => sum - m(i)(j) } }
           new Array2DRowRealMatrix(m)
         }
         val decomposition = new EigenDecomposition(matrix)
@@ -104,12 +102,10 @@ object SearchLabsController extends FortyTwoController {
           val minEigenVal = eigenVals(eigenVals.length - 2)
 
           def getValues(n: Int) = {
-            val vec = decomposition.getEigenvector(n).toArray
             val eigenVal = eigenVals(n)
-            val avg = vec.sum/vec.length
-            val diff = eigenVal - minEigenVal
-            val norm = sqrt(abs(diff)) * (if (diff > 0) 1 else -1)
-            vec.map(v => (v - avg) * norm)
+            val norm = sqrt(eigenVal - minEigenVal)
+            val vec = decomposition.getEigenvector(n).toArray
+            vec.map(v => v * norm)
           }
 
           val x = getValues(0)
@@ -134,5 +130,12 @@ object SearchLabsController extends FortyTwoController {
       }
     }
     Ok(JsObject(Seq("data" -> JsArray(data))))
+  }
+
+  private def similarity(vectors1: Array[Array[Byte]], vectors2: Array[Array[Byte]]) = {
+    vectors1.zip(vectors2).foldLeft(0.0d){ case (sum, (v1, v2)) =>
+      if (v1.isEmpty || v2.isEmpty) sum
+      else sum + SemanticVector.similarity(v1, v2).toDouble
+    }
   }
 }
