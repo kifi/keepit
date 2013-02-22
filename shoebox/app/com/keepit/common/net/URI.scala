@@ -68,12 +68,8 @@ object URI extends Logging {
     }
   }
 
-  def encodeSymbols(uriString: String): String = {
-    uriString.map(_ match {
-      case ch if "@$^*()[]{}|".contains(ch) => java.net.URLEncoder.encode(ch.toString, "UTF-8")
-      case ch => ch
-    }).mkString("")
-  }
+  val charToEncoded = "@$^()[]{}|".map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
+  def encodeSymbols(uriString: String): String = uriString.map(c => charToEncoded.getOrElse(c, c.toString)).mkString
 
   def normalizeScheme(scheme: Option[String]) = scheme.map(_.toLowerCase)
 
