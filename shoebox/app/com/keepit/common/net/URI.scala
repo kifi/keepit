@@ -34,7 +34,7 @@ object URI extends Logging {
       } catch {
         case e: java.net.URISyntaxException =>
         // there may be malformed escape
-        val fixedUriString = fixMalformedEscape(uriString)
+        val fixedUriString = fixDoubleHash(encodeSymbols(fixMalformedEscape(uriString)))
         new java.net.URI(fixedUriString).normalize()
       }
       val scheme = normalizeScheme(Option(uri.getScheme))
@@ -55,13 +55,24 @@ object URI extends Logging {
   val encodedHash = java.net.URLEncoder.encode("#", "UTF-8")
 
   def fixMalformedEscape(uriString: String) = {
-    (uriString.split("%", -1) match {
+    uriString.split("%", -1) match {
       case Array(first, rest @ _*) =>
         rest.foldLeft(first){ (str, piece) => str + twoHexDigits.findPrefixOf(piece).map(_ => "%").getOrElse(encodedPercent) + piece }
-    }).split("\\#",-1) match {
+    }
+  }
+
+  def fixDoubleHash(uriString: String): String = {
+    uriString.split("\\#",-1) match {
       case Array(first, rest @ _*) =>
         first + "#" + rest.mkString(encodedHash)
     }
+  }
+
+  def encodeSymbols(uriString: String): String = {
+    uriString.map(_ match {
+      case ch if "@$^*()[]{}".contains(ch) => java.net.URLEncoder.encode(ch.toString, "UTF-8")
+      case ch => ch
+    }).mkString("")
   }
 
   def normalizeScheme(scheme: Option[String]) = scheme.map(_.toLowerCase)
