@@ -24,6 +24,7 @@ import play.api.libs.concurrent.Promise
 import com.keepit.common.net.ClientResponse
 import java.util.concurrent.TimeUnit
 import com.google.inject.Inject
+import com.keepit.common.akka.FortyTwoActor
 
 trait MailSenderPlugin extends Plugin {
   def processMail(mail: ElectronicMail) : Unit
@@ -61,7 +62,7 @@ class MailSenderPluginImpl @Inject() (system: ActorSystem, db: DBConnection, mai
 private[mail] case class ProcessOutbox(sender: MailSenderPlugin)
 private[mail] case class ProcessMail(mail: ElectronicMail, sender: MailSenderPlugin)
 
-private[mail] class MailSenderActor() extends Actor with Logging {
+private[mail] class MailSenderActor() extends FortyTwoActor with Logging {
 
   def receive() = {
     case ProcessOutbox(sender) => sender.processOutbox()

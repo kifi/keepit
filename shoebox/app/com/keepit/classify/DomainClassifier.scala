@@ -13,12 +13,13 @@ import akka.actor.{Actor, Props, ActorSystem}
 import akka.dispatch.Future
 import akka.pattern.ask
 import akka.util.duration._
+import com.keepit.common.akka.FortyTwoActor
 
 
 private case class FetchDomainInfo(domain: String)
 
 private[classify] class DomainClassificationActor(db: DBConnection, client: HttpClient, updater: SensitivityUpdater,
-    domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo) extends Actor {
+    domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo) extends FortyTwoActor {
 
   private final val KEY = "42go42"
 
