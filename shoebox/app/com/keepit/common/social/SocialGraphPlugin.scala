@@ -14,12 +14,13 @@ import akka.util.Timeout
 import akka.util.duration._
 import play.api.Play.current
 import play.api.Plugin
+import com.keepit.common.akka.FortyTwoActor
 
 //case object FetchAll
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case object FetchAll
 
-private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: DBConnection, socialRepo: SocialUserInfoRepo) extends Actor with Logging {
+private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: DBConnection, socialRepo: SocialUserInfoRepo) extends FortyTwoActor with Logging {
   def receive() = {
     case FetchAll =>
       val unprocessedUsers = db.readOnly {implicit s =>

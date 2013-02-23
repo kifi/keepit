@@ -21,10 +21,11 @@ import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.inject._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.akka.FortyTwoActor
 
 case object Index
 
-private[index] class ArticleIndexerActor(articleIndexer: ArticleIndexer) extends Actor with Logging {
+private[index] class ArticleIndexerActor(articleIndexer: ArticleIndexer) extends FortyTwoActor with Logging {
 
   def receive() = {
     case Index => try {

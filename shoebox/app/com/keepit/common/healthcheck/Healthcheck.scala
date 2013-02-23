@@ -26,6 +26,7 @@ import org.joda.time.DateTime
 import akka.dispatch.Future
 import com.google.inject.Inject
 import com.google.inject.Provider
+import com.keepit.common.akka.FortyTwoActor
 
 case class HealthcheckError(error: Option[Throwable] = None, method: Option[String] = None,
     path: Option[String] = None, callType: CallType, errorMessage: Option[String] = None,

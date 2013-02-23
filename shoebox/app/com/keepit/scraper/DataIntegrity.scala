@@ -21,6 +21,7 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.ScrapeInfo
 import play.api.libs.concurrent.Akka
 import akka.util.duration._
+import com.keepit.common.akka.FortyTwoActor
 
 
 trait DataIntegrityPlugin extends Plugin {
@@ -52,7 +53,7 @@ class DataIntegrityPluginImpl @Inject() (system: ActorSystem)
 
 private[scraper] case object CleanOrphans
 
-private[scraper] class DataIntegrityActor() extends Actor with Logging {
+private[scraper] class DataIntegrityActor() extends FortyTwoActor with Logging {
 
   def receive() = {
     case CleanOrphans =>

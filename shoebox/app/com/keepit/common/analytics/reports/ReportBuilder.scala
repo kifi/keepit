@@ -24,6 +24,7 @@ import com.google.inject.Inject
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.analytics.reports.Reports.ReportGroup
+import com.keepit.common.akka.FortyTwoActor
 
 object Reports {
   lazy val dailyActiveUniqueUserReport = new DailyActiveUniqueUserReport
@@ -129,7 +130,7 @@ private[reports] case class ReportCron(sender: ReportBuilderPlugin)
 private[reports] case class BuildReport(startDate: DateTime, endDate: DateTime, report: Report)
 private[reports] case class BuildReports(startDate: DateTime, endDate: DateTime, reportGroup: Reports.ReportGroup)
 
-private[reports] class ReportBuilderActor() extends Actor with Logging {
+private[reports] class ReportBuilderActor() extends FortyTwoActor with Logging {
 
   def receive() = {
     case ReportCron(sender) =>
