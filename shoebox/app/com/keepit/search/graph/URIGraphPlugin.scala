@@ -21,11 +21,12 @@ import com.google.inject.Inject
 import com.google.inject.Provider
 import com.keepit.inject._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.akka.FortyTwoActor
 
 case object Load
 case class Update(userId: Id[User])
 
-private[graph] class URIGraphActor(uriGraph: URIGraph) extends Actor with Logging {
+private[graph] class URIGraphActor(uriGraph: URIGraph) extends FortyTwoActor with Logging {
 
   def receive() = {
     case Load => try {

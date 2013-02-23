@@ -30,6 +30,7 @@ import akka.util.duration._
 import play.api.Play.current
 import play.api.libs.json.{JsNumber, JsString, JsObject}
 import play.api.libs.ws.WS
+import com.keepit.common.akka.FortyTwoActor
 
 private case object RefetchAll
 private case class ApplyTag(tagName: DomainTagName, domainNames: Seq[String])
@@ -52,7 +53,7 @@ object DomainTagImportEvents {
 private[classify] class DomainTagImportActor(db: DBConnection, updater: SensitivityUpdater, clock: Provider[DateTime],
     domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo,
     persistEventPlugin: PersistEventPlugin, settings: DomainTagImportSettings)
-    extends Actor with Logging {
+    extends FortyTwoActor with Logging {
 
   import DomainTagImportEvents._
 

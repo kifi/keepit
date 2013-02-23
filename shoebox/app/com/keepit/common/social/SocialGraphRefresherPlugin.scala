@@ -25,11 +25,12 @@ import com.keepit.common.db.slick._
 import play.api.Play.current
 import play.api.libs.json.JsArray
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
+import com.keepit.common.akka.FortyTwoActor
 
 private case class RefreshUserInfo(socialUserInfo: SocialUserInfo)
 private case object RefreshAll
 
-private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphPlugin, db: DBConnection, socialRepo: SocialUserInfoRepo) extends Actor with Logging {
+private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphPlugin, db: DBConnection, socialRepo: SocialUserInfoRepo) extends FortyTwoActor with Logging {
   def receive() = {
     case RefreshAll => {
       log.info("going to check which SocilaUserInfo Was not fetched Lately")

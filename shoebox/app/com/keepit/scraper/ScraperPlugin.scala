@@ -12,11 +12,12 @@ import akka.pattern.ask
 import akka.util.Timeout
 import akka.util.duration._
 import play.api.Plugin
+import com.keepit.common.akka.FortyTwoActor
 
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
 
-private[scraper] class ScraperActor(scraper: Scraper) extends Actor with Logging {
+private[scraper] class ScraperActor(scraper: Scraper) extends FortyTwoActor with Logging {
   def receive() = {
     case Scrape => sender ! scraper.run()
     case ScrapeInstance(uri) => sender ! scraper.safeProcessURI(uri)

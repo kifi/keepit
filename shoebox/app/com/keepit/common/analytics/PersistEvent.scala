@@ -15,13 +15,14 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import play.api.Play.current
 import play.api.Plugin
+import com.keepit.common.akka.FortyTwoActor
 
 case object Load
 case class Update(userId: Id[User])
 case class Persist(event: Event, queueTime: DateTime)
 case class PersistMany(events: Seq[Event], queueTime: DateTime)
 
-private[analytics] class PersistEventActor extends Actor with Logging {
+private[analytics] class PersistEventActor extends FortyTwoActor with Logging {
 
   def receive() = {
     case Persist(event, queueTime) =>
