@@ -205,7 +205,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       }
 
       buildLineField(fieldName, domains, (fieldName, url) =>
-        URI.parse(url).flatMap{ uri =>
+        URI.parse(url).toOption.flatMap{ uri =>
           uri.host match {
             case Some(Host(domain @ _*)) =>
               Some(new IteratorTokenStream((1 to domain.size).iterator, (n: Int) => domain.take(n).reverse.mkString(".")))

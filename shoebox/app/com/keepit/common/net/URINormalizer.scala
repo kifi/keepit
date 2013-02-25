@@ -1,6 +1,7 @@
 package com.keepit.common.net
 
 import com.keepit.common.logging.Logging
+import util.{Failure, Success}
 
 object URINormalizer extends Logging {
 
@@ -8,13 +9,13 @@ object URINormalizer extends Logging {
 
   def normalize(uriString: String) = {
     URI.parse(uriString) match {
-      case Some(uri) =>
+      case Success(uri) =>
         normalizers.find(_.isDefinedAt(uri)).map{ n =>
           n.apply(uri)
         }.getOrElse(throw new Exception("failed to find a normalizer"))
-      case None =>
+      case Failure(_) =>
         log.error("uri normalization failed: [%s]".format(uriString))
-        uriString // parsing/normalization failed
+        uriString
     }
   }
 
