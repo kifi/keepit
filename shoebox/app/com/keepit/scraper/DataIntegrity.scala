@@ -20,9 +20,9 @@ import akka.actor.{Actor, Cancellable, Props, ActorSystem}
 import com.keepit.model.NormalizedURI
 import com.keepit.model.ScrapeInfo
 import play.api.libs.concurrent.Akka
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
-
 
 trait DataIntegrityPlugin extends Plugin {
   def cron(): Unit

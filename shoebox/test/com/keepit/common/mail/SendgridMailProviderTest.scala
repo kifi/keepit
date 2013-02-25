@@ -1,7 +1,6 @@
 package com.keepit.common.mail
 
 import com.keepit.test._
-import com.keepit.TestAkkaSystem
 import com.keepit.inject._
 import play.api.Play.current
 import play.api.libs.json.JsValue
@@ -17,7 +16,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 
 @RunWith(classOf[JUnitRunner])
-class SendgridMailProviderTest extends Specification with TestAkkaSystem {
+class SendgridMailProviderTest extends Specification {
 
   "SendgridMailProvider" should {
     "send email" in {

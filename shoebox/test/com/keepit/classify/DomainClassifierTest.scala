@@ -10,10 +10,13 @@ import com.keepit.inject.{provide, inject}
 import com.keepit.test.{DbRepos, EmptyApplication}
 
 import akka.actor.ActorSystem
-import akka.dispatch.Await
-import akka.util.duration._
+import scala.concurrent.Await
 import play.api.Play.current
 import play.api.test.Helpers.running
+
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import java.util.concurrent.TimeUnit
 
 class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
   val system = ActorSystem("system")
@@ -39,7 +42,7 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
             importer.applyTagToDomains(DomainTagName("search engines"), Seq("google.com", "yahoo.com")),
             importer.applyTagToDomains(DomainTagName("Technology and Computers"), Seq("42go.com", "google.com")),
             importer.applyTagToDomains(DomainTagName("Porn"), Seq("playboy.com"))
-          ).foreach { Await.result(_, intToDurationInt(1).second ) }
+          ).foreach { Await.result(_, pairIntToDuration(100, TimeUnit.SECONDS) ) }
         }
 
         classifier.isSensitive("google.com") === Right(Some(false))
@@ -84,7 +87,7 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
           classifier.isSensitive("playboy.com").left.get,
           classifier.isSensitive("porn.com").left.get
         ).foreach { future =>
-          Await.result(future, intToDurationInt(1).second)
+          Await.result(future, pairIntToDuration(100, TimeUnit.MILLISECONDS))
         }
 
         classifier.isSensitive("yahoo.com") === Right(Some(false))

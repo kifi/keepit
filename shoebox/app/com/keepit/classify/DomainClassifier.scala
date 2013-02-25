@@ -10,9 +10,10 @@ import com.keepit.common.db.slick.DBConnection
 import com.keepit.common.net.HttpClient
 
 import akka.actor.{Actor, Props, ActorSystem}
-import akka.dispatch.Future
+import scala.concurrent.Future
 import akka.pattern.ask
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 
 
@@ -43,7 +44,7 @@ private[classify] class DomainClassificationActor(db: DBConnection, client: Http
     }).filterNot(DomainTagName.isBlacklisted)
   }
 
-  protected def receive = {
+  def receive = {
     case FetchDomainInfo(hostname) =>
       val tagNames = getTagNames(hostname)
       db.readWrite { implicit s =>

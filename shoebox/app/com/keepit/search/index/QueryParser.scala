@@ -27,7 +27,7 @@ class QueryParser(analyzer: Analyzer) extends LuceneQueryParser(Version.LUCENE_3
       if (queryText == null || queryText.trim.length == 0) null
       else super.parse(queryText)
     } catch {
-      case e => super.parse(LuceneQueryParser.escape(queryText))
+      case e: Throwable => super.parse(LuceneQueryParser.escape(queryText))
     }
     Option(query)
   }

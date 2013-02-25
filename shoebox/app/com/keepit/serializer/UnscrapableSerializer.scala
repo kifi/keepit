@@ -22,17 +22,17 @@ class UnscrapableSerializer extends Format[Unscrapable] {
   def writesSeq(unscrapables: Seq[Unscrapable]): JsValue =
     JsArray(unscrapables.map(writes))
 
-  def reads(json: JsValue): Unscrapable =
-    Unscrapable(
+  def reads(json: JsValue): JsResult[Unscrapable] =
+    JsSuccess(Unscrapable(
       id = (json \ "id").asOpt[Long].map(Id[Unscrapable](_)),
       createdAt = parseStandardTime((json \ "createdAt").as[String]),
       updatedAt = parseStandardTime((json \ "updatedAt").as[String]),
       pattern = (json \ "pattern").as[String],
       state = State[Unscrapable]((json \ "state").as[String])
-    )
+    ))
 
   def readsSeq(json: JsValue) =
-    json.as[List[JsObject]].map(reads)
+    json.as[List[JsObject]].map(reads).map(_.get)
 }
 
 object UnscrapableSerializer {

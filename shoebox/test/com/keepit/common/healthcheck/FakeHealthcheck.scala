@@ -4,28 +4,23 @@ import com.keepit.common.mail._
 import com.keepit.common.mail.EmailAddresses.ENG
 import akka.actor.Actor._
 import akka.actor._
-import akka.dispatch.Future
 import scala.collection.mutable.MutableList
-import akka.dispatch.Promise
-import akka.dispatch.ExecutionContext
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent._
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 case class FakeHealthcheck() extends HealthcheckPlugin {
 
   val _errors = MutableList[HealthcheckError]()
 
-  def errorCountFuture(): Future[Int] = Promise.successful(_errors.size)(new ExecutionContext() {
-    def execute(runnable: Runnable): Unit = {}
-    def reportFailure(t: Throwable): Unit = {}
-  })
+  def errorCountFuture(): Future[Int] = future {_errors.size}
 
   def errorCount(): Int = errors.size
 
   def resetErrorCount(): Unit = _errors.clear
 
-  def errorsFuture(): Future[List[HealthcheckError]] = Promise.successful(_errors.toList)(new ExecutionContext() {
-    def execute(runnable: Runnable): Unit = {}
-    def reportFailure(t: Throwable): Unit = {}
-  })
+  def errorsFuture(): Future[List[HealthcheckError]] = future {_errors.toList}
 
   def errors(): List[HealthcheckError] = _errors.toList
 

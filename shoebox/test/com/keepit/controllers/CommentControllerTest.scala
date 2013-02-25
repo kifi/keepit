@@ -56,28 +56,28 @@ class CommentControllerTest extends SpecificationWithJUnit with DbRepos {
         val request1 = FakeRequest("POST", "/comments/follow")
           .withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
           .withJsonBody(JsObject(Seq("url" -> JsString("http://www.42go.com"))))
-        val result1 = routeAndCall(request1).get
+        val result1 = route(request1).get
         status(result1) === OK
         contentAsString(result1) === """{"following":true}"""
 
         val request2 = FakeRequest("POST", "/comments/unfollow")
           .withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
           .withJsonBody(JsObject(Seq("url" -> JsString("http://www.42go.com"))))
-        val result2 = routeAndCall(request2).get
+        val result2 = route(request2).get
         status(result2) === OK
         contentAsString(result2) === """{"following":false}"""
 
         val request3 = FakeRequest("POST", "/comments/follow")
           .withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
           .withJsonBody(JsObject(Seq("url" -> JsString("http://www.42go.com"))))
-        val result3 = routeAndCall(request3).get
+        val result3 = route(request3).get
         status(result3) === OK
         contentAsString(result3) === """{"following":true}"""
 
         val request4 = FakeRequest("POST", "/comments/follow")
           .withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
           .withJsonBody(JsObject(Seq("url" -> JsString("http://www.42go.com"))))
-        val result4 = routeAndCall(request4).get
+        val result4 = route(request4).get
         status(result4) === OK
         contentAsString(result4) === """{"following":true}"""      }
     }

@@ -1,20 +1,20 @@
 package com.keepit.common.db.slick
 
-import org.scalaquery.ql.extended.{ExtendedProfile => Profile}
-import org.scalaquery.session.{Database, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability}
-import org.scalaquery.ql._
+import scala.slick.driver._
+import scala.slick.session._
+import scala.slick.lifted._
+import scala.slick.SlickException
 import java.sql.{PreparedStatement, Connection, DatabaseMetaData, Statement}
-import org.scalaquery.SQueryException
 import com.google.inject.Inject
 import com.keepit.common.db.DbInfo
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
-  val Driver: Profile
+  val Driver: ExtendedDriver
   def dbInfo: DbInfo
   lazy val handle: Database = dbInfo.database
 
-  def sequenceID: OperatorColumn[Int]
+  def sequenceID: Column[Int]
   def entityName(name: String): String = name
 }
 

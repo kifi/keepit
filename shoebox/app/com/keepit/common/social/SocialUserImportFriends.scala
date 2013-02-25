@@ -11,9 +11,9 @@ import akka.util.Timeout
 import akka.actor._
 import akka.actor.Actor._
 import akka.actor.ActorRef
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import akka.pattern.ask
-import akka.dispatch.Await
+import scala.concurrent.Await
 import play.api.libs.concurrent._
 import org.joda.time.DateTime
 import akka.dispatch.Future
@@ -58,7 +58,7 @@ class SocialUserImportFriends() extends Logging {
     val socialId = try {
       SocialId((friend \ "id").as[String])
     } catch {
-      case e =>
+      case e: Throwable =>
         log.error("Can't parse username from friend json %s".format(friend))
         throw e
     }

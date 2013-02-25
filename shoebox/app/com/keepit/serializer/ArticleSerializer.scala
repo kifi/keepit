@@ -27,7 +27,7 @@ class ArticleSerializer extends Format[Article] {
       )
     )
 
-  def reads(json: JsValue): Article = Article(
+  def reads(json: JsValue): JsResult[Article] = JsSuccess(Article(
       Id((json \ "normalizedUriId").as[Long]),
       (json \ "title").as[String],
       (json \ "content").as[String],
@@ -39,7 +39,7 @@ class ArticleSerializer extends Format[Article] {
       (json \ "titleLang").asOpt[String] map { lang => Lang(lang) },
       (json \ "contentLang").asOpt[String] map { lang => Lang(lang) },
       (json \ "destinationUrl").asOpt[String]
-    )
+    ))
 }
 
 object ArticleSerializer {

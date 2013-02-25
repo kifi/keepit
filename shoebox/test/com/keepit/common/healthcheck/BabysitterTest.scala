@@ -8,14 +8,22 @@ import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.social.SecureSocialUserService
 import com.keepit.test.EmptyApplication
 import com.keepit.test.FakeClock
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.test.Helpers._
-import akka.util.Duration
+import play.api._
+import play.api.libs.concurrent.Akka
+import com.keepit.common.logging.Logging
+import play.api.libs.concurrent.Akka
+import com.keepit.inject._
 import org.joda.time.DateTime
+import com.google.inject._
+import akka.actor.Scheduler
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.duration._
+import scala.concurrent.duration._
 import com.keepit.common.time._
-import akka.testkit.TestActorRef
 
 @RunWith(classOf[JUnitRunner])
 class BabysitterTest extends SpecificationWithJUnit {

@@ -19,7 +19,7 @@ class PersonalSearchResultSerializer extends Writes[PersonalSearchResult] with L
         "isPrivate" -> JsBoolean(res.isPrivate)
       ))
     } catch {
-      case e =>
+      case e: Throwable =>
         log.error("can't serialize %s".format(res))
         throw e
     }

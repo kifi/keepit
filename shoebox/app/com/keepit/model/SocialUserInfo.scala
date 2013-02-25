@@ -20,7 +20,8 @@ import com.keepit.common.social.SocialUserRawInfo
 import com.keepit.common.social.SocialNetworks
 import com.keepit.common.social.SocialId
 import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 
 case class SocialUserInfo(
   id: Option[Id[SocialUserInfo]] = None,
@@ -68,7 +69,7 @@ case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId
 }
 class SocialUserInfoNetworkCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[SocialUserInfoNetworkKey, SocialUserInfo] {
   val ttl = 30 days
-  def deserialize(obj: Any): SocialUserInfo = SocialUserInfoSerializer.socialUserInfoSerializer.reads(obj.asInstanceOf[JsObject])
+  def deserialize(obj: Any): SocialUserInfo = SocialUserInfoSerializer.socialUserInfoSerializer.reads(obj.asInstanceOf[JsObject]).get
   def serialize(socialUser: SocialUserInfo) = SocialUserInfoSerializer.socialUserInfoSerializer.writes(socialUser)
 }
 
@@ -77,10 +78,7 @@ class SocialUserInfoRepoImpl @Inject() (
     val db: DataBaseComponent, val userCache: SocialUserInfoUserCache, val networkCache: SocialUserInfoNetworkCache)
     extends DbRepo[SocialUserInfo] with SocialUserInfoRepo {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 

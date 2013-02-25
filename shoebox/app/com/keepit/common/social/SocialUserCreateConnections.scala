@@ -8,11 +8,13 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.common.healthcheck.BabysitterTimeout
+import com.keepit.common.db.slick.DBConnection
 import play.api.Play.current
 import play.api.libs.json.{JsArray, JsValue}
-import akka.util.duration._
-import com.keepit.common.db.slick.DBConnection
-
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee._
+import play.api.libs.concurrent._
+import scala.concurrent.duration._
 
 class SocialUserCreateConnections() extends Logging {
 

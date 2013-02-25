@@ -1,7 +1,6 @@
 package com.keepit.common.mail
 
 import com.keepit.test._
-import com.keepit.TestAkkaSystem
 import com.keepit.inject._
 import play.api.Play.current
 import play.api.libs.json.JsValue
@@ -14,7 +13,7 @@ import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.runner.JUnitRunner
 
 @RunWith(classOf[JUnitRunner])
-class PostOfficeTest extends Specification with TestAkkaSystem {
+class PostOfficeTest extends Specification {
 
   "PostOffice" should {
     "persist and load email" in {

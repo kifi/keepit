@@ -24,7 +24,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.controllers.CommonActions._
+
 import play.api.http.ContentTypes
 import securesocial.core._
 import com.keepit.common.social._
@@ -41,7 +41,7 @@ object FortyTwoController {
     val emptyCookie = None
     override val isSigned = true
     override val secure = false
-    override val maxAge = -1
+    override val maxAge = None
     override val httpOnly = true
     def deserialize(data: Map[String, String]) = data.get(COOKIE_NAME).map(ExternalId[User](_))
     def serialize(data: Option[ExternalId[User]]) = data.map(id => Map(COOKIE_NAME -> id.id.toString())).getOrElse(Map.empty)

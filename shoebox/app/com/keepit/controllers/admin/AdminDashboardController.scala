@@ -10,11 +10,11 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import java.util.concurrent.TimeUnit
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
-import com.keepit.controllers.CommonActions._
+
 import com.keepit.inject._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.ArticleStore
@@ -29,6 +29,7 @@ import play.api.libs.json.JsNumber
 import play.api.http.ContentTypes
 import com.keepit.common.db.slick.DBConnection
 import com.keepit.common.db.slick.Repo
+import scala.concurrent.duration._
 
 /**
  * Charts, etc.

@@ -2,7 +2,7 @@ package com.keepit.controllers
 
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.logging.Logging
-import com.keepit.controllers.CommonActions._
+
 import play.api.Play.current
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._

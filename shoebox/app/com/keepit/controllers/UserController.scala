@@ -16,10 +16,11 @@ import com.keepit.search.Lang
 import com.keepit.search.MainSearcherFactory
 import com.keepit.common.mail._
 
-import akka.dispatch.Await
-import akka.util.duration._
+import scala.concurrent.Await
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
+import scala.concurrent.duration._
 
 case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstallations: Seq[KifiInstallation])
 

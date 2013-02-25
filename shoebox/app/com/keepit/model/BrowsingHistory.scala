@@ -19,7 +19,8 @@ import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
 import com.keepit.serializer.BrowsingHistoryBinarySerializer
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 
 case class BrowsingHistory (
                     id: Option[Id[BrowsingHistory]] = None,
@@ -57,10 +58,7 @@ class BrowsingHistoryUserIdCache @Inject() (val repo: FortyTwoCachePlugin) exten
 @Singleton
 class BrowsingHistoryRepoImpl @Inject() (val db: DataBaseComponent, val browsingCache: BrowsingHistoryUserIdCache) extends DbRepo[BrowsingHistory] with BrowsingHistoryRepo {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 

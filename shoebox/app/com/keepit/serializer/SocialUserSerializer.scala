@@ -33,8 +33,8 @@ class SocialUserSerializer extends Format[SocialUser] {
       "refreshToken" -> (info.refreshToken map { e => JsString(e) } getOrElse(JsNull))
     ))
 
-  def reads(json: JsValue): SocialUser =
-    SocialUser(
+  def reads(json: JsValue): JsSuccess[SocialUser] =
+    JsSuccess(SocialUser(
         UserId((json \ "id" \ "id").as[String],
                (json \ "id" \ "providerId").as[String]),
         (json \ "displayName").as[String],
@@ -52,7 +52,7 @@ class SocialUserSerializer extends Format[SocialUser] {
         None,
         Some(readsOAuth2Info(json \ "oAuth2Info")),
         None
-    )
+    ))
 
   def readsOAuth2Info(json: JsValue): OAuth2Info =
     OAuth2Info(

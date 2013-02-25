@@ -1,7 +1,6 @@
 package com.keepit.common.mail
 
 import com.keepit.test._
-import com.keepit.TestAkkaSystem
 import com.keepit.inject._
 import play.api.Play.current
 import play.api.libs.json.JsValue
@@ -18,7 +17,7 @@ import com.keepit.common.db.slick.DBSession._
 
 
 @RunWith(classOf[JUnitRunner])
-class ElectronicMailTest extends Specification with TestAkkaSystem {
+class ElectronicMailTest extends Specification {
 
   "ElectronicMail" should {
     "user filters" in {

@@ -68,10 +68,7 @@ trait URLRepo extends Repo[URL] {
 @Singleton
 class URLRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[URL] with URLRepo {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 
