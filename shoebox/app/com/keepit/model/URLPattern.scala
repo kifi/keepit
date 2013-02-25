@@ -56,7 +56,7 @@ class URLPatternRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[UR
     def * = id.? ~ pattern ~ example.? ~ createdAt ~ updatedAt ~ state <> (URLPattern, URLPattern.unapply _)
   }
 
-  var activePatternsCache = new java.util.concurrent.atomic.AtomicReference[Seq[String]](null)  // TODO: memcache?
+  val activePatternsCache = new java.util.concurrent.atomic.AtomicReference[Seq[String]](null)  // TODO: memcache?
 
   override def save(pattern: URLPattern)(implicit session: RWSession): URLPattern = {
     val newPattern = super.save(pattern)
