@@ -9,6 +9,7 @@ object URI extends Logging {
       case URI(scheme, userInfo, host, port, path, query, fragment) =>
         Success(URI(Some(uriString), scheme, userInfo, host, port, path, query, fragment))
       case _ =>
+        log.warn("Could not parse URL: %s".format(uriString))
         Failure(new java.net.URISyntaxException(uriString, null))
     }
   }
