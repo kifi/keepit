@@ -120,13 +120,9 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           doc.add(buildSemanticVectorField("sv", titleAnalyzer.tokenStream("t", article.title), contentAnalyzer.tokenStream("c", article.content)))
 
           // index domain name
-          URI.parse(uri.url) match {
-            case Some(uri) =>
-              uri.host match {
-                case Some(Host(domain @ _*)) =>
-                  doc.add(buildIteratorField("site", (1 to domain.size).iterator){ n => domain.take(n).reverse.mkString(".") })
-                case _ =>
-              }
+          URI.parse(uri.url).toOption.flatMap(_.host) match {
+            case Some(Host(domain @ _*)) =>
+              doc.add(buildIteratorField("site", (1 to domain.size).iterator){ n => domain.take(n).reverse.mkString(".") })
             case _ =>
           }
 
