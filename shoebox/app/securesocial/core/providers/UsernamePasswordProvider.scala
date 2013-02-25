@@ -23,7 +23,9 @@ import play.api.mvc.{PlainResult, Results, Result, Request}
 import utils.PasswordHasher
 import play.api.{Play, Application}
 import Play.current
-import com.typesafe.plugin._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.ExecutionContext.Implicits.global
+import securesocial.core.providers.utils.BCryptPasswordHasher
 
 /**
 
@@ -44,7 +46,7 @@ class UsernamePasswordProvider(application: Application) extends IdentityProvide
       credentials => {
         val userId = UserId(credentials._1, providerId)
         UserService.find(userId) match {
-          case Some(user) if user.passwordInfo.isDefined && use[PasswordHasher].matches(user.passwordInfo.get, credentials._2) =>
+          case Some(user) if user.passwordInfo.isDefined && new BCryptPasswordHasher(Play.current).matches(user.passwordInfo.get, credentials._2) =>
             Right(user)
           case _ => Left(badRequest(UsernamePasswordProvider.loginForm, Some(InvalidCredentials)))
         }

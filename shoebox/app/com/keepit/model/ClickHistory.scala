@@ -10,7 +10,8 @@ import org.joda.time.DateTime
 import play.api._
 import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
 import com.keepit.serializer.ClickHistoryBinarySerializer
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 
 case class ClickHistory (
                     id: Option[Id[ClickHistory]] = None,
@@ -47,10 +48,7 @@ class ClickHistoryUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends 
 @Singleton
 class ClickHistoryRepoImpl @Inject() (val db: DataBaseComponent, val clickCache: ClickHistoryUserIdCache) extends DbRepo[ClickHistory] with ClickHistoryRepo {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 

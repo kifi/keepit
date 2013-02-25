@@ -23,7 +23,7 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
       )
     )
 
-  def reads(json: JsValue): SocialUserRawInfo = {
+  def reads(json: JsValue): JsSuccess[SocialUserRawInfo] = JsSuccess({
     val jsons = (json \ "jsons") match {
       case array: JsArray => array.value
       case _ => Seq()
@@ -38,7 +38,7 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
       fullName = (json \ "fullName").as[String],
       jsons = jsons
     )
-  }
+  })
 }
 
 object SocialUserRawInfoSerializer {

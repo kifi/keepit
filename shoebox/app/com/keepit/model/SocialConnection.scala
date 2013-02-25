@@ -1,9 +1,6 @@
 package com.keepit.model
 
 import play.api.Play.current
-import org.scalaquery.util.{Node, WithOp, SimpleTypeName, ValueLinearizer}
-import org.scalaquery.simple.{GetResult, StaticQuery => Q}
-import org.scalaquery.simple.GetResult._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
 import com.keepit.common.db._
@@ -42,10 +39,8 @@ trait SocialConnectionRepo extends Repo[SocialConnection] {
 @Singleton
 class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[SocialConnection] with SocialConnectionRepo {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
+  import scala.slick.jdbc.StaticQuery
   import db.Driver.Implicit._
   import DBSession._
 
@@ -86,7 +81,7 @@ class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
              (sui.user_id != ?)
       """.format(connectionsSQL)
     //can use GetResult and SetParameter to be type safe, not sure its worth it at this point
-    val q = Q.query[(Long, Long), Long](sql)
+    val q = StaticQuery.query[(Long, Long), Long](sql)
     val res: Seq[Long] = q.list(id.id, id.id)
     res map {id => Id[User](id)} toSet
   }

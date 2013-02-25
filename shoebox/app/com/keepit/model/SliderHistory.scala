@@ -19,7 +19,7 @@ import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
 import com.keepit.serializer.SliderHistoryBinarySerializer
-import akka.util.duration._
+import scala.concurrent.duration._
 import com.keepit.search.MultiHashFilter
 
 case class SliderHistory (
@@ -58,10 +58,7 @@ class SliderHistoryUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends
 @Singleton
 class SliderHistoryRepoImpl @Inject() (val db: DataBaseComponent, val browsingCache: SliderHistoryUserIdCache) extends DbRepo[SliderHistory] with SliderHistoryRepo {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 

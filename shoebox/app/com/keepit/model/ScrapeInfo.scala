@@ -79,10 +79,7 @@ trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
 @Singleton
 class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[ScrapeInfo] with ScrapeInfoRepo {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 
@@ -99,7 +96,7 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
 
   def allActive(implicit session: RSession): Seq[ScrapeInfo] = {
     val q = (for {
-       Join(s, u) <- table innerJoin inject[NormalizedURIRepoImpl].table on (_.uriId is _.id)
+       (s, u) <- table innerJoin inject[NormalizedURIRepoImpl].table on (_.uriId is _.id)
        if u.state is NormalizedURIStates.INDEXED
      } yield s.*)
    q.list

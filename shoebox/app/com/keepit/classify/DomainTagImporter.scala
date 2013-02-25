@@ -22,13 +22,17 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.inject.inject
 
+import scala.concurrent.{Await, Future}
 import akka.actor.Status.Failure
+
 import akka.actor.{ActorSystem, Props, Actor}
-import akka.dispatch.Future
 import akka.pattern.ask
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import play.api.libs.json.{JsArray, JsNumber, JsString, JsObject}
+
 import play.api.Play.current
-import play.api.libs.json.{JsNumber, JsString, JsObject}
+
 import play.api.libs.ws.WS
 import com.keepit.common.akka.FortyTwoActor
 
@@ -65,14 +69,14 @@ private[classify] class DomainTagImportActor(db: DBConnection, updater: Sensitiv
   // the size of the group of domains to insert at a time
   private val GROUP_SIZE = 500
 
-  protected def receive = {
+ def receive = {
     case RefetchAll =>
       try {
         val outputFilename = FILE_FORMAT.format(clock.get().toString(DATE_FORMAT))
         val outputPath = new URI("%s/%s".format(settings.localDir, outputFilename)).normalize.getPath
         log.info("refetching all domains to %s".format(outputPath))
         persistEvent(IMPORT_START, JsObject(Seq()))
-        WS.url(settings.url).get().onRedeem { res =>
+        WS.url(settings.url).get().onSuccess { case res =>
           val s = new FileOutputStream(outputPath)
           try {
             IOUtils.copy(res.getAHCResponse.getResponseBodyAsStream, s)
@@ -138,7 +142,7 @@ private[classify] class DomainTagImportActor(db: DBConnection, updater: Sensitiv
   }
 
   private def failWithException(eventName: String, e: Exception) {
-    log.error(e)
+    log.error(s"fail on event $eventName", e)
     inject[HealthcheckPlugin].addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(e.getMessage)))
     persistEventPlugin.persist(Events.serverEvent(
       EventFamilies.EXCEPTION,

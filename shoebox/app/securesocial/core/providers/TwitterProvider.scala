@@ -21,13 +21,15 @@ import play.api.mvc.{Request, Results, Result}
 import play.api.libs.oauth.{RequestToken, OAuthCalculator}
 import play.api.libs.ws.{Response, WS}
 import play.api.{Application, Logger}
-
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.Await
+import scala.concurrent.Future
 
 /**
  * A Twitter Provider
  */
 class TwitterProvider(application: Application) extends OAuth1Provider(application) {
-
 
   override def providerId = TwitterProvider.Twitter
 
@@ -37,11 +39,7 @@ class TwitterProvider(application: Application) extends OAuth1Provider(applicati
     val call = WS.url(TwitterProvider.VerifyCredentials).sign(
       OAuthCalculator(oauthInfo.serviceInfo.key,
       RequestToken(oauthInfo.token, oauthInfo.secret))).get()
-    call.await(10000).fold(
-      onError => {
-        Logger.error("timed out waiting for Twitter")
-        throw new AuthenticationException()
-      },
+    Await.result(call.transform(
       response =>
       {
         val me = response.json
@@ -49,8 +47,12 @@ class TwitterProvider(application: Application) extends OAuth1Provider(applicati
         val name = (me \ "name").as[String]
         val profileImage = (me \ "profile_image_url").asOpt[String]
         user.copy(id = UserId(id.toString, providerId), displayName = name, avatarUrl = profileImage)
+      },
+      onError => {
+        Logger.error("timed out waiting for Twitter")
+        throw new AuthenticationException()
       }
-    )
+    ), 10 seconds)
   }
 }
 

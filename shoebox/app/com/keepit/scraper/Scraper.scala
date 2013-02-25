@@ -55,7 +55,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
   private def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {
       processURI(uri, info)
     } catch {
-      case e =>
+      case e: Throwable =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
         val errorURI = inject[DBConnection].readWrite { implicit s =>
           inject[ScrapeInfoRepo].save(info.withFailure())
@@ -136,7 +136,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
           new DefaultExtractor(url, Scraper.maxContentChars)
       }
     } catch {
-      case e =>
+      case e: Throwable =>
           log.warn("uri parsing failed: [%s][%s]".format(url, e.toString))
           new DefaultExtractor(url, Scraper.maxContentChars)
     }
@@ -153,7 +153,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
         case _ => fetchArticle(normalizedUri, httpFetcher, info)
       }
     } catch {
-      case _ => fetchArticle(normalizedUri, httpFetcher, info)
+      case _: Throwable => fetchArticle(normalizedUri, httpFetcher, info)
     }
   }
 
@@ -209,7 +209,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
           Error(fetchStatus.statusCode, fetchStatus.message.getOrElse("fetch failed"))
       }
     } catch {
-      case e => Error(-1, "fetch failed: %s".format(e.toString))
+      case e: Throwable => Error(-1, "fetch failed: %s".format(e.toString))
     }
   }
 

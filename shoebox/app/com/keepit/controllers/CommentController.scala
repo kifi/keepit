@@ -29,7 +29,7 @@ import securesocial.core.SecureSocial
 import securesocial.core.java.SecureSocial.SecuredAction
 import com.keepit.common.social.ThreadInfo
 import com.keepit.common.healthcheck.BabysitterTimeout
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 
 object CommentController extends FortyTwoController {
 
@@ -269,7 +269,7 @@ object CommentController extends FortyTwoController {
         }
       }
       catch {
-        case _ => None // It throws an exception if it fails ExternalId[User]. Just return None.
+        case e: Throwable => None // It throws an exception if it fails ExternalId[User]. Just return None.
       }
     } flatten
   }

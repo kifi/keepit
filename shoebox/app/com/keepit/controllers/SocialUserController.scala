@@ -24,7 +24,7 @@ import com.keepit.model.User
 import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
 import com.keepit.serializer.UserWithSocialSerializer
-import com.keepit.controllers.CommonActions._
+
 import play.api.http.ContentTypes
 import securesocial.core._
 import com.keepit.scraper.ScraperPlugin

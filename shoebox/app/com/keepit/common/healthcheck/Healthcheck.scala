@@ -18,14 +18,13 @@ import akka.util.Timeout
 import akka.actor._
 import akka.actor.Actor._
 import akka.actor.ActorRef
-import akka.util.duration._
 import akka.pattern.ask
-import akka.dispatch.Await
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
 import org.joda.time.DateTime
-import akka.dispatch.Future
-import com.google.inject.Inject
-import com.google.inject.Provider
+import scala.concurrent.{Future, Await}
+import com.google.inject.{Inject, Provider}
+import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 
 case class HealthcheckError(error: Option[Throwable] = None, method: Option[String] = None,

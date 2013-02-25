@@ -162,7 +162,7 @@ class NormalizedURITest extends SpecificationWithJUnit with DbRepos {
     try {
       uriRepo.save(uri)
     } catch {
-      case e =>
+      case e: Throwable =>
         println("fail to persist uri %s. Existing URIs in the db are: %s".
             format(uri, uriRepo.all.map(_.toString).mkString("\n")))
         throw e

@@ -33,7 +33,7 @@ case class CompleteReport(reportName: String, reportVersion: String, list: Seq[R
       row.fields.toSeq
     }.sortWith((a, b) => a._2.ordering < b._2.ordering).map(_._1).distinct
 
-    log.info(columns)
+    log.info(columns mkString ", ")
     val dates = list.map(_.date).sorted
 
     val keyedList = list.map { row =>
@@ -43,7 +43,7 @@ case class CompleteReport(reportName: String, reportVersion: String, list: Seq[R
       (row.date, f)
     } toMap
 
-    log.info(keyedList)
+    log.info(keyedList mkString ", ")
 
     val duration = new Duration(currentDateTime.minusDays(1),currentDateTime) // for now, all reports are 1 day durations
 

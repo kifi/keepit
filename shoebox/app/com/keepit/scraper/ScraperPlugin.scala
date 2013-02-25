@@ -6,12 +6,13 @@ import com.keepit.model.NormalizedURI
 import com.keepit.search.Article
 
 import akka.actor._
-import akka.dispatch.Await
-import akka.dispatch.Future
+import scala.concurrent.Await
+import scala.concurrent.Future
 import akka.pattern.ask
 import akka.util.Timeout
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Plugin
+import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 
 case object Scrape

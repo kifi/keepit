@@ -5,9 +5,9 @@ import com.google.inject._
 import com.google.inject.binder._
 import akka.actor.Actor._
 import akka.actor._
-import akka.dispatch.Await
+import scala.concurrent.Await
 import akka.pattern.ask
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 import play.api.Configuration
 import scala.collection.mutable.MutableList

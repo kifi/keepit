@@ -86,7 +86,6 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
       result.setValue(0)
       result.setMatch(false)
     }
-    result
 
     var sum = 0.0f
     val eTxt = textWeight.explain(reader, doc)

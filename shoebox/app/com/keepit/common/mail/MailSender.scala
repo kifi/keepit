@@ -16,7 +16,7 @@ import akka.actor.ActorSystem
 import akka.actor.Actor
 import akka.actor.Props
 import akka.actor.Props
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import akka.actor.ActorRef
 import akka.actor.Cancellable
 import com.google.inject.Provider
@@ -24,6 +24,7 @@ import play.api.libs.concurrent.Promise
 import com.keepit.common.net.ClientResponse
 import java.util.concurrent.TimeUnit
 import com.google.inject.Inject
+import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 
 trait MailSenderPlugin extends Plugin {

@@ -21,12 +21,12 @@ class ScoringSerializer extends Format[Scoring] with Logging {
         "boostedRecencyScore" -> (if (res.boostedRecencyScore.isNaN()) JsNull else JsNumber(res.boostedRecencyScore))
       ))
     } catch {
-      case e =>
+      case e: Throwable =>
         log.error("can't serialize %s".format(res))
         throw e
     }
 
-  def reads(json: JsValue): Scoring = {
+  def reads(json: JsValue): JsResult[Scoring] = JsSuccess({
     val score = new Scoring(
       textScore  = (json \ "textScore").as[Float],
       normalizedTextScore  = (json \ "normalizedTextScore").as[Float],
@@ -37,7 +37,7 @@ class ScoringSerializer extends Format[Scoring] with Logging {
     score.boostedBookmarkScore  = (json \ "boostedBookmarkScore").asOpt[Float].getOrElse(Float.NaN)
     score.boostedRecencyScore  = (json \ "boostedRecencyScore").asOpt[Float].getOrElse(Float.NaN)
     score
-  }
+  })
 }
 
 object ScoringSerializer {

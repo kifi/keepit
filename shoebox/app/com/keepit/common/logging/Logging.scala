@@ -1,7 +1,7 @@
 package com.keepit.common.logging
 
-import grizzled.slf4j.Logger
+import play.api.Logger
 
 trait Logging {
-  lazy val log = Logger[this.type]
+  lazy val log = Logger(getClass)
 }

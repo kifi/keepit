@@ -34,10 +34,7 @@ trait ArticleSearchResultRefRepo extends Repo[ArticleSearchResultRef] with Exter
 @Singleton
 class ArticleSearchResultRefRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[ArticleSearchResultRef] with ArticleSearchResultRefRepo with ExternalIdColumnDbFunction[ArticleSearchResultRef] {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
+  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 

@@ -20,14 +20,14 @@ class URLHistorySerializer extends Format[Seq[URLHistory]] {
         Seq("date" -> JsString(r.date.toStandardTimeString), "id" -> JsNumber(r.id.id), "cause" -> JsString(r.cause.value))
     )))
 
-  def reads(json: JsValue): Seq[URLHistory] = {
-    (json \ "history").asOpt[List[JsObject]].getOrElse(Nil).map { h =>
+  def reads(json: JsValue): JsResult[Seq[URLHistory]] = 
+    JsSuccess((json \ "history").asOpt[List[JsObject]].getOrElse(Nil).map { h =>
       val date = parseStandardTime((h \ "date").as[String])
       val id = Id[NormalizedURI]((h \ "id").as[Int])
       val cause = URLHistoryCause((h \ "cause").as[String])
       URLHistory(date, id, cause)
-    }
-  }
+    })
+      
 }
 
 object URLHistorySerializer {
