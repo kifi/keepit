@@ -98,7 +98,7 @@ object SearchLabsController extends FortyTwoController {
 
         try {
           val eigenVals = decomposition.getRealEigenvalues()
-          val minEigenVal = eigenVals(eigenVals.length - 2)
+          val minEigenVal = eigenVals(size - 2)
 
           def getValues(n: Int) = {
             val eigenVal = eigenVals(n)
@@ -132,9 +132,10 @@ object SearchLabsController extends FortyTwoController {
   }
 
   private def similarity(vectors1: Array[Array[Byte]], vectors2: Array[Array[Byte]]) = {
-    vectors1.zip(vectors2).foldLeft(0.0d){ case (sum, (v1, v2)) =>
+    val s = vectors1.zip(vectors2).foldLeft(0.0d){ case (sum, (v1, v2)) =>
       if (v1.isEmpty || v2.isEmpty) sum
       else sum + SemanticVector.similarity(v1, v2).toDouble
     }
+    (s / vectors1.length) - 1.0d - Double.MinPositiveValue
   }
 }
