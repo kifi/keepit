@@ -79,4 +79,8 @@
     <button type="reset" class="btn">Clear unsaved changes</button>
   </form>
   }
+<script>
+$(function() { $("form").submit(function() { $(this).find("button[type=submit]").button("loading"); }); });
+</script>
+
 }
