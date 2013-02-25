@@ -21,6 +21,7 @@ case class Phrase (
   def withId(id: Id[Phrase]): Phrase = copy(id = Some(id))
   def withUpdateTime(now: DateTime): Phrase = this.copy(updatedAt = now)
   def isActive: Boolean = state == PhraseStates.ACTIVE
+  def withState(state: State[Phrase]): Phrase = copy(state = state)
 }
 
 @ImplementedBy(classOf[PhraseRepoImpl])

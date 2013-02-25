@@ -127,12 +127,12 @@ class PhraseIndexer(indexDirectory: Directory, db: DBConnection, phraseRepo: Phr
     db.readOnly { implicit session =>
       log.info("reloading phrase index")
       val indexableIterator = phraseRepo.allIterator.map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
-      reload(indexableIterator, refresh = false)
+      reloadWithCloseableIterator(indexableIterator, refresh = false)
       refreshSearcher()
     }
   }
 
-  def reload(indexableIterator: CloseableIterator[PhraseIndexable], refresh: Boolean) {
+  def reloadWithCloseableIterator(indexableIterator: CloseableIterator[PhraseIndexable], refresh: Boolean) {
     try { reload(indexableIterator, refresh) }
     finally { indexableIterator.close }
   }

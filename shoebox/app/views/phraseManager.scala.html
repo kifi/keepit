@@ -1,4 +1,4 @@
-@(phrasesOpt: Option[Seq[Phrase]], phraseFiles: Seq[String], page: Int, count: Int, numPages: Int)
+@(phrasesOpt: Option[Seq[Phrase]], page: Int, count: Int, numPages: Int)
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -50,14 +50,10 @@
   </form>
 
   <form class="form-inline" action="@com.keepit.controllers.admin.routes.PhraseController.refreshPhrases" method="POST">
-    <select name="importFile">
-    @for(file <- phraseFiles) {
-      <option value="@file">@file</option>
-    }
-    </select>
-    <button type="submit" class="btn">Import file</button>
-    <p><small>Note: This disables this page until the import is finished.</small></p>
+    <button type="submit" class="btn">Sync Lucene</button>
   </form>
+  
+  @pagination(page, numPages)
 
   @if(phrasesOpt.isDefined) {
   <form action="@com.keepit.controllers.admin.routes.PhraseController.savePhrases" method="POST">
@@ -72,7 +68,7 @@
       </thead>
       @for(phrase <- phrasesOpt.get) {
       <tr>
-        <td><input type="checkbox" class="checkbox" name="active_@phrase.id.get" @if(phrase.isActive) {checked}>
+        <td><input type="checkbox" class="checkbox" name="active_@phrase.id.get" @if(phrase.isActive) {checked}><input type="hidden" name="phrase_@phrase.id.get" value="@phrase.id.get">
         <td>@phrase.phrase
         <td>@phrase.lang.lang
         <td>@phrase.source
@@ -84,40 +80,3 @@
   </form>
   }
 }
-
-<script>
-$(function() {
-  $(".slider-patterns")
-  .on("keydown keypress keyup mousedown mouseup blur", ".url-pattern,.url-example", updateRow)
-  .submit(function(e) {
-    if ($(this).find(".error").focus().select().length) {
-      e.preventDefault();
-    } else {
-      $(this).find("button[type=submit]").button("loading");
-    }
-  })
-  .find(".url-pattern").each(updateRow);
-
-  function updateRow() {
-    var $tr = $(this).closest("tr");
-    var $pat = $tr.find(".url-pattern"), pat = $pat.val(), $patGrp = $pat.closest(".control-group"), re;
-    var $url = $tr.find(".url-example"), url = $url.val();
-    var $match = $tr.find(".url-match").removeClass("match-y match-n");
-    if (pat) {
-      try {
-        re = new RegExp(pat)
-      } catch (e) {
-        $patGrp.addClass("error");
-        return;
-      }
-    } else if (!$tr.data("new")) {
-      $patGrp.addClass("error");
-      return;
-    }
-    $patGrp.removeClass("error");
-    if (!/^\s*$/.test(url)) {
-      $match.addClass(re.test(url) ? "match-y" : "match-n");
-    }
-  }
-});
-</script>

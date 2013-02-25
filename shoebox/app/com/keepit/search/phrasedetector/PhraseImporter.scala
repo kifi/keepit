@@ -1,6 +1,6 @@
 package com.keepit.search.phrasedetector
 
-import java.io.{IOException, FileReader, LineNumberReader, File}
+import java.io._
 import com.keepit.search.Lang
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
@@ -23,18 +23,20 @@ import com.keepit.common.time._
 import play.api.Play.current
 
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.search.Lang
 
 object PhraseImporter {
   private var inProgress = false
   def startImport(implicit session: RWSession) {
     val st = session.conn.createStatement()
-    val sql = """DROP INDEX phrase_i_phrase(phrase) ON phrase;"""
+    val sql = """DROP INDEX follow_i_phrase_lang_state on phrase;"""
     st.executeQuery(sql)
     inProgress = true
   }
   def endImport(implicit session: RWSession) {
     val st = session.conn.createStatement()
-    val sql = """CREATE INDEX phrase_i_phrase(phrase) ON phrase;"""
+    val sql =
+      """CREATE INDEX follow_i_phrase_lang_state on phrase (phrase, lang, state);"""
     st.executeQuery(sql)
     inProgress = false
   }
@@ -95,6 +97,7 @@ class PhraseImporterImpl @Inject()(system: ActorSystem, db: DBConnection, phrase
   }
 }
 
+
 trait PhraseFormatter
 class WikipediaFormatter extends PhraseFormatter {
   def format(phrase: String) = {
@@ -104,6 +107,33 @@ class WikipediaFormatter extends PhraseFormatter {
       if(begin>=0 && end>0) str.substring(0,begin) + str.substring(end+1)
       else str
     }
-    removeParenths(phrase.replaceAll("_"," "),("(",")")).trim
+    val result = removeParenths(phrase.replaceAll("_"," "),("(",")"))
+    if(result.split(" ").size <= 1) None
+    else Some(result.trim)
   }
+}
+
+class WikipediaFileImport {
+  def importFile(infile: String) = {
+    import scala.io.Source
+    import java.io._
+    val writer = new PrintWriter(new File(infile + "-clean"))
+    val formatter = new WikipediaFormatter
+    val sqlline = """INSERT INTO phrase (created_at, updated_at, phrase, source, lang, state) VALUES (NOW(), NOW(), '%s', 'wikipedia', 'en', 'active');"""
+    Source.fromFile(infile).getLines.foreach { line =>
+      val r = formatter.format(line)
+      if(r.isDefined) {
+        try {
+          val sanitized = r.get.replaceAll("""\\""","""\\\\""").replaceAll("""'""","""\\'""").replaceAll(""""""","""\\"""").replaceAll("""%""","""\\%""").trim
+          if(sanitized.length > 5) {
+            writer.println(sqlline.format(sanitized))
+          }
+        } catch {
+          case ex => println(ex + "\t" + r.get)
+        }
+      }
+    }
+    writer.close
+  }
+
 }
