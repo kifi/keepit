@@ -35,6 +35,7 @@ import play.api.Play.current
 
 import play.api.libs.ws.WS
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice}
 
 private case object RefetchAll
 private case class ApplyTag(tagName: DomainTagName, domainNames: Seq[String])
@@ -75,8 +76,11 @@ private[classify] class DomainTagImportActor(db: DBConnection, updater: Sensitiv
         val outputFilename = FILE_FORMAT.format(clock.get().toString(DATE_FORMAT))
         val outputPath = new URI("%s/%s".format(settings.localDir, outputFilename)).normalize.getPath
         log.info("refetching all domains to %s".format(outputPath))
-        persistEvent(IMPORT_START, JsObject(Seq()))
         WS.url(settings.url).get().onSuccess { case res =>
+          persistEvent(IMPORT_START, JsObject(Seq()))
+          inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+            subject = "Domain import started", htmlBody = s"Domain import started at $currentDateTime",
+            category = PostOffice.Categories.ADMIN))
           val s = new FileOutputStream(outputPath)
           try {
             IOUtils.copy(res.getAHCResponse.getResponseBodyAsStream, s)
