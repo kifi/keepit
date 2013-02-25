@@ -1,7 +1,5 @@
 package com.keepit.controllers.admin
 
-import org.scala_tools.time.Imports._
-
 import com.keepit.classify._
 import com.keepit.common.analytics.{MongoEventStore, EventFamilies, MongoSelector}
 import com.keepit.common.controller.FortyTwoController
@@ -17,6 +15,9 @@ import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.json.{JsBoolean, JsArray, JsObject, Json}
 import play.api.mvc.Action
+
+import org.joda.time._
+import scala.concurrent.duration._
 
 object SliderAdminController extends FortyTwoController {
 
@@ -159,9 +160,9 @@ object SliderAdminController extends FortyTwoController {
     import com.keepit.classify.DomainTagImportEvents._
 
     val selector = MongoSelector(EventFamilies.DOMAIN_TAG_IMPORT)
-        .withMinDate(currentDateTime - (1 month))
+        .withMinDate(currentDateTime.minus(Period.months(1)))
     val failureSelector = MongoSelector(EventFamilies.EXCEPTION).withEventName(IMPORT_FAILURE)
-        .withMinDate(currentDateTime - (1 month))
+        .withMinDate(currentDateTime.minus(Period.months(1)))
     val dbObjects = inject[MongoEventStore].find("server", selector).toList
     val failureDbObjects = inject[MongoEventStore].find("server", failureSelector).toList
     val events = (dbObjects ++ failureDbObjects).map { obj =>

@@ -22,6 +22,7 @@ import com.keepit.inject._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import scala.concurrent.duration._
 import scala.concurrent.Future
+import com.keepit.common.akka.FortyTwoActor
 
 case object Index
 
