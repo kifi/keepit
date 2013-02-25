@@ -10,9 +10,9 @@ class URITest extends Specification {
   "URI" should {
 
     "parse urls" in {
-      URI.parse("http://google.com/").isDefined === true
-      URI.parse("http://bing.com/?q=1").isDefined === true
-      URI.parse("https://sub.domain.com").isDefined === true
+      URI.parse("http://google.com/").isSuccess === true
+      URI.parse("http://bing.com/?q=1").isSuccess === true
+      URI.parse("https://sub.domain.com").isSuccess === true
       URI.unapply("http://google.com/").get._3.get.name === "google.com"
     }
     "handle edge cases on unapply" in {

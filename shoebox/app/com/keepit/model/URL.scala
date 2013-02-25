@@ -54,7 +54,7 @@ case class URL (
 object URLFactory {
   def apply(url: String, normalizedUriId: Id[NormalizedURI],
       createdAt: DateTime = inject[DateTime], updatedAt: DateTime = inject[DateTime]) =
-    URL(url = url, normalizedUriId = normalizedUriId, domain = URI.parse(url).flatMap(_.host).map(_.name),
+    URL(url = url, normalizedUriId = normalizedUriId, domain = URI.parse(url).toOption.flatMap(_.host).map(_.name),
       createdAt = createdAt, updatedAt = updatedAt)
 }
 
