@@ -25,6 +25,7 @@ import org.joda.time.DateTime
 import scala.concurrent.{Future, Await}
 import com.google.inject.{Inject, Provider}
 import scala.concurrent.duration._
+import com.keepit.common.akka.FortyTwoActor
 
 case class HealthcheckError(error: Option[Throwable] = None, method: Option[String] = None,
     path: Option[String] = None, callType: CallType, errorMessage: Option[String] = None,

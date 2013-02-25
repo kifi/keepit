@@ -25,7 +25,7 @@ import scala.concurrent.Future
 
 case object Index
 
-private[index] class ArticleIndexerActor(articleIndexer: ArticleIndexer) extends Actor with Logging {
+private[index] class ArticleIndexerActor(articleIndexer: ArticleIndexer) extends FortyTwoActor with Logging {
 
   def receive() = {
     case Index => try {

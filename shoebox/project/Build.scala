@@ -52,6 +52,7 @@ object ApplicationBuild extends Build {
       "org.apache.lucene" % "lucene-analyzers" % "3.6.1",
       "org.apache.httpcomponents" % "httpclient" % "4.2.1",
       "org.apache.tika" % "tika-parsers" % "1.2",
+      "org.apache.commons" % "commons-math3" % "3.1.1",
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       //used for securesocial
       //"com.typesafe" %% "play-plugins-util" % "2.1",

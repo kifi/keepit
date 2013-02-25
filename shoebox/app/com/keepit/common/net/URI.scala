@@ -5,8 +5,11 @@ import com.keepit.common.logging.Logging
 object URI extends Logging {
   def parse(uriString: String): Option[URI] = {
     uriString.replace(" ", "%20") match {
-      case URI(scheme, userInfo, host, port, path, query, fragment) => Some(URI(Some(uriString), scheme, userInfo, host, port, path, query, fragment))
-      case _ => None // parse failed
+      case URI(scheme, userInfo, host, port, path, query, fragment) =>
+        Some(URI(Some(uriString), scheme, userInfo, host, port, path, query, fragment))
+      case _ => 
+        log.warn("Could not parse URL: %s".format(uriString))
+        None // parse failed
     }
   }
 
@@ -31,7 +34,7 @@ object URI extends Logging {
       } catch {
         case e: java.net.URISyntaxException =>
         // there may be malformed escape
-        val fixedUriString = fixMalformedEscape(uriString)
+        val fixedUriString = fixDoubleHash(encodeSymbols(fixMalformedEscape(uriString)))
         new java.net.URI(fixedUriString).normalize()
       }
       val scheme = normalizeScheme(Option(uri.getScheme))
@@ -49,6 +52,7 @@ object URI extends Logging {
 
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
   val encodedPercent = java.net.URLEncoder.encode("%", "UTF-8")
+  val encodedHash = java.net.URLEncoder.encode("#", "UTF-8")
 
   def fixMalformedEscape(uriString: String) = {
     uriString.split("%", -1) match {
@@ -56,6 +60,16 @@ object URI extends Logging {
         rest.foldLeft(first){ (str, piece) => str + twoHexDigits.findPrefixOf(piece).map(_ => "%").getOrElse(encodedPercent) + piece }
     }
   }
+
+  def fixDoubleHash(uriString: String): String = {
+    uriString.split("\\#",-1) match {
+      case Array(first, rest @ _*) =>
+        first + "#" + rest.mkString(encodedHash)
+    }
+  }
+
+  val charToEncoded = "@$^()[]{}|".map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
+  def encodeSymbols(uriString: String): String = uriString.map(c => charToEncoded.getOrElse(c, c.toString)).mkString
 
   def normalizeScheme(scheme: Option[String]) = scheme.map(_.toLowerCase)
 

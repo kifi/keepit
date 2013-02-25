@@ -22,11 +22,12 @@ import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, Healthchec
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import scala.concurrent.Future
+import com.keepit.common.akka.FortyTwoActor
 
 case object Load
 case class Update(userId: Id[User])
 
-private[graph] class URIGraphActor(uriGraph: URIGraph) extends Actor with Logging {
+private[graph] class URIGraphActor(uriGraph: URIGraph) extends FortyTwoActor with Logging {
 
   def receive() = {
     case Load => try {

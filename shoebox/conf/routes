@@ -132,6 +132,7 @@ POST    /admin/slider/domainTags    com.keepit.controllers.admin.SliderAdminCont
 GET     /admin/slider/domains       com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
 POST    /admin/slider/domains       com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
 POST    /admin/slider/domains/fetch com.keepit.controllers.admin.SliderAdminController.refetchClassifications
+GET     /admin/slider/importEvents  com.keepit.controllers.admin.SliderAdminController.getImportEvents
 
 GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
 GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()
@@ -142,6 +143,11 @@ GET     /admin/healthcheck/resetErrorCount    com.keepit.common.healthcheck.Heal
 POST    /admin/logging/emails       com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
 
 GET     /admin/url/renormalize      com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
+
+GET     /admin/labs/rankVsScore     com.keepit.controllers.SearchLabsController.rankVsScore(q: Option[String] ?= None)
+GET     /admin/labs/rankVsScore.json com.keepit.controllers.SearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
+GET     /admin/labs/friendMap       com.keepit.controllers.SearchLabsController.friendMap(q: Option[String] ?= None)
+GET     /admin/labs/friendMap.json  com.keepit.controllers.SearchLabsController.friendMapJson(q: Option[String] ?= None)
 
 ##########################################
 # Secure social routes

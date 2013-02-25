@@ -1,7 +1,7 @@
 package com.keepit.controllers
 
 import com.keepit.inject._
-import com.keepit.classify.{Domain, DomainRepo, DomainStates}
+import com.keepit.classify.{Domain, DomainClassifier, DomainRepo, DomainStates}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -27,10 +27,18 @@ case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstal
 object UserController extends FortyTwoController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
-    val (bookmark, following, socialUsers, numComments, numMessages) = inject[DBConnection].readOnly {implicit s =>
-      inject[NormalizedURIRepo].getByNormalizedUrl(url) match {
+    val userId = request.userId
+    val (bookmark, following, socialUsers, numComments, numMessages, neverOnSite, sensitive) = inject[DBConnection].readOnly {implicit s =>
+      val nUri = inject[NormalizedURIRepo].getByNormalizedUrl(url)
+      val host: String = nUri.flatMap(_.domain).getOrElse(URI.parse(url).get.host.get.name)
+      val domain: Option[Domain] = inject[DomainRepo].get(host)
+      val neverOnSite: Option[UserToDomain] = domain.flatMap { domain =>
+        inject[UserToDomainRepo].get(userId, domain.id.get, UserToDomainKinds.NEVER_SHOW)
+      }
+      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(inject[DomainClassifier].isSensitive(host).right.getOrElse(None))
+
+      nUri match {
         case Some(uri) =>
-          val userId = request.userId
           val bookmark = inject[BookmarkRepo].getByUriAndUser(uri.id.get, userId)
           val following = inject[FollowRepo].get(userId, uri.id.get).isDefined
 
@@ -44,9 +52,9 @@ object UserController extends FortyTwoController {
           val numComments = commentRepo.getPublicCount(uri.id.get)
           val numMessages = commentRepo.getMessages(uri.id.get, userId).size
 
-          (bookmark, following, socialUsers, numComments, numMessages)
+          (bookmark, following, socialUsers, numComments, numMessages, neverOnSite, sensitive)
         case None =>
-          (None, false, Nil, 0, 0)
+          (None, false, Nil, 0, 0, neverOnSite, sensitive)
       }
     }
 
@@ -56,7 +64,9 @@ object UserController extends FortyTwoController {
         "following" -> JsBoolean(following),
         "friends" -> userWithSocialSerializer.writes(socialUsers),
         "numComments" -> JsNumber(numComments),
-        "numMessages" -> JsNumber(numMessages))))
+        "numMessages" -> JsNumber(numMessages),
+        "neverOnSite" -> JsBoolean(neverOnSite.isDefined),
+        "sensitive" -> JsBoolean(sensitive.getOrElse(false)))))
   }
 
   def suppressSliderForSite() = AuthenticatedJsonAction { request =>
@@ -71,7 +81,7 @@ object UserController extends FortyTwoController {
         case None => domainRepo.save(Domain(hostname = host))
       }
       val utdRepo = inject[UserToDomainRepo]
-      utdRepo.get(request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW) match {
+      utdRepo.get(request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW, excludeState = None) match {
         case Some(utd) if (utd.isActive != suppress) =>
           utdRepo.save(utd.withState(if (suppress) UserToDomainStates.ACTIVE else UserToDomainStates.INACTIVE))
         case Some(utd) => utd

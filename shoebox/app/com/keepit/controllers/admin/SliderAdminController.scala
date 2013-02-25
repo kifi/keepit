@@ -1,12 +1,17 @@
 package com.keepit.controllers.admin
 
+import org.scala_tools.time.Imports._
+
 import com.keepit.classify._
+import com.keepit.common.analytics.{MongoEventStore, EventFamilies, MongoSelector}
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.time._
 import com.keepit.inject.inject
 import com.keepit.model.{SliderRuleRepo, SliderRuleStates}
 import com.keepit.model.{URLPattern, URLPatternRepo, URLPatternStates}
+import com.mongodb.casbah.Imports._
 
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
@@ -118,7 +123,7 @@ object SliderAdminController extends FortyTwoController {
     Ok(views.html.domains(domains))
   }
 
-  def saveDomainOverrides = AuthenticatedJsonAction { implicit request =>
+  def saveDomainOverrides = AdminJsonAction { implicit request =>
     val domainRepo = inject[DomainRepo]
 
     val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
@@ -145,8 +150,44 @@ object SliderAdminController extends FortyTwoController {
     Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
   }
 
-  def refetchClassifications = Action { implicit request =>
+  def refetchClassifications = /* TODO: AdminJson */Action { implicit request =>
     inject[DomainTagImporter].refetchClassifications()
     Ok(JsObject(Seq()))
   }
+
+  def getImportEvents = AdminHtmlAction { implicit request =>
+    import com.keepit.classify.DomainTagImportEvents._
+
+    val selector = MongoSelector(EventFamilies.DOMAIN_TAG_IMPORT)
+        .withMinDate(currentDateTime - (1 month))
+    val failureSelector = MongoSelector(EventFamilies.EXCEPTION).withEventName(IMPORT_FAILURE)
+        .withMinDate(currentDateTime - (1 month))
+    val dbObjects = inject[MongoEventStore].find("server", selector).toList
+    val failureDbObjects = inject[MongoEventStore].find("server", failureSelector).toList
+    val events = (dbObjects ++ failureDbObjects).map { obj =>
+      val meta = obj.getAs[DBObject]("metaData").get
+      val createdAt = obj.getAs[DateTime]("createdAt").get
+      val eventName = meta.getAs[String]("eventName").get
+      val metaData = meta.getAs[DBObject]("metaData").orNull
+      val description = eventName match {
+        case IMPORT_START => "Full import started"
+        case IMPORT_TAG_SUCCESS => "Tag %s imported (%d added, %d removed, %d total domains)".format(
+          metaData.getAs[String]("tagName").get,
+          metaData.getAs[Double]("numDomainsAdded").get.toInt,
+          metaData.getAs[Double]("numDomainsRemoved").get.toInt,
+          metaData.getAs[Double]("totalDomains").get.toInt)
+        case IMPORT_SUCCESS => "Domains imported (%d added, %d removed, %d total domains)".format(
+          metaData.getAs[Double]("numDomainsAdded").get.toInt,
+          metaData.getAs[Double]("numDomainsRemoved").get.toInt,
+          metaData.getAs[Double]("totalDomains").get.toInt)
+        case REMOVE_TAG_SUCCESS => "Tag %s removed".format(metaData.getAs[String]("tagName").get)
+        case IMPORT_FAILURE => metaData.getAs[String]("message").get
+      }
+      ImportEvent(createdAt, eventName, description)
+    }.sortBy(_.createdAt).reverse
+    Ok(views.html.domainImportEvents(events))
+  }
 }
+
+case class ImportEvent(createdAt: DateTime, eventType: String, description: String)
+

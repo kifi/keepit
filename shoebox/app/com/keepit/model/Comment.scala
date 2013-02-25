@@ -116,7 +116,7 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
     comment
   }
 
-  def all(permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment] =
+  def all(permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment] = 
     (for(b <- table if b.permissions === permissions && b.state === CommentStates.ACTIVE) yield b).list
 
   def all(permissions: State[CommentPermission], userId: Id[User])(implicit session: RSession): Seq[Comment] =
