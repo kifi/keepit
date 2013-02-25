@@ -1,8 +1,8 @@
 package com.keepit.common.net
 
+import scala.concurrent._
+
 import play.api.libs.json._
-import org.specs2.mutable.Specification
-import scala.concurrent.Future
 
 class FakeHttpClient(requestToResponse: Option[PartialFunction[String, String]] = None) extends HttpClient {
 
@@ -26,8 +26,8 @@ class FakeHttpClient(requestToResponse: Option[PartialFunction[String, String]] 
 
   override def longTimeout(): HttpClient = this
 
-  override def postFuture(url: String, body: JsValue): Future[ClientResponse] = throw new Exception("not supported")
-  override def getFuture(url: String): Future[ClientResponse] = throw new Exception("not supported")
+  override def postFuture(url: String, body: JsValue): Future[ClientResponse] = Future.successful { post(url, body) }
+  override def getFuture(url: String): Future[ClientResponse] = Future.successful { get(url) }
   override def withHeaders(hdrs: (String, String)*): HttpClient = throw new Exception("not supported")
 }
 
