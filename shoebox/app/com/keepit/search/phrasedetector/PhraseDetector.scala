@@ -24,7 +24,7 @@ import com.keepit.inject._
 import org.apache.lucene.store.RAMDirectory
 import com.keepit.common.db.slick.DBConnection
 import com.keepit.model.{PhraseRepo, Phrase}
-import org.scalaquery.util.CloseableIterator
+import scala.slick.util.CloseableIterator
 import play.api.Play.current
 
 object PhraseDetector {

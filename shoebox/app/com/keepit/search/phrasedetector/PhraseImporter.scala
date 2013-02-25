@@ -129,7 +129,7 @@ class WikipediaFileImport {
             writer.println(sqlline.format(sanitized))
           }
         } catch {
-          case ex => println(ex + "\t" + r.get)
+          case ex: Throwable => println(ex + "\t" + r.get)
         }
       }
     }

@@ -185,7 +185,7 @@ object FortyTwoTypeMappers {
   }
 
   implicit object LangTypeMapper extends BaseTypeMapper[Lang] {
-    def apply(profile: BasicProfile) = new LangMapperDelegate
+    def apply(profile: BasicProfile) = new LangMapperDelegate(profile)
   }
 }
 
@@ -434,19 +434,9 @@ class ByteArrayMapperDelegate(val profile: BasicProfile) extends DelegateMapperD
 //************************************
 //       Lang -> String
 //************************************
-class LangMapperDelegate extends StringMapperDelegate[Lang] {
+class LangMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[Lang](profile) {
   def zero = Lang("")
   def sourceToDest(value: Lang) = value.lang
   def safeDestToSource(str: String) = Lang(str)
 }
-
-//************************************
-//       Lang -> String
-//************************************
-class PhraseMapperDelegate extends StringMapperDelegate[Lang] {
-  def zero = Lang("")
-  def sourceToDest(value: Lang) = value.lang
-  def safeDestToSource(str: String) = Lang(str)
-}
-
 

@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.search.Lang
-import org.scalaquery.util.CloseableIterator
+import scala.slick.util.CloseableIterator
 
 case class Phrase (
   id: Option[Id[Phrase]] = None,

@@ -12,6 +12,7 @@ import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
+import com.keepit.model.Phrase
 
 @RunWith(classOf[JUnitRunner])
 class PhraseDetectorTest extends SpecificationWithJUnit {
