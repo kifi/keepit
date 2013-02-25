@@ -1,18 +1,17 @@
 <configuration>
-    
-  <conversionRule conversionWord="coloredLevel" converterClass="play.api.Logger$ColoredLevel" />
-  
-  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+  <appender name="CONSOLE"
+    class="ch.qos.logback.core.ConsoleAppender">
+    <!-- deny all events with a level below INFO, that is TRACE and DEBUG -->
+    <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+      <level>INFO</level>
+    </filter>
     <encoder>
-      <pattern>%-5coloredLevel %d{HH:mm:ss.SSS} [%thread] %logger{20} - %message%n%xException{5}</pattern>
+      <pattern>
+        %-4relative [%thread] %-5level %logger{30} - %message%n%xException{5}
+      </pattern>
     </encoder>
   </appender>
-  
-  <logger name="play" level="INFO" />
-  <logger name="application" level="INFO" />
-
-  <root level="ERROR">
-    <appender-ref ref="STDOUT" />
+  <root level="DEBUG">
+    <appender-ref ref="CONSOLE" />
   </root>
-  
 </configuration>
