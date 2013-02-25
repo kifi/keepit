@@ -19,7 +19,7 @@ class CompleteReportSerializer extends Format[CompleteReport] {
       )
     )
 
-  def reads(json: JsValue): CompleteReport =  {
+  def reads(json: JsValue): JsResult[CompleteReport] =  {
     val list = (json \ "report").as[JsObject].fields.map { case (dateVal, row) =>
       val date = parseStandardTime(dateVal)
       val fields = (row.as[JsObject].fields map { case (key, value) =>
@@ -30,12 +30,12 @@ class CompleteReportSerializer extends Format[CompleteReport] {
       }).toMap
       ReportRow(date, fields)
     }
-    CompleteReport(
+    JsSuccess(CompleteReport(
       reportName = (json \ "reportName").as[String],
       reportVersion = (json \ "reportVersion").as[String],
       createdAt = parseStandardTime((json \ "createdAt").as[String]),
       list = list
-    )
+    ))
   }
 }
 

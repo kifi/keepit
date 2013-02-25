@@ -19,10 +19,11 @@ import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.serializer.BookmarkSerializer
 
-import akka.dispatch.Await
-import akka.util.duration._
+import scala.concurrent.Await
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 import play.api.libs.json._
+import scala.concurrent.duration._
 
 
 object BookmarksController extends FortyTwoController {
@@ -260,7 +261,7 @@ object BookmarksController extends FortyTwoController {
     case JsArray(elements) => (elements map {e => internBookmarks(e, user, experiments, source, installationId)} flatten).toList
     case json: JsObject if(json.keys.contains("children")) => internBookmarks(json \ "children" , user, experiments, source)
     case json: JsObject => List(internBookmark(json, user, experiments, source)).flatten
-    case e => throw new Exception("can't figure what to do with %s".format(e))
+    case e: Throwable => throw new Exception("can't figure what to do with %s".format(e))
   }
 
   private def internBookmark(json: JsObject, user: User, experiments: Seq[State[ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = {

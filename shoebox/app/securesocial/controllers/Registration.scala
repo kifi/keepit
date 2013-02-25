@@ -23,9 +23,8 @@ import play.api.data.validation.Constraints._
 import play.api.{Play, Logger}
 import securesocial.core.providers.UsernamePasswordProvider
 import securesocial.core.{AuthenticationMethod, SocialUser, UserId, UserService}
-import com.typesafe.plugin._
 import Play.current
-import securesocial.core.providers.utils.{GravatarHelper, PasswordHasher}
+import securesocial.core.providers.utils.{GravatarHelper, PasswordHasher, BCryptPasswordHasher}
 
 
 /**
@@ -87,7 +86,7 @@ object Registration extends Controller {
           Some(info.email),
           GravatarHelper.avatarFor(info.email),
           AuthenticationMethod.UserPassword,
-          passwordInfo = Some(use[PasswordHasher].hash(info.password)))
+          passwordInfo = Some(new BCryptPasswordHasher(Play.current).hash(info.password)))
         UserService.save(user)
         Redirect(routes.LoginPage.login()).flashing("success" -> "Thank you for signing up.  Check your email for further instructions")
       }

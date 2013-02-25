@@ -6,17 +6,19 @@ import com.keepit.model.NormalizedURI
 import com.keepit.search.Article
 
 import akka.actor._
-import akka.dispatch.Await
-import akka.dispatch.Future
+import scala.concurrent.Await
+import scala.concurrent.Future
 import akka.pattern.ask
 import akka.util.Timeout
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Plugin
+import scala.concurrent.duration._
+import com.keepit.common.akka.FortyTwoActor
 
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
 
-private[scraper] class ScraperActor(scraper: Scraper) extends Actor with Logging {
+private[scraper] class ScraperActor(scraper: Scraper) extends FortyTwoActor with Logging {
   def receive() = {
     case Scrape => sender ! scraper.run()
     case ScrapeInstance(uri) => sender ! scraper.safeProcessURI(uri)

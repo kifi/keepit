@@ -7,19 +7,21 @@ import com.keepit.inject._
 import com.keepit.model._
 
 import akka.actor._
-import akka.dispatch.Await
-import akka.dispatch.Future
+import scala.concurrent.Await
+import scala.concurrent.Future
 import akka.pattern.ask
 import akka.util.Timeout
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 import play.api.Plugin
+import scala.concurrent.duration._
+import com.keepit.common.akka.FortyTwoActor
 
 //case object FetchAll
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case object FetchAll
 
-private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: DBConnection, socialRepo: SocialUserInfoRepo) extends Actor with Logging {
+private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: DBConnection, socialRepo: SocialUserInfoRepo) extends FortyTwoActor with Logging {
   def receive() = {
     case FetchAll =>
       val unprocessedUsers = db.readOnly {implicit s =>

@@ -14,7 +14,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
-import com.keepit.controllers.CommonActions._
+
 import com.keepit.inject._
 import com.keepit.scraper._
 import com.keepit.model._

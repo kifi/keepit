@@ -1,9 +1,7 @@
 package com.keepit.common.db.slick
 
-import org.scalaquery.ql._
-import org.scalaquery.ql.SimpleFunction
-import org.scalaquery.session.Database
-import org.scalaquery.ql.extended.MySQLDriver
+import scala.slick.driver.MySQLDriver
+import scala.slick.lifted._
 
 import javax.sql._
 

@@ -11,9 +11,10 @@ import akka.util.Timeout
 import akka.actor._
 import akka.actor.Actor._
 import akka.actor.ActorRef
-import akka.util.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import akka.pattern.ask
-import akka.dispatch.Await
+import scala.concurrent.Await
+import akka.pattern.ask
 import play.api.libs.concurrent._
 import org.joda.time.DateTime
 import akka.dispatch.Future
@@ -25,11 +26,15 @@ import com.keepit.common.db.slick._
 import play.api.Play.current
 import play.api.libs.json.JsArray
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.Await
+import com.keepit.common.akka.FortyTwoActor
 
 private case class RefreshUserInfo(socialUserInfo: SocialUserInfo)
 private case object RefreshAll
 
-private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphPlugin, db: DBConnection, socialRepo: SocialUserInfoRepo) extends Actor with Logging {
+private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphPlugin, db: DBConnection, socialRepo: SocialUserInfoRepo) extends FortyTwoActor with Logging {
   def receive() = {
     case RefreshAll => {
       log.info("going to check which SocilaUserInfo Was not fetched Lately")

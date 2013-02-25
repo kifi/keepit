@@ -9,10 +9,12 @@ import com.keepit.inject._
 import com.keepit.test._
 
 import akka.actor.ActorSystem
-import akka.dispatch.Await
-import akka.util.duration._
+import scala.concurrent.{Await, Future}
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
 import play.api.Play.current
 import play.api.test.Helpers._
+import java.util.concurrent.TimeUnit
 
 class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
   val system = ActorSystem("system")
@@ -44,7 +46,7 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
             domainTagImporter.applyTagToDomains(
               DomainTagName("t4"), Seq("42go.com", "amazon.com", "wikipedia.org"))
           ).foreach { future =>
-            Await.result(future, intToDurationInt(1).second)
+            Await.result(future, pairIntToDuration((100, TimeUnit.MILLISECONDS)))
           }
         }
 
@@ -86,7 +88,7 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
             // remove a tag
             domainTagImporter.removeTag(DomainTagName("t3"))
           ).foreach { future =>
-            Await.result(future, intToDurationInt(1).second)
+            Await.result(future, pairIntToDuration((100, TimeUnit.MILLISECONDS)))
           }
         }
 
@@ -114,14 +116,14 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
           tagRepo.save(DomainTag(name = DomainTagName("stuff"), sensitive = None))
 
           Await.result(domainTagImporter.applyTagToDomains(
-            DomainTagName("things"), Seq("cnn.com", "yahoo.com", "google.com")), intToDurationInt(1).second)
+            DomainTagName("things"), Set("cnn.com", "yahoo.com", "google.com").toSeq), pairIntToDuration(100, TimeUnit.MILLISECONDS))
 
           domainRepo.get("cnn.com").get.sensitive === Some(false)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(Some(true)))
           domainRepo.get("cnn.com").get.sensitive === Some(true)
 
           Await.result(domainTagImporter.applyTagToDomains(
-            DomainTagName("stuff"), Seq("apple.com", "microsoft.com", "cnn.com")), intToDurationInt(1).second)
+            DomainTagName("stuff"), Set("apple.com", "microsoft.com", "cnn.com").toSeq), pairIntToDuration(100, TimeUnit.MILLISECONDS))
 
           domainRepo.get("cnn.com").get.sensitive === Some(true)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(None))

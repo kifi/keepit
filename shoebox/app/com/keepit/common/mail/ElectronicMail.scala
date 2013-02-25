@@ -65,11 +65,8 @@ trait ElectronicMailRepo extends Repo[ElectronicMail] with ExternalIdColumnFunct
 @Singleton
 class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[ElectronicMail] with ElectronicMailRepo with ExternalIdColumnDbFunction[ElectronicMail] {
   import FortyTwoTypeMappers._
-  import org.scalaquery.ql._
-  import org.scalaquery.ql.ColumnOps._
-  import org.scalaquery.ql.basic.BasicProfile
-  import org.scalaquery.ql.extended.ExtendedTable
   import db.Driver.Implicit._
+  import scala.slick.lifted.Query
   import DBSession._
 
   override lazy val table = new RepoTable[ElectronicMail](db, "electronic_mail") with ExternalIdColumn[ElectronicMail] {

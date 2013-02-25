@@ -11,10 +11,9 @@ import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import akka.actor.ActorSystem
 import akka.actor.Scheduler
-import org.scalaquery.session.Database
-import org.scalaquery.session.Session
-import org.scalaquery.session.ResultSetConcurrency
 import javax.sql.DataSource
+
+import scala.slick.session.Database
 
 class SlickModule(dbInfo: DbInfo) extends ScalaModule {
   def configure(): Unit = {

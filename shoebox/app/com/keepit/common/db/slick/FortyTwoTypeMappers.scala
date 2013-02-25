@@ -3,10 +3,10 @@ package com.keepit.common.db.slick
 import java.sql.{Timestamp, Clob, Blob}
 
 import org.joda.time.DateTime
-import org.scalaquery.ql.basic.BasicProfile
-import org.scalaquery.ql.basic.BasicTypeMapperDelegates._
-import org.scalaquery.ql.{TypeMapperDelegate, BaseTypeMapper}
-import org.scalaquery.session.{PositionedParameters, PositionedResult}
+import scala.slick.driver._
+import scala.slick.lifted.TypeMapper._
+import scala.slick.lifted.{NumericTypeMapper, BaseTypeMapper, TypeMapperDelegate}
+import scala.slick.session.{PositionedParameters, PositionedResult, ResultSetType}
 
 import com.keepit.classify.{DomainTagName, DomainTag, Domain, DomainToTag}
 import com.keepit.common.db.{Id, State, Model, ExternalId, LargeString}
@@ -25,164 +25,163 @@ import securesocial.core.{SocialUser, UserId, AuthenticationMethod}
 object FortyTwoTypeMappers {
   // Time
   implicit object DateTimeTypeMapper extends BaseTypeMapper[DateTime] {
-    def apply(profile: BasicProfile) = new DateTimeMapperDelegate
+    def apply(profile: BasicProfile) = new DateTimeMapperDelegate(profile)
   }
 
   implicit object GenericIdTypeMapper extends BaseTypeMapper[Id[Model[_]]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[Model[_]]
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Model[_]](profile)
   }
 
   //ExternalIds
   implicit object ArticleSearchResultRefExternalIdTypeMapper extends BaseTypeMapper[ExternalId[ArticleSearchResultRef]] {
-    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[ArticleSearchResultRef]
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[ArticleSearchResultRef](profile)
   }
 
   implicit object KifiInstallationExternalIdTypeMapper extends BaseTypeMapper[ExternalId[KifiInstallation]] {
-    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[KifiInstallation]
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[KifiInstallation](profile)
   }
 
   implicit object NormalizedURIExternalIdTypeMapper extends BaseTypeMapper[ExternalId[NormalizedURI]] {
-    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[NormalizedURI]
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[NormalizedURI](profile)
   }
 
   //Ids
   implicit object CommentIdTypeMapper extends BaseTypeMapper[Id[Comment]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[Comment]
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Comment](profile)
   }
 
   implicit object SocialUserInfoIdTypeMapper extends BaseTypeMapper[Id[SocialUserInfo]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[SocialUserInfo]
+    def apply(profile: BasicProfile) = new IdMapperDelegate[SocialUserInfo](profile)
   }
 
   implicit object FollowIdTypeMapper extends BaseTypeMapper[Id[Follow]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[Follow]
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Follow](profile)
   }
 
   implicit object UserIdTypeMapper extends BaseTypeMapper[Id[User]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[User]
+    def apply(profile: BasicProfile) = new IdMapperDelegate[User](profile)
   }
 
   implicit object URLIdTypeMapper extends BaseTypeMapper[Id[URL]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[URL]
+    def apply(profile: BasicProfile) = new IdMapperDelegate[URL](profile)
   }
 
   implicit object UnscrapableIdTypeMapper extends BaseTypeMapper[Id[Unscrapable]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[Unscrapable]
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Unscrapable](profile)
   }
 
   implicit object NormalizedURIIdTypeMapper extends BaseTypeMapper[Id[NormalizedURI]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[NormalizedURI]
+    def apply(profile: BasicProfile) = new IdMapperDelegate[NormalizedURI](profile)
   }
 
   implicit object DomainToTagIdTypeMapper extends BaseTypeMapper[Id[DomainToTag]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[DomainToTag]
+    def apply(profile: BasicProfile) = new IdMapperDelegate[DomainToTag](profile)
   }
 
   implicit object DomainIdTypeMapper extends BaseTypeMapper[Id[Domain]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[Domain]
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Domain](profile)
   }
 
   implicit object DomainTagIdTypeMapper extends BaseTypeMapper[Id[DomainTag]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[DomainTag]
+    def apply(profile: BasicProfile) = new IdMapperDelegate[DomainTag](profile)
   }
 
   //States
-
   implicit object NormalizedURIStateTypeMapper extends BaseTypeMapper[State[NormalizedURI]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[NormalizedURI]
+    def apply(profile: BasicProfile) = new StateMapperDelegate[NormalizedURI](profile)
   }
 
   implicit object ExperimentTypeStateTypeMapper extends BaseTypeMapper[State[ExperimentType]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[ExperimentType]
+    def apply(profile: BasicProfile) = new StateMapperDelegate[ExperimentType](profile)
   }
 
   implicit object CommentPermissionTypeStateTypeMapper extends BaseTypeMapper[State[CommentPermission]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[CommentPermission]
+    def apply(profile: BasicProfile) = new StateMapperDelegate[CommentPermission](profile)
   }
 
   implicit object DomainTagStateTypeMapper extends BaseTypeMapper[State[DomainTag]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[DomainTag]
+    def apply(profile: BasicProfile) = new StateMapperDelegate[DomainTag](profile)
   }
 
   implicit object DomainStateTypeMapper extends BaseTypeMapper[State[Domain]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[Domain]
+    def apply(profile: BasicProfile) = new StateMapperDelegate[Domain](profile)
   }
 
   implicit object DomainToTagStateTypeMapper extends BaseTypeMapper[State[DomainToTag]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[DomainToTag]
+    def apply(profile: BasicProfile) = new StateMapperDelegate[DomainToTag](profile)
   }
 
   implicit object UserToDomainKindTypeMapper extends BaseTypeMapper[State[UserToDomainKind]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[UserToDomainKind]
+    def apply(profile: BasicProfile) = new StateMapperDelegate[UserToDomainKind](profile)
   }
 
   //Other
   implicit object URLHistorySeqHistoryTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
-    def apply(profile: BasicProfile) = new URLHistorySeqMapperDelegate
+    def apply(profile: BasicProfile) = new URLHistorySeqMapperDelegate(profile)
   }
 
   implicit object ElectronicMailMessageIdTypeMapper extends BaseTypeMapper[ElectronicMailMessageId] {
-    def apply(profile: BasicProfile) = new ElectronicMailMessageIdMapperDelegate
+    def apply(profile: BasicProfile) = new ElectronicMailMessageIdMapperDelegate(profile)
   }
 
   implicit object ElectronicMailCategoryTypeMapper extends BaseTypeMapper[ElectronicMailCategory] {
-    def apply(profile: BasicProfile) = new ElectronicMailCategoryMapperDelegate
+    def apply(profile: BasicProfile) = new ElectronicMailCategoryMapperDelegate(profile)
   }
 
   implicit object SystemEmailAddressTypeMapper extends BaseTypeMapper[SystemEmailAddress] {
-    def apply(profile: BasicProfile) = new SystemEmailAddressMapperDelegate
+    def apply(profile: BasicProfile) = new SystemEmailAddressMapperDelegate(profile)
   }
 
   implicit object EmailAddressHolderTypeMapper extends BaseTypeMapper[EmailAddressHolder] {
-    def apply(profile: BasicProfile) = new EmailAddressHolderMapperDelegate
+    def apply(profile: BasicProfile) = new EmailAddressHolderMapperDelegate(profile)
   }
 
   implicit object BookmarkSourceHistoryTypeMapper extends BaseTypeMapper[BookmarkSource] {
-    def apply(profile: BasicProfile) = new BookmarkSourceMapperDelegate
+    def apply(profile: BasicProfile) = new BookmarkSourceMapperDelegate(profile)
   }
 
   implicit object SocialNetworkTypeHistoryTypeMapper extends BaseTypeMapper[SocialNetworkType] {
-    def apply(profile: BasicProfile) = new SocialNetworkTypeMapperDelegate
+    def apply(profile: BasicProfile) = new SocialNetworkTypeMapperDelegate(profile)
   }
 
   implicit object SocialUserHistoryTypeMapper extends BaseTypeMapper[SocialUser] {
-    def apply(profile: BasicProfile) = new SocialUserMapperDelegate
+    def apply(profile: BasicProfile) = new SocialUserMapperDelegate(profile)
   }
 
   implicit object SocialIdHistoryTypeMapper extends BaseTypeMapper[SocialId] {
-    def apply(profile: BasicProfile) = new SocialIdMapperDelegate
+    def apply(profile: BasicProfile) = new SocialIdMapperDelegate(profile)
   }
 
   implicit object LargeStringTypeMapper extends BaseTypeMapper[LargeString] {
-    def apply(profile: BasicProfile) = new LargeStringMapperDelegate
+    def apply(profile: BasicProfile) = new LargeStringMapperDelegate(profile)
   }
 
   implicit object ByteArrayTypeMapper extends BaseTypeMapper[Array[Byte]] {
-    def apply(profile: BasicProfile) = new ByteArrayMapperDelegate
+    def apply(profile: BasicProfile) = new ByteArrayMapperDelegate(profile)
   }
 
   implicit object DeepLinkTokenTypeMapper extends BaseTypeMapper[DeepLinkToken] {
-    def apply(profile: BasicProfile) = new DeepLinkTokenMapperDelegate
+    def apply(profile: BasicProfile) = new DeepLinkTokenMapperDelegate(profile)
   }
 
   implicit object DeepLocatorTypeMapper extends BaseTypeMapper[DeepLocator] {
-    def apply(profile: BasicProfile) = new DeepLocatorMapperDelegate
+    def apply(profile: BasicProfile) = new DeepLocatorMapperDelegate(profile)
   }
 
   implicit object JsArrayTypeMapper extends BaseTypeMapper[JsArray] {
-    def apply(profile: BasicProfile) = new JsArrayMapperDelegate
+    def apply(profile: BasicProfile) = new JsArrayMapperDelegate(profile)
   }
 
   implicit object KifiVersionTypeMapper extends BaseTypeMapper[KifiVersion] {
-    def apply(profile: BasicProfile) = new KifiVersionMapperDelegate
+    def apply(profile: BasicProfile) = new KifiVersionMapperDelegate(profile)
   }
 
   implicit object UserAgentTypeMapper extends BaseTypeMapper[UserAgent] {
-    def apply(profile: BasicProfile) = new UserAgentMapperDelegate
+    def apply(profile: BasicProfile) = new UserAgentMapperDelegate(profile)
   }
 
   implicit object DomainTagNameTypeMapper extends BaseTypeMapper[DomainTagName] {
-    def apply(profile: BasicProfile) = new DomainTagNameMapperDelegate
+    def apply(profile: BasicProfile) = new DomainTagNameMapperDelegate(profile)
   }
 
   implicit object LangTypeMapper extends BaseTypeMapper[Lang] {
@@ -201,6 +200,7 @@ abstract class DelegateMapperDelegate[S, D] extends TypeMapperDelegate[S] {
   def nextValue(r: PositionedResult): S = destToSource(delegate.nextValue(r))
   def updateValue(value: S, r: PositionedResult) = delegate.updateValue(sourceToDest(value), r)
   override def valueToSQLLiteral(value: S) = delegate.valueToSQLLiteral(sourceToDest(value))
+  override def sqlTypeName = delegate.sqlTypeName
 
   def destToSource(dest: D): S = Option(dest) match {
     case None => zero
@@ -211,15 +211,15 @@ abstract class DelegateMapperDelegate[S, D] extends TypeMapperDelegate[S] {
   def safeDestToSource(source: D): S
 }
 
-abstract class StringMapperDelegate[T] extends DelegateMapperDelegate[T, String] {
-  override val delegate = new StringTypeMapperDelegate()
+abstract class StringMapperDelegate[T](val profile: BasicProfile) extends DelegateMapperDelegate[T, String] {
+  override val delegate = profile.typeMapperDelegates.stringTypeMapperDelegate
 }
 
 //************************************
 //       DateTime -> Timestamp
 //************************************
-class DateTimeMapperDelegate extends DelegateMapperDelegate[DateTime, Timestamp] {
-  protected val delegate = new TimestampTypeMapperDelegate()
+class DateTimeMapperDelegate(val profile: BasicProfile) extends DelegateMapperDelegate[DateTime, Timestamp] {
+  protected val delegate = profile.typeMapperDelegates.timestampTypeMapperDelegate
   def zero = currentDateTime
   def sourceToDest(value: DateTime): Timestamp = new Timestamp(value.toDate().getTime())
   def safeDestToSource(value: Timestamp): DateTime = value
@@ -228,8 +228,8 @@ class DateTimeMapperDelegate extends DelegateMapperDelegate[DateTime, Timestamp]
 //************************************
 //       Id -> Long
 //************************************
-class IdMapperDelegate[T] extends DelegateMapperDelegate[Id[T], Long] {
-  protected val delegate = new LongTypeMapperDelegate()
+class IdMapperDelegate[T](val profile: BasicProfile) extends DelegateMapperDelegate[Id[T], Long] {
+  protected val delegate = profile.typeMapperDelegates.longTypeMapperDelegate
   def zero = Id[T](0)
   def sourceToDest(value: Id[T]): Long = value.id
   def safeDestToSource(value: Long): Id[T] = Id[T](value)
@@ -238,7 +238,7 @@ class IdMapperDelegate[T] extends DelegateMapperDelegate[Id[T], Long] {
 //************************************
 //       ExternalId -> String
 //************************************
-class ExternalIdMapperDelegate[T] extends StringMapperDelegate[ExternalId[T]] {
+class ExternalIdMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[ExternalId[T]](profile) {
   def zero = ExternalId[T]()
   def sourceToDest(value: ExternalId[T]): String = value.id
   def safeDestToSource(str: String): ExternalId[T] = ExternalId[T](str)
@@ -247,7 +247,7 @@ class ExternalIdMapperDelegate[T] extends StringMapperDelegate[ExternalId[T]] {
 //************************************
 //       State -> String
 //************************************
-class StateMapperDelegate[T] extends StringMapperDelegate[State[T]] {
+class StateMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[State[T]](profile) {
   def zero = new State("")
   def sourceToDest(value: State[T]): String = value.value
   def safeDestToSource(str: String): State[T] = State[T](str)
@@ -256,7 +256,7 @@ class StateMapperDelegate[T] extends StringMapperDelegate[State[T]] {
 //************************************
 //       DeepLocator -> String
 //************************************
-class DeepLocatorMapperDelegate[T] extends StringMapperDelegate[DeepLocator] {
+class DeepLocatorMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[DeepLocator](profile) {
   def zero = DeepLocator("")
   def sourceToDest(value: DeepLocator): String = value.value
   def safeDestToSource(str: String): DeepLocator = DeepLocator(str)
@@ -265,7 +265,7 @@ class DeepLocatorMapperDelegate[T] extends StringMapperDelegate[DeepLocator] {
 //************************************
 //       DeepLinkToken -> String
 //************************************
-class DeepLinkTokenMapperDelegate[T] extends StringMapperDelegate[DeepLinkToken] {
+class DeepLinkTokenMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[DeepLinkToken](profile) {
   def zero = DeepLinkToken("")
   def sourceToDest(value: DeepLinkToken): String = value.value
   def safeDestToSource(str: String): DeepLinkToken = DeepLinkToken(str)
@@ -274,7 +274,7 @@ class DeepLinkTokenMapperDelegate[T] extends StringMapperDelegate[DeepLinkToken]
 //************************************
 //       JsArray -> String
 //************************************
-class JsArrayMapperDelegate[T] extends StringMapperDelegate[JsArray] {
+class JsArrayMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[JsArray](profile) {
   def zero = JsArray()
   def sourceToDest(value: JsArray): String = Json.stringify(value)
   def safeDestToSource(str: String): JsArray = Json.parse(str).asInstanceOf[JsArray]
@@ -283,7 +283,7 @@ class JsArrayMapperDelegate[T] extends StringMapperDelegate[JsArray] {
 //************************************
 //       Seq[URLHistory] -> String
 //************************************
-class URLHistorySeqMapperDelegate extends StringMapperDelegate[Seq[URLHistory]] {
+class URLHistorySeqMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[Seq[URLHistory]](profile) {
   def zero = Nil
   def sourceToDest(history: Seq[URLHistory]) = {
     val serializer = URLHS.urlHistorySerializer
@@ -292,14 +292,14 @@ class URLHistorySeqMapperDelegate extends StringMapperDelegate[Seq[URLHistory]] 
   def safeDestToSource(history: String) = {
     val json = Json.parse(history)
     val serializer = URLHS.urlHistorySerializer
-    serializer.reads(json)
+    serializer.reads(json).get
   }
 }
 
 //************************************
 //       BookmarkSource -> String
 //************************************
-class BookmarkSourceMapperDelegate extends StringMapperDelegate[BookmarkSource] {
+class BookmarkSourceMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[BookmarkSource](profile) {
   def zero = BookmarkSource("")
   def sourceToDest(value: BookmarkSource): String = value.value
   def safeDestToSource(str: String): BookmarkSource = BookmarkSource(str)
@@ -309,7 +309,7 @@ class BookmarkSourceMapperDelegate extends StringMapperDelegate[BookmarkSource] 
 //************************************
 //       SocialNetworkType -> String
 //************************************
-class SocialNetworkTypeMapperDelegate extends StringMapperDelegate[SocialNetworkType] {
+class SocialNetworkTypeMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[SocialNetworkType](profile) {
   def zero = SocialNetworks.FACEBOOK
   def sourceToDest(socialNetworkType: SocialNetworkType) = socialNetworkType.name
   def safeDestToSource(str: String) = str match {
@@ -321,16 +321,16 @@ class SocialNetworkTypeMapperDelegate extends StringMapperDelegate[SocialNetwork
 //************************************
 //       SocialNetworkType -> String
 //************************************
-class SocialUserMapperDelegate extends StringMapperDelegate[SocialUser] {
+class SocialUserMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[SocialUser](profile) {
   def zero = SocialUser(id = UserId("", ""), displayName = "", email = None, avatarUrl = None, authMethod = AuthenticationMethod.OAuth2)
   def sourceToDest(socialUser: SocialUser) = SocialUserSerializer.userSerializer.writes(socialUser).toString
-  def safeDestToSource(str: String) = SocialUserSerializer.userSerializer.reads(Json.parse(str))
+  def safeDestToSource(str: String) = SocialUserSerializer.userSerializer.reads(Json.parse(str)).get
 }
 
 //************************************
 //       SocialId -> String
 //************************************
-class SocialIdMapperDelegate extends StringMapperDelegate[SocialId] {
+class SocialIdMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[SocialId](profile) {
   def zero = SocialId("")
   def sourceToDest(socialId: SocialId) = socialId.id
   def safeDestToSource(str: String) = SocialId(str)
@@ -339,7 +339,7 @@ class SocialIdMapperDelegate extends StringMapperDelegate[SocialId] {
 //************************************
 //       KifiVersion -> String
 //************************************
-class KifiVersionMapperDelegate extends StringMapperDelegate[KifiVersion] {
+class KifiVersionMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[KifiVersion](profile) {
   def zero = KifiVersion(0, 0, 0)
   def sourceToDest(version: KifiVersion) = version.toString
   def safeDestToSource(str: String) = KifiVersion(str)
@@ -348,7 +348,7 @@ class KifiVersionMapperDelegate extends StringMapperDelegate[KifiVersion] {
 //************************************
 //       UserAgent -> String
 //************************************
-class UserAgentMapperDelegate extends StringMapperDelegate[UserAgent] {
+class UserAgentMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[UserAgent](profile) {
   def zero = UserAgent("")
   def sourceToDest(value: UserAgent) = value.userAgent
   def safeDestToSource(str: String) = UserAgent(str)
@@ -357,7 +357,7 @@ class UserAgentMapperDelegate extends StringMapperDelegate[UserAgent] {
 //************************************
 //       ElectronicMailMessageId -> String
 //************************************
-class ElectronicMailMessageIdMapperDelegate extends StringMapperDelegate[ElectronicMailMessageId] {
+class ElectronicMailMessageIdMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[ElectronicMailMessageId](profile) {
   def zero = ElectronicMailMessageId("")
   def sourceToDest(value: ElectronicMailMessageId) = value.id
   def safeDestToSource(str: String) = ElectronicMailMessageId(str)
@@ -366,7 +366,7 @@ class ElectronicMailMessageIdMapperDelegate extends StringMapperDelegate[Electro
 //************************************
 //       ElectronicMailCategory -> String
 //************************************
-class ElectronicMailCategoryMapperDelegate extends StringMapperDelegate[ElectronicMailCategory] {
+class ElectronicMailCategoryMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[ElectronicMailCategory](profile) {
   def zero = ElectronicMailCategory("")
   def sourceToDest(value: ElectronicMailCategory) = value.category
   def safeDestToSource(str: String) = ElectronicMailCategory(str)
@@ -375,7 +375,7 @@ class ElectronicMailCategoryMapperDelegate extends StringMapperDelegate[Electron
 //************************************
 //       SystemEmailAddress -> String
 //************************************
-class SystemEmailAddressMapperDelegate extends StringMapperDelegate[SystemEmailAddress] {
+class SystemEmailAddressMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[SystemEmailAddress](profile) {
   def zero = EmailAddresses.TEAM
   def sourceToDest(value: SystemEmailAddress) = value.address
   def safeDestToSource(str: String) = EmailAddresses(str)
@@ -384,7 +384,7 @@ class SystemEmailAddressMapperDelegate extends StringMapperDelegate[SystemEmailA
 //************************************
 //       EmailAddressHolder -> String
 //************************************
-class EmailAddressHolderMapperDelegate extends StringMapperDelegate[EmailAddressHolder] {
+class EmailAddressHolderMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[EmailAddressHolder](profile) {
   def zero = new EmailAddressHolder(){val address = ""}
   def sourceToDest(value: EmailAddressHolder) = value.address
   def safeDestToSource(str: String) = new EmailAddressHolder(){val address = str}
@@ -393,7 +393,7 @@ class EmailAddressHolderMapperDelegate extends StringMapperDelegate[EmailAddress
 //************************************
 //       DomainTagName -> String
 //************************************
-class DomainTagNameMapperDelegate extends StringMapperDelegate[DomainTagName] {
+class DomainTagNameMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[DomainTagName](profile) {
   def zero = DomainTagName("")
   def sourceToDest(value: DomainTagName) = value.name
   def safeDestToSource(str: String) = DomainTagName(str)
@@ -402,8 +402,8 @@ class DomainTagNameMapperDelegate extends StringMapperDelegate[DomainTagName] {
 //************************************
 //       LargeString -> Clob
 //************************************
-class LargeStringMapperDelegate extends DelegateMapperDelegate[LargeString, Clob] {
-  protected val delegate = new ClobTypeMapperDelegate()
+class LargeStringMapperDelegate(val profile: BasicProfile) extends DelegateMapperDelegate[LargeString, Clob] {
+  protected val delegate = profile.typeMapperDelegates.clobTypeMapperDelegate
   def zero = LargeString("")
   def sourceToDest(value: LargeString): Clob = new SerialClob(value.value.toCharArray())
   def safeDestToSource(value: Clob): LargeString = {
@@ -418,8 +418,8 @@ class LargeStringMapperDelegate extends DelegateMapperDelegate[LargeString, Clob
 //************************************
 //       Array[Byte] -> Blob
 //************************************
-class ByteArrayMapperDelegate extends DelegateMapperDelegate[Array[Byte], Blob] {
-  protected val delegate = new BlobTypeMapperDelegate()
+class ByteArrayMapperDelegate(val profile: BasicProfile) extends DelegateMapperDelegate[Array[Byte], Blob] {
+  protected val delegate = profile.typeMapperDelegates.blobTypeMapperDelegate
   def zero = new Array[Byte](0)
   def sourceToDest(value: Array[Byte]): Blob = new SerialBlob(value)
   def safeDestToSource(value: Blob): Array[Byte] = {

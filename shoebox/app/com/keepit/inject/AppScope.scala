@@ -5,11 +5,14 @@ import com.google.inject.OutOfScopeException
 import com.google.inject.Provider
 import com.google.inject.Scope
 import com.keepit.common.logging.Logging
+import com.keepit.common.db.ExternalId
 import play.api.Application
 import play.api.Plugin
 import play.utils.Threads
 
 class AppScope extends Scope with Logging {
+
+  private val identifier = ExternalId[AppScope]()
 
   private var started = false
   private var stopped = false
@@ -20,7 +23,7 @@ class AppScope extends Scope with Logging {
   private var instances: Map[Key[_], Any] = Map.empty
 
   def onStart(app: Application): Unit = synchronized {
-    println("scope starting...")
+    println(s"[$identifier] scope starting...")
     require(!started, "AppScope has already been started")
     this.app = app
     pluginsToStart foreach startPlugin
@@ -29,7 +32,7 @@ class AppScope extends Scope with Logging {
   }
 
   private[this] def startPlugin(plugin: Plugin): Unit = {
-    log.info("starting plugin: " + plugin)
+    log.info(s"[$identifier] starting plugin: $plugin")
     // start plugin, explicitly using the app classloader
     Threads.withContextClassLoader(app.classloader) {
       plugin.onStart()
@@ -38,12 +41,12 @@ class AppScope extends Scope with Logging {
   }
 
   def onStop(app: Application): Unit = synchronized {
-    println("scope stopping...")
+    println(s"[$identifier] scope stopping...")
     if(!started) {
-      log.error("AppScore has not been started")
+      log.error("App not started!", new Exception(s"[$identifier] AppScore has not been started"))
     }
     else {
-      require(!stopped, "AppScope has already been stopped")
+      require(!stopped, s"[$identifier] AppScope has already been stopped")
       // stop plugins, explicitly using the app classloader
       Threads.withContextClassLoader(app.classloader) {
         for (plugin <- plugins) {
@@ -51,7 +54,7 @@ class AppScope extends Scope with Logging {
           plugin.onStop()
         }
       }
-      log.info("scope stopped")
+      log.info(s"[$identifier] scope stopped!")
       plugins = Nil
       stopped = true
     }

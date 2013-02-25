@@ -1,5 +1,10 @@
 package com.keepit.common.analytics
 
+import scala.concurrent.Await
+import akka.actor.ActorSystem
+import com.keepit.common.db.Id
+import play.api.Plugin
+import akka.actor.Cancellable
 import org.joda.time._
 
 import com.google.inject.Inject
@@ -9,19 +14,22 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.inject._
 import com.keepit.model.User
+import play.api.libs.concurrent.Execution.Implicits._
 
 import akka.actor.Actor
 import akka.actor.ActorSystem
 import akka.actor.Props
+
 import play.api.Play.current
 import play.api.Plugin
+import com.keepit.common.akka.FortyTwoActor
 
 case object Load
 case class Update(userId: Id[User])
 case class Persist(event: Event, queueTime: DateTime)
 case class PersistMany(events: Seq[Event], queueTime: DateTime)
 
-private[analytics] class PersistEventActor extends Actor with Logging {
+private[analytics] class PersistEventActor extends FortyTwoActor with Logging {
 
   def receive() = {
     case Persist(event, queueTime) =>

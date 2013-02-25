@@ -28,6 +28,8 @@ shoebox/modules/securesocial/.cache
 shoebox/modules/securesocial/.target
 shoebox/modules/securesocial/.settings
 shoebox/modules/securesocial/bin/*
+shoebox/shoebox.sublime-project
+shoebox/shoebox.sublime-workspace
 *.swp
 
 # Compiled source #
@@ -42,6 +44,7 @@ shoebox/modules/securesocial/bin/*
 # IDE Files   #
 ###############
 workspace.xml
+*.sublime-project
 
 # Logs and databases #
 ######################

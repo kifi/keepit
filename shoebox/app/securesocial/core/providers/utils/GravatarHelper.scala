@@ -18,24 +18,30 @@ package securesocial.core.providers.utils
 
 import java.security.MessageDigest
 import play.api.libs.ws.WS
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.Await
+import scala.concurrent.Future
 
 object GravatarHelper {
   val GravatarUrl = "http://www.gravatar.com/avatar/%s?d=404"
   val Md5 = "MD5"
 
   def avatarFor(email: String): Option[String] = {
-    hash(email).map( hash => {
+    hash(email).map(hash => {
       val url = GravatarUrl.format(hash)
-      WS.url(url).get().await(10000).fold(
-        onError => None,
-        onSucess => if (onSucess.status == 200) Some(url) else None
-      )
+      try {
+        val result = Await.result(WS.url(url).get(), 10 seconds)
+        if (result.status == 200) Some(url) else None
+      } catch {
+        case e: Throwable => None
+      }
     }).getOrElse(None)
   }
 
   private def hash(email: String): Option[String] = {
     val s = email.trim.toLowerCase
-    if ( s.length > 0 ) {
+    if (s.length > 0) {
       val out = MessageDigest.getInstance(Md5).digest(s.getBytes)
       Some(BigInt(1, out).toString(16))
     } else {

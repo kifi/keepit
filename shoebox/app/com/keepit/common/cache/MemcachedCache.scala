@@ -86,7 +86,7 @@ class MemcachedPlugin @Inject() (client: MemcachedClient) extends CachePlugin {
           }
         )
       } catch {
-        case e =>
+        case e: Throwable =>
           logger.error("An error has occured while getting the value from memcached" , e)
           future.cancel(false)
           None

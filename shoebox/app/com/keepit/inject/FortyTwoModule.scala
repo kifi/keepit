@@ -1,6 +1,6 @@
 package com.keepit.inject
 
-import org.scalaquery.session.Database
+import scala.slick.session.Database
 import com.tzavellas.sse.guice.ScalaModule
 import com.google.inject.{Provides, Inject, Singleton, Provider}
 import com.keepit.common.time._
