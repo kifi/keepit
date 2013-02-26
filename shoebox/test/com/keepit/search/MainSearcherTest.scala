@@ -76,7 +76,7 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
 
   val source = BookmarkSource("test")
 
-  val defaultConfig = new SearchConfigManager(None).getDefaultConfig
+  val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
   val noBoostConfig = defaultConfig("myBookmarkBoost" -> "1", "sharingBoost" -> "0", "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
                                    "percentMatch" -> "0", "tailCutting" -> "0", "dumpingByRank" -> "false")
   val allHitsConfig = defaultConfig("tailCutting" -> "0")

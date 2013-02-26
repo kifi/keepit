@@ -1,15 +1,21 @@
 package com.keepit.shoebox
 
-import java.io.File
-import java.net.InetAddress
-import org.apache.lucene.store.MMapDirectory
+import akka.actor.ActorSystem
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3Client
+import com.google.common.io.Files
 import com.google.inject.Provides
 import com.google.inject.Singleton
-import com.keepit.common.controller.FortyTwoServices
+import com.google.inject.multibindings.Multibinder
+import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.actor.ActorPlugin
+import com.keepit.common.analytics._
+import com.keepit.common.analytics.reports._
+import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
+import com.keepit.common.cache._
+import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.db.slick.DBConnection
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.HealthcheckPluginImpl
 import com.keepit.common.logging.Logging
@@ -25,8 +31,9 @@ import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.store.S3Bucket
 import com.keepit.inject.AppScoped
 import com.keepit.inject.FortyTwoModule
-import com.keepit.scraper.ScraperConfig
+import com.keepit.model.SliderHistoryTracker
 import com.keepit.scraper._
+import com.keepit.search._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.graph.URIGraphPluginImpl
@@ -34,27 +41,12 @@ import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexerPluginImpl
 import com.keepit.search.phrasedetector.PhraseIndexer
-import com.keepit.search.ArticleSearchResultStore
-import com.keepit.search.ArticleStore
-import com.keepit.search.S3ArticleSearchResultStoreImpl
-import com.keepit.search.S3ArticleStoreImpl
-import com.keepit.search.SearchConfigManager
-import com.keepit.search.ResultClickTracker
-import com.keepit.search.BrowsingHistoryTracker
-import com.keepit.search.ClickHistoryTracker
-import com.tzavellas.sse.guice.ScalaModule
-import akka.actor.ActorSystem
-import play.api.Play.current
 import com.mongodb.casbah.MongoConnection
-import com.keepit.common.analytics._
-import com.keepit.common.analytics.reports._
-import com.google.inject.multibindings.Multibinder
-import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
-import com.keepit.common.cache._
-import com.keepit.classify.DomainTagImportSettings
-import com.google.common.io.Files
-import com.keepit.model.SliderHistoryTracker
-
+import com.tzavellas.sse.guice.ScalaModule
+import java.io.File
+import java.net.InetAddress
+import org.apache.lucene.store.MMapDirectory
+import play.api.Play.current
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -206,13 +198,9 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def searchConfigManager: SearchConfigManager = {
-    current.configuration.getString("index.config") match {
-      case None => new SearchConfigManager(None)
-      case Some(dirPath) =>
-        val dir = new File(dirPath).getCanonicalFile()
-        new SearchConfigManager(if (dir.exists) Some(dir) else None)
-    }
+  def searchConfigManager(expRepo: SearchConfigExperimentRepo, db: DBConnection): SearchConfigManager = {
+    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
+    new SearchConfigManager(optFile, expRepo, db)
   }
 
   @Singleton

@@ -34,6 +34,7 @@ case class PersonalSearchResultPacket(
   query: String,
   hits: Seq[PersonalSearchResult],
   mayHaveMoreHits: Boolean,
+  experimentId: Option[Id[SearchConfigExperiment]],
   context: String)
 
 object SearchController extends FortyTwoController {
@@ -55,7 +56,7 @@ object SearchController extends FortyTwoController {
     }
 
     val filterOut = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-    val config = inject[SearchConfigManager].getUserConfig(userId)
+    val config = inject[SearchConfigManager].getConfig(userId, query)
 
     val mainSearcherFactory = inject[MainSearcherFactory]
     val searcher = mainSearcherFactory(userId, friendIds, filterOut, config)
@@ -65,42 +66,31 @@ object SearchController extends FortyTwoController {
       log.warn("maxHits is zero")
       ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], filterOut, 0, Int.MaxValue)
     }
-    val realResults = toPersonalSearchResultPacket(userId, searchRes)
-
-    val res = if (kifiVersion.getOrElse(KifiVersion(0,0,0)) >= KifiVersion(2,0,8)) {
-      realResults
-    } else {
-      val upgradeResult = PersonalSearchResult(
-        hit = PersonalSearchHit(id = Id[NormalizedURI](0), externalId = ExternalId[NormalizedURI](), title = Some("★★★ KiFi has updated! Please reload your plugin. ★★★"), url = "http://keepitfindit.com/upgrade"),
-        count = 0,
-        isMyBookmark = false,
-        isPrivate = false,
-        users = Nil,
-        score = 42f)
-      realResults.copy(hits = Seq(upgradeResult) ++ realResults.hits)
-    }
-
+    val res = toPersonalSearchResultPacket(userId, searchRes, config)
     reportArticleSearchResult(searchRes)
     Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
 
-  private def reportArticleSearchResult(res: ArticleSearchResult) = dispatch ({
-        inject[DBConnection].readWrite { implicit s =>
-          inject[ArticleSearchResultRefRepo].save(ArticleSearchResultFactory(res))
-        }
-        inject[ArticleSearchResultStore] += (res.uuid -> res)
-      }, { e =>
-         log.error("Could not persist article search result %s".format(res), e)
-      })
+  private def reportArticleSearchResult(res: ArticleSearchResult) {
+    dispatch ({
+      inject[DBConnection].readWrite { implicit s =>
+        inject[ArticleSearchResultRefRepo].save(ArticleSearchResultFactory(res))
+      }
+      inject[ArticleSearchResultStore] += (res.uuid -> res)
+    }, { e =>
+      log.error("Could not persist article search result %s".format(res), e)
+    })
+  }
 
-  private[controllers] def toPersonalSearchResultPacket(userId: Id[User], res: ArticleSearchResult) = {
+  private[controllers] def toPersonalSearchResultPacket(userId: Id[User],
+      res: ArticleSearchResult, config: SearchConfig): PersonalSearchResultPacket = {
     val hits = inject[DBConnection].readOnly { implicit s =>
       res.hits.map(toPersonalSearchResult(userId, _))
     }
     log.debug(hits mkString "\n")
 
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, filter)
+    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, config.experimentId, filter)
   }
 
   private[controllers] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
@@ -109,7 +99,7 @@ object SearchController extends FortyTwoController {
     val users = res.users.toSeq.map{ userId =>
       val user = inject[UserRepo].get(userId)
       val info = inject[SocialUserInfoRepo].getByUser(userId).head
-      UserWithSocial(user, info, inject[BookmarkRepo].count(userId).toInt, Nil, Nil)
+      UserWithSocial(user, info, inject[BookmarkRepo].count(userId), Nil, Nil)
     }
     PersonalSearchResult(toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark, false, users, res.score)
   }
@@ -128,7 +118,7 @@ object SearchController extends FortyTwoController {
     val friendIds = inject[DBConnection].readOnly { implicit s =>
       inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
     }
-    val config = inject[SearchConfigManager].getUserConfig(userId)
+    val config = inject[SearchConfigManager].getConfig(userId, queryString)
 
     val mainSearcherFactory = inject[MainSearcherFactory]
     val searcher = mainSearcherFactory(userId, friendIds, Set(), config)

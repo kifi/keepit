@@ -1,12 +1,12 @@
 package com.keepit.common.db.slick
 
+import scala.slick.driver._
+import scala.slick.lifted.{BaseTypeMapper, TypeMapperDelegate}
+import scala.slick.session.{PositionedParameters, PositionedResult}
+
 import java.sql.{Timestamp, Clob, Blob}
 
 import org.joda.time.DateTime
-import scala.slick.driver._
-import scala.slick.lifted.TypeMapper._
-import scala.slick.lifted.{NumericTypeMapper, BaseTypeMapper, TypeMapperDelegate}
-import scala.slick.session.{PositionedParameters, PositionedResult, ResultSetType}
 
 import com.keepit.classify.{DomainTagName, DomainTag, Domain, DomainToTag}
 import com.keepit.common.db.{Id, State, Model, ExternalId, LargeString}
@@ -20,7 +20,6 @@ import com.keepit.serializer.{URLHistorySerializer => URLHS, SocialUserSerialize
 import javax.sql.rowset.serial.{SerialBlob, SerialClob}
 import play.api.libs.json._
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod}
-
 
 object FortyTwoTypeMappers {
   // Time
@@ -84,6 +83,10 @@ object FortyTwoTypeMappers {
 
   implicit object DomainTagIdTypeMapper extends BaseTypeMapper[Id[DomainTag]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[DomainTag](profile)
+  }
+
+  implicit object SearchConfigExperimentIdTypeMapper extends BaseTypeMapper[Id[SearchConfigExperiment]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[SearchConfigExperiment](profile)
   }
 
   //States
@@ -170,6 +173,10 @@ object FortyTwoTypeMappers {
 
   implicit object JsArrayTypeMapper extends BaseTypeMapper[JsArray] {
     def apply(profile: BasicProfile) = new JsArrayMapperDelegate(profile)
+  }
+
+  implicit object StringToStringMapTypeMapper extends BaseTypeMapper[Map[String, String]] {
+    def apply(profile: BasicProfile) = new StringToStringMapMapperDelegate(profile)
   }
 
   implicit object KifiVersionTypeMapper extends BaseTypeMapper[KifiVersion] {
@@ -274,6 +281,17 @@ class JsArrayMapperDelegate[T](profile: BasicProfile) extends StringMapperDelega
   def zero = JsArray()
   def sourceToDest(value: JsArray): String = Json.stringify(value)
   def safeDestToSource(str: String): JsArray = Json.parse(str).asInstanceOf[JsArray]
+}
+
+//************************************
+//       Map[String, String] -> String
+//************************************
+class StringToStringMapMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[Map[String, String]](profile) {
+  def zero = Map()
+  def sourceToDest(value: Map[String, String]): String =
+    Json.stringify(JsObject(value.map { case (k, v) => k -> JsString(v) }.toSeq))
+  def safeDestToSource(str: String): Map[String, String] =
+    Json.parse(str).asInstanceOf[JsObject].fields.map { case (k, v) => k -> v.as[String] }.toMap
 }
 
 //************************************
