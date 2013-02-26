@@ -126,7 +126,7 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
     (for(b <- table if b.uriId === uriId && b.state === CommentStates.ACTIVE) yield b).list
 
   def getChildCount(commentId: Id[Comment])(implicit session: RSession): Int =
-    (for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b.id.count).first
+    Query((for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b.id).countDistinct).first
 
   def getPublic(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment] =
     (for {
@@ -147,9 +147,9 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
   
   def getPublicCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int =
     commentCountCache.getOrElse(CommentCountUriIdKey(uriId)) {
-      (for {
+      Query((for {
         b <- table if b.uriId === uriId && b.permissions === CommentPermissions.PUBLIC && b.parent.isNull && b.state === CommentStates.ACTIVE
-      } yield b.id.count).first
+      } yield b.id).countDistinct).first
     }
 
   def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] =
@@ -179,16 +179,15 @@ class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCach
   }
 
   def count(permissions: State[CommentPermission])(implicit session: RSession): Int =
-    (for {
+    Query((for {
       b <- table if b.permissions === permissions && b.state === CommentStates.ACTIVE
-    } yield b.id.count).first
+    } yield b.id).countDistinct).first
 
   def page(page: Int, size: Int, permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment] = {
     val q = for {
       t <- table if (t.permissions === permissions)
-      _ <- Query.orderBy(t.id desc)
     } yield t
-    q.drop(page * size).take(size).list
+    q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
   def getParticipantsUserIds(commentId: Id[Comment])(implicit session: RSession): Set[Id[User]] = {
