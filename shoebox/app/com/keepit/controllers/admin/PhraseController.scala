@@ -36,7 +36,7 @@ object PhraseController extends FortyTwoController  {
     Redirect(com.keepit.controllers.admin.routes.PhraseController.displayPhrases())
   }
   def addPhrase = AdminHtmlAction{ implicit request =>
-    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val phrase = body.get("phrase").get
     val lang = body.get("lang").get
     val source = body.get("source").get
