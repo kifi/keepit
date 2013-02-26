@@ -107,7 +107,7 @@ object AuthController extends FortyTwoController {
   }
 
   def unimpersonate = AdminJsonAction { request =>
-    Ok(JsObject(Seq("userId" -> JsString(request.userId.toString)))).discardingCookies(ImpersonateCookie.COOKIE_NAME)
+    Ok(JsObject(Seq("userId" -> JsString(request.userId.toString)))).discardingCookies(ImpersonateCookie.discard)
   }
 
   def impersonate(id: Id[User]) = AdminJsonAction { request =>
