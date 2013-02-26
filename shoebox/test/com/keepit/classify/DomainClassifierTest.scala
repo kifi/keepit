@@ -5,7 +5,7 @@ import org.specs2.mutable.SpecificationWithJUnit
 
 import com.keepit.common.analytics.{FakePersistEventPluginImpl, PersistEventPlugin}
 import com.keepit.common.db.slick.DBConnection
-import com.keepit.common.net.FakeHttpClient
+import com.keepit.common.net.{HttpClientImpl, FakeHttpClient}
 import com.keepit.inject.{provide, inject}
 import com.keepit.test.{DbRepos, EmptyApplication}
 
@@ -23,6 +23,7 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
   "The domain classifier" should {
     "use imported classifications and not fetch for known domains" in {
       running(new EmptyApplication()) {
+        //val client = new HttpClientImpl()
         val client = new FakeHttpClient(Some(Map.empty))
 
         val classifier = new DomainClassifierImpl(system, inject[DBConnection], client,

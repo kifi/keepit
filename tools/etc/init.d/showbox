@@ -4,8 +4,8 @@
 # description: Java deamon script
 #
 # Set this to your Java installation
-JAVA_HOME=/usr/java/jdk1.6.0_34
- 
+JAVA_HOME=/usr/java/jdk1.7.0_09
+
 serviceNameLo="shoebox"                                  # service name with the first letter in lowercase
 serviceName="Shoebox"                                    # service name
 serviceUser="fortytwo"                                      # OS user name for the service
@@ -19,7 +19,10 @@ yourkit="-agentpath:/opt/yjp/bin/linux-x86-64/libyjpagent.so=port=4242,dir=~/pro
 jmxArgs="-Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false" # remote JMX
 javaCommand="java"                                         # name of the Java launcher without the path
 javaExe="$JAVA_HOME/bin/$javaCommand"                      # file name of the Java application launcher executable
-javaArgs="$yourkit $jmxArgs -Ddb.$serviceNameLo.password=keepmydatasecure -Dhttp.port=9000 -Xms512M -Xmx1024m -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -cp \"$applDir/lib/*\" play.core.server.NettyServer $applDir"                     # arguments for Java launcher
+javaGc="-Xloggc:gc_stats.log -XX:+PrintGCDetails -XX:PermSize=128m -XX:MaxPermSize=200m -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+HeapDumpOnOutOfMemoryError"
+classpathLine=`grep "classpath=" $applDir/start | sed 's/.*"\(.*\)".*/\1/'`
+classpath=`echo "$classpathLine" | sed 's%$scriptdir%'$applDir'%g'`
+javaArgs="$yourkit $jmxArgs $javaGc -Ddb.$serviceNameLo.password=keepmydatasecure -Dhttp.port=9000 -Xms512M -Xmx1024m -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -cp $classpath play.core.server.NettyServer $applDir"                     # arguments for Java launcher
 javaCommandLine="$javaExe $javaArgs"                       # command line to start the Java service application
 javaCommandLineKeyword="prod/$serviceNameLo.conf"                     # a keyword that occurs on the commandline, used to detect an already running service process and to distinguish it from others
  

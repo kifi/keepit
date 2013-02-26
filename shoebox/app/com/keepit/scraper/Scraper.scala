@@ -19,6 +19,7 @@ import com.google.inject.Inject
 import org.apache.http.HttpStatus
 import org.joda.time.{DateTime, Seconds}
 import play.api.Play.current
+import scala.util.{Failure, Success}
 
 object Scraper {
   val BATCH_SIZE = 100
@@ -130,11 +131,11 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
   protected def getExtractor(url: String): Extractor = {
     try {
       URI.parse(url) match {
-        case Some(uri) =>
+        case Success(uri) =>
           Extractor.factories.find(_.isDefinedAt(uri)).map{ f =>
             f.apply(uri)
           }.getOrElse(throw new Exception("failed to find a extractor factory"))
-        case None =>
+        case Failure(_) =>
           log.warn("uri parsing failed: [%s]".format(url))
           new DefaultExtractor(url, Scraper.maxContentChars)
       }
@@ -148,7 +149,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
   def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, useProxy: Boolean): ScraperResult = {
     try {
       URI.parse(normalizedUri.url) match {
-        case Some(uri) =>
+        case Success(uri) =>
           uri.scheme match {
             case Some("file") => Error(-1, "forbidden scheme: %s".format("file"))
             case _ => fetchArticle(normalizedUri, httpFetcher, info, useProxy)

@@ -1,15 +1,16 @@
 package com.keepit.common.net
 
 import com.keepit.common.logging.Logging
+import util.{Failure, Success, Try}
 
 object URI extends Logging {
-  def parse(uriString: String): Option[URI] = {
-    uriString.replace(" ", "%20") match {
+  def parse(uriString: String): Try[URI] = {
+    uriString match {
       case URI(scheme, userInfo, host, port, path, query, fragment) =>
-        Some(URI(Some(uriString), scheme, userInfo, host, port, path, query, fragment))
-      case _ => 
+        Success(URI(Some(uriString), scheme, userInfo, host, port, path, query, fragment))
+      case _ =>
         log.warn("Could not parse URL: %s".format(uriString))
-        None // parse failed
+        Failure(new java.net.URISyntaxException(uriString, null))
     }
   }
 
@@ -28,8 +29,7 @@ object URI extends Logging {
     try {
       val uri = try {
         // preprocess illegal chars
-        val preprocessed = uriString.replace("|", "%7C")
-
+        val preprocessed = uriString.replace(" ", "%20").replace("|", "%7C")
         new java.net.URI(preprocessed).normalize()
       } catch {
         case e: java.net.URISyntaxException =>

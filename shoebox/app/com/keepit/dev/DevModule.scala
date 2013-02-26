@@ -1,16 +1,23 @@
 package com.keepit.dev
 
-import java.io.File
+import akka.actor.ActorSystem
 import scala.collection.mutable.HashMap
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.MMapDirectory
 import org.apache.lucene.store.RAMDirectory
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3._
+import com.google.common.io.Files
 import com.google.inject.Provides
 import com.google.inject.Singleton
-import com.keepit.common.controller.FortyTwoServices
+import com.google.inject.multibindings._
+import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.actor.ActorPlugin
+import com.keepit.common.analytics._
+import com.keepit.common.analytics.reports._
+import com.keepit.common.cache._
+import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.db.slick.DBConnection
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -18,7 +25,7 @@ import com.keepit.common.healthcheck.HealthcheckPluginImpl
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.MailSenderPlugin
 import com.keepit.common.mail.MailSenderPluginImpl
-import com.keepit.common.mail.PostOfficeImpl
+import com.keepit.common.mail.PostOffice
 import com.keepit.common.net.HttpClient
 import com.keepit.common.net.HttpClientImpl
 import com.keepit.common.social._
@@ -26,6 +33,9 @@ import com.keepit.common.store.S3Bucket
 import com.keepit.inject._
 import com.keepit.model.{SliderHistoryTracker, NormalizedURI, SocialUserInfo}
 import com.keepit.scraper._
+import com.keepit.search.Article
+import com.keepit.search.ArticleStore
+import com.keepit.search._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.graph.URIGraphPluginImpl
@@ -34,11 +44,16 @@ import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexerPluginImpl
 import com.keepit.search.phrasedetector.PhraseIndexer
 import com.keepit.search._
+import com.mongodb.casbah.MongoConnection
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.tzavellas.sse.guice.ScalaModule
-import akka.actor.ActorSystem
+import java.io.File
+import java.net.InetAddress
+import org.apache.lucene.store.MMapDirectory
+import org.apache.lucene.store.RAMDirectory
 import play.api.Play.current
+import scala.collection.mutable.HashMap
 import com.keepit.common.mail.PostOffice
 import java.net.InetAddress
 import com.keepit.common.analytics.S3EventStoreImpl
@@ -242,13 +257,9 @@ class DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def searchConfigManager: SearchConfigManager = {
-    current.configuration.getString("index.config") match {
-      case None => new SearchConfigManager(None)
-      case Some(dirPath) =>
-        val dir = new File(dirPath).getCanonicalFile()
-        new SearchConfigManager(if (dir.exists) Some(dir) else None)
-    }
+  def searchConfigManager(expRepo: SearchConfigExperimentRepo, db: DBConnection): SearchConfigManager = {
+    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
+    new SearchConfigManager(optFile, expRepo, db)
   }
 
   @Singleton

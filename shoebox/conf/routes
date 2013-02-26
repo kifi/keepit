@@ -120,6 +120,10 @@ GET     /admin/messages/:page       com.keepit.controllers.CommentController.mes
 GET     /admin/searchConfig/:id     com.keepit.controllers.SearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   com.keepit.controllers.SearchConfigController.setUserConfig(id: Id[User])
 GET     /admin/searchConfig/:id/reset com.keepit.controllers.SearchConfigController.resetUserConfig(id: Id[User])
+GET     /admin/searchExperiments    com.keepit.controllers.SearchConfigController.getExperiments
+POST    /admin/searchExperiments    com.keepit.controllers.SearchConfigController.addNewExperiment
+POST    /admin/searchExperiments/delete    com.keepit.controllers.SearchConfigController.deleteExperiment
+POST    /admin/searchExperiments/update    com.keepit.controllers.SearchConfigController.updateExperiment
 
 GET     /admin/explainResult        com.keepit.controllers.SearchController.explain(query: String, uriId: Id[NormalizedURI])
 

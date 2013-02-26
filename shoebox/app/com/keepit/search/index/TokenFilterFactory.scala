@@ -35,7 +35,7 @@ import org.tartarus.snowball.ext.TurkishStemmer
 import org.tartarus.snowball.SnowballProgram
 
 import com.keepit.search.index.LuceneVersion.version
-
+import scala.reflect.ClassTag
 
 trait TokenFilterFactory {
   def apply(tokenSteam: TokenStream): TokenStream
@@ -89,13 +89,13 @@ class StopFilterFactories {
     }
   }
 
-  private def loadFrom[A <: Analyzer](implicit m : Manifest[A]): TokenFilterFactory = loadFrom[A](false, "stopwords.txt", "#")
+  private def loadFrom[A <: Analyzer](implicit m : ClassTag[A]): TokenFilterFactory = loadFrom[A](false, "stopwords.txt", "#")
 
-  private def loadFrom[A](ignoreCase: Boolean, file: String, comment: String)(implicit m : Manifest[A]): TokenFilterFactory = {
+  private def loadFrom[A](ignoreCase: Boolean, file: String, comment: String)(implicit m : ClassTag[A]): TokenFilterFactory = {
     var reader: Reader = null
     try {
       val file = "stopwords.txt"
-      val clazz = m.erasure
+      val clazz = m.runtimeClass
       reader = IOUtils.getDecodingReader(clazz.getResourceAsStream(file), IOUtils.CHARSET_UTF_8)
       val stopSet = WordlistLoader.getWordSet(reader, comment, new CharArraySet(version, 16, ignoreCase))
       load(stopSet)
@@ -121,8 +121,8 @@ class StemFilterFactories {
   val Romanian = snowball[RomanianStemmer]
   val Turkish = snowball[TurkishStemmer]
 
-  private def snowball[S <: SnowballProgram](implicit m : Manifest[S]) = {
-    val snowballConstructor = m.erasure.getConstructor().asInstanceOf[Constructor[SnowballProgram]]
+  private def snowball[S <: SnowballProgram](implicit m : ClassTag[S]) = {
+    val snowballConstructor = m.runtimeClass.getConstructor().asInstanceOf[Constructor[SnowballProgram]]
     new TokenFilterFactory {
       def apply(tokenStream: TokenStream) = new SnowballFilter(tokenStream, snowballConstructor.newInstance())
     }

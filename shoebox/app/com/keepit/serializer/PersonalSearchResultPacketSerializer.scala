@@ -14,6 +14,7 @@ class PersonalSearchResultPacketSerializer extends Writes[PersonalSearchResultPa
         "query" -> JsString(res.query),
         "hits" -> PersonalSearchResultSerializer.resSerializer.writes(res.hits),
         "mayHaveMore" -> JsBoolean(res.mayHaveMoreHits),
+        "experimentId" -> res.experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull),
         "context" -> JsString(res.context)
       ))
     } catch {
