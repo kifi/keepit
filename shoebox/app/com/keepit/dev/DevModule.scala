@@ -244,7 +244,7 @@ class DevModule() extends ScalaModule with Logging {
         val proxyPort = proxyConf.getInt("port").getOrElse(8080)
         val proxyProtocol = proxyConf.getString("protocol").getOrElse("http")
         Some(new HttpHost(proxyHost, proxyPort, proxyProtocol))
-      case None => None
+      case _ => None
     }
 
     new HttpFetcherImpl(
