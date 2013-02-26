@@ -27,13 +27,13 @@ class MainSearcherFactory @Inject() (
     clickHistoryTracker: ClickHistoryTracker
  ) {
 
-  def apply(userId: Id[User], friendIds: Set[Id[User]], filterOut: Set[Long], config: SearchConfig) = {
+  def apply(userId: Id[User], friendIds: Set[Id[User]], filter: SearchFilter, config: SearchConfig) = {
     val articleSearcher = articleIndexer.getSearcher
     val uriGraphSearcher = uriGraph.getURIGraphSearcher
     new MainSearcher(
         userId,
         friendIds,
-        filterOut,
+        filter,
         config,
         articleSearcher,
         uriGraphSearcher,
