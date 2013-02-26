@@ -65,7 +65,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
     log.info("executing request " + httpGet.getURI())
 
     val httpContext = new BasicHttpContext()
-    val client = if(useProxy) httpClient else proxyHttpClient
+    val client = if(useProxy) proxyHttpClient else httpClient
 
     val response = client.execute(httpGet, httpContext)
     log.info(response.getStatusLine.toString)
