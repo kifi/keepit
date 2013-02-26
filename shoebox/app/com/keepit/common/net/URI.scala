@@ -207,11 +207,7 @@ class Query(val params: Seq[Param]) {
   def containsParam(name: String) = params.exists(_.name == name)
 }
 
-object Param {
-  def apply(name:String, value:Option[String]) = new Param(name, value)
-  def unapply(param: Param): Option[(String, Option[String])] = Some((param.name, param.value))
-}
-class Param(val name: String, val value: Option[String]) {
+case class Param(val name: String, val value: Option[String]) {
   override def toString() = {
     if (value.isDefined) (name + "=" + value.get) else name
   }
