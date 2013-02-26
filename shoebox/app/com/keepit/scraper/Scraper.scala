@@ -53,7 +53,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
   }
 
   private def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {
-      processURI(uri, info)
+      processURI(uri, info, false)
     } catch {
       case e: Throwable =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
@@ -72,13 +72,14 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
   }
 
 
-  private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
-    log.info("scraping %s".format(uri))
+  private def processURI(uri: NormalizedURI, info: ScrapeInfo, useProxy: Boolean): (NormalizedURI, Option[Article]) = {
+    if(!useProxy) log.info(s"scraping $uri") else log.info(s"scraping $uri with proxy")
+
     val db = inject[DBConnection]
     val uriRepo = inject[NormalizedURIRepo]
     val scrapeInfoRepo = inject[ScrapeInfoRepo]
 
-    fetchArticle(uri, info) match {
+    fetchArticle(uri, info, useProxy) match {
       case Scraped(article, signature) =>
         // store a scraped article in a store map
         articleStore += (uri.id.get -> article)
@@ -100,7 +101,9 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
         // update the scrape schedule, uri is not changed
         db.readWrite { implicit s => scrapeInfoRepo.save(info.withDocumentUnchanged()) }
         (uri, None)
-      case Error(httpStatus, msg) =>
+      case Error(httpStatus, msg) if useProxy == false =>
+        processURI(uri, info, true)
+      case Error(httpStatus, msg) if useProxy == true =>
         // store a fallback article in a store map
         val article = Article(
             id = uri.id.get,
@@ -142,18 +145,18 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
     }
   }
 
-  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo): ScraperResult = {
+  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, useProxy: Boolean): ScraperResult = {
     try {
       URI.parse(normalizedUri.url) match {
         case Some(uri) =>
           uri.scheme match {
             case Some("file") => Error(-1, "forbidden scheme: %s".format("file"))
-            case _ => fetchArticle(normalizedUri, httpFetcher, info)
+            case _ => fetchArticle(normalizedUri, httpFetcher, info, useProxy)
           }
-        case _ => fetchArticle(normalizedUri, httpFetcher, info)
+        case _ => fetchArticle(normalizedUri, httpFetcher, info, useProxy)
       }
     } catch {
-      case _: Throwable => fetchArticle(normalizedUri, httpFetcher, info)
+      case _: Throwable => fetchArticle(normalizedUri, httpFetcher, info, useProxy)
     }
   }
 
@@ -164,13 +167,13 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
     }
   }
 
-  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo): ScraperResult = {
+  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, useProxy: Boolean): ScraperResult = {
     val url = normalizedUri.url
     val extractor = getExtractor(url)
     val ifModifiedSince = getIfModifiedSince(info)
 
     try {
-      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince){ input => extractor.process(input) }
+      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince, useProxy){ input => extractor.process(input) }
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
