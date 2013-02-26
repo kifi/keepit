@@ -1,0 +1,24 @@
+<li class="g">
+  <div class="vsc">
+    <h3 class="r"><a href="{{bookmark.url}}">{{{bookmark.title}}}</a></h3>
+    <div class="vspib" aria-label="Result details" role="button" tabindex="0"></div>
+    <div class="s">
+      <div class="f kv">
+        <cite class="kifi_resurl">{{displayScore}}{{{displayUrl}}}</cite>
+      </div>
+    </div>
+  </div>
+  <!--n-->
+  <div class="keep_social_bar">
+    {{#isMyBookmark}}
+      <a data-hover="tooltip" title="You! You look great!" class="name_tooltip_link" href="http://www.facebook.com/{{session.facebookId}}" target="_blank"><img class="keep_face self_profile_image {{^users}}self_profile_image_no_friends{{/users}}" src="{{session.avatarUrl}}" alt="You!"></a>
+    {{/isMyBookmark}}
+    {{#users}}
+      <a data-hover="tooltip" title="{{firstName}} {{lastName}}" class="name_tooltip_link" href="http://www.facebook.com/{{facebookId}}" target="_blank"><img class="keep_face" src="https://graph.facebook.com/{{facebookId}}/picture?type=square" alt="{{firstName}} {{lastName}}"></a>
+    {{/users}}
+    <div class="social_bar_text">
+      <span class="social_bar_message_highlighted">{{{countText}}}</span>
+      <span class="social_bar_message"> kept this</span>
+    </div>
+  </div>
+</li>

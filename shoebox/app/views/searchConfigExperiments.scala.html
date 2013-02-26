@@ -1,4 +1,4 @@
-@(experiments: Seq[com.keepit.search.SearchConfigExperiment], defaultConfig: Map[String,String])
+@(experiments: Seq[com.keepit.search.SearchConfigExperiment], defaultParams: Map[String,String])
 
 
 @paramValue(parameter: String, value: String, description: Option[String], editable: Boolean, showDefault: Boolean) = {
@@ -10,7 +10,7 @@
       } else {
         <input type="hidden" class="search-param" name="@parameter" value="@value">@value
       }
-      @if(showDefault) { (default @{defaultConfig.get(parameter)}) }
+      @if(showDefault) { (default @{defaultParams.get(parameter)}) }
     </td>
     <td>@description.getOrElse("")</td>
   </tr>
@@ -35,11 +35,11 @@
       </div>
       <table class="table table-bordered experiment-settings">
         <tr> <th>Parameter</th><th>Value</th><th>Description</th> </tr>
-        @defining((experiment.config.toSet -- defaultConfig.toSet).toSeq.sortBy(_._1)) { nonDefaults =>
+        @defining((experiment.config.params.toSet -- defaultParams.toSet).toSeq.sortBy(_._1)) { nonDefaults =>
           @nonDefaults.map { case (p, v) =>
             @paramValue(p, v, com.keepit.search.SearchConfig.getDescription(p), experiment.isEditable, true)
           }
-          @{(defaultConfig -- nonDefaults.map(_._1)).toSeq.sortBy(_._1).map { case (p, v) =>
+          @{(defaultParams -- nonDefaults.map(_._1)).toSeq.sortBy(_._1).map { case (p, v) =>
             paramValue(p, v, com.keepit.search.SearchConfig.getDescription(p), experiment.isEditable, false)
           }}
         }
@@ -55,7 +55,7 @@
       </div>
       <table class="table table-bordered experiment-settings">
         <tr> <th>Parameter</th><th>Value</th><th>Description</th> </tr>
-        @defaultConfig.map { case (p, v) =>
+        @defaultParams.map { case (p, v) =>
           @paramValue(p, v, com.keepit.search.SearchConfig.getDescription(p), false, false)
         }
       </table>

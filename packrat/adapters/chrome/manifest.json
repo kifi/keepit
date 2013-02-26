@@ -1,6 +1,6 @@
 {
   "name": "Kifi Beta",
-  "version": "2.1.58",
+  "version": "2.2.0",
   "manifest_version": 2,
   "description": "Keep it, Find it!",
   "icons": {
@@ -40,7 +40,6 @@
     "images/results/gdocs.gif",
     "images/results/gdrive.png",
     "images/results/gmail.png",
-    "html/google_inject.html",
     "html/kept_hover.html",
     "html/main_hover.html",
     "html/social_hover.html",
@@ -56,6 +55,8 @@
     "html/comments/message_list.html",
     "html/comments/comment_post.html",
     "html/comments/message_post.html",
-    "html/comments/snapshot_bar.html"
+    "html/comments/snapshot_bar.html",
+    "html/search/google.html",
+    "html/search/google_hit.html"
   ]
 }
