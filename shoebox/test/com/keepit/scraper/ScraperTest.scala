@@ -39,7 +39,7 @@ class ScraperTest extends SpecificationWithJUnit {
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/existing"
       val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(33)))
-      val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
+      val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get), false)
 
       result must beAnInstanceOf[Scraped] // Article
       (result: @unchecked) match {
@@ -54,7 +54,7 @@ class ScraperTest extends SpecificationWithJUnit {
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/missing"
       val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(44)))
-      val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
+      val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get), false)
       result must beAnInstanceOf[Error]
       (result: @unchecked) match {
         case Error(httpStatus, _) => httpStatus === HttpStatus.SC_NOT_FOUND
