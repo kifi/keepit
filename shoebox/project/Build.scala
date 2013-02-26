@@ -66,7 +66,7 @@ object ApplicationBuild extends Build {
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
     val main = play.Project(appName, appVersion, appDependencies).settings(
-      //scalacOptions ++= Seq("-deprecation", "-unchecked","-feature"),
+      scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls","-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds","-language:existentials", "-language:experimental.macros"),
       // add some imports to the routes file
       routesImport ++= Seq(
         "com.keepit.common.db.{ExternalId, Id, State}",
