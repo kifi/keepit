@@ -48,7 +48,7 @@ import com.keepit.search.index.AnalyzerBuilder.toAnalyzerBuilder
 import com.keepit.search.Lang
 
 import LuceneVersion.version
-
+import scala.reflect.ClassTag
 
 object LuceneVersion {
   val version = Version.LUCENE_36
@@ -113,8 +113,8 @@ object DefaultAnalyzer {
     "tr" -> langAnalyzers("tr").withStemFilter(_.Turkish)
   )
 
-  private def analyzer[A <: Analyzer](implicit m : Manifest[A]) = {
-    m.erasure.getConstructor(classOf[Version]).newInstance(version).asInstanceOf[Analyzer]
+  private def analyzer[A <: Analyzer](implicit m : ClassTag[A]) = {
+    m.runtimeClass.getConstructor(classOf[Version]).newInstance(version).asInstanceOf[Analyzer]
   }
 
   private def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, defaultAnalyzer)
@@ -156,17 +156,17 @@ object AnalyzerBuilder extends Logging {
 
   class AnalyzerBuilder(analyzer: Analyzer, factories: List[TokenFilterFactory], charFilterConstructor: Option[Constructor[CharFilter]]) {
 
-    def withFilter[T <: TokenFilter](implicit m : Manifest[T]): AnalyzerBuilder = {
+    def withFilter[T <: TokenFilter](implicit m : ClassTag[T]): AnalyzerBuilder = {
       try {
-        val constructor = m.erasure.getConstructor(classOf[Version], classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
+        val constructor = m.runtimeClass.getConstructor(classOf[Version], classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
         withFilter(WrapperTokenFilterFactory(constructor, version))
       } catch {
         case ex: NoSuchMethodException =>
           try {
-            val constructor = m.erasure.getConstructor(classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
+            val constructor = m.runtimeClass.getConstructor(classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
             withFilter(WrapperTokenFilterFactory(constructor))
           } catch {
-            case ex: NoSuchMethodException => log.error("failed to find a filter constructor: %s".format(m.erasure.toString))
+            case ex: NoSuchMethodException => log.error("failed to find a filter constructor: %s".format(m.runtimeClass.toString))
             this
           }
       }
@@ -177,8 +177,8 @@ object AnalyzerBuilder extends Logging {
 
     def withFilter(factory: TokenFilterFactory): AnalyzerBuilder = new AnalyzerBuilder(analyzer, factory::factories, charFilterConstructor)
 
-    def withCharFilter[T <: CharFilter](implicit m : Manifest[T]): AnalyzerBuilder = {
-      val constructor = m.erasure.getConstructor(classOf[CharStream]).asInstanceOf[Constructor[CharFilter]]
+    def withCharFilter[T <: CharFilter](implicit m : ClassTag[T]): AnalyzerBuilder = {
+      val constructor = m.runtimeClass.getConstructor(classOf[CharStream]).asInstanceOf[Constructor[CharFilter]]
       new AnalyzerBuilder(analyzer, factories, Some(constructor))
     }
 
