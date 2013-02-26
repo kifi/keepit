@@ -97,13 +97,10 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent) extends DbRep
     }
 
   def count(filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Int =
-    (for (t <- table if t.to =!= filterRecipeintNot) yield t.id.countDistinct).first
+    Query((for (t <- table if t.to =!= filterRecipeintNot) yield t.id).countDistinct).first
 
   def page(page: Int, size: Int, filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Seq[ElectronicMail] =
-    (for {
-      t <- table if t.to =!= filterRecipeintNot
-      _ <- Query.orderBy(t.id desc)
-    } yield t).drop(page * size).take(size).list
+    (for ( t <- table if t.to =!= filterRecipeintNot ) yield t).sortBy(_.id desc).drop(page * size).take(size).list
 }
 
 object ElectronicMailStates {
