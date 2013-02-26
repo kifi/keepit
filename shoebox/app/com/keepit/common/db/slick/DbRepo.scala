@@ -66,9 +66,8 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   def page(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[M] =  {
     val q = for {
       t <- table
-      _ <- Query.orderBy(t.id desc)
     } yield t
-    q.drop(page * size).take(size).list
+    q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
   private def insert(model: M)(implicit session: RWSession) = {

@@ -104,10 +104,10 @@ class BookmarkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Book
     (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
 
   def count(userId: Id[User])(implicit session: RSession): Int =
-    Query(table.where(b => b.userId === userId).count).first
+    Query(table.where(b => b.userId === userId).length).first
 
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int =
-    Query(table.where(b => b.kifiInstallation === kifiInstallation).count).first
+    Query(table.where(b => b.kifiInstallation === kifiInstallation).length).first
 
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.urlId === urlId) yield b).list
