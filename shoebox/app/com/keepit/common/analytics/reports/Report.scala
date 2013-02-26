@@ -12,6 +12,8 @@ import com.mongodb.casbah.Imports._
 import scala.util.Random
 import org.joda.time._
 import com.keepit.common.db.slick.{DBSession, FortyTwoTypeMappers, DBConnection}
+import com.keepit.search.SearchConfigExperiment
+import com.keepit.common.db.Id
 
 object Parsers {
   type ParsedDBObject = (DateTime, Map[String, ValueOrdering])
@@ -93,7 +95,7 @@ case class CompleteReport(reportName: String, reportVersion: String, list: Seq[R
 trait Report {
   lazy val store = inject[MongoEventStore]
   val default_report_size = 10
-  val reportName = "report"
+  def reportName = "report"
   val numFields = 2
   val reportVersion: String = "1.0"
   val ordering = 1000
@@ -498,3 +500,33 @@ class DailyKifiAtLeastOneResult extends BasicDailyAggregationReport with Logging
     super.get(selector, startDate, endDate)
   }
 }
+
+trait DailyByExperiment extends BasicDailyAggregationReport with Logging {
+  def eventName: String
+  def experiment: SearchConfigExperiment
+
+  override lazy val reportName = s"Daily${eventName.capitalize} ${experiment.description}"
+
+  def get(startDate: DateTime, endDate: DateTime): CompleteReport = {
+    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate)
+        .withMetaData("experimentId", experiment.id.get.id)
+        .withEventName(eventName).build
+    super.get(selector, startDate, endDate)
+  }
+}
+
+class DailyKifiAtLeastOneResultByExperiment(val experiment: SearchConfigExperiment) extends DailyByExperiment {
+  override val eventName = "kifiAtLeastOneResult"
+  override val ordering = 1000 + experiment.id.get.id.toInt
+}
+
+class DailyGoogleResultClickedByExperiment(val experiment: SearchConfigExperiment) extends DailyByExperiment {
+  override val eventName = "googleResultClicked"
+  override val ordering = 2000 + experiment.id.get.id.toInt
+}
+
+class DailyKifiResultClickedByExperiment(val experiment: SearchConfigExperiment) extends DailyByExperiment {
+  override val eventName = "kifiResultClicked"
+  override val ordering = 3000 + experiment.id.get.id.toInt
+}
+

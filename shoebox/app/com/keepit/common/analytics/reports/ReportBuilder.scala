@@ -1,31 +1,21 @@
 package com.keepit.common.analytics.reports
 
-
-import play.api.Play.current
-import play.api.Plugin
-import com.keepit.model.EmailAddress
-import play.api.templates.Html
-import play.api.libs.ws.WS
-import play.api.libs.json._
-import play.api.libs.ws._
-import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError}
-import com.keepit.inject._
-import akka.actor.ActorSystem
-import akka.actor.Actor
-import akka.actor.Props
-import akka.actor.Props
-import play.api.libs.concurrent.Execution.Implicits._
-import akka.actor.ActorRef
-import akka.actor.Cancellable
-import com.google.inject.Provider
-import play.api.libs.concurrent.Promise
-import com.google.inject.Inject
-import org.joda.time.DateTime
-import com.keepit.common.time._
-import com.keepit.common.analytics.reports.Reports.ReportGroup
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import org.joda.time.DateTime
+
+import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.analytics.reports.Reports.ReportGroup
+import com.keepit.common.logging.Logging
+import com.keepit.common.time._
+import com.keepit.search.{SearchConfigManager, SearchConfigExperiment}
+
+import akka.actor.ActorSystem
+import akka.actor.Cancellable
+import akka.actor.Props
+import play.api.Plugin
 
 object Reports {
   lazy val dailyActiveUniqueUserReport = new DailyActiveUniqueUserReport
@@ -89,6 +79,15 @@ object Reports {
   lazy val DailyAdminReports = ReportGroup("DailyAdminReport",
     Seq(dailyUniqueDepricatedAddBookmarks, dailySearchQueriesReport)
   )
+
+  def searchExperimentReports(experiments: Seq[SearchConfigExperiment]): ReportGroup = {
+    val constructors = Seq(
+      new DailyKifiResultClickedByExperiment(_),
+      new DailyGoogleResultClickedByExperiment(_),
+      new DailyKifiAtLeastOneResultByExperiment(_))
+    ReportGroup("SearchExperimentReport",
+      for (experiment <- experiments; constructor <- constructors) yield constructor(experiment))
+  }
 }
 
 trait ReportBuilderPlugin extends Plugin {
@@ -100,7 +99,7 @@ trait ReportBuilderPlugin extends Plugin {
   val defaultEndTime = currentDate.plusDays(1).toDateTimeAtStartOfDay
 }
 
-class ReportBuilderPluginImpl @Inject() (system: ActorSystem)
+class ReportBuilderPluginImpl @Inject() (system: ActorSystem, searchConfigManager: SearchConfigManager)
   extends Logging with ReportBuilderPlugin {
 
 
@@ -122,8 +121,11 @@ class ReportBuilderPluginImpl @Inject() (system: ActorSystem)
   }
 
   override def reportCron(): Unit = {
-    if (currentDateTime.hourOfDay().get() == 3) // 3am PST
+    if (currentDateTime.hourOfDay().get() == 3) {// 3am PST
+      actor ! BuildReports(defaultStartTime, defaultEndTime,
+        Reports.searchExperimentReports(searchConfigManager.activeExperiments))
       actor ! BuildReports(defaultStartTime, defaultEndTime, Reports.DailyReports)
+    }
   }
 }
 
