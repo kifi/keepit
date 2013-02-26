@@ -13,7 +13,7 @@ case class SearchConfigExperiment(
     id: Option[Id[SearchConfigExperiment]] = None,
     weight: Double = 0,
     description: String = "",
-    config: Map[String, String] = Map(),
+    config: SearchConfig = SearchConfig(Map[String, String]()),
     state: State[SearchConfigExperiment] = SearchConfigExperimentStates.CREATED,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime
@@ -44,7 +44,7 @@ class SearchConfigExperimentRepoImpl @Inject()(val db: DataBaseComponent)
   override lazy val table = new RepoTable[SearchConfigExperiment](db, "search_config_experiment") {
     def weight = column[Double]("weight", O.NotNull)
     def description = column[String]("description", O.NotNull)
-    def config = column[Map[String, String]]("config", O.NotNull)
+    def config = column[SearchConfig]("config", O.NotNull)
     def * = id.? ~ weight ~ description ~ config ~ state ~ createdAt ~ updatedAt <>
         (SearchConfigExperiment.apply _, SearchConfigExperiment.unapply _)
   }

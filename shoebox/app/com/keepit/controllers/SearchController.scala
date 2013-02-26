@@ -56,7 +56,7 @@ object SearchController extends FortyTwoController {
     }
 
     val filterOut = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-    val config = inject[SearchConfigManager].getConfig(userId, query)
+    val (config, experimentId) = inject[SearchConfigManager].getConfig(userId, query)
 
     val mainSearcherFactory = inject[MainSearcherFactory]
     val searcher = mainSearcherFactory(userId, friendIds, filterOut, config)
@@ -66,7 +66,7 @@ object SearchController extends FortyTwoController {
       log.warn("maxHits is zero")
       ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], filterOut, 0, Int.MaxValue)
     }
-    val res = toPersonalSearchResultPacket(userId, searchRes, config)
+    val res = toPersonalSearchResultPacket(userId, searchRes, config, experimentId)
     reportArticleSearchResult(searchRes)
     Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
@@ -83,14 +83,14 @@ object SearchController extends FortyTwoController {
   }
 
   private[controllers] def toPersonalSearchResultPacket(userId: Id[User],
-      res: ArticleSearchResult, config: SearchConfig): PersonalSearchResultPacket = {
+      res: ArticleSearchResult, config: SearchConfig, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
     val hits = inject[DBConnection].readOnly { implicit s =>
       res.hits.map(toPersonalSearchResult(userId, _))
     }
     log.debug(hits mkString "\n")
 
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, config.experimentId, filter)
+    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, experimentId, filter)
   }
 
   private[controllers] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
@@ -118,7 +118,7 @@ object SearchController extends FortyTwoController {
     val friendIds = inject[DBConnection].readOnly { implicit s =>
       inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
     }
-    val config = inject[SearchConfigManager].getConfig(userId, queryString)
+    val (config, _) = inject[SearchConfigManager].getConfig(userId, queryString)
 
     val mainSearcherFactory = inject[MainSearcherFactory]
     val searcher = mainSearcherFactory(userId, friendIds, Set(), config)

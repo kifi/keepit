@@ -175,8 +175,8 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new JsArrayMapperDelegate(profile)
   }
 
-  implicit object StringToStringMapTypeMapper extends BaseTypeMapper[Map[String, String]] {
-    def apply(profile: BasicProfile) = new StringToStringMapMapperDelegate(profile)
+  implicit object SearchConfigTypeMapper extends BaseTypeMapper[SearchConfig] {
+    def apply(profile: BasicProfile) = new SearchConfigMapperDelegate(profile)
   }
 
   implicit object KifiVersionTypeMapper extends BaseTypeMapper[KifiVersion] {
@@ -288,14 +288,14 @@ class JsArrayMapperDelegate[T](profile: BasicProfile) extends StringMapperDelega
 }
 
 //************************************
-//       Map[String, String] -> String
+//       SearchConfig -> String
 //************************************
-class StringToStringMapMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[Map[String, String]](profile) {
-  def zero = Map()
-  def sourceToDest(value: Map[String, String]): String =
-    Json.stringify(JsObject(value.map { case (k, v) => k -> JsString(v) }.toSeq))
-  def safeDestToSource(str: String): Map[String, String] =
-    Json.parse(str).asInstanceOf[JsObject].fields.map { case (k, v) => k -> v.as[String] }.toMap
+class SearchConfigMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[SearchConfig](profile) {
+  def zero = SearchConfig(Map[String, String]())
+  def sourceToDest(value: SearchConfig): String =
+    Json.stringify(JsObject(value.params.map { case (k, v) => k -> JsString(v) }.toSeq))
+  def safeDestToSource(str: String): SearchConfig =
+    SearchConfig(Json.parse(str).asInstanceOf[JsObject].fields.map { case (k, v) => k -> v.as[String] }.toMap)
 }
 
 //************************************

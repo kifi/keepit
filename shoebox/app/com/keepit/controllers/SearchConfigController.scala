@@ -51,8 +51,7 @@ object SearchConfigController extends FortyTwoController {
 
   def addNewExperiment = AdminHtmlAction { implicit request =>
     inject[SearchConfigManager].saveExperiment(
-      SearchConfigExperiment(description = "New Experiment",
-        config = inject[SearchConfigManager].defaultConfig.params))
+      SearchConfigExperiment(description = "New Experiment", config = inject[SearchConfigManager].defaultConfig))
     Redirect(com.keepit.controllers.routes.SearchConfigController.getExperiments)
   }
 
@@ -81,7 +80,7 @@ object SearchConfigController extends FortyTwoController {
     val manager = inject[SearchConfigManager]
     id.map { id =>
       val exp = manager.getExperiment(id)
-      manager.saveExperiment(exp.copy(description = desc, weight = weight, config = exp.config ++ params,
+      manager.saveExperiment(exp.copy(description = desc, weight = weight, config = exp.config(params),
         state = state.getOrElse(exp.state)))
     }
     Ok(JsObject(Seq()))

@@ -1,0 +1,19 @@
+<ol id="keepit" class="kpt-results">
+  <li class="g keepit">
+    <div class="vsc">
+      <h3 class="r" id="kifi_trusted">Kifi Trusted Results</h3>
+    </div>
+    <!--n-->
+  </li>
+  <span id="kifi_reslist">
+  {{#results}}
+    {{>google_hit}}
+  {{/results}}
+
+  {{#mayHaveMore}}
+    <div class="kifi_more">
+      <div class="kifi_more_button"></div>
+    </div>
+  {{/mayHaveMore}}
+  </span>
+</ol>
