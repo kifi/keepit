@@ -62,6 +62,7 @@ object SearchConfig {
       "dumpingHalfDecayOthers" -> "how many top hits in others' bookmark are important"
     )
 
+  def apply(params: (String, String)*): SearchConfig = SearchConfig(Map(params:_*))
   def getDescription(name: String) = descriptions.get(name)
 }
 
@@ -86,7 +87,7 @@ class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigE
       }
     }.getOrElse(new SearchConfig(SearchConfig.defaultParams))
   }
-  
+
   private[this] val _activeExperiments = new AtomicReference(db.readWrite { implicit s =>
     experimentRepo.getActive()
   })
@@ -119,7 +120,7 @@ class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigE
     (hash - min) / (max - min)
   }
 
-  def getConfig(userId: Id[User], queryText: String): SearchConfig = {
+  def getConfig(userId: Id[User], queryText: String): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
     val hashFrac = hash(userId, queryText)
 
     var frac = 0.0
@@ -128,12 +129,11 @@ class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigE
       frac >= hashFrac
     }
 
-    SearchConfig(getUserConfig(userId).params ++ experiment.map(_.config).getOrElse(Map()), experiment.map(_.id.get))
+    (getUserConfig(userId)(experiment.map(_.config.params).getOrElse(Map())), experiment.map(_.id.get))
   }
 }
 
-case class SearchConfig(params: Map[String, String], experimentId: Option[Id[SearchConfigExperiment]] = None) {
-
+case class SearchConfig(params: Map[String, String]) {
   def asInt(name: String) = params(name).toInt
   def asLong(name: String) = params(name).toLong
   def asFloat(name: String) = params(name).toFloat
@@ -142,7 +142,7 @@ case class SearchConfig(params: Map[String, String], experimentId: Option[Id[Sea
   def asString(name: String) = params(name)
 
   def apply(newParams: Map[String, String]): SearchConfig = new SearchConfig(params ++ newParams)
-  def apply(newParams: (String, String)*): SearchConfig = apply(newParams.foldLeft(Map.empty[String, String]){ (m, p) => m + p })
+  def apply(newParams: (String, String)*): SearchConfig = apply(Map(newParams:_*))
 
   def iterator: Iterator[(String, String)] = params.iterator
 }
