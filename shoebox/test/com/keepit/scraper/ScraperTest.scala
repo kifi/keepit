@@ -250,7 +250,7 @@ class ScraperTest extends SpecificationWithJUnit {
 
   def getMockScraper(articleStore: ArticleStore, suffix: String = "") = {
     val mockHttpFetcher = new HttpFetcher {
-      def fetch(url: String , ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
+      def fetch(url: String , ifModifiedSince: Option[DateTime] = None, useProxy: Boolean = false)(f: HttpInputStream => Unit): HttpFetchStatus = {
         val httpContext = new BasicHttpContext()
         val htmlTemplate = "<html> <head><title>foo%s</title></head> <body>this is a body text. bar%s.</body> </html>"
         url match {
