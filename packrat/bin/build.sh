@@ -53,11 +53,6 @@ if [ "$1" == "package" ]; then
   find out -d 1
 
   if [ "$2" == "deploy" ]; then
-    echo -e "\nDeploying unpacked Chrome extension via Dropbox"
-    sed -i '' '/"version":/s/2[.]1[.]/2.0./' out/chrome/manifest.json
-    rsync -vrc --delete out/chrome ~/Dropbox/keepit
-    sed -i '' '/"version":/s/2[.]0[.]/2.1./' out/chrome/manifest.json
-
     echo -e "\nDeploying Firefox extension to keepitfindit.com"
     scp out/kifi-beta.xpi marvin:
     scp out/kifi-beta.update.rdf marvin:
