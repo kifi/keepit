@@ -1,11 +1,15 @@
 package com.keepit.search
 
-import com.keepit.common.db.Id
-import com.keepit.model.User
 import java.io.File
 import java.io.FileInputStream
 import java.util.Properties
-import java.io.FileOutputStream
+import java.util.concurrent.atomic.AtomicReference
+
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBConnection
+import com.keepit.model.User
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.query.QueryHash
 
 object SearchConfig {
   private[search] val defaultParams =
@@ -61,13 +65,13 @@ object SearchConfig {
   def getDescription(name: String) = descriptions.get(name)
 }
 
-class SearchConfigManager(configDir: Option[File]) {
+class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigExperimentRepo, db: DBConnection) {
+
+  private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
   private val propertyFileName = "searchconfig.properties"
 
-  private[this] var defaultConfig = load
-
-  def load = {
+  lazy val defaultConfig = {
     configDir.flatMap{ dir =>
       val file = new File(dir, propertyFileName)
       if (file.exists()) {
@@ -82,23 +86,54 @@ class SearchConfigManager(configDir: Option[File]) {
       }
     }.getOrElse(new SearchConfig(SearchConfig.defaultParams))
   }
+  
+  private[this] val _activeExperiments = new AtomicReference(db.readWrite { implicit s =>
+    experimentRepo.getActive()
+  })
 
-  def apply(params: Map[String, String]): SearchConfig = {
-    defaultConfig = defaultConfig(params)
-    defaultConfig
+  def activeExperiments: Seq[SearchConfigExperiment] = _activeExperiments.get
+
+  def getExperiments: Seq[SearchConfigExperiment] = db.readOnly { implicit s =>
+    experimentRepo.getNotInactive()
   }
 
-  def apply(newParams: (String, String)*): SearchConfig = apply(newParams.foldLeft(Map.empty[String, String]){ (m, p) => m + p })
+  def getExperiment(id: Id[SearchConfigExperiment]): SearchConfigExperiment = db.readOnly { implicit s =>
+    experimentRepo.get(id)
+  }
 
-  def getDefaultConfig = defaultConfig
+  def saveExperiment(experiment: SearchConfigExperiment): SearchConfigExperiment = db.readWrite { implicit s =>
+    val exp = experimentRepo.save(experiment)
+    _activeExperiments.set(experimentRepo.getActive())
+    exp
+  }
 
   private var userConfig = Map.empty[Long, SearchConfig]
   def getUserConfig(userId: Id[User]) = userConfig.getOrElse(userId.id, defaultConfig)
   def setUserConfig(userId: Id[User], config: SearchConfig) { userConfig = userConfig + (userId.id -> config) }
   def resetUserConfig(userId: Id[User]) { userConfig = userConfig - userId.id }
+
+  // hash a user and a query to a number between 0 and 1
+  private def hash(userId: Id[User], queryText: String): Double = {
+    val hash = QueryHash(userId, queryText, analyzer)
+    val (max, min) = (Long.MaxValue.toDouble, Long.MinValue.toDouble)
+    (hash - min) / (max - min)
+  }
+
+  def getConfig(userId: Id[User], queryText: String): SearchConfig = {
+    val hashFrac = hash(userId, queryText)
+
+    var frac = 0.0
+    val experiment = activeExperiments.find { e =>
+      frac += e.weight
+      frac >= hashFrac
+    }
+
+    SearchConfig(getUserConfig(userId).params ++ experiment.map(_.config).getOrElse(Map()), experiment.map(_.id.get))
+  }
 }
 
-class SearchConfig(params: Map[String, String]) {
+case class SearchConfig(params: Map[String, String], experimentId: Option[Id[SearchConfigExperiment]] = None) {
+
   def asInt(name: String) = params(name).toInt
   def asLong(name: String) = params(name).toLong
   def asFloat(name: String) = params(name).toFloat
