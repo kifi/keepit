@@ -39,7 +39,7 @@ case class PersonalSearchResultPacket(
 
 object SearchController extends FortyTwoController {
 
-  def search(q: Option[String], term: Option[String], maxHits: Int, lastUUIDStr: Option[String], filter: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
+  def search(q: Option[String], term: Option[String], maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
     // TODO: remove term parameter and require q after all KiFi installations >= 2.1.46
     val query = q.orElse(term).get
 
@@ -47,7 +47,6 @@ object SearchController extends FortyTwoController {
         case "" => None
         case str => Some(ExternalId[ArticleSearchResultRef](str))
     }
-    val searchFilter = SearchFilter(filter)
 
     val userId = request.userId
     log.info("searching with %s using userId id %s".format(query, userId))
@@ -55,16 +54,18 @@ object SearchController extends FortyTwoController {
       inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
     }
 
-    val filterOut = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
+    val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
+    val searchFilter = SearchFilter.default(idFilter)
+    
     val config = inject[SearchConfigManager].getConfig(userId, query)
 
     val mainSearcherFactory = inject[MainSearcherFactory]
-    val searcher = mainSearcherFactory(userId, friendIds, filterOut, config)
+    val searcher = mainSearcherFactory(userId, friendIds, searchFilter, config)
     val searchRes = if (maxHits > 0) {
       searcher.search(query, maxHits, lastUUID, searchFilter)
     } else {
       log.warn("maxHits is zero")
-      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], filterOut, 0, Int.MaxValue)
+      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue)
     }
     val res = toPersonalSearchResultPacket(userId, searchRes, config)
     reportArticleSearchResult(searchRes)
@@ -121,7 +122,7 @@ object SearchController extends FortyTwoController {
     val config = inject[SearchConfigManager].getConfig(userId, queryString)
 
     val mainSearcherFactory = inject[MainSearcherFactory]
-    val searcher = mainSearcherFactory(userId, friendIds, Set(), config)
+    val searcher = mainSearcherFactory(userId, friendIds, SearchFilter.default(), config)
     val explanation = searcher.explain(queryString, uriId)
 
     Ok(views.html.explainResult(queryString, userId, uriId, explanation))
