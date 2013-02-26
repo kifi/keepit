@@ -26,8 +26,8 @@ $(function() {
     !function drawAxes() {
       var xAxis = d3.svg.axis().scale(xScale).ticks(8).orient(o.xaxis == "top" ? "top" : "bottom");
       var yAxis = d3.svg.axis().scale(yScale).ticks(8).orient(o.yaxis == "right" ? "right" : "left");
-      var xpos = yDomain[o.xaxis == "top" ? 1 : 0];
-      var ypos = xDomain[o.yaxis == "right" ? 1 : 0];
+      var xpos = (o.xaxis == "zero" ? 0 : yDomain[o.xaxis == "top" ? 1 : 0]);
+      var ypos = (o.yaxis == "zero" ? 0 : xDomain[o.yaxis == "right" ? 1 : 0]);
       svg.append("svg:g").attr("class", "axis").attr("transform", "translate(0,"+ yScale(xpos) +")").call(xAxis);
       svg.append("svg:g").attr("class", "axis").attr("transform", "translate("+ xScale(ypos) +",0)").call(yAxis);
     }();
