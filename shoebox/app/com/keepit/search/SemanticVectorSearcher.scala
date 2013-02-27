@@ -54,7 +54,7 @@ class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGra
           case None => Array.empty[Byte]
         }
       }
-      if (vectors.isEmpty) m else m + (u -> vectors)
+      if (vectors.forall(_.isEmpty)) m else m + (u -> vectors)
     }
   }
 
