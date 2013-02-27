@@ -23,6 +23,7 @@ import play.api.test.Helpers._
 import org.apache.lucene.store.RAMDirectory
 import scala.math._
 import scala.util.Random
+import com.keepit.inject._
 
 @RunWith(classOf[JUnitRunner])
 class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
@@ -46,7 +47,7 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
     val mainSearcherFactory = new MainSearcherFactory(
         articleIndexer,
         uriGraph,
-        new MainQueryParserFactory(new PhraseDetector(PhraseIndexer())),
+        new MainQueryParserFactory(new PhraseDetector(PhraseIndexer(inject[DBConnection], inject[PhraseRepo]))),
         resultClickTracker,
         browsingHistoryTracker,
         clickHistoryTracker)
