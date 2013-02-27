@@ -39,9 +39,8 @@ case class PersonalSearchResultPacket(
 
 object SearchController extends FortyTwoController {
 
-  def search(q: Option[String], term: Option[String], maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
-    // TODO: remove term parameter and require q after all KiFi installations >= 2.1.46
-    val query = q.orElse(term).get
+  def search(q: String, maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
+    val query = q
 
     val lastUUID = lastUUIDStr.flatMap{
         case "" => None
@@ -56,7 +55,7 @@ object SearchController extends FortyTwoController {
 
     val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
     val searchFilter = SearchFilter.default(idFilter)
-    
+
     val (config, experimentId) = inject[SearchConfigManager].getConfig(userId, query)
 
     val mainSearcherFactory = inject[MainSearcherFactory]
