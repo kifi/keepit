@@ -33,7 +33,7 @@ import com.google.inject.{Inject, Singleton}
 class BookmarksController @Inject() (db: DBConnection, 
   bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, socialRepo: UserWithSocialRepo, userRepo: UserRepo, urlPatternRepo: URLPatternRepo,
   scrapeRepo: ScrapeInfoRepo, domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo, urlRepo: URLRepo,
-  sliderRuleRepo: SliderRuleRepo, socialConnectionRepo: SocialConnectionRepo, commentReadRepo: CommentReadRepo
+  sliderRuleRepo: SliderRuleRepo, socialConnectionRepo: SocialConnectionRepo, commentReadRepo: CommentReadRepo,
   scraper: ScraperPlugin, uriGraph: URIGraphPlugin, healthcheck: HealthcheckPlugin,
   classifier: DomainClassifier) 
     extends FortyTwoController {
