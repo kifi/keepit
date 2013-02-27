@@ -28,13 +28,10 @@ object URI extends Logging {
   def unapply(uriString: String): Option[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] = {
     try {
       val uri = try {
-        // preprocess illegal chars
-        val preprocessed = uriString.replace(" ", "%20").replace("|", "%7C")
-        new java.net.URI(preprocessed).normalize()
+        new java.net.URI(uriString).normalize()
       } catch {
         case e: java.net.URISyntaxException =>
-        // there may be malformed escape
-        val fixedUriString = fixDoubleHash(encodeSymbols(fixMalformedEscape(uriString)))
+        val fixedUriString = encodeExtraDelimiters(encodeSymbols(fixMalformedEscape(uriString)))
         new java.net.URI(fixedUriString).normalize()
       }
       val scheme = normalizeScheme(Option(uri.getScheme))
@@ -52,24 +49,30 @@ object URI extends Logging {
 
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
   val encodedPercent = java.net.URLEncoder.encode("%", "UTF-8")
-  val encodedHash = java.net.URLEncoder.encode("#", "UTF-8")
+  val encodingMap = ":?#@$^()[]{}<>| ".map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
+  val encodeRe = """[@$^()\[\]{}<>| ]""".r
 
   def fixMalformedEscape(uriString: String) = {
     uriString.split("%", -1) match {
       case Array(first, rest @ _*) =>
-        rest.foldLeft(first){ (str, piece) => str + twoHexDigits.findPrefixOf(piece).map(_ => "%").getOrElse(encodedPercent) + piece }
+        rest.foldLeft(first) { (str, piece) =>
+          str + twoHexDigits.findPrefixOf(piece).map(_ => "%").getOrElse(encodedPercent) + piece
+        }
     }
   }
 
-  def fixDoubleHash(uriString: String): String = {
-    uriString.split("\\#",-1) match {
-      case Array(first, rest @ _*) =>
-        first + "#" + rest.mkString(encodedHash)
+  def encodeExtraDelimiters(uriString: String): String = {
+    var s = uriString
+    ":?#".foreach { c =>
+      val (i, j) = (s.indexOf(c), s.lastIndexOf(c))
+      if (j > i) {
+        s = s.substring(0, i + 1) + s.substring(i + 1).replace(c.toString, encodingMap(c))
+      }
     }
+    s
   }
 
-  val charToEncoded = "@$^()[]{}|".map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
-  def encodeSymbols(uriString: String): String = uriString.map(c => charToEncoded.getOrElse(c, c.toString)).mkString
+  def encodeSymbols(uriString: String): String = encodeRe.replaceAllIn(uriString, m => encodingMap(m.group(0)(0)))
 
   def normalizeScheme(scheme: Option[String]) = scheme.map(_.toLowerCase)
 

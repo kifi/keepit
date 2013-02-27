@@ -11,6 +11,12 @@ class URITest extends Specification {
       URI.parse("http://google.com/").get.host.get.name === "google.com"
       URI.parse("https://sub.domain.com").get.host.get.name === "sub.domain.com"
       URI.parse("http://bing.com/?q=1").get.query.get.params === Seq(Param("q", Some("1")))
+      URI.parse("http://cr.com/SchedPdf.aspx?locIds={99D3-41B6-9852}&dir=asc").get.query.get.params ===
+        Seq(Param("dir", Some("asc")), Param("locIds", Some("%7B99D3-41B6-9852%7D")))
+      URI.parse("http://da.seek.com/d/PERK_[PerkinElmer_Optoelec]_SU405-2.html").get.path ===
+        Some("/d/PERK_[PerkinElmer_Optoelec]_SU405-2.html")
+      URI.parse("http://scala.org/api/index.html#scala.reflect.api.Universe@Type>:Null<:Types.this.TypeApi").get.fragment ===
+        Some("scala.reflect.api.Universe%40Type%3E%3ANull%3C%3ATypes.this.TypeApi")
     }
     "parse URLs via unapply" in {
       "http://premium.nba.com/pr/leaguepass/app/2012/console.html?debug=false&type=lp&TinedSid=Gaa419b-25665208-1262918951531-1&nsfg=1355463185|billing.lpbchoice_LAL_LAC_NYK_MIA_OKC^billing.lpbchoice^giBJ5TL8HJT8eLc6&retryCount=3" match {
