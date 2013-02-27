@@ -35,12 +35,6 @@ class ActivityStream {
         val iteratee = Iteratee.foreach[JsValue]{ s => /* ignore for now */ }
 
         (iteratee, enumerator)
-
-      case CannotConnect(error) =>
-        val iteratee = Done[JsValue,Unit]((),Input.EOF)
-        val enumerator = Enumerator[JsValue](JsObject(Seq("error" -> JsString(error)))).andThen(Enumerator.enumInput(Input.EOF))
-
-        (iteratee, enumerator)
     }
   }
 
