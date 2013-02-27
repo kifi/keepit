@@ -3,8 +3,8 @@
 # ~~~~
 
 # Home page
-GET     /                           com.keepit.controllers.HomeController.home
-GET     /upgrade                    com.keepit.controllers.HomeController.upgrade
+GET     /                           @com.keepit.controllers.HomeController.home
+GET     /upgrade                    @com.keepit.controllers.HomeController.upgrade
 
 POST    /bookmarks/add              com.keepit.controllers.BookmarksController.addBookmarks
 POST    /bookmarks/update           com.keepit.controllers.BookmarksController.updateBookmarks
