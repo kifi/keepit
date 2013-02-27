@@ -23,7 +23,6 @@ POST    /comments/unfollow          com.keepit.controllers.CommentController.sto
 
 GET     /messages/threads/:id       com.keepit.controllers.CommentController.getMessageThread(id: ExternalId[Comment])
 GET     /messages/threads           com.keepit.controllers.CommentController.getMessageThreadList(url: String)
-POST    /messages                   com.keepit.controllers.CommentController.createComment()
 
 GET     /r/:id                      com.keepit.controllers.DeepLinkController.handle(id: String)
 
@@ -153,8 +152,6 @@ GET     /admin/healthcheck/isHealthy    com.keepit.common.healthcheck.HealthCont
 GET     /admin/healthcheck/resetErrorCount    com.keepit.common.healthcheck.HealthController.resetErrorCount()
 
 POST    /admin/logging/emails       com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
-
-GET     /admin/url/renormalize      com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 
 GET     /admin/labs/rankVsScore     com.keepit.controllers.SearchLabsController.rankVsScore(q: Option[String] ?= None)
 GET     /admin/labs/rankVsScore.json com.keepit.controllers.SearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
