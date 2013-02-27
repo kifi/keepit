@@ -1,5 +1,6 @@
 @(experiments: Seq[com.keepit.search.SearchConfigExperiment], defaultParams: Map[String,String])
-
+@import com.keepit.common.db.Id
+@import com.keepit.controllers.routes.SearchConfigController
 
 @paramValue(parameter: String, value: String, description: Option[String], editable: Boolean, showDefault: Boolean) = {
   <tr>
@@ -16,7 +17,9 @@
   </tr>
 }
 
-@admin("Search Experiments", stylesheets = List("admin_search_config")) {
+@admin("Search Experiments",
+    scripts = List("d3-2.10.3", "admin_dashboard"),
+    stylesheets = List("admin_search_config")) {
   <h2>Experiment config</h2>
   <ul class="experiments">
     @experiments.map { experiment =>
@@ -29,9 +32,14 @@
         <div class="basic-settings">
           <strong><input class="experiment-weight" value="@{(experiment.weight * 100).toInt}">%</strong>
           <button class="btn show-settings">Show settings</button>
+          <button class="btn show-chart">Show chart</button>
           <button type="button" class="btn update-experiment">Update</button>
           <button type="button" class="btn delete-experiment">Delete</button>
         </div>
+      </div>
+      <div class="experiment-chart">
+        <h3 class="chart-title">Kifi vs. Google</h3>
+        <div class="growth-chart" data-uri="@SearchConfigController.getKifiVsGoogle(experiment.id.get)"></div>
       </div>
       <table class="table table-bordered experiment-settings">
         <tr> <th>Parameter</th><th>Value</th><th>Description</th> </tr>
@@ -51,7 +59,12 @@
         <strong>Default Values</strong>
         <div class="basic-settings">
           <button class="btn show-settings">Show settings</button>
+          <button class="btn show-chart">Show chart</button>
         </div>
+      </div>
+      <div class="experiment-chart">
+        <h3 class="chart-title">Kifi vs. Google</h3>
+        <div class="growth-chart" data-uri="@SearchConfigController.getKifiVsGoogle(Id(0))"></div>
       </div>
       <table class="table table-bordered experiment-settings">
         <tr> <th>Parameter</th><th>Value</th><th>Description</th> </tr>
@@ -81,7 +94,7 @@ $(function() {
     $li.find(".search-param").each(function() {
       data["param_" + $(this).attr("name")] = $(this).val();
     });
-    $.post("@com.keepit.controllers.routes.SearchConfigController.updateExperiment()", data, callback);
+    $.post("@SearchConfigController.updateExperiment()", data, callback);
   }
 
   $(".experiments").on("change", ".experiment-weight", function() {
@@ -97,7 +110,7 @@ $(function() {
     var data = {
       id: +$li.data("id")
     };
-    $.post("@com.keepit.controllers.routes.SearchConfigController.deleteExperiment()", data, function() {
+    $.post("@SearchConfigController.deleteExperiment()", data, function() {
       window.location.reload();
     });
   });
@@ -108,6 +121,9 @@ $(function() {
   });
   $(".experiments").on("click", ".show-settings", function() {
     $(this).closest("li").find(".experiment-settings").toggle();
+  });
+  $(".experiments").on("click", ".show-chart", function() {
+    $(this).closest("li").find(".experiment-chart").toggle();
   });
   $("#save-all-experiments").on("click", function() {
     var updating = 0;
@@ -121,7 +137,7 @@ $(function() {
     $(this).closest("li").find(".experiment-settings").toggle();
   });
   $("#add-new-experiment").on("click", function() {
-    $.post("@com.keepit.controllers.routes.SearchConfigController.addNewExperiment()", function() {
+    $.post("@SearchConfigController.addNewExperiment()", function() {
       window.location.reload();
     });
   });
