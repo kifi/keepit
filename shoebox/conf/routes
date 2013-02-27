@@ -22,10 +22,10 @@ POST    /comments/follow            com.keepit.controllers.CommentController.sta
 POST    /comments/unfollow          com.keepit.controllers.CommentController.stopFollowing()
 DELETE  /comments/follow            com.keepit.controllers.CommentController.stopFollowing()
 # TODO: remove DELETE route above (Firefox Addon SDK does not support DELETE requests) after all KiFi installations >= 2.1.45
+# the line above creates the "unreachable code" warning :-(
 
 GET     /messages/threads/:id       com.keepit.controllers.CommentController.getMessageThread(id: ExternalId[Comment])
 GET     /messages/threads           com.keepit.controllers.CommentController.getMessageThreadList(url: String)
-POST    /messages                   com.keepit.controllers.CommentController.createComment()
 
 GET     /r/:id                      com.keepit.controllers.DeepLinkController.handle(id: String)
 
