@@ -318,7 +318,7 @@ object BookmarksController extends FortyTwoController {
         "isPrivate" -> bookmark.isPrivate,
         "title" -> bookmark.title,
         "uri" -> bookmark.url,
-        "source" -> bookmark.source)
+        "source" -> bookmark.source.value)
     )
 
     inject[ActivityStream].streamActivity("bookmark", json)

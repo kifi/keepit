@@ -53,10 +53,28 @@
 
         var act = person + body
         $("td.body", el).html(act)
+      } else if(kind == "bookmark") {
+        var user = data.activity.user
+        var bookmark = data.activity.bookmark
+
+        var person = '<div class="person"><a href="/admin/user/' + user.id + '"><img src="' + user.avatar + '">' + user.name + '</a></div>'
+        var labelClass = "";
+        if(bookmark.source == "HOVER_KEEP")
+          labelClass = " label-success"
+        else if(bookmark.source == "PLUGIN_START")
+          labelClass = " label-info"
+
+        var link = '<span class="label' + labelClass + '"><a href="/bookmarks/edit?id=' + bookmark.id + '">' + bookmark.source + '</a></span> <a href="' + bookmark.uri + '">' + bookmark.title + '</a>'
+        var isPriv = bookmark.isPrivate ? " (private)": ""
+        var body = '<div class="bookmark">' + link + isPriv + '</div>'
+
+        var act = person + body
+        $("td.body", el).html(act)
+      } else {
+        $("td.body", el).html("No formatter for " + kind + ": " + data.activity)
       }
 
       $('#event_log').prepend(el)
-      
     }
     eventSocket.onmessage = receiveEvent
       
