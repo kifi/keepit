@@ -31,9 +31,11 @@ import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class BookmarksController @Inject() (db: DBConnection, 
-  bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, socialRepo: UserWithSocialRepo, userRepo: UserRepo, 
-  scrapeRepo: ScrapeInfoRepo, domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo,
-  scraper: ScraperPlugin, uriGraph: URIGraphPlugin) 
+  bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, socialRepo: UserWithSocialRepo, userRepo: UserRepo, urlPatternRepo: URLPatternRepo,
+  scrapeRepo: ScrapeInfoRepo, domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo, urlRepo: URLRepo,
+  sliderRuleRepo: SliderRuleRepo, socialConnectionRepo: SocialConnectionRepo, commentReadRepo: CommentReadRepo
+  scraper: ScraperPlugin, uriGraph: URIGraphPlugin, healthcheck: HealthcheckPlugin,
+  classifier: DomainClassifier) 
     extends FortyTwoController {
 
   def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
@@ -134,23 +136,22 @@ class BookmarksController @Inject() (db: DBConnection,
       val neverOnSite: Option[UserToDomain] = domain.flatMap { dom =>
         userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
       }
-      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(inject[DomainClassifier].isSensitive(host).right.getOrElse(None))
+      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(classifier.isSensitive(host).right.getOrElse(None))
 
       val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
         bookmarkRepo.getByUriAndUser(uriId, userId)
       }
-      val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
+      val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
       val ruleGroup: Option[SliderRuleGroup] = ver.flatMap { v =>
-        val group = inject[SliderRuleRepo].getGroup("default")
+        val group = sliderRuleRepo.getGroup("default")
         if (v == group.version) None else Some(group)
       }
-      val patterns: Option[Seq[String]] = ruleGroup.map(_ => inject[URLPatternRepo].getActivePatterns)
+      val patterns: Option[Seq[String]] = ruleGroup.map(_ => urlPatternRepo.getActivePatterns)
 
       val locator: Option[DeepLocator] = uriId.flatMap { uriId =>
-        val repo = inject[CommentReadRepo]
-        val messages = repo.getParentsOfUnreadMessages(userId, uriId)
+        val messages = commentReadRepo.getParentsOfUnreadMessages(userId, uriId)
         messages.size match {
-          case 0 => if (repo.hasUnreadComments(userId, uriId)) Some(DeepLocator.ofCommentList) else None
+          case 0 => if (commentReadRepo.hasUnreadComments(userId, uriId)) Some(DeepLocator.ofCommentList) else None
           case 1 => Some(DeepLocator.ofMessageThread(messages.head))
           case _ => Some(DeepLocator.ofMessageThreadList)
         }
@@ -248,7 +249,7 @@ class BookmarksController @Inject() (db: DBConnection,
         dispatch ({
            event.persistToS3().persistToMongo()
         }, { e =>
-          inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.API,
+          healthcheck.addError(HealthcheckError(error = Some(e), callType = Healthcheck.API,
               errorMessage = Some("Can't persist event %s".format(event))))
         })
         BadRequest(msg)
@@ -276,7 +277,6 @@ class BookmarksController @Inject() (db: DBConnection,
         }
       }
       if (isNewURI) scraper.asyncScrape(uri)
-      val urlRepo = inject[URLRepo]
       val bookmark = db.readWrite { implicit s =>
         bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get) match {
           case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
