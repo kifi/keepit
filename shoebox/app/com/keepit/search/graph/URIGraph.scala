@@ -79,7 +79,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   def load(): Int = {
     log.info("loading URIGraph")
     try {
-      val users = inject[DBConnection].readOnly { implicit s => inject[UserRepo].all }
+      val users = inject[Database].readOnly { implicit s => inject[UserRepo].all }
       var cnt = 0
       indexDocuments(users.iterator.map{ user => buildIndexable(user) }, commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
@@ -95,7 +95,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   def update(userId: Id[User]): Int = {
     log.info("updating a URIGraph for user=%d".format(userId.id))
     try {
-      val user = inject[DBConnection].readOnly { implicit s => inject[UserRepo].get(userId) }
+      val user = inject[Database].readOnly { implicit s => inject[UserRepo].get(userId) }
       var cnt = 0
       indexDocuments(Iterator(buildIndexable(user)), commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
@@ -111,12 +111,12 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   def getURIGraphSearcher() = new URIGraphSearcher(searcher)
 
   def buildIndexable(userId: Id[User]) = {
-    val user = inject[DBConnection].readOnly { implicit s => inject[UserRepo].get(userId) }
+    val user = inject[Database].readOnly { implicit s => inject[UserRepo].get(userId) }
     buildIndexable(user)
   }
 
   def buildIndexable(user: User) = {
-    val bookmarks = inject[DBConnection].readOnly(implicit session => inject[BookmarkRepo].getByUser(user.id.get))
+    val bookmarks = inject[Database].readOnly(implicit session => inject[BookmarkRepo].getByUser(user.id.get))
     new URIListIndexable(user.id.get, bookmarks)
   }
 

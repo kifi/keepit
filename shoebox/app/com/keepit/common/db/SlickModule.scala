@@ -13,13 +13,13 @@ import akka.actor.ActorSystem
 import akka.actor.Scheduler
 import javax.sql.DataSource
 
-import scala.slick.session.Database
+import scala.slick.session.{Database => SlickDatabase}
 
 class SlickModule(dbInfo: DbInfo) extends ScalaModule {
   def configure(): Unit = {
     println("configuring SlickModule")
     //see http://stackoverflow.com/questions/6271435/guice-and-scala-injection-on-generics-dependencies
-    bind[DBConnection].in(classOf[Singleton])
+    bind[Database].in(classOf[Singleton])
     lazy val db = dbInfo.driverName match {
       case MySQL.driverName     => new MySQL( dbInfo )
       case H2.driverName        => new H2( dbInfo )
@@ -29,6 +29,6 @@ class SlickModule(dbInfo: DbInfo) extends ScalaModule {
 }
 
 trait DbInfo {
-  def database: Database
+  def database: SlickDatabase
   def driverName: String
 }

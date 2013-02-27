@@ -14,7 +14,7 @@ object ElectronicMailController extends FortyTwoController {
 
   def electronicMailsView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 200
-    val (count, electronicMails) = inject[DBConnection].readOnly { implicit s =>
+    val (count, electronicMails) = inject[Database].readOnly { implicit s =>
       val repo = inject[ElectronicMailRepo]
       val electronicMails = repo.page(page, PAGE_SIZE, filterRecipeintNot = EmailAddresses.ENG)
       val count = repo.count(filterRecipeintNot = EmailAddresses.ENG)

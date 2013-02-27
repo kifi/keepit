@@ -36,7 +36,7 @@ class SocialUserImportEmail() extends Logging {
 
   private def importEmailFromJson(userId: Id[User], json: JsValue): Option[EmailAddress] = {
     (json \ "email").asOpt[String].map {emailString =>
-      inject[DBConnection].readWrite{ implicit session =>
+      inject[Database].readWrite{ implicit session =>
         val userRepo = inject[UserRepo]
         val emailRepo = inject[EmailAddressRepo]
         emailRepo.getByAddressOpt(emailString) match {

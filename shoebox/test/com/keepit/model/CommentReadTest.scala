@@ -27,7 +27,7 @@ import com.keepit.common.social.SocialNetworks.FACEBOOK
 class CommentReadTest extends SpecificationWithJUnit with DbRepos {
 
   def setup() = {
-    inject[DBConnection].readWrite {implicit s =>
+    inject[Database].readWrite {implicit s =>
       val commentRepo = inject[CommentRepo]
       val userRepo = inject[UserRepo]
       val commentRecipientRepo = inject[CommentRecipientRepo]
@@ -61,7 +61,7 @@ class CommentReadTest extends SpecificationWithJUnit with DbRepos {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, comment1, comment2, comment3, msg1, msg2, msg3, msg4) = setup()
 
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           val userRepo = inject[UserRepo]
           val user3 = userRepo.save(User(firstName = "Other", lastName = "User"))
 
@@ -98,7 +98,7 @@ class CommentReadTest extends SpecificationWithJUnit with DbRepos {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, comment1, comment2, comment3, msg1, msg2, msg3, msg4) = setup()
 
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           val userRepo = inject[UserRepo]
           val user3 = userRepo.save(User(firstName = "Other", lastName = "User"))
 
@@ -155,7 +155,7 @@ class CommentReadTest extends SpecificationWithJUnit with DbRepos {
 
         val commentReadRepo = inject[CommentReadRepo]
 
-        val externalId = inject[DBConnection].readOnly {implicit session =>
+        val externalId = inject[Database].readOnly {implicit session =>
           val messages = commentReadRepo.getParentsOfUnreadMessages(user2.id.get, uri1.id.get)
           messages.size === 3
           messages.head.externalId
@@ -168,7 +168,7 @@ class CommentReadTest extends SpecificationWithJUnit with DbRepos {
         val result = CommentController.getMessageThread(externalId)(authRequest)
         status(result) must equalTo(OK)
 
-        inject[DBConnection].readOnly {implicit session =>
+        inject[Database].readOnly {implicit session =>
           val messages = commentReadRepo.getParentsOfUnreadMessages(user1.id.get, uri1.id.get)
           messages.size === 1
         }

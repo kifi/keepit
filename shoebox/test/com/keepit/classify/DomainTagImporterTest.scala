@@ -4,7 +4,7 @@ import org.joda.time.DateTime
 import org.specs2.mutable._
 
 import com.keepit.common.analytics.FakePersistEventPluginImpl
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.inject._
 import com.keepit.test._
 
@@ -25,7 +25,7 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val domainToTagRepo = inject[DomainToTagRepo]
-        val db = inject[DBConnection]
+        val db = inject[Database]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
           inject[SensitivityUpdater], provide(new DateTime), system, db,
           new FakePersistEventPluginImpl(system), settings)
@@ -65,7 +65,7 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val domainToTagRepo = inject[DomainToTagRepo]
-        val db = inject[DBConnection]
+        val db = inject[Database]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
           inject[SensitivityUpdater], provide(new DateTime), system, db,
           new FakePersistEventPluginImpl(system), settings)
@@ -106,7 +106,7 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val domainToTagRepo = inject[DomainToTagRepo]
-        val db = inject[DBConnection]
+        val db = inject[Database]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
           inject[SensitivityUpdater], provide(new DateTime), system, db,
           new FakePersistEventPluginImpl(system), settings)

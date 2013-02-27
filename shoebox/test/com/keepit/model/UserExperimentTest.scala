@@ -25,16 +25,16 @@ class UserExperimentTest extends SpecificationWithJUnit {
         val userRepo = inject[UserRepo]
         val expRepo = inject[UserExperimentRepo]
 
-        val (shanee, santa) = inject[DBConnection].readWrite{ implicit session =>
+        val (shanee, santa) = inject[Database].readWrite{ implicit session =>
           (userRepo.save(User(firstName = "Shanee", lastName = "Smith")),
            userRepo.save(User(firstName = "Santa", lastName = "Claus")))
         }
 
-        inject[DBConnection].readWrite{ implicit session =>
+        inject[Database].readWrite{ implicit session =>
           expRepo.save(UserExperiment(userId = shanee.id.get, experimentType = ExperimentTypes.ADMIN))
         }
 
-        inject[DBConnection].readOnly{ implicit session =>
+        inject[Database].readOnly{ implicit session =>
           expRepo.getExperiment(shanee.id.get, ExperimentTypes.ADMIN).isDefined === true
           expRepo.getExperiment(shanee.id.get, ExperimentTypes.FAKE).isDefined === false
           expRepo.getExperiment(santa.id.get, ExperimentTypes.ADMIN).isDefined === false
@@ -48,19 +48,19 @@ class UserExperimentTest extends SpecificationWithJUnit {
         val userRepo = inject[UserRepo]
         val expRepo = inject[UserExperimentRepo]
 
-        val (shanee, shachaf, santa) = inject[DBConnection].readWrite{ implicit session =>
+        val (shanee, shachaf, santa) = inject[Database].readWrite{ implicit session =>
           (userRepo.save(User(firstName = "Shanee", lastName = "Smith")),
            userRepo.save(User(firstName = "Shachaf", lastName = "Smith")),
            userRepo.save(User(firstName = "Santa", lastName = "Claus")))
         }
 
-        inject[DBConnection].readWrite{ implicit session =>
+        inject[Database].readWrite{ implicit session =>
           expRepo.save(UserExperiment(userId = shanee.id.get, experimentType = ExperimentTypes.ADMIN))
           expRepo.save(UserExperiment(userId = santa.id.get, experimentType = ExperimentTypes.ADMIN))
           expRepo.save(UserExperiment(userId = santa.id.get, experimentType = ExperimentTypes.FAKE))
         }
 
-        inject[DBConnection].readWrite{ implicit session =>
+        inject[Database].readWrite{ implicit session =>
           val shanees = expRepo.getByUser(shanee.id.get)
           shanees.size === 1
           shanees.head.experimentType === ExperimentTypes.ADMIN

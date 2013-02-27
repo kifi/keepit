@@ -22,7 +22,7 @@ class SliderRuleTest extends SpecificationWithJUnit with DbRepos {
         val repo = inject[SliderRuleRepo]
         inject[SliderRuleRepo] must be(repo) // singleton
 
-        val (r1, r2, r3, r4, foo, bar) = inject[DBConnection].readWrite{ implicit session =>
+        val (r1, r2, r3, r4, foo, bar) = inject[Database].readWrite{ implicit session =>
           (repo.save(SliderRule(None, "foo", "rule1", None)),
            repo.save(SliderRule(None, "foo", "rule2", Some(JsArray(Seq(JsNumber(8)))))),
            repo.save(SliderRule(None, "bar", "rule1", None)),
@@ -34,12 +34,12 @@ class SliderRuleTest extends SpecificationWithJUnit with DbRepos {
         foo.rules.map(_.id) === Seq(r1.id, r2.id)
         bar.rules.map(_.id) === Seq(r3.id, r4.id)
 
-        inject[DBConnection].readOnly{ implicit session =>
+        inject[Database].readOnly{ implicit session =>
           repo.getGroup("foo") must be(foo)  // in-memory cache should work
           repo.getGroup("bar") must be(bar)
         }
 
-        inject[DBConnection].readWrite{ implicit session =>
+        inject[Database].readWrite{ implicit session =>
           repo.save(foo.rules(1).withParameters(None))
           repo.getGroup("foo").version must be_>(foo.version)
           repo.getGroup("bar") must be(bar)  // still in memory cache

@@ -22,7 +22,7 @@ import com.keepit.common.db.Id
 class ThreadInfoTest extends SpecificationWithJUnit {
 
   def setup() = {
-    inject[DBConnection].readWrite { implicit session =>
+    inject[Database].readWrite { implicit session =>
       val commentRepo = inject[CommentRepo]
       val userRepo = inject[UserRepo]
       val commentRecipientRepo = inject[CommentRecipientRepo]
@@ -54,7 +54,7 @@ class ThreadInfoTest extends SpecificationWithJUnit {
     "load with initiator" in {
       running(new EmptyApplication()) {
         val (user1, user2, msg) = setup()
-        val info = inject[DBConnection].readOnly { implicit session => inject[ThreadInfoRepo].load(msg, user1.id) }
+        val info = inject[Database].readOnly { implicit session => inject[ThreadInfoRepo].load(msg, user1.id) }
         info.recipients.size === 1
         info.recipients.head.externalId === user2.externalId
       }
@@ -62,7 +62,7 @@ class ThreadInfoTest extends SpecificationWithJUnit {
     "load with recepient" in {
       running(new EmptyApplication()) {
         val (user1, user2, msg) = setup()
-        val info = inject[DBConnection].readOnly { implicit session => inject[ThreadInfoRepo].load(msg, user2.id) }
+        val info = inject[Database].readOnly { implicit session => inject[ThreadInfoRepo].load(msg, user2.id) }
         info.recipients.size === 1
         info.recipients.head.externalId === user1.externalId
       }

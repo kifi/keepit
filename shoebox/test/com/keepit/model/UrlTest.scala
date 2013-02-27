@@ -19,11 +19,11 @@ class URLTest extends SpecificationWithJUnit {
         val repo = inject[URLRepo]
         repo.eq(inject[URLRepo]) === true //verify singleton
 
-        inject[DBConnection].readWrite{ implicit session =>
+        inject[Database].readWrite{ implicit session =>
           repo.count === 0
         }
 
-        val (url1, nuri1, url2, nuri2, nuri3) = inject[DBConnection].readWrite { implicit session =>
+        val (url1, nuri1, url2, nuri2, nuri3) = inject[Database].readWrite { implicit session =>
           val nuriRepo = inject[NormalizedURIRepo]
           val nuri1 = nuriRepo.save(NormalizedURIFactory("Google", "http://www.google.com/"))
           val nuri2 = nuriRepo.save(NormalizedURIFactory("Bing", "http://www.bing.com/"))
@@ -34,7 +34,7 @@ class URLTest extends SpecificationWithJUnit {
           (url1, nuri1, url2, nuri2, nuri3)
         }
 
-        inject[DBConnection].readOnly{ implicit session =>
+        inject[Database].readOnly{ implicit session =>
           println(repo.all)
           repo.get("http://cnn.com").isDefined === false
           repo.get("http://www.google.com/#1").isDefined === true

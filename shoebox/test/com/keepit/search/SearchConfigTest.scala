@@ -1,6 +1,6 @@
 package com.keepit.search
 
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.inject._
 import com.keepit.model.{UserRepo, User}
 import com.keepit.test.{DbRepos, EmptyApplication}
@@ -13,9 +13,9 @@ class SearchConfigTest extends SpecificationWithJUnit with DbRepos {
     "load defaults correctly" in {
       running(new EmptyApplication()) {
         val searchConfigManager =
-          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[DBConnection])
+          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[Database])
         val userRepo = inject[UserRepo]
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           val andrew = userRepo.save(User(firstName = "Andrew", lastName = "Connor"))
           val greg = userRepo.save(User(firstName = "Greg", lastName = "Metvin"))
           val (c1, _) = searchConfigManager.getConfig(andrew.id.get, "fortytwo")
@@ -28,9 +28,9 @@ class SearchConfigTest extends SpecificationWithJUnit with DbRepos {
     "load overrides for experiments" in {
       running(new EmptyApplication()) {
         val searchConfigManager =
-          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[DBConnection])
+          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[Database])
         val userRepo = inject[UserRepo]
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           val andrew = userRepo.save(User(firstName = "Andrew", lastName = "Connor"))
           val v1 = searchConfigManager.saveExperiment(SearchConfigExperiment(config = SearchConfig(
             "recencyBoost" -> "2.0",
@@ -58,9 +58,9 @@ class SearchConfigTest extends SpecificationWithJUnit with DbRepos {
     }
     "load correct override based on weights" in {
       running(new EmptyApplication()) {
-        val searchConfigManager = new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[DBConnection])
+        val searchConfigManager = new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[Database])
         val userRepo = inject[UserRepo]
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           val andrew = userRepo.save(User(firstName = "Andrew", lastName = "Connor"))
           searchConfigManager.saveExperiment(SearchConfigExperiment(config = SearchConfig(
             "recencyBoost" -> "2.0",
@@ -87,9 +87,9 @@ class SearchConfigTest extends SpecificationWithJUnit with DbRepos {
     "not get configs from inactive experiments" in {
       running(new EmptyApplication()) {
         val searchConfigManager =
-          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[DBConnection])
+          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[Database])
         val userRepo = inject[UserRepo]
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           val greg = userRepo.save(User(firstName = "Greg", lastName = "Metvin"))
           val ex = searchConfigManager.saveExperiment(SearchConfigExperiment(config = SearchConfig(
             "percentMatch" -> "700",

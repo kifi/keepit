@@ -34,7 +34,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
     log.info("starting a new scrape round")
-    val tasks = inject[DBConnection].readOnly { implicit s =>
+    val tasks = inject[Database].readOnly { implicit s =>
       inject[ScrapeInfoRepo].getOverdueList().map{ info => (inject[NormalizedURIRepo].get(info.uriId), info) }
     }
     log.info("got %s uris to scrape".format(tasks.length))
@@ -47,7 +47,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
     val repo = inject[ScrapeInfoRepo]
-    val info = inject[DBConnection].readWrite { implicit s =>
+    val info = inject[Database].readWrite { implicit s =>
       repo.getByUri(uri.id.get).getOrElse(repo.save(ScrapeInfo(uriId = uri.id.get)))
     }
     safeProcessURI(uri, info)
@@ -58,7 +58,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
     } catch {
       case e: Throwable =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
-        val errorURI = inject[DBConnection].readWrite { implicit s =>
+        val errorURI = inject[Database].readWrite { implicit s =>
           inject[ScrapeInfoRepo].save(info.withFailure())
           inject[NormalizedURIRepo].save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
@@ -76,7 +76,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
   private def processURI(uri: NormalizedURI, info: ScrapeInfo, useProxy: Boolean): (NormalizedURI, Option[Article]) = {
     if(!useProxy) log.info(s"scraping $uri") else log.info(s"scraping $uri with proxy")
 
-    val db = inject[DBConnection]
+    val db = inject[Database]
     val uriRepo = inject[NormalizedURIRepo]
     val scrapeInfoRepo = inject[ScrapeInfoRepo]
 
@@ -162,7 +162,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
   }
 
   private def isUnscrapable(url: String, destinationUrl: Option[String]) = {
-    inject[DBConnection].readOnly { implicit s =>
+    inject[Database].readOnly { implicit s =>
       val uns = inject[UnscrapableRepo]
       (uns.contains(url) || (destinationUrl.isDefined && uns.contains(destinationUrl.get)))
     }

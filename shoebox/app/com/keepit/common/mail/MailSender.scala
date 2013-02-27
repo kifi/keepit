@@ -32,7 +32,7 @@ trait MailSenderPlugin extends Plugin {
   def processOutbox(): Unit
 }
 
-class MailSenderPluginImpl @Inject() (system: ActorSystem, db: DBConnection, mailRepo: ElectronicMailRepo)
+class MailSenderPluginImpl @Inject() (system: ActorSystem, db: Database, mailRepo: ElectronicMailRepo)
   extends Logging with MailSenderPlugin {
 
   override def processMail(mail: ElectronicMail): Unit = actor ! ProcessMail(mail, this)

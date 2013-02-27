@@ -16,7 +16,7 @@ import org.joda.time.format.DateTimeFormat
 import com.google.inject.{Provider, ImplementedBy, Inject}
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -55,7 +55,7 @@ object DomainTagImportEvents {
   val REMOVE_TAG_FAILURE = "removeTagFailure"
 }
 
-private[classify] class DomainTagImportActor(db: DBConnection, updater: SensitivityUpdater, clock: Provider[DateTime],
+private[classify] class DomainTagImportActor(db: Database, updater: SensitivityUpdater, clock: Provider[DateTime],
     domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo,
     persistEventPlugin: PersistEventPlugin, settings: DomainTagImportSettings)
     extends FortyTwoActor with Logging {
@@ -271,7 +271,7 @@ trait DomainTagImporter {
 }
 
 class DomainTagImporterImpl @Inject()(domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo,
-    updater: SensitivityUpdater, clock: Provider[DateTime], system: ActorSystem, db: DBConnection,
+    updater: SensitivityUpdater, clock: Provider[DateTime], system: ActorSystem, db: Database,
     persistEventPlugin: PersistEventPlugin, settings: DomainTagImportSettings)
     extends DomainTagImporter {
 

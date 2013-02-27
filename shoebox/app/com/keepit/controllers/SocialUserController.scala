@@ -35,7 +35,7 @@ import com.keepit.common.controller.FortyTwoController
 object SocialUserController extends FortyTwoController {
 
   def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
-    val socialUserInfo = inject[DBConnection].readWrite { implicit s =>
+    val socialUserInfo = inject[Database].readWrite { implicit s =>
       val repo = inject[SocialUserInfoRepo]
       repo.save(repo.get(socialUserId).reset())
     }
@@ -44,7 +44,7 @@ object SocialUserController extends FortyTwoController {
 
   def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
 
-    val (socialUserInfo, socialConnections) = inject[DBConnection].readOnly { implicit s =>
+    val (socialUserInfo, socialConnections) = inject[Database].readOnly { implicit s =>
       val socialRepo = inject[SocialUserInfoRepo]
       val connectionRepo = inject[SocialConnectionRepo]
       val socialUserInfo = socialRepo.get(socialUserId)
@@ -60,7 +60,7 @@ object SocialUserController extends FortyTwoController {
 
   def socialUsersView(page: Int) = AdminHtmlAction { implicit request =>
     val PAGE_SIZE = 300
-    val (socialUsers, count) = inject[DBConnection].readOnly { implicit s =>
+    val (socialUsers, count) = inject[Database].readOnly { implicit s =>
       val repo = inject[SocialUserInfoRepo]
       (repo.page(page, PAGE_SIZE), repo.count)
     }
@@ -70,7 +70,7 @@ object SocialUserController extends FortyTwoController {
 
   def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
     val graph = inject[SocialGraphPlugin]
-    val socialUserInfo = inject[DBConnection].readOnly { implicit s => inject[SocialUserInfoRepo].get(socialUserInfoId) }
+    val socialUserInfo = inject[Database].readOnly { implicit s => inject[SocialUserInfoRepo].get(socialUserInfoId) }
     if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))
     graph.asyncFetch(socialUserInfo)
     Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfoId))

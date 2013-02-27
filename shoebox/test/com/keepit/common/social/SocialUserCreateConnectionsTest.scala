@@ -6,7 +6,7 @@ import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
 
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.inject._
 import com.keepit.model.{UserRepo, SocialUserInfoRepo, SocialUserInfo, User}
 import com.keepit.test.EmptyApplication
@@ -33,7 +33,7 @@ class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
 
         val result = inject[SocialUserImportFriends].importFriends(Seq(json))
 
-        val socialUserInfo = inject[DBConnection].readWrite { implicit c =>
+        val socialUserInfo = inject[Database].readWrite { implicit c =>
           val user = inject[UserRepo].save(User(firstName = "fn1", lastName = "ln1"))
           inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Bob Smith",
@@ -55,7 +55,7 @@ class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
 
         inject[SocialUserImportFriends].importFriends(Seq(json1))
 
-        val socialUserInfo = inject[DBConnection].readWrite { implicit c =>
+        val socialUserInfo = inject[Database].readWrite { implicit c =>
           val user = inject[UserRepo].save(User(firstName = "fn1", lastName = "ln1"))
           inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Bob Smith",

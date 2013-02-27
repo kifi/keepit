@@ -90,7 +90,7 @@ class CommentControllerTest extends SpecificationWithJUnit with DbRepos {
 
     "persist comment emails" in {
       running(new EmptyApplication().withFakeMail()) {
-        val comment = inject[DBConnection].readWrite { implicit s =>
+        val comment = inject[Database].readWrite { implicit s =>
           val userRepo = inject[UserRepo]
           val emailRepo = inject[EmailAddressRepo]
           val normalizedURIRepo = inject[NormalizedURIRepo]
