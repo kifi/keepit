@@ -27,6 +27,12 @@ import scala.collection.JavaConversions._
 import com.keepit.search.MainQueryParser
 import com.keepit.search.MainQueryParserFactory
 import com.keepit.search.phrasedetector._
+import com.keepit.inject._
+import scala.Some
+import com.keepit.search.index.Hit
+import com.keepit.model.NormalizedURI
+import com.keepit.search.Lang
+import com.keepit.search.Article
 
 @RunWith(classOf[JUnitRunner])
 class ArticleIndexerTest extends SpecificationWithJUnit with DbRepos {
@@ -34,7 +40,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit with DbRepos {
   val ramDir = new RAMDirectory
   val store = new FakeArticleStore()
   val uriIdArray = new Array[Long](3)
-  val parserFactory = new MainQueryParserFactory(new PhraseDetector(PhraseIndexer()))
+  val parserFactory = new MainQueryParserFactory(new PhraseDetector(PhraseIndexer(inject[DBConnection], inject[PhraseRepo])))
 
   def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
     Article(
