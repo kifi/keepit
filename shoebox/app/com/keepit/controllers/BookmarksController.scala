@@ -12,7 +12,6 @@ import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.net._
 import com.keepit.common.social._
-import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.graph.URIGraph
@@ -32,10 +31,10 @@ import com.google.inject.{Inject, Singleton}
 @Singleton
 class BookmarksController @Inject() (db: DBConnection, 
   bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, socialRepo: UserWithSocialRepo, userRepo: UserRepo, urlPatternRepo: URLPatternRepo,
-  scrapeRepo: ScrapeInfoRepo, domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo, urlRepo: URLRepo,
-  sliderRuleRepo: SliderRuleRepo, socialConnectionRepo: SocialConnectionRepo, commentReadRepo: CommentReadRepo,
-  scraper: ScraperPlugin, uriGraph: URIGraphPlugin, healthcheck: HealthcheckPlugin,
-  classifier: DomainClassifier) 
+  scrapeRepo: ScrapeInfoRepo, domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo, urlRepo: URLRepo, socialUserInfoRepo: SocialUserInfoRepo,
+  sliderRuleRepo: SliderRuleRepo, socialConnectionRepo: SocialConnectionRepo, commentReadRepo: CommentReadRepo, experimentRepo: UserExperimentRepo,
+  scraper: ScraperPlugin, uriGraphPlugin: URIGraphPlugin, healthcheck: HealthcheckPlugin,
+  classifier: DomainClassifier, historyTracker: SliderHistoryTracker, uriGraph: URIGraph, activityStream: ActivityStream) 
     extends FortyTwoController {
 
   def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
@@ -89,7 +88,7 @@ class BookmarksController @Inject() (db: DBConnection,
     }
     uniqueUsers foreach { userId =>
       log.info("updating user %s".format(userId))
-      uriGraph.update(userId)
+      uriGraphPlugin.update(userId)
     }
     Redirect(request.request.referer)
   }
@@ -99,7 +98,7 @@ class BookmarksController @Inject() (db: DBConnection,
     db.readWrite { implicit s =>
       val bookmark = bookmarkRepo.get(id)
       bookmarkRepo.delete(id)
-      uriGraph.update(bookmark.userId)
+      uriGraphPlugin.update(bookmark.userId)
       Redirect(com.keepit.controllers.routes.BookmarksController.bookmarksView(0))
     }
   }
@@ -158,14 +157,14 @@ class BookmarksController @Inject() (db: DBConnection,
       }
 
       val shown: Option[Boolean] = if (locator.isDefined) None else uriId.map { uriId =>
-        inject[SliderHistoryTracker].getMultiHashFilter(userId).mayContain(uriId.id)
+        historyTracker.getMultiHashFilter(userId).mayContain(uriId.id)
       }
 
       (uriId, bookmark, sensitive, neverOnSite, friendIds, ruleGroup, patterns, locator, shown)
     }
 
     val keptByAnyFriends = uriId.map { uriId =>
-      val searcher = inject[URIGraph].getURIGraphSearcher
+      val searcher = uriGraph.getURIGraphSearcher
       searcher.intersectAny(
         searcher.getUserToUserEdgeSet(userId, friendIds),
         searcher.getUriToUserEdgeSet(uriId))
@@ -200,7 +199,7 @@ class BookmarksController @Inject() (db: DBConnection,
         }
       }
     }
-    uriGraph.update(request.userId)
+    uriGraphPlugin.update(request.userId)
     bookmark match {
       case Some(bookmark) => Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
       case None => NotFound
@@ -234,13 +233,13 @@ class BookmarksController @Inject() (db: DBConnection,
             val experiments = request.experimants
             val user = db.readOnly { implicit s => userRepo.get(userId) }
             internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
-            uriGraph.update(userId)
+            uriGraphPlugin.update(userId)
             Ok(JsObject(Seq()))
         }
       case None =>
         val (user, experiments, installation) = db.readOnly{ implicit session =>
           (userRepo.get(userId),
-           inject[UserExperimentRepo].getByUser(userId) map (_.experimentType),
+           experimentRepo.getByUser(userId) map (_.experimentType),
            installationId.map(_.id).getOrElse(""))
         }
         val msg = "Unsupported operation for user %s with old installation".format(userId)
@@ -300,7 +299,7 @@ class BookmarksController @Inject() (db: DBConnection,
 
   private def addToActivityStream(user: User, bookmark: Bookmark) = {
     val social = db.readOnly { implicit session =>
-      inject[SocialUserInfoRepo].getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
+      socialUserInfoRepo.getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
     }
 
     val json = Json.obj(
@@ -316,6 +315,6 @@ class BookmarksController @Inject() (db: DBConnection,
         "source" -> bookmark.source.value)
     )
 
-    inject[ActivityStream].streamActivity("bookmark", json)
+    activityStream.streamActivity("bookmark", json)
   }
 }
