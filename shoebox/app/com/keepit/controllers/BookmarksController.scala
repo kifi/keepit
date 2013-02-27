@@ -27,8 +27,9 @@ import scala.concurrent.duration._
 
 import com.keepit.common.analytics.ActivityStream
 
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton}
 
+@Singleton
 class BookmarksController @Inject() (db: DBConnection, 
   bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, socialRepo: UserWithSocialRepo, userRepo: UserRepo, 
   scrapeRepo: ScrapeInfoRepo, domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo,
