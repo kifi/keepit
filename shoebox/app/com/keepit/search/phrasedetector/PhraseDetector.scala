@@ -33,7 +33,7 @@ object PhraseDetector {
 }
 
 @Singleton
-class PhraseDetector @Inject() (indexer: Indexer[Phrase]) {
+class PhraseDetector @Inject() (indexer: PhraseIndexer) {
   def detectAll(terms: Array[Term]) = {
     var result = Set.empty[(Int, Int)] // (position, length)
     val pq = new PQ(terms.size)
