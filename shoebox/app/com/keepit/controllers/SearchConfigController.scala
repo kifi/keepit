@@ -13,7 +13,7 @@ import play.api.libs.json.JsObject
 
 object SearchConfigController extends FortyTwoController {
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val user = inject[DBConnection].readOnly { implicit s =>
+    val user = inject[Database].readOnly { implicit s =>
       val repo = inject[UserWithSocialRepo]
       repo.toUserWithSocial(inject[UserRepo].get(userId))
     }

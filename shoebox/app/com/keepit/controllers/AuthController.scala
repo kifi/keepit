@@ -60,7 +60,7 @@ object AuthController extends FortyTwoController {
          }
          kiId
        })}.get
-    val (user, installation, sliderRuleGroup, urlPatterns) = inject[DBConnection].readWrite{implicit s =>
+    val (user, installation, sliderRuleGroup, urlPatterns) = inject[Database].readWrite{implicit s =>
       val repo = inject[KifiInstallationRepo]
       log.info("start. details: %s, %s, %s".format(userAgent, version, installationIdOpt))
       val installation: KifiInstallation = installationIdOpt flatMap { id =>
@@ -102,7 +102,7 @@ object AuthController extends FortyTwoController {
   }
 
   def whois = AuthenticatedJsonAction { request =>
-    val user = inject[DBConnection].readOnly(implicit s => inject[UserRepo].get(request.userId))
+    val user = inject[Database].readOnly(implicit s => inject[UserRepo].get(request.userId))
     Ok(JsObject(Seq("externalUserId" -> JsString(user.externalId.toString))))
   }
 
@@ -111,7 +111,7 @@ object AuthController extends FortyTwoController {
   }
 
   def impersonate(id: Id[User]) = AdminJsonAction { request =>
-    val user = inject[DBConnection].readOnly { implicit s =>
+    val user = inject[Database].readOnly { implicit s =>
       inject[UserRepo].get(id)
     }
     log.info("impersonating user %s".format(user)) //todo(eishay) add event & email

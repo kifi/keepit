@@ -23,7 +23,7 @@ class ClickHistoryTracker(tableSize: Int, numHashFuncs: Int, minHits: Int) {
     filter.put(uriId.id)
 
     val repo = inject[ClickHistoryRepo]
-    inject[DBConnection].readWrite { implicit session =>
+    inject[Database].readWrite { implicit session =>
       repo.save(repo.getByUserId(userId) match {
         case Some(h) => h.withFilter(filter.getFilter)
         case None =>
@@ -34,7 +34,7 @@ class ClickHistoryTracker(tableSize: Int, numHashFuncs: Int, minHits: Int) {
 
   def getMultiHashFilter(userId: Id[User]) = {
     val repo = inject[ClickHistoryRepo]
-    inject[DBConnection].readOnly { implicit session =>
+    inject[Database].readOnly { implicit session =>
       repo.getByUserId(userId) match {
         case Some(clickHistory) =>
           new MultiHashFilter(clickHistory.tableSize, clickHistory.filter, clickHistory.numHashFuncs, clickHistory.minHits)

@@ -46,7 +46,7 @@ object PostOffice {
   val BODY_MAX_SIZE = 524288
 }
 
-class PostOfficeImpl @Inject() (db: DBConnection, mailRepo: ElectronicMailRepo, healthcheck: HealthcheckPlugin, mailer: MailSenderPlugin) extends PostOffice with Logging {
+class PostOfficeImpl @Inject() (db: Database, mailRepo: ElectronicMailRepo, healthcheck: HealthcheckPlugin, mailer: MailSenderPlugin) extends PostOffice with Logging {
 
   def sendMail(mail: ElectronicMail): ElectronicMail = {
     val prepared = db.readWrite { implicit s =>

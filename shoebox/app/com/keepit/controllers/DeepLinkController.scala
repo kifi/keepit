@@ -34,7 +34,7 @@ import com.keepit.common.analytics.reports._
 object DeepLinkController extends FortyTwoController {
 
   def handle(token: String) = AuthenticatedHtmlAction { request =>
-    val db = inject[DBConnection]
+    val db = inject[Database]
     val deepLink = db.readOnly { implicit session => inject[DeepLinkRepo].getByToken(DeepLinkToken(token)) }
 
     deepLink match {

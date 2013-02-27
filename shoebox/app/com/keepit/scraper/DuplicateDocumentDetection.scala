@@ -28,7 +28,7 @@ class DuplicateDocumentDetection extends Logging {
     "4k3jinEqzd67np/61CIsuYfehiUCvjwaL+3feeAe+OyBKmzWX9pOiBmttIu6uSSBVocxwdSxGnc4w6xO8cbPxL2K/lrNxL71Bwq51m4/B5fvhmNIhe81wb1cMO6w/Xo4mq8PA==" // Google docs
   */)
 
-  lazy val documentSignatures = inject[DBConnection].readOnly { implicit session =>
+  lazy val documentSignatures = inject[Database].readOnly { implicit session =>
     inject[ScrapeInfoRepo].allActive.map { s =>
       if (IGNORED_DOCUMENTS.contains(s.signature)) None
       else Some((s.uriId, parseBase64Binary(s.signature)))
@@ -53,7 +53,7 @@ class DuplicateDocumentDetection extends Logging {
 
   def processDocument(currentDoc: (Id[NormalizedURI], Array[Byte]), threshold: Double) = {
     implicit val dupeRepo = inject[DuplicateDocumentRepo]
-    inject[DBConnection].readOnly { implicit session =>
+    inject[Database].readOnly { implicit session =>
       documentSignatures.map { case (otherId, otherSig) =>
         if (currentDoc._1.id >= otherId.id) {
           None
@@ -88,7 +88,7 @@ class DuplicateDocumentDetection extends Logging {
 
      var dupeDocumentsCount = 0
      val dupeRepo = inject[DuplicateDocumentRepo]
-     inject[DBConnection].readWrite { implicit conn =>
+     inject[Database].readWrite { implicit conn =>
        docs.foreach { similarDoc =>
          val id = similarDoc._1
          val similars = similarDoc._2

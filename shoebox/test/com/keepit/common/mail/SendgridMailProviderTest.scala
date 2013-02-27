@@ -21,7 +21,7 @@ class SendgridMailProviderTest extends Specification {
   "SendgridMailProvider" should {
     "send email" in {
       running(new ShoeboxApplication().withFakeHealthcheck()) {
-        val mail = inject[DBConnection].readWrite { implicit s =>
+        val mail = inject[Database].readWrite { implicit s =>
           inject[ElectronicMailRepo].save(ElectronicMail(
               from = EmailAddresses.ENG,
               fromName = Some("Marvin"),
@@ -46,7 +46,7 @@ class SendgridMailProviderTest extends Specification {
 
 //         usually using inject[PostOffice].sendMail(mail
 //        inject[SendgridMailProvider].sendMailToSendgrid(mail)
-        inject[DBConnection].readOnly { implicit s =>
+        inject[Database].readOnly { implicit s =>
           val loaded = inject[ElectronicMailRepo].get(mail.id.get)
           loaded.from === mail.from
           loaded.fromName === mail.fromName

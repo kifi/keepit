@@ -15,7 +15,7 @@ import play.api.libs.json._
 import java.io.File
 import com.keepit.common.social.SocialUserImportFriends
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 
 @RunWith(classOf[JUnitRunner])
 class SocialConnectionTest extends SpecificationWithJUnit {
@@ -39,10 +39,10 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         val connections = inject[SocialUserCreateConnections]
         val userRepo = inject[UserRepo]
 
-        val eishaySocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+        val eishaySocialUserInfo = inject[Database].readWrite{ implicit s =>
           socialRepo.save(socialRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith"))))
         }
-        val andrewSocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+        val andrewSocialUserInfo = inject[Database].readWrite{ implicit s =>
           socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Andrew", lastName = "Conner"))))
         }
 
@@ -51,7 +51,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
 
 
         // Create FortyTwo accounts on certain users
-        val users = inject[DBConnection].readWrite{ implicit s =>
+        val users = inject[Database].readWrite{ implicit s =>
           val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic")) ::
             userRepo.save(User(firstName = "Kelvin", lastName = "Jiang")) ::
             userRepo.save(User(firstName = "John", lastName = "Cochran")) :: Nil
@@ -68,7 +68,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         connections.createConnections(eishaySocialUserInfo, Seq(eishayJson))
         connections.createConnections(andrewSocialUserInfo, Seq(andrewJson))
 
-        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[DBConnection].readOnly{ implicit s =>
+        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[Database].readOnly{ implicit s =>
           connectionRepo.count === 18
           (connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
            connectionRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
@@ -98,16 +98,16 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         loadJsonImportFriends("facebook_graph_andrew_min.json")
         loadJsonImportFriends("facebook_graph_eishay_min.json")
 
-        inject[DBConnection].readOnly{ implicit s =>
+        inject[Database].readOnly{ implicit s =>
           println("Connections: " + inject[SocialUserInfoRepo].all.size)
         }
 
         val userRepo = inject[UserRepo]
         val socialRepo = inject[SocialUserInfoRepo]
-        val eishaySocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+        val eishaySocialUserInfo = inject[Database].readWrite{ implicit s =>
           socialRepo.save(socialRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith"))))
         }
-        val andrewSocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+        val andrewSocialUserInfo = inject[Database].readWrite{ implicit s =>
           socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Andrew", lastName = "Conner"))))
         }
 
@@ -116,7 +116,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
 
 
         // Create FortyTwo accounts on certain users
-        val users = inject[DBConnection].readWrite{ implicit s =>
+        val users = inject[Database].readWrite{ implicit s =>
           val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic")) ::
             userRepo.save(User(firstName = "Kelvin", lastName = "Jiang")) ::
             userRepo.save(User(firstName = "John", lastName = "Cochran")) :: Nil
@@ -135,7 +135,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
 
         val connectionRepo = inject[SocialConnectionRepo]
 
-        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[DBConnection].readOnly{ implicit s =>
+        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[Database].readOnly{ implicit s =>
           connectionRepo.all.size === 18
           (connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
            connectionRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
@@ -167,7 +167,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
 
         loadJsonImportFriends(Seq("facebook_graph_eishay_min_page1.json", "facebook_graph_eishay_min_page2.json"))
 
-        inject[DBConnection].readOnly{ implicit s =>
+        inject[Database].readOnly{ implicit s =>
           println("Connections: " + inject[SocialUserInfoRepo].all.size)
         }
 
@@ -175,7 +175,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         val connectionRepo = inject[SocialConnectionRepo]
         val connections = inject[SocialUserCreateConnections]
         val userRepo = inject[UserRepo]
-        val eishaySocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+        val eishaySocialUserInfo = inject[Database].readWrite{ implicit s =>
           val info = socialRepo.save(SocialUserInfo(fullName = "Eishay Smith", socialId = SocialId("646386018"), networkType = SocialNetworks.FACEBOOK))
           socialRepo.save(info.withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith"))))
         }
@@ -184,7 +184,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         val eishay2Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay_min_page2.json"))).mkString)
 
         // Create FortyTwo accounts on certain users
-        val users = inject[DBConnection].readWrite{ implicit s =>
+        val users = inject[Database].readWrite{ implicit s =>
           val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic")) ::
             userRepo.save(User(firstName = "Kelvin", lastName = "Jiang")) ::
             userRepo.save(User(firstName = "John", lastName = "Cochran")) ::
@@ -199,7 +199,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
 
         inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, Seq(eishay1Json, eishay2Json))
 
-        val eishayFortyTwoConnection = inject[DBConnection].readOnly{ implicit s =>
+        val eishayFortyTwoConnection = inject[Database].readOnly{ implicit s =>
           connectionRepo.all.size === 12
           connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get)
         }
@@ -229,10 +229,10 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         val connections = inject[SocialUserCreateConnections]
         val userRepo = inject[UserRepo]
 
-        val eishaySocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+        val eishaySocialUserInfo = inject[Database].readWrite{ implicit s =>
             socialRepo.save(socialRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith"))))
         }
-        val andrewSocialUserInfo = inject[DBConnection].readWrite{ implicit s =>
+        val andrewSocialUserInfo = inject[Database].readWrite{ implicit s =>
             socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Andrew", lastName = "Conner"))))
         }
 
@@ -243,7 +243,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         // Create FortyTwo accounts on certain users
         val users = scala.collection.mutable.MutableList[User]()
 
-        inject[DBConnection].readWrite{ implicit s =>
+        inject[Database].readWrite{ implicit s =>
           users += userRepo.save(User(firstName = "Igor", lastName = "Perisic"))
           users += userRepo.save(User(firstName = "Kelvin", lastName = "Jiang"))
           users += userRepo.save(User(firstName = "John", lastName = "Cochran"))
@@ -259,7 +259,7 @@ class SocialConnectionTest extends SpecificationWithJUnit {
         inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, Seq(eishayJson))
         inject[SocialUserCreateConnections].createConnections(andrewSocialUserInfo, Seq(andrewJson))
 
-        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[DBConnection].readOnly{ implicit s =>
+        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[Database].readOnly{ implicit s =>
           connectionRepo.all.size === 612
           (connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
            connectionRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))

@@ -28,7 +28,7 @@ object SendgridMailProvider {
 }
 
 @Singleton
-class SendgridMailProvider @Inject() (db: DBConnection, mailRepo: ElectronicMailRepo, healthcheck: HealthcheckPlugin) extends Logging {
+class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo, healthcheck: HealthcheckPlugin) extends Logging {
 
   private class SMTPAuthenticator extends Authenticator {
     override def getPasswordAuthentication(): PasswordAuthentication = {

@@ -6,7 +6,7 @@ import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.model.User
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
@@ -66,7 +66,7 @@ object SearchConfig {
   def getDescription(name: String) = descriptions.get(name)
 }
 
-class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigExperimentRepo, db: DBConnection) {
+class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigExperimentRepo, db: Database) {
 
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 

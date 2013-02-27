@@ -11,7 +11,7 @@ import com.keepit.common.logging.Logging
 import com.mongodb.casbah.Imports._
 import scala.util.Random
 import org.joda.time._
-import com.keepit.common.db.slick.{DBSession, FortyTwoTypeMappers, DBConnection}
+import com.keepit.common.db.slick.{DBSession, FortyTwoTypeMappers, Database}
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.common.db.Id
 
@@ -322,7 +322,7 @@ class DailyTotalUsers extends Report with Logging {
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport = {
     var fields = Seq[ReportRow]()
-    inject[DBConnection].readOnly { implicit session =>
+    inject[Database].readOnly { implicit session =>
       val conn = session.conn
       val st = conn.createStatement()
       val sql =
@@ -348,7 +348,7 @@ class DailyPrivateKeeps extends Report with Logging {
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport = {
     var fields = Seq[ReportRow]()
-    inject[DBConnection].readOnly { implicit session =>
+    inject[Database].readOnly { implicit session =>
       val conn = session.conn
       val st = conn.createStatement()
       val sql =
@@ -374,7 +374,7 @@ class DailyPublicKeeps extends Report with Logging {
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport = {
     var fields = Seq[ReportRow]()
-    inject[DBConnection].readOnly { implicit session =>
+    inject[Database].readOnly { implicit session =>
       val conn = session.conn
       val st = conn.createStatement()
       val sql =
@@ -400,7 +400,7 @@ class DailyNewThread extends Report with Logging {
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport = {
     var fields = Seq[ReportRow]()
-    inject[DBConnection].readOnly { implicit session =>
+    inject[Database].readOnly { implicit session =>
       val conn = session.conn
       val st = conn.createStatement()
       val sql =

@@ -29,7 +29,7 @@ import com.keepit.common.analytics.ActivityStream
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
-class BookmarksController @Inject() (db: DBConnection, 
+class BookmarksController @Inject() (db: Database, 
   bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, socialRepo: UserWithSocialRepo, userRepo: UserRepo, urlPatternRepo: URLPatternRepo,
   scrapeRepo: ScrapeInfoRepo, domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo, urlRepo: URLRepo, socialUserInfoRepo: SocialUserInfoRepo,
   sliderRuleRepo: SliderRuleRepo, socialConnectionRepo: SocialConnectionRepo, commentReadRepo: CommentReadRepo, experimentRepo: UserExperimentRepo,
