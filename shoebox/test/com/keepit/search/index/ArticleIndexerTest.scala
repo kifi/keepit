@@ -32,6 +32,8 @@ import scala.Some
 import com.keepit.model.NormalizedURI
 import com.keepit.search.Lang
 import com.keepit.search.Article
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.util.Version
 
 @RunWith(classOf[JUnitRunner])
 class ArticleIndexerTest extends SpecificationWithJUnit with DbRepos {
@@ -39,7 +41,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit with DbRepos {
   val ramDir = new RAMDirectory
   val store = new FakeArticleStore()
   val uriIdArray = new Array[Long](3)
-  val parserFactory = new MainQueryParserFactory(new PhraseDetector(PhraseIndexer()))
+  val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()))
 
   def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
     Article(
