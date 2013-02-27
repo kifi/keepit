@@ -15,6 +15,7 @@ import play.api.libs.iteratee._
 import play.api.libs.concurrent._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.search.SearchConfigManager
 
 
 object AdminEventController extends FortyTwoController {
