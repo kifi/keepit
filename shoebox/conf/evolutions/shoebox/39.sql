@@ -28,6 +28,6 @@ CREATE TABLE search_config_experiment (
     INDEX search_config_experiment_state (state)
 );
 
-insert into evolutions (name, description) values('40.sql', 'adding search experiment tables');
+insert into evolutions (name, description) values('39.sql', 'adding search experiment tables');
 
 # --- !Downs
