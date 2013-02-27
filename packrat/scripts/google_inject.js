@@ -25,7 +25,7 @@ api.log("[google_inject]");
   // TODO: also detect result selection via keyboard
   $("#main").on("mousedown", "#search h3.r a", function logSearchEvent() {
     var href = this.href, $li = $(this).closest("li.g");
-    var $kifiRes = $("#kifi_reslist"), $kifiLi = $kifiRes.children("li.g");
+    var $kifiRes = $("#kifi-res-list"), $kifiLi = $kifiRes.children("li.g");
     var resIdx = $li.parent().children("li.g").index($li);
     var isKifi = $li[0].parentNode === $kifiRes[0];
 
@@ -100,7 +100,7 @@ api.log("[google_inject]");
       tKifiResultsReceived = +new Date;
       api.log("[results] response after", tKifiResultsReceived - t1, "ms:", resp);
 
-      $("#keepit").remove(); // remove any old results
+      $("#kifi-res").remove(); // remove any old results
       response = resp;
       clicks.kifi = clicks.google = 0;
 
@@ -205,6 +205,7 @@ api.log("[google_inject]");
     response.html = Mustache.to_html(resultsHtml, {
         results: hits,
         session: response.session,
+        endBgUrl: api.url("images/shade_above.png"),
         mayHaveMore: response.mayHaveMore},
       {google_hit: hitHtml});
 
@@ -218,12 +219,12 @@ api.log("[google_inject]");
       response.shown = true;
       tKifiResultsShown = +new Date;
     }
-    var $keepit = $(response.html)
-      .find(".kifi_more")[response.mayHaveMore ? "show" : "hide"]().end()
+    var $res = $(response.html)
+      .find(".kifi-more")[response.mayHaveMore ? "show" : "hide"]().end()
       .insertBefore(this);
     api.log("[insertResults] inserted");
-    $keepit.on("click", ".kifi_more_button", function onMoreClick() {
-      var numShown = $("#kifi_reslist").children("li.g").length;
+    $res.on("click", ".kifi-more", function onMoreClick() {
+      var numShown = $("#kifi-res-list").children("li.g").length;
       api.log("[onMoreClick] shown:", numShown, "on hand:", response.hits.length);
       if (response.hits.length > numShown) {
         renderMore(response.hits.slice(numShown));
@@ -231,13 +232,13 @@ api.log("[google_inject]");
       } else if (response.mayHaveMore) {
         showMoreOnArrival = true;
       } else {
-        $(this).closest(".kifi_more").hide(200);
+        $(this).closest(".kifi-more").hide(200);
       }
-    }).on("click", "#kifi_trusted", function() {
-      $("#kifi_reslist").toggle("fast");
+    }).on("click", "#kifi-trusted", function() {
+      $(this).nextAll().toggle("fast");
     });
     if (response.showScores) {
-      $("#kifi_trusted").prepend(
+      $("#kifi-trusted").prepend(
         '<a class=kifi-debug-results href="https://' + response.server + '/admin/search/results/' + response.uuid + '" target=_blank>debug</a>');
     }
   }
@@ -271,10 +272,10 @@ api.log("[google_inject]");
       hit.session = response.session;
       return Mustache.to_html(hitHtml, hit);
     }).join("");
-    var $list = $("#kifi_reslist");
+    var $list = $("#kifi-res-list");
     $(html).hide().insertAfter($list.children("li.g").last()).slideDown(200);
     if (!response.mayHaveMore) {
-      $list.find(".kifi_more").hide(200);
+      $list.find(".kifi-more").hide(200);
     }
   }
 

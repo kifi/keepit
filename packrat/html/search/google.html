@@ -1,19 +1,15 @@
-<ol id="keepit" class="kpt-results">
-  <li class="g keepit">
-    <div class="vsc">
-      <h3 class="r" id="kifi_trusted">Kifi Trusted Results</h3>
-    </div>
-    <!--n-->
-  </li>
-  <span id="kifi_reslist">
+<div id="kifi-res">
+  <h3 id="kifi-trusted" class="r">KiFi Trusted Results</h3>
+
+  <ol id="kifi-res-list">
   {{#results}}
     {{>google_hit}}
   {{/results}}
+  </ol>
 
+  <div class="kifi-end" style="background:url({{endBgUrl}}) center bottom no-repeat">
   {{#mayHaveMore}}
-    <div class="kifi_more">
-      <div class="kifi_more_button"></div>
-    </div>
+    <div class="kifi-more">More trusted results <span class="kifi-more-arrow">&raquo;</span></div>
   {{/mayHaveMore}}
-  </span>
-</ol>
+  </div>
+</div>
