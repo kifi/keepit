@@ -3,18 +3,18 @@
 # ~~~~
 
 # Home page
-GET     /                           com.keepit.controllers.HomeController.home
-GET     /upgrade                    com.keepit.controllers.HomeController.upgrade
+GET     /                           @com.keepit.controllers.HomeController.home
+GET     /upgrade                    @com.keepit.controllers.HomeController.upgrade
 
-POST    /bookmarks/add              com.keepit.controllers.BookmarksController.addBookmarks
-POST    /bookmarks/update           com.keepit.controllers.BookmarksController.updateBookmarks
-GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all
-GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
-POST    /bookmarks/rescrape         com.keepit.controllers.BookmarksController.rescrape
-POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
-GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(uri: String, ver: Option[String] ?= None)
-POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.remove()
-POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy()
+POST    /bookmarks/add              @com.keepit.controllers.BookmarksController.addBookmarks
+POST    /bookmarks/update           @com.keepit.controllers.BookmarksController.updateBookmarks
+GET     /bookmarks/all              @com.keepit.controllers.BookmarksController.all
+GET     /bookmarks/edit             @com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
+POST    /bookmarks/rescrape         @com.keepit.controllers.BookmarksController.rescrape
+POST    /bookmarks/delete           @com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
+GET     /bookmarks/check            @com.keepit.controllers.BookmarksController.checkIfExists(uri: String, ver: Option[String] ?= None)
+POST    /bookmarks/remove           @com.keepit.controllers.BookmarksController.remove()
+POST    /bookmarks/private          @com.keepit.controllers.BookmarksController.updatePrivacy()
 
 POST    /comments/add               com.keepit.controllers.CommentController.createComment()
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
@@ -61,7 +61,7 @@ GET     /admin/realtime/event/stream      com.keepit.controllers.admin.AdminEven
 GET     /admin/realtime/activity             com.keepit.controllers.admin.AdminEventController.activityViewer
 GET     /admin/realtime/activity/stream      com.keepit.controllers.admin.AdminEventController.activityStream
 
-GET     /admin/bookmarks/page/:page com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
+GET     /admin/bookmarks/page/:page @com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
 
 GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scrape/:state        com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
