@@ -23,11 +23,10 @@ case class DomainTag(
   def withState(state: State[DomainTag]) = this.copy(state = state)
 }
 
-sealed trait DomainTagName { def name: String }
-private final case class DomainTagNameImpl(name: String) extends DomainTagName
+class DomainTagName private (val name: String) extends AnyVal
 
 object DomainTagName {
-  def apply(name: String): DomainTagName = DomainTagNameImpl(name.toLowerCase.trim)
+  def apply(name: String): DomainTagName = DomainTagName(name.toLowerCase.trim)
   def unapply(dtn: DomainTagName): Option[String] = Some(dtn.name)
 
   private val blacklist = Seq(

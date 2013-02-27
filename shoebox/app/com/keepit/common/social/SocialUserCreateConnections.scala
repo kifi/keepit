@@ -37,17 +37,17 @@ class SocialUserCreateConnections() extends Logging {
         connectionRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get) match {
           case Some(c) => {
             if (c.state != SocialConnectionStates.ACTIVE) {
-              log.info("activate connection between %s and %s".format(c.socialUser1, c.socialUser2))
+              log.debug("activate connection between %s and %s".format(c.socialUser1, c.socialUser2))
               connectionRepo.save(c.withState(SocialConnectionStates.ACTIVE))
             }
             else
             {
-              log.info("connection between %s and %s is already active".format(c.socialUser1, c.socialUser2))
+              log.debug("connection between %s and %s is already active".format(c.socialUser1, c.socialUser2))
               c
             }
           }
           case None => {
-            log.info("a new connection was created  between %s and %s".format(socialUserInfo.id.get, sui.id.get))
+            log.debug("a new connection was created  between %s and %s".format(socialUserInfo.id.get, sui.id.get))
             connectionRepo.save(SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = sui.id.get))
           }
         }
@@ -62,8 +62,8 @@ class SocialUserCreateConnections() extends Logging {
       val connectionRepo = inject[SocialConnectionRepo]
 	    val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends map extractSocialId
 	    val existingSocialUserInfoIds = connectionRepo.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
-	    log.info("socialUserInfoForAllFriendsIds = %s".format(socialUserInfoForAllFriendsIds))
-	    log.info("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
+	    log.debug("socialUserInfoForAllFriendsIds = %s".format(socialUserInfoForAllFriendsIds))
+	    log.debug("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
 	    log.info("size of diff =%s".format((existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds).length))
 	    existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds  map {
 	      socialId => {

@@ -12,7 +12,6 @@ import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.net._
 import com.keepit.common.social._
-import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.graph.URIGraph
@@ -27,25 +26,33 @@ import scala.concurrent.duration._
 
 import com.keepit.common.analytics.ActivityStream
 
+import com.google.inject.{Inject, Singleton}
 
-object BookmarksController extends FortyTwoController {
+@Singleton
+class BookmarksController @Inject() (db: DBConnection, 
+  bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, socialRepo: UserWithSocialRepo, userRepo: UserRepo, urlPatternRepo: URLPatternRepo,
+  scrapeRepo: ScrapeInfoRepo, domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo, urlRepo: URLRepo, socialUserInfoRepo: SocialUserInfoRepo,
+  sliderRuleRepo: SliderRuleRepo, socialConnectionRepo: SocialConnectionRepo, commentReadRepo: CommentReadRepo, experimentRepo: UserExperimentRepo,
+  scraper: ScraperPlugin, uriGraphPlugin: URIGraphPlugin, healthcheck: HealthcheckPlugin,
+  classifier: DomainClassifier, historyTracker: SliderHistoryTracker, uriGraph: URIGraph, activityStream: ActivityStream) 
+    extends FortyTwoController {
 
   def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
-    inject[DBConnection].readOnly { implicit session =>
-      val bookmark = inject[BookmarkRepo].get(id)
-      val uri = inject[NormalizedURIRepo].get(bookmark.uriId)
-      val user = inject[UserWithSocialRepo].toUserWithSocial(inject[UserRepo].get(bookmark.userId))
-      val scrapeInfo = inject[ScrapeInfoRepo].getByUri(bookmark.uriId)
+    db.readOnly { implicit session =>
+      val bookmark = bookmarkRepo.get(id)
+      val uri = uriRepo.get(bookmark.uriId)
+      val user = socialRepo.toUserWithSocial(userRepo.get(bookmark.userId))
+      val scrapeInfo = scrapeRepo.getByUri(bookmark.uriId)
       Ok(views.html.bookmark(user, bookmark, uri, scrapeInfo))
     }
   }
 
   def rescrape = AuthenticatedJsonAction { request =>
     val id = Id[Bookmark]((request.body.asJson.get \ "id").as[Int])
-    inject[DBConnection].readOnly { implicit session =>
-      val bookmark = inject[BookmarkRepo].get(id)
-      val uri = inject[NormalizedURIRepo].get(bookmark.uriId)
-      Await.result(inject[ScraperPlugin].asyncScrape(uri), 1 minutes)
+    db.readOnly { implicit session =>
+      val bookmark = bookmarkRepo.get(id)
+      val uri = uriRepo.get(bookmark.uriId)
+      Await.result(scraper.asyncScrape(uri), 1 minutes)
       Ok(JsObject(Seq("status" -> JsString("ok"))))
     }
   }
@@ -55,24 +62,22 @@ object BookmarksController extends FortyTwoController {
     def toBoolean(str: String) = str.trim.toInt == 1
 
     def setIsPrivate(id: Id[Bookmark], isPrivate: Boolean)(implicit session: RWSession): Id[User] = {
-      val repo = inject[BookmarkRepo]
-      val bookmark = repo.get(id)
+      val bookmark = bookmarkRepo.get(id)
       log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate))
-      repo.save(bookmark.withPrivate(isPrivate))
+      bookmarkRepo.save(bookmark.withPrivate(isPrivate))
       log.info("updated bookmark %s".format(bookmark))
       bookmark.userId
     }
 
     def setIsActive(id: Id[Bookmark], isActive: Boolean)(implicit session: RWSession): Id[User] = {
-      val repo = inject[BookmarkRepo]
-      val bookmark = repo.get(id)
+      val bookmark = bookmarkRepo.get(id)
       log.info("updating bookmark %s with active = %s".format(bookmark, isActive))
-      repo.save(bookmark.withActive(isActive))
+      bookmarkRepo.save(bookmark.withActive(isActive))
       log.info("updated bookmark %s".format(bookmark))
       bookmark.userId
     }
 
-    val uniqueUsers = inject[DBConnection].readWrite { implicit s =>
+    val uniqueUsers = db.readWrite { implicit s =>
       val modifiedUserIds = request.body.asFormUrlEncoded.get map { case (key, values) =>
         key.split("_") match {
           case Array("private", id) => setIsPrivate(Id[Bookmark](id.toInt), toBoolean(values.last))
@@ -83,39 +88,33 @@ object BookmarksController extends FortyTwoController {
     }
     uniqueUsers foreach { userId =>
       log.info("updating user %s".format(userId))
-      inject[URIGraphPlugin].update(userId)
+      uriGraphPlugin.update(userId)
     }
     Redirect(request.request.referer)
   }
 
   //this is an admin only task!!!
   def delete(id: Id[Bookmark]) = AdminHtmlAction { request =>
-    inject[DBConnection].readWrite { implicit s =>
-      val repo = inject[BookmarkRepo]
-      val bookmark = repo.get(id)
-      repo.delete(id)
-      inject[URIGraphPlugin].update(bookmark.userId)
+    db.readWrite { implicit s =>
+      val bookmark = bookmarkRepo.get(id)
+      bookmarkRepo.delete(id)
+      uriGraphPlugin.update(bookmark.userId)
       Redirect(com.keepit.controllers.routes.BookmarksController.bookmarksView(0))
     }
   }
 
   def all = AdminHtmlAction { request =>
-    val bookmarks = inject[DBConnection].readOnly(implicit session => inject[BookmarkRepo].all)
+    val bookmarks = db.readOnly(implicit session => bookmarkRepo.all)
     Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
   }
 
   def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 200
-    val (count, bookmarksAndUsers) = inject[DBConnection].readOnly { implicit s =>
-      val userRepo = inject[UserRepo]
-      val bookmarkRepo = inject[BookmarkRepo]
-      val normalizedURIRepo = inject[NormalizedURIRepo]
-      val scrapeInfoRepo = inject[ScrapeInfoRepo]
+    val (count, bookmarksAndUsers) = db.readOnly { implicit s =>
       val bookmarks = bookmarkRepo.page(page, PAGE_SIZE)
-      val repo = inject[UserWithSocialRepo]
-      val users = bookmarks map (_.userId) map userRepo.get map repo.toUserWithSocial
-      val uris = bookmarks map (_.uriId) map normalizedURIRepo.get map (bookmarkRepo.uriStats)
-      val scrapes = bookmarks map (_.uriId) map scrapeInfoRepo.getByUri
+      val users = bookmarks map (_.userId) map userRepo.get map socialRepo.toUserWithSocial
+      val uris = bookmarks map (_.uriId) map uriRepo.get map (bookmarkRepo.uriStats)
+      val scrapes = bookmarks map (_.uriId) map scrapeRepo.getByUri
       val count = bookmarkRepo.count(s)
       (count, (users, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq)
     }
@@ -127,46 +126,45 @@ object BookmarksController extends FortyTwoController {
   def checkIfExists(uri: String, ver: Option[String]) = AuthenticatedJsonAction { request =>
     val userId = request.userId
     // TODO: Optimize by not checking sensitivity and keptByAnyFriends if kept by user.
-    val (uriId, bookmark, sensitive, neverOnSite, friendIds, ruleGroup, patterns, locator, shown) = inject[DBConnection].readOnly { implicit s =>
-      val nUri: Option[NormalizedURI] = inject[NormalizedURIRepo].getByNormalizedUrl(uri)
+    val (uriId, bookmark, sensitive, neverOnSite, friendIds, ruleGroup, patterns, locator, shown) = db.readOnly { implicit s =>
+      val nUri: Option[NormalizedURI] = uriRepo.getByNormalizedUrl(uri)
       val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
 
       val host: String = nUri.flatMap(_.domain).getOrElse(URI.parse(uri).get.host.get.name)
-      val domain: Option[Domain] = inject[DomainRepo].get(host)
+      val domain: Option[Domain] = domainRepo.get(host)
       val neverOnSite: Option[UserToDomain] = domain.flatMap { dom =>
-        inject[UserToDomainRepo].get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
+        userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
       }
-      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(inject[DomainClassifier].isSensitive(host).right.getOrElse(None))
+      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(classifier.isSensitive(host).right.getOrElse(None))
 
       val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
-        inject[BookmarkRepo].getByUriAndUser(uriId, userId)
+        bookmarkRepo.getByUriAndUser(uriId, userId)
       }
-      val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
+      val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
       val ruleGroup: Option[SliderRuleGroup] = ver.flatMap { v =>
-        val group = inject[SliderRuleRepo].getGroup("default")
+        val group = sliderRuleRepo.getGroup("default")
         if (v == group.version) None else Some(group)
       }
-      val patterns: Option[Seq[String]] = ruleGroup.map(_ => inject[URLPatternRepo].getActivePatterns)
+      val patterns: Option[Seq[String]] = ruleGroup.map(_ => urlPatternRepo.getActivePatterns)
 
       val locator: Option[DeepLocator] = uriId.flatMap { uriId =>
-        val repo = inject[CommentReadRepo]
-        val messages = repo.getParentsOfUnreadMessages(userId, uriId)
+        val messages = commentReadRepo.getParentsOfUnreadMessages(userId, uriId)
         messages.size match {
-          case 0 => if (repo.hasUnreadComments(userId, uriId)) Some(DeepLocator.ofCommentList) else None
+          case 0 => if (commentReadRepo.hasUnreadComments(userId, uriId)) Some(DeepLocator.ofCommentList) else None
           case 1 => Some(DeepLocator.ofMessageThread(messages.head))
           case _ => Some(DeepLocator.ofMessageThreadList)
         }
       }
 
       val shown: Option[Boolean] = if (locator.isDefined) None else uriId.map { uriId =>
-        inject[SliderHistoryTracker].getMultiHashFilter(userId).mayContain(uriId.id)
+        historyTracker.getMultiHashFilter(userId).mayContain(uriId.id)
       }
 
       (uriId, bookmark, sensitive, neverOnSite, friendIds, ruleGroup, patterns, locator, shown)
     }
 
     val keptByAnyFriends = uriId.map { uriId =>
-      val searcher = inject[URIGraph].getURIGraphSearcher
+      val searcher = uriGraph.getURIGraphSearcher
       searcher.intersectAny(
         searcher.getUserToUserEdgeSet(userId, friendIds),
         searcher.getUriToUserEdgeSet(uriId))
@@ -194,15 +192,14 @@ object BookmarksController extends FortyTwoController {
 
   def remove() = AuthenticatedJsonAction { request =>
     val url = (request.body.asJson.get \ "url").as[String]
-    val repo = inject[BookmarkRepo]
-    val bookmark = inject[DBConnection].readWrite { implicit s =>
-      inject[NormalizedURIRepo].getByNormalizedUrl(url).flatMap { uri =>
-        repo.getByUriAndUser(uri.id.get, request.userId).map { b =>
-          repo.save(b.withActive(false))
+    val bookmark = db.readWrite { implicit s =>
+      uriRepo.getByNormalizedUrl(url).flatMap { uri =>
+        bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).map { b =>
+          bookmarkRepo.save(b.withActive(false))
         }
       }
     }
-    inject[URIGraphPlugin].update(request.userId)
+    uriGraphPlugin.update(request.userId)
     bookmark match {
       case Some(bookmark) => Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
       case None => NotFound
@@ -211,11 +208,10 @@ object BookmarksController extends FortyTwoController {
 
   def updatePrivacy() = AuthenticatedJsonAction { request =>
     val (url, priv) = request.body.asJson.map{o => ((o \ "url").as[String], (o \ "private").as[Boolean])}.get
-    val repo = inject[BookmarkRepo]
-    inject[DBConnection].readWrite { implicit s =>
-      inject[NormalizedURIRepo].getByNormalizedUrl(url).flatMap { uri =>
-        repo.getByUriAndUser(uri.id.get, request.userId).filter(_.isPrivate != priv).map {b =>
-          repo.save(b.withPrivate(priv))
+    db.readWrite { implicit s =>
+      uriRepo.getByNormalizedUrl(url).flatMap { uri =>
+        bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).filter(_.isPrivate != priv).map {b =>
+          bookmarkRepo.save(b.withPrivate(priv))
         }
       }
     } match {
@@ -235,15 +231,15 @@ object BookmarksController extends FortyTwoController {
           case _ =>
             log.info("adding bookmarks of user %s".format(userId))
             val experiments = request.experimants
-            val user = inject[DBConnection].readOnly { implicit s => inject[UserRepo].get(userId) }
+            val user = db.readOnly { implicit s => userRepo.get(userId) }
             internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
-            inject[URIGraphPlugin].update(userId)
+            uriGraphPlugin.update(userId)
             Ok(JsObject(Seq()))
         }
       case None =>
-        val (user, experiments, installation) = inject[DBConnection].readOnly{ implicit session =>
-          (inject[UserRepo].get(userId),
-           inject[UserExperimentRepo].getByUser(userId) map (_.experimentType),
+        val (user, experiments, installation) = db.readOnly{ implicit session =>
+          (userRepo.get(userId),
+           experimentRepo.getByUser(userId) map (_.experimentType),
            installationId.map(_.id).getOrElse(""))
         }
         val msg = "Unsupported operation for user %s with old installation".format(userId)
@@ -252,7 +248,7 @@ object BookmarksController extends FortyTwoController {
         dispatch ({
            event.persistToS3().persistToMongo()
         }, { e =>
-          inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.API,
+          healthcheck.addError(HealthcheckError(error = Some(e), callType = Healthcheck.API,
               errorMessage = Some("Can't persist event %s".format(event))))
         })
         BadRequest(msg)
@@ -273,23 +269,21 @@ object BookmarksController extends FortyTwoController {
 
     if (!url.toLowerCase.startsWith("javascript:")) {
       log.debug("interning bookmark %s with title [%s]".format(json, title))
-      val (uri, isNewURI) = inject[DBConnection].readWrite { implicit s =>
-        inject[NormalizedURIRepo].getByNormalizedUrl(url) match {
+      val (uri, isNewURI) = db.readWrite { implicit s =>
+        uriRepo.getByNormalizedUrl(url) match {
           case Some(uri) => (uri, false)
           case None => (createNewURI(title, url), true)
         }
       }
-      if (isNewURI) inject[ScraperPlugin].asyncScrape(uri)
-      val repo = inject[BookmarkRepo]
-      val urlRepo = inject[URLRepo]
-      val bookmark = inject[DBConnection].readWrite { implicit s =>
-        repo.getByUriAndUser(uri.id.get, user.id.get) match {
+      if (isNewURI) scraper.asyncScrape(uri)
+      val bookmark = db.readWrite { implicit s =>
+        bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get) match {
           case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
-          case Some(bookmark) => Some(repo.save(bookmark.withActive(true).withPrivate(isPrivate)))
+          case Some(bookmark) => Some(bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate)))
           case None =>
             Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
             val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-            Some(repo.save(BookmarkFactory(uri, user.id.get, title, urlObj, source, isPrivate, installationId)))
+            Some(bookmarkRepo.save(BookmarkFactory(uri, user.id.get, title, urlObj, source, isPrivate, installationId)))
         }
       }
       if(bookmark.isDefined) addToActivityStream(user, bookmark.get)
@@ -301,11 +295,11 @@ object BookmarksController extends FortyTwoController {
   }
 
   private def createNewURI(title: String, url: String)(implicit session: RWSession) =
-    inject[NormalizedURIRepo].save(NormalizedURIFactory(title = title, url = url))
+    uriRepo.save(NormalizedURIFactory(title = title, url = url))
 
   private def addToActivityStream(user: User, bookmark: Bookmark) = {
-    val social = inject[DBConnection].readOnly { implicit session =>
-      inject[SocialUserInfoRepo].getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
+    val social = db.readOnly { implicit session =>
+      socialUserInfoRepo.getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
     }
 
     val json = Json.obj(
@@ -321,6 +315,6 @@ object BookmarksController extends FortyTwoController {
         "source" -> bookmark.source.value)
     )
 
-    inject[ActivityStream].streamActivity("bookmark", json)
+    activityStream.streamActivity("bookmark", json)
   }
 }

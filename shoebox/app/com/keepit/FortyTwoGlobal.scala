@@ -21,6 +21,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
 
   def injector: Injector
 
+  override def getControllerInstance[A](clazz: Class[A]) = injector.getInstance(clazz)
+
   override def beforeStart (app: Application): Unit = {
     val conf = app.configuration
     val appName = conf.getString("application.name").get
