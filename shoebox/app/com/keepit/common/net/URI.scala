@@ -50,7 +50,7 @@ object URI extends Logging {
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
   val encodedPercent = java.net.URLEncoder.encode("%", "UTF-8")
   val encodingMap = ":?#@$^()[]{}<>| ".map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
-  val encodeRe = """[@$^()\[\]{}<>| ]""".r
+  val symbolRe = """[@$^()\[\]{}<>| ]""".r
 
   def fixMalformedEscape(uriString: String) = {
     uriString.split("%", -1) match {
@@ -72,7 +72,7 @@ object URI extends Logging {
     s
   }
 
-  def encodeSymbols(uriString: String): String = encodeRe.replaceAllIn(uriString, m => encodingMap(m.group(0)(0)))
+  def encodeSymbols(uriString: String): String = symbolRe.replaceAllIn(uriString, m => encodingMap(m.group(0)(0)))
 
   def normalizeScheme(scheme: Option[String]) = scheme.map(_.toLowerCase)
 
