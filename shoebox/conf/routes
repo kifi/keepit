@@ -2,9 +2,26 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-# Home page
+##########################################
+# Website
+##########################################
+
 GET     /                           com.keepit.controllers.HomeController.home
 GET     /upgrade                    com.keepit.controllers.HomeController.upgrade
+
+GET     /login                      securesocial.controllers.LoginPage.login
+GET     /logout                     securesocial.controllers.LoginPage.logout
+
+GET     /signup                     securesocial.controllers.Registration.signUp
+POST    /signup                     securesocial.controllers.Registration.handleSignUp
+
+# OAuth provider entry points (e.g. "facebook")
+GET     /authenticate/:provider     securesocial.controllers.LoginPage.authenticate(provider)
+POST    /authenticate/:provider     securesocial.controllers.LoginPage.authenticateByPost(provider)
+
+##########################################
+# Extension API
+##########################################
 
 POST    /bookmarks/add              com.keepit.controllers.BookmarksController.addBookmarks
 POST    /bookmarks/update           com.keepit.controllers.BookmarksController.updateBookmarks
@@ -159,20 +176,3 @@ GET     /admin/labs/rankVsScore     com.keepit.controllers.SearchLabsController.
 GET     /admin/labs/rankVsScore.json com.keepit.controllers.SearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
 GET     /admin/labs/friendMap       com.keepit.controllers.SearchLabsController.friendMap(q: Option[String] ?= None)
 GET     /admin/labs/friendMap.json  com.keepit.controllers.SearchLabsController.friendMapJson(q: Option[String] ?= None)
-
-##########################################
-# Secure social routes
-##########################################
-
-# Login page
-GET     /login                      securesocial.controllers.LoginPage.login
-GET     /logout                     securesocial.controllers.LoginPage.logout
-
-# User Registration
-GET     /signup                     securesocial.controllers.Registration.signUp
-POST    /signup                     securesocial.controllers.Registration.handleSignUp
-
-# Providers entry points
-GET     /authenticate/:provider     securesocial.controllers.LoginPage.authenticate(provider)
-POST    /authenticate/:provider     securesocial.controllers.LoginPage.authenticateByPost(provider)
-
