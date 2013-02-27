@@ -45,6 +45,10 @@ case class MongoSelector(eventFamily: EventFamily) {
     q = q ++ ("metaData.metaData.%s".format(field) -> value)
     this
   }
+  def withMetaData[T](field: String, value: T)(implicit n: Numeric[T]) = {
+    q = q ++ ("metaData.metaData.%s".format(field) -> n.toDouble(value))
+    this
+  }
   def withDateRange(startDate: DateTime, endDate: DateTime) = {
     q = q ++ ("createdAt" $gte startDate $lte endDate)
     this

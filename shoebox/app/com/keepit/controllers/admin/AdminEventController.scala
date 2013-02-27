@@ -44,15 +44,19 @@ object AdminEventController extends FortyTwoController {
         "reportName" -> text
     )
 
-    val reportName = reportForm.bindFromRequest.get.toLowerCase match {
+    val reportGroup = reportForm.bindFromRequest.get.toLowerCase match {
       case "daily" => Reports.DailyReports
       case "admin" => Reports.DailyAdminReports
+      case "experiment" =>
+        val activeExperiments = inject[SearchConfigManager].activeExperiments
+        Reports.searchExperimentReports(activeExperiments)
       case unknown => throw new Exception("Unknown report: %s".format(unknown))
     }
 
     val rb = inject[ReportBuilderPlugin]
 
-    rb.buildReports(rb.defaultStartTime, rb.defaultEndTime, reportName)
+    rb.buildReports(rb.defaultStartTime, rb.defaultEndTime, reportGroup)
+
 
     Redirect(com.keepit.controllers.admin.routes.AdminEventController.reportList())
   }
