@@ -35,6 +35,9 @@ trait EventListenerPlugin extends Plugin {
 
 class EventHelper @Inject() (listeners: JSet[EventListenerPlugin]) {
   def newEvent(event: Event): Seq[String] = {
+
+    inject[EventStream].streamEvent(event)
+
     val events = listeners.filter(_.onEvent.isDefinedAt(event))
     events.map(_.onEvent(event))
     events.map(_.getClass.getSimpleName.replaceAll("\\$","")).toSeq
