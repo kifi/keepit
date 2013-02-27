@@ -30,6 +30,10 @@ import securesocial.core.java.SecureSocial.SecuredAction
 import com.keepit.common.social.ThreadInfo
 import com.keepit.common.healthcheck.BabysitterTimeout
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json._
+import com.keepit.common.time._
+import org.joda.time.DateTime
+import com.keepit.common.analytics.ActivityStream
 
 object CommentController extends FortyTwoController {
 
@@ -90,6 +94,8 @@ object CommentController extends FortyTwoController {
     }
 
     dispatch(notifyRecipients(comment), {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
+
+    addToActivityStream(comment)
 
     comment.permissions match {
       case CommentPermissions.PUBLIC =>
@@ -397,5 +403,34 @@ object CommentController extends FortyTwoController {
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(views.html.messages(uriAndUsers, page, count, pageCount))
+  }
+
+  private def addToActivityStream(comment: Comment) = {
+    val (user, social, uri) = inject[DBConnection].readOnly { implicit session =>
+      val user = inject[UserRepo].get(comment.userId)
+      val social = inject[SocialUserInfoRepo].getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
+      val uri = inject[NormalizedURIRepo].get(comment.uriId)
+
+      (user, social, uri)
+    }
+
+    val json = Json.obj(
+      "user" -> Json.obj(
+        "id" -> user.id.get.id,
+        "name" -> s"${user.firstName} ${user.lastName}",
+        "avatar" -> s"https://graph.facebook.com/${social}/picture?height=150&width=150"),
+      "comment" -> Json.obj(
+        "id" -> comment.id.get.id,
+        "text" -> comment.text.toString,
+        "title" -> comment.pageTitle,
+        "uri" -> uri.url)
+    )
+
+    val kind = comment.permissions match {
+      case CommentPermissions.PUBLIC => "comment"
+      case CommentPermissions.MESSAGE => "message"
+    }
+
+    inject[ActivityStream].streamActivity(kind, json)
   }
 }

@@ -7,6 +7,7 @@ import com.keepit.inject._
 import play.api.Play.current
 import play.api.Plugin
 import scala.collection.mutable
+import play.api.libs.json._
 
 @Singleton
 class CacheStatistics {
@@ -104,14 +105,13 @@ trait ObjectCache[K <: Key[T], T] {
   def deserialize(obj: Any): T
 
   def get(key: K): Option[T]
-  def set(key: K, value: T): Unit
+  def set(key: K, value: T): T
   def remove(key: K): Unit
 
   def getOrElse(key: K)(orElse: => T): T = {
     get(key).getOrElse {
       val value = orElse
       set(key, value)
-      value
     }
   }
 
@@ -121,8 +121,9 @@ trait ObjectCache[K <: Key[T], T] {
       case None =>
         val value = orElse
         if (value.isDefined)
-          set(key, value.get)
-        value
+          Some(set(key, value.get))
+        else
+          value
     }
   }
 }
@@ -137,9 +138,22 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     }
     objOpt
   }
-  def set(key: K, value: T) {
-    repo.set(key.toString, serialize(value), ttl.toSeconds.toInt)
+  def set(key: K, value: T): T = {
+    val properlyBoxed = serialize(value) match {
+      case x: java.lang.Byte => x.byteValue()
+      case x: java.lang.Short => x.shortValue()
+      case x: java.lang.Integer => x.intValue()
+      case x: java.lang.Long => x.longValue()
+      case x: java.lang.Float => x.floatValue()
+      case x: java.lang.Double => x.doubleValue()
+      case x: java.lang.Character => x.charValue()
+      case x: java.lang.Boolean => x.booleanValue()
+      case x: scala.Array[_] => x
+      case x: JsValue => Json.stringify(x)
+    }
+    repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
     inject[CacheStatistics].incrSets(key.getClass.getSimpleName)
+    value
   }
   def remove(key: K) { repo.remove(key.toString) }
 }
