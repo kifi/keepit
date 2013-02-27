@@ -117,11 +117,16 @@ object PhraseIndexer {
   def apply(indexDirectory: Directory, db: Database, phraseRepo: PhraseRepo): PhraseIndexer  = {
     val analyzer = DefaultAnalyzer.forIndexing
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
-    new PhraseIndexer(indexDirectory, db, phraseRepo, config)
+    new PhraseIndexerImpl(indexDirectory, db, phraseRepo, config)
   }
 }
 
-class PhraseIndexer(indexDirectory: Directory, db: Database, phraseRepo: PhraseRepo, indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase](indexDirectory, indexWriterConfig)  {
+abstract class PhraseIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase](indexDirectory, indexWriterConfig) {
+  def reload(): Unit
+  def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true): Unit
+}
+
+class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: PhraseRepo, indexWriterConfig: IndexWriterConfig) extends PhraseIndexer(indexDirectory, indexWriterConfig)  {
 
   def reload() {
     db.readOnly { implicit session =>
@@ -146,6 +151,7 @@ class PhraseIndexer(indexDirectory: Directory, db: Database, phraseRepo: PhraseR
   def buildIndexable(data: Phrase): Indexable[Phrase] = throw new UnsupportedOperationException
   def buildIndexable(id: Id[Phrase]): Indexable[Phrase] = throw new UnsupportedOperationException
 }
+
 
 class PhraseIndexable(override val id: Id[Phrase], phrase: String, lang: Lang) extends Indexable[Phrase] with PhraseFieldBuilder {
   override def buildDocument = {
