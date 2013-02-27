@@ -13,7 +13,7 @@ import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.common.db.slick._
 
-object HomeController extends FortyTwoController {
+class HomeController extends FortyTwoController {
 
   def home = Action{ request =>
     log.info("yet another homepage access!")
