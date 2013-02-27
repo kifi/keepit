@@ -29,7 +29,6 @@ import com.keepit.search.MainQueryParserFactory
 import com.keepit.search.phrasedetector._
 import com.keepit.inject._
 import scala.Some
-import com.keepit.search.index.Hit
 import com.keepit.model.NormalizedURI
 import com.keepit.search.Lang
 import com.keepit.search.Article
