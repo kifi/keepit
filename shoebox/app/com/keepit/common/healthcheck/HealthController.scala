@@ -2,7 +2,7 @@ package com.keepit.common.healthcheck
 
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.dateTimeToRichDateTime
+import com.keepit.common.time.RichDateTime
 import com.keepit.inject._
 import play.api.Play.current
 import play.api.mvc.Action
