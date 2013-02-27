@@ -60,12 +60,19 @@ object AdminEventController extends FortyTwoController {
     Ok(views.html.reports(availableReports))
   }
 
-  def realTimeViewer() = AdminHtmlAction { implicit request =>
+  def activityViewer() = AdminHtmlAction { implicit request =>
+    Ok(views.html.adminRTActivityViewer())
+  }
+
+  def activityStream() = WebSocket.async[JsValue] { implicit request  =>
+    inject[ActivityStream].newStream()
+  }
+
+  def eventViewer() = AdminHtmlAction { implicit request =>
     Ok(views.html.adminRTEventViewer())
   }
 
   def eventStream() = WebSocket.async[JsValue] { implicit request  =>
-
-    inject[ActivityStream].newStream()
+    inject[EventStream].newStream()
   }
 }

@@ -48,21 +48,17 @@ package object time {
     def compare(a: DateTime, b: DateTime) = a.compareTo(b)
   }
 
-  class DateTimeConverter(time: Long, zone: DateTimeZone) {
-    def toDateTime: DateTime = new DateTime(time, zone)
+  implicit class DateTimeConverter(val time: Long) extends AnyVal {
+    def toDateTime(implicit zone: DateTimeZone): DateTime = new DateTime(time, zone)
   }
 
-  implicit def dateToDateTimeConverter(date: java.util.Date)(implicit zone: DateTimeZone) =
-    new DateTimeConverter(date.getTime, zone)
+  implicit def dateToDateTimeConverter(date: java.util.Date) = new DateTimeConverter(date.getTime)
 
-  implicit def sqlDateToDateTimeConverter(date: java.sql.Date)(implicit zone: DateTimeZone) =
-    new DateTimeConverter(date.getTime, zone)
+  implicit def sqlDateToDateTimeConverter(date: java.sql.Date) = new DateTimeConverter(date.getTime)
 
-  implicit def sqlTimeToDateTimeConverter(time: java.sql.Time)(implicit zone: DateTimeZone) =
-    new DateTimeConverter(time.getTime, zone)
+  implicit def sqlTimeToDateTimeConverter(time: java.sql.Time) = new DateTimeConverter(time.getTime)
 
-  implicit def sqlTimestampToDateTimeConverter(timestamp: java.sql.Timestamp)(implicit zone: DateTimeZone) =
-    new DateTime(timestamp.getTime, zone)
+  implicit def sqlTimestampToDateTimeConverter(ts: java.sql.Timestamp) = new DateTimeConverter(ts.getTime)
 
   def parseStandardTime(timeString: String) = STANDARD_DATETIME_FORMAT.parseDateTime(timeString)
   def parseStandardDate(timeString: String) = STANDARD_DATE_FORMAT.parseLocalDate(timeString)
@@ -70,7 +66,7 @@ package object time {
   lazy val START_OF_TIME = parseStandardTime("0000-01-01 00:00:00.000 -0800")
   lazy val END_OF_TIME = parseStandardTime("9999-01-01 00:00:00.000 -0800")
 
-  class RichDateTime(date: DateTime) {
+  implicit class RichDateTime(val date: DateTime) extends AnyVal {
     def toLocalDateInZone(implicit zone: DateTimeZone): LocalDate = date.withZone(zone).toLocalDate
     def toLocalTimeInZone(implicit zone: DateTimeZone): LocalTime = date.withZone(zone).toLocalTime
     def toHttpHeaderString: String = HTTP_HEADER_DATETIME_FORMAT.print(date)
@@ -85,22 +81,16 @@ package object time {
 
     def isSameDay(ld: LocalDate)(implicit zone: DateTimeZone): Boolean = ld == date.withZone(zone).toLocalDate
 
-    lazy val format = HTTP_HEADER_DATETIME_FORMAT.print(date)
+    def format = HTTP_HEADER_DATETIME_FORMAT.print(date)
   }
 
-  implicit def dateTimeToRichDateTime(d: DateTime) = new RichDateTime(d)
-
-
-  class RichTimeZone(zone: DateTimeZone) {
+  implicit class RichTimeZone(val zone: DateTimeZone) extends AnyVal {
     def localDateFor(d: DateTime): LocalDate = d.withZone(zone).toLocalDate
     def localTimeFor(d: DateTime): LocalTime = d.withZone(zone).toLocalTime
   }
-  implicit def dateTimeZoneToRichTimeZone(zone: DateTimeZone) = new RichTimeZone(zone)
 
-
-  class RichLocalDate(ld: LocalDate) {
+  implicit class RichLocalDate(val ld: LocalDate) extends AnyVal {
     def isSameDay(d: DateTime)(implicit zone: DateTimeZone) = ld == d.withZone(zone).toLocalDate
     def toJson: JsString = JsString(STANDARD_DATE_FORMAT.print(ld))
   }
-  implicit def localDateToRichLocalDate(ld: LocalDate) = new RichLocalDate(ld)
 }
