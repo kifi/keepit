@@ -9,16 +9,19 @@
     </div>
   </div>
   <!--n-->
-  <div class="keep_social_bar">
+  <div class="kifi-who">
     {{#isMyBookmark}}
-      <a data-hover="tooltip" title="You! You look great!" class="name_tooltip_link" href="http://www.facebook.com/{{session.facebookId}}" target="_blank"><img class="keep_face self_profile_image {{^users}}self_profile_image_no_friends{{/users}}" src="{{session.avatarUrl}}" alt="You!"></a>
+      <a title="You! You look great!" href="http://www.facebook.com/{{session.facebookId}}" target="_blank">{{!
+      }}<img class="kifi-face kifi-self{{^users}} kifi-only{{/users}}" src="{{session.avatarUrl}}" alt="You!">{{!
+    }}</a>
     {{/isMyBookmark}}
     {{#users}}
-      <a data-hover="tooltip" title="{{firstName}} {{lastName}}" class="name_tooltip_link" href="http://www.facebook.com/{{facebookId}}" target="_blank"><img class="keep_face" src="https://graph.facebook.com/{{facebookId}}/picture?type=square" alt="{{firstName}} {{lastName}}"></a>
+      <a title="{{firstName}} {{lastName}}" href="http://www.facebook.com/{{facebookId}}" target="_blank">{{!
+      }}<img class="kifi-face" src="https://graph.facebook.com/{{facebookId}}/picture?type=square" alt="{{firstName}} {{lastName}}">{{!
+     }}</a>
     {{/users}}
-    <div class="social_bar_text">
-      <span class="social_bar_message_highlighted">{{{countText}}}</span>
-      <span class="social_bar_message"> kept this</span>
-    </div>
+    <span class="kifi-who-text-all">
+      <span class="kifi-who-text">{{{countText}}}</span> kept this
+    </span>
   </div>
 </li>
