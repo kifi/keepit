@@ -1,7 +1,7 @@
 package com.keepit.common.db.slick
 
+import scala.slick.session.{Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability}
 import scala.slick.driver._
-import scala.slick.session._
 import scala.slick.lifted._
 import scala.slick.SlickException
 import java.sql.{PreparedStatement, Connection, DatabaseMetaData, Statement}
@@ -12,13 +12,13 @@ import com.keepit.common.db.DbInfo
 trait DataBaseComponent {
   val Driver: ExtendedDriver
   def dbInfo: DbInfo
-  lazy val handle: Database = dbInfo.database
+  lazy val handle: SlickDatabase = dbInfo.database
 
   def sequenceID: Column[Int]
   def entityName(name: String): String = name
 }
 
-class DBConnection @Inject() (db: DataBaseComponent) {
+class Database @Inject() (db: DataBaseComponent) {
   import DBSession._
 
   def readOnly[T](f: ROSession => T): T = {

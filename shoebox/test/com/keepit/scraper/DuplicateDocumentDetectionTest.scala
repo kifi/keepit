@@ -32,7 +32,7 @@ class DuplicateDocumentDetectionTest extends SpecificationWithJUnit {
 
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
-        val documentSignatures2 = inject[DBConnection].readWrite { implicit s =>
+        val documentSignatures2 = inject[Database].readWrite { implicit s =>
           val nuri1 = uriRepo.save(NormalizedURIFactory("http://google.com/1"))
           val nuri2 = uriRepo.save(NormalizedURIFactory("http://google.com/2"))
           val nuri3 = uriRepo.save(NormalizedURIFactory("http://google.com/3"))

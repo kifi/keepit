@@ -23,7 +23,7 @@ class UnscrapableTest extends SpecificationWithJUnit with DbRepos {
 
         unscrapeCache.get(UnscrapableAllKey()).isDefined === false
 
-        inject[DBConnection].readWrite { implicit session =>
+        inject[Database].readWrite { implicit session =>
           unscrapableRepo.save(Unscrapable(pattern = "^https*://www\\.facebook\\.com/login.*$"))
           unscrapableRepo.save(Unscrapable(pattern = "^https*://.*.google.com.*/ServiceLogin.*$"))
 

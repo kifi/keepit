@@ -101,7 +101,7 @@ class SliderHistoryTracker(tableSize: Int, numHashFuncs: Int, minHits: Int) {
     val filter = getMultiHashFilter(userId)
     filter.put(uriId.id)
 
-    inject[DBConnection].readWrite { implicit session =>
+    inject[Database].readWrite { implicit session =>
       val sliderHistoryRepo = inject[SliderHistoryRepo]
       sliderHistoryRepo.save(sliderHistoryRepo.getByUserId(userId) match {
         case Some(bh) =>
@@ -114,7 +114,7 @@ class SliderHistoryTracker(tableSize: Int, numHashFuncs: Int, minHits: Int) {
 
   def getMultiHashFilter(userId: Id[User]) = {
     val sliderHistoryRepo = inject[SliderHistoryRepo]
-    inject[DBConnection].readOnly { implicit session =>
+    inject[Database].readOnly { implicit session =>
       sliderHistoryRepo.getByUserId(userId) match {
         case Some(sliderHistory) =>
           new MultiHashFilter(sliderHistory.tableSize, sliderHistory.filter, sliderHistory.numHashFuncs, sliderHistory.minHits)

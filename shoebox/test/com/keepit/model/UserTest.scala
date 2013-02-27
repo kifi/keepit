@@ -12,7 +12,7 @@ import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
 import com.keepit.common.cache.{FortyTwoCachePlugin, FortyTwoCache}
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.common.db._
 
 @RunWith(classOf[JUnitRunner])
@@ -25,7 +25,7 @@ class UserRepoTest extends SpecificationWithJUnit with DbRepos {
         val userRepo = inject[UserRepoImpl]
         userRepo.idCache.get(UserIdKey(Id[User](1))).isDefined === false
 
-        inject[DBConnection].readWrite { implicit session =>
+        inject[Database].readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
 
           userRepo.idCache.get(UserIdKey(Id[User](1))).get === user

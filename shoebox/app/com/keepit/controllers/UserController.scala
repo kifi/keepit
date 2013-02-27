@@ -28,7 +28,7 @@ object UserController extends FortyTwoController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
     val userId = request.userId
-    val (bookmark, following, socialUsers, numComments, numMessages, neverOnSite, sensitive) = inject[DBConnection].readOnly {implicit s =>
+    val (bookmark, following, socialUsers, numComments, numMessages, neverOnSite, sensitive) = inject[Database].readOnly {implicit s =>
       val nUri = inject[NormalizedURIRepo].getByNormalizedUrl(url)
       val host: String = nUri.flatMap(_.domain).getOrElse(URI.parse(url).get.host.get.name)
       val domain: Option[Domain] = inject[DomainRepo].get(host)
@@ -73,7 +73,7 @@ object UserController extends FortyTwoController {
     val json = request.body.asJson.get
     val host: String = URI.parse((json \ "url").as[String]).get.host.get.name
     val suppress: Boolean = (json \ "suppress").as[Boolean]
-    val utd = inject[DBConnection].readWrite {implicit s =>
+    val utd = inject[Database].readWrite {implicit s =>
       val domainRepo = inject[DomainRepo]
       val domain = domainRepo.get(host, excludeState = None) match {
         case Some(d) if d.isActive => d
@@ -94,7 +94,7 @@ object UserController extends FortyTwoController {
   }
 
   def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
-    val socialConnections = inject[DBConnection].readOnly {implicit s =>
+    val socialConnections = inject[Database].readOnly {implicit s =>
       val userRepo = inject[UserRepo]
       val basicUserRepo = inject[BasicUserRepo]
       inject[SocialConnectionRepo].getFortyTwoUserConnections(authRequest.userId).map(uid => basicUserRepo.load(userRepo.get(uid))).toSeq
@@ -106,7 +106,7 @@ object UserController extends FortyTwoController {
   }
 
   def getUser(id: Id[User]) = AdminJsonAction { request =>
-    val user = inject[DBConnection].readOnly { implicit s =>
+    val user = inject[Database].readOnly { implicit s =>
       val repo = inject[UserWithSocialRepo]
       repo.toUserWithSocial(inject[UserRepo].get(id))
     }
@@ -119,7 +119,7 @@ object UserController extends FortyTwoController {
   }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = inject[DBConnection].readOnly { implicit s =>
+    val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = inject[Database].readOnly { implicit s =>
       val userWithSocialRepo = inject[UserWithSocialRepo]
       val userRepo = inject[UserRepo]
       val socialUserInfoRepo = inject[SocialUserInfoRepo]
@@ -150,7 +150,7 @@ object UserController extends FortyTwoController {
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = inject[DBConnection].readOnly {implicit s =>
+    val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = inject[Database].readOnly {implicit s =>
       val userWithSocial = inject[UserWithSocialRepo].toUserWithSocial(inject[UserRepo].get(userId))
       val bookmarks = inject[BookmarkRepo].getByUser(userId)
       val normalizedURIRepo = inject[NormalizedURIRepo]
@@ -161,7 +161,7 @@ object UserController extends FortyTwoController {
       (userWithSocial, (bookmarks, uris).zipped.toList.seq, socialConnections, fortyTwoConnections, kifiInstallations)
     }
     // above needs slicking.
-    val historyUpdateCount = inject[DBConnection].readOnly { implicit session =>
+    val historyUpdateCount = inject[Database].readOnly { implicit session =>
       inject[BrowsingHistoryRepo].getByUserId(userId).map(_.updatesCount).getOrElse(0)
     }
 
@@ -182,7 +182,7 @@ object UserController extends FortyTwoController {
   }
 
   def usersView = AdminHtmlAction { implicit request =>
-    val users = inject[DBConnection].readOnly { implicit s =>
+    val users = inject[Database].readOnly { implicit s =>
       inject[UserRepo].all map userStatistics
     }
     Ok(views.html.users(users))
@@ -200,7 +200,7 @@ object UserController extends FortyTwoController {
       case _ => None
     }).flatten
 
-    inject[DBConnection].readWrite{ implicit session =>
+    inject[Database].readWrite{ implicit session =>
       val emailRepo = inject[EmailAddressRepo]
       val oldEmails = emailRepo.getByUser(userId).toSet
       val newEmails = (emailList map { address =>
@@ -225,7 +225,7 @@ object UserController extends FortyTwoController {
 
   def addExperiment(userId: Id[User], experimentType: String) = AdminJsonAction { request =>
     val repo = inject[UserExperimentRepo]
-    val experiments = inject[DBConnection].readWrite{ implicit session =>
+    val experiments = inject[Database].readWrite{ implicit session =>
       val existing = repo.getByUser(userId)
       val experiment = ExperimentTypes(experimentType)
       if (existing contains(experimentType)) throw new Exception("user %s already has an experiment %s".format(experimentType))
@@ -236,7 +236,7 @@ object UserController extends FortyTwoController {
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val socialUserInfos = inject[DBConnection].readOnly {implicit s =>
+    val socialUserInfos = inject[Database].readOnly {implicit s =>
       val user = inject[UserRepo].get(userId)
       inject[SocialUserInfoRepo].getByUser(user.id.get)
     }

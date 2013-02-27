@@ -57,7 +57,7 @@ object ChatController extends FortyTwoController {
     val message = parseMessage(request.body)
     log.info("will chat with user (externalId) %s, url is %s and message is %s".format(receipantExternalId, url, message))
 
-    val receipantSocialUserInfo = inject[DBConnection].readOnly { implicit s =>
+    val receipantSocialUserInfo = inject[Database].readOnly { implicit s =>
       val user = inject[UserRepo].get(receipantExternalId)
       val infos = inject[SocialUserInfoRepo].getByUser(user.id.get)
       //at this point we must have a single info per user

@@ -8,7 +8,7 @@ import play.api.Play.current
 import com.keepit.search.phrasedetector.{PhraseIndexer, PhraseImporter}
 import com.keepit.model.{PhraseStates, PhraseRepo, Phrase}
 import com.keepit.inject._
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.search.Lang
 import com.keepit.common.db._
 
@@ -18,7 +18,7 @@ object PhraseController extends FortyTwoController  {
 
   def displayPhrases(page: Int = 0) = AdminHtmlAction{ implicit request =>
     val phraseRepo = inject[PhraseRepo]
-    val (phrasesOpt, count) = inject[DBConnection].readOnly { implicit session =>
+    val (phrasesOpt, count) = inject[Database].readOnly { implicit session =>
       val count = phraseRepo.count
       val phrasesOpt = if(!PhraseImporter.isInProgress) {
         Some(phraseRepo.page(page, pageSize))
@@ -41,7 +41,7 @@ object PhraseController extends FortyTwoController  {
     val lang = body.get("lang").get
     val source = body.get("source").get
 
-    inject[DBConnection].readWrite { implicit session =>
+    inject[Database].readWrite { implicit session =>
       inject[PhraseRepo].save(Phrase(phrase = phrase, lang = Lang(lang), source = source))
     }
     Redirect(com.keepit.controllers.admin.routes.PhraseController.displayPhrases())
@@ -49,7 +49,7 @@ object PhraseController extends FortyTwoController  {
 
   def savePhrases = AdminHtmlAction { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
-    inject[DBConnection].readWrite { implicit session =>
+    inject[Database].readWrite { implicit session =>
       val repo = inject[PhraseRepo]
       for (key <- body.keys.filter(_.startsWith("phrase_")).map(_.substring(7))) {
         val id = Id[Phrase](key.toLong)

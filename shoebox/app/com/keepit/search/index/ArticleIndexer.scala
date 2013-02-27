@@ -47,7 +47,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
 
   def run(commitBatchSize: Int, fetchSize: Int): Int = {
     log.info("starting a new indexing round")
-    val db = inject[DBConnection]
+    val db = inject[Database]
     val repo = inject[NormalizedURIRepo]
     try {
       val uris = db.readOnly {implicit s =>
@@ -84,7 +84,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   }
 
   def buildIndexable(id: Id[NormalizedURI]) = {
-    val uri = inject[DBConnection].readOnly { implicit c => inject[NormalizedURIRepo].get(id) }
+    val uri = inject[Database].readOnly { implicit c => inject[NormalizedURIRepo].get(id) }
     buildIndexable(uri)
   }
 
