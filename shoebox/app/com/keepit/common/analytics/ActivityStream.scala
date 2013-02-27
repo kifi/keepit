@@ -33,7 +33,6 @@ class ActivityStream {
       case Connected(enumerator) =>
         // Since we're expecting no input from the client, just consume and discard the input
         val iteratee = Iteratee.foreach[JsValue]{ s => /* ignore for now */ }
-
         (iteratee, enumerator)
     }
   }
@@ -55,16 +54,15 @@ class ActivityStreamActor extends FortyTwoActor {
 
   def notifyAll(kind: String, json: JsObject) {
     val msg = Json.obj(
-        "kind" -> kind,
-        "time" -> inject[DateTime].toStandardTimeString,
-        "activity" -> json
+      "kind" -> kind,
+      "time" -> inject[DateTime].toStandardTimeString,
+      "activity" -> json
     )
     activityChannel.push(msg)
   }
 }
 
-trait ActivityStreamMessage
+private trait ActivityStreamMessage
 private case object NewStream extends ActivityStreamMessage
 private case class Connected(enumerator: Enumerator[JsValue]) extends ActivityStreamMessage
-private case class CannotConnect(errorMsg: String) extends ActivityStreamMessage
 private case class BroadcastActivity(kind: String, json: JsObject) extends ActivityStreamMessage
