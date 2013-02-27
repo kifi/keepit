@@ -6,8 +6,8 @@
 # Website
 ##########################################
 
-GET     /                           com.keepit.controllers.HomeController.home
-GET     /upgrade                    com.keepit.controllers.HomeController.upgrade
+GET     /                           @com.keepit.controllers.HomeController.home
+GET     /upgrade                    @com.keepit.controllers.HomeController.upgrade
 
 GET     /login                      securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
@@ -23,15 +23,15 @@ POST    /authenticate/:provider     securesocial.controllers.LoginPage.authentic
 # Extension API
 ##########################################
 
-POST    /bookmarks/add              com.keepit.controllers.BookmarksController.addBookmarks
-POST    /bookmarks/update           com.keepit.controllers.BookmarksController.updateBookmarks
-GET     /bookmarks/all              com.keepit.controllers.BookmarksController.all
-GET     /bookmarks/edit             com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
-POST    /bookmarks/rescrape         com.keepit.controllers.BookmarksController.rescrape
-POST    /bookmarks/delete           com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
-GET     /bookmarks/check            com.keepit.controllers.BookmarksController.checkIfExists(uri: String, ver: Option[String] ?= None)
-POST    /bookmarks/remove           com.keepit.controllers.BookmarksController.remove()
-POST    /bookmarks/private          com.keepit.controllers.BookmarksController.updatePrivacy()
+POST    /bookmarks/add              @com.keepit.controllers.BookmarksController.addBookmarks
+POST    /bookmarks/update           @com.keepit.controllers.BookmarksController.updateBookmarks
+GET     /bookmarks/all              @com.keepit.controllers.BookmarksController.all
+GET     /bookmarks/edit             @com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
+POST    /bookmarks/rescrape         @com.keepit.controllers.BookmarksController.rescrape
+POST    /bookmarks/delete           @com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
+GET     /bookmarks/check            @com.keepit.controllers.BookmarksController.checkIfExists(uri: String, ver: Option[String] ?= None)
+POST    /bookmarks/remove           @com.keepit.controllers.BookmarksController.remove()
+POST    /bookmarks/private          @com.keepit.controllers.BookmarksController.updatePrivacy()
 
 POST    /comments/add               com.keepit.controllers.CommentController.createComment()
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
