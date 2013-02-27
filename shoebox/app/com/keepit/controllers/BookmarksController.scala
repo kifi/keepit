@@ -25,6 +25,8 @@ import play.api.Play.current
 import play.api.libs.json._
 import scala.concurrent.duration._
 
+import com.keepit.common.analytics.ActivityStream
+
 
 object BookmarksController extends FortyTwoController {
 
@@ -280,7 +282,7 @@ object BookmarksController extends FortyTwoController {
       if (isNewURI) inject[ScraperPlugin].asyncScrape(uri)
       val repo = inject[BookmarkRepo]
       val urlRepo = inject[URLRepo]
-      inject[DBConnection].readWrite { implicit s =>
+      val bookmark = inject[DBConnection].readWrite { implicit s =>
         repo.getByUriAndUser(uri.id.get, user.id.get) match {
           case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
           case Some(bookmark) => Some(repo.save(bookmark.withActive(true).withPrivate(isPrivate)))
@@ -290,6 +292,9 @@ object BookmarksController extends FortyTwoController {
             Some(repo.save(BookmarkFactory(uri, user.id.get, title, urlObj, source, isPrivate, installationId)))
         }
       }
+      if(bookmark.isDefined) addToActivityStream(user, bookmark.get)
+
+      bookmark
     } else {
       None
     }
@@ -297,4 +302,25 @@ object BookmarksController extends FortyTwoController {
 
   private def createNewURI(title: String, url: String)(implicit session: RWSession) =
     inject[NormalizedURIRepo].save(NormalizedURIFactory(title = title, url = url))
+
+  private def addToActivityStream(user: User, bookmark: Bookmark) = {
+    val social = inject[DBConnection].readOnly { implicit session =>
+      inject[SocialUserInfoRepo].getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
+    }
+
+    val json = Json.obj(
+      "user" -> Json.obj(
+        "id" -> user.id.get.id,
+        "name" -> s"${user.firstName} ${user.lastName}",
+        "avatar" -> s"https://graph.facebook.com/${social}/picture?height=150&width=150"),
+      "bookmark" -> Json.obj(
+        "id" -> bookmark.id.get.id,
+        "isPrivate" -> bookmark.isPrivate,
+        "title" -> bookmark.title,
+        "uri" -> bookmark.url,
+        "source" -> bookmark.source.value)
+    )
+
+    inject[ActivityStream].streamActivity("bookmark", json)
+  }
 }

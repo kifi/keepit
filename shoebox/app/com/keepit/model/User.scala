@@ -43,7 +43,7 @@ case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
 }
 class UserExternalIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UserExternalIdKey, User] {
   val ttl = 24 hours
-  def deserialize(obj: Any): User = UserSerializer.userSerializer.reads(obj.asInstanceOf[JsObject]).get
+  def deserialize(obj: Any): User = UserSerializer.userSerializer.reads(Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsObject]).get
   def serialize(user: User) = UserSerializer.userSerializer.writes(user)
 }
 case class UserIdKey(id: Id[User]) extends Key[User] {
@@ -52,7 +52,7 @@ case class UserIdKey(id: Id[User]) extends Key[User] {
 }
 class UserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UserIdKey, User] {
   val ttl = 24 hours
-  def deserialize(obj: Any): User = UserSerializer.userSerializer.reads(obj.asInstanceOf[JsObject]).get
+  def deserialize(obj: Any): User = UserSerializer.userSerializer.reads(Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsObject]).get
   def serialize(user: User) = UserSerializer.userSerializer.writes(user)
 }
 
