@@ -112,12 +112,12 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
 
 
 object PhraseIndexer {
-  def apply(): PhraseIndexer = apply(new RAMDirectory)
+  def apply(db: DBConnection, phraseRepo: PhraseRepo): PhraseIndexer = apply(new RAMDirectory, db, phraseRepo)
 
-  def apply(indexDirectory: Directory): PhraseIndexer  = {
+  def apply(indexDirectory: Directory, db: DBConnection, phraseRepo: PhraseRepo): PhraseIndexer  = {
     val analyzer = DefaultAnalyzer.forIndexing
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
-    new PhraseIndexer(indexDirectory, inject[DBConnection], inject[PhraseRepo], config)
+    new PhraseIndexer(indexDirectory, db, phraseRepo, config)
   }
 }
 

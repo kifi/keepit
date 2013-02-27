@@ -31,7 +31,7 @@ import com.keepit.common.net.HttpClientImpl
 import com.keepit.common.social._
 import com.keepit.common.store.S3Bucket
 import com.keepit.inject._
-import com.keepit.model.{SliderHistoryTracker, NormalizedURI, SocialUserInfo}
+import com.keepit.model.{PhraseRepo, SliderHistoryTracker, NormalizedURI, SocialUserInfo}
 import com.keepit.scraper._
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
@@ -199,7 +199,7 @@ class DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def phraseIndexer: PhraseIndexer = {
+  def phraseIndexer(db: DBConnection, phraseRepo: PhraseRepo): PhraseIndexer = {
     val indexDir = current.configuration.getString("index.phrase.directory") match {
       case None =>
         new RAMDirectory()
@@ -217,7 +217,7 @@ class DevModule() extends ScalaModule with Logging {
       new File(configDir, "phrase")
     }
 
-    PhraseIndexer(indexDir)
+    PhraseIndexer(indexDir, db, phraseRepo)
   }
 
   @Provides
