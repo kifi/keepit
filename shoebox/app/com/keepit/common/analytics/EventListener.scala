@@ -98,3 +98,4 @@ class DeadQueryListener extends EventListenerPlugin {
       if (metaData \ "kifiClicked").asOpt[String].getOrElse("-1").toDouble.toInt == 0 =>
   }
 }
+

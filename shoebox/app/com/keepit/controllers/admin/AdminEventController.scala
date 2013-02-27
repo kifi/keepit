@@ -7,6 +7,7 @@ import com.keepit.inject._
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import com.keepit.common.controller.FortyTwoController
 import play.api.libs.json._
+import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
 import play.api.data._
 import play.api.data.Forms._
@@ -60,13 +61,6 @@ object AdminEventController extends FortyTwoController {
 
   def eventStream() = WebSocket.async[JsValue] { implicit request  =>
 
-    val in = Iteratee.foreach[JsValue](println).mapDone { _ =>
-      println("Disconnected")
-    }
-    
-    // Send a single 'Hello!' message
-    val out: Enumerator[JsValue] = Enumerator(Json.obj("message" -> "Hi!"))
-    
-    Future { (in, out) }
+    inject[ActivityStream].newStream()
   }
 }

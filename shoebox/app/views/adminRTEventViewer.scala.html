@@ -1,65 +1,66 @@
 @()(implicit request: RequestHeader)
 
 
-@admin("What's Happening on Kifi?", stylesheets = Nil) {
-<h3>URLs at which the Slider Should Not Slide In Automatically</h3>
+@admin("What's Happening on Kifi?", stylesheets = List("admin_activity")) {
 
-
+<table id="event_log" class="table activity-table">
+  <thead>
+    <tr>
+      <td>Time</td><td>Event</td><td>Body</td>
+    </tr>
+  </thead>
+  <tbody>
+    
+  </tbody>
+</table>
 
 <script type="text/javascript" charset="utf-8">
+  $(function() {
 
-    $(function() {
-        
-  var WS = window['MozWebSocket'] ? MozWebSocket : WebSocket
-        var chatSocket = new WS("@com.keepit.controllers.admin.routes.AdminEventController.eventStream.webSocketURL()")
-        
-        var sendMessage = function() {
-            chatSocket.send(JSON.stringify(
-                {text: $("#talk").val()}
-            ))
-            $("#talk").val('')
-        }
-        
-        var receiveEvent = function(event) {
-            var data = JSON.parse(event.data)
-            
-            // Handle errors
-            if(data.error) {
-                chatSocket.close()
-                $("#onError span").text(data.error)
-                $("#onError").show()
-                return
-            } else {
-                $("#onChat").show()
-            }
-            
-            // Create the message element
-            var el = $('<div class="message"><span></span><p></p></div>')
-            $("span", el).text(data.user)
-            $("p", el).text(data.message)
-            $(el).addClass(data.kind)
-            $('#messages').append(el)
-            
-            // Update the members list
-            $("#members").html('') 
-            $(data.members).each(function() {
-                $("#members").append('<li>' + this + '</li>')
-            })
-        }
-        
-        var handleReturnKey = function(e) {
-            if(e.charCode == 13 || e.keyCode == 13) {
-                e.preventDefault()
-                sendMessage()
-            } 
-        }
-        
-        $("#talk").keypress(handleReturnKey)  
-        
-        chatSocket.onmessage = receiveEvent
-        
-    })
+    var formatTime = function (dateStr) {
+      var date = new Date(dateStr)
+      var hours   = date.getHours()
+      var minutes = date.getMinutes()
+      var seconds = date.getSeconds()
 
+      if (hours   < 10) {hours   = "0"+hours;}
+      if (minutes < 10) {minutes = "0"+minutes;}
+      if (seconds < 10) {seconds = "0"+seconds;}
+      var time    = hours+':'+minutes+':'+seconds;
+      return time;
+    }
+      
+    var WS = window['MozWebSocket'] ? MozWebSocket : WebSocket
+    var eventSocket = new WS("@com.keepit.controllers.admin.routes.AdminEventController.eventStream.webSocketURL()")
+    
+    var receiveEvent = function(event) {
+      var data = JSON.parse(event.data)
+
+      var el = $('<tr><td class="time"></td><td class="kind"></td><td class="body"></td></tr>')
+
+      $("td.time", el).text(formatTime(data.time))
+
+      var kind = data.kind
+      $("td.kind", el).text(kind)
+
+      if(kind == "comment" || kind == "message") {
+        var user = data.activity.user
+        var comment = data.activity.comment
+
+        var person = '<div class="person"><a href="/admin/user/' + user.id + '"><img src="' + user.avatar + '">' + user.name + '</a></div>'
+        var link = '<a href="' + comment.uri + '">' + comment.title + '</a>'
+        var body = '<div class="comment">' + link + comment.text + '</div>'
+
+        var act = person + body
+        $("td.body", el).html(act)
+      }
+
+      $('#event_log').prepend(el)
+      
+    }
+    eventSocket.onmessage = receiveEvent
+      
+  });
 </script>
 
 }

@@ -150,7 +150,6 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       case x: java.lang.Boolean => x.booleanValue()
       case x: scala.Array[_] => x
       case x: JsValue => Json.stringify(x)
-      case x => x
     }
     repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
     inject[CacheStatistics].incrSets(key.getClass.getSimpleName)

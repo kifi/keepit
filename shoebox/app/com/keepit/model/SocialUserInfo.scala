@@ -59,7 +59,7 @@ case class SocialUserInfoUserKey(userId: Id[User]) extends Key[List[SocialUserIn
 }
 class SocialUserInfoUserCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[SocialUserInfoUserKey, List[SocialUserInfo]] {
   val ttl = 30 days
-  def deserialize(obj: Any): List[SocialUserInfo] = SocialUserInfoSerializer.socialUserInfoSerializer.readsSeq(Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsObject])
+  def deserialize(obj: Any): List[SocialUserInfo] = SocialUserInfoSerializer.socialUserInfoSerializer.readsSeq(Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsArray])
   def serialize(socialUsers: List[SocialUserInfo]) = SocialUserInfoSerializer.socialUserInfoSerializer.writesSeq(socialUsers)
 }
 
