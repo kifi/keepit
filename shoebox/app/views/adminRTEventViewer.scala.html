@@ -3,13 +3,13 @@
 
 @admin("What's Happening on Kifi?", stylesheets = List("admin_activity")) {
 
-<table id="event_log" class="table activity-table">
+<table class="table activity-table">
   <thead>
     <tr>
       <td>Time</td><td>Event</td><td>Body</td>
     </tr>
   </thead>
-  <tbody>
+  <tbody id="event_body">
     
   </tbody>
 </table>
@@ -36,45 +36,22 @@
     var receiveEvent = function(event) {
       var data = JSON.parse(event.data)
 
-      var el = $('<tr><td class="time"></td><td class="kind"></td><td class="body"></td></tr>')
+      var el = $('<tr><td class="time"></td><td class="event-family"></td><td class="event-name"></td><td class="body"></td></tr>')
 
       $("td.time", el).text(formatTime(data.time))
 
-      var kind = data.kind
-      $("td.kind", el).text(kind)
+      var family = data.family
+      var name = data.name
+      var user = data.user
 
-      if(kind == "comment" || kind == "message") {
-        var user = data.activity.user
-        var comment = data.activity.comment
+      $("td.event-family", el).text(family)
+      $("td.event-name", el).text(name)
 
-        var person = '<div class="person"><a href="/admin/user/' + user.id + '"><img src="' + user.avatar + '">' + user.name + '</a></div>'
-        var link = '<a href="' + comment.uri + '">' + comment.title + '</a>'
-        var body = '<div class="comment">' + link + comment.text + '</div>'
+      var person = '<div class="person"><a href="/admin/user/' + user.id + '"><img src="' + user.avatar + '">' + user.name + '</a></div>'
+      $("td.body", el).html(person)
 
-        var act = person + body
-        $("td.body", el).html(act)
-      } else if(kind == "bookmark") {
-        var user = data.activity.user
-        var bookmark = data.activity.bookmark
+      $('#event_body').prepend(el).children(":nth-child(n+25)").remove();
 
-        var person = '<div class="person"><a href="/admin/user/' + user.id + '"><img src="' + user.avatar + '">' + user.name + '</a></div>'
-        var labelClass = "";
-        if(bookmark.source == "HOVER_KEEP")
-          labelClass = " label-success"
-        else if(bookmark.source == "PLUGIN_START")
-          labelClass = " label-info"
-
-        var link = '<span class="label' + labelClass + '"><a href="/bookmarks/edit?id=' + bookmark.id + '">' + bookmark.source + '</a></span> <a href="' + bookmark.uri + '">' + bookmark.title + '</a>'
-        var isPriv = bookmark.isPrivate ? " (private)": ""
-        var body = '<div class="bookmark">' + link + isPriv + '</div>'
-
-        var act = person + body
-        $("td.body", el).html(act)
-      } else {
-        $("td.body", el).html("No formatter for " + kind + ": " + data.activity)
-      }
-
-      $('#event_log').prepend(el)
     }
     eventSocket.onmessage = receiveEvent
       
