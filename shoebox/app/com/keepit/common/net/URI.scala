@@ -5,12 +5,8 @@ import util.{Failure, Success, Try}
 
 object URI extends Logging {
   def parse(uriString: String): Try[URI] = {
-    uriString match {
-      case URI(scheme, userInfo, host, port, path, query, fragment) =>
-        Success(URI(Some(uriString), scheme, userInfo, host, port, path, query, fragment))
-      case _ =>
-        log.warn("Could not parse URL: %s".format(uriString))
-        Failure(new java.net.URISyntaxException(uriString, null))
+    unapplyTry(uriString).map { case (scheme, userInfo, host, port, path, query, fragment) =>
+      URI(Some(uriString), scheme, userInfo, host, port, path, query, fragment)
     }
   }
 
@@ -26,25 +22,24 @@ object URI extends Logging {
     Some((uri.scheme, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment))
   }
   def unapply(uriString: String): Option[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] = {
-    try {
-      val uri = try {
-        new java.net.URI(uriString).normalize()
-      } catch {
-        case e: java.net.URISyntaxException =>
-        val fixedUriString = encodeExtraDelimiters(encodeSymbols(fixMalformedEscape(uriString)))
-        new java.net.URI(fixedUriString).normalize()
-      }
-      val scheme = normalizeScheme(Option(uri.getScheme))
-      val userInfo = Option(uri.getUserInfo)
-      val host = normalizeHost(Option(uri.getHost))
-      val port = normalizePort(scheme, uri.getPort)
-      val path = normalizePath(Option(uri.getPath))
-      val query = normalizeQuery(Option(uri.getRawQuery))
-      val fragment = normalizeFragment(Option(uri.getRawFragment))
-      Some((scheme, userInfo, host, port, path, query, fragment))
+    unapplyTry(uriString).toOption
+  }
+  def unapplyTry(uriString: String): Try[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] = Try {
+    val uri = try {
+      new java.net.URI(uriString).normalize()
     } catch {
-      case _: Throwable => None
+      case e: java.net.URISyntaxException =>
+      val fixedUriString = encodeExtraDelimiters(encodeSymbols(fixMalformedEscape(uriString)))
+      new java.net.URI(fixedUriString).normalize()
     }
+    val scheme = normalizeScheme(Option(uri.getScheme))
+    val userInfo = Option(uri.getUserInfo)
+    val host = normalizeHost(Option(uri.getHost))
+    val port = normalizePort(scheme, uri.getPort)
+    val path = normalizePath(Option(uri.getPath))
+    val query = normalizeQuery(Option(uri.getRawQuery))
+    val fragment = normalizeFragment(Option(uri.getRawFragment))
+    (scheme, userInfo, host, port, path, query, fragment)
   }
 
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
