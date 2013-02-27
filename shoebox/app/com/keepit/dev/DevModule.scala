@@ -1,6 +1,10 @@
 package com.keepit.dev
 
 import akka.actor.ActorSystem
+import scala.collection.mutable.HashMap
+import org.apache.lucene.store.Directory
+import org.apache.lucene.store.MMapDirectory
+import org.apache.lucene.store.RAMDirectory
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3._
 import com.google.common.io.Files
@@ -39,7 +43,10 @@ import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexerPluginImpl
 import com.keepit.search.phrasedetector.PhraseIndexer
+import com.keepit.search._
 import com.mongodb.casbah.MongoConnection
+import com.keepit.search.Article
+import com.keepit.search.ArticleStore
 import com.tzavellas.sse.guice.ScalaModule
 import java.io.File
 import java.net.InetAddress
@@ -47,6 +54,24 @@ import org.apache.lucene.store.MMapDirectory
 import org.apache.lucene.store.RAMDirectory
 import play.api.Play.current
 import scala.collection.mutable.HashMap
+import com.keepit.common.mail.PostOffice
+import java.net.InetAddress
+import com.keepit.common.analytics.S3EventStoreImpl
+import com.keepit.common.analytics.S3EventStore
+import com.keepit.common.analytics.Event
+import com.keepit.common.analytics.MongoEventStore
+import com.keepit.common.analytics.FakeMongoEventStoreImpl
+import com.keepit.common.analytics.MongoEventStoreImpl
+import com.mongodb.casbah.MongoConnection
+import com.keepit.common.analytics._
+import com.keepit.common.analytics.reports._
+import com.google.inject.multibindings._
+import com.keepit.common.analytics._
+import com.keepit.common.cache._
+import com.keepit.classify.DomainTagImportSettings
+import com.google.common.io.Files
+import org.apache.http.HttpHost
+
 
 class DevModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -192,7 +217,7 @@ class DevModule() extends ScalaModule with Logging {
       new File(configDir, "phrase")
     }
 
-    PhraseIndexer(indexDir, dataDir)
+    PhraseIndexer(indexDir)
   }
 
   @Provides
@@ -212,11 +237,23 @@ class DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def httpFetcher: HttpFetcher = new HttpFetcherImpl(
-    userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17",
-    connectionTimeout = 30000,
-    soTimeOut = 30000
-  )
+  def httpFetcher: HttpFetcher = {
+    val proxyHttpHost = current.configuration.getConfig("proxy") match {
+      case Some(proxyConf) if proxyConf.getString("host").isDefined =>
+        val proxyHost = proxyConf.getString("host").get
+        val proxyPort = proxyConf.getInt("port").getOrElse(8080)
+        val proxyProtocol = proxyConf.getString("protocol").getOrElse("http")
+        Some(new HttpHost(proxyHost, proxyPort, proxyProtocol))
+      case _ => None
+    }
+
+    new HttpFetcherImpl(
+      userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17",
+      connectionTimeout = 30000,
+      soTimeOut = 30000,
+      proxyHttpHost = proxyHttpHost
+    )
+  }
 
   @Singleton
   @Provides

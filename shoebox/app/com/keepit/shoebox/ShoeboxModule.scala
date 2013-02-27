@@ -1,6 +1,8 @@
 package com.keepit.shoebox
 
 import akka.actor.ActorSystem
+import java.net.InetAddress
+import org.apache.lucene.store.MMapDirectory
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3Client
@@ -16,6 +18,7 @@ import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListene
 import com.keepit.common.cache._
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.HealthcheckPluginImpl
 import com.keepit.common.logging.Logging
@@ -42,11 +45,29 @@ import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexerPluginImpl
 import com.keepit.search.phrasedetector.PhraseIndexer
 import com.mongodb.casbah.MongoConnection
+import com.keepit.search.ArticleStore
+import com.keepit.search.S3ArticleSearchResultStoreImpl
+import com.keepit.search.S3ArticleStoreImpl
+import com.keepit.search.SearchConfigManager
+import com.keepit.search.ResultClickTracker
+import com.keepit.search.BrowsingHistoryTracker
+import com.keepit.search.ClickHistoryTracker
 import com.tzavellas.sse.guice.ScalaModule
 import java.io.File
 import java.net.InetAddress
 import org.apache.lucene.store.MMapDirectory
 import play.api.Play.current
+import com.mongodb.casbah.MongoConnection
+import com.keepit.common.analytics._
+import com.keepit.common.analytics.reports._
+import com.google.inject.multibindings.Multibinder
+import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
+import com.keepit.common.cache._
+import com.keepit.classify.DomainTagImportSettings
+import com.google.common.io.Files
+import com.keepit.model.SliderHistoryTracker
+import org.apache.http.HttpHost
+
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
@@ -166,7 +187,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
       val configDir = new File(path).getCanonicalFile()
       new File(configDir, "phrase")
     }
-    PhraseIndexer(new MMapDirectory(dir), dataDir)
+    PhraseIndexer(new MMapDirectory(dir))
   }
 
 
@@ -190,11 +211,23 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def httpFetcher: HttpFetcher = new HttpFetcherImpl(
-    userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17",
-    connectionTimeout = 30000,
-    soTimeOut = 30000
-  )
+  def httpFetcher: HttpFetcher = {
+    val proxyHttpHost = current.configuration.getConfig("proxy") match {
+      case Some(proxyConf) if proxyConf.getString("host").isDefined =>
+        val proxyHost = proxyConf.getString("host").get
+        val proxyPort = proxyConf.getInt("port").getOrElse(8080)
+        val proxyProtocol = proxyConf.getString("protocol").getOrElse("http")
+        Some(new HttpHost(proxyHost, proxyPort, proxyProtocol))
+      case None => None
+    }
+
+    new HttpFetcherImpl(
+      userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17",
+      connectionTimeout = 30000,
+      soTimeOut = 30000,
+      proxyHttpHost = proxyHttpHost
+    )
+  }
 
   @Singleton
   @Provides
