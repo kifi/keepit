@@ -5,12 +5,8 @@ import util.{Failure, Success, Try}
 
 object URI extends Logging {
   def parse(uriString: String): Try[URI] = {
-    uriString match {
-      case URI(scheme, userInfo, host, port, path, query, fragment) =>
-        Success(URI(Some(uriString), scheme, userInfo, host, port, path, query, fragment))
-      case _ =>
-        log.warn("Could not parse URL: %s".format(uriString))
-        Failure(new java.net.URISyntaxException(uriString, null))
+    unapplyTry(uriString).map { case (scheme, userInfo, host, port, path, query, fragment) =>
+      URI(Some(uriString), scheme, userInfo, host, port, path, query, fragment)
     }
   }
 
@@ -26,50 +22,52 @@ object URI extends Logging {
     Some((uri.scheme, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment))
   }
   def unapply(uriString: String): Option[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] = {
-    try {
-      val uri = try {
-        // preprocess illegal chars
-        val preprocessed = uriString.replace(" ", "%20").replace("|", "%7C")
-        new java.net.URI(preprocessed).normalize()
-      } catch {
-        case e: java.net.URISyntaxException =>
-        // there may be malformed escape
-        val fixedUriString = fixDoubleHash(encodeSymbols(fixMalformedEscape(uriString)))
-        new java.net.URI(fixedUriString).normalize()
-      }
-      val scheme = normalizeScheme(Option(uri.getScheme))
-      val userInfo = Option(uri.getUserInfo)
-      val host = normalizeHost(Option(uri.getHost))
-      val port = normalizePort(scheme, uri.getPort)
-      val path = normalizePath(Option(uri.getPath))
-      val query = normalizeQuery(Option(uri.getRawQuery))
-      val fragment = normalizeFragment(Option(uri.getRawFragment))
-      Some((scheme, userInfo, host, port, path, query, fragment))
+    unapplyTry(uriString).toOption
+  }
+  def unapplyTry(uriString: String): Try[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] = Try {
+    val uri = try {
+      new java.net.URI(uriString).normalize()
     } catch {
-      case _: Throwable => None
+      case e: java.net.URISyntaxException =>
+      val fixedUriString = encodeExtraDelimiters(encodeSymbols(fixMalformedEscape(uriString)))
+      new java.net.URI(fixedUriString).normalize()
     }
+    val scheme = normalizeScheme(Option(uri.getScheme))
+    val userInfo = Option(uri.getUserInfo)
+    val host = normalizeHost(Option(uri.getHost))
+    val port = normalizePort(scheme, uri.getPort)
+    val path = normalizePath(Option(uri.getPath))
+    val query = normalizeQuery(Option(uri.getRawQuery))
+    val fragment = normalizeFragment(Option(uri.getRawFragment))
+    (scheme, userInfo, host, port, path, query, fragment)
   }
 
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
   val encodedPercent = java.net.URLEncoder.encode("%", "UTF-8")
-  val encodedHash = java.net.URLEncoder.encode("#", "UTF-8")
+  val encodingMap = ":?#@$^()[]{}<>| ".map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
+  val symbolRe = """[@$^()\[\]{}<>| ]""".r
 
   def fixMalformedEscape(uriString: String) = {
     uriString.split("%", -1) match {
       case Array(first, rest @ _*) =>
-        rest.foldLeft(first){ (str, piece) => str + twoHexDigits.findPrefixOf(piece).map(_ => "%").getOrElse(encodedPercent) + piece }
+        rest.foldLeft(first) { (str, piece) =>
+          str + twoHexDigits.findPrefixOf(piece).map(_ => "%").getOrElse(encodedPercent) + piece
+        }
     }
   }
 
-  def fixDoubleHash(uriString: String): String = {
-    uriString.split("\\#",-1) match {
-      case Array(first, rest @ _*) =>
-        first + "#" + rest.mkString(encodedHash)
+  def encodeExtraDelimiters(uriString: String): String = {
+    var s = uriString
+    ":?#".foreach { c =>
+      val (i, j) = (s.indexOf(c), s.lastIndexOf(c))
+      if (j > i) {
+        s = s.substring(0, i + 1) + s.substring(i + 1).replace(c.toString, encodingMap(c))
+      }
     }
+    s
   }
 
-  val charToEncoded = "@$^()[]{}|".map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
-  def encodeSymbols(uriString: String): String = uriString.map(c => charToEncoded.getOrElse(c, c.toString)).mkString
+  def encodeSymbols(uriString: String): String = symbolRe.replaceAllIn(uriString, m => encodingMap(m.group(0)(0)))
 
   def normalizeScheme(scheme: Option[String]) = scheme.map(_.toLowerCase)
 
@@ -207,11 +205,7 @@ class Query(val params: Seq[Param]) {
   def containsParam(name: String) = params.exists(_.name == name)
 }
 
-object Param {
-  def apply(name:String, value:Option[String]) = new Param(name, value)
-  def unapply(param: Param): Option[(String, Option[String])] = Some((param.name, param.value))
-}
-class Param(val name: String, val value: Option[String]) {
+case class Param(val name: String, val value: Option[String]) {
   override def toString() = {
     if (value.isDefined) (name + "=" + value.get) else name
   }

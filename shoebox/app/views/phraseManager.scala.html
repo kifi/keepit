@@ -1,0 +1,86 @@
+@(phrasesOpt: Option[Seq[Phrase]], page: Int, count: Int, numPages: Int)
+
+@pagination(page: Int, pageCount: Int) = {
+  <div class="pagination pagination-centered pagination-mini">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases(page - 1)">
+        } else {
+         <a href="#">
+        }
+        Prev
+        </a>
+      </li>
+      @for(i <- 0 to (pageCount - 1)) {
+        @if(i == page) {
+          <li class="disabled">
+            <a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases(i)">@{i + 1}</a>
+          </li>
+        } else {
+          <li class="active">
+            <a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases(i)">@{i + 1}</a>
+          </li>
+        }
+      }
+      <li>
+        @if(count > 0) {
+          <a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases(page + 1)">
+        } else {
+         <a href="#">
+        }
+        Next
+        </a>
+      </li>
+    </ul>
+  </div>
+}
+
+@admin("Phrases") {
+  <h3>Phrases Used in Searching and Classification</h3>
+
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.PhraseController.addPhrase" method="POST">
+    <label>Phrase: </label>
+    <input type="text" name="phrase" placeholder="Phrase">
+    <label>Language: </label>
+    <input type="text" name="lang" value="en">
+    <label>Source: </label>
+    <input type="text" name="source" value="manual">
+    <button type="submit" class="btn btn-primary">Add</button>
+  </form>
+
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.PhraseController.refreshPhrases" method="POST">
+    <button type="submit" class="btn">Sync Lucene</button>
+  </form>
+  
+  @pagination(page, numPages)
+
+  @if(phrasesOpt.isDefined) {
+  <form action="@com.keepit.controllers.admin.routes.PhraseController.savePhrases" method="POST">
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>
+          <th>Phrase
+          <th>Language
+          <th>Source
+          <th>Added Date
+      </thead>
+      @for(phrase <- phrasesOpt.get) {
+      <tr>
+        <td><input type="checkbox" class="checkbox" name="active_@phrase.id.get" @if(phrase.isActive) {checked}><input type="hidden" name="phrase_@phrase.id.get" value="@phrase.id.get">
+        <td>@phrase.phrase
+        <td>@phrase.lang.lang
+        <td>@phrase.source
+        <td>@adminHelper.dateTimeDisplay(phrase.createdAt)
+      }
+    </table>
+    <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
+    <button type="reset" class="btn">Clear unsaved changes</button>
+  </form>
+  }
+<script>
+$(function() { $("form").submit(function() { $(this).find("button[type=submit]").button("loading"); }); });
+</script>
+
+}

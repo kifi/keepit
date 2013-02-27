@@ -7,11 +7,7 @@ import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.entity.GzipDecompressingEntity
 import org.apache.http.client.params.ClientPNames
 import org.apache.http.HttpHeaders.{CONTENT_TYPE, IF_MODIFIED_SINCE, LOCATION}
-import org.apache.http.HttpRequest
-import org.apache.http.HttpRequestInterceptor
-import org.apache.http.HttpResponse
-import org.apache.http.HttpResponseInterceptor
-import org.apache.http.HttpStatus
+import org.apache.http._
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.impl.conn.PoolingClientConnectionManager
 import org.apache.http.params.HttpParams
@@ -24,13 +20,14 @@ import org.apache.http.util.EntityUtils
 import java.io.{InputStream, IOException}
 import java.net.URL
 import scala.util.Try
+import org.apache.http.conn.params.ConnRoutePNames
 
 trait HttpFetcher {
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, useProxy: Boolean)(f: HttpInputStream => Unit): HttpFetchStatus
   def close()
 }
 
-class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int) extends HttpFetcher with Logging {
+class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int, proxyHttpHost: Option[HttpHost] = None) extends HttpFetcher with Logging {
   val cm = new PoolingClientConnectionManager
   cm.setMaxTotal(100)
 
@@ -40,17 +37,25 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int)
   HttpProtocolParams.setUserAgent(httpParams, userAgent)
   val httpClient = new DefaultHttpClient(cm, httpParams)
 
+  val proxyHttpClient = new DefaultHttpClient(cm, httpParams)
+  if(proxyHttpHost.isDefined)
+    proxyHttpClient.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, proxyHttpHost.get)
+
   // track redirects
-  httpClient.addResponseInterceptor(new HttpResponseInterceptor() {
+  val interceptor = new HttpResponseInterceptor() {
     override def process(response: HttpResponse, context: HttpContext) {
       if (response.containsHeader(LOCATION)) {
         val locations = response.getHeaders(LOCATION)
         if (locations.length > 0) context.setAttribute("scraper_destination_url", locations(0).getValue())
       }
     }
-  })
+  }
+  httpClient.addResponseInterceptor(interceptor)
+  proxyHttpClient.addResponseInterceptor(interceptor)
 
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, useProxy: Boolean)(f: HttpInputStream => Unit): HttpFetchStatus = {
+
+
     val httpGet = new HttpGet(url)
 
     ifModifiedSince.foreach{ ifModifiedSince =>
@@ -60,7 +65,9 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int)
     log.info("executing request " + httpGet.getURI())
 
     val httpContext = new BasicHttpContext()
-    val response = httpClient.execute(httpGet, httpContext)
+    val client = if(useProxy) proxyHttpClient else httpClient
+
+    val response = client.execute(httpGet, httpContext)
     log.info(response.getStatusLine.toString)
 
     val statusCode = response.getStatusLine.getStatusCode
@@ -119,6 +126,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int)
     // shut down the connection manager to ensure
     // immediate deallocation of all system resources
     httpClient.getConnectionManager().shutdown()
+    proxyHttpClient.getConnectionManager().shutdown()
   }
 }
 

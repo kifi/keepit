@@ -18,7 +18,7 @@ import org.apache.lucene.search.Explanation
 class MainSearcher(
     userId: Id[User],
     friendIds: Set[Id[User]],
-    filterOut: Set[Long],
+    filter: SearchFilter,
     config: SearchConfig,
     articleSearcher: Searcher,
     val uriGraphSearcher: URIGraphSearcher,
@@ -28,7 +28,8 @@ class MainSearcher(
     clickHistoryTracker: ClickHistoryTracker
 ) extends Logging {
   val currentTime = currentDateTime.getMillis()
-  val isInitialSearch = filterOut.isEmpty
+  val idFilter = filter.idFilter
+  val isInitialSearch = idFilter.isEmpty
 
   // get config params
   val minMyBookmarks = config.asInt("minMyBookmarks")
@@ -57,8 +58,11 @@ class MainSearcher(
   val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
   val myUris = myUriEdges.destIdLongSet
   val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
-  val friendlyUris = friendIds.foldLeft(myUris){ (s, f) => s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet }
-
+  val friendlyUris = {
+    var uris = if (filter.includeMine) myUris else Set.empty[Long]
+    filter.filterFriends(friendIds).foldLeft(uris){ (s, f) => s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet }
+  }
+  
   def getPersonalizedSearcher(query: Query) = {
     val indexReader = uriGraphSearcher.openPersonalIndex(userId, query) match {
       case Some((personalReader, personalIdMapper)) =>
@@ -73,20 +77,20 @@ class MainSearcher(
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
-
+    
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
     parser.parseQuery(queryString).map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
-      var personalizedSearcher = getPersonalizedSearcher(articleQuery)
+      val personalizedSearcher = getPersonalizedSearcher(articleQuery)
       personalizedSearcher.setSimilarity(similarity)
       personalizedSearcher.doSearch(articleQuery){ (scorer, mapper) =>
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
           val id = mapper.getId(doc)
-          if (!filterOut.contains(id)) {
+          if (!idFilter.contains(id)) {
             val clickBoost = clickBoosts(id)
             val score = scorer.score()
             if (friendlyUris.contains(id)) {
@@ -107,7 +111,7 @@ class MainSearcher(
     (myHits, friendsHits, othersHits)
   }
 
-  def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter(None)): ArticleSearchResult = {
+  def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter.default()): ArticleSearchResult = {
 
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
@@ -126,17 +130,16 @@ class MainSearcher(
 
     var threshold = highScore * tailCutting
 
-    myHits.toSortedList.iterator.zipWithIndex.map{ case (h, rank) =>
-      if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayMine) // dumping the scores by rank
-      h
-    }.takeWhile{ h =>
-      h.score > threshold
-    }.foreach{ h =>
-      val id = Id[NormalizedURI](h.id)
-      val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet - userId
-      val sharingSize = sharingUsers.size
-      val ok = (sharingSize > 0 && filter.shared) || (sharingSize == 0 && filter.mine)
-      if (ok) {
+    if (myHits.size > 0 && filter.includeMine) {
+      myHits.toRankedIterator.map{ case (h, rank) =>
+        if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayMine) // dumping the scores by rank
+        h
+      }.takeWhile{ h =>
+        h.score > threshold
+      }.foreach{ h =>
+        val id = Id[NormalizedURI](h.id)
+        val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet - userId
+        val sharingSize = sharingUsers.size
         h.users = sharingUsers
         h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(sharingSize + 1), recencyScore(myUriEdges.getCreatedAt(id)))
         h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
@@ -144,10 +147,10 @@ class MainSearcher(
       }
     }
 
-    if (friendsHits.size > 0 && filter.friends) {
+    if (friendsHits.size > 0 && filter.includeFriends) {
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
-      friendsHits.toSortedList.iterator.zipWithIndex.map{ case (h, rank) =>
+      friendsHits.toRankedIterator.map{ case (h, rank) =>
         if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayFriends) // dumping the scores by rank
         h
       }.takeWhile{ h =>
@@ -164,9 +167,9 @@ class MainSearcher(
       queue.foreach{ h => hits.insert(h) }
     }
 
-    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.others) {
+    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
       val queue = createQueue(numHitsToReturn - hits.size)
-      othersHits.toSortedList.iterator.zipWithIndex.map{ case (h, rank) =>
+      othersHits.toRankedIterator.map{ case (h, rank) =>
         if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayOthers) // dumping the scores by rank
         h
       }.takeWhile{
@@ -185,10 +188,10 @@ class MainSearcher(
     val hitList = hits.toSortedList
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
-    val newFilter = filterOut ++ hitList.map(_.id)
+    val newIdFilter = filter.idFilter ++ hitList.map(_.id)
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
-        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newFilter, millisPassed.toInt, (filterOut.size / numHitsToReturn).toInt)
+        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt)
   }
 
   private def getPublicBookmarkCount(id: Long) = {
@@ -262,6 +265,9 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
     }
     res
   }
+  
+  // the following method is destructive. after the call ArticleHitQueue is unusable
+  def toRankedIterator = toSortedList.iterator.zipWithIndex
 
   def foreach(f: MutableArticleHit => Unit) {
     val arr = getHeapArray()
