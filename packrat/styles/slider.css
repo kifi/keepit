@@ -16,6 +16,7 @@
   box-shadow: none;
   border-radius: 0;
   min-width: 0;
+  -moz-box-sizing: content-box;
   box-sizing: content-box;
   text-align: left;
   direction: ltr;
