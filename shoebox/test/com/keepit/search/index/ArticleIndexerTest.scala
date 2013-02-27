@@ -39,7 +39,7 @@ class ArticleIndexerTest extends SpecificationWithJUnit with DbRepos {
   val ramDir = new RAMDirectory
   val store = new FakeArticleStore()
   val uriIdArray = new Array[Long](3)
-  val parserFactory = new MainQueryParserFactory(new PhraseDetector(PhraseIndexer(inject[DBConnection], inject[PhraseRepo])))
+  val parserFactory = new MainQueryParserFactory(new PhraseDetector(PhraseIndexer()))
 
   def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
     Article(

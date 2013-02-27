@@ -47,7 +47,7 @@ class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
     val mainSearcherFactory = new MainSearcherFactory(
         articleIndexer,
         uriGraph,
-        new MainQueryParserFactory(new PhraseDetector(PhraseIndexer(inject[DBConnection], inject[PhraseRepo]))),
+        new MainQueryParserFactory(new PhraseDetector(PhraseIndexer())),
         resultClickTracker,
         browsingHistoryTracker,
         clickHistoryTracker)
