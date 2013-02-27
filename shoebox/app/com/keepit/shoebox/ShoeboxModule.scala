@@ -34,7 +34,7 @@ import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.store.S3Bucket
 import com.keepit.inject.AppScoped
 import com.keepit.inject.FortyTwoModule
-import com.keepit.model.SliderHistoryTracker
+import com.keepit.model.{PhraseRepo, SliderHistoryTracker}
 import com.keepit.scraper._
 import com.keepit.search._
 import com.keepit.search.graph.URIGraph
@@ -65,7 +65,6 @@ import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListene
 import com.keepit.common.cache._
 import com.keepit.classify.DomainTagImportSettings
 import com.google.common.io.Files
-import com.keepit.model.SliderHistoryTracker
 import org.apache.http.HttpHost
 
 
@@ -175,7 +174,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def phraseIndexer: PhraseIndexer = {
+  def phraseIndexer(db: DBConnection, phraseRepo: PhraseRepo): PhraseIndexer = {
     val dirPath = current.configuration.getString("index.phrase.directory").get
     val dir = new File(dirPath).getCanonicalFile()
     if (!dir.exists()) {
@@ -187,7 +186,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
       val configDir = new File(path).getCanonicalFile()
       new File(configDir, "phrase")
     }
-    PhraseIndexer(new MMapDirectory(dir))
+    PhraseIndexer(new MMapDirectory(dir), db, phraseRepo)
   }
 
 
