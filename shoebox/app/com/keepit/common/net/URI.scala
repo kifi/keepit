@@ -5,8 +5,8 @@ import util.{Failure, Success, Try}
 
 object URI extends Logging {
   def parse(uriString: String): Try[URI] = {
-    unapplyTry(uriString).map { t =>
-      URI(Some(uriString), t._1, t._2, t._3, t._4, t._5, t._6, t._7)
+    unapplyTry(uriString).map { case (scheme, userInfo, host, port, path, query, fragment) =>
+      URI(Some(uriString), scheme, userInfo, host, port, path, query, fragment)
     }
   }
 
