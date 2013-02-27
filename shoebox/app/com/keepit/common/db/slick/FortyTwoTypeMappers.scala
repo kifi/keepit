@@ -229,7 +229,7 @@ class DateTimeMapperDelegate(val profile: BasicProfile) extends DelegateMapperDe
   protected val delegate = profile.typeMapperDelegates.timestampTypeMapperDelegate
   def zero = currentDateTime
   def sourceToDest(value: DateTime): Timestamp = new Timestamp(value.toDate().getTime())
-  def safeDestToSource(value: Timestamp): DateTime = value
+  def safeDestToSource(value: Timestamp): DateTime = value.toDateTime
 }
 
 //************************************
