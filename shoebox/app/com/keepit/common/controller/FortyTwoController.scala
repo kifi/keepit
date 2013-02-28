@@ -57,7 +57,7 @@ object FortyTwoController {
   }
 }
 
-trait FortyTwoController extends Controller with Logging with SecureSocial {
+trait AuthenticatedController extends Controller with Logging with SecureSocial {
   import FortyTwoController._
 
   case class AuthenticatedRequest(
@@ -69,15 +69,10 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
       adminUserId: Option[Id[User]] = None)
     extends WrappedRequest(request)
 
-  def AuthenticatedJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
-    AuthenticatedAction(true, action)(request) match {
-      case r: PlainResult => r.as(ContentTypes.JSON)
-      case any => any
-    }
+  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId) = inject[DBConnection].readOnly{ implicit session =>
+    val userId = loadUserId(userIdOpt, socialId)
+    (userId, getExperiments(userId))
   }
-
-  def AuthenticatedHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
-    AuthenticatedAction(false, action)
 
   private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession) = {
     val repo = inject[SocialUserInfoRepo]
@@ -91,11 +86,6 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
         if (socialUser.userId.get != userId) log.error("Social user id %s does not match session user id %s".format(socialUser, userId))
         userId
     }
-  }
-
-  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId) = inject[DBConnection].readOnly{ implicit session =>
-    val userId = loadUserId(userIdOpt, socialId)
-    (userId, getExperiments(userId))
   }
 
   private def getExperiments(userId: Id[User])(implicit session: RSession): Seq[State[ExperimentType]] =
@@ -125,8 +115,7 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
     }
   }
 
-  private def isAdmin(experiments: Seq[State[ExperimentType]]) =
-    experiments.find(e => e == ExperimentTypes.ADMIN).isDefined
+  private def isAdmin(experiments: Seq[State[ExperimentType]]) = experiments.find(e => e == ExperimentTypes.ADMIN).isDefined
 
   private def executeAction(action: AuthenticatedRequest => Result, userId: Id[User], socialUser: SocialUser,
       experiments: Seq[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
@@ -158,14 +147,18 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
     }
   }
 
+}
+
+trait AdminController extends AuthenticatedController {
+  
+  def AdminHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] = AdminAction(false, action)
+
   def AdminJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
     AdminAction(true, action)(request) match {
       case r: PlainResult => r.as(ContentTypes.JSON)
       case any => any
     }
   }
-
-  def AdminHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] = AdminAction(false, action)
 
   private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest => Result): Action[AnyContent] = {
     AuthenticatedAction(isApi, { implicit request =>
@@ -182,6 +175,21 @@ trait FortyTwoController extends Controller with Logging with SecureSocial {
       }
     })
   }
+}
 
+/**
+  Will rename to WebsiteController and not include the AdminController after all Web Controllers will be free of admin actions
+*/
+trait FortyTwoController extends AuthenticatedController with AdminController {
+
+  def AuthenticatedJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
+    AuthenticatedAction(true, action)(request) match {
+      case r: PlainResult => r.as(ContentTypes.JSON)
+      case any => any
+    }
+  }
+
+  def AuthenticatedHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
+    AuthenticatedAction(false, action)
 }
 
