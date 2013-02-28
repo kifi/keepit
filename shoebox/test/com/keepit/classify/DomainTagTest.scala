@@ -2,7 +2,7 @@ package com.keepit.classify
 
 import org.specs2.mutable._
 
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.inject.inject
 import com.keepit.test.DbRepos
 import com.keepit.test.EmptyApplication
@@ -21,7 +21,7 @@ class DomainTagTest extends SpecificationWithJUnit with DbRepos {
         val t2 = DomainTag(name = DomainTagName("tag2"), sensitive = Some(false))
         val t3 = DomainTag(name = DomainTagName("tag3"), sensitive = None)
 
-        inject[DBConnection].readWrite { implicit c =>
+        inject[Database].readWrite { implicit c =>
           val Seq(st1, st2, st3) = Seq(t1, t2, t3).map(tagRepo.save(_))
 
           tagRepo.get(st1.id.get) === st1

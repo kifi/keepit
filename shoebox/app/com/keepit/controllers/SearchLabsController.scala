@@ -52,7 +52,7 @@ object SearchLabsController extends FortyTwoController {
       friendsHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
       othersHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
     }
-    var data = inject[DBConnection].readOnly { implicit s =>
+    var data = inject[Database].readOnly { implicit s =>
       var data = List.empty[JsArray]
       while (hits.size > 0) {
         val top = hits.top
@@ -75,7 +75,7 @@ object SearchLabsController extends FortyTwoController {
     val data = new ArrayBuffer[JsArray]
     q.foreach{ q =>
       val userId = request.userId
-      val friendIds = inject[DBConnection].readOnly { implicit s =>
+      val friendIds = inject[Database].readOnly { implicit s =>
         inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
       }
       val allUserIds = (friendIds + userId).toArray
@@ -115,7 +115,7 @@ object SearchLabsController extends FortyTwoController {
             if (n == 0 || n.isNaN()) 1.0 else n
           }
 
-          inject[DBConnection].readOnly { implicit s =>
+          inject[Database].readOnly { implicit s =>
             val userRepo = inject[UserRepo]
             (0 until size).map{ i =>
               val user = userRepo.get(userIndex(i))

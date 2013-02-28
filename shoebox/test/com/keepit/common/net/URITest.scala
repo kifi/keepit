@@ -59,5 +59,8 @@ class URITest extends Specification {
       }
       success
     }
+    "throw URISyntaxException upon .get after failed parse" in {
+      URI.parse("`").get must throwA[java.net.URISyntaxException]
+    }
   }
 }

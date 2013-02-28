@@ -88,6 +88,11 @@ trait AuthenticatedController extends Controller with Logging with SecureSocial 
     }
   }
 
+  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId) = inject[Database].readOnly{ implicit session =>
+    val userId = loadUserId(userIdOpt, socialId)
+    (userId, getExperiments(userId))
+  }
+
   private def getExperiments(userId: Id[User])(implicit session: RSession): Seq[State[ExperimentType]] =
     inject[UserExperimentRepo].getByUser(userId).map(_.experimentType)
 
@@ -101,7 +106,7 @@ trait AuthenticatedController extends Controller with Logging with SecureSocial 
       val newSession = session + (FORTYTWO_USER_ID -> userId.toString)
       impersonatedUserIdOpt match {
         case Some(impExternalUserId) =>
-          val (impExperiments, impSocialUser, impUserId) = inject[DBConnection].readOnly { implicit session =>
+          val (impExperiments, impSocialUser, impUserId) = inject[Database].readOnly { implicit session =>
             val impUserId = inject[UserRepo].get(impExternalUserId).id.get
             if (!isAdmin(experiments)) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
             val impSocialUserInfo = inject[SocialUserInfoRepo].getByUser(impUserId).head
@@ -163,7 +168,7 @@ trait AdminController extends AuthenticatedController {
   private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest => Result): Action[AnyContent] = {
     AuthenticatedAction(isApi, { implicit request =>
       val userId = request.adminUserId.getOrElse(request.userId)
-      val isAdmin = inject[DBConnection].readOnly{ implicit session =>
+      val isAdmin = inject[Database].readOnly{ implicit session =>
         inject[UserExperimentRepo].getExperiment(userId, ExperimentTypes.ADMIN).isDefined
       }
       val authorizedDevUser = Play.isDev && userId.id == 1L

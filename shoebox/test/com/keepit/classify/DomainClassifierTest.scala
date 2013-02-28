@@ -4,7 +4,7 @@ import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationWithJUnit
 
 import com.keepit.common.analytics.{FakePersistEventPluginImpl, PersistEventPlugin}
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.common.net.{HttpClientImpl, FakeHttpClient}
 import com.keepit.inject.{provide, inject}
 import com.keepit.test.{DbRepos, EmptyApplication}
@@ -26,7 +26,7 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
         //val client = new HttpClientImpl()
         val client = new FakeHttpClient(Some(Map.empty))
 
-        val classifier = new DomainClassifierImpl(system, inject[DBConnection], client,
+        val classifier = new DomainClassifierImpl(system, inject[Database], client,
           inject[SensitivityUpdater], inject[DomainRepo], inject[DomainTagRepo], inject[DomainToTagRepo])
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
@@ -34,7 +34,7 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
         val importer = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
           inject[SensitivityUpdater], provide(new DateTime), system, db,
           new FakePersistEventPluginImpl(system), DomainTagImportSettings())
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           tagRepo.save(DomainTag(name = DomainTagName("Search Engines"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("Technology and computers"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("Porn"), sensitive = Some(true)))
@@ -62,11 +62,11 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
           case s if s.contains("42go.com") || s.contains("addepar.com") => "FM~Technology and computers"
           case s if s.contains("playboy.com") || s.contains("porn.com") => "FM~Porn"
         }))
-        val classifier = new DomainClassifierImpl(system, inject[DBConnection], client,
+        val classifier = new DomainClassifierImpl(system, inject[Database], client,
           inject[SensitivityUpdater], inject[DomainRepo], inject[DomainTagRepo], inject[DomainToTagRepo])
         val domainRepo = inject[DomainRepo]
         val tagRepo = inject[DomainTagRepo]
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           tagRepo.save(DomainTag(name = DomainTagName("Search Engines"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("Technology and computers"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("Porn"), sensitive = Some(true)))

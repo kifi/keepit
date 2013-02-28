@@ -28,7 +28,7 @@ object ArticleIndexerController extends FortyTwoController {
 
   def indexByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
     transitionByAdmin(state -> Set(SCRAPED, SCRAPE_FAILED)) { newState =>
-      inject[DBConnection].readWrite { implicit s =>
+      inject[Database].readWrite { implicit s =>
         val repo = inject[NormalizedURIRepo]
         repo.getByState(state).foreach{ uri => repo.save(uri.withState(newState)) }
       }

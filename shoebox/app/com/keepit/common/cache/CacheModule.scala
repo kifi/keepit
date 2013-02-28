@@ -17,7 +17,7 @@ import akka.actor.ActorSystem
 import akka.actor.Scheduler
 import javax.sql.DataSource
 import com.tzavellas.sse.guice.ScalaModule
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.MySQL
 import com.keepit.common.db.slick.H2
 import com.keepit.common.db.slick.DataBaseComponent

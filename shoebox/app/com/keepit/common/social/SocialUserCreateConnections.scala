@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.common.healthcheck.BabysitterTimeout
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import play.api.Play.current
 import play.api.libs.json.{JsArray, JsValue}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -29,7 +29,7 @@ class SocialUserCreateConnections() extends Logging {
 
     implicit val timeout = BabysitterTimeout(30 seconds, 2 minutes)
 
-    inject[DBConnection].readWrite { implicit s =>
+    inject[Database].readWrite { implicit s =>
       val socialRepo = inject[SocialUserInfoRepo]
       val connectionRepo = inject[SocialConnectionRepo]
       parentJson flatMap extractFriends map extractSocialId map { socialRepo.get(_, SocialNetworks.FACEBOOK)
@@ -57,7 +57,7 @@ class SocialUserCreateConnections() extends Logging {
 
   def disableConnectionsNotInJson(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
     log.info("looking for connections to disable for user %s".format(socialUserInfo.fullName))
-    inject[DBConnection].readWrite { implicit s =>
+    inject[Database].readWrite { implicit s =>
       val socialRepo = inject[SocialUserInfoRepo]
       val connectionRepo = inject[SocialConnectionRepo]
 	    val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends map extractSocialId

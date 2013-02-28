@@ -48,7 +48,7 @@ object EventController extends FortyTwoController {
   private def createEventsFromPayload(params: JsValue, userId: Id[User]) = {
     val logRecievedTime = currentDateTime
 
-    val (user, experiments) = inject[DBConnection].readOnly{ implicit session =>
+    val (user, experiments) = inject[Database].readOnly{ implicit session =>
       (inject[UserRepo].get(userId),
        inject[UserExperimentRepo].getByUser(userId) map (_.experimentType))
     }

@@ -27,7 +27,7 @@ import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTime
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.DbInfo
 import com.keepit.common.db.slick._
-import scala.slick.session.Database
+import scala.slick.session.{Database => SlickDatabase}
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import akka.actor.{Scheduler, Cancellable, ActorRef}
@@ -64,7 +64,7 @@ class EmptyApplication() extends TestApplication(new TestGlobal(TestModule()))
 
 trait DbRepos {
   import play.api.Play.current
-  def db = inject[DBConnection]
+  def db = inject[Database]
   def userRepo = inject[UserRepo]
   def uriRepo = inject[NormalizedURIRepo]
   def urlRepo = inject[URLRepo]
@@ -84,7 +84,7 @@ case class TestModule() extends ScalaModule {
     bind[Babysitter].to[FakeBabysitter]
     install(new SlickModule(new DbInfo() {
       //later on we can customize it by the application name
-      lazy val database = Database.forDataSource(DB.getDataSource("shoebox")(Play.current))
+      lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
       lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
     }))
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]

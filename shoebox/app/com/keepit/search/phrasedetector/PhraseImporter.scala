@@ -17,7 +17,7 @@ import play.api.libs.json.{JsArray, JsNumber, JsString, JsObject}
 import com.google.inject.{Provider, ImplementedBy, Inject}
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import play.api.Play.current
@@ -48,7 +48,7 @@ case class ImportFile(file: File) extends PhraseMessage
 case object StartImport extends PhraseMessage
 case object EndImport extends PhraseMessage
 
-private[phrasedetector] class PhraseImporterActor(dbConnection: DBConnection, phraseRepo: PhraseRepo) extends Actor with Logging {
+private[phrasedetector] class PhraseImporterActor(dbConnection: Database, phraseRepo: PhraseRepo) extends Actor with Logging {
   private val GROUP_SIZE = 500
 
   def receive = {
@@ -88,7 +88,7 @@ trait PhraseImporter {
   def importFile(file: File): Unit
 }
 
-class PhraseImporterImpl @Inject()(system: ActorSystem, db: DBConnection, phraseRepo: PhraseRepo,
+class PhraseImporterImpl @Inject()(system: ActorSystem, db: Database, phraseRepo: PhraseRepo,
                                    persistEventPlugin: PersistEventPlugin) extends PhraseImporter {
   private val actor = system.actorOf(Props { new PhraseImporterActor(db, phraseRepo) })
 

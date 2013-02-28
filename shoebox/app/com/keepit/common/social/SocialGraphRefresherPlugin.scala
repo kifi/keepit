@@ -34,7 +34,7 @@ import com.keepit.common.akka.FortyTwoActor
 private case class RefreshUserInfo(socialUserInfo: SocialUserInfo)
 private case object RefreshAll
 
-private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphPlugin, db: DBConnection, socialRepo: SocialUserInfoRepo) extends FortyTwoActor with Logging {
+private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphPlugin, db: Database, socialRepo: SocialUserInfoRepo) extends FortyTwoActor with Logging {
   def receive() = {
     case RefreshAll => {
       log.info("going to check which SocilaUserInfo Was not fetched Lately")
@@ -53,7 +53,7 @@ private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphP
 
 trait SocialGraphRefresher extends Plugin {}
 
-class SocialGraphRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin : SocialGraphPlugin, db: DBConnection, socialRepo: SocialUserInfoRepo) extends SocialGraphRefresher with Logging {
+class SocialGraphRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin : SocialGraphPlugin, db: Database, socialRepo: SocialUserInfoRepo) extends SocialGraphRefresher with Logging {
   implicit val actorTimeout = Timeout(5 seconds)
 
   private val actor = system.actorOf(Props { new SocialGraphRefresherActor(socialGraphPlugin, db, socialRepo) })
