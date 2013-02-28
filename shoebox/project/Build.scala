@@ -94,7 +94,11 @@ object ApplicationBuild extends Build {
 
       javaOptions in test ++= Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=1024m"),
 
+      parallelExecution in Test := true,
+
       //see https://groups.google.com/forum/?fromgroups=#!topic/play-framework/4Fz5TsOKPio
-      testOptions += Tests.Argument(TestFrameworks.JUnit, "--ignore-runners=org.specs2.runner.JUnitRunner")
+      testOptions += Tests.Argument(TestFrameworks.JUnit, "--ignore-runners=org.specs2.runner.JUnitRunner"),
+      testOptions in Test += Tests.Argument("sequential", "false"),
+      testOptions in Test += Tests.Argument("threadsNb", "16")
     )
 }
