@@ -32,16 +32,9 @@ object ApplicationBuild extends Build {
     writeToFile("conf/app_version.txt", appVersion)
     writeToFile("conf/app_compilation_date.txt", now)
 
-    /*
-     * play-plugins-util is dependent on guice 2.x while we use guice 3.x.
-     * guice 2.x is imported from com.cedarsoft and it screws up the entire runtime!
-     * for more info
-     * https://github.com/harrah/xsbt/wiki/Library-Management
-     * https://github.com/typesafehub/play-plugins/blob/master/guice/project/Build.scala
-     * http://stackoverflow.com/questions/10958215/how-to-exclude-commons-logging-from-a-scala-sbt-slf4j-project 
-     */
     val appDependencies = Seq(
       jdbc,
+      "com.novocode" % "junit-interface" % "0.10-M2",
       "mysql" % "mysql-connector-java" % "5.1.10",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" % "akka-testkit" % "2.0.2",
@@ -53,8 +46,6 @@ object ApplicationBuild extends Build {
       "org.apache.tika" % "tika-parsers" % "1.2",
       "org.apache.commons" % "commons-math3" % "3.1.1",
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
-      //used for securesocial
-      //"com.typesafe" %% "play-plugins-util" % "2.1",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
       "javax.mail" % "mail" % "1.4.5",
@@ -99,11 +90,11 @@ object ApplicationBuild extends Build {
         "com.google.inject" % "guice" % "3.0",
         "com.google.inject.extensions" % "guice-multibindings" % "3.0",
         "com.tzavellas" % "sse-guice" % "0.7.1"
-        //"org.scalatest" %% "scalatest" % "2.0.M4" % "test",
-        //"org.scalaquery" % "scalaquery_2.9.1" % "0.10.0-M1"
-        //"com.typesafe.slick" %% "slick" % "1.0.0"
       ),
 
-      javaOptions in test ++= Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=1024m")
+      javaOptions in test ++= Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=1024m"),
+
+      //see https://groups.google.com/forum/?fromgroups=#!topic/play-framework/4Fz5TsOKPio
+      testOptions += Tests.Argument(TestFrameworks.JUnit, "--ignore-runners=org.specs2.runner.JUnitRunner")
     )
 }
