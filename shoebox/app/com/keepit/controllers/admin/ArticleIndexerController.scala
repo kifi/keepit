@@ -55,7 +55,7 @@ object ArticleIndexerController extends FortyTwoController {
       val doc = indexer.buildIndexable(id).buildDocument
       Ok(views.html.luceneDocDump("Article", doc, indexer))
     } catch {
-      case _ => Ok(views.html.luceneDocDump("No Article", new Document, indexer))
+      case e: Throwable => Ok(views.html.luceneDocDump("No Article", new Document, indexer))
     }
   }
 }

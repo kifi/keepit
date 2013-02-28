@@ -42,7 +42,7 @@ object URIGraphController extends FortyTwoController {
       val doc = indexer.buildIndexable(id).buildDocument
       Ok(views.html.luceneDocDump("URIGraph", doc, indexer))
     } catch {
-      case _ => Ok(views.html.luceneDocDump("No URIGraph", new Document, indexer))
+      case e: Throwable => Ok(views.html.luceneDocDump("No URIGraph", new Document, indexer))
     }
   }
 }
