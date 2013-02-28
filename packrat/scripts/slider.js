@@ -840,6 +840,7 @@ slider = function() {
           searchingText: "",
           animateDropdown: false,
           preventDuplicates: true,
+          allowTabOut: true,
           tokenValue: "externalId",
           theme: "kifi",
           zindex: 2147483641});
