@@ -69,11 +69,6 @@ trait AuthenticatedController extends Controller with Logging with SecureSocial 
       adminUserId: Option[Id[User]] = None)
     extends WrappedRequest(request)
 
-  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId) = inject[DBConnection].readOnly{ implicit session =>
-    val userId = loadUserId(userIdOpt, socialId)
-    (userId, getExperiments(userId))
-  }
-
   private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession) = {
     val repo = inject[SocialUserInfoRepo]
     userIdOpt match {
