@@ -503,7 +503,7 @@ class DailyKifiAtLeastOneResult extends BasicDailyAggregationReport with Logging
 
 class DailyDustSettledKifiHadResults(kifiHadResults: Boolean = true) extends BasicDailyAggregationReport with Logging {
   override val reportName = s"DailyDustSettledKifiHad${if (kifiHadResults) "" else "No"}Results"
-  override val ordering = 260
+  override val ordering = 270 + (if (kifiHadResults) 1 else 0)
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
     val selector = MongoSelector(EventFamilies.SEARCH)
@@ -519,17 +519,30 @@ trait DailyByExperiment extends BasicDailyAggregationReport with Logging {
   def experiment: Option[SearchConfigExperiment]
 
   override lazy val reportName = s"Daily${eventName.capitalize} ${experiment.map(_.description).getOrElse("Default")}"
+  def baseSelector(startDate: DateTime, endDate: DateTime): MongoSelector =
+    MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate)
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport = {
-    val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate)
-        .withEventName(eventName)
-    val selectorWithMetaData = experiment.map { e =>
-      selector.withMetaData("experimentId", e.id.get.id.toInt)
+    val sel = baseSelector(startDate, endDate).withEventName(eventName)
+    val selectorWithExperimentId = experiment.map { e =>
+      sel.withMetaData("experimentId", e.id.get.id.toInt)
     }.getOrElse {
-      selector.withMetaData("experimentId", "null")
+      sel.withMetaData("experimentId", "null")
     }.build
-    super.get(selectorWithMetaData, startDate, endDate)
+    super.get(selectorWithExperimentId, startDate, endDate)
   }
+}
+
+class DailyDustSettledKifiHadResultsByExperiment(val experiment: Option[SearchConfigExperiment],
+    val kifiHadResults: Boolean = true) extends DailyByExperiment {
+  override val eventName = "dustSettled"
+  override lazy val reportName = s"DailyDustSettledKifiHad${if (kifiHadResults) "" else "No"}Results " +
+    s"${experiment.map(_.description).getOrElse("Default")}"
+  override val ordering = 4000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
+  override def baseSelector(startDate: DateTime, endDate: DateTime): MongoSelector =
+    MongoSelector(EventFamilies.SEARCH)
+      .withDateRange(startDate, endDate)
+      .withMetaData("kifiHadResults", kifiHadResults)
 }
 
 class DailyKifiAtLeastOneResultByExperiment(val experiment: Option[SearchConfigExperiment]) extends DailyByExperiment {
