@@ -503,30 +503,34 @@ class DailyKifiAtLeastOneResult extends BasicDailyAggregationReport with Logging
 
 trait DailyByExperiment extends BasicDailyAggregationReport with Logging {
   def eventName: String
-  def experiment: SearchConfigExperiment
+  def experiment: Option[SearchConfigExperiment]
 
-  override lazy val reportName = s"Daily${eventName.capitalize} ${experiment.description}"
+  override lazy val reportName = s"Daily${eventName.capitalize} ${experiment.map(_.description).getOrElse("Default")}"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport = {
     val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate)
-        .withMetaData("experimentId", experiment.id.get.id)
-        .withEventName(eventName).build
-    super.get(selector, startDate, endDate)
+        .withEventName(eventName)
+    val selectorWithMetaData = experiment.map { e =>
+      selector.withMetaData("experimentId", e.id.get.id.toInt)
+    }.getOrElse {
+      selector.withMetaData("experimentId", "null")
+    }.build
+    super.get(selectorWithMetaData, startDate, endDate)
   }
 }
 
-class DailyKifiAtLeastOneResultByExperiment(val experiment: SearchConfigExperiment) extends DailyByExperiment {
+class DailyKifiAtLeastOneResultByExperiment(val experiment: Option[SearchConfigExperiment]) extends DailyByExperiment {
   override val eventName = "kifiAtLeastOneResult"
-  override val ordering = 1000 + experiment.id.get.id.toInt
+  override val ordering = 1000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
 }
 
-class DailyGoogleResultClickedByExperiment(val experiment: SearchConfigExperiment) extends DailyByExperiment {
+class DailyGoogleResultClickedByExperiment(val experiment: Option[SearchConfigExperiment]) extends DailyByExperiment {
   override val eventName = "googleResultClicked"
-  override val ordering = 2000 + experiment.id.get.id.toInt
+  override val ordering = 2000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
 }
 
-class DailyKifiResultClickedByExperiment(val experiment: SearchConfigExperiment) extends DailyByExperiment {
+class DailyKifiResultClickedByExperiment(val experiment: Option[SearchConfigExperiment]) extends DailyByExperiment {
   override val eventName = "kifiResultClicked"
-  override val ordering = 3000 + experiment.id.get.id.toInt
+  override val ordering = 3000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
 }
 
