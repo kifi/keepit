@@ -22,46 +22,47 @@ case class MongoSelector(eventFamily: EventFamily) {
     case name => MongoDBObject("eventFamily" -> name)
   }
 
-  def ofParentEvent(eventId: ExternalId[Event]) = {
+  def ofParentEvent(eventId: ExternalId[Event]): this.type = {
     q = q ++ ("metaData.prevEvents" $in eventId.id)
+    this
   }
-  def withId(externalId: ExternalId[Event]) = {
+  def withId(externalId: ExternalId[Event]): this.type = {
     q = q ++ ("id" -> externalId.id)
     this
   }
-  def withUser(externalId: ExternalId[User]) = {
+  def withUser(externalId: ExternalId[User]): this.type = {
     q = q ++ ("metaData.userId" -> externalId.id)
     this
   }
-  def withEventName(name: String) = {
+  def withEventName(name: String): this.type = {
     q = q ++ ("metaData.eventName" -> name)
     this
   }
-  def withMetaData(field: String) = {
-    q = q ++ ("metaData.metaData.%s".format(field) $exists true)
+  def withMetaData(field: String): this.type = {
+    q = q ++ (s"metaData.metaData.$field" $exists true)
     this
   }
-  def withMetaData[T](field: String, value: Boolean) = {
-    q = q ++ ("metaData.metaData.%s".format(field) -> value)
+  def withMetaData(field: String, value: Boolean): this.type = {
+    q = q ++ (s"metaData.metaData.$field" -> value)
     this
   }
-  def withMetaData(field: String, value: String) = {
-    q = q ++ ("metaData.metaData.%s".format(field) -> value)
+  def withMetaData(field: String, value: String): this.type = {
+    q = q ++ (s"metaData.metaData.$field" -> value)
     this
   }
-  def withMetaData[T](field: String, value: T)(implicit n: Numeric[T]) = {
-    q = q ++ ("metaData.metaData.%s".format(field) -> n.toDouble(value))
+  def withMetaData[T](field: String, value: T)(implicit n: Numeric[T]): this.type = {
+    q = q ++ (s"metaData.metaData.$field" -> n.toDouble(value))
     this
   }
-  def withDateRange(startDate: DateTime, endDate: DateTime) = {
+  def withDateRange(startDate: DateTime, endDate: DateTime): this.type = {
     q = q ++ ("createdAt" $gte startDate $lte endDate)
     this
   }
-  def withMinDate(startDate: DateTime) = {
+  def withMinDate(startDate: DateTime): this.type = {
     q = q ++ ("createdAt" $gte startDate)
     this
   }
-  def withMaxDate(endDate: DateTime) = {
+  def withMaxDate(endDate: DateTime): this.type = {
     q = q ++ ("createdAt" $lte endDate)
     this
   }
