@@ -44,6 +44,8 @@ object Reports {
   lazy val dailyUniqueUsersMessaging = new DailyUniqueUsersMessaging
   lazy val dailyUniqueUsersCommenting = new DailyUniqueUsersCommenting
   lazy val dailyKifiLoadedReport = new DailyKifiLoadedReport
+  lazy val dailyDustSettledKifiHadResults = new DailyDustSettledKifiHadResults(true)
+  lazy val dailyDustSettledKifiHadNoResults = new DailyDustSettledKifiHadResults(false)
 
   case class ReportGroup(name: String, reports: Seq[Report])
 
@@ -73,7 +75,9 @@ object Reports {
       dailyUniqueUsersKeeping,
       dailyUniqueUsersMessaging,
       dailyUniqueUsersCommenting,
-      dailyKifiLoadedReport)
+      dailyKifiLoadedReport,
+      dailyDustSettledKifiHadResults,
+      dailyDustSettledKifiHadNoResults)
   )
 
   lazy val DailyAdminReports = ReportGroup("DailyAdminReport",
@@ -86,7 +90,8 @@ object Reports {
       new DailyGoogleResultClickedByExperiment(_),
       new DailyKifiAtLeastOneResultByExperiment(_))
     ReportGroup("SearchExperimentReport",
-      for (experiment <- experiments; constructor <- constructors) yield constructor(experiment))
+      for (experiment <- experiments; constructor <- constructors) yield constructor(Some(experiment))
+    )
   }
 }
 
