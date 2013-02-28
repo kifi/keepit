@@ -53,6 +53,7 @@ api.log("[google_inject]");
   function onIdle() {
     logEvent("search", "dustSettled", {
       "query": query,
+      "experimentId": response.experimentId,
       "kifiHadResults": response.hits && response.hits.length > 0,
       "kifiReceivedAt": tKifiResultsReceived - tQuery,
       "kifiShownAt": tKifiResultsShown - tQuery,

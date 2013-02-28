@@ -37,9 +37,15 @@
           <button type="button" class="btn delete-experiment">Delete</button>
         </div>
       </div>
-      <div class="experiment-chart">
-        <h3 class="chart-title">Kifi vs. Google</h3>
-        <div class="growth-chart" data-uri="@SearchConfigController.getKifiVsGoogle(experiment.id.get)"></div>
+      <div class="charts">
+        <div class="experiment-chart">
+          <h3 class="chart-title">Kifi vs. Google</h3>
+          <div class="growth-chart" data-uri="@SearchConfigController.getKifiVsGoogle(experiment.id.get)"></div>
+        </div>
+        <div class="experiment-chart">
+          <h3 class="chart-title">Kifi had results</h3>
+          <div class="growth-chart" data-uri="@SearchConfigController.getKifiHadResults(experiment.id.get)"></div>
+        </div>
       </div>
       <table class="table table-bordered experiment-settings">
         <tr> <th>Parameter</th><th>Value</th><th>Description</th> </tr>
@@ -62,9 +68,15 @@
           <button class="btn show-chart">Show chart</button>
         </div>
       </div>
-      <div class="experiment-chart">
-        <h3 class="chart-title">Kifi vs. Google</h3>
-        <div class="growth-chart" data-uri="@SearchConfigController.getKifiVsGoogle(Id(0))"></div>
+      <div class="charts">
+        <div class="experiment-chart">
+          <h3 class="chart-title">Kifi vs. Google</h3>
+          <div class="growth-chart" data-uri="@SearchConfigController.getKifiVsGoogle(Id(0))"></div>
+        </div>
+        <div class="experiment-chart">
+          <h3 class="chart-title">Kifi had results</h3>
+          <div class="growth-chart" data-uri="@SearchConfigController.getKifiHadResults(Id(0))"></div>
+        </div>
       </div>
       <table class="table table-bordered experiment-settings">
         <tr> <th>Parameter</th><th>Value</th><th>Description</th> </tr>
