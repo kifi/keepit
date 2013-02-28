@@ -26,6 +26,8 @@ import com.keepit.common.social.UserWithSocial
 import com.keepit.search.ArticleSearchResultStore
 import com.keepit.common.controller.FortyTwoController
 
+import scala.util.Try
+
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
 case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[UserWithSocial], score: Float)
@@ -39,22 +41,31 @@ case class PersonalSearchResultPacket(
 
 object SearchController extends FortyTwoController {
 
-  def search(q: String, maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
-    val query = q
-
+  def search(query: String, filter: Option[String], maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
     val lastUUID = lastUUIDStr.flatMap{
-        case "" => None
-        case str => Some(ExternalId[ArticleSearchResultRef](str))
+      case "" => None
+      case str => Some(ExternalId[ArticleSearchResultRef](str))
     }
 
     val userId = request.userId
     log.info("searching with %s using userId id %s".format(query, userId))
-    val friendIds = inject[Database].readOnly { implicit s =>
-      inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
-    }
-
     val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-    val searchFilter = SearchFilter.default(idFilter)
+    val (friendIds, searchFilter) = inject[Database].readOnly { implicit s =>
+      val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
+      val searchFilter = filter match {
+        case Some("m") =>
+          SearchFilter.mine(idFilter)
+        case Some("f") =>
+          SearchFilter.friends(idFilter)
+        case Some(ids) =>
+          val userRepo = inject[UserRepo]
+          val userIds = ids.split(',').flatMap(id => Try(ExternalId[User](id)).toOption).flatMap(userRepo.getOpt(_)).flatMap(_.id)
+          SearchFilter.custom(idFilter, userIds.toSet)
+        case None =>
+          SearchFilter.default(idFilter)
+      }
+      (friendIds, searchFilter)
+    }
 
     val (config, experimentId) = inject[SearchConfigManager].getConfig(userId, query)
 
