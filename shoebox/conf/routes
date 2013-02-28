@@ -143,6 +143,7 @@ POST    /admin/searchExperiments    com.keepit.controllers.SearchConfigControlle
 POST    /admin/searchExperiments/delete    com.keepit.controllers.SearchConfigController.deleteExperiment
 POST    /admin/searchExperiments/update    com.keepit.controllers.SearchConfigController.updateExperiment
 GET     /admin/searchExperiments/kvg/:id   com.keepit.controllers.SearchConfigController.getKifiVsGoogle(id: Id[SearchConfigExperiment])
+GET     /admin/searchExperiments/kifiHadResults/:id   com.keepit.controllers.SearchConfigController.getKifiHadResults(id: Id[SearchConfigExperiment])
 
 GET     /admin/explainResult        com.keepit.controllers.SearchController.explain(query: String, uriId: Id[NormalizedURI])
 

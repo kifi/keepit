@@ -22,6 +22,13 @@ ul.experiments {
       padding: 4px;
     }
   }
+  .experiment-chart {
+    width: 50%;
+    min-width: 520px;
+    max-width: 800px;
+    margin: 10px 0;
+    float: right;
+  }
   .basic-settings {
     float: right;
     .btn {
@@ -39,10 +46,19 @@ ul.experiments {
   }
 }
 
+.charts {
+    *zoom: 1;
+}
+
+.charts:after {
+    clear: both;
+    content: "";
+    display: table;
+}
+
 .growth-chart {
   height: 300px;
-  min-width: 400px;
-  max-width: 800px;
+  width: 480px;
   margin: 0 auto;
   background: white;
 }
