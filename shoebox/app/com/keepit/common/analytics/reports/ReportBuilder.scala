@@ -86,7 +86,8 @@ object Reports {
       new DailyGoogleResultClickedByExperiment(_),
       new DailyKifiAtLeastOneResultByExperiment(_))
     ReportGroup("SearchExperimentReport",
-      for (experiment <- experiments; constructor <- constructors) yield constructor(experiment))
+      for (experiment <- experiments; constructor <- constructors) yield constructor(Some(experiment))
+    )
   }
 }
 
