@@ -21,7 +21,7 @@ import com.keepit.model._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.inject._
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 
 @Singleton
 class EventStream {
@@ -56,7 +56,7 @@ class EventStreamActor extends FortyTwoActor {
 
     event match {
       case Event(_,UserEventMetadata(eventFamily,eventName,externalUser,_,experiments,metaData,_),createdAt,_) =>
-        val (user, social) = inject[DBConnection].readOnly { implicit session =>
+        val (user, social) = inject[Database].readOnly { implicit session =>
           val user = inject[UserRepo].get(externalUser)
           val social = inject[SocialUserInfoRepo].getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
           (user, social)

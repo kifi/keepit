@@ -23,12 +23,12 @@ class ElectronicMailTest extends Specification {
     "user filters" in {
       running(new ShoeboxApplication().withFakeHealthcheck().withFakeMail()) {
         val repo = inject[ElectronicMailRepo]
-        inject[DBConnection].readWrite { implicit s => 
+        inject[Database].readWrite { implicit s => 
           repo.save(ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.ENG, subject = "foo 1", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK))
           repo.save(ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.TEAM, subject = "foo 2", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK))
           repo.save(ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.EISHAY, subject = "foo 3", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK))
         }
-        inject[DBConnection].readOnly { implicit s =>
+        inject[Database].readOnly { implicit s =>
           repo.page(0, 10, EmailAddresses.ENG).size == 2
           repo.page(0, 2, EmailAddresses.ENG).size == 2
           repo.count(EmailAddresses.ANDREW) === 3

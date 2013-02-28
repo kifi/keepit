@@ -1,6 +1,6 @@
 package com.keepit.inject
 
-import scala.slick.session.Database
+import scala.slick.session.{Database => SlickDatabase}
 import com.tzavellas.sse.guice.ScalaModule
 import com.google.inject.{Provides, Inject, Singleton, Provider}
 import com.keepit.common.time._
@@ -22,7 +22,7 @@ class FortyTwoModule() extends ScalaModule {
     bind[AppScope].toInstance(appScope)
     install(new SlickModule(new DbInfo() {
       //later on we can customize it by the application name
-      lazy val database = Database.forDataSource(DB.getDataSource("shoebox")(Play.current))
+      lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
       lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
       println("loading database driver %s".format(driverName))
     }))

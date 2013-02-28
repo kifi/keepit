@@ -17,7 +17,7 @@ import com.keepit.common.analytics.reports._
 import com.keepit.common.analytics.{UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
 import com.keepit.common.cache._
 import com.keepit.common.controller.FortyTwoServices
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.HealthcheckPluginImpl
@@ -174,7 +174,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def phraseIndexer(db: DBConnection, phraseRepo: PhraseRepo): PhraseIndexer = {
+  def phraseIndexer(db: Database, phraseRepo: PhraseRepo): PhraseIndexer = {
     val dirPath = current.configuration.getString("index.phrase.directory").get
     val dir = new File(dirPath).getCanonicalFile()
     if (!dir.exists()) {
@@ -230,7 +230,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def searchConfigManager(expRepo: SearchConfigExperimentRepo, db: DBConnection): SearchConfigManager = {
+  def searchConfigManager(expRepo: SearchConfigExperimentRepo, db: Database): SearchConfigManager = {
     val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
     new SearchConfigManager(optFile, expRepo, db)
   }

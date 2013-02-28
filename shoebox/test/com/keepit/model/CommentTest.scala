@@ -24,7 +24,7 @@ import play.api.test.Helpers._
 class CommentTest extends SpecificationWithJUnit {
 
   def setup() = {
-    inject[DBConnection].readWrite {implicit s =>
+    inject[Database].readWrite {implicit s =>
       val commentRepo = inject[CommentRepo]
       val userRepo = inject[UserRepo]
       val commentRecipientRepo = inject[CommentRecipientRepo]
@@ -69,7 +69,7 @@ class CommentTest extends SpecificationWithJUnit {
 
         val (user1, user2, uri1, uri2, msg3) = setup()
 
-        inject[DBConnection].readOnly { implicit s =>
+        inject[Database].readOnly { implicit s =>
           commentRepo.getPublicCount(Id[NormalizedURI](1))
           commentRepo.getMessagesWithChildrenCount(Id[NormalizedURI](1), Id[User](1))
           commentRepo.getMessagesWithChildrenCount(Id[NormalizedURI](2), Id[User](1))
@@ -80,7 +80,7 @@ class CommentTest extends SpecificationWithJUnit {
         commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(Id[NormalizedURI](2), Id[User](1))).get === 0
 
         // Caching invalidation
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           commentRecipientRepo.save(CommentRecipient(commentId = msg3.id.get, userId = Some(user1.id.get)))
           commentRepo.save(Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "New message on msg3 to user2!", permissions = CommentPermissions.MESSAGE, parent = msg3.id))
           commentRepo.messageWithChildrenCountCache.get(MessageWithChildrenCountUriIdUserIdKey(uri1.id.get, user1.id.get)).isDefined === false
@@ -98,7 +98,7 @@ class CommentTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
 
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           val userRepo = inject[UserRepo]
           val user3 = userRepo.save(User(firstName = "Other", lastName = "User"))
 
@@ -127,7 +127,7 @@ class CommentTest extends SpecificationWithJUnit {
     "add comments" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
-        inject[DBConnection].readOnly {implicit s =>
+        inject[Database].readOnly {implicit s =>
           inject[CommentRepo].all().length === 9
         }
       }
@@ -135,7 +135,7 @@ class CommentTest extends SpecificationWithJUnit {
    "count" in {
       running(new EmptyApplication()) {
         setup()
-        inject[DBConnection].readOnly {implicit s =>
+        inject[Database].readOnly {implicit s =>
           inject[CommentRepo].count(CommentPermissions.PUBLIC) === 3
           inject[CommentRepo].count(CommentPermissions.MESSAGE) === 4
         }
@@ -144,7 +144,7 @@ class CommentTest extends SpecificationWithJUnit {
     "count and load public comments by URI" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
-        inject[DBConnection].readOnly {implicit s =>
+        inject[Database].readOnly {implicit s =>
           inject[CommentRepo].getPublicCount(uri1.id.get) === 2
           inject[CommentRepo].getPublicCount(uri2.id.get) === 1
           inject[CommentRepo].getPublic(uri1.id.get).length === 2
@@ -155,7 +155,7 @@ class CommentTest extends SpecificationWithJUnit {
     "count and load messages by URI and UserId" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
-        inject[DBConnection].readOnly {implicit s =>
+        inject[Database].readOnly {implicit s =>
           val repo = inject[CommentRepo]
           repo.getMessages(uri1.id.get, user1.id.get).length === 2
           repo.getMessages(uri1.id.get, user2.id.get).length === 3
@@ -167,7 +167,7 @@ class CommentTest extends SpecificationWithJUnit {
     "count messages AND comments by URI and UserId" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg3) = setup()
-        inject[DBConnection].readOnly {implicit s =>
+        inject[Database].readOnly {implicit s =>
           val repo = inject[CommentRepo]
           repo.getChildCount(msg3.id.get) === 1
           repo.getMessagesWithChildrenCount(uri1.id.get, user1.id.get) === 2

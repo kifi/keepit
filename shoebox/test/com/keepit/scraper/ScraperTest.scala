@@ -63,7 +63,7 @@ class ScraperTest extends SpecificationWithJUnit {
 
     "fetch allActive" in {
       running(new EmptyApplication()) {
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           val uriRepo = inject[NormalizedURIRepo]
           val scrapeRepo = inject[ScrapeInfoRepo]
           val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").withState(NormalizedURIStates.INDEXED))
@@ -80,7 +80,7 @@ class ScraperTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
-        val (uri1, uri2, info1, info2) = inject[DBConnection].readWrite { implicit s =>
+        val (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
           val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
           val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing"))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
@@ -93,7 +93,7 @@ class ScraperTest extends SpecificationWithJUnit {
         store.size === 2
 
         // get URIs from db
-        val (uri11, uri22) = inject[DBConnection].readOnly { implicit s =>
+        val (uri11, uri22) = inject[Database].readOnly { implicit s =>
           (uriRepo.get(uri1.id.get), uriRepo.get(uri2.id.get))
         }
 
@@ -107,7 +107,7 @@ class ScraperTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
-        var (uri1, uri2, info1, info2) = inject[DBConnection].readWrite { implicit s =>
+        var (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
           val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
           val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing"))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
@@ -119,7 +119,7 @@ class ScraperTest extends SpecificationWithJUnit {
         store.size === 2
 
         // get ScrapeInfo from db
-        val (info1a, info2a) = inject[DBConnection].readOnly { implicit s =>
+        val (info1a, info2a) = inject[Database].readOnly { implicit s =>
           (scrapeRepo.getByUri(uri1.id.get).get, scrapeRepo.getByUri(uri2.id.get).get)
         }
 
@@ -173,7 +173,7 @@ class ScraperTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
-        var (uri1, info1) = inject[DBConnection].readWrite { implicit s =>
+        var (uri1, info1) = inject[Database].readWrite { implicit s =>
           val uri1 = uriRepo.save(NormalizedURIFactory(title = "notModified", url = "http://www.keepit.com/notModified"))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           (uri1, info1)
@@ -184,7 +184,7 @@ class ScraperTest extends SpecificationWithJUnit {
         store.size === 1
 
         // get ScrapeInfo from db
-        val info1a = inject[DBConnection].readOnly { implicit s =>
+        val info1a = inject[Database].readOnly { implicit s =>
           scrapeRepo.getByUri(uri1.id.get).get
         }
 
@@ -195,18 +195,18 @@ class ScraperTest extends SpecificationWithJUnit {
         (info1a.signature.length > 0) === true
 
         val repo = inject[ScrapeInfoRepo]
-        inject[DBConnection].readWrite { implicit s => repo.save(info1a.withNextScrape(info1a.lastScrape)) }
+        inject[Database].readWrite { implicit s => repo.save(info1a.withNextScrape(info1a.lastScrape)) }
         scraper.run.head._2 must beNone // check the article
 
-        val info1b = inject[DBConnection].readOnly { implicit s => repo.getByUri(info1a.uriId).get }
+        val info1b = inject[Database].readOnly { implicit s => repo.getByUri(info1a.uriId).get }
         ((info1b.lastScrape compareTo info1a.lastScrape) == 0) === true // last scrape should not be changed
         (info1b.interval > info1a.interval) === true
         ((info1b.nextScrape compareTo info1a.nextScrape) > 0) === true
 
-        inject[DBConnection].readWrite { implicit s => repo.save(info1b.withNextScrape(info1b.lastScrape)) }
+        inject[Database].readWrite { implicit s => repo.save(info1b.withNextScrape(info1b.lastScrape)) }
         scraper.run.head._2 must beNone // check the article
 
-        val info1c = inject[DBConnection].readOnly { implicit s => repo.getByUri(info1b.uriId).get }
+        val info1c = inject[Database].readOnly { implicit s => repo.getByUri(info1b.uriId).get }
         ((info1c.lastScrape compareTo info1b.lastScrape) == 0) === true // last scrape should not be changed
         (info1c.interval > info1b.interval) === true
         ((info1c.nextScrape compareTo info1b.nextScrape) > 0) === true
@@ -217,15 +217,15 @@ class ScraperTest extends SpecificationWithJUnit {
       running(new EmptyApplication()) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
-        var info = inject[DBConnection].readWrite { implicit s =>
+        var info = inject[Database].readWrite { implicit s =>
           val uri = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
           scrapeRepo.getByUri(uri.id.get).get
         }
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           info = scrapeRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
           info.nextScrape === END_OF_TIME
         }
-        inject[DBConnection].readWrite { implicit s =>
+        inject[Database].readWrite { implicit s =>
           info = scrapeRepo.save(info.withState(ScrapeInfoStates.ACTIVE))
           (info.nextScrape.getMillis <= currentDateTime.getMillis) === true
         }
@@ -235,9 +235,9 @@ class ScraperTest extends SpecificationWithJUnit {
 
   private[this] def scrapeAndUpdateScrapeInfo(info: ScrapeInfo, scraper: Scraper): ScrapeInfo = {
     val repo = inject[ScrapeInfoRepo]
-    inject[DBConnection].readWrite { implicit s => repo.save(info.withNextScrape(info.lastScrape)) }
+    inject[Database].readWrite { implicit s => repo.save(info.withNextScrape(info.lastScrape)) }
     scraper.run
-    inject[DBConnection].readOnly { implicit s => repo.getByUri(info.uriId).get }
+    inject[Database].readOnly { implicit s => repo.getByUri(info.uriId).get }
   }
 
   private def toHttpInputStream(text: String) = {

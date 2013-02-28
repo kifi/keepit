@@ -58,7 +58,7 @@ private[scraper] class DataIntegrityActor() extends FortyTwoActor with Logging {
   def receive() = {
     case CleanOrphans =>
       val orphanCleaner = new OrphanCleaner
-      inject[DBConnection].readWrite { implicit session =>
+      inject[Database].readWrite { implicit session =>
         orphanCleaner.cleanNormalizedURIs()
         orphanCleaner.cleanScrapeInfo()
       }

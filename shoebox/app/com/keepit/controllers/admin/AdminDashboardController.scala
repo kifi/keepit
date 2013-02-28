@@ -27,7 +27,7 @@ import org.joda.time.DateTimeZone
 import org.joda.time.Days
 import play.api.libs.json.JsNumber
 import play.api.http.ContentTypes
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.Repo
 import scala.concurrent.duration._
 
@@ -38,8 +38,8 @@ object AdminDashboardController extends FortyTwoController {
 
   implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
 
-  private lazy val userCountByDate = calcCountByDate(inject[DBConnection].readOnly(implicit session => inject[UserRepo].all).map(_.createdAt.toLocalDateInZone))
-  private lazy val bookmarkCountByDate = calcCountByDate(inject[DBConnection].readOnly(implicit session => inject[BookmarkRepo].all).map(_.createdAt.toLocalDateInZone))
+  private lazy val userCountByDate = calcCountByDate(inject[Database].readOnly(implicit session => inject[UserRepo].all).map(_.createdAt.toLocalDateInZone))
+  private lazy val bookmarkCountByDate = calcCountByDate(inject[Database].readOnly(implicit session => inject[BookmarkRepo].all).map(_.createdAt.toLocalDateInZone))
 
   private def calcCountByDate(dates: => Seq[LocalDate]) = {
 

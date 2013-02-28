@@ -23,7 +23,7 @@ class UserToDomainTest extends SpecificationWithJUnit with DbRepos {
         val repo = inject[UserToDomainRepo]
         inject[UserToDomainRepo] must be(repo) // singleton
 
-        val (u1, u2, d1, d2, u1d1, u1d2, u2d2) = inject[DBConnection].readWrite{ implicit session =>
+        val (u1, u2, d1, d2, u1d1, u1d2, u2d2) = inject[Database].readWrite{ implicit session =>
           val u1 = inject[UserRepo].save(User(firstName = "J", lastName = "Jacobs"))
           val u2 = inject[UserRepo].save(User(firstName = "A", lastName = "Jacobs"))
           val d1 = inject[DomainRepo].save(Domain(hostname = "outlook.com"))
@@ -34,7 +34,7 @@ class UserToDomainTest extends SpecificationWithJUnit with DbRepos {
            repo.save(UserToDomain(None, u2.id.get, d2.id.get, UserToDomainKinds.NEVER_SHOW)))
         }
 
-        inject[DBConnection].readOnly{ implicit session =>
+        inject[Database].readOnly{ implicit session =>
           repo.get(u1.id.get, d1.id.get, UserToDomainKinds.NEVER_SHOW) === Some(u1d1)
           repo.get(u1.id.get, d2.id.get, UserToDomainKinds.NEVER_SHOW) === Some(u1d2)
           repo.get(u2.id.get, d1.id.get, UserToDomainKinds.NEVER_SHOW) === None

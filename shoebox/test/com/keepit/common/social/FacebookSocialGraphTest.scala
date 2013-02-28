@@ -6,7 +6,7 @@ import org.junit.runner.RunWith
 import org.specs2.mutable._
 import org.specs2.runner.JUnitRunner
 
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.common.net.FakeHttpClient
 import com.keepit.inject._
 import com.keepit.model.SocialUserInfo
@@ -51,11 +51,11 @@ class FacebookSocialGraphTest extends SpecificationWithJUnit with DbRepos {
         val socialUser = SocialUser(UserId("100004067535411", "facebook"), "Boaz Tal", Some("boaz.tal@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
 
-        val user = inject[DBConnection].readWrite { implicit s => 
+        val user = inject[Database].readWrite { implicit s => 
           userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
         }
         val unsaved = SocialUserInfo(userId = user.id, fullName = "Eishay Smith", socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
-        val socialUserInfo = inject[DBConnection].readWrite { implicit s =>
+        val socialUserInfo = inject[Database].readWrite { implicit s =>
           inject[SocialUserInfoRepo].save(unsaved)
         }
         unsaved.userId === user.id

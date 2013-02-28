@@ -18,7 +18,7 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
    * Assuming for now that there is only facebook
    */
   def find(id: UserId): Option[SocialUser] =
-    inject[DBConnection].readOnly { implicit s =>
+    inject[Database].readOnly { implicit s =>
       inject[SocialUserInfoRepo].getOpt(SocialId(id.id), SocialNetworks.FACEBOOK)
     } match {
       case None =>
@@ -29,7 +29,7 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
         Some(user.credentials.getOrElse(throw new Exception("user [%s] does not have credentials".format(user))))
     }
 
-  def save(socialUser: SocialUser): Unit = inject[DBConnection].readWrite { implicit s =>
+  def save(socialUser: SocialUser): Unit = inject[Database].readWrite { implicit s =>
     //todo(eishay) take the network type from the socialUser
     log.debug("persisting social user %s".format(socialUser))
     val socialUserInfo = inject[SocialUserInfoRepo].save(internUser(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK, socialUser)
@@ -50,7 +50,7 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
     )
   }
 
-  private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser): SocialUserInfo = inject[DBConnection].readWrite { implicit s =>
+  private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser): SocialUserInfo = inject[Database].readWrite { implicit s =>
     val userRepo = inject[UserRepo]
     inject[SocialUserInfoRepo].getOpt(socialId, socialNetworkType) match {
       case Some(socialUserInfo) if (!socialUserInfo.userId.isEmpty) =>

@@ -4,7 +4,7 @@ import com.keepit.classify._
 import com.keepit.common.analytics.{MongoEventStore, EventFamilies, MongoSelector}
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.inject.inject
 import com.keepit.model.{SliderRuleRepo, SliderRuleStates}
@@ -23,7 +23,7 @@ object SliderAdminController extends FortyTwoController {
 
   def getRules = AdminHtmlAction { implicit request =>
     val groupName = "default"
-    val group = inject[DBConnection].readOnly { implicit session =>
+    val group = inject[Database].readOnly { implicit session =>
       inject[SliderRuleRepo].getGroup(groupName)
     }
     Ok(views.html.sliderRules(groupName, group.rules.map(r => r.name -> r).toMap))
@@ -32,7 +32,7 @@ object SliderAdminController extends FortyTwoController {
   def saveRules = AdminHtmlAction { implicit request =>
     val body = request.body.asFormUrlEncoded.get
     val groupName = body("group").head
-    inject[DBConnection].readWrite { implicit session =>
+    inject[Database].readWrite { implicit session =>
       val repo = inject[SliderRuleRepo]
       repo.getGroup(groupName).rules.foreach { rule =>
         val newRule = rule
@@ -45,7 +45,7 @@ object SliderAdminController extends FortyTwoController {
   }
 
   def getPatterns = AdminHtmlAction { implicit request =>
-    val patterns = inject[DBConnection].readOnly { implicit session =>
+    val patterns = inject[Database].readOnly { implicit session =>
       inject[URLPatternRepo].all
     }
     Ok(views.html.sliderPatterns(patterns))
@@ -53,7 +53,7 @@ object SliderAdminController extends FortyTwoController {
 
   def savePatterns = AdminHtmlAction { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
-    inject[DBConnection].readWrite { implicit session =>
+    inject[Database].readWrite { implicit session =>
       val repo = inject[URLPatternRepo]
       for (key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))) {
         val id = Id[URLPattern](key.toLong)
@@ -77,14 +77,14 @@ object SliderAdminController extends FortyTwoController {
   }
 
   def getDomainTags = AdminHtmlAction { implicit request =>
-    val tags = inject[DBConnection].readOnly { implicit session =>
+    val tags = inject[Database].readOnly { implicit session =>
       inject[DomainTagRepo].all
     }
     Ok(views.html.domainTags(tags))
   }
 
   def saveDomainTags = AdminHtmlAction { implicit request =>
-    val db = inject[DBConnection]
+    val db = inject[Database]
     val sensitivityUpdater = inject[SensitivityUpdater]
     val domainToTagRepo = inject[DomainToTagRepo]
     val domainRepo = inject[DomainRepo]
@@ -118,7 +118,7 @@ object SliderAdminController extends FortyTwoController {
   }
 
   def getDomainOverrides = AdminHtmlAction { implicit request =>
-    val domains = inject[DBConnection].readOnly { implicit session =>
+    val domains = inject[Database].readOnly { implicit session =>
       inject[DomainRepo].getOverrides()
     }
     Ok(views.html.domains(domains))
@@ -130,11 +130,11 @@ object SliderAdminController extends FortyTwoController {
     val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
       case (k, vs) => k.toLowerCase -> (vs.head.toLowerCase == "true")
     }.toMap
-    val domainsToRemove = inject[DBConnection].readOnly { implicit session =>
+    val domainsToRemove = inject[Database].readOnly { implicit session =>
       inject[DomainRepo].getOverrides()
     }.filterNot(d => domainSensitiveMap.contains(d.hostname))
 
-    inject[DBConnection].readWrite { implicit s =>
+    inject[Database].readWrite { implicit s =>
       domainSensitiveMap.foreach {
         case (domainName, sensitive) if Domain.isValid(domainName) =>
           val domain = domainRepo.get(domainName)

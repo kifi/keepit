@@ -38,7 +38,7 @@ class SocialUserImportFriends() extends Logging {
   private def importFriendsFromJson(parentJson: JsValue): Seq[SocialUserRawInfo] = {
     val repo = inject[SocialUserInfoRepo]
     val socialUserInfos = extractFriends(parentJson) filter infoNotInDb map createSocialUserInfo map { t => 
-      (inject[DBConnection].readWrite {implicit s => repo.save(t._1)}, t._2)
+      (inject[Database].readWrite {implicit s => repo.save(t._1)}, t._2)
     }
 
     val socialUserRawInfos = socialUserInfos map { case (info, friend) => createSocialUserRawInfo(info, friend) }
@@ -62,7 +62,7 @@ class SocialUserImportFriends() extends Logging {
         log.error("Can't parse username from friend json %s".format(friend))
         throw e
     }
-    inject[DBConnection].readOnly {implicit s =>
+    inject[Database].readOnly {implicit s =>
       inject[SocialUserInfoRepo].getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here
     }
   }

@@ -57,7 +57,7 @@ object UrlController extends FortyTwoController {
   def doRenormalize(readOnly: Boolean = true, domain: Option[String] = None) = {
     // Processes all models that reference a `NormalizedURI`, and renormalizes all URLs.
     val changedURIs = scala.collection.mutable.MutableList[ChangedNormURI]()
-    val (urlsSize, changes) = inject[DBConnection].readWrite {implicit session =>
+    val (urlsSize, changes) = inject[Database].readWrite {implicit session =>
 
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]

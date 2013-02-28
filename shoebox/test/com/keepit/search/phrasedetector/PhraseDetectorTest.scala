@@ -14,7 +14,7 @@ import play.api.test._
 import play.api.test.Helpers._
 import com.keepit.model.{PhraseRepo, Phrase}
 import com.keepit.test.EmptyApplication
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.inject._
 
 @RunWith(classOf[JUnitRunner])
@@ -24,7 +24,7 @@ class PhraseDetectorTest extends SpecificationWithJUnit {
     "detects phrases in input text" in {
         running(new EmptyApplication()) {
         val ramDir = new RAMDirectory
-        val indexer = PhraseIndexer(new RAMDirectory(), inject[DBConnection], inject[PhraseRepo])
+        val indexer = PhraseIndexer(new RAMDirectory(), inject[Database], inject[PhraseRepo])
         val lang = Lang("en")
         val phrases = List(
           "classroom project",

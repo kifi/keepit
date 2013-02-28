@@ -22,7 +22,7 @@ class HomeController extends FortyTwoController {
   }
 
   def upgrade = AuthenticatedHtmlAction { implicit request =>
-    val user = inject[DBConnection].readOnly { implicit s => inject[UserRepo].get(request.userId) }
+    val user = inject[Database].readOnly { implicit s => inject[UserRepo].get(request.userId) }
     log.info("Looks like %s needs to upgrade".format(user.firstName + " " + user.lastName))
     val html = io.Source.fromURL(Play.resource("/public/html/upgrade.html").get).mkString
     Ok(html).as(ContentTypes.HTML)
