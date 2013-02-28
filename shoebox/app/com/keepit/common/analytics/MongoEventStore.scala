@@ -41,6 +41,10 @@ case class MongoSelector(eventFamily: EventFamily) {
     q = q ++ ("metaData.metaData.%s".format(field) $exists true)
     this
   }
+  def withMetaData[T](field: String, value: Boolean) = {
+    q = q ++ ("metaData.metaData.%s".format(field) -> value)
+    this
+  }
   def withMetaData(field: String, value: String) = {
     q = q ++ ("metaData.metaData.%s".format(field) -> value)
     this

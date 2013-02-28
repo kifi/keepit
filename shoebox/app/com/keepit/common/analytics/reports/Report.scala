@@ -501,6 +501,19 @@ class DailyKifiAtLeastOneResult extends BasicDailyAggregationReport with Logging
   }
 }
 
+class DailyDustSettledKifiHadResults(kifiHadResults: Boolean = true) extends BasicDailyAggregationReport with Logging {
+  override val reportName = s"DailyDustSettledKifiHad${if (kifiHadResults) "" else "No"}Results"
+  override val ordering = 260
+
+  def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
+    val selector = MongoSelector(EventFamilies.SEARCH)
+        .withDateRange(startDate, endDate)
+        .withMetaData("kifiHadResults", kifiHadResults)
+        .withEventName("dustSettled").build
+    super.get(selector, startDate, endDate)
+  }
+}
+
 trait DailyByExperiment extends BasicDailyAggregationReport with Logging {
   def eventName: String
   def experiment: Option[SearchConfigExperiment]
