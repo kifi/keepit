@@ -65,7 +65,7 @@ class SlickTest extends SpecificationWithJUnit {
         val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent])
 
         //just for testing you know...
-        inject[DBConnection].readWrite{ implicit session =>
+        inject[Database].readWrite{ implicit session =>
           repo.asInstanceOf[BarRepoImpl].createTableForTesting() //only in test mode we should know about the implementation
           val fooA = repo.save(Bar(name = "A"))
           fooA.id.get.id === 1
@@ -73,7 +73,7 @@ class SlickTest extends SpecificationWithJUnit {
           fooB.id.get.id === 2
         }
 
-        inject[DBConnection].readOnly{ implicit session =>
+        inject[Database].readOnly{ implicit session =>
           repo.count(session) === 2
           val a = repo.getByName("A")
           a.size === 1
@@ -125,12 +125,12 @@ class SlickTest extends SpecificationWithJUnit {
         val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent])
 
         //just for testing you know...
-        val (b1, b2) = inject[DBConnection].readWrite{ implicit session =>
+        val (b1, b2) = inject[Database].readWrite{ implicit session =>
           repo.asInstanceOf[BarRepoImpl].createTableForTesting() //only in test mode we should know about the implementation
           (repo.save(Bar(name = "A")), repo.save(Bar(name = "B")))
         }
 
-        inject[DBConnection].readOnly{ implicit session =>
+        inject[Database].readOnly{ implicit session =>
           repo.count(session) === 2
           repo.get(b1.externalId) === b1
           repo.get(b2.externalId) === b2

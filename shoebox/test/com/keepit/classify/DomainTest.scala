@@ -3,7 +3,7 @@ package com.keepit.classify
 
 import org.specs2.mutable._
 
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.inject.inject
 import com.keepit.test.DbRepos
 import com.keepit.test.EmptyApplication
@@ -22,7 +22,7 @@ class DomainTest extends SpecificationWithJUnit with DbRepos {
         val d2 = Domain(hostname = "facebook.com", autoSensitive = Some(false))
         val d3 = Domain(hostname = "yahoo.com", autoSensitive = Some(false))
 
-        inject[DBConnection].readWrite { implicit c =>
+        inject[Database].readWrite { implicit c =>
           val Seq(sd1, sd2, sd3) = Seq(d1, d2, d3).map(domainRepo.save(_))
 
           domainRepo.get("google.com").get === sd1
@@ -43,7 +43,7 @@ class DomainTest extends SpecificationWithJUnit with DbRepos {
 
         val d = Domain(hostname = "google.com", autoSensitive = Some(false))
 
-        inject[DBConnection].readWrite { implicit c =>
+        inject[Database].readWrite { implicit c =>
           val sd = domainRepo.save(d)
 
           domainRepo.get(sd.id.get).sensitive.get === false

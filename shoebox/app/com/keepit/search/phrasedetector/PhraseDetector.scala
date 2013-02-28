@@ -22,7 +22,7 @@ import scala.collection.mutable.ArrayBuffer
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
 import org.apache.lucene.store.RAMDirectory
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.model.{PhraseRepo, Phrase}
 import scala.slick.util.CloseableIterator
 import play.api.Play.current
@@ -112,14 +112,9 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
 
 
 object PhraseIndexer {
-  def apply(): PhraseIndexer = {
-    val analyzer = DefaultAnalyzer.forIndexing
-    val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
-    new FakePhraseIndexer(config)
-  }
-  def apply(db: DBConnection, phraseRepo: PhraseRepo): PhraseIndexer = apply(new RAMDirectory, db, phraseRepo)
+  def apply(db: Database, phraseRepo: PhraseRepo): PhraseIndexer = apply(new RAMDirectory, db, phraseRepo)
 
-  def apply(indexDirectory: Directory, db: DBConnection, phraseRepo: PhraseRepo): PhraseIndexer  = {
+  def apply(indexDirectory: Directory, db: Database, phraseRepo: PhraseRepo): PhraseIndexer  = {
     val analyzer = DefaultAnalyzer.forIndexing
     val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
     new PhraseIndexerImpl(indexDirectory, db, phraseRepo, config)
@@ -131,7 +126,7 @@ abstract class PhraseIndexer(indexDirectory: Directory, indexWriterConfig: Index
   def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true): Unit
 }
 
-class PhraseIndexerImpl(indexDirectory: Directory, db: DBConnection, phraseRepo: PhraseRepo, indexWriterConfig: IndexWriterConfig) extends PhraseIndexer(indexDirectory, indexWriterConfig)  {
+class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: PhraseRepo, indexWriterConfig: IndexWriterConfig) extends PhraseIndexer(indexDirectory, indexWriterConfig)  {
 
   def reload() {
     db.readOnly { implicit session =>
@@ -157,12 +152,6 @@ class PhraseIndexerImpl(indexDirectory: Directory, db: DBConnection, phraseRepo:
   def buildIndexable(id: Id[Phrase]): Indexable[Phrase] = throw new UnsupportedOperationException
 }
 
-class FakePhraseIndexer(indexWriterConfig: IndexWriterConfig) extends PhraseIndexer(new RAMDirectory, indexWriterConfig) {
-  def reload() = {}
-  def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true) = {}
-  def buildIndexable(data: Phrase): Indexable[Phrase] = throw new UnsupportedOperationException
-  def buildIndexable(id: Id[Phrase]): Indexable[Phrase] = throw new UnsupportedOperationException
-}
 
 class PhraseIndexable(override val id: Id[Phrase], phrase: String, lang: Lang) extends Indexable[Phrase] with PhraseFieldBuilder {
   override def buildDocument = {

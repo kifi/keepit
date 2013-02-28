@@ -54,7 +54,7 @@ class BookmarkTest extends SpecificationWithJUnit with DbRepos {
           bookmarkRepo.all
         }
         println(cxAll mkString "\n")
-        val all = inject[DBConnection].readOnly(implicit session => bookmarkRepo.all)
+        val all = inject[Database].readOnly(implicit session => bookmarkRepo.all)
         all.map(_.title) === Seq("G1", "A1", "G2")
       }
     }

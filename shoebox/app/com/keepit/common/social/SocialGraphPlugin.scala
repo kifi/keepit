@@ -1,7 +1,7 @@
 package com.keepit.common.social
 
 import com.google.inject.Inject
-import com.keepit.common.db.slick.DBConnection
+import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.model._
@@ -21,7 +21,7 @@ import com.keepit.common.akka.FortyTwoActor
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case object FetchAll
 
-private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: DBConnection, socialRepo: SocialUserInfoRepo) extends FortyTwoActor with Logging {
+private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: Database, socialRepo: SocialUserInfoRepo) extends FortyTwoActor with Logging {
   def receive() = {
     case FetchAll =>
       val unprocessedUsers = db.readOnly {implicit s =>
@@ -69,7 +69,7 @@ trait SocialGraphPlugin extends Plugin {
   def fetchAll(): Unit
 }
 
-class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: FacebookSocialGraph, db: DBConnection, socialRepo: SocialUserInfoRepo) 
+class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: FacebookSocialGraph, db: Database, socialRepo: SocialUserInfoRepo) 
     extends SocialGraphPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)

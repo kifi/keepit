@@ -26,7 +26,7 @@ case class DomainTag(
 class DomainTagName private (val name: String) extends AnyVal
 
 object DomainTagName {
-  def apply(name: String): DomainTagName = DomainTagName(name.toLowerCase.trim)
+  def apply(name: String): DomainTagName = new DomainTagName(name.toLowerCase.trim)
   def unapply(dtn: DomainTagName): Option[String] = Some(dtn.name)
 
   private val blacklist = Seq(
