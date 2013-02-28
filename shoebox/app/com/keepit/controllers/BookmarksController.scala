@@ -29,12 +29,12 @@ import com.keepit.common.analytics.ActivityStream
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
-class BookmarksController @Inject() (db: Database, 
+class BookmarksController @Inject() (db: Database,
   bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, socialRepo: UserWithSocialRepo, userRepo: UserRepo, urlPatternRepo: URLPatternRepo,
   scrapeRepo: ScrapeInfoRepo, domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo, urlRepo: URLRepo, socialUserInfoRepo: SocialUserInfoRepo,
   sliderRuleRepo: SliderRuleRepo, socialConnectionRepo: SocialConnectionRepo, commentReadRepo: CommentReadRepo, experimentRepo: UserExperimentRepo,
   scraper: ScraperPlugin, uriGraphPlugin: URIGraphPlugin, healthcheck: HealthcheckPlugin,
-  classifier: DomainClassifier, historyTracker: SliderHistoryTracker, uriGraph: URIGraph, activityStream: ActivityStream) 
+  classifier: DomainClassifier, historyTracker: SliderHistoryTracker, uriGraph: URIGraph, activityStream: ActivityStream)
     extends FortyTwoController {
 
   def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
@@ -130,12 +130,12 @@ class BookmarksController @Inject() (db: Database,
       val nUri: Option[NormalizedURI] = uriRepo.getByNormalizedUrl(uri)
       val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
 
-      val host: String = nUri.flatMap(_.domain).getOrElse(URI.parse(uri).get.host.get.name)
-      val domain: Option[Domain] = domainRepo.get(host)
+      val host: Option[String] = nUri.flatMap(_.domain).orElse(URI.parse(uri).get.host.map(_.name))
+      val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
       val neverOnSite: Option[UserToDomain] = domain.flatMap { dom =>
         userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
       }
-      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(classifier.isSensitive(host).right.getOrElse(None))
+      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(host.flatMap(classifier.isSensitive(_).right.getOrElse(None)))
 
       val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
         bookmarkRepo.getByUriAndUser(uriId, userId)
