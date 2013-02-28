@@ -88,7 +88,9 @@ object Reports {
     val constructors = Seq(
       new DailyKifiResultClickedByExperiment(_),
       new DailyGoogleResultClickedByExperiment(_),
-      new DailyKifiAtLeastOneResultByExperiment(_))
+      new DailyKifiAtLeastOneResultByExperiment(_),
+      (x: Option[SearchConfigExperiment]) => new DailyDustSettledKifiHadResultsByExperiment(x, true),
+      (x: Option[SearchConfigExperiment]) => new DailyDustSettledKifiHadResultsByExperiment(x, false))
     ReportGroup("SearchExperimentReport",
       for (experiment <- experiments; constructor <- constructors) yield constructor(Some(experiment))
     )
