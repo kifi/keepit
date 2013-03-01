@@ -1,6 +1,7 @@
 package com.keepit.scraper
 
 case class ScraperConfig(
+  enabled: Boolean = true,
   minInterval: Double = 12.0d, //hours
   maxInterval: Double = 1024.0d, //hours
   intervalIncrement: Double = 2.0d, //hours

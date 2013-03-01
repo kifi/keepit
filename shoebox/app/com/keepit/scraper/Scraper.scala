@@ -32,26 +32,34 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
   implicit val config = scraperConfig
 
   def run(): Seq[(NormalizedURI, Option[Article])] = {
-    val startedTime = currentDateTime
-    log.info("starting a new scrape round")
-    val tasks = inject[Database].readOnly { implicit s =>
-      inject[ScrapeInfoRepo].getOverdueList().map{ info => (inject[NormalizedURIRepo].get(info.uriId), info) }
+    if (scraperConfig.enabled) {
+      val startedTime = currentDateTime
+      log.info("starting a new scrape round")
+      val tasks = inject[Database].readOnly { implicit s =>
+        inject[ScrapeInfoRepo].getOverdueList().map{ info => (inject[NormalizedURIRepo].get(info.uriId), info) }
+      }
+      log.info("got %s uris to scrape".format(tasks.length))
+      val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
+      val jobTime = Seconds.secondsBetween(startedTime, currentDateTime).getSeconds()
+      log.info("successfully scraped %s articles out of %s in %s seconds:\n%s".format(
+          scrapedArticles.flatMap(_._2).size, tasks.size, jobTime, scrapedArticles.map(_._1).mkString("\n")))
+      scrapedArticles
+    } else {
+      log.info("scraper is disabled")
+      Seq()
     }
-    log.info("got %s uris to scrape".format(tasks.length))
-    val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
-    val jobTime = Seconds.secondsBetween(startedTime, currentDateTime).getSeconds()
-    log.info("succesfuly scraped %s articles out of %s in %s seconds:\n%s".format(
-        scrapedArticles.flatMap{ a => a._2 }.size, tasks.size, jobTime, scrapedArticles map {a => a._1} mkString "\n"))
-    scrapedArticles
   }
 
-  def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
-    val repo = inject[ScrapeInfoRepo]
-    val info = inject[Database].readWrite { implicit s =>
-      repo.getByUri(uri.id.get).getOrElse(repo.save(ScrapeInfo(uriId = uri.id.get)))
-    }
-    safeProcessURI(uri, info)
-  }
+  def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) =
+    if (scraperConfig.enabled) {
+      try {
+        val repo = inject[ScrapeInfoRepo]
+        val info = inject[Database].readWrite { implicit s =>
+          repo.getByUri(uri.id.get).getOrElse(repo.save(ScrapeInfo(uriId = uri.id.get)))
+        }
+        safeProcessURI(uri, info)
+      }
+    } else (uri, None)
 
   private def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {
       processURI(uri, info, false)

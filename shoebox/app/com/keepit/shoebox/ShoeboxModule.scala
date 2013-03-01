@@ -206,7 +206,8 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def scraperConfig: ScraperConfig = ScraperConfig()
+  def scraperConfig: ScraperConfig =
+    ScraperConfig(enabled = current.configuration.getBoolean("scraper.enabled").getOrElse(true))
 
   @Singleton
   @Provides
