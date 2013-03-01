@@ -21,18 +21,17 @@
   border: 1px solid #e5e7e8;
   border-radius: 20px;
   background: #fafafa;
-  padding: 5px;
-  font-size: 12px !important;
+  padding: 5px !important; /* FF */
+  font-size: 12px !important; /* FF */
 }
-.kifi-res-filter-keeps:link,
-.kifi-res-filter-keeps:visited {
+.kifi-res-filter-keeps {
   position: absolute;
   top: 0;
   left: -6px;
-  padding-left: 16px;
-  padding-right: 16px;
-  color: #b2b2b2;
-  text-decoration: none;
+  padding-left: 16px !important; /* FF */
+  padding-right: 16px !important; /* FF */
+  color: #b2b2b2 !important; /* FF */
+  text-decoration: none !important; /* FF */
 }
 .kifi-res-filter-keeps:hover {
   background: #fdfdfd;
@@ -132,7 +131,8 @@ input#token-input-kifi-res-filter-cust {
   margin: 0;
   border: none;
   outline: none;
-  padding: 5px;
+  -moz-appearance: none;
+  padding: 5px !important; /* FF */
   background-color: #fff;
   font: inherit;
   font-size: 11px;
@@ -146,7 +146,7 @@ input#kifi-res-filter-cust { /* shown temporarily until $.tokenInput called */
   border-radius: 3px;
 }
 input#token-input-kifi-res-filter-cust {
-  padding-top: 2px;
+  padding-top: 2px !important; /* FF */
 }
 input#kifi-res-filter-cust:-moz-placeholder,
 input#token-input-kifi-res-filter-cust:-moz-placeholder {
@@ -157,8 +157,8 @@ ul.token-input-list-googly {
   box-sizing: border-box;
   width: 467px;
   margin: 0;
-  padding: 3px 0 0;
-  border: 1px solid #e2e2e2;
+  padding: 3px 0 0 !important; /* FF */
+  border: 1px solid #e2e2e2 !important; /* FF */
   border-radius: 3px;
   background-color: #fff;
   cursor: text;
@@ -239,10 +239,8 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
   background-color: #c9dcfb;
 }
 
-
-
 #kifi-res-list {
-  margin-top: 18px;
+  margin-top: 18px !important; /* FF */
 }
 #kifi-res-list.kifi-res-none {
   margin: 20px 0 12px;
