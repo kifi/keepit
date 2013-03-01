@@ -328,7 +328,7 @@ function postComment(request, respond) {
 }
 
 function searchOnServer(request, respond) {
-  logEvent("search", "newSearch", {query: request.query});
+  logEvent("search", "newSearch", {query: request.query, filter: request.filter});
 
   if (!session) {
     api.log("[searchOnServer] no session");
@@ -339,6 +339,7 @@ function searchOnServer(request, respond) {
   var config = getConfigs();
   ajax("GET", "http://" + config.server + "/search", {
       q: request.query,
+      f: request.filter === "a" ? undefined : request.filter,
       maxHits: request.lastUUID ? 5 : api.prefs.get("maxResults"),
       lastUUID: request.lastUUID,
       context: request.context,
