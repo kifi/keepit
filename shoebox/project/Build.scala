@@ -99,6 +99,9 @@ object ApplicationBuild extends Build {
       //see https://groups.google.com/forum/?fromgroups=#!topic/play-framework/4Fz5TsOKPio
       testOptions += Tests.Argument(TestFrameworks.JUnit, "--ignore-runners=org.specs2.runner.JUnitRunner"),
       testOptions in Test += Tests.Argument("sequential", "false"),
-      testOptions in Test += Tests.Argument("threadsNb", "16")
+      testOptions in Test += Tests.Argument("threadsNb", "16"),
+
+      //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
+      sources in doc in Compile := List()
     )
 }
