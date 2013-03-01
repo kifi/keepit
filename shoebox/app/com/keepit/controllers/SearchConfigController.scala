@@ -1,7 +1,11 @@
 package com.keepit.controllers
 
+import scala.BigDecimal
 import scala.math.BigDecimal.RoundingMode
 
+import java.util.concurrent.TimeUnit
+
+import com.google.common.cache.{CacheLoader, CacheBuilder}
 import com.keepit.common.analytics.reports.{Report, DailyDustSettledKifiHadResultsByExperiment, DailyKifiResultClickedByExperiment, DailyGoogleResultClickedByExperiment}
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.db._
@@ -14,7 +18,6 @@ import com.keepit.search._
 
 import play.api.Play.current
 import play.api.libs.json.{JsString, JsArray, JsNumber, JsObject}
-import scala.BigDecimal
 
 object SearchConfigController extends FortyTwoController {
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -55,12 +58,12 @@ object SearchConfigController extends FortyTwoController {
   }
 
   private def getChartData(reportA: Report, reportB: Report, minDays: Int = 10, maxDays: Int = 20) = {
-    val cdt = currentDateTime
-    val completeReportA = reportA.get(cdt.minusDays(maxDays), cdt)
-    val completeReportB = reportB.get(cdt.minusDays(maxDays), cdt)
+    val now = currentDate
+    val nowDateTime = now.toDateTimeAtCurrentTime(DEFAULT_DATE_TIME_ZONE)
+    val completeReportA = reportA.get(nowDateTime.minusDays(maxDays), nowDateTime)
+    val completeReportB = reportB.get(nowDateTime.minusDays(maxDays), nowDateTime)
     val aMap = completeReportA.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
     val bMap = completeReportB.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
-    val now = currentDate
     val (days, diffs) = (for (i <- maxDays to 0 by -1) yield {
       val day = now.minusDays(i)
       val (a, b) = (aMap.get(day).getOrElse(0), bMap.get(day).getOrElse(0))
@@ -77,16 +80,29 @@ object SearchConfigController extends FortyTwoController {
     ))
   }
 
-  def getKifiVsGoogle(experimentId: Id[SearchConfigExperiment]) = AuthenticatedJsonAction { implicit request =>
-    val e = Some(experimentId).filter(_.id != 0).map(inject[SearchConfigManager].getExperiment)
-    Ok(getChartData(new DailyKifiResultClickedByExperiment(e), new DailyGoogleResultClickedByExperiment(e)))
+  private lazy val kifiVsGoogleCache = CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS)
+    .build(new CacheLoader[Id[SearchConfigExperiment], JsObject] {
+      def load(expId: Id[SearchConfigExperiment]) = {
+        val e = Some(expId).filter(_.id > 0).map(inject[SearchConfigManager].getExperiment)
+        getChartData(new DailyKifiResultClickedByExperiment(e), new DailyGoogleResultClickedByExperiment(e))
+      }
+    })
+  private lazy val kifiHadResultsCache = CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS)
+    .build(new CacheLoader[Id[SearchConfigExperiment], JsObject] {
+      def load(expId: Id[SearchConfigExperiment]) = {
+        val e = Some(expId).filter(_.id > 0).map(inject[SearchConfigManager].getExperiment)
+        getChartData(
+          new DailyDustSettledKifiHadResultsByExperiment(e, true),
+          new DailyDustSettledKifiHadResultsByExperiment(e, false))
+      }
+    })
+
+  def getKifiVsGoogle(expId: Id[SearchConfigExperiment]) = AuthenticatedJsonAction { implicit request =>
+    Ok(kifiVsGoogleCache(expId))
   }
 
   def getKifiHadResults(expId: Id[SearchConfigExperiment]) = AuthenticatedJsonAction { implicit request =>
-    val e = Some(expId).filter(_.id != 0).map(inject[SearchConfigManager].getExperiment)
-    Ok(getChartData(
-      new DailyDustSettledKifiHadResultsByExperiment(e, true),
-      new DailyDustSettledKifiHadResultsByExperiment(e, false)))
+    Ok(kifiHadResultsCache(expId))
   }
 
   def addNewExperiment = AdminHtmlAction { implicit request =>
