@@ -59,7 +59,7 @@ object SearchController extends FortyTwoController {
           SearchFilter.friends(idFilter)
         case Some(ids) =>
           val userRepo = inject[UserRepo]
-          val userIds = ids.split(',').flatMap(id => Try(ExternalId[User](id)).toOption).flatMap(userRepo.getOpt(_)).flatMap(_.id)
+          val userIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption).flatMap(userRepo.getOpt(_)).flatMap(_.id)
           SearchFilter.custom(idFilter, userIds.toSet)
         case None =>
           SearchFilter.default(idFilter)
