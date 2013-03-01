@@ -31,7 +31,15 @@ import java.io.OutputStreamWriter
 
 @RunWith(classOf[JUnitRunner])
 class ScraperTest extends SpecificationWithJUnit {
-  implicit val config = ScraperConfig()
+  implicit val config = ScraperConfig(
+    minInterval = 12.0d, //hours
+    maxInterval = 1024.0d, //hours
+    intervalIncrement = 2.0d, //hours
+    intervalDecrement = 1.0d, //hours
+    initialBackoff = 1.0d, //hours
+    maxBackoff = 1024.0d, //hours
+    changeThreshold = 0.05
+  )
 
   "Scraper" should {
     "get a article from an existing website" in running(new EmptyApplication()) {
