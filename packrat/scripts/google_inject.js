@@ -11,11 +11,13 @@ api.log("[google_inject]");
     api.port.emit("log_event", Array.prototype.slice.call(arguments));
   }
 
-  var resultsHtml, hitHtml;
-  api.load("html/search/google.html", function(html) { resultsHtml = html });
+  var allHtml, hitsHtml, hitHtml;
+  api.load("html/search/google.html", function(html) { allHtml = html });
+  api.load("html/search/google_hits.html", function(html) { hitsHtml = html });
   api.load("html/search/google_hit.html", function(html) { hitHtml = html });
 
-  var query;              // latest search query
+  var filter = "a";       // current search filter ("a", "m", "f", or zero or more dot-delimited user ids)
+  var query = "";         // latest search query
   var response = {};      // latest kifi results received
   var showMoreOnArrival;
   var clicks = {kifi: 0, google: 0};
@@ -43,7 +45,6 @@ api.log("[google_inject]");
     clearTimeout(keyTimer);
     keyTimer = setTimeout(search, 120);  // enough of a delay that we won't search after *every* keystroke (similar to Google's behavior)
   });
-  var $qPredict = $("#gs_taif0");  // stable identifier: "Google Search Type-Ahead Input Field 0"
   $("#gbqf").submit(function() {  // stable identifier: "Google Bar Query Form"
     tQuery = +new Date;
     clearTimeout(keyTimer);
@@ -72,49 +73,71 @@ api.log("[google_inject]");
     }
   }
 
-  function search(fallbackQuery) {
+  function search(fallbackQuery, newFilter) {
     if (isVertical) return;
 
-    var q = ($qPredict.val() || $q.val() || fallbackQuery || "").trim().replace(/\s+/, " ");  // TODO: also detect "Showing results for" and prefer that
-    if (q === query) {
-      api.log("[search] nothing new");
+    var q = (getPrediction() || $q.val() || fallbackQuery || "").trim().replace(/\s+/, " ");  // TODO: also detect "Showing results for" and prefer that
+    var f = newFilter || filter;
+    if (q === query && f === filter) {
+      api.log("[search] nothing new, query:", q, "filter:", f);
       return;
-    } else if (!(query = q)) {
+    }
+    query = q;
+    filter = f;
+    if (!q) {
       api.log("[search] empty query");
       return;
     }
-
-    api.log("[search] query:", q);
+    api.log("[search] query:", q, "filter:", f);
 
     clearTimeout(idleTimer);
     idleTimer = setTimeout(onIdle, 1200);
     var t1 = +new Date;
-    api.port.emit("get_keeps", {query: q}, function results(resp) {
-      if (q !== query) {
-        api.log("[results] ignoring for:", q);
+    api.port.emit("get_keeps", {query: q, filter: f}, function results(resp) {
+      if (q !== query || f !== filter) {
+        api.log("[results] ignoring for query:", q, "filter:", f);
         return;
       } else if (!resp.session) {
-        api.log("[results] no user info")
+        api.log("[results] no user info");
         return;
       }
 
       tKifiResultsReceived = +new Date;
       api.log("[results] response after", tKifiResultsReceived - t1, "ms:", resp);
 
-      $("#kifi-res").remove(); // remove any old results
+      $resList.remove(); // remove any old results
       response = resp;
-      clicks.kifi = clicks.google = 0;
+      response.filter = f;
+      if (!newFilter) {
+        clicks.kifi = clicks.google = 0;
+      }
 
-      logEvent("search", "kifiLoaded", {"query": q, "queryUUID": resp.uuid});
-      if (resp.hits.length) {
-        logEvent("search", "kifiAtLeastOneResult", {"query": q, "queryUUID": resp.uuid, experimentId: response.experimentId});
-        showResults()
-        prefetchMore();
+      var $res = $("#kifi-res");
+      resp.hits.forEach(processHit);
+      if (resp.hits.length || newFilter || filter !== "a") {  // we show a "no results match filter" message if filtering
+        var el = $res[0] || document.getElementById("ires");
+        if (el) {
+          insertResults(el);
+        } else {
+          // must wait for Google to render its results
+        }
       } else {
-        resp.shown = true;
-        tKifiResultsShown = tKifiResultsReceived;
+        $res.remove();
+      }
+
+      logEvent("search", "kifiLoaded", {"query": q, "filter": f == "a" ? undefined : f, "queryUUID": resp.uuid});
+      if (resp.hits.length) {
+        logEvent("search", "kifiAtLeastOneResult", {"query": q, "filter": f == "a" ? undefined : f, "queryUUID": resp.uuid, "experimentId": resp.experimentId});
+        prefetchMore();
       }
     });
+
+    var $resList = $("#kifi-res-list,.kifi-res-end").css("opacity", .2);
+  }
+
+  var elPredict;
+  function getPrediction() {
+    return (elPredict || (elPredict = document.getElementById("gs_taif0")) || 0).value;  // stable identifier: "Google Search Type-Ahead Input Field 0"
   }
 
   function parseQuery(hash) {
@@ -143,11 +166,14 @@ api.log("[google_inject]");
         if (nodes[j].id === "ires") {
           tGoogleResultsShown = +new Date;
           api.log("[onMutation] Google results inserted");
-          insertResults.call(nodes[j]);
+          if (response.hits) {
+            insertResults(nodes[j]);
+          }
+          search();  // prediction may have changed
         }
       }
     }
-  }).observe(document.getElementById("main"), {childList: true, subtree: true});
+  }).observe(document.getElementById("main"), {childList: true, subtree: true});  // TODO: optimize away subtree
 
   /*******************************************************/
 
@@ -197,57 +223,131 @@ api.log("[google_inject]");
     return boldSearchTerms(url, response.query);
   }
 
-  function showResults() {
-    var hits = response.hits.slice();  // copy to ensure that we don't render any prefetched results that arrive
-    api.log("[showResults] hits:", hits);
-
-    hits.forEach(processHit);
-
-    response.html = Mustache.to_html(resultsHtml, {
-        results: hits,
-        session: response.session,
-        endBgUrl: api.url("images/shade_above.png"),
-        mayHaveMore: response.mayHaveMore},
-      {google_hit: hitHtml});
-
-    $("#ires").each(insertResults);
-  }
-
-  function insertResults() {
-    // assert(this.id == "ires")
-    if (!response.html) return;
+  function insertResults(el) {  // el.id must be "ires" (full rendering) or "kifi-res" (partial rendering)
     if (!response.shown) {
       response.shown = true;
       tKifiResultsShown = +new Date;
     }
-    var $res = $(response.html)
-      .find(".kifi-more")[response.mayHaveMore ? "show" : "hide"]().end()
-      .insertBefore(this);
-    api.log("[insertResults] inserted");
-    $res.on("click", ".kifi-more", function onMoreClick() {
-      var numShown = $("#kifi-res-list").children("li.g").length;
-      api.log("[onMoreClick] shown:", numShown, "on hand:", response.hits.length);
-      if (response.hits.length > numShown) {
-        renderMore(response.hits.slice(numShown));
-        prefetchMore();
-      } else if (response.mayHaveMore) {
-        showMoreOnArrival = true;
-      } else {
-        $(this).closest(".kifi-more").hide(200);
+    var params = {
+      results: response.hits,
+      anyResults: response.hits.length > 0,
+      // newFilter: newFilter,
+      session: response.session,
+      endBgUrl: api.url("images/shade_above.png"),
+      mayHaveMore: response.mayHaveMore};
+    if (el.id === "kifi-res") {
+      $(el).append(Mustache.to_html(hitsHtml, params, {google_hit: hitHtml}));
+    } else {
+      var $res = $(Mustache.to_html(allHtml, params, {google_hits: hitsHtml, google_hit: hitHtml}))
+        .insertBefore(el);
+
+      // bind event handlers
+      $res.on("click", ".kifi-res-more", function onMoreClick() {
+        api.log("[onMoreClick] shown:", response.hits.length, "avail:", response.nextHits);
+        if (response.nextHits) {
+          renderMore();
+          prefetchMore();
+        } else if (response.mayHaveMore) {
+          showMoreOnArrival = true;
+        } else {
+          $(this).closest(".kifi-res-more").hide(200);
+        }
+      }).on("click", ".kifi-res-title", function() {
+        api.log("[queue]", $(this).queue());
+        $res.find("#kifi-res-list,.kifi-res-end").toggle(200);
+        $res.find(".kifi-res-filter-keeps").fadeToggle(200);
+        $res.find(".kifi-res-filters-x:visible").click();
+        $(this).toggleClass("kifi-collapsed").delay(200);
+      }).on("click", ".kifi-res-filter-keeps", function() {
+        var $f = $res.find(".kifi-res-filters");
+        if ($f.is(":animated")) return;
+        if ($f.is(":visible")) {
+          $f.find(".kifi-res-filters-x").click();
+        } else {
+          $(this).addClass("kifi-expanded");
+          $f.slideDown(200);
+        }
+      }).on("click", ".kifi-res-filters-x", function() {
+        var $fils = $(this).closest(".kifi-res-filters");
+        var $fil = $fils.find(".kifi-res-filter[data-filter=a]");
+        if (!$fil.hasClass("kifi-selected")) {
+          $fil.click();
+          $fils.delay(150);
+        }
+        $fils.slideUp(200, function() {
+          $res.find(".kifi-res-filter-keeps").removeClass("kifi-expanded");
+        });
+      }).on("click", ".kifi-res-filter:not(.kifi-selected)", function() {
+        var $f = $(this).siblings(".kifi-selected").removeClass("kifi-selected").end().addClass("kifi-selected");
+        var f = $f.data("filter");
+        if (f != "c") {
+          $res.find(".kifi-res-filter-custom").slideUp(200);
+          search(null, f);
+        } else {
+          var $in = $res.find("#kifi-res-filter-cust");
+          $res.find(".kifi-res-filter-custom").slideDown(200, function() {
+            $("#token-input-kifi-res-filter-cust").focus();
+          });
+          api.port.emit("get_friends", function(data) {
+            api.log("friends:", data);
+            var friends = data.friends; //TODO!
+            for (var i in friends) {
+              var f = friends[i];
+              f.name = f.firstName + " " + f.lastName;
+            }
+            if (!$in.tokenInput) {
+              api.require("scripts/lib/jquery-tokeninput-1.6.1.min.js", function() {
+                $in.tokenInput(friends, {
+                  searchDelay: 0,
+                  minChars: 2,
+                  placeholder: $in.prop("placeholder"),
+                  hintText: "",
+                  noResultsText: "",
+                  searchingText: "",
+                  animateDropdown: false,
+                  preventDuplicates: true,
+                  allowTabOut: true,
+                  tokenValue: "externalId",
+                  theme: "googly",
+                  onReady: function() {
+                    $("#token-input-kifi-res-filter-cust").focus();
+                  },
+                  onAdd: function(friend) {
+                    api.log("[onAdd]", friend.externalId, friend.name);
+                    search("", filter.length > 1 ? (filter + "." + friend.externalId) : friend.externalId);
+                  },
+                  onDelete: function(friend) {
+                    api.log("[onDelete]", friend.externalId, friend.name);
+                    var f = filter.split(".").filter(function(id) {return id != friend.externalId}).join(".");
+                    if (f) {
+                      search("", f);
+                    } else {
+                      filter = "";  // signifies an empty custom filter
+                    }
+                  }});
+              });
+            }
+          });
+        }
+      }).on("click", ".kifi-res-filter-custom-x", function() {
+        $res.find(".kifi-res-filter[data-filter=a]").click();
+      }).on("click", ".kifi-res-debug", function() {
+        location = "https://" + response.server + "/admin/search/results/" + response.uuid;
+      });
+
+      if (response.showScores) {
+        $res.find(".kifi-res-title").prepend("<a class=kifi-res-debug href=javascript: target=_blank>debug</a>");
       }
-    }).on("click", "#kifi-trusted", function() {
-      $(this).nextAll().toggle("fast");
-    });
-    if (response.showScores) {
-      $("#kifi-trusted").prepend(
-        '<a class=kifi-debug-results href="https://' + response.server + '/admin/search/results/' + response.uuid + '" target=_blank>debug</a>');
     }
+
+    api.log("[insertResults] done");
   }
 
   function prefetchMore() {
     if (response.mayHaveMore) {
       api.port.emit("get_keeps", {
         "query": response.query,
+        "filter": response.filter,
         "lastUUID": response.uuid,
         "context": response.context
       }, function onPrefetchResponse(resp) {
@@ -257,18 +357,21 @@ api.log("[google_inject]");
         response.uuid = resp.uuid;
         response.context = resp.context;
         response.mayHaveMore = resp.mayHaveMore;
-        response.hits.push.apply(response.hits, resp.hits);
+        response.nextHits = resp.hits;
         if (showMoreOnArrival) {
           showMoreOnArrival = false;
-          renderMore(resp.hits);
+          renderMore();
           prefetchMore();
         }
       });
     }
   }
 
-  function renderMore(hits) {
+  function renderMore() {
+    var hits = response.nextHits;
     api.log("[renderMore] hits:", hits);
+    response.hits.push.apply(response.hits, hits);
+    response.nextHits = null;
     var html = hits.map(function(hit) {
       hit.session = response.session;
       return Mustache.to_html(hitHtml, hit);
@@ -276,7 +379,7 @@ api.log("[google_inject]");
     var $list = $("#kifi-res-list");
     $(html).hide().insertAfter($list.children("li.g").last()).slideDown(200);
     if (!response.mayHaveMore) {
-      $list.find(".kifi-more").hide(200);
+      $list.find(".kifi-res-more").hide(200);
     }
   }
 

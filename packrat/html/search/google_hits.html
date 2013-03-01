@@ -1,0 +1,16 @@
+{{#anyResults}}
+  <ol id="kifi-res-list">
+  {{#results}}
+    {{>google_hit}}
+  {{/results}}
+  </ol>
+{{/anyResults}}
+{{^anyResults}}
+  <div id="kifi-res-list" class="kifi-res-none">Sorry, no keeps match this filter.</div>
+{{/anyResults}}
+
+<div class="kifi-res-end" style="background:url({{endBgUrl}}) center bottom no-repeat">
+{{#mayHaveMore}}
+  <div class="kifi-res-more">More trusted results <span class="kifi-res-more-arrow">&raquo;</span></div>
+{{/mayHaveMore}}
+</div>

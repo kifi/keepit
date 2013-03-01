@@ -1,15 +1,18 @@
 <div id="kifi-res">
-  <h3 id="kifi-trusted" class="r">KiFi Trusted Results</h3>
-
-  <ol id="kifi-res-list">
-  {{#results}}
-    {{>google_hit}}
-  {{/results}}
-  </ol>
-
-  <div class="kifi-end" style="background:url({{endBgUrl}}) center bottom no-repeat">
-  {{#mayHaveMore}}
-    <div class="kifi-more">More trusted results <span class="kifi-more-arrow">&raquo;</span></div>
-  {{/mayHaveMore}}
+  <div style="position:relative">
+    <h3 class="kifi-res-title r">KiFi Trusted Results<span class="kifi-res-title-arrow">&raquo;</span></h3>
+    <a class="kifi-res-filter-keeps" href="javascript:">Filter Keeps</a>
   </div>
+  <menu class="kifi-res-filters">
+    <span data-filter="a" class="kifi-res-filter kifi-selected">All Keeps</span>
+    <span data-filter="m" class="kifi-res-filter">My Keeps</span>
+    <span data-filter="f" class="kifi-res-filter">Friends’ Keeps</span>
+    <span data-filter="c" class="kifi-res-filter">Custom Keeps</span>
+    <span class="kifi-res-filters-x">&times;</span>
+  </menu>
+  <div class="kifi-res-filter-custom">
+    <input type="text" class="kifi-res-filter-cust" id="kifi-res-filter-cust" placeholder="Type a friend’s name">
+    <span class="kifi-res-filter-custom-x">&times;</span>
+  </div>
+  {{>google_hits}}
 </div>
