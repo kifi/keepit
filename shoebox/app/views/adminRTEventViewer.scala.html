@@ -3,7 +3,12 @@
 
 @admin("What's Happening on Kifi?", stylesheets = List("admin_activity")) {
 
-<h3 id="metrics">Total keeps: <span id="total-keeps">0</span>, total Kifi clicked: <span id="total-kifi-clicked">0</span>, total Google clicked: <span id="total-google-clicked">0</span>. Running for <span id="total-time">00:00:00</span>.</h3>
+<h3 id="metrics">
+  Total keeps: <span id="total-keeps">0</span>, 
+  total Kifi clicked: <span id="total-kifi-clicked">0</span>, 
+  total Google clicked: <span id="total-google-clicked">0</span>. 
+  Running for <span id="total-time">00:00:00</span>.
+</h3>
 
 <table class="table activity-table">
   <thead>
@@ -34,7 +39,7 @@
 
     var WS = window['MozWebSocket'] ? MozWebSocket : WebSocket
     //var wsLocation = "@com.keepit.controllers.admin.routes.AdminEventController.eventStream.webSocketURL()"
-    var wsLocation = "ws://keepitfindit.com:9000/admin/realtime/event/stream"
+    var wsLocation = "ws://keepitfindit.com/admin/realtime/event/stream"
 
 
     var startWS = function(location) {
@@ -43,14 +48,14 @@
 
       eventSocket.onmessage = receiveEvent
       eventSocket.onclose = function() {
-        if(intervalId != 0) clearInterval(intervalId)
+        clearInterval(intervalId)
         setTimeout(function(){ startWS(location) }, 2500)
       }
       eventSocket.onopen = function() {
         intervalId = setInterval(function() {
           if (eventSocket.readyState === undefined || eventSocket.readyState > 1) {
             eventSocket.close()
-            if(intervalId != 0) clearInterval(intervalId)
+            clearInterval(intervalId)
             startWS(location)
           }
         }, 5000)
@@ -96,14 +101,7 @@
     setInterval(function() {
       var now = new Date()
       var diff = (now - startTime)/1000
-      var hours   = Math.round(diff/60/60)
-      var minutes = Math.round(diff/60%60)
-      var seconds = Math.round(diff%60)
-
-      if (hours   < 10) {hours   = "0"+hours;}
-      if (minutes < 10) {minutes = "0"+minutes;}
-      if (seconds < 10) {seconds = "0"+seconds;}
-      var time    = hours+':'+minutes+':'+seconds;
+      var time = new Date(Math.round(diff) * 1000).toUTCString().split(" ")[4]);
       $("#total-time").text(time)
     }, 1000)
 
