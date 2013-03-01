@@ -62,7 +62,7 @@ class MainSearcher(
     var uris = if (filter.includeMine) myUris else Set.empty[Long]
     filter.filterFriends(friendIds).foldLeft(uris){ (s, f) => s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet }
   }
-  
+
   def getPersonalizedSearcher(query: Query) = {
     val indexReader = uriGraphSearcher.openPersonalIndex(userId, query) match {
       case Some((personalReader, personalIdMapper)) =>
@@ -77,7 +77,7 @@ class MainSearcher(
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
-    
+
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
@@ -99,7 +99,7 @@ class MainSearcher(
               } else {
                 friendsHits.insert(id, score * clickBoost, false, false)
               }
-            } else {
+            } else if (filter.includeOthers) {
               othersHits.insert(id, score * clickBoost, false, false)
             }
           }
@@ -265,7 +265,7 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
     }
     res
   }
-  
+
   // the following method is destructive. after the call ArticleHitQueue is unusable
   def toRankedIterator = toSortedList.iterator.zipWithIndex
 
