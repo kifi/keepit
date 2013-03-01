@@ -29,7 +29,7 @@ class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
          * using json and one socialuserinfo, create connections
          *
          */
-        val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay.json")).mkString)
+        val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
 
         val result = inject[SocialUserImportFriends].importFriends(Seq(json))
 
@@ -44,14 +44,14 @@ class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
 
         val connections = inject[SocialUserCreateConnections].createConnections(socialUserInfo, Seq(json))
 
-        connections.size === 199
+        connections.size === 12
       }
     }
-    
+
     "disable non existing connecions" in {
       running(new EmptyApplication().withFakeStore) {
 
-        val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay.json")).mkString)
+        val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
 
         inject[SocialUserImportFriends].importFriends(Seq(json1))
 
@@ -66,16 +66,14 @@ class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
 
         val connections = inject[SocialUserCreateConnections].createConnections(socialUserInfo, Seq(json1))
 
-        connections.size === 199
-        
-        val json2 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
+        connections.size === 12
+
+        val json2 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_super_min.json")).mkString)
 
         val connectionsAfter = inject[SocialUserCreateConnections].createConnections(socialUserInfo, Seq(json2))
-        connectionsAfter.size === 12
+        connectionsAfter.size === 8
       }
     }
-    
+
   }
-
-
 }
