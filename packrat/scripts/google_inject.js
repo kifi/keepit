@@ -21,6 +21,7 @@ api.log("[google_inject]");
   var response = {};      // latest kifi results received
   var showMoreOnArrival;
   var clicks = {kifi: 0, google: 0};
+  var friends;            // friends cache for custom filter autocomplete
 
   // "main" div seems to always stay in the page, so only need to bind listener once.
   // TODO: move this code lower, so it runs after we initiate the first search
@@ -288,46 +289,49 @@ api.log("[google_inject]");
           $res.find(".kifi-res-filter-custom").slideDown(200, function() {
             $("#token-input-kifi-res-filter-cust").focus();
           });
-          api.port.emit("get_friends", function(data) {
+          friends ? withFriends() : api.port.emit("get_friends", function(data) {
             api.log("friends:", data);
-            var friends = data.friends; //TODO!
+            friends = data.friends;
             for (var i in friends) {
               var f = friends[i];
               f.name = f.firstName + " " + f.lastName;
             }
-            if (!$in.tokenInput) {
-              api.require("scripts/lib/jquery-tokeninput-1.6.1.min.js", function() {
-                $in.tokenInput(friends, {
-                  searchDelay: 0,
-                  minChars: 2,
-                  placeholder: $in.prop("placeholder"),
-                  hintText: "",
-                  noResultsText: "",
-                  searchingText: "",
-                  animateDropdown: false,
-                  preventDuplicates: true,
-                  allowTabOut: true,
-                  tokenValue: "externalId",
-                  theme: "googly",
-                  onReady: function() {
-                    $("#token-input-kifi-res-filter-cust").focus();
-                  },
-                  onAdd: function(friend) {
-                    api.log("[onAdd]", friend.externalId, friend.name);
-                    search("", filter.length > 1 ? (filter + "." + friend.externalId) : friend.externalId);
-                  },
-                  onDelete: function(friend) {
-                    api.log("[onDelete]", friend.externalId, friend.name);
-                    var f = filter.split(".").filter(function(id) {return id != friend.externalId}).join(".");
-                    if (f) {
-                      search("", f);
-                    } else {
-                      filter = "";  // signifies an empty custom filter
-                    }
-                  }});
-              });
-            }
+            withFriends();
           });
+          function withFriends() {
+            $in.tokenInput ? withTokenInputScript() : api.require("scripts/lib/jquery-tokeninput-1.6.1.min.js", withTokenInputScript);
+          }
+          function withTokenInputScript() {
+            if ($in.prev("ul").length) return;
+            $in.tokenInput(friends, {
+              searchDelay: 0,
+              minChars: 2,
+              placeholder: $in.prop("placeholder"),
+              hintText: "",
+              noResultsText: "",
+              searchingText: "",
+              animateDropdown: false,
+              preventDuplicates: true,
+              allowTabOut: true,
+              tokenValue: "externalId",
+              theme: "googly",
+              onReady: function() {
+                $("#token-input-kifi-res-filter-cust").focus();
+              },
+              onAdd: function(friend) {
+                api.log("[onAdd]", friend.externalId, friend.name);
+                search("", filter.length > 1 ? (filter + "." + friend.externalId) : friend.externalId);
+              },
+              onDelete: function(friend) {
+                api.log("[onDelete]", friend.externalId, friend.name);
+                var f = filter.split(".").filter(function(id) {return id != friend.externalId}).join(".");
+                if (f) {
+                  search("", f);
+                } else {
+                  filter = "";  // signifies an empty custom filter
+                }
+              }});
+          }
         }
       }).on("click", ".kifi-res-filter-custom-x", function() {
         $res.find(".kifi-res-filter[data-filter=a]").click();
