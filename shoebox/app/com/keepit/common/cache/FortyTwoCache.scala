@@ -5,9 +5,9 @@ import scala.concurrent.duration._
 import com.google.inject.{Inject, Singleton}
 import com.keepit.inject._
 import play.api.Play.current
-import play.api.Plugin
 import scala.collection.mutable
 import play.api.libs.json._
+import com.keepit.common.plugin.SchedulingPlugin
 
 @Singleton
 class CacheStatistics {
@@ -28,7 +28,7 @@ class CacheStatistics {
 }
 
 // Abstraction around play2-memcached plugin
-trait FortyTwoCachePlugin extends Plugin {
+trait FortyTwoCachePlugin extends SchedulingPlugin {
   def get(key: String): Option[Any]
   def remove(key: String): Unit
   def set(key: String, value: Any, expiration: Int = 0): Unit

@@ -12,7 +12,6 @@ import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.time._
-import play.api.Plugin
 import play.api.templates.Html
 import akka.util.Timeout
 import akka.actor._
@@ -26,6 +25,7 @@ import scala.concurrent.{Future, Await}
 import com.google.inject.{Inject, Provider}
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.plugin.SchedulingPlugin
 
 case class HealthcheckError(error: Option[Throwable] = None, method: Option[String] = None,
     path: Option[String] = None, callType: CallType, errorMessage: Option[String] = None,
@@ -114,7 +114,7 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice, services: Fo
   }
 }
 
-trait HealthcheckPlugin extends Plugin {
+trait HealthcheckPlugin extends SchedulingPlugin {
   def errorCountFuture(): Future[Int]
   def errorCount(): Int
   def errorsFuture(): Future[List[HealthcheckError]]
@@ -132,16 +132,10 @@ class HealthcheckPluginImpl(system: ActorSystem, host: String, postOffice: PostO
   private val actor = system.actorOf(Props { new HealthcheckActor(postOffice, services) })
 
   // plugin lifecycle methods
-  private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
-  override def onStart(): Unit = {
-    _cancellables = Seq(
-      system.scheduler.schedule(0 seconds, 10 minutes, actor, ReportErrorsAction),
-      system.scheduler.schedule(12 hours, 12 hours, actor, Heartbeat)
-    )
-  }
-  override def onStop(): Unit = {
-    _cancellables.map(_.cancel)
+  override def onStart() {
+     scheduleTask(system, 0 seconds, 10 minutes, actor, ReportErrorsAction)
+     scheduleTask(system, 12 hours, 12 hours, actor, Heartbeat)
   }
 
   def errorCountFuture(): Future[Int] = (actor ? ErrorCountSinceLastCheck).mapTo[Int]

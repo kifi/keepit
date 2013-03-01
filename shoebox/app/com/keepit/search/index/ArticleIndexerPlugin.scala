@@ -23,6 +23,7 @@ import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, Healthchec
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.plugin.SchedulingPlugin
 
 case object Index
 
@@ -44,7 +45,7 @@ private[index] class ArticleIndexerActor(articleIndexer: ArticleIndexer) extends
   }
 }
 
-trait ArticleIndexerPlugin extends Plugin {
+trait ArticleIndexerPlugin extends SchedulingPlugin {
   def index(): Int
 }
 
@@ -55,17 +56,13 @@ class ArticleIndexerPluginImpl @Inject() (system: ActorSystem, articleIndexer: A
   private val actor = system.actorOf(Props { new ArticleIndexerActor(articleIndexer) })
 
   // plugin lifecycle methods
-  private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
-  override def onStart(): Unit = {
+  override def onStart() {
     log.info("starting ArticleIndexerPluginImpl")
-    _cancellables = Seq(
-      system.scheduler.schedule(30 seconds, 1 minutes, actor, Index)
-    )
+    scheduleTask(system, 30 seconds, 1 minutes, actor, Index)
   }
-  override def onStop(): Unit = {
+  override def onStop() {
     log.info("stopping ArticleIndexerPluginImpl")
-    _cancellables.map(_.cancel)
     articleIndexer.close()
   }
 

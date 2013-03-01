@@ -5,7 +5,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import play.api.Play.current
-import play.api.Plugin
 import play.api.templates.Html
 import akka.util.Timeout
 import akka.actor._
@@ -23,6 +22,7 @@ import scala.concurrent.duration._
 import scala.concurrent.Await
 import scala.concurrent.Future
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.plugin.SchedulingPlugin
 
 case object Load
 case class Update(userId: Id[User])
@@ -50,7 +50,7 @@ private[graph] class URIGraphActor(uriGraph: URIGraph) extends FortyTwoActor wit
   }
 }
 
-trait URIGraphPlugin extends Plugin {
+trait URIGraphPlugin extends SchedulingPlugin {
   def load(): Int
   def update(userId: Id[User]): Int
 }
@@ -61,15 +61,12 @@ class URIGraphPluginImpl @Inject() (system: ActorSystem, uriGraph: URIGraph) ext
 
   private val actor = system.actorOf(Props { new URIGraphActor(uriGraph) })
 
-  // plugin lifecycle methods
-  private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
-  override def onStart(): Unit = {
+  override def onStart() {
     log.info("starting URIGraphPluginImpl")
   }
-  override def onStop(): Unit = {
+  override def onStop() {
     log.info("stopping URIGrpahPluginImpl")
-    _cancellables.map(_.cancel)
     uriGraph.close()
   }
 
