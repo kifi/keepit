@@ -35,7 +35,6 @@ case class NormalizedURI  (
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[NormalizedURI] = ExternalId(),
   title: Option[String] = None,
-  domain: Option[String] = None,
   url: String,
   urlHash: String,
   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE
@@ -51,7 +50,6 @@ case class NormalizedURI  (
 trait NormalizedURIRepo extends DbRepo[NormalizedURI]  {
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def getByDomain(domain: String)(implicit session: RSession): Seq[NormalizedURI]
   def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI]
 }
 
@@ -67,8 +65,7 @@ class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo
     def title = column[String]("title")
     def url = column[String]("url", O.NotNull)
     def urlHash = column[String]("url_hash", O.NotNull)
-    def domain = column[String]("domain", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ domain.? ~ url ~ urlHash ~ state <> (NormalizedURI, NormalizedURI.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state <> (NormalizedURI, NormalizedURI.unapply _)
   }
 
   def allActive()(implicit session: RSession): Seq[NormalizedURI] =
@@ -92,9 +89,6 @@ class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo
     limited.list
   }
 
-  def getByDomain(domain: String)(implicit session: RSession) =
-    (for (t <- table if t.state === NormalizedURIStates.ACTIVE && t.domain === domain) yield t).list
-
   def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI] = {
     val hash = NormalizedURIFactory.hashUrl(NormalizedURIFactory.normalize(url))
     (for (t <- table if t.urlHash === hash) yield t).firstOption
@@ -115,9 +109,7 @@ object NormalizedURIFactory {
 
   def apply(title: Option[String], url: String, state: State[NormalizedURI]): NormalizedURI = {
     val normalized = normalize(url)
-    NormalizedURI(title = title, url = normalized,
-      domain = URI.parse(normalized).toOption.flatMap(_.host).map(_.name),
-      urlHash = hashUrl(normalized), state = state)
+    NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized), state = state)
   }
 
   def normalize(url: String) = URINormalizer.normalize(url)
