@@ -48,9 +48,9 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
   HttpProtocolParams.setUserAgent(proxyHttpParams, userAgent)
 
   val proxyHttpClient = new DefaultHttpClient(cm, proxyHttpParams)
-  if(proxyHttpHost.isDefined) {
+  if (proxyHttpHost.isDefined) {
     proxyHttpClient.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, proxyHttpHost.get)
-    if(credentials.isDefined) {
+    if (credentials.isDefined) {
       proxyHttpClient.getCredentialsProvider().setCredentials(
         new AuthScope(proxyHttpHost.get.toHostString(), proxyHttpHost.get.getPort()),
         credentials.get)
@@ -78,10 +78,10 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
       httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.format)
     }
 
-    log.info("executing request " + httpGet.getURI() + (if(useProxy) " using proxy" else " with no proxy"))
+    log.info("executing request " + httpGet.getURI() + (if (useProxy) " using proxy" else " with no proxy"))
 
     val httpContext = new BasicHttpContext()
-    val client = if(true) proxyHttpClient else httpClient
+    val client = if(useProxy) proxyHttpClient else httpClient
 
     val response = client.execute(httpGet, httpContext)
     log.info(response.getStatusLine.toString)
