@@ -2,7 +2,7 @@
 // @require styles/comments.css
 // @require scripts/lib/jquery-1.8.2.min.js
 // @require scripts/lib/jquery-ui-1.9.1.custom.min.js
-// @require scripts/lib/jquery.tokeninput.js
+// @require scripts/lib/jquery-tokeninput-1.6.1.min.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/keymaster.min.js
 // @require scripts/lib/lodash.min.js
@@ -831,7 +831,19 @@ slider = function() {
           var f = friends[i];
           f.name = f.firstName + " " + f.lastName;
         }
-        $container.find(".kifi-to-list").tokenInput(friends, {theme: "kifi"});
+        $container.find(".kifi-to-list").tokenInput(friends, {
+          searchDelay: 0,
+          minChars: 2,
+          placeholder: "To",
+          hintText: "",
+          noResultsText: "",
+          searchingText: "",
+          animateDropdown: false,
+          preventDuplicates: true,
+          allowTabOut: true,
+          tokenValue: "externalId",
+          theme: "kifi",
+          zindex: 2147483641});
         $container.find("#token-input-to-list").keypress(function(e) {
           return e.which !== 13;
         });

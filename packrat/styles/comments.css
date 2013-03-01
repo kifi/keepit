@@ -457,10 +457,8 @@ li.token-input-token-kifi span {
 }
 li.token-input-selected-token-kifi {
   background-color: #fafafa;
-  border: 1px solid #e2e2e2;
+  border-color: #e2e2e2;
   color: #414B52;
-  margin: 0 !important;
-  padding: 0 !important;
 }
 li.token-input-selected-token-kifi span {
   color: #414B52;
@@ -481,7 +479,6 @@ div.token-input-dropdown-kifi {
   border: 1px solid #ccc;
   border-top: none;
   cursor: default;
-  z-index: 2147483641;
 }
 div.token-input-dropdown-kifi p {
   margin: 0 !important;
