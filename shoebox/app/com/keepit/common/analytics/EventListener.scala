@@ -10,7 +10,6 @@ import com.keepit.common.net.URINormalizer
 import com.keepit.search.ArticleSearchResultRef
 import play.api.Play.current
 import java.sql.Connection
-import play.api.Plugin
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import java.util.{Set => JSet}
 import com.google.inject.Inject
@@ -18,8 +17,9 @@ import scala.collection.JavaConversions._
 import com.keepit.search.ResultClickTracker
 import com.keepit.search.BrowsingHistoryTracker
 import com.keepit.search.ClickHistoryTracker
+import com.keepit.common.plugin.SchedulingPlugin
 
-trait EventListenerPlugin extends Plugin {
+trait EventListenerPlugin extends SchedulingPlugin {
   def onEvent: PartialFunction[Event,Unit]
 
   case class SearchMeta(query: String, url: String, normUrl: Option[NormalizedURI], queryUUID: Option[ExternalId[ArticleSearchResultRef]])

@@ -18,7 +18,8 @@ package securesocial.core
 
 import securesocial.controllers.routes
 import play.api.mvc.{Request, Result}
-import play.api.{Application, Logger, Plugin}
+import play.api.{Application, Logger}
+import com.keepit.common.plugin.SchedulingPlugin
 
 /**
  * Base class for all Identity Providers.  All providers are plugins and are loaded
@@ -26,7 +27,7 @@ import play.api.{Application, Logger, Plugin}
  *
  *
  */
-abstract class IdentityProvider(application: Application) extends Plugin {
+abstract class IdentityProvider(application: Application) extends SchedulingPlugin {
   val SecureSocial = "securesocial."
   val Dot = "."
 

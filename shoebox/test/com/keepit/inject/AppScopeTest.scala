@@ -8,15 +8,15 @@ import com.tzavellas.sse.guice.ScalaModule
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
 import org.specs2.mutable.SpecificationWithJUnit
-import play.api.Plugin
 import play.api.test._
+import com.keepit.common.plugin.SchedulingPlugin
 
-class TestPlugin extends Plugin {
+class TestPlugin extends SchedulingPlugin {
   var started = false
   var stopped = false
   override def enabled = true
-  override def onStart(): Unit = { assert(!started); started = true }
-  override def onStop(): Unit = { assert(started && !stopped); stopped = true }
+  override def onStart() { assert(!started); started = true }
+  override def onStop() { assert(started && !stopped); stopped = true }
 }
 
 @AppScoped

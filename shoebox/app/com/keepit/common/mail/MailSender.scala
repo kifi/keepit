@@ -1,7 +1,6 @@
 package com.keepit.common.mail
 
 import play.api.Play.current
-import play.api.Plugin
 import com.keepit.model.EmailAddress
 import play.api.templates.Html
 import play.api.libs.ws.WS
@@ -26,8 +25,9 @@ import java.util.concurrent.TimeUnit
 import com.google.inject.Inject
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.plugin.SchedulingPlugin
 
-trait MailSenderPlugin extends Plugin {
+trait MailSenderPlugin extends SchedulingPlugin {
   def processMail(mail: ElectronicMail) : Unit
   def processOutbox(): Unit
 }
@@ -39,16 +39,9 @@ class MailSenderPluginImpl @Inject() (system: ActorSystem, db: Database, mailRep
 
   private val actor = system.actorOf(Props { new MailSenderActor() })
   // plugin lifecycle methods
-  private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
-  override def onStart(): Unit = {
-    _cancellables = Seq(
-      system.scheduler.schedule(5 seconds, 5 seconds, actor, ProcessOutbox(this))
-    )
-  }
-
-  override def onStop(): Unit = {
-    _cancellables.map(_.cancel)
+  override def onStart() {
+    scheduleTask(system, 5 seconds, 5 seconds, actor, ProcessOutbox(this))
   }
 
   override def processOutbox(): Unit = {

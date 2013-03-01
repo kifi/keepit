@@ -9,6 +9,7 @@ import com.keepit.common.db.ExternalId
 import play.api.Application
 import play.api.Plugin
 import play.utils.Threads
+import com.keepit.common.plugin.SchedulingPlugin
 
 class AppScope extends Scope with Logging {
 
@@ -51,7 +52,13 @@ class AppScope extends Scope with Logging {
       Threads.withContextClassLoader(app.classloader) {
         for (plugin <- plugins) {
           log.info("stopping plugin: " + plugin)
-          plugin.onStop()
+          plugin match {
+            case p: SchedulingPlugin =>
+              p.cancelTasks()
+              p.onStop()
+            case p =>
+              p.onStop()
+          }
         }
       }
       log.info(s"[$identifier] scope stopped!")

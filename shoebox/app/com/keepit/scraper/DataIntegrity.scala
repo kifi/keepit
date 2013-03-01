@@ -15,7 +15,6 @@ import org.apache.http.HttpStatus
 import org.joda.time.{DateTime, Seconds}
 import play.api.Play.current
 import scala.collection.Seq
-import play.api.Plugin
 import akka.actor.{Actor, Cancellable, Props, ActorSystem}
 import com.keepit.model.NormalizedURI
 import com.keepit.model.ScrapeInfo
@@ -23,8 +22,9 @@ import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.plugin.SchedulingPlugin
 
-trait DataIntegrityPlugin extends Plugin {
+trait DataIntegrityPlugin extends SchedulingPlugin {
   def cron(): Unit
 }
 
@@ -33,16 +33,9 @@ class DataIntegrityPluginImpl @Inject() (system: ActorSystem)
 
   private val actor = system.actorOf(Props { new DataIntegrityActor() })
   // plugin lifecycle methods
-  private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
-  override def onStart(): Unit = {
-    _cancellables = Seq(
-      system.scheduler.schedule(10 seconds, 1 hour, actor, CleanOrphans)
-    )
-  }
-
-  override def onStop(): Unit = {
-    _cancellables.map(_.cancel)
+  override def onStart() {
+    scheduleTask(system, 10 seconds, 1 hour, actor, CleanOrphans)
   }
 
   override def cron(): Unit = {

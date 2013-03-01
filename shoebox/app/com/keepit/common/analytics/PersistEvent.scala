@@ -21,8 +21,8 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 
 import play.api.Play.current
-import play.api.Plugin
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.plugin.SchedulingPlugin
 
 case object Load
 case class Update(userId: Id[User])
@@ -54,7 +54,7 @@ private[analytics] class PersistEventActor extends FortyTwoActor with Logging {
   }
 }
 
-trait PersistEventPlugin extends Plugin {
+trait PersistEventPlugin extends SchedulingPlugin {
   def persist(event: Event): Unit
   def persist(events: Seq[Event]): Unit
 }
@@ -65,10 +65,10 @@ class PersistEventPluginImpl @Inject() (system: ActorSystem) extends PersistEven
   private val actor = system.actorOf(Props { new PersistEventActor })
 
   override def enabled: Boolean = true
-  override def onStart(): Unit = {
+  override def onStart() {
     log.info("starting PersistEventImpl")
   }
-  override def onStop(): Unit = {
+  override def onStop() {
     log.info("stopping PersistEventImpl")
   }
 

@@ -13,9 +13,9 @@ import akka.pattern.ask
 import akka.util.Timeout
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
-import play.api.Plugin
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.plugin.SchedulingPlugin
 
 //case object FetchAll
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
@@ -64,7 +64,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: Database,
   }
 }
 
-trait SocialGraphPlugin extends Plugin {
+trait SocialGraphPlugin extends SchedulingPlugin {
   def asyncFetch(socialUserInfo: SocialUserInfo): Future[Either[Seq[SocialConnection], Exception]]
   def fetchAll(): Unit
 }
@@ -77,17 +77,13 @@ class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: Faceboo
   private val actor = system.actorOf(Props { new SocialGraphActor(socialGraph, db, socialRepo) })
 
   // plugin lifecycle methods
-  private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
-  override def onStart(): Unit = {
+  override def onStart() {
     log.info("starting SocialGraphPluginImpl")
-    _cancellables = Seq(
-      system.scheduler.schedule(0 seconds, 1 minutes, actor, FetchAll)
-    )
+    scheduleTask(system, 0 seconds, 1 minutes, actor, FetchAll)
   }
-  override def onStop(): Unit = {
+  override def onStop() {
     log.info("stopping SocialGraphPluginImpl")
-    _cancellables.map(_.cancel)
   }
 
   def fetchAll(): Unit = {
