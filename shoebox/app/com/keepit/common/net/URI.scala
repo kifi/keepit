@@ -44,8 +44,8 @@ object URI extends Logging {
 
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
   val encodedPercent = java.net.URLEncoder.encode("%", "UTF-8")
-  val encodingMap = ":?#@$^()[]{}<>| ".map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
-  val symbolRe = """[@$^()\[\]{}<>| ]""".r
+  val encodingMap = ":?#`@$^()[]{}<>| ".map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
+  val symbolRe = """[`@$^()\[\]{}<>| ]""".r
 
   def fixMalformedEscape(uriString: String) = {
     uriString.split("%", -1) match {

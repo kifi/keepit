@@ -17,6 +17,8 @@ class URITest extends Specification {
         Some("/d/PERK_[PerkinElmer_Optoelec]_SU405-2.html")
       URI.parse("http://scala.org/api/index.html#scala.reflect.api.Universe@Type>:Null<:Types.this.TypeApi").get.fragment ===
         Some("scala.reflect.api.Universe%40Type%3E%3ANull%3C%3ATypes.this.TypeApi")
+      URI.parse("http://www.walmart.com/browse/tvs/3_1/?facet=tv_screen_size_range%3A60``+%26+Larger").get.query.get.params ===
+        Seq(Param("facet", Some("tv_screen_size_range%3A60%60%60+%26+Larger")))
     }
     "parse URLs via unapply" in {
       "http://premium.nba.com/pr/leaguepass/app/2012/console.html?debug=false&type=lp&TinedSid=Gaa419b-25665208-1262918951531-1&nsfg=1355463185|billing.lpbchoice_LAL_LAC_NYK_MIA_OKC^billing.lpbchoice^giBJ5TL8HJT8eLc6&retryCount=3" match {
