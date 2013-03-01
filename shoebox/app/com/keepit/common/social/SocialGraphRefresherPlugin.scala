@@ -5,7 +5,6 @@ import com.keepit.search.ArticleStore
 import com.keepit.common.logging.Logging
 import com.keepit.search.Article
 import com.keepit.model._
-import play.api.Plugin
 import play.api.templates.Html
 import akka.util.Timeout
 import akka.actor._
@@ -30,6 +29,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.plugin.SchedulingPlugin
 
 private case class RefreshUserInfo(socialUserInfo: SocialUserInfo)
 private case object RefreshAll
@@ -51,7 +51,7 @@ private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphP
 }
 
 
-trait SocialGraphRefresher extends Plugin {}
+trait SocialGraphRefresher extends SchedulingPlugin {}
 
 class SocialGraphRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin : SocialGraphPlugin, db: Database, socialRepo: SocialUserInfoRepo) extends SocialGraphRefresher with Logging {
   implicit val actorTimeout = Timeout(5 seconds)
@@ -59,14 +59,8 @@ class SocialGraphRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin
   private val actor = system.actorOf(Props { new SocialGraphRefresherActor(socialGraphPlugin, db, socialRepo) })
 
   // plugin lifecycle methods
-  private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
-  override def onStart(): Unit = {
-    _cancellables = Seq(
-      system.scheduler.schedule(0 seconds, 5 minutes, actor, RefreshAll)
-    )
-  }
-  override def onStop(): Unit = {
-    _cancellables.map(_.cancel)
+  override def onStart() {
+    scheduleTask(system, 0 seconds, 5 minutes, actor, RefreshAll)
   }
 }

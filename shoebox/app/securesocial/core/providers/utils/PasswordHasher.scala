@@ -17,14 +17,15 @@
 package securesocial.core.providers.utils
 
 import securesocial.core.PasswordInfo
-import play.api.{Logger, Plugin, Application}
+import play.api.{Logger, Application}
 import org.mindrot.jbcrypt._
+import com.keepit.common.plugin.SchedulingPlugin
 
 /**
  * A trait that defines the password hasher interface
  */
 
-trait PasswordHasher extends Plugin {
+trait PasswordHasher extends SchedulingPlugin {
   /**
    * Hashes a password
    *

@@ -11,9 +11,9 @@ import scala.concurrent.Future
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Plugin
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.plugin.SchedulingPlugin
 
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
@@ -26,7 +26,7 @@ private[scraper] class ScraperActor(scraper: Scraper) extends FortyTwoActor with
   }
 }
 
-trait ScraperPlugin extends Plugin {
+trait ScraperPlugin extends SchedulingPlugin {
   def scrape(): Seq[(NormalizedURI, Option[Article])]
   def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])]
 }
@@ -38,18 +38,14 @@ class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extend
   private val actor = system.actorOf(Props { new ScraperActor(scraper) })
 
   // plugin lifecycle methods
-  private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
-  override def onStart(): Unit = {
+  override def onStart() {
     log.info("starting ScraperPluginImpl")
-    _cancellables = Seq(
-      system.scheduler.schedule(0 seconds, 1 minutes, actor, Scrape)
-    )
+    scheduleTask(system, 0 seconds, 1 minutes, actor, Scrape)
   }
-  override def onStop(): Unit = {
+  override def onStop() {
     log.info("stopping ScraperPluginImpl")
     scraper.close()
-    _cancellables.map(_.cancel)
   }
 
   override def scrape(): Seq[(NormalizedURI, Option[Article])] = {

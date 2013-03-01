@@ -16,8 +16,8 @@
  */
 package securesocial.core
 
-import play.api.{Logger, Plugin, Application}
-
+import play.api.{Logger, Application}
+import com.keepit.common.plugin.SchedulingPlugin
 
 /**
  * A trait that provides the means to find and save users
@@ -48,7 +48,7 @@ trait UserService {
  *
  * @param application
  */
-abstract class UserServicePlugin(application: Application) extends Plugin with UserService {
+abstract class UserServicePlugin(application: Application) extends SchedulingPlugin with UserService {
   /**
    * Registers this object so SecureSocial can invoke it.
    */

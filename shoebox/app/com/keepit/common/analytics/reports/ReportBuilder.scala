@@ -15,7 +15,7 @@ import com.keepit.search.{SearchConfigManager, SearchConfigExperiment}
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.Props
-import play.api.Plugin
+import com.keepit.common.plugin.SchedulingPlugin
 
 object Reports {
   lazy val dailyActiveUniqueUserReport = new DailyActiveUniqueUserReport
@@ -97,7 +97,7 @@ object Reports {
   }
 }
 
-trait ReportBuilderPlugin extends Plugin {
+trait ReportBuilderPlugin extends SchedulingPlugin {
   def buildReport(startDate: DateTime, endDate: DateTime, report: Report) : Unit
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit
   def reportCron(): Unit
@@ -115,16 +115,9 @@ class ReportBuilderPluginImpl @Inject() (system: ActorSystem, searchConfigManage
 
   private val actor = system.actorOf(Props { new ReportBuilderActor() })
   // plugin lifecycle methods
-  private var _cancellables: Seq[Cancellable] = Nil
   override def enabled: Boolean = true
-  override def onStart(): Unit = {
-    _cancellables = Seq(
-      system.scheduler.schedule(10 seconds, 1 hour, actor, ReportCron(this))
-    )
-  }
-
-  override def onStop(): Unit = {
-    _cancellables.map(_.cancel)
+  override def onStart() {
+    scheduleTask(system, 10 seconds, 1 hour, actor, ReportCron(this))
   }
 
   override def reportCron(): Unit = {
