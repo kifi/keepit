@@ -12,6 +12,12 @@
 slider = function() {
   var following, isKept, lastShownAt;
 
+  key("esc", function() {
+    if (document.querySelector(".kifi-slider")) {
+      slideOut("esc");
+    }
+  });
+
   $('<input id="editableFix" style="opacity:0;color:transparent;width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html')
 
   $.extend(jQuery.easing, {
@@ -889,8 +895,8 @@ slider = function() {
           .draggable({cursor: "move", distance: 10, handle: ".kifi-snapshot-bar", scroll: false})
           .on("click", ".kifi-snapshot-cancel", exitSnapshotMode)
           .add($shades).css("opacity", 0).animate({opacity: 1}, 300);
-        key.setScope("snapshot");
         key("esc", "snapshot", exitSnapshotMode);
+        key.setScope("snapshot");
       });
       $(window).scroll(function() {
         if (sel) updateSelection(cX, cY);
@@ -903,6 +909,7 @@ slider = function() {
       });
       function exitSnapshotMode() {
         $selectable.add(".kifi-snapshot-bar-wrap").animate({opacity: 0}, 400, function() { $(this).remove(); });
+        key.setScope();
         key.deleteScope("snapshot");
         slideIn();
         $(".kifi-slider").find(".kifi-comment-compose").each(function() {
