@@ -38,22 +38,31 @@
     }
 
     var WS = window['MozWebSocket'] ? MozWebSocket : WebSocket
-    //var wsLocation = "@com.keepit.controllers.admin.routes.AdminEventController.eventStream.webSocketURL()"
-    var wsLocation = "ws://keepitfindit.com/admin/realtime/event/stream"
+    var wsLocation = "@com.keepit.controllers.admin.routes.AdminEventController.eventStream.webSocketURL()"
+    //var wsLocation = "ws://keepitfindit.com/admin/realtime/event/stream"
 
 
     var startWS = function(location) {
       var eventSocket = new WS(location)
       var intervalId = 0;
 
+      var echoInterval = setInterval(function() {
+        console.log("Sending echo at: " + (+new Date))
+        eventSocket.send(JSON.stringify({echo: (+new Date)}))
+      }, 10000)
+
       eventSocket.onmessage = receiveEvent
       eventSocket.onclose = function() {
+        clearInterval(echoInterval)
         clearInterval(intervalId)
         setTimeout(function(){ startWS(location) }, 2500)
+        console.log("Restarting connected because of onclose")
       }
       eventSocket.onopen = function() {
         intervalId = setInterval(function() {
           if (eventSocket.readyState === undefined || eventSocket.readyState > 1) {
+            clearInterval(echoInterval)
+            console.log("Restarting connected because of readyState ", eventSocket.readyState)
             eventSocket.close()
             clearInterval(intervalId)
             startWS(location)
@@ -66,6 +75,11 @@
     
     var receiveEvent = function(event) {
       var data = JSON.parse(event.data)
+
+      if(data.echo !== undefined) {
+        console.log("Echo reply at: " + (+ new Date))
+        return;
+      }
 
       var el = $('<tr><td class="time"></td><td class="event-family"></td><td class="event-name"></td><td class="body"></td></tr>')
 
@@ -81,7 +95,7 @@
       var person = '<div class="person"><a href="/admin/user/' + user.id + '"><img src="' + user.avatar + '">' + user.name + '</a></div>'
       $("td.body", el).html(person)
 
-      $('#event_body').prepend(el).children(":nth-child(n+25)").remove();
+      $('#event_body').prepend(el).children(":nth-child(n+50)").remove();
 
       calculateTotals(name)
     }
@@ -101,7 +115,7 @@
     setInterval(function() {
       var now = new Date()
       var diff = (now - startTime)/1000
-      var time = new Date(Math.round(diff) * 1000).toUTCString().split(" ")[4]);
+      var time = new Date(Math.round(diff) * 1000).toUTCString().split(" ")[4];
       $("#total-time").text(time)
     }, 1000)
 
