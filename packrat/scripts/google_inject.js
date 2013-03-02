@@ -289,48 +289,51 @@ api.log("[google_inject]");
           $res.find(".kifi-res-filter-custom").slideDown(200, function() {
             $("#token-input-kifi-res-filter-cust").focus();
           });
-          friends ? withFriends() : api.port.emit("get_friends", function(data) {
-            api.log("friends:", data);
-            friends = data.friends;
-            for (var i in friends) {
-              var f = friends[i];
-              f.name = f.firstName + " " + f.lastName;
-            }
+          if (friends) {
             withFriends();
-          });
-          function withFriends() {
-            $in.tokenInput ? withTokenInputScript() : api.require("scripts/lib/jquery-tokeninput-1.6.1.min.js", withTokenInputScript);
+          } else {
+            api.port.emit("get_friends", function(data) {
+              api.log("friends:", data);
+              friends = data.friends;
+              for (var i in friends) {
+                var f = friends[i];
+                f.name = f.firstName + " " + f.lastName;
+              }
+              withFriends();
+            });
           }
-          function withTokenInputScript() {
-            if ($in.prev("ul").length) return;
-            $in.tokenInput(friends, {
-              searchDelay: 0,
-              minChars: 2,
-              placeholder: $in.prop("placeholder"),
-              hintText: "",
-              noResultsText: "",
-              searchingText: "",
-              animateDropdown: false,
-              preventDuplicates: true,
-              allowTabOut: true,
-              tokenValue: "externalId",
-              theme: "googly",
-              onReady: function() {
-                $("#token-input-kifi-res-filter-cust").focus();
-              },
-              onAdd: function(friend) {
-                api.log("[onAdd]", friend.externalId, friend.name);
-                search("", filter.length > 1 ? (filter + "." + friend.externalId) : friend.externalId);
-              },
-              onDelete: function(friend) {
-                api.log("[onDelete]", friend.externalId, friend.name);
-                var f = filter.split(".").filter(function(id) {return id != friend.externalId}).join(".");
-                if (f) {
-                  search("", f);
-                } else {
-                  filter = "";  // signifies an empty custom filter
-                }
-              }});
+          function withFriends() {
+            api.require("scripts/lib/jquery-tokeninput-1.6.1.min.js", function() {
+              if ($in.prev("ul").length) return;
+              $in.tokenInput(friends, {
+                searchDelay: 0,
+                minChars: 2,
+                placeholder: $in.prop("placeholder"),
+                hintText: "",
+                noResultsText: "",
+                searchingText: "",
+                animateDropdown: false,
+                preventDuplicates: true,
+                allowTabOut: true,
+                tokenValue: "externalId",
+                theme: "googly",
+                onReady: function() {
+                  $("#token-input-kifi-res-filter-cust").focus();
+                },
+                onAdd: function(friend) {
+                  api.log("[onAdd]", friend.externalId, friend.name);
+                  search("", filter.length > 1 ? (filter + "." + friend.externalId) : friend.externalId);
+                },
+                onDelete: function(friend) {
+                  api.log("[onDelete]", friend.externalId, friend.name);
+                  var f = filter.split(".").filter(function(id) {return id != friend.externalId}).join(".");
+                  if (f) {
+                    search("", f);
+                  } else {
+                    filter = "";  // signifies an empty custom filter
+                  }
+                }});
+             });
           }
         }
       }).on("click", ".kifi-res-filter-custom-x", function() {
