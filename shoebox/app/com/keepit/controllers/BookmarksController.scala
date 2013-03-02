@@ -8,8 +8,7 @@ import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.net._
 import com.keepit.common.social._
 import com.keepit.model._
@@ -17,6 +16,7 @@ import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.serializer.BookmarkSerializer
+import com.keepit.controllers.core.BookmarkManager
 
 import scala.concurrent.Await
 import play.api.libs.concurrent.Execution.Implicits._
@@ -24,103 +24,16 @@ import play.api.Play.current
 import play.api.libs.json._
 import scala.concurrent.duration._
 
-import com.keepit.common.analytics.ActivityStream
-
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
-class BookmarksController @Inject() (db: Database,
-  bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, socialRepo: UserWithSocialRepo, userRepo: UserRepo, urlPatternRepo: URLPatternRepo,
-  scrapeRepo: ScrapeInfoRepo, domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo, urlRepo: URLRepo, socialUserInfoRepo: SocialUserInfoRepo,
+class BookmarksController @Inject() (db: Database, bookmarkManager: BookmarkManager,
+  bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, userRepo: UserRepo, urlPatternRepo: URLPatternRepo,
+  domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo,
   sliderRuleRepo: SliderRuleRepo, socialConnectionRepo: SocialConnectionRepo, commentReadRepo: CommentReadRepo, experimentRepo: UserExperimentRepo,
-  scraper: ScraperPlugin, uriGraphPlugin: URIGraphPlugin, healthcheck: HealthcheckPlugin,
-  classifier: DomainClassifier, historyTracker: SliderHistoryTracker, uriGraph: URIGraph, activityStream: ActivityStream)
-    extends FortyTwoController {
-
-  def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
-    db.readOnly { implicit session =>
-      val bookmark = bookmarkRepo.get(id)
-      val uri = uriRepo.get(bookmark.uriId)
-      val user = socialRepo.toUserWithSocial(userRepo.get(bookmark.userId))
-      val scrapeInfo = scrapeRepo.getByUri(bookmark.uriId)
-      Ok(views.html.bookmark(user, bookmark, uri, scrapeInfo))
-    }
-  }
-
-  def rescrape = AuthenticatedJsonAction { request =>
-    val id = Id[Bookmark]((request.body.asJson.get \ "id").as[Int])
-    db.readOnly { implicit session =>
-      val bookmark = bookmarkRepo.get(id)
-      val uri = uriRepo.get(bookmark.uriId)
-      Await.result(scraper.asyncScrape(uri), 1 minutes)
-      Ok(JsObject(Seq("status" -> JsString("ok"))))
-    }
-  }
-
-  //post request with a list of private/public and active/inactive
-  def updateBookmarks() = AdminHtmlAction { request =>
-    def toBoolean(str: String) = str.trim.toInt == 1
-
-    def setIsPrivate(id: Id[Bookmark], isPrivate: Boolean)(implicit session: RWSession): Id[User] = {
-      val bookmark = bookmarkRepo.get(id)
-      log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate))
-      bookmarkRepo.save(bookmark.withPrivate(isPrivate))
-      log.info("updated bookmark %s".format(bookmark))
-      bookmark.userId
-    }
-
-    def setIsActive(id: Id[Bookmark], isActive: Boolean)(implicit session: RWSession): Id[User] = {
-      val bookmark = bookmarkRepo.get(id)
-      log.info("updating bookmark %s with active = %s".format(bookmark, isActive))
-      bookmarkRepo.save(bookmark.withActive(isActive))
-      log.info("updated bookmark %s".format(bookmark))
-      bookmark.userId
-    }
-
-    val uniqueUsers = db.readWrite { implicit s =>
-      val modifiedUserIds = request.body.asFormUrlEncoded.get map { case (key, values) =>
-        key.split("_") match {
-          case Array("private", id) => setIsPrivate(Id[Bookmark](id.toInt), toBoolean(values.last))
-          case Array("active", id) => setIsActive(Id[Bookmark](id.toInt), toBoolean(values.last))
-        }
-      }
-      Set(modifiedUserIds.toSeq: _*)
-    }
-    uniqueUsers foreach { userId =>
-      log.info("updating user %s".format(userId))
-      uriGraphPlugin.update(userId)
-    }
-    Redirect(request.request.referer)
-  }
-
-  //this is an admin only task!!!
-  def delete(id: Id[Bookmark]) = AdminHtmlAction { request =>
-    db.readWrite { implicit s =>
-      val bookmark = bookmarkRepo.get(id)
-      bookmarkRepo.delete(id)
-      uriGraphPlugin.update(bookmark.userId)
-      Redirect(com.keepit.controllers.routes.BookmarksController.bookmarksView(0))
-    }
-  }
-
-  def all = AdminHtmlAction { request =>
-    val bookmarks = db.readOnly(implicit session => bookmarkRepo.all)
-    Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
-  }
-
-  def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
-    val PAGE_SIZE = 200
-    val (count, bookmarksAndUsers) = db.readOnly { implicit s =>
-      val bookmarks = bookmarkRepo.page(page, PAGE_SIZE)
-      val users = bookmarks map (_.userId) map userRepo.get map socialRepo.toUserWithSocial
-      val uris = bookmarks map (_.uriId) map uriRepo.get map (bookmarkRepo.uriStats)
-      val scrapes = bookmarks map (_.uriId) map scrapeRepo.getByUri
-      val count = bookmarkRepo.count(s)
-      (count, (users, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq)
-    }
-    val pageCount: Int = count / PAGE_SIZE + 1
-    Ok(views.html.bookmarks(bookmarksAndUsers, page, count, pageCount))
-  }
+  uriGraphPlugin: URIGraphPlugin, healthcheck: HealthcheckPlugin,
+  classifier: DomainClassifier, historyTracker: SliderHistoryTracker, uriGraph: URIGraph)
+    extends BrowserExtensionController {
 
   // TODO: require ver parameter after all installations >= 2.1.51
   def checkIfExists(uri: String, ver: Option[String]) = AuthenticatedJsonAction { request =>
@@ -232,7 +145,7 @@ class BookmarksController @Inject() (db: Database,
             log.info("adding bookmarks of user %s".format(userId))
             val experiments = request.experimants
             val user = db.readOnly { implicit s => userRepo.get(userId) }
-            internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
+            bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
             uriGraphPlugin.update(userId)
             Ok(JsObject(Seq()))
         }
@@ -253,68 +166,5 @@ class BookmarksController @Inject() (db: Database,
         })
         BadRequest(msg)
     }
-  }
-
-  private def internBookmarks(value: JsValue, user: User, experiments: Seq[State[ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): List[Bookmark] = value match {
-    case JsArray(elements) => (elements map {e => internBookmarks(e, user, experiments, source, installationId)} flatten).toList
-    case json: JsObject if(json.keys.contains("children")) => internBookmarks(json \ "children" , user, experiments, source)
-    case json: JsObject => List(internBookmark(json, user, experiments, source)).flatten
-    case e: Throwable => throw new Exception("can't figure what to do with %s".format(e))
-  }
-
-  private def internBookmark(json: JsObject, user: User, experiments: Seq[State[ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = {
-    val title = (json \ "title").as[String]
-    val url = (json \ "url").as[String]
-    val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
-
-    if (!url.toLowerCase.startsWith("javascript:")) {
-      log.debug("interning bookmark %s with title [%s]".format(json, title))
-      val (uri, isNewURI) = db.readWrite { implicit s =>
-        uriRepo.getByNormalizedUrl(url) match {
-          case Some(uri) => (uri, false)
-          case None => (createNewURI(title, url), true)
-        }
-      }
-      if (isNewURI) scraper.asyncScrape(uri)
-      val bookmark = db.readWrite { implicit s =>
-        bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get) match {
-          case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
-          case Some(bookmark) => Some(bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate)))
-          case None =>
-            Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
-            val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-            Some(bookmarkRepo.save(BookmarkFactory(uri, user.id.get, title, urlObj, source, isPrivate, installationId)))
-        }
-      }
-      if(bookmark.isDefined) addToActivityStream(user, bookmark.get)
-
-      bookmark
-    } else {
-      None
-    }
-  }
-
-  private def createNewURI(title: String, url: String)(implicit session: RWSession) =
-    uriRepo.save(NormalizedURIFactory(title = title, url = url))
-
-  private def addToActivityStream(user: User, bookmark: Bookmark) = {
-    val social = db.readOnly { implicit session =>
-      socialUserInfoRepo.getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
-    }
-
-    val json = Json.obj(
-      "user" -> Json.obj(
-        "id" -> user.id.get.id,
-        "name" -> s"${user.firstName} ${user.lastName}",
-        "avatar" -> s"https://graph.facebook.com/${social}/picture?height=150&width=150"),
-      "bookmark" -> Json.obj(
-        "id" -> bookmark.id.get.id,
-        "isPrivate" -> bookmark.isPrivate,
-        "title" -> bookmark.title,
-        "uri" -> bookmark.url,
-        "source" -> bookmark.source.value)
-    )
-
-    activityStream.streamActivity("bookmark", json)
   }
 }

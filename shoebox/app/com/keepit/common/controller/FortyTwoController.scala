@@ -150,7 +150,7 @@ trait AuthenticatedController extends Controller with Logging with SecureSocial 
 }
 
 trait AdminController extends AuthenticatedController {
-  
+
   def AdminHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] = AdminAction(false, action)
 
   def AdminJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
@@ -177,10 +177,7 @@ trait AdminController extends AuthenticatedController {
   }
 }
 
-/**
-  Will rename to WebsiteController and not include the AdminController after all Web Controllers will be free of admin actions
-*/
-trait FortyTwoController extends AuthenticatedController with AdminController {
+trait BrowserExtensionController extends AuthenticatedController {
 
   def AuthenticatedJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
     AuthenticatedAction(true, action)(request) match {
@@ -188,8 +185,9 @@ trait FortyTwoController extends AuthenticatedController with AdminController {
       case any => any
     }
   }
+}
 
+trait FortyTwoController extends BrowserExtensionController with AdminController {
   def AuthenticatedHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
     AuthenticatedAction(false, action)
 }
-
