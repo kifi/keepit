@@ -71,6 +71,7 @@ import com.keepit.common.cache._
 import com.keepit.classify.DomainTagImportSettings
 import com.google.common.io.Files
 import org.apache.http.HttpHost
+import org.apache.http.auth.UsernamePasswordCredentials
 
 
 class DevModule() extends ScalaModule with Logging {
@@ -238,20 +239,26 @@ class DevModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def httpFetcher: HttpFetcher = {
-    val proxyHttpHost = current.configuration.getConfig("proxy") match {
+    val (proxyHttpHost, credentials) = current.configuration.getConfig("proxy") match {
       case Some(proxyConf) if proxyConf.getString("host").isDefined =>
         val proxyHost = proxyConf.getString("host").get
         val proxyPort = proxyConf.getInt("port").getOrElse(8080)
         val proxyProtocol = proxyConf.getString("protocol").getOrElse("http")
-        Some(new HttpHost(proxyHost, proxyPort, proxyProtocol))
-      case _ => None
+        val credentials = (proxyConf.getString("username"), proxyConf.getString("password")) match {
+          case (Some(username), Some(password)) =>
+            Some(new UsernamePasswordCredentials(username, password))
+          case _ => None
+        }
+        (Some(new HttpHost(proxyHost, proxyPort, proxyProtocol)), credentials)
+      case _ => (None, None)
     }
 
     new HttpFetcherImpl(
       userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17",
       connectionTimeout = 30000,
       soTimeOut = 30000,
-      proxyHttpHost = proxyHttpHost
+      proxyHttpHost = proxyHttpHost,
+      credentials = credentials
     )
   }
 

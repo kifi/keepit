@@ -33,7 +33,7 @@ class EventStream {
     (default ? NewStream).map {
       case Connected(enumerator) =>
         // Since we're expecting no input from the client, just consume and discard the input
-        val iteratee = Iteratee.foreach[JsValue]{ s => /* ignore for now */ }
+        val iteratee = Iteratee.foreach[JsValue]{ s => default ! ReplyEcho }
         (iteratee, enumerator)
     }
   }
@@ -50,6 +50,8 @@ class EventStreamActor extends FortyTwoActor {
       sender ! Connected(eventEnumerator)
     case BroadcastEvent(event) =>
       notifyAll(event)
+    case ReplyEcho =>
+      eventChannel.push(Json.obj("echo" -> System.currentTimeMillis.toString))
   }
 
   def notifyAll(event: Event) {
@@ -79,3 +81,4 @@ class EventStreamActor extends FortyTwoActor {
 
 private trait EventStreamMessage
 private case class BroadcastEvent(event: Event) extends EventStreamMessage
+private case object ReplyEcho
