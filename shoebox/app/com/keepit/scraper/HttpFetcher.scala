@@ -21,13 +21,15 @@ import java.io.{InputStream, IOException}
 import java.net.URL
 import scala.util.Try
 import org.apache.http.conn.params.ConnRoutePNames
+import org.apache.http.auth.AuthScope
+import org.apache.http.auth.UsernamePasswordCredentials
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, useProxy: Boolean)(f: HttpInputStream => Unit): HttpFetchStatus
   def close()
 }
 
-class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int, proxyHttpHost: Option[HttpHost] = None) extends HttpFetcher with Logging {
+class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int, proxyHttpHost: Option[HttpHost] = None, credentials: Option[UsernamePasswordCredentials] = None) extends HttpFetcher with Logging {
   val cm = new PoolingClientConnectionManager
   cm.setMaxTotal(100)
 
@@ -37,9 +39,23 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
   HttpProtocolParams.setUserAgent(httpParams, userAgent)
   val httpClient = new DefaultHttpClient(cm, httpParams)
 
-  val proxyHttpClient = new DefaultHttpClient(cm, httpParams)
-  if(proxyHttpHost.isDefined)
+  val proxyCm = new PoolingClientConnectionManager
+  proxyCm.setMaxTotal(100)
+
+  val proxyHttpParams = new BasicHttpParams
+  HttpConnectionParams.setConnectionTimeout(proxyHttpParams, connectionTimeout)
+  HttpConnectionParams.setSoTimeout(proxyHttpParams, soTimeOut)
+  HttpProtocolParams.setUserAgent(proxyHttpParams, userAgent)
+
+  val proxyHttpClient = new DefaultHttpClient(cm, proxyHttpParams)
+  if (proxyHttpHost.isDefined) {
     proxyHttpClient.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, proxyHttpHost.get)
+    if (credentials.isDefined) {
+      proxyHttpClient.getCredentialsProvider().setCredentials(
+        new AuthScope(proxyHttpHost.get.toHostString(), proxyHttpHost.get.getPort()),
+        credentials.get)
+    }
+  }
 
   // track redirects
   val interceptor = new HttpResponseInterceptor() {
@@ -62,7 +78,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
       httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.format)
     }
 
-    log.info("executing request " + httpGet.getURI())
+    log.info("executing request " + httpGet.getURI() + (if (useProxy) " using proxy" else " with no proxy"))
 
     val httpContext = new BasicHttpContext()
     val client = if(useProxy) proxyHttpClient else httpClient

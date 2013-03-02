@@ -3,7 +3,12 @@
 
 @admin("What's Happening on Kifi?", stylesheets = List("admin_activity")) {
 
-<h3 id="metrics">Total keeps: <span id="total-keeps">0</span>, total Kifi clicked: <span id="total-kifi-clicked">0</span>, total Google clicked: <span id="total-google-clicked">0</span>. Running for <span id="total-time">00:00:00</span>.</h3>
+<h3 id="metrics">
+  Total keeps: <span id="total-keeps">0</span>, 
+  total Kifi clicked: <span id="total-kifi-clicked">0</span>, 
+  total Google clicked: <span id="total-google-clicked">0</span>. 
+  Running for <span id="total-time">00:00:00</span>.
+</h3>
 
 <table class="table activity-table">
   <thead>
@@ -33,24 +38,33 @@
     }
 
     var WS = window['MozWebSocket'] ? MozWebSocket : WebSocket
-    //var wsLocation = "@com.keepit.controllers.admin.routes.AdminEventController.eventStream.webSocketURL()"
-    var wsLocation = "ws://keepitfindit.com:9000/admin/realtime/event/stream"
+    var wsLocation = "@com.keepit.controllers.admin.routes.AdminEventController.eventStream.webSocketURL()"
+    //var wsLocation = "ws://keepitfindit.com/admin/realtime/event/stream"
 
 
     var startWS = function(location) {
       var eventSocket = new WS(location)
       var intervalId = 0;
 
+      var echoInterval = setInterval(function() {
+        console.log("Sending echo at: " + (+new Date))
+        eventSocket.send(JSON.stringify({echo: (+new Date)}))
+      }, 10000)
+
       eventSocket.onmessage = receiveEvent
       eventSocket.onclose = function() {
-        if(intervalId != 0) clearInterval(intervalId)
+        clearInterval(echoInterval)
+        clearInterval(intervalId)
         setTimeout(function(){ startWS(location) }, 2500)
+        console.log("Restarting connected because of onclose")
       }
       eventSocket.onopen = function() {
         intervalId = setInterval(function() {
           if (eventSocket.readyState === undefined || eventSocket.readyState > 1) {
+            clearInterval(echoInterval)
+            console.log("Restarting connected because of readyState ", eventSocket.readyState)
             eventSocket.close()
-            if(intervalId != 0) clearInterval(intervalId)
+            clearInterval(intervalId)
             startWS(location)
           }
         }, 5000)
@@ -61,6 +75,11 @@
     
     var receiveEvent = function(event) {
       var data = JSON.parse(event.data)
+
+      if(data.echo !== undefined) {
+        console.log("Echo reply at: " + (+ new Date))
+        return;
+      }
 
       var el = $('<tr><td class="time"></td><td class="event-family"></td><td class="event-name"></td><td class="body"></td></tr>')
 
@@ -76,7 +95,7 @@
       var person = '<div class="person"><a href="/admin/user/' + user.id + '"><img src="' + user.avatar + '">' + user.name + '</a></div>'
       $("td.body", el).html(person)
 
-      $('#event_body').prepend(el).children(":nth-child(n+25)").remove();
+      $('#event_body').prepend(el).children(":nth-child(n+50)").remove();
 
       calculateTotals(name)
     }
@@ -96,14 +115,7 @@
     setInterval(function() {
       var now = new Date()
       var diff = (now - startTime)/1000
-      var hours   = Math.round(diff/60/60)
-      var minutes = Math.round(diff/60%60)
-      var seconds = Math.round(diff%60)
-
-      if (hours   < 10) {hours   = "0"+hours;}
-      if (minutes < 10) {minutes = "0"+minutes;}
-      if (seconds < 10) {seconds = "0"+seconds;}
-      var time    = hours+':'+minutes+':'+seconds;
+      var time = new Date(Math.round(diff) * 1000).toUTCString().split(" ")[4];
       $("#total-time").text(time)
     }, 1000)
 
