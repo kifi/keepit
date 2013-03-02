@@ -130,7 +130,7 @@ class BookmarksController @Inject() (db: Database,
       val nUri: Option[NormalizedURI] = uriRepo.getByNormalizedUrl(uri)
       val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
 
-      val host: Option[String] = nUri.flatMap(_.domain).orElse(URI.parse(uri).get.host.map(_.name))
+      val host: Option[String] = URI.parse(uri).get.host.map(_.name)
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
       val neverOnSite: Option[UserToDomain] = domain.flatMap { dom =>
         userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
