@@ -170,9 +170,9 @@ ul.token-input-list-googly {
 }
 li.token-input-token-googly {
   float: left;
-  margin: 0 0 3px 3px;
+  margin: 0 0 3px 3px !important; /* FF */
   border-radius: 6px;
-  padding: 2px 0 2px 8px;
+  padding: 2px 0 2px 8px !important; /* FF */
   background-color: #4c8ffb;
   color: #fff;
   cursor: default;
@@ -193,7 +193,7 @@ li.token-input-token-googly .token-input-delete-token-googly {
   border-radius: inherit;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
-  font: bold 13px/11px arial;
+  font: bold 13px/92% arial;
   vertical-align: text-bottom;
   cursor: pointer;
 }
