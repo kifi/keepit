@@ -115,7 +115,7 @@ class MainSearcher(
 
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
-    val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
+    val clickBoosts = resultClickTracker.getBoosts(userId, queryString, (if (filter.includeMine) maxResultClickBoost else 1))
     val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
 
     val myTotal = myHits.totalHits
@@ -130,7 +130,7 @@ class MainSearcher(
 
     var threshold = highScore * tailCutting
 
-    if (myHits.size > 0 && filter.includeMine) {
+    if (myHits.size > 0) {
       myHits.toRankedIterator.map{ case (h, rank) =>
         if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayMine) // dumping the scores by rank
         h
