@@ -27,7 +27,7 @@ api = function() {
       } else if (tab.status === "loading") {
         // we might want to dispatch on.loading here.
         chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
-          page.complete = arry && arr[0] === "complete";
+          page.complete = arr && arr[0] === "complete";
           if (page.complete || arr && arr[0] === "interactive") {
             injectContentScripts(page, callback);
           }
