@@ -32,27 +32,29 @@ class MainSearcher(
   val isInitialSearch = idFilter.isEmpty
 
   // get config params
-  val minMyBookmarks = config.asInt("minMyBookmarks")
-  val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   val percentMatch = config.asFloat("percentMatch")
   val recencyBoost = config.asFloat("recencyBoost")
   val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
-  val tailCutting = if (isInitialSearch) config.asFloat("tailCutting") else 0.01
   val proximityBoost = config.asFloat("proximityBoost")
   val semanticBoost = config.asFloat("semanticBoost")
   val dumpingByRank = config.asBoolean("dumpingByRank")
   val dumpingHalfDecayMine = config.asFloat("dumpingHalfDecayMine")
   val dumpingHalfDecayFriends = config.asFloat("dumpingHalfDecayFriends")
   val dumpingHalfDecayOthers = config.asFloat("dumpingHalfDecayOthers")
-  val maxResultClickBoost = config.asFloat("maxResultClickBoost")
   val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
   val svWeightClickHistory = config.asInt("svWeightClickHistory")
   val similarity = Similarity(config.asString("similarity"))
   val enableCoordinator = config.asBoolean("enableCoordinator")
   val phraseBoost = config.asFloat("phraseBoost")
+
+  // following config params are enabled only when the default filter is in use
+  val minMyBookmarks = if (filter.isDefault) config.asInt("minMyBookmarks") else 0
+  val myBookmarkBoost = if (filter.isDefault) config.asFloat("myBookmarkBoost") else 1.0f
+  val maxResultClickBoost = if (filter.isDefault) config.asFloat("maxResultClickBoost") else 1.0f
+  val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.01f
 
   // initialize user's social graph info
   val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
@@ -115,7 +117,7 @@ class MainSearcher(
 
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
-    val clickBoosts = resultClickTracker.getBoosts(userId, queryString, (if (filter.includeMine) maxResultClickBoost else 1))
+    val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
     val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
 
     val myTotal = myHits.totalHits
