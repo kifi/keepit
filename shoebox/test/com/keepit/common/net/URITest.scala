@@ -19,6 +19,9 @@ class URITest extends Specification {
         Some("scala.reflect.api.Universe%40Type%3E%3ANull%3C%3ATypes.this.TypeApi")
       URI.parse("http://www.walmart.com/browse/tvs/3_1/?facet=tv_screen_size_range%3A60``+%26+Larger").get.query.get.params ===
         Seq(Param("facet", Some("tv_screen_size_range%3A60%60%60+%26+Larger")))
+      URI.parse(
+        """https://wwws.mint.com/investment.event?accountId=4242424242#location%3A%7B"accountId"%3A"0",+"tab"%3A0%7D""")
+        .get.fragment.get === "location%3A%7B%22accountId%22%3A%220%22%2C+%22tab%22%3A0%7D"
     }
     "parse URLs via unapply" in {
       "http://premium.nba.com/pr/leaguepass/app/2012/console.html?debug=false&type=lp&TinedSid=Gaa419b-25665208-1262918951531-1&nsfg=1355463185|billing.lpbchoice_LAL_LAC_NYK_MIA_OKC^billing.lpbchoice^giBJ5TL8HJT8eLc6&retryCount=3" match {
@@ -62,7 +65,7 @@ class URITest extends Specification {
       success
     }
     "throw URISyntaxException upon .get after failed parse" in {
-      URI.parse("`").get must throwA[java.net.URISyntaxException]
+      URI.parse("http:\\test").get must throwA[java.net.URISyntaxException]
     }
   }
 }
