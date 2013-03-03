@@ -1,7 +1,8 @@
 package com.keepit.common.net
 
+import scala.util.Try
+
 import com.keepit.common.logging.Logging
-import util.{Failure, Success, Try}
 
 object URI extends Logging {
   def parse(uriString: String): Try[URI] = {
@@ -29,8 +30,8 @@ object URI extends Logging {
       new java.net.URI(uriString).normalize()
     } catch {
       case e: java.net.URISyntaxException =>
-      val fixedUriString = encodeExtraDelimiters(encodeSymbols(fixMalformedEscape(uriString)))
-      new java.net.URI(fixedUriString).normalize()
+        val fixedUriString = encodeExtraDelimiters(encodeSymbols(fixMalformedEscape(uriString)))
+        new java.net.URI(fixedUriString).normalize()
     }
     val scheme = normalizeScheme(Option(uri.getScheme))
     val userInfo = Option(uri.getUserInfo)
@@ -44,8 +45,10 @@ object URI extends Logging {
 
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
   val encodedPercent = java.net.URLEncoder.encode("%", "UTF-8")
-  val encodingMap = ":?#`@$^()[]{}<>| ".map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
-  val symbolRe = """[`@$^()\[\]{}<>| ]""".r
+  val symbols = """'"`@$^()[]{}<>| """
+  val delimiters = ":?#"
+  val encodingMap = (symbols ++ delimiters).map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
+  val nonDelimiterEncodingMap = (encodingMap -- delimiters).withDefault(a => a.toString)
 
   def fixMalformedEscape(uriString: String) = {
     uriString.split("%", -1) match {
@@ -58,7 +61,7 @@ object URI extends Logging {
 
   def encodeExtraDelimiters(uriString: String): String = {
     var s = uriString
-    ":?#".foreach { c =>
+    delimiters.foreach { c =>
       val (i, j) = (s.indexOf(c), s.lastIndexOf(c))
       if (j > i) {
         s = s.substring(0, i + 1) + s.substring(i + 1).replace(c.toString, encodingMap(c))
@@ -67,7 +70,7 @@ object URI extends Logging {
     s
   }
 
-  def encodeSymbols(uriString: String): String = symbolRe.replaceAllIn(uriString, m => encodingMap(m.group(0)(0)))
+  def encodeSymbols(uriString: String): String = uriString.map(nonDelimiterEncodingMap).mkString
 
   def normalizeScheme(scheme: Option[String]) = scheme.map(_.toLowerCase)
 
