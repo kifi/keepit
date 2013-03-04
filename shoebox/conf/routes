@@ -23,10 +23,10 @@ POST    /authenticate/:provider     securesocial.controllers.LoginPage.authentic
 # Extension API
 ##########################################
 
-POST    /bookmarks/add              @com.keepit.controllers.BookmarksController.addBookmarks
-GET     /bookmarks/check            @com.keepit.controllers.BookmarksController.checkIfExists(uri: String, ver: Option[String] ?= None)
-POST    /bookmarks/remove           @com.keepit.controllers.BookmarksController.remove()
-POST    /bookmarks/private          @com.keepit.controllers.BookmarksController.updatePrivacy()
+POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
+GET     /bookmarks/check            @com.keepit.controllers.ext.ExtBookmarksController.checkIfExists(uri: String, ver: Option[String] ?= None)
+POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
+POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 
 POST    /comments/add               com.keepit.controllers.CommentController.createComment()
 GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
@@ -50,8 +50,6 @@ POST    /kifi/start                 com.keepit.controllers.AuthController.start
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
 GET     /whois                      com.keepit.controllers.AuthController.whois
 GET     /session/end                com.keepit.controllers.AuthController.logOut
-
-POST    /chat/:recipientId          com.keepit.controllers.ChatController.chat(recipientId: ExternalId[User])
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

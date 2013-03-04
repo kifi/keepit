@@ -1,4 +1,4 @@
-package com.keepit.controllers
+package com.keepit.controllers.ext
 
 import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.analytics.EventFamilies
@@ -16,7 +16,7 @@ import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.serializer.BookmarkSerializer
-import com.keepit.controllers.core.BookmarkManager
+import com.keepit.controllers.core.BookmarkInterner
 
 import scala.concurrent.Await
 import play.api.libs.concurrent.Execution.Implicits._
@@ -27,7 +27,7 @@ import scala.concurrent.duration._
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
-class BookmarksController @Inject() (db: Database, bookmarkManager: BookmarkManager,
+class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkInterner,
   bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, userRepo: UserRepo, urlPatternRepo: URLPatternRepo,
   domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo,
   sliderRuleRepo: SliderRuleRepo, socialConnectionRepo: SocialConnectionRepo, commentReadRepo: CommentReadRepo, experimentRepo: UserExperimentRepo,

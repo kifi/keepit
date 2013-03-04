@@ -18,6 +18,7 @@ import play.api.mvc.Action
 
 import org.joda.time._
 import scala.concurrent.duration._
+import views.html
 
 object SliderAdminController extends FortyTwoController {
 
@@ -26,7 +27,7 @@ object SliderAdminController extends FortyTwoController {
     val group = inject[Database].readOnly { implicit session =>
       inject[SliderRuleRepo].getGroup(groupName)
     }
-    Ok(views.html.sliderRules(groupName, group.rules.map(r => r.name -> r).toMap))
+    Ok(html.admin.sliderRules(groupName, group.rules.map(r => r.name -> r).toMap))
   }
 
   def saveRules = AdminHtmlAction { implicit request =>
@@ -48,7 +49,7 @@ object SliderAdminController extends FortyTwoController {
     val patterns = inject[Database].readOnly { implicit session =>
       inject[URLPatternRepo].all
     }
-    Ok(views.html.sliderPatterns(patterns))
+    Ok(html.admin.sliderPatterns(patterns))
   }
 
   def savePatterns = AdminHtmlAction { implicit request =>
@@ -80,7 +81,7 @@ object SliderAdminController extends FortyTwoController {
     val tags = inject[Database].readOnly { implicit session =>
       inject[DomainTagRepo].all
     }
-    Ok(views.html.domainTags(tags))
+    Ok(html.admin.domainTags(tags))
   }
 
   def saveDomainTags = AdminHtmlAction { implicit request =>
@@ -121,7 +122,7 @@ object SliderAdminController extends FortyTwoController {
     val domains = inject[Database].readOnly { implicit session =>
       inject[DomainRepo].getOverrides()
     }
-    Ok(views.html.domains(domains))
+    Ok(html.admin.domains(domains))
   }
 
   def saveDomainOverrides = AdminJsonAction { implicit request =>
@@ -186,7 +187,7 @@ object SliderAdminController extends FortyTwoController {
       }
       ImportEvent(createdAt, eventName, description)
     }.sortBy(_.createdAt).reverse
-    Ok(views.html.domainImportEvents(events))
+    Ok(html.admin.domainImportEvents(events))
   }
 }
 

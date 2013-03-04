@@ -17,6 +17,7 @@ import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.controller.FortyTwoController
 import org.apache.lucene.document.Document
+import views.html
 
 object ArticleIndexerController extends FortyTwoController {
 
@@ -40,7 +41,7 @@ object ArticleIndexerController extends FortyTwoController {
 
   def indexInfo = AdminHtmlAction { implicit request =>
     val indexer = inject[ArticleIndexer]
-    Ok(views.html.indexer(indexer))
+    Ok(html.admin.indexer(indexer))
   }
 
   def refreshSearcher = AdminHtmlAction { implicit request =>
@@ -53,9 +54,9 @@ object ArticleIndexerController extends FortyTwoController {
     val indexer = inject[ArticleIndexer]
     try {
       val doc = indexer.buildIndexable(id).buildDocument
-      Ok(views.html.luceneDocDump("Article", doc, indexer))
+      Ok(html.admin.luceneDocDump("Article", doc, indexer))
     } catch {
-      case e: Throwable => Ok(views.html.luceneDocDump("No Article", new Document, indexer))
+      case e: Throwable => Ok(html.admin.luceneDocDump("No Article", new Document, indexer))
     }
   }
 }
