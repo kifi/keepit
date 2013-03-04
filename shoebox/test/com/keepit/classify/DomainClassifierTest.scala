@@ -3,9 +3,9 @@ package com.keepit.classify
 import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationWithJUnit
 
-import com.keepit.common.analytics.{FakePersistEventPluginImpl, PersistEventPlugin}
+import com.keepit.common.analytics.FakePersistEventPluginImpl
 import com.keepit.common.db.slick.Database
-import com.keepit.common.net.{HttpClientImpl, FakeHttpClient}
+import com.keepit.common.net.FakeHttpClient
 import com.keepit.inject.{provide, inject}
 import com.keepit.test.{DbRepos, EmptyApplication}
 
@@ -14,7 +14,6 @@ import scala.concurrent.Await
 import play.api.Play.current
 import play.api.test.Helpers.running
 
-import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import java.util.concurrent.TimeUnit
 
@@ -46,10 +45,10 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
           ).foreach { Await.result(_, pairIntToDuration(100, TimeUnit.SECONDS) ) }
         }
 
-        classifier.isSensitive("google.com") === Right(Some(false))
-        classifier.isSensitive("yahoo.com") === Right(Some(false))
-        classifier.isSensitive("42go.com") === Right(Some(false))
-        classifier.isSensitive("playboy.com") === Right(Some(true))
+        classifier.isSensitive("google.com") === Right(false)
+        classifier.isSensitive("yahoo.com") === Right(false)
+        classifier.isSensitive("42go.com") === Right(false)
+        classifier.isSensitive("playboy.com") === Right(true)
       }
     }
     "fetch if necessary" in {
@@ -76,7 +75,7 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
           domainRepo.save(Domain(hostname = "google.com", manualSensitive = Some(false)))
         }
 
-        classifier.isSensitive("google.com") === Right(Some(false))
+        classifier.isSensitive("google.com") === Right(false)
 
         Seq(
           classifier.isSensitive("yahoo.com").left.get,
@@ -91,14 +90,14 @@ class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
           Await.result(future, pairIntToDuration(100, TimeUnit.MILLISECONDS))
         }
 
-        classifier.isSensitive("yahoo.com") === Right(Some(false))
-        classifier.isSensitive("zdnet.com") === Right(None)
-        classifier.isSensitive("schwab.com") === Right(Some(true))
-        classifier.isSensitive("hover.com") === Right(None)
-        classifier.isSensitive("42go.com") === Right(Some(false))
-        classifier.isSensitive("addepar.com") === Right(Some(false))
-        classifier.isSensitive("playboy.com") === Right(Some(true))
-        classifier.isSensitive("porn.com") === Right(Some(true))
+        classifier.isSensitive("yahoo.com") === Right(false)
+        classifier.isSensitive("zdnet.com") === Right(false)
+        classifier.isSensitive("schwab.com") === Right(true)
+        classifier.isSensitive("hover.com") === Right(false)
+        classifier.isSensitive("42go.com") === Right(false)
+        classifier.isSensitive("addepar.com") === Right(false)
+        classifier.isSensitive("playboy.com") === Right(true)
+        classifier.isSensitive("porn.com") === Right(true)
       }
     }
   }

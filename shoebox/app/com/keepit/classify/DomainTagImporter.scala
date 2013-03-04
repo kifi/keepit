@@ -163,8 +163,8 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
     val startTime = currentDateTime
     val result = value
     db.readWrite { implicit s =>
-      log.debug("Updating sensitivity for changed domains")
-      updater.updateDomainsChangedSince(startTime)
+      log.debug("Clearing sensitivity for changed domains")
+      updater.clearDomainsChangedSince(startTime)
     }
     result
   }

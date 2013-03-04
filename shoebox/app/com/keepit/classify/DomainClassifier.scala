@@ -72,13 +72,13 @@ private[classify] class DomainClassificationActor(db: Database, client: HttpClie
           updater.updateSensitivity(domain)
         }
       }
-      sender ! Await.result[Option[Boolean]](future, 100 seconds)
+      sender ! Await.result[Boolean](future, 100 seconds)
   }
 }
 
 @ImplementedBy(classOf[DomainClassifierImpl])
 trait DomainClassifier {
-  def isSensitive(domain: String): Either[Future[Option[Boolean]], Option[Boolean]]
+  def isSensitive(domain: String): Either[Future[Boolean], Boolean]
 }
 
 class DomainClassifierImpl @Inject()(system: ActorSystem, db: Database, client: HttpClient,
@@ -89,12 +89,13 @@ class DomainClassifierImpl @Inject()(system: ActorSystem, db: Database, client: 
     new DomainClassificationActor(db, client, updater, domainRepo, tagRepo, domainToTagRepo)
   })
 
-  def isSensitive(domainName: String): Either[Future[Option[Boolean]], Option[Boolean]] = {
-    db.readOnly { implicit s =>
-      domainRepo.get(domainName) match {
-        case Some(domain) => Right(domain.sensitive)
-        case None => Left(actor.ask(FetchDomainInfo(domainName))(1 minute).mapTo[Option[Boolean]])
-      }
+  def isSensitive(domainName: String): Either[Future[Boolean], Boolean] = {
+    val domainOpt = db.readOnly { implicit s => domainRepo.get(domainName) }
+    domainOpt match {
+      case Some(domain) =>
+        Right(domain.sensitive.getOrElse(db.readWrite { implicit s => updater.updateSensitivity(domain) }))
+      case None =>
+        Left(actor.ask(FetchDomainInfo(domainName))(1 minute).mapTo[Boolean])
     }
   }
 }
