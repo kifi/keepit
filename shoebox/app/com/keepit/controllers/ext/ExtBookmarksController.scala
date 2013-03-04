@@ -48,7 +48,8 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
       val neverOnSite: Option[UserToDomain] = domain.flatMap { dom =>
         userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
       }
-      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(host.flatMap(classifier.isSensitive(_).right.getOrElse(None)))
+      val sensitive: Option[Boolean] =
+        domain.flatMap(_.sensitive).orElse(host.flatMap(classifier.isSensitive(_).right.toOption))
 
       val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
         bookmarkRepo.getByUriAndUser(uriId, userId)
