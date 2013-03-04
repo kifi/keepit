@@ -92,7 +92,7 @@ object ApplicationBuild extends Build {
         "com.tzavellas" % "sse-guice" % "0.7.1"
       ),
 
-      javaOptions in test ++= Seq("-Xms256m", "-Xmx1g", "-XX:PermSize=128m", "-XX:MaxPermSize=256m", "-XX:+CMSClassUnloadingEnabled", "-XX:+CMSPermGenSweepingEnabled"),
+      javaOptions in test ++= Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m"),
 
       parallelExecution in Test := true,
 
