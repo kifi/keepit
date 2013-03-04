@@ -27,11 +27,11 @@ object URI extends Logging {
   }
   def unapplyTry(uriString: String): Try[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] = Try {
     val uri = try {
-      new java.net.URI(uriString).normalize()
+      new java.net.URI(uriString).parseServerAuthority().normalize()
     } catch {
       case e: java.net.URISyntaxException =>
         val fixedUriString = encodeExtraDelimiters(encodeSymbols(fixMalformedEscape(uriString)))
-        new java.net.URI(fixedUriString).normalize()
+        new java.net.URI(fixedUriString).parseServerAuthority().normalize()
     }
     val scheme = normalizeScheme(Option(uri.getScheme))
     val userInfo = Option(uri.getUserInfo)

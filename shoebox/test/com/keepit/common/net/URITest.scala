@@ -65,7 +65,8 @@ class URITest extends Specification {
       success
     }
     "throw URISyntaxException upon .get after failed parse" in {
-      URI.parse("http:\\test").get must throwA[java.net.URISyntaxException]
+      URI.parse("http:\\\\host").get must throwA[java.net.URISyntaxException]
+      URI.parse("http://bad+host").get must throwA[java.net.URISyntaxException]
     }
   }
 }
