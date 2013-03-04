@@ -60,18 +60,18 @@ object SearchConfigController extends FortyTwoController {
       reportB: Option[SearchConfigExperiment] => Report,
       experiment: Option[SearchConfigExperiment],
       minDays: Int = 10, maxDays: Int = 20) = {
-    val now = currentDate
-    val nowDateTime = now.toDateTimeAtCurrentTime(DEFAULT_DATE_TIME_ZONE)
-    val completeReportA = reportA(experiment).get(nowDateTime.minusDays(maxDays), nowDateTime)
-    val completeReportB = reportB(experiment).get(nowDateTime.minusDays(maxDays), nowDateTime)
-    val completeReportADefault = reportA(None).get(nowDateTime.minusDays(maxDays), nowDateTime)
-    val completeReportBDefault = reportB(None).get(nowDateTime.minusDays(maxDays), nowDateTime)
+    val now = currentDateTime
+    val today = now.toLocalDate
+    val completeReportA = reportA(experiment).get(now.minusDays(maxDays), now)
+    val completeReportB = reportB(experiment).get(now.minusDays(maxDays), now)
+    val completeReportADefault = reportA(None).get(now.minusDays(maxDays), now)
+    val completeReportBDefault = reportB(None).get(now.minusDays(maxDays), now)
     val aMap = completeReportA.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
     val bMap = completeReportB.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
     val aDefMap = completeReportADefault.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
     val bDefMap = completeReportBDefault.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
     val (days, (as, bs, values), (adefs, bdefs, defaultValues)) = (for (i <- maxDays to 0 by -1) yield {
-      val day = now.minusDays(i)
+      val day = today.minusDays(i)
       val (a, b) = (aMap.get(day).getOrElse(0), bMap.get(day).getOrElse(0))
       val (adef, bdef) = (aDefMap.get(day).getOrElse(0), bDefMap.get(day).getOrElse(0))
       val total = 1.0*(a + b)
