@@ -4,7 +4,7 @@ import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
 import com.keepit.common.async._
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.BrowserExtensionController
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
