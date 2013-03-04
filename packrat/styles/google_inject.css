@@ -350,9 +350,14 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
   transform: rotate(90deg) scale(1,1.2);
 }
 
+.kifi-debug .kifi-res-debug {
+  display: inline-block;
+}
 .kifi-res-debug {
-  float: left;
-  margin: 4px 0 0 10px;
+  display: none;
+  width: 0;
+  position: relative;
+  left: 6px;
   font-size: 8px;
   opacity: .3;
   text-decoration: none;
