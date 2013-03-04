@@ -29,6 +29,7 @@ import com.keepit.common.analytics.ActivityStream
 import com.google.inject.{Inject, Singleton}
 
 import views.html
+import views.html
 
 @Singleton
 class AdminBookmarksController @Inject() (db: Database, scraper: ScraperPlugin, uriGraphPlugin: URIGraphPlugin,
@@ -117,7 +118,7 @@ class AdminBookmarksController @Inject() (db: Database, scraper: ScraperPlugin, 
       (count, (users, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq)
     }
     val pageCount: Int = count / PAGE_SIZE + 1
-    Ok(views.admin.html.bookmarks(bookmarksAndUsers, page, count, pageCount))
+    Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount))
   }
 }
 
