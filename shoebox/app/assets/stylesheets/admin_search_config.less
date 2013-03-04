@@ -77,8 +77,12 @@ svg {
 
 path.line {
   fill: none;
-  stroke: #666;
+  stroke: #369;
   stroke-width: 2px;
+}
+
+path.line.default {
+  stroke: #999;
 }
 
 path.area {
@@ -107,9 +111,20 @@ path.area {
 }
 
 .hover text {
+  color: #333;
   text-anchor: middle;
+}
+
+.desc-text {
+  font-size: 13px;
 }
 
 .hover text.count {
   font-size: 18px;
+}
+
+
+.hover text.count.default {
+  font-size: 14px;
+  color: #999;
 }
