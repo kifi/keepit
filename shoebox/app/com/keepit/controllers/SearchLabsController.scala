@@ -32,11 +32,12 @@ import scala.math._
 import org.apache.commons.math3.linear.Array2DRowRealMatrix
 import org.apache.commons.math3.linear.EigenDecomposition
 import java.util.Random
+import views.html
 
 object SearchLabsController extends FortyTwoController {
 
   def rankVsScore(q: Option[String] = None) = AdminHtmlAction { implicit request =>
-    Ok(views.html.labs.rankVsScore(q))
+    Ok(html.labs.rankVsScore(q))
   }
   def rankVsScoreJson(q: Option[String] = None) = AdminJsonAction { implicit request =>
     val topN = 50
@@ -69,7 +70,7 @@ object SearchLabsController extends FortyTwoController {
   }
 
   def friendMap(q: Option[String] = None) = AdminHtmlAction { implicit request =>
-    Ok(views.html.labs.friendMap(q))
+    Ok(html.labs.friendMap(q))
   }
   def friendMapJson(q: Option[String] = None) = AdminJsonAction { implicit request =>
     val data = new ArrayBuffer[JsArray]

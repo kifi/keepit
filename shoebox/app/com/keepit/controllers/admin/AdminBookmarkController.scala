@@ -28,6 +28,8 @@ import com.keepit.common.analytics.ActivityStream
 
 import com.google.inject.{Inject, Singleton}
 
+import views.html
+
 @Singleton
 class AdminBookmarksController @Inject() (db: Database, scraper: ScraperPlugin, uriGraphPlugin: URIGraphPlugin,
   bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, socialRepo: UserWithSocialRepo, userRepo: UserRepo,scrapeRepo: ScrapeInfoRepo)
@@ -39,7 +41,7 @@ class AdminBookmarksController @Inject() (db: Database, scraper: ScraperPlugin, 
       val uri = uriRepo.get(bookmark.uriId)
       val user = socialRepo.toUserWithSocial(userRepo.get(bookmark.userId))
       val scrapeInfo = scrapeRepo.getByUri(bookmark.uriId)
-      Ok(views.html.bookmark(user, bookmark, uri, scrapeInfo))
+      Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo))
     }
   }
 
@@ -115,7 +117,7 @@ class AdminBookmarksController @Inject() (db: Database, scraper: ScraperPlugin, 
       (count, (users, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq)
     }
     val pageCount: Int = count / PAGE_SIZE + 1
-    Ok(views.html.bookmarks(bookmarksAndUsers, page, count, pageCount))
+    Ok(views.admin.html.bookmarks(bookmarksAndUsers, page, count, pageCount))
   }
 }
 

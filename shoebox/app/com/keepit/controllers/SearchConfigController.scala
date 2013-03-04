@@ -18,6 +18,7 @@ import com.keepit.search._
 
 import play.api.Play.current
 import play.api.libs.json.{JsString, JsArray, JsNumber, JsObject}
+import views.html
 
 object SearchConfigController extends FortyTwoController {
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -25,7 +26,7 @@ object SearchConfigController extends FortyTwoController {
       val repo = inject[UserWithSocialRepo]
       repo.toUserWithSocial(inject[UserRepo].get(userId))
     }
-    Ok(views.html.searchConfig(user))
+    Ok(html.admin.searchConfig(user))
   }
 
   def setUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -54,7 +55,7 @@ object SearchConfigController extends FortyTwoController {
   def getExperiments = AdminHtmlAction { implicit request =>
     val experiments = inject[SearchConfigManager].getExperiments
     val default = inject[SearchConfigManager].defaultConfig
-    Ok(views.html.searchConfigExperiments(experiments, default.params))
+    Ok(html.admin.searchConfigExperiments(experiments, default.params))
   }
 
   private def getChartData(reportA: Report, reportB: Report, minDays: Int = 10, maxDays: Int = 20) = {

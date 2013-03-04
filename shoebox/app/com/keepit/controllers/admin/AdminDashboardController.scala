@@ -30,6 +30,7 @@ import play.api.http.ContentTypes
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.Repo
 import scala.concurrent.duration._
+import views.html
 
 /**
  * Charts, etc.
@@ -57,7 +58,7 @@ object AdminDashboardController extends FortyTwoController {
   }
 
   def index = AdminHtmlAction { implicit request =>
-    Ok(views.html.adminDashboard())
+    Ok(html.admin.adminDashboard())
   }
 
   def usersByDate = AdminJsonAction { implicit request =>
