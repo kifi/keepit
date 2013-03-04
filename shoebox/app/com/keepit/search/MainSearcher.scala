@@ -128,7 +128,7 @@ class MainSearcher(
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
 
-    val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds ++ Set(userId))
+    val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
 
     val hits = createQueue(numHitsToReturn)
 
@@ -145,7 +145,7 @@ class MainSearcher(
         h.score > threshold
       }.foreach{ h =>
         val id = Id[NormalizedURI](h.id)
-        val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet - userId
+        val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
         val sharingSize = sharingUsers.size
         h.users = sharingUsers
         h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(sharingSize + 1), recencyScore(myUriEdges.getCreatedAt(id)))
