@@ -26,6 +26,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.model.{PhraseRepo, Phrase}
 import scala.slick.util.CloseableIterator
 import play.api.Play.current
+import com.keepit.common.logging.Logging
 
 object PhraseDetector {
   val termTemplate = new Term("p", "")
@@ -126,14 +127,16 @@ abstract class PhraseIndexer(indexDirectory: Directory, indexWriterConfig: Index
   def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true): Unit
 }
 
-class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: PhraseRepo, indexWriterConfig: IndexWriterConfig) extends PhraseIndexer(indexDirectory, indexWriterConfig)  {
+class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: PhraseRepo, indexWriterConfig: IndexWriterConfig) extends PhraseIndexer(indexDirectory, indexWriterConfig) with Logging  {
 
   def reload() {
     db.readOnly { implicit session =>
-      log.info("reloading phrase index")
+      log.info("[PhraseIndexer] reloading phrase index")
       val indexableIterator = phraseRepo.allIterator.map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
       reloadWithCloseableIterator(indexableIterator, refresh = false)
+      log.info("[PhraseIndexer] refreshing searcher")
       refreshSearcher()
+      log.info("[PhraseIndexer] phrase import complete")
     }
   }
 
@@ -144,7 +147,7 @@ class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: Phr
 
   def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true) {
     deleteAllDocuments(refresh = false)
-    indexDocuments(indexableIterator, 500000, refresh = false){ s => /* nothing */ }
+    indexDocuments(indexableIterator, 500000, refresh = false){ s => log.info(s"[PhraseIndexer] imported ${s.length} phrases. First in batch id: ${s.headOption.map(t=> t._1.id.id).getOrElse("")}") }
     if (refresh) refreshSearcher()
   }
 
