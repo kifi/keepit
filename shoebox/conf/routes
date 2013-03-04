@@ -51,8 +51,6 @@ GET     /welcome                    com.keepit.controllers.AuthController.welcom
 GET     /whois                      com.keepit.controllers.AuthController.whois
 GET     /session/end                com.keepit.controllers.AuthController.logOut
 
-POST    /chat/:recipientId          com.keepit.controllers.ChatController.chat(recipientId: ExternalId[User])
-
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
 
