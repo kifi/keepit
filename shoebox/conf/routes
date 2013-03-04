@@ -24,11 +24,6 @@ POST    /authenticate/:provider     securesocial.controllers.LoginPage.authentic
 ##########################################
 
 POST    /bookmarks/add              @com.keepit.controllers.BookmarksController.addBookmarks
-POST    /bookmarks/update           @com.keepit.controllers.BookmarksController.updateBookmarks
-GET     /bookmarks/all              @com.keepit.controllers.BookmarksController.all
-GET     /bookmarks/edit             @com.keepit.controllers.BookmarksController.edit(id: Id[Bookmark])
-POST    /bookmarks/rescrape         @com.keepit.controllers.BookmarksController.rescrape
-POST    /bookmarks/delete           @com.keepit.controllers.BookmarksController.delete(id: Id[Bookmark])
 GET     /bookmarks/check            @com.keepit.controllers.BookmarksController.checkIfExists(uri: String, ver: Option[String] ?= None)
 POST    /bookmarks/remove           @com.keepit.controllers.BookmarksController.remove()
 POST    /bookmarks/private          @com.keepit.controllers.BookmarksController.updatePrivacy()
@@ -73,12 +68,17 @@ GET     /admin/events               com.keepit.controllers.admin.AdminEventContr
 POST    /admin/events/buildReport   com.keepit.controllers.admin.AdminEventController.buildReport
 GET     /admin/events/report        com.keepit.controllers.admin.AdminEventController.getReport(reportName: String)
 
-GET     /admin/realtime/event             com.keepit.controllers.admin.AdminEventController.eventViewer
+GET     /admin/realtime/event       com.keepit.controllers.admin.AdminEventController.eventViewer
 GET     /admin/realtime/event/stream      com.keepit.controllers.admin.AdminEventController.eventStream
-GET     /admin/realtime/activity             com.keepit.controllers.admin.AdminEventController.activityViewer
-GET     /admin/realtime/activity/stream      com.keepit.controllers.admin.AdminEventController.activityStream
+GET     /admin/realtime/activity    com.keepit.controllers.admin.AdminEventController.activityViewer
+GET     /admin/realtime/activity/stream   com.keepit.controllers.admin.AdminEventController.activityStream
 
-GET     /admin/bookmarks/page/:page @com.keepit.controllers.BookmarksController.bookmarksView(page: Int)
+GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
+GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Bookmark])
+POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
+POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
+GET     /admin/bookmarks/all        @com.keepit.controllers.admin.AdminBookmarksController.all
+POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
 
 GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scrape/:state        com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
