@@ -102,8 +102,8 @@ trait ReportBuilderPlugin extends SchedulingPlugin {
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit
   def reportCron(): Unit
 
-  val defaultStartTime = currentDate.minusDays(30).toDateTimeAtStartOfDay
-  val defaultEndTime = currentDate.plusDays(1).toDateTimeAtStartOfDay
+  def defaultStartTime = currentDate.minusDays(30).toDateTimeAtStartOfDay
+  def defaultEndTime = currentDate.plusDays(1).toDateTimeAtStartOfDay
 }
 
 class ReportBuilderPluginImpl @Inject() (system: ActorSystem, searchConfigManager: SearchConfigManager)
