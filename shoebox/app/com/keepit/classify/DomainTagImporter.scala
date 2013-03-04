@@ -89,8 +89,8 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
           }
           val zipFile = new ZipFile(outputPath)
           val results = (for (entry <- zipFile.entries if entry.getName.endsWith("/domains")) yield {
-            val tagName = entry.getName.split("/", 3) match {
-              case Array(_, categoryName, _) => DomainTagName(categoryName)
+            val tagName = entry.getName.split("/", 2) match {
+              case Array(categoryName, _) => DomainTagName(categoryName)
               case _ => throw new IllegalStateException("Invalid domain format: " + entry.getName)
             }
             if (!DomainTagName.isBlacklisted(tagName)) {
