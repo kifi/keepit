@@ -34,6 +34,7 @@ import play.api.libs.json._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.analytics.ActivityStream
+import views.html
 
 object CommentController extends FortyTwoController {
 
@@ -316,7 +317,7 @@ object CommentController extends FortyTwoController {
                   from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
                   to = addr,
                   subject = "%s %s commented on a page you are following".format(author.firstName, author.lastName),
-                  htmlBody = replaceLookHereLinks(views.html.email.newComment(author, recipient, deepLink.url, comment).body),
+                  htmlBody = replaceLookHereLinks(html.email.newComment(author, recipient, deepLink.url, comment).body),
                   category = PostOffice.Categories.COMMENT))
             }
           }
@@ -342,7 +343,7 @@ object CommentController extends FortyTwoController {
                   from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(sender.firstName, sender.lastName)),
                   to = addr,
                   subject = "%s %s sent you a message using KiFi".format(sender.firstName, sender.lastName),
-                  htmlBody = replaceLookHereLinks(views.html.email.newMessage(sender, recipient, deepLink.url, comment).body),
+                  htmlBody = replaceLookHereLinks(html.email.newMessage(sender, recipient, deepLink.url, comment).body),
                   category = PostOffice.Categories.MESSAGE))
             }
           }
@@ -364,7 +365,7 @@ object CommentController extends FortyTwoController {
         (repo.toUserWithSocial(inject[UserRepo].get(f.userId)), f, inject[NormalizedURIRepo].get(f.uriId))
       }
     }
-    Ok(views.html.follows(uriAndUsers))
+    Ok(html.admin.follows(uriAndUsers))
   }
 
   def commentsViewFirstPage = commentsView(0)
@@ -380,7 +381,7 @@ object CommentController extends FortyTwoController {
       }))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
-    Ok(views.html.comments(uriAndUsers, page, count, pageCount))
+    Ok(html.admin.comments(uriAndUsers, page, count, pageCount))
   }
 
   def messagesViewFirstPage =  messagesView(0)
@@ -402,7 +403,7 @@ object CommentController extends FortyTwoController {
       }))
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
-    Ok(views.html.messages(uriAndUsers, page, count, pageCount))
+    Ok(html.admin.messages(uriAndUsers, page, count, pageCount))
   }
 
   private def addToActivityStream(comment: Comment) = {

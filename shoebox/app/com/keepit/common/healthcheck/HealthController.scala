@@ -3,13 +3,16 @@ package com.keepit.common.healthcheck
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.RichDateTime
+import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.cache.CacheStatistics
 import com.keepit.inject._
+
 import play.api.Play.current
 import play.api.mvc.Action
 import play.api.mvc.Controller
 import securesocial.core.SecureSocial
-import com.keepit.common.controller.FortyTwoController
-import com.keepit.common.cache.CacheStatistics
+
+import views.html
 
 object HealthController extends FortyTwoController {
 
@@ -20,7 +23,7 @@ object HealthController extends FortyTwoController {
     val services = inject[FortyTwoServices]
     val cacheStats = inject[CacheStatistics].getStatistics
     val (totalHits, totalMisses, totalSets) = (cacheStats.map(_._2).sum, cacheStats.map(_._3).sum, cacheStats.map(_._4).sum)
-    Ok(views.html.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString, services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
+    Ok(html.admin.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString, services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
   }
 
   def ping() = Action { implicit request =>

@@ -21,6 +21,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
 import scala.concurrent.duration._
+import views.html
 
 case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstallations: Seq[KifiInstallation])
 
@@ -146,7 +147,7 @@ object UserController extends FortyTwoController {
     val rawInfos = socialUserInfos map {info =>
       inject[SocialUserRawInfoStore].get(info.id.get)
     }
-    Ok(views.html.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails))
+    Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails))
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -178,14 +179,14 @@ object UserController extends FortyTwoController {
       }
     }
 
-    Ok(views.html.user(user, bookmarks.size, filteredBookmarks.getOrElse(bookmarks), socialConnections, fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch))
+    Ok(html.admin.user(user, bookmarks.size, filteredBookmarks.getOrElse(bookmarks), socialConnections, fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch))
   }
 
   def usersView = AdminHtmlAction { implicit request =>
     val users = inject[Database].readOnly { implicit s =>
       inject[UserRepo].all map userStatistics
     }
-    Ok(views.html.users(users))
+    Ok(html.admin.users(users))
   }
 
   def updateUser(userId: Id[User]) = AdminHtmlAction { implicit request =>

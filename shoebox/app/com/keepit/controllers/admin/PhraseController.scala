@@ -11,6 +11,7 @@ import com.keepit.inject._
 import com.keepit.common.db.slick.Database
 import com.keepit.search.Lang
 import com.keepit.common.db._
+import views.html
 
 object PhraseController extends FortyTwoController  {
 
@@ -28,7 +29,7 @@ object PhraseController extends FortyTwoController  {
       (phrasesOpt, count)
     }
     val numPages = (count / pageSize).toInt
-    Ok(views.html.phraseManager(phrasesOpt, page, count, numPages))
+    Ok(html.admin.phraseManager(phrasesOpt, page, count, numPages))
   }
 
   def refreshPhrases = AdminHtmlAction{ implicit request =>

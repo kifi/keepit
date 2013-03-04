@@ -17,6 +17,8 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.search.SearchConfigManager
 
+import views.html
+
 
 object AdminEventController extends FortyTwoController {
 
@@ -57,11 +59,11 @@ object AdminEventController extends FortyTwoController {
 
     val availableReports = inject[ReportStore].getReports() // strip ".json"
 
-    Ok(views.html.reports(availableReports))
+    Ok(html.admin.reports(availableReports))
   }
 
   def activityViewer() = AdminHtmlAction { implicit request =>
-    Ok(views.html.adminRTActivityViewer())
+    Ok(html.admin.adminRTActivityViewer())
   }
 
   def activityStream() = WebSocket.async[JsValue] { implicit request  =>
@@ -69,7 +71,7 @@ object AdminEventController extends FortyTwoController {
   }
 
   def eventViewer() = AdminHtmlAction { implicit request =>
-    Ok(views.html.adminRTEventViewer())
+    Ok(html.admin.adminRTEventViewer())
   }
 
   def eventStream() = WebSocket.async[JsValue] { implicit request  =>

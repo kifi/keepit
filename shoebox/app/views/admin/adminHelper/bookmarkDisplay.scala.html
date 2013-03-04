@@ -1,6 +1,6 @@
 @(bookmark: Bookmark)
 
 <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.edit(bookmark.id.get)">
-@adminHelper.bookmarkBadge(bookmark)
+@admin.adminHelper.bookmarkBadge(bookmark)
 @{if (bookmark.title.size > 70) bookmark.title.substring(0, 70) + "..." else bookmark.title}
 </a>

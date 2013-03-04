@@ -7,6 +7,7 @@ import com.keepit.common.mail._
 import com.keepit.common.controller.FortyTwoController
 
 import play.api.Play.current
+import views.html
 
 object ElectronicMailController extends FortyTwoController {
 
@@ -21,6 +22,6 @@ object ElectronicMailController extends FortyTwoController {
       (count, electronicMails)
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
-    Ok(views.html.electronicMails(electronicMails, page, count, pageCount))
+    Ok(html.admin.electronicMails(electronicMails, page, count, pageCount))
   }
 }

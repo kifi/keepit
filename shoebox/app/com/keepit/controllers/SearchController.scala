@@ -27,6 +27,7 @@ import com.keepit.search.ArticleSearchResultStore
 import com.keepit.common.controller.FortyTwoController
 
 import scala.util.Try
+import views.html
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
@@ -135,7 +136,7 @@ object SearchController extends FortyTwoController {
     val searcher = mainSearcherFactory(userId, friendIds, SearchFilter.default(), config)
     val explanation = searcher.explain(queryString, uriId)
 
-    Ok(views.html.explainResult(queryString, userId, uriId, explanation))
+    Ok(html.admin.explainResult(queryString, userId, uriId, explanation))
   }
 
   case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
@@ -158,6 +159,6 @@ object SearchController extends FortyTwoController {
         ArticleSearchResultHitMeta(uri, users.toSeq, scoring, hit)
       }
     }
-    Ok(views.html.articleSearchResult(result, metas))
+    Ok(html.admin.articleSearchResult(result, metas))
   }
 }

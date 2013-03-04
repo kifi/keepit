@@ -25,13 +25,14 @@ import javax.xml.bind.DatatypeConverter._
 import com.keepit.common.mail._
 import slick.Database
 import com.keepit.scraper.DuplicateDocumentDetection
+import views.html
 
 object ScraperController extends FortyTwoController {
 
   def scrape = AdminHtmlAction { implicit request =>
     val scraper = inject[ScraperPlugin]
     val articles = scraper.scrape()
-    Ok(views.html.scrape(articles))
+    Ok(html.admin.scrape(articles))
   }
 
   def scrapeByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
@@ -42,7 +43,7 @@ object ScraperController extends FortyTwoController {
       }
       val scraper = inject[ScraperPlugin]
       val articles = scraper.scrape()
-      Ok(views.html.scrape(articles))
+      Ok(html.admin.scrape(articles))
     }
   }
 
@@ -52,7 +53,7 @@ object ScraperController extends FortyTwoController {
     val uri = inject[Database].readOnly { implicit s =>
       inject[NormalizedURIRepo].get(article.id)
     }
-    Ok(views.html.article(article, uri))
+    Ok(html.admin.article(article, uri))
   }
 
   def getUnscrapable() = AdminHtmlAction { implicit request =>
@@ -60,7 +61,7 @@ object ScraperController extends FortyTwoController {
       inject[UnscrapableRepo].allActive()
     }
 
-    Ok(views.html.unscrapable(docs))
+    Ok(html.admin.unscrapable(docs))
   }
 
   def previewUnscrapable() = AdminHtmlAction { implicit request =>
@@ -79,7 +80,7 @@ object ScraperController extends FortyTwoController {
       }
       destinSet.filter(_.matches(pattern)) ++ normSet.filter(_.matches(pattern))
     }
-    Ok(views.html.unscrapablePreview(pattern, numRecords, records))
+    Ok(html.admin.unscrapablePreview(pattern, numRecords, records))
   }
 
   def createUnscrapable() = AdminHtmlAction { implicit request =>
@@ -126,7 +127,7 @@ object ScraperController extends FortyTwoController {
       }
     }
 
-    Ok(views.html.documentIntegrity(loadedDupes))
+    Ok(html.admin.documentIntegrity(loadedDupes))
   }
 
   def typedAction(action: String) = action match {

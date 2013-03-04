@@ -31,6 +31,7 @@ import com.keepit.common.net.URINormalizer
 import com.keepit.common.mail._
 import play.api.libs.concurrent.Akka
 import scala.concurrent.duration._
+import views.html
 
 /**
  * Charts, etc.
@@ -40,7 +41,7 @@ object UrlController extends FortyTwoController {
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
   def index = AdminHtmlAction { implicit request =>
-    Ok(views.html.adminDashboard())
+    Ok(html.admin.adminDashboard())
   }
 
   case class ChangedNormURI(context: String, url: String, currURI: String, from: Long, to: Long, toUri: String)
