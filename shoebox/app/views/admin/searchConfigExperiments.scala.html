@@ -18,7 +18,7 @@
 }
 
 @admin("Search Experiments",
-    scripts = List("d3-2.10.3", "admin_dashboard"),
+    scripts = List("d3-2.10.3", "experiment_charts"),
     stylesheets = List("admin_search_config")) {
   <h2>Experiment config</h2>
   <ul class="experiments">
@@ -40,11 +40,13 @@
       <div class="charts">
         <div class="experiment-chart">
           <h3 class="chart-title">Kifi vs. Google</h3>
-          <div class="growth-chart" data-uri="@SearchConfigController.getKifiVsGoogle(experiment.id.get)"></div>
+          <div class="growth-chart"
+            data-uri="@SearchConfigController.getKifiVsGoogle(experiment.id.get)"></div>
         </div>
         <div class="experiment-chart">
           <h3 class="chart-title">Kifi had results</h3>
-          <div class="growth-chart" data-uri="@SearchConfigController.getKifiHadResults(experiment.id.get)"></div>
+          <div class="growth-chart"
+            data-uri="@SearchConfigController.getKifiHadResults(experiment.id.get)"></div>
         </div>
       </div>
       <table class="table table-bordered experiment-settings">

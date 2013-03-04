@@ -1,8 +1,5 @@
 package com.keepit.controllers
 
-import scala.BigDecimal
-import scala.math.BigDecimal.RoundingMode
-
 import java.util.concurrent.TimeUnit
 
 import com.google.common.cache.{CacheLoader, CacheBuilder}
@@ -58,26 +55,42 @@ object SearchConfigController extends FortyTwoController {
     Ok(html.admin.searchConfigExperiments(experiments, default.params))
   }
 
-  private def getChartData(reportA: Report, reportB: Report, minDays: Int = 10, maxDays: Int = 20) = {
+  private def getChartData(
+      reportA: Option[SearchConfigExperiment] => Report,
+      reportB: Option[SearchConfigExperiment] => Report,
+      experiment: Option[SearchConfigExperiment],
+      minDays: Int = 10, maxDays: Int = 20) = {
     val now = currentDate
     val nowDateTime = now.toDateTimeAtCurrentTime(DEFAULT_DATE_TIME_ZONE)
-    val completeReportA = reportA.get(nowDateTime.minusDays(maxDays), nowDateTime)
-    val completeReportB = reportB.get(nowDateTime.minusDays(maxDays), nowDateTime)
+    val completeReportA = reportA(experiment).get(nowDateTime.minusDays(maxDays), nowDateTime)
+    val completeReportB = reportB(experiment).get(nowDateTime.minusDays(maxDays), nowDateTime)
+    val completeReportADefault = reportA(None).get(nowDateTime.minusDays(maxDays), nowDateTime)
+    val completeReportBDefault = reportB(None).get(nowDateTime.minusDays(maxDays), nowDateTime)
     val aMap = completeReportA.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
     val bMap = completeReportB.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
-    val (days, diffs) = (for (i <- maxDays to 0 by -1) yield {
+    val aDefMap = completeReportADefault.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
+    val bDefMap = completeReportBDefault.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
+    val (days, (as, bs, values), (adefs, bdefs, defaultValues)) = (for (i <- maxDays to 0 by -1) yield {
       val day = now.minusDays(i)
       val (a, b) = (aMap.get(day).getOrElse(0), bMap.get(day).getOrElse(0))
+      val (adef, bdef) = (aDefMap.get(day).getOrElse(0), bDefMap.get(day).getOrElse(0))
       val total = 1.0*(a + b)
-      (day, if (total > 0) a / total else 0)
+      val totalDef = 1.0*(adef + bdef)
+      (day, (a, b, if (total > 0) a / total else 0), (adef, bdef, if (totalDef > 0) adef / totalDef else 0))
     }) match { case tuples =>
-      val toDrop = tuples.indexWhere(_._2 != 0.0) min (tuples.length - minDays)
-      val (days, kvg) = tuples.drop(toDrop).unzip
-      (days, kvg.zip(0.0 +: kvg).map { case (a, b) => a - b })
+      val toDrop = tuples.indexWhere(_._2._3 != 0.0) min (tuples.length - minDays)
+      tuples.drop(toDrop).unzip3 match { case (a, b, c) => (a, b.unzip3, c.unzip3) }
     }
+    val (aSum, bSum, aDefSum, bDefSum) = (as.sum, bs.sum, adefs.sum, bdefs.sum)
+    val (total, totalDef) = (1.0*(aSum + bSum), 1.0*(aDefSum + bDefSum))
     JsObject(List(
       "day0" -> JsString(days.min.toString),
-      "counts" -> JsArray(diffs.map {i => JsNumber(BigDecimal(i).setScale(3, RoundingMode.HALF_EVEN))})
+      "counts" -> JsArray(values.map {i => JsNumber(i) }),
+      "defaultCounts" -> JsArray(defaultValues.map {i => JsNumber(i) }),
+      "samples" -> JsNumber(aSum + bSum),
+      "defaultSamples" -> JsNumber(aDefSum + bDefSum),
+      "avg" -> JsNumber(aSum / total),
+      "defaultAvg" -> JsNumber(aDefSum / totalDef)
     ))
   }
 
@@ -85,16 +98,15 @@ object SearchConfigController extends FortyTwoController {
     .build(new CacheLoader[Id[SearchConfigExperiment], JsObject] {
       def load(expId: Id[SearchConfigExperiment]) = {
         val e = Some(expId).filter(_.id > 0).map(inject[SearchConfigManager].getExperiment)
-        getChartData(new DailyKifiResultClickedByExperiment(e), new DailyGoogleResultClickedByExperiment(e))
+        getChartData(new DailyKifiResultClickedByExperiment(_), new DailyGoogleResultClickedByExperiment(_), e)
       }
     })
   private lazy val kifiHadResultsCache = CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS)
     .build(new CacheLoader[Id[SearchConfigExperiment], JsObject] {
       def load(expId: Id[SearchConfigExperiment]) = {
         val e = Some(expId).filter(_.id > 0).map(inject[SearchConfigManager].getExperiment)
-        getChartData(
-          new DailyDustSettledKifiHadResultsByExperiment(e, true),
-          new DailyDustSettledKifiHadResultsByExperiment(e, false))
+        getChartData(new DailyDustSettledKifiHadResultsByExperiment(_, true),
+          new DailyDustSettledKifiHadResultsByExperiment(_, false), e)
       }
     })
 
