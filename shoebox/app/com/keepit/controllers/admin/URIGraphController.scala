@@ -21,6 +21,7 @@ import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.model.User
 import com.keepit.common.controller.FortyTwoController
 import org.apache.lucene.document.Document
+import views.html
 
 object URIGraphController extends FortyTwoController {
 
@@ -40,9 +41,9 @@ object URIGraphController extends FortyTwoController {
     val indexer = inject[URIGraph].asInstanceOf[URIGraphImpl]
     try {
       val doc = indexer.buildIndexable(id).buildDocument
-      Ok(views.html.luceneDocDump("URIGraph", doc, indexer))
+      Ok(html.admin.luceneDocDump("URIGraph", doc, indexer))
     } catch {
-      case e: Throwable => Ok(views.html.luceneDocDump("No URIGraph", new Document, indexer))
+      case e: Throwable => Ok(html.admin.luceneDocDump("No URIGraph", new Document, indexer))
     }
   }
 }

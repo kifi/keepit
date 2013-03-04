@@ -31,6 +31,7 @@ import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social.{SocialGraphPlugin, UserWithSocial}
 import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.controller.FortyTwoController
+import views.html
 
 object SocialUserController extends FortyTwoController {
 
@@ -55,7 +56,7 @@ object SocialUserController extends FortyTwoController {
 
     val rawInfo = inject[SocialUserRawInfoStore].get(socialUserInfo.id.get)
 
-    Ok(views.html.socialUser(socialUserInfo, socialConnections, rawInfo))
+    Ok(html.admin.socialUser(socialUserInfo, socialConnections, rawInfo))
   }
 
   def socialUsersView(page: Int) = AdminHtmlAction { implicit request =>
@@ -65,7 +66,7 @@ object SocialUserController extends FortyTwoController {
       (repo.page(page, PAGE_SIZE), repo.count)
     }
     val pageCount = (count / PAGE_SIZE + 1).toInt
-    Ok(views.html.socialUsers(socialUsers, page, count, pageCount))
+    Ok(html.admin.socialUsers(socialUsers, page, count, pageCount))
   }
 
   def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
