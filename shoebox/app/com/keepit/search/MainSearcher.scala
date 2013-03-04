@@ -54,15 +54,20 @@ class MainSearcher(
   val minMyBookmarks = if (filter.isDefault) config.asInt("minMyBookmarks") else 0
   val myBookmarkBoost = if (filter.isDefault) config.asFloat("myBookmarkBoost") else 1.0f
   val maxResultClickBoost = if (filter.isDefault) config.asFloat("maxResultClickBoost") else 1.0f
-  val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.01f
+  val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
 
   // initialize user's social graph info
   val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
   val myUris = myUriEdges.destIdLongSet
   val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
+  val friendUris = filter.filterFriends(friendIds).foldLeft(Set.empty[Long]){ (s, f) =>
+    s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet
+  }
+
   val friendlyUris = {
-    var uris = if (filter.includeMine) myUris else Set.empty[Long]
-    filter.filterFriends(friendIds).foldLeft(uris){ (s, f) => s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet }
+    if (filter.includeMine) myUris ++ friendUris
+    else if (filter.includeShared) friendUris
+    else friendUris -- myUris // friends only
   }
 
   def getPersonalizedSearcher(query: Query) = {
