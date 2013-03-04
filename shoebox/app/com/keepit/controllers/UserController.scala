@@ -31,12 +31,14 @@ object UserController extends FortyTwoController {
     val userId = request.userId
     val (bookmark, following, socialUsers, numComments, numMessages, neverOnSite, sensitive) = inject[Database].readOnly {implicit s =>
       val nUri = inject[NormalizedURIRepo].getByNormalizedUrl(url)
-      val host: String = URI.parse(url).get.host.get.name
-      val domain: Option[Domain] = inject[DomainRepo].get(host)
+      val host: Option[String] = URI.parse(url).get.host.map(_.name)
+      val domain: Option[Domain] = host.flatMap(inject[DomainRepo].get(_))
       val neverOnSite: Option[UserToDomain] = domain.flatMap { domain =>
         inject[UserToDomainRepo].get(userId, domain.id.get, UserToDomainKinds.NEVER_SHOW)
       }
-      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(inject[DomainClassifier].isSensitive(host).right.getOrElse(None))
+      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(
+        host.flatMap(inject[DomainClassifier].isSensitive(_).right.getOrElse(None)))
+
 
       nUri match {
         case Some(uri) =>
