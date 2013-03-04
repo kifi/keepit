@@ -339,7 +339,7 @@ api.log("[google_inject]");
       mayHaveMore: response.mayHaveMore};
 
     $res.append(Mustache.to_html(hitsHtml, params, {google_hit: hitHtml}))
-      .toggleClass("kifi-debug", response.showScores);
+      .toggleClass("kifi-debug", !!response.showScores);
 
     api.log("[appendResults] done");
   }
