@@ -29,7 +29,7 @@ import com.keepit.common.analytics.ActivityStream
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
-class BookmarkManager @Inject() (db: Database, uriRepo: NormalizedURIRepo, scraper: ScraperPlugin, bookmarkRepo: BookmarkRepo,
+class BookmarkInterner @Inject() (db: Database, uriRepo: NormalizedURIRepo, scraper: ScraperPlugin, bookmarkRepo: BookmarkRepo,
   urlRepo: URLRepo, socialUserInfoRepo: SocialUserInfoRepo, activityStream: ActivityStream)
     extends Logging {
 
