@@ -339,7 +339,7 @@ function searchOnServer(request, respond) {
   var config = getConfigs();
   ajax("GET", "http://" + config.server + "/search", {
       q: request.query,
-      f: request.filter === "a" ? undefined : request.filter,
+      f: request.filter === "a" ? null : request.filter,
       maxHits: request.lastUUID ? 5 : api.prefs.get("maxResults"),
       lastUUID: request.lastUUID,
       context: request.context,

@@ -11,12 +11,13 @@ api.log("[google_inject]");
     api.port.emit("log_event", Array.prototype.slice.call(arguments));
   }
 
-  var allHtml, hitsHtml, hitHtml;
-  api.load("html/search/google.html", function(html) { allHtml = html });
+  var hitsHtml, hitHtml;
+  api.load("html/search/google.html", function(html) { $res = $(Mustache.to_html(html)); bindHandlers() });
   api.load("html/search/google_hits.html", function(html) { hitsHtml = html });
   api.load("html/search/google_hit.html", function(html) { hitHtml = html });
 
-  var filter = "a";       // current search filter ("a", "m", "f", or zero or more dot-delimited user ids)
+  var $res = $();         // reference to our search results (kept so that we can reinsert when removed)
+  var filter;             // current search filter (null, "a", "m", "f", or zero or more dot-delimited user ids)
   var query = "";         // latest search query
   var response = {};      // latest kifi results received
   var showMoreOnArrival;
@@ -79,7 +80,7 @@ api.log("[google_inject]");
 
     var q = (getPrediction() || $q.val() || fallbackQuery || "").trim().replace(/\s+/, " ");  // TODO: also detect "Showing results for" and prefer that
     var f = newFilter || filter;
-    if (q === query && f === filter) {
+    if (q == query && f == filter) {
       api.log("[search] nothing new, query:", q, "filter:", f);
       return;
     }
@@ -95,7 +96,7 @@ api.log("[google_inject]");
     idleTimer = setTimeout(onIdle, 1200);
     var t1 = +new Date;
     api.port.emit("get_keeps", {query: q, filter: f}, function results(resp) {
-      if (q !== query || f !== filter) {
+      if (q != query || f != filter) {
         api.log("[results] ignoring for query:", q, "filter:", f);
         return;
       } else if (!resp.session) {
@@ -108,32 +109,33 @@ api.log("[google_inject]");
 
       $resList.remove(); // remove any old results
       response = resp;
+      response.hits.forEach(processHit);
       response.filter = f;
       if (!newFilter) {
         clicks.kifi = clicks.google = 0;
       }
 
-      var $res = $("#kifi-res");
-      resp.hits.forEach(processHit);
-      if (resp.hits.length || newFilter || filter !== "a") {  // we show a "no results match filter" message if filtering
-        var el = $res[0] || document.getElementById("ires");
-        if (el) {
-          insertResults(el);
-        } else {
-          // must wait for Google to render its results
-        }
-      } else {
-        $res.remove();
+      var ires = document.getElementById("ires");
+      if (ires) {
+        response.shown = true;
+        tKifiResultsShown = +new Date;
       }
 
-      logEvent("search", "kifiLoaded", {"query": q, "filter": f == "a" ? undefined : f, "queryUUID": resp.uuid});
+      if (response.hits.length || f) {  // we show a "no results match filter" message if filtering
+        appendResults();
+        $res.show().insertBefore(ires);
+      } else {
+        $res.hide();
+      }
+
+      logEvent("search", "kifiLoaded", {"query": q, "filter": f, "queryUUID": resp.uuid});
       if (resp.hits.length) {
-        logEvent("search", "kifiAtLeastOneResult", {"query": q, "filter": f == "a" ? undefined : f, "queryUUID": resp.uuid, "experimentId": resp.experimentId});
+        logEvent("search", "kifiAtLeastOneResult", {"query": q, "filter": f, "queryUUID": resp.uuid, "experimentId": resp.experimentId});
         prefetchMore();
       }
     });
 
-    var $resList = $("#kifi-res-list,.kifi-res-end").css("opacity", .2);
+    var $resList = $res.find("#kifi-res-list,.kifi-res-end").css("opacity", .2);
   }
 
   var elPredict;
@@ -167,9 +169,7 @@ api.log("[google_inject]");
         if (nodes[j].id === "ires") {
           tGoogleResultsShown = +new Date;
           api.log("[onMutation] Google results inserted");
-          if (response.hits) {
-            insertResults(nodes[j]);
-          }
+          $res.insertBefore(nodes[j]);  // reattach
           search();  // prediction may have changed
         }
       }
@@ -224,130 +224,124 @@ api.log("[google_inject]");
     return boldSearchTerms(url, response.query);
   }
 
-  function insertResults(el) {  // el.id must be "ires" (full rendering) or "kifi-res" (partial rendering)
-    if (!response.shown) {
-      response.shown = true;
-      tKifiResultsShown = +new Date;
-    }
+  function bindHandlers() {
+    $res.on("click", ".kifi-res-more", function onMoreClick() {
+      api.log("[onMoreClick] shown:", response.hits.length, "avail:", response.nextHits);
+      if (response.nextHits) {
+        renderMore();
+        prefetchMore();
+      } else if (response.mayHaveMore) {
+        showMoreOnArrival = true;
+      } else {
+        $(this).closest(".kifi-res-more").hide(200);
+      }
+    }).on("click", ".kifi-res-title", function() {
+      $res.find("#kifi-res-list,.kifi-res-end").toggle(200);
+      $res.find(".kifi-res-filter-keeps").fadeToggle(200);
+      $res.find(".kifi-res-filters-x:visible").click();
+      $(this).toggleClass("kifi-collapsed").delay(200);
+    }).on("click", ".kifi-res-filter-keeps", function() {
+      var $f = $res.find(".kifi-res-filters");
+      if ($f.is(":animated")) return;
+      if ($f.is(":visible")) {
+        $f.find(".kifi-res-filters-x").click();
+      } else {
+        $(this).addClass("kifi-expanded");
+        $f.slideDown(200);
+      }
+    }).on("click", ".kifi-res-filters-x", function() {
+      var $fils = $(this).closest(".kifi-res-filters");
+      var $fil = $fils.find(".kifi-res-filter[data-filter=a]");
+      if (!$fil.hasClass("kifi-selected")) {
+        $fil.click();
+        $fils.delay(150);
+      }
+      $fils.slideUp(200, function() {
+        $res.find(".kifi-res-filter-keeps").removeClass("kifi-expanded");
+      });
+    }).on("click", ".kifi-res-filter:not(.kifi-selected)", function() {
+      var $f = $(this).siblings(".kifi-selected").removeClass("kifi-selected").end().addClass("kifi-selected");
+      var f = $f.data("filter");
+      if (f != "c") {
+        $res.find(".kifi-res-filter-custom").slideUp(200, function() {
+          var $in = $res.find("#kifi-res-filter-cust");
+          if ($in.tokenInput) {
+            $in.tokenInput("clear");
+          }
+        });
+        search(null, f);
+      } else {
+        var $in = $res.find("#kifi-res-filter-cust");
+        $res.find(".kifi-res-filter-custom").slideDown(200, function() {
+          $("#token-input-kifi-res-filter-cust").focus();
+        });
+        if (friends) {
+          withFriends();
+        } else {
+          api.port.emit("get_friends", function(data) {
+            api.log("friends:", data);
+            friends = data.friends;
+            for (var i in friends) {
+              var f = friends[i];
+              f.name = f.firstName + " " + f.lastName;
+            }
+            withFriends();
+          });
+        }
+        function withFriends() {
+          api.require("scripts/lib/jquery-tokeninput-1.6.1.min.js", function() {
+            if ($in.prev("ul").length) return;
+            $in.tokenInput(friends, {
+              searchDelay: 0,
+              minChars: 2,
+              placeholder: $in.prop("placeholder"),
+              hintText: "",
+              noResultsText: "",
+              searchingText: "",
+              animateDropdown: false,
+              preventDuplicates: true,
+              allowTabOut: true,
+              tokenValue: "externalId",
+              theme: "googly",
+              onReady: function() {
+                $("#token-input-kifi-res-filter-cust").focus();
+              },
+              onAdd: function(friend) {
+                api.log("[onAdd]", friend.externalId, friend.name);
+                search("", filter.length > 1 ? (filter + "." + friend.externalId) : friend.externalId);
+              },
+              onDelete: function(friend) {
+                api.log("[onDelete]", friend.externalId, friend.name);
+                var f = filter.split(".").filter(function(id) {return id != friend.externalId}).join(".");
+                if (f) {
+                  search("", f);
+                } else {
+                  filter = "";  // signifies an empty custom filter
+                }
+              }});
+           });
+        }
+      }
+    }).on("click", ".kifi-res-filter-custom-x", function() {
+      $res.find(".kifi-res-filter[data-filter=a]").click();
+    }).on("click", ".kifi-res-debug", function(e) {
+      e.stopPropagation();
+      location = "https://" + response.server + "/admin/search/results/" + response.uuid;
+    });
+  }
+
+  function appendResults() {
     var params = {
       results: response.hits,
       anyResults: response.hits.length > 0,
-      // newFilter: newFilter,
       session: response.session,
       endBgUrl: api.url("images/shade_above.png"),
       mayHaveMore: response.mayHaveMore};
-    if (el.id === "kifi-res") {
-      $(el).append(Mustache.to_html(hitsHtml, params, {google_hit: hitHtml}));
-    } else {
-      var $res = $(Mustache.to_html(allHtml, params, {google_hits: hitsHtml, google_hit: hitHtml}))
-        .insertBefore(el);
 
-      // bind event handlers
-      $res.on("click", ".kifi-res-more", function onMoreClick() {
-        api.log("[onMoreClick] shown:", response.hits.length, "avail:", response.nextHits);
-        if (response.nextHits) {
-          renderMore();
-          prefetchMore();
-        } else if (response.mayHaveMore) {
-          showMoreOnArrival = true;
-        } else {
-          $(this).closest(".kifi-res-more").hide(200);
-        }
-      }).on("click", ".kifi-res-title", function() {
-        api.log("[queue]", $(this).queue());
-        $res.find("#kifi-res-list,.kifi-res-end").toggle(200);
-        $res.find(".kifi-res-filter-keeps").fadeToggle(200);
-        $res.find(".kifi-res-filters-x:visible").click();
-        $(this).toggleClass("kifi-collapsed").delay(200);
-      }).on("click", ".kifi-res-filter-keeps", function() {
-        var $f = $res.find(".kifi-res-filters");
-        if ($f.is(":animated")) return;
-        if ($f.is(":visible")) {
-          $f.find(".kifi-res-filters-x").click();
-        } else {
-          $(this).addClass("kifi-expanded");
-          $f.slideDown(200);
-        }
-      }).on("click", ".kifi-res-filters-x", function() {
-        var $fils = $(this).closest(".kifi-res-filters");
-        var $fil = $fils.find(".kifi-res-filter[data-filter=a]");
-        if (!$fil.hasClass("kifi-selected")) {
-          $fil.click();
-          $fils.delay(150);
-        }
-        $fils.slideUp(200, function() {
-          $res.find(".kifi-res-filter-keeps").removeClass("kifi-expanded");
-        });
-      }).on("click", ".kifi-res-filter:not(.kifi-selected)", function() {
-        var $f = $(this).siblings(".kifi-selected").removeClass("kifi-selected").end().addClass("kifi-selected");
-        var f = $f.data("filter");
-        if (f != "c") {
-          $res.find(".kifi-res-filter-custom").slideUp(200);
-          search(null, f);
-        } else {
-          var $in = $res.find("#kifi-res-filter-cust");
-          $res.find(".kifi-res-filter-custom").slideDown(200, function() {
-            $("#token-input-kifi-res-filter-cust").focus();
-          });
-          if (friends) {
-            withFriends();
-          } else {
-            api.port.emit("get_friends", function(data) {
-              api.log("friends:", data);
-              friends = data.friends;
-              for (var i in friends) {
-                var f = friends[i];
-                f.name = f.firstName + " " + f.lastName;
-              }
-              withFriends();
-            });
-          }
-          function withFriends() {
-            api.require("scripts/lib/jquery-tokeninput-1.6.1.min.js", function() {
-              if ($in.prev("ul").length) return;
-              $in.tokenInput(friends, {
-                searchDelay: 0,
-                minChars: 2,
-                placeholder: $in.prop("placeholder"),
-                hintText: "",
-                noResultsText: "",
-                searchingText: "",
-                animateDropdown: false,
-                preventDuplicates: true,
-                allowTabOut: true,
-                tokenValue: "externalId",
-                theme: "googly",
-                onReady: function() {
-                  $("#token-input-kifi-res-filter-cust").focus();
-                },
-                onAdd: function(friend) {
-                  api.log("[onAdd]", friend.externalId, friend.name);
-                  search("", filter.length > 1 ? (filter + "." + friend.externalId) : friend.externalId);
-                },
-                onDelete: function(friend) {
-                  api.log("[onDelete]", friend.externalId, friend.name);
-                  var f = filter.split(".").filter(function(id) {return id != friend.externalId}).join(".");
-                  if (f) {
-                    search("", f);
-                  } else {
-                    filter = "";  // signifies an empty custom filter
-                  }
-                }});
-             });
-          }
-        }
-      }).on("click", ".kifi-res-filter-custom-x", function() {
-        $res.find(".kifi-res-filter[data-filter=a]").click();
-      }).on("click", ".kifi-res-debug", function() {
-        location = "https://" + response.server + "/admin/search/results/" + response.uuid;
-      });
+    $res.append(Mustache.to_html(hitsHtml, params, {google_hit: hitHtml}))
+      .toggleClass("kifi-debug", response.showScores);
 
-      if (response.showScores) {
-        $res.find(".kifi-res-title").prepend("<a class=kifi-res-debug href=javascript: target=_blank>debug</a>");
-      }
-    }
-
-    api.log("[insertResults] done");
+    api.log("[appendResults] done");
   }
 
   function prefetchMore() {
