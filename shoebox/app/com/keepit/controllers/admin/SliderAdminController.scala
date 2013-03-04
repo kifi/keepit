@@ -1,5 +1,10 @@
 package com.keepit.controllers.admin
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.future
+
+import org.joda.time._
+
 import com.keepit.classify._
 import com.keepit.common.analytics.{MongoEventStore, EventFamilies, MongoSelector}
 import com.keepit.common.controller.FortyTwoController
@@ -12,12 +17,8 @@ import com.keepit.model.{URLPattern, URLPatternRepo, URLPatternStates}
 import com.mongodb.casbah.Imports._
 
 import play.api.Play.current
-import play.api.libs.concurrent.Akka
 import play.api.libs.json.{JsBoolean, JsArray, JsObject, Json}
 import play.api.mvc.Action
-
-import org.joda.time._
-import scala.concurrent.duration._
 import views.html
 
 object SliderAdminController extends FortyTwoController {
@@ -88,7 +89,6 @@ object SliderAdminController extends FortyTwoController {
     val db = inject[Database]
     val sensitivityUpdater = inject[SensitivityUpdater]
     val domainToTagRepo = inject[DomainToTagRepo]
-    val domainRepo = inject[DomainRepo]
     val tagRepo = inject[DomainTagRepo]
 
     val tagIdValue = """sensitive_([0-9]+)""".r
@@ -104,14 +104,12 @@ object SliderAdminController extends FortyTwoController {
       db.readWrite { implicit s =>
         inject[DomainTagRepo].save(tag)
       }
-      Akka.future {
+      future {
         val domainIds = db.readOnly { implicit s =>
           domainToTagRepo.getByTag(tag.id.get).map(_.domainId)
         }
-        domainIds.grouped(1000).foreach { ids =>
-          db.readWrite { implicit s =>
-            ids.map(domainRepo.get).foreach(sensitivityUpdater.updateSensitivity)
-          }
+        db.readWrite { implicit s =>
+          sensitivityUpdater.clearDomainSensitivity(domainIds)
         }
       }
     }

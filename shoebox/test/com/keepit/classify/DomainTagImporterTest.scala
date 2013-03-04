@@ -17,15 +17,15 @@ import play.api.test.Helpers._
 import java.util.concurrent.TimeUnit
 
 class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
-  val system = ActorSystem("system")
-  val settings = DomainTagImportSettings()
+  private val system = ActorSystem("system")
+  private val settings = DomainTagImportSettings()
+  private val timeout = pairIntToDuration((500, TimeUnit.MILLISECONDS))
   "The domain tag importer" should {
     "load domain sensitivity from a map of tags to domains" in {
       running(new EmptyApplication()) {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val domainToTagRepo = inject[DomainToTagRepo]
-        val db = inject[Database]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
           inject[SensitivityUpdater], provide(new DateTime), system, db,
           new FakePersistEventPluginImpl(system), settings)
@@ -45,18 +45,19 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
             // add a new tag (unknown sensitivity)
             domainTagImporter.applyTagToDomains(
               DomainTagName("t4"), Seq("42go.com", "amazon.com", "wikipedia.org"))
-          ).foreach { future =>
-            Await.result(future, pairIntToDuration((100, TimeUnit.MILLISECONDS)))
-          }
+          ).foreach(Await.result(_, timeout))
+
+          Seq("apple.com", "amazon.com", "google.com", "methvin.net", "42go.com", "wikipedia.org")
+            .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].updateSensitivity)
         }
 
         db.readOnly { implicit s =>
           domainRepo.get("apple.com").get.sensitive === Some(true)
-          domainRepo.get("amazon.com").get.sensitive === None
+          domainRepo.get("amazon.com").get.sensitive === Some(false)
           domainRepo.get("google.com").get.sensitive === Some(false)
           domainRepo.get("methvin.net").get.sensitive === Some(true)
           domainRepo.get("42go.com").get.sensitive === Some(true)
-          domainRepo.get("wikipedia.org").get.sensitive === None
+          domainRepo.get("wikipedia.org").get.sensitive === Some(false)
         }
       }
     }
@@ -87,9 +88,10 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
               DomainTagName("t3"), Seq("apple.com", "42go.com", "methvin.net")),
             // remove a tag
             domainTagImporter.removeTag(DomainTagName("t3"))
-          ).foreach { future =>
-            Await.result(future, pairIntToDuration((100, TimeUnit.MILLISECONDS)))
-          }
+          ).foreach(Await.result(_, timeout))
+
+          Seq("apple.com", "amazon.com", "google.com", "methvin.net", "42go.com")
+              .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].updateSensitivity)
         }
 
         db.readOnly { implicit s =>
@@ -115,19 +117,23 @@ class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
           tagRepo.save(DomainTag(name = DomainTagName("things"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("stuff"), sensitive = None))
 
-          Await.result(domainTagImporter.applyTagToDomains(
-            DomainTagName("things"), Set("cnn.com", "yahoo.com", "google.com").toSeq), pairIntToDuration(100, TimeUnit.MILLISECONDS))
+          Await.result(domainTagImporter.applyTagToDomains(DomainTagName("things"),
+            Set("cnn.com", "yahoo.com", "google.com").toSeq), timeout)
+          Seq("cnn.com", "yahoo.com", "google.com")
+            .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].updateSensitivity)
 
           domainRepo.get("cnn.com").get.sensitive === Some(false)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(Some(true)))
           domainRepo.get("cnn.com").get.sensitive === Some(true)
 
-          Await.result(domainTagImporter.applyTagToDomains(
-            DomainTagName("stuff"), Set("apple.com", "microsoft.com", "cnn.com").toSeq), pairIntToDuration(100, TimeUnit.MILLISECONDS))
+          Await.result(domainTagImporter.applyTagToDomains(DomainTagName("stuff"),
+            Set("apple.com", "microsoft.com", "cnn.com").toSeq), timeout)
+          Seq("apple.com", "microsoft.com", "cnn.com")
+            .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].updateSensitivity)
 
           domainRepo.get("cnn.com").get.sensitive === Some(true)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(None))
-          domainRepo.get("cnn.com").get.sensitive === None
+          domainRepo.get("cnn.com").get.sensitive === Some(false)
         }
       }
     }

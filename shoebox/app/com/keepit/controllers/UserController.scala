@@ -36,9 +36,8 @@ object UserController extends FortyTwoController {
       val neverOnSite: Option[UserToDomain] = domain.flatMap { domain =>
         inject[UserToDomainRepo].get(userId, domain.id.get, UserToDomainKinds.NEVER_SHOW)
       }
-      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(
-        host.flatMap(inject[DomainClassifier].isSensitive(_).right.getOrElse(None)))
-
+      val sensitive: Option[Boolean] =
+        domain.flatMap(_.sensitive).orElse(host.flatMap(inject[DomainClassifier].isSensitive(_).right.toOption))
 
       nUri match {
         case Some(uri) =>
