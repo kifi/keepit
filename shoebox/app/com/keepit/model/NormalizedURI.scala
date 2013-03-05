@@ -47,7 +47,7 @@ case class NormalizedURI  (
 }
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
-trait NormalizedURIRepo extends DbRepo[NormalizedURI]  {
+trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI]
@@ -60,8 +60,7 @@ class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[NormalizedURI](db, "normalized_uri") {
-    def externalId = column[ExternalId[NormalizedURI]]("external_id")
+  override lazy val table = new RepoTable[NormalizedURI](db, "normalized_uri") with ExternalIdColumn[NormalizedURI] {
     def title = column[String]("title")
     def url = column[String]("url", O.NotNull)
     def urlHash = column[String]("url_hash", O.NotNull)
