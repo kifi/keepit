@@ -15,6 +15,7 @@ object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
       "phraseBoost" -> "0.0",
+      "siteBoost" -> "2.0",
       "enableCoordinator" -> "true",
       "similarity" -> "default",
       "svWeightMyBookMarks" -> "1",
@@ -39,6 +40,7 @@ object SearchConfig {
   private[this] val descriptions =
     Map[String, String](
       "phraseBoost" -> "boost value for the detected phrase",
+      "siteBoost" -> "boost value for matching website names and domains",
       "enableCoordinator" -> "enables the IDF based coordinator",
       "similarity" -> "similarity characteristics",
       "svWeightMyBookMarks" -> "semantics vector weight for my bookmarks",

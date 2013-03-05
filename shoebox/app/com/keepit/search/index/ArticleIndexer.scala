@@ -123,6 +123,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           URI.parse(uri.url).toOption.flatMap(_.host) match {
             case Some(Host(domain @ _*)) =>
               doc.add(buildIteratorField("site", (1 to domain.size).iterator){ n => domain.take(n).reverse.mkString(".") })
+              doc.add(buildIteratorField("site_keywords", (0 until domain.size).iterator)(domain))
             case _ =>
           }
 

@@ -1,25 +1,25 @@
 package com.keepit.search
 
-import com.keepit.search.phrasedetector.PhraseDetector
-import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.classify.Domain
 import com.keepit.search.index.QueryParser
-import com.keepit.search.query.QueryUtil._
+import com.keepit.search.phrasedetector.PhraseDetector
+import com.keepit.search.query.Coordinator
 import com.keepit.search.query.ProximityQuery
+import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.SemanticVectorQuery
 import com.keepit.search.query.TopLevelQuery
-import com.keepit.search.query.Coordinator
-import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.analysis.Analyzer
+import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
+import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
-import org.apache.lucene.analysis.Analyzer
-import org.apache.lucene.index.Term
-import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
 import scala.collection.mutable.ArrayBuffer
 
-class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Float, semanticBoost: Float, phraseBoost: Float, phraseDetector: PhraseDetector) extends QueryParser(analyzer) {
+class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Float, semanticBoost: Float,
+    phraseBoost: Float, siteBoost: Float, phraseDetector: PhraseDetector)
+    extends QueryParser(analyzer) {
 
   super.setAutoGeneratePhraseQueries(true)
 
@@ -46,12 +46,23 @@ class MainQueryParser(analyzer: Analyzer, baseBoost: Float, proximityBoost: Floa
       }
     }
 
+    def addSiteQuery(baseQuery: BooleanQuery, query: Query) {
+      query match {
+        case query: TermQuery =>
+          val q = copyFieldQuery(query, if (Domain.isValid(query.getTerm.text)) "site" else "site_keywords")
+          q.setBoost(siteBoost)
+          baseQuery.add(q, Occur.SHOULD)
+        case _ => 
+      }
+    }
+
     val booleanQuery = new BooleanQuery(true) with Coordinator // add Coordinator trait for TopLevelQuery
 
     Option(super.getFieldQuery("t", queryText, quoted)).foreach{ query =>
       booleanQuery.add(query, Occur.SHOULD)
       booleanQuery.add(copyFieldQuery(query, "c"), Occur.SHOULD)
       booleanQuery.add(copyFieldQuery(query, "title"), Occur.SHOULD)
+      addSiteQuery(booleanQuery, query)
     }
 
     if(!quoted) {
