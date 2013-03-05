@@ -359,10 +359,10 @@ api.log("[google_inject]");
         api.log("[onPrefetchResponse]", resp);
         resp.hits.forEach(processHit);
 
-        response.uuid = resp.uuid;
-        response.context = resp.context;
-        response.mayHaveMore = resp.mayHaveMore;
         response.nextHits = resp.hits;
+        response.nextUUID = resp.uuid;
+        response.nextContext = resp.context;
+        response.mayHaveMore = resp.mayHaveMore;
         if (showMoreOnArrival) {
           showMoreOnArrival = false;
           renderMore();
@@ -376,7 +376,11 @@ api.log("[google_inject]");
     var hits = response.nextHits;
     api.log("[renderMore] hits:", hits);
     response.hits.push.apply(response.hits, hits);
-    response.nextHits = null;
+    response.uuid = response.nextUUID;
+    response.context = response.nextContext;
+    delete response.nextHits;
+    delete response.nextUUID;
+    delete response.nextContext;
     var html = hits.map(function(hit) {
       hit.session = response.session;
       return Mustache.to_html(hitHtml, hit);
