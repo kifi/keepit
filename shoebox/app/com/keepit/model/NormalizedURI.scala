@@ -54,7 +54,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
 }
 
 @Singleton
-class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[NormalizedURI] with NormalizedURIRepo {
+class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
