@@ -3,7 +3,7 @@
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
     <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+"
-       class="name_tooltip_link" href="@com.keepit.controllers.routes.UserController.userView(userWithSocial.user.id.get)">
+       class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminUserController.userView(userWithSocial.user.id.get)">
       <img class="user-avatar" src="https://graph.facebook.com/@userWithSocial.socialUserInfo.socialId.id/picture?type=square"/> @userWithSocial.user.firstName @userWithSocial.user.lastName
     </a>
   </span>

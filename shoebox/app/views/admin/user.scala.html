@@ -49,7 +49,7 @@
       <tr>
         <th>Email</th>
         <td>
-          <form action="@com.keepit.controllers.routes.UserController.updateUser(userWithSocial.user.id.get)" method="POST" class="form-inline">
+          <form action="@com.keepit.controllers.admin.routes.AdminUserController.updateUser(userWithSocial.user.id.get)" method="POST" class="form-inline">
             <input type="text" name="emails" value="@{userWithSocial.emails.map(_.address).mkString(",")}">
             <input type="submit" value="Change emails">
           </form>
@@ -64,7 +64,7 @@
       </tr>
     </table>
     <p>
-      <a href="@com.keepit.controllers.routes.UserController.moreUserInfoView(userWithSocial.user.id.get)">More User Info</a>
+      <a href="@com.keepit.controllers.admin.routes.AdminUserController.moreUserInfoView(userWithSocial.user.id.get)">More User Info</a>
     </p>
 
 	<div class="row-fluid">
@@ -94,7 +94,7 @@
   
   <h2>User kept @totalBookmarks Bookmarks</h2>
   <h3>Showing @bookmarks.size Bookmarks of total @totalBookmarks</h3>
-  <form class="form-inline" action="@com.keepit.controllers.routes.UserController.userView(userWithSocial.user.id.get)" method="POST">
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminUserController.userView(userWithSocial.user.id.get)" method="POST">
     @if(bookmarkSearch.isDefined){
       <input type="text" name="bookmarkSearch" value="@{bookmarkSearch.get}"/>
     } else {
@@ -140,7 +140,7 @@
   <script type="text/javascript">
     function refreshAllSocialUserInfo() {
       $("#refresh_sui").prop("disabled", true).text("Refreshing Social User Info...");
-      location.href="@com.keepit.controllers.routes.UserController.refreshAllSocialInfo(userWithSocial.user.id.get)"
+      location.href="@com.keepit.controllers.admin.routes.AdminUserController.refreshAllSocialInfo(userWithSocial.user.id.get)"
     }
     function impersonate() {
       $.post("@com.keepit.controllers.routes.AuthController.impersonate(userWithSocial.user.id.get)")
@@ -149,14 +149,14 @@
       $.post("@com.keepit.controllers.routes.AuthController.unimpersonate()")
     }
     function blockUser() {
-      $.post('@com.keepit.controllers.routes.UserController.addExperiment(userWithSocial.user.id.get, "block")', function(data) {
+      $.post('@com.keepit.controllers.admin.routes.AdminUserController.addExperiment(userWithSocial.user.id.get, "block")', function(data) {
         var list = $("<ul/>")
         $(data).each(function(i, e){list.append($("<li>" + e + "</li>"));})
         $('#experiments').html(list);
       });
     }
     function makeAdmin() {
-      $.post('@com.keepit.controllers.routes.UserController.addExperiment(userWithSocial.user.id.get, "admin")', function(data) {
+      $.post('@com.keepit.controllers.admin.routes.AdminUserController.addExperiment(userWithSocial.user.id.get, "admin")', function(data) {
         var list = $("<ul/>")
         $(data).each(function(i, e){list.append($("<li>" + e + "</li>"));})
         $('#experiments').html(list);
