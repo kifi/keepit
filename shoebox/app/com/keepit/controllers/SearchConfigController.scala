@@ -89,8 +89,8 @@ object SearchConfigController extends FortyTwoController {
       "defaultCounts" -> JsArray(defaultValues.map {i => JsNumber(i) }),
       "samples" -> JsNumber(aSum + bSum),
       "defaultSamples" -> JsNumber(aDefSum + bDefSum),
-      "avg" -> JsNumber(aSum / total),
-      "defaultAvg" -> JsNumber(aDefSum / totalDef)
+      "avg" -> JsNumber(if (total > 0) aSum / total else 0),
+      "defaultAvg" -> JsNumber(if (totalDef > 0) aDefSum / totalDef else 0)
     ))
   }
 
