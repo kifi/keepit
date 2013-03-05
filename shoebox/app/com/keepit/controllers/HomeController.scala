@@ -21,6 +21,10 @@ class HomeController extends FortyTwoController {
     Ok(html).as(ContentTypes.HTML)
   }
 
+  def giveMeA200 = Action { request =>
+    Ok("You got it!")
+  }
+
   def upgrade = AuthenticatedHtmlAction { implicit request =>
     val user = inject[Database].readOnly { implicit s => inject[UserRepo].get(request.userId) }
     log.info("Looks like %s needs to upgrade".format(user.firstName + " " + user.lastName))
