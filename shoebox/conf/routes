@@ -48,6 +48,7 @@ GET     /users/friends              @com.keepit.controllers.ext.ExtUserControlle
 POST    /users/events               com.keepit.controllers.EventController.logUserEvents
 
 GET     /search                     com.keepit.controllers.SearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
+GET     /search/chatter             com.keepit.controllers.CommentController.getCounts(ids: String)
 
 POST    /kifi/start                 com.keepit.controllers.AuthController.start
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
