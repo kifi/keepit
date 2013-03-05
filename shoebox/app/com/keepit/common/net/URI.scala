@@ -27,27 +27,27 @@ object URI extends Logging {
   }
   def unapplyTry(uriString: String): Try[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] = Try {
     val uri = try {
-      new java.net.URI(uriString).parseServerAuthority().normalize()
+      new java.net.URI(uriString).normalize()
     } catch {
       case e: java.net.URISyntaxException =>
         val fixedUriString = encodeExtraDelimiters(encodeSymbols(fixMalformedEscape(uriString)))
-        new java.net.URI(fixedUriString).parseServerAuthority().normalize()
+        new java.net.URI(fixedUriString).normalize()
     }
     val scheme = normalizeScheme(Option(uri.getScheme))
-    val userInfo = Option(uri.getUserInfo)
-    val host = normalizeHost(Option(uri.getHost))
-    val port = normalizePort(scheme, uri.getPort)
+    val (userInfo, host, port) = normalizeAuthority(
+      scheme, Option(uri.getAuthority), Option(uri.getUserInfo), Option(uri.getHost), uri.getPort)
     val path = normalizePath(Option(uri.getPath))
     val query = normalizeQuery(Option(uri.getRawQuery))
     val fragment = normalizeFragment(Option(uri.getRawFragment))
     (scheme, userInfo, host, port, path, query, fragment)
   }
 
+  val authorityRe = """(?:([^@]*)@)?(.*?)(?::(\d{1,5}))?""".r
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
   val encodedPercent = java.net.URLEncoder.encode("%", "UTF-8")
   val symbols = """'"`@$^()[]{}<>| """
   val symbolRe = ("[\\Q" + symbols + "\\E]").r
-  val delimiters = ":?#"
+  val delimiters = "?#"
   val encodingMap = (symbols ++ delimiters).map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
 
   def fixMalformedEscape(uriString: String) = {
@@ -72,20 +72,35 @@ object URI extends Logging {
 
   def encodeSymbols(uriString: String): String = symbolRe.replaceAllIn(uriString, m => encodingMap(m.group(0)(0)))
 
-  def normalizeScheme(scheme: Option[String]) = scheme.map(_.toLowerCase)
+  def normalizeScheme(scheme: Option[String]): Option[String] = scheme.map(_.toLowerCase)
 
-  def normalizeHost(host: Option[String]) = {
-    host.flatMap{ host =>
-      host match {
-        case Host(domain @ _*) => Some(Host(domain: _*))
-        case host =>
-          log.error("host normalization failed: [%s]".format(host))
-          Some(Host(Seq(host): _*))
+  def normalizeAuthority(scheme: Option[String], authority: Option[String],
+      userInfo: Option[String], host: Option[String], port: Int)
+      : (Option[String], Option[Host], Int) = {
+    if (host.isDefined) {
+      (userInfo, Some(normalizeHost(host.get)), normalizePort(scheme, port))
+    } else {
+      authority match {
+        case Some(authorityRe(u, h, p)) =>
+          (Option(u), Some(normalizeHost(h)), normalizePort(scheme, Option(p).map(_.toInt).getOrElse(-1)))
+        case Some(a) =>
+          log.error(s"authority normalization failed: [$a]")
+          (None, Some(normalizeHost(a)), -1)
+        case None =>
+          (None, None, -1)
       }
     }
   }
 
-  def normalizePort(scheme: Option[String], port: Int) = (scheme, port) match {
+  def normalizeHost(host: String): Host = host match {
+    case Host(domain @ _*) =>
+      Host(domain: _*)
+    case host =>
+      log.error("host normalization failed: [%s]".format(host))
+      Host(host)
+  }
+
+  def normalizePort(scheme: Option[String], port: Int): Int = (scheme, port) match {
     case (Some("http"), 80) => -1
     case (Some("https"), 443) => -1
     case _ => port
