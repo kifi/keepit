@@ -38,6 +38,19 @@ import views.html
 
 object CommentController extends FortyTwoController {
 
+  def getCounts(ids: String) = AuthenticatedJsonAction { request =>
+    val nUriExtIds = ids.split('.').map(ExternalId[NormalizedURI](_))
+    val counts = inject[Database].readOnly { implicit s =>
+      val nUriRepo = inject[NormalizedURIRepo]
+      val commentRepo = inject[CommentRepo]
+      nUriExtIds.map { extId =>
+        val id = nUriRepo.get(extId).id.get
+        extId -> (commentRepo.getPublicCount(id), commentRepo.getMessages(id, request.userId).size)
+      }
+    }
+    Ok(JsObject(counts.map { case (id, n) => id.id -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
+  }
+
   def createComment() = AuthenticatedJsonAction { request =>
     val o = request.body.asJson.get
     val (urlStr, title, text, permissions, recipients, parent) = (
@@ -112,7 +125,6 @@ object CommentController extends FortyTwoController {
   def getUpdates(url: String) = AuthenticatedJsonAction { request =>
     val (messageCount, publicCount) = inject[Database].readOnly { implicit s =>
       val commentRepo = inject[CommentRepo]
-      val commentReadRepo = inject[CommentReadRepo]
 
       inject[NormalizedURIRepo].getByNormalizedUrl(url) map {uri =>
         val uriId = uri.id.get
