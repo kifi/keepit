@@ -49,6 +49,7 @@ class MainSearcher(
   val similarity = Similarity(config.asString("similarity"))
   val enableCoordinator = config.asBoolean("enableCoordinator")
   val phraseBoost = config.asFloat("phraseBoost")
+  val siteBoost = config.asFloat("siteBoost")
 
   // following config params are enabled only when the default filter is in use
   val minMyBookmarks = if (filter.isDefault) config.asInt("minMyBookmarks") else 0
@@ -95,7 +96,7 @@ class MainSearcher(
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
     parser.parseQuery(queryString).map{ articleQuery =>
@@ -225,7 +226,7 @@ class MainSearcher(
 
   def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     val lang = Lang("en") // TODO: detect
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 
