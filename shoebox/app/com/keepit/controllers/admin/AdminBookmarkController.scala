@@ -29,7 +29,6 @@ import com.keepit.common.analytics.ActivityStream
 import com.google.inject.{Inject, Singleton}
 
 import views.html
-import views.html
 
 @Singleton
 class AdminBookmarksController @Inject() (db: Database, scraper: ScraperPlugin, uriGraphPlugin: URIGraphPlugin,

@@ -4,7 +4,7 @@
   <span style="margin:2px">
     @if(socialUserInfo.userId.isDefined && !socialOnly) {
       <a data-hover="tooltip" title="@socialUserInfo.fullName+"
-         class="name_tooltip_link" href="@com.keepit.controllers.routes.UserController.userView(socialUserInfo.userId.get)">
+         class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminUserController.userView(socialUserInfo.userId.get)">
         <img class="user-avatar" src="https://graph.facebook.com/@socialUserInfo.socialId.id/picture?type=square"/><b> @socialUserInfo.fullName</b>
       </a>
     } else {

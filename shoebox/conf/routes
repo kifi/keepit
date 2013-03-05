@@ -38,10 +38,12 @@ GET     /messages/threads           com.keepit.controllers.CommentController.get
 
 GET     /r/:id                      com.keepit.controllers.DeepLinkController.handle(id: String)
 
-GET     /users/slider               com.keepit.controllers.UserController.getSliderInfo(url: String)
-POST    /users/slider/suppress      com.keepit.controllers.UserController.suppressSliderForSite
+GET     /users/slider               @com.keepit.controllers.ext.ExtUserController.getSliderInfo(url: String)
+POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 GET     /users/slider/updates       com.keepit.controllers.CommentController.getUpdates(url: String)
-GET     /users/friends              com.keepit.controllers.UserController.getSocialConnections()
+
+GET     /users/friends              @com.keepit.controllers.ext.ExtUserController.getSocialConnections()
+
 POST    /users/events               com.keepit.controllers.EventController.logUserEvents
 
 GET     /search                     com.keepit.controllers.SearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
@@ -102,13 +104,13 @@ GET     /admin/uriGraph/load        com.keepit.controllers.admin.URIGraphControl
 GET     /admin/uriGraph/update/:userId com.keepit.controllers.admin.URIGraphController.update(userId: Id[User])
 GET     /admin/uriGraph/dumpDoc/:userId  com.keepit.controllers.admin.URIGraphController.dumpLuceneDocument(userId: Id[User])
 
-GET     /admin/users                com.keepit.controllers.UserController.usersView
-GET     /admin/user/:id             com.keepit.controllers.UserController.userView(id: Id[User])
-POST    /admin/user/:id             com.keepit.controllers.UserController.userView(id: Id[User])
-GET     /admin/user/:id/more-info   com.keepit.controllers.UserController.moreUserInfoView(id: Id[User])
-POST    /admin/user/:id/experiment/add/:exp  com.keepit.controllers.UserController.addExperiment(id: Id[User], exp: String)
-POST    /admin/user/:id/update      com.keepit.controllers.UserController.updateUser(id: Id[User])
-GET     /admin/user/:id/social_users/refresh com.keepit.controllers.UserController.refreshAllSocialInfo(id: Id[User])
+GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.usersView
+GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
+POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
+GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User])
+POST    /admin/user/:id/experiment/add/:exp  @com.keepit.controllers.admin.AdminUserController.addExperiment(id: Id[User], exp: String)
+POST    /admin/user/:id/update      @com.keepit.controllers.admin.AdminUserController.updateUser(id: Id[User])
+GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.AdminUserController.refreshAllSocialInfo(id: Id[User])
 POST    /admin/user/:id/impersonate com.keepit.controllers.AuthController.impersonate(id: Id[User])
 POST    /admin/unimpersonate        com.keepit.controllers.AuthController.unimpersonate()
 
