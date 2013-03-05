@@ -73,8 +73,8 @@ $(function() {
       d0 = d3.time.format("%Y-%m-%d").parse(o.day0);
 
       descText.text(
-          "Average: " + formatPercent(o.avg) + "/" + formatPercent(o.defaultAvg) + "%, " +
-          "Samples: " + o.samples + "/" + o.defaultSamples)
+          "Average: " + formatPercent(o.avg) + "% / " + formatPercent(o.defaultAvg) + "%, " +
+          "Samples: " + o.samples)
 
       counts = o.counts.map(formatPercent);
       defaultCounts = o.defaultCounts.map(formatPercent);
