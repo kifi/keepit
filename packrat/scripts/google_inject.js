@@ -12,7 +12,7 @@ api.log("[google_inject]");
   }
 
   var hitsHtml, hitHtml;
-  api.load("html/search/google.html", function(html) { $res = $(Mustache.to_html(html)); bindHandlers() });
+  api.load("html/search/google.html", function(html) { $res = $(Mustache.to_html(html)).hide(); bindHandlers() });
   api.load("html/search/google_hits.html", function(html) { hitsHtml = html });
   api.load("html/search/google_hit.html", function(html) { hitHtml = html });
 
