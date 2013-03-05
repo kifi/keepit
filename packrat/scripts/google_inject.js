@@ -170,6 +170,10 @@ api.log("[google_inject]");
           tGoogleResultsShown = +new Date;
           api.log("[onMutation] Google results inserted");
           $res.insertBefore(nodes[j]);  // reattach
+          if (!response.shown) {
+            response.shown = true;
+            tKifiResultsShown = +new Date;
+          }
           search();  // prediction may have changed
         }
       }
