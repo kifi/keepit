@@ -2,6 +2,8 @@ package com.keepit.classify
 
 import scala.collection.JavaConversions.enumerationAsScalaIterator
 import scala.collection.mutable
+import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.io.Source
 
 import java.io.FileOutputStream
@@ -14,28 +16,23 @@ import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 
 import com.google.inject.{Provider, ImplementedBy, Inject}
+import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice}
 import com.keepit.common.time._
 import com.keepit.inject.inject
 
-import scala.concurrent.{Await, Future}
 import akka.actor.Status.Failure
-
-import akka.actor.{ActorSystem, Props, Actor}
+import akka.actor.{ActorSystem, Props}
 import akka.pattern.ask
-import play.api.libs.concurrent.Execution.Implicits._
-import scala.concurrent.duration._
-import play.api.libs.json.{JsArray, JsNumber, JsString, JsObject}
-
 import play.api.Play.current
-
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.{JsNumber, JsString, JsObject}
 import play.api.libs.ws.WS
-import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice}
 
 private case object RefetchAll
 private case class ApplyTag(tagName: DomainTagName, domainNames: Seq[String])
@@ -74,12 +71,13 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
     case RefetchAll =>
       try {
         val outputFilename = FILE_FORMAT.format(clock.get().toString(DATE_FORMAT))
-        val outputPath = new URI("%s/%s".format(settings.localDir, outputFilename)).normalize.getPath
-        log.info("refetching all domains to %s".format(outputPath))
+        val outputPath = new URI(s"${settings.localDir}/$outputFilename").normalize.getPath
+        log.info(s"refetching all domains to $outputPath")
         WS.url(settings.url).get().onSuccess { case res =>
           persistEvent(IMPORT_START, JsObject(Seq()))
+          val startTime = currentDateTime
           inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
-            subject = "Domain import started", htmlBody = s"Domain import started at $currentDateTime",
+            subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
             category = PostOffice.Categories.ADMIN))
           val s = new FileOutputStream(outputPath)
           try {
@@ -103,11 +101,19 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
               Some(withSensitivityUpdate(applyTagToDomains(tagName, domains)))
             } else None
           }).flatten
+          val (added, removed, total) =
+            (results.map(_.added).sum, results.map(_.removed).sum, results.map(_.total).sum)
           persistEvent(IMPORT_SUCCESS, JsObject(Seq(
-            "numDomainsAdded" -> JsNumber(results.map(_.added).sum),
-            "numDomainsRemoved" -> JsNumber(results.map(_.removed).sum),
-            "totalDomains" -> JsNumber(results.map(_.total).sum)
+            "numDomainsAdded" -> JsNumber(added),
+            "numDomainsRemoved" -> JsNumber(removed),
+            "totalDomains" -> JsNumber(total)
           )))
+          val endTime = currentDateTime
+          inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+            subject = "Domain import finished",
+            htmlBody = s"Domain import started at $startTime and succeeded at $endTime with $added added, " +
+                s"$removed removed, and $total total domains.",
+            category = PostOffice.Categories.ADMIN))
         }
       } catch {
         case e: Exception => failWithException(IMPORT_FAILURE, e)
