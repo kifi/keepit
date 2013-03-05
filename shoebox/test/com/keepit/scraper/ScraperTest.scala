@@ -42,7 +42,7 @@ class ScraperTest extends SpecificationWithJUnit {
   )
 
   "Scraper" should {
-    "get a article from an existing website" in running(new EmptyApplication()) {
+    "get a article from an existing website" in {
       val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/existing"
@@ -57,7 +57,7 @@ class ScraperTest extends SpecificationWithJUnit {
       }
     }
 
-    "throw an error from a non-existing website" in running(new EmptyApplication()) {
+    "throw an error from a non-existing website" in {
       val store = new FakeArticleStore()
       val scraper = getMockScraper(store)
       val url = "http://www.keepit.com/missing"

@@ -20,7 +20,7 @@ object PhraseController extends FortyTwoController  {
   def displayPhrases(page: Int = 0) = AdminHtmlAction{ implicit request =>
     val phraseRepo = inject[PhraseRepo]
     val (phrasesOpt, count) = inject[Database].readOnly { implicit session =>
-      val count = phraseRepo.count
+      val count = 10//phraseRepo.count
       val phrasesOpt = if(!PhraseImporter.isInProgress) {
         Some(phraseRepo.page(page, pageSize))
       } else {

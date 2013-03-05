@@ -100,6 +100,9 @@ object ApplicationBuild extends Build {
       testOptions += Tests.Argument(TestFrameworks.JUnit, "--ignore-runners=org.specs2.runner.JUnitRunner"),
       testOptions in Test += Tests.Argument("sequential", "false"),
       testOptions in Test += Tests.Argument("threadsNb", "16"),
+      testOptions in Test += Tests.Argument("showtimes", "true"),
+      testOptions in Test += Tests.Argument("stopOnFail", "true"),
+      testOptions in Test += Tests.Argument("failtrace", "true"),
 
       //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
       sources in doc in Compile := List()
