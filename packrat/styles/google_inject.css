@@ -329,32 +329,50 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
   cursor: pointer;
 }
 .kifi-chatter:hover,
-.kifi-chatter.kifi-hover {
+.kifi-chatter.kifi-hover-showing {
   background-position: right -16px;
 }
 .kifi-chatter-hover {
   position: absolute;
-  bottom: 24px;
+  bottom: 21px;
   left: -40px;
   width: 78px;
-  height: 42px;
-  padding: 6px 10px;
+  height: 0;
+  padding: 0;
   background-color: #4c8ffb;
   color: #fff;
-  font-size: 11px;
+  font-size: 0;
   cursor: default;
-  z-index: 999;
+  z-index: 99;
+  opacity: 0;
+  -webkit-transition: opacity 90ms, bottom 90ms ease-out, height 0 90ms, padding 0 90ms, font-size 0 90ms;
+  transition: opacity 90ms, bottom 90ms ease-out, height 0 90ms, padding 0 90ms, font-size 0 90ms;
 }
-.kifi-chatter-hover:after {
-  content: " ";
+.kifi-hover-showing .kifi-chatter-hover {
+  bottom: 24px;
+  height: 42px;
+  padding: 6px 10px;
+  font-size: 11px;
+  opacity: 1;
+  -webkit-transition: opacity 90ms, bottom 90ms ease-out;
+  transition: opacity 90ms, bottom 90ms ease-out;
+}
+.kifi-chatter-▾ {
   position: absolute;
   left: 45px;
   bottom: -4px;
   width: 0;
   height: 0;
-  border-color: #4c8ffb transparent;
-  border-width: 5px 4px 0;
   border-style: solid;
+  border-color: #4c8ffb transparent;
+  border-width: 0;
+  -webkit-transition: border-width 0 90ms;
+  transition: border-width 0 90ms;
+}
+.kifi-hover-showing .kifi-chatter-▾ {
+  border-width: 5px 4px 0;
+  -webkit-transition: none;
+  transition: none;
 }
 .kifi-chatter-title {
   display: block;

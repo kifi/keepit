@@ -32,31 +32,27 @@ home-grown at FortyTwo, not intended for distribution (yet)
       var $a = $(this), data = $a.data();
       if (!data.hover) {
         data.hover = {lastEventTime: 0};
-        var t, $h = $(createHover.call(this)).hide().appendTo($a);
-        $a.on("mouseover.showHover", function(e) {
-          api.log("[mouseover.showHover]", e.target);
+        var t, $h = $(createHover.call(this)).appendTo($a);
+        $a.on("mouseenter.showHover", function() {
           clearTimeout(t);
           t = setTimeout(function() {
-            $h.show(); $a.addClass("kifi-hover");
+            $a.addClass("kifi-hover-showing");
             data.hover.lastEventTime = +new Date;
-          }, 200);
-        }).on("mouseout.showHover", function(e) {
-          api.log("[mouseout.showHover]", e);
+          }, 100);
+        }).on("mouseleave.showHover", function(e) {
           if (e.toElement && this.contains(e.toElement)) return;
           clearTimeout(t);
           t = setTimeout(function() {
-            $h.hide(); $a.removeClass("kifi-hover");
+            $a.removeClass("kifi-hover-showing");
             data.hover.lastEventTime = +new Date;
-          }, 500);
+          }, 300);
         }).on("click.showHover", function(e) {
           if ($h[0].contains(e.target)) return;
-          api.log("[click.showHover]", this);
           if (new Date - data.hover.lastEventTime > 200) {
             clearTimeout(t);
-            $h.toggle(); $a.toggleClass("kifi-hover");
+            $a.toggleClass("kifi-hover-showing");
           }
         }).on("mousedown.showHover", function(e) {
-          api.log("[mousedown.showHover]");
           e.preventDefault();  // prevents selection via drag or double-click
         });
       }
