@@ -29,26 +29,26 @@ GET     /bookmarks/check            @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 
-POST    /comments/add               com.keepit.controllers.CommentController.createComment()
-GET     /comments/public            com.keepit.controllers.CommentController.getComments(url: String)
-POST    /comments/follow            com.keepit.controllers.CommentController.startFollowing()
-POST    /comments/unfollow          com.keepit.controllers.CommentController.stopFollowing()
+POST    /comments/add               @com.keepit.controllers.ext.ExtCommentController.createComment()
+GET     /comments/public            @com.keepit.controllers.ext.ExtCommentController.getComments(url: String)
+POST    /comments/follow            @com.keepit.controllers.ext.ExtCommentController.startFollowing()
+POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentController.stopFollowing()
 
-GET     /messages/threads/:id       com.keepit.controllers.CommentController.getMessageThread(id: ExternalId[Comment])
-GET     /messages/threads           com.keepit.controllers.CommentController.getMessageThreadList(url: String)
+GET     /messages/threads/:id       @com.keepit.controllers.ext.ExtCommentController.getMessageThread(id: ExternalId[Comment])
+GET     /messages/threads           @com.keepit.controllers.ext.ExtCommentController.getMessageThreadList(url: String)
 
 GET     /r/:id                      com.keepit.controllers.DeepLinkController.handle(id: String)
 
 GET     /users/slider               @com.keepit.controllers.ext.ExtUserController.getSliderInfo(url: String)
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
-GET     /users/slider/updates       com.keepit.controllers.CommentController.getUpdates(url: String)
+GET     /users/slider/updates       @com.keepit.controllers.ext.ExtCommentController.getUpdates(url: String)
 
 GET     /users/friends              @com.keepit.controllers.ext.ExtUserController.getSocialConnections()
 
 POST    /users/events               com.keepit.controllers.EventController.logUserEvents
 
 GET     /search                     com.keepit.controllers.SearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
-GET     /search/chatter             com.keepit.controllers.CommentController.getCounts(ids: String)
+GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)
 
 POST    /kifi/start                 com.keepit.controllers.AuthController.start
 GET     /welcome                    com.keepit.controllers.AuthController.welcome
@@ -131,11 +131,11 @@ GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPrevi
 GET     /admin/electronicMails       com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
 GET     /admin/electronicMails/:page com.keepit.controllers.admin.ElectronicMailController.electronicMailsView(page: Int)
 
-GET     /admin/follows              com.keepit.controllers.CommentController.followsView
-GET     /admin/comments             com.keepit.controllers.CommentController.commentsViewFirstPage
-GET     /admin/comments/:page       com.keepit.controllers.CommentController.commentsView(page: Int)
-GET     /admin/messages             com.keepit.controllers.CommentController.messagesViewFirstPage
-GET     /admin/messages/:page       com.keepit.controllers.CommentController.messagesView(page: Int)
+GET     /admin/follows              @com.keepit.controllers.admin.AdminCommentController.followsView
+GET     /admin/comments             @com.keepit.controllers.admin.AdminCommentController.commentsViewFirstPage
+GET     /admin/comments/:page       @com.keepit.controllers.admin.AdminCommentController.commentsView(page: Int)
+GET     /admin/messages             @com.keepit.controllers.admin.AdminCommentController.messagesViewFirstPage
+GET     /admin/messages/:page       @com.keepit.controllers.admin.AdminCommentController.messagesView(page: Int)
 
 GET     /admin/searchConfig/:id     com.keepit.controllers.SearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   com.keepit.controllers.SearchConfigController.setUserConfig(id: Id[User])
