@@ -24,6 +24,8 @@ case class FakeHealthcheck() extends HealthcheckPlugin {
 
   def errors(): List[HealthcheckError] = _errors.toList
 
+  def reportErrors(): Unit = {}
+
   def addError(error: HealthcheckError): HealthcheckError = {
     _errors += error
     error
