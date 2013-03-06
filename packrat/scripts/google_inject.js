@@ -1,6 +1,7 @@
 // @match /^https?:\/\/www\.google\.(com|com\.(a[fgiru]|b[dhnorz]|c[ouy]|do|e[cgt]|fj|g[hit]|hk|jm|k[hw]|l[by]|m[txy]|n[afgip]|om|p[aehkry]|qa|s[abglv]|t[jrw]|u[ay]|v[cn])|co\.(ao|bw|c[kr]|i[dln]|jp|k[er]|ls|m[az]|nz|t[hz]|u[gkz]|v[ei]|z[amw])|a[demstz]|b[aefgijsy]|cat|c[adfghilmnvz]|d[ejkmz]|e[es]|f[imr]|g[aeglmpry]|h[nrtu]|i[emqst]|j[eo]|k[giz]|l[aiktuv]|m[degklnsuvw]|n[eloru]|p[lnstosuw]|s[cehikmnot]|t[dgklmnot]|v[gu]|ws)\/(|search|webhp)([?#].*)?$/
 // @require styles/google_inject.css
 // @require scripts/lib/jquery-1.8.2.min.js
+// @require scripts/lib/jquery-showhover.js
 // @require scripts/lib/mustache-0.7.1.min.js
 // @require scripts/api.js
 
@@ -11,10 +12,11 @@ api.log("[google_inject]");
     api.port.emit("log_event", Array.prototype.slice.call(arguments));
   }
 
-  var hitsHtml, hitHtml;
+  var hitsHtml, hitHtml, chatterHtml;
   api.load("html/search/google.html", function(html) { $res = $(Mustache.to_html(html)).hide(); bindHandlers() });
   api.load("html/search/google_hits.html", function(html) { hitsHtml = html });
   api.load("html/search/google_hit.html", function(html) { hitHtml = html });
+  api.load("html/search/chatter.html", function(html) { chatterHtml = html });
 
   var $res = $();         // reference to our search results (kept so that we can reinsert when removed)
   var filter;             // current search filter (null, "a", "m", "f", or zero or more dot-delimited user ids)
@@ -131,6 +133,7 @@ api.log("[google_inject]");
       logEvent("search", "kifiLoaded", {"query": q, "filter": f, "queryUUID": resp.uuid});
       if (resp.hits.length) {
         logEvent("search", "kifiAtLeastOneResult", {"query": q, "filter": f, "queryUUID": resp.uuid, "experimentId": resp.experimentId});
+        loadChatter(response.hits.slice());
         prefetchMore();
       }
     });
@@ -331,6 +334,17 @@ api.log("[google_inject]");
     }).on("click", ".kifi-res-debug", function(e) {
       e.stopPropagation();
       location = "https://" + response.server + "/admin/search/results/" + response.uuid;
+    }).on("mouseenter", ".kifi-chatter", function() {
+      $(this).showHover(function() {
+        var n = $(this).data("n");
+        return Mustache.to_html(chatterHtml, {
+          numComments: n[0],
+          numMessages: n[1],
+          pluralize: function() {return pluralLambda}});
+      }).showHover("enter");
+    }).on("click", ".kifi-chatter-deeplink", function() {
+      api.port.emit("add_deep_link_listener", {locator: $(this).data("locator")});
+      window.location = $(this).closest("li.g").find("h3.r a")[0].href;
     });
   }
 
@@ -346,6 +360,22 @@ api.log("[google_inject]");
       .toggleClass("kifi-debug", !!response.showScores);
 
     api.log("[appendResults] done");
+  }
+
+  function loadChatter(hits) {
+    api.port.emit("get_chatter", {ids: hits.map(function(h) {return h.bookmark.externalId})}, function gotChatter(counts) {
+      api.log("[gotChatter]", counts);
+      var bgImg = "url(" + api.url("images/chatter.png") + ")";
+      for (var id in counts) {
+        if (counts.hasOwnProperty(id)) {
+          var n = counts[id];
+          if (n[0] || n[1]) {
+            $res.find("#kifi-who-" + id).append(
+              $("<span class=kifi-chatter>").css("background-image", bgImg).data("n", n));
+          }
+        }
+      }
+    });
   }
 
   function prefetchMore() {
@@ -386,6 +416,7 @@ api.log("[google_inject]");
     if (!response.mayHaveMore) {
       $list.find(".kifi-res-more").hide(200);
     }
+    loadChatter(hits);
   }
 
   function processHit(hit) {
@@ -438,6 +469,11 @@ api.log("[google_inject]");
 
   function plural(n, term) {
     return n + " " + term + (n == 1 ? "" : "s");
+  }
+
+  function pluralLambda(text, render) {
+    text = render(text);
+    return text + (text.substr(0, 2) == "1 " ? "" : "s");
   }
 
   function boldSearchTerms(text, query) {
