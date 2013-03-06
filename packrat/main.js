@@ -87,6 +87,11 @@ api.port.on({
     return true;
   },
   get_keeps: searchOnServer,
+  get_chatter: function(data, respond) {
+    api.log("[get_chatter]", data.ids);
+    ajax("GET", "http://" + getConfigs().server + "/search/chatter", {ids: data.ids.join(".")}, respond);
+    return true;
+  },
   add_bookmarks: function(data, respond) {
     getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
       addKeep(info, data, respond);
@@ -176,10 +181,9 @@ function getSliderInfo(tab, respond) {
 }
 
 function createDeepLinkListener(link, linkTabId, respond) {
-  var createdTime = new Date();
+  var createdTime = new Date;
   api.tabs.on.ready.add(function deepLinkListener(tab) {
-    var now = new Date();
-    if (now - createdTime > 15000) {
+    if (new Date - createdTime > 15000) {
       api.tabs.on.ready.remove(deepLinkListener);
       api.log("[createDeepLinkListener] Listener timed out.");
       return;
