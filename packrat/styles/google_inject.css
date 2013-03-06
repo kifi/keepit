@@ -324,7 +324,7 @@ a.kifi-res-friends {
   position: absolute;
   bottom: 20px;
   padding: 4px 8px;
-  background-color: rgba(0,0,0,.75);
+  background-color: #282828;
   color: #fff;
   font-size: 11px;
   z-index: 99;
@@ -342,7 +342,7 @@ a.kifi-res-friends {
   width: 0;
   height: 0;
   border-style: solid;
-  border-color: rgba(0,0,0,.75) transparent;
+  border-color: #282828 transparent;
   border-width: 5px 4px 0;
 }
 .kifi-res-friends-list {
