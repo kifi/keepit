@@ -68,7 +68,7 @@ class SocialUserCreateConnectionsTest extends Specification {
         val json2 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_super_min.json")).mkString)
 
         val connectionsAfter = inject[SocialUserCreateConnections].createConnections(socialUserInfo, Seq(json2))
-        connectionsAfter.size === 8
+        connectionsAfter.size === 5
       }
     }
 
