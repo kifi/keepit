@@ -1,6 +1,5 @@
 package com.keepit.search.index
 
-import com.keepit.test.EmptyApplication
 import com.keepit.search.Lang
 import org.specs2.mutable._
 import play.api.Play.current
@@ -18,18 +17,19 @@ import org.apache.lucene.search.BooleanClause._
 
 class QueryParserTest extends Specification {
 
-  val analyzer = DefaultAnalyzer.forParsing(Lang("en"))
-  val parser = new QueryParser(analyzer) {
-    override def parseQuery(queryText: String) = {
-      val qopt = super.parseQuery(queryText)
-      //println("[%s]=>[%s]".format(queryText, qopt))
-      qopt
+  private trait QueryParserScope extends Scope {
+    val analyzer = DefaultAnalyzer.forParsing(Lang("en"))
+    val parser = new QueryParser(analyzer) {
+      override def parseQuery(queryText: String) = {
+        val qopt = super.parseQuery(queryText)
+        //println("[%s]=>[%s]".format(queryText, qopt))
+        qopt
+      }
     }
   }
 
   "QueryParser" should {
-    /* todo(eishay): fix me!!!
-    "be forgiving to lucene parser error" in {
+    "be forgiving to lucene parser error" in new QueryParserScope {
       parser.parseQuery("aaa\"bbb") must beSome[Query]
       parser.parseQuery("aaa \"bbb") must beSome[Query]
       parser.parseQuery("aaa (bbb") must beSome[Query]
@@ -39,13 +39,13 @@ class QueryParserTest extends Specification {
       parser.parseQuery("\"") must beSome[Query]
     }
 
-    "handle an empty query" in {
+    "handle an empty query" in new QueryParserScope {
       parser.parseQuery(" ") must beNone
       parser.parseQuery("") must beNone
       parser.parseQuery(null) must beNone
     }
 
-    "handle query operators" in {
+    "handle query operators" in new QueryParserScope {
       var query = parser.parseQuery("+aaa")
       query must beSome[Query]
 
@@ -65,6 +65,5 @@ class QueryParserTest extends Specification {
       clauses(0).getOccur() === Occur.SHOULD
       clauses(1).getOccur() === Occur.MUST
     }
-    */
   }
 }

@@ -26,9 +26,13 @@
     <li class="@if(experiment.isActive) { active-experiment }" data-id="@experiment.id">
       <div class="experiment-desc">
         <input class="experiment-description" value="@experiment.description">
-        @if(experiment.isPausable) { <button type="button" class="btn pause-experiment">Pause</button> }
-        @if(experiment.isStartable) { <button type="button" class="btn start-experiment">Start</button> }
-        (currently @experiment.state.value)
+        @if(experiment.isRunning) {
+          <button type="button" class="btn pause-experiment">Pause</button>
+          [Started at <em>@experiment.startedAt.map(adminHelper.dateTimeDisplay(_))</em>]
+        }
+        @if(experiment.isStartable) {
+          <button type="button" class="btn start-experiment">Start</button>
+        }
         <div class="basic-settings">
           <strong><input class="experiment-weight" value="@{(experiment.weight * 100).toInt}">%</strong>
           <button class="btn show-settings">Show settings</button>
