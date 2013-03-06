@@ -439,31 +439,32 @@ api.log("[google_inject]");
 
     // Awful decision tree for clean text. Come up with a better way.
     if (hit.isMyBookmark) { // you
+      var priv = hit.isPrivate ? " <span class=kifi-res-private>Private</span>" : "";
       if (numFriends == 0) { // no friends
         if (hit.count > 0) { // others
-          hit.countText = "You and " + plural(hit.count, "other");
+          hit.countText = "You" + priv + " + " + plural(hit.count, "other") + " kept this";
         } else { // no others
-          hit.countText = "You";
+          hit.countText = "You kept this" + priv;
         }
       } else { // numFriends > 0
         if (hit.count > 0) { // others
-          hit.countText = "You, <b>" + plural(numFriends, "friend") + "</b>, and " + plural(hit.count, "other");
+          hit.countText = "You" + priv + " + <b>" + plural(numFriends, "friend") + "</b> + " + plural(hit.count, "other") + " kept this";
         } else { // no others
-          hit.countText = "You and <b>" + plural(numFriends, "friend") + "</b>";
+          hit.countText = "You" + priv + " + <b>" + plural(numFriends, "friend") + "</b> kept this";
         }
       }
     } else { // not you
       if (numFriends == 0) { // no friends
         if (hit.count > 0) { // others
-          hit.countText = plural(hit.count, "other");
-        } else { // no others
-          hit.countText = "No one"; // ???
+          hit.countText = plural(hit.count, "other") + " kept this";
+        } else { // no others (should never get here)
+          hit.countText = "No one kept this";
         }
       } else { // numFriends > 0
         if (hit.count > 0) { // others
-          hit.countText = "<b>" + plural(numFriends, "friend") + "</b>, and " + plural(hit.count, "other");
+          hit.countText = "<b>" + plural(numFriends, "friend") + "</b> + " + plural(hit.count, "other") + " kept this";
         } else { // no others
-          hit.countText = "<b>" + plural(numFriends, "friend") + "</b>";
+          hit.countText = "<b>" + plural(numFriends, "friend") + "</b> kept this";
         }
       }
     }
