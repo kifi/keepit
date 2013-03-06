@@ -149,8 +149,8 @@ object SearchConfigController extends FortyTwoController {
     val manager = inject[SearchConfigManager]
     id.map { id =>
       val exp = manager.getExperiment(id)
-      manager.saveExperiment(exp.copy(description = desc, weight = weight, config = exp.config(params),
-        state = state.getOrElse(exp.state)))
+      manager.saveExperiment(exp.copy(description = desc, weight = weight, config = exp.config(params))
+          .withState(state.getOrElse(exp.state)))
     }
     Ok(JsObject(Seq()))
   }

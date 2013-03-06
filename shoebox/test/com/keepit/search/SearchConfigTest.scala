@@ -108,5 +108,10 @@ class SearchConfigTest extends SpecificationWithJUnit with DbRepos {
         }
       }
     }
+    "update startedAt in experiments when started" in {
+      val exp = new SearchConfigExperiment()
+      val startedExp = exp.withState(SearchConfigExperimentStates.ACTIVE)
+      startedExp.startedAt must beSome
+    }
   }
 }
