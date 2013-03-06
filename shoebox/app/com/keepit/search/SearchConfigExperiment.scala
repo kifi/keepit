@@ -14,16 +14,21 @@ case class SearchConfigExperiment(
     weight: Double = 0,
     description: String = "",
     config: SearchConfig = SearchConfig(Map[String, String]()),
+    startedAt: Option[DateTime] = None,
     state: State[SearchConfigExperiment] = SearchConfigExperimentStates.CREATED,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime
     ) extends Model[SearchConfigExperiment] {
   def withId(id: Id[SearchConfigExperiment]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def withState(state: State[SearchConfigExperiment]) = this.copy(state = state)
+  def withState(state: State[SearchConfigExperiment]) = {
+    if (isStartable && state == SearchConfigExperimentStates.ACTIVE)
+      this.copy(state = state, startedAt = Some(currentDateTime))
+    else this.copy(state = state)
+  }
   def isActive: Boolean = state == SearchConfigExperimentStates.ACTIVE
   def isStartable = Seq(SearchConfigExperimentStates.PAUSED, SearchConfigExperimentStates.CREATED) contains state
-  def isPausable = state == SearchConfigExperimentStates.ACTIVE
+  def isRunning = state == SearchConfigExperimentStates.ACTIVE
   def isEditable = state == SearchConfigExperimentStates.CREATED
 }
 
@@ -45,7 +50,8 @@ class SearchConfigExperimentRepoImpl @Inject()(val db: DataBaseComponent)
     def weight = column[Double]("weight", O.NotNull)
     def description = column[String]("description", O.NotNull)
     def config = column[SearchConfig]("config", O.NotNull)
-    def * = id.? ~ weight ~ description ~ config ~ state ~ createdAt ~ updatedAt <>
+    def startedAt = column[Option[DateTime]]("started_at", O.NotNull)
+    def * = id.? ~ weight ~ description ~ config ~ startedAt ~ state ~ createdAt ~ updatedAt <>
         (SearchConfigExperiment.apply _, SearchConfigExperiment.unapply _)
   }
 
