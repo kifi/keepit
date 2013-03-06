@@ -1,5 +1,7 @@
 package com.keepit.common.healthcheck
 
+import org.apache.commons.codec.binary.Base64
+import java.security.MessageDigest
 import scala.collection.mutable.MutableList
 import com.keepit.common.healthcheck.Healthcheck._
 import com.keepit.common.db.ExternalId
@@ -27,9 +29,20 @@ import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.SchedulingPlugin
 
+case class HealthcheckErrorSignature(value: String) extends AnyVal
+
 case class HealthcheckError(error: Option[Throwable] = None, method: Option[String] = None,
     path: Option[String] = None, callType: CallType, errorMessage: Option[String] = None,
     id: ExternalId[HealthcheckError] = ExternalId(), createdAt: DateTime = currentDateTime) {
+
+  lazy val formattedStackTrace = error.map(e => e.getStackTrace() mkString "\n<br/> &nbsp; ").getOrElse("")
+
+  lazy val signature: HealthcheckErrorSignature = {
+    val toHash = formattedStackTrace + error.map(e => e.toString).getOrElse("") + errorMessage.getOrElse("")
+    val binaryHash = MessageDigest.getInstance("MD5").digest(toHash.getBytes("UTF-8"))
+    HealthcheckErrorSignature(new String(new Base64().encode(binaryHash), "UTF-8"))
+  }
+
   def toHtml: String = {
     val message = new StringBuilder("%s: [%s] Error during call of type %s".format(createdAt, id, callType))
     method.map { m =>
@@ -43,7 +56,7 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
     }
     error.map { e =>
       message ++= "<br/>Exception %s stack trace: \n<br/>".format(e.toString())
-      message ++= (e.getStackTrace() mkString "\n<br/> &nbsp; ")
+      message ++= formattedStackTrace
       causeDisplay(e)
     }
 
@@ -78,7 +91,10 @@ case object GetErrors
 
 private[healthcheck] class HealthcheckActor(postOffice: PostOffice, services: FortyTwoServices) extends Actor with Logging {
 
-  private var errors: List[HealthcheckError] = Nil
+  private def initErrors: Map[HealthcheckErrorSignature, List[HealthcheckError]] = Map().withDefaultValue(List[HealthcheckError]())
+
+  private var errorsSinceStart: Map[HealthcheckErrorSignature, Int] = Map().withDefaultValue(0)
+  private var errors = initErrors
   private var errorCount = 0
   private var lastError: Option[DateTime] = None
   private val startupTime = currentDateTime
@@ -86,10 +102,11 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice, services: Fo
   def receive() = {
     case ReportErrorsAction =>
       if (errors.nonEmpty) {
-        val message = Html(errors map {_.toHtml} mkString "\n<br/><hr/>")
-        val subject = "ERROR REPORT: %s errors on %s version %s compiled on %s".format(
-            errors.size, services.currentService, services.currentVersion, services.compilationTime)
-        errors = Nil
+        val message = Html(errors map {case(sig, error) =>
+          s"$error.size since last report, $errorsSinceStart(sig) since start of error sig $sig.value:\n<br/>$error.tail.toHtml"
+        } mkString "\n<br/><hr/>")
+        val subject = s"ERROR REPORT: $errors.size errors on $services.currentService version $services.currentVersion compiled on $services.compilationTime"
+        errors = initErrors
         postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = message.body, category = PostOffice.Categories.HEALTHCHECK))
       }
     case Heartbeat =>
@@ -105,9 +122,11 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice, services: Fo
     case ResetErrorCount =>
       errorCount = 0
     case GetErrors =>
-      sender ! errors
+      sender ! errors.values.flatten.toSeq
     case error: HealthcheckError =>
-      errors = error :: errors
+      val sigErrors = error :: errors(error.signature)
+      errors = errors + (error.signature -> sigErrors)
+      errorsSinceStart = errorsSinceStart + (error.signature -> (errorsSinceStart(error.signature) + 1))
       errorCount = errorCount + 1
       lastError = Some(currentDateTime)
     case m => throw new Exception("unknown message %s".format(m))
@@ -118,7 +137,7 @@ trait HealthcheckPlugin extends SchedulingPlugin {
   def errorCountFuture(): Future[Int]
   def errorCount(): Int
   def errorsFuture(): Future[List[HealthcheckError]]
-  def errors(): List[HealthcheckError]
+  def errors(): Seq[HealthcheckError]
   def resetErrorCount(): Unit
   def addError(error: HealthcheckError): HealthcheckError
   def reportStart(): ElectronicMail
@@ -144,7 +163,7 @@ class HealthcheckPluginImpl(system: ActorSystem, host: String, postOffice: PostO
 
   def errorsFuture(): Future[List[HealthcheckError]] = (actor ? GetErrors).mapTo[List[HealthcheckError]]
 
-  def errors(): List[HealthcheckError] = Await.result(errorsFuture(), 20 seconds)
+  def errors(): Seq[HealthcheckError] = Await.result(errorsFuture(), 20 seconds)
 
   def resetErrorCount(): Unit = actor ! ResetErrorCount
 

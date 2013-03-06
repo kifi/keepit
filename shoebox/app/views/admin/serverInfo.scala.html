@@ -1,7 +1,7 @@
 @(currentService: com.keepit.common.controller.ServiceType,
   currentVersion: com.keepit.common.controller.ServiceVersion,
   compilationTime: String, started: String, errorCount: Int,
-  recentErrors: List[com.keepit.common.healthcheck.HealthcheckError],
+  recentErrors: Seq[HealthcheckError],
   cacheStats: Seq[(String, Int, Int, Int)], totalHits: Int, totalMisses: Int, totalSets: Int)
 
 @admin(currentService + " service") {

@@ -83,7 +83,8 @@ object ApplicationBuild extends Build {
         "com.keepit.common.db.{ExternalId, Id, State}",
         "com.keepit.model._",
         "com.keepit.common.social._",
-        "com.keepit.search._"
+        "com.keepit.search._",
+        "com.keepit.common.healthcheck.HealthcheckError"
       ),
       
       libraryDependencies ++= Seq(
@@ -97,7 +98,8 @@ object ApplicationBuild extends Build {
       parallelExecution in Test := true,
 
       //see https://groups.google.com/forum/?fromgroups=#!topic/play-framework/4Fz5TsOKPio
-      testOptions += Tests.Argument(TestFrameworks.JUnit, "--ignore-runners=org.specs2.runner.JUnitRunner"),
+      // testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "--ignore-runners=org.specs2.runner.JUnitRunner"),
+      testOptions in Test += Tests.Argument(TestFrameworks.JUnit, "junitxml", "console"),
       testOptions in Test += Tests.Argument("sequential", "false"),
       testOptions in Test += Tests.Argument("threadsNb", "16"),
       testOptions in Test += Tests.Argument("showtimes", "true"),

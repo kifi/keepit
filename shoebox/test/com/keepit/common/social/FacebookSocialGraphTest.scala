@@ -2,9 +2,7 @@ package com.keepit.common.social
 
 import java.io.File
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.FakeHttpClient
@@ -22,8 +20,7 @@ import securesocial.core.OAuth2Info
 import securesocial.core.SocialUser
 import securesocial.core.UserId
 
-@RunWith(classOf[JUnitRunner])
-class FacebookSocialGraphTest extends SpecificationWithJUnit with DbRepos {
+class FacebookSocialGraphTest extends Specification with DbRepos {
 
   "FacebookSocialGraph" should {
 
