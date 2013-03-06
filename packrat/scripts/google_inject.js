@@ -367,12 +367,10 @@ api.log("[google_inject]");
       api.log("[gotChatter]", counts);
       var bgImg = "url(" + api.url("images/chatter.png") + ")";
       for (var id in counts) {
-        if (counts.hasOwnProperty(id)) {
-          var n = counts[id];
-          if (n[0] || n[1]) {
-            $res.find("#kifi-who-" + id).append(
-              $("<span class=kifi-chatter>").css("background-image", bgImg).data("n", n));
-          }
+        var n = counts[id];
+        if (n[0] || n[1]) {
+          $res.find("#kifi-who-" + id).append(
+            $("<span class=kifi-chatter>").css("background-image", bgImg).data("n", n));
         }
       }
     });
