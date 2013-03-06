@@ -11,10 +11,10 @@ import com.keepit.common.db.slick.Database
 import akka.actor.ActorSystem
 
 trait StreamManager[T, S] {
-  def connect(identifier: T): Enumerator[T]
+  def connect(identifier: T): Enumerator[S]
   def clientIsConnected: Boolean
   def disconnect(identifier: T): Unit
-  def disconnectAll(): Unit
+  def disconnectAll(identifier: T): Unit
   def push(idenifier: T, msg: S): Unit
   def pushAll(msg: S): Unit
 }
