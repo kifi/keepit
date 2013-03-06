@@ -23,7 +23,8 @@ object HealthController extends FortyTwoController {
     val services = inject[FortyTwoServices]
     val cacheStats = inject[CacheStatistics].getStatistics
     val (totalHits, totalMisses, totalSets) = (cacheStats.map(_._2).sum, cacheStats.map(_._3).sum, cacheStats.map(_._4).sum)
-    Ok(html.admin.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString, services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
+    Ok(html.admin.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString,
+        services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
   }
 
   def ping() = Action { implicit request =>
@@ -46,6 +47,11 @@ object HealthController extends FortyTwoController {
 
   def getErrors() = AdminHtmlAction { implicit request =>
     Ok(inject[HealthcheckPlugin].errors().mkString("\n"))
+  }
+
+  def reportErrors() = AdminHtmlAction { implicit request =>
+    inject[HealthcheckPlugin].reportErrors()
+    Ok("reported")
   }
 
   def resetErrorCount() = AdminHtmlAction { implicit request =>

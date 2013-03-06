@@ -20,6 +20,9 @@
       }}<img class="kifi-face" src="https://graph.facebook.com/{{facebookId}}/picture?type=square" alt="{{firstName}} {{lastName}}">{{!
      }}</a>
     {{/users}}
+    {{^isMyBookmark}}{{^users}}
+      <img class="kifi-globe" src="{{globeUrl}}">
+    {{/users}}{{/isMyBookmark}}
     <span class="kifi-who-text">{{{countText}}}</span>
   </div>
 </li>

@@ -354,6 +354,7 @@ api.log("[google_inject]");
       anyResults: response.hits.length > 0,
       session: response.session,
       endBgUrl: api.url("images/shade_above.png"),
+      globeUrl: api.url("images/globe.png"),
       mayHaveMore: response.mayHaveMore};
 
     $res.append(Mustache.to_html(hitsHtml, params, {google_hit: hitHtml}))
@@ -411,7 +412,7 @@ api.log("[google_inject]");
     delete response.nextContext;
     var html = hits.map(function(hit) {
       hit.session = response.session;
-      return Mustache.to_html(hitHtml, hit);
+      return Mustache.to_html(hitHtml, $.extend({globeUrl: api.url("images/globe.png")}, hit));
     }).join("");
     var $list = $("#kifi-res-list");
     $(html).hide().insertAfter($list.children("li.g").last()).slideDown(200);

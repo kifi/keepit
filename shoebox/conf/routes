@@ -167,6 +167,7 @@ POST    /admin/phrases/save         com.keepit.controllers.admin.PhraseControlle
 
 GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
 GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()
+POST    /admin/healthcheck/emailErrors    com.keepit.common.healthcheck.HealthController.reportErrors()
 GET     /admin/healthcheck/errors   com.keepit.common.healthcheck.HealthController.getErrors()
 GET     /admin/healthcheck/isHealthy    com.keepit.common.healthcheck.HealthController.isHealthy()
 GET     /admin/healthcheck/resetErrorCount    com.keepit.common.healthcheck.HealthController.resetErrorCount()
