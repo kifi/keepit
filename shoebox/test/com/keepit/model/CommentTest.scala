@@ -1,8 +1,6 @@
 package com.keepit.model
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import com.keepit.test.EmptyApplication
 
 import play.api.Play.current
@@ -21,7 +19,7 @@ import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
 
-class CommentTest extends SpecificationWithJUnit {
+class CommentTest extends Specification {
 
   def setup() = {
     inject[Database].readWrite {implicit s =>

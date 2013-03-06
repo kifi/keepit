@@ -1,9 +1,7 @@
 package com.keepit.model
 
 import org.joda.time.DateTime
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 
 import com.keepit.classify.{Domain, DomainRepo}
 import com.keepit.common.db.slick._
@@ -16,7 +14,7 @@ import play.api.libs.json._
 import play.api.test._
 import play.api.test.Helpers._
 
-class UserToDomainTest extends SpecificationWithJUnit with DbRepos {
+class UserToDomainTest extends Specification with DbRepos {
   "UserToDomain" should {
     "save and load" in {
       running(new EmptyApplication()) {

@@ -1,8 +1,6 @@
 package com.keepit.search
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -12,8 +10,7 @@ import java.util.Random
 import java.nio.ByteBuffer
 import java.io.File
 
-@RunWith(classOf[JUnitRunner])
-class MultiHashFilterTest extends SpecificationWithJUnit {
+class MultiHashFilterTest extends Specification {
   val rand = new Random(123456789L)
 
   def create(tableSize: Int, numHashFuncs: Int, minHits: Int, syncEvery: Int = 1000) = {

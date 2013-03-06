@@ -1,9 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.search.Lang
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -17,8 +15,7 @@ import org.apache.lucene.util.Version
 import java.io.Reader
 import java.io.StringReader
 
-@RunWith(classOf[JUnitRunner])
-class DefaultAnalyzerTest extends SpecificationWithJUnit {
+class DefaultAnalyzerTest extends Specification {
 
   implicit def toReader(str: String): Reader = new StringReader(str)
   val analyzer = DefaultAnalyzer.forIndexing

@@ -2,9 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.common.db._
 import com.keepit.test._
-import org.junit.runner.RunWith
-import org.specs2.mutable.SpecificationWithJUnit
-import org.specs2.runner.JUnitRunner
+import org.specs2.mutable.Specification
 import play.api.Play.current
 import play.api.mvc._
 import play.api.test.Helpers._
@@ -31,8 +29,7 @@ import securesocial.core.AuthenticationMethod
 import org.joda.time.LocalDate
 import org.joda.time.DateTime
 
-@RunWith(classOf[JUnitRunner])
-class AdminDashboardControllerTest extends SpecificationWithJUnit with DbRepos {
+class AdminDashboardControllerTest extends Specification with DbRepos {
 
   "AdminDashboardController" should {
     "get users by date as JSON" in {

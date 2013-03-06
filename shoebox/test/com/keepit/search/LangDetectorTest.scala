@@ -1,16 +1,13 @@
 package com.keepit.search
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 
 
-@RunWith(classOf[JUnitRunner])
-class LangDetectorTest extends SpecificationWithJUnit {
+class LangDetectorTest extends Specification {
 
   "LangDetector" should {
     "detect English" in {

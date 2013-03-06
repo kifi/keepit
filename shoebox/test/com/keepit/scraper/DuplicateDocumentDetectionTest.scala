@@ -1,8 +1,6 @@
 package com.keepit.scraper
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import scala.util.Random
 import com.keepit.model._
 import com.keepit.inject._
@@ -14,8 +12,7 @@ import play.api.test.Helpers._
 import com.keepit.test.EmptyApplication
 import javax.xml.bind.DatatypeConverter._
 
-@RunWith(classOf[JUnitRunner])
-class DuplicateDocumentDetectionTest extends SpecificationWithJUnit {
+class DuplicateDocumentDetectionTest extends Specification {
 
   "Signature" should {
 

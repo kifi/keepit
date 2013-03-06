@@ -12,7 +12,7 @@ import play.api.Play.current
 import play.api.test.Helpers._
 
 
-class DomainTest extends SpecificationWithJUnit with DbRepos {
+class DomainTest extends Specification with DbRepos {
   "The domain repo" should {
     "save and retrieve domains by name and id" in {
       running(new EmptyApplication()) {

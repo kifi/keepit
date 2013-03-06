@@ -5,9 +5,7 @@ import com.google.inject.Inject
 import com.google.inject.Injector
 import com.google.inject.Key
 import com.tzavellas.sse.guice.ScalaModule
-import org.junit.runner.RunWith
-import org.specs2.runner.JUnitRunner
-import org.specs2.mutable.SpecificationWithJUnit
+import org.specs2.mutable.Specification
 import play.api.test._
 import com.keepit.common.plugin.SchedulingPlugin
 
@@ -44,8 +42,7 @@ class TestModule extends ScalaModule {
   }
 }
 
-@RunWith(classOf[JUnitRunner])
-class AppScopeTest extends SpecificationWithJUnit {
+class AppScopeTest extends Specification {
 
   "AppScope" should {
     "fail if entered or exited incorrectly" in {

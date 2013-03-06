@@ -1,8 +1,6 @@
 package com.keepit.model
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import com.keepit.test.{DbRepos, EmptyApplication}
 
 import play.api.Play.current
@@ -24,7 +22,7 @@ import com.keepit.controllers.admin.AdminDashboardController
 import com.keepit.controllers.CommentController
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 
-class CommentReadTest extends SpecificationWithJUnit with DbRepos {
+class CommentReadTest extends Specification with DbRepos {
 
   def setup() = {
     inject[Database].readWrite {implicit s =>

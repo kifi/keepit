@@ -1,16 +1,25 @@
 package com.keepit.search.index
 
 import com.keepit.search.Lang
+import org.specs2.specification.Scope
+import org.specs2.mutable._
+import play.api.Play.current
+import play.api.libs.json.Json
+import play.api.test._
+import play.api.test.Helpers._
+import com.keepit.search.graph.UserToUserEdgeSet
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.util.Version
+import org.apache.lucene.search.Query
+import org.apache.lucene.search.TermQuery
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.BooleanClause
+import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.Query
-import org.junit.runner.RunWith
-import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
-import org.specs2.specification.Scope
 
-@RunWith(classOf[JUnitRunner])
-class QueryParserTest extends SpecificationWithJUnit {
+class QueryParserTest extends Specification {
 
   private trait QueryParserScope extends Scope {
     val analyzer = DefaultAnalyzer.forParsing(Lang("en"))

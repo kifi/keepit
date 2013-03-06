@@ -1,8 +1,6 @@
 package com.keepit.model
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
@@ -13,8 +11,7 @@ import play.api.Play.current
 import play.api.test.Helpers._
 import securesocial.core._
 
-@RunWith(classOf[JUnitRunner])
-class SocialUserInfoTest extends SpecificationWithJUnit with DbRepos {
+class SocialUserInfoTest extends Specification with DbRepos {
 
   def setup(): User = {
     db.readWrite { implicit s =>
