@@ -84,15 +84,12 @@ slider = function() {
   function summaryText(numFriends, isKept) {
     if (isKept) {
       if (numFriends > 0) {
-        return "You and " +
-          (numFriends == 1 ? "another friend" : (numFriends + " of your friends")) +
-          " kept this.";
+        return "You and " + (numFriends == 1 ? "a friend" : (numFriends + " of your friends")) + " kept this.";
       }
       return "You kept this!";
     }
     if (numFriends > 0) {
-      return ([,"One","Two","Three","Four"][numFriends] || numFriends) +
-        " of your friends kept this.";
+      return ([,"One","Two","Three","Four"][numFriends] || numFriends) + " of your friends kept this.";
     }
     return "To quickly find this page later...";
   }
