@@ -1,35 +1,22 @@
 package com.keepit.realtime
 
-import akka.actor._
-import scala.concurrent.duration._
-import play.api._
-import play.api.libs.json._
-import play.api.libs.iteratee._
-import play.api.libs.concurrent._
-import akka.util.Timeout
+import java.util.concurrent.atomic.AtomicInteger
+import scala.collection.concurrent.{Map => ConcurrentMap}
+import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import akka.pattern.ask
+import play.api._
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.common.akka.FortyTwoActor
-import scala.concurrent.Future
-import com.keepit.serializer.EventSerializer
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.model._
-import com.keepit.common.time._
-import org.joda.time.DateTime
-import com.keepit.inject._
-import com.keepit.common.db.slick.Database
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.ConcurrentHashMap
-import scala.collection.concurrent.{Map => ConcurrentMap}
-import com.keepit.common.db._
-import com.keepit.common.logging.Logging
+import play.api.libs.iteratee._
+import akka.actor.Cancellable
 
-trait ClientStreamLike[T] {
-  val userId: Id[User]
-  def connect(): Enumerator[T]
+trait ClientStreamLike[S] {
+  def connect(): Enumerator[S]
   def disconnect(): Unit
-  def push(msg: T): Unit
+  def attach(cancellable: Cancellable)
+  def push(msg: S): Unit
   def close(): Unit
   def hasListeners: Boolean
   def getConnectionCount: Int
@@ -37,26 +24,33 @@ trait ClientStreamLike[T] {
 
 
 
-class ClientStream[T](val userId: Id[User]) extends ClientStreamLike[T] with Logging {
+class ClientStream[T, S](val identifier: T) extends ClientStreamLike[S] with Logging {
   private var connections = new AtomicInteger(0)
+  private var cancellables: Seq[Cancellable] = Seq()
 
-  val (enumerator, channel) = Concurrent.broadcast[T]
+  val (enumerator, channel) = Concurrent.broadcast[S]
 
-  def connect(): Enumerator[T] = {
-    log.info(s"connect() for userId ${userId.id}")
+  def connect(): Enumerator[S] = {
+    log.info(s"connect() for client ${identifier}")
     connections.incrementAndGet()
     enumerator
   }
 
   def disconnect(): Unit = {
-    log.info(s"disconnect() for userId ${userId.id}")
+    log.info(s"disconnect() for client ${identifier}")
     connections.decrementAndGet()
   }
 
-  def push(json: T): Unit = channel.push(json)
+  def attach(cancellable: Cancellable) = {
+    cancellables :+= cancellable
+  }
+
+  def push(payload: S): Unit = channel.push(payload)
+
   def close() {
-    log.info(s"close() for userId ${userId.id}")
+    log.info(s"close() for client ${identifier}")
     connections.set(0)
+    cancellables.map(_.cancel)
     channel.eofAndEnd()
   }
   def hasListeners: Boolean = getConnectionCount != 0

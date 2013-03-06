@@ -30,7 +30,7 @@ import play.api.mvc.RequestHeader
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Seq[State[ExperimentType]], adminUserId: Option[Id[User]])
 
 @Singleton
-class StreamController @Inject() (db: Database, socialUserInfoRepo: SocialUserInfoRepo, userRepo: UserRepo, experimentRepo: UserExperimentRepo, streamManager: StreamManager, streams: Streams) extends FortyTwoController {
+class StreamController @Inject() (db: Database, socialUserInfoRepo: SocialUserInfoRepo, userRepo: UserRepo, experimentRepo: UserExperimentRepo, streamProvider: UserStreamProvider, streams: Streams) extends FortyTwoController {
   private def secureRequestHeader(request: RequestHeader): Option[StreamSession] = {
     /*
      * Unfortunately, everything related to existing secured actions intimately deals with Action, Request, Result, etc.
@@ -63,12 +63,15 @@ class StreamController @Inject() (db: Database, socialUserInfoRepo: SocialUserIn
   def ws() = WebSocket.using[JsValue] { implicit request  =>
     secureRequestHeader(request) match {
       case Some(streamSession) =>
-        val enumerator = streamManager.connect(streamSession.userId) >- streams.welcome(streamSession.userId) >- streams.unreadNotifications(streamSession.userId)
+
+        val feeds = streamProvider.getStreams(request.queryString.keys.toSeq)
+
+        val enumerator = Enumerator.interleave(feeds.map(_.connect(streamSession.userId)))
         val iteratee = Iteratee.foreach[JsValue]{ s =>
           println(s)
         }.mapDone { _ =>
           log.info(s"Client ${streamSession.userId} disconnecting!")
-          inject[StreamManager].disconnect(streamSession.userId)
+          feeds.map(_.disconnect(streamSession.userId))
         }
 
         (iteratee, enumerator)
