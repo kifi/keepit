@@ -7,6 +7,7 @@
 // @require scripts/lib/keymaster.min.js
 // @require scripts/lib/lodash.min.js
 // @require scripts/lib/mustache-0.7.1.min.js
+// @require scripts/render.js
 // @require scripts/snapshot.js
 
 slider = function() {
@@ -37,49 +38,6 @@ slider = function() {
         c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
     }
   });
-
-  var templateCache = {};
-
-  function renderTemplate(path, params, partialPaths, callback) {
-    // sort out partialPaths and callback (both optional)
-    if (!callback && typeof partialPaths == "function") {
-      callback = partialPaths;
-      partialPaths = undefined;
-    }
-
-    loadPartials(path.replace(/[^\/]*$/, ""), partialPaths || {}, function(partials) {
-      loadFile(path, function(template) {
-        callback(Mustache.render(template, params, partials));
-      });
-    });
-
-    function loadPartials(basePath, paths, callback) {
-      var partials = {}, names = Object.keys(paths), numLoaded = 0;
-      if (!names.length) {
-        callback(partials);
-      } else {
-        names.forEach(function(name) {
-          loadFile(basePath + paths[name], function(tmpl) {
-            partials[name] = tmpl;
-            if (++numLoaded == names.length) {
-              callback(partials);
-            }
-          });
-        });
-      }
-    }
-
-    function loadFile(path, callback) {
-      var tmpl = templateCache[path];
-      if (tmpl) {
-        callback(tmpl);
-      } else {
-        api.load(path, function(tmpl) {
-          callback(templateCache[path] = tmpl);
-        });
-      }
-    }
-  }
 
   function summaryText(numFriends, isKept) {
     if (isKept) {
@@ -136,7 +94,7 @@ slider = function() {
       following = o.following;
       lastShownAt = +new Date;
 
-      renderTemplate('html/kept_hover.html', {
+      render("html/kept_hover.html", {
           "logo": api.url('images/kifilogo.png'),
           "arrow": api.url('images/triangle_down.31x16.png'),
           "profilepic": o.session.avatarUrl,
@@ -155,11 +113,11 @@ slider = function() {
         }, {
           "main_hover": "main_hover.html",
           "footer": "footer.html"
-        }, function(template) {
+        }, function(html) {
           if (document.querySelector(".kifi-slider")) {
             api.log("No need to inject, it's already here!");
           } else {
-            drawKeepItHover(o, template, !locator ? $.noop : function() {
+            drawKeepItHover(o, html, !locator ? $.noop : function() {
               openDeepLink(o.session, locator);
             });
             logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: location.href});
@@ -317,7 +275,7 @@ slider = function() {
       if (data.$card) {
         data.$card.stop().fadeIn(100);
       } else {
-        renderTemplate("html/social_hover.html", {friend: friends[$img.index(".kifi-keeper")]}, function(html) {
+        render("html/social_hover.html", {friend: friends[$img.index(".kifi-keeper")]}, function(html) {
           if (!data.$card) {
             data.$card = $("<div class=kifi-keeper-hovercard>").html(html)
             .find(".kifi-network").css("background-image", "url(" + api.url("images/social_icons.png") + ")").end()
@@ -394,8 +352,8 @@ slider = function() {
       logo: api.url('images/kifilogo.png')
     }
 
-    renderTemplate("html/footer.html", footerParams, function(renderedTemplate) {
-      $(".kifi-slider-footer").html(renderedTemplate)
+    render("html/footer.html", footerParams, function(html) {
+      $(".kifi-slider-footer").html(html)
       .on("mousedown", ".kifi-footer-close", hideComments)
       .on("mousedown", ".kifi-footer-keep", function(e) {
         e.preventDefault();
@@ -691,15 +649,15 @@ slider = function() {
         "comment_post_view": type != "message" ? "comment_post.html" : "message_post.html"};
       if (partialRender) {
         // Hacky solution for a partial refresh. Needs to be refactored.
-        renderTemplate("html/comments/" + partials.comment_body_view, params, partials, function(renderedTemplate) {
-          var $b = $(".kifi-comments-body").html(renderedTemplate);
+        render("html/comments/" + partials.comment_body_view, params, partials, function(html) {
+          var $b = $(".kifi-comments-body").html(html);
           $b.animate({scrollTop: $b[0].scrollHeight - $b[0].clientHeight})
           $b.find("time").timeago();
           viewTransitionInProgress = false;
         });
       } else {
-        renderTemplate("html/comments/comments_view.html", params, partials, function(renderedTemplate) {
-          drawCommentView(renderedTemplate, session, type, id, onComplete);
+        render("html/comments/comments_view.html", params, partials, function(html) {
+          drawCommentView(html, session, type, id, onComplete);
         });
       }
   }
@@ -892,7 +850,7 @@ slider = function() {
       var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
         updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
       });
-      renderTemplate("html/comments/snapshot_bar.html", {"type": typeName}, function(html) {
+      render("html/comments/snapshot_bar.html", {"type": typeName}, function(html) {
         $(html).appendTo("body")
           .draggable({cursor: "move", distance: 10, handle: ".kifi-snapshot-bar", scroll: false})
           .on("click", ".kifi-snapshot-cancel", exitSnapshotMode)
@@ -991,10 +949,10 @@ slider = function() {
         badGlobalState["updates"].publicCount++;
         badGlobalState["updates"].countSum++;
 
-        renderTemplate("html/comments/comment.html", params, function(renderedComment) {
-          //drawCommentView(renderedTemplate, session, type);
+        render("html/comments/comment.html", params, function(html) {
+          //drawCommentView(html, session, type);
           $(".kifi-comments-body").find(".kifi-comment-fake").parent().remove();
-          $(".kifi-comments-body").append(renderedComment).find("time").timeago();
+          $(".kifi-comments-body").append(html).find("time").timeago();
           updateCommentCount(type);
           repositionScroll(false);
         });
@@ -1056,10 +1014,10 @@ slider = function() {
         params["formatDate"] = commentDateFormatter;
         params["formatIsoDate"] = isoDateFormatter;
 
-        renderTemplate("html/comments/comment.html", params, function(renderedComment) {
-          //drawCommentView(renderedTemplate, session, type);
+        render("html/comments/comment.html", params, function(html) {
+          //drawCommentView(html, session, type);
           $(".kifi-comments-body").find('.kifi-comment-fake').parent().remove();
-          $('.kifi-thread-wrapper').append(renderedComment).find("time").timeago();
+          $('.kifi-thread-wrapper').append(html).find("time").timeago();
           repositionScroll(false);
         });
 
