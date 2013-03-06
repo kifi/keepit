@@ -50,10 +50,12 @@ object ScraperController extends FortyTwoController {
   def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction { implicit request =>
     val store = inject[ArticleStore]
     val article = store.get(id).get
-    val uri = inject[Database].readOnly { implicit s =>
-      inject[NormalizedURIRepo].get(article.id)
+    val (uri, info) = inject[Database].readOnly { implicit s =>
+      (inject[NormalizedURIRepo].get(article.id),
+       inject[ScrapeInfoRepo].getByUri(article.id))
     }
-    Ok(html.admin.article(article, uri))
+
+    Ok(html.admin.article(article, uri, info.get))
   }
 
   def getUnscrapable() = AdminHtmlAction { implicit request =>
