@@ -268,6 +268,7 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
   height: 27px;
   background-color: #fafafa;
   border-radius: 20px;
+  padding-right: 8px;
   font-size: 0;
 }
 .kifi-who:before {
@@ -305,14 +306,53 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
   text-decoration: underline;
   cursor: pointer;
 }
-
-.social_bar_action {
+.kifi-chatter {
   float: right;
-  color: #2D4486;
-  font-size: 12px;
-  padding: 5px 0 0 0;
-  margin: 0 0 0 3px;
-  font-family: arial, helvetica;
+  margin-top: 6px;
+  width: 18px;
+  height: 16px;
+  background-position: right 0;
+  position: relative;
+  cursor: pointer;
+}
+.kifi-chatter:hover,
+.kifi-chatter.kifi-hover {
+  background-position: right -16px;
+}
+.kifi-chatter-hover {
+  position: absolute;
+  bottom: 24px;
+  left: -40px;
+  width: 78px;
+  height: 42px;
+  padding: 6px 10px;
+  background-color: #4c8ffb;
+  color: #fff;
+  font-size: 11px;
+  cursor: default;
+  z-index: 999;
+}
+.kifi-chatter-hover:after {
+  content: " ";
+  position: absolute;
+  left: 45px;
+  bottom: -4px;
+  width: 0;
+  height: 0;
+  border-color: #4c8ffb transparent;
+  border-width: 5px 4px 0;
+  border-style: solid;
+}
+.kifi-chatter-title {
+  display: block;
+  margin-bottom: 2px;
+}
+.kifi-chatter-hover a {
+  color: #fff !important;
+  text-decoration: none !important;
+}
+.kifi-chatter-hover a:hover {
+  text-decoration: underline !important;
 }
 
 .kifi-res-end {
