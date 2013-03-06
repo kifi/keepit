@@ -278,6 +278,7 @@ api.log("[google_inject]");
         });
         search(null, f);
       } else {
+        filter = "";  // signifies an empty custom filter
         var $in = $res.find("#kifi-res-filter-cust");
         $res.find(".kifi-res-filter-custom").slideDown(200, function() {
           $("#token-input-kifi-res-filter-cust").focus();
