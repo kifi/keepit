@@ -9,7 +9,7 @@ import com.keepit.test._
 import play.api.Play.current
 import play.api.test.Helpers._
 
-class KifiInstallationTest extends SpecificationWithJUnit with DbRepos {
+class KifiInstallationTest extends Specification with DbRepos {
 
   "KifiInstallation" should {
     "parse version strings and order correctly" in {

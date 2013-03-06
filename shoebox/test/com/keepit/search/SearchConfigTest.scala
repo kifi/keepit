@@ -4,11 +4,11 @@ import com.keepit.common.db.slick.Database
 import com.keepit.inject._
 import com.keepit.model.{UserRepo, User}
 import com.keepit.test.{DbRepos, EmptyApplication}
-import org.specs2.mutable.SpecificationWithJUnit
+import org.specs2.mutable.Specification
 import play.api.Play.current
 import play.api.test.Helpers._
 
-class SearchConfigTest extends SpecificationWithJUnit with DbRepos {
+class SearchConfigTest extends Specification with DbRepos {
   "The search configuration" should {
     "load defaults correctly" in {
       running(new EmptyApplication()) {
@@ -107,6 +107,11 @@ class SearchConfigTest extends SpecificationWithJUnit with DbRepos {
           c2.asDouble("phraseBoost") !== 500.0
         }
       }
+    }
+    "update startedAt in experiments when started" in {
+      val exp = new SearchConfigExperiment()
+      val startedExp = exp.withState(SearchConfigExperimentStates.ACTIVE)
+      startedExp.startedAt must beSome
     }
   }
 }

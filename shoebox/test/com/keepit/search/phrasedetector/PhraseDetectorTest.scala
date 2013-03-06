@@ -5,9 +5,7 @@ import com.keepit.search.Lang
 import com.keepit.search.index.DefaultAnalyzer
 import org.apache.lucene.index.Term
 import org.apache.lucene.store.RAMDirectory
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -17,8 +15,7 @@ import com.keepit.test.EmptyApplication
 import com.keepit.common.db.slick.Database
 import com.keepit.inject._
 
-@RunWith(classOf[JUnitRunner])
-class PhraseDetectorTest extends SpecificationWithJUnit {
+class PhraseDetectorTest extends Specification {
 
   "PhraseDetectorTest" should {
     "detects phrases in input text" in {

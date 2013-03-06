@@ -1,8 +1,6 @@
 package com.keepit.serializer
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -11,8 +9,7 @@ import securesocial.core._
 import com.keepit.model.{BrowsingHistory, User}
 import com.keepit.common.db._
 
-@RunWith(classOf[JUnitRunner])
-class BrowsingHistorySerializerTest extends SpecificationWithJUnit {
+class BrowsingHistorySerializerTest extends Specification {
 
   "BrowsingHistorySerializer" should {
     "do a basic serialization flow" in {

@@ -1,9 +1,7 @@
 package com.keepit.common.social
 
 import com.keepit.inject._
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -22,8 +20,7 @@ import play.api.Play
 import java.net.URL
 import java.io.File
 
-@RunWith(classOf[JUnitRunner])
-class SocialUserImportEmailTest extends SpecificationWithJUnit with DbRepos {
+class SocialUserImportEmailTest extends Specification with DbRepos {
 
   "SocialUserImportEmail" should {
     "import email" in {

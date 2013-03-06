@@ -1,8 +1,6 @@
 package com.keepit.search.query
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -28,8 +26,7 @@ import com.keepit.search.index.DefaultAnalyzer
 import org.apache.lucene.document.Field
 import org.apache.lucene.search.DocIdSetIterator
 
-@RunWith(classOf[JUnitRunner])
-class BooleanQueryWithPercentMatchTest extends SpecificationWithJUnit {
+class BooleanQueryWithPercentMatchTest extends Specification {
 
   val indexingAnalyzer = DefaultAnalyzer.forIndexing
   val config = new IndexWriterConfig(Version.LUCENE_36, indexingAnalyzer)

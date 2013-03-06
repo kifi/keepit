@@ -2,14 +2,10 @@ package com.keepit.common.analytics
 
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.time._
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.test._
 import play.api.test.Helpers._
 import scala.math._
-import org.junit.runner.RunWith
-import org.specs2.runner.JUnitRunner
 import com.keepit.test._
 import com.keepit.common.db.Id
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
@@ -18,8 +14,7 @@ import com.keepit.common.db._
 import play.api.Play.current
 import com.keepit.inject.inject
 
-@RunWith(classOf[JUnitRunner])
-class EventListenerTest extends SpecificationWithJUnit with DbRepos {
+class EventListenerTest extends Specification with DbRepos {
 
   def setup() = {
     db.readWrite {implicit s =>

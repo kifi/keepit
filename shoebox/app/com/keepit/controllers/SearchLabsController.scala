@@ -69,10 +69,10 @@ object SearchLabsController extends FortyTwoController {
     Ok(JsObject(Seq("data" -> JsArray(data))))
   }
 
-  def friendMap(q: Option[String] = None) = AdminHtmlAction { implicit request =>
-    Ok(html.labs.friendMap(q))
+  def friendMap(q: Option[String] = None, minKeeps: Option[Int] = None) = AdminHtmlAction { implicit request =>
+    Ok(html.labs.friendMap(q, minKeeps))
   }
-  def friendMapJson(q: Option[String] = None) = AdminJsonAction { implicit request =>
+  def friendMapJson(q: Option[String] = None, minKeeps: Option[Int]) = AdminJsonAction { implicit request =>
     val data = new ArrayBuffer[JsArray]
     q.foreach{ q =>
       val userId = request.userId
@@ -83,7 +83,7 @@ object SearchLabsController extends FortyTwoController {
 
       val mainSearcherFactory = inject[MainSearcherFactory]
       val searcher = mainSearcherFactory.semanticVectorSearcher()
-      val vectorMap = searcher.getSemanticVectors(allUserIds, q, Lang("en"))
+      val vectorMap = searcher.getSemanticVectors(allUserIds, q, Lang("en"), minKeeps.getOrElse(1))
       val size = vectorMap.size
       val userIndex = vectorMap.keys.toArray
       val vectors = userIndex.map{ u => vectorMap(u) }

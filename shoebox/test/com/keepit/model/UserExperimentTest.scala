@@ -1,8 +1,6 @@
 package com.keepit.model
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -15,8 +13,7 @@ import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
 
-@RunWith(classOf[JUnitRunner])
-class UserExperimentTest extends SpecificationWithJUnit {
+class UserExperimentTest extends Specification {
 
   "UserExperiment" should {
 

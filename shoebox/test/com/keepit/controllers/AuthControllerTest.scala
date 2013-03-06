@@ -1,9 +1,7 @@
 package com.keepit.controllers
 
 import com.keepit.test._
-import org.junit.runner.RunWith
-import org.specs2.mutable.SpecificationWithJUnit
-import org.specs2.runner.JUnitRunner
+import org.specs2.mutable.Specification
 import play.api.Play.current
 import play.api.libs.json._
 import play.api.mvc._
@@ -31,8 +29,7 @@ import securesocial.core.AuthenticationMethod
 import org.joda.time.LocalDate
 import org.joda.time.DateTime
 
-@RunWith(classOf[JUnitRunner])
-class AuthControllerTest extends SpecificationWithJUnit with DbRepos {
+class AuthControllerTest extends Specification with DbRepos {
 
   //todo(eishay) refactor commonalities out of this one and AdminDashboardController to make this test easy to write
   "AuthController" should {

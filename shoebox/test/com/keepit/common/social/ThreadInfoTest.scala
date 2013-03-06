@@ -1,8 +1,6 @@
 package com.keepit.common.social
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
@@ -18,8 +16,7 @@ import com.keepit.common.db.ExternalId
 import org.joda.time.DateTime
 import com.keepit.common.db.Id
 
-@RunWith(classOf[JUnitRunner])
-class ThreadInfoTest extends SpecificationWithJUnit {
+class ThreadInfoTest extends Specification {
 
   def setup() = {
     inject[Database].readWrite { implicit session =>

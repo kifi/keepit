@@ -10,7 +10,7 @@ import com.keepit.test.EmptyApplication
 import play.api.Play.current
 import play.api.test.Helpers._
 
-class URLTest extends SpecificationWithJUnit {
+class URLTest extends Specification {
 
   "Url" should {
 

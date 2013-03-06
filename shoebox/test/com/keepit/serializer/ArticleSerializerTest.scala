@@ -1,8 +1,6 @@
 package com.keepit.serializer
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -15,8 +13,7 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.Lang
 
-@RunWith(classOf[JUnitRunner])
-class ArticleSerializerTest extends SpecificationWithJUnit {
+class ArticleSerializerTest extends Specification {
 
   "ArticleSerializer" should {
     "do a basic serialization flow" in {

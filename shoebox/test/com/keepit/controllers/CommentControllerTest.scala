@@ -13,9 +13,7 @@ import com.keepit.test.EmptyApplication
 import com.keepit.test.FakeClock
 import com.keepit.test.DbRepos
 
-import org.junit.runner.RunWith
-import org.specs2.mutable.SpecificationWithJUnit
-import org.specs2.runner.JUnitRunner
+import org.specs2.mutable.Specification
 
 import play.api.Play.current
 import play.api.libs.json.{Json, JsArray, JsBoolean, JsObject, JsString, JsValue}
@@ -31,8 +29,7 @@ import securesocial.core.UserId
 import securesocial.core.AuthenticationMethod
 import org.joda.time.DateTime
 
-@RunWith(classOf[JUnitRunner])
-class CommentControllerTest extends SpecificationWithJUnit with DbRepos {
+class CommentControllerTest extends Specification with DbRepos {
 
   "CommentController" should {
 

@@ -1,9 +1,7 @@
 package com.keepit.model
 
 import org.joda.time.DateTime
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
@@ -15,7 +13,7 @@ import play.api.libs.json._
 import play.api.test._
 import play.api.test.Helpers._
 
-class SliderRuleTest extends SpecificationWithJUnit with DbRepos {
+class SliderRuleTest extends Specification with DbRepos {
   "SliderRule" should {
     "save, load by group name, cache group versions" in {
       running(new EmptyApplication().withFakeTime()) {

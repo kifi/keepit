@@ -7,16 +7,12 @@ import play.api.libs.json.JsValue
 import play.api.test.Helpers._
 import akka.actor.ActorRef
 import akka.testkit.ImplicitSender
-import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
-import org.specs2.mutable.SpecificationWithJUnit
-import org.specs2.runner.JUnitRunner
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 
 
-@RunWith(classOf[JUnitRunner])
 class ElectronicMailTest extends Specification {
 
   "ElectronicMail" should {

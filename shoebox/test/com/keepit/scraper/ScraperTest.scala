@@ -14,9 +14,7 @@ import com.keepit.search.Lang
 import com.keepit.test.EmptyApplication
 import com.keepit.scraper.extractor.Extractor
 import com.keepit.scraper.extractor.TikaBasedExtractor
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
@@ -29,8 +27,7 @@ import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
 import java.io.OutputStreamWriter
 
-@RunWith(classOf[JUnitRunner])
-class ScraperTest extends SpecificationWithJUnit {
+class ScraperTest extends Specification {
   implicit val config = ScraperConfig(
     minInterval = 12.0d, //hours
     maxInterval = 1024.0d, //hours
@@ -43,17 +40,19 @@ class ScraperTest extends SpecificationWithJUnit {
 
   "Scraper" should {
     "get a article from an existing website" in {
-      val store = new FakeArticleStore()
-      val scraper = getMockScraper(store)
-      val url = "http://www.keepit.com/existing"
-      val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(33)))
-      val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get), false)
+      running(new EmptyApplication()) {
+        val store = new FakeArticleStore()
+        val scraper = getMockScraper(store)
+        val url = "http://www.keepit.com/existing"
+        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(33)))
+        val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get), false)
 
-      result must beAnInstanceOf[Scraped] // Article
-      (result: @unchecked) match {
-        case Scraped(article, signature) =>
-          article.title === "foo"
-          article.content === "this is a body text. bar."
+        result must beAnInstanceOf[Scraped] // Article
+        (result: @unchecked) match {
+          case Scraped(article, signature) =>
+            article.title === "foo"
+            article.content === "this is a body text. bar."
+        }
       }
     }
 

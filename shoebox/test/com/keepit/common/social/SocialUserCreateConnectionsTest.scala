@@ -2,9 +2,7 @@ package com.keepit.common.social
 
 import java.io.File
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 
 import com.keepit.common.db.slick.Database
 import com.keepit.inject._
@@ -15,8 +13,7 @@ import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 
-@RunWith(classOf[JUnitRunner])
-class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
+class SocialUserCreateConnectionsTest extends Specification {
 
 
   "SocialUserCreateConnections" should {
@@ -71,7 +68,7 @@ class SocialUserCreateConnectionsTest extends SpecificationWithJUnit {
         val json2 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_super_min.json")).mkString)
 
         val connectionsAfter = inject[SocialUserCreateConnections].createConnections(socialUserInfo, Seq(json2))
-        connectionsAfter.size === 8
+        connectionsAfter.size === 5
       }
     }
 

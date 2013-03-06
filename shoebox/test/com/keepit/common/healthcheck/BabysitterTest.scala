@@ -1,8 +1,6 @@
 package com.keepit.common.healthcheck
 
-import org.junit.runner.RunWith
-import org.specs2.mutable.SpecificationWithJUnit
-import org.specs2.runner.JUnitRunner
+import org.specs2.mutable.Specification
 import com.keepit.inject._
 import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.social.SecureSocialUserService
@@ -25,8 +23,7 @@ import scala.concurrent.duration._
 import scala.concurrent.duration._
 import com.keepit.common.time._
 
-@RunWith(classOf[JUnitRunner])
-class BabysitterTest extends SpecificationWithJUnit {
+class BabysitterTest extends Specification {
 
   "Babysitter" should {
     "do nothing if code executes quickly" in {

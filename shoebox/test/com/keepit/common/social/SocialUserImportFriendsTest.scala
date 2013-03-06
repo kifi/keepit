@@ -1,8 +1,6 @@
 package com.keepit.common.social
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -23,15 +21,14 @@ import java.io.File
 import play.core.TestApplication
 import scala.collection.mutable.Map
 
-@RunWith(classOf[JUnitRunner])
-class SocialUserImportFriendsTest extends SpecificationWithJUnit {
+class SocialUserImportFriendsTest extends Specification {
 
   "SocialUserImportFriends" should {
     "import friends" in {
       running(new EmptyApplication().withFakeStore) {
         val graphs = List(
             ("facebook_graph_andrew_min.json", 7, "Kristen Lynch"),
-            ("facebook_graph_eishay_super_min.json", 8, "Igor Perisic")
+            ("facebook_graph_eishay_super_min.json", 5, "Igor Perisic")
         )
         graphs map { case (filename, numOfFriends, firstFriend) => testFacebookGraph(filename, numOfFriends, firstFriend) }
 

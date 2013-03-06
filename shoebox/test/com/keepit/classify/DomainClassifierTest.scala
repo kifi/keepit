@@ -1,7 +1,7 @@
 package com.keepit.classify
 
 import org.joda.time.DateTime
-import org.specs2.mutable.SpecificationWithJUnit
+import org.specs2.mutable.Specification
 
 import com.keepit.common.analytics.FakePersistEventPluginImpl
 import com.keepit.common.db.slick.Database
@@ -17,7 +17,7 @@ import play.api.test.Helpers.running
 import scala.concurrent.duration._
 import java.util.concurrent.TimeUnit
 
-class DomainClassifierTest extends SpecificationWithJUnit with DbRepos {
+class DomainClassifierTest extends Specification with DbRepos {
   val system = ActorSystem("system")
   "The domain classifier" should {
     "use imported classifications and not fetch for known domains" in {

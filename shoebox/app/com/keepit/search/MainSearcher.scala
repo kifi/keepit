@@ -49,6 +49,7 @@ class MainSearcher(
   val similarity = Similarity(config.asString("similarity"))
   val enableCoordinator = config.asBoolean("enableCoordinator")
   val phraseBoost = config.asFloat("phraseBoost")
+  val siteBoost = config.asFloat("siteBoost")
 
   // following config params are enabled only when the default filter is in use
   val minMyBookmarks = if (filter.isDefault) config.asInt("minMyBookmarks") else 0
@@ -57,17 +58,27 @@ class MainSearcher(
   val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
 
   // initialize user's social graph info
-  val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
-  val myUris = myUriEdges.destIdLongSet
-  val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
-  val friendUris = filter.filterFriends(friendIds).foldLeft(Set.empty[Long]){ (s, f) =>
+  private[this] val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
+  private[this] val myUris = myUriEdges.destIdLongSet
+  private[this] val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
+  private[this] val filteredFriendIds = filter.filterFriends(friendIds)
+  private[this] val friendUris = filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) =>
     s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet
   }
-
-  val friendlyUris = {
+  private[this] val friendlyUris = {
     if (filter.includeMine) myUris ++ friendUris
     else if (filter.includeShared) friendUris
     else friendUris -- myUris // friends only
+  }
+
+  private[this] val customFilterOn = (filteredFriendIds != friendIds)
+  private[this] val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
+  private[this] val filteredFriendEdgeSet = if (customFilterOn) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
+
+  def findSharingUsers(id: Id[NormalizedURI]) = {
+    val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
+    val effectiveSharingSize = if (customFilterOn) uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).size else sharingUsers.size
+    (sharingUsers, effectiveSharingSize)
   }
 
   def getPersonalizedSearcher(query: Query) = {
@@ -85,7 +96,7 @@ class MainSearcher(
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
     parser.parseQuery(queryString).map{ articleQuery =>
@@ -128,8 +139,6 @@ class MainSearcher(
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
 
-    val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
-
     val hits = createQueue(numHitsToReturn)
 
     // global high score
@@ -145,10 +154,9 @@ class MainSearcher(
         h.score > threshold
       }.foreach{ h =>
         val id = Id[NormalizedURI](h.id)
-        val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
-        val sharingSize = sharingUsers.size
+        val (sharingUsers, effectiveSharingSize) = findSharingUsers(id)
         h.users = sharingUsers
-        h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(sharingSize + 1), recencyScore(myUriEdges.getCreatedAt(id)))
+        h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(effectiveSharingSize + 1), recencyScore(myUriEdges.getCreatedAt(id)))
         h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
         hits.insert(h)
       }
@@ -164,10 +172,9 @@ class MainSearcher(
         h.score > threshold
       }.foreach{ h =>
         val id = Id[NormalizedURI](h.id)
-        val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
-
+        val (sharingUsers, effectiveSharingSize) = findSharingUsers(id)
         h.users = sharingUsers
-        h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(sharingUsers.size), 0.0f)
+        h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(effectiveSharingSize), 0.0f)
         h.score = h.scoring.score(1.0f, sharingBoostInNetwork, recencyBoost)
         queue.insert(h)
       }
@@ -207,7 +214,7 @@ class MainSearcher(
 
   def createQueue(sz: Int) = new ArticleHitQueue(sz)
 
-  private def dumpFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/2.0d, 3.0d))).toFloat
+  private def dumpFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/halfDecay, 3.0d))).toFloat
 
   private def bookmarkScore(bookmarkCount: Int) = (1.0f - (1.0f/(bookmarkCount.toFloat)))
 
@@ -219,7 +226,7 @@ class MainSearcher(
 
   def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     val lang = Lang("en") // TODO: detect
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 

@@ -10,16 +10,12 @@ import scala.slick.driver._
 import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.test.Helpers._
-import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
-import org.specs2.mutable.SpecificationWithJUnit
-import org.specs2.runner.JUnitRunner
 import scala.slick.lifted.Query
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
 
-@RunWith(classOf[JUnitRunner])
-class SlickTest extends SpecificationWithJUnit {
+class SlickTest extends Specification {
 
   "Slick" should {
 
