@@ -12,7 +12,7 @@ import akka.actor.ActorSystem
 
 trait StreamManager[T, S] {
   def connect(identifier: T): Enumerator[S]
-  def clientIsConnected: Boolean
+  def clientIsConnected(clientIdentifier: T): Boolean
   def disconnect(identifier: T): Unit
   def disconnectAll(identifier: T): Unit
   def push(idenifier: T, msg: S): Unit
