@@ -19,13 +19,13 @@ import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
 import com.keepit.controllers.admin.AdminDashboardController
-import com.keepit.controllers.CommentController
+import com.keepit.controllers.ext.ExtCommentController
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 
 class CommentReadTest extends Specification with DbRepos {
 
   def setup() = {
-    inject[Database].readWrite {implicit s =>
+    db.readWrite {implicit s =>
       val commentRepo = inject[CommentRepo]
       val userRepo = inject[UserRepo]
       val commentRecipientRepo = inject[CommentRecipientRepo]
@@ -59,7 +59,7 @@ class CommentReadTest extends Specification with DbRepos {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, comment1, comment2, comment3, msg1, msg2, msg3, msg4) = setup()
 
-        inject[Database].readWrite { implicit s =>
+        db.readWrite { implicit s =>
           val userRepo = inject[UserRepo]
           val user3 = userRepo.save(User(firstName = "Other", lastName = "User"))
 
@@ -96,7 +96,7 @@ class CommentReadTest extends Specification with DbRepos {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, comment1, comment2, comment3, msg1, msg2, msg3, msg4) = setup()
 
-        inject[Database].readWrite { implicit s =>
+        db.readWrite { implicit s =>
           val userRepo = inject[UserRepo]
           val user3 = userRepo.save(User(firstName = "Other", lastName = "User"))
 
@@ -131,7 +131,7 @@ class CommentReadTest extends Specification with DbRepos {
       }
     }
     "update lastreadid when viewing thread" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck()) {
+      running(new EmptyApplication().withFakeSecureSocialUserService.withFakeHealthcheck.withFakeMail) {
 
         import com.keepit.common.time._
         val (user1, user2, uri1, uri2, comment1, comment2, comment3, msg1, msg2, msg3, msg4) = setup()
@@ -153,7 +153,7 @@ class CommentReadTest extends Specification with DbRepos {
 
         val commentReadRepo = inject[CommentReadRepo]
 
-        val externalId = inject[Database].readOnly {implicit session =>
+        val externalId = db.readOnly {implicit session =>
           val messages = commentReadRepo.getParentsOfUnreadMessages(user2.id.get, uri1.id.get)
           messages.size === 3
           messages.head.externalId
@@ -161,12 +161,12 @@ class CommentReadTest extends Specification with DbRepos {
 
 
         val fakeRequest = FakeRequest().withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
-        val authRequest = CommentController.AuthenticatedRequest(null, user1.id.get, fakeRequest)
+        val authRequest = inject[ExtCommentController].AuthenticatedRequest(null, user1.id.get, fakeRequest)
         authRequest.session.get(SecureSocial.ProviderKey) === Some("facebook")
-        val result = CommentController.getMessageThread(externalId)(authRequest)
+        val result = inject[ExtCommentController].getMessageThread(externalId)(authRequest)
         status(result) must equalTo(OK)
 
-        inject[Database].readOnly {implicit session =>
+        db.readOnly {implicit session =>
           val messages = commentReadRepo.getParentsOfUnreadMessages(user1.id.get, uri1.id.get)
           messages.size === 1
         }
