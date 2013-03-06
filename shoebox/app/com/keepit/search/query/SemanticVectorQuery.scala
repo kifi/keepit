@@ -46,7 +46,7 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
   private[this] var termList = {
     val terms = query.terms
-    terms.foldLeft(List.empty[(Term, Array[Byte], Float)]){ (list, term) =>
+    terms.foldLeft(List.empty[(Term, SemanticVector, Float)]){ (list, term) =>
       val vector = searcher.getSemanticVector(term)
       val idf = searcher.idf(term)
       (term, vector, idf)::list
@@ -92,7 +92,7 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
     result
   }
 
-  private def explainTerm(term: Term, reader: IndexReader, vector: Array[Byte], value: Float, doc: Int) = {
+  private def explainTerm(term: Term, reader: IndexReader, vector: SemanticVector, value: Float, doc: Int) = {
     val dv = new DocAndVector(reader.termPositions(term), vector, value)
     dv.fetchDoc(doc)
     if (dv.doc == doc && value > 0.0f) {
@@ -118,10 +118,10 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   }
 }
 
-private[query] final class DocAndVector(tp: TermPositions, vector: Array[Byte], weight: Float) {
+private[query] final class DocAndVector(tp: TermPositions, vector: SemanticVector, weight: Float) {
   var doc = -1
 
-  private[this] var curVec = new Array[Byte](SemanticVector.arraySize)
+  private[this] var payload = new Array[Byte](SemanticVector.arraySize)
 
   def fetchDoc(target: Int) {
     doc = if (tp.skipTo(target)) tp.doc() else DocIdSetIterator.NO_MORE_DOCS
@@ -131,8 +131,8 @@ private[query] final class DocAndVector(tp: TermPositions, vector: Array[Byte], 
     val score = if (tp.freq() > 0) {
       tp.nextPosition()
       if (tp.isPayloadAvailable()) {
-        curVec = tp.getPayload(curVec, 0)
-        SemanticVector.similarity(vector, curVec) * weight
+        payload = tp.getPayload(payload, 0)
+        vector.similarity(new SemanticVector(payload)) * weight
       } else {
         0.0f
       }

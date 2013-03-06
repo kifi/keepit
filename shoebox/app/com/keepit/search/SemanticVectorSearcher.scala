@@ -14,7 +14,7 @@ import scala.collection.mutable.ArrayBuffer
 class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGraphSearcher) {
   val indexReader = articleSearcher.indexReader
 
-  private def getSemanticVector(term: Term, ids: Set[Long], minDocs: Int = 1): Option[Array[Byte]] = {
+  private def getSemanticVector(term: Term, ids: Set[Long], minDocs: Int = 1): Option[SemanticVector] = {
     val subReaders = indexReader.wrappedSubReaders
     val composer = new SemanticVectorComposer
     var vector = new Array[Byte](SemanticVector.arraySize)
@@ -44,17 +44,17 @@ class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGra
     if (composer.numInputs >= minDocs) Some(composer.getSemanticVector()) else None
   }
 
-  def getSemanticVectors(userIds: Array[Id[User]], query: String, lang: Lang, minDocs: Int = 1): Map[Id[User],Array[Array[Byte]]] = {
+  def getSemanticVectors(userIds: Array[Id[User]], query: String, lang: Lang, minDocs: Int = 1): Map[Id[User],Array[SemanticVector]] = {
     val terms = getTerms(query, lang)
-    userIds.foldLeft(Map.empty[Id[User],Array[Array[Byte]]]){ (m, u) =>
+    userIds.foldLeft(Map.empty[Id[User],Array[SemanticVector]]){ (m, u) =>
       val uriIds = uriGraphSearcher.getUserToUriEdgeSet(u, publicOnly = false).destIdLongSet
       val vectors = terms.map{ term =>
         getSemanticVector(term, uriIds, minDocs) match {
           case Some(v) => v
-          case None => Array.empty[Byte]
+          case None => new SemanticVector(Array.empty[Byte])
         }
       }
-      if (vectors.forall(_.isEmpty)) m else m + (u -> vectors)
+      if (vectors.forall(_.bytes.isEmpty)) m else m + (u -> vectors)
     }
   }
 
