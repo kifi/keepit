@@ -315,9 +315,44 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
   background-color: #e8e8e8;
   color: #999;
 }
-#kifi-res .kifi-who-text b:hover {
-  text-decoration: underline;
-  cursor: pointer;
+a.kifi-res-friends {
+  color: #3277e7 !important;
+  text-decoration: none;
+  position: relative;
+}
+.kifi-res-friends-hover {
+  position: absolute;
+  bottom: 20px;
+  padding: 4px 8px;
+  background-color: #282828;
+  color: #fff;
+  font-size: 11px;
+  z-index: 99;
+  cursor: default;
+  display: none;
+}
+.kifi-hover-showing .kifi-res-friends-hover {
+  display: block;
+}
+.kifi-res-friends-▾ {
+  position: absolute;
+  left: 50%;
+  margin-left: -4px;
+  bottom: -5px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-color: #282828 transparent;
+  border-width: 5px 4px 0;
+}
+.kifi-res-friends-list {
+  margin: 0;
+}
+.kifi-res-friends-name {
+  display: block;
+  list-style: none;
+  padding: 0;
+  white-space: nowrap;
 }
 .kifi-chatter {
   float: right;
@@ -360,7 +395,7 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
 .kifi-chatter-▾ {
   position: absolute;
   left: 45px;
-  bottom: -4px;
+  bottom: -5px;
   width: 0;
   height: 0;
   border-style: solid;

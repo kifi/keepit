@@ -12,10 +12,11 @@ api.log("[google_inject]");
     api.port.emit("log_event", Array.prototype.slice.call(arguments));
   }
 
-  var hitsHtml, hitHtml, chatterHtml;
+  var hitsHtml, hitHtml, friendsHtml, chatterHtml;
   api.load("html/search/google.html", function(html) { $res = $(Mustache.to_html(html)).hide(); bindHandlers() });
   api.load("html/search/google_hits.html", function(html) { hitsHtml = html });
   api.load("html/search/google_hit.html", function(html) { hitHtml = html });
+  api.load("html/search/friends.html", function(html) { friendsHtml = html });
   api.load("html/search/chatter.html", function(html) { chatterHtml = html });
 
   var $res = $();         // reference to our search results (kept so that we can reinsert when removed)
@@ -335,6 +336,17 @@ api.log("[google_inject]");
     }).on("click", ".kifi-res-debug", function(e) {
       e.stopPropagation();
       location = "https://" + response.server + "/admin/search/results/" + response.uuid;
+    }).on("mouseenter", ".kifi-res-friends", function() {
+      $(this).showHover(function() {
+        var i = $(this).closest("li.g").index("li.g");
+        // measuring in order to center hover box above link
+        var $h = $(Mustache.to_html(friendsHtml, {friends: response.hits[i].users}))
+          .css({visibility: "hidden", display: "block"})
+          .appendTo(this);
+        return $h.css("left", .5 * (this.offsetWidth - $h[0].offsetWidth))
+          .css({visibility: "", display: ""})
+          .detach();
+      }).showHover("enter");
     }).on("mouseenter", ".kifi-chatter", function() {
       $(this).showHover(function() {
         var n = $(this).data("n");
@@ -439,6 +451,7 @@ api.log("[google_inject]");
     hit.countText = "";
 
     var numFriends = hit.users.length;
+    var friendsLink = numFriends ? "<a class=kifi-res-friends href=javascript:>" + plural(numFriends, "friend") + "</a>" : "";
 
     hit.count = hit.count - hit.users.length - (hit.isMyBookmark ? 1 : 0);
 
@@ -453,9 +466,9 @@ api.log("[google_inject]");
         }
       } else { // numFriends > 0
         if (hit.count > 0) { // others
-          hit.countText = "You" + priv + " + <b>" + plural(numFriends, "friend") + "</b> + " + plural(hit.count, "other") + " kept this";
+          hit.countText = "You" + priv + " + " + friendsLink + " + " + plural(hit.count, "other") + " kept this";
         } else { // no others
-          hit.countText = "You" + priv + " + <b>" + plural(numFriends, "friend") + "</b> kept this";
+          hit.countText = "You" + priv + " + " + friendsLink + " kept this";
         }
       }
     } else { // not you
@@ -467,9 +480,9 @@ api.log("[google_inject]");
         }
       } else { // numFriends > 0
         if (hit.count > 0) { // others
-          hit.countText = "<b>" + plural(numFriends, "friend") + "</b> + " + plural(hit.count, "other") + " kept this";
+          hit.countText = friendsLink + " + " + plural(hit.count, "other") + " kept this";
         } else { // no others
-          hit.countText = "<b>" + plural(numFriends, "friend") + "</b> kept this";
+          hit.countText = friendsLink + " kept this";
         }
       }
     }
