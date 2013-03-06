@@ -344,7 +344,7 @@ api.log("[google_inject]");
       }).showHover("enter");
     }).on("click", ".kifi-chatter-deeplink", function() {
       api.port.emit("add_deep_link_listener", {locator: $(this).data("locator")});
-      window.location = $(this).closest("li.g").find("h3.r a")[0].href;
+      location.href = $(this).closest("li.g").find("h3.r a")[0].href;
     });
   }
 
@@ -416,7 +416,9 @@ api.log("[google_inject]");
       return Mustache.to_html(hitHtml, $.extend({globeUrl: api.url("images/globe.png")}, hit));
     }).join("");
     var $list = $("#kifi-res-list");
-    $(html).hide().insertAfter($list.children("li.g").last()).slideDown(200);
+    $(html).hide().insertAfter($list.children("li.g").last()).slideDown(200, function() {
+      $(this).css("overflow", "");  // slideDown clean-up
+    });
     if (!response.mayHaveMore) {
       $list.find(".kifi-res-more").hide(200);
     }
