@@ -14,6 +14,8 @@ import org.specs2.mutable._
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
+import org.apache.lucene.store.RAMDirectory
+import org.specs2.specification.Scope
 import play.api.test.Helpers._
 import scala.collection.JavaConversions._
 

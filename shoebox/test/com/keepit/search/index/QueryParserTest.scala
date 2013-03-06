@@ -1,6 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.search.Lang
+import org.specs2.specification.Scope
 import org.specs2.mutable._
 import play.api.Play.current
 import play.api.libs.json.Json
@@ -14,6 +15,9 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.search.BooleanClause._
+import org.apache.lucene.search.BooleanClause._
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.Query
 
 class QueryParserTest extends Specification {
 
