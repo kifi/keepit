@@ -161,7 +161,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
     }
   }
 
-  private def isUnscrapable(url: String, destinationUrl: Option[String]) = {
+  protected def isUnscrapable(url: String, destinationUrl: Option[String]) = {
     inject[Database].readOnly { implicit s =>
       val uns = inject[UnscrapableRepo]
       (uns.contains(url) || (destinationUrl.isDefined && uns.contains(destinationUrl.get)))

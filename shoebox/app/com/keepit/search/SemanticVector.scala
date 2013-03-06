@@ -10,7 +10,21 @@ import scala.util.Random
 import scala.util.Sorting
 import scala.math._
 
+class SemanticVector(val bytes: Array[Byte]) extends AnyVal {
+
+    // hamming distance
+  def distance(other: SemanticVector) = SemanticVector.distance(bytes, other.bytes)
+
+  // similarity of two vectors (-1.0 to 1.0) ~ cosine distance
+  def similarity(other: SemanticVector) = SemanticVector.similarity(bytes, other.bytes)
+}
+
 object SemanticVector {
+  class Sketch(val vec: Array[Float]) extends AnyVal {
+    def copyFrom(other: Sketch): Unit = Array.copy(vec, 0, other.vec, 0, vectorSize)
+    def clone() = new Sketch(vec.clone())
+  }
+
   val vectorSize = 128 // bits
   val arraySize = vectorSize / 8
   private[this] val gaussianSampleSize = 100000L
@@ -56,39 +70,39 @@ object SemanticVector {
 
   private[this] val MASK = 0x7FFFFFFFFFFFFFFFL // 63 bits
 
-  def getSeed(term: String): Array[Float] = {
+  def getSeed(term: String): Sketch = {
     var seed = (term.hashCode.toLong + (term.charAt(0).toLong << 31)) & MASK
     val sketch = emptySketch
     var i = 0
     while (i < vectorSize) {
       seed = (seed * 0x5DEECE66DL + 0x123456789L) & MASK // linear congruential generator
-      sketch(i) = gaussianSample((seed % gaussianSampleSize).toInt)
+      sketch.vec(i) = gaussianSample((seed % gaussianSampleSize).toInt)
       i += 1
     }
     sketch
   }
 
-  def emptySketch = new Array[Float](vectorSize)
+  def emptySketch = new Sketch(new Array[Float](vectorSize))
 
-  def updateSketch(sketch1: Array[Float], sketch2: Array[Float]) {
+  def updateSketch(sketch1: Sketch, sketch2: Sketch) {
     updateSketch(sketch1, sketch2, 1.0f)
   }
 
-  def updateSketch(sketch1: Array[Float], sketch2: Array[Float], norm: Float) {
+  def updateSketch(sketch1: Sketch, sketch2: Sketch, norm: Float) {
     var i = 0
     while (i < vectorSize) {
-      sketch1(i) += (sketch2(i) * norm)
+      sketch1.vec(i) += (sketch2.vec(i) * norm)
       i += 1
     }
   }
 
-  def vectorize(sketch: Array[Float]) = {
-    val vector = new Array[Byte](vectorSize / 8)
+  def vectorize(sketch: Sketch) = {
+    val vector = new Array[Byte](arraySize)
     var i = 0
     var j = 0
     var byte = 0
     while (i < vectorSize) {
-      byte = (byte << 1) | (if (sketch(i) > 0.0f) 1 else 0)
+      byte = (byte << 1) | (if (sketch.vec(i) > 0.0f) 1 else 0)
       i += 1
       if ((i % 8) == 0) {
         vector(j) = byte.toByte
@@ -96,16 +110,16 @@ object SemanticVector {
         j += 1
       }
     }
-    vector
+    new SemanticVector(vector)
   }
 
-  def vectorize(sketch: Array[Int], threshold: Int) = {
-    val vector = new Array[Byte](vectorSize / 8)
+  def vectorize(counts: Array[Int], threshold: Int) = {
+    val vector = new Array[Byte](arraySize)
     var i = 0
     var j = 0
     var byte = 0
     while (i < vectorSize) {
-      byte = (byte << 1) | (if (sketch(i) > threshold) 1 else 0)
+      byte = (byte << 1) | (if (counts(i) > threshold) 1 else 0)
       i += 1
       if ((i % 8) == 0) {
         vector(j) = byte.toByte
@@ -113,18 +127,18 @@ object SemanticVector {
         j += 1
       }
     }
-    vector
+    new SemanticVector(vector)
   }
 }
 
 class SemanticVectorBuilder(windowSize: Int) {
   import SemanticVector._
 
-  private[this] var termSketches = Map.empty[String, Array[Float]]
-  private[this] var termSeeds = Map.empty[String, Array[Float]]
+  private[this] var termSketches = Map.empty[String, Sketch]
+  private[this] var termSeeds = Map.empty[String, Sketch]
 
   private[this] val termQueue = new Array[String](windowSize)
-  private[this] val seedQueue = new Array[Array[Float]](windowSize)
+  private[this] val seedQueue = new Array[Sketch](windowSize)
 
   private[this] var headPos = 0
   private[this] var tailPos = - windowSize
@@ -142,11 +156,11 @@ class SemanticVectorBuilder(windowSize: Int) {
     headPos = 0
     tailPos = - termQueue.length
     midPos = - (termQueue.length / 2)
-    Array.copy(headSketch, 0, tailSketch, 0, vectorSize)
+    tailSketch.copyFrom(headSketch)
   }
 
   def resetTermSketches {
-    termSketches = Map.empty[String, Array[Float]]
+    termSketches = Map.empty[String, Sketch]
   }
 
   def getSeedSketch(term: String) = {
@@ -165,7 +179,7 @@ class SemanticVectorBuilder(windowSize: Int) {
 
     var i = 0
     while (i < vectorSize) {
-      sketch(i) -= (midSeed(i) * 0.95f + tailSketch(i))
+      sketch.vec(i) -= (midSeed.vec(i) * 0.95f + tailSketch.vec(i))
       i += 1
     }
     sketch
@@ -194,7 +208,7 @@ class SemanticVectorBuilder(windowSize: Int) {
     clear
   }
 
-  def updateTermSketch(token: String, localSketch: Array[Float]) {
+  def updateTermSketch(token: String, localSketch: Sketch) {
     val sketch = termSketches.get(token) match {
       case Some(sketch) => sketch
       case None =>
@@ -218,7 +232,7 @@ class SemanticVectorBuilder(windowSize: Int) {
         if (iterator.hasNext) {
           clearAttributes()
           val (termText, sketch) = iterator.next
-          payloadAttr.setPayload(new Payload(vectorize(sketch)))
+          payloadAttr.setPayload(new Payload(vectorize(sketch).bytes))
           termAttr.append(termText)
           posIncrAttr.setPositionIncrement(1)
           true
@@ -262,7 +276,7 @@ class SemanticVectorComposer {
     val sketch = emptySketch
     var i = 0
     while (i < vectorSize) {
-      sketch(i) = ((counters(i).toFloat/cnt.toFloat) - 0.5f)
+      sketch.vec(i) = ((counters(i).toFloat/cnt.toFloat) - 0.5f)
       i += 1
     }
     sketch

@@ -132,10 +132,10 @@ object SearchLabsController extends FortyTwoController {
     Ok(JsObject(Seq("data" -> JsArray(data))))
   }
 
-  private def similarity(vectors1: Array[Array[Byte]], vectors2: Array[Array[Byte]]) = {
+  private def similarity(vectors1: Array[SemanticVector], vectors2: Array[SemanticVector]) = {
     val s = vectors1.zip(vectors2).foldLeft(0.0d){ case (sum, (v1, v2)) =>
-      if (v1.isEmpty || v2.isEmpty) sum
-      else sum + SemanticVector.similarity(v1, v2).toDouble
+      if (v1.bytes.isEmpty || v2.bytes.isEmpty) sum
+      else sum + v1.similarity(v2).toDouble
     }
     (s / vectors1.length) - 1.0d - Double.MinPositiveValue
   }
