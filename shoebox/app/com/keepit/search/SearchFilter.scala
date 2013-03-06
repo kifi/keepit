@@ -28,7 +28,7 @@ object SearchFilter {
   }
   def friends(idFilter: Set[Long] = Set()) = new SearchFilter(idFilter) {
     def includeMine    = false
-    def includeShared  = false
+    def includeShared  = true
     def includeFriends = true
     def includeOthers  = false
   }
