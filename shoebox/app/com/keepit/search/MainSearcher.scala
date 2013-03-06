@@ -216,7 +216,7 @@ class MainSearcher(
 
   private def dumpFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/halfDecay, 3.0d))).toFloat
 
-  private def bookmarkScore(bookmarkCount: Int) = (1.0f - (1.0f/(bookmarkCount.toFloat)))
+  private def bookmarkScore(bookmarkCount: Int) = (1.0f - (1.0f/(1.0f + bookmarkCount.toFloat)))
 
   private def recencyScore(createdAt: Long): Float = {
     val t = max(currentTime - createdAt, 0).toFloat / halfDecayMillis
