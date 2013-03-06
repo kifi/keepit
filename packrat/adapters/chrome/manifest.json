@@ -60,6 +60,7 @@
     "html/comments/message_post.html",
     "html/comments/snapshot_bar.html",
     "html/search/chatter.html",
+    "html/search/friends.html",
     "html/search/google.html",
     "html/search/google_hits.html",
     "html/search/google_hit.html"
