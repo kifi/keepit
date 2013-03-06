@@ -17,7 +17,7 @@ class StreamManager {
 
   def connect(userId: Id[User]): Enumerator[JsObject] = {
     println(s"Client $userId connecting.")
-    val clientStream = Option(clients.get(userId)).getOrElse {
+    val clientStream = clients.get(userId).getOrElse {
       println(s"Client $userId doesn't exist. Creating.")
       ClientStream[JsObject](userId)
     }
@@ -25,7 +25,7 @@ class StreamManager {
   }
 
   def disconnect(userId: Id[User]) {
-    Option(clients.get(userId)).map { client =>
+    clients.get(userId).map { client =>
       client.disconnect()
       if(!client.hasListeners) {
         client.close()
@@ -36,7 +36,7 @@ class StreamManager {
 
   def push(userId: Id[User], msg: JsObject) {
     println(s"Pushing for $userId")
-    Option(clients.get(userId)).map{ client =>
+    clients.get(userId).map{ client =>
       println("PUSHED!")
       client.push(msg)
     }
