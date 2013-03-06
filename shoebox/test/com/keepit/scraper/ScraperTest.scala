@@ -40,17 +40,19 @@ class ScraperTest extends Specification {
 
   "Scraper" should {
     "get a article from an existing website" in {
-      val store = new FakeArticleStore()
-      val scraper = getMockScraper(store)
-      val url = "http://www.keepit.com/existing"
-      val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(33)))
-      val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get), false)
+      running(new EmptyApplication()) {
+        val store = new FakeArticleStore()
+        val scraper = getMockScraper(store)
+        val url = "http://www.keepit.com/existing"
+        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(33)))
+        val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get), false)
 
-      result must beAnInstanceOf[Scraped] // Article
-      (result: @unchecked) match {
-        case Scraped(article, signature) =>
-          article.title === "foo"
-          article.content === "this is a body text. bar."
+        result must beAnInstanceOf[Scraped] // Article
+        (result: @unchecked) match {
+          case Scraped(article, signature) =>
+            article.title === "foo"
+            article.content === "this is a body text. bar."
+        }
       }
     }
 
