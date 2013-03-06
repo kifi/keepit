@@ -10,16 +10,16 @@ import com.keepit.search.Lang
 import com.keepit.search.MainQueryParserFactory
 import com.keepit.search.phrasedetector._
 import com.keepit.test._
-import org.apache.lucene.store.RAMDirectory
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
+import play.api.Play.current
+import play.api.libs.json.Json
+import play.api.test._
+import org.apache.lucene.store.RAMDirectory
 import org.specs2.specification.Scope
 import play.api.test.Helpers._
 import scala.collection.JavaConversions._
 
-@RunWith(classOf[JUnitRunner])
-class ArticleIndexerTest extends SpecificationWithJUnit with DbRepos {
+class ArticleIndexerTest extends Specification with DbRepos {
 
   private trait IndexerScope extends Scope {
     val ramDir = new RAMDirectory

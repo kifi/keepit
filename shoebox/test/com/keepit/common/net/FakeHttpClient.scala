@@ -20,7 +20,7 @@ class FakeHttpClient(requestToResponse: Option[PartialFunction[String, String]] 
     callCount += 1
     val rtr: PartialFunction[String, String] = requestToResponse.getOrElse({ case _ => "" })
     new FakeClientResponse(rtr.lift(url).getOrElse {
-      throw new Exception("url %s did not match".format(url))
+      throw new Exception(s"url [$url] did not match")
     })
   }
 

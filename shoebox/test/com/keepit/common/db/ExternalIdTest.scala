@@ -1,17 +1,14 @@
 package com.keepit.common.db
 
 import java.util.UUID
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import scala.collection.mutable.{Map => MutableMap}
 
-@RunWith(classOf[JUnitRunner])
-class ExternalIdTest extends SpecificationWithJUnit {
+class ExternalIdTest extends Specification {
 
   "ExternalId" should {
     "be created" in {

@@ -1,10 +1,7 @@
 package com.keepit.common.net
 
-import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
-import org.specs2.runner.JUnitRunner
 
-@RunWith(classOf[JUnitRunner])
 class URITest extends Specification {
   "URI" should {
     "parse URLs" in {

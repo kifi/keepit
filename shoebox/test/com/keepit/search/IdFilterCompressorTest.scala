@@ -1,8 +1,6 @@
 package com.keepit.search
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -10,8 +8,7 @@ import play.api.test.Helpers._
 import scala.math._
 import scala.util.Random
 
-@RunWith(classOf[JUnitRunner])
-class IdFilterCompressorTest extends SpecificationWithJUnit {
+class IdFilterCompressorTest extends Specification {
   val rand = new Random
   val idSet = (0 to 100).foldLeft(Set.empty[Long]){ (s, n) => s + rand.nextInt(1000).toLong }
 

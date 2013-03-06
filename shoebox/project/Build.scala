@@ -34,7 +34,6 @@ object ApplicationBuild extends Build {
 
     val appDependencies = Seq(
       jdbc,
-      "com.novocode" % "junit-interface" % "0.10-M2",
       "mysql" % "mysql-connector-java" % "5.1.10",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" % "akka-testkit" % "2.0.2",
@@ -96,8 +95,6 @@ object ApplicationBuild extends Build {
 
       parallelExecution in Test := true,
 
-      //see https://groups.google.com/forum/?fromgroups=#!topic/play-framework/4Fz5TsOKPio
-      testOptions += Tests.Argument(TestFrameworks.JUnit, "--ignore-runners=org.specs2.runner.JUnitRunner"),
       testOptions in Test += Tests.Argument("sequential", "false"),
       testOptions in Test += Tests.Argument("threadsNb", "16"),
       testOptions in Test += Tests.Argument("showtimes", "true"),

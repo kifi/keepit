@@ -1,16 +1,13 @@
 package com.keepit.serializer
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import securesocial.core._
 
-@RunWith(classOf[JUnitRunner])
-class SocialUserSerializerTest extends SpecificationWithJUnit {
+class SocialUserSerializerTest extends Specification {
 
   "SocialUserSerializer" should {
     "do a basic serialization flow" in {

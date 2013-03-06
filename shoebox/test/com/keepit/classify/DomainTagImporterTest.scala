@@ -16,7 +16,7 @@ import play.api.Play.current
 import play.api.test.Helpers._
 import java.util.concurrent.TimeUnit
 
-class DomainTagImporterTest extends SpecificationWithJUnit with DbRepos {
+class DomainTagImporterTest extends Specification with DbRepos {
   private val system = ActorSystem("system")
   private val settings = DomainTagImportSettings()
   private val timeout = pairIntToDuration((500, TimeUnit.MILLISECONDS))

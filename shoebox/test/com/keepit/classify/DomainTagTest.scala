@@ -11,7 +11,7 @@ import play.api.Play.current
 import play.api.test.Helpers._
 
 
-class DomainTagTest extends SpecificationWithJUnit with DbRepos {
+class DomainTagTest extends Specification with DbRepos {
   "The tag repo" should {
     "save and retrieve tags" in {
       running(new EmptyApplication()) {
