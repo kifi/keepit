@@ -171,6 +171,11 @@ slider = function() {
             }
           }
         });
+
+        badGlobalState["updates"] = {
+          publicCount: o.numComments,
+          messageCount: o.numMessages,
+          countSum: o.numComments + o.numMessages};
     });
   }
 
