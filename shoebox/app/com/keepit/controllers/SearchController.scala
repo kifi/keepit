@@ -113,7 +113,9 @@ object SearchController extends FortyTwoController {
       val info = inject[SocialUserInfoRepo].getByUser(userId).head
       UserWithSocial(user, info, inject[BookmarkRepo].count(userId), Nil, Nil)
     }
-    PersonalSearchResult(toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark, false, users, res.score)
+    PersonalSearchResult(
+      toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark,
+      bookmark.map(_.isPrivate).getOrElse(false), users, res.score)
   }
 
   private[controllers] def toPersonalSearchHit(uri: NormalizedURI, bookmark: Option[Bookmark]) = {
