@@ -10,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
 import akka.actor.ActorSystem
 
-trait StreamManager0[T, S] {
+trait StreamManager[T, S] {
   def connect(identifier: T): Enumerator[T]
   def clientIsConnected: Boolean
   def disconnect(identifier: T): Unit
@@ -20,7 +20,7 @@ trait StreamManager0[T, S] {
 }
 
 
-trait MultiClientStreamManager[T, S] extends StreamManager0[T, S] with Logging {
+trait MultiClientStreamManager[T, S] extends StreamManager[T, S] with Logging {
 
   private var clients = new ConcurrentHashMap[T, ClientStreamLike[S]]()
   protected def safeGet(key: T) = Option(clients.get(key))
