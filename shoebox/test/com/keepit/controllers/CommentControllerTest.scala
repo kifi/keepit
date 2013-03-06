@@ -1,5 +1,6 @@
 package com.keepit.controllers
 
+import com.keepit.controllers.ext.ExtCommentController
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.FakeOutbox
@@ -34,7 +35,7 @@ class CommentControllerTest extends Specification with DbRepos {
   "CommentController" should {
 
     "follow and unfollow" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService()) {
+      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck.withFakeMail) {
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)
@@ -79,15 +80,9 @@ class CommentControllerTest extends Specification with DbRepos {
         contentAsString(result4) === """{"following":true}"""      }
     }
 
-    "replace links" in {
-      CommentController.replaceLookHereLinks("[hi there](x-kifi-sel:body>foo.bar#there)") === "[hi there]"
-      CommentController.replaceLookHereLinks("A [hi there](x-kifi-sel:foo.bar#there) B") === "A [hi there] B"
-      CommentController.replaceLookHereLinks("(A) [hi there](x-kifi-sel:foo.bar#there:nth-child(2\\)>a:nth-child(1\\)) [B] C") === "(A) [hi there] [B] C"
-    }
-
     "persist comment emails" in {
       running(new EmptyApplication().withFakeMail()) {
-        val comment = inject[Database].readWrite { implicit s =>
+        val comment = db.readWrite { implicit s =>
           val userRepo = inject[UserRepo]
           val emailRepo = inject[EmailAddressRepo]
           val normalizedURIRepo = inject[NormalizedURIRepo]
@@ -101,13 +96,18 @@ class CommentControllerTest extends Specification with DbRepos {
           inject[CommentRecipientRepo].save(CommentRecipient(commentId = msg.id.get, userId = Some(recepient.id.get)))
           msg
         }
-        CommentController.notifyRecipients(comment)
+        val extCommentController = inject[ExtCommentController]
+        extCommentController.notifyRecipients(comment)
         val mails = inject[FakeOutbox]
         mails.size === 1
         val mail = mails.head
         mail.senderUserId.get === comment.userId
         mail.subject === "Andrew Conner sent you a message using KiFi"
         mail.htmlBody.value must contain("""Public Comment [look here] on Google1""")
+
+        extCommentController.replaceLookHereLinks("[hi there](x-kifi-sel:body>foo.bar#there)") === "[hi there]"
+        extCommentController.replaceLookHereLinks("A [hi there](x-kifi-sel:foo.bar#there) B") === "A [hi there] B"
+        extCommentController.replaceLookHereLinks("(A) [hi there](x-kifi-sel:foo.bar#there:nth-child(2\\)>a:nth-child(1\\)) [B] C") === "(A) [hi there] [B] C"
       }
     }
   }
