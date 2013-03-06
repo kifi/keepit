@@ -10,9 +10,7 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.test._
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -26,8 +24,7 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.BooleanQuery
 import scala.collection.JavaConversions._
 
-@RunWith(classOf[JUnitRunner])
-class URIGraphTest extends SpecificationWithJUnit with DbRepos {
+class URIGraphTest extends Specification with DbRepos {
 
   private def setupDB = {
     db.readWrite { implicit s =>

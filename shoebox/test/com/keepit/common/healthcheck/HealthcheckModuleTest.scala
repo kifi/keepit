@@ -5,13 +5,10 @@ import com.keepit.common.mail.FakeOutbox
 import com.keepit.test.EmptyApplication
 import play.api.Play.current
 import play.api.test.Helpers.running
-import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
-import org.specs2.runner.JUnitRunner
 import com.keepit.test.ShoeboxApplication
 import com.keepit.shoebox.ShoeboxModule
 
-@RunWith(classOf[JUnitRunner])
 class HealthcheckModuleTest extends Specification {
 
   "HealthcheckModule" should {

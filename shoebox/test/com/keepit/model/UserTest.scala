@@ -1,8 +1,6 @@
 package com.keepit.model
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 
 import com.keepit.test._
 import com.keepit.inject._
@@ -15,8 +13,7 @@ import com.keepit.common.cache.{FortyTwoCachePlugin, FortyTwoCache}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db._
 
-@RunWith(classOf[JUnitRunner])
-class UserRepoTest extends SpecificationWithJUnit with DbRepos {
+class UserRepoTest extends Specification with DbRepos {
 
   "UserRepo" should {
     "Use the cache" in {

@@ -1,8 +1,6 @@
 package com.keepit.search.query
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -39,8 +37,7 @@ import com.keepit.search.index.Indexer
 import com.keepit.search.index.PersonalizedSearcher
 import com.keepit.search.index.QueryParser
 
-@RunWith(classOf[JUnitRunner])
-class SemanticVectorQueryTest extends SpecificationWithJUnit {
+class SemanticVectorQueryTest extends Specification {
 
   class Tst(val id: Id[Tst], val text: String)
 

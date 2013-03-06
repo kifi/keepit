@@ -1,8 +1,6 @@
 package com.keepit.common.social
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -23,8 +21,7 @@ import java.io.File
 import play.core.TestApplication
 import scala.collection.mutable.Map
 
-@RunWith(classOf[JUnitRunner])
-class SocialUserImportFriendsTest extends SpecificationWithJUnit {
+class SocialUserImportFriendsTest extends Specification {
 
   "SocialUserImportFriends" should {
     "import friends" in {

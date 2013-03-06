@@ -1,8 +1,6 @@
 package com.keepit.model
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 
 import com.keepit.common.db.slick._
 import com.keepit.inject._
@@ -12,7 +10,7 @@ import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
 
-class FollowTest extends SpecificationWithJUnit with DbRepos {
+class FollowTest extends Specification with DbRepos {
 
   "Follow" should {
 

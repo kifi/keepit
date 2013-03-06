@@ -13,9 +13,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.inject._
 import com.keepit.test._
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -27,8 +25,7 @@ import com.keepit.inject._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 
-@RunWith(classOf[JUnitRunner])
-class MainSearcherTest extends SpecificationWithJUnit with DbRepos {
+class MainSearcherTest extends Specification with DbRepos {
 
   val resultClickTracker = ResultClickTracker(8)
   val browsingHistoryTracker = running(new EmptyApplication()) {

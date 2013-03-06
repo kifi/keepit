@@ -1,9 +1,7 @@
 package com.keepit.model
 
 import org.joda.time.DateTime
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 
 import com.keepit.inject._
 
@@ -18,7 +16,7 @@ import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
 
-class BookmarkTest extends SpecificationWithJUnit with DbRepos {
+class BookmarkTest extends Specification with DbRepos {
 
   def setup() = {
     val t1 = new DateTime(2012, 2, 14, 21, 59, 0, 0, PT)

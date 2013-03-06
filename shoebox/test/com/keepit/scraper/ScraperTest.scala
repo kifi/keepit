@@ -14,9 +14,7 @@ import com.keepit.search.Lang
 import com.keepit.test.EmptyApplication
 import com.keepit.scraper.extractor.Extractor
 import com.keepit.scraper.extractor.TikaBasedExtractor
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
@@ -29,8 +27,7 @@ import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
 import java.io.OutputStreamWriter
 
-@RunWith(classOf[JUnitRunner])
-class ScraperTest extends SpecificationWithJUnit {
+class ScraperTest extends Specification {
   implicit val config = ScraperConfig(
     minInterval = 12.0d, //hours
     maxInterval = 1024.0d, //hours

@@ -2,9 +2,7 @@ package com.keepit.search.index
 
 import com.keepit.test.EmptyApplication
 import com.keepit.search.Lang
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -15,8 +13,7 @@ import org.apache.lucene.util.Version
 import org.apache.lucene.search.Query
 import scala.util.Random
 
-@RunWith(classOf[JUnitRunner])
-class IdMapperTest extends SpecificationWithJUnit {
+class IdMapperTest extends Specification {
 
   "ReverseArrayMapper" should {
     "map ids back indexes" in {

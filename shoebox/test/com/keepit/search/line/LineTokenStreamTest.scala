@@ -1,8 +1,6 @@
 package com.keepit.search.line
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -15,8 +13,7 @@ import scala.collection.mutable.ArrayBuffer
 import org.apache.lucene.util.Version
 import java.io.StringReader
 
-@RunWith(classOf[JUnitRunner])
-class LineTokenStreamTest extends SpecificationWithJUnit {
+class LineTokenStreamTest extends Specification {
   val analyzer = new WhitespaceAnalyzer(Version.LUCENE_36)
   "LineTokenStream" should {
     "tokenize strings aligning the position according to the line number" in {

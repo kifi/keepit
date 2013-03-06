@@ -1,15 +1,12 @@
 package com.keepit.scraper.extractor
 
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import org.jsoup.Jsoup
 import com.keepit.common.net.URI
 import java.io.FileInputStream
 import com.keepit.scraper.HttpInputStream
 
-@RunWith(classOf[JUnitRunner])
-class GithubExtractorTest extends SpecificationWithJUnit {
+class GithubExtractorTest extends Specification {
 
   def setup(url: String, file: String): String = {
     val uri = URI.parse(url).get

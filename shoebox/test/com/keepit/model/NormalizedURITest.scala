@@ -1,9 +1,7 @@
 package com.keepit.model
 
 import java.sql.Connection
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -14,8 +12,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
 
-@RunWith(classOf[JUnitRunner])
-class NormalizedURITest extends SpecificationWithJUnit with DbRepos {
+class NormalizedURITest extends Specification with DbRepos {
 
   def setup() = {
     db.readWrite {implicit s =>

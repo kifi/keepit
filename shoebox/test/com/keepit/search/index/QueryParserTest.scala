@@ -2,9 +2,7 @@ package com.keepit.search.index
 
 import com.keepit.test.EmptyApplication
 import com.keepit.search.Lang
-import org.junit.runner.RunWith
 import org.specs2.mutable._
-import org.specs2.runner.JUnitRunner
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
@@ -18,8 +16,7 @@ import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.search.BooleanClause._
 
-@RunWith(classOf[JUnitRunner])
-class QueryParserTest extends SpecificationWithJUnit {
+class QueryParserTest extends Specification {
 
   val analyzer = DefaultAnalyzer.forParsing(Lang("en"))
   val parser = new QueryParser(analyzer) {
