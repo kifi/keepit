@@ -364,6 +364,7 @@ api.log("[google_inject]");
   }
 
   function loadChatter(hits) {
+    if (!hits.length) return;
     api.port.emit("get_chatter", {ids: hits.map(function(h) {return h.bookmark.externalId})}, function gotChatter(counts) {
       api.log("[gotChatter]", counts);
       var bgImg = "url(" + api.url("images/chatter.png") + ")";
