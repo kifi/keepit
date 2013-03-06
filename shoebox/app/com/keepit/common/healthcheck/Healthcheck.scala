@@ -35,10 +35,10 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
     path: Option[String] = None, callType: CallType, errorMessage: Option[String] = None,
     id: ExternalId[HealthcheckError] = ExternalId(), createdAt: DateTime = currentDateTime) {
 
-  lazy val formattedStackTrace = error.map(e => e.getStackTrace() mkString "\n<br/> &nbsp; ").getOrElse("")
+  lazy val stackTraceHtml = error.map(e => e.getStackTrace() mkString "\n<br/> &nbsp; ").getOrElse("")
 
   lazy val signature: HealthcheckErrorSignature = {
-    val binaryHash = MessageDigest.getInstance("MD5").digest(formattedStackTrace.getBytes("UTF-8"))
+    val binaryHash = MessageDigest.getInstance("MD5").digest(stackTraceHtml.getBytes("UTF-8"))
     HealthcheckErrorSignature(new String(new Base64().encode(binaryHash), "UTF-8"))
   }
 
@@ -55,7 +55,7 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
     }
     error.map { e =>
       message ++= "<br/>Exception %s stack trace: \n<br/>".format(e.toString())
-      message ++= formattedStackTrace
+      message ++= stackTraceHtml
       causeDisplay(e)
     }
 
