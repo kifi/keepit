@@ -38,8 +38,7 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
   lazy val formattedStackTrace = error.map(e => e.getStackTrace() mkString "\n<br/> &nbsp; ").getOrElse("")
 
   lazy val signature: HealthcheckErrorSignature = {
-    val toHash = formattedStackTrace + error.map(e => e.toString).getOrElse("") + errorMessage.getOrElse("")
-    val binaryHash = MessageDigest.getInstance("MD5").digest(toHash.getBytes("UTF-8"))
+    val binaryHash = MessageDigest.getInstance("MD5").digest(formattedStackTrace.getBytes("UTF-8"))
     HealthcheckErrorSignature(new String(new Base64().encode(binaryHash), "UTF-8"))
   }
 
@@ -103,9 +102,9 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice, services: Fo
     case ReportErrorsAction =>
       if (errors.nonEmpty) {
         val message = Html(errors map {case(sig, error) =>
-          s"$error.size since last report, $errorsSinceStart(sig) since start of error sig $sig.value:\n<br/>$error.tail.toHtml"
+          s"${error.size} since last report, ${errorsSinceStart(sig)} since start of error sig ${sig.value}:\n<br/>${error.last.toHtml}"
         } mkString "\n<br/><hr/>")
-        val subject = s"ERROR REPORT: $errors.size errors on $services.currentService version $services.currentVersion compiled on $services.compilationTime"
+        val subject = s"ERROR REPORT: New errors on ${services.currentService} version ${services.currentVersion} compiled on ${services.compilationTime}"
         errors = initErrors
         postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = message.body, category = PostOffice.Categories.HEALTHCHECK))
       }
@@ -142,6 +141,7 @@ trait HealthcheckPlugin extends SchedulingPlugin {
   def addError(error: HealthcheckError): HealthcheckError
   def reportStart(): ElectronicMail
   def reportStop(): ElectronicMail
+  def reportErrors(): Unit
 }
 
 class HealthcheckPluginImpl(system: ActorSystem, host: String, postOffice: PostOffice, services: FortyTwoServices) extends HealthcheckPlugin {
@@ -166,6 +166,8 @@ class HealthcheckPluginImpl(system: ActorSystem, host: String, postOffice: PostO
   def errors(): Seq[HealthcheckError] = Await.result(errorsFuture(), 20 seconds)
 
   def resetErrorCount(): Unit = actor ! ResetErrorCount
+
+  def reportErrors(): Unit = actor ! ReportErrorsAction
 
   def fakeError() = addError(HealthcheckError(None, None, None, Healthcheck.API, Some("Fake error")))
 

@@ -49,6 +49,11 @@ object HealthController extends FortyTwoController {
     Ok(inject[HealthcheckPlugin].errors().mkString("\n"))
   }
 
+  def reportErrors() = AdminHtmlAction { implicit request =>
+    inject[HealthcheckPlugin].reportErrors()
+    Ok("reported")
+  }
+
   def resetErrorCount() = AdminHtmlAction { implicit request =>
     inject[HealthcheckPlugin].resetErrorCount
 
