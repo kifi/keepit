@@ -82,7 +82,8 @@ object ApplicationBuild extends Build {
         "com.keepit.common.db.{ExternalId, Id, State}",
         "com.keepit.model._",
         "com.keepit.common.social._",
-        "com.keepit.search._"
+        "com.keepit.search._",
+        "com.keepit.common.healthcheck.HealthcheckError"
       ),
       
       libraryDependencies ++= Seq(
