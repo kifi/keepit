@@ -88,14 +88,14 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
         val scrapedURI = db.readWrite { implicit s =>
           // update the scrape schedule and the uri state to SCRAPED
           scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
-          uriRepo.save(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          uriRepo.saveAsIndexable(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
         }
         log.info("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
       case NotScrapable(destinationUrl) =>
         val unscrapableURI = db.readWrite { implicit s =>
           scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
-          uriRepo.save(uri.withState(NormalizedURIStates.UNSCRAPABLE))
+          uriRepo.saveAsIndexable(uri.withState(NormalizedURIStates.UNSCRAPABLE))
         }
         (unscrapableURI, None)
       case NotModified =>
@@ -122,7 +122,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
         // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
         val errorURI = db.readWrite { implicit s =>
           scrapeInfoRepo.save(info.withFailure())
-          uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
+          uriRepo.saveAsIndexable(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         (errorURI, None)
     }
