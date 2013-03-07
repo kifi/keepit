@@ -14,7 +14,6 @@ trait DataBaseComponent {
   def dbInfo: DbInfo
   lazy val handle: SlickDatabase = dbInfo.database
 
-  def sequenceID: Column[Int]
   def entityName(name: String): String = name
 }
 

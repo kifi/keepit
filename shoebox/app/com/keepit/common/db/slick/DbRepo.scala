@@ -70,10 +70,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  private def insert(model: M)(implicit session: RWSession) = {
-    assert(1 == table.insert(model))
-    Id[M](Query(db.sequenceID).first)
-  }
+  private def insert(model: M)(implicit session: RWSession) = table.autoInc.insert(model)
 
   private def update(model: M)(implicit session: RWSession) = {
     val target = for(t <- table if t.id === model.id.get) yield t
@@ -98,6 +95,8 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
     }
 
     def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
+
+    def autoInc = * returning id
 
     def createdAt = column[DateTime]("created_at", O.NotNull)
     def updatedAt = column[DateTime]("updated_at", O.NotNull)
@@ -132,7 +131,7 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends RepoWithEx
 
   def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id).get
 
-  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = 
+  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] =
     (for(f <- externalIdColumn if f.externalId === id) yield f).firstOption
 }
 
