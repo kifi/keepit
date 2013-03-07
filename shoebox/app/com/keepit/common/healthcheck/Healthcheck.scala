@@ -35,11 +35,26 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
     path: Option[String] = None, callType: CallType, errorMessage: Option[String] = None,
     id: ExternalId[HealthcheckError] = ExternalId(), createdAt: DateTime = currentDateTime) {
 
-  lazy val stackTraceHtml = error.map(e => e.getStackTrace() mkString "\n<br/> &nbsp; ").getOrElse("")
-
   lazy val signature: HealthcheckErrorSignature = {
-    val binaryHash = MessageDigest.getInstance("MD5").digest(stackTraceHtml.getBytes("UTF-8"))
+    val permText: String = stackTraceHtml + path.getOrElse("") + method.getOrElse("") + callType.toString
+    val binaryHash = MessageDigest.getInstance("MD5").digest(permText.getBytes("UTF-8"))
     HealthcheckErrorSignature(new String(new Base64().encode(binaryHash), "UTF-8"))
+  }
+
+  lazy val stackTraceHtml: String = {
+    def causeString(throwableOptions: Option[Throwable]): String = throwableOptions match {
+      case None => "[No Cause]"
+      case Some(t) => (t.getStackTrace() mkString "\n<br/> &nbsp; ") + s"\n<br/> &nbsp; Cause: ${causeString(Option(t.getCause))}"
+    }
+    causeString(error)
+  }
+
+  lazy val titleHtml: String = {
+    def causeString(throwableOptions: Option[Throwable]): String = throwableOptions match {
+      case None => "[No Cause]"
+      case Some(t) => s"${t.getClass.getName}: ${t.getMessage}\n<br/> &nbsp; Cause: ${causeString(Option(t.getCause))}"
+    }
+    (error map (e => causeString(error))).getOrElse(errorMessage.getOrElse(this.toString))
   }
 
   def toHtml: String = {
@@ -101,12 +116,19 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice, services: Fo
   def receive() = {
     case ReportErrorsAction =>
       if (errors.nonEmpty) {
-        val message = Html(errors map {case(sig, error) =>
-          s"${error.size} since last report, ${errorsSinceStart(sig)} since start of error sig ${sig.value}:\n<br/>${error.last.toHtml}"
-        } mkString "\n<br/><hr/>")
-        val subject = s"ERROR REPORT: New errors on ${services.currentService} version ${services.currentVersion} compiled on ${services.compilationTime}"
+        val titles = errors map {case(sig, errorList) =>
+          s"${errorList.size} since last report, ${errorsSinceStart(sig)} since start of: ${errorList.last.titleHtml}"
+        } mkString "\n<br/>"
+
+        val messages = errors map {case(sig, errorList) =>
+          s"${errorList.size} since last report, ${errorsSinceStart(sig)} since start of errorList sig ${sig.value}:\n<br/>${errorList.last.toHtml}"
+        } mkString "\n<br/><hr/>"
+        val subject = s"ERROR REPORT: $errorCount errors since start on ${services.currentService.name} version ${services.currentVersion} compiled on ${services.compilationTime}"
         errors = initErrors
-        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = message.body, category = PostOffice.Categories.HEALTHCHECK))
+
+        val htmlMessage = Html(s"$titles<br/><hr/><br/>$messages")
+
+        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = htmlMessage.body, category = PostOffice.Categories.HEALTHCHECK))
       }
     case Heartbeat =>
       val now = currentDateTime
