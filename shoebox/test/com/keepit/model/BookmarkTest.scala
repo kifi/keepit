@@ -91,6 +91,15 @@ class BookmarkTest extends Specification with DbRepos {
         }
       }
     }
+    "count mutual keeps" in {
+      running(new EmptyApplication()) {
+        val (user1, user2, uri1, uri2) = setup()
+        db.readOnly {implicit s =>
+          bookmarkRepo.getNumMutual(user1.id.get, user2.id.get) === 1
+          bookmarkRepo.getNumMutual(user2.id.get, user1.id.get) === 1
+        }
+      }
+    }
   }
 
 }
