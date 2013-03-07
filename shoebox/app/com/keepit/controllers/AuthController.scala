@@ -94,7 +94,7 @@ object AuthController extends FortyTwoController {
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)
   def welcome = SecuredAction() { implicit request =>
     log.debug("in welcome. with user : [ %s ]".format(request.user ))
-    Redirect(com.keepit.controllers.routes.HomeController.home())
+    Redirect(com.keepit.controllers.website.routes.HomeController.home())
   }
 
   def logOut = UserAwareAction { implicit request =>

@@ -1,13 +1,13 @@
 package com.keepit.controllers.admin
 
 import play.api.Play.current
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import com.keepit.common.db.Id
 import com.keepit.common.db.LargeString._
 import com.keepit.model.{Comment, NormalizedURI, User}
 import views.html
 
-object AdminEmailPreviewController extends FortyTwoController {
+object AdminEmailPreviewController extends AdminController {
 
   val sender = User(firstName = "Jared", lastName = "Jacobs")
   val recipient = User(firstName = "Eishay", lastName = "Smith")

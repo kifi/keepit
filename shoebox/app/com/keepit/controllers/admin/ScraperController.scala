@@ -20,14 +20,14 @@ import com.keepit.scraper._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import javax.xml.bind.DatatypeConverter._
 import com.keepit.common.mail._
 import slick.Database
 import com.keepit.scraper.DuplicateDocumentDetection
 import views.html
 
-object ScraperController extends FortyTwoController {
+object ScraperController extends AdminController {
 
   def scrape = AdminHtmlAction { implicit request =>
     val scraper = inject[ScraperPlugin]

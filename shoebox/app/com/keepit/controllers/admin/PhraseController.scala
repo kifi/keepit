@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import play.api.mvc.Action
 import play.api.Play
 import play.api.http.ContentTypes
@@ -13,7 +13,7 @@ import com.keepit.search.Lang
 import com.keepit.common.db._
 import views.html
 
-object PhraseController extends FortyTwoController  {
+object PhraseController extends AdminController  {
 
   val pageSize = 50
 

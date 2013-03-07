@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import play.api.mvc.Action
 import play.api.Play
 import play.api.http.ContentTypes
@@ -12,7 +12,7 @@ import play.api.http.ContentTypes
  * Time: 12:18 AM
  * To change this template use File | Settings | File Templates.
  */
-object ElectronicMailLoggingController extends FortyTwoController  {
+object ElectronicMailLoggingController extends AdminController  {
 
   def doLog() = Action { implicit request =>
     request.body.asFormUrlEncoded match {

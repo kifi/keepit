@@ -9,7 +9,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.async.dispatch
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
 import com.keepit.common.social._
@@ -43,7 +43,7 @@ class AdminCommentController @Inject() (db: Database,
   userWithSocialRepo: UserWithSocialRepo,
   followRepo: FollowRepo,
   userRepo: UserRepo)
-    extends FortyTwoController {
+    extends AdminController {
 
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = db.readOnly { implicit s =>

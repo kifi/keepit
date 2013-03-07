@@ -5,7 +5,7 @@ import play.api.mvc._
 
 import com.keepit.inject._
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import play.api.libs.json._
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
@@ -20,7 +20,7 @@ import com.keepit.search.SearchConfigManager
 import views.html
 
 
-object AdminEventController extends FortyTwoController {
+object AdminEventController extends AdminController {
 
   def buildReport() = AdminHtmlAction { request =>
 
