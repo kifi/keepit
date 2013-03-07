@@ -7,7 +7,6 @@
 ##########################################
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
-GET     /upgrade                    @com.keepit.controllers.website.HomeController.upgrade
 GET     /giveMeA200                 @com.keepit.controllers.website.HomeController.giveMeA200
 
 GET     /login                      securesocial.controllers.LoginPage.login
