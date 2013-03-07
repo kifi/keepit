@@ -28,12 +28,4 @@ class HomeController @Inject() (db: Database,
   def giveMeA200 = Action { request =>
     Ok("You got it!")
   }
-
-  def upgrade = AuthenticatedHtmlAction { implicit request =>
-    val user = db.readOnly { implicit s => userRepo.get(request.userId) }
-    log.info("Looks like %s needs to upgrade".format(user.firstName + " " + user.lastName))
-    val html = io.Source.fromURL(Play.resource("/public/html/upgrade.html").get).mkString
-    Ok(html).as(ContentTypes.HTML)
-  }
-
 }
