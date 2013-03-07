@@ -4,12 +4,12 @@ import com.keepit.inject._
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 
 import play.api.Play.current
 import views.html
 
-object ElectronicMailController extends FortyTwoController {
+object ElectronicMailController extends AdminController {
 
   def electronicMailsViewFirstPage = electronicMailsView(0)
 
