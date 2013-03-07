@@ -9,7 +9,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.async.dispatch
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.BrowserExtensionController
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
 import com.keepit.common.social._
@@ -51,7 +51,7 @@ class ExtCommentController @Inject() (db: Database,
   deepLinkRepo: DeepLinkRepo,
   postOffice: PostOffice,
   activityStream: ActivityStream)
-    extends FortyTwoController {
+    extends BrowserExtensionController {
 
   def getCounts(ids: String) = AuthenticatedJsonAction { request =>
     val nUriExtIds = ids.split('.').map(ExternalId[NormalizedURI](_))
