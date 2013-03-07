@@ -13,7 +13,10 @@
         Prev
         </a>
       </li>
-      @for(i <- (0.max(page - 10) to (pageCount - 1).min(page + 10))) {
+      @if(page - 20 > 0) {
+        <li class="disabled">...</li>
+      }
+      @for(i <- (0.max(page - 20) to (pageCount - 1).min(page + 20))) {
         @if(i == page) {
 	        <li class="disabled">
 	          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(i)">@{i + 1}</a>
@@ -23,6 +26,9 @@
 	          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(i)">@{i + 1}</a>
 	        </li>
 	      }
+      }
+      @if(page + 20 < pageCount - 1) {
+        <li class="disabled">...</li>
       }
       <li>
         @if(bookmarksAndUsers.size > 0) {

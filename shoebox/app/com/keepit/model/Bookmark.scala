@@ -6,6 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
+import com.keepit.common.cache._
 import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
@@ -14,6 +15,7 @@ import play.api.libs.json._
 import java.net.URI
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
+import scala.concurrent.duration._
 
 case class BookmarkSource(value: String) {
   implicit def getValue = value
@@ -71,8 +73,22 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit
 }
 
+case class BookmarkCountKey() extends Key[Int] {
+  val namespace = "bookmark_count"
+  def toKey(): String = "k"
+}
+
+class BookmarkCountCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[BookmarkCountKey, Int] {
+  val ttl = 1 hours
+  def deserialize(obj: Any): Int = obj.asInstanceOf[Int]
+  def serialize(count: Int) = count
+}
+
 @Singleton
-class BookmarkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
+class BookmarkRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val countCache: BookmarkCountCache)
+      extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -89,6 +105,17 @@ class BookmarkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Book
     def source = column[BookmarkSource]("source", O.NotNull)
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~ userId ~ state ~ source ~ kifiInstallation.? <> (Bookmark, Bookmark.unapply _)
+  }
+
+  override def invalidateCache(bookmark: Bookmark)(implicit session: RSession) = {
+    countCache.remove(BookmarkCountKey())
+    bookmark
+  }
+
+  override def count(implicit session: RSession): Int = {
+    countCache.getOrElse(BookmarkCountKey()) {
+      super.count
+    }
   }
 
   def allActive()(implicit session: RSession): Seq[Bookmark] =
@@ -112,7 +139,7 @@ class BookmarkRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Book
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.urlId === urlId) yield b).list
 
-  def uriStats(uri: NormalizedURI)(implicit sesion: RSession): NormalizedURIStats = 
+  def uriStats(uri: NormalizedURI)(implicit sesion: RSession): NormalizedURIStats =
     NormalizedURIStats(uri, getByUri(uri.id.get))
 
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit = (for(b <- table if b.id === id) yield b).delete
