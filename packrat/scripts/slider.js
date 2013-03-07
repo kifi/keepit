@@ -200,7 +200,7 @@ slider = function() {
     })
     .on("mouseenter", ".kifi-keeper", function() {
       var $a = $(this), friend = o.friends[$a.index(".kifi-keeper")];
-      render("html/social_hover.html", {
+      render("html/friend_card.html", {
         name: friend.firstName + " " + friend.lastName,
         facebookId: friend.facebookId,
         iconsUrl: api.url("images/social_icons.png")
