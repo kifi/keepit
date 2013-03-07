@@ -332,7 +332,7 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
   color: #999;
 }
 a.kifi-res-friends {
-  color: #3277e7 !important;
+  color: inherit !important;
   text-decoration: none;
   position: relative;
 }
