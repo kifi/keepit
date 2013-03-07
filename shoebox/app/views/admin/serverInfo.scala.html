@@ -19,7 +19,15 @@
         <th>Error count (<a href="@com.keepit.common.healthcheck.routes.HealthController.resetErrorCount()">reset</a>)</th><td>@errorCount</td>
       </tr>
       <tr>
-        <th>Recent errors</th><td>@recentErrors.mkString("\n<br>")</td>
+        <th>Recent errors</th>
+        <td>
+          @for(e <- recentErrors) {
+            @e.id : @e.signature.value
+            <br/>
+            @Html(e.titleHtml)
+            <hr/>
+          }
+        </td>
       </tr>
       <tr>
         <th>Cache Health</th>

@@ -7,6 +7,8 @@ import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.inject._
 
+import scala.util.Random
+
 import play.api.Play.current
 import play.api.mvc.Action
 import play.api.mvc.Controller
@@ -40,9 +42,15 @@ object HealthController extends FortyTwoController {
     }
   }
 
+  //randomly creates one of two exceptions, each time with a random exception message
   def causeError() = Action { implicit request =>
-    0/0 // The realest fake error imaginable // Technically, this error is ∉ ℝ
-    Ok("You cannot see this.")
+    if (Random.nextBoolean) {
+      // throwing a X/0 exception. its a fixed stack exception with random message text
+      (Random.nextInt) / 0
+    }
+    // throwing an array out bound exception. its a fixed stack exception with random message text
+    (new Array[Int](1))(Random.nextInt + 1) = 1
+    Ok("You cannot see this :-P ")
   }
 
   def getErrors() = AdminHtmlAction { implicit request =>
