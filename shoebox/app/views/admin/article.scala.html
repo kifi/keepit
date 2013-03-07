@@ -1,9 +1,12 @@
-@(article: com.keepit.search.Article, uri: NormalizedURI)
+@(article: com.keepit.search.Article, uri: NormalizedURI, info: ScrapeInfo)
 
 @admin("Article: " + article.title) {
-   <table class="table table-bordered">
+  <table class="table table-bordered">
       <tr>
         <th>First introduced</th><td>@adminHelper.dateTimeDisplay(uri.updatedAt)</td>
+      </tr>
+      <tr>
+        <th>Last scrape</th><td>@adminHelper.dateTimeDisplay(info.lastScrape)</td>
       </tr>
       <tr>
         <th>URL</th><td><a href="@uri.url">@uri.url</a></td>
