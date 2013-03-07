@@ -107,7 +107,7 @@ class AdminBookmarksController @Inject() (db: Database, scraper: ScraperPlugin, 
   }
 
   def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
-    val PAGE_SIZE = 100
+    val PAGE_SIZE = 50
     val (count, bookmarksAndUsers) = db.readOnly { implicit s =>
       val bookmarks = bookmarkRepo.page(page, PAGE_SIZE)
       val users = bookmarks map (_.userId) map userRepo.get map socialRepo.toUserWithSocial
