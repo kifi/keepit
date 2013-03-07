@@ -22,7 +22,7 @@ import com.keepit.inject._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.model._
 import com.keepit.search.ArticleStore
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.BabysitterTimeout
 import org.joda.time.LocalDate
@@ -36,7 +36,7 @@ import views.html
 /**
  * Charts, etc.
  */
-object UrlController extends FortyTwoController {
+object UrlController extends AdminController {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 

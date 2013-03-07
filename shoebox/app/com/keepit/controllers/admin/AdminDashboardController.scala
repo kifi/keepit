@@ -18,7 +18,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.ArticleStore
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.healthcheck.BabysitterTimeout
@@ -35,7 +35,7 @@ import views.html
 /**
  * Charts, etc.
  */
-object AdminDashboardController extends FortyTwoController {
+object AdminDashboardController extends AdminController {
 
   implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
 
