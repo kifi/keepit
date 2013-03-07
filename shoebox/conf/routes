@@ -28,6 +28,7 @@ POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksCont
 GET     /bookmarks/check            @com.keepit.controllers.ext.ExtBookmarksController.checkIfExists(uri: String, ver: Option[String] ?= None)
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
+GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
 POST    /comments/add               @com.keepit.controllers.ext.ExtCommentController.createComment()
 GET     /comments/public            @com.keepit.controllers.ext.ExtCommentController.getComments(url: String)

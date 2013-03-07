@@ -68,6 +68,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark]
   def count(userId: Id[User])(implicit session: RSession): Int
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
+  def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
   def uriStats(uri: NormalizedURI)(implicit sesion: RSession): NormalizedURIStats
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit
@@ -135,6 +136,12 @@ class BookmarkRepoImpl @Inject() (
 
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int =
     Query(table.where(b => b.kifiInstallation === kifiInstallation).length).first
+
+  def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int =
+    Query((for {
+      b1 <- table if b1.userId === userId && b1.state === BookmarkStates.ACTIVE
+      b2 <- table if b2.userId === otherUserId && b2.state === BookmarkStates.ACTIVE && b2.uriId === b1.uriId && !b2.isPrivate
+    } yield b2.id).countDistinct).first
 
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.urlId === urlId) yield b).list

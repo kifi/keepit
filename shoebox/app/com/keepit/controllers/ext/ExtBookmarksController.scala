@@ -168,4 +168,11 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
         BadRequest(msg)
     }
   }
+
+  def getNumMutualKeeps(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    val n: Int = db.readOnly { implicit s =>
+      bookmarkRepo.getNumMutual(request.userId, userRepo.get(id).id.get)
+    }
+    Ok(Json.obj("n" -> n))
+  }
 }
