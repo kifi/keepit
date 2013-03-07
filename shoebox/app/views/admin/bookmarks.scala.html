@@ -13,7 +13,7 @@
         Prev
         </a>
       </li>
-      @for(i <- 0 to (pageCount - 1)) {
+      @for(i <- (0.max(page - 10) to (pageCount - 1).min(page + 10))) {
         @if(i == page) {
 	        <li class="disabled">
 	          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(i)">@{i + 1}</a>
