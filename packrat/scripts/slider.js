@@ -199,7 +199,7 @@ slider = function() {
       });
     })
     .on("mouseenter", ".kifi-keeper", function() {
-      var $a = $(this), friend = o.friends[$a.index(".kifi-keeper")];
+      var $a = $(this), friend = o.friends[$a.prevAll(".kifi-keeper").length];
       render("html/friend_card.html", {
         name: friend.firstName + " " + friend.lastName,
         facebookId: friend.facebookId,
