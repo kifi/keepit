@@ -23,6 +23,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 import play.api.libs.json._
 import scala.concurrent.duration._
+import scala.concurrent._
+import ExecutionContext.Implicits.global
 
 import com.keepit.common.analytics.ActivityStream
 
@@ -108,14 +110,22 @@ class AdminBookmarksController @Inject() (db: Database, scraper: ScraperPlugin, 
 
   def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 50
-    val (count, bookmarksAndUsers) = db.readOnly { implicit s =>
-      val bookmarks = bookmarkRepo.page(page, PAGE_SIZE)
-      val users = bookmarks map (_.userId) map userRepo.get map socialRepo.toUserWithSocial
-      val uris = bookmarks map (_.uriId) map uriRepo.get map (bookmarkRepo.uriStats)
-      val scrapes = bookmarks map (_.uriId) map scrapeRepo.getByUri
-      val count = bookmarkRepo.count(s)
-      (count, (users, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq)
+
+    def bookmarksInfos() = {
+      future { db.readOnly { implicit s => bookmarkRepo.page(page, PAGE_SIZE) } } flatMap { bookmarks =>
+        for {
+          users <- future { db.readOnly { implicit s => bookmarks map (_.userId) map userRepo.get map socialRepo.toUserWithSocial } }
+          uris <- future { db.readOnly { implicit s => bookmarks map (_.uriId) map uriRepo.get map (bookmarkRepo.uriStats) } }
+          scrapes <- future { db.readOnly { implicit s => bookmarks map (_.uriId) map scrapeRepo.getByUri } }
+        } yield (users, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
+      }
     }
+
+    val (count, bookmarksAndUsers) = Await.result( for {
+        bookmarksAndUsers <- bookmarksInfos()
+        count <- future { db.readOnly { implicit s => bookmarkRepo.count(s) } }
+      } yield (count, bookmarksAndUsers), 1 minutes)
+
     val pageCount: Int = count / PAGE_SIZE + 1
     Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount))
   }

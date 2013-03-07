@@ -12,7 +12,6 @@ import org.joda.time.DateTime
 import play.api._
 import play.api.libs.json._
 import com.keepit.common.cache._
-import akka.util.Duration
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.serializer.UserSerializer
 import com.keepit.common.logging.Logging

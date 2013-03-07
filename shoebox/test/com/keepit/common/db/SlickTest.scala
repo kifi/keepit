@@ -78,6 +78,72 @@ class SlickTest extends Specification {
       }
     }
 
+    "rollback transaction" in {
+
+      running(new ShoeboxApplication()) {
+        val db = inject[Database]
+        import db.db.Driver.Implicit._ // here's the driver, abstracted away
+        import db.db.Driver.Table
+
+        val T = new Table[Int]("t") {
+          def a = column[Int]("a")
+          def * = a
+        }
+
+        db.readWrite{ implicit session =>
+          T.ddl.create
+        }
+
+        val q = Query(T)
+
+        db.readWrite{ implicit session =>
+          T.insert(42)
+          q.firstOption === Some(42)
+          session.rollback()
+        }
+
+        db.readOnly{ implicit session =>
+          q.firstOption === None
+        }
+
+        db.readWrite{ implicit session =>
+          T.insert(1)
+        }
+
+        db.readWrite{ implicit session =>
+          Query(T).delete
+          q.firstOption === None
+          session.rollback()
+        }
+
+        db.readOnly{ implicit session =>
+          q.firstOption === Some(1)
+        }
+
+        try {
+          db.readWrite{ implicit session =>
+            Query(T).delete
+            q.firstOption === None
+            throw new Exception
+          }
+        } catch {
+          case _: Throwable => //ignore
+        }
+
+        db.readOnly{ implicit session =>
+          q.firstOption === Some(1)
+        }
+
+        db.readWrite{ implicit session =>
+          Query(T).delete
+        }
+
+        db.readOnly{ implicit session =>
+          q.firstOption === None
+        }
+      }
+    }
+
     "using external id" in {
       running(new ShoeboxApplication()) {
 
