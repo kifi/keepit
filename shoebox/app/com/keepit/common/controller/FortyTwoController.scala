@@ -178,7 +178,6 @@ trait AdminController extends AuthenticatedController {
 }
 
 trait BrowserExtensionController extends AuthenticatedController {
-
   def AuthenticatedJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
     AuthenticatedAction(true, action)(request) match {
       case r: PlainResult => r.as(ContentTypes.JSON)
@@ -187,7 +186,9 @@ trait BrowserExtensionController extends AuthenticatedController {
   }
 }
 
-trait FortyTwoController extends BrowserExtensionController with AdminController {
+trait WebsiteExtensionController extends AuthenticatedController {
   def AuthenticatedHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
     AuthenticatedAction(false, action)
 }
+
+trait FortyTwoController extends BrowserExtensionController with AdminController with WebsiteExtensionController
