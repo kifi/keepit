@@ -1,7 +1,9 @@
 // @require styles/slider.css
+// @require styles/friend_card.css
 // @require styles/comments.css
 // @require scripts/lib/jquery-1.8.2.min.js
 // @require scripts/lib/jquery-ui-1.9.1.custom.min.js
+// @require scripts/lib/jquery-showhover.js
 // @require scripts/lib/jquery-tokeninput-1.6.1.min.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/keymaster.min.js
@@ -196,11 +198,15 @@ slider = function() {
         $btn.text("Make it " + (priv ? "Public" : "Private"));
       });
     })
-    .on("mouseover", ".kifi-keeper", function() {
-      onMouseoverKeeper(this, o.friends);
-    })
-    .on("mouseout", ".kifi-keeper", function() {
-      onMouseoutKeeper(this);
+    .on("mouseenter", ".kifi-keeper", function() {
+      var $a = $(this), friend = o.friends[$a.index(".kifi-keeper")];
+      render("html/social_hover.html", {
+        name: friend.firstName + " " + friend.lastName,
+        facebookId: friend.facebookId,
+        iconsUrl: api.url("images/social_icons.png")
+      }, function(html) {
+        $a.showHover(function() {return html}).showHover("enter");
+      });
     })
     .on("click", ".kifi-button-dropdown", function() {
       $(".kifi-keep-options").slideToggle(150);
@@ -266,40 +272,6 @@ slider = function() {
         .off("mouseleave", t.start);
       t.dead = true;
     }};
-
-  function onMouseoverKeeper(img, friends) {
-    var $img = $(img), data = $img.data();
-
-    clearTimeout(data.tHide);
-    data.tShow = setTimeout(function() {
-      if (data.$card) {
-        data.$card.stop().fadeIn(100);
-      } else {
-        render("html/social_hover.html", {friend: friends[$img.index(".kifi-keeper")]}, function(html) {
-          if (!data.$card) {
-            data.$card = $("<div class=kifi-keeper-hovercard>").html(html)
-            .find(".kifi-network").css("background-image", "url(" + api.url("images/social_icons.png") + ")").end()
-            .appendTo($img.parent()).fadeIn(100)
-            .on("mouseenter", function() {
-              clearTimeout(data.tHide);
-            })
-            .on("mouseleave", onMouseoutKeeper.bind(null, img));
-          }
-        });
-      }
-    }, 500);
-  }
-
-  function onMouseoutKeeper(img) {
-    var data = $(img).data();
-
-    clearTimeout(data.tShow);
-    data.tHide = setTimeout(function() {
-      if (data.$card) {
-        data.$card.stop().fadeOut(100);
-      }
-    }, 600);
-  }
 
   function slideOutKept() {
     var $s = $(".kifi-slider");
