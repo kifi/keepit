@@ -305,8 +305,12 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
 }
 .kifi-face.kifi-friend .kifi-kcard {
   bottom: 36px;
-  left: -140px;
+  left: -22px;
   z-index: 999;
+}
+.kifi-face.kifi-friend .kifi-kcard::before,
+.kifi-face.kifi-friend .kifi-kcard::after {
+  left: 33px;
 }
 .kifi-globe {
   margin-left: 6px;

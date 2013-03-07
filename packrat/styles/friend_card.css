@@ -18,16 +18,15 @@
   top: 100%;
   height: 0;
   width: 0;
+  left: 50%;
   border: solid transparent;
 }
 .kifi-kcard::before {
-  left: 50%;
   margin-left: -9px;
   border-width: 9px;
   border-top-color: inherit;
 }
 .kifi-kcard::after {
-  left: 50%;
   margin-left: -8px;
   border-width: 8px;
   border-top-color: #f2f2f2;
