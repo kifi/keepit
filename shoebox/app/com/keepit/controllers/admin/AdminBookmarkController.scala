@@ -111,22 +111,21 @@ class AdminBookmarksController @Inject() (db: Database, scraper: ScraperPlugin, 
   def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 50
 
-    def bookmarksInfos()(implicit s: ROSession) = {
-      future { bookmarkRepo.page(page, PAGE_SIZE) } flatMap { bookmarks =>
+    def bookmarksInfos() = {
+      future { db.readOnly { implicit s => bookmarkRepo.page(page, PAGE_SIZE) } } flatMap { bookmarks =>
         for {
-          users <- future { bookmarks map (_.userId) map userRepo.get map socialRepo.toUserWithSocial }
-          uris <- future { bookmarks map (_.uriId) map uriRepo.get map (bookmarkRepo.uriStats) }
-          scrapes <- future { bookmarks map (_.uriId) map scrapeRepo.getByUri }
+          users <- future { db.readOnly { implicit s => bookmarks map (_.userId) map userRepo.get map socialRepo.toUserWithSocial } }
+          uris <- future { db.readOnly { implicit s => bookmarks map (_.uriId) map uriRepo.get map (bookmarkRepo.uriStats) } }
+          scrapes <- future { db.readOnly { implicit s => bookmarks map (_.uriId) map scrapeRepo.getByUri } }
         } yield (users, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
       }
     }
 
-    val (count, bookmarksAndUsers) = db.readOnly { implicit s =>
-      Await.result( for {
+    val (count, bookmarksAndUsers) = Await.result( for {
         bookmarksAndUsers <- bookmarksInfos()
-        count <- future { bookmarkRepo.count(s) }
+        count <- future { db.readOnly { implicit s => bookmarkRepo.count(s) } }
       } yield (count, bookmarksAndUsers), 1 minutes)
-    }
+
     val pageCount: Int = count / PAGE_SIZE + 1
     Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount))
   }
