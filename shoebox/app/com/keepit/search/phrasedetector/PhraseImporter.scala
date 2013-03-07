@@ -11,7 +11,6 @@ import akka.actor.Status.Failure
 import akka.actor.{ActorSystem, Props, Actor}
 import akka.dispatch.Future
 import akka.pattern.ask
-import akka.util.duration._
 import play.api.libs.json.{JsArray, JsNumber, JsString, JsObject}
 
 import com.google.inject.{Provider, ImplementedBy, Inject}
