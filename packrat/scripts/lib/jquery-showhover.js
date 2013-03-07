@@ -52,8 +52,6 @@ home-grown at FortyTwo, not intended for distribution (yet)
             clearTimeout(t);
             $a.toggleClass("kifi-hover-showing");
           }
-        }).on("mousedown.showHover", function(e) {
-          e.preventDefault();  // prevents selection via drag or double-click
         });
       }
     },

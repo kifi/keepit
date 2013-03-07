@@ -296,6 +296,18 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
 .kifi-face.kifi-self.kifi-only {
   border-radius: 20px;
 }
+.kifi-face.kifi-friend {
+  display: inline-block;
+  background-size: 21px;
+  background-position: 1px 1px;
+  background-repeat: no-repeat;
+  position: relative;
+}
+.kifi-face.kifi-friend .kifi-kcard {
+  bottom: 36px;
+  left: -140px;
+  z-index: 999;
+}
 .kifi-globe {
   margin-left: 6px;
   width: 21px;
