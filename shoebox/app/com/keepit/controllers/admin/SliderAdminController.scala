@@ -7,7 +7,7 @@ import org.joda.time._
 
 import com.keepit.classify._
 import com.keepit.common.analytics.{MongoEventStore, EventFamilies, MongoSelector}
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
@@ -21,7 +21,7 @@ import play.api.libs.json.{JsBoolean, JsArray, JsObject, Json}
 import play.api.mvc.Action
 import views.html
 
-object SliderAdminController extends FortyTwoController {
+object SliderAdminController extends AdminController {
 
   def getRules = AdminHtmlAction { implicit request =>
     val groupName = "default"

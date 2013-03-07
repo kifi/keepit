@@ -15,11 +15,11 @@ import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import org.apache.lucene.document.Document
 import views.html
 
-object ArticleIndexerController extends FortyTwoController {
+object ArticleIndexerController extends AdminController {
 
   def index = AdminHtmlAction { implicit request =>
     val indexer = inject[ArticleIndexerPlugin]

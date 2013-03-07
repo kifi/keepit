@@ -19,11 +19,11 @@ import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphImpl
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.model.User
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import org.apache.lucene.document.Document
 import views.html
 
-object URIGraphController extends FortyTwoController {
+object URIGraphController extends AdminController {
 
   def load = AdminHtmlAction { implicit request =>
     val uriGraphPlugin = inject[URIGraphPlugin]
