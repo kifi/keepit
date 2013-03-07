@@ -14,11 +14,10 @@ trait DataBaseComponent {
   def dbInfo: DbInfo
   lazy val handle: SlickDatabase = dbInfo.database
 
-  def sequenceID: Column[Int]
   def entityName(name: String): String = name
 }
 
-class Database @Inject() (db: DataBaseComponent) {
+class Database @Inject() (val db: DataBaseComponent) {
   import DBSession._
 
   def readOnly[T](f: ROSession => T): T = {
@@ -28,7 +27,11 @@ class Database @Inject() (db: DataBaseComponent) {
 
   def readWrite[T](f: RWSession => T): T = {
     val s = db.handle.createSession.forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
-    try { f(new RWSession(s)) } finally s.close()
+    try {
+      s.withTransaction {
+        f(new RWSession(s))
+      }
+    } finally s.close()
   }
 }
 
