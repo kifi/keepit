@@ -13,7 +13,6 @@ class H2(val dbInfo: DbInfo)
   println("initiating H2 driver")
   val Driver = H2Driver
 
-  lazy val sequenceID = SimpleFunction.nullary[Int]("SCOPE_IDENTITY")
   override def entityName(name: String): String = name.toUpperCase()
 }
 
