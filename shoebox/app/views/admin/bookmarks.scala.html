@@ -1,4 +1,4 @@
-@(bookmarksAndUsers: Seq[((User, SocialUserInfo), (Bookmark, NormalizedURIStats, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)
+@(bookmarksAndUsers: Seq[((User, SocialUserInfo), (Bookmark, NormalizedURI, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -55,12 +55,11 @@
       <th>User</th>
       <th>Title</th>
       <th>Source</th>
-      <th>Shares</th>
       <th>Creation</th>
       <th>State</th>
       <th>Last Scrape</th>
     </tr>
-  @for((((user, socialUserInfo), (bookmark, uriStat, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
+  @for((((user, socialUserInfo), (bookmark, uri, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
       <td>@adminHelper.userDisplay(user, socialUserInfo)</td>
@@ -78,9 +77,8 @@
           }
         }}
       </td>
-      <td>@uriStat.bookmarks.size</td>
       <td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
-      <td>@adminHelper.uriStateDisplay(uriStat.uri)</td>
+      <td>@adminHelper.uriStateDisplay(uri)</td>
       <td>@scrapeInfo.map(si => adminHelper.dateTimeDisplay(si.lastScrape)).mkString</td>
     </tr>
   }
