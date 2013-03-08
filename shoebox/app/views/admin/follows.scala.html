@@ -9,10 +9,10 @@
       <th>Title</th>
       <th>Creation</th>
     </tr>
-  @for(((user, follow, article), i) <- uriAndUsers.zipWithIndex) {
+  @for(((userWithSocial, follow, article), i) <- uriAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
-      <td>@adminHelper.userDisplay(user)</td>
+      <td>@adminHelper.userDisplay(userWithSocial.user, userWithSocial.socialUserInfo)</td>
       <td>@adminHelper.articleDisplay(article)</td>
       <td>@adminHelper.dateTimeDisplay(follow.createdAt)</td>
     </tr>

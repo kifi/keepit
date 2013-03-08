@@ -89,7 +89,7 @@
 	      <div class="scrollArea">
 	        <ol>
 	        @for(userWithSocial <- fortyTwoConnections) {
-	          <li>@adminHelper.userDisplay(userWithSocial)</li>
+	          <li>@adminHelper.userDisplay(userWithSocial.user, userWithSocial.socialUserInfo)</li>
 	        }
 	        </ol>
 	      </div>
