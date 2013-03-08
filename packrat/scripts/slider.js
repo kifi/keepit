@@ -21,8 +21,6 @@ slider = function() {
     }
   });
 
-  $('<input id="editableFix" style="opacity:0;color:transparent;width:1px;height:1px;border:none;margin:0;padding:0;" tabIndex="-1">').appendTo('html')
-
   $.extend(jQuery.easing, {
     easeQuickSnapBounce: function(x,t,b,c,d,s) {
       if (s == null) s = 1.3;
@@ -794,7 +792,6 @@ slider = function() {
     }
 
     // Main comment textarea
-    var editableFix = $('#editableFix');
 
     var typeName = type == "public" ? "comment" : "message";
     var placeholder = "<span class=kifi-placeholder>Add a " + typeName + "…</span>";
@@ -804,9 +801,6 @@ slider = function() {
         .find(".kifi-placeholder").remove().end()
         .animate({'height': 85}, 150, 'easeQuickSnapBounce');
     }).on("blur", ".kifi-comment-compose", function() {
-      editableFix[0].setSelectionRange(0, 0);
-      editableFix.blur();
-
       var value = $(this).html();
       value = commentSerializer(value);
       if (!value) { // unchanged text!

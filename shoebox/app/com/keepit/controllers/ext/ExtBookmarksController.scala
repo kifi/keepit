@@ -81,7 +81,6 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
     }.getOrElse(false)
 
     Ok(JsObject(Seq(
-      "user_has_bookmark" -> JsBoolean(bookmark.isDefined), // TODO: remove this key after all installations >= 2.1.49
       "kept" -> JsBoolean(bookmark.isDefined),
       "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
       "sensitive" -> JsBoolean(sensitive.getOrElse(false))) ++
