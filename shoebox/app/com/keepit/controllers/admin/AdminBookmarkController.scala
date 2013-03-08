@@ -138,7 +138,7 @@ class AdminBookmarksController @Inject() (db: Database,
             }
           }}}
           uris <- future { time("load uriStatus") { db.readOnly { implicit s =>
-            bookmarks map (_.uriId) map uriRepo.get map (bookmarkRepo.uriStats)
+            bookmarks map (_.uriId) map uriRepo.get
           }}}
           scrapes <- future { time("load scrape info") { db.readOnly { implicit s =>
             bookmarks map (_.uriId) map scrapeRepo.getByUri
