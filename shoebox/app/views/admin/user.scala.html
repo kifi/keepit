@@ -1,8 +1,8 @@
-@(userWithSocial: UserWithSocial, 
+@(userWithSocial: UserWithSocial,
   totalBookmarks: Int,
-  bookmarks: Seq[(Bookmark, NormalizedURI)], 
-  socialConnections: Seq[SocialUserInfo], 
-  fortyTwoConnections: Seq[UserWithSocial], 
+  bookmarks: Seq[(Bookmark, NormalizedURI)],
+  socialConnections: Seq[SocialUserInfo],
+  fortyTwoConnections: Seq[UserWithSocial],
   kifiInstallations: Seq[KifiInstallation],
   historyUpdateCount: Int,
   bookmarkSearch: Option[String])
@@ -84,14 +84,14 @@
 	      <div class="scrollArea">
 	        <ol>
 	        @for(userWithSocial <- fortyTwoConnections) {
-	          <li>@adminHelper.userDisplay(userWithSocial)</li>
+	          <li>@adminHelper.userDisplay(userWithSocial.user, userWithSocial.socialUserInfo)</li>
 	        }
 	        </ol>
 	      </div>
 	    </li>
 	  </ul>
 	</div>
-  
+
   <h2>User kept @totalBookmarks Bookmarks</h2>
   <h3>Showing @bookmarks.size Bookmarks of total @totalBookmarks</h3>
   <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminUserController.userView(userWithSocial.user.id.get)" method="POST">
