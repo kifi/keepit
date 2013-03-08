@@ -70,7 +70,6 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
-  def uriStats(uri: NormalizedURI)(implicit sesion: RSession): NormalizedURIStats
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit
 }
 
@@ -145,9 +144,6 @@ class BookmarkRepoImpl @Inject() (
 
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.urlId === urlId) yield b).list
-
-  def uriStats(uri: NormalizedURI)(implicit sesion: RSession): NormalizedURIStats =
-    NormalizedURIStats(uri, getByUri(uri.id.get))
 
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit = (for(b <- table if b.id === id) yield b).delete
 }
