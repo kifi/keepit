@@ -27,15 +27,15 @@ class UserExperimentTest extends Specification {
            userRepo.save(User(firstName = "Santa", lastName = "Claus")))
         }
 
-        inject[Database].readWrite{ implicit session =>
+        inject[Database].readWrite { implicit session =>
           expRepo.save(UserExperiment(userId = shanee.id.get, experimentType = ExperimentTypes.ADMIN))
         }
 
-        inject[Database].readOnly{ implicit session =>
-          expRepo.getExperiment(shanee.id.get, ExperimentTypes.ADMIN).isDefined === true
-          expRepo.getExperiment(shanee.id.get, ExperimentTypes.FAKE).isDefined === false
-          expRepo.getExperiment(santa.id.get, ExperimentTypes.ADMIN).isDefined === false
-          expRepo.getExperiment(santa.id.get, ExperimentTypes.FAKE).isDefined === false
+        inject[Database].readOnly { implicit session =>
+          expRepo.get(shanee.id.get, ExperimentTypes.ADMIN) must beSome
+          expRepo.get(shanee.id.get, ExperimentTypes.FAKE) must beNone
+          expRepo.get(santa.id.get, ExperimentTypes.ADMIN) must beNone
+          expRepo.get(santa.id.get, ExperimentTypes.FAKE) must beNone
         }
       }
     }
