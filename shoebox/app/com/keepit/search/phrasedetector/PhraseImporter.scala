@@ -17,7 +17,6 @@ import com.google.inject.{Provider, ImplementedBy, Inject}
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import play.api.Play.current
 
