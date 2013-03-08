@@ -27,7 +27,7 @@ import scala.concurrent.duration._
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 
-import
+import scala.collection.mutable.{HashMap => MutableMap, SynchronizedMap}
 
 import com.keepit.common.analytics.ActivityStream
 
@@ -121,21 +121,28 @@ class AdminBookmarksController @Inject() (db: Database,
   def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 50
 
+    val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
+    val socialUserInfoMap = new MutableMap[Id[User], SocialUserInfo] with SynchronizedMap[Id[User], SocialUserInfo]
+
     def bookmarksInfos() = {
       future { time(s"load $PAGE_SIZE bookmarks") { db.readOnly { implicit s => bookmarkRepo.page(page, PAGE_SIZE) } } } flatMap { bookmarks =>
         for {
           users <- future { time("load user") { db.readOnly { implicit s =>
-            bookmarks map (_.userId) map userRepo.get
-          } } }
+            bookmarks map (_.userId) map { id =>
+              userMap.getOrElseUpdate(id, userRepo.get(id))
+            }
+          }}}
           socialUserInfo <- future { time("load socialUserInfo") { db.readOnly { implicit s =>
-            bookmarks map (_.userId) map {id => socialUserInfoRepo.getByUser(id).head}
-          } } }
+            bookmarks map (_.userId) map { id =>
+              socialUserInfoMap.getOrElseUpdate(id, socialUserInfoRepo.getByUser(id).head)
+            }
+          }}}
           uris <- future { time("load uriStatus") { db.readOnly { implicit s =>
             bookmarks map (_.uriId) map uriRepo.get map (bookmarkRepo.uriStats)
-          } } }
+          }}}
           scrapes <- future { time("load scrape info") { db.readOnly { implicit s =>
             bookmarks map (_.uriId) map scrapeRepo.getByUri
-          } } }
+          }}}
         } yield ((users, socialUserInfo).zipped.toList.seq,
                  (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
       }
