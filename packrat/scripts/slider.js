@@ -797,16 +797,13 @@ slider = function() {
     var placeholder = "<span class=kifi-placeholder>Add a " + typeName + "…</span>";
     $cpv.find(".kifi-comment-compose").html(placeholder);
     $cpv.on("focus", ".kifi-comment-compose", function() {
-      $(this)
-        .find(".kifi-placeholder").remove().end()
-        .animate({'height': 85}, 150, 'easeQuickSnapBounce');
+      $(this).find(".kifi-placeholder").remove();
     }).on("blur", ".kifi-comment-compose", function() {
       var value = $(this).html();
       value = commentSerializer(value);
       if (!value) { // unchanged text!
         $(this).html(placeholder);
       }
-      $(this).animate({'height': 35}, 150, 'easeQuickSnapBounce');
     }).on("click", ".kifi-take-snapshot", function() {
       // make absolute positioning relative to document instead of viewport
       document.documentElement.style.position = "relative";
