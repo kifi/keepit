@@ -4,6 +4,7 @@ import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
 import com.keepit.common.async._
+import com.keepit.common.performance._
 import com.keepit.common.controller.AdminController
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
@@ -112,18 +113,18 @@ class AdminBookmarksController @Inject() (db: Database, scraper: ScraperPlugin, 
     val PAGE_SIZE = 50
 
     def bookmarksInfos() = {
-      future { db.readOnly { implicit s => bookmarkRepo.page(page, PAGE_SIZE) } } flatMap { bookmarks =>
+      future { time(s"load $PAGE_SIZE bookmarks") { db.readOnly { implicit s => bookmarkRepo.page(page, PAGE_SIZE) } } } flatMap { bookmarks =>
         for {
-          users <- future { db.readOnly { implicit s => bookmarks map (_.userId) map userRepo.get map socialRepo.toUserWithSocial } }
-          uris <- future { db.readOnly { implicit s => bookmarks map (_.uriId) map uriRepo.get map (bookmarkRepo.uriStats) } }
-          scrapes <- future { db.readOnly { implicit s => bookmarks map (_.uriId) map scrapeRepo.getByUri } }
+          users <- future { time("load userWithSocial") { db.readOnly { implicit s => bookmarks map (_.userId) map userRepo.get map socialRepo.toUserWithSocial } } }
+          uris <- future { time("load uriStatus") { db.readOnly { implicit s => bookmarks map (_.uriId) map uriRepo.get map (bookmarkRepo.uriStats) } } }
+          scrapes <- future { time("load scrape info") { db.readOnly { implicit s => bookmarks map (_.uriId) map scrapeRepo.getByUri } } }
         } yield (users, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
       }
     }
 
     val (count, bookmarksAndUsers) = Await.result( for {
-        bookmarksAndUsers <- bookmarksInfos()
-        count <- future { db.readOnly { implicit s => bookmarkRepo.count(s) } }
+        bookmarksAndUsers <- time("load full bookmarksInfos") { bookmarksInfos() }
+        count <- future { time("count bookmarks") { db.readOnly { implicit s => bookmarkRepo.count(s) } } }
       } yield (count, bookmarksAndUsers), 1 minutes)
 
     val pageCount: Int = count / PAGE_SIZE + 1
