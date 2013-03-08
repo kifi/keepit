@@ -296,6 +296,22 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
 .kifi-face.kifi-self.kifi-only {
   border-radius: 20px;
 }
+.kifi-face.kifi-friend {
+  display: inline-block;
+  background-size: 21px;
+  background-position: 1px 1px;
+  background-repeat: no-repeat;
+  position: relative;
+}
+.kifi-face.kifi-friend .kifi-kcard {
+  bottom: 36px;
+  left: -22px;
+  z-index: 999;
+}
+.kifi-face.kifi-friend .kifi-kcard::before,
+.kifi-face.kifi-friend .kifi-kcard::after {
+  left: 33px;
+}
 .kifi-globe {
   margin-left: 6px;
   width: 21px;
@@ -316,8 +332,8 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
   color: #999;
 }
 a.kifi-res-friends {
-  color: #3277e7 !important;
-  text-decoration: none;
+  color: inherit !important;
+  text-decoration: none !important; /* FF */
   position: relative;
 }
 .kifi-res-friends-hover {

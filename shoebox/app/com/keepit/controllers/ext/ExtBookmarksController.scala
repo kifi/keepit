@@ -35,8 +35,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
   classifier: DomainClassifier, historyTracker: SliderHistoryTracker, uriGraph: URIGraph)
     extends BrowserExtensionController {
 
-  // TODO: require ver parameter after all installations >= 2.1.51
-  def checkIfExists(uri: String, ver: Option[String]) = AuthenticatedJsonAction { request =>
+  def checkIfExists(uri: String, ver: String) = AuthenticatedJsonAction { request =>
     val userId = request.userId
     // TODO: Optimize by not checking sensitivity and keptByAnyFriends if kept by user.
     val (uriId, bookmark, sensitive, neverOnSite, friendIds, ruleGroup, patterns, locator, shown) = db.readOnly { implicit s =>
@@ -55,10 +54,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
         bookmarkRepo.getByUriAndUser(uriId, userId)
       }
       val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
-      val ruleGroup: Option[SliderRuleGroup] = ver.flatMap { v =>
-        val group = sliderRuleRepo.getGroup("default")
-        if (v == group.version) None else Some(group)
-      }
+      val ruleGroup: Option[SliderRuleGroup] = Option(sliderRuleRepo.getGroup("default")).filter(_.version != ver)
       val patterns: Option[Seq[String]] = ruleGroup.map(_ => urlPatternRepo.getActivePatterns)
 
       val locator: Option[DeepLocator] = uriId.flatMap { uriId =>
@@ -167,5 +163,12 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
         })
         BadRequest(msg)
     }
+  }
+
+  def getNumMutualKeeps(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    val n: Int = db.readOnly { implicit s =>
+      bookmarkRepo.getNumMutual(request.userId, userRepo.get(id).id.get)
+    }
+    Ok(Json.obj("n" -> n))
   }
 }

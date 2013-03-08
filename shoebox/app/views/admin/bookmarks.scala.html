@@ -1,5 +1,4 @@
-@(bookmarksAndUsers: Seq[(UserWithSocial, (Bookmark, NormalizedURIStats, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)
-@import com.keepit.common.social.UserWithSocial
+@(bookmarksAndUsers: Seq[((User, SocialUserInfo), (Bookmark, NormalizedURI, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -13,7 +12,12 @@
         Prev
         </a>
       </li>
-      @for(i <- (0.max(page - 10) to (pageCount - 1).min(page + 10))) {
+      @if(page - 20 > 0) {
+        <li class="disabled">
+          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0)">...</a>
+        </li>
+      }
+      @for(i <- (0.max(page - 20) to (pageCount - 1).min(page + 20))) {
         @if(i == page) {
 	        <li class="disabled">
 	          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(i)">@{i + 1}</a>
@@ -23,6 +27,11 @@
 	          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(i)">@{i + 1}</a>
 	        </li>
 	      }
+      }
+      @if(page + 20 < pageCount - 1) {
+        <li class="disabled">
+          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(pageCount - 1)">...</a>
+        </li>
       }
       <li>
         @if(bookmarksAndUsers.size > 0) {
@@ -46,15 +55,14 @@
       <th>User</th>
       <th>Title</th>
       <th>Source</th>
-      <th>Shares</th>
       <th>Creation</th>
       <th>State</th>
       <th>Last Scrape</th>
     </tr>
-  @for(((user, (bookmark, uriStat, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
+  @for((((user, socialUserInfo), (bookmark, uri, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
-      <td>@adminHelper.userDisplay(user)</td>
+      <td>@adminHelper.userDisplay(user, socialUserInfo)</td>
       <td>@adminHelper.bookmarkDisplay(bookmark)</td>
       <td>
         @{bookmark.source.value match {
@@ -69,9 +77,8 @@
           }
         }}
       </td>
-      <td>@uriStat.bookmarks.size</td>
       <td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
-      <td>@adminHelper.uriStateDisplay(uriStat.uri)</td>
+      <td>@adminHelper.uriStateDisplay(uri)</td>
       <td>@scrapeInfo.map(si => adminHelper.dateTimeDisplay(si.lastScrape)).mkString</td>
     </tr>
   }

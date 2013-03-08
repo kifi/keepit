@@ -16,11 +16,13 @@ import play.api.test.Helpers.running
 
 import scala.concurrent.duration._
 import java.util.concurrent.TimeUnit
+import org.specs2.execute.SkipException
 
 class DomainClassifierTest extends Specification with DbRepos {
   val system = ActorSystem("system")
   "The domain classifier" should {
     "use imported classifications and not fetch for known domains" in {
+      throw new SkipException(skipped)
       running(new EmptyApplication()) {
         //val client = new HttpClientImpl()
         val client = new FakeHttpClient(Some(Map.empty))
@@ -52,6 +54,7 @@ class DomainClassifierTest extends Specification with DbRepos {
       }
     }
     "fetch if necessary" in {
+      throw new SkipException(skipped)
       running(new EmptyApplication()) {
         val client = new FakeHttpClient(Some({
           case s if s.contains("yahoo.com") => "FR~Search engines"

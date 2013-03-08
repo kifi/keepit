@@ -92,6 +92,11 @@ api.port.on({
     ajax("GET", "http://" + getConfigs().server + "/search/chatter", {ids: data.ids.join(".")}, respond);
     return true;
   },
+  get_num_mutual_keeps: function(data, respond) {
+    api.log("[get_num_mutual_keeps]", data.id);
+    ajax("GET", "http://" + getConfigs().server + "/bookmarks/mutual/" + data.id, respond);
+    return true;
+  },
   add_bookmarks: function(data, respond) {
     getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
       addKeep(info, data, respond);

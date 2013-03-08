@@ -18,7 +18,7 @@ import com.keepit.common.mail._
 import scala.concurrent.Await
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
-import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
+import play.api.libs.json.{Json, JsArray, JsBoolean, JsNumber, JsObject, JsString}
 import scala.concurrent.duration._
 import views.html
 
@@ -135,15 +135,25 @@ class AdminUserController @Inject() (db: Database,
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
   }
 
-  def addExperiment(userId: Id[User], experimentType: String) = AdminJsonAction { request =>
-    val experiments = db.readWrite{ implicit session =>
-      val existing = userExperimentRepo.getByUser(userId)
-      val experiment = ExperimentTypes(experimentType)
-      if (existing contains(experimentType)) throw new Exception("user %s already has an experiment %s".format(experimentType))
-      userExperimentRepo.save(UserExperiment(userId = userId, experimentType = experiment))
-      userExperimentRepo.getByUser(userId)
+  def addExperiment(userId: Id[User], experiment: String) = AdminJsonAction { request =>
+    val expType = ExperimentTypes(experiment)
+    db.readWrite { implicit session =>
+      userExperimentRepo.get(userId, expType, excludeState = None) match {
+        case Some(ue) if ue.isActive => ue
+        case Some(ue) => userExperimentRepo.save(ue.withState(UserExperimentStates.ACTIVE))
+        case None => userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType))
+      }
     }
-    Ok(JsArray(experiments map {e => JsString(e.experimentType.value) }))
+    Ok(Json.obj(experiment -> true))
+  }
+
+  def removeExperiment(userId: Id[User], experiment: String) = AdminJsonAction { request =>
+    db.readWrite { implicit session =>
+      userExperimentRepo.get(userId, ExperimentTypes(experiment)).foreach { ue =>
+        userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
+      }
+    }
+    Ok(Json.obj(experiment -> false))
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction { implicit request =>

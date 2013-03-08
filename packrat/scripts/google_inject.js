@@ -1,5 +1,6 @@
 // @match /^https?:\/\/www\.google\.(com|com\.(a[fgiru]|b[dhnorz]|c[ouy]|do|e[cgt]|fj|g[hit]|hk|jm|k[hw]|l[by]|m[txy]|n[afgip]|om|p[aehkry]|qa|s[abglv]|t[jrw]|u[ay]|v[cn])|co\.(ao|bw|c[kr]|i[dln]|jp|k[er]|ls|m[az]|nz|t[hz]|u[gkz]|v[ei]|z[amw])|a[demstz]|b[aefgijsy]|cat|c[adfghilmnvz]|d[ejkmz]|e[es]|f[imr]|g[aeglmpry]|h[nrtu]|i[emqst]|j[eo]|k[giz]|l[aiktuv]|m[degklnsuvw]|n[eloru]|p[lnstosuw]|s[cehikmnot]|t[dgklmnot]|v[gu]|ws)\/(|search|webhp)([?#].*)?$/
 // @require styles/google_inject.css
+// @require styles/friend_card.css
 // @require scripts/lib/jquery-1.8.2.min.js
 // @require scripts/lib/jquery-showhover.js
 // @require scripts/lib/mustache-0.7.1.min.js
@@ -334,11 +335,26 @@ api.log("[google_inject]");
       $res.find(".kifi-res-filter[data-filter=a]").click();
     }).on("click", ".kifi-res-debug", function(e) {
       e.stopPropagation();
-      location = "https://" + response.server + "/admin/search/results/" + response.uuid;
+      location.href = "https://" + response.server + "/admin/search/results/" + response.uuid;
+    }).on("mouseenter", ".kifi-face.kifi-friend", function() {
+      var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
+      var friend = response.hits[i].users[j];
+      render("html/friend_card.html", {
+        name: friend.firstName + " " + friend.lastName,
+        facebookId: friend.facebookId,
+        iconsUrl: api.url("images/social_icons.png")
+      }, function(html) {
+        $a.showHover(function() {
+          api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+            $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
+          });
+          return html;
+        }).showHover("enter");
+      });
     }).on("mouseenter", ".kifi-res-friends", function() {
-      var $fr = $(this), i = $fr.closest("li.g").index("li.g");
+      var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;
       render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
-        $fr.showHover(function() {
+        $a.showHover(function() {
           // measuring in order to center hover box above link
           var $h = $(html)
             .css({visibility: "hidden", display: "block"})

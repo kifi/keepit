@@ -11,14 +11,12 @@ import akka.actor.Status.Failure
 import akka.actor.{ActorSystem, Props, Actor}
 import akka.dispatch.Future
 import akka.pattern.ask
-import akka.util.duration._
 import play.api.libs.json.{JsArray, JsNumber, JsString, JsObject}
 
 import com.google.inject.{Provider, ImplementedBy, Inject}
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import play.api.Play.current
 

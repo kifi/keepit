@@ -69,7 +69,7 @@ private[classify] class DomainClassificationActor(db: Database, client: HttpClie
           domainToTagRepo.insertAll((tagIds -- existingTagRelationships.map(_.tagId)).map { tagId =>
             DomainToTag(domainId = domain.id.get, tagId = tagId)
           }.toSeq)
-          updater.updateSensitivity(domain)
+          updater.calculateSensitivity(domain).getOrElse(false)
         }
       }
       sender ! Await.result[Boolean](future, 100 seconds)
@@ -91,11 +91,11 @@ class DomainClassifierImpl @Inject()(system: ActorSystem, db: Database, client: 
 
   def isSensitive(domainName: String): Either[Future[Boolean], Boolean] = {
     val domainOpt = db.readOnly { implicit s => domainRepo.get(domainName) }
-    domainOpt match {
-      case Some(domain) =>
-        Right(domain.sensitive.getOrElse(db.readWrite { implicit s => updater.updateSensitivity(domain) }))
-      case None =>
-        Left(actor.ask(FetchDomainInfo(domainName))(1 minute).mapTo[Boolean])
+    domainOpt.flatMap { domain =>
+      domain.sensitive.orElse(db.readWrite { implicit s => updater.calculateSensitivity(domain) })
+    } match {
+      case Some(sensitive) => Right(sensitive)
+      case None => Left(actor.ask(FetchDomainInfo(domainName))(1 minute).mapTo[Boolean])
     }
   }
 }
