@@ -55,7 +55,7 @@ class DomainTagImporterTest extends Specification {
 
         db.readWrite { implicit s =>
           Seq("apple.com", "amazon.com", "google.com", "methvin.net", "42go.com", "wikipedia.org")
-            .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].updateSensitivity)
+            .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
         }
 
         db.readOnly { implicit s =>
@@ -101,7 +101,7 @@ class DomainTagImporterTest extends Specification {
 
         db.readWrite { implicit s =>
           Seq("apple.com", "amazon.com", "google.com", "methvin.net", "42go.com")
-              .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].updateSensitivity)
+              .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
         }
 
         db.readOnly { implicit s =>
@@ -134,7 +134,7 @@ class DomainTagImporterTest extends Specification {
         Await.result(future1, timeout)
         val future2 = db.readWrite { implicit s =>
           Seq("cnn.com", "yahoo.com", "google.com")
-            .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].updateSensitivity)
+            .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
 
           domainRepo.get("cnn.com").get.sensitive === Some(false)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(Some(true)))
@@ -146,7 +146,7 @@ class DomainTagImporterTest extends Specification {
         Await.result(future2, timeout)
         db.readWrite { implicit s =>
           Seq("apple.com", "microsoft.com", "cnn.com")
-              .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].updateSensitivity)
+              .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
 
           domainRepo.get("cnn.com").get.sensitive === Some(true)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(None))
