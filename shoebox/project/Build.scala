@@ -13,9 +13,9 @@ object ApplicationBuild extends Build {
 
   override def settings = super.settings ++ Seq(
       EclipseKeys.skipParents in ThisBuild := false)
-      
+
     val appName         = "shoebox"
-      
+
     val BUILD_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyyMMdd-HHmm")
                                                  .withLocale(Locale.ENGLISH)
                                                  .withZone(DateTimeZone.forID("America/Los_Angeles"))
@@ -76,7 +76,7 @@ object ApplicationBuild extends Build {
         "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
         "releases"  at "https://oss.sonatype.org/content/groups/scala-tools"
       ),
-      
+
       // add some imports to the templates files
       templatesImport ++= Seq(
         "com.keepit.common.db.{ExternalId, Id, State}",
@@ -85,7 +85,7 @@ object ApplicationBuild extends Build {
         "com.keepit.search._",
         "com.keepit.common.healthcheck.HealthcheckError"
       ),
-      
+
       libraryDependencies ++= Seq(
         "com.google.inject" % "guice" % "3.0",
         "com.google.inject.extensions" % "guice-multibindings" % "3.0",
