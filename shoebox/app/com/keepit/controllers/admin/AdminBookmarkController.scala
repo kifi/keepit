@@ -27,6 +27,8 @@ import scala.concurrent.duration._
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 
+import
+
 import com.keepit.common.analytics.ActivityStream
 
 import com.google.inject.{Inject, Singleton}
@@ -34,8 +36,15 @@ import com.google.inject.{Inject, Singleton}
 import views.html
 
 @Singleton
-class AdminBookmarksController @Inject() (db: Database, scraper: ScraperPlugin, uriGraphPlugin: URIGraphPlugin,
-  bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, socialRepo: UserWithSocialRepo, userRepo: UserRepo,scrapeRepo: ScrapeInfoRepo)
+class AdminBookmarksController @Inject() (db: Database,
+  scraper: ScraperPlugin,
+  uriGraphPlugin: URIGraphPlugin,
+  bookmarkRepo: BookmarkRepo,
+  uriRepo: NormalizedURIRepo,
+  socialRepo: UserWithSocialRepo,
+  userRepo: UserRepo,
+  scrapeRepo: ScrapeInfoRepo,
+  socialUserInfoRepo: SocialUserInfoRepo)
     extends AdminController {
 
   def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
@@ -115,10 +124,20 @@ class AdminBookmarksController @Inject() (db: Database, scraper: ScraperPlugin, 
     def bookmarksInfos() = {
       future { time(s"load $PAGE_SIZE bookmarks") { db.readOnly { implicit s => bookmarkRepo.page(page, PAGE_SIZE) } } } flatMap { bookmarks =>
         for {
-          users <- future { time("load userWithSocial") { db.readOnly { implicit s => bookmarks map (_.userId) map userRepo.get map socialRepo.toUserWithSocial } } }
-          uris <- future { time("load uriStatus") { db.readOnly { implicit s => bookmarks map (_.uriId) map uriRepo.get map (bookmarkRepo.uriStats) } } }
-          scrapes <- future { time("load scrape info") { db.readOnly { implicit s => bookmarks map (_.uriId) map scrapeRepo.getByUri } } }
-        } yield (users, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
+          users <- future { time("load user") { db.readOnly { implicit s =>
+            bookmarks map (_.userId) map userRepo.get
+          } } }
+          socialUserInfo <- future { time("load socialUserInfo") { db.readOnly { implicit s =>
+            bookmarks map (_.userId) map {id => socialUserInfoRepo.getByUser(id).head}
+          } } }
+          uris <- future { time("load uriStatus") { db.readOnly { implicit s =>
+            bookmarks map (_.uriId) map uriRepo.get map (bookmarkRepo.uriStats)
+          } } }
+          scrapes <- future { time("load scrape info") { db.readOnly { implicit s =>
+            bookmarks map (_.uriId) map scrapeRepo.getByUri
+          } } }
+        } yield ((users, socialUserInfo).zipped.toList.seq,
+                 (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
       }
     }
 
