@@ -73,7 +73,6 @@ trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
   def allActive(implicit session: RSession): Seq[ScrapeInfo]
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Option[ScrapeInfo]
   def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo]
-
 }
 
 @Singleton
@@ -91,7 +90,9 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
     def failures =   column[Int]("failures", O.NotNull)
     def signature =  column[String]("signature", O.NotNull)
     def destinationUrl = column[String]("destination_url", O.Nullable)
-    def * = id.? ~ uriId ~ lastScrape ~ nextScrape ~ interval ~ failures ~ state ~ signature ~ destinationUrl.? <> (ScrapeInfo, ScrapeInfo.unapply _)
+    def seq = column[Int]("seq", O.NotNull)
+    def * = id.? ~ uriId ~ lastScrape ~ nextScrape ~ interval ~ failures ~ state ~ signature ~
+        destinationUrl.? <> (ScrapeInfo, ScrapeInfo.unapply _)
   }
 
   def allActive(implicit session: RSession): Seq[ScrapeInfo] = {
@@ -107,12 +108,8 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
 
   def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo] = {
     val q = (for(f <- table if f.nextScrape <= due && f.state === ScrapeInfoStates.ACTIVE) yield f)
-    ((limit > 0) match {
-      case true => q.take(limit)
-      case false => q
-    }).list
+    (if (limit > 0) q.take(limit) else q).list
   }
-
 }
 
 object ScrapeInfoStates extends States[ScrapeInfo]

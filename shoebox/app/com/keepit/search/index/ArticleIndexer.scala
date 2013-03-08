@@ -50,19 +50,13 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     val db = inject[Database]
     val repo = inject[NormalizedURIRepo]
     try {
-      val uris = db.readOnly {implicit s =>
-        val uris = repo.getByState(SCRAPE_FAILED, fetchSize)
-        if (uris.size < fetchSize) {
-          val combo = uris ++ repo.getByState(SCRAPED, fetchSize - uris.size)
-          if (uris.size < fetchSize) combo ++ repo.getByState(UNSCRAPABLE, fetchSize - uris.size)
-          else combo
-        }
-        else uris
+      val uris = db.readOnly { implicit s =>
+       repo.getIndexable(sequenceNumber, fetchSize)
       }
       var cnt = 0
       indexDocuments(uris.iterator.map{ uri => buildIndexable(uri) }, commitBatchSize){ commitBatch =>
-        commitBatch.foreach{ case (indexable, indexError)  =>
-          db.readWrite { implicit s =>
+        db.readWrite { implicit s =>
+          commitBatch.foreach { case (indexable, indexError) =>
             val articleIndexable = indexable.asInstanceOf[ArticleIndexable]
             val state = indexError match {
               case Some(error) =>
@@ -74,6 +68,9 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
             repo.save(repo.get(indexable.id).withState(state))
           }
         }
+      }
+      for (uri <- uris.lastOption) {
+        sequenceNumber = uri.seq
       }
       cnt
     } catch {

@@ -1,25 +1,45 @@
 package com.keepit.common.db.slick
 
+import com.keepit.classify.DomainTag
+import com.keepit.classify.DomainToTag
+import com.keepit.classify.{DomainTagName, Domain}
+import com.keepit.common.db._
+import com.keepit.common.mail.ElectronicMailCategory
+import com.keepit.common.mail.ElectronicMailMessageId
+import com.keepit.common.mail._
+import com.keepit.common.social.SocialId
+import com.keepit.common.social._
+import com.keepit.common.time._
+import com.keepit.model.Comment
+import com.keepit.model.ExperimentType
+import com.keepit.model.Follow
+import com.keepit.model.KifiInstallation
+import com.keepit.model.NormalizedURI
+import com.keepit.model.SocialUserInfo
+import com.keepit.model.URL
+import com.keepit.model.Unscrapable
+import com.keepit.model.User
+import com.keepit.model.UserToDomainKind
+import com.keepit.model._
+import com.keepit.search.ArticleSearchResultRef
+import com.keepit.search.Lang
+import com.keepit.search.SearchConfigExperiment
+import com.keepit.search._
+import com.keepit.serializer.{URLHistorySerializer => URLHS, SocialUserSerializer}
+import java.sql.{Timestamp, Clob, Blob}
+import javax.sql.rowset.serial.{SerialBlob, SerialClob}
+import org.joda.time.DateTime
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsString
+import play.api.libs.json._
+import scala.Some
 import scala.slick.driver._
 import scala.slick.lifted.{BaseTypeMapper, TypeMapperDelegate}
 import scala.slick.session.{PositionedParameters, PositionedResult}
-
-import java.sql.{Timestamp, Clob, Blob}
-
-import org.joda.time.DateTime
-
-import com.keepit.classify.{DomainTagName, DomainTag, Domain, DomainToTag}
-import com.keepit.common.db.{Id, State, Model, ExternalId, LargeString}
-import com.keepit.common.mail._
-import com.keepit.common.social._
-import com.keepit.common.time._
-import com.keepit.model._
-import com.keepit.search._
-import com.keepit.serializer.{URLHistorySerializer => URLHS, SocialUserSerializer}
-
-import javax.sql.rowset.serial.{SerialBlob, SerialClob}
-import play.api.libs.json._
-import securesocial.core.{SocialUser, UserId, AuthenticationMethod}
+import securesocial.core.AuthenticationMethod
+import securesocial.core.SocialUser
+import securesocial.core.UserId
 
 object FortyTwoTypeMappers {
   // Time
@@ -119,6 +139,10 @@ object FortyTwoTypeMappers {
   }
 
   //Other
+  implicit object SequenceNumberTypeMapper extends BaseTypeMapper[SequenceNumber] {
+    def apply(profile: BasicProfile) = new SequenceNumberTypeMapperDelegate(profile)
+  }
+
   implicit object URLHistorySeqHistoryTypeMapper extends BaseTypeMapper[Seq[URLHistory]] {
     def apply(profile: BasicProfile) = new URLHistorySeqMapperDelegate(profile)
   }
@@ -230,6 +254,17 @@ class DateTimeMapperDelegate(val profile: BasicProfile) extends DelegateMapperDe
   def zero = currentDateTime
   def sourceToDest(value: DateTime): Timestamp = new Timestamp(value.toDate().getTime())
   def safeDestToSource(value: Timestamp): DateTime = value.toDateTime
+}
+
+//************************************
+//       SequenceNumber -> Long
+//************************************
+class SequenceNumberTypeMapperDelegate(val profile: BasicProfile)
+    extends DelegateMapperDelegate[SequenceNumber, Long] {
+  protected val delegate = profile.typeMapperDelegates.longTypeMapperDelegate
+  def zero = SequenceNumber(0)
+  def sourceToDest(value: SequenceNumber): Long = value.value
+  def safeDestToSource(value: Long): SequenceNumber = SequenceNumber(value)
 }
 
 //************************************
