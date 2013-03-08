@@ -25,7 +25,7 @@ import play.api.mvc.{CookieBaker, Session}
 import play.api.data._
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
-import play.api.libs.json.{JsArray, JsObject, JsString}
+import play.api.libs.json.Json
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.controller.FortyTwoController._
 import com.keepit.common.db._
@@ -41,8 +41,10 @@ import com.keepit.common.db.slick._
 
 object AuthController extends FortyTwoController {
   def start = AuthenticatedJsonAction { implicit request =>
+    val userId = request.userId
     val socialUser = request.socialUser
-    log.info("facebook id %s".format(socialUser.id))
+    log.info(s"start id: $userId, facebook id: ${socialUser.id}")
+
     val (userAgent, version, installationIdOpt) = request.body.asJson.map { json =>
       (UserAgent((json \ "agent").as[String]),
        KifiVersion((json \ "version").as[String]),
@@ -56,38 +58,41 @@ object AuthController extends FortyTwoController {
                method = Some(request.method.toUpperCase()),
                path = Some(request.path),
                callType = Healthcheck.API,
-               errorMessage = Some("Invalid ExternalId passed in \"%s\" for userId %s".format(id, request.userId))))
+               errorMessage = Some("Invalid ExternalId passed in \"%s\" for userId %s".format(id, userId))))
          }
          kiId
        })}.get
-    val (user, installation, sliderRuleGroup, urlPatterns) = inject[Database].readWrite{implicit s =>
-      val repo = inject[KifiInstallationRepo]
-      log.info("start. details: %s, %s, %s".format(userAgent, version, installationIdOpt))
+    log.info(s"start details: $userAgent, $version, $installationIdOpt")
+
+    val (user, installation, experiments, sliderRuleGroup, urlPatterns) = inject[Database].readWrite{implicit s =>
+      val user: User = inject[UserRepo].get(userId)
+      val installationRepo = inject[KifiInstallationRepo]
       val installation: KifiInstallation = installationIdOpt flatMap { id =>
-        repo.getOpt(request.userId, id)
+        installationRepo.getOpt(userId, id)
       } match {
         case None =>
-          repo.save(KifiInstallation(userId = request.userId, userAgent = userAgent, version = version))
+          installationRepo.save(KifiInstallation(userId = userId, userAgent = userAgent, version = version))
+        case Some(install) if install.version != version || install.userAgent != userAgent =>
+          installationRepo.save(install.withUserAgent(userAgent).withVersion(version))
         case Some(install) =>
-          if (install.version != version || install.userAgent != userAgent) {
-            repo.save(install.withUserAgent(userAgent).withVersion(version))
-          } else {
-            install
-          }
+          install
       }
-
-      (inject[UserRepo].get(request.userId), installation, inject[SliderRuleRepo].getGroup("default"), inject[URLPatternRepo].getActivePatterns)
+      val experiments: Seq[String] = inject[UserExperimentRepo].getByUser(user.id.get).map(_.experimentType.value)
+      val sliderRuleGroup: SliderRuleGroup = inject[SliderRuleRepo].getGroup("default")
+      val urlPatterns: Seq[String] = inject[URLPatternRepo].getActivePatterns
+      (user, installation, experiments, sliderRuleGroup, urlPatterns)
     }
 
-    Ok(JsObject(Seq(
-      "avatarUrl" -> JsString(socialUser.avatarUrl.get),
-      "name" -> JsString(socialUser.displayName),
-      "facebookId" -> JsString(socialUser.id.id),
-      "provider" -> JsString(socialUser.id.providerId),
-      "userId" -> JsString(user.externalId.id),
-      "installationId" -> JsString(installation.externalId.id),
+    Ok(Json.obj(
+      "avatarUrl" -> socialUser.avatarUrl.get,
+      "name" -> socialUser.displayName,
+      "facebookId" -> socialUser.id.id,
+      "provider" -> socialUser.id.providerId,
+      "userId" -> user.externalId.id,
+      "installationId" -> installation.externalId.id,
+      "experiments" -> experiments,
       "rules" -> sliderRuleGroup.compactJson,
-      "patterns" -> JsArray(urlPatterns.map(JsString)))))
+      "patterns" -> urlPatterns))
     .withCookies(KifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 
@@ -103,11 +108,11 @@ object AuthController extends FortyTwoController {
 
   def whois = AuthenticatedJsonAction { request =>
     val user = inject[Database].readOnly(implicit s => inject[UserRepo].get(request.userId))
-    Ok(JsObject(Seq("externalUserId" -> JsString(user.externalId.toString))))
+    Ok(Json.obj("externalUserId" -> user.externalId.toString))
   }
 
   def unimpersonate = AdminJsonAction { request =>
-    Ok(JsObject(Seq("userId" -> JsString(request.userId.toString)))).discardingCookies(ImpersonateCookie.discard)
+    Ok(Json.obj("userId" -> request.userId.toString)).discardingCookies(ImpersonateCookie.discard)
   }
 
   def impersonate(id: Id[User]) = AdminJsonAction { request =>
@@ -115,6 +120,6 @@ object AuthController extends FortyTwoController {
       inject[UserRepo].get(id)
     }
     log.info("impersonating user %s".format(user)) //todo(eishay) add event & email
-    Ok(JsObject(Seq("userId" -> JsString(id.toString)))).withCookies(ImpersonateCookie.encodeAsCookie(Some(user.externalId)))
+    Ok(Json.obj("userId" -> id.toString)).withCookies(ImpersonateCookie.encodeAsCookie(Some(user.externalId)))
   }
 }
