@@ -335,7 +335,7 @@ api.log("[google_inject]");
       $res.find(".kifi-res-filter[data-filter=a]").click();
     }).on("click", ".kifi-res-debug", function(e) {
       e.stopPropagation();
-      location = "https://" + response.server + "/admin/search/results/" + response.uuid;
+      location.href = "https://" + response.server + "/admin/search/results/" + response.uuid;
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
       var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
       var friend = response.hits[i].users[j];
@@ -344,7 +344,12 @@ api.log("[google_inject]");
         facebookId: friend.facebookId,
         iconsUrl: api.url("images/social_icons.png")
       }, function(html) {
-        $a.showHover(function() {return html}).showHover("enter");
+        $a.showHover(function() {
+          api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+            $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
+          });
+          return html;
+        }).showHover("enter");
       });
     }).on("mouseenter", ".kifi-res-friends", function() {
       var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;
