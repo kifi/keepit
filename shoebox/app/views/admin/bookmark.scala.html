@@ -15,7 +15,7 @@
         <th>State/Visibility</th><td>@adminHelper.bookmarkBadge(bookmark)</td>
       </tr>
       <tr>
-        <th>Saved by</th><td>@adminHelper.userDisplay(userWithSocial)</td>
+        <th>Saved by</th><td>@adminHelper.userDisplay(userWithSocial.user, userWithSocial.socialUserInfo)</td>
       </tr>
       <tr>
         <th>Creation time</th><td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>

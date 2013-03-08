@@ -61,10 +61,10 @@
       <th>State</th>
       <th>Last Scrape</th>
     </tr>
-  @for(((user, (bookmark, uriStat, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
+  @for(((userWithSocial, (bookmark, uriStat, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
-      <td>@adminHelper.userDisplay(user)</td>
+      <td>@adminHelper.userDisplay(userWithSocial.user, userWithSocial.socialUserInfo)</td>
       <td>@adminHelper.bookmarkDisplay(bookmark)</td>
       <td>
         @{bookmark.source.value match {

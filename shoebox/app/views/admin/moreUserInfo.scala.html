@@ -1,10 +1,10 @@
-@(userWithSocial: UserWithSocial, 
-  rawInfos: Seq[SocialUserRawInfo], 
-  socialUserInfos: Seq[SocialUserInfo], 
-  follows: Seq[NormalizedURI], 
-  comments: Seq[(NormalizedURI, Comment)], 
+@(userWithSocial: UserWithSocial,
+  rawInfos: Seq[SocialUserRawInfo],
+  socialUserInfos: Seq[SocialUserInfo],
+  follows: Seq[NormalizedURI],
+  comments: Seq[(NormalizedURI, Comment)],
   messages: Seq[(NormalizedURI, Comment, Seq[UserWithSocial])],
-  sentElectronicMails: Seq[com.keepit.common.mail.ElectronicMail], 
+  sentElectronicMails: Seq[com.keepit.common.mail.ElectronicMail],
   receivedElectronicMails: Seq[com.keepit.common.mail.ElectronicMail])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
@@ -50,7 +50,7 @@
      </tr>
    }
   </table>
-  
+
   <h2>User has @comments.size comments</h2>
   <table class="table table-bordered">
    <tr>
@@ -71,7 +71,7 @@
      </tr>
    }
   </table>
-  
+
   <h2>User has @messages.size messages</h2>
   <table class="table table-bordered">
    <tr>
@@ -86,8 +86,8 @@
        <td rowspan="2">@{i+1}</td>
        <td>@message.pageTitle</td>
        <td>@adminHelper.articleDisplay(uri)</td>
-       <td>@for(recipient <- recipients) { 
-         @adminHelper.userDisplay(recipient)
+       <td>@for(recipient <- recipients) {
+         @adminHelper.userDisplay(recipient.user, recipient.socialUserInfo)
        }</td>
        <td>@adminHelper.dateTimeDisplay(message.createdAt)</td>
      </tr>
@@ -96,7 +96,7 @@
      </tr>
    }
    </table>
-   
+
   <h2>User has @messages.size messages</h2>
   <table class="table table-bordered">
    <tr>
@@ -111,8 +111,8 @@
        <td rowspan="2">@{i+1}</td>
        <td>@message.pageTitle</td>
        <td>@adminHelper.articleDisplay(uri)</td>
-       <td>@for(recipient <- recipients) { 
-         @adminHelper.userDisplay(recipient)
+       <td>@for(recipient <- recipients) {
+         @adminHelper.userDisplay(recipient.user, recipient.socialUserInfo)
        }</td>
        <td>@adminHelper.dateTimeDisplay(message.createdAt)</td>
      </tr>
@@ -144,7 +144,7 @@
     </tr>
   }
   </table>
-   
+
    <h2>User had received @receivedElectronicMails.size emails</h2>
    <table class="table table-bordered">
     <tr>
