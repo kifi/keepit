@@ -49,7 +49,7 @@ class UserNotificationRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ externalId ~ category ~ details ~ commentId.? ~ state <> (UserNotification, UserNotification.unapply _)
   }
 
-  def getWithUserId(userId: Id[User], howMany: Option[Int], excludeState: Option[State[UserNotification]] = Some(UserNotificationStates.INACTIVE))(implicit session: RSession): Seq[UserNotification] = {
+  def getWithUserId(userId: Id[User], startingTime: DateTime, howMany: Option[Int], excludeState: Option[State[UserNotification]] = Some(UserNotificationStates.INACTIVE))(implicit session: RSession): Seq[UserNotification] = {
 
     Nil
   }
