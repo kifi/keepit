@@ -18,11 +18,9 @@
 
 @admin("User: " + userWithSocial.user.firstName + " " + userWithSocial.user.lastName) {
   <h2>User details </h2>
-    <button class="btn" id="refresh_sui" onclick="refreshAllSocialUserInfo()">Refresh Social User Info!</button>&nbsp
-    <button class="btn" onclick="blockUser()">Block User</button>&nbsp
-    <button class="btn" onclick="makeAdmin()">Make Admin</button>&nbsp
-    <button class="btn" onclick="impersonate()">Impersonate User</button>&nbsp
-    <button class="btn" onclick="unimpersonate()">Stop Impersonating</button>&nbsp
+    <button class="btn" id="refresh_sui" onclick="refreshAllSocialUserInfo()">Refresh Social User Info!</button>
+    <button class="btn" onclick="impersonate()">Impersonate User</button>
+    <button class="btn" onclick="unimpersonate()">Stop Impersonating</button>
     <button class="btn" onclick="configSearch()">Config Search</button>
     <br/>
     <table class="table table-bordered">
@@ -56,7 +54,14 @@
         </td>
       </tr>
       <tr>
-        <th>Experiments</th><td id="experiments">@userWithSocial.experiments.mkString(",")</td>
+        <th>Experiments</th>
+        <td id="experiments" class="form-inline" style="cursor:default">
+          @for(exp <- Seq(ExperimentTypes.ADMIN, ExperimentTypes.BLOCK, ExperimentTypes.METRO)) {
+            <label class="checkbox" style="cursor:pointer;margin-right:6px">
+              <input type="checkbox" data-exp="@exp.value" @if(userWithSocial.experiments.contains(exp)) {checked}>@exp.value
+            </label>
+          }
+        </td>
       </tr>
       <tr>
         <th>Useful page update count</th>
@@ -148,22 +153,27 @@
     function unimpersonate() {
       $.post("@com.keepit.controllers.routes.AuthController.unimpersonate()")
     }
-    function blockUser() {
-      $.post('@com.keepit.controllers.admin.routes.AdminUserController.addExperiment(userWithSocial.user.id.get, "block")', function(data) {
-        var list = $("<ul/>")
-        $(data).each(function(i, e){list.append($("<li>" + e + "</li>"));})
-        $('#experiments').html(list);
-      });
-    }
-    function makeAdmin() {
-      $.post('@com.keepit.controllers.admin.routes.AdminUserController.addExperiment(userWithSocial.user.id.get, "admin")', function(data) {
-        var list = $("<ul/>")
-        $(data).each(function(i, e){list.append($("<li>" + e + "</li>"));})
-        $('#experiments').html(list);
-      });
-    }
     function configSearch() {
       location.href="@com.keepit.controllers.routes.SearchConfigController.showUserConfig(userWithSocial.user.id.get)"
     }
+    $(function() {
+      $("#experiments").on("click", "input", function() {
+        var $td = $(this).closest("#experiments");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+        if (this.checked) {
+          $.post('@com.keepit.controllers.admin.routes.AdminUserController.addExperiment(userWithSocial.user.id.get, "~")'.replace("~", $(this).data("exp")))
+            .done(done).fail(fail);
+        } else {
+          $.ajax('@com.keepit.controllers.admin.routes.AdminUserController.removeExperiment(userWithSocial.user.id.get, "~")'.replace("~", $(this).data("exp")),
+            {type: "DELETE"}).done(done).fail(fail);
+        }
+        function done() {
+          $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+          $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+      });
+    });
   </script>
 }

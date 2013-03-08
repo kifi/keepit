@@ -164,7 +164,7 @@ trait AdminController extends AuthenticatedController {
     AuthenticatedAction(isApi, { implicit request =>
       val userId = request.adminUserId.getOrElse(request.userId)
       val isAdmin = inject[Database].readOnly{ implicit session =>
-        inject[UserExperimentRepo].getExperiment(userId, ExperimentTypes.ADMIN).isDefined
+        inject[UserExperimentRepo].get(userId, ExperimentTypes.ADMIN).isDefined
       }
       val authorizedDevUser = Play.isDev && userId.id == 1L
       if (authorizedDevUser || isAdmin) {

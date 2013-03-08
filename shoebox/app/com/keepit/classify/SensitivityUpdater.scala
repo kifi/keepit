@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 
 @ImplementedBy(classOf[SensitivityUpdaterImpl])
 trait SensitivityUpdater {
-  def updateSensitivity(domain: Domain)(implicit session: RWSession): Boolean
+  def calculateSensitivity(domain: Domain)(implicit session: RWSession): Option[Boolean]
   def clearDomainsChangedSince(dateTime: DateTime)(implicit session: RWSession)
   def clearDomainSensitivity(domains: Seq[Id[Domain]])(implicit session: RWSession)
 }
@@ -17,11 +17,13 @@ trait SensitivityUpdater {
 class SensitivityUpdaterImpl @Inject()
     (domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo) extends SensitivityUpdater {
 
-  def updateSensitivity(domain: Domain)(implicit session: RWSession): Boolean = {
+  def calculateSensitivity(domain: Domain)(implicit session: RWSession): Option[Boolean] = {
     val tags = tagRepo.getTags(domainToTagRepo.getByDomain(domain.id.get).map(_.tagId))
-    val sensitive = tags.map(_.sensitive).foldLeft(false) { _ || _.getOrElse(false) }
-    if (domain.autoSensitive != Some(sensitive)) {
-      domainRepo.updateAutoSensitivity(Seq(domain.id.get), Some(sensitive))
+    val sensitive = tags.map(_.sensitive).foldLeft(None: Option[Boolean]) { (a, b) =>
+      Some(a.getOrElse(false) || b.getOrElse(false))
+    }
+    for (s <- sensitive if domain.autoSensitive != sensitive) {
+      domainRepo.updateAutoSensitivity(Seq(domain.id.get), Some(s))
     }
     sensitive
   }
