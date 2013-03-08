@@ -19,15 +19,17 @@ import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.net.URI
-import com.google.inject._
+import com.keepit.common.cache._
+import com.keepit.serializer.NormalizedURISerializer
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.model._
 import com.keepit.common.db._
 
-case class URISearchResults(uri: NormalizedURI, score: Float)
+import scala.concurrent.duration._
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 
-case class NormalizedURIStats(uri: NormalizedURI, bookmarks: Seq[Bookmark])
+case class URISearchResults(uri: NormalizedURI, score: Float)
 
 case class NormalizedURI  (
   id: Option[Id[NormalizedURI]] = None,
@@ -53,8 +55,21 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI]
 }
 
+case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
+  val namespace = "uri_by_id"
+  def toKey(): String = id.id.toString
+}
+class NormalizedURICache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[NormalizedURIKey, NormalizedURI] {
+  val ttl = 7 days
+  def deserialize(obj: Any): NormalizedURI = NormalizedURISerializer.normalizedURISerializer.reads(Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsObject]).get
+  def serialize(uri: NormalizedURI) = NormalizedURISerializer.normalizedURISerializer.writes(uri)
+}
+
 @Singleton
-class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
+class NormalizedURIRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  idCache: NormalizedURICache)
+    extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -65,6 +80,20 @@ class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo
     def url = column[String]("url", O.NotNull)
     def urlHash = column[String]("url_hash", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state <> (NormalizedURI, NormalizedURI.unapply _)
+  }
+
+  override def invalidateCache(uri: NormalizedURI)(implicit session: RSession) = {
+    uri.id match {
+      case Some(id) => idCache.set(NormalizedURIKey(id), uri)
+      case None =>
+    }
+    uri
+  }
+
+  override def get(id: Id[NormalizedURI])(implicit session: RSession): NormalizedURI = {
+    idCache.getOrElse(NormalizedURIKey(id)) {
+      (for(f <- table if f.id is id) yield f).first
+    }
   }
 
   def allActive()(implicit session: RSession): Seq[NormalizedURI] =

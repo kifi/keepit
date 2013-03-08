@@ -16,12 +16,12 @@
     <tr>
       <td>@{i+1}</td>
       <td><span class="badge">@userStatistics.user.id.get.id</span></td>
-      <td>@adminHelper.userDisplay(userStatistics.userWithSocial)</td>
+      <td>@adminHelper.userDisplay(userStatistics.userWithSocial.user, userStatistics.userWithSocial.socialUserInfo)</td>
       <td>@userStatistics.userWithSocial.bookmarksCount</td>
       <td>@adminHelper.dateDisplay(userStatistics.user.createdAt)</td>
       <td><a href='mailto:@{userStatistics.userWithSocial.emails.map(_.address).mkString(",")}'>@{userStatistics.userWithSocial.emails.map(_.address).mkString(", ")}</a></td>
       <td>@userStatistics.userWithSocial.experiments.mkString(", ")</td>
-      <td>@userStatistics.kifiInstallations.map(_.version).mkString(", ")</td>     
+      <td>@userStatistics.kifiInstallations.map(_.version).mkString(", ")</td>
     </tr>
   }
   </table>

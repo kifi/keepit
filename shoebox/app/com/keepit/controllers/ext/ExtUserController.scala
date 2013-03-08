@@ -19,7 +19,7 @@ import com.keepit.common.mail._
 import scala.concurrent.Await
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
-import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
+import play.api.libs.json.{Json, JsBoolean}
 import scala.concurrent.duration._
 import views.html
 
@@ -32,16 +32,16 @@ class ExtUserController @Inject() (db: Database,
     extends BrowserExtensionController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
-    val slicerInfo = sliderInfoLoader.load(request.userId, url)
-    Ok(JsObject(Seq(
-        "kept" -> JsBoolean(slicerInfo.bookmark.isDefined),
-        "private" -> JsBoolean(slicerInfo.bookmark.map(_.isPrivate).getOrElse(false)),
-        "following" -> JsBoolean(slicerInfo.following),
-        "friends" -> userWithSocialSerializer.writes(slicerInfo.socialUsers),
-        "numComments" -> JsNumber(slicerInfo.numComments),
-        "numMessages" -> JsNumber(slicerInfo.numMessages),
-        "neverOnSite" -> JsBoolean(slicerInfo.neverOnSite.isDefined),
-        "sensitive" -> JsBoolean(slicerInfo.sensitive.getOrElse(false)))))
+    val sliderInfo = sliderInfoLoader.load(request.userId, url)
+    Ok(Json.obj(
+        "kept" -> sliderInfo.bookmark.isDefined,
+        "private" -> JsBoolean(sliderInfo.bookmark.map(_.isPrivate).getOrElse(false)),
+        "following" -> sliderInfo.following,
+        "friends" -> userWithSocialSerializer.writes(sliderInfo.socialUsers),
+        "numComments" -> sliderInfo.numComments,
+        "numMessages" -> sliderInfo.numMessages,
+        "neverOnSite" -> sliderInfo.neverOnSite.isDefined,
+        "sensitive" -> JsBoolean(sliderInfo.sensitive.getOrElse(false))))
   }
 
   def suppressSliderForSite() = AuthenticatedJsonAction { request =>
@@ -63,7 +63,7 @@ class ExtUserController @Inject() (db: Database,
       }
     }
 
-    Ok(JsObject(Seq("host" -> JsString(host), "suppressed" -> JsBoolean(suppress))))
+    Ok(Json.obj("host" -> host, "suppressed" -> suppress))
   }
 
   def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
@@ -71,8 +71,6 @@ class ExtUserController @Inject() (db: Database,
       socialConnectionRepo.getFortyTwoUserConnections(authRequest.userId).map(uid => basicUserRepo.load(userRepo.get(uid))).toSeq
     }
 
-    Ok(JsObject(Seq(
-      ("friends" -> JsArray(socialConnections.map(sc => BasicUserSerializer.basicUserSerializer.writes(sc))))
-    )))
+    Ok(Json.obj("friends" -> socialConnections.map(sc => BasicUserSerializer.basicUserSerializer.writes(sc))))
   }
 }

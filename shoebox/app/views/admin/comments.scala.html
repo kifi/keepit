@@ -46,10 +46,10 @@
       <th>Page</th>
       <th>Creation</th>
     </tr>
-  @for(((user, comment, article), i) <- uriAndUsers.zipWithIndex) {
+  @for(((userWithSocial, comment, article), i) <- uriAndUsers.zipWithIndex) {
     <tr>
       <td rowspan="2">@{i+1}</td>
-      <td>@adminHelper.userDisplay(user)</td>
+      <td>@adminHelper.userDisplay(userWithSocial.user, userWithSocial.socialUserInfo)</td>
       <td>@comment.pageTitle</td>
       <td>@adminHelper.articleDisplay(article)</td>
       <td>@adminHelper.dateTimeDisplay(comment.createdAt)</td>
