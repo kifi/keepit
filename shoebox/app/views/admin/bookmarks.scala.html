@@ -1,5 +1,4 @@
-@(bookmarksAndUsers: Seq[(UserWithSocial, (Bookmark, NormalizedURIStats, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)
-@import com.keepit.common.social.UserWithSocial
+@(bookmarksAndUsers: Seq[((User, SocialUserInfo), (Bookmark, NormalizedURIStats, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -61,10 +60,10 @@
       <th>State</th>
       <th>Last Scrape</th>
     </tr>
-  @for(((userWithSocial, (bookmark, uriStat, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
+  @for((((user, socialUserInfo), (bookmark, uriStat, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
-      <td>@adminHelper.userDisplay(userWithSocial.user, userWithSocial.socialUserInfo)</td>
+      <td>@adminHelper.userDisplay(user, socialUserInfo)</td>
       <td>@adminHelper.bookmarkDisplay(bookmark)</td>
       <td>
         @{bookmark.source.value match {
