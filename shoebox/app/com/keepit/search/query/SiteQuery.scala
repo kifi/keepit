@@ -7,7 +7,11 @@ import org.apache.lucene.util.ToStringUtils
 object SiteQuery {
   def apply(domain: String) = {
     val tok = domain.toLowerCase.dropWhile{ c => ! c.isLetterOrDigit }
-    new SiteQuery(new Term("site", tok))
+    if (tok.length > 0) {
+      new SiteQuery(new Term("site", tok))
+    } else {
+      null
+    }
   }
 }
 

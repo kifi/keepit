@@ -31,9 +31,12 @@ class ArticleIndexerTest extends Specification with DbRepos {
     var (uri1, uri2, uri3) = db.readWrite { implicit s =>
       val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
       val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown"))
-      (uriRepo.save(NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state = SCRAPED)),
-          uriRepo.save(NormalizedURIFactory(title = "a2", url = "http://www.keepit.org/article2", state = SCRAPED)),
-          uriRepo.save(NormalizedURIFactory(title = "a3", url = "http://www.findit.com/article3", state = SCRAPED)))
+      (uriRepo.saveAsIndexable(
+        NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state = SCRAPED)),
+          uriRepo.saveAsIndexable(
+            NormalizedURIFactory(title = "a2", url = "http://www.keepit.org/article2", state = SCRAPED)),
+          uriRepo.saveAsIndexable(
+            NormalizedURIFactory(title = "a3", url = "http://www.findit.com/article3", state = SCRAPED)))
     }
     store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
     store += (uri2.id.get -> mkArticle(uri2.id.get, "title2 titles", "content2 alldocs bodies soul"))
@@ -73,24 +76,27 @@ class ArticleIndexerTest extends Specification with DbRepos {
   }
 
   "ArticleIndexer" should {
-    "index scraped URIs" in running(new EmptyApplication())(new IndexerScope {
+    "index indexable URIs" in running(new EmptyApplication())(new IndexerScope {
+      indexer.sequenceNumber = SequenceNumber(3) // skip initial documents
 
       db.readWrite { implicit s =>
         uri1 = uriRepo.save(uriRepo.get(uri1.id.get).withState(INDEXED))
-        uri2 = uriRepo.save(uriRepo.get(uri2.id.get).withState(SCRAPED))
+        uri2 = uriRepo.saveAsIndexable(uriRepo.get(uri2.id.get).withState(SCRAPED))
         uri3 = uriRepo.save(uriRepo.get(uri3.id.get).withState(ACTIVE))
       }
-
+      indexer.sequenceNumber.value === 3
       indexer.run()
+      indexer.sequenceNumber.value === 4
       indexer.numDocs === 1
 
       db.readWrite { implicit s =>
-        uri1 = uriRepo.save(uri1.withState(SCRAPED))
-        uri2 = uriRepo.save(uri2.withState(SCRAPED))
-        uri3 = uriRepo.save(uri3.withState(SCRAPED))
+        uri1 = uriRepo.saveAsIndexable(uri1.withState(SCRAPED))
+        uri2 = uriRepo.saveAsIndexable(uri2.withState(SCRAPED))
+        uri3 = uriRepo.saveAsIndexable(uri3.withState(SCRAPED))
       }
 
       indexer.run()
+      indexer.sequenceNumber.value ==== 7
       indexer.numDocs === 3
 
       db.readOnly { implicit s =>

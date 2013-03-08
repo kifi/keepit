@@ -19,11 +19,15 @@ import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.net.URI
-import com.google.inject._
+import com.keepit.common.cache._
+import com.keepit.serializer.NormalizedURISerializer
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.model._
 import com.keepit.common.db._
+
+import scala.concurrent.duration._
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
@@ -35,7 +39,8 @@ case class NormalizedURI  (
   title: Option[String] = None,
   url: String,
   urlHash: String,
-  state: State[NormalizedURI] = NormalizedURIStates.ACTIVE
+  state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
+  seq: SequenceNumber = SequenceNumber(0)
 ) extends ModelWithExternalId[NormalizedURI] with Logging {
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
@@ -49,20 +54,63 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI]
+  def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
+  def saveAsIndexable(model: NormalizedURI)(implicit session: RWSession): NormalizedURI
+}
+
+case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
+  val namespace = "uri_by_id"
+  def toKey(): String = id.id.toString
+}
+class NormalizedURICache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[NormalizedURIKey, NormalizedURI] {
+  val ttl = 7 days
+  def deserialize(obj: Any): NormalizedURI = NormalizedURISerializer.normalizedURISerializer.reads(Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsObject]).get
+  def serialize(uri: NormalizedURI) = NormalizedURISerializer.normalizedURISerializer.writes(uri)
 }
 
 @Singleton
-class NormalizedURIRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
+class NormalizedURIRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  idCache: NormalizedURICache)
+    extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 
+  private val sequence = db.getSequence("normalized_uri_sequence")
+
   override lazy val table = new RepoTable[NormalizedURI](db, "normalized_uri") with ExternalIdColumn[NormalizedURI] {
     def title = column[String]("title")
     def url = column[String]("url", O.NotNull)
     def urlHash = column[String]("url_hash", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state <> (NormalizedURI, NormalizedURI.unapply _)
+    def seq = column[SequenceNumber]("seq", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq <> (NormalizedURI,
+        NormalizedURI.unapply _)
+  }
+
+  def saveAsIndexable(model: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
+    val num = sequence.incrementAndGet()
+    save(model.copy(seq = num))
+  }
+
+  def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
+    val q = (for (f <- table if f.seq > sequenceNumber) yield f).sortBy(_.seq)
+    (if (limit >= 0) q.take(limit) else q).list
+  }
+
+  override def invalidateCache(uri: NormalizedURI)(implicit session: RSession) = {
+    uri.id match {
+      case Some(id) => idCache.set(NormalizedURIKey(id), uri)
+      case None =>
+    }
+    uri
+  }
+
+  override def get(id: Id[NormalizedURI])(implicit session: RSession): NormalizedURI = {
+    idCache.getOrElse(NormalizedURIKey(id)) {
+      (for(f <- table if f.id is id) yield f).first
+    }
   }
 
   def allActive()(implicit session: RSession): Seq[NormalizedURI] =
