@@ -40,7 +40,7 @@ case class NormalizedURI  (
   url: String,
   urlHash: String,
   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
-  seq: SequenceNumber = SequenceNumber(0)
+  seq: SequenceNumber = SequenceNumber.ZERO
 ) extends ModelWithExternalId[NormalizedURI] with Logging {
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)

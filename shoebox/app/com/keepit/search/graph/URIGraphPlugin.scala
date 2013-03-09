@@ -25,25 +25,17 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.SchedulingPlugin
 
 case object Load
-case class Update(userId: Id[User])
+case object Update
 
 private[graph] class URIGraphActor(uriGraph: URIGraph) extends FortyTwoActor with Logging {
 
   def receive() = {
-    case Load => try {
-        sender ! uriGraph.load()
+    case Update => try {
+        sender ! uriGraph.update()
       } catch {
         case e: Exception =>
           inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
-              errorMessage = Some("Error loading uri graph")))
-          sender ! -1
-      }
-    case Update(u) => try {
-        sender ! uriGraph.update(u)
-      } catch {
-        case e: Exception =>
-          inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
-              errorMessage = Some("Error updating uri graph with %s".format(u))))
+              errorMessage = Some("Error updating uri graph")))
           sender ! -1
       }
     case m => throw new Exception("unknown message %s".format(m))
@@ -51,8 +43,7 @@ private[graph] class URIGraphActor(uriGraph: URIGraph) extends FortyTwoActor wit
 }
 
 trait URIGraphPlugin extends SchedulingPlugin {
-  def load(): Int
-  def update(userId: Id[User]): Int
+  def update(): Future[Int]
 }
 
 class URIGraphPluginImpl @Inject() (system: ActorSystem, uriGraph: URIGraph) extends URIGraphPlugin with Logging {
@@ -70,13 +61,5 @@ class URIGraphPluginImpl @Inject() (system: ActorSystem, uriGraph: URIGraph) ext
     uriGraph.close()
   }
 
-  override def load(): Int = {
-    val future = actor.ask(Load)(1 minutes).mapTo[Int]
-    Await.result(future, 1 minutes)
-  }
-
-  override def update(userId: Id[User]) = {
-    val future = actor.ask(Update(userId))(1 minutes).mapTo[Int]
-    Await.result(future, 1 minutes)
-  }
+  override def update(): Future[Int] = actor.ask(Update)(1 minutes).mapTo[Int]
 }
