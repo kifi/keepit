@@ -171,10 +171,12 @@ api.port.on({
   }});
 
 function emitSliderRules(tab) {
-  if (session && api.prefs.get("showSlider")) {
+  if (session) {
+    var show = api.prefs.get("showSlider");
     api.tabs.emit(tab, "slider_rules", {  // only the relevant rules
-      viewport: session.rules.rules.viewport,
-      scroll: session.rules.rules[tab.showOnScroll && "scroll"]});
+      metro: session.experiments.indexOf("metro") >= 0,
+      viewport: show && session.rules.rules.viewport,
+      scroll: show && session.rules.rules[tab.showOnScroll && "scroll"]});
   }
 }
 
