@@ -26,7 +26,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
     val store = new FakeArticleStore()
     val uriIdArray = new Array[Long](3)
     val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()))
-    val indexer = ArticleIndexer(ramDir, store)
+    var indexer = ArticleIndexer(ramDir, store)
 
     var (uri1, uri2, uri3) = db.readWrite { implicit s =>
       val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
@@ -96,7 +96,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       }
 
       indexer.run()
-      indexer.sequenceNumber.value ==== 7
+      indexer.sequenceNumber.value === 7
       indexer.numDocs === 3
 
       db.readOnly { implicit s =>
@@ -107,6 +107,9 @@ class ArticleIndexerTest extends Specification with DbRepos {
       uri1.state === INDEXED
       uri2.state === INDEXED
       uri3.state === INDEXED
+
+      indexer = ArticleIndexer(ramDir, store)
+      indexer.sequenceNumber.value === 7
     })
 
     "search documents (hits in contents)" in running(new EmptyApplication())(new IndexerScope {
