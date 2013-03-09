@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import com.google.inject.Provider
 import play.api.Play
 import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.logging.Logging
 
 /**
  * Plugin that creates an actor system with classloader configured to be reload-aware.
@@ -13,7 +14,7 @@ import com.keepit.common.plugin.SchedulingPlugin
  * Also serves as Provider[ActorSystem] so that guice can inject this actor system into
  * other services or plugins that need to use actors.
  */
-class ActorPlugin(systemName: String) extends SchedulingPlugin with Provider[ActorSystem] {
+class ActorPlugin(systemName: String) extends SchedulingPlugin with Provider[ActorSystem] with Logging {
 
   val system = ActorSystem(systemName, Play.current.configuration.underlying, Play.current.classloader)
   def get: ActorSystem = system
@@ -21,6 +22,7 @@ class ActorPlugin(systemName: String) extends SchedulingPlugin with Provider[Act
   override def enabled: Boolean = true
 
   override def onStart() {
+    log.info(s"loaded actor system with:\n$system.config")
   }
 
   override def onStop() {
