@@ -372,8 +372,12 @@ api.log("[google_inject]");
           pluralize: function() {return pluralLambda}
         }, function(html) {
           $ch.showHover(function() {
-            return html;
-          }).showHover("enter");
+            return $(html).on("transitionend", function(e) {
+              if (e.originalEvent.propertyName === "opacity" && $(this).css("opacity") < .1) {
+                this.style.display = "none";
+              }
+            });
+          }).showHover("enter")
         });
     }).on("click", ".kifi-chatter-deeplink", function() {
       api.port.emit("add_deep_link_listener", {locator: $(this).data("locator")});
