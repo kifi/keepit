@@ -109,18 +109,18 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
           (indexable, error)
         }
         commit()
-        log.info("index commited")
         afterCommit(commitBatch)
       }
     }
     if (refresh) refreshSearcher()
   }
 
-  def commit() {
+  private def commit() {
     indexWriter.commit(Map(
-      Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString,
-      Indexer.CommitData.sequenceNumber -> sequenceNumber.toString
+          Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString,
+          Indexer.CommitData.sequenceNumber -> sequenceNumber.toString
     ))
+    log.info("index committed")
   }
 
   def deleteAllDocuments(refresh: Boolean = true) {
