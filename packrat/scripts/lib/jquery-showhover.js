@@ -36,6 +36,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
         $a.on("mouseenter.showHover", function() {
           clearTimeout(t);
           t = setTimeout(function() {
+            $h.show();
             $a.addClass("kifi-hover-showing");
             data.hover.lastEventTime = +new Date;
           }, 100);
