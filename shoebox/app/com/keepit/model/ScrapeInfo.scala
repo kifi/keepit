@@ -20,7 +20,7 @@ case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
   uriId: Id[NormalizedURI], // = NormalizedURI id
   lastScrape: DateTime = START_OF_TIME,
-  nextScrape: DateTime = currentDateTime,
+  nextScrape: DateTime = START_OF_TIME,
   interval: Double = 24.0d, // hours
   failures: Int = 0,
   state: State[ScrapeInfo] = ScrapeInfoStates.ACTIVE,
