@@ -76,19 +76,23 @@
 }
 .kifi-slider2-lock {
   position: absolute;
-  top: -15px;
+  top: 0;
   left: 0;
   width: 21px;
-  height: 40px;
-  border-radius: 0 20px 20px 0;
+  height: 26px;
+  border-top-left-radius: inherit;
+  border-bottom-right-radius: 21px;
   background-color: #465f78;
   background-repeat: no-repeat;
   background-position: 0 999px;
 }
+.kifi-slider2-lock:hover {
+  background-color: #4c6c8c;
+}
 .kifi-slider2-lock::before {
   content: " ";
   position: absolute;
-  top: 21px;
+  top: 6px;
   left: 5px;
   width: 7px;
   height: 9px;
