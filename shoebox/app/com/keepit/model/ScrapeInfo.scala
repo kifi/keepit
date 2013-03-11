@@ -107,7 +107,7 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
     (for(f <- table if f.uriId === uriId) yield f).firstOption
 
   def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo] = {
-    val q = (for(f <- table if f.nextScrape <= due && f.state === ScrapeInfoStates.ACTIVE) yield f)
+    val q = (for(f <- table if f.nextScrape <= due && f.state === ScrapeInfoStates.ACTIVE) yield f).sortBy(_.nextScrape)
     (if (limit > 0) q.take(limit) else q).list
   }
 }
