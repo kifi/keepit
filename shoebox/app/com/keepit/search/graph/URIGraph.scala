@@ -121,6 +121,8 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
   }
 
   class URIListIndexable(override val id: Id[User], val bookmarks: Seq[Bookmark]) extends Indexable[User] with LineFieldBuilder {
+    override val sequenceNumber = SequenceNumber(0)
+
     override def buildDocument = {
       val doc = super.buildDocument
       val payload = URIList.toByteArray(bookmarks)
