@@ -12,8 +12,8 @@ class MySQL(val dbInfo: DbInfo)
 
   def getSequence(name: String): DbSequence = new DbSequence(name) {
     def incrementAndGet()(implicit sess: RWSession): SequenceNumber = {
-      val stmt = sess.getPreparedStatement(s"""UPDATE $name SET id=LAST_INSERT_ID(id+1); SELECT LAST_INSERT_ID();""")
-      val rs = stmt.executeQuery()
+      sess.getPreparedStatement(s"UPDATE $name SET id=LAST_INSERT_ID(id+1);").execute()
+      val rs = sess.getPreparedStatement(s"SELECT LAST_INSERT_ID();").executeQuery()
       rs.next()
       SequenceNumber(rs.getLong(1))
     }
