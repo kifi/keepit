@@ -85,10 +85,10 @@ object SearchConfigController extends FortyTwoController {
     val (total, totalDef) = (1.0*(aSum + bSum), 1.0*(aDefSum + bDefSum))
     JsObject(List(
       "day0" -> JsString(days.min.toString),
-      "counts" -> JsArray(values.map {i => JsNumber(i) }),
+      "counts" -> JsArray(values.map(JsNumber(_))),
       "defaultCounts" -> JsArray(defaultValues.map {i => JsNumber(i) }),
-      "samples" -> JsNumber(aSum + bSum),
-      "defaultSamples" -> JsNumber(aDefSum + bDefSum),
+      "samples" -> JsArray((as, bs).zipped.map(_ + _).map(JsNumber(_)).toSeq),
+      "defaultSamples" -> JsArray((adefs, bdefs).zipped.map(_ + _).map(JsNumber(_)).toSeq),
       "avg" -> JsNumber(if (total > 0) aSum / total else 0),
       "defaultAvg" -> JsNumber(if (totalDef > 0) aDefSum / totalDef else 0)
     ))

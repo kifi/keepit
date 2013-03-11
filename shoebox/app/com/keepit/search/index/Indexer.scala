@@ -1,25 +1,22 @@
 package com.keepit.search.index
 
-import com.keepit.common.db.Id
-import com.keepit.common.logging.Logging
-import com.keepit.common.time._
-import com.keepit.search.Lang
+import scala.collection.JavaConversions._
+
+import java.io.IOException
+import java.lang.OutOfMemoryError
+
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.CorruptIndexException
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.index.Payload
 import org.apache.lucene.index.Term
 import org.apache.lucene.store.Directory
-import org.apache.lucene.search.Query
-import org.apache.lucene.util.Version
-import java.io.File
-import java.io.IOException
-import java.lang.OutOfMemoryError
-import scala.collection.JavaConversions._
-import scala.math._
+
+import com.keepit.common.db.{SequenceNumber, Id}
+import com.keepit.common.logging.Logging
+import com.keepit.common.time._
 
 case class IndexError(msg: String)
 
@@ -34,6 +31,7 @@ object Indexer {
 
   object CommitData {
     val committedAt = "COMMITTED_AT"
+    val sequenceNumber = "SEQUENCE_NUMBER"
   }
 }
 
@@ -54,6 +52,9 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   }
 
   def getSearcher = searcher
+
+  protected[search] var sequenceNumber =
+    SequenceNumber(commitData.getOrElse(Indexer.CommitData.sequenceNumber, "0").toLong)
 
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
     try {
@@ -106,7 +107,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
           }
           (indexable, error)
         }
-        indexWriter.commit(Map(Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString))
+        commit()
         log.info("index commited")
         afterCommit(commitBatch)
       }
@@ -114,11 +115,18 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     if (refresh) refreshSearcher()
   }
 
+  def commit() {
+    indexWriter.commit(Map(
+      Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString,
+      Indexer.CommitData.sequenceNumber -> sequenceNumber.toString
+    ))
+  }
+
   def deleteAllDocuments(refresh: Boolean = true) {
     if (IndexReader.indexExists(indexDirectory)) {
       doWithIndexWriter{ indexWriter =>
         indexWriter.deleteAll()
-        indexWriter.commit(Map(Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString))
+        commit()
       }
     }
     if (refresh) refreshSearcher()
@@ -127,8 +135,8 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   def commitData: Map[String, String] = {
     // get the latest commit
     val indexReader = Option(IndexReader.openIfChanged(searcher.indexReader.inner)).getOrElse(searcher.indexReader.inner)
-    var indexCommit = indexReader.getIndexCommit()
-    var mutableMap = indexCommit.getUserData()
+    val indexCommit = indexReader.getIndexCommit()
+    val mutableMap = indexCommit.getUserData()
     log.info("commit data =" + mutableMap)
     Map() ++ mutableMap
   }

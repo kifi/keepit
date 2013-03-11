@@ -27,8 +27,11 @@ $(function() {
         .classed("hover", true)
         .style("display", "none");
     var countHoverDef = gHoverDef.append("svg:text")
-        .attr("y", -7)
+        .attr("y", -14)
         .classed("count default", true);
+    var samplesHoverDef = gHoverDef.append("svg:text")
+        .attr("y", -4)
+        .classed("samples default", true);
 
     var path = svg.append("svg:path")
         .attr("class", "line");
@@ -36,10 +39,13 @@ $(function() {
         .classed("hover", true)
         .style("display", "none");
     var dateHover = gHover.append("svg:text")
-        .attr("y", -24);
+        .attr("y", -28);
     var countHover = gHover.append("svg:text")
-        .attr("y", -7)
+        .attr("y", -14)
         .classed("count", true);
+    var samplesHover = gHover.append("svg:text")
+        .attr("y", -4)
+        .classed("samples", true);
 
     var descText = svg.append("svg:text")
         .attr("x", -20).attr("y", -12)
@@ -55,7 +61,7 @@ $(function() {
       .y(function(d) { return y(d); })
       .interpolate("monotone");
 
-    var d0, d0d, counts, defaultCounts;
+    var d0, d0d, counts, defaultCounts, samples, defaultSamples, max = 0;
     function date(i) {
       var d = new Date(d0);
       d.setDate(d0d + i);
@@ -72,16 +78,17 @@ $(function() {
     function draw(o) {
       d0 = d3.time.format("%Y-%m-%d").parse(o.day0);
 
-      descText.text(
-          "Average: " + formatPercent(o.avg) + "% / " + formatPercent(o.defaultAvg) + "%, " +
-          "Samples: " + o.samples)
+      descText.text("Average: " + formatPercent(o.avg) + "% / " + formatPercent(o.defaultAvg) + "%")
 
       counts = o.counts.map(formatPercent);
+      samples = o.samples
+      defaultSamples = o.defaultSamples
       defaultCounts = o.defaultCounts.map(formatPercent);
       d0d = d0.getUTCDate();
 
+      max = d3.max(counts.concat(defaultCounts))*1.1; // make sure we aren't too close to the edge
       x.domain([d0, date(counts.length - 1)]);
-      y.domain([0, d3.max(counts.concat(defaultCounts))]).nice();
+      y.domain([0, max]).nice();
 
       gXAxis.call(xAxis);
       gYAxis.call(yAxis);
@@ -92,13 +99,16 @@ $(function() {
     function onMouseMove() {
       var i = date.index(x.invert(d3.mouse(svg[0][0])[0]));
       if (i >= 0 && i < counts.length) {
-        var d = date(i), n = counts[i], dn = defaultCounts[i];
-        if (dn == n) {
+        var d = date(i), n = counts[i], dn = defaultCounts[i], s = samples[i], ds = defaultSamples[i];
+        if (Math.abs(dn - n)/max < .15) {
+          // if values are close enough, only render the experiment label so the default label doesn't overlap
           gHoverDef.style("display", "none");
         } else {
+          samplesHoverDef.text(ds + " samples")
           countHoverDef.text(dn + "%");
           gHoverDef.style("display", "").attr("transform", "translate(" + x(d) + "," + y(dn) + ")");
         }
+        samplesHover.text(s + " samples")
         dateHover.text(d3.time.format("%a %b %d")(d).replace(" 0", " "));
         countHover.text(n + "%");
         gHover.style("display", "").attr("transform", "translate(" + x(d) + "," + y(n) + ")");

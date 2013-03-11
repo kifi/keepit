@@ -20,6 +20,7 @@ import org.apache.http.HttpStatus
 import org.joda.time.{DateTime, Seconds}
 import play.api.Play.current
 import scala.util.{Failure, Success}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 
 object Scraper {
   val BATCH_SIZE = 100
@@ -45,7 +46,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
     scrapedArticles
   }
 
-  def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
+  def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
     val repo = inject[ScrapeInfoRepo]
     val info = inject[Database].readWrite { implicit s =>
       repo.getByUri(uri.id.get).getOrElse(repo.save(ScrapeInfo(uriId = uri.id.get)))
@@ -58,6 +59,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
     } catch {
       case e: Throwable =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
+        inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL))
         val errorURI = inject[Database].readWrite { implicit s =>
           inject[ScrapeInfoRepo].save(info.withFailure())
           inject[NormalizedURIRepo].save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
@@ -88,14 +90,14 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
         val scrapedURI = db.readWrite { implicit s =>
           // update the scrape schedule and the uri state to SCRAPED
           scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
-          uriRepo.save(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          uriRepo.saveAsIndexable(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
         }
         log.info("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
       case NotScrapable(destinationUrl) =>
         val unscrapableURI = db.readWrite { implicit s =>
           scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
-          uriRepo.save(uri.withState(NormalizedURIStates.UNSCRAPABLE))
+          uriRepo.saveAsIndexable(uri.withState(NormalizedURIStates.UNSCRAPABLE))
         }
         (unscrapableURI, None)
       case NotModified =>
@@ -122,7 +124,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
         // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
         val errorURI = db.readWrite { implicit s =>
           scrapeInfoRepo.save(info.withFailure())
-          uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
+          uriRepo.saveAsIndexable(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         (errorURI, None)
     }

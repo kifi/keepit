@@ -1,12 +1,11 @@
 package com.keepit.common.db.slick
 
-import scala.slick.session.{Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability}
-import scala.slick.driver._
-import scala.slick.lifted._
-import scala.slick.SlickException
-import java.sql.{PreparedStatement, Connection, DatabaseMetaData, Statement}
 import com.google.inject.Inject
-import com.keepit.common.db.DbInfo
+import com.keepit.common.db.{DbSequence, DbInfo}
+import java.sql.{PreparedStatement, Connection}
+import scala.collection.mutable
+import scala.slick.driver._
+import scala.slick.session.{Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability}
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
@@ -14,10 +13,13 @@ trait DataBaseComponent {
   def dbInfo: DbInfo
   lazy val handle: SlickDatabase = dbInfo.database
 
+  def getSequence(name: String): DbSequence
+
   def entityName(name: String): String = name
 }
 
 class Database @Inject() (val db: DataBaseComponent) {
+
   import DBSession._
 
   def readOnly[T](f: ROSession => T): T = {
@@ -46,6 +48,11 @@ object DBSession {
     def close() = throw new UnsupportedOperationException
     def rollback() = session.rollback
     def withTransaction[T](f: => T): T = session.withTransaction(f)
+
+    private val statementCache = new mutable.HashMap[String, PreparedStatement]
+    def getPreparedStatement(statement: String): PreparedStatement =
+      statementCache.getOrElseUpdate(statement, this.conn.prepareStatement(statement))
+
     override def forParameters(rsType: ResultSetType = resultSetType, rsConcurrency: ResultSetConcurrency = resultSetConcurrency,
       rsHoldability: ResultSetHoldability = resultSetHoldability) = throw new UnsupportedOperationException
   }

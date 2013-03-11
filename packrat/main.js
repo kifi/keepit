@@ -171,10 +171,12 @@ api.port.on({
   }});
 
 function emitSliderRules(tab) {
-  if (session && api.prefs.get("showSlider")) {
+  if (session) {
+    var show = api.prefs.get("showSlider");
     api.tabs.emit(tab, "slider_rules", {  // only the relevant rules
-      viewport: session.rules.rules.viewport,
-      scroll: session.rules.rules[tab.showOnScroll && "scroll"]});
+      metro: session.experiments.indexOf("metro") >= 0,
+      viewport: show && session.rules.rules.viewport,
+      scroll: show && session.rules.rules[tab.showOnScroll && "scroll"]});
   }
 }
 
@@ -627,24 +629,3 @@ authenticate(function() {
     }
   });
 });
-
-// TODO: remove the temporary prefs storage migration code below after Jan 31.
-if (this.chrome) {
-  ["max_res","show_score"].forEach(function(name) {
-    var val = api.storage["production_" + name] || api.storage["development_" + name];
-    if (val) api.prefs.set({max_res: "maxResults", show_score: "showScores"}[name], val === "yes" ? true : val);
-    delete api.storage["production_" + name];
-    delete api.storage["development_" + name];
-  });
-}
-if (api.storage.env) {
-  if (api.storage.env === "development") {
-    api.prefs.set("env", "development");
-  }
-  delete api.storage.env;
-}
-
-// TODO: remove the temporary prefs storage migration code below after Feb 10.
-if (this.chrome) {
-  delete api.storage[":sliderDelay"];
-}
