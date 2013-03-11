@@ -78,10 +78,12 @@ $(function() {
     function draw(o) {
       d0 = d3.time.format("%Y-%m-%d").parse(o.day0);
 
-      descText.text("Average: " + formatPercent(o.avg) + "% / " + formatPercent(o.defaultAvg) + "%")
-
       counts = o.counts.map(formatPercent);
       samples = o.samples
+
+      descText.text("Average: " + formatPercent(o.avg) + "% / " + formatPercent(o.defaultAvg) + "% | " +
+                    "Samples: " + d3.sum(o.samples))
+
       defaultSamples = o.defaultSamples
       defaultCounts = o.defaultCounts.map(formatPercent);
       d0d = d0.getUTCDate();
