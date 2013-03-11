@@ -8,22 +8,18 @@
   bookmarkSearch: Option[String])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
-  <span style="margin:2px">
-    <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId.id" target="_blank">
-      <img class="user-avatar" src="https://graph.facebook.com/@userWithSocial.socialUserInfo.socialId.id/picture?type=square"/>
-      @userWithSocial.socialUserInfo.socialId.id
-    </a>
-  </span>
+  <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId.id" target="_blank">
+    <img class="user-avatar" src="https://graph.facebook.com/@userWithSocial.socialUserInfo.socialId.id/picture?type=square">@userWithSocial.socialUserInfo.socialId.id
+  </a>
 }
 
-@admin("User: " + userWithSocial.user.firstName + " " + userWithSocial.user.lastName) {
-  <h2>User details </h2>
+@admin("User: " + userWithSocial.user.firstName + " " + userWithSocial.user.lastName, stylesheets = List("admin_user")) {
     <button class="btn" id="refresh_sui" onclick="refreshAllSocialUserInfo()">Refresh Social User Info!</button>
     <button class="btn" onclick="impersonate()">Impersonate User</button>
     <button class="btn" onclick="unimpersonate()">Stop Impersonating</button>
     <button class="btn" onclick="configSearch()">Config Search</button>
     <br/>
-    <table class="table table-bordered">
+    <table class="user-summary table table-bordered">
       <tr>
         <th>Name</th><td>@userWithSocial.user.firstName @userWithSocial.user.lastName</td>
       </tr>
@@ -49,15 +45,15 @@
         <td>
           <form action="@com.keepit.controllers.admin.routes.AdminUserController.updateUser(userWithSocial.user.id.get)" method="POST" class="form-inline">
             <input type="text" name="emails" value="@{userWithSocial.emails.map(_.address).mkString(",")}">
-            <input type="submit" value="Change emails">
+            <input type="submit" value="Save">
           </form>
         </td>
       </tr>
       <tr>
         <th>Experiments</th>
-        <td id="experiments" class="form-inline" style="cursor:default">
+        <td id="experiments" class="form-inline">
           @for(exp <- Seq(ExperimentTypes.ADMIN, ExperimentTypes.BLOCK, ExperimentTypes.METRO)) {
-            <label class="checkbox" style="cursor:pointer;margin-right:6px">
+            <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(userWithSocial.experiments.contains(exp)) {checked}>@exp.value
             </label>
           }
