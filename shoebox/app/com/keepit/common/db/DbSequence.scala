@@ -22,6 +22,10 @@ case class SequenceNumber(value: Long) extends AnyVal with Ordered[SequenceNumbe
   override def toString = value.toString
 }
 
+object SequenceNumber {
+  val ZERO = SequenceNumber(0)
+}
+
 abstract class DbSequence(val name: String) {
   if (DbSequence.validSequenceName.findFirstIn(name).isEmpty)
     throw new IllegalArgumentException(s"Sequence name $name is invalid")

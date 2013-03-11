@@ -87,19 +87,16 @@ class AdminBookmarksController @Inject() (db: Database,
       bookmark.userId
     }
 
-    val uniqueUsers = db.readWrite { implicit s =>
-      val modifiedUserIds = request.body.asFormUrlEncoded.get map { case (key, values) =>
+    db.readWrite { implicit s =>
+      request.body.asFormUrlEncoded.get foreach { case (key, values) =>
         key.split("_") match {
           case Array("private", id) => setIsPrivate(Id[Bookmark](id.toInt), toBoolean(values.last))
           case Array("active", id) => setIsActive(Id[Bookmark](id.toInt), toBoolean(values.last))
         }
       }
-      Set(modifiedUserIds.toSeq: _*)
     }
-    uniqueUsers foreach { userId =>
-      log.info("updating user %s".format(userId))
-      uriGraphPlugin.update(userId)
-    }
+    log.info("updating changed users")
+    uriGraphPlugin.update()
     Redirect(request.request.referer)
   }
 
@@ -108,7 +105,7 @@ class AdminBookmarksController @Inject() (db: Database,
     db.readWrite { implicit s =>
       val bookmark = bookmarkRepo.get(id)
       bookmarkRepo.delete(id)
-      uriGraphPlugin.update(bookmark.userId)
+      uriGraphPlugin.update()
       Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
     }
   }

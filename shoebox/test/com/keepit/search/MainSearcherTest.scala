@@ -102,7 +102,7 @@ class MainSearcherTest extends Specification with DbRepos {
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
         val clickBoosts = resultClickTracker.getBoosts(Id[User](0), "", 1.0f)
-        graph.load() === users.size
+        graph.update() === users.size
         indexer.run() === uris.size
 
         val numHitsPerCategory = 1000
@@ -161,7 +161,7 @@ class MainSearcherTest extends Specification with DbRepos {
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
-        graph.load() === users.size
+        graph.update() === users.size
         indexer.run() === uris.size
 
         val numHitsToReturn = 7
@@ -219,7 +219,7 @@ class MainSearcherTest extends Specification with DbRepos {
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
-        graph.load() === users.size
+        graph.update() === users.size
 
         def run = {
           val numHitsToReturn = 100
@@ -282,7 +282,7 @@ class MainSearcherTest extends Specification with DbRepos {
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
-        graph.load() === users.size
+        graph.update() === users.size
         indexer.run() === uris.size
 
         val numHitsToReturn = 100
@@ -317,7 +317,7 @@ class MainSearcherTest extends Specification with DbRepos {
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
-        graph.load() === users.size
+        graph.update() === users.size
         indexer.run() === uris.size
 
         val numHitsToReturn = 3
@@ -369,7 +369,7 @@ class MainSearcherTest extends Specification with DbRepos {
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
-        graph.load() === 1
+        graph.update() === users.size
         indexer.run() === uris.size
 
         val mainSearcher = mainSearcherFactory(userId, Set.empty[Id[User]], SearchFilter.default(), noBoostConfig("recencyBoost" -> "1.0"))
@@ -406,7 +406,7 @@ class MainSearcherTest extends Specification with DbRepos {
         }
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
-        graph.load() === 1
+        graph.update() === users.size
         indexer.run() === uris.size
 
         var mainSearcher = mainSearcherFactory(userId, Set.empty[Id[User]], SearchFilter.default(), noBoostConfig)
@@ -446,11 +446,11 @@ class MainSearcherTest extends Specification with DbRepos {
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
-        graph.load() === users.size
+        graph.update() === 1
         indexer.run() === uris.size
 
-        var mainSearcher = mainSearcherFactory(user1.id.get, Set(user2.id.get), SearchFilter.default(), noBoostConfig)
-        var res = mainSearcher.search("alldocs", uris.size, None)
+        val mainSearcher = mainSearcherFactory(user1.id.get, Set(user2.id.get), SearchFilter.default(), noBoostConfig)
+        val res = mainSearcher.search("alldocs", uris.size, None)
 
         val publicSet = publicUris.map(u => u.id.get).toSet
         val privateSet = privateUris.map(u => u.id.get).toSet
@@ -479,11 +479,11 @@ class MainSearcherTest extends Specification with DbRepos {
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
-        graph.load() === users.size
+        graph.update() === 1
         indexer.run() === uris.size
 
-        var mainSearcher = mainSearcherFactory(user1.id.get, Set(user2.id.get), SearchFilter.default(), noBoostConfig)
-        var res = mainSearcher.search("alldocs", uris.size, None)
+        val mainSearcher = mainSearcherFactory(user1.id.get, Set(user2.id.get), SearchFilter.default(), noBoostConfig)
+        val res = mainSearcher.search("alldocs", uris.size, None)
 
         val publicSet = publicUris.map(u => u.id.get).toSet
         val privateSet = privateUris.map(u => u.id.get).toSet
@@ -512,7 +512,7 @@ class MainSearcherTest extends Specification with DbRepos {
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
-        graph.load() === users.size
+        graph.update() === users.size
         indexer.run() === uris.size
 
         val numHitsToReturn = 100

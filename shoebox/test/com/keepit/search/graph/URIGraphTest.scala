@@ -111,6 +111,26 @@ class URIGraphTest extends Specification with DbRepos {
   }
 
   "URIGraph" should {
+    "maintain a sequence number on bookmarks " in {
+      running(new EmptyApplication()) {
+        val (users, uris) = setupDB
+        val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
+        val bookmarks = db.readWrite { implicit s =>
+          expectedUriToUserEdges.flatMap{ case (uri, users) =>
+            users.map { user =>
+              val url1 = urlRepo.get(uri.url).getOrElse( urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")))
+            }
+          }
+        }
+        val graphDir = new RAMDirectory
+        val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
+        graph.update() === users.size
+        graph.sequenceNumber.value === bookmarks.size
+        val graph2 = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
+        graph2.sequenceNumber.value === bookmarks.size
+      }
+    }
     "generate UriToUsrEdgeSet" in {
       running(new EmptyApplication()) {
         val (users, uris) = setupDB
@@ -129,7 +149,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val graphDir = new RAMDirectory
         val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
-        graph.load() === users.size
+        graph.update() === users.size
 
         val searcher = graph.getURIGraphSearcher()
 
@@ -161,7 +181,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val graphDir = new RAMDirectory
         val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
-        graph.load() === users.size
+        graph.update() === users.size
 
         val searcher = graph.getURIGraphSearcher()
 
@@ -194,7 +214,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val graphDir = new RAMDirectory
         val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
-        graph.load() === users.size
+        graph.update() === users.size
 
         val searcher = graph.getURIGraphSearcher()
 
@@ -267,7 +287,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val graphDir = new RAMDirectory
         val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
-        graph.load() === users.size
+        graph.update() === 2
 
         val searcher = graph.getURIGraphSearcher()
         val personaltitle = new TermQuery(URIGraph.titleTerm.createTerm("personaltitle"))
@@ -300,7 +320,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val graphDir = new RAMDirectory
         val graph = URIGraph(graphDir).asInstanceOf[URIGraphImpl]
-        graph.load() === users.size
+        graph.update() === 1
 
         val searcher = graph.getURIGraphSearcher()
 

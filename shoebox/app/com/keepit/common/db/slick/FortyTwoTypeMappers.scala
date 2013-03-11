@@ -262,7 +262,7 @@ class DateTimeMapperDelegate(val profile: BasicProfile) extends DelegateMapperDe
 class SequenceNumberTypeMapperDelegate(val profile: BasicProfile)
     extends DelegateMapperDelegate[SequenceNumber, Long] {
   protected val delegate = profile.typeMapperDelegates.longTypeMapperDelegate
-  def zero = SequenceNumber(0)
+  def zero = SequenceNumber.ZERO
   def sourceToDest(value: SequenceNumber): Long = value.value
   def safeDestToSource(value: Long): SequenceNumber = SequenceNumber(value)
 }
