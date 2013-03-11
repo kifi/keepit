@@ -1,6 +1,6 @@
 {
   "name": "Kifi Beta",
-  "version": "2.2.13",
+  "version": "2.2.14",
   "manifest_version": 2,
   "description": "Keep it, Find it!",
   "icons": {
@@ -38,8 +38,7 @@
     "images/snapshot.png",
     "images/social_icons.png",
     "images/triangle_down.31x16.png",
-    "images/metro/lock_gray.png",
-    "images/metro/lock_white.png",
+    "images/metro/slider.png",
     "images/results/dropbox.png",
     "images/results/facebook.png",
     "images/results/gdocs.gif",

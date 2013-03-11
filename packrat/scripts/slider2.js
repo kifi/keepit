@@ -22,7 +22,7 @@ slider2 = function() {
   });
 
   function showSlider(trigger, locator) {
-    api.port.emit("get_slider_info", function(o) {
+    /*api.port.emit("get_slider_info",*/!function(o) {
       api.log("slider info:", o);
 
       isKept = o.kept;
@@ -34,7 +34,7 @@ slider2 = function() {
           // "arrow": api.url('images/triangle_down.31x16.png'),
           // "profilepic": o.session.avatarUrl,
           // "name": o.session.name,
-          "lockUrl": api.url("images/metro/lock_gray.png"),
+          "bgUrl": api.url("images/metro/slider.png"),
           "isKept": o.kept,
           "private": o.private,
           "sensitive": o.sensitive,
@@ -54,38 +54,37 @@ slider2 = function() {
             api.log("[showSlider] already there");  // TODO: remove old one? perhaps from previous installation
           } else {
             $slider = $(html).appendTo("html");
+            setTimeout(function() { $slider.addClass("kifi-visible") });
 
             // attach event bindings
+            $slider.on("mouseleave", function() {
+              api.log("[mouseleave]");
+              slideOut("mouseleave");
+            });
             // $slider.on("click", ".kifi-slider-x", function() {
             //   slideOut("x");
             // })
-
-            slideIn();
 
             logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: location.href});
 
             if (locator) {
               openDeepLink(o.session, locator);
-            } else {
+            } else if (trigger != "tile") {
               idleTimer.start();
             }
           }
         });
-    });
-  }
-
-  function slideIn() {
-    $slider.animate({right: 10, opacity: 1}, 120, function() {
-      $slider.css({right: 10, opacity: 1});
-    });
+    }({kept: false, friends: []});
   }
 
   // trigger is for the event log (e.g. "key", "icon"). pass no trigger if just hiding slider temporarily.
   function slideOut(trigger) {
     idleTimer.kill();
-    $slider.animate({right: -300, opacity: 0}, 120, !trigger ? $.noop : function() {
-      $slider.remove();
-      $slider = null;
+    $slider.addClass("kifi-hidden").on("transitionend", function(e) {
+      if (trigger && e.originalEvent.propertyName == "opacity") {
+        $slider.remove();
+        $slider = null;
+      }
     });
     if (trigger) {
       logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - lastShownAt)});

@@ -39,23 +39,40 @@
   position: fixed;
   z-index: 2147483640;
   bottom: 10px;
-  right: -300px;
+  right: 10px;
   height: 42px;
-  width: 300px;
-  text-align: right;
+  width: 120px;
   font: 12px/42px sans-serif;
+  opacity: 1;
+  overflow: hidden;
+}
+.kifi-slider2.kifi-visible {
+  width: 300px;
+  -webkit-transition: width .1s ease-out;
+  transition: width .1s ease-out;
+}
+.kifi-slider2.kifi-hidden {
+  width: 42px;
+  opacity: 0;
+  -webkit-transition: width .1s ease-in, opacity .07s ease-in .04s;
+  transition: width .1s ease-in, opacity .07s ease-in .04s;
 }
 .kifi-slider2-keep {
-  display: inline-block;
+  position: absolute;
+  top: 0;
+  right: 0;
   width: 120px;
+  height: 42px;
   line-height: 42px;
   border-radius: 5px;
   background: #34495e;
   color: #fff;
   text-align: center;
   cursor: pointer;
-  position: relative;
   overflow: hidden;
+}
+.kifi-slider2-keep:hover {
+  background: #36526f;
 }
 .kifi-slider2-lock {
   position: absolute;
@@ -65,7 +82,97 @@
   height: 40px;
   border-radius: 0 20px 20px 0;
   background-color: #465f78;
-  background-size: 7px 9px;
   background-repeat: no-repeat;
-  background-position: 5px 21px;
+  background-position: 0 999px;
+}
+.kifi-slider2-lock::before {
+  content: " ";
+  position: absolute;
+  top: 21px;
+  left: 5px;
+  width: 7px;
+  height: 9px;
+  background-image: inherit;
+  background-size: auto 17px;
+  background-repeat: no-repeat;
+  background-position: -91px 0;
+  font-size: 0;
+}
+.kifi-slider2-lock:hover::before {
+  background-position: -98px 0;
+}
+.kifi-slider2-dock {
+  position: absolute;
+  top: 0;
+  right: 123px;
+  width: 177px;
+  height: 42px;
+  background: #67829c;
+  border-radius: 5px;
+  font-size: 0;
+}
+.kifi-slider2-dock-btn {
+  display: inline-block;
+  height: 42px;
+  background-color: #67829c;
+  background-position: 0 999px;
+  background-repeat: no-repeat;
+  text-align: center;
+  vertical-align: top;
+  cursor: pointer;
+}
+.kifi-slider2-dock-btn:first-child {
+  border-top-left-radius: inherit;
+  border-bottom-left-radius: inherit;
+}
+.kifi-slider2-dock-btn:last-child {
+  border-top-right-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+.kifi-slider2-dock-btn:hover {
+  background-color: #7492af;
+}
+.kifi-slider2-dock-btn::before {
+  content: " ";
+  display: inline-block;
+  margin-top: 14px;
+  background-image: inherit;
+  background-size: auto 17px;
+  background-repeat: no-repeat;
+  height: 17px;
+}
+.kifi-slider2-dock-btn.kifi-slider2-noti {
+  width: 48px;
+}
+.kifi-slider2-dock-btn.kifi-slider2-noti::before {
+  background-position: 0 0;
+  width: 14px;
+}
+.kifi-slider2-dock-btn.kifi-slider2-comm {
+  width: 48px;
+}
+.kifi-slider2-dock-btn.kifi-slider2-comm::before {
+  background-position: -14px 0;
+  width: 17px;
+}
+.kifi-slider2-dock-btn.kifi-slider2-mess {
+  width: 48px;
+}
+.kifi-slider2-dock-btn.kifi-slider2-mess::before {
+  background-position: -31px 0;
+  width: 22px;
+}
+.kifi-slider2-dock-btn.kifi-slider2-pane {
+  width: 30px;
+}
+.kifi-slider2-dock-btn.kifi-slider2-pane::before {
+  background-position: -53px 0;
+  width: 19px;
+}
+.kifi-slider2-dock-sep {
+  display: inline-block;
+  width: 1px;
+  height: 34px;
+  margin-top: 4px;
+  background: #506982;
 }

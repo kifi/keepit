@@ -109,8 +109,14 @@ var slider, slider2, injected, t0 = +new Date;
   }
 
   function insertTile() {
+    var el;
+    while (el = document.getElementById("kifi-tile")) {
+      el.remove();
+    }
+
     // don't want to inject a stylesheet until we show slider
-    var el = document.createElement("div");
+    el = document.createElement("div");
+    el.id = "kifi-tile";
     el.style.position = "fixed";
     el.style.zIndex = 2147483639;
     el.style.bottom = "10px";
