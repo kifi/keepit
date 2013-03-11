@@ -20,6 +20,7 @@ import org.apache.http.HttpStatus
 import org.joda.time.{DateTime, Seconds}
 import play.api.Play.current
 import scala.util.{Failure, Success}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 
 object Scraper {
   val BATCH_SIZE = 100
@@ -45,7 +46,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
     scrapedArticles
   }
 
-  def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = try {
+  def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
     val repo = inject[ScrapeInfoRepo]
     val info = inject[Database].readWrite { implicit s =>
       repo.getByUri(uri.id.get).getOrElse(repo.save(ScrapeInfo(uriId = uri.id.get)))
@@ -58,6 +59,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
     } catch {
       case e: Throwable =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
+        inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL))
         val errorURI = inject[Database].readWrite { implicit s =>
           inject[ScrapeInfoRepo].save(info.withFailure())
           inject[NormalizedURIRepo].save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
