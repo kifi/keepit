@@ -93,6 +93,7 @@ class DomainClassifierTest extends Specification with DbRepos {
           Await.result(future, pairIntToDuration(100, TimeUnit.MILLISECONDS))
         }
 
+        classifier.isSensitive("www.yahoo.com") === Right(false)
         classifier.isSensitive("yahoo.com") === Right(false)
         classifier.isSensitive("zdnet.com") === Right(false)
         classifier.isSensitive("schwab.com") === Right(true)
@@ -100,6 +101,7 @@ class DomainClassifierTest extends Specification with DbRepos {
         classifier.isSensitive("42go.com") === Right(false)
         classifier.isSensitive("addepar.com") === Right(false)
         classifier.isSensitive("playboy.com") === Right(true)
+        classifier.isSensitive("www.porn.com") === Right(true)
         classifier.isSensitive("porn.com") === Right(true)
       }
     }
