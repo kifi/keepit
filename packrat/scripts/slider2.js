@@ -80,7 +80,7 @@ slider2 = function() {
   // trigger is for the event log (e.g. "key", "icon"). pass no trigger if just hiding slider temporarily.
   function slideOut(trigger) {
     idleTimer.kill();
-    $slider.addClass("kifi-hidden").on("transitionend", function(e) {
+    $slider.addClass("kifi-hidden").on("transitionend webkitTransitionEnd", function(e) {
       if (trigger && e.originalEvent.propertyName == "opacity") {
         $slider.remove();
         $slider = null;
