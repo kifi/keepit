@@ -89,7 +89,13 @@ class DomainClassifierImpl @Inject()(system: ActorSystem, db: Database, client: 
     new DomainClassificationActor(db, client, updater, domainRepo, tagRepo, domainToTagRepo)
   })
 
-  def isSensitive(domainName: String): Either[Future[Boolean], Boolean] = {
+  private val splitPattern = """\.""".r
+
+  def isSensitive(hostname: String): Either[Future[Boolean], Boolean] = {
+    val domainName = (splitPattern.split(hostname.toLowerCase).toSeq match {
+      case "www" +: domain => domain
+      case domain => domain
+    }).mkString(".")
     val domainOpt = db.readOnly { implicit s => domainRepo.get(domainName) }
     domainOpt.flatMap { domain =>
       domain.sensitive.orElse(db.readWrite { implicit s => updater.calculateSensitivity(domain) })
