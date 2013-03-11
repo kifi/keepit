@@ -17,26 +17,27 @@ trait PercentMatch extends QueryParser {
   def setPercentMatch(value: Float) { percentMatch = value }
 
   override protected def getBooleanQuery(clauses: ArrayBuffer[BooleanClause]): Option[Query] = {
-    if (clauses.size ==0) {
-      null; // all clause words were filtered away by the analyzer.
-    }
-    val query = new BooleanQueryWithPercentMatch(false) // ignore disableCoord. we always enable coord and control the behavior thru a Similarity instance
-    query.setPercentMatch(percentMatch)
-
-    val (siteClauses, otherClauses) = clauses.partition{ clause => clause.getQuery.isInstanceOf[SiteQuery] && !clause.isProhibited }
-    otherClauses.foreach{ clause => query.add(clause) }
-
-    val finalQuery = if (siteClauses.isEmpty) {
-      query
+    if (clauses.isEmpty) {
+      None // all clause words were filtered away by the analyzer.
     } else {
-      val siteQuery = {
-        if (siteClauses.size == 1) siteClauses(0).getQuery
-        else siteClauses.foldLeft(new BooleanQuery(true)){ (bq, clause) => bq.add(clause.getQuery, Occur.MUST); bq }
-      }
+      val query = new BooleanQueryWithPercentMatch(false) // ignore disableCoord. we always enable coord and control the behavior thru a Similarity instance
+      query.setPercentMatch(percentMatch)
 
-      if (otherClauses.isEmpty) siteQuery
-      else new ConditionalQuery(query, siteQuery)
+      val (siteClauses, otherClauses) = clauses.partition{ clause => clause.getQuery.isInstanceOf[SiteQuery] && !clause.isProhibited }
+      otherClauses.foreach{ clause => query.add(clause) }
+
+      val finalQuery = if (siteClauses.isEmpty) {
+        query
+      } else {
+        val siteQuery = {
+          if (siteClauses.size == 1) siteClauses(0).getQuery
+          else siteClauses.foldLeft(new BooleanQuery(true)){ (bq, clause) => bq.add(clause.getQuery, Occur.MUST); bq }
+        }
+
+        if (otherClauses.isEmpty) siteQuery
+        else new ConditionalQuery(query, siteQuery)
+      }
+      Option(finalQuery)
     }
-    Option(finalQuery)
   }
 }
