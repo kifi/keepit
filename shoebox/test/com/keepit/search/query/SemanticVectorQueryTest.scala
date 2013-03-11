@@ -35,7 +35,7 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.analysis.Analyzer
 import com.keepit.search.index.Indexer
 import com.keepit.search.index.PersonalizedSearcher
-import com.keepit.search.index.QueryParser
+import com.keepit.search.query.parser.QueryParser
 
 class SemanticVectorQueryTest extends Specification {
 
@@ -61,8 +61,6 @@ class SemanticVectorQueryTest extends Specification {
 
     def buildIndexable(id: Id[Tst]): Indexable[Tst] = throw new UnsupportedOperationException()
     def buildIndexable(data: Tst): Indexable[Tst] = new TstIndexable(data.id, data.text)
-
-    def getQueryParser(lang: Lang): QueryParser = throw new UnsupportedOperationException
 
     def index(id: Id[Tst], text: String) = {
       indexDocuments(Some(buildIndexable(new Tst(id, text))).iterator, 100){ docs => }

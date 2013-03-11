@@ -99,7 +99,7 @@ class MainSearcher(
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
-    parser.parseQuery(queryString).map{ articleQuery =>
+    parser.parse(queryString).map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
@@ -230,7 +230,7 @@ class MainSearcher(
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 
-    parser.parseQuery(queryString).map{ query =>
+    parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
       val idMapper = personalizedSearcher.indexReader.getIdMapper
