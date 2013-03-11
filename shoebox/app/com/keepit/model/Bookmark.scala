@@ -41,7 +41,8 @@ case class Bookmark(
   userId: Id[User],
   state: State[Bookmark] = BookmarkStates.ACTIVE,
   source: BookmarkSource,
-  kifiInstallation: Option[ExternalId[KifiInstallation]] = None
+  kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
+  seq: SequenceNumber = SequenceNumber.ZERO
 ) extends ModelWithExternalId[Bookmark] {
   def withId(id: Id[Bookmark]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -66,11 +67,13 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark]
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark]
+  def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Set[Id[User]]
   def count(userId: Id[User])(implicit session: RSession): Int
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit
+  def save(model: Bookmark)(implicit session: RWSession): Bookmark
 }
 
 case class BookmarkCountKey() extends Key[Int] {
@@ -94,6 +97,8 @@ class BookmarkRepoImpl @Inject() (
   import db.Driver.Implicit._
   import DBSession._
 
+  private val sequence = db.getSequence("bookmark_sequence")
+
   override lazy val table = new RepoTable[Bookmark](db, "bookmark") with ExternalIdColumn[Bookmark] {
     def title = column[String]("title", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
@@ -104,7 +109,9 @@ class BookmarkRepoImpl @Inject() (
     def isPrivate = column[Boolean]("is_private", O.NotNull)
     def source = column[BookmarkSource]("source", O.NotNull)
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~ userId ~ state ~ source ~ kifiInstallation.? <> (Bookmark, Bookmark.unapply _)
+    def seq = column[SequenceNumber]("seq", O.Nullable)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~
+        userId ~ state ~ source ~ kifiInstallation.? ~ seq <> (Bookmark, Bookmark.unapply _)
   }
 
   override def invalidateCache(bookmark: Bookmark)(implicit session: RSession) = {
@@ -130,6 +137,9 @@ class BookmarkRepoImpl @Inject() (
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
 
+  def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Set[Id[User]] =
+    (for (b <- table if b.seq > num) yield b.userId).list.toSet
+
   def count(userId: Id[User])(implicit session: RSession): Int =
     Query(table.where(b => b.userId === userId).length).first
 
@@ -144,6 +154,11 @@ class BookmarkRepoImpl @Inject() (
 
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.urlId === urlId) yield b).list
+
+  override def save(model: Bookmark)(implicit session: RWSession) = {
+    val newModel = model.copy(seq = sequence.incrementAndGet())
+    super.save(newModel)
+  }
 
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit = (for(b <- table if b.id === id) yield b).delete
 }
