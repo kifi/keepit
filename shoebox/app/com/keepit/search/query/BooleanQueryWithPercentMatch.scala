@@ -149,7 +149,7 @@ object BooleanScorer {
 
     val mainScorer =
       if (required.length > 0 && optional.length > 0) {
-        new BooleanScorer(weight, conjunction(), disjunction())
+        new BooleanScorer(weight, conjunction(), disjunction(), threshold)
       } else if (required.length > 0){
         conjunction()
       } else if (optional.length > 0) {
@@ -160,7 +160,7 @@ object BooleanScorer {
   }
 }
 
-class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer) extends Scorer(weight) with Coordinator {
+class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float) extends Scorer(weight) with Coordinator {
 
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -181,7 +181,15 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
 
   override def advance(target: Int): Int = {
     doc = required.advance(target)
-    if (doc < NO_MORE_DOCS) optional.advance(doc)
+    if (threshold > 0.0f) { // some of the optional clauses must match to reach the threshold.
+      while (doc < NO_MORE_DOCS && optional.advance(doc) != doc) {
+        doc = required.advance(optional.docID)
+      }
+    } else { // the required clauses have enough weights. the optional clause is truly optional.
+      if (doc < NO_MORE_DOCS && optional.docID < doc) {
+        optional.advance(doc)
+      }
+    }
     doc
   }
 
@@ -298,7 +306,7 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
       doc = top.doc
       while (scoreValue <= 0.0f && doc < NO_MORE_DOCS) {
         doc = top.doc
-        scoreValue = doScore()
+        scoreValue = doScore() // doScore advances underlying scorers
         top = pq.top
       }
     }
