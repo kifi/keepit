@@ -1,4 +1,4 @@
-package com.keepit.search.index
+package com.keepit.search.query.parser
 
 import com.keepit.search.Lang
 import org.specs2.specification.Scope
@@ -18,42 +18,39 @@ import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.Query
+import com.keepit.search.index.DefaultAnalyzer
 
 class QueryParserTest extends Specification {
 
   private trait QueryParserScope extends Scope {
     val analyzer = DefaultAnalyzer.forParsing(Lang("en"))
-    val parser = new QueryParser(analyzer) {
-      override def parseQuery(queryText: String) = {
-        val qopt = super.parseQuery(queryText)
-        //println("[%s]=>[%s]".format(queryText, qopt))
-        qopt
-      }
+    val parser = new QueryParser(analyzer, None) with DefaultSyntax {
+      override val fields = Set("", "site")
     }
   }
 
   "QueryParser" should {
     "be forgiving to lucene parser error" in new QueryParserScope {
-      parser.parseQuery("aaa\"bbb") must beSome[Query]
-      parser.parseQuery("aaa \"bbb") must beSome[Query]
-      parser.parseQuery("aaa (bbb") must beSome[Query]
-      parser.parseQuery("aaa (bbb))") must beSome[Query]
-      parser.parseQuery("aaa) bbb") must beSome[Query]
-      parser.parseQuery("+") must beSome[Query]
-      parser.parseQuery("\"") must beSome[Query]
+      parser.parse("aaa\"bbb") must beSome[Query]
+      parser.parse("aaa \"bbb") must beSome[Query]
+      parser.parse("aaa (bbb") must beSome[Query]
+      parser.parse("aaa (bbb))") must beSome[Query]
+      parser.parse("aaa) bbb") must beSome[Query]
+      parser.parse("+") must beNone
+      parser.parse("\"") must beNone
     }
 
     "handle an empty query" in new QueryParserScope {
-      parser.parseQuery(" ") must beNone
-      parser.parseQuery("") must beNone
-      parser.parseQuery(null) must beNone
+      parser.parse(" ") must beNone
+      parser.parse("") must beNone
+      parser.parse(null) must beNone
     }
 
     "handle query operators" in new QueryParserScope {
-      var query = parser.parseQuery("+aaa")
+      var query = parser.parse("+aaa")
       query must beSome[Query]
 
-      query = parser.parseQuery("+aaa +bbb")
+      query = parser.parse("+aaa +bbb")
       query must beSome[Query]
 
       var clauses = query.get.asInstanceOf[BooleanQuery].getClauses
@@ -61,7 +58,7 @@ class QueryParserTest extends Specification {
       clauses(0).getOccur() === Occur.MUST
       clauses(1).getOccur() === Occur.MUST
 
-      query = parser.parseQuery("aaa +bbb")
+      query = parser.parse("aaa +bbb")
       query must beSome[Query]
 
       clauses = query.get.asInstanceOf[BooleanQuery].getClauses
