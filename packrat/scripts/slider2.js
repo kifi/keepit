@@ -150,6 +150,7 @@ slider2 = function() {
 
     api.port.emit("set_page_icon", true);
     info.kept = true;
+    info.private = privately;
     btn.classList.remove("kifi-unkept");
     btn.classList.add(privately ? "kifi-private" : "kifi-public");
 
@@ -169,6 +170,7 @@ slider2 = function() {
 
     api.port.emit("set_page_icon", false);
     info.kept = false;
+    delete info.private;
     btn.classList.remove("kifi-private", "kifi-public");
     btn.classList.add("kifi-unkept");
 
@@ -180,10 +182,11 @@ slider2 = function() {
   }
 
   function togglePrivate(btn) {
-    var priv = !btn.classList.contains("kifi-private");
+    var priv = !info.private;
     api.log("[setPrivate]", priv);
 
-    btn.classList.remove(priv ? "kifi-public" : "kifi-private");
+    info.private = priv;
+    btn.classList.remove("kifi-private", "kifi-public");
     btn.classList.add(priv ? "kifi-private" : "kifi-public");
 
     api.port.emit("set_private", priv, function(resp) {
