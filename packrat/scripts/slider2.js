@@ -55,12 +55,7 @@ slider2 = function() {
           $slider = $(html).appendTo("html").layout().addClass("kifi-visible");
 
           // attach event bindings
-          $slider.on("mouseleave", function() {
-            api.log("[mouseleave]");
-            if (!$pane) {
-              hideSlider("mouseleave");
-            }
-          }).on("click", ".kifi-slider2-keep", function() {
+          $slider.on("click", ".kifi-slider2-keep", function() {
             if (this.classList.contains("kifi-unkept")) {
               keepPage(this, false);
             } else {
@@ -92,8 +87,10 @@ slider2 = function() {
 
           if (locator) {
             openDeepLink(o.session, locator);
-          } else if (trigger != "tile") {
-            idleTimer.start();
+          } else if (trigger == "tile") {
+            idleTimer.start(100, true);
+          } else {
+            idleTimer.start(5000);
           }
         }
       });
@@ -114,14 +111,17 @@ slider2 = function() {
   }
 
   var idleTimer = {
-    start: function() {
-      api.log("[idleTimer.start]");
+    start: function(ms, isInside) {
+      idleTimer.ms = ms = ms > 0 ? ms : idleTimer.ms;
+      api.log("[idleTimer.start]", ms, "ms", isInside != null ? isInside : "");
       var t = idleTimer;
       clearTimeout(t.timeout);
-      t.timeout = setTimeout(function hideSliderIdle() {
-        api.log("[hideSliderIdle]");
-        hideSlider("idle");
-      }, 400);
+      if (!isInside) {
+        t.timeout = setTimeout(function hideSliderIdle() {
+          api.log("[hideSliderIdle]");
+          hideSlider("idle");
+        }, ms);
+      }
       $slider
         .off("mouseenter", t.clear).on("mouseenter", t.clear)
         .off("mouseleave", t.start).on("mouseleave", t.start);
@@ -199,6 +199,7 @@ slider2 = function() {
     var $html = $("html").addClass("kifi-pane-parent");
     $pane = $("<div class=kifi-pane>").appendTo($html).layout();
     $html.addClass("kifi-with-pane");
+    idleTimer.kill();
   }
 
   function hidePane() {
@@ -209,6 +210,7 @@ slider2 = function() {
       $html.removeClass("kifi-pane-parent");
     });
     var $html = $("html").removeClass("kifi-with-pane");
+    idleTimer.start(100, true);
   }
 
   // the slider API
