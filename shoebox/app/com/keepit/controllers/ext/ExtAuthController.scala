@@ -1,4 +1,4 @@
-package com.keepit.controllers
+package com.keepit.controllers.ext
 
 /**
  * Copyright 2012 Jorge Aliss (jaliss at gmail dot com) - twitter: @jaliss
@@ -34,12 +34,22 @@ import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
 import com.keepit.model._
-import com.keepit.common.controller.FortyTwoController
-import com.keepit.inject._
+import com.keepit.common.controller.BrowserExtensionController
 import com.keepit.common.healthcheck._
 import com.keepit.common.db.slick._
 
-object AuthController extends FortyTwoController {
+import com.google.inject.{Inject, Singleton}
+
+@Singleton
+class ExtAuthController @Inject() (
+  db: Database,
+  healthcheckPlugin: HealthcheckPlugin,
+  userRepo: UserRepo,
+  installationRepo: KifiInstallationRepo,
+  urlPatternRepo: URLPatternRepo,
+  sliderRuleRepo: SliderRuleRepo,
+  userExperimentRepo: UserExperimentRepo)
+    extends BrowserExtensionController {
   def start = AuthenticatedJsonAction { implicit request =>
     val userId = request.userId
     val socialUser = request.socialUser
@@ -54,7 +64,7 @@ object AuthController extends FortyTwoController {
            case Some(_) =>
            case None =>
              // They sent an invalid id. Bug on client side?
-             inject[HealthcheckPlugin].addError(HealthcheckError(
+             healthcheckPlugin.addError(HealthcheckError(
                method = Some(request.method.toUpperCase()),
                path = Some(request.path),
                callType = Healthcheck.API,
@@ -64,9 +74,8 @@ object AuthController extends FortyTwoController {
        })}.get
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
-    val (user, installation, experiments, sliderRuleGroup, urlPatterns) = inject[Database].readWrite{implicit s =>
-      val user: User = inject[UserRepo].get(userId)
-      val installationRepo = inject[KifiInstallationRepo]
+    val (user, installation, experiments, sliderRuleGroup, urlPatterns) = db.readWrite{implicit s =>
+      val user: User = userRepo.get(userId)
       val installation: KifiInstallation = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)
       } match {
@@ -77,9 +86,9 @@ object AuthController extends FortyTwoController {
         case Some(install) =>
           install
       }
-      val experiments: Seq[String] = inject[UserExperimentRepo].getByUser(user.id.get).map(_.experimentType.value)
-      val sliderRuleGroup: SliderRuleGroup = inject[SliderRuleRepo].getGroup("default")
-      val urlPatterns: Seq[String] = inject[URLPatternRepo].getActivePatterns
+      val experiments: Seq[String] = userExperimentRepo.getByUser(user.id.get).map(_.experimentType.value)
+      val sliderRuleGroup: SliderRuleGroup = sliderRuleRepo.getGroup("default")
+      val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
       (user, installation, experiments, sliderRuleGroup, urlPatterns)
     }
 
@@ -107,19 +116,7 @@ object AuthController extends FortyTwoController {
   }
 
   def whois = AuthenticatedJsonAction { request =>
-    val user = inject[Database].readOnly(implicit s => inject[UserRepo].get(request.userId))
+    val user = db.readOnly(implicit s => userRepo.get(request.userId))
     Ok(Json.obj("externalUserId" -> user.externalId.toString))
-  }
-
-  def unimpersonate = AdminJsonAction { request =>
-    Ok(Json.obj("userId" -> request.userId.toString)).discardingCookies(ImpersonateCookie.discard)
-  }
-
-  def impersonate(id: Id[User]) = AdminJsonAction { request =>
-    val user = inject[Database].readOnly { implicit s =>
-      inject[UserRepo].get(id)
-    }
-    log.info("impersonating user %s".format(user)) //todo(eishay) add event & email
-    Ok(Json.obj("userId" -> id.toString)).withCookies(ImpersonateCookie.encodeAsCookie(Some(user.externalId)))
   }
 }
