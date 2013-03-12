@@ -82,6 +82,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
 
     Ok(JsObject(Seq(
       "kept" -> JsBoolean(bookmark.isDefined),
+      "private" -> JsBoolean(bookmark.map(_.isPrivate).getOrElse(false)),
       "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
       "sensitive" -> JsBoolean(sensitive.getOrElse(false))) ++
       neverOnSite.map { _ => Seq(
