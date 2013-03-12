@@ -26,9 +26,14 @@ import views.html
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
-class ExtUserController @Inject() (db: Database,
-  domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo, socialConnectionRepo: SocialConnectionRepo, userRepo: UserRepo,
-  basicUserRepo: BasicUserRepo, sliderInfoLoader: SliderInfoLoader)
+class ExtUserController @Inject() (
+  db: Database,
+  domainRepo: DomainRepo,
+  userToDomainRepo: UserToDomainRepo,
+  socialConnectionRepo: SocialConnectionRepo,
+  userRepo: UserRepo,
+  basicUserRepo: BasicUserRepo,
+  sliderInfoLoader: SliderInfoLoader)
     extends BrowserExtensionController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
