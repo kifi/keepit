@@ -82,7 +82,6 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
         inject[BookmarkRepo].getUsersChanged(sequenceNumber)
       }
       val indexables = usersChanged.map(buildIndexable)
-      sequenceNumber = (indexables.flatMap(_.bookmarks).map(_.seq) + sequenceNumber).max
       indexDocuments(indexables.iterator, commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
       }
@@ -104,11 +103,14 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     val bookmarks = inject[Database].readOnly { implicit session =>
       inject[BookmarkRepo].getByUser(user.id.get)
     }
-    new URIListIndexable(user.id.get, bookmarks)
+    new URIListIndexable(user.id.get, bookmarks.map(_.seq).max, bookmarks)
   }
 
-  class URIListIndexable(override val id: Id[User], val bookmarks: Seq[Bookmark]) extends Indexable[User] with LineFieldBuilder {
-    override val sequenceNumber = SequenceNumber(0)
+  class URIListIndexable(
+    override val id: Id[User],
+    override val sequenceNumber: SequenceNumber,
+    val bookmarks: Seq[Bookmark]
+  ) extends Indexable[User] with LineFieldBuilder {
 
     override def buildDocument = {
       val doc = super.buildDocument

@@ -49,7 +49,7 @@ class SemanticVectorQueryTest extends Specification {
 
       implicit def toReader(text: String) = new StringReader(text)
 
-      override val sequenceNumber = SequenceNumber(0)
+      override val sequenceNumber = SequenceNumber.ZERO
 
       override def buildDocument = {
         val doc = super.buildDocument
