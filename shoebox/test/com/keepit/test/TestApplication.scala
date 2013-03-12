@@ -23,7 +23,7 @@ import com.keepit.model._
 import com.keepit.FortyTwoGlobal
 import com.tzavellas.sse.guice.ScalaModule
 import com.keepit.common.store.FakeStoreModule
-import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout}
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.DbInfo
 import com.keepit.common.db.slick._

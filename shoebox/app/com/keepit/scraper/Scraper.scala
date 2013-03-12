@@ -2,7 +2,6 @@ package com.keepit.scraper
 
 import com.keepit.common.logging.Logging
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -28,28 +27,36 @@ object Scraper {
   val maxContentChars = 100000 // 100K chars
 }
 
-class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, scraperConfig: ScraperConfig) extends Logging {
+class Scraper @Inject() (
+  db: Database,
+  httpFetcher: HttpFetcher,
+  articleStore: ArticleStore,
+  scraperConfig: ScraperConfig,
+  scrapeInfoRepo: ScrapeInfoRepo,
+  normalizedURIRepo: NormalizedURIRepo,
+  healthcheckPlugin: HealthcheckPlugin,
+  unscrapableRepo: UnscrapableRepo)
+    extends Logging {
 
   implicit val config = scraperConfig
 
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
-    log.debug("starting a new scrape round")
-    val tasks = inject[Database].readOnly { implicit s =>
-      inject[ScrapeInfoRepo].getOverdueList().map{ info => (inject[NormalizedURIRepo].get(info.uriId), info) }
+    log.info("starting a new scrape round")
+    val tasks = db.readOnly { implicit s =>
+      scrapeInfoRepo.getOverdueList().map{ info => (normalizedURIRepo.get(info.uriId), info) }
     }
-    log.debug("got %s uris to scrape".format(tasks.length))
+    log.info("got %s uris to scrape".format(tasks.length))
     val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
     val jobTime = Seconds.secondsBetween(startedTime, currentDateTime).getSeconds()
-    log.debug("succesfuly scraped %s articles out of %s in %s seconds:\n%s".format(
+    log.info("succesfuly scraped %s articles out of %s in %s seconds:\n%s".format(
         scrapedArticles.flatMap{ a => a._2 }.size, tasks.size, jobTime, scrapedArticles map {a => a._1} mkString "\n"))
     scrapedArticles
   }
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
-    val repo = inject[ScrapeInfoRepo]
-    val info = inject[Database].readWrite { implicit s =>
-      repo.getByUri(uri.id.get).getOrElse(repo.save(ScrapeInfo(uriId = uri.id.get)))
+    val info = db.readWrite { implicit s =>
+      scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
     }
     safeProcessURI(uri, info)
   }
@@ -59,10 +66,10 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
     } catch {
       case e: Throwable =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
-        inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL))
-        val errorURI = inject[Database].readWrite { implicit s =>
-          inject[ScrapeInfoRepo].save(info.withFailure())
-          inject[NormalizedURIRepo].save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
+        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL))
+        val errorURI = db.readWrite { implicit s =>
+          scrapeInfoRepo.save(info.withFailure())
+          normalizedURIRepo.save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         (errorURI, None)
     }
@@ -76,11 +83,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
 
 
   private def processURI(uri: NormalizedURI, info: ScrapeInfo, useProxy: Boolean): (NormalizedURI, Option[Article]) = {
-    if(!useProxy) log.debug(s"scraping $uri") else log.debug(s"scraping $uri with proxy")
-
-    val db = inject[Database]
-    val uriRepo = inject[NormalizedURIRepo]
-    val scrapeInfoRepo = inject[ScrapeInfoRepo]
+    if(!useProxy) log.info(s"scraping $uri") else log.info(s"scraping $uri with proxy")
 
     fetchArticle(uri, info, useProxy) match {
       case Scraped(article, signature) =>
@@ -90,14 +93,14 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
         val scrapedURI = db.readWrite { implicit s =>
           // update the scrape schedule and the uri state to SCRAPED
           scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
-          uriRepo.saveAsIndexable(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          normalizedURIRepo.saveAsIndexable(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
         }
-        log.debug("fetched uri %s => %s".format(uri, article))
+        log.info("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
       case NotScrapable(destinationUrl) =>
         val unscrapableURI = db.readWrite { implicit s =>
           scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
-          uriRepo.saveAsIndexable(uri.withState(NormalizedURIStates.UNSCRAPABLE))
+          normalizedURIRepo.saveAsIndexable(uri.withState(NormalizedURIStates.UNSCRAPABLE))
         }
         (unscrapableURI, None)
       case NotModified =>
@@ -124,7 +127,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
         // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
         val errorURI = db.readWrite { implicit s =>
           scrapeInfoRepo.save(info.withFailure())
-          uriRepo.saveAsIndexable(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
+          normalizedURIRepo.saveAsIndexable(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         (errorURI, None)
     }
@@ -164,9 +167,8 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
   }
 
   protected def isUnscrapable(url: String, destinationUrl: Option[String]) = {
-    inject[Database].readOnly { implicit s =>
-      val uns = inject[UnscrapableRepo]
-      (uns.contains(url) || (destinationUrl.isDefined && uns.contains(destinationUrl.get)))
+    db.readOnly { implicit s =>
+      (unscrapableRepo.contains(url) || (destinationUrl.isDefined && unscrapableRepo.contains(destinationUrl.get)))
     }
   }
 
