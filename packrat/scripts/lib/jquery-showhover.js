@@ -45,6 +45,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
           clearTimeout(t);
           t = setTimeout(function() {
             $a.removeClass("kifi-hover-showing");
+            $h.css("display", "");
             data.hover.lastEventTime = +new Date;
           }, 200);
         }).on("click.showHover", function(e) {
