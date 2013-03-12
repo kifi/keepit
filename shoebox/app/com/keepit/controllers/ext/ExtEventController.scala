@@ -8,6 +8,7 @@ import play.api.data.validation.Constraints._
 import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.http.ContentTypes
+import play.api.libs.json._
 
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -23,7 +24,6 @@ import com.keepit.search._
 import com.keepit.common.social.UserWithSocial
 import com.keepit.search.ArticleSearchResultStore
 import com.keepit.common.controller.BrowserExtensionController
-import play.api.libs.json._
 import com.keepit.common.analytics._
 import com.keepit.model._
 import com.keepit.common.time._
@@ -46,7 +46,6 @@ class ExtEventController @Inject() (
       case 1 => createEventsFromPayload(json, userId)
       case i => throw new Exception("Unknown events version: %s".format(i))
     }
-
     Ok(JsObject(Seq("stored" -> JsString("ok"))))
   }
 
