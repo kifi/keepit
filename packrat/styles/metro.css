@@ -173,10 +173,40 @@
   background-position: -53px 0;
   width: 19px;
 }
+.kifi-slider2-dock-btn.kifi-slider2-pane.kifi-slider2-pane-hide::before {
+  background-position: -72px 0;
+}
 .kifi-slider2-dock-sep {
   display: inline-block;
   width: 1px;
   height: 34px;
   margin-top: 4px;
   background: #506982;
+}
+.kifi-pane {
+  position: fixed;
+  top: 0;
+  right: -320px;
+  bottom: 0;
+  left: auto;
+  width: 320px;
+  height: 100%;
+  background: #1f272f;
+  z-index: 2147483639;
+  -webkit-transition: right .25s ease-in;
+  transition: right .25s ease-in;
+}
+html.kifi-pane-parent.kifi-with-pane .kifi-pane {
+  right: 0;
+}
+html.kifi-pane-parent {
+  position: relative;
+  width: auto;
+  min-width: 0;
+  margin-right: 0;
+  -webkit-transition: margin-right .25s ease-in;
+  transition: margin-right .25s ease-in;
+}
+html.kifi-pane-parent.kifi-with-pane {
+  margin-right: 320px;
 }
