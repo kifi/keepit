@@ -41,7 +41,8 @@ import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class AdminAuthController @Inject() (
-  db: Database, userRepo: UserRepo)
+  db: Database,
+  userRepo: UserRepo)
     extends AdminController {
 
   def unimpersonate = AdminJsonAction { request =>

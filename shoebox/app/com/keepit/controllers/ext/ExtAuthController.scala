@@ -42,8 +42,13 @@ import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class ExtAuthController @Inject() (
-  db: Database, healthcheckPlugin: HealthcheckPlugin, userRepo: UserRepo, installationRepo: KifiInstallationRepo,
-  urlPatternRepo: URLPatternRepo, sliderRuleRepo: SliderRuleRepo, userExperimentRepo: UserExperimentRepo)
+  db: Database,
+  healthcheckPlugin: HealthcheckPlugin,
+  userRepo: UserRepo,
+  installationRepo: KifiInstallationRepo,
+  urlPatternRepo: URLPatternRepo,
+  sliderRuleRepo: SliderRuleRepo,
+  userExperimentRepo: UserExperimentRepo)
     extends BrowserExtensionController {
   def start = AuthenticatedJsonAction { implicit request =>
     val userId = request.userId
