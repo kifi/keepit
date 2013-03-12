@@ -1,15 +1,18 @@
+/*
 @font-face {
   font-family: 'Lato';
   font-style: normal;
   font-weight: 300;
   src: local('Lato Light'), local('Lato-Light'), url(//themes.googleusercontent.com/static/fonts/lato/v6/kcf5uOXucLcbFOydGU24WALUuEpTyoUstqEm5AMlJo4.woff) format('woff');
 }
+*/
 @font-face {
   font-family: 'Lato';
   font-style: normal;
   font-weight: 400;
   src: local('Lato Regular'), local('Lato-Regular'), url(//themes.googleusercontent.com/static/fonts/lato/v6/qIIYRU-oROkIk8vfvxw6QvesZW2xOQ-xsNqO47m55DA.woff) format('woff');
 }
+/*
 @font-face {
   font-family: 'Lato';
   font-style: normal;
@@ -34,6 +37,7 @@
   font-weight: 700;
   src: local('Lato Bold Italic'), local('Lato-BoldItalic'), url(//themes.googleusercontent.com/static/fonts/lato/v6/HkF_qI1x_noxlxhrhMQYELO3LdcAZYWl9Si6vvxL-qU.woff) format('woff');
 }
+*/
 
 .kifi-slider2 {
   position: fixed;
@@ -67,33 +71,50 @@
   border-radius: 5px;
   background: #34495e;
   color: #fff;
+  font-family: Lato,sans-serif;
   text-align: center;
   cursor: pointer;
   overflow: hidden;
 }
-.kifi-slider2-keep.kifi-unkept::after {
+.kifi-slider2-keep.kifi-unkept::before {
+  content: "keep";
+}
+.kifi-slider2-keep.kifi-unkept.kifi-lock-hover::before {
   content: "keep";
 }
 .kifi-slider2-keep.kifi-unkept.kifi-lock-hover::after {
-  content: "keep (private)";
+  content: "(private)";
+  font-size: 9px;
+  margin-left: 2px;
 }
-.kifi-slider2-keep.kifi-public::after {
+.kifi-slider2-keep.kifi-public::before {
   content: "kept";
 }
-.kifi-slider2-keep.kifi-public:hover::after {
+.kifi-slider2-keep.kifi-public:hover::before {
   content: "unkeep";
 }
-.kifi-slider2-keep.kifi-public.kifi-lock-hover::after {
+.kifi-slider2-keep.kifi-public.kifi-lock-hover::before {
   content: "make private";
 }
-.kifi-slider2-keep.kifi-private::after {
-  content: "kept (private)";
+.kifi-slider2-keep.kifi-private::before {
+  content: "kept";
 }
-.kifi-slider2-keep.kifi-private:hover::after {
+.kifi-slider2-keep.kifi-private::after {
+  content: "(private)";
+  font-size: 9px;
+  margin-left: 2px;
+}
+.kifi-slider2-keep.kifi-private:hover::before {
   content: "unkeep";
 }
-.kifi-slider2-keep.kifi-private.kifi-lock-hover::after {
+.kifi-slider2-keep.kifi-private:hover::after {
+  content: "";
+}
+.kifi-slider2-keep.kifi-private.kifi-lock-hover::before {
   content: "make public";
+}
+.kifi-slider2-keep.kifi-private.kifi-lock-hover::after {
+  content: "";
 }
 .kifi-slider2-keep:hover {
   background: #36526f;
