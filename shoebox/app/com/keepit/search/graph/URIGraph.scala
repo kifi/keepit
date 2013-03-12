@@ -81,8 +81,7 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       val usersChanged = inject[Database].readOnly { implicit s =>
         inject[BookmarkRepo].getUsersChanged(sequenceNumber)
       }
-      val indexables = usersChanged.map(buildIndexable)
-      indexDocuments(indexables.iterator, commitBatchSize){ commitBatch =>
+      indexDocuments(usersChanged.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
       }
       cnt
@@ -94,16 +93,12 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
 
   def getURIGraphSearcher() = new URIGraphSearcher(searcher)
 
-  def buildIndexable(userId: Id[User]): URIListIndexable = {
-    val user = inject[Database].readOnly { implicit s => inject[UserRepo].get(userId) }
-    buildIndexable(user)
-  }
-
-  def buildIndexable(user: User): URIListIndexable = {
+  def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
+    val (userId, seq) = userIdAndSequenceNumber
     val bookmarks = inject[Database].readOnly { implicit session =>
-      inject[BookmarkRepo].getByUser(user.id.get)
+      inject[BookmarkRepo].getByUser(userId)
     }
-    new URIListIndexable(user.id.get, bookmarks.map(_.seq).max, bookmarks)
+    new URIListIndexable(userId, seq, bookmarks)
   }
 
   class URIListIndexable(

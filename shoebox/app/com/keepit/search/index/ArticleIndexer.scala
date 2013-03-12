@@ -76,12 +76,12 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     }
   }
 
-  def buildIndexable(id: Id[NormalizedURI]) = {
+  def buildIndexable(id: Id[NormalizedURI]): ArticleIndexable = {
     val uri = inject[Database].readOnly { implicit c => inject[NormalizedURIRepo].get(id) }
     buildIndexable(uri)
   }
 
-  def buildIndexable(uri: NormalizedURI) = {
+  def buildIndexable(uri: NormalizedURI): ArticleIndexable = {
     new ArticleIndexable(uri.id.get, uri.seq, uri, articleStore)
   }
 
