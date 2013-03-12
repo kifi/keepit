@@ -28,7 +28,7 @@ import com.keepit.common.analytics._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.analytics.reports._
-import com.keepit.common.controller.WebsiteExtensionController
+import com.keepit.common.controller.WebsiteController
 
 
 import com.google.inject.{Inject, Singleton}
@@ -38,7 +38,7 @@ class ExtDeepLinkController @Inject() (
   db: Database,
   deepLinkRepo: DeepLinkRepo,
   normalizedURIRepo: NormalizedURIRepo)
-    extends WebsiteExtensionController {
+    extends WebsiteController {
 
   def handle(token: String) = AuthenticatedHtmlAction { request =>
     val deepLink = db.readOnly { implicit session => deepLinkRepo.getByToken(DeepLinkToken(token)) }
