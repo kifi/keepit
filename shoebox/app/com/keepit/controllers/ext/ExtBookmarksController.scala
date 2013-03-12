@@ -37,7 +37,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
   classifier: DomainClassifier, historyTracker: SliderHistoryTracker, uriGraph: URIGraph, sliderInfoLoader: SliderInfoLoader)
     extends BrowserExtensionController {
 
-  def checkIfExists(uri: String, ver: String = "") = AuthenticatedJsonAction { request =>
+  def checkIfExists(uri: String, ver: String) = AuthenticatedJsonAction { request =>
     val userId = request.userId
 
     val sliderInfo = sliderInfoLoader.initialLoad(userId, uri, ver)
