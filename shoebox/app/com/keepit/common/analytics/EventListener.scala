@@ -12,7 +12,6 @@ import play.api.Play.current
 import java.sql.Connection
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import java.util.{Set => JSet}
-import com.google.inject.Inject
 import scala.collection.JavaConversions._
 import com.keepit.search.ResultClickTracker
 import com.keepit.search.BrowsingHistoryTracker
@@ -38,7 +37,6 @@ trait EventListenerPlugin extends SchedulingPlugin {
   }
 }
 
-@Singleton
 class EventHelper @Inject() (system: ActorSystem, listeners: JSet[EventListenerPlugin]) {
   private val default = system.actorOf(Props(new EventHelperActor(listeners)))
   def newEvent(event: Event): Seq[String] = {
