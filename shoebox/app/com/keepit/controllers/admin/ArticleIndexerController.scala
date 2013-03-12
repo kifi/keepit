@@ -8,7 +8,6 @@ import play.api.mvc._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.logging.Logging
 
 import com.keepit.inject._
 import com.keepit.search.index.ArticleIndexerPlugin

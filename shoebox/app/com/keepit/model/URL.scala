@@ -14,7 +14,6 @@ import play.api.libs.json._
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
-import com.keepit.common.logging.Logging
 import com.keepit.common.net.{URI, URINormalizer}
 import com.keepit.serializer.{URLHistorySerializer => URLHS}
 import com.keepit.inject._
