@@ -42,15 +42,15 @@
 .kifi-slider2 {
   position: fixed;
   z-index: 2147483640;
-  bottom: 10px;
-  right: 10px;
-  height: 42px;
+  bottom: 0;
+  right: 0;
+  height: 62px;
   width: 120px;
   font: 12px/42px sans-serif;
   opacity: 1;
 }
 .kifi-slider2.kifi-visible {
-  width: 300px;
+  width: 320px;
   -webkit-transition: width .1s ease-out;
   transition: width .1s ease-out;
 }
@@ -62,8 +62,8 @@
 }
 .kifi-slider2-keep {
   position: absolute;
-  top: 0;
-  right: 0;
+  bottom: 10px;
+  right: 10px;
   width: 120px;
   height: 42px;
   line-height: 42px;
@@ -157,8 +157,8 @@
 }
 .kifi-slider2-dock {
   position: absolute;
-  top: 0;
-  right: 123px;
+  bottom: 10px;
+  right: 133px;
   width: 177px;
   height: 42px;
   background: #67829c;
