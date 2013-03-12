@@ -50,10 +50,10 @@ POST    /users/events               com.keepit.controllers.EventController.logUs
 GET     /search                     com.keepit.controllers.SearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
 GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)
 
-POST    /kifi/start                 com.keepit.controllers.AuthController.start
-GET     /welcome                    com.keepit.controllers.AuthController.welcome
-GET     /whois                      com.keepit.controllers.AuthController.whois
-GET     /session/end                com.keepit.controllers.AuthController.logOut
+POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
+GET     /welcome                    @com.keepit.controllers.ext.ExtAuthController.welcome
+GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
+GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
@@ -114,8 +114,8 @@ POST    /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUser
 DELETE  /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.removeExperiment(id: Id[User], exp: String)
 POST    /admin/user/:id/update      @com.keepit.controllers.admin.AdminUserController.updateUser(id: Id[User])
 GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.AdminUserController.refreshAllSocialInfo(id: Id[User])
-POST    /admin/user/:id/impersonate com.keepit.controllers.AuthController.impersonate(id: Id[User])
-POST    /admin/unimpersonate        com.keepit.controllers.AuthController.unimpersonate()
+POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthController.impersonate(id: Id[User])
+POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 
 GET     /admin/social_users/:page   com.keepit.controllers.SocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      com.keepit.controllers.SocialUserController.socialUserView(id: Id[SocialUserInfo])

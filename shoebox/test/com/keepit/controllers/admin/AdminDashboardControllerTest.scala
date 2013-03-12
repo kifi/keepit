@@ -1,5 +1,6 @@
 package com.keepit.controllers.admin
 
+import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.db._
 import com.keepit.test._
 import org.specs2.mutable.Specification
@@ -57,7 +58,7 @@ class AdminDashboardControllerTest extends Specification with DbRepos {
         }
 
         val fakeRequest = FakeRequest().withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
-        val authRequest = AdminDashboardController.AuthenticatedRequest(null, u1.id.get, fakeRequest)
+        val authRequest = AuthenticatedRequest(null, u1.id.get, fakeRequest)
         authRequest.session.get(SecureSocial.ProviderKey) === Some("facebook")
         inject[FakeClock].push(today)
         val result = AdminDashboardController.usersByDate(authRequest)
