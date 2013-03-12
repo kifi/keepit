@@ -9,10 +9,10 @@ var slider, slider2, injected, t0 = +new Date;
 
 !function() {
   api.log("host:", location.hostname);
-  var viewportEl = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"], rules = 0;
+  var viewportEl = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"], info, rules = 0;
 
   document.addEventListener("keydown", function(e) {
-    if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75 /*&& !rules.metro*/) {  // cmd-shift-K or ctrl-shift-K
+    if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75 /*&& !info.metro*/) {  // cmd-shift-K or ctrl-shift-K
       withSlider(function() {
         slider.toggle("key");
       });
@@ -45,44 +45,40 @@ var slider, slider2, injected, t0 = +new Date;
   }, 60000);
 
   api.port.on({
-    button_click: function() {
-      // if (rules.metro) {
-      //   withSlider2(function() {
-      //     slider2.toggle("button");
-      //   });
-      // } else {
-        withSlider(function() {
-         slider.toggle("button");
-        });
-      // }
-    },
-    auto_show: autoShow.bind(null, "auto"),
-    slider_rules: function(sliderRules) {
-      rules = sliderRules;
-      if (rules.scroll) {
-        document.addEventListener("scroll", onScrollMaybeShow);
-      }
-      if (rules.metro) {
+    init_slider: function(o) {
+      info = o;
+      rules = o.rules || 0;
+      if (o.metro) {
         insertTile();
+      }
+      if (o.locator) {
+        // if (o.metro) { ... } else
+        withSlider(function() {
+          slider.shown() || slider.show(o.trigger, o.locator);
+        });
+      } else if (rules.scroll) {
+        document.addEventListener("scroll", onScrollMaybeShow);
       }
     },
     open_slider_to: function(data) {
-      // if (!rules.metro) {
-        withSlider(function() {
-          slider.shown() || slider.show(data.trigger, data.locator);
-        });
-      // }
-    }});
-  api.port.emit("get_slider_rules");
+      // if (info.metro) { ... } else
+      withSlider(function() {
+        slider.shown() || slider.show(data.trigger, data.locator);
+      });
+    },
+    button_click: function() {
+      withSlider(function() {
+        slider.toggle("button");
+      });
+    },
+    auto_show: autoShow.bind(null, "auto")});
+  api.port.emit("init_slider_please");
 
   function autoShow(trigger) {
     var width;
     if (rules.viewport && (width = viewportEl.clientWidth) < rules.viewport[0]) {
       api.log("[autoShow] viewport too narrow:", width, "<", rules.viewport[0]);
-    // } else if (rules.metro) {
-    //   withSlider2(function() {
-    //     slider2.shown() || slider2.show(trigger);
-    //   });
+    // } else if (info.metro) { ...
     } else {
       withSlider(function() {
         slider.shown() || slider.show(trigger);
@@ -136,7 +132,7 @@ var slider, slider2, injected, t0 = +new Date;
     document.documentElement.appendChild(el);
     el.addEventListener("mouseover", function() {
       withSlider2(function() {
-        slider2.show("tile");
+        slider2.show(info, "tile");
       });
     });
   }

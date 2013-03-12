@@ -76,13 +76,13 @@ api.timers.setTimeout(function maybeSend() {
 // ===== Handling messages from content scripts or other extension pages
 
 api.port.on({
-  log_in: function(data, respond) {
+  log_in: function(_, respond) {
     authenticate(function() {
       respond(session);
     });
     return true;
   },
-  log_out: function(data, respond) {
+  log_out: function(_, respond) {
     deauthenticate(respond);
     return true;
   },
@@ -103,7 +103,7 @@ api.port.on({
     });
     return true;
   },
-  unkeep: function(data, respond, tab) {
+  unkeep: function(_, respond, tab) {
     getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
       removeKeep(info, tab.url, respond);
     });
@@ -120,17 +120,22 @@ api.port.on({
       api.log("[follow] resp:", o);
     });
   },
-  get_prefs: function(data, respond) {
+  get_prefs: function(_, respond) {
     respond({session: session, prefs: api.prefs.get("env", "showSlider", "maxResults", "showScores")});
   },
   set_prefs: function(data) {
     api.prefs.set(data);
   },
-  set_page_icon: function(data, respond, tab) {
+  set_page_icon: function(data, _, tab) {
     setIcon(tab, data);
   },
-  get_slider_rules: function(data, respond, tab) {
-    emitSliderRules(tab);
+  init_slider_please: function(_, _, tab) {
+    var emission = tab.emitOnReady;
+    if (session && emission) {
+      api.log("[init_slider_please] emitting:", tab.id, emission);
+      api.tabs.emit(tab, emission[0], emission[1]);
+      delete tab.emitOnReady;
+    }
   },
   get_slider_info: function(data, respond, tab) {
     if (session) {
@@ -140,11 +145,11 @@ api.port.on({
     }
     return true;
   },
-  get_slider_updates: function(data, respond, tab) {
+  get_slider_updates: function(_, respond, tab) {
     ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, respond);
     return true;
   },
-  suppress_on_site: function(data, respond, tab) {
+  suppress_on_site: function(data, _, tab) {
     ajax("POST", "http://" + getConfigs().server + "/users/slider/suppress", {url: tab.url, suppress: data});
   },
   log_event: function(data) {
@@ -161,7 +166,7 @@ api.port.on({
     postComment(data, respond);
     return true;
   },
-  get_friends: function(data, respond) {
+  get_friends: function(_, respond) {
     ajax("GET", "http://" + getConfigs().server + "/users/friends", respond);
     return true;
   },
@@ -169,16 +174,6 @@ api.port.on({
     createDeepLinkListener(data, tab.id, respond);
     return true;
   }});
-
-function emitSliderRules(tab) {
-  if (session) {
-    var show = api.prefs.get("showSlider");
-    api.tabs.emit(tab, "slider_rules", {  // only the relevant rules
-      metro: session.experiments.indexOf("metro") >= 0,
-      viewport: show && session.rules.rules.viewport,
-      scroll: show && session.rules.rules[tab.showOnScroll && "scroll"]});
-  }
-}
 
 function getSliderInfo(tab, respond) {
   ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
@@ -433,35 +428,39 @@ api.tabs.on.loading.add(function(tab) {
   setIcon(tab);
 
   checkKeepStatus(tab, function gotKeptStatus(resp) {
+    var data = {metro: session.experiments.indexOf("metro") >= 0};
+    ["kept", "private", "sensitive", "neverOnSite"/*, "keepers"*/].forEach(function(key) {
+      data[key] = resp[key];
+    });
     if (session.rules.rules.message && /^\/messages/.test(resp.locator) ||
         session.rules.rules.comment && /^\/comments/.test(resp.locator) && !resp.neverOnSite) {
-      var emission = ["open_slider_to", {
-        trigger: resp.locator.substr(1, 7), // "message" or "comment"
-        locator: resp.locator}];
-      if (tab.ready) {
-        api.log("[gotKeptStatus] got locator:", tab.id);
-        api.tabs.emit(tab, emission[0], emission[1]);
-      } else {
-        api.log("[gotKeptStatus] got locator but tab not ready:", tab.id);
-        tab.emitOnReady = emission;
-      }
+      api.log("[gotKeptStatus]", tab.id, resp.locator);
+      data.trigger = resp.locator.substr(1, 7); // "message" or "comment"
+      data.locator = resp.locator;
     } else if (!resp.kept && !resp.neverOnSite && (!resp.sensitive || !session.rules.rules.sensitive)) {
       var url = tab.url;
       if (session.rules.rules.url && session.patterns.some(function(re) {return re.test(url)})) {
-        api.log("[gotKeptStatus] restricted:", url);
-        return;
-      }
-
-      if (session.rules.rules.shown && resp.shown) {
-        api.log("[gotKeptStatus] shown before:", url);
+        api.log("[gotKeptStatus]", tab.id, "restricted");
+      } else if (session.rules.rules.shown && resp.shown) {
+        api.log("[gotKeptStatus]", tab.id, "shown before");
       } else {
-        tab.showOnScroll = !!session.rules.rules.scroll;
+        if (api.prefs.get("showSlider")) {
+          data.rules = { // only the relevant ones
+            scroll: session.rules.rules.scroll,
+            viewport: session.rules.rules.viewport};
+        }
         tab.autoShowSec = (session.rules.rules[resp.keptByAnyFriends ? "friendKept" : "focus"] || [])[0];
         if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
           scheduleAutoShow(tab);
         }
-        emitSliderRules(tab);
       }
+    }
+
+    api.log("[gotKeptStatus]", tab.id, data);
+    if (tab.ready) {
+      api.tabs.emit(tab, "init_slider", data);
+    } else {
+      tab.emitOnReady = ["init_slider", data];
     }
   });
 });
