@@ -92,7 +92,8 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
             case Left(doc) =>
               try {
                 indexWriter.updateDocument(indexable.idTerm, doc)
-                log.info("indexed id=%s".format(indexable.id))
+                if (sequenceNumber < indexable.sequenceNumber) sequenceNumber = indexable.sequenceNumber
+                log.info("indexed id=%s seq=%s".format(indexable.id, indexable.sequenceNumber))
                 None
               } catch {
                 case e: CorruptIndexException => throw e  // fatal

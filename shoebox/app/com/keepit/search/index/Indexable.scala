@@ -1,6 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.common.db.Id
+import com.keepit.common.db.SequenceNumber
 import com.keepit.search.SemanticVectorBuilder
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.TokenStream
@@ -16,6 +17,7 @@ import java.io.StringReader
 
 trait Indexable[T] {
 
+  val sequenceNumber: SequenceNumber
   val id: Id[T]
   val idTerm = Indexer.idFieldTerm.createTerm(id.toString)
 
