@@ -48,8 +48,8 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
       sliderInfo.bookmark.map(b => "private" -> JsBoolean(sliderInfo.bookmark.map(_.isPrivate).getOrElse(false))),
       Some("keptByAnyFriends" -> JsBoolean(sliderInfo.socialUsers.size > 0)), // Not needed on new slider
       Some("friends" -> userWithSocialSerializer.writes(sliderInfo.socialUsers)),
-      Some("numUnreadComments" -> JsNumber(sliderInfo.numUnreadComments)),
-      Some("numUnreadMessaes" -> JsNumber(sliderInfo.numUnreadMessages)),
+      Some("unreadComments" -> JsNumber(sliderInfo.numUnreadComments)),
+      Some("unreadMessages" -> JsNumber(sliderInfo.numUnreadMessages)),
       Some("sensitive" -> JsBoolean(sliderInfo.sensitive.getOrElse(false))),
       sliderInfo.neverOnSite.map { _ => "neverOnSite" -> JsBoolean(true) },
       sliderInfo.locator.map { s => "locator" -> JsString(s.value) },
