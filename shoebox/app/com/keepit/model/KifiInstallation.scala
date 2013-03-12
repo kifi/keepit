@@ -110,10 +110,10 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ externalId ~ version ~ userAgent ~ state <> (KifiInstallation, KifiInstallation.unapply _)
   }
 
-  def all(userId: Id[User])(implicit session: RSession): Seq[KifiInstallation] = 
+  def all(userId: Id[User])(implicit session: RSession): Seq[KifiInstallation] =
     (for(k <- table if k.userId === userId) yield k).list
 
-  def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation] = 
+  def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation] =
     (for(k <- table if k.userId === userId && k.externalId === externalId) yield k).firstOption
 }
 

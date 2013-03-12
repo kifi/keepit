@@ -2,7 +2,6 @@ package com.keepit.common.social
 
 import scala.collection.mutable.MutableList
 import com.keepit.search.ArticleStore
-import com.keepit.common.logging.Logging
 import com.keepit.search.Article
 import com.keepit.model.SocialUserInfo
 import play.api.Plugin

@@ -2,7 +2,6 @@ package com.keepit.common.social
 
 import scala.collection.mutable.MutableList
 import com.keepit.search.ArticleStore
-import com.keepit.common.logging.Logging
 import com.keepit.search.Article
 import com.keepit.model._
 import play.api.Plugin
@@ -37,7 +36,7 @@ class SocialUserImportFriends() extends Logging {
 
   private def importFriendsFromJson(parentJson: JsValue): Seq[SocialUserRawInfo] = {
     val repo = inject[SocialUserInfoRepo]
-    val socialUserInfos = extractFriends(parentJson) filter infoNotInDb map createSocialUserInfo map { t => 
+    val socialUserInfos = extractFriends(parentJson) filter infoNotInDb map createSocialUserInfo map { t =>
       (inject[Database].readWrite {implicit s => repo.save(t._1)}, t._2)
     }
 

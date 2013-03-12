@@ -15,7 +15,6 @@ import play.api._
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
-import com.keepit.common.logging.Logging
 import play.api.libs.json._
 
 case class CommentRead (

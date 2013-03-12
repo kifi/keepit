@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit
 
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.logging.Logging
 
 import com.keepit.inject._
 import com.keepit.scraper.ScraperPlugin

@@ -13,7 +13,6 @@ import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
 import play.api.libs.json._
-import com.keepit.common.logging.Logging
 
 case class SocialConnection(
   id: Option[Id[SocialConnection]] = None,
