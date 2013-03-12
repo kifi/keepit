@@ -42,6 +42,8 @@ import akka.actor.ActorRef
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import com.keepit.common.actor.ActorPlugin
+import akka.actor.ActorSystem
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -81,6 +83,7 @@ case class TestModule() extends ScalaModule {
     val appScope = new AppScope
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
+    bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[Babysitter].to[FakeBabysitter]
     install(new SlickModule(new DbInfo() {
       //later on we can customize it by the application name
@@ -103,6 +106,10 @@ case class TestModule() extends ScalaModule {
 
   @Provides
   def localDate(clock: FakeClock) : LocalDate = clock.pop.toLocalDate
+
+  @Provides
+  @AppScoped
+  def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-test-actor-system")
 
   @Provides
   @Singleton
