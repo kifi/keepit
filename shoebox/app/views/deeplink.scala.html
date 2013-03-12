@@ -1,16 +1,17 @@
 @(uri: String, locator: String, isSecure: Boolean)
+<!doctype html>
 <html data-kifi-deep-link='{"locator":"@locator","uri":"@uri","isSecure":@isSecure}'>
-  <head>
-    <script>
-      setTimeout(function() {
-        window.location = "@uri";
-      }, 1000);
-    </script>
-  </head>
-  <body>
-    <div class="kifi-deep-link-no-extension">
-      It appears that you aren't running the latest Kifi extension right now. No worries, forwarding you to the page.
-    </div>
-  </body>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  setTimeout(function() {
+    document.querySelector(".kifi-deep-link-no-extension").style.visibility = "visible";
+  }, 100);
+  setTimeout(function() {
+    location.href = "@uri";
+  }, 2000);
+});
+</script>
+<div class="kifi-deep-link-no-extension" style="visibility:hidden">
+  It appears that this browser doesn't have KiFi installed. We're sending you along to the page anyway.
+</div>
 </html>
-

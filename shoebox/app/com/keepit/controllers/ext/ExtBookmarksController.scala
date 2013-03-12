@@ -44,6 +44,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
     type wrapped = Option[(String, JsValue)]
     val result: Seq[wrapped] = Seq(
       Some("kept" -> JsBoolean(sliderInfo.bookmark.isDefined)),
+      Some("private" -> JsBoolean(sliderInfo.bookmark.map(_.isPrivate).getOrElse(false))),
       Some("keptByAnyFriends" -> JsBoolean(sliderInfo.socialUsers.size > 0)), // Not needed on new slider
       Some("sensitive" -> JsBoolean(sliderInfo.sensitive.getOrElse(false))),
       sliderInfo.neverOnSite.map { _ => "neverOnSite" -> JsBoolean(true) },
@@ -51,7 +52,6 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
       sliderInfo.shown.map { "shown" -> JsBoolean(_) },
       sliderInfo.ruleGroup.map {"rules" -> _.compactJson},
       sliderInfo.patterns.map(p => "patterns" -> JsArray(p.map(JsString))))
-
 
     Ok(JsObject(result flatten))
   }

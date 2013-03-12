@@ -13,7 +13,6 @@ import play.api.libs.json.JsNumber
 import play.api.libs.concurrent.Execution.Implicits._
 import java.util.concurrent.TimeUnit
 import com.keepit.common.db._
-import com.keepit.common.logging.Logging
 
 import com.keepit.inject._
 import com.keepit.scraper.ScraperPlugin

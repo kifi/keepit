@@ -1078,7 +1078,7 @@ slider = function() {
     if (document.querySelector(".kifi-slider")) {
       slideOut(trigger);
     } else {
-      this.show(trigger);
+      showSlider(trigger);
     }
   }};
 }();

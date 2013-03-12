@@ -1,7 +1,6 @@
 package com.keepit.common.analytics.reports
 
 import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.serializer.CompleteReportSerializer
 import com.keepit.inject._

@@ -1,6 +1,5 @@
 package com.keepit.common.mail
 
-import com.keepit.common.logging.Logging
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._

@@ -93,7 +93,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
               try {
                 indexWriter.updateDocument(indexable.idTerm, doc)
                 if (sequenceNumber < indexable.sequenceNumber) sequenceNumber = indexable.sequenceNumber
-                log.info("indexed id=%s seq=%s".format(indexable.id, indexable.sequenceNumber))
+                log.debug("indexed id=%s seq=%s".format(indexable.id, indexable.sequenceNumber))
                 None
               } catch {
                 case e: CorruptIndexException => throw e  // fatal
@@ -147,9 +147,6 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   def refreshSearcher() {
     searcher = Searcher.reopen(searcher)
   }
-
-  def buildIndexable(data: T): Indexable[T]
-  def buildIndexable(id: Id[T]): Indexable[T]
 
   def getFieldDecoder(fieldName: String) = {
     fieldDecoders.get(fieldName) match {
