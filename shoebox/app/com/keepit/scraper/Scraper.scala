@@ -34,14 +34,14 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
 
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
-    log.info("starting a new scrape round")
+    log.debug("starting a new scrape round")
     val tasks = inject[Database].readOnly { implicit s =>
       inject[ScrapeInfoRepo].getOverdueList().map{ info => (inject[NormalizedURIRepo].get(info.uriId), info) }
     }
-    log.info("got %s uris to scrape".format(tasks.length))
+    log.debug("got %s uris to scrape".format(tasks.length))
     val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
     val jobTime = Seconds.secondsBetween(startedTime, currentDateTime).getSeconds()
-    log.info("succesfuly scraped %s articles out of %s in %s seconds:\n%s".format(
+    log.debug("succesfuly scraped %s articles out of %s in %s seconds:\n%s".format(
         scrapedArticles.flatMap{ a => a._2 }.size, tasks.size, jobTime, scrapedArticles map {a => a._1} mkString "\n"))
     scrapedArticles
   }
@@ -76,7 +76,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
 
 
   private def processURI(uri: NormalizedURI, info: ScrapeInfo, useProxy: Boolean): (NormalizedURI, Option[Article]) = {
-    if(!useProxy) log.info(s"scraping $uri") else log.info(s"scraping $uri with proxy")
+    if(!useProxy) log.debug(s"scraping $uri") else log.debug(s"scraping $uri with proxy")
 
     val db = inject[Database]
     val uriRepo = inject[NormalizedURIRepo]
@@ -92,7 +92,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
           scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
           uriRepo.saveAsIndexable(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
         }
-        log.info("fetched uri %s => %s".format(uri, article))
+        log.debug("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
       case NotScrapable(destinationUrl) =>
         val unscrapableURI = db.readWrite { implicit s =>
