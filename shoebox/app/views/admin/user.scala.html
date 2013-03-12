@@ -145,10 +145,10 @@
       location.href="@com.keepit.controllers.admin.routes.AdminUserController.refreshAllSocialInfo(userWithSocial.user.id.get)"
     }
     function impersonate() {
-      $.post("@com.keepit.controllers.routes.AuthController.impersonate(userWithSocial.user.id.get)")
+      $.post("@com.keepit.controllers.admin.routes.AdminAuthController.impersonate(userWithSocial.user.id.get)")
     }
     function unimpersonate() {
-      $.post("@com.keepit.controllers.routes.AuthController.unimpersonate()")
+      $.post("@com.keepit.controllers.admin.routes.AdminAuthController.unimpersonate()")
     }
     function configSearch() {
       location.href="@com.keepit.controllers.routes.SearchConfigController.showUserConfig(userWithSocial.user.id.get)"
