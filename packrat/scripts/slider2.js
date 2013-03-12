@@ -12,12 +12,17 @@
 // @require scripts/render.js
 // #require scripts/snapshot.js
 
+// http://stackoverflow.com/questions/12088819/css-transitions-on-new-elements
+jQuery.fn.layout = function() {
+  return this.each(function() {this.clientHeight});  // forces layout
+};
+
 slider2 = function() {
-  var $slider, following, isKept, lastShownAt;
+  var $slider, $pane, following, isKept, lastShownAt;
 
   key("esc", function() {
     if (document.querySelector(".kifi-slider2")) {
-      slideOut("esc");
+      hideSlider("esc");
     }
   });
 
@@ -53,16 +58,25 @@ slider2 = function() {
           if (document.querySelector(".kifi-slider2")) {
             api.log("[showSlider] already there");  // TODO: remove old one? perhaps from previous installation
           } else {
-            $slider = $(html).appendTo("html");
-            setTimeout(function() { $slider.addClass("kifi-visible") });
+            $slider = $(html).appendTo("html").layout().addClass("kifi-visible");
 
             // attach event bindings
             $slider.on("mouseleave", function() {
               api.log("[mouseleave]");
-              slideOut("mouseleave");
+              if (!$pane) {
+                hideSlider("mouseleave");
+              }
+            }).on("click", ".kifi-slider2-pane", function() {
+              if (this.classList.contains("kifi-slider2-pane-hide")) {
+                this.classList.remove("kifi-slider2-pane-hide");
+                hidePanel();
+              } else {
+                this.classList.add("kifi-slider2-pane-hide");
+                showPanel();
+              }
             });
             // $slider.on("click", ".kifi-slider-x", function() {
-            //   slideOut("x");
+            //   hideSlider("x");
             // })
 
             logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: location.href});
@@ -78,7 +92,7 @@ slider2 = function() {
   }
 
   // trigger is for the event log (e.g. "key", "icon"). pass no trigger if just hiding slider temporarily.
-  function slideOut(trigger) {
+  function hideSlider(trigger) {
     idleTimer.kill();
     $slider.addClass("kifi-hidden").on("transitionend webkitTransitionEnd", function(e) {
       if (trigger && e.originalEvent.propertyName == "opacity") {
@@ -96,9 +110,9 @@ slider2 = function() {
       api.log("[idleTimer.start]");
       var t = idleTimer;
       clearTimeout(t.timeout);
-      t.timeout = setTimeout(function slideOutIdle() {
-        api.log("[slideOutIdle]");
-        slideOut("idle");
+      t.timeout = setTimeout(function hideSliderIdle() {
+        api.log("[hideSliderIdle]");
+        hideSlider("idle");
       }, 400);
       $slider
         .off("mouseenter", t.clear).on("mouseenter", t.clear)
@@ -123,6 +137,23 @@ slider2 = function() {
       t.dead = true;
     }};
 
+  function showPanel() {
+    api.log("[showPanel]");
+    var $html = $("html").addClass("kifi-pane-parent");
+    $pane = $("<div class=kifi-pane>").appendTo($html).layout();
+    $html.addClass("kifi-with-pane");
+  }
+
+  function hidePanel() {
+    api.log("[hidePanel]");
+    $pane.on("transitionend webkitTransitionEnd", function() {
+      $pane.remove();
+      $pane = null;
+      $html.removeClass("kifi-pane-parent");
+    });
+    var $html = $("html").removeClass("kifi-with-pane");
+  }
+
   // the slider API
   return {
     show: function(trigger, locator) {  // trigger is for the event log (e.g. "auto", "key", "icon")
@@ -133,7 +164,7 @@ slider2 = function() {
     },
     toggle: function(trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
       if (document.querySelector(".kifi-slider2")) {
-        slideOut(trigger);
+        hideSlider(trigger);
       } else {
         showSlider(trigger);
       }
