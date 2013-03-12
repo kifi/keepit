@@ -1,7 +1,8 @@
 package com.keepit.search.index
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.Id
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.search.Article
@@ -11,8 +12,6 @@ import com.keepit.search.SearchConfig
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.inject._
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import play.api.Play.current
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.document.Document
@@ -51,13 +50,10 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
     val repo = inject[NormalizedURIRepo]
     try {
       val uris = db.readOnly { implicit s =>
-       repo.getIndexable(sequenceNumber, fetchSize)
+        repo.getIndexable(sequenceNumber, fetchSize)
       }
       var cnt = 0
-      indexDocuments(uris.iterator.map{ uri =>
-        sequenceNumber = uri.seq
-        buildIndexable(uri)
-      }, commitBatchSize){ commitBatch =>
+      indexDocuments(uris.iterator.map{ uri => buildIndexable(uri) }, commitBatchSize){ commitBatch =>
         db.readWrite { implicit s =>
           commitBatch.foreach { case (indexable, indexError) =>
             val articleIndexable = indexable.asInstanceOf[ArticleIndexable]
@@ -86,10 +82,15 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   }
 
   def buildIndexable(uri: NormalizedURI) = {
-    new ArticleIndexable(uri.id.get, uri, articleStore)
+    new ArticleIndexable(uri.id.get, uri.seq, uri, articleStore)
   }
 
-  class ArticleIndexable(override val id: Id[NormalizedURI], val uri: NormalizedURI, articleStore: ArticleStore) extends Indexable[NormalizedURI] {
+  class ArticleIndexable(
+    override val id: Id[NormalizedURI],
+    override val sequenceNumber: SequenceNumber,
+    val uri: NormalizedURI,
+    articleStore: ArticleStore
+  ) extends Indexable[NormalizedURI] {
     implicit def toReader(text: String) = new StringReader(text)
 
     override def buildDocument = {

@@ -25,6 +25,7 @@ import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
 import com.keepit.common.db.Id
+import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.Indexable
 import com.keepit.search.Lang
@@ -47,6 +48,8 @@ class SemanticVectorQueryTest extends Specification {
     class TstIndexable[Tst](override val id: Id[Tst], val text: String) extends Indexable[Tst] {
 
       implicit def toReader(text: String) = new StringReader(text)
+
+      override val sequenceNumber = SequenceNumber.ZERO
 
       override def buildDocument = {
         val doc = super.buildDocument

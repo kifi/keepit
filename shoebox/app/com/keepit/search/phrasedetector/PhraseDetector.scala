@@ -1,6 +1,7 @@
 package com.keepit.search.phrasedetector
 
 import com.keepit.common.db.Id
+import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.DocUtil
 import com.keepit.search.index.Indexer
@@ -157,6 +158,7 @@ class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: Phr
 
 
 class PhraseIndexable(override val id: Id[Phrase], phrase: String, lang: Lang) extends Indexable[Phrase] with PhraseFieldBuilder {
+  override val sequenceNumber = SequenceNumber.ZERO
   override def buildDocument = {
     val doc = super.buildDocument
     doc.add(buildPhraseField("p", phrase, lang))
