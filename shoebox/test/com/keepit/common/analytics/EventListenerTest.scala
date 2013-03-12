@@ -13,6 +13,7 @@ import com.keepit.model._
 import com.keepit.common.db._
 import play.api.Play.current
 import com.keepit.inject.inject
+import akka.actor.ActorSystem
 
 class EventListenerTest extends Specification with DbRepos {
 
@@ -39,9 +40,9 @@ class EventListenerTest extends Specification with DbRepos {
         val listener = new EventListenerPlugin {
          def onEvent: PartialFunction[Event,Unit] = { case _ => }
         }
-        val (user2, result) = db.readWrite {implicit s => 
-          listener.searchParser(user.externalId, 
-            JsObject(Seq("url" -> JsString("http://google.com/"), "query" -> JsString("potatoes")))) 
+        val (user2, result) = db.readWrite {implicit s =>
+          listener.searchParser(user.externalId,
+            JsObject(Seq("url" -> JsString("http://google.com/"), "query" -> JsString("potatoes"))))
         }
 
         user2.id === user.id
@@ -54,6 +55,7 @@ class EventListenerTest extends Specification with DbRepos {
   "EventListener" should {
     "process events" in {
       running(new EmptyApplication()) {
+        val system = ActorSystem("system")
         val (normUrlId, url, user, bookmark) = setup()
 
         val unrelatedEvent = Events.userEvent(EventFamilies.SEARCH,"someOtherEvent", user, Seq(), "", JsObject(Seq()), Seq())

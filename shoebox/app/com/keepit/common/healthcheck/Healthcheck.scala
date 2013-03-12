@@ -123,7 +123,7 @@ private[healthcheck] class HealthcheckActor(postOffice: PostOffice, services: Fo
         val messages = errors map {case(sig, errorList) =>
           s"${errorList.size} since last report, ${errorsSinceStart(sig)} since start of errorList sig ${sig.value}:\n<br/>${errorList.last.toHtml}"
         } mkString "\n<br/><hr/>"
-        val subject = s"ERROR REPORT: $errorCount errors since start on ${services.currentService.name} version ${services.currentVersion} compiled on ${services.compilationTime}"
+        val subject = s"ERROR REPORT: ${errors.map(_._2.size).sum} errors since last report on ${services.currentService.name} version ${services.currentVersion} compiled on ${services.compilationTime}"
         errors = initErrors
 
         val htmlMessage = Html(s"$titles<br/><hr/><br/>$messages")
