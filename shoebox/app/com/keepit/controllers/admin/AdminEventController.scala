@@ -23,13 +23,12 @@ import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class AdminEventController @Inject() (
-  db: Database,
   searchConfigManager: SearchConfigManager,
   rb: ReportBuilderPlugin,
   reportStore: ReportStore,
   events: EventStream,
   activities: ActivityStream)
-    extends BrowserExtensionController {
+    extends AdminController {
 
   def buildReport() = AdminHtmlAction { request =>
 
