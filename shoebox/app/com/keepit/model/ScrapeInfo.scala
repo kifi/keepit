@@ -31,7 +31,7 @@ case class ScrapeInfo(
   def withUpdateTime(now: DateTime) = this
 
   def withState(state: State[ScrapeInfo]) = state match {
-    case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = currentDateTime) // scrape ASAP when switched to ACTIVE
+    case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = START_OF_TIME) // scrape ASAP when switched to ACTIVE
     case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
   }
 
