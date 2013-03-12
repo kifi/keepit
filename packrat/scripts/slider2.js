@@ -69,10 +69,10 @@ slider2 = function() {
             }).on("click", ".kifi-slider2-pane", function() {
               if (this.classList.contains("kifi-slider2-pane-hide")) {
                 this.classList.remove("kifi-slider2-pane-hide");
-                hidePanel();
+                hidePane();
               } else {
                 this.classList.add("kifi-slider2-pane-hide");
-                showPanel();
+                showPane();
               }
             });
             // $slider.on("click", ".kifi-slider-x", function() {
@@ -137,15 +137,15 @@ slider2 = function() {
       t.dead = true;
     }};
 
-  function showPanel() {
-    api.log("[showPanel]");
+  function showPane() {
+    api.log("[showPane]");
     var $html = $("html").addClass("kifi-pane-parent");
     $pane = $("<div class=kifi-pane>").appendTo($html).layout();
     $html.addClass("kifi-with-pane");
   }
 
-  function hidePanel() {
-    api.log("[hidePanel]");
+  function hidePane() {
+    api.log("[hidePane]");
     $pane.on("transitionend webkitTransitionEnd", function() {
       $pane.remove();
       $pane = null;
