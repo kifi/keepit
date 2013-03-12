@@ -45,7 +45,7 @@ object URIGraphController extends AdminController {
   def dumpLuceneDocument(id: Id[User]) =  AdminHtmlAction { implicit request =>
     val indexer = inject[URIGraph].asInstanceOf[URIGraphImpl]
     try {
-      val doc = indexer.buildIndexable(id).buildDocument
+      val doc = indexer.buildIndexable(id, SequenceNumber.ZERO).buildDocument
       Ok(html.admin.luceneDocDump("URIGraph", doc, indexer))
     } catch {
       case e: Throwable => Ok(html.admin.luceneDocDump("No URIGraph", new Document, indexer))

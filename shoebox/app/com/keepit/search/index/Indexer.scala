@@ -148,9 +148,6 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     searcher = Searcher.reopen(searcher)
   }
 
-  def buildIndexable(data: T): Indexable[T]
-  def buildIndexable(id: Id[T]): Indexable[T]
-
   def getFieldDecoder(fieldName: String) = {
     fieldDecoders.get(fieldName) match {
       case Some(decoder) => decoder
