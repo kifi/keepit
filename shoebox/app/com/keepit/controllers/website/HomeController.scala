@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.WebsiteExtensionController
+import com.keepit.common.controller.WebsiteController
 import com.keepit.common.logging.Logging
 
 import play.api.Play.current
@@ -17,7 +17,7 @@ import com.google.inject.{Inject, Singleton}
 @Singleton
 class HomeController @Inject() (db: Database,
   userRepo: UserRepo)
-    extends WebsiteExtensionController {
+    extends WebsiteController {
 
   def home = Action{ request =>
     log.info("yet another homepage access!")

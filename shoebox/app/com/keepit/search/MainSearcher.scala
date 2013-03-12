@@ -50,11 +50,11 @@ class MainSearcher(
   val enableCoordinator = config.asBoolean("enableCoordinator")
   val phraseBoost = config.asFloat("phraseBoost")
   val siteBoost = config.asFloat("siteBoost")
+  val minMyBookmarks = config.asInt("minMyBookmarks")
+  val myBookmarkBoost = config.asFloat("myBookmarkBoost")
+  val maxResultClickBoost = config.asFloat("maxResultClickBoost")
 
-  // following config params are enabled only when the default filter is in use
-  val minMyBookmarks = if (filter.isDefault) config.asInt("minMyBookmarks") else 0
-  val myBookmarkBoost = if (filter.isDefault) config.asFloat("myBookmarkBoost") else 1.0f
-  val maxResultClickBoost = if (filter.isDefault) config.asFloat("maxResultClickBoost") else 1.0f
+  // tailCutting is set to low when a non-default filter is in use
   val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
 
   // initialize user's social graph info
@@ -99,7 +99,7 @@ class MainSearcher(
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
-    parser.parseQuery(queryString).map{ articleQuery =>
+    parser.parse(queryString).map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
@@ -230,7 +230,7 @@ class MainSearcher(
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 
-    parser.parseQuery(queryString).map{ query =>
+    parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
       val idMapper = personalizedSearcher.indexReader.getIdMapper

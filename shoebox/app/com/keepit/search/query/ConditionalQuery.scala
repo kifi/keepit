@@ -34,7 +34,7 @@ class ConditionalQuery(val source: Query, val condition: Query) extends Query2 w
     condition.extractTerms(out)
   }
 
-  override def toString(s: String) = "Conditional(%s, %s, %s)".format(source.toString(s), condition.toString(s))
+  override def toString(s: String) = "Conditional(%s, %s)".format(source.toString(s), condition.toString(s))
 
   override def equals(obj: Any): Boolean = obj match {
     case query: ConditionalQuery => (source == query.source) && (condition == query.condition)

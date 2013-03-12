@@ -13,14 +13,16 @@ import com.keepit.common.db.LargeString._
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
 
+import com.keepit.controllers.admin.AdminDashboardController
+import com.keepit.controllers.ext.ExtCommentController
+import com.keepit.common.social.SocialNetworks.FACEBOOK
+import com.keepit.common.controller.AuthenticatedRequest
+
 import securesocial.core._
 
 import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
-import com.keepit.controllers.admin.AdminDashboardController
-import com.keepit.controllers.ext.ExtCommentController
-import com.keepit.common.social.SocialNetworks.FACEBOOK
 
 class CommentReadTest extends Specification with DbRepos {
 
@@ -161,7 +163,7 @@ class CommentReadTest extends Specification with DbRepos {
 
 
         val fakeRequest = FakeRequest().withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
-        val authRequest = inject[ExtCommentController].AuthenticatedRequest(null, user1.id.get, fakeRequest)
+        val authRequest = AuthenticatedRequest(null, user1.id.get, fakeRequest)
         authRequest.session.get(SecureSocial.ProviderKey) === Some("facebook")
         val result = inject[ExtCommentController].getMessageThread(externalId)(authRequest)
         status(result) must equalTo(OK)

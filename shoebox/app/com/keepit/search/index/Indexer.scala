@@ -92,7 +92,8 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
             case Left(doc) =>
               try {
                 indexWriter.updateDocument(indexable.idTerm, doc)
-                log.info("indexed id=%s".format(indexable.id))
+                if (sequenceNumber < indexable.sequenceNumber) sequenceNumber = indexable.sequenceNumber
+                log.debug("indexed id=%s seq=%s".format(indexable.id, indexable.sequenceNumber))
                 None
               } catch {
                 case e: CorruptIndexException => throw e  // fatal
@@ -108,18 +109,18 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
           (indexable, error)
         }
         commit()
-        log.info("index commited")
         afterCommit(commitBatch)
       }
     }
     if (refresh) refreshSearcher()
   }
 
-  def commit() {
+  private def commit() {
     indexWriter.commit(Map(
-      Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString,
-      Indexer.CommitData.sequenceNumber -> sequenceNumber.toString
+          Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString,
+          Indexer.CommitData.sequenceNumber -> sequenceNumber.toString
     ))
+    log.info("index committed")
   }
 
   def deleteAllDocuments(refresh: Boolean = true) {
@@ -146,9 +147,6 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   def refreshSearcher() {
     searcher = Searcher.reopen(searcher)
   }
-
-  def buildIndexable(data: T): Indexable[T]
-  def buildIndexable(id: Id[T]): Indexable[T]
 
   def getFieldDecoder(fieldName: String) = {
     fieldDecoders.get(fieldName) match {

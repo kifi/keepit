@@ -20,7 +20,7 @@ case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
   uriId: Id[NormalizedURI], // = NormalizedURI id
   lastScrape: DateTime = START_OF_TIME,
-  nextScrape: DateTime = currentDateTime,
+  nextScrape: DateTime = START_OF_TIME,
   interval: Double = 24.0d, // hours
   failures: Int = 0,
   state: State[ScrapeInfo] = ScrapeInfoStates.ACTIVE,
@@ -31,7 +31,7 @@ case class ScrapeInfo(
   def withUpdateTime(now: DateTime) = this
 
   def withState(state: State[ScrapeInfo]) = state match {
-    case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = currentDateTime) // scrape ASAP when switched to ACTIVE
+    case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = START_OF_TIME) // scrape ASAP when switched to ACTIVE
     case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
   }
 
@@ -107,7 +107,7 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
     (for(f <- table if f.uriId === uriId) yield f).firstOption
 
   def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo] = {
-    val q = (for(f <- table if f.nextScrape <= due && f.state === ScrapeInfoStates.ACTIVE) yield f)
+    val q = (for(f <- table if f.nextScrape <= due && f.state === ScrapeInfoStates.ACTIVE) yield f).sortBy(_.nextScrape)
     (if (limit > 0) q.take(limit) else q).list
   }
 }

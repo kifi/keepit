@@ -1,4 +1,4 @@
-package com.keepit.controllers
+package com.keepit.controllers.ext
 
 import play.api.data._
 import play.api._
@@ -13,10 +13,8 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.async._
 import com.keepit.model._
-import com.keepit.inject._
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import java.sql.Connection
-import com.keepit.common.logging.Logging
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.Hit
 import com.keepit.search.graph._
@@ -29,13 +27,19 @@ import com.keepit.common.analytics._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.analytics.reports._
+import com.keepit.common.controller.WebsiteController
 
+import com.google.inject.{Inject, Singleton}
 
-object DeepLinkController extends FortyTwoController {
+@Singleton
+class ExtDeepLinkController @Inject() (
+  db: Database,
+  deepLinkRepo: DeepLinkRepo,
+  normalizedURIRepo: NormalizedURIRepo)
+    extends WebsiteController {
 
   def handle(token: String) = AuthenticatedHtmlAction { request =>
-    val db = inject[Database]
-    val deepLink = db.readOnly { implicit session => inject[DeepLinkRepo].getByToken(DeepLinkToken(token)) }
+    val deepLink = db.readOnly { implicit session => deepLinkRepo.getByToken(DeepLinkToken(token)) }
 
     deepLink match {
       case Some(deep) =>
@@ -43,7 +47,9 @@ object DeepLinkController extends FortyTwoController {
           case Some(recip) if request.userId != recip =>
             Forbidden
           case _ =>
-            val uri = deep.uriId.map(uri => db.readOnly { implicit session => inject[NormalizedURIRepo].get(uri).url }) getOrElse ("")
+            val uri = deep.uriId.map(uri => db.readOnly { implicit session =>
+              normalizedURIRepo.get(uri).url
+            }) getOrElse ("")
             val locator = deep.deepLocator.value
             val isSecure = deep.recipientUserId.isDefined
             Ok(views.html.deeplink(uri, locator, isSecure))

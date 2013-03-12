@@ -1,31 +1,29 @@
 package com.keepit.search.graph
 
-import com.keepit.common.logging.Logging
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.inject._
-import com.keepit.common.net.Host
-import com.keepit.common.net.URI
-import com.keepit.model._
-import com.keepit.search.Lang
-import com.keepit.search.LangDetector
-import com.keepit.search.index.{DefaultAnalyzer, Hit, Indexable, Indexer, IndexError, Searcher}
-import play.api.Play.current
-import org.apache.lucene.analysis.Analyzer
+import scala.collection.mutable.ArrayBuffer
+
+import java.io.StringReader
+
 import org.apache.lucene.analysis.TokenStream
-import org.apache.lucene.document.Document
-import org.apache.lucene.document.Field
-import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
-import scala.collection.mutable.ArrayBuffer
-import com.keepit.search.line.LineFieldBuilder
-import java.io.StringReader
+
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.net.Host
+import com.keepit.common.net.URI
+import com.keepit.inject._
+import com.keepit.model._
+import com.keepit.search.Lang
+import com.keepit.search.LangDetector
 import com.keepit.search.index.DocUtil
 import com.keepit.search.index.FieldDecoder
+import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
+import com.keepit.search.line.LineFieldBuilder
+
+import play.api.Play.current
 
 object URIGraph {
   val userTerm = new Term("usr", "")
@@ -51,8 +49,7 @@ object URIGraph {
 }
 
 trait URIGraph {
-  def load(): Int
-  def update(userId: Id[User]): Int
+  def update(): Int
   def getURIGraphSearcher(): URIGraphSearcher
   def close(): Unit
 }
@@ -76,51 +73,40 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     cnt
   }
 
-  def load(): Int = {
-    log.info("loading URIGraph")
+  def update(): Int = {
+    log.info("updating URIGraph")
     try {
-      val users = inject[Database].readOnly { implicit s => inject[UserRepo].all }
       var cnt = 0
-      indexDocuments(users.iterator.map{ user => buildIndexable(user) }, commitBatchSize){ commitBatch =>
-        cnt += commitCallback(commitBatch)
-      }
-      cnt
-    } catch {
-      case ex: Throwable =>
-        log.error("error in loading", ex)
-        throw ex
-    }
-  }
 
-  def update(userId: Id[User]): Int = {
-    log.info("updating a URIGraph for user=%d".format(userId.id))
-    try {
-      val user = inject[Database].readOnly { implicit s => inject[UserRepo].get(userId) }
-      var cnt = 0
-      indexDocuments(Iterator(buildIndexable(user)), commitBatchSize){ commitBatch =>
+      val usersChanged = inject[Database].readOnly { implicit s =>
+        inject[BookmarkRepo].getUsersChanged(sequenceNumber)
+      }
+      indexDocuments(usersChanged.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
       }
       cnt
-    } catch {
-      case ex: Throwable =>
-        log.error("error in URIGraph update", ex)
-        throw ex
+    } catch { case e: Throwable =>
+      log.error("error in URIGraph update", e)
+      throw e
     }
   }
 
   def getURIGraphSearcher() = new URIGraphSearcher(searcher)
 
-  def buildIndexable(userId: Id[User]) = {
-    val user = inject[Database].readOnly { implicit s => inject[UserRepo].get(userId) }
-    buildIndexable(user)
+  def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
+    val (userId, seq) = userIdAndSequenceNumber
+    val bookmarks = inject[Database].readOnly { implicit session =>
+      inject[BookmarkRepo].getByUser(userId)
+    }
+    new URIListIndexable(userId, seq, bookmarks)
   }
 
-  def buildIndexable(user: User) = {
-    val bookmarks = inject[Database].readOnly(implicit session => inject[BookmarkRepo].getByUser(user.id.get))
-    new URIListIndexable(user.id.get, bookmarks)
-  }
+  class URIListIndexable(
+    override val id: Id[User],
+    override val sequenceNumber: SequenceNumber,
+    val bookmarks: Seq[Bookmark]
+  ) extends Indexable[User] with LineFieldBuilder {
 
-  class URIListIndexable(override val id: Id[User], val bookmarks: Seq[Bookmark]) extends Indexable[User] with LineFieldBuilder {
     override def buildDocument = {
       val doc = super.buildDocument
       val payload = URIList.toByteArray(bookmarks)

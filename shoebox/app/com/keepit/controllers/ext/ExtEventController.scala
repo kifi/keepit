@@ -1,4 +1,4 @@
-package com.keepit.controllers
+package com.keepit.controllers.ext
 
 import play.api.data._
 import play.api._
@@ -8,31 +8,36 @@ import play.api.data.validation.Constraints._
 import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.http.ContentTypes
+import play.api.libs.json._
 
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.db._
 import com.keepit.common.async._
 import com.keepit.model._
-import com.keepit.inject._
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import java.sql.Connection
-import com.keepit.common.logging.Logging
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.Hit
 import com.keepit.search.graph._
 import com.keepit.search._
 import com.keepit.common.social.UserWithSocial
 import com.keepit.search.ArticleSearchResultStore
-import com.keepit.common.controller.FortyTwoController
-import play.api.libs.json._
+import com.keepit.common.controller.BrowserExtensionController
 import com.keepit.common.analytics._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.analytics.reports._
 
+import com.google.inject.{Inject, Singleton}
 
-object EventController extends FortyTwoController {
+@Singleton
+class ExtEventController @Inject() (
+  db: Database,
+  userExperimentRepo: UserExperimentRepo,
+  userRepo: UserRepo,
+  persistEventPlugin: PersistEventPlugin)
+    extends BrowserExtensionController {
 
   def logUserEvents = AuthenticatedJsonAction { request =>
     val userId = request.userId
@@ -41,16 +46,15 @@ object EventController extends FortyTwoController {
       case 1 => createEventsFromPayload(json, userId)
       case i => throw new Exception("Unknown events version: %s".format(i))
     }
-
     Ok(JsObject(Seq("stored" -> JsString("ok"))))
   }
 
   private def createEventsFromPayload(params: JsValue, userId: Id[User]) = {
     val logRecievedTime = currentDateTime
 
-    val (user, experiments) = inject[Database].readOnly{ implicit session =>
-      (inject[UserRepo].get(userId),
-       inject[UserExperimentRepo].getByUser(userId) map (_.experimentType))
+    val (user, experiments) = db.readOnly{ implicit session =>
+      (userRepo.get(userId),
+       userExperimentRepo.getByUser(userId) map (_.experimentType))
     }
 
     val events = (params \ "events") match {
@@ -82,7 +86,7 @@ object EventController extends FortyTwoController {
         val newEvent = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
         log.debug("Created new event: %s".format(newEvent))
 
-        inject[PersistEventPlugin].persist(newEvent)
+        persistEventPlugin.persist(newEvent)
       }
   }
 }

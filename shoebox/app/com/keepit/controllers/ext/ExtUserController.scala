@@ -10,11 +10,11 @@ import com.keepit.model._
 import com.keepit.serializer.UserWithSocialSerializer._
 import com.keepit.serializer.BasicUserSerializer
 import com.keepit.common.social._
-import com.keepit.common.controller.BrowserExtensionController
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.Lang
 import com.keepit.search.MainSearcherFactory
 import com.keepit.common.mail._
+import com.keepit.common.controller.BrowserExtensionController
 
 import scala.concurrent.Await
 import play.api.libs.concurrent.Execution.Implicits._

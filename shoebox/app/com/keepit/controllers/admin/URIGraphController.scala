@@ -1,46 +1,51 @@
 package com.keepit.controllers.admin
 
-import play.api.data._
-import java.util.concurrent.TimeUnit
-import play.api._
-import play.api.Play.current
-import play.api.mvc._
-import play.api.libs.json.JsArray
-import play.api.libs.json.Json
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsNumber
-import com.keepit.common.db._
-import com.keepit.common.logging.Logging
+import scala.concurrent.ExecutionContext.Implicits.global
 
+import org.apache.lucene.document.Document
+
+import com.keepit.common.controller.AdminController
+import com.keepit.common.db._
+import com.keepit.common.db.slick.Database
 import com.keepit.inject._
+import com.keepit.model.{BookmarkRepo, User}
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphImpl
 import com.keepit.search.graph.URIGraphPlugin
-import com.keepit.model.User
-import com.keepit.common.controller.AdminController
-import org.apache.lucene.document.Document
+
+import play.api.Play.current
 import views.html
 
 object URIGraphController extends AdminController {
 
   def load = AdminHtmlAction { implicit request =>
     val uriGraphPlugin = inject[URIGraphPlugin]
-    val cnt = uriGraphPlugin.load()
-    Ok("indexed %d users".format(cnt))
+    Async {
+      uriGraphPlugin.update().map { cnt =>
+        Ok(s"indexed $cnt users")
+      }
+    }
   }
 
   def update(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val uriGraphPlugin = inject[URIGraphPlugin]
-    val cnt = uriGraphPlugin.update(userId)
-    Ok("indexed %d users".format(cnt))
+    val bookmarkRepo = inject[BookmarkRepo]
+    val db = inject[Database]
+    Async {
+      val bookmarks = db.readOnly { implicit s => bookmarkRepo.getByUser(userId) }
+      bookmarks.grouped(1000).foreach { group =>
+        db.readWrite { implicit s => group.foreach(bookmarkRepo.save) }
+      }
+      uriGraphPlugin.update().map { cnt =>
+        Ok(s"indexed $cnt users")
+      }
+    }
   }
 
   def dumpLuceneDocument(id: Id[User]) =  AdminHtmlAction { implicit request =>
     val indexer = inject[URIGraph].asInstanceOf[URIGraphImpl]
     try {
-      val doc = indexer.buildIndexable(id).buildDocument
+      val doc = indexer.buildIndexable(id, SequenceNumber.ZERO).buildDocument
       Ok(html.admin.luceneDocDump("URIGraph", doc, indexer))
     } catch {
       case e: Throwable => Ok(html.admin.luceneDocDump("No URIGraph", new Document, indexer))

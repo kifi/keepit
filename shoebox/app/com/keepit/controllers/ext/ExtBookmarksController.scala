@@ -109,7 +109,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
         }
       }
     }
-    uriGraphPlugin.update(request.userId)
+    uriGraphPlugin.update()
     bookmark match {
       case Some(bookmark) => Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
       case None => NotFound
@@ -143,7 +143,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
             val experiments = request.experimants
             val user = db.readOnly { implicit s => userRepo.get(userId) }
             bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
-            uriGraphPlugin.update(userId)
+            uriGraphPlugin.update()
             Ok(JsObject(Seq()))
         }
       case None =>

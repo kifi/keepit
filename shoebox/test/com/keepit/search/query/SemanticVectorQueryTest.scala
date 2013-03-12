@@ -25,6 +25,7 @@ import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
 import com.keepit.common.db.Id
+import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.Indexable
 import com.keepit.search.Lang
@@ -35,7 +36,7 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.analysis.Analyzer
 import com.keepit.search.index.Indexer
 import com.keepit.search.index.PersonalizedSearcher
-import com.keepit.search.index.QueryParser
+import com.keepit.search.query.parser.QueryParser
 
 class SemanticVectorQueryTest extends Specification {
 
@@ -47,6 +48,8 @@ class SemanticVectorQueryTest extends Specification {
     class TstIndexable[Tst](override val id: Id[Tst], val text: String) extends Indexable[Tst] {
 
       implicit def toReader(text: String) = new StringReader(text)
+
+      override val sequenceNumber = SequenceNumber.ZERO
 
       override def buildDocument = {
         val doc = super.buildDocument
@@ -61,8 +64,6 @@ class SemanticVectorQueryTest extends Specification {
 
     def buildIndexable(id: Id[Tst]): Indexable[Tst] = throw new UnsupportedOperationException()
     def buildIndexable(data: Tst): Indexable[Tst] = new TstIndexable(data.id, data.text)
-
-    def getQueryParser(lang: Lang): QueryParser = throw new UnsupportedOperationException
 
     def index(id: Id[Tst], text: String) = {
       indexDocuments(Some(buildIndexable(new Tst(id, text))).iterator, 100){ docs => }

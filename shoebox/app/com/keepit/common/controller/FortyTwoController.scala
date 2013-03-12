@@ -57,17 +57,17 @@ object FortyTwoController {
   }
 }
 
+case class AuthenticatedRequest(
+    socialUser: SocialUser,
+    userId: Id[User],
+    request: Request[AnyContent],
+    experimants: Seq[State[ExperimentType]] = Nil,
+    kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
+    adminUserId: Option[Id[User]] = None)
+  extends WrappedRequest(request)
+
 trait AuthenticatedController extends Controller with Logging with SecureSocial {
   import FortyTwoController._
-
-  case class AuthenticatedRequest(
-      socialUser: SocialUser,
-      userId: Id[User],
-      request: Request[AnyContent],
-      experimants: Seq[State[ExperimentType]] = Nil,
-      kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
-      adminUserId: Option[Id[User]] = None)
-    extends WrappedRequest(request)
 
   private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession) = {
     val repo = inject[SocialUserInfoRepo]
@@ -186,9 +186,9 @@ trait BrowserExtensionController extends AuthenticatedController {
   }
 }
 
-trait WebsiteExtensionController extends AuthenticatedController {
+trait WebsiteController extends AuthenticatedController {
   def AuthenticatedHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
     AuthenticatedAction(false, action)
 }
 
-trait FortyTwoController extends BrowserExtensionController with AdminController with WebsiteExtensionController
+trait FortyTwoController extends BrowserExtensionController with AdminController with WebsiteController

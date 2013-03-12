@@ -12,12 +12,16 @@ import play.api.Play.current
 import java.sql.Connection
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import java.util.{Set => JSet}
-import com.google.inject.Inject
 import scala.collection.JavaConversions._
 import com.keepit.search.ResultClickTracker
 import com.keepit.search.BrowsingHistoryTracker
 import com.keepit.search.ClickHistoryTracker
 import com.keepit.common.plugin.SchedulingPlugin
+import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.keepit.common.akka.FortyTwoActor
+import akka.actor.ActorSystem
+import akka.actor.Props
+import com.keepit.classify.DomainTagImportActor
 
 trait EventListenerPlugin extends SchedulingPlugin {
   def onEvent: PartialFunction[Event,Unit]
@@ -33,17 +37,25 @@ trait EventListenerPlugin extends SchedulingPlugin {
   }
 }
 
-class EventHelper @Inject() (listeners: JSet[EventListenerPlugin]) {
+class EventHelper @Inject() (system: ActorSystem, listeners: JSet[EventListenerPlugin], eventStream: EventStream) {
+  private val default = system.actorOf(Props(new EventHelperActor(listeners, eventStream)))
   def newEvent(event: Event): Seq[String] = {
-
-    inject[EventStream].streamEvent(event)
-
-    val events = listeners.filter(_.onEvent.isDefinedAt(event))
-    events.map(_.onEvent(event))
-    events.map(_.getClass.getSimpleName.replaceAll("\\$","")).toSeq
+    default ! event
+    listeners.filter(_.onEvent.isDefinedAt(event)).map(_.getClass.getSimpleName.replaceAll("\\$","")).toSeq
   }
 }
 
+@Singleton
+class EventHelperActor(listeners: JSet[EventListenerPlugin], eventStream: EventStream) extends FortyTwoActor {
+  def receive = {
+    case event: Event =>
+      eventStream.streamEvent(event)
+      val events = listeners.filter(_.onEvent.isDefinedAt(event))
+      events.map(_.onEvent(event))
+  }
+}
+
+@Singleton
 class KifiResultClickedListener extends EventListenerPlugin {
   private lazy val resultClickTracker = inject[ResultClickTracker]
   private lazy val clickHistoryTracker = inject[ClickHistoryTracker]
@@ -63,6 +75,7 @@ class KifiResultClickedListener extends EventListenerPlugin {
   }
 }
 
+@Singleton
 class UsefulPageListener extends EventListenerPlugin {
   private lazy val browsingHistoryTracker = inject[BrowsingHistoryTracker]
 
@@ -78,6 +91,7 @@ class UsefulPageListener extends EventListenerPlugin {
   }
 }
 
+@Singleton
 class SliderShownListener extends EventListenerPlugin {
   private lazy val sliderHistoryTracker = inject[SliderHistoryTracker]
 
@@ -95,6 +109,7 @@ class SliderShownListener extends EventListenerPlugin {
   }
 }
 
+@Singleton
 class DeadQueryListener extends EventListenerPlugin {
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_,UserEventMetadata(EventFamilies.SEARCH,"searchUnload",externalUser,_,experiments,metaData,_),_,_)
