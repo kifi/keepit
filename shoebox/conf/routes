@@ -48,7 +48,7 @@ GET     /users/slider/updates       @com.keepit.controllers.ext.ExtCommentContro
 
 GET     /users/friends              @com.keepit.controllers.ext.ExtUserController.getSocialConnections()
 
-POST    /users/events               com.keepit.controllers.EventController.logUserEvents
+POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
 
 GET     /search                     com.keepit.controllers.SearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
 GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)

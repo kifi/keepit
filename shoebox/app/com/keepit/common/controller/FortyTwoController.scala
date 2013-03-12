@@ -186,9 +186,9 @@ trait BrowserExtensionController extends AuthenticatedController {
   }
 }
 
-trait WebsiteExtensionController extends AuthenticatedController {
+trait WebsiteController extends AuthenticatedController {
   def AuthenticatedHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
     AuthenticatedAction(false, action)
 }
 
-trait FortyTwoController extends BrowserExtensionController with AdminController with WebsiteExtensionController
+trait FortyTwoController extends BrowserExtensionController with AdminController with WebsiteController
