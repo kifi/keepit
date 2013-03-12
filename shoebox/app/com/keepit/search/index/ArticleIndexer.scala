@@ -53,7 +53,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
         repo.getIndexable(sequenceNumber, fetchSize)
       }
       var cnt = 0
-      indexDocuments(uris.iterator.map{ uri => buildIndexable(uri) }, commitBatchSize){ commitBatch =>
+      indexDocuments(uris.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
         db.readWrite { implicit s =>
           commitBatch.foreach { case (indexable, indexError) =>
             val articleIndexable = indexable.asInstanceOf[ArticleIndexable]
