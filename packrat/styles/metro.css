@@ -48,7 +48,6 @@
   width: 120px;
   font: 12px/42px sans-serif;
   opacity: 1;
-  overflow: hidden;
 }
 .kifi-slider2.kifi-visible {
   width: 300px;
@@ -176,6 +175,7 @@
   text-align: center;
   vertical-align: top;
   cursor: pointer;
+  position: relative;
 }
 .kifi-slider2-dock-btn:first-child {
   border-top-left-radius: inherit;
@@ -190,8 +190,8 @@
 }
 .kifi-slider2-dock-btn::before {
   content: " ";
-  display: inline-block;
-  margin-top: 14px;
+  position: absolute;
+  top: 15px;
   background-image: inherit;
   background-size: auto 17px;
   background-repeat: no-repeat;
@@ -203,6 +203,8 @@
 .kifi-slider2-dock-btn.kifi-slider2-noti::before {
   background-position: 0 0;
   width: 14px;
+  left: 18px;
+  top: 14px;
 }
 .kifi-slider2-dock-btn.kifi-slider2-comm {
   width: 48px;
@@ -210,6 +212,7 @@
 .kifi-slider2-dock-btn.kifi-slider2-comm::before {
   background-position: -14px 0;
   width: 17px;
+  left: 15px;
 }
 .kifi-slider2-dock-btn.kifi-slider2-mess {
   width: 48px;
@@ -217,6 +220,7 @@
 .kifi-slider2-dock-btn.kifi-slider2-mess::before {
   background-position: -31px 0;
   width: 22px;
+  left: 13px;
 }
 .kifi-slider2-dock-btn.kifi-slider2-pane {
   width: 30px;
@@ -224,9 +228,22 @@
 .kifi-slider2-dock-btn.kifi-slider2-pane::before {
   background-position: -53px 0;
   width: 19px;
+  left: 6px;
 }
 .kifi-slider2-dock-btn.kifi-slider2-pane.kifi-slider2-pane-hide::before {
   background-position: -72px 0;
+}
+.kifi-slider2-dock-count {
+  display: inline-block;
+  position: relative;
+  top: -18px;
+  box-sizing: border-box;
+  min-width: 21px;
+  border-radius: 12px;
+  padding: 0 3px;
+  background: #e74c3c;
+  color: #fff;
+  font: 10px/21px sans-serif;
 }
 .kifi-slider2-dock-sep {
   display: inline-block;

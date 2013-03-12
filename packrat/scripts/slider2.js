@@ -12,7 +12,6 @@
 // @require scripts/render.js
 // #require scripts/snapshot.js
 
-// http://stackoverflow.com/questions/12088819/css-transitions-on-new-elements
 jQuery.fn.layout = function() {
   return this.each(function() {this.clientHeight});  // forces layout
 };
@@ -39,12 +38,12 @@ slider2 = function() {
         // "name": o.session.name,
         "bgUrl": api.url("images/metro/slider.png"),
         "isKept": o.kept,
-        "isPrivate": o.private//,
+        "isPrivate": o.private,
         // "sensitive": o.sensitive,
         // "site": location.hostname,
         // "neverOnSite": o.neverOnSite,
-        // "numComments": o.numComments,
-        // "numMessages": o.numMessages,
+        "newComments": 35,  // TODO: hook up real values
+        "newMessages": 4//,
         // "connected_networks": api.url("images/networks.png"),
         // "socialConnections": o.friends.length == 0 ? null : {
         //   countText: summaryText(o.friends.length, o.kept),
