@@ -71,30 +71,6 @@
   cursor: pointer;
   overflow: hidden;
 }
-.kifi-slider2-keep.kifi-unkept::after {
-  content: "keep";
-}
-.kifi-slider2-keep.kifi-unkept.kifi-lock-hover::after {
-  content: "keep (private)";
-}
-.kifi-slider2-keep.kifi-public::after {
-  content: "kept";
-}
-.kifi-slider2-keep.kifi-public:hover::after {
-  content: "unkeep";
-}
-.kifi-slider2-keep.kifi-public.kifi-lock-hover::after {
-  content: "make private";
-}
-.kifi-slider2-keep.kifi-private::after {
-  content: "kept (private)";
-}
-.kifi-slider2-keep.kifi-private:hover::after {
-  content: "unkeep";
-}
-.kifi-slider2-keep.kifi-private.kifi-lock-hover::after {
-  content: "make public";
-}
 .kifi-slider2-keep:hover {
   background: #36526f;
 }
@@ -112,12 +88,6 @@
 }
 .kifi-slider2-lock:hover {
   background-color: #4c6c8c;
-}
-.kifi-private .kifi-slider2-lock {
-  background-color: #a00;
-}
-.kifi-private .kifi-slider2-lock:hover {
-  background-color: #b00;
 }
 .kifi-slider2-lock::before {
   content: " ";
