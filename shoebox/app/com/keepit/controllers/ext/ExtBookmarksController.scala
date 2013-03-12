@@ -17,14 +17,16 @@ import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.serializer.BookmarkSerializer
 import com.keepit.controllers.core.BookmarkInterner
-
 import scala.concurrent.Await
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 import play.api.libs.json._
 import scala.concurrent.duration._
-
 import com.google.inject.{Inject, Singleton}
+import play.api.libs.json.Json.JsValueWrapper
+import views.html.admin.bookmark
+import com.keepit.controllers.core.SliderInfoLoader
+import com.keepit.serializer.UserWithSocialSerializer._
 
 @Singleton
 class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkInterner,
@@ -32,72 +34,30 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
   domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo,
   sliderRuleRepo: SliderRuleRepo, socialConnectionRepo: SocialConnectionRepo, commentReadRepo: CommentReadRepo, experimentRepo: UserExperimentRepo,
   uriGraphPlugin: URIGraphPlugin, healthcheck: HealthcheckPlugin,
-  classifier: DomainClassifier, historyTracker: SliderHistoryTracker, uriGraph: URIGraph)
+  classifier: DomainClassifier, historyTracker: SliderHistoryTracker, uriGraph: URIGraph, sliderInfoLoader: SliderInfoLoader)
     extends BrowserExtensionController {
 
   def checkIfExists(uri: String, ver: String) = AuthenticatedJsonAction { request =>
     val userId = request.userId
-    // TODO: Optimize by not checking sensitivity and keptByAnyFriends if kept by user.
-    val (uriId, bookmark, sensitive, neverOnSite, friendIds, ruleGroup, patterns, locator, shown) = db.readOnly { implicit s =>
-      val nUri: Option[NormalizedURI] = uriRepo.getByNormalizedUrl(uri)
-      val uriId: Option[Id[NormalizedURI]] = nUri.flatMap(_.id)
 
-      val host: Option[String] = URI.parse(uri).get.host.map(_.name)
-      val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
-      val neverOnSite: Option[UserToDomain] = domain.flatMap { dom =>
-        userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
-      }
-      val sensitive: Option[Boolean] =
-        domain.flatMap(_.sensitive).orElse(host.flatMap(classifier.isSensitive(_).right.toOption))
+    val sliderInfo = sliderInfoLoader.initialLoad(userId, uri, ver)
 
-      val bookmark: Option[Bookmark] = uriId.flatMap { uriId =>
-        bookmarkRepo.getByUriAndUser(uriId, userId)
-      }
-      val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
-      val ruleGroup: Option[SliderRuleGroup] = Option(sliderRuleRepo.getGroup("default")).filter(_.version != ver)
-      val patterns: Option[Seq[String]] = ruleGroup.map(_ => urlPatternRepo.getActivePatterns)
+    type wrapped = Option[(String, JsValue)]
+    val result: Seq[wrapped] = Seq(
+      Some("kept" -> JsBoolean(sliderInfo.bookmark.isDefined)),
+      sliderInfo.bookmark.map(b => "private" -> JsBoolean(sliderInfo.bookmark.map(_.isPrivate).getOrElse(false))),
+      Some("keptByAnyFriends" -> JsBoolean(sliderInfo.socialUsers.size > 0)), // Not needed on new slider
+      Some("friends" -> userWithSocialSerializer.writes(sliderInfo.socialUsers)),
+      Some("unreadComments" -> JsNumber(sliderInfo.numUnreadComments)),
+      Some("unreadMessages" -> JsNumber(sliderInfo.numUnreadMessages)),
+      Some("sensitive" -> JsBoolean(sliderInfo.sensitive.getOrElse(false))),
+      sliderInfo.neverOnSite.map { _ => "neverOnSite" -> JsBoolean(true) },
+      sliderInfo.locator.map { s => "locator" -> JsString(s.value) },
+      sliderInfo.shown.map { "shown" -> JsBoolean(_) },
+      sliderInfo.ruleGroup.map {"rules" -> _.compactJson},
+      sliderInfo.patterns.map(p => "patterns" -> JsArray(p.map(JsString))))
 
-      val locator: Option[DeepLocator] = uriId.flatMap { uriId =>
-        val messages = commentReadRepo.getParentsOfUnreadMessages(userId, uriId)
-        messages.size match {
-          case 0 => if (commentReadRepo.hasUnreadComments(userId, uriId)) Some(DeepLocator.ofCommentList) else None
-          case 1 => Some(DeepLocator.ofMessageThread(messages.head))
-          case _ => Some(DeepLocator.ofMessageThreadList)
-        }
-      }
-
-      val shown: Option[Boolean] = if (locator.isDefined) None else uriId.map { uriId =>
-        historyTracker.getMultiHashFilter(userId).mayContain(uriId.id)
-      }
-
-      (uriId, bookmark, sensitive, neverOnSite, friendIds, ruleGroup, patterns, locator, shown)
-    }
-
-    val keptByAnyFriends = uriId.map { uriId =>
-      val searcher = uriGraph.getURIGraphSearcher
-      searcher.intersectAny(
-        searcher.getUserToUserEdgeSet(userId, friendIds),
-        searcher.getUriToUserEdgeSet(uriId))
-    }.getOrElse(false)
-
-    Ok(JsObject(Seq(
-      "kept" -> JsBoolean(bookmark.isDefined),
-      "private" -> JsBoolean(bookmark.map(_.isPrivate).getOrElse(false)),
-      "keptByAnyFriends" -> JsBoolean(keptByAnyFriends),
-      "sensitive" -> JsBoolean(sensitive.getOrElse(false))) ++
-      neverOnSite.map { _ => Seq(
-        "neverOnSite" -> JsBoolean(true))
-      }.getOrElse(Nil) ++
-      locator.map { l => Seq(
-        "locator" -> JsString(l.value))
-      }.getOrElse(Nil) ++
-      shown.map { s => Seq(
-        "shown" -> JsBoolean(s))
-      }.getOrElse(Nil) ++
-      ruleGroup.map { g => Seq(
-        "rules" -> g.compactJson,
-        "patterns" -> JsArray(patterns.get.map(JsString)))
-      }.getOrElse(Nil)))
+    Ok(JsObject(result flatten))
   }
 
   def remove() = AuthenticatedJsonAction { request =>
