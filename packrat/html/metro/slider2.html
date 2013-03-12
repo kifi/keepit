@@ -5,9 +5,17 @@
   <span class="kifi-slider2-dock">
     <span class="kifi-slider2-dock-btn kifi-slider2-noti" style="background-image:url({{bgUrl}})"></span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-comm" style="background-image:url({{bgUrl}})"></span>
+    <span class="kifi-slider2-dock-btn kifi-slider2-comm" style="background-image:url({{bgUrl}})">
+      {{#newComments}}
+      <span class="kifi-slider2-dock-count">{{newComments}}</span>
+      {{/newComments}}
+    </span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-mess" style="background-image:url({{bgUrl}})"></span>
+    <span class="kifi-slider2-dock-btn kifi-slider2-mess" style="background-image:url({{bgUrl}})">
+      {{#newMessages}}
+      <span class="kifi-slider2-dock-count">{{newMessages}}</span>
+      {{/newMessages}}
+    </span>
     <span class="kifi-slider2-dock-sep"></span>
     <span class="kifi-slider2-dock-btn kifi-slider2-pane" style="background-image:url({{bgUrl}})"></span>
   </span>
