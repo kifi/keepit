@@ -15,6 +15,11 @@ GET     /logout                     securesocial.controllers.LoginPage.logout
 GET     /signup                     securesocial.controllers.Registration.signUp
 POST    /signup                     securesocial.controllers.Registration.handleSignUp
 
+##########################################
+# Web API
+##########################################
+GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
+
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.LoginPage.authenticate(provider)
 POST    /authenticate/:provider     securesocial.controllers.LoginPage.authenticateByPost(provider)
@@ -36,8 +41,6 @@ POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentContro
 
 GET     /messages/threads/:id       @com.keepit.controllers.ext.ExtCommentController.getMessageThread(id: ExternalId[Comment])
 GET     /messages/threads           @com.keepit.controllers.ext.ExtCommentController.getMessageThreadList(url: String)
-
-GET     /r/:id                      com.keepit.controllers.DeepLinkController.handle(id: String)
 
 GET     /users/slider               @com.keepit.controllers.ext.ExtUserController.getSliderInfo(url: String)
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
