@@ -26,6 +26,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.libs.json.Json.JsValueWrapper
 import views.html.admin.bookmark
 import com.keepit.controllers.core.SliderInfoLoader
+import com.keepit.serializer.UserWithSocialSerializer._
 
 @Singleton
 class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkInterner,
@@ -36,7 +37,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
   classifier: DomainClassifier, historyTracker: SliderHistoryTracker, uriGraph: URIGraph, sliderInfoLoader: SliderInfoLoader)
     extends BrowserExtensionController {
 
-  def checkIfExists(uri: String, ver: String) = AuthenticatedJsonAction { request =>
+  def checkIfExists(uri: String, ver: String = "") = AuthenticatedJsonAction { request =>
     val userId = request.userId
 
     val sliderInfo = sliderInfoLoader.initialLoad(userId, uri, ver)
@@ -44,8 +45,11 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
     type wrapped = Option[(String, JsValue)]
     val result: Seq[wrapped] = Seq(
       Some("kept" -> JsBoolean(sliderInfo.bookmark.isDefined)),
-      Some("private" -> JsBoolean(sliderInfo.bookmark.map(_.isPrivate).getOrElse(false))),
+      sliderInfo.bookmark.map(b => "private" -> JsBoolean(sliderInfo.bookmark.map(_.isPrivate).getOrElse(false))),
       Some("keptByAnyFriends" -> JsBoolean(sliderInfo.socialUsers.size > 0)), // Not needed on new slider
+      Some("friends" -> userWithSocialSerializer.writes(sliderInfo.socialUsers)),
+      Some("numUnreadComments" -> JsNumber(sliderInfo.numUnreadComments)),
+      Some("numUnreadMessaes" -> JsNumber(sliderInfo.numUnreadMessages)),
       Some("sensitive" -> JsBoolean(sliderInfo.sensitive.getOrElse(false))),
       sliderInfo.neverOnSite.map { _ => "neverOnSite" -> JsBoolean(true) },
       sliderInfo.locator.map { s => "locator" -> JsString(s.value) },
