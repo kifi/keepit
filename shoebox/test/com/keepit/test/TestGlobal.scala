@@ -6,9 +6,9 @@ import com.google.inject.Module
 import com.keepit.FortyTwoGlobal
 import play.api.Mode.Test
 
-case class TestGlobal(module: Module) extends FortyTwoGlobal(Test) {
+case class TestGlobal(modules: Module*) extends FortyTwoGlobal(Test) {
 
-  override lazy val injector: Injector = Guice.createInjector(module)
+  override lazy val injector: Injector = Guice.createInjector(modules: _*)
 
 }
 
