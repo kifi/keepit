@@ -114,6 +114,7 @@
   background: #67829c;
   border-radius: 5px;
   font-size: 0;
+  text-align: right; /* keeps contents still during transition */
 }
 .kifi-slider2-dock-btn {
   display: inline-block;
