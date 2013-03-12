@@ -14,7 +14,6 @@ import play.api.Play.current
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
-import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.cache._

@@ -17,7 +17,6 @@ import com.keepit.model._
 import com.keepit.inject._
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import java.sql.Connection
-import com.keepit.common.logging.Logging
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.Hit
 import com.keepit.search.graph._
