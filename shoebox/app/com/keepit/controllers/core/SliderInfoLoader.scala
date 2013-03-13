@@ -91,7 +91,7 @@ class SliderInfoLoader @Inject() (db: Database,
         SliderInitialInfo(bookmark, socialUsers, numUnreadComments, numUnreadMessages, neverOnSite, sensitive, locator, shown, ruleGroup, patterns)
       case None =>
         val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
-        SliderInitialInfo(None, Nil, 0, 0, None, sensitive, None, None, None, None)
+        SliderInitialInfo(None, Nil, 0, 0, neverOnSite, sensitive, None, None, None, None)
     }
   }
 }
