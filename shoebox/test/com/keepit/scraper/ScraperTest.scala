@@ -7,6 +7,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
@@ -40,7 +41,7 @@ class ScraperTest extends Specification {
 
   "Scraper" should {
     "get a article from an existing website" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck) {
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/existing"
@@ -57,19 +58,21 @@ class ScraperTest extends Specification {
     }
 
     "throw an error from a non-existing website" in {
-      val store = new FakeArticleStore()
-      val scraper = getMockScraper(store)
-      val url = "http://www.keepit.com/missing"
-      val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(44)))
-      val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get), false)
-      result must beAnInstanceOf[Error]
-      (result: @unchecked) match {
-        case Error(httpStatus, _) => httpStatus === HttpStatus.SC_NOT_FOUND
+      running(new EmptyApplication().withFakeHealthcheck) {
+        val store = new FakeArticleStore()
+        val scraper = getMockScraper(store)
+        val url = "http://www.keepit.com/missing"
+        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(44)))
+        val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get), false)
+        result must beAnInstanceOf[Error]
+        (result: @unchecked) match {
+          case Error(httpStatus, _) => httpStatus === HttpStatus.SC_NOT_FOUND
+        }
       }
     }
 
     "fetch allActive" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck) {
         inject[Database].readWrite { implicit s =>
           val uriRepo = inject[NormalizedURIRepo]
           val scrapeRepo = inject[ScrapeInfoRepo]
@@ -84,7 +87,7 @@ class ScraperTest extends Specification {
     }
 
     "fetch ACTIVE uris and scrape them" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         val (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
@@ -111,7 +114,7 @@ class ScraperTest extends Specification {
 
     "adjust scrape schedule" in {
       // DEV should be using the default ScraperConfig
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
@@ -177,7 +180,7 @@ class ScraperTest extends Specification {
 
     "not scrape a not-modified page" in {
       // DEV should be using the default ScraperConfig
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var (uri1, info1) = inject[Database].readWrite { implicit s =>
@@ -221,7 +224,7 @@ class ScraperTest extends Specification {
     }
 
     "update scrape schedule upon state change" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var info = inject[Database].readWrite { implicit s =>
@@ -282,7 +285,8 @@ class ScraperTest extends Specification {
       }
       def close() {}
     }
-    new Scraper(mockHttpFetcher, articleStore, ScraperConfig()) {
+    new Scraper(inject[Database], mockHttpFetcher, articleStore, ScraperConfig(),
+      inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[HealthcheckPlugin], inject[UnscrapableRepo]) {
       override protected def getExtractor(url: String): Extractor = {
         new TikaBasedExtractor(url, 10000) {
           protected def getContentHandler = new BodyContentHandler(output)
