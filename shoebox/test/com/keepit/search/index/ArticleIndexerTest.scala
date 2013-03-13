@@ -80,7 +80,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       indexer.sequenceNumber = SequenceNumber(3) // skip initial documents
 
       db.readWrite { implicit s =>
-        uri1 = uriRepo.save(uriRepo.get(uri1.id.get).withState(INDEXED))
+        uri1 = uriRepo.save(uriRepo.get(uri1.id.get).withState(SCRAPED))
         uri2 = uriRepo.saveAsIndexable(uriRepo.get(uri2.id.get).withState(SCRAPED))
         uri3 = uriRepo.save(uriRepo.get(uri3.id.get).withState(ACTIVE))
       }
@@ -98,15 +98,6 @@ class ArticleIndexerTest extends Specification with DbRepos {
       indexer.run()
       indexer.sequenceNumber.value === 7
       indexer.numDocs === 3
-
-      db.readOnly { implicit s =>
-        uri1 = uriRepo.get(uri1.id.get)
-        uri2 = uriRepo.get(uri2.id.get)
-        uri3 = uriRepo.get(uri3.id.get)
-      }
-      uri1.state === INDEXED
-      uri2.state === INDEXED
-      uri3.state === INDEXED
 
       indexer = ArticleIndexer(ramDir, store)
       indexer.sequenceNumber.value === 7
