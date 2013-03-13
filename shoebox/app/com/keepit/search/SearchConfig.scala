@@ -123,15 +123,19 @@ class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigE
   }
 
   def getConfig(userId: Id[User], queryText: String): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
-    val hashFrac = hash(userId, queryText)
+    userConfig.get(userId.id) match {
+      case Some(config) => (config, None)
+      case None =>
+        val hashFrac = hash(userId, queryText)
 
-    var frac = 0.0
-    val experiment = activeExperiments.find { e =>
-      frac += e.weight
-      frac >= hashFrac
-    }
+        var frac = 0.0
+        val experiment = activeExperiments.find { e =>
+          frac += e.weight
+          frac >= hashFrac
+        }
 
-    (getUserConfig(userId)(experiment.map(_.config.params).getOrElse(Map())), experiment.map(_.id.get))
+        (defaultConfig(experiment.map(_.config.params).getOrElse(Map())), experiment.map(_.id.get))
+      }
   }
 }
 
