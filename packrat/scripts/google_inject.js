@@ -338,7 +338,6 @@ api.log("[google_inject]");
       location.href = "https://" + response.server + "/admin/search/results/" + response.uuid;
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
       var $a = $(this).showHover(function(callback) {
-        api.log("[mouseenter] kifi-face.kifi-friend create");
         var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
         var friend = response.hits[i].users[j];
         render("html/friend_card.html", {
@@ -352,7 +351,6 @@ api.log("[google_inject]");
       });
     }).on("mouseenter", ".kifi-res-friends", function() {
       var $a = $(this).showHover(function(callback) {
-        api.log("[mouseenter] kifi-res-friends create");
         var i = $a.closest("li.g").prevAll("li.g").length;
         render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
           // measuring in order to center hover box above link
@@ -366,7 +364,6 @@ api.log("[google_inject]");
       });
     }).on("mouseenter", ".kifi-chatter", function() {
       var $ch = $(this).showHover(function(callback) {
-        api.log("[mouseenter] kifi-chatter create");
         var n = $ch.data("n");
         render("html/search/chatter.html", {
           numComments: n[0],
@@ -375,7 +372,6 @@ api.log("[google_inject]");
         }, function(html) {
           callback($(html).on("transitionend", function(e) {
             if (e.originalEvent.propertyName === "opacity" && !$ch.hasClass("kifi-hover-showing")) {
-              api.log("[transitionend] kifi-chatter display:none");
               this.style.display = "none";
             }
           }));
