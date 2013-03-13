@@ -40,6 +40,6 @@ class ThreadInfoRepo extends Logging {
   private def filteredRecipients(userIds: Seq[Id[User]], sessionUser: Option[Id[User]])(implicit session: RSession): Seq[BasicUser] = {
     val basicUserRepo = inject[BasicUserRepo]
     val userRepo = inject[UserRepo]
-    userIds.filterNot(recepientUserId => sessionUser map (_ == recepientUserId) getOrElse(false)).distinct map (u => basicUserRepo.load(userRepo.get(u)))
+    userIds.filterNot(recepientUserId => sessionUser map (_ == recepientUserId) getOrElse(false)).distinct map (u => basicUserRepo.load(u))
   }
 }

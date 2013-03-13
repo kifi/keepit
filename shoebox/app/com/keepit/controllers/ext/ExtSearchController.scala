@@ -7,7 +7,6 @@ import play.api.data.validation.Constraints._
 import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.http.ContentTypes
-
 import play.api.Play.current
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -25,15 +24,15 @@ import com.keepit.common.social.UserWithSocial
 import com.keepit.search.ArticleSearchResultStore
 import com.keepit.common.controller.BrowserExtensionController
 import com.keepit.common.performance._
-
 import scala.util.Try
 import views.html
-
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.social.BasicUser
+import com.keepit.common.social.BasicUserRepo
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
-case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[UserWithSocial], score: Float)
+case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[BasicUser], score: Float)
 case class PersonalSearchResultPacket(
   uuid: ExternalId[ArticleSearchResultRef],
   query: String,
@@ -53,7 +52,8 @@ class ExtSearchController @Inject() (
   articleSearchResultRefRepo: ArticleSearchResultRefRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   bookmarkRepo: BookmarkRepo,
-  uriRepo: NormalizedURIRepo)
+  uriRepo: NormalizedURIRepo,
+  basicUserRepo: BasicUserRepo)
     extends BrowserExtensionController {
 
   def search(query: String, filter: Option[String], maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
@@ -143,11 +143,7 @@ class ExtSearchController @Inject() (
     //todo:eishay why do we need the next line?
     val uri = uriRepo.get(res.uriId)
     val bookmark = if (res.isMyBookmark) bookmarkRepo.getByUriAndUser(uri.id.get, userId) else None
-    val users = res.users.toSeq.map{ userId =>
-      val user = userRepo.get(userId)
-      val info = socialUserInfoRepo.getByUser(userId).head
-      UserWithSocial(user, info, bookmarkRepo.count(userId), Nil, Nil)
-    }
+    val users = res.users.toSeq.map(basicUserRepo.load)
     PersonalSearchResult(
       toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark,
       bookmark.map(_.isPrivate).getOrElse(false), users, res.score)
