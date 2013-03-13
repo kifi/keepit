@@ -1,4 +1,4 @@
-@(result: ArticleSearchResult, metas: Seq[com.keepit.controllers.SearchController.ArticleSearchResultHitMeta])
+@(result: ArticleSearchResult, metas: Seq[com.keepit.controllers.admin.ArticleSearchResultHitMeta])
 
 @admin("Article Search Result: " + result.uuid) {
 
@@ -60,7 +60,7 @@
         <td>@{meta.hit.isPrivate}</td>
         <td>@{meta.hit.bookmarkCount}</td>
         <td>
-          <form action="@com.keepit.controllers.routes.SearchController.explain(result.query, meta.uri.id.get)" method="GET" class="form-inline">
+          <form action="@com.keepit.controllers.admin.routes.AdminSearchController.explain(result.query, meta.uri.id.get)" method="GET" class="form-inline">
             <input type="hidden" name="query" value="@{result.query}"/>
             <input type="hidden" name="uriId" value="@{meta.uri.id}"/>
             <button type="submit" class="btn">Explain</button> </td>

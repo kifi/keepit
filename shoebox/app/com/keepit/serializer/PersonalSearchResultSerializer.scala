@@ -3,7 +3,7 @@ package com.keepit.serializer
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
-import com.keepit.controllers._
+import com.keepit.controllers.ext._
 import play.api.libs.json._
 
 class PersonalSearchResultSerializer extends Writes[PersonalSearchResult] with Logging {
