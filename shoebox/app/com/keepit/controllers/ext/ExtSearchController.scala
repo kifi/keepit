@@ -1,4 +1,4 @@
-package com.keepit.controllers
+package com.keepit.controllers.ext
 
 import play.api.data._
 import play.api._
@@ -9,7 +9,6 @@ import play.api.mvc._
 import play.api.http.ContentTypes
 
 import play.api.Play.current
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -24,10 +23,12 @@ import com.keepit.search.graph._
 import com.keepit.search._
 import com.keepit.common.social.UserWithSocial
 import com.keepit.search.ArticleSearchResultStore
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.BrowserExtensionController
 
 import scala.util.Try
 import views.html
+
+import com.google.inject.{Inject, Singleton}
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
@@ -40,7 +41,19 @@ case class PersonalSearchResultPacket(
   experimentId: Option[Id[SearchConfigExperiment]],
   context: String)
 
-object SearchController extends FortyTwoController {
+@Singleton
+class ExtSearchController @Inject() (
+  db: Database,
+  userRepo: UserRepo,
+  socialConnectionRepo: SocialConnectionRepo,
+  searchConfigManager: SearchConfigManager,
+  mainSearcherFactory: MainSearcherFactory,
+  articleSearchResultStore: ArticleSearchResultStore,
+  articleSearchResultRefRepo: ArticleSearchResultRefRepo,
+  socialUserInfoRepo: SocialUserInfoRepo,
+  bookmarkRepo: BookmarkRepo,
+  uriRepo: NormalizedURIRepo)
+    extends BrowserExtensionController {
 
   def search(query: String, filter: Option[String], maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
     val lastUUID = lastUUIDStr.flatMap{
@@ -51,15 +64,14 @@ object SearchController extends FortyTwoController {
     val userId = request.userId
     log.info("searching with %s using userId id %s".format(query, userId))
     val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-    val (friendIds, searchFilter) = inject[Database].readOnly { implicit s =>
-      val friendIds = inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
+    val (friendIds, searchFilter) = db.readOnly { implicit s =>
+      val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
       val searchFilter = filter match {
         case Some("m") =>
           SearchFilter.mine(idFilter)
         case Some("f") =>
           SearchFilter.friends(idFilter)
         case Some(ids) =>
-          val userRepo = inject[UserRepo]
           val userIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption).flatMap(userRepo.getOpt(_)).flatMap(_.id)
           SearchFilter.custom(idFilter, userIds.toSet)
         case None =>
@@ -68,9 +80,8 @@ object SearchController extends FortyTwoController {
       (friendIds, searchFilter)
     }
 
-    val (config, experimentId) = inject[SearchConfigManager].getConfig(userId, query)
+    val (config, experimentId) = searchConfigManager.getConfig(userId, query)
 
-    val mainSearcherFactory = inject[MainSearcherFactory]
     val searcher = mainSearcherFactory(userId, friendIds, searchFilter, config)
     val searchRes = if (maxHits > 0) {
       searcher.search(query, maxHits, lastUUID, searchFilter)
@@ -85,10 +96,10 @@ object SearchController extends FortyTwoController {
 
   private def reportArticleSearchResult(res: ArticleSearchResult) {
     dispatch ({
-      inject[Database].readWrite { implicit s =>
-        inject[ArticleSearchResultRefRepo].save(ArticleSearchResultFactory(res))
+      db.readWrite { implicit s =>
+        articleSearchResultRefRepo.save(ArticleSearchResultFactory(res))
       }
-      inject[ArticleSearchResultStore] += (res.uuid -> res)
+      articleSearchResultStore += (res.uuid -> res)
     }, { e =>
       log.error("Could not persist article search result %s".format(res), e)
     })
@@ -96,7 +107,7 @@ object SearchController extends FortyTwoController {
 
   private[controllers] def toPersonalSearchResultPacket(userId: Id[User],
       res: ArticleSearchResult, config: SearchConfig, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
-    val hits = inject[Database].readOnly { implicit s =>
+    val hits = db.readOnly { implicit s =>
       res.hits.map(toPersonalSearchResult(userId, _))
     }
     log.debug(hits mkString "\n")
@@ -106,12 +117,13 @@ object SearchController extends FortyTwoController {
   }
 
   private[controllers] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
-    val uri = inject[NormalizedURIRepo].get(res.uriId)
-    val bookmark = if (res.isMyBookmark) inject[BookmarkRepo].getByUriAndUser(uri.id.get, userId) else None
+    //todo:eishay why do we need the next line?
+    val uri = uriRepo.get(res.uriId)
+    val bookmark = if (res.isMyBookmark) bookmarkRepo.getByUriAndUser(uri.id.get, userId) else None
     val users = res.users.toSeq.map{ userId =>
-      val user = inject[UserRepo].get(userId)
-      val info = inject[SocialUserInfoRepo].getByUser(userId).head
-      UserWithSocial(user, info, inject[BookmarkRepo].count(userId), Nil, Nil)
+      val user = userRepo.get(userId)
+      val info = socialUserInfoRepo.getByUser(userId).head
+      UserWithSocial(user, info, bookmarkRepo.count(userId), Nil, Nil)
     }
     PersonalSearchResult(
       toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark,
@@ -127,40 +139,4 @@ object SearchController extends FortyTwoController {
     PersonalSearchHit(uri.id.get, uri.externalId, title, url)
   }
 
-  def explain(queryString: String, uriId: Id[NormalizedURI]) = AdminHtmlAction { request =>
-    val userId = request.userId
-    val friendIds = inject[Database].readOnly { implicit s =>
-      inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
-    }
-    val (config, _) = inject[SearchConfigManager].getConfig(userId, queryString)
-
-    val mainSearcherFactory = inject[MainSearcherFactory]
-    val searcher = mainSearcherFactory(userId, friendIds, SearchFilter.default(), config)
-    val explanation = searcher.explain(queryString, uriId)
-
-    Ok(html.admin.explainResult(queryString, userId, uriId, explanation))
-  }
-
-  case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
-
-  def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = AdminHtmlAction { implicit request =>
-    val ref = inject[Database].readWrite { implicit s =>
-      inject[ArticleSearchResultRefRepo].get(id)
-    }
-    val result = inject[ArticleSearchResultStore].get(ref.externalId).get
-    val uriRepo = inject[NormalizedURIRepo]
-    val userRepo = inject[UserRepo]
-    val metas: Seq[ArticleSearchResultHitMeta] = inject[Database].readOnly { implicit s =>
-      result.hits.zip(result.scorings) map { tuple =>
-        val hit = tuple._1
-        val scoring = tuple._2
-        val uri = uriRepo.get(hit.uriId)
-        val users = hit.users.map { userId =>
-          userRepo.get(userId)
-        }
-        ArticleSearchResultHitMeta(uri, users.toSeq, scoring, hit)
-      }
-    }
-    Ok(html.admin.articleSearchResult(result, metas))
-  }
 }
