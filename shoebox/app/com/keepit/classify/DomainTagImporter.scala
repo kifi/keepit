@@ -169,7 +169,7 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
     val startTime = currentDateTime
     val result = value
     db.readWrite { implicit s =>
-      log.debug("Clearing sensitivity for changed domains")
+      log.info("Clearing sensitivity for changed domains")
       updater.clearDomainsChangedSince(startTime)
     }
     result
@@ -195,32 +195,34 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
     val domainIdsToAdd = new mutable.HashSet[Id[Domain]]
 
     def findAffectedDomains(): Int = {
-      log.debug("'%s': getting set of domains to apply to".format(tagName.name))
-      val domainTuples = db.readOnly { implicit s =>
-        domainNames.map { hostname => (hostname, domainRepo.get(hostname)) }
+      log.info("'%s': getting associated domains".format(tagName.name))
+      val toSave = new mutable.ArrayBuffer[Domain]
+      domainNames.grouped(GROUP_SIZE).foreach { batch =>
+        val domains = db.readOnly { implicit s => domainRepo.getAllByName(batch) }
+        domainIdsToAdd ++= domains.map(_.id.get)
+        toSave ++= (batch.toSet -- domains.map(_.hostname)).map(h => Domain(hostname = h))
       }
-      domainTuples.grouped(GROUP_SIZE).foreach { batch =>
+      log.info("'%s': adding new domains".format(tagName.name))
+      toSave.grouped(GROUP_SIZE).foreach { batch =>
         db.readWrite { implicit s =>
-          for ((hostname, domainOption) <- batch) {
-            domainIdsToAdd += (domainOption match {
-              case Some(domain) if domain.state != DomainStates.ACTIVE =>
-                domainRepo.save(domain.withState(DomainStates.ACTIVE))
-              case Some(domain) => domain
-              case None => domainRepo.save(Domain(hostname = hostname))
-            }).id.get
+          batch.foreach { domain =>
+            domainIdsToAdd += domainRepo.save(domain).id.get
           }
         }
       }
-      domainTuples.size
+      domainNames.size
     }
 
     def findRelationshipsToUpdate() {
-      log.debug("'%s': finding domain tag relationships to update".format(tagName.name))
+      log.info("'%s': getting associated domain tag relationships".format(tagName.name))
       val domainTagRels = db.readOnly { implicit s =>
         domainToTagRepo.getByTag(tagId, excludeState = None)
       }
+      val toActivate = new mutable.ArrayBuffer[Id[DomainToTag]]
+      val toDeactivate = new mutable.ArrayBuffer[Id[DomainToTag]]
+      log.info("'%s': finding changed domain tag relationships".format(tagName.name))
       domainTagRels.grouped(GROUP_SIZE).foreach { batch =>
-        db.readWrite { implicit s =>
+        db.readOnly { implicit s =>
           batch.foreach { dtt =>
             val shouldBeActive = domainIdsToAdd.contains(dtt.domainId)
             // this already exists in the db; just update it instead of adding it
@@ -228,19 +230,26 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
             dtt.state match {
               case DomainToTagStates.ACTIVE if !shouldBeActive =>
                 removed += 1
-                domainToTagRepo.save(dtt.withState(DomainToTagStates.INACTIVE))
+                toDeactivate += dtt.id.get
               case DomainToTagStates.INACTIVE if shouldBeActive =>
                 added += 1
-                domainToTagRepo.save(dtt.withState(DomainToTagStates.ACTIVE))
+                toActivate += dtt.id.get
               case _ =>
             }
           }
         }
       }
+      log.info("'%s': saving changed domain tag relationships".format(tagName.name))
+      toActivate.grouped(GROUP_SIZE).foreach { batch =>
+        db.readWrite { implicit s => domainToTagRepo.setState(batch, DomainToTagStates.ACTIVE) }
+      }
+      toDeactivate.grouped(GROUP_SIZE).foreach { batch =>
+        db.readWrite { implicit s => domainToTagRepo.setState(batch, DomainToTagStates.INACTIVE) }
+      }
     }
 
     def addNewRelationships() {
-      log.debug("'%s': adding new relationships".format(tagName.name))
+      log.info("'%s': adding new relationships".format(tagName.name))
       domainIdsToAdd.toStream.grouped(GROUP_SIZE).foreach { batch =>
         db.readWrite { implicit s =>
           domainToTagRepo.insertAll(batch.map { domainId =>
