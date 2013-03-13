@@ -49,14 +49,18 @@
 }
 .kifi-slider2.kifi-visible {
   width: 320px;
-  -webkit-transition: width .1s ease-out;
-  transition: width .1s ease-out;
+  -webkit-transition: width 100ms ease-out;
+  transition: width 100ms ease-out;
+}
+.kifi-slider2.kifi-growing {
+  overflow: hidden;
 }
 .kifi-slider2.kifi-hidden {
-  width: 42px;
+  overflow: hidden;
+  width: 0;
   opacity: 0;
-  -webkit-transition: width .1s ease-in, opacity .07s ease-in .04s;
-  transition: width .1s ease-in, opacity .07s ease-in .04s;
+  -webkit-transition: width 100ms ease-in, opacity 60ms ease-in 40ms;
+  transition: width 100ms ease-in, opacity 60ms ease-in 40ms;
 }
 .kifi-slider2-keep {
   position: absolute;
@@ -71,7 +75,6 @@
   font-family: Lato,sans-serif;
   text-align: center;
   cursor: pointer;
-  overflow: hidden;
 }
 .kifi-slider2-keep.kifi-unkept::before {
   content: "keep";
@@ -115,6 +118,9 @@
 }
 .kifi-slider2-keep:hover {
   background: #36526f;
+}
+.kifi-slider2-keep:active {
+  background: #304357;
 }
 .kifi-slider2-lock {
   position: absolute;
@@ -161,7 +167,7 @@
   height: 42px;
   background: #67829c;
   border-radius: 5px;
-  font-size: 0;
+  font: 0/0 serif;
   text-align: right; /* keeps contents still during transition */
 }
 .kifi-slider2-dock-btn {
@@ -185,6 +191,9 @@
 }
 .kifi-slider2-dock-btn:hover {
   background-color: #7492af;
+}
+.kifi-slider2-dock-btn:active {
+  background-color: #627b94;
 }
 .kifi-slider2-dock-btn::before {
   content: " ";
@@ -234,14 +243,18 @@
 .kifi-slider2-dock-count {
   display: inline-block;
   position: relative;
-  top: -18px;
-  box-sizing: border-box;
-  min-width: 21px;
+  top: -12px;
+  box-sizing: content-box;
+  min-width: 16px;
   border-radius: 12px;
   padding: 0 3px;
   background: #e74c3c;
   color: #fff;
   font: 10px/21px sans-serif;
+}
+.kifi-slider2.kifi-growing .kifi-slider2-dock-count,
+.kifi-slider2.kifi-hidden .kifi-slider2-dock-count {
+  display: none;
 }
 .kifi-slider2-dock-sep {
   display: inline-block;
@@ -291,12 +304,12 @@ html.kifi-pane-parent.kifi-with-pane {
 a.kifi-pane-head-settings {
   float: right;
   padding: 0 18px;
-  color: inherit;
+  color: inherit !important;
+  text-decoration: none !important;
 }
 a.kifi-pane-head-settings:hover {
   color: #fff;
   background: #283949;
-  text-decoration: none;
 }
 .kifi-pane input[type=text].kifi-pane-search {
   margin: 16px 18px;
@@ -338,12 +351,12 @@ a.kifi-pane-head-settings:hover {
   color: #f8f8f8;
 }
 a.kifi-pane-action {
-  padding: 10px 8px;
-  color: inherit;
   display: block;
+  padding: 10px 8px;
+  color: inherit !important;
+  text-decoration: none !important;
 }
 a.kifi-pane-action:hover {
-  color: #fff;
+  color: #fff !important;
   background: #283949;
-  text-decoration: none;
 }
