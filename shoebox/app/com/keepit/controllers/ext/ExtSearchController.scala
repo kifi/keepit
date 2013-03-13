@@ -146,7 +146,7 @@ class ExtSearchController @Inject() (
     val users = res.users.toSeq.map{ userId =>
       val user = userRepo.get(userId)
       val info = socialUserInfoRepo.getByUser(userId).head
-      UserWithSocial(user, info, bookmarkRepo.count(userId), Nil, Nil)
+      UserWithSocial(user, info, 0, Nil, Nil)
     }
     PersonalSearchResult(
       toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark,
