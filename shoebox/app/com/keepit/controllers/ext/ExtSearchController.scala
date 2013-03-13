@@ -24,6 +24,7 @@ import com.keepit.search._
 import com.keepit.common.social.UserWithSocial
 import com.keepit.search.ArticleSearchResultStore
 import com.keepit.common.controller.BrowserExtensionController
+import com.keepit.common.performance._
 
 import scala.util.Try
 import views.html
@@ -64,33 +65,40 @@ class ExtSearchController @Inject() (
     val userId = request.userId
     log.info("searching with %s using userId id %s".format(query, userId))
     val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-    val (friendIds, searchFilter) = db.readOnly { implicit s =>
-      val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
-      val searchFilter = filter match {
-        case Some("m") =>
-          SearchFilter.mine(idFilter)
-        case Some("f") =>
-          SearchFilter.friends(idFilter)
-        case Some(ids) =>
-          val userIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption).flatMap(userRepo.getOpt(_)).flatMap(_.id)
-          SearchFilter.custom(idFilter, userIds.toSet)
-        case None =>
-          SearchFilter.default(idFilter)
+    val (friendIds, searchFilter) = time("search-connections") {
+      db.readOnly { implicit s =>
+        val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
+        val searchFilter = filter match {
+          case Some("m") =>
+            SearchFilter.mine(idFilter)
+          case Some("f") =>
+            SearchFilter.friends(idFilter)
+          case Some(ids) =>
+            val userIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption).flatMap(userRepo.getOpt(_)).flatMap(_.id)
+            SearchFilter.custom(idFilter, userIds.toSet)
+          case None =>
+            SearchFilter.default(idFilter)
+        }
+        (friendIds, searchFilter)
       }
-      (friendIds, searchFilter)
     }
 
     val (config, experimentId) = searchConfigManager.getConfig(userId, query)
 
-    val searcher = mainSearcherFactory(userId, friendIds, searchFilter, config)
-    val searchRes = if (maxHits > 0) {
-      searcher.search(query, maxHits, lastUUID, searchFilter)
-    } else {
-      log.warn("maxHits is zero")
-      ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue)
+    val searchRes = time("search-searching") {
+      val searcher = mainSearcherFactory(userId, friendIds, searchFilter, config)
+      val searchRes = if (maxHits > 0) {
+        searcher.search(query, maxHits, lastUUID, searchFilter)
+      } else {
+        log.warn("maxHits is zero")
+        ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue)
+      }
+
+      searchRes
     }
     val res = toPersonalSearchResultPacket(userId, searchRes, config, experimentId)
     reportArticleSearchResult(searchRes)
+
     Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
 
@@ -105,10 +113,25 @@ class ExtSearchController @Inject() (
     })
   }
 
-  private[controllers] def toPersonalSearchResultPacket(userId: Id[User],
+  private[ext] def toPersonalSearchResultPacket(userId: Id[User],
       res: ArticleSearchResult, config: SearchConfig, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
-    val hits = db.readOnly { implicit s =>
-      res.hits.map(toPersonalSearchResult(userId, _))
+
+    val doParallel = util.Random.nextBoolean
+
+    val hits = if(doParallel) {
+      time(s"search-personal-result-parallel-${res.hits.size}") {
+        res.hits.par.map { hit =>
+          db.readOnly { implicit s =>
+            toPersonalSearchResult(userId, hit)
+          }
+        } seq
+      }
+    } else {
+      time(s"search-personal-result-${res.hits.size}") {
+        db.readOnly { implicit s =>
+          res.hits.map(toPersonalSearchResult(userId, _))
+        }
+      }
     }
     log.debug(hits mkString "\n")
 
@@ -116,7 +139,7 @@ class ExtSearchController @Inject() (
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, experimentId, filter)
   }
 
-  private[controllers] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
+  private[ext] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
     //todo:eishay why do we need the next line?
     val uri = uriRepo.get(res.uriId)
     val bookmark = if (res.isMyBookmark) bookmarkRepo.getByUriAndUser(uri.id.get, userId) else None
@@ -130,7 +153,7 @@ class ExtSearchController @Inject() (
       bookmark.map(_.isPrivate).getOrElse(false), users, res.score)
   }
 
-  private[controllers] def toPersonalSearchHit(uri: NormalizedURI, bookmark: Option[Bookmark]) = {
+  private[ext] def toPersonalSearchHit(uri: NormalizedURI, bookmark: Option[Bookmark]) = {
     val (title, url) = bookmark match {
       case Some(bookmark) => (Some(bookmark.title), bookmark.url)
       case None => (uri.title, uri.url)
