@@ -76,8 +76,10 @@ class ScraperTest extends Specification {
         inject[Database].readWrite { implicit s =>
           val uriRepo = inject[NormalizedURIRepo]
           val scrapeRepo = inject[ScrapeInfoRepo]
-          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").withState(NormalizedURIStates.INDEXED))
-          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing").withState(NormalizedURIStates.INDEXED))
+          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing")
+              .withState(NormalizedURIStates.SCRAPED))
+          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing")
+              .withState(NormalizedURIStates.SCRAPED))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           val info2 = scrapeRepo.getByUri(uri2.id.get).get
           val all = scrapeRepo.allActive

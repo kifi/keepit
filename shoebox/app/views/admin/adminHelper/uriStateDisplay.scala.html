@@ -1,22 +1,25 @@
-@(uri: NormalizedURI)
+@(uri: com.keepit.model.NormalizedURI)
+@import com.keepit.model.NormalizedURIStates._
 
-@{uri.state.value match {
-  case "indexed" => {
-    <span class="label label-success">{uri.state.value}</span>
-  }
-  case "active" => {
+<span data-seq="@uri.seq" class="uri-state">
+@{uri.state match {
+  case ACTIVE => {
     <span class="label label-important">{uri.state.value}</span>
   }
-  case "fallbacked" => {
-    <span class="label label-warning">{uri.state.value}</span>
+  case SCRAPED => {
+    <span class="label label-info if-not-indexed">scraped</span>
+    <span class="label label-success if-indexed" style="display: none">indexed</span>
   }
-  case "scraped" => {
-    <span class="label label-info">{uri.state.value}</span>
+  case SCRAPE_FAILED => {
+    <span class="label label-inverse if-not-indexed">scrape_failed</span>
+    <span class="label label-warning if-indexed" style="display: none">fallbacked</span>
   }
-  case "fallback_failed" => {
-    <span class="label label-inverse">{uri.state.value}</span>
+  case UNSCRAPABLE => {
+      <span class="label if-not-indexed">unscrapable</span>
+      <span class="label if-indexed" style="display: none">unscrape_fallback</span>
   }
   case _ => {
     <span class="label">{uri.state.value}</span>
   }
 }}
+</span>
