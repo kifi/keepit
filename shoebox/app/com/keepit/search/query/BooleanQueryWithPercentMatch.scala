@@ -178,7 +178,9 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
   override def advance(target: Int): Int = {
     doc = required.advance(target)
     if (threshold > 0.0f) { // some of the optional clauses must match to reach the threshold.
-      while (doc < NO_MORE_DOCS && optional.advance(doc) != doc) {
+      while (doc < NO_MORE_DOCS) {
+        if (doc == optional.docID) return doc
+        if (doc == optional.advance(doc)) return doc
         doc = required.advance(optional.docID)
       }
     } else { // the required clauses have enough weights. the optional clause is truly optional.
