@@ -337,48 +337,50 @@ api.log("[google_inject]");
       e.stopPropagation();
       location.href = "https://" + response.server + "/admin/search/results/" + response.uuid;
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
-      var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
-      var friend = response.hits[i].users[j];
-      render("html/friend_card.html", {
-        name: friend.firstName + " " + friend.lastName,
-        facebookId: friend.facebookId,
-        iconsUrl: api.url("images/social_icons.png")
-      }, function(html) {
-        $a.showHover(function() {
-          api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
-            $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
-          });
-          return html;
-        }).showHover("enter");
+      var $a = $(this).showHover(function(callback) {
+        api.log("[mouseenter] kifi-face.kifi-friend create");
+        var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
+        var friend = response.hits[i].users[j];
+        render("html/friend_card.html", {
+          name: friend.firstName + " " + friend.lastName,
+          facebookId: friend.facebookId,
+          iconsUrl: api.url("images/social_icons.png")
+        }, callback);
+        api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+          $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
+        });
       });
     }).on("mouseenter", ".kifi-res-friends", function() {
-      var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;
-      render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
-        $a.showHover(function() {
+      var $a = $(this).showHover(function(callback) {
+        api.log("[mouseenter] kifi-res-friends create");
+        var i = $a.closest("li.g").prevAll("li.g").length;
+        render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
           // measuring in order to center hover box above link
           var $h = $(html)
             .css({visibility: "hidden", display: "block"})
-            .appendTo(this);
-          return $h.css("left", .5 * (this.offsetWidth - $h[0].offsetWidth))
+            .appendTo($a);
+          callback($h.css("left", .5 * ($a[0].offsetWidth - $h[0].offsetWidth))
             .css({visibility: "", display: ""})
-            .detach();
-        }).showHover("enter");
+            .detach());
+        });
       });
     }).on("mouseenter", ".kifi-chatter", function() {
-      var $ch = $(this), n = $ch.data("n");
-      render("html/search/chatter.html", {
+      var $ch = $(this).showHover(function(callback) {
+        api.log("[mouseenter] kifi-chatter create");
+        var n = $ch.data("n");
+        render("html/search/chatter.html", {
           numComments: n[0],
           numMessages: n[1],
           pluralize: function() {return pluralLambda}
         }, function(html) {
-          $ch.showHover(function() {
-            return $(html).on("transitionend", function(e) {
-              if (e.originalEvent.propertyName === "opacity" && $(this).css("opacity") < .1) {
-                this.style.display = "none";
-              }
-            });
-          }).showHover("enter")
+          callback($(html).on("transitionend", function(e) {
+            if (e.originalEvent.propertyName === "opacity" && !$ch.hasClass("kifi-hover-showing")) {
+              api.log("[transitionend] kifi-chatter display:none");
+              this.style.display = "none";
+            }
+          }));
         });
+      });
     }).on("click", ".kifi-chatter-deeplink", function() {
       api.port.emit("add_deep_link_listener", {locator: $(this).data("locator")});
       location.href = $(this).closest("li.g").find("h3.r a")[0].href;
