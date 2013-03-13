@@ -179,6 +179,7 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
     doc = required.advance(target)
     if (threshold > 0.0f) { // some of the optional clauses must match to reach the threshold.
       while (doc < NO_MORE_DOCS) {
+        if (doc == optional.docID) return doc
         if (doc == optional.advance(doc)) return doc
         doc = required.advance(optional.docID)
       }
