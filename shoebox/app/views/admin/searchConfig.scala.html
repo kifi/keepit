@@ -1,4 +1,4 @@
-@(userWithSocial: UserWithSocial)
+@(userWithSocial: UserWithSocial, configs: Seq[(String, String)])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
@@ -15,14 +15,14 @@
 
 @admin("Search Configuration") {
   <h2>@userWithSocial.user.firstName @userWithSocial.user.lastName</h2>
-  <form action="@com.keepit.controllers.routes.SearchConfigController.setUserConfig(userWithSocial.user.id.get)" method="POST" class="form-inline">
+  <form action="@com.keepit.controllers.admin.routes.AdminSearchConfigController.setUserConfig(userWithSocial.user.id.get)" method="POST" class="form-inline">
     <table class="table table-bordered">
       <tr> <th>Parameter</th><th>Value</th><th>Description</th> </tr>
-      @com.keepit.controllers.SearchConfigController.allConfigParams(userWithSocial.user.id.get).map{ case (p, v) => @paramValue(p, v, com.keepit.search.SearchConfig.getDescription(p)) }
+      @configs.map{ case (p, v) => @paramValue(p, v, com.keepit.search.SearchConfig.getDescription(p)) }
     </table>
     <button type="submit" class="btn">Update</button>
   </form>
-  <form action="@com.keepit.controllers.routes.SearchConfigController.resetUserConfig(userWithSocial.user.id.get)" method="GET" class="form-inline">
+  <form action="@com.keepit.controllers.admin.routes.AdminSearchConfigController.resetUserConfig(userWithSocial.user.id.get)" method="GET" class="form-inline">
      <button type="submit" class="btn">Revert To Defaults</button><br/>
   </form>
 }

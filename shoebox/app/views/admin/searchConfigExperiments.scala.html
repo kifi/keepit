@@ -1,6 +1,6 @@
 @(experiments: Seq[com.keepit.search.SearchConfigExperiment], defaultParams: Map[String,String])
 @import com.keepit.common.db.Id
-@import com.keepit.controllers.routes.SearchConfigController
+@import com.keepit.controllers.admin.routes.AdminSearchConfigController
 
 @paramValue(parameter: String, value: String, description: Option[String], editable: Boolean, showDefault: Boolean) = {
   <tr>
@@ -45,12 +45,12 @@
         <div class="experiment-chart">
           <h3 class="chart-title">Kifi vs. Google</h3>
           <div class="growth-chart"
-            data-uri="@SearchConfigController.getKifiVsGoogle(experiment.id.get)"></div>
+            data-uri="@AdminSearchConfigController.getKifiVsGoogle(experiment.id.get)"></div>
         </div>
         <div class="experiment-chart">
           <h3 class="chart-title">Kifi had results</h3>
           <div class="growth-chart"
-            data-uri="@SearchConfigController.getKifiHadResults(experiment.id.get)"></div>
+            data-uri="@AdminSearchConfigController.getKifiHadResults(experiment.id.get)"></div>
         </div>
       </div>
       <table class="table table-bordered experiment-settings">
@@ -77,11 +77,11 @@
       <div class="charts">
         <div class="experiment-chart">
           <h3 class="chart-title">Kifi vs. Google</h3>
-          <div class="growth-chart" data-uri="@SearchConfigController.getKifiVsGoogle(Id(0))"></div>
+          <div class="growth-chart" data-uri="@AdminSearchConfigController.getKifiVsGoogle(Id(0))"></div>
         </div>
         <div class="experiment-chart">
           <h3 class="chart-title">Kifi had results</h3>
-          <div class="growth-chart" data-uri="@SearchConfigController.getKifiHadResults(Id(0))"></div>
+          <div class="growth-chart" data-uri="@AdminSearchConfigController.getKifiHadResults(Id(0))"></div>
         </div>
       </div>
       <table class="table table-bordered experiment-settings">
@@ -112,7 +112,7 @@ $(function() {
     $li.find(".search-param").each(function() {
       data["param_" + $(this).attr("name")] = $(this).val();
     });
-    $.post("@SearchConfigController.updateExperiment()", data, callback);
+    $.post("@AdminSearchConfigController.updateExperiment()", data, callback);
   }
 
   $(".experiments").on("change", ".experiment-weight", function() {
@@ -128,7 +128,7 @@ $(function() {
     var data = {
       id: +$li.data("id")
     };
-    $.post("@SearchConfigController.deleteExperiment()", data, function() {
+    $.post("@AdminSearchConfigController.deleteExperiment()", data, function() {
       window.location.reload();
     });
   });
@@ -155,7 +155,7 @@ $(function() {
     $(this).closest("li").find(".experiment-settings").toggle();
   });
   $("#add-new-experiment").on("click", function() {
-    $.post("@SearchConfigController.addNewExperiment()", function() {
+    $.post("@AdminSearchConfigController.addNewExperiment()", function() {
       window.location.reload();
     });
   });
