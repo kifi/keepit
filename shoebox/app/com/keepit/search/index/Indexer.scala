@@ -53,8 +53,14 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
 
   def getSearcher = searcher
 
-  protected[search] var sequenceNumber =
+  private var _sequenceNumber =
     SequenceNumber(commitData.getOrElse(Indexer.CommitData.sequenceNumber, "0").toLong)
+
+  def sequenceNumber = _sequenceNumber
+
+  private[search] def sequenceNumber_=(n: SequenceNumber) {
+    _sequenceNumber = n
+  }
 
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
     try {
@@ -78,6 +84,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
 
   def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int, refresh: Boolean = true)(afterCommit: Seq[(Indexable[T], Option[IndexError])]=>Unit): Unit = {
     doWithIndexWriter{ indexWriter =>
+      var maxSequenceNumber = sequenceNumber
       indexables.grouped(commitBatchSize).foreach{ indexableBatch =>
         val commitBatch = indexableBatch.map{ indexable =>
           val document = try {
@@ -92,7 +99,8 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
             case Left(doc) =>
               try {
                 indexWriter.updateDocument(indexable.idTerm, doc)
-                if (sequenceNumber < indexable.sequenceNumber) sequenceNumber = indexable.sequenceNumber
+                if (maxSequenceNumber < indexable.sequenceNumber)
+                  maxSequenceNumber = indexable.sequenceNumber
                 log.debug("indexed id=%s seq=%s".format(indexable.id, indexable.sequenceNumber))
                 None
               } catch {
@@ -108,14 +116,15 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
           }
           (indexable, error)
         }
-        commit()
+        commit(maxSequenceNumber)
         afterCommit(commitBatch)
       }
     }
     if (refresh) refreshSearcher()
   }
 
-  private def commit() {
+  private def commit(seqNum: SequenceNumber = this.sequenceNumber) {
+    this.sequenceNumber = seqNum
     indexWriter.commit(Map(
           Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString,
           Indexer.CommitData.sequenceNumber -> sequenceNumber.toString

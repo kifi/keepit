@@ -99,11 +99,12 @@ GET     /admin/data/renormalize     com.keepit.controllers.admin.UrlController.r
 POST    /admin/data/handleDuplicate com.keepit.controllers.admin.ScraperController.handleDuplicate
 POST    /admin/data/handleDuplicates com.keepit.controllers.admin.ScraperController.handleDuplicates
 
-GET     /admin/article/index        com.keepit.controllers.admin.ArticleIndexerController.index
-GET     /admin/article/index/:state com.keepit.controllers.admin.ArticleIndexerController.indexByState(state: State[NormalizedURI])
-GET     /admin/article/indexInfo    com.keepit.controllers.admin.ArticleIndexerController.indexInfo
-GET     /admin/article/refreshSearcher com.keepit.controllers.admin.ArticleIndexerController.refreshSearcher
-GET     /admin/article/dumpDoc/:uriId  com.keepit.controllers.admin.ArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
+GET     /admin/article/index        @com.keepit.controllers.admin.ArticleIndexerController.index
+GET     /admin/article/getSequenceNumber @com.keepit.controllers.admin.ArticleIndexerController.getSequenceNumber
+GET     /admin/article/index/:state @com.keepit.controllers.admin.ArticleIndexerController.indexByState(state: State[NormalizedURI])
+GET     /admin/article/indexInfo    @com.keepit.controllers.admin.ArticleIndexerController.indexInfo
+GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.ArticleIndexerController.refreshSearcher
+GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.ArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
 
 GET     /admin/uriGraph/load        com.keepit.controllers.admin.URIGraphController.load
 GET     /admin/uriGraph/update/:userId com.keepit.controllers.admin.URIGraphController.update(userId: Id[User])

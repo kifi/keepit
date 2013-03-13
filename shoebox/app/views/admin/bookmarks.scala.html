@@ -1,11 +1,13 @@
 @(bookmarksAndUsers: Seq[((User, SocialUserInfo), (Bookmark, NormalizedURI, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)
+@import com.keepit.model.NormalizedURIStates._
+@import com.keepit.controllers.admin.routes
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
     <ul>
       <li>
         @if(page > 0) {
-          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(page - 1)">
+          <a href="@routes.AdminBookmarksController.bookmarksView(page - 1)">
         } else {
          <a href="#">
         }
@@ -14,28 +16,28 @@
       </li>
       @if(page - 20 > 0) {
         <li class="disabled">
-          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0)">...</a>
+          <a href="@routes.AdminBookmarksController.bookmarksView(0)">...</a>
         </li>
       }
       @for(i <- (0.max(page - 20) to (pageCount - 1).min(page + 20))) {
         @if(i == page) {
 	        <li class="disabled">
-	          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(i)">@{i + 1}</a>
+	          <a href="@routes.AdminBookmarksController.bookmarksView(i)">@{i + 1}</a>
 	        </li>
         } else {
 	        <li class="active">
-	          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(i)">@{i + 1}</a>
+	          <a href="@routes.AdminBookmarksController.bookmarksView(i)">@{i + 1}</a>
 	        </li>
 	      }
       }
       @if(page + 20 < pageCount - 1) {
         <li class="disabled">
-          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(pageCount - 1)">...</a>
+          <a href="@routes.AdminBookmarksController.bookmarksView(pageCount - 1)">...</a>
         </li>
       }
       <li>
         @if(bookmarksAndUsers.size > 0) {
-          <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(page + 1)">
+          <a href="@routes.AdminBookmarksController.bookmarksView(page + 1)">
         } else {
          <a href="#">
         }
@@ -85,3 +87,16 @@
   </table>
   @pagination(page, pageCount)
 }
+
+<script type="text/javascript">
+  $.get("@routes.ArticleIndexerController.getSequenceNumber", function (data) {
+    var sequenceNumber = data.sequenceNumber
+    $(".uri-state").each(function () {
+      var seq = $(this).data('seq');
+      var indexed = seq <= sequenceNumber
+      $(this)
+        .find('.if-indexed').toggle(indexed).end()
+        .find('.if-not-indexed').toggle(!indexed);
+    });
+  });
+</script>
