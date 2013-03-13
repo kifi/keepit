@@ -50,7 +50,7 @@ GET     /users/friends              @com.keepit.controllers.ext.ExtUserControlle
 
 POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
 
-GET     /search                     com.keepit.controllers.SearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
+GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
 GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)
 
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
@@ -126,7 +126,6 @@ GET     /admin/social_user/:id/refresh com.keepit.controllers.SocialUserControll
 GET     /admin/social_user/:id/reset com.keepit.controllers.SocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 
 GET     /admin/server               com.keepit.common.healthcheck.HealthController.serviceView()
-GET     /admin/search/results/:id   com.keepit.controllers.SearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
 
 GET     /admin/emails/comment       com.keepit.controllers.admin.AdminEmailPreviewController.newComment
 GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
@@ -151,7 +150,8 @@ POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSe
 GET     /admin/searchExperiments/kvg/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiVsGoogle(id: Id[SearchConfigExperiment])
 GET     /admin/searchExperiments/kifiHadResults/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiHadResults(id: Id[SearchConfigExperiment])
 
-GET     /admin/explainResult        com.keepit.controllers.SearchController.explain(query: String, uriId: Id[NormalizedURI])
+GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI])
+GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
 
 GET     /admin/slider/rules         com.keepit.controllers.admin.SliderAdminController.getRules
 POST    /admin/slider/rules         com.keepit.controllers.admin.SliderAdminController.saveRules
