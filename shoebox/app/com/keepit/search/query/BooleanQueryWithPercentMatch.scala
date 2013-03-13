@@ -34,7 +34,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
   def getPercentMatch() = percentMatch
 
   override def rewrite(reader: IndexReader) = {
-    if (minNrShouldMatch == 0 && clauses.size() == 1) { // optimize 1-clause queries
+    if (clauses.size() == 1) { // optimize 1-clause queries
       val c = clauses.get(0)
       if (!c.isProhibited()) {
         var query = c.getQuery().rewrite(reader)
@@ -74,26 +74,26 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
   override def createWeight(searcher: Searcher) = {
 
     new BooleanWeight(searcher, disableCoord) {
-      override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean) = {
+      override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
         val required = new ArrayBuffer[Scorer]
         val prohibited = new ArrayBuffer[Scorer]
-        val optional = new ArrayBuffer[Scorer]
-        var valuesOnOptional = new ArrayBuffer[Float]
+        val optional = new ArrayBuffer[(Scorer, Float)]
 
         var totalValueOnRequired = 0.0f
-        var totalValuesOnOptional = 0.0f
+        var totalValueOnOptional = 0.0f
         clauses.zip(weights).foreach{ case (c, w) =>
           val subScorer = w.scorer(reader, true, false)
           if (c.isRequired()) {
             totalValueOnRequired += w.getValue
-            if (subScorer != null) required += subScorer
+            // if a required clasuse does not have a scorer, no hit
+            if (subScorer == null) return null
+            required += subScorer
           } else if (c.isProhibited()) {
             if (subScorer != null) prohibited += subScorer
           } else {
-            totalValuesOnOptional += w.getValue
+            totalValueOnOptional += w.getValue
             if (subScorer != null) {
-              optional += subScorer
-              valuesOnOptional += w.getValue
+              optional += ((subScorer, w.getValue))
             }
           }
         }
@@ -101,15 +101,10 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
         if (required.isEmpty && optional.isEmpty) {
           // no required and optional clauses.
           null
-        } else if (optional.size() < minNrShouldMatch) {
-          // either >1 req scorer, or there are 0 req scorers and at least 1
-          // optional scorer. Therefore if there are not enough optional scorers
-          // no documents will be matched by the query
-          null
         } else {
-          val threshold = (totalValueOnRequired + totalValuesOnOptional) * percentMatch / 100.0f - totalValueOnRequired
-          BooleanScorer(this, disableCoord, similarity, minNrShouldMatch, required.toArray, prohibited.toArray, optional.toArray, maxCoord,
-                        valuesOnOptional.toArray, threshold)
+          val threshold = (totalValueOnRequired + totalValueOnOptional) * percentMatch / 100.0f - totalValueOnRequired
+          BooleanScorer(this, disableCoord, similarity, maxCoord, threshold,
+                        required.toArray, totalValueOnRequired, optional.toArray, totalValueOnOptional, prohibited.toArray)
         }
       }
     }
@@ -131,17 +126,18 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
 }
 
 object BooleanScorer {
-  def apply(weight: Weight, disableCoord: Boolean, similarity: Similarity, minNrShouldMatch: Int,
-            required: Array[Scorer], prohibited: Array[Scorer], optional: Array[Scorer], maxCoord: Int,
-            valuesOnOptional: Array[Float], threshold: Float) = {
+  def apply(weight: Weight, disableCoord: Boolean, similarity: Similarity, maxCoord: Int, threshold: Float,
+            required: Array[Scorer], requiredValue: Float,
+            optional: Array[(Scorer, Float)], optionalValue: Float,
+            prohibited: Array[Scorer]) = {
     def conjunction() = {
       val coord = if (disableCoord) 1.0f else similarity.coord(required.length, required.length)
-      new BooleanAndScorer(weight, coord, required)
+      new BooleanAndScorer(weight, coord, required, requiredValue)
     }
     def disjunction() = {
       val maxCoord = required.length + optional.length
       val coordFactors = (0 to optional.length).map{ i => if (disableCoord) 1.0f else similarity.coord(i + required.length, maxCoord) }.toArray
-      new BooleanOrScorer(weight, optional, coordFactors, valuesOnOptional, threshold)
+      new BooleanOrScorer(weight, optional, coordFactors, threshold, optionalValue)
     }
     def prohibit(source: Scorer with Coordinator) = {
       new BooleanNotScorer(weight, source, prohibited)
@@ -149,7 +145,7 @@ object BooleanScorer {
 
     val mainScorer =
       if (required.length > 0 && optional.length > 0) {
-        new BooleanScorer(weight, conjunction(), disjunction(), threshold)
+        new BooleanScorer(weight, conjunction(), disjunction(), threshold, requiredValue + optionalValue)
       } else if (required.length > 0){
         conjunction()
       } else if (optional.length > 0) {
@@ -160,7 +156,7 @@ object BooleanScorer {
   }
 }
 
-class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float) extends Scorer(weight) with Coordinator {
+class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float, val value: Float) extends Scorer(weight) with Coordinator {
 
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -193,10 +189,10 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
     doc
   }
 
-  override def coord = optional.coord
+  override def coord = (required.value + optional.value)/value
 }
 
-class BooleanAndScorer(weight: Weight, coord: Float, scorers: Array[Scorer]) extends Scorer(weight) with Coordinator {
+class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Scorer], val value: Float) extends Scorer(weight) with Coordinator {
 
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -213,7 +209,7 @@ class BooleanAndScorer(weight: Weight, coord: Float, scorers: Array[Scorer]) ext
         sum += scorers(i).score()
         i += 1
       }
-      scoreValue = sum * coord
+      scoreValue = sum * coordFactor
     }
     scoreValue
   }
@@ -239,15 +235,17 @@ class BooleanAndScorer(weight: Weight, coord: Float, scorers: Array[Scorer]) ext
     }
     doc
   }
+
+  override def coord = 1.0f
 }
 
-class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Array[Float], values: Array[Float], threshold: Float) extends Scorer(weight) with Coordinator with Logging {
+class BooleanOrScorer(weight: Weight, scorers: Array[(Scorer, Float)], coordFactors: Array[Float], threshold: Float, maxOverlapValue: Float)
+extends Scorer(weight) with Coordinator with Logging {
 
   private[this] var doc = -1
   private[this] var scoreValue = 0.0f
   private[this] var overlapValue = 0.0f
-  private[this] val maxOverlapValue = values.sum
-  private[this] val overlapValueUnit = maxOverlapValue / values.length
+  private[this] val overlapValueUnit = maxOverlapValue / scorers.length
 
   private[this] class ScorerDoc(val scorer: Scorer, val value: Float, var doc: Int, var scoredDoc: Int) {
     private[this] var scoreVal = 0.0f
@@ -268,7 +266,7 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
     override def lessThan(a: ScorerDoc, b: ScorerDoc) = (a.doc < b.doc)
   }
 
-  scorers.zip(values).foreach{ case (s, v) => pq.insertWithOverflow(new ScorerDoc(s, v, -1, -1)) }
+  scorers.foreach{ case (s, v) => pq.insertWithOverflow(new ScorerDoc(s, v, -1, -1)) }
 
   override def docID() = doc
 
@@ -313,6 +311,7 @@ class BooleanOrScorer(weight: Weight, scorers: Array[Scorer], coordFactors: Arra
     doc
   }
 
+  def value = overlapValue
   override def coord = overlapValueUnit / (overlapValueUnit + (maxOverlapValue - overlapValue))
 }
 
