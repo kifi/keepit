@@ -45,7 +45,7 @@ exports.get = function(id, callback) {
 };
 
 exports.getAll = function(callback) {
-  callback(runQuery(history.getNewQuery()));
+  callback(runQuery(history.getNewQuery()).filter(function(b) {return /^https?:/.test(b.url)}));
 };
 
 exports.getBarFolder = function(callback) {
