@@ -73,7 +73,7 @@ class ExtUserController @Inject() (
 
   def getSocialConnections() = AuthenticatedJsonAction { authRequest =>
     val socialConnections = db.readOnly {implicit s =>
-      socialConnectionRepo.getFortyTwoUserConnections(authRequest.userId).map(uid => basicUserRepo.load(userRepo.get(uid))).toSeq
+      socialConnectionRepo.getFortyTwoUserConnections(authRequest.userId).map(uid => basicUserRepo.load(uid)).toSeq
     }
 
     Ok(Json.obj("friends" -> socialConnections.map(sc => BasicUserSerializer.basicUserSerializer.writes(sc))))
