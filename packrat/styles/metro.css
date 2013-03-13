@@ -1,11 +1,9 @@
-/*
 @font-face {
   font-family: 'Lato';
   font-style: normal;
   font-weight: 300;
   src: local('Lato Light'), local('Lato-Light'), url(//themes.googleusercontent.com/static/fonts/lato/v6/kcf5uOXucLcbFOydGU24WALUuEpTyoUstqEm5AMlJo4.woff) format('woff');
 }
-*/
 @font-face {
   font-family: 'Lato';
   font-style: normal;
@@ -252,6 +250,7 @@
   margin-top: 4px;
   background: #506982;
 }
+
 .kifi-pane {
   position: fixed;
   top: 0;
@@ -278,4 +277,73 @@ html.kifi-pane-parent {
 }
 html.kifi-pane-parent.kifi-with-pane {
   margin-right: 320px;
+}
+.kifi-pane-head {
+  height: 52px;
+  background: #141c24;
+  font: 300 14px/52px Lato,sans-serif;
+  color: #f8f8f8;
+}
+.kifi-pane-head-logo {
+  padding-left: 18px;
+  cursor: default;
+}
+a.kifi-pane-head-settings {
+  float: right;
+  padding: 0 18px;
+  color: inherit;
+}
+a.kifi-pane-head-settings:hover {
+  color: #fff;
+  background: #283949;
+  text-decoration: none;
+}
+.kifi-pane input[type=text].kifi-pane-search {
+  margin: 16px 18px;
+  width: 284px;
+  height: auto;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 4px;
+  outline: none;
+  box-shadow: none;
+  background: #fff;
+  padding: 12px 14px;
+  font: 300 16px/20px Lato,sans-serif;
+  color: #333;
+}
+.kifi-pane-page-title {
+  margin: 22px 18px 6px;
+  color: #f8f8f8;
+  font: 300 15px Lato,sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kifi-pane-page-url {
+  margin: 0 18px;
+  color: #f8f8f8;
+  font: 300 13px Lato,sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kifi-pane-actions {
+  position: absolute;
+  bottom: 100px;
+  left: 10px;
+  width: 300px;
+  height: auto;
+  font: 300 14px Lato,sans-serif;
+  color: #f8f8f8;
+}
+a.kifi-pane-action {
+  padding: 10px 8px;
+  color: inherit;
+  display: block;
+}
+a.kifi-pane-action:hover {
+  color: #fff;
+  background: #283949;
+  text-decoration: none;
 }

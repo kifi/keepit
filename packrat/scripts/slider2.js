@@ -20,7 +20,10 @@ slider2 = function() {
   var $slider, $pane, info, lastShownAt;
 
   key("esc", function() {
-    if (document.querySelector(".kifi-slider2")) {
+    if ($pane) {
+      hidePane();
+    }
+    if ($slider) {
       hideSlider("esc");
     }
   });
@@ -196,10 +199,15 @@ slider2 = function() {
 
   function showPane() {
     api.log("[showPane]");
-    var $html = $("html").addClass("kifi-pane-parent");
-    $pane = $("<div class=kifi-pane>").appendTo($html).layout();
-    $html.addClass("kifi-with-pane");
     idleTimer.kill();
+    render("html/metro/pane.html", {
+      title: document.title,
+      url: location.href
+    }, function(html) {
+      var $html = $("html").addClass("kifi-pane-parent");
+      $pane = $(html).appendTo($html).layout();
+      $html.addClass("kifi-with-pane");
+    });
   }
 
   function hidePane() {
