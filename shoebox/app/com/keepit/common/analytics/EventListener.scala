@@ -37,6 +37,7 @@ trait EventListenerPlugin extends SchedulingPlugin {
   }
 }
 
+@Singleton
 class EventHelper @Inject() (system: ActorSystem, listeners: JSet[EventListenerPlugin], eventStream: EventStream) {
   private val default = system.actorOf(Props(new EventHelperActor(listeners, eventStream)))
   def newEvent(event: Event): Seq[String] = {
@@ -45,7 +46,6 @@ class EventHelper @Inject() (system: ActorSystem, listeners: JSet[EventListenerP
   }
 }
 
-@Singleton
 class EventHelperActor(listeners: JSet[EventListenerPlugin], eventStream: EventStream) extends FortyTwoActor {
   def receive = {
     case event: Event =>

@@ -30,6 +30,7 @@ trait DomainToTagRepo extends Repo[DomainToTag] {
       (implicit session: RSession): Seq[DomainToTag]
   def insertAll(domainToToTags: Seq[DomainToTag])(implicit session: RWSession): Option[Int]
   def getDomainsChangedSince(dateTime: DateTime)(implicit session: RSession): Set[Id[Domain]]
+  def setState(domainToTagIds: Seq[Id[DomainToTag]], state: State[DomainToTag])(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -56,6 +57,10 @@ class DomainToTagRepoImpl @Inject()(val db: DataBaseComponent)
 
   def insertAll(domainToTags: Seq[DomainToTag])(implicit session: RWSession): Option[Int] =
     table.insertAll(domainToTags: _*)
+
+  def setState(domainToTagIds: Seq[Id[DomainToTag]], state: State[DomainToTag])
+      (implicit session: RWSession): Int =
+    (for (t <- table if t.id inSet domainToTagIds) yield t.state).update(state)
 
   def getDomainsChangedSince(dateTime: DateTime)(implicit session: RSession): Set[Id[Domain]] =
     (for (t <- table if t.updatedAt >= dateTime) yield t.domainId).elements.toSet

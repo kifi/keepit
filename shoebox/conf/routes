@@ -69,14 +69,14 @@ GET     /admin                      com.keepit.controllers.admin.AdminDashboardC
 GET     /admin/graphs/users.json    com.keepit.controllers.admin.AdminDashboardController.usersByDate
 GET     /admin/graphs/bookmarks.json    com.keepit.controllers.admin.AdminDashboardController.bookmarksByDate
 
-GET     /admin/events               com.keepit.controllers.admin.AdminEventController.reportList
-POST    /admin/events/buildReport   com.keepit.controllers.admin.AdminEventController.buildReport
-GET     /admin/events/report        com.keepit.controllers.admin.AdminEventController.getReport(reportName: String)
+GET     /admin/events               @com.keepit.controllers.admin.AdminEventController.reportList
+POST    /admin/events/buildReport   @com.keepit.controllers.admin.AdminEventController.buildReport
+GET     /admin/events/report        @com.keepit.controllers.admin.AdminEventController.getReport(reportName: String)
 
-GET     /admin/realtime/event       com.keepit.controllers.admin.AdminEventController.eventViewer
-GET     /admin/realtime/event/stream      com.keepit.controllers.admin.AdminEventController.eventStream
-GET     /admin/realtime/activity    com.keepit.controllers.admin.AdminEventController.activityViewer
-GET     /admin/realtime/activity/stream   com.keepit.controllers.admin.AdminEventController.activityStream
+GET     /admin/realtime/event       @com.keepit.controllers.admin.AdminEventController.eventViewer
+GET     /admin/realtime/event/stream      @com.keepit.controllers.admin.AdminEventController.eventStream
+GET     /admin/realtime/activity    @com.keepit.controllers.admin.AdminEventController.activityViewer
+GET     /admin/realtime/activity/stream   @com.keepit.controllers.admin.AdminEventController.activityStream
 
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Bookmark])
@@ -141,15 +141,15 @@ GET     /admin/comments/:page       @com.keepit.controllers.admin.AdminCommentCo
 GET     /admin/messages             @com.keepit.controllers.admin.AdminCommentController.messagesViewFirstPage
 GET     /admin/messages/:page       @com.keepit.controllers.admin.AdminCommentController.messagesView(page: Int)
 
-GET     /admin/searchConfig/:id     com.keepit.controllers.SearchConfigController.showUserConfig(id: Id[User])
-POST    /admin/searchConfig/:id/set   com.keepit.controllers.SearchConfigController.setUserConfig(id: Id[User])
-GET     /admin/searchConfig/:id/reset com.keepit.controllers.SearchConfigController.resetUserConfig(id: Id[User])
-GET     /admin/searchExperiments    com.keepit.controllers.SearchConfigController.getExperiments
-POST    /admin/searchExperiments    com.keepit.controllers.SearchConfigController.addNewExperiment
-POST    /admin/searchExperiments/delete    com.keepit.controllers.SearchConfigController.deleteExperiment
-POST    /admin/searchExperiments/update    com.keepit.controllers.SearchConfigController.updateExperiment
-GET     /admin/searchExperiments/kvg/:id   com.keepit.controllers.SearchConfigController.getKifiVsGoogle(id: Id[SearchConfigExperiment])
-GET     /admin/searchExperiments/kifiHadResults/:id   com.keepit.controllers.SearchConfigController.getKifiHadResults(id: Id[SearchConfigExperiment])
+GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
+POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])
+GET     /admin/searchConfig/:id/reset @com.keepit.controllers.admin.AdminSearchConfigController.resetUserConfig(id: Id[User])
+GET     /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.getExperiments
+POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.addNewExperiment
+POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
+POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
+GET     /admin/searchExperiments/kvg/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiVsGoogle(id: Id[SearchConfigExperiment])
+GET     /admin/searchExperiments/kifiHadResults/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiHadResults(id: Id[SearchConfigExperiment])
 
 GET     /admin/explainResult        com.keepit.controllers.SearchController.explain(query: String, uriId: Id[NormalizedURI])
 

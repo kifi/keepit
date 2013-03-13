@@ -151,7 +151,7 @@
       $.post("@com.keepit.controllers.admin.routes.AdminAuthController.unimpersonate()")
     }
     function configSearch() {
-      location.href="@com.keepit.controllers.routes.SearchConfigController.showUserConfig(userWithSocial.user.id.get)"
+      location.href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userWithSocial.user.id.get)"
     }
     $(function() {
       $("#experiments").on("click", "input", function() {

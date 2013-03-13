@@ -37,6 +37,8 @@ object Domain {
 trait DomainRepo extends Repo[Domain] {
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Option[Domain]
+  def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
+      (implicit session: RSession): Seq[Domain]
   def getAll(domains: Seq[Id[Domain]], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain]
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
@@ -64,6 +66,10 @@ class DomainRepoImpl @Inject()(val db: DataBaseComponent) extends DbRepo[Domain]
   def getAll(domains: Seq[Id[Domain]], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain] =
     (for (d <- table if d.id.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
+
+  def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
+      (implicit session: RSession): Seq[Domain] =
+    (for (d <- table if d.hostname.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
 
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))
       (implicit session: RSession): Seq[Domain] =

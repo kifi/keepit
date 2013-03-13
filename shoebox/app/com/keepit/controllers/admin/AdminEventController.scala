@@ -19,8 +19,16 @@ import com.keepit.search.SearchConfigManager
 
 import views.html
 
+import com.google.inject.{Inject, Singleton}
 
-object AdminEventController extends AdminController {
+@Singleton
+class AdminEventController @Inject() (
+  searchConfigManager: SearchConfigManager,
+  rb: ReportBuilderPlugin,
+  reportStore: ReportStore,
+  events: EventStream,
+  activities: ActivityStream)
+    extends AdminController {
 
   def buildReport() = AdminHtmlAction { request =>
 
@@ -33,16 +41,11 @@ object AdminEventController extends AdminController {
       case "daily" => Reports.DailyReports
       case "admin" => Reports.DailyAdminReports
       case "experiment" =>
-        val activeExperiments = inject[SearchConfigManager].activeExperiments
+        val activeExperiments = searchConfigManager.activeExperiments
         Reports.searchExperimentReports(activeExperiments)
       case unknown => throw new Exception("Unknown report: %s".format(unknown))
     }
-
-    val rb = inject[ReportBuilderPlugin]
-
     rb.buildReports(rb.defaultStartTime, rb.defaultEndTime, reportGroup)
-
-
     Redirect(com.keepit.controllers.admin.routes.AdminEventController.reportList())
   }
 
@@ -50,14 +53,14 @@ object AdminEventController extends AdminController {
 
     log.info(reportName)
 
-    val report = inject[ReportStore].get(reportName).get
+    val report = reportStore.get(reportName).get
 
     Ok(report.toCSV).withHeaders(("Content-Disposition", "attachment; filename=" + reportName + ".csv"))
   }
 
   def reportList() = AdminHtmlAction { request =>
 
-    val availableReports = inject[ReportStore].getReports() // strip ".json"
+    val availableReports = reportStore.getReports() // strip ".json"
 
     Ok(html.admin.reports(availableReports))
   }
@@ -67,7 +70,7 @@ object AdminEventController extends AdminController {
   }
 
   def activityStream() = WebSocket.async[JsValue] { implicit request  =>
-    inject[ActivityStream].newStream()
+    activities.newStream()
   }
 
   def eventViewer() = AdminHtmlAction { implicit request =>
@@ -75,6 +78,6 @@ object AdminEventController extends AdminController {
   }
 
   def eventStream() = WebSocket.async[JsValue] { implicit request  =>
-    inject[EventStream].newStream()
+    events.newStream()
   }
 }
