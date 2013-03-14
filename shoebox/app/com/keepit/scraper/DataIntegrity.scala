@@ -24,9 +24,7 @@ import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.SchedulingPlugin
 
-trait DataIntegrityPlugin extends SchedulingPlugin {
-  def cron(): Unit
-}
+trait DataIntegrityPlugin extends SchedulingPlugin
 
 class DataIntegrityPluginImpl @Inject() (system: ActorSystem)
   extends Logging with DataIntegrityPlugin {
