@@ -3,7 +3,7 @@
 // #require styles/comments.css
 // @require scripts/lib/jquery-1.8.2.min.js
 // #require scripts/lib/jquery-ui-1.9.1.custom.min.js
-// #require scripts/lib/jquery-showhover.js
+// @require scripts/lib/jquery-showhover.js
 // #require scripts/lib/jquery-tokeninput-1.6.1.min.js
 // #require scripts/lib/jquery.timeago.js
 // @require scripts/lib/keymaster.min.js
@@ -63,24 +63,39 @@ slider2 = function() {
           });
 
           // attach event bindings
-          $slider.on("click", ".kifi-slider2-keep", function() {
-            if (this.classList.contains("kifi-unkept")) {
-              keepPage(this, false);
+          $slider.on("mouseout", ".kifi-slider2-keep-btn", function() {
+            this.classList.remove("kifi-hoverless");
+          }).on("click", ".kifi-slider2-keep-btn", function() {
+            var el = this.parentNode;
+            if (el.classList.contains("kifi-unkept")) {
+              keepPage(el, false);
             } else {
-              unkeepPage(this);
+              unkeepPage(el);
             }
+            this.classList.add("kifi-hoverless");
+          }).on("mouseenter", ".kifi-slider2-lock", function() {
+            $(this).showHover({
+              reuse: false,
+              showDelay: 250,
+              hideDelay: 100,
+              recovery: Infinity,
+              create: function(callback) {
+                var html = this.parentNode.classList.contains("kifi-unkept") ?
+                  "keep privately<br>(so only you can see it)" :
+                  this.parentNode.classList.contains("kifi-public") ? "make private" : "make  public";
+                var $h = $("<div class=kifi-slider2-tip>").html(html)
+                  .css({display: "block", visibility: "hidden"}).appendTo(this);
+                callback($h.css("left", 8 - $h[0].offsetWidth / 2).detach().css({display: "", visibility: ""}));
+              }});
           }).on("click", ".kifi-slider2-lock", function(e) {
-            e.stopPropagation();
-            var btn = this.parentNode;
-            if (btn.classList.contains("kifi-unkept")) {
-              keepPage(btn, true);
+            if (e.target !== this) return;
+            $(this).showHover("destroy");
+            var el = this.parentNode;
+            if (el.classList.contains("kifi-unkept")) {
+              keepPage(el, true);
             } else {
-              togglePrivate(btn);
+              togglePrivate(el);
             }
-          }).on("mouseover", ".kifi-slider2-lock", function() {
-            this.parentNode.classList.add("kifi-lock-hover");
-          }).on("mouseout", ".kifi-slider2-lock", function() {
-            this.parentNode.classList.remove("kifi-lock-hover");
           }).on("click", ".kifi-slider2-pane", function() {
             if (this.classList.contains("kifi-slider2-pane-hide")) {
               this.classList.remove("kifi-slider2-pane-hide");
