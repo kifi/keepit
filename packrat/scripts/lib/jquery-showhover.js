@@ -7,7 +7,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
 // inside it (presumably absolutely positioned relative to the trigger) on mouseenter
 // (after a short delay) and to disappear on mouseleave (after a short delay).
 // Clicking the trigger toggles visibility of the hover element, with a small
-// recovery period during which clicks are ignored after each enter/exit.
+// recovery period during which clicks are ignored after each show.
 
 !function($) {
   $.fn.showHover = function(method) {
@@ -30,7 +30,8 @@ home-grown at FortyTwo, not intended for distribution (yet)
   var defaultOpts = {
     showDelay: 100,
     hideDelay: 200,
-    recovery: 200};  // ms since last enter/leave before click will be honored
+    recovery: 200,  // ms since last show before click will be honored
+    reuse: true};
   var methods = {
     init: function(opts) {
       var $a = $(this), data = $a.data("hover");
@@ -39,19 +40,19 @@ home-grown at FortyTwo, not intended for distribution (yet)
         onMouseEnter(opts.showDelay);
       } else {
         var t0 = +new Date;
-        $a.data("hover", data = {lastEnterTime: Infinity});
+        $a.data("hover", data = {lastShowTime: 0});
         setTimeout(opts.create.bind(this, function(hover) {
           data.$h = $(hover).appendTo($a);
           onMouseEnter(Math.max(0, opts.showDelay - (new Date - t0)));
         }));
         $a.on("mouseleave.showHover", function(e) {
           if (!e.toElement || !this.contains(e.toElement)) {
-            onMouseLeave(opts.hideDelay);
+            onMouseLeave(opts.hideDelay, opts.reuse);
           }
         }).on("click.showHover", function(e) {
-          if (!data.$h[0].contains(e.target) && new Date - data.lastEnterTime > opts.recovery) {
+          if (!data.$h[0].contains(e.target) && new Date - data.lastShowTime > opts.recovery) {
             if ($a.hasClass("kifi-hover-showing")) {
-              onMouseLeave(0);
+              onMouseLeave(0, opts.reuse);
             } else {
               onMouseEnter(0);
             }
@@ -61,23 +62,26 @@ home-grown at FortyTwo, not intended for distribution (yet)
       function onMouseEnter(ms) {
         clearTimeout(data.t);
         data.t = setTimeout(function() {
-          api.log("[onMouseEnter] showing");
           data.$h.show();
           $a.addClass("kifi-hover-showing");
-          data.lastEnterTime = +new Date;
+          data.lastShowTime = +new Date;
         }, ms);
       }
-      function onMouseLeave(ms) {
+      function onMouseLeave(ms, reuse) {
         clearTimeout(data.t);
         data.t = setTimeout(function() {
-          api.log("[onMouseLeave] hiding");
           $a.removeClass("kifi-hover-showing");
-          data.$h.css("display", "");
+          if (reuse) {
+            data.$h.css("display", "");
+          } else {
+            $a.showHover("destroy");
+          }
         }, ms);
       }
     },
     destroy: function() {
-      $(this).unbind(".showHover");
-      $(data.$h).remove();
+      var $a = $(this);
+      $(($a.data("hover") || 0).$h).remove();
+      $a.unbind(".showHover").removeData("hover");
     }};
 }(jQuery);
