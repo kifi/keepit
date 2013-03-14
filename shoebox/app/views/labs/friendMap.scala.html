@@ -1,14 +1,14 @@
 @(query: Option[String], minKeeps: Option[Int])
 
 @admin.admin("Friend Map", scripts = List("d3-2.10.3", "simple_plot"), stylesheets = List("simple_plot")) {
-  <form class="form-inline" action="@com.keepit.controllers.routes.SearchLabsController.friendMap()" method="GET">
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminSearchLabsController.friendMap()" method="GET">
     Query:
     @if(query.isDefined){
       <input type="text" name="q" value="@{query.get}"/>
     } else {
       <input type="text" name="q" placeholder="query"/>
     }
-    Minimum Keeps: 
+    Minimum Keeps:
     @if(query.isDefined){
       <input type="text" name="minKeeps" value="@{minKeeps.get}"/>
     } else {
@@ -20,5 +20,5 @@
   <div class="simple-plot"
        data-xscale="linear" data-xstart="-1" data-xend="1" data-xaxis="zero"
        data-yscale="linear" data-ystart="-1" data-yend="1" data-yaxis="zero"
-       data-uri="@com.keepit.controllers.routes.SearchLabsController.friendMapJson(query, minKeeps)"></div>
+       data-uri="@com.keepit.controllers.admin.routes.AdminSearchLabsController.friendMapJson(query, minKeeps)"></div>
 }
