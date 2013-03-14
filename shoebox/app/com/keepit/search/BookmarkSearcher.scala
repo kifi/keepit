@@ -10,6 +10,7 @@ import com.keepit.search.query.SiteQuery
 import com.keepit.search.query.parser.DefaultSyntax
 import com.keepit.search.query.parser.QueryParser
 import com.keepit.search.query.parser.PercentMatch
+import com.keepit.search.query.parser.QueryExpansion
 import com.keepit.model._
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.search.BooleanQuery

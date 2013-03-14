@@ -5,6 +5,7 @@ import com.keepit.search.phrasedetector.PhraseDetector
 import com.keepit.search.query.parser.QueryParser
 import com.keepit.search.query.parser.DefaultSyntax
 import com.keepit.search.query.parser.PercentMatch
+import com.keepit.search.query.parser.QueryExpansion
 import com.keepit.search.query.parser.QueryParserException
 import com.keepit.search.query.Coordinator
 import com.keepit.search.query.ProximityQuery
