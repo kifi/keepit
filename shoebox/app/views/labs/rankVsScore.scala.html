@@ -1,7 +1,7 @@
 @(query: Option[String])
 
 @admin.admin("Rank vs Score", scripts = List("d3-2.10.3", "simple_plot"), stylesheets = List("simple_plot")) {
-  <form class="form-inline" action="@com.keepit.controllers.routes.SearchLabsController.rankVsScore()" method="GET">
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminSearchLabsController.rankVsScore()" method="GET">
     @if(query.isDefined){
       <input type="text" name="q" value="@{query.get}"/>
     } else {
@@ -13,5 +13,5 @@
   <div class="simple-plot"
        data-xscale="log" data-xstart="0.5" data-xend="50" data-xaxis="bottom"
        data-yscale="log" data-ystart="0.0001" data-yend="20" data-yaxis="left"
-       data-uri="@com.keepit.controllers.routes.SearchLabsController.rankVsScoreJson(query)"></div>
+       data-uri="@com.keepit.controllers.admin.routes.AdminSearchLabsController.rankVsScoreJson(query)"></div>
 }
