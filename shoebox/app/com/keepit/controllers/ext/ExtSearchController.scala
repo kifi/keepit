@@ -117,7 +117,6 @@ class ExtSearchController @Inject() (
   }
 
   private[controllers] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
-    //todo:eishay why do we need the next line?
     val uri = uriRepo.get(res.uriId)
     val bookmark = if (res.isMyBookmark) bookmarkRepo.getByUriAndUser(uri.id.get, userId) else None
     val users = res.users.toSeq.map{ userId =>
