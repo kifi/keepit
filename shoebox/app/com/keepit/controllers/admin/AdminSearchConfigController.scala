@@ -1,23 +1,23 @@
 package com.keepit.controllers.admin
 
-import java.util.concurrent.TimeUnit
+import scala.concurrent.ExecutionContext.global
+
+import java.util.concurrent.{Callable, TimeUnit}
 
 import com.google.common.cache.{CacheLoader, CacheBuilder}
+import com.google.common.util.concurrent.ListenableFutureTask
+import com.google.inject.{Inject, Singleton}
 import com.keepit.common.analytics.reports.{Report, DailyDustSettledKifiHadResultsByExperiment, DailyKifiResultClickedByExperiment, DailyGoogleResultClickedByExperiment}
 import com.keepit.common.controller.AdminController
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.social._
 import com.keepit.common.time._
-import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search._
 
-import play.api.Play.current
 import play.api.libs.json.{JsString, JsArray, JsNumber, JsObject}
 import views.html
-
-import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class AdminSearchConfigController @Inject() (
@@ -99,19 +99,31 @@ class AdminSearchConfigController @Inject() (
     ))
   }
 
-  private lazy val kifiVsGoogleCache = CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS)
+  private lazy val kifiVsGoogleCache = CacheBuilder.newBuilder()
+    .expireAfterWrite(1, TimeUnit.DAYS)
+    .refreshAfterWrite(10, TimeUnit.MINUTES)
     .build(new CacheLoader[Id[SearchConfigExperiment], JsObject] {
       def load(expId: Id[SearchConfigExperiment]) = {
         val e = Some(expId).filter(_.id > 0).map(configManager.getExperiment)
         getChartData(new DailyKifiResultClickedByExperiment(_), new DailyGoogleResultClickedByExperiment(_), e)
       }
-    })
-  private lazy val kifiHadResultsCache = CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.HOURS)
+      override def reload(key: Id[SearchConfigExperiment], oldValue: JsObject) = {
+        val task = ListenableFutureTask.create(new Callable[JsObject] { def call = load(key) })
+        global.execute(task); task
+      }
+  })
+  private lazy val kifiHadResultsCache = CacheBuilder.newBuilder()
+    .expireAfterWrite(1, TimeUnit.DAYS)
+    .refreshAfterWrite(10, TimeUnit.MINUTES)
     .build(new CacheLoader[Id[SearchConfigExperiment], JsObject] {
       def load(expId: Id[SearchConfigExperiment]) = {
         val e = Some(expId).filter(_.id > 0).map(configManager.getExperiment)
         getChartData(new DailyDustSettledKifiHadResultsByExperiment(_, true),
           new DailyDustSettledKifiHadResultsByExperiment(_, false), e)
+      }
+      override def reload(key: Id[SearchConfigExperiment], oldValue: JsObject) = {
+        val task = ListenableFutureTask.create(new Callable[JsObject] { def call = load(key) })
+        global.execute(task); task
       }
     })
 
