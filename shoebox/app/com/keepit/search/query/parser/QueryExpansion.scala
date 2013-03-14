@@ -1,11 +1,9 @@
-package com.keepit.search
+package com.keepit.search.query.parser
 
 import com.keepit.classify.Domain
 import com.keepit.search.query.Coordinator
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.SiteQuery
-import com.keepit.search.query.parser.QueryParser
-import com.keepit.search.query.parser.QueryParserException
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.PhraseQuery
@@ -19,7 +17,6 @@ trait QueryExpansion extends QueryParser {
 
   var enableCoord = false
   val siteBoost: Float
-  override val fields = Set("", "site")
 
   private[this] val stemmedTerms = new ArrayBuffer[Term]
   private[this] val stemmedQueries = new ArrayBuffer[Query]

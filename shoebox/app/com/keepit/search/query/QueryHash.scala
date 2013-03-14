@@ -2,7 +2,8 @@ package com.keepit.search.query
 
 import com.keepit.common.db.Id
 import com.keepit.model.User
-import org.apache.lucene.queryParser.{QueryParser => LuceneQueryParser}
+import com.keepit.search.query.parser.QueryParser
+import com.keepit.search.query.parser.DefaultSyntax
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.Version
@@ -12,16 +13,12 @@ object QueryHash {
   def apply(userId: Id[User], queryText: String, analyzer: Analyzer): Long = {
     val hash = new StringHash64(userId.id)
 
-    // use bare lucene parser to avoid expansions etc.
-    val parser = new LuceneQueryParser(Version.LUCENE_36, "b", analyzer)
-
-    val query = try {
-      if (queryText == null || queryText.trim.length == 0) null
-      else parser.parse(queryText)
-    } catch {
-      case e: Throwable => parser.parse(LuceneQueryParser.escape(queryText))
+    if (queryText != null && queryText.trim.length != 0) {
+      // use the minimum parser to avoid expansions etc.
+      val parser = new QueryParser(analyzer, None) with DefaultSyntax
+      parser.parse(queryText).foreach{ query => hash.update(query.toString) }
     }
-    if (query != null) hash.update(query.toString)
+
     hash.get
   }
 }
