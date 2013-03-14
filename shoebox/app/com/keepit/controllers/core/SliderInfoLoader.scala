@@ -14,7 +14,7 @@ import com.keepit.model._
 import com.google.inject.{Inject, Singleton}
 
 case class SliderInfo(bookmark: Option[Bookmark], following: Boolean, socialUsers: Seq[UserWithSocial], numComments: Int, numMessages: Int, neverOnSite: Option[UserToDomain], sensitive: Option[Boolean])
-case class SliderInitialInfo(bookmark: Option[Bookmark], socialUsers: Seq[UserWithSocial], numUnreadComments: Int, numUnreadMessages: Int, neverOnSite: Option[UserToDomain], sensitive: Option[Boolean], locator: Option[DeepLocator], shown: Option[Boolean], ruleGroup: Option[SliderRuleGroup], patterns: Option[Seq[String]])
+case class SliderInitialInfo(bookmark: Option[Bookmark], socialUsers: Seq[UserWithSocial], numKeeps: Int, numUnreadComments: Int, numUnreadMessages: Int, neverOnSite: Option[UserToDomain], sensitive: Option[Boolean], locator: Option[DeepLocator], shown: Option[Boolean], ruleGroup: Option[SliderRuleGroup], patterns: Option[Seq[String]])
 
 @Singleton
 class SliderInfoLoader @Inject() (db: Database,
@@ -71,7 +71,8 @@ class SliderInfoLoader @Inject() (db: Database,
         val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
         val searcher = uriGraph.getURIGraphSearcher
         val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
-        val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
+        val keepersEdgeSet = searcher.getUriToUserEdgeSet(uri.id.get)
+        val sharingUserIds = searcher.intersect(friendEdgeSet, keepersEdgeSet).destIdSet - userId
         val socialUsers = sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
 
         val numUnreadMessages = commentReadRepo.getParentsOfUnreadMessages(userId, uri.id.get).size
@@ -88,10 +89,12 @@ class SliderInfoLoader @Inject() (db: Database,
           historyTracker.getMultiHashFilter(userId).mayContain(uriId.id)
         }
 
-        SliderInitialInfo(bookmark, socialUsers, numUnreadComments, numUnreadMessages, neverOnSite, sensitive, locator, shown, ruleGroup, patterns)
+        SliderInitialInfo(
+          bookmark, socialUsers, keepersEdgeSet.size, numUnreadComments, numUnreadMessages,
+          neverOnSite, sensitive, locator, shown, ruleGroup, patterns)
       case None =>
         val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
-        SliderInitialInfo(None, Nil, 0, 0, neverOnSite, sensitive, None, None, None, None)
+        SliderInitialInfo(None, Nil, 0, 0, 0, neverOnSite, sensitive, None, None, None, None)
     }
   }
 }
