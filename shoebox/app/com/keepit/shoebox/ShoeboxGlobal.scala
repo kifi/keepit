@@ -18,6 +18,7 @@ import com.keepit.common.healthcheck._
 import com.keepit.common.analytics.PersistEventPlugin
 import com.keepit.common.analytics.reports.ReportBuilderPlugin
 import com.keepit.common.cache.MemcachedPlugin
+import com.keepit.search.graph.URIGraphPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
   private var creatingInjector = false
@@ -48,6 +49,7 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
     require(inject[ReportBuilderPlugin].enabled)
     require(inject[DataIntegrityPlugin].enabled)
     require(inject[MemcachedPlugin].enabled)
+    require(inject[URIGraphPlugin].enabled)
     log.info("shoebox started")
   }
 
