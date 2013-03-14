@@ -55,7 +55,12 @@ slider2 = function() {
         if (document.querySelector(".kifi-slider2")) {
           api.log("[showSlider] already there");  // TODO: remove old one? perhaps from previous installation
         } else {
-          $slider = $(html).appendTo("html").layout().addClass("kifi-visible");
+          $slider = $(html).appendTo("html").layout().addClass("kifi-visible kifi-growing")
+          .on("transitionend webkitTransitionEnd", function f() {
+            if (this === $slider[0]) {
+              $slider.off("transitionend webkitTransitionEnd", f).removeClass("kifi-growing");
+            }
+          });
 
           // attach event bindings
           $slider.on("click", ".kifi-slider2-keep", function() {
@@ -102,8 +107,8 @@ slider2 = function() {
   // trigger is for the event log (e.g. "key", "icon"). pass no trigger if just hiding slider temporarily.
   function hideSlider(trigger) {
     idleTimer.kill();
-    $slider.addClass("kifi-hidden").on("transitionend webkitTransitionEnd", function(e) {
-      if (trigger && e.originalEvent.propertyName == "opacity") {
+    $slider.addClass("kifi-hidden").removeClass("kifi-visible").on("transitionend webkitTransitionEnd", function(e) {
+      if (this === $slider[0] && e.originalEvent.propertyName == "opacity" && trigger) {
         $slider.remove();
         $slider = null;
       }
@@ -213,9 +218,11 @@ slider2 = function() {
   function hidePane() {
     api.log("[hidePane]");
     $pane.on("transitionend webkitTransitionEnd", function() {
-      $pane.remove();
-      $pane = null;
-      $html.removeClass("kifi-pane-parent");
+      if (this === $pane[0]) {
+        $pane.remove();
+        $pane = null;
+        $html.removeClass("kifi-pane-parent");
+      }
     });
     var $html = $("html").removeClass("kifi-with-pane");
     idleTimer.start(100, true);

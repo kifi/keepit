@@ -1,31 +1,20 @@
 package com.keepit.search.index
 
-import com.keepit.common.logging.Logging
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.Healthcheck.INTERNAL
+import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
-import com.keepit.search.Article
+import com.keepit.inject._
+import com.keepit.model._
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
-import com.keepit.search.SearchConfig
-import com.keepit.model._
-import com.keepit.model.NormalizedURIStates._
-import com.keepit.inject._
-import play.api.Play.current
-import org.apache.lucene.analysis.Analyzer
-import org.apache.lucene.document.Document
-import org.apache.lucene.document.Field
-import org.apache.lucene.index.IndexWriter
+import java.io.StringReader
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.Directory
-import org.apache.lucene.store.MMapDirectory
-import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.Version
-import java.io.File
-import java.io.IOException
-import java.io.StringReader
-import scala.math._
+import play.api.Play.current
 
 object ArticleIndexer {
 
@@ -54,19 +43,11 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       }
       var cnt = 0
       indexDocuments(uris.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
-        db.readWrite { implicit s =>
-          commitBatch.foreach { case (indexable, indexError) =>
-            val articleIndexable = indexable.asInstanceOf[ArticleIndexable]
-            val state = indexError match {
-              case Some(error) =>
-                findNextState(articleIndexable.uri.state -> Set(INDEX_FAILED, FALLBACK_FAILED, UNSCRAPE_FALLBACK_FAILED))
-              case None =>
-                cnt += 1
-                findNextState(articleIndexable.uri.state -> Set(INDEXED, FALLBACKED, UNSCRAPE_FALLBACK))
-            }
-            repo.save(repo.get(indexable.id).withState(state))
-          }
+        val (errors, successes) = commitBatch.partition(_._2.isDefined)
+        errors.map(_._2.get).foreach { error =>
+          inject[HealthcheckPlugin].addError(HealthcheckError(errorMessage = Some(error.msg), callType = INTERNAL))
         }
+        cnt += successes.size
       }
       cnt
     } catch {
@@ -86,8 +67,8 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   }
 
   class ArticleIndexable(
-    override val id: Id[NormalizedURI],
-    override val sequenceNumber: SequenceNumber,
+    val id: Id[NormalizedURI],
+    val sequenceNumber: SequenceNumber,
     val uri: NormalizedURI,
     articleStore: ArticleStore
   ) extends Indexable[NormalizedURI] {

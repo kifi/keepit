@@ -25,11 +25,11 @@ import org.apache.http.auth.AuthScope
 import org.apache.http.auth.UsernamePasswordCredentials
 
 trait HttpFetcher {
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, useProxy: Boolean)(f: HttpInputStream => Unit): HttpFetchStatus
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus
   def close()
 }
 
-class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int, proxyHttpHost: Option[HttpHost] = None, credentials: Option[UsernamePasswordCredentials] = None) extends HttpFetcher with Logging {
+class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int) extends HttpFetcher with Logging {
   val cm = new PoolingClientConnectionManager
   cm.setMaxTotal(100)
 
@@ -42,21 +42,6 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
   val proxyCm = new PoolingClientConnectionManager
   proxyCm.setMaxTotal(100)
 
-  val proxyHttpParams = new BasicHttpParams
-  HttpConnectionParams.setConnectionTimeout(proxyHttpParams, connectionTimeout)
-  HttpConnectionParams.setSoTimeout(proxyHttpParams, soTimeOut)
-  HttpProtocolParams.setUserAgent(proxyHttpParams, userAgent)
-
-  val proxyHttpClient = new DefaultHttpClient(cm, proxyHttpParams)
-  if (proxyHttpHost.isDefined) {
-    proxyHttpClient.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, proxyHttpHost.get)
-    if (credentials.isDefined) {
-      proxyHttpClient.getCredentialsProvider().setCredentials(
-        new AuthScope(proxyHttpHost.get.toHostString(), proxyHttpHost.get.getPort()),
-        credentials.get)
-    }
-  }
-
   // track redirects
   val interceptor = new HttpResponseInterceptor() {
     override def process(response: HttpResponse, context: HttpContext) {
@@ -67,9 +52,8 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
     }
   }
   httpClient.addResponseInterceptor(interceptor)
-  proxyHttpClient.addResponseInterceptor(interceptor)
 
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, useProxy: Boolean)(f: HttpInputStream => Unit): HttpFetchStatus = {
+  def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
 
 
     val httpGet = new HttpGet(url)
@@ -78,12 +62,11 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
       httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.format)
     }
 
-    log.info("executing request " + httpGet.getURI() + (if (useProxy) " using proxy" else " with no proxy"))
+    log.info("executing request " + httpGet.getURI())
 
     val httpContext = new BasicHttpContext()
-    val client = if(useProxy) proxyHttpClient else httpClient
 
-    val response = client.execute(httpGet, httpContext)
+    val response = httpClient.execute(httpGet, httpContext)
     log.info(response.getStatusLine.toString)
 
     val statusCode = response.getStatusLine.getStatusCode
@@ -138,11 +121,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
   }
 
   def close() {
-    // When HttpClient instance is no longer needed,
-    // shut down the connection manager to ensure
-    // immediate deallocation of all system resources
     httpClient.getConnectionManager().shutdown()
-    proxyHttpClient.getConnectionManager().shutdown()
   }
 }
 

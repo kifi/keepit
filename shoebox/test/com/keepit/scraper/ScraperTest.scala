@@ -46,7 +46,7 @@ class ScraperTest extends Specification {
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/existing"
         val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(33)))
-        val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get), false)
+        val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
 
         result must beAnInstanceOf[Scraped] // Article
         (result: @unchecked) match {
@@ -63,7 +63,7 @@ class ScraperTest extends Specification {
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/missing"
         val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(44)))
-        val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get), false)
+        val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
         result must beAnInstanceOf[Error]
         (result: @unchecked) match {
           case Error(httpStatus, _) => httpStatus === HttpStatus.SC_NOT_FOUND
@@ -76,8 +76,10 @@ class ScraperTest extends Specification {
         inject[Database].readWrite { implicit s =>
           val uriRepo = inject[NormalizedURIRepo]
           val scrapeRepo = inject[ScrapeInfoRepo]
-          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing").withState(NormalizedURIStates.INDEXED))
-          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing").withState(NormalizedURIStates.INDEXED))
+          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing")
+              .withState(NormalizedURIStates.SCRAPED))
+          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing")
+              .withState(NormalizedURIStates.SCRAPED))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           val info2 = scrapeRepo.getByUri(uri2.id.get).get
           val all = scrapeRepo.allActive
@@ -260,7 +262,7 @@ class ScraperTest extends Specification {
 
   def getMockScraper(articleStore: ArticleStore, suffix: String = "") = {
     val mockHttpFetcher = new HttpFetcher {
-      def fetch(url: String , ifModifiedSince: Option[DateTime] = None, useProxy: Boolean = false)(f: HttpInputStream => Unit): HttpFetchStatus = {
+      def fetch(url: String , ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
         val httpContext = new BasicHttpContext()
         val htmlTemplate = "<html> <head><title>foo%s</title></head> <body>this is a body text. bar%s.</body> </html>"
         url match {

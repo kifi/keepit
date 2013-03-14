@@ -197,18 +197,16 @@ slider = function() {
       });
     })
     .on("mouseenter", ".kifi-keeper", function() {
-      var $a = $(this), friend = o.friends[$a.prevAll(".kifi-keeper").length];
-      render("html/friend_card.html", {
-        name: friend.firstName + " " + friend.lastName,
-        facebookId: friend.facebookId,
-        iconsUrl: api.url("images/social_icons.png")
-      }, function(html) {
-        $a.showHover(function() {
-          api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
-            $a.find(".kifi-kcard-mutual").text(o.n + " mutual keep" + (o.n == 1 ? "" : "s"));
-          });
-          return html;
-        }).showHover("enter");
+      var $a = $(this).showHover(function(callback) {
+        var friend = o.friends[$a.prevAll(".kifi-keeper").length];
+        render("html/friend_card.html", {
+          name: friend.firstName + " " + friend.lastName,
+          facebookId: friend.facebookId,
+          iconsUrl: api.url("images/social_icons.png")
+        }, callback);
+        api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+          $a.find(".kifi-kcard-mutual").text(o.n + " mutual keep" + (o.n == 1 ? "" : "s"));
+        });
       });
     })
     .on("click", ".kifi-button-dropdown", function() {

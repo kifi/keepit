@@ -135,8 +135,11 @@ object SearchLabsController extends FortyTwoController {
   private def similarity(vectors1: Array[SemanticVector], vectors2: Array[SemanticVector]) = {
     val s = vectors1.zip(vectors2).foldLeft(0.0d){ case (sum, (v1, v2)) =>
       if (v1.bytes.isEmpty || v2.bytes.isEmpty) sum
-      else sum + v1.similarity(v2).toDouble
+      else {
+    	val tmp = v1.similarity(v2).toDouble
+    	sum + tmp*tmp
+      }
     }
-    (s / vectors1.length) - 1.0d - Double.MinPositiveValue
+    (sqrt(s) / vectors1.length) - 1.0d - Double.MinPositiveValue
   }
 }

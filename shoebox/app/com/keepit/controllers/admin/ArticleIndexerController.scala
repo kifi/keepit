@@ -1,56 +1,53 @@
 package com.keepit.controllers.admin
 
-import play.api.data._
-import java.util.concurrent.TimeUnit
-import play.api._
-import play.api.Play.current
-import play.api.mvc._
+import com.google.inject.Inject
+import com.keepit.common.controller.AdminController
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-
-import com.keepit.inject._
-import com.keepit.search.index.ArticleIndexerPlugin
-import com.keepit.search.index.ArticleIndexer
-import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.common.controller.AdminController
+import com.keepit.model._
+import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.index.ArticleIndexerPlugin
 import org.apache.lucene.document.Document
+import play.api.libs.json.{JsNumber, JsObject}
 import views.html
 
-object ArticleIndexerController extends AdminController {
+class ArticleIndexerController @Inject()(
+    db: Database,
+    indexerPlugin: ArticleIndexerPlugin,
+    indexer: ArticleIndexer,
+    normUriRepo: NormalizedURIRepo
+  ) extends AdminController {
 
   def index = AdminHtmlAction { implicit request =>
-    val indexer = inject[ArticleIndexerPlugin]
-    val cnt = indexer.index()
+    val cnt = indexerPlugin.index()
     Ok("indexed %d articles".format(cnt))
   }
 
   def indexByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
     transitionByAdmin(state -> Set(SCRAPED, SCRAPE_FAILED)) { newState =>
-      inject[Database].readWrite { implicit s =>
-        val repo = inject[NormalizedURIRepo]
-        repo.getByState(state).foreach{ uri => repo.save(uri.withState(newState)) }
+      db.readWrite { implicit s =>
+        normUriRepo.getByState(state).foreach{ uri => normUriRepo.save(uri.withState(newState)) }
       }
-      val indexer = inject[ArticleIndexerPlugin]
-      val cnt = indexer.index()
+      val cnt = indexerPlugin.index()
       Ok("indexed %d articles".format(cnt))
     }
   }
 
   def indexInfo = AdminHtmlAction { implicit request =>
-    val indexer = inject[ArticleIndexer]
     Ok(html.admin.indexer(indexer))
   }
 
+  def getSequenceNumber = AdminJsonAction { implicit request =>
+    Ok(JsObject(Seq("sequenceNumber" -> JsNumber(indexer.sequenceNumber.value))))
+  }
+
   def refreshSearcher = AdminHtmlAction { implicit request =>
-    val indexer = inject[ArticleIndexer]
-    indexer.refreshSearcher
+    indexer.refreshSearcher()
     Ok("searcher refreshed")
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]) =  AdminHtmlAction { implicit request =>
-    val indexer = inject[ArticleIndexer]
     try {
       val doc = indexer.buildIndexable(id).buildDocument
       Ok(html.admin.luceneDocDump("Article", doc, indexer))

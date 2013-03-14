@@ -1,20 +1,13 @@
 package com.keepit.model
 
-import play.api.Play.current
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.scraper.ScraperConfig
-import java.sql.Connection
 import org.joda.time.DateTime
-import play.api._
-import play.api.libs.json._
 import scala.math._
-import org.joda.time.Hours
-import org.specs2.internal.scalaz.FirstOption
 
 case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
@@ -76,11 +69,12 @@ trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
 }
 
 @Singleton
-class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[ScrapeInfo] with ScrapeInfoRepo {
-  import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
-  import db.Driver.Implicit._
+class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent, val normUriRepo: NormalizedURIRepoImpl)
+    extends DbRepo[ScrapeInfo] with ScrapeInfoRepo {
+
   import DBSession._
+  import FortyTwoTypeMappers._
+  import db.Driver.Implicit._
 
   override lazy val table = new RepoTable[ScrapeInfo](db, "scrape_info") {
     def uriId =      column[Id[NormalizedURI]]("uri_id", O.NotNull)
@@ -96,11 +90,9 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Sc
   }
 
   def allActive(implicit session: RSession): Seq[ScrapeInfo] = {
-    val q = (for {
-       (s, u) <- table innerJoin inject[NormalizedURIRepoImpl].table on (_.uriId is _.id)
-       if u.state is NormalizedURIStates.INDEXED
-     } yield s.*)
-   q.list
+    (for {
+      (s, u) <- table innerJoin normUriRepo.table on (_.uriId is _.id)
+    } yield s.*).list
   }
 
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Option[ScrapeInfo] =
