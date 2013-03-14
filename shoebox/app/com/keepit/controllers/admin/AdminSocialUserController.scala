@@ -1,4 +1,4 @@
-package com.keepit.controllers
+package com.keepit.controllers.admin
 
 import play.api.data._
 import java.util.concurrent.TimeUnit
@@ -15,7 +15,6 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
 import play.api.Play.current
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -30,50 +29,54 @@ import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social.{SocialGraphPlugin, UserWithSocial}
 import com.keepit.common.social.SocialUserRawInfoStore
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import views.html
 
-object SocialUserController extends FortyTwoController {
+import com.google.inject.{Inject, Singleton}
+
+@Singleton
+class AdminSocialUserController @Inject() (
+  db: Database,
+  socialUserInfoRepo: SocialUserInfoRepo,
+  socialConnectionRepo: SocialConnectionRepo,
+  socialUserRawInfoStore: SocialUserRawInfoStore,
+  socialGraphPlugin: SocialGraphPlugin)
+    extends AdminController {
 
   def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
-    val socialUserInfo = inject[Database].readWrite { implicit s =>
-      val repo = inject[SocialUserInfoRepo]
-      repo.save(repo.get(socialUserId).reset())
+    val socialUserInfo = db.readWrite { implicit s =>
+      socialUserInfoRepo.save(socialUserInfoRepo.get(socialUserId).reset())
     }
-    Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfo.id.get))
+    Redirect(com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfo.id.get))
   }
 
   def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
 
-    val (socialUserInfo, socialConnections) = inject[Database].readOnly { implicit s =>
-      val socialRepo = inject[SocialUserInfoRepo]
-      val connectionRepo = inject[SocialConnectionRepo]
-      val socialUserInfo = socialRepo.get(socialUserId)
-      val socialConnections = connectionRepo.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName)
+    val (socialUserInfo, socialConnections) = db.readOnly { implicit s =>
+      val socialUserInfo = socialUserInfoRepo.get(socialUserId)
+      val socialConnections = socialConnectionRepo.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName)
 
       (socialUserInfo, socialConnections)
     }
 
-    val rawInfo = inject[SocialUserRawInfoStore].get(socialUserInfo.id.get)
+    val rawInfo = socialUserRawInfoStore.get(socialUserInfo.id.get)
 
     Ok(html.admin.socialUser(socialUserInfo, socialConnections, rawInfo))
   }
 
   def socialUsersView(page: Int) = AdminHtmlAction { implicit request =>
     val PAGE_SIZE = 300
-    val (socialUsers, count) = inject[Database].readOnly { implicit s =>
-      val repo = inject[SocialUserInfoRepo]
-      (repo.page(page, PAGE_SIZE), repo.count)
+    val (socialUsers, count) = db.readOnly { implicit s =>
+      (socialUserInfoRepo.page(page, PAGE_SIZE), socialUserInfoRepo.count)
     }
     val pageCount = (count / PAGE_SIZE + 1).toInt
     Ok(html.admin.socialUsers(socialUsers, page, count, pageCount))
   }
 
   def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
-    val graph = inject[SocialGraphPlugin]
-    val socialUserInfo = inject[Database].readOnly { implicit s => inject[SocialUserInfoRepo].get(socialUserInfoId) }
+    val socialUserInfo = db.readOnly { implicit s => socialUserInfoRepo.get(socialUserInfoId) }
     if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))
-    graph.asyncFetch(socialUserInfo)
-    Redirect(com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfoId))
+    socialGraphPlugin.asyncFetch(socialUserInfo)
+    Redirect(com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfoId))
   }
 }

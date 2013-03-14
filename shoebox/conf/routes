@@ -121,10 +121,10 @@ GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.Admin
 POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthController.impersonate(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 
-GET     /admin/social_users/:page   com.keepit.controllers.SocialUserController.socialUsersView(page: Int)
-GET     /admin/social_user/:id      com.keepit.controllers.SocialUserController.socialUserView(id: Id[SocialUserInfo])
-GET     /admin/social_user/:id/refresh com.keepit.controllers.SocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
-GET     /admin/social_user/:id/reset com.keepit.controllers.SocialUserController.resetSocialUser(id: Id[SocialUserInfo])
+GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
+GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
+GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
+GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 
 GET     /admin/server               com.keepit.common.healthcheck.HealthController.serviceView()
 
