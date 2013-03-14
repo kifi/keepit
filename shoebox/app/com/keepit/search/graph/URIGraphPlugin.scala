@@ -1,30 +1,18 @@
 package com.keepit.search.graph
 
-import scala.collection.mutable.MutableList
-import com.keepit.common.logging.Logging
-import com.keepit.common.db.Id
-import com.keepit.model.User
-import play.api.Play.current
-import play.api.templates.Html
-import akka.util.Timeout
 import akka.actor._
-import akka.actor.Actor._
-import akka.actor.ActorRef
-import play.api.libs.concurrent.Execution.Implicits._
 import akka.pattern.ask
-import play.api.libs.concurrent._
-import org.joda.time.DateTime
+import akka.util.Timeout
 import com.google.inject.Inject
-import com.google.inject.Provider
-import com.keepit.inject._
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
-import scala.concurrent.duration._
-import scala.concurrent.Await
-import scala.concurrent.Future
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.inject._
+import play.api.Play.current
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
-case object Load
 case object Update
 
 private[graph] class URIGraphActor(uriGraph: URIGraph) extends FortyTwoActor with Logging {
@@ -54,10 +42,12 @@ class URIGraphPluginImpl @Inject() (system: ActorSystem, uriGraph: URIGraph) ext
 
   override def enabled: Boolean = true
   override def onStart() {
+    scheduleTask(system, 30 seconds, 1 minute, actor, Update)
     log.info("starting URIGraphPluginImpl")
   }
   override def onStop() {
-    log.info("stopping URIGrpahPluginImpl")
+    log.info("stopping URIGraphPluginImpl")
+    cancelTasks()
     uriGraph.close()
   }
 
