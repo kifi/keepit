@@ -180,7 +180,7 @@ GET     /admin/healthcheck/resetErrorCount    com.keepit.common.healthcheck.Heal
 
 POST    /admin/logging/emails       com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
 
-GET     /admin/labs/rankVsScore     com.keepit.controllers.SearchLabsController.rankVsScore(q: Option[String] ?= None)
-GET     /admin/labs/rankVsScore.json com.keepit.controllers.SearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
-GET     /admin/labs/friendMap       com.keepit.controllers.SearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
-GET     /admin/labs/friendMap.json  com.keepit.controllers.SearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+GET     /admin/labs/rankVsScore     @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScore(q: Option[String] ?= None)
+GET     /admin/labs/rankVsScore.json @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
+GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
