@@ -3,4 +3,5 @@
 @admin("Index") {
   <b>num documents indexed:</b> @{indexer.numDocs}<br/>
   <b>last committed at:</b> @{indexer.commitData.getOrElse(com.keepit.search.index.Indexer.CommitData.committedAt, "N/A")}<br/>
+  <b>last sequence number:</b> @{indexer.commitData.getOrElse(com.keepit.search.index.Indexer.CommitData.sequenceNumber, "N/A")}<br/>
 }
