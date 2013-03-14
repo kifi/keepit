@@ -9,7 +9,7 @@
       </a>
     } else {
       <a data-hover="tooltip" title="@socialUserInfo.fullName+"
-         class="name_tooltip_link" href="@com.keepit.controllers.routes.SocialUserController.socialUserView(socialUserInfo.id.get)">
+         class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfo.id.get)">
         <img class="user-avatar" src="https://graph.facebook.com/@socialUserInfo.socialId.id/picture?type=square"/> @socialUserInfo.fullName
       </a>
     }
