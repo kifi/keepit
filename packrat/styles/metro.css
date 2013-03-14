@@ -44,7 +44,7 @@
   right: 0;
   height: 62px;
   width: 120px;
-  font: 12px/42px sans-serif;
+  font-size: 12px;
   opacity: 1;
 }
 .kifi-slider2.kifi-visible {
@@ -68,58 +68,48 @@
   right: 10px;
   width: 120px;
   height: 42px;
-  line-height: 42px;
   border-radius: 5px;
+}
+.kifi-slider2-keep-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 42px;
+  line-height: 42px;
+  border-radius: inherit;
   background: #34495e;
   color: #fff;
   font-family: Lato,sans-serif;
   text-align: center;
   cursor: pointer;
 }
-.kifi-slider2-keep.kifi-unkept::before {
+.kifi-unkept .kifi-slider2-keep-btn::before {
   content: "keep";
 }
-.kifi-slider2-keep.kifi-unkept.kifi-lock-hover::before {
-  content: "keep";
-}
-.kifi-slider2-keep.kifi-unkept.kifi-lock-hover::after {
-  content: "(private)";
-  font-size: 9px;
-  margin-left: 2px;
-}
-.kifi-slider2-keep.kifi-public::before {
+.kifi-public .kifi-slider2-keep-btn::before,
+.kifi-private .kifi-slider2-keep-btn::before,
+.kifi-public .kifi-slider2-keep-btn.kifi-hoverless:hover::before,
+.kifi-private .kifi-slider2-keep-btn.kifi-hoverless:hover::before {
   content: "kept";
 }
-.kifi-slider2-keep.kifi-public:hover::before {
-  content: "unkeep";
-}
-.kifi-slider2-keep.kifi-public.kifi-lock-hover::before {
-  content: "make private";
-}
-.kifi-slider2-keep.kifi-private::before {
-  content: "kept";
-}
-.kifi-slider2-keep.kifi-private::after {
+.kifi-private .kifi-slider2-keep-btn::after,
+.kifi-private .kifi-slider2-keep-btn.kifi-hoverless:hover::after {
   content: "(private)";
   font-size: 9px;
-  margin-left: 2px;
+  margin-left: 3px;
 }
-.kifi-slider2-keep.kifi-private:hover::before {
+.kifi-public .kifi-slider2-keep-btn:hover::before,
+.kifi-private .kifi-slider2-keep-btn:hover::before {
   content: "unkeep";
 }
-.kifi-slider2-keep.kifi-private:hover::after {
+.kifi-private .kifi-slider2-keep-btn:hover::after {
   content: "";
 }
-.kifi-slider2-keep.kifi-private.kifi-lock-hover::before {
-  content: "make public";
-}
-.kifi-slider2-keep.kifi-private.kifi-lock-hover::after {
-  content: "";
-}
-.kifi-slider2-keep:hover {
+.kifi-slider2-keep-btn:hover {
   background: #36526f;
 }
-.kifi-slider2-keep:active {
+.kifi-slider2-keep-btn:active {
   background: #304357;
 }
 .kifi-slider2-lock {
@@ -133,6 +123,7 @@
   background-color: #465f78;
   background-repeat: no-repeat;
   background-position: 0 999px;
+  cursor: pointer;
 }
 .kifi-slider2-lock:hover {
   background-color: #4c6c8c;
@@ -159,6 +150,7 @@
 .kifi-slider2-lock:hover::before {
   background-position: -98px 0;
 }
+
 .kifi-slider2-dock {
   position: absolute;
   bottom: 10px;
@@ -262,6 +254,36 @@
   height: 34px;
   margin-top: 4px;
   background: #506982;
+}
+.kifi-slider2-tip {
+  position: absolute;
+  bottom: 100%;
+  width: auto;
+  height: auto;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  padding: 16px 24px 18px;
+  background-color: #2c3e50;
+  color: #fff;
+  font: 12px/16px Lato,sans-serif;
+  text-align: center;
+  white-space: nowrap;
+  cursor: default;
+  display: none;
+}
+.kifi-hover-showing .kifi-slider2-tip {
+  display: block;
+}
+.kifi-slider2-tip::before {
+  content: " ";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -8px;
+  font: 0/0 serif;
+  border-style: solid;
+  border-width: 8px 8px 0;
+  border-color: #2c3e50 transparent;
 }
 
 .kifi-pane {
