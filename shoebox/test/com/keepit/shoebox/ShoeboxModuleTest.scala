@@ -1,26 +1,23 @@
 package com.keepit.shoebox
 
-import com.keepit.test._
+import com.keepit.controllers.admin._
+import com.keepit.controllers.ext._
 import com.keepit.inject._
-import play.api.Play.current
-import play.api.libs.json.JsValue
-import play.api.test.Helpers._
-import akka.actor.ActorRef
-import akka.testkit.ImplicitSender
+import com.keepit.test._
 import org.specs2.mutable.Specification
-import org.joda.time.{DateTime, LocalDate}
+import play.api.Play.current
+import play.api.test.Helpers._
 
 class ShoeboxModuleTest extends Specification {
 
   "Module" should {
-    "get time" in {
+    "instantiate controllers" in {
       running(new ShoeboxApplication().withFakeHealthcheck().withFakeMail()) {
-        inject[DateTime] !== null
-      }
-    }
-    "get date" in {
-      running(new ShoeboxApplication().withFakeHealthcheck().withFakeMail()) {
-        inject[LocalDate] !== null
+        inject[AdminCommentController]
+        inject[ExtCommentController]
+        inject[AdminEventController]
+        inject[ExtEventController]
+        true
       }
     }
   }

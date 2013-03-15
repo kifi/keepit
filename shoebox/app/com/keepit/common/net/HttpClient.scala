@@ -1,18 +1,18 @@
 package com.keepit.common.net
 
+import scala.collection.immutable.Seq
+import scala.concurrent.Await
+import scala.concurrent.Future
+import scala.concurrent.duration._
+
+import java.net.ConnectException
+import java.util.concurrent.TimeUnit
+
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json._
+import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
 import play.mvc._
-import play.api.libs.json._
-import java.util.concurrent.TimeUnit
-import play.api.libs.ws.WS.WSRequestHolder
-import play.api.mvc.Request
-import scala.collection.immutable.Seq
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.concurrent._
-import scala.concurrent.duration._
-import scala.concurrent._
-import scala.concurrent.Future
-import scala.concurrent.Await
 
 trait HttpClient {
 
@@ -39,8 +39,13 @@ case class HttpClientImpl(val timeout: Long = 2, val timeoutUnit: TimeUnit = Tim
 
   def getFuture(url: String): Future[ClientResponse] = {
     val request = req(url)
+    val startedAt = System.currentTimeMillis()
     request.get() map { response =>
       res(request, response)
+    } recoverWith {
+      case e: ConnectException =>
+        val duration = System.currentTimeMillis() - startedAt
+        throw new ConnectException(s"${e.getMessage} (took $duration ms)")
     }
   }
 
@@ -48,8 +53,13 @@ case class HttpClientImpl(val timeout: Long = 2, val timeoutUnit: TimeUnit = Tim
 
   def postFuture(url: String, body: JsValue): Future[ClientResponse] = {
     val request = req(url)
+    val startedAt = System.currentTimeMillis()
     request.post(body) map { response =>
       res(request, response)
+    } recoverWith {
+      case e: ConnectException =>
+        val duration = System.currentTimeMillis() - startedAt
+        throw new ConnectException(s"${e.getMessage} (took $duration ms)")
     }
   }
 

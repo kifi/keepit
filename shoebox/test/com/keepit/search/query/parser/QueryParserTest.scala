@@ -24,9 +24,7 @@ class QueryParserTest extends Specification {
 
   private trait QueryParserScope extends Scope {
     val analyzer = DefaultAnalyzer.forParsing(Lang("en"))
-    val parser = new QueryParser(analyzer, None) with DefaultSyntax {
-      override val fields = Set("", "site")
-    }
+    val parser = new QueryParser(analyzer, None) with DefaultSyntax
   }
 
   "QueryParser" should {
@@ -65,6 +63,65 @@ class QueryParserTest extends Specification {
       clauses.length === 2
       clauses(0).getOccur() === Occur.SHOULD
       clauses(1).getOccur() === Occur.MUST
+
+      query = parser.parse("-aaa bbb")
+      query must beSome[Query]
+
+      clauses = query.get.asInstanceOf[BooleanQuery].getClauses
+      clauses.length === 2
+      clauses(0).getOccur() === Occur.MUST_NOT
+      clauses(1).getOccur() === Occur.SHOULD
+
+      query = parser.parse("aaa -bbb")
+      query must beSome[Query]
+
+      clauses = query.get.asInstanceOf[BooleanQuery].getClauses
+      clauses.length === 2
+      clauses(0).getOccur() === Occur.SHOULD
+      clauses(1).getOccur() === Occur.MUST_NOT
+
+      query = parser.parse("-aaa +bbb")
+      query must beSome[Query]
+
+      clauses = query.get.asInstanceOf[BooleanQuery].getClauses
+      clauses.length === 2
+      clauses(0).getOccur() === Occur.MUST_NOT
+      clauses(1).getOccur() === Occur.MUST
+
+      query = parser.parse("+aaa -bbb")
+      query must beSome[Query]
+
+      clauses = query.get.asInstanceOf[BooleanQuery].getClauses
+      clauses.length === 2
+      clauses(0).getOccur() === Occur.MUST
+      clauses(1).getOccur() === Occur.MUST_NOT
+
+    }
+
+    "handle double quotes" in new QueryParserScope {
+      var query = parser.parse("\"aaa\"")
+      query.toString === "Some(aaa)"
+
+      query = parser.parse("\"aaa\" ")
+      query.toString === "Some(aaa)"
+
+      query = parser.parse("\"aaa bbb\"")
+      query.toString === "Some(\"aaa bbb\")"
+
+      query = parser.parse("\"aaa bbb\" ")
+      query.toString === "Some(\"aaa bbb\")"
+
+      query = parser.parse("\"aaa\"bbb\"")
+      query.toString === "Some(\"aaa bbb\")"
+
+      query = parser.parse("\"aaa\"bbb\" ")
+      query.toString === "Some(\"aaa bbb\")"
+
+      query = parser.parse("aaa\"bbb")
+      query.toString === "Some(\"aaa bbb\")"
+
+      query = parser.parse("aaa\"bbb ")
+      query.toString === "Some(\"aaa bbb\")"
     }
   }
 }

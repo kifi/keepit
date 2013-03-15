@@ -1,6 +1,6 @@
 package com.keepit
 
-import com.google.inject.Injector
+import com.google.inject.{Stage, Guice, Module, Injector}
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.controller.ServiceType
 import com.keepit.common.db.ExternalId
@@ -19,7 +19,23 @@ import com.keepit.common.controller.ReportedException
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with Logging {
 
-  def injector: Injector
+  def modules: Seq[Module]
+
+  private var creatingInjector = false
+  lazy val injector: Injector = {
+    if (creatingInjector) throw new Exception("Injector is being created!")
+    creatingInjector = true
+    try {
+      mode match {
+        case Mode.Dev => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
+        case Mode.Prod => Guice.createInjector(Stage.PRODUCTION, modules: _*)
+        case Mode.Test => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
+        case m => throw new IllegalStateException(s"Unknown mode $m")
+      }
+    } finally {
+      creatingInjector = false
+    }
+  }
 
   override def getControllerInstance[A](clazz: Class[A]) = injector.getInstance(clazz)
 
