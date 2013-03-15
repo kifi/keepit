@@ -40,9 +40,6 @@
 	font-family:verdana;
   border-radius: 10px;
 }
-#kifi-notify-notice-wrapper .hover .kifi-notify-item {
-	background-position:right -40px;
-}
 #kifi-notify-notice-wrapper .kifi-notify-item p {
 	padding:0;
 	margin:0;
