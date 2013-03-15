@@ -1,9 +1,5 @@
 package com.keepit.shoebox
 
-import com.google.inject.Guice
-import com.google.inject.Injector
-import com.google.inject.Stage
-import com.google.inject.util.Modules
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.analytics.PersistEventPlugin
 import com.keepit.common.analytics.reports.ReportBuilderPlugin
@@ -16,6 +12,7 @@ import com.keepit.module.CommonModule
 import com.keepit.scraper._
 import com.keepit.search.SearchModule
 import com.keepit.search.graph.URIGraphPlugin
+import com.keepit.search.index.ArticleIndexerPlugin
 import play.api.Mode._
 import play.api.Play.current
 import play.api._
@@ -30,6 +27,8 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
 //    require(inject[FortyTwoServices].currentService == ServiceType.SHOEBOX,
 //        "ShoeboxGlobal can only be run on a shoebox service")
     super.onStart(app)
+    require(inject[ScraperPlugin].enabled)
+    require(inject[ArticleIndexerPlugin].enabled)
     require(inject[SocialGraphPlugin].enabled)
     require(inject[MailSenderPlugin].enabled)
     inject[MailSenderPlugin].processOutbox()
