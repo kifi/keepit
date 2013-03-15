@@ -1,8 +1,5 @@
 package com.keepit.dev
 
-import com.google.inject.Guice
-import com.google.inject.Injector
-import com.google.inject.Stage
 import com.google.inject.util.Modules
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.analytics.reports.ReportBuilderPlugin
@@ -14,17 +11,18 @@ import com.keepit.common.social.SocialGraphRefresher
 import com.keepit.inject._
 import com.keepit.module.CommonModule
 import com.keepit.scraper.{DataIntegrityPlugin, ScraperPlugin}
-import com.keepit.search.{SearchGlobal, SearchModule}
+import com.keepit.search.SearchModule
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.index.ArticleIndexerPlugin
-import com.keepit.shoebox.{ShoeboxGlobal, ShoeboxModule}
+import com.keepit.shoebox.ShoeboxModule
+
 import play.api.Application
 import play.api.Mode._
 import play.api.Play.current
 
 object DevGlobal extends FortyTwoGlobal(Dev) {
 
-  val modules = Seq(Modules.`override`((ShoeboxGlobal.modules ++ SearchGlobal.modules): _*).`with`(new DevModule))
+  val modules = Seq(Modules.`override`(new CommonModule, new ShoeboxModule, new SearchModule).`with`(new DevModule))
 
   override def onStart(app: Application): Unit = {
     require(inject[FortyTwoServices].currentService == ServiceType.DEV_MODE,
