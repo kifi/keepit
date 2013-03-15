@@ -353,13 +353,7 @@ api.log("[google_inject]");
       var $a = $(this).showHover(function(callback) {
         var i = $a.closest("li.g").prevAll("li.g").length;
         render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
-          // measuring in order to center hover box above link
-          var $h = $(html)
-            .css({visibility: "hidden", display: "block"})
-            .appendTo($a);
-          callback($h.css("left", .5 * ($a[0].offsetWidth - $h[0].offsetWidth))
-            .css({visibility: "", display: ""})
-            .detach());
+          callback(html, function(w) {this.style.left = ($a[0].offsetWidth - w) / 2 + "px"});
         });
       });
     }).on("mouseenter", ".kifi-chatter", function() {
@@ -485,7 +479,7 @@ api.log("[google_inject]");
 
     hit.count = hit.count - hit.users.length - (hit.isMyBookmark ? 1 : 0);
 
-    // Awful decision tree for clean text. Come up with a better way.
+    // Awful decision tree. Got a better way?
     if (hit.isMyBookmark) { // you
       var priv = hit.isPrivate ? " <span class=kifi-res-private>Private</span>" : "";
       if (numFriends == 0) { // no friends
