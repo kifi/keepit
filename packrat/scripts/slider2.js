@@ -45,12 +45,9 @@ slider2 = function() {
         // "sensitive": o.sensitive,
         // "site": location.hostname,
         // "neverOnSite": o.neverOnSite,
-        "newComments": 35,  // TODO: hook up real values
-        "newMessages": 4//,
-        // "connected_networks": api.url("images/networks.png"),
-        // "socialConnections": o.friends.length == 0 ? null : {
-        //   countText: summaryText(o.friends.length, o.kept),
-        //   friends: o.friends}
+        "newComments": o.unreadComments,
+        "newMessages": o.unreadMessages,
+        // "connected_networks": api.url("images/networks.png")
       }, function(html) {
         if (document.querySelector(".kifi-slider2")) {
           api.log("[showSlider] already there");  // TODO: remove old one? perhaps from previous installation
@@ -80,7 +77,8 @@ slider2 = function() {
                 }, true);
               }
             }
-          }).on("click", ".kifi-slider2-keep-btn", function() {
+          }).on("click", ".kifi-slider2-keep-btn", function(e) {
+            if (e.target !== this) return;
             var el = this.parentNode;
             if (el.classList.contains("kifi-unkept")) {
               keepPage(el, false);
@@ -88,6 +86,26 @@ slider2 = function() {
               unkeepPage(el);
             }
             this.classList.add("kifi-hoverless");
+          }).on("mouseover", ".kifi-slider2-keep-btn", function(e) {
+            if (e.target === this) {
+              if (o.keepers || o.keeps) {
+                var $btn = $(this).showHover({
+                  reuse: false,
+                  showDelay: 250,
+                  hideDelay: 200,
+                  recovery: Infinity,
+                  create: function(callback) {
+                    render("html/metro/keepers.html", {
+                      keepers: o.keepers,
+                      captionHtml: formatCountHtml(o.kept, o.private, (o.keepers || 0).length, o.keeps)
+                    }, function(html) {
+                      callback($("<div class=kifi-slider2-tip>").html(html));
+                    });
+                  }});
+              }
+            } else {
+              this.classList.add("kifi-hoverless");
+            }
           }).on("mouseout", ".kifi-slider2-keep-btn", function() {
             this.classList.remove("kifi-hoverless");
           }).on("mouseenter", ".kifi-slider2-lock", function() {
@@ -100,9 +118,7 @@ slider2 = function() {
                 var html = this.parentNode.classList.contains("kifi-unkept") ?
                   "keep privately<br>(so only you can see it)" :
                   this.parentNode.classList.contains("kifi-public") ? "make private" : "make public";
-                var $h = $("<div class=kifi-slider2-tip>").html(html)
-                  .css({display: "block", visibility: "hidden"}).appendTo(this);
-                callback($h.css("left", 8 - $h[0].offsetWidth / 2).detach().css({display: "", visibility: ""}));
+                callback($("<div class=kifi-slider2-tip>").html(html), function(w) {this.style.left = 8 - w / 2 + "px"});
               }});
           }).on("click", ".kifi-slider2-lock", function(e) {
             if (e.target !== this) return;
@@ -253,6 +269,38 @@ slider2 = function() {
     });
     $pane = null;
     var $html = $("html").removeClass("kifi-with-pane");
+  }
+
+  function formatCountHtml(kept, isPrivate, numFriends, numTotal) {
+    var numOthers = (numTotal || 0) - (numFriends || 0) - (kept && !isPrivate ? 1 : 0);
+    // Awful decision tree. Got a better way?
+    if (kept) {
+      var priv = ""; // isPrivate ? " <span class=kifi-slider2-private>Private</span>" : "";
+      if (numFriends) {
+        if (numOthers) {
+          return "You" + priv + " + " + plural(numFriends, "friend") + " + " + plural(numOthers, "other") + " kept this";
+        }
+        return "You" + priv + " + " + plural(numFriends, "friend") + " kept this";
+      }
+      if (numOthers) {
+        return "You" + priv + " + " + plural(numOthers, "other") + " kept this";
+      }
+      return "You kept this" + priv;
+    }
+    if (numFriends) {
+      if (numOthers) {
+        return plural(numFriends, "friend") + " + " + plural(numOthers, "other") + " kept this";
+      }
+      return plural(numFriends, "friend") + " kept this";
+    }
+    if (numOthers) {
+      return plural(numOthers, "other") + " kept this";
+    }
+    return "No one kept this";
+  }
+
+  function plural(n, term) {
+    return n + " " + term + (n == 1 ? "" : "s");
   }
 
   // the slider API
