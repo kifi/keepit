@@ -12,7 +12,6 @@ import com.keepit.common.db.SlickModule
 import com.keepit.common.db.DbInfo
 import play.api.Play
 import play.api.db.DB
-import com.keepit.common.cache.MemcachedCacheModule
 
 class FortyTwoModule() extends ScalaModule {
   def configure(): Unit = {
