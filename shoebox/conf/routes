@@ -65,9 +65,9 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 # Admin
 ##########################################
 
-GET     /admin                      com.keepit.controllers.admin.AdminDashboardController.index
-GET     /admin/graphs/users.json    com.keepit.controllers.admin.AdminDashboardController.usersByDate
-GET     /admin/graphs/bookmarks.json    com.keepit.controllers.admin.AdminDashboardController.bookmarksByDate
+GET     /admin                      @com.keepit.controllers.admin.AdminDashboardController.index
+GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboardController.usersByDate
+GET     /admin/graphs/bookmarks.json    @com.keepit.controllers.admin.AdminDashboardController.bookmarksByDate
 
 GET     /admin/events               @com.keepit.controllers.admin.AdminEventController.reportList
 POST    /admin/events/buildReport   @com.keepit.controllers.admin.AdminEventController.buildReport
