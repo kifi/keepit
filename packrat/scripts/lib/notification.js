@@ -117,8 +117,7 @@ var KifiNotification = {
 					removeItem(unique_id, e, manual_close);
 				})
 			})
-		}
-		else {
+		} else {
 			removeItem(unique_id, e);
 		}
 					
