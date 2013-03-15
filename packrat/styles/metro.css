@@ -156,6 +156,7 @@
 }
 .kifi-slider2-keep-btn .kifi-slider2-tip {
   right: 16px;
+  padding: 14px 18px 10px;
 }
 .kifi-slider2-keep-btn .kifi-slider2-tip::before {
   left: auto;
@@ -176,11 +177,14 @@
   border-radius: 2px;
   position: relative;
 }
+/*
 .kifi-slider2-keeper .kifi-kcard {
   bottom: 48px;
   left: -132px;
 }
+*/
 .kifi-slider2-keepers-caption {
+  text-align: right;
   font: 300 12px Lato,sans-serif;
 }
 

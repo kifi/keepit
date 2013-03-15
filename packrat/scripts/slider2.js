@@ -95,6 +95,7 @@ slider2 = function() {
                   hideDelay: 200,
                   recovery: Infinity,
                   create: function(callback) {
+                    // TODO: preload friend pictures
                     render("html/metro/keepers.html", {
                       keepers: o.keepers,
                       captionHtml: formatCountHtml(o.kept, o.private, (o.keepers || 0).length, o.keeps)
