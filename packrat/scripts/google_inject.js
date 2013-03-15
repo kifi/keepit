@@ -337,18 +337,20 @@ api.log("[google_inject]");
       e.stopPropagation();
       location.href = "https://" + response.server + "/admin/search/results/" + response.uuid;
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
-      var $a = $(this).showHover(function(callback) {
-        var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
-        var friend = response.hits[i].users[j];
-        render("html/friend_card.html", {
-          name: friend.firstName + " " + friend.lastName,
-          facebookId: friend.facebookId,
-          iconsUrl: api.url("images/social_icons.png")
-        }, callback);
-        api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
-          $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
-        });
-      });
+      var $a = $(this).showHover({
+        hideDelay: 600,
+        create: function(callback) {
+          var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
+          var friend = response.hits[i].users[j];
+          render("html/friend_card.html", {
+            name: friend.firstName + " " + friend.lastName,
+            facebookId: friend.facebookId,
+            iconsUrl: api.url("images/social_icons.png")
+          }, callback);
+          api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+            $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
+          });
+        }});
     }).on("mouseenter", ".kifi-res-friends", function() {
       var $a = $(this).showHover(function(callback) {
         var i = $a.closest("li.g").prevAll("li.g").length;
@@ -357,20 +359,22 @@ api.log("[google_inject]");
         });
       });
     }).on("mouseenter", ".kifi-chatter", function() {
-      var $ch = $(this).showHover(function(callback) {
-        var n = $ch.data("n");
-        render("html/search/chatter.html", {
-          numComments: n[0],
-          numMessages: n[1],
-          pluralize: function() {return pluralLambda}
-        }, function(html) {
-          callback($(html).on("transitionend", function(e) {
-            if (e.originalEvent.propertyName === "opacity" && !$ch.hasClass("kifi-hover-showing")) {
-              this.style.display = "none";
-            }
-          }));
-        });
-      });
+      var $ch = $(this).showHover({
+        hideDelay: 600,
+        create: function(callback) {
+          var n = $ch.data("n");
+          render("html/search/chatter.html", {
+            numComments: n[0],
+            numMessages: n[1],
+            pluralize: function() {return pluralLambda}
+          }, function(html) {
+            callback($(html).on("transitionend", function(e) {
+              if (e.originalEvent.propertyName === "opacity" && !$ch.hasClass("kifi-hover-showing")) {
+                this.style.display = "none";
+              }
+            }));
+          });
+        }});
     }).on("click", ".kifi-chatter-deeplink", function() {
       api.port.emit("add_deep_link_listener", {locator: $(this).data("locator")});
       location.href = $(this).closest("li.g").find("h3.r a")[0].href;

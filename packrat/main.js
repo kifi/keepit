@@ -432,6 +432,7 @@ api.tabs.on.loading.add(function(tab) {
     ["kept", "private", "keepers", "keeps", "sensitive", "neverOnSite", "unreadComments", "unreadMessages"].forEach(function(key) {
       data[key] = resp[key];
     });
+    data.otherKeeps = (data.keeps || 0) - (data.keepers || []).length - (data.kept && !data.private ? 1 : 0);
     if (session.rules.rules.message && /^\/messages/.test(resp.locator) ||
         session.rules.rules.comment && /^\/comments/.test(resp.locator) && !resp.neverOnSite) {
       api.log("[gotKeptStatus]", tab.id, resp.locator);
