@@ -27,15 +27,16 @@ home-grown at FortyTwo, not intended for distribution (yet)
     return this;
   }
 
-  var defaultOpts = {
-    showDelay: 100,
-    hideDelay: 200,
-    recovery: 200,  // ms since last show before click will be honored
-    reuse: true};
   var methods = {
     init: function(opts) {
       var $a = $(this), data = $a.data("hover");
-      opts = $.extend(defaultOpts, typeof opts === "function" ? {create: opts} : opts);
+      opts = $.extend({
+          create: $.noop,
+          showDelay: 100,
+          hideDelay: 0,
+          recovery: 160,  // ms since last show before click will be honored
+          reuse: true},
+        typeof opts === "function" ? {create: opts} : opts);
       if (data) {
         onMouseEnter(opts.showDelay);
       } else {
@@ -54,14 +55,14 @@ home-grown at FortyTwo, not intended for distribution (yet)
           data.$h = $h;
           onMouseEnter(Math.max(0, opts.showDelay - (new Date - t0)));
         }));
-        $a.on("mouseleave.showHover", function(e) {
-          if (!e.toElement || !this.contains(e.toElement)) {
-            onMouseLeave(opts.hideDelay, opts.reuse);
+        $a.on("mouseout.showHover", function(e) {
+          if (!e.relatedTarget || !this.contains(e.relatedTarget)) {
+            onMouseLeave(opts.hideDelay, e);
           }
         }).on("click.showHover", function(e) {
           if (!data.$h[0].contains(e.target) && new Date - data.lastShowTime > opts.recovery) {
             if ($a.hasClass("kifi-hover-showing")) {
-              onMouseLeave(0, opts.reuse);
+              onMouseLeave();
             } else {
               onMouseEnter(0);
             }
@@ -69,28 +70,63 @@ home-grown at FortyTwo, not intended for distribution (yet)
         });
       }
       function onMouseEnter(ms) {
+        data.inEither = true;
         clearTimeout(data.t);
-        data.t = setTimeout(function() {
-          data.$h.show();
-          $a.addClass("kifi-hover-showing");
-          data.lastShowTime = +new Date;
-        }, ms);
+        if (ms) {
+          data.t = setTimeout(show, ms);
+        } else {
+          show();
+        }
       }
-      function onMouseLeave(ms, reuse) {
+      function onMouseLeave(ms, e) {
+        data.inEither = false;
         clearTimeout(data.t);
-        data.t = setTimeout(function() {
-          $a.removeClass("kifi-hover-showing");
-          if (reuse) {
-            data.$h.css("display", "");
-          } else {
-            $a.showHover("destroy");
+        if (ms && between(e.clientX, e.clientY)) {
+          document.addEventListener("mousemove", onMouseMove, true);
+          data.t = setTimeout(hide, ms);
+        } else {
+          hide();
+        }
+      }
+      function onMouseMove(e) {
+        if (!between(e.clientX, e.clientY)) {
+          if (!data.inEither) {
+            hide();
           }
-        }, ms);
+          document.removeEventListener("mousemove", onMouseMove, true);
+        }
+      }
+      function show() {
+        data.$h.show();
+        $a.addClass("kifi-hover-showing");
+        data.lastShowTime = +new Date;
+      }
+      function hide() {
+        $a.removeClass("kifi-hover-showing");
+        if (opts.reuse) {
+          data.$h.css("display", "");
+        } else {
+          $a.showHover("destroy");
+        }
+      }
+      // Returns whether the viewport coords (x, y) are in the trapezoid between the top edge
+      // of hover trigger element and the bottom edge of the hover element.
+      function between(x, y) {
+        var rT = $a[0].getBoundingClientRect(), rH = data.$h[0].getBoundingClientRect();
+        return y >= rH.bottom && y <= rT.top &&
+          !leftOf(x, y, rH.left, rH.bottom, rT.left, rT.top) &&
+          leftOf(x, y, rH.right, rH.bottom, rT.right, rT.top);
       }
     },
     destroy: function() {
       var $a = $(this);
       $(($a.data("hover") || 0).$h).remove();
       $a.unbind(".showHover").removeData("hover");
-    }};
+    }
+  };
+
+  // Returns whether (x, y) is left of the line between (x1, y1) and (x2, y2).
+  function leftOf(x, y, x1, y1, x2, y2) {
+    return (x2 - x1) * (y - y1) > (y2 - y1) * (x - x1);
+  }
 }(jQuery);
