@@ -429,7 +429,7 @@ api.tabs.on.loading.add(function(tab) {
 
   checkKeepStatus(tab, function gotKeptStatus(resp) {
     var data = {metro: session.experiments.indexOf("metro") >= 0};
-    ["kept", "private", "sensitive", "neverOnSite"/*, "keepers"*/].forEach(function(key) {
+    ["kept", "private", "keepers", "keeps", "sensitive", "neverOnSite", "unreadComments", "unreadMessages"].forEach(function(key) {
       data[key] = resp[key];
     });
     if (session.rules.rules.message && /^\/messages/.test(resp.locator) ||
@@ -449,7 +449,7 @@ api.tabs.on.loading.add(function(tab) {
             scroll: session.rules.rules.scroll,
             viewport: session.rules.rules.viewport};
         }
-        tab.autoShowSec = (session.rules.rules[resp.keptByAnyFriends ? "friendKept" : "focus"] || [])[0];
+        tab.autoShowSec = (session.rules.rules[resp.keepers ? "friendKept" : "focus"] || [])[0];
         if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
           scheduleAutoShow(tab);
         }

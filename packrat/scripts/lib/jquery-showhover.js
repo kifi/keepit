@@ -41,8 +41,17 @@ home-grown at FortyTwo, not intended for distribution (yet)
       } else {
         var t0 = +new Date;
         $a.data("hover", data = {lastShowTime: 0});
-        setTimeout(opts.create.bind(this, function(hover) {
-          data.$h = $(hover).appendTo($a);
+        setTimeout(opts.create.bind(this, function(hover, useSize) {
+          var $h = $(hover);
+          if (useSize) {
+            $h.css({visibility: "hidden", display: "block"}).appendTo($a);
+            var r = $h[0].getBoundingClientRect();
+            $h.css({visibility: "", display: ""});
+            useSize.call($h[0], r.width, r.height);
+          } else {
+            $h.appendTo($a);
+          }
+          data.$h = $h;
           onMouseEnter(Math.max(0, opts.showDelay - (new Date - t0)));
         }));
         $a.on("mouseleave.showHover", function(e) {
