@@ -10,7 +10,6 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.json.Json
-import com.keepit.common.controller.AdminController
 import com.keepit.common.controller.FortyTwoController._
 import com.keepit.common.db._
 import com.keepit.common.social.{SocialId, SocialNetworks}
@@ -19,6 +18,7 @@ import com.keepit.model._
 import com.keepit.common.healthcheck._
 import com.keepit.common.db.slick._
 
+import com.keepit.common.controller.AdminController
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
