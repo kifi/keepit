@@ -1,12 +1,12 @@
 
-<div id="kifi-notify-item-{{notifyId}}" class="kifi-notify-item-wrapper {{popupClass}}" style="display:none">
+<div id="kifi-notify-item" class="kifi-notify-item-wrapper {{popupClass}}" style="display:none">
   <div class="kifi-notify-item">
     <div class="kifi-notify-close">&times;</div>
     {{{image}}}
-    <div class="{{class_name}}">
+    <div class="{{innerClass}}">
       <div class="kifi-notify-title">{{title}}</div>
       {{#link}}<div class="kifi-notify-link">{{link}}</div>{{/link}}
-      <div class="kifi-notify-text">&ldquo;{{{text}}}&rdquo;</div>
+      <div class="kifi-notify-text">&ldquo;{{{contentHtml}}}&rdquo;</div>
     </div>
     <div style="clear:both"></div>
   </div>

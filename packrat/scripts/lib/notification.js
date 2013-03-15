@@ -1,152 +1,133 @@
 
 var KifiNotification = {
-	position: 'top-right',
-	fadeInMs: 300,
-	fadeOutMs: 100,
-	showForMs: 3000,
-	
-	hideTimer: 0,
-	notificationsCount: 0,
+	defaultParams: {
+		wrapperClass: '',
+		fadeInMs: 300,
+		fadeOutMs: 100,
+		showForMs: 4000,
+		image: '',
+		link: '',
+		contentHtml: '',
+		sticky: false,
+		popupClass: '',
+		clickAction: $.noop,
+		closeOnClick: true
+	},
 	
 	add: function (params){
-		if (typeof(params) == 'string') {
-			params = {text:params};
-		}
 		if (params.click && typeof(params.click) == 'string') {
 			params.click = function () { document.location = params.click };
 		}
 		
-		var title = params.title, 
-			text = params.text,
-			link = params.link,
-			image = params.image || '',
-			sticky = params.sticky || false,
-			popupClass = params.className || '',
-			position = params.position || '',
-			closeTime = params.time || this.showForMs,
-			clickAction = params.click || $.noop,
-			closeOnClick = params.closeOnClick || true;
+		params = $.extend(this.defaultParams, params)
 
 		if ($('#kifi-notify-notice-wrapper').length == 0){
 			$('body').append('<div id="kifi-notify-notice-wrapper"></div>');
 		}
-		
-		this.notificationsCount++;
-		var notifyId = this.notificationsCount;
-		
-		$(['before_open', 'after_open', 'before_close', 'after_close']).each(function (i, val){
-			KifiNotification['_' + val + '_' + notifyId] = ($.isFunction(params[val])) ? params[val] : function (){}
-		});
 
-		this.hideTimer = closeTime;
-
-		var image_str = (image != '') ? '<img src="' + image + '" class="kifi-notify-image" />' : '',
-			className = (image != '') ? 'kifi-notify-with-image' : 'kifi-notify-without-image';
+		var imageHtml = (params.image != '') ? '<img src="' + params.image + '" class="kifi-notify-image" />' : '',
+			innerClass = (params.image != '') ? 'kifi-notify-with-image' : 'kifi-notify-without-image';
 
 		render("html/notify_box.html", {
-      'title': title,
-      'text': text,
-      'image': image_str,
-      'notifyId': notifyId,
-      'className': className,
-      'popupClass': popupClass,
-      'link': link
+      'title': params.title,
+      'contentHtml': params.contentHtml,
+      'image': imageHtml,
+      'popupClass': params.popupClass,
+      'innerClass': innerClass,
+      'link': params.link
     }, function (html) {
-			$('#kifi-notify-notice-wrapper').addClass(position).append(html);
-			
-			var item = $('#kifi-notify-item-' + notifyId);
-			
-			item.fadeIn(KifiNotification.fadeInMs, function (){
-				KifiNotification['_after_open_' + notifyId](item);
+			var $item = $(html);
+
+			$('#kifi-notify-notice-wrapper').addClass(params.wrapperClass).append($item);
+
+			$(['beforeOpen', 'afterOpen', 'beforeClose', 'afterClose']).each(function (i, val){
+				$item.data(val, $.isFunction(params[val]) ? params[val] : $.noop);
 			});
 			
-			if (!sticky){
-				KifiNotification.startFadeTimer(item, notifyId);
+			$item.fadeIn(params.fadeInMs, function (){
+				$item.data("afterOpen")();
+			});
+			
+			if (!params.sticky){
+				KifiNotification.startFadeTimer($item, params);
 			}
+
 			
-			item.bind('mouseenter', function (event){
-				if (!sticky) { 
-					clearTimeout(KifiNotification['_int_id_' + notifyId]);
-					item.stop().css({ opacity: '', height: '' });
+			$item.bind('mouseenter', function (event){
+				if (!params.sticky) {
+					clearTimeout($item.data("fadeOutTimer"));
+					$item.stop().css({ opacity: '', height: '' });
 				}
-				item.addClass('hover');
 			}).bind('mouseleave', function (event){
-				if (!sticky){
-					KifiNotification.startFadeTimer(item, notifyId);
+				if (!params.sticky){
+					KifiNotification.startFadeTimer($item, params);
 				}
-				item.removeClass('hover');
 			}).bind('click', function (event) {
-				if (closeOnClick) {
-					KifiNotification.removeSpecific(notifyId, {}, null, true);
+				if (params.closeOnClick) {
+					KifiNotification.removeSpecific($item, {}, true);
 				}
-				clickAction();
+				params.clickAction();
 			});
 			
-			$(item).find('.kifi-notify-close').click(function (){
-				KifiNotification.removeSpecific(notifyId, {}, null, true);
+			$item.find('.kifi-notify-close').click(function (){
+				KifiNotification.removeSpecific($item, {}, true);
 			});
     });
 		
-		return notifyId;
+		return true;
 	
 	},
 	
-	fadeItem: function (e, unique_id, params, unbind_events){
+	fadeItem: function ($item, params, unbind_events){
 		var params = params || {},
 			fade = (typeof(params.fade) != 'undefined') ? params.fade : true,
-			fadeOutMs = params.speed || this.fadeOutMs,
+			fadeOutMs = params.fadeOutMs || 300,
 			manual_close = unbind_events;
 
-		this['_before_close_' + unique_id](e, manual_close);
+		$item.data("beforeClose")($item, manual_close);
 
 		if (unbind_events){
-			e.unbind('mouseenter mouseleave');
+			$item.unbind('mouseenter mouseleave');
 		}
 
-		var removeItem = function (unique_id, e, manual_close){
-			e.remove();
-			this['_after_close_' + unique_id](e, manual_close);
+		var removeItem = function ($item, manual_close){
+			$item.data("afterClose")($item, manual_close);
+			$item.remove();
 			if ($('.kifi-notify-item-wrapper').length == 0){
 				$('#kifi-notify-notice-wrapper').remove();
 			}
 		}
 
 		if (fade){
-			e.animate({ opacity: 0 }, fadeOutMs, function (){
-				e.animate({ height: 0 }, 300, function (){
-					removeItem(unique_id, e, manual_close);
+			$item.animate({ opacity: 0 }, fadeOutMs)
+			  .animate({ height: 0 }, 300, function (){
+					removeItem($item, manual_close);
 				})
-			})
 		} else {
-			removeItem(unique_id, e);
+			removeItem($item);
 		}
 					
 	},
 	
-	removeSpecific: function (unique_id, params, e, unbind_events){
-		if (!e){
-			var e = $('#kifi-notify-item-' + unique_id);
-		}
-		this.fadeItem(e, unique_id, params || {}, unbind_events);
-		
+	removeSpecific: function ($item, params, unbind_events){
+		this.fadeItem($item, params || {}, unbind_events);
 	},
 	
-	startFadeTimer: function (e, unique_id){
-		this['_int_id_' + unique_id] = setTimeout(function (){ 
-			KifiNotification.fadeItem(e, unique_id);
-		}, this.hideTimer);
-	
+	startFadeTimer: function ($item, params){
+		$item.data("fadeOutTimer", setTimeout(function (){ 
+			KifiNotification.fadeItem($item, params);
+		}, params.showForMs));
 	},
 
 	stop: function (params){
-		var before_close = ($.isFunction(params.before_close)) ? params.before_close : function (){};
-		var after_close = ($.isFunction(params.after_close)) ? params.after_close : function (){};
+		params.beforeClose = params.beforeClose || $.noop;
+		params.beforeClose = params.beforeClose || $.noop;
 		
 		var wrap = $('#kifi-notify-notice-wrapper');
-		before_close(wrap);
+		params.beforeClose(wrap);
 		wrap.fadeOut(function (){
 			$(this).remove();
-			after_close();
+			params.afterClose();
 		});
 	
 	}

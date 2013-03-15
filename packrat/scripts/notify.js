@@ -11,11 +11,11 @@
 
 KifiNotification.add({
   title: 'Alexander Willis Schultz',
-  text: 'I commented on it above, but people I\'m talking to are hesitant to add on group because they are unsure of how to explain it.',
+  contentHtml: 'I commented on it above, but people I\'m talking to are hesitant to add on group because they are unsure of how to explain it.',
   link: 'Label Reading 101 Wellness City',
   image: 'https://fbcdn-profile-a.akamaihd.net/hprofile-ak-ash3/49938_508538138_1167343243_q.jpg',
   sticky: true,
-  time: 3000
+  showForMs: 3000
 });
 
 
@@ -23,20 +23,20 @@ KifiNotification.add({
 setTimeout(function() {
   KifiNotification.add({
     title: 'Alexander Willis Schultz',
-    text: 'I commented on it above, but people I\'m talking to are hesitant to add on group because they are unsure of how to explain it.',
+    contentHtml: 'I commented on it above, but people I\'m talking to are hesitant to add on group because they are unsure of how to explain it.',
     image: 'https://fbcdn-profile-a.akamaihd.net/hprofile-ak-ash3/49938_508538138_1167343243_q.jpg',
     click: function() {alert('hi')},
     sticky: false,
-    time: 3000
+    showForMs: 3000
   });
 }, 2000)
 
 setTimeout(function() {
   KifiNotification.add({
     title: 'This is a sticky notice!',
-    text: 'stiiiiiiicky',
+    contentHtml: 'stiiiiiiicky',
     image: 'https://fbcdn-profile-a.akamaihd.net/hprofile-ak-ash3/49938_508538138_1167343243_q.jpg',
     sticky: true,
-    time: 3000
+    showForMs: 3000
   });
 }, 4000)
