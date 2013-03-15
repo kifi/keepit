@@ -104,7 +104,7 @@ var KifiNotification = {
 					removeItem($item, manual_close);
 				})
 		} else {
-			removeItem($item);
+			removeItem($item, manual_close);
 		}
 					
 	},

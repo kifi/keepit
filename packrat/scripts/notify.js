@@ -6,7 +6,7 @@
 // @require scripts/lib/mustache-0.7.1.min.js
 // @require scripts/api.js
 // @require scripts/render.js
-// @require scripts/lib/notification.js
+// @require scripts/lib/notification.min.js
 
 
 KifiNotification.add({
