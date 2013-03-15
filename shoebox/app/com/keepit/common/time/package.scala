@@ -40,6 +40,11 @@ package object time {
   def currentDate(implicit zone: DateTimeZone) = new LocalDate(zone)
   def currentDateTime(implicit zone: DateTimeZone) = new DateTime(zone)
 
+  class Clock() {
+    def currentDate = currentDate
+    def currentDateTime(implicit zone: DateTimeZone) = new DateTime(zone)
+  }
+
   implicit val localDateOrdering = new Ordering[LocalDate] {
     def compare(a: LocalDate, b: LocalDate) = a.compareTo(b)
   }
