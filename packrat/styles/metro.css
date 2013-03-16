@@ -42,10 +42,9 @@
   z-index: 2147483640;
   bottom: 0;
   right: 0;
-  height: 62px;
+  height: 72px;
   width: 120px;
   font-size: 12px;
-  opacity: 1;
 }
 .kifi-slider2.kifi-visible {
   width: 320px;
@@ -78,11 +77,21 @@
   height: 42px;
   line-height: 42px;
   border-radius: inherit;
-  background: #34495e;
   color: #fff;
   font-family: Lato,sans-serif;
   text-align: center;
   cursor: pointer;
+}
+.kifi-slider2-keep-btn,
+.kifi-slider2-keep-btn.kifi-hoverless:hover,
+.kifi-slider2-keep-btn.kifi-hoverless:active {
+  background: #34495e;
+}
+.kifi-slider2-keep-btn:hover {
+  background: #36526f;
+}
+.kifi-slider2-keep-btn:active {
+  background: #304357;
 }
 .kifi-unkept .kifi-slider2-keep-btn::before {
   content: "keep";
@@ -105,12 +114,6 @@
 }
 .kifi-private .kifi-slider2-keep-btn:hover::after {
   content: "";
-}
-.kifi-slider2-keep-btn:hover {
-  background: #36526f;
-}
-.kifi-slider2-keep-btn:active {
-  background: #304357;
 }
 .kifi-slider2-lock {
   position: absolute;
@@ -149,6 +152,39 @@
 }
 .kifi-slider2-lock:hover::before {
   background-position: -98px 0;
+}
+.kifi-slider2-keep-btn .kifi-slider2-tip {
+  right: 16px;
+  padding: 14px 18px 10px;
+}
+.kifi-slider2-keep-btn .kifi-slider2-tip::before {
+  left: auto;
+  right: 36px;
+}
+.kifi-slider2-keepers {
+  text-align: right;
+  font-size: 0;
+  white-space: nowrap;
+  cursor: default;
+}
+.kifi-slider2-keeper {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  margin-right: 1px;
+  background-size: 100%;
+  border-radius: 2px;
+  position: relative;
+}
+/*
+.kifi-slider2-keeper .kifi-kcard {
+  bottom: 48px;
+  left: -132px;
+}
+*/
+.kifi-slider2-keepers-caption {
+  text-align: right;
+  font: 300 12px Lato,sans-serif;
 }
 
 .kifi-slider2-dock {

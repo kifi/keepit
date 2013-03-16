@@ -20,8 +20,9 @@ object SearchGlobal extends FortyTwoGlobal(Prod) {
 
   override def onStart(app: Application): Unit = {
     log.info("starting the shoebox")
-//    require(inject[FortyTwoServices].currentService == ServiceType.SHOEBOX,
-//        "ShoeboxGlobal can only be run on a shoebox service")
+    // TODO(greg): figure out how to do service type for search
+    // require(inject[FortyTwoServices].currentService == ServiceType.SHOEBOX,
+    //    "ShoeboxGlobal can only be run on a shoebox service")
     super.onStart(app)
     require(inject[ArticleIndexerPlugin].enabled)
     require(inject[MailSenderPlugin].enabled)

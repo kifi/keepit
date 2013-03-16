@@ -45,12 +45,9 @@ slider2 = function() {
         // "sensitive": o.sensitive,
         // "site": location.hostname,
         // "neverOnSite": o.neverOnSite,
-        "newComments": 35,  // TODO: hook up real values
-        "newMessages": 4//,
-        // "connected_networks": api.url("images/networks.png"),
-        // "socialConnections": o.friends.length == 0 ? null : {
-        //   countText: summaryText(o.friends.length, o.kept),
-        //   friends: o.friends}
+        "newComments": o.unreadComments,
+        "newMessages": o.unreadMessages,
+        // "connected_networks": api.url("images/networks.png")
       }, function(html) {
         if (document.querySelector(".kifi-slider2")) {
           api.log("[showSlider] already there");  // TODO: remove old one? perhaps from previous installation
@@ -65,12 +62,13 @@ slider2 = function() {
           // attach event bindings
           $slider.mouseout(function(e) {
             if (!$pane) {
-              if (e.toElement) {
-                if ($slider && !$slider[0].contains(e.toElement)) {
+              if (e.relatedTarget) {
+                if ($slider && !$slider[0].contains(e.relatedTarget)) {
                   api.log("[slider.mouseout]");
                   hideSlider("mouseout");
                 }
               } else {  // out of window
+                api.log("[slider.mouseout] out of window");
                 document.documentElement.addEventListener("mouseover", function f(e) {
                   this.removeEventListener("mouseover", f, true);
                   api.log("[document.mouseover]", e.target);
@@ -80,7 +78,9 @@ slider2 = function() {
                 }, true);
               }
             }
-          }).on("click", ".kifi-slider2-keep-btn", function() {
+          }).on("click", ".kifi-slider2-keep-btn", function(e) {
+            if (e.target !== this) return;
+            $(this).showHover("destroy");
             var el = this.parentNode;
             if (el.classList.contains("kifi-unkept")) {
               keepPage(el, false);
@@ -88,21 +88,38 @@ slider2 = function() {
               unkeepPage(el);
             }
             this.classList.add("kifi-hoverless");
+          }).on("mouseover", ".kifi-slider2-keep-btn", function(e) {
+            if (e.target !== this) {
+              this.classList.add("kifi-hoverless");
+            }
+            if ((e.target === this || e.target.parentNode === this) && (o.keepers || o.keeps)) {
+              $(this).showHover({
+                reuse: false,
+                showDelay: 250,
+                hideDelay: 800,
+                recovery: Infinity,
+                create: function(callback) {
+                  // TODO: preload friend pictures
+                  render("html/metro/keepers.html", {
+                    keepers: o.keepers,
+                    captionHtml: formatCountHtml(o.kept, o.private, (o.keepers || 0).length, o.otherKeeps)
+                  }, function(html) {
+                    callback($("<div class=kifi-slider2-tip>").html(html));
+                  });
+                }});
+            }
           }).on("mouseout", ".kifi-slider2-keep-btn", function() {
             this.classList.remove("kifi-hoverless");
           }).on("mouseenter", ".kifi-slider2-lock", function() {
             $(this).showHover({
               reuse: false,
               showDelay: 250,
-              hideDelay: 100,
               recovery: Infinity,
               create: function(callback) {
                 var html = this.parentNode.classList.contains("kifi-unkept") ?
                   "keep privately<br>(so only you can see it)" :
                   this.parentNode.classList.contains("kifi-public") ? "make private" : "make public";
-                var $h = $("<div class=kifi-slider2-tip>").html(html)
-                  .css({display: "block", visibility: "hidden"}).appendTo(this);
-                callback($h.css("left", 8 - $h[0].offsetWidth / 2).detach().css({display: "", visibility: ""}));
+                callback($("<div class=kifi-slider2-tip>").html(html), function(w) {this.style.left = 8 - w / 2 + "px"});
               }});
           }).on("click", ".kifi-slider2-lock", function(e) {
             if (e.target !== this) return;
@@ -253,6 +270,37 @@ slider2 = function() {
     });
     $pane = null;
     var $html = $("html").removeClass("kifi-with-pane");
+  }
+
+  function formatCountHtml(kept, isPrivate, numFriends, numOthers) {
+    // Awful decision tree. Got a better way?
+    if (kept) {
+      var priv = ""; // isPrivate ? " <span class=kifi-slider2-private>Private</span>" : "";
+      if (numFriends) {
+        if (numOthers) {
+          return "You" + priv + " + " + plural(numFriends, "friend") + " + " + plural(numOthers, "other") + " kept this";
+        }
+        return "You" + priv + " + " + plural(numFriends, "friend") + " kept this";
+      }
+      if (numOthers) {
+        return "You" + priv + " + " + plural(numOthers, "other") + " kept this";
+      }
+      return "You kept this" + priv;
+    }
+    if (numFriends) {
+      if (numOthers) {
+        return plural(numFriends, "friend") + " + " + plural(numOthers, "other") + " kept this";
+      }
+      return plural(numFriends, "friend") + " kept this";
+    }
+    if (numOthers) {
+      return plural(numOthers, "other") + " kept this";
+    }
+    return "No one kept this";
+  }
+
+  function plural(n, term) {
+    return n + " " + term + (n == 1 ? "" : "s");
   }
 
   // the slider API

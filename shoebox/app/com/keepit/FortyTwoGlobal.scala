@@ -21,20 +21,11 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
 
   def modules: Seq[Module]
 
-  private var creatingInjector = false
-  lazy val injector: Injector = {
-    if (creatingInjector) throw new Exception("Injector is being created!")
-    creatingInjector = true
-    try {
-      mode match {
-        case Mode.Dev => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
-        case Mode.Prod => Guice.createInjector(Stage.PRODUCTION, modules: _*)
-        case Mode.Test => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
-        case m => throw new IllegalStateException(s"Unknown mode $m")
-      }
-    } finally {
-      creatingInjector = false
-    }
+  lazy val injector: Injector = mode match {
+    case Mode.Dev => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
+    case Mode.Prod => Guice.createInjector(Stage.PRODUCTION, modules: _*)
+    case Mode.Test => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
+    case m => throw new IllegalStateException(s"Unknown mode $m")
   }
 
   override def getControllerInstance[A](clazz: Class[A]) = injector.getInstance(clazz)
