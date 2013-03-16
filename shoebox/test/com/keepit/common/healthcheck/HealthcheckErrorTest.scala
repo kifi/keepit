@@ -13,14 +13,45 @@ class HealthcheckErrorTest extends Specification {
 
   "HealthcheckError" should {
     "create signature" in {
-      val errors = for (i <- 1 to 3)
-        yield HealthcheckError(error = Some(new IllegalArgumentException("foo error = " + i, new RuntimeException("cause is bar " + i))), callType = Healthcheck.API)
-      errors(0).stackTraceHtml === errors(1).stackTraceHtml
-      errors(0).stackTraceHtml === errors(2).stackTraceHtml
+      def troubleMaker() =
+        for (i <- 1 to 2)
+          yield HealthcheckError(
+            error = Some(
+              new IllegalArgumentException(
+                "foo error = " + i,
+                new RuntimeException("cause is bar " + i))),
+            callType = Healthcheck.API)
+      def method1() = troubleMaker()
+      def method2() = method1()
+      def method3() = method2()
+      def method4() = method3()
+      def method5() = method3()
+      val errors = method4() ++ method5()
       errors(0).signature === errors(1).signature
       errors(0).signature === errors(2).signature
+      errors(0).signature === errors(3).signature
+      errors(0).signature.value === """wnVBULcUmJ6ZjPjLEvCW3A=="""
+    }
 
-      errors(0).titleHtml === "java.lang.IllegalArgumentException: foo error = 1\n<br/> &nbsp; Cause: java.lang.RuntimeException: cause is bar 1\n<br/> &nbsp; Cause: [No Cause]"
+    "causeStacktraceHead stack depth" in {
+      def troubleMaker(i: Int) =
+        HealthcheckError(
+          error = Some(
+            new IllegalArgumentException(
+              "foo error = " + i,
+              new RuntimeException("cause is bar " + i))),
+          callType = Healthcheck.API)
+      def method1() = troubleMaker(0)::troubleMaker(1)::Nil
+      def method2() = method1()
+      def method3() = method2()
+      def method4() = method3()
+      def method5() = method3()
+      val errors = method4() ++ method5()
+      errors(0).causeStacktraceHead(3) === errors(1).causeStacktraceHead(3)
+      errors(0).causeStacktraceHead(3) === errors(2).causeStacktraceHead(3)
+      errors(0).causeStacktraceHead(3) === errors(3).causeStacktraceHead(3)
+      errors(0).causeStacktraceHead(4) === errors(3).causeStacktraceHead(4)
+      errors(0).causeStacktraceHead(5) !== errors(3).causeStacktraceHead(5)
     }
   }
 }
