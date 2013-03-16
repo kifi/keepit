@@ -30,7 +30,6 @@ class HealthcheckErrorTest extends Specification {
       errors(0).signature === errors(1).signature
       errors(0).signature === errors(2).signature
       errors(0).signature === errors(3).signature
-      errors(0).signature.value === """wnVBULcUmJ6ZjPjLEvCW3A=="""
     }
 
     "causeStacktraceHead stack depth" in {
