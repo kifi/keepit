@@ -98,14 +98,9 @@ case class TestModule() extends ScalaModule {
     listenerBinder.addBinding().to(classOf[SliderShownListener])
   }
 
-  @Provides @Singleton
-  def clock = new FakeClock
-
   @Provides
-  def dateTime(clock: FakeClock) : DateTime = clock.pop
-
-  @Provides
-  def localDate(clock: FakeClock) : LocalDate = clock.pop.toLocalDate
+  @Singleton
+  def clock: Clock = new Clock()
 
   @Provides
   @AppScoped
@@ -116,26 +111,14 @@ case class TestModule() extends ScalaModule {
   def fortyTwoServices(dateTime: DateTime): FortyTwoServices = FortyTwoServices(dateTime)
 }
 
-case class FakeTimeModule() extends ScalaModule {
-  def configure(): Unit = {}
-
-  @Provides @Singleton
-  def clock = new FakeClock
-
-  @Provides
-  def dateTime(clock: FakeClock) : DateTime = clock.pop
-
-  @Provides
-  def localDate(clock: FakeClock) : LocalDate = clock.pop.toLocalDate
-}
-
-
-class FakeClock {
+class FakeClock extends Clock {
   val stack = MutableStack[DateTime]()
 
   def push(t : DateTime): FakeClock = { stack push t; this }
-  def push(d : LocalDate): FakeClock = { stack push d.toDateTimeAtStartOfDay(DEFAULT_DATE_TIME_ZONE); this }
-  def pop(): DateTime = if (stack.isEmpty) currentDateTime else stack.pop
+  def push(d : LocalDate): FakeClock = { stack push d.toDateTimeAtStartOfDay(clockZone); this }
+
+  def currentDate: LocalDate = currentDateTime.toLocalDate
+  def currentDateTime: DateTime = if (stack.isEmpty) super.currentDateTime else stack.pop
 }
 
 case class BabysitterModule() extends ScalaModule {

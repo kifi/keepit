@@ -25,17 +25,15 @@ class FortyTwoModule() extends ScalaModule {
       lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
       println("loading database driver %s".format(driverName))
     }))
-    bind[DateTime].toProvider(new Provider[DateTime](){
-      override def get(): DateTime = currentDateTime
-    })
   }
 
   @Provides
   @Singleton
-  def fortyTwoServices(dateTime: DateTime): FortyTwoServices = FortyTwoServices(dateTime)
+  def fortyTwoServices(clock: Clock): FortyTwoServices = FortyTwoServices(clock)
 
   @Provides
-  def localDate: LocalDate = currentDate
+  @Singleton
+  def clock: Clock = new Clock()
 
   @Provides
   @AppScoped

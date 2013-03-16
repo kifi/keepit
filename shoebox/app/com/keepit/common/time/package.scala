@@ -40,9 +40,10 @@ package object time {
   def currentDate(implicit zone: DateTimeZone) = new LocalDate(zone)
   def currentDateTime(implicit zone: DateTimeZone) = new DateTime(zone)
 
-  class Clock() {
-    def currentDate = currentDate
-    def currentDateTime(implicit zone: DateTimeZone) = new DateTime(zone)
+  class Clock(): LocalDate {
+    val clockZone: DateTimeZone = DEFAULT_DATE_TIME_ZONE
+    def currentDate: LocalDate = new LocalDate(defaultZone)
+    def currentDateTime: DateTime = new DateTime(defaultZone)
   }
 
   implicit val localDateOrdering = new Ordering[LocalDate] {
