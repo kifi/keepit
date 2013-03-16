@@ -20,10 +20,9 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.model._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.inject._
 
 @Singleton
-class ActivityStream {
+class ActivityStream @Inject (clock: Clock) {
   implicit val timeout = Timeout(1 second)
 
   lazy val default = Akka.system.actorOf(Props[ActivityStreamActor])
@@ -55,7 +54,7 @@ class ActivityStreamActor extends FortyTwoActor {
   def notifyAll(kind: String, json: JsObject) {
     val msg = Json.obj(
       "kind" -> kind,
-      "time" -> inject[DateTime].toStandardTimeString,
+      "time" -> clock.currentDateTime.toStandardTimeString,
       "activity" -> json
     )
     activityChannel.push(msg)

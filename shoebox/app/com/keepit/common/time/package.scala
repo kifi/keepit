@@ -1,5 +1,6 @@
 package com.keepit.common
 
+import com.google.inject.Singleton
 import java.util.Locale
 import org.joda.time.{DateTime, DateTimeZone, LocalDate, LocalTime}
 import org.joda.time.format.DateTimeFormat
@@ -40,10 +41,11 @@ package object time {
   def currentDate(implicit zone: DateTimeZone) = new LocalDate(zone)
   def currentDateTime(implicit zone: DateTimeZone) = new DateTime(zone)
 
-  class Clock(): LocalDate {
+  @Singleton
+  class Clock() {
     val clockZone: DateTimeZone = DEFAULT_DATE_TIME_ZONE
-    def currentDate: LocalDate = new LocalDate(defaultZone)
-    def currentDateTime: DateTime = new DateTime(defaultZone)
+    def currentDate: LocalDate = new LocalDate(clockZone)
+    def currentDateTime: DateTime = new DateTime(clockZone)
   }
 
   implicit val localDateOrdering = new Ordering[LocalDate] {

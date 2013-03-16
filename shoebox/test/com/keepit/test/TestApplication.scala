@@ -53,7 +53,6 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withFakeHttpClient() = overrideWith(FakeHttpClientModule())
   def withFakeStore() = overrideWith(FakeStoreModule())
   def withRealBabysitter() = overrideWith(BabysitterModule())
-  def withFakeTime() = overrideWith(FakeTimeModule())
   def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
 
   def overrideWith(model: Module): TestApplication =

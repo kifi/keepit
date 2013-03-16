@@ -32,10 +32,6 @@ class FortyTwoModule() extends ScalaModule {
   def fortyTwoServices(clock: Clock): FortyTwoServices = FortyTwoServices(clock)
 
   @Provides
-  @Singleton
-  def clock: Clock = new Clock()
-
-  @Provides
   @AppScoped
   def schedulerProvider(system: ActorSystem): Scheduler = {
     system.scheduler
