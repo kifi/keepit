@@ -17,8 +17,8 @@ import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.SchedulingPlugin
 
-//case object FetchAll
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
+private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
 private case object FetchAll
 
 private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: Database, socialRepo: SocialUserInfoRepo) extends FortyTwoActor with Logging {
@@ -28,11 +28,20 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: Database,
         socialRepo.getUnprocessed()
       }
       unprocessedUsers foreach { user =>
-        self ! FetchUserInfo(user)
+        self ! FetchUserInfoQuietly(user)
       }
       sender ! unprocessedUsers.size
 
     case FetchUserInfo(socialUserInfo) =>
+      sender ! fetchUserInfo(socialUserInfo)
+
+    case FetchUserInfoQuietly(socialUserInfo) =>
+      fetchUserInfo(socialUserInfo)
+
+    case m => throw new Exception("unknown message %s".format(m))
+  }
+
+  def fetchUserInfo(socialUserInfo: SocialUserInfo): Either[Exception, Seq[SocialConnection]] = {
       try {
         require(socialUserInfo.credentials.isDefined,
           "social user info's credentials are not defined: %s".format(socialUserInfo))
@@ -48,7 +57,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: Database,
         db.readWrite { implicit c =>
           socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }
-        sender ! Right(connections)
+        Right(connections)
       } catch {
         //todo(yonatan): healthcheck event, granular exception catching, frontend should be notified.
         case ex: Exception =>
@@ -56,11 +65,8 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: Database,
             socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
           }
           log.error("Problem Fetching User Info for %s".format(socialUserInfo), ex)
-          sender ! Left(ex)
+          Left(ex)
       }
-
-
-    case m => throw new Exception("unknown message %s".format(m))
   }
 }
 
@@ -69,7 +75,7 @@ trait SocialGraphPlugin extends SchedulingPlugin {
   def fetchAll(): Unit
 }
 
-class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: FacebookSocialGraph, db: Database, socialRepo: SocialUserInfoRepo) 
+class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: FacebookSocialGraph, db: Database, socialRepo: SocialUserInfoRepo)
     extends SocialGraphPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
@@ -80,7 +86,7 @@ class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: Faceboo
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting SocialGraphPluginImpl")
-    scheduleTask(system, 0 seconds, 1 minutes, actor, FetchAll)
+    scheduleTask(system, 10 seconds, 1 minutes, actor, FetchAll)
   }
   override def onStop() {
     log.info("stopping SocialGraphPluginImpl")
