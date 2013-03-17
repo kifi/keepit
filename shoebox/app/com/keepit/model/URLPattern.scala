@@ -43,7 +43,7 @@ trait URLPatternRepo extends Repo[URLPattern] {
 }
 
 @Singleton
-class URLPatternRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[URLPattern] with URLPatternRepo {
+class URLPatternRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[URLPattern] with URLPatternRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

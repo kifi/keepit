@@ -65,7 +65,7 @@ trait URLRepo extends Repo[URL] {
 }
 
 @Singleton
-class URLRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[URL] with URLRepo {
+class URLRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[URL] with URLRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

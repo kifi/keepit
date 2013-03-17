@@ -42,7 +42,7 @@ trait DuplicateDocumentRepo extends Repo[DuplicateDocument] {
 }
 
 @Singleton
-class DuplicateDocumentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[DuplicateDocument] with DuplicateDocumentRepo {
+class DuplicateDocumentRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[DuplicateDocument] with DuplicateDocumentRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

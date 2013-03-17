@@ -34,7 +34,7 @@ trait DomainToTagRepo extends Repo[DomainToTag] {
 }
 
 @Singleton
-class DomainToTagRepoImpl @Inject()(val db: DataBaseComponent)
+class DomainToTagRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock)
   extends DbRepo[DomainToTag] with DomainToTagRepo {
 
   import DBSession._

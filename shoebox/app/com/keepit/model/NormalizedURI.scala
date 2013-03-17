@@ -71,6 +71,7 @@ class NormalizedURICache @Inject() (val repo: FortyTwoCachePlugin) extends Forty
 @Singleton
 class NormalizedURIRepoImpl @Inject() (
   val db: DataBaseComponent,
+  val clock: Clock,
   idCache: NormalizedURICache)
     extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._

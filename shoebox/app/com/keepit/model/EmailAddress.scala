@@ -32,7 +32,7 @@ trait EmailAddressRepo extends Repo[EmailAddress] {
 }
 
 @Singleton
-class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[EmailAddress] with EmailAddressRepo {
+class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[EmailAddress] with EmailAddressRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

@@ -6,6 +6,7 @@ import org.joda.time.DateTime
 import play.api.Play.current
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
+import com.keepit.common.time.Clock
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -84,7 +85,12 @@ class MessageWithChildrenCountUriIdUserIdCache @Inject() (val repo: FortyTwoCach
 }
 
 @Singleton
-class CommentRepoImpl @Inject() (val db: DataBaseComponent, val commentCountCache: CommentCountUriIdCache, val messageWithChildrenCountCache: MessageWithChildrenCountUriIdUserIdCache) extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] {
+class CommentRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val commentCountCache: CommentCountUriIdCache,
+  val messageWithChildrenCountCache: MessageWithChildrenCountUriIdUserIdCache)
+    extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

@@ -44,8 +44,8 @@ package object time {
   @Singleton
   class Clock() {
     val clockZone: DateTimeZone = DEFAULT_DATE_TIME_ZONE
-    def currentDate: LocalDate = new LocalDate(clockZone)
-    def currentDateTime: DateTime = new DateTime(clockZone)
+    def today: LocalDate = new LocalDate(clockZone)
+    def now: DateTime = new DateTime(clockZone)
   }
 
   implicit val localDateOrdering = new Ordering[LocalDate] {

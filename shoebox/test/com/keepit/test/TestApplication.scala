@@ -107,7 +107,7 @@ case class TestModule() extends ScalaModule {
 
   @Provides
   @Singleton
-  def fortyTwoServices(dateTime: DateTime): FortyTwoServices = FortyTwoServices(dateTime)
+  def fortyTwoServices(clock: Clock): FortyTwoServices = FortyTwoServices(clock)
 }
 
 class FakeClock extends Clock {
@@ -116,8 +116,8 @@ class FakeClock extends Clock {
   def push(t : DateTime): FakeClock = { stack push t; this }
   def push(d : LocalDate): FakeClock = { stack push d.toDateTimeAtStartOfDay(clockZone); this }
 
-  def currentDate: LocalDate = currentDateTime.toLocalDate
-  def currentDateTime: DateTime = if (stack.isEmpty) super.currentDateTime else stack.pop
+  override def today: LocalDate = currentDateTime.toLocalDate
+  override def now: DateTime = if (stack.isEmpty) super.now else stack.pop
 }
 
 case class BabysitterModule() extends ScalaModule {

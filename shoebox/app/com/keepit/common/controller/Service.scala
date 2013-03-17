@@ -23,7 +23,7 @@ object ServiceType {
 
 case class FortyTwoServices(clock: Clock) {
 
-  val started = clock.currentDateTime
+  val started = clock.now
 
   val serviceByCode = Map(
     ServiceType.SHOEBOX.name -> ServiceType.SHOEBOX,
