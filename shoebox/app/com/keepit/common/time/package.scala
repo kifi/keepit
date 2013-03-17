@@ -41,6 +41,15 @@ package object time {
   def currentDate(implicit zone: DateTimeZone) = new LocalDate(zone)
   def currentDateTime(implicit zone: DateTimeZone) = new DateTime(zone)
 
+  /**
+   * Using a clock is similar to have inject a Provider[DateTime] and Provider[LocalDate] with the diferance that it has a bit nicer syntax and a bit easier to test.
+   * The reason we should avoid injecting the time object directly is that many times a time object injected
+   * it is used as the "now" or "today" time which wasn't accurate since the time the DateTime or LocalDate object
+   * where injected wasn't neccecarily the time that they where intended to use.
+   * For example, if a repo need a clock to time the update time of an entity then it should not use a DateTime that it got while
+   * instantiating, it should use a clock and ask it each time for a new timestamp.
+   * Avoiding the time object injection would help us avoid these very hard to spot bugs.
+  */
   @Singleton
   class Clock() {
     val clockZone: DateTimeZone = DEFAULT_DATE_TIME_ZONE
