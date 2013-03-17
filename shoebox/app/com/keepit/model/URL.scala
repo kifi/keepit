@@ -26,12 +26,7 @@ object URLHistoryCause {
   val SPLIT = URLHistoryCause("split")
   val MERGE = URLHistoryCause("merge")
 }
-case class URLHistory(date: DateTime, id: Id[NormalizedURI], cause: URLHistoryCause)
-
-object URLHistory {
-  def apply(id: Id[NormalizedURI], cause: URLHistoryCause): URLHistory = URLHistory(inject[DateTime], id, cause)
-  def apply(id: Id[NormalizedURI]): URLHistory = URLHistory(inject[DateTime], id, URLHistoryCause.CREATE)
-}
+case class URLHistory(date: DateTime, id: Id[NormalizedURI], cause: URLHistoryCause = URLHistoryCause.CREATE)
 
 case class URL (
   id: Option[Id[URL]] = None,
