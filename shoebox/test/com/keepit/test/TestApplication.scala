@@ -8,6 +8,7 @@ import com.google.inject.Module
 import com.google.inject.Singleton
 import com.google.inject.Provides
 import com.google.inject.util.Modules
+import com.keepit.common.logging.Logging
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.healthcheck.FakeHealthcheck
 import com.keepit.common.healthcheck.FakeHealthcheckModule
@@ -99,7 +100,11 @@ case class TestModule() extends ScalaModule {
 
   @Provides
   @Singleton
-  def clock: Clock = new Clock()
+  def fakeClock: FakeClock = new FakeClock()
+
+  @Provides
+  @Singleton
+  def clock(clock: FakeClock): Clock = clock
 
   @Provides
   @AppScoped
@@ -110,14 +115,24 @@ case class TestModule() extends ScalaModule {
   def fortyTwoServices(clock: Clock): FortyTwoServices = FortyTwoServices(clock)
 }
 
-class FakeClock extends Clock {
+class FakeClock extends Clock with Logging {
   val stack = MutableStack[DateTime]()
 
   def push(t : DateTime): FakeClock = { stack push t; this }
   def push(d : LocalDate): FakeClock = { stack push d.toDateTimeAtStartOfDay(clockZone); this }
 
-  override def today: LocalDate = currentDateTime.toLocalDate
-  override def now: DateTime = if (stack.isEmpty) super.now else stack.pop
+  override def today: LocalDate = this.now.toLocalDate
+  override def now: DateTime = {
+    if (stack.isEmpty) {
+      val nowTime = super.now
+      log.debug(s"FakeClock is retuning real now value: $nowTime")
+      nowTime
+    } else {
+      val fakeNowTime = stack.pop
+      log.debug(s"FakeClock is retuning fake now value: $fakeNowTime")
+      fakeNowTime
+    }
+  }
 }
 
 case class BabysitterModule() extends ScalaModule {
