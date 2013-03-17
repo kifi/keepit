@@ -22,10 +22,10 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 
 @Singleton
-class ActivityStream @Inject() (actor: ActivityStreamActor) {
+class ActivityStream @Inject() (clock: Clock) {
   implicit val timeout = Timeout(1 second)
 
-  lazy val default = Akka.system.actorOf(Props {actor})
+  lazy val default = Akka.system.actorOf(Props {new ActivityStreamActor(clock)})
 
   def newStream(): Future[(Iteratee[JsValue,_],Enumerator[JsValue])] = {
     (default ? NewStream).map {
