@@ -30,8 +30,8 @@ case class URLHistory(date: DateTime, id: Id[NormalizedURI], cause: URLHistoryCa
 
 case class URL (
   id: Option[Id[URL]] = None,
-  createdAt: DateTime = inject[DateTime],
-  updatedAt: DateTime = inject[DateTime],
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
   url: String,
   domain: Option[String],
   normalizedUriId: Id[NormalizedURI],
@@ -46,10 +46,8 @@ case class URL (
 }
 
 object URLFactory {
-  def apply(url: String, normalizedUriId: Id[NormalizedURI],
-      createdAt: DateTime = inject[DateTime], updatedAt: DateTime = inject[DateTime]) =
-    URL(url = url, normalizedUriId = normalizedUriId, domain = URI.parse(url).toOption.flatMap(_.host).map(_.name),
-      createdAt = createdAt, updatedAt = updatedAt)
+  def apply(url: String, normalizedUriId: Id[NormalizedURI]) =
+    URL(url = url, normalizedUriId = normalizedUriId, domain = URI.parse(url).toOption.flatMap(_.host).map(_.name))
 }
 
 @ImplementedBy(classOf[URLRepoImpl])
