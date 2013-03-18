@@ -205,6 +205,7 @@ slider2 = function() {
     info.private = privately;
     btn.classList.remove("kifi-unkept");
     btn.classList.add(privately ? "kifi-private" : "kifi-public");
+    $(".kifi-pane-kept").addClass("kifi-kept");
 
     logEvent("slider", "keep", {"isPrivate": privately});
 
@@ -225,6 +226,7 @@ slider2 = function() {
     delete info.private;
     btn.classList.remove("kifi-private", "kifi-public");
     btn.classList.add("kifi-unkept");
+    $(".kifi-pane-kept").removeClass("kifi-kept");
 
     logEvent("slider", "unkeep");
 
@@ -251,7 +253,12 @@ slider2 = function() {
     idleTimer.kill();
     render("html/metro/pane.html", {
       title: document.title,
-      url: location.href
+      url: location.href,
+      kifiLogoUrl: api.url("images/kifi_logo.png"),
+      gearUrl: api.url("images/metro/gear.png"),
+      kept: info.kept,
+      keepers: info.keepers,
+      keepersCaptionHtml: formatCountHtml(0, 0, (info.keepers || 0).length, info.otherKeeps)
     }, function(html) {
       var $html = $("html").addClass("kifi-pane-parent");
       $pane = $(html).appendTo($html).layout();

@@ -42,12 +42,12 @@
   z-index: 2147483640;
   bottom: 0;
   right: 0;
-  height: 72px;
-  width: 126px;
+  height: 68px;
+  width: 134px;
   font-size: 12px;
 }
 .kifi-slider2.kifi-visible {
-  width: 320px;
+  width: 322px;
   -webkit-transition: width 100ms ease-out;
   transition: width 100ms ease-out;
 }
@@ -63,8 +63,8 @@
 }
 .kifi-slider2-x {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
+  bottom: 6px;
+  right: 6px;
   height: 42px;
   width: 0;
   border-radius: 5px;
@@ -92,20 +92,20 @@
 }
 .kifi-slider2-keep {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
-  width: 126px;
+  bottom: 6px;
+  right: 6px;
+  width: 136px;
   height: 42px;
   border-radius: 5px;
   -webkit-transition: width .25s ease-in;
   transition: width .25s ease-in;
 }
 .kifi-pane-parent .kifi-slider2-keep {
-  left: 184px;
+  left: 180px;
   right: auto;
 }
 .kifi-with-pane .kifi-slider2-keep {
-  width: 94px;
+  width: 104px;
 }
 .kifi-slider2-keep-btn {
   position: absolute;
@@ -256,8 +256,8 @@
 
 .kifi-slider2-dock {
   position: absolute;
-  bottom: 10px;
-  right: 139px;
+  bottom: 6px;
+  right: 145px;
   width: 171px;
   height: 42px;
   background: #67829c;
@@ -383,12 +383,12 @@
 .kifi-pane {
   position: fixed;
   top: 0;
-  right: -320px;
+  right: -322px;
   bottom: 0;
   left: auto;
-  width: 320px;
+  width: 322px;
   height: 100%;
-  background: #1f272f;
+  background: #34495e;
   z-index: 2147483639;
   -webkit-transition: right .25s ease-in;
   transition: right .25s ease-in;
@@ -405,74 +405,125 @@ html.kifi-pane-parent {
   transition: margin-right .25s ease-in;
 }
 html.kifi-pane-parent.kifi-with-pane {
-  margin-right: 320px;
+  margin-right: 322px;
 }
 .kifi-pane-head {
-  height: 52px;
-  background: #141c24;
-  font: 300 14px/52px Lato,sans-serif;
-  color: #f8f8f8;
+  height: 39px;
+  background: #2c3e50;
 }
 .kifi-pane-head-logo {
-  padding-left: 18px;
-  cursor: default;
+  margin: 10px 0 0 19px;
+  width: 38px;
+  height: 18px;
+  border: 0;
+  padding: 0;
 }
 a.kifi-pane-head-settings {
   float: right;
-  padding: 0 18px;
-  color: inherit !important;
-  text-decoration: none !important;
+  width: 40px;
+  height: 100%;
+  margin-right: 6px;
+  background-size: 16px;
+  background-position: 12px 12px;
+  background-repeat: no-repeat;
 }
 a.kifi-pane-head-settings:hover {
-  color: #fff;
-  background: #283949;
+  background-color: #374d63;
+}
+a.kifi-pane-head-settings:active {
+  background-color: #324559;
 }
 .kifi-pane input[type=text].kifi-pane-search {
-  margin: 16px 18px;
-  width: 284px;
+  margin: 0 6px;
+  width: 308px;
   height: auto;
   box-sizing: border-box;
   border: none;
-  border-radius: 4px;
+  border-radius: 0;
   outline: none;
   box-shadow: none;
-  background: #fff;
-  padding: 12px 14px;
+  background: #ecf0f1;
+  padding: 9px 12px;
   font: 300 16px/20px Lato,sans-serif;
   color: #333;
+  transition: background-color linear .1s;
+}
+.kifi-pane input[type=text].kifi-pane-search:focus {
+  background: #fff;
+}
+.kifi-pane-general {
+  margin: 0 18px;
+  font: 300 13px Lato,sans-serif;
+  color: #f8f8f8;
 }
 .kifi-pane-page-title {
-  margin: 22px 18px 6px;
-  color: #f8f8f8;
-  font: 300 15px Lato,sans-serif;
+  margin: 22px 0 4px;
+  font-size: 15px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .kifi-pane-page-url {
-  margin: 0 18px;
-  color: #f8f8f8;
-  font: 300 13px Lato,sans-serif;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.kifi-pane-kept {
+  margin-top: 9px;
+  border-top: 1px solid #2c3e50;
+  line-height: 38px;
+}
+.kifi-pane-kept-y,
+.kifi-pane-kept.kifi-kept .kifi-pane-kept-n {
+  display: none;
+}
+.kifi-pane-kept.kifi-kept .kifi-pane-kept-y {
+  display: inline;
+}
+.kifi-pane-kept-by {
+  border-top: 1px solid #2c3e50;
+  padding-top: 9px;
+}
+.kifi-pane-keepers {
+  font-size: 0;
+  white-space: nowrap;
+  cursor: default;
+}
+.kifi-pane-keeper {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  margin-right: 1px;
+  background-size: 100%;
+  border-radius: 2px;
+  position: relative;
+}
+.kifi-pane-keepers-caption {
+  line-height: 31px;
+}
+.kifi-pane-in-collections {
+  border-top: 1px solid #2c3e50;
+  padding-top: 9px;
+}
+.kifi-pane-in-collections-list.kifi-none {
+  color: #aaa;
+}
 .kifi-pane-actions {
   position: absolute;
-  bottom: 100px;
-  left: 10px;
-  width: 300px;
+  bottom: 94px;
+  left: 0;
+  width: 100%;
   height: auto;
-  font: 300 14px Lato,sans-serif;
+  font: 300 14px/20px Lato,sans-serif;
   color: #f8f8f8;
 }
 a.kifi-pane-action {
   display: block;
-  padding: 10px 8px;
+  padding: 10px 18px;
   color: inherit !important;
   text-decoration: none !important;
 }
 a.kifi-pane-action:hover {
   color: #fff !important;
-  background: #283949;
+  background: #67829c;
 }
