@@ -95,8 +95,9 @@ class HashMapMemoryCache extends FortyTwoCachePlugin {
 
 trait Key[T] {
   val namespace: String
+  val version: Int = 1
   def toKey(): String
-  override final def toString: String = namespace + "#" + toKey()
+  override final def toString: String = namespace + "#" + version + "#" + toKey()
 }
 
 trait ObjectCache[K <: Key[T], T] {
