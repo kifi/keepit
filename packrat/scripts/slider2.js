@@ -130,12 +130,11 @@ slider2 = function() {
             } else {
               togglePrivate(el);
             }
-          }).on("click", ".kifi-slider2-pane", function() {
-            if (this.classList.contains("kifi-slider2-pane-hide")) {
-              this.classList.remove("kifi-slider2-pane-hide");
+          }).on("click", ".kifi-slider2-pane,.kifi-slider2-x", function() {
+            var cl = document.documentElement.classList;
+            if (cl.contains("kifi-with-pane")) {
               hidePane();
-            } else {
-              this.classList.add("kifi-slider2-pane-hide");
+            } else if (!cl.contains("kifi-pane-parent")) {
               showPane();
             }
           });
