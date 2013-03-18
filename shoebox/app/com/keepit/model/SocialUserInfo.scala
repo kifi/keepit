@@ -55,6 +55,7 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
 
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[List[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
+  override val version = 2
   def toKey(): String = userId.id.toString
 }
 class SocialUserInfoUserCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[SocialUserInfoUserKey, List[SocialUserInfo]] {

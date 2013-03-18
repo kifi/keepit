@@ -36,9 +36,23 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
     id: ExternalId[HealthcheckError] = ExternalId(), createdAt: DateTime = currentDateTime) {
 
   lazy val signature: HealthcheckErrorSignature = {
-    val permText: String = stackTraceHtml + path.getOrElse("") + method.getOrElse("") + callType.toString
+    val permText: String =
+      causeStacktraceHead(4).getOrElse(errorMessage.getOrElse("")) +
+      path.getOrElse("") +
+      method.getOrElse("") +
+      callType.toString
     val binaryHash = MessageDigest.getInstance("MD5").digest(permText.getBytes("UTF-8"))
     HealthcheckErrorSignature(new String(new Base64().encode(binaryHash), "UTF-8"))
+  }
+
+  def causeStacktraceHead(depth: Int, throwable: Option[Throwable] = error): Option[String] = throwable match {
+    case None => None
+    case Some(t) =>
+      causeStacktraceHead(depth, Option(t.getCause)) match {
+        case Some(msg) => Some(msg)
+        case None =>
+          Some(t.getStackTrace().take(depth).mkString)
+      }
   }
 
   lazy val stackTraceHtml: String = {
