@@ -13,8 +13,28 @@ import com.keepit.model._
 
 import com.google.inject.{Inject, Singleton}
 
-case class SliderInfo(bookmark: Option[Bookmark], following: Boolean, socialUsers: Seq[UserWithSocial], numComments: Int, numMessages: Int, neverOnSite: Option[UserToDomain], sensitive: Option[Boolean])
-case class SliderInitialInfo(bookmark: Option[Bookmark], socialUsers: Seq[UserWithSocial], numUnreadComments: Int, numUnreadMessages: Int, neverOnSite: Option[UserToDomain], sensitive: Option[Boolean], locator: Option[DeepLocator], shown: Option[Boolean], ruleGroup: Option[SliderRuleGroup], patterns: Option[Seq[String]])
+case class SliderInfo(
+  bookmark: Option[Bookmark],
+  following: Boolean,
+  socialUsers: Seq[UserWithSocial],
+  numComments: Int,
+  numMessages: Int,
+  neverOnSite: Option[UserToDomain],
+  sensitive: Option[Boolean])
+case class SliderInitialInfo(
+  bookmark: Option[Bookmark],
+  socialUsers: Seq[UserWithSocial],
+  numKeeps: Int,
+  numComments: Int,
+  numUnreadComments: Int,
+  numMessages: Int,
+  numUnreadMessages: Int,
+  neverOnSite: Option[UserToDomain],
+  sensitive: Option[Boolean],
+  locator: Option[DeepLocator],
+  shown: Option[Boolean],
+  ruleGroup: Option[SliderRuleGroup],
+  patterns: Option[Seq[String]])
 
 @Singleton
 class SliderInfoLoader @Inject() (db: Database,
@@ -74,24 +94,26 @@ class SliderInfoLoader @Inject() (db: Database,
         val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
         val socialUsers = sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
 
-        val numUnreadMessages = commentReadRepo.getParentsOfUnreadMessages(userId, uri.id.get).size
+        val numComments = commentRepo.getPublicCount(uri.id.get)
         val numUnreadComments = commentReadRepo.getUnreadCommentsCount(userId, uri.id.get)
-        val locator: Option[DeepLocator] = uri.id.flatMap { uriId =>
-          val messages = commentReadRepo.getParentsOfUnreadMessages(userId, uriId)
-          messages.size match {
-            case 0 => if (commentReadRepo.hasUnreadComments(userId, uriId)) Some(DeepLocator.ofCommentList) else None
-            case 1 => Some(DeepLocator.ofMessageThread(messages.head))
-            case _ => Some(DeepLocator.ofMessageThreadList)
-          }
+        val numMessages = commentRepo.getMessages(uri.id.get, userId).size
+        val unreadMessages = commentReadRepo.getParentsOfUnreadMessages(userId, uri.id.get)
+        val numUnreadMessages = unreadMessages.size
+        val locator: Option[DeepLocator] = numUnreadMessages match {
+          case 0 => if (numUnreadComments > 0) Some(DeepLocator.ofCommentList) else None
+          case 1 => Some(DeepLocator.ofMessageThread(unreadMessages.head))
+          case _ => Some(DeepLocator.ofMessageThreadList)
         }
         val shown: Option[Boolean] = if (locator.isDefined) None else uri.id.map { uriId =>
           historyTracker.getMultiHashFilter(userId).mayContain(uriId.id)
         }
 
-        SliderInitialInfo(bookmark, socialUsers, numUnreadComments, numUnreadMessages, neverOnSite, sensitive, locator, shown, ruleGroup, patterns)
+        SliderInitialInfo(
+          bookmark, socialUsers, keepersEdgeSet.size, numComments, numUnreadComments, numMessages, numUnreadMessages,
+          neverOnSite, sensitive, locator, shown, ruleGroup, patterns)
       case None =>
         val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
-        SliderInitialInfo(None, Nil, 0, 0, None, sensitive, None, None, None, None)
+        SliderInitialInfo(None, Nil, 0, 0, 0, 0, 0, neverOnSite, sensitive, None, None, None, None)
     }
   }
 }

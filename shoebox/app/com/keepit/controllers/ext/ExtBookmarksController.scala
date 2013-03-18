@@ -45,12 +45,15 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
     type wrapped = Option[(String, JsValue)]
     val result: Seq[wrapped] = Seq(
       Some("kept" -> JsBoolean(sliderInfo.bookmark.isDefined)),
-      sliderInfo.bookmark.map(b => "private" -> JsBoolean(sliderInfo.bookmark.map(_.isPrivate).getOrElse(false))),
-      Some("keptByAnyFriends" -> JsBoolean(sliderInfo.socialUsers.size > 0)), // Not needed on new slider
-      Some("friends" -> userWithSocialSerializer.writes(sliderInfo.socialUsers)),
-      Some("unreadComments" -> JsNumber(sliderInfo.numUnreadComments)),
-      Some("unreadMessages" -> JsNumber(sliderInfo.numUnreadMessages)),
-      Some("sensitive" -> JsBoolean(sliderInfo.sensitive.getOrElse(false))),
+      sliderInfo.bookmark.map(_.isPrivate) match { case Some(true) => Some("private" -> JsBoolean(true)); case _ => None },
+      sliderInfo.socialUsers match { case Nil => None; case _ => Some("keptByAnyFriends" -> JsBoolean(true)) }, // TODO: remove
+      sliderInfo.socialUsers match { case Nil => None; case u => Some("keepers" -> userWithSocialSerializer.writes(u)) },
+      sliderInfo.numKeeps match { case 0 => None; case n => Some("keeps" -> JsNumber(n)) },
+      sliderInfo.numComments match { case 0 => None; case n => Some("numComments" -> JsNumber(n)) },
+      sliderInfo.numUnreadComments match { case 0 => None; case n => Some("unreadComments" -> JsNumber(n)) },
+      sliderInfo.numMessages match { case 0 => None; case n => Some("numMessages" -> JsNumber(n)) },
+      sliderInfo.numUnreadMessages match { case 0 => None; case n => Some("unreadMessages" -> JsNumber(n)) },
+      sliderInfo.sensitive.flatMap { s => if (s) Some("sensitive" -> JsBoolean(true)) else None },
       sliderInfo.neverOnSite.map { _ => "neverOnSite" -> JsBoolean(true) },
       sliderInfo.locator.map { s => "locator" -> JsString(s.value) },
       sliderInfo.shown.map { "shown" -> JsBoolean(_) },
