@@ -61,7 +61,7 @@ class AdminDashboardControllerTest extends Specification with DbRepos {
         val authRequest = AuthenticatedRequest(null, u1.id.get, fakeRequest)
         authRequest.session.get(SecureSocial.ProviderKey) === Some("facebook")
         inject[FakeClock].push(today)
-        val result = AdminDashboardController.usersByDate(authRequest)
+        val result = inject[AdminDashboardController].usersByDate(authRequest)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         charset(result) must beSome("utf-8")

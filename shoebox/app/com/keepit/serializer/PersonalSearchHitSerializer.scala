@@ -2,7 +2,7 @@ package com.keepit.serializer
 
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
-import com.keepit.controllers.PersonalSearchHit
+import com.keepit.controllers.ext.PersonalSearchHit
 import com.keepit.model._
 import play.api.libs.json._
 

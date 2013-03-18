@@ -1,4 +1,4 @@
-package com.keepit.controllers
+package com.keepit.controllers.admin
 
 import play.api.data._
 import play.api._
@@ -13,11 +13,10 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsNumber
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.AdminController
 import com.keepit.model._
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.Hit
@@ -34,7 +33,17 @@ import org.apache.commons.math3.linear.EigenDecomposition
 import java.util.Random
 import views.html
 
-object SearchLabsController extends FortyTwoController {
+import com.google.inject.{Inject, Singleton}
+
+@Singleton
+class AdminSearchLabsController @Inject() (
+  db: Database,
+  mainSearcherFactory: MainSearcherFactory,
+  searchConfigManager: SearchConfigManager,
+  normalizedURIRepo: NormalizedURIRepo,
+  socialConnectionRepo: SocialConnectionRepo,
+  userRepo: UserRepo)
+    extends AdminController {
 
   def rankVsScore(q: Option[String] = None) = AdminHtmlAction { implicit request =>
     Ok(html.labs.rankVsScore(q))
@@ -42,8 +51,7 @@ object SearchLabsController extends FortyTwoController {
   def rankVsScoreJson(q: Option[String] = None) = AdminJsonAction { implicit request =>
     val topN = 50
     val fakeUserId = Id[User](-1)
-    val mainSearcherFactory = inject[MainSearcherFactory]
-    val config = inject[SearchConfigManager].defaultConfig
+    val config = searchConfigManager.defaultConfig
     val searcher = mainSearcherFactory(fakeUserId, Set.empty[Id[User]], SearchFilter.default(), config)
     val hits = new HitQueue(topN)
     val nullClickBoost = new ResultClickBoosts{ def apply(value: Long) = 1.0f }
@@ -53,11 +61,11 @@ object SearchLabsController extends FortyTwoController {
       friendsHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
       othersHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
     }
-    var data = inject[Database].readOnly { implicit s =>
+    var data = db.readOnly { implicit s =>
       var data = List.empty[JsArray]
       while (hits.size > 0) {
         val top = hits.top
-        val uri = inject[NormalizedURIRepo].get(Id[NormalizedURI](top.id))
+        val uri = normalizedURIRepo.get(Id[NormalizedURI](top.id))
         var title = uri.title.map(_.trim).getOrElse("")
         if (title == "") title = uri.url
         data = JsArray(Seq(JsNumber(hits.size), JsNumber(top.score), JsString(title)))::data
@@ -76,12 +84,11 @@ object SearchLabsController extends FortyTwoController {
     val data = new ArrayBuffer[JsArray]
     q.foreach{ q =>
       val userId = request.userId
-      val friendIds = inject[Database].readOnly { implicit s =>
-        inject[SocialConnectionRepo].getFortyTwoUserConnections(userId)
+      val friendIds = db.readOnly { implicit s =>
+        socialConnectionRepo.getFortyTwoUserConnections(userId)
       }
       val allUserIds = (friendIds + userId).toArray
 
-      val mainSearcherFactory = inject[MainSearcherFactory]
       val searcher = mainSearcherFactory.semanticVectorSearcher()
       val vectorMap = searcher.getSemanticVectors(allUserIds, q, Lang("en"), minKeeps.getOrElse(1))
       val size = vectorMap.size
@@ -116,8 +123,7 @@ object SearchLabsController extends FortyTwoController {
             if (n == 0 || n.isNaN()) 1.0 else n
           }
 
-          inject[Database].readOnly { implicit s =>
-            val userRepo = inject[UserRepo]
+          db.readOnly { implicit s =>
             (0 until size).map{ i =>
               val user = userRepo.get(userIndex(i))
               data += JsArray(Seq(JsNumber(x(i)/norm), JsNumber(y(i)/norm), JsString("%s %s".format(user.firstName, user.lastName))))
@@ -135,8 +141,11 @@ object SearchLabsController extends FortyTwoController {
   private def similarity(vectors1: Array[SemanticVector], vectors2: Array[SemanticVector]) = {
     val s = vectors1.zip(vectors2).foldLeft(0.0d){ case (sum, (v1, v2)) =>
       if (v1.bytes.isEmpty || v2.bytes.isEmpty) sum
-      else sum + v1.similarity(v2).toDouble
+      else {
+    	val tmp = v1.similarity(v2).toDouble
+    	sum + tmp*tmp
+      }
     }
-    (s / vectors1.length) - 1.0d - Double.MinPositiveValue
+    (sqrt(s) / vectors1.length) - 1.0d - Double.MinPositiveValue
   }
 }

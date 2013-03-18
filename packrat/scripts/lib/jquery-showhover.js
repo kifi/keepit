@@ -7,19 +7,19 @@ home-grown at FortyTwo, not intended for distribution (yet)
 // inside it (presumably absolutely positioned relative to the trigger) on mouseenter
 // (after a short delay) and to disappear on mouseleave (after a short delay).
 // Clicking the trigger toggles visibility of the hover element, with a small
-// refractory period after each show/hide.
+// recovery period during which clicks are ignored after each show.
 
 !function($) {
   $.fn.showHover = function(method) {
     if (this.length > 1) {
-      $.error("jQuery.showHover invoked on too many elements: " + this.length);
+      $.error("jQuery.showHover invoked on " + this.length + " elements");
     }
     if (typeof method === "string") {
       var f = methods[method];
       if (f) {
         f.apply(this[0], Array.prototype.slice.call(arguments, 1));
       } else {
-        $.error("No method " +  method + " on jQuery.showHover");
+        $.error("jQuery.showHover has no method '" +  method + "'");
       }
     } else {
       methods.init.apply(this[0], arguments);
@@ -28,40 +28,105 @@ home-grown at FortyTwo, not intended for distribution (yet)
   }
 
   var methods = {
-    init: function(createHover) {
-      var $a = $(this), data = $a.data();
-      if (!data.hover) {
-        data.hover = {lastEventTime: 0};
-        var t, $h = $(createHover.call(this)).appendTo($a);
-        $a.on("mouseenter.showHover", function() {
-          clearTimeout(t);
-          t = setTimeout(function() {
-            $h.show();
-            $a.addClass("kifi-hover-showing");
-            data.hover.lastEventTime = +new Date;
-          }, 100);
-        }).on("mouseleave.showHover", function(e) {
-          if (e.toElement && this.contains(e.toElement)) return;
-          clearTimeout(t);
-          t = setTimeout(function() {
-            $a.removeClass("kifi-hover-showing");
-            $h.css("display", "");
-            data.hover.lastEventTime = +new Date;
-          }, 200);
+    init: function(opts) {
+      var $a = $(this), data = $a.data("hover");
+      opts = $.extend({
+          create: $.noop,
+          showDelay: 100,
+          hideDelay: 0,
+          recovery: 160,  // ms since last show before click will be honored
+          reuse: true},
+        typeof opts === "function" ? {create: opts} : opts);
+      if (data) {
+        onMouseEnter(opts.showDelay);
+      } else {
+        var t0 = +new Date;
+        $a.data("hover", data = {lastShowTime: 0});
+        setTimeout(opts.create.bind(this, function(hover, useSize) {
+          var $h = $(hover);
+          if (useSize) {
+            $h.css({visibility: "hidden", display: "block"}).appendTo($a);
+            var r = $h[0].getBoundingClientRect();
+            $h.css({visibility: "", display: ""});
+            useSize.call($h[0], r.width, r.height);
+          } else {
+            $h.appendTo($a);
+          }
+          data.$h = $h;
+          onMouseEnter(Math.max(0, opts.showDelay - (new Date - t0)));
+        }));
+        $a.on("mouseout.showHover", function(e) {
+          if (!e.relatedTarget || !this.contains(e.relatedTarget)) {
+            onMouseLeave(opts.hideDelay, e);
+          }
         }).on("click.showHover", function(e) {
-          if ($h[0].contains(e.target)) return;
-          if (new Date - data.hover.lastEventTime > 200) {
-            clearTimeout(t);
-            $a.toggleClass("kifi-hover-showing");
+          if (!data.$h[0].contains(e.target) && new Date - data.lastShowTime > opts.recovery) {
+            if ($a.hasClass("kifi-hover-showing")) {
+              onMouseLeave();
+            } else {
+              onMouseEnter(0);
+            }
           }
         });
       }
+      function onMouseEnter(ms) {
+        data.inEither = true;
+        clearTimeout(data.t);
+        if (ms) {
+          data.t = setTimeout(show, ms);
+        } else {
+          show();
+        }
+      }
+      function onMouseLeave(ms, e) {
+        data.inEither = false;
+        clearTimeout(data.t);
+        if (ms && between(e.clientX, e.clientY)) {
+          document.addEventListener("mousemove", onMouseMove, true);
+          data.t = setTimeout(hide, ms);
+        } else {
+          hide();
+        }
+      }
+      function onMouseMove(e) {
+        if (!between(e.clientX, e.clientY)) {
+          if (!data.inEither) {
+            hide();
+          }
+          document.removeEventListener("mousemove", onMouseMove, true);
+        }
+      }
+      function show() {
+        data.$h.show();
+        $a.addClass("kifi-hover-showing");
+        data.lastShowTime = +new Date;
+      }
+      function hide() {
+        $a.removeClass("kifi-hover-showing");
+        if (opts.reuse) {
+          data.$h.css("display", "");
+        } else {
+          $a.showHover("destroy");
+        }
+      }
+      // Returns whether the viewport coords (x, y) are in the trapezoid between the top edge
+      // of hover trigger element and the bottom edge of the hover element.
+      function between(x, y) {
+        var rT = $a[0].getBoundingClientRect(), rH = data.$h[0].getBoundingClientRect();
+        return y >= rH.bottom && y <= rT.top &&
+          !leftOf(x, y, rH.left, rH.bottom, rT.left, rT.top) &&
+          leftOf(x, y, rH.right, rH.bottom, rT.right, rT.top);
+      }
     },
-    enter: function() {
-      $(this).triggerHandler("mouseover.showHover");
-    },
-    unbind: function() {
-      $(this).unbind(".showHover");
-      // TODO: destroy hover?
-    }};
+    destroy: function() {
+      var $a = $(this);
+      $(($a.data("hover") || 0).$h).remove();
+      $a.unbind(".showHover").removeData("hover");
+    }
+  };
+
+  // Returns whether (x, y) is left of the line between (x1, y1) and (x2, y2).
+  function leftOf(x, y, x1, y1, x2, y2) {
+    return (x2 - x1) * (y - y1) > (y2 - y1) * (x - x1);
+  }
 }(jQuery);

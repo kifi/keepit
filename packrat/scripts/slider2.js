@@ -3,7 +3,7 @@
 // #require styles/comments.css
 // @require scripts/lib/jquery-1.8.2.min.js
 // #require scripts/lib/jquery-ui-1.9.1.custom.min.js
-// #require scripts/lib/jquery-showhover.js
+// @require scripts/lib/jquery-showhover.js
 // #require scripts/lib/jquery-tokeninput-1.6.1.min.js
 // #require scripts/lib/jquery.timeago.js
 // @require scripts/lib/keymaster.min.js
@@ -45,37 +45,91 @@ slider2 = function() {
         // "sensitive": o.sensitive,
         // "site": location.hostname,
         // "neverOnSite": o.neverOnSite,
-        "newComments": 35,  // TODO: hook up real values
-        "newMessages": 4//,
-        // "connected_networks": api.url("images/networks.png"),
-        // "socialConnections": o.friends.length == 0 ? null : {
-        //   countText: summaryText(o.friends.length, o.kept),
-        //   friends: o.friends}
+        "newComments": o.unreadComments,
+        "newMessages": o.unreadMessages,
+        // "connected_networks": api.url("images/networks.png")
       }, function(html) {
         if (document.querySelector(".kifi-slider2")) {
           api.log("[showSlider] already there");  // TODO: remove old one? perhaps from previous installation
         } else {
-          $slider = $(html).appendTo("html").layout().addClass("kifi-visible");
+          $slider = $(html).appendTo("html").layout().addClass("kifi-visible kifi-growing")
+          .on("transitionend webkitTransitionEnd", function f(e) {
+            if (e.target === $slider[0]) {
+              $slider.off("transitionend webkitTransitionEnd", f).removeClass("kifi-growing");
+            }
+          });
 
           // attach event bindings
-          $slider.on("click", ".kifi-slider2-keep", function() {
-            if (this.classList.contains("kifi-unkept")) {
-              keepPage(this, false);
-            } else {
-              unkeepPage(this);
+          $slider.mouseout(function(e) {
+            if (!$pane) {
+              if (e.relatedTarget) {
+                if ($slider && !$slider[0].contains(e.relatedTarget)) {
+                  api.log("[slider.mouseout]");
+                  hideSlider("mouseout");
+                }
+              } else {  // out of window
+                api.log("[slider.mouseout] out of window");
+                document.documentElement.addEventListener("mouseover", function f(e) {
+                  this.removeEventListener("mouseover", f, true);
+                  api.log("[document.mouseover]", e.target);
+                  if ($slider && !$slider[0].contains(e.target)) {
+                    hideSlider("mouseout");
+                  }
+                }, true);
+              }
             }
+          }).on("click", ".kifi-slider2-keep-btn", function(e) {
+            if (e.target !== this) return;
+            $(this).showHover("destroy");
+            var el = this.parentNode;
+            if (el.classList.contains("kifi-unkept")) {
+              keepPage(el, false);
+            } else {
+              unkeepPage(el);
+            }
+            this.classList.add("kifi-hoverless");
+          }).on("mouseover", ".kifi-slider2-keep-btn", function(e) {
+            if (e.target !== this) {
+              this.classList.add("kifi-hoverless");
+            }
+            if ((e.target === this || e.target.parentNode === this) && (o.keepers || o.keeps)) {
+              $(this).showHover({
+                reuse: false,
+                showDelay: 250,
+                hideDelay: 800,
+                recovery: Infinity,
+                create: function(callback) {
+                  // TODO: preload friend pictures
+                  render("html/metro/keepers.html", {
+                    keepers: o.keepers,
+                    captionHtml: formatCountHtml(o.kept, o.private, (o.keepers || 0).length, o.otherKeeps)
+                  }, function(html) {
+                    callback($("<div class=kifi-slider2-tip>").html(html));
+                  });
+                }});
+            }
+          }).on("mouseout", ".kifi-slider2-keep-btn", function() {
+            this.classList.remove("kifi-hoverless");
+          }).on("mouseenter", ".kifi-slider2-lock", function() {
+            $(this).showHover({
+              reuse: false,
+              showDelay: 250,
+              recovery: Infinity,
+              create: function(callback) {
+                var html = this.parentNode.classList.contains("kifi-unkept") ?
+                  "keep privately<br>(so only you can see it)" :
+                  this.parentNode.classList.contains("kifi-public") ? "make private" : "make public";
+                callback($("<div class=kifi-slider2-tip>").html(html), function(w) {this.style.left = 8 - w / 2 + "px"});
+              }});
           }).on("click", ".kifi-slider2-lock", function(e) {
-            e.stopPropagation();
-            var btn = this.parentNode;
-            if (btn.classList.contains("kifi-unkept")) {
-              keepPage(btn, true);
+            if (e.target !== this) return;
+            $(this).showHover("destroy");
+            var el = this.parentNode;
+            if (el.classList.contains("kifi-unkept")) {
+              keepPage(el, true);
             } else {
-              togglePrivate(btn);
+              togglePrivate(el);
             }
-          }).on("mouseover", ".kifi-slider2-lock", function() {
-            this.parentNode.classList.add("kifi-lock-hover");
-          }).on("mouseout", ".kifi-slider2-lock", function() {
-            this.parentNode.classList.remove("kifi-lock-hover");
           }).on("click", ".kifi-slider2-pane", function() {
             if (this.classList.contains("kifi-slider2-pane-hide")) {
               this.classList.remove("kifi-slider2-pane-hide");
@@ -90,9 +144,7 @@ slider2 = function() {
 
           if (locator) {
             openDeepLink(o.session, locator);
-          } else if (trigger == "tile") {
-            idleTimer.start(100, true);
-          } else {
+          } else if (trigger != "tile") {
             idleTimer.start(5000);
           }
         }
@@ -102,29 +154,27 @@ slider2 = function() {
   // trigger is for the event log (e.g. "key", "icon"). pass no trigger if just hiding slider temporarily.
   function hideSlider(trigger) {
     idleTimer.kill();
-    $slider.addClass("kifi-hidden").on("transitionend webkitTransitionEnd", function(e) {
-      if (trigger && e.originalEvent.propertyName == "opacity") {
-        $slider.remove();
-        $slider = null;
+    $slider.addClass("kifi-hidden").removeClass("kifi-visible").on("transitionend webkitTransitionEnd", function(e) {
+      if (e.target.classList.contains("kifi-slider2") && e.originalEvent.propertyName == "opacity" && trigger) {
+        $(e.target).remove();
       }
     });
+    $slider = null;
     if (trigger) {
       logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
     }
   }
 
   var idleTimer = {
-    start: function(ms, isInside) {
+    start: function(ms) {
       idleTimer.ms = ms = ms > 0 ? ms : idleTimer.ms;
-      api.log("[idleTimer.start]", ms, "ms", isInside != null ? isInside : "");
+      api.log("[idleTimer.start]", ms, "ms");
       var t = idleTimer;
       clearTimeout(t.timeout);
-      if (!isInside) {
-        t.timeout = setTimeout(function hideSliderIdle() {
-          api.log("[hideSliderIdle]");
-          hideSlider("idle");
-        }, ms);
-      }
+      t.timeout = setTimeout(function hideSliderIdle() {
+        api.log("[hideSliderIdle]");
+        hideSlider("idle");
+      }, ms);
       $slider
         .off("mouseenter", t.clear).on("mouseenter", t.clear)
         .off("mouseleave", t.start).on("mouseleave", t.start);
@@ -212,13 +262,45 @@ slider2 = function() {
 
   function hidePane() {
     api.log("[hidePane]");
-    $pane.on("transitionend webkitTransitionEnd", function() {
-      $pane.remove();
-      $pane = null;
-      $html.removeClass("kifi-pane-parent");
+    $pane.on("transitionend webkitTransitionEnd", function(e) {
+      if (e.target.classList.contains("kifi-pane")) {
+        $(e.target).remove();
+        $html.removeClass("kifi-pane-parent");
+      }
     });
+    $pane = null;
     var $html = $("html").removeClass("kifi-with-pane");
-    idleTimer.start(100, true);
+  }
+
+  function formatCountHtml(kept, isPrivate, numFriends, numOthers) {
+    // Awful decision tree. Got a better way?
+    if (kept) {
+      var priv = ""; // isPrivate ? " <span class=kifi-slider2-private>Private</span>" : "";
+      if (numFriends) {
+        if (numOthers) {
+          return "You" + priv + " + " + plural(numFriends, "friend") + " + " + plural(numOthers, "other") + " kept this";
+        }
+        return "You" + priv + " + " + plural(numFriends, "friend") + " kept this";
+      }
+      if (numOthers) {
+        return "You" + priv + " + " + plural(numOthers, "other") + " kept this";
+      }
+      return "You kept this" + priv;
+    }
+    if (numFriends) {
+      if (numOthers) {
+        return plural(numFriends, "friend") + " + " + plural(numOthers, "other") + " kept this";
+      }
+      return plural(numFriends, "friend") + " kept this";
+    }
+    if (numOthers) {
+      return plural(numOthers, "other") + " kept this";
+    }
+    return "No one kept this";
+  }
+
+  function plural(n, term) {
+    return n + " " + term + (n == 1 ? "" : "s");
   }
 
   // the slider API

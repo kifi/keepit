@@ -57,10 +57,10 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
       sliderInfo.neverOnSite.map { _ => "neverOnSite" -> JsBoolean(true) },
       sliderInfo.locator.map { s => "locator" -> JsString(s.value) },
       sliderInfo.shown.map { "shown" -> JsBoolean(_) },
-      sliderInfo.ruleGroup.map {"rules" -> _.compactJson},
-      sliderInfo.patterns.map(p => "patterns" -> JsArray(p.map(JsString))))
+      sliderInfo.ruleGroup.map { "rules" -> _.compactJson },
+      sliderInfo.patterns.map { p => "patterns" -> JsArray(p.map(JsString)) })
 
-    Ok(JsObject(result flatten))
+    Ok(JsObject(result.flatten))
   }
 
   def remove() = AuthenticatedJsonAction { request =>

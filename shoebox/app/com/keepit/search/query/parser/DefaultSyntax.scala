@@ -8,11 +8,13 @@ import scala.util.matching.Regex.Match
 import scala.collection.mutable.ArrayBuffer
 
 object DefaultSyntax {
+  val queryFields = Set("", "site")
+
   val spacesRegex = """\p{Zs}+""".r
   val qualifierRegex = """([+-])[^\p{Zs}]""".r
   val fieldRegex = """(\w+):\p{Zs}*""".r
   val termRegex = """([^\p{Zs}]+)[\p{Zs}$]*""".r
-  val quotedTermRegex = """\"([^\"]*)\"[\p{Zs}$]""".r
+  val quotedTermRegex = """\"((([^\"])|(\"[^\p{Zs}]))*)\"([\p{Zs}]|$)""".r
   val endOfQueryRegex = """($)""".r
 
   case class QuerySpec(occur: Occur, field: String, term: String, quoted: Boolean)
@@ -20,6 +22,8 @@ object DefaultSyntax {
 
 trait DefaultSyntax extends QueryParser {
   import DefaultSyntax._
+
+  override val fields = queryFields
 
   private[this] var buf: CharSequence = ""
 
@@ -118,17 +122,5 @@ trait DefaultSyntax extends QueryParser {
       getBooleanQuery(clauses)
     }
   }
-}
-
-object Tst extends App {
-  import com.keepit.search.Lang
-  import com.keepit.search.index.DefaultAnalyzer
-
-  val analyzer = DefaultAnalyzer.forParsing(Lang("en"))
-  val parser = new QueryParser(analyzer, None) with DefaultSyntax {
-    override val fields = Set("", "site")
-  }
-
-  println(parser.parse("\""))
 }
 

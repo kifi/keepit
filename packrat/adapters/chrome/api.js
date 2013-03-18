@@ -285,7 +285,19 @@ api = function() {
           callback(bm && bm[0]);
         });
       },
-      getAll: chrome.bookmarks.getTree.bind(chrome.bookmarks),
+      getAll: function(callback) {
+        chrome.bookmarks.getTree(function(bm) {
+          var arr = [];
+          !function traverse(b) {
+            if (b.children) {
+              b.children.forEach(traverse);
+            } else if (/^https?:/.test(b.url)) {
+              arr.push({id: b.id, url: b.url, title: b.title});
+            }
+          }(bm && bm[0]);
+          callback(arr);
+        });
+      },
       getBarFolder: function(callback) {
         chrome.bookmarks.getChildren("0", function(bm) {
           callback(bm.filter(function(bm) { return bm.title == "Bookmarks Bar" })[0] || bm[0]);

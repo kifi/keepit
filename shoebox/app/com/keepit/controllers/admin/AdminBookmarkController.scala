@@ -38,7 +38,6 @@ import views.html
 @Singleton
 class AdminBookmarksController @Inject() (db: Database,
   scraper: ScraperPlugin,
-  uriGraphPlugin: URIGraphPlugin,
   bookmarkRepo: BookmarkRepo,
   uriRepo: NormalizedURIRepo,
   socialRepo: UserWithSocialRepo,
@@ -96,16 +95,13 @@ class AdminBookmarksController @Inject() (db: Database,
       }
     }
     log.info("updating changed users")
-    uriGraphPlugin.update()
     Redirect(request.request.referer)
   }
 
   //this is an admin only task!!!
   def delete(id: Id[Bookmark]) = AdminHtmlAction { request =>
     db.readWrite { implicit s =>
-      val bookmark = bookmarkRepo.get(id)
       bookmarkRepo.delete(id)
-      uriGraphPlugin.update()
       Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
     }
   }

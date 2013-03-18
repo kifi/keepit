@@ -337,48 +337,44 @@ api.log("[google_inject]");
       e.stopPropagation();
       location.href = "https://" + response.server + "/admin/search/results/" + response.uuid;
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
-      var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
-      var friend = response.hits[i].users[j];
-      render("html/friend_card.html", {
-        name: friend.firstName + " " + friend.lastName,
-        facebookId: friend.facebookId,
-        iconsUrl: api.url("images/social_icons.png")
-      }, function(html) {
-        $a.showHover(function() {
+      var $a = $(this).showHover({
+        hideDelay: 600,
+        create: function(callback) {
+          var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
+          var friend = response.hits[i].users[j];
+          render("html/friend_card.html", {
+            name: friend.firstName + " " + friend.lastName,
+            facebookId: friend.facebookId,
+            iconsUrl: api.url("images/social_icons.png")
+          }, callback);
           api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
             $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
           });
-          return html;
-        }).showHover("enter");
-      });
+        }});
     }).on("mouseenter", ".kifi-res-friends", function() {
-      var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;
-      render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
-        $a.showHover(function() {
-          // measuring in order to center hover box above link
-          var $h = $(html)
-            .css({visibility: "hidden", display: "block"})
-            .appendTo(this);
-          return $h.css("left", .5 * (this.offsetWidth - $h[0].offsetWidth))
-            .css({visibility: "", display: ""})
-            .detach();
-        }).showHover("enter");
+      var $a = $(this).showHover(function(callback) {
+        var i = $a.closest("li.g").prevAll("li.g").length;
+        render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
+          callback(html, function(w) {this.style.left = ($a[0].offsetWidth - w) / 2 + "px"});
+        });
       });
     }).on("mouseenter", ".kifi-chatter", function() {
-      var $ch = $(this), n = $ch.data("n");
-      render("html/search/chatter.html", {
-          numComments: n[0],
-          numMessages: n[1],
-          pluralize: function() {return pluralLambda}
-        }, function(html) {
-          $ch.showHover(function() {
-            return $(html).on("transitionend", function(e) {
-              if (e.originalEvent.propertyName === "opacity" && $(this).css("opacity") < .1) {
+      var $ch = $(this).showHover({
+        hideDelay: 600,
+        create: function(callback) {
+          var n = $ch.data("n");
+          render("html/search/chatter.html", {
+            numComments: n[0],
+            numMessages: n[1],
+            pluralize: function() {return pluralLambda}
+          }, function(html) {
+            callback($(html).on("transitionend", function(e) {
+              if (e.originalEvent.propertyName === "opacity" && !$ch.hasClass("kifi-hover-showing")) {
                 this.style.display = "none";
               }
-            });
-          }).showHover("enter")
-        });
+            }));
+          });
+        }});
     }).on("click", ".kifi-chatter-deeplink", function() {
       api.port.emit("add_deep_link_listener", {locator: $(this).data("locator")});
       location.href = $(this).closest("li.g").find("h3.r a")[0].href;
@@ -487,7 +483,7 @@ api.log("[google_inject]");
 
     hit.count = hit.count - hit.users.length - (hit.isMyBookmark ? 1 : 0);
 
-    // Awful decision tree for clean text. Come up with a better way.
+    // Awful decision tree. Got a better way?
     if (hit.isMyBookmark) { // you
       var priv = hit.isPrivate ? " <span class=kifi-res-private>Private</span>" : "";
       if (numFriends == 0) { // no friends

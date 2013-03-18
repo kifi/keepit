@@ -3,7 +3,7 @@ package com.keepit.serializer
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
-import com.keepit.controllers._
+import com.keepit.controllers.ext._
 import play.api.libs.json._
 
 class PersonalSearchResultSerializer extends Writes[PersonalSearchResult] with Logging {
@@ -13,7 +13,7 @@ class PersonalSearchResultSerializer extends Writes[PersonalSearchResult] with L
       JsObject(List(
         "count"  -> JsString(res.count.toString()),
         "bookmark" -> PersonalSearchHitSerializer.hitSerializer.writes(res.hit),
-        "users" -> UserWithSocialSerializer.userWithSocialSerializer.writes(res.users),
+        "users" -> BasicUserSerializer.basicUserSerializer.writes(res.users),
         "score" -> JsNumber(res.score),
         "isMyBookmark" -> JsBoolean(res.isMyBookmark),
         "isPrivate" -> JsBoolean(res.isPrivate)

@@ -24,9 +24,7 @@ import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.SchedulingPlugin
 
-trait DataIntegrityPlugin extends SchedulingPlugin {
-  def cron(): Unit
-}
+trait DataIntegrityPlugin extends SchedulingPlugin
 
 class DataIntegrityPluginImpl @Inject() (system: ActorSystem)
   extends Logging with DataIntegrityPlugin {
@@ -35,16 +33,12 @@ class DataIntegrityPluginImpl @Inject() (system: ActorSystem)
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(system, 10 seconds, 1 hour, actor, CleanOrphans)
-  }
-
-  override def cron(): Unit = {
-    if (currentDateTime.hourOfDay().get() == 21) // 9pm PST
-      actor ! CleanOrphans
+    scheduleTask(system, 5 minutes, 1 hour, actor, Cron)
   }
 }
 
 private[scraper] case object CleanOrphans
+private[scraper] case object Cron
 
 private[scraper] class DataIntegrityActor() extends FortyTwoActor with Logging {
 
@@ -55,6 +49,9 @@ private[scraper] class DataIntegrityActor() extends FortyTwoActor with Logging {
         orphanCleaner.cleanNormalizedURIs()
         orphanCleaner.cleanScrapeInfo()
       }
+    case Cron =>
+      if (currentDateTime.hourOfDay().get() == 21) // 9pm PST
+        self ! CleanOrphans
     case unknown =>
       throw new Exception("unknown message: %s".format(unknown))
   }

@@ -2,7 +2,6 @@ package com.keepit.scraper
 
 import com.keepit.common.logging.Logging
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -28,41 +27,49 @@ object Scraper {
   val maxContentChars = 100000 // 100K chars
 }
 
-class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, scraperConfig: ScraperConfig) extends Logging {
+class Scraper @Inject() (
+  db: Database,
+  httpFetcher: HttpFetcher,
+  articleStore: ArticleStore,
+  scraperConfig: ScraperConfig,
+  scrapeInfoRepo: ScrapeInfoRepo,
+  normalizedURIRepo: NormalizedURIRepo,
+  healthcheckPlugin: HealthcheckPlugin,
+  unscrapableRepo: UnscrapableRepo)
+    extends Logging {
 
   implicit val config = scraperConfig
 
   def run(): Seq[(NormalizedURI, Option[Article])] = {
     val startedTime = currentDateTime
-    log.debug("starting a new scrape round")
-    val tasks = inject[Database].readOnly { implicit s =>
-      inject[ScrapeInfoRepo].getOverdueList().map{ info => (inject[NormalizedURIRepo].get(info.uriId), info) }
+    log.info("starting a new scrape round")
+    val tasks = db.readOnly { implicit s =>
+      scrapeInfoRepo.getOverdueList().map{ info => (normalizedURIRepo.get(info.uriId), info) }
     }
-    log.debug("got %s uris to scrape".format(tasks.length))
+    log.info("got %s uris to scrape".format(tasks.length))
     val scrapedArticles = tasks.map{ case (uri, info) => safeProcessURI(uri, info) }
     val jobTime = Seconds.secondsBetween(startedTime, currentDateTime).getSeconds()
-    log.debug("succesfuly scraped %s articles out of %s in %s seconds:\n%s".format(
+    log.info("succesfuly scraped %s articles out of %s in %s seconds:\n%s".format(
         scrapedArticles.flatMap{ a => a._2 }.size, tasks.size, jobTime, scrapedArticles map {a => a._1} mkString "\n"))
     scrapedArticles
   }
 
   def safeProcessURI(uri: NormalizedURI): (NormalizedURI, Option[Article]) = {
-    val repo = inject[ScrapeInfoRepo]
-    val info = inject[Database].readWrite { implicit s =>
-      repo.getByUri(uri.id.get).getOrElse(repo.save(ScrapeInfo(uriId = uri.id.get)))
+    val info = db.readWrite { implicit s =>
+      scrapeInfoRepo.getByUri(uri.id.get).getOrElse(scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get)))
     }
     safeProcessURI(uri, info)
   }
 
   private def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {
-      processURI(uri, info, false)
+      processURI(uri, info)
     } catch {
       case e: Throwable =>
         log.error("uncaught exception while scraping uri %s".format(uri), e)
-        inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL))
-        val errorURI = inject[Database].readWrite { implicit s =>
-          inject[ScrapeInfoRepo].save(info.withFailure())
-          inject[NormalizedURIRepo].save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
+        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL))
+        val errorURI = db.readWrite { implicit s =>
+          scrapeInfoRepo.save(info.withFailure())
+          normalizedURIRepo.save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         (errorURI, None)
     }
@@ -75,14 +82,10 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
   }
 
 
-  private def processURI(uri: NormalizedURI, info: ScrapeInfo, useProxy: Boolean): (NormalizedURI, Option[Article]) = {
-    if(!useProxy) log.debug(s"scraping $uri") else log.debug(s"scraping $uri with proxy")
+  private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
+    log.info(s"scraping $uri")
 
-    val db = inject[Database]
-    val uriRepo = inject[NormalizedURIRepo]
-    val scrapeInfoRepo = inject[ScrapeInfoRepo]
-
-    fetchArticle(uri, info, useProxy) match {
+    fetchArticle(uri, info) match {
       case Scraped(article, signature) =>
         // store a scraped article in a store map
         articleStore += (uri.id.get -> article)
@@ -90,23 +93,21 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
         val scrapedURI = db.readWrite { implicit s =>
           // update the scrape schedule and the uri state to SCRAPED
           scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
-          uriRepo.saveAsIndexable(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          normalizedURIRepo.saveAsIndexable(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
         }
-        log.debug("fetched uri %s => %s".format(uri, article))
+        log.info("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
       case NotScrapable(destinationUrl) =>
         val unscrapableURI = db.readWrite { implicit s =>
           scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
-          uriRepo.saveAsIndexable(uri.withState(NormalizedURIStates.UNSCRAPABLE))
+          normalizedURIRepo.saveAsIndexable(uri.withState(NormalizedURIStates.UNSCRAPABLE))
         }
         (unscrapableURI, None)
       case NotModified =>
         // update the scrape schedule, uri is not changed
         db.readWrite { implicit s => scrapeInfoRepo.save(info.withDocumentUnchanged()) }
         (uri, None)
-      case Error(httpStatus, msg) if useProxy == false =>
-        processURI(uri, info, true)
-      case Error(httpStatus, msg) if useProxy == true =>
+      case Error(httpStatus, msg) =>
         // store a fallback article in a store map
         val article = Article(
             id = uri.id.get,
@@ -124,7 +125,7 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
         // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
         val errorURI = db.readWrite { implicit s =>
           scrapeInfoRepo.save(info.withFailure())
-          uriRepo.saveAsIndexable(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
+          normalizedURIRepo.saveAsIndexable(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         (errorURI, None)
     }
@@ -148,35 +149,34 @@ class Scraper @Inject() (httpFetcher: HttpFetcher, articleStore: ArticleStore, s
     }
   }
 
-  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, useProxy: Boolean): ScraperResult = {
+  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo): ScraperResult = {
     try {
       URI.parse(normalizedUri.url) match {
         case Success(uri) =>
           uri.scheme match {
             case Some("file") => Error(-1, "forbidden scheme: %s".format("file"))
-            case _ => fetchArticle(normalizedUri, httpFetcher, info, useProxy)
+            case _ => fetchArticle(normalizedUri, httpFetcher, info)
           }
-        case _ => fetchArticle(normalizedUri, httpFetcher, info, useProxy)
+        case _ => fetchArticle(normalizedUri, httpFetcher, info)
       }
     } catch {
-      case _: Throwable => fetchArticle(normalizedUri, httpFetcher, info, useProxy)
+      case _: Throwable => fetchArticle(normalizedUri, httpFetcher, info)
     }
   }
 
   protected def isUnscrapable(url: String, destinationUrl: Option[String]) = {
-    inject[Database].readOnly { implicit s =>
-      val uns = inject[UnscrapableRepo]
-      (uns.contains(url) || (destinationUrl.isDefined && uns.contains(destinationUrl.get)))
+    db.readOnly { implicit s =>
+      (unscrapableRepo.contains(url) || (destinationUrl.isDefined && unscrapableRepo.contains(destinationUrl.get)))
     }
   }
 
-  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, useProxy: Boolean): ScraperResult = {
+  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo): ScraperResult = {
     val url = normalizedUri.url
     val extractor = getExtractor(url)
     val ifModifiedSince = getIfModifiedSince(info)
 
     try {
-      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince, useProxy){ input => extractor.process(input) }
+      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince){ input => extractor.process(input) }
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>

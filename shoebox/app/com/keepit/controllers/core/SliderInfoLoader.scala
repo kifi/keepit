@@ -91,7 +91,8 @@ class SliderInfoLoader @Inject() (db: Database,
         val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
         val searcher = uriGraph.getURIGraphSearcher
         val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
-        val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
+        val keepersEdgeSet = searcher.getUriToUserEdgeSet(uri.id.get)
+        val sharingUserIds = searcher.intersect(friendEdgeSet, keepersEdgeSet).destIdSet - userId
         val socialUsers = sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
 
         val numComments = commentRepo.getPublicCount(uri.id.get)

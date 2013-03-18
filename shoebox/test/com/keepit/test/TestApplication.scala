@@ -16,14 +16,14 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time._
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
-import com.keepit.shoebox.ShoeboxModule
-import com.keepit.dev.DevModule
+import com.keepit.shoebox.{ShoeboxGlobal, ShoeboxModule}
+import com.keepit.dev.{DevGlobal, DevModule}
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.FortyTwoGlobal
 import com.tzavellas.sse.guice.ScalaModule
 import com.keepit.common.store.FakeStoreModule
-import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout}
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.DbInfo
 import com.keepit.common.db.slick._
@@ -57,11 +57,11 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
 
   def overrideWith(model: Module): TestApplication =
-    new TestApplication(new TestGlobal(Modules.`override`(global.module).`with`(model)))
+    new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
 }
 
-class DevApplication() extends TestApplication(new TestGlobal(new DevModule()))
-class ShoeboxApplication() extends TestApplication(new TestGlobal(new ShoeboxModule()))
+class DevApplication() extends TestApplication(new TestGlobal(DevGlobal.modules: _*))
+class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxGlobal.modules: _*))
 class EmptyApplication() extends TestApplication(new TestGlobal(TestModule()))
 
 trait DbRepos {

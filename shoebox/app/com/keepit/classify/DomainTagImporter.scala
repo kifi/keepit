@@ -86,21 +86,22 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
             s.close()
           }
           val zipFile = new ZipFile(outputPath)
-          val results = (for (entry <- zipFile.entries if entry.getName.endsWith("/domains")) yield {
-            val tagName = entry.getName.split("/", 2) match {
-              case Array(categoryName, _) => DomainTagName(categoryName)
-              case _ => throw new IllegalStateException("Invalid domain format: " + entry.getName)
-            }
-            if (!DomainTagName.isBlacklisted(tagName)) {
+          val results = zipFile.entries.toSeq.collect {
+            case entry if entry.getName.endsWith("/domains") =>
+              entry.getName.split("/", 2) match {
+                case Array(categoryName, _) => (DomainTagName(categoryName), entry)
+                case _ => throw new IllegalStateException("Invalid domain format: " + entry.getName)
+              }
+          }.collect {
+            case (tagName, entry) if !DomainTagName.isBlacklisted(tagName) =>
               val domains = Source.fromInputStream(zipFile.getInputStream(entry)).getLines()
                 .map(_.toLowerCase.trim).filter { domain =>
                   val valid = Domain.isValid(domain)
                   if (!valid) log.debug("'%s' is not a valid domain!" format domain)
                   valid
                 }.toSet.toSeq
-              Some(withSensitivityUpdate(applyTagToDomains(tagName, domains)))
-            } else None
-          }).flatten
+              withSensitivityUpdate(applyTagToDomains(tagName, domains))
+          }
           val (added, removed, total) =
             (results.map(_.added).sum, results.map(_.removed).sum, results.map(_.total).sum)
           persistEvent(IMPORT_SUCCESS, JsObject(Seq(

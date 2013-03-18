@@ -1,37 +1,26 @@
 package com.keepit.shoebox
 
-import play.api._
-import play.api.Mode._
-import play.api.Play.current
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.controller.FortyTwoServices
-import com.keepit.common.controller.ServiceType
-import com.keepit.scraper._
-import com.keepit.search.index.ArticleIndexerPlugin
-import com.keepit.inject._
-import com.google.inject.Guice
-import com.google.inject.Injector
-import com.google.inject.Stage
-import com.keepit.common.social.SocialGraphPlugin
-import com.keepit.common.mail.MailSenderPlugin
-import com.keepit.common.healthcheck._
 import com.keepit.common.analytics.PersistEventPlugin
 import com.keepit.common.analytics.reports.ReportBuilderPlugin
 import com.keepit.common.cache.MemcachedPlugin
+import com.keepit.common.healthcheck._
+import com.keepit.common.mail.MailSenderPlugin
+import com.keepit.common.social.SocialGraphPlugin
+import com.keepit.inject._
+import com.keepit.module.CommonModule
+import com.keepit.scraper._
+import com.keepit.search.SearchModule
+import com.keepit.search.graph.URIGraphPlugin
+import com.keepit.search.index.ArticleIndexerPlugin
+import play.api.Mode._
+import play.api.Play.current
+import play.api._
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
-  private var creatingInjector = false
-  override lazy val injector: Injector = {
-    if (creatingInjector) throw new Exception("Injector is being created!")
-    creatingInjector = true
-    try {
-      createInjector()
-    } finally {
-      creatingInjector = false
-    }
-  }
 
-  def createInjector(): Injector = Guice.createInjector(Stage.PRODUCTION, new ShoeboxModule())
+  //TODO(greg): remove SearchModule once we've migrated search stuff to search server
+  val modules = Seq(new CommonModule, new ShoeboxModule, new SearchModule)
 
   override def onStart(app: Application): Unit = {
     log.info("starting the shoebox")
@@ -48,6 +37,7 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
     require(inject[ReportBuilderPlugin].enabled)
     require(inject[DataIntegrityPlugin].enabled)
     require(inject[MemcachedPlugin].enabled)
+    require(inject[URIGraphPlugin].enabled)
     log.info("shoebox started")
   }
 

@@ -5,7 +5,7 @@
     <ul>
       <li>
         @if(page > 0) {
-          <a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(page - 1)">
+          <a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUsersView(page - 1)">
         } else {
          <a href="#">
         }
@@ -15,17 +15,17 @@
       @for(i <- 0 to (pageCount - 1)) {
         @if(i == page) {
           <li class="disabled">
-            <a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(i)">@{i + 1}</a>
+            <a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUsersView(i)">@{i + 1}</a>
           </li>
         } else {
           <li class="active">
-            <a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(i)">@{i + 1}</a>
+            <a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUsersView(i)">@{i + 1}</a>
           </li>
         }
       }
       <li>
         @if(socialUserInfos.size > 0) {
-          <a href="@com.keepit.controllers.routes.SocialUserController.socialUsersView(page + 1)">
+          <a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUsersView(page + 1)">
         } else {
          <a href="#">
         }

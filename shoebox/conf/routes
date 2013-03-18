@@ -50,7 +50,7 @@ GET     /users/friends              @com.keepit.controllers.ext.ExtUserControlle
 
 POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
 
-GET     /search                     com.keepit.controllers.SearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
+GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
 GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)
 
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
@@ -65,9 +65,9 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 # Admin
 ##########################################
 
-GET     /admin                      com.keepit.controllers.admin.AdminDashboardController.index
-GET     /admin/graphs/users.json    com.keepit.controllers.admin.AdminDashboardController.usersByDate
-GET     /admin/graphs/bookmarks.json    com.keepit.controllers.admin.AdminDashboardController.bookmarksByDate
+GET     /admin                      @com.keepit.controllers.admin.AdminDashboardController.index
+GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboardController.usersByDate
+GET     /admin/graphs/bookmarks.json    @com.keepit.controllers.admin.AdminDashboardController.bookmarksByDate
 
 GET     /admin/events               @com.keepit.controllers.admin.AdminEventController.reportList
 POST    /admin/events/buildReport   @com.keepit.controllers.admin.AdminEventController.buildReport
@@ -99,11 +99,12 @@ GET     /admin/data/renormalize     com.keepit.controllers.admin.UrlController.r
 POST    /admin/data/handleDuplicate com.keepit.controllers.admin.ScraperController.handleDuplicate
 POST    /admin/data/handleDuplicates com.keepit.controllers.admin.ScraperController.handleDuplicates
 
-GET     /admin/article/index        com.keepit.controllers.admin.ArticleIndexerController.index
-GET     /admin/article/index/:state com.keepit.controllers.admin.ArticleIndexerController.indexByState(state: State[NormalizedURI])
-GET     /admin/article/indexInfo    com.keepit.controllers.admin.ArticleIndexerController.indexInfo
-GET     /admin/article/refreshSearcher com.keepit.controllers.admin.ArticleIndexerController.refreshSearcher
-GET     /admin/article/dumpDoc/:uriId  com.keepit.controllers.admin.ArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
+GET     /admin/article/index        @com.keepit.controllers.admin.ArticleIndexerController.index
+GET     /admin/article/getSequenceNumber @com.keepit.controllers.admin.ArticleIndexerController.getSequenceNumber
+GET     /admin/article/index/:state @com.keepit.controllers.admin.ArticleIndexerController.indexByState(state: State[NormalizedURI])
+GET     /admin/article/indexInfo    @com.keepit.controllers.admin.ArticleIndexerController.indexInfo
+GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.ArticleIndexerController.refreshSearcher
+GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.ArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
 
 GET     /admin/uriGraph/load        com.keepit.controllers.admin.URIGraphController.load
 GET     /admin/uriGraph/update/:userId com.keepit.controllers.admin.URIGraphController.update(userId: Id[User])
@@ -120,13 +121,12 @@ GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.Admin
 POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthController.impersonate(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 
-GET     /admin/social_users/:page   com.keepit.controllers.SocialUserController.socialUsersView(page: Int)
-GET     /admin/social_user/:id      com.keepit.controllers.SocialUserController.socialUserView(id: Id[SocialUserInfo])
-GET     /admin/social_user/:id/refresh com.keepit.controllers.SocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
-GET     /admin/social_user/:id/reset com.keepit.controllers.SocialUserController.resetSocialUser(id: Id[SocialUserInfo])
+GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
+GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
+GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
+GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 
 GET     /admin/server               com.keepit.common.healthcheck.HealthController.serviceView()
-GET     /admin/search/results/:id   com.keepit.controllers.SearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
 
 GET     /admin/emails/comment       com.keepit.controllers.admin.AdminEmailPreviewController.newComment
 GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
@@ -151,7 +151,8 @@ POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSe
 GET     /admin/searchExperiments/kvg/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiVsGoogle(id: Id[SearchConfigExperiment])
 GET     /admin/searchExperiments/kifiHadResults/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiHadResults(id: Id[SearchConfigExperiment])
 
-GET     /admin/explainResult        com.keepit.controllers.SearchController.explain(query: String, uriId: Id[NormalizedURI])
+GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI])
+GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
 
 GET     /admin/slider/rules         com.keepit.controllers.admin.SliderAdminController.getRules
 POST    /admin/slider/rules         com.keepit.controllers.admin.SliderAdminController.saveRules
@@ -179,7 +180,7 @@ GET     /admin/healthcheck/resetErrorCount    com.keepit.common.healthcheck.Heal
 
 POST    /admin/logging/emails       com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
 
-GET     /admin/labs/rankVsScore     com.keepit.controllers.SearchLabsController.rankVsScore(q: Option[String] ?= None)
-GET     /admin/labs/rankVsScore.json com.keepit.controllers.SearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
-GET     /admin/labs/friendMap       com.keepit.controllers.SearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
-GET     /admin/labs/friendMap.json  com.keepit.controllers.SearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+GET     /admin/labs/rankVsScore     @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScore(q: Option[String] ?= None)
+GET     /admin/labs/rankVsScore.json @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
+GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
