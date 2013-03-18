@@ -49,7 +49,9 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
       sliderInfo.socialUsers match { case Nil => None; case _ => Some("keptByAnyFriends" -> JsBoolean(true)) }, // TODO: remove
       sliderInfo.socialUsers match { case Nil => None; case u => Some("keepers" -> userWithSocialSerializer.writes(u)) },
       sliderInfo.numKeeps match { case 0 => None; case n => Some("keeps" -> JsNumber(n)) },
+      sliderInfo.numComments match { case 0 => None; case n => Some("numComments" -> JsNumber(n)) },
       sliderInfo.numUnreadComments match { case 0 => None; case n => Some("unreadComments" -> JsNumber(n)) },
+      sliderInfo.numMessages match { case 0 => None; case n => Some("numMessages" -> JsNumber(n)) },
       sliderInfo.numUnreadMessages match { case 0 => None; case n => Some("unreadMessages" -> JsNumber(n)) },
       sliderInfo.sensitive.flatMap { s => if (s) Some("sensitive" -> JsBoolean(true)) else None },
       sliderInfo.neverOnSite.map { _ => "neverOnSite" -> JsBoolean(true) },
