@@ -113,6 +113,13 @@ slider2 = function() {
             }
           }).on("mouseout", ".kifi-slider2-keep-btn", function() {
             this.classList.remove("kifi-hoverless");
+          }).on("hover:hide", ".kifi-slider2-keep-btn", function() {
+            document.documentElement.addEventListener("mousemove", function f(e) {
+              this.removeEventListener("mousemove", f, true);
+              if ($slider && !$slider[0].contains(e.target)) {
+                hideSlider("mouseout");
+              }
+            }, true);
           }).on("mouseenter", ".kifi-slider2-lock", function() {
             if ($pane) return;
             $(this).showHover({
