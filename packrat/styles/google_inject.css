@@ -343,12 +343,15 @@ a.kifi-res-friends {
   background-color: #282828;
   color: #fff;
   font-size: 11px;
-  z-index: 99;
   cursor: default;
-  display: none;
+  z-index: 99;
+  opacity: 0;
+  -webkit-transition: opacity 80ms ease-in-out, bottom 80ms ease-out;
+  transition: opacity 80ms ease-in-out, bottom 80ms ease-out;
 }
 .kifi-hover-showing .kifi-res-friends-hover {
-  display: block;
+  bottom: 22px;
+  opacity: 1;
 }
 .kifi-res-friends-▾ {
   position: absolute;
@@ -396,14 +399,12 @@ a.kifi-res-friends {
   cursor: default;
   z-index: 99;
   opacity: 0;
-  -webkit-transition: opacity 90ms ease-in-out, bottom 90ms ease-out;
-  transition: opacity 90ms ease-in-out, bottom 90ms ease-out;
+  -webkit-transition: opacity 80ms ease-in-out, bottom 80ms ease-out;
+  transition: opacity 80ms ease-in-out, bottom 80ms ease-out;
 }
 .kifi-hover-showing .kifi-chatter-hover {
   bottom: 24px;
   opacity: 1;
-  -webkit-transition: opacity 90ms ease-in-out, bottom 90ms ease-out;
-  transition: opacity 90ms ease-in-out, bottom 90ms ease-out;
 }
 .kifi-chatter-hover::after {
   content: " ";
