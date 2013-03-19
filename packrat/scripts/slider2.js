@@ -228,7 +228,8 @@ slider2 = function() {
     api.port.emit("set_page_icon", false);
     info.kept = false;
     delete info.private;
-    btn.classList.remove("kifi-private", "kifi-public");
+    btn.classList.remove("kifi-private");
+    btn.classList.remove("kifi-public");
     btn.classList.add("kifi-unkept");
     $(".kifi-pane-kept").removeClass("kifi-kept");
     updateTile(false);
