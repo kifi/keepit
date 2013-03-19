@@ -351,7 +351,8 @@ api.log("[google_inject]");
             $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
           });
         }});
-    }).on("mouseenter", ".kifi-res-friends", function() {
+    }).on("mouseenter", ".kifi-res-friends", function(e) {
+      if (e.target !== this) return;
       var $a = $(this).showHover({
         fadesOut: true,
         create: function(callback) {
