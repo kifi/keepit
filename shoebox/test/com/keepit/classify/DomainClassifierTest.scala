@@ -103,6 +103,8 @@ class DomainClassifierTest extends Specification with DbRepos {
         classifier.isSensitive("playboy.com") === Right(true)
         classifier.isSensitive("www.porn.com") === Right(true)
         classifier.isSensitive("porn.com") === Right(true)
+
+        classifier.isSensitive("local-domain") === Right(true)
       }
     }
   }
