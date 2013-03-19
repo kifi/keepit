@@ -98,7 +98,7 @@ slider2 = function() {
                 create: function(callback) {
                   // TODO: preload friend pictures
                   render("html/metro/keepers.html", {
-                    keepers: shuffle(o.keepers.slice(0, 8)),
+                    keepers: pick(o.keepers, 8),
                     captionHtml: formatCountHtml(o.kept, o.private, (o.keepers || 0).length, o.otherKeeps)
                   }, function(html) {
                     callback($("<div class=kifi-slider2-tip>").html(html));
@@ -263,7 +263,7 @@ slider2 = function() {
       kifiLogoUrl: api.url("images/kifi_logo.png"),
       gearUrl: api.url("images/metro/gear.png"),
       kept: info.kept,
-      keepers: shuffle(info.keepers.slice(0, 7)),
+      keepers: pick(info.keepers, 7),
       keepersCaptionHtml: formatCountHtml(0, 0, (info.keepers || 0).length, info.otherKeeps)
     }, function(html) {
       var $html = $("html").addClass("kifi-pane-parent");
@@ -315,12 +315,17 @@ slider2 = function() {
     return n + " " + term + (n == 1 ? "" : "s");
   }
 
-  function shuffle(arr) {
-    var i = arr.length, j, v;
-    while (i > 1) {
-      j = Math.random() * i-- | 0;
+  function pick(arr, n) {
+    if (!arr) return;
+    if (n == null || n > arr.length) {
+      n = arr.length;
+    }
+    arr = arr.slice();
+    for (var i = 0, j, v, N = arr.length; i < n; i++) {
+      j = i + Math.random() * (N - i) | 0;
       v = arr[i], arr[i] = arr[j], arr[j] = v;
     }
+    arr.length = n;
     return arr;
   }
 
