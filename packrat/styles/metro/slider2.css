@@ -223,13 +223,16 @@
   font: 300 12px/27px Lato,sans-serif;
 }
 .kifi-slider2-keepers {
-  float: right;
+  direction: rtl;
+  font-size: 0;
+  line-height: 0;
   white-space: nowrap;
   cursor: default;
   position: relative;
 }
 .kifi-slider2-keeper {
-  float: right;
+  display: inline-block;
+  direction: ltr;
   width: 36px;
   height: 36px;
   margin-left: 1px;
