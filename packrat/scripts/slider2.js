@@ -1,23 +1,16 @@
-// @require styles/metro.css
-// #require styles/friend_card.css
-// #require styles/comments.css
+// @require styles/metro/slider2.css
 // @require scripts/lib/jquery-1.8.2.min.js
-// #require scripts/lib/jquery-ui-1.9.1.custom.min.js
 // @require scripts/lib/jquery-showhover.js
-// #require scripts/lib/jquery-tokeninput-1.6.1.min.js
-// #require scripts/lib/jquery.timeago.js
 // @require scripts/lib/keymaster.min.js
-// #require scripts/lib/lodash.min.js
 // @require scripts/lib/mustache-0.7.1.min.js
 // @require scripts/render.js
-// #require scripts/snapshot.js
 
 jQuery.fn.layout = function() {
   return this.each(function() {this.clientHeight});  // forces layout
 };
 
 slider2 = function() {
-  var $slider, $pane, info, lastShownAt;
+  var $tile = $("#kifi-tile"), $slider, $pane, info, lastShownAt;
 
   key("esc", function() {
     if ($pane) {
@@ -55,6 +48,7 @@ slider2 = function() {
           api.log("[showSlider] already there");
         } else {
           $(".kifi-slider2").remove();  // e.g. from earlier version
+          $tile.addClass("kifi-behind-slider");
           $slider = $(html).appendTo("html").layout().addClass("kifi-visible kifi-growing")
           .on("transitionend webkitTransitionEnd", function f(e) {
             if (e.target.classList.contains("kifi-slider2")) {
@@ -160,18 +154,17 @@ slider2 = function() {
       });
   }
 
-  // trigger is for the event log (e.g. "key", "icon"). pass no trigger if just hiding slider temporarily.
+  // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
     idleTimer.kill();
-    $slider.addClass("kifi-hidden").removeClass("kifi-visible").on("transitionend webkitTransitionEnd", function(e) {
-      if (e.target.classList.contains("kifi-slider2") && e.originalEvent.propertyName == "opacity" && trigger) {
+    $slider.addClass("kifi-hiding").on("transitionend webkitTransitionEnd", function(e) {
+      if (e.target.classList.contains("kifi-slider2") && e.originalEvent.propertyName == "opacity") {
         $(e.target).remove();
+        $tile.removeClass("kifi-behind-slider");
       }
     });
     $slider = null;
-    if (trigger) {
-      logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
-    }
+    logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
   }
 
   var idleTimer = {
@@ -216,7 +209,7 @@ slider2 = function() {
     btn.classList.remove("kifi-unkept");
     btn.classList.add(privately ? "kifi-private" : "kifi-public");
     $(".kifi-pane-kept").addClass("kifi-kept");
-    updateTile(true);
+    $tile.addClass("kifi-kept");
 
     logEvent("slider", "keep", {"isPrivate": privately});
 
@@ -239,7 +232,7 @@ slider2 = function() {
     btn.classList.remove("kifi-public");
     btn.classList.add("kifi-unkept");
     $(".kifi-pane-kept").removeClass("kifi-kept");
-    updateTile(false);
+    $tile.removeClass("kifi-kept");
 
     logEvent("slider", "unkeep");
 

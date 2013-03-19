@@ -433,6 +433,8 @@ api.tabs.on.loading.add(function(tab) {
      "numComments", "unreadComments", "numMessages", "unreadMessages"].forEach(function(key) {
       data[key] = resp[key];
     });
+    data.unreadComments = 4;
+    data.unreadMessages = 3;
     data.otherKeeps = (data.keeps || 0) - (data.keepers || []).length - (data.kept && !data.private ? 1 : 0);
     if (session.rules.rules.message && /^\/messages/.test(resp.locator) ||
         session.rules.rules.comment && /^\/comments/.test(resp.locator) && !resp.neverOnSite) {
