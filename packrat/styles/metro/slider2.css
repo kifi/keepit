@@ -316,6 +316,7 @@
   left: 12px;
 }
 .kifi-slider2-dock-btn .kifi-count:not(.kifi-unread) {
+  border-color: transparent;
   background-color: #99a4ae;
 }
 .kifi-slider2.kifi-growing .kifi-count,

@@ -257,18 +257,20 @@ slider2 = function() {
   function showPane() {
     api.log("[showPane]");
     idleTimer.kill();
-    render("html/metro/pane.html", {
-      title: document.title,
-      url: location.href,
-      kifiLogoUrl: api.url("images/kifi_logo.png"),
-      gearUrl: api.url("images/metro/gear.png"),
-      kept: info.kept,
-      keepers: pick(info.keepers, 7),
-      keepersCaptionHtml: formatCountHtml(0, 0, (info.keepers || 0).length, info.otherKeeps)
-    }, function(html) {
-      var $html = $("html").addClass("kifi-pane-parent");
-      $pane = $(html).appendTo($html).layout();
-      $html.addClass("kifi-with-pane");
+    api.require("styles/metro/pane.css", function() {
+      render("html/metro/pane.html", {
+        title: document.title,
+        url: location.href,
+        kifiLogoUrl: api.url("images/kifi_logo.png"),
+        gearUrl: api.url("images/metro/gear.png"),
+        kept: info.kept,
+        keepers: pick(info.keepers, 7),
+        keepersCaptionHtml: formatCountHtml(0, 0, (info.keepers || 0).length, info.otherKeeps)
+      }, function(html) {
+        var $html = $("html").addClass("kifi-pane-parent");
+        $pane = $(html).appendTo($html).layout();
+        $html.addClass("kifi-with-pane");
+      });
     });
   }
 
