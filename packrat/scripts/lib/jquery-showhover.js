@@ -91,6 +91,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
       function onMouseMove(e) {
         if (!between(e.clientX, e.clientY)) {
           if (!data.inEither) {
+            clearTimeout(data.t);
             hide();
           }
           document.removeEventListener("mousemove", onMouseMove, true);
@@ -108,6 +109,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
         } else {
           $a.showHover("destroy");
         }
+        $a.trigger("hover:hide");
       }
       // Returns whether the viewport coords (x, y) are in the trapezoid between the top edge
       // of hover trigger element and the bottom edge of the hover element.
