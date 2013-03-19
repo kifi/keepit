@@ -102,7 +102,8 @@ slider2 = function() {
                   // TODO: preload friend pictures
                   render("html/metro/keepers.html", {
                     keepers: keepers,
-                    captionHtml: formatCountHtml(o.kept, o.private, (o.keepers || 0).length, o.otherKeeps)
+                    anyKeepers: !!keepers,
+                    captionHtml: formatCountHtml(o.kept, (o.keepers || 0).length, o.otherKeeps)
                   }, function(html) {
                     callback($("<div class=kifi-slider2-tip>").html(html).data("keepers", keepers));
                   });
@@ -285,7 +286,7 @@ slider2 = function() {
         gearUrl: api.url("images/metro/gear.png"),
         kept: info.kept,
         keepers: pick(info.keepers, 7),
-        keepersCaptionHtml: formatCountHtml(0, 0, (info.keepers || 0).length, info.otherKeeps)
+        keepersCaptionHtml: formatCountHtml(0, (info.keepers || 0).length, info.otherKeeps)
       }, function(html) {
         var $html = $("html").addClass("kifi-pane-parent");
         $pane = $(html).appendTo($html).layout();
@@ -306,31 +307,13 @@ slider2 = function() {
     var $html = $("html").removeClass("kifi-with-pane");
   }
 
-  function formatCountHtml(kept, isPrivate, numFriends, numOthers) {
-    // Awful decision tree. Got a better way?
-    if (kept) {
-      var priv = ""; // isPrivate ? " <span class=kifi-slider2-private>Private</span>" : "";
-      if (numFriends) {
-        if (numOthers) {
-          return "You" + priv + " + " + plural(numFriends, "friend") + " + " + plural(numOthers, "other") + " kept this";
-        }
-        return "You" + priv + " + " + plural(numFriends, "friend") + " kept this";
-      }
-      if (numOthers) {
-        return "You" + priv + " + " + plural(numOthers, "other") + " kept this";
-      }
-      return "You kept this" + priv;
-    }
-    if (numFriends) {
-      if (numOthers) {
-        return plural(numFriends, "friend") + " + " + plural(numOthers, "other") + " kept this";
-      }
-      return plural(numFriends, "friend") + " kept this";
-    }
-    if (numOthers) {
-      return plural(numOthers, "other") + " kept this";
-    }
-    return "No one kept this";
+  function formatCountHtml(kept, numFriends, numOthers) {
+    return [
+        kept ? "You" : null,
+        numFriends ? plural(numFriends, "friend") : null,
+        numOthers ? plural(numOthers, "other") : null]
+      .filter(function(v) {return v})
+      .join(" + ");
   }
 
   function plural(n, term) {
