@@ -16,6 +16,7 @@ import play.api.Play.current
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.SchedulingPlugin
+import scala.util.{Try, Success, Failure}
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -41,7 +42,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: Database,
     case m => throw new Exception("unknown message %s".format(m))
   }
 
-  def fetchUserInfo(socialUserInfo: SocialUserInfo): Either[Exception, Seq[SocialConnection]] = {
+  def fetchUserInfo(socialUserInfo: SocialUserInfo): Try[Seq[SocialConnection]] = {
       try {
         require(socialUserInfo.credentials.isDefined,
           "social user info's credentials are not defined: %s".format(socialUserInfo))
@@ -57,7 +58,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: Database,
         db.readWrite { implicit c =>
           socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }
-        Right(connections)
+        Success(connections)
       } catch {
         //todo(yonatan): healthcheck event, granular exception catching, frontend should be notified.
         case ex: Exception =>
@@ -65,14 +66,13 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: Database,
             socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
           }
           log.error("Problem Fetching User Info for %s".format(socialUserInfo), ex)
-          Left(ex)
+          Failure(ex)
       }
   }
 }
 
 trait SocialGraphPlugin extends SchedulingPlugin {
-  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Either[Seq[SocialConnection], Exception]]
-  def fetchAll(): Unit
+  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Try[Seq[SocialConnection]]]
 }
 
 class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: FacebookSocialGraph, db: Database, socialRepo: SocialUserInfoRepo)
@@ -92,15 +92,10 @@ class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: Faceboo
     log.info("stopping SocialGraphPluginImpl")
   }
 
-  def fetchAll(): Unit = {
-    val future = actor.ask(FetchAll)(1 minutes).mapTo[Int]
-    Await.result(future, 1 minutes)
-  }
-
-  override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Either[Seq[SocialConnection], Exception]] = {
+  override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Try[Seq[SocialConnection]]] = {
     require(socialUserInfo.credentials.isDefined,
       "social user info's credentials are not defined: %s".format(socialUserInfo))
-    actor.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Either[Seq[SocialConnection], Exception]]
+    actor.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Try[Seq[SocialConnection]]]
   }
 }
 
