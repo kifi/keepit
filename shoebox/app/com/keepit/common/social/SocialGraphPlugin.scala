@@ -71,8 +71,7 @@ private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: Database,
 }
 
 trait SocialGraphPlugin extends SchedulingPlugin {
-  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Either[Seq[SocialConnection], Exception]]
-  def fetchAll(): Unit
+  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Either[Exception, Seq[SocialConnection]]]
 }
 
 class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: FacebookSocialGraph, db: Database, socialRepo: SocialUserInfoRepo)
@@ -92,15 +91,10 @@ class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: Faceboo
     log.info("stopping SocialGraphPluginImpl")
   }
 
-  def fetchAll(): Unit = {
-    val future = actor.ask(FetchAll)(1 minutes).mapTo[Int]
-    Await.result(future, 1 minutes)
-  }
-
-  override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Either[Seq[SocialConnection], Exception]] = {
+  override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Either[Exception, Seq[SocialConnection]]] = {
     require(socialUserInfo.credentials.isDefined,
       "social user info's credentials are not defined: %s".format(socialUserInfo))
-    actor.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Either[Seq[SocialConnection], Exception]]
+    actor.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Either[Exception, Seq[SocialConnection]]]
   }
 }
 
