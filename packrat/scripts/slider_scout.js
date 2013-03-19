@@ -110,40 +110,27 @@ var slider, slider2, injected, t0 = +new Date;
       el.remove();
     }
 
-    // don't want to inject a stylesheet until we show slider
-    el = document.createElement("div");
-    el.id = "kifi-tile";
-    el.style.position = "fixed";
-    el.style.zIndex = 2147483639;
-    el.style.bottom = "6px";
-    el.style.right = "6px";
-    el.style.left = "auto";
-    el.style.top = "auto";
-    el.style.width = "42px";
-    el.style.height = "42px";
-    el.style.borderRadius = "5px";
-    el.style.color = "#fff";
-    el.style.backgroundRepeat = "no-repeat";
-    el.style.backgroundSize = "26px auto";
-    el.style.cursor = "pointer";
-    updateTile.call(el, o.kept);
-    document.documentElement.appendChild(el);
-    el.addEventListener("mouseover", function() {
-      withSlider2(function() {
-        slider2.show(info, "tile");
+    api.require("styles/metro/tile.css", function() {
+      var tileEl = document.createElement("div");
+      tileEl.id = "kifi-tile";
+      tileEl.style.backgroundImage = "url(" + api.url("images/metro/tile_logo.png") + ")";
+      if (o.kept) {
+        tileEl.className = "kifi-kept";
+      }
+      var nUnread = (o.unreadComments || 0) + (o.unreadMessages || 0);
+      var nTot = (o.numComments || 0) + (o.numMessages || 0);
+      if (nUnread || nTot) {
+        var countEl = document.createElement("span");
+        countEl.className = "kifi-count" + (nUnread ? " kifi-unread" : "");
+        countEl.textContent = nUnread || nTot;
+        tileEl.appendChild(countEl);
+      }
+      document.documentElement.appendChild(tileEl);
+      tileEl.addEventListener("mouseover", function() {
+        withSlider2(function() {
+          slider2.show(info, "tile");
+        });
       });
     });
-    el.addEventListener("kifi:keep", function(e) {
-      api.log("[kifi:keep]", e);
-    });
-
   }
 }();
-
-function updateTile(kept) {
-  var el = this.id === "kifi-tile" ? this : document.getElementById("kifi-tile");
-  el.style.backgroundColor = kept ? "#2980b9": "#000";
-  el.style.backgroundImage = "url(" + api.url(kept ? "images/metro/tile_kept.png" : "images/metro/tile_logo.png") + ")";
-  el.style.backgroundPosition = kept ? "9px 16px" : "9px 15px";
-  el.style.opacity = kept ? .3 : .2;
-}

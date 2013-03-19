@@ -1,0 +1,66 @@
+@font-face {
+  font-family: Lato;
+  font-style: normal;
+  font-weight: 300;
+  src: local('Lato Light'), local('Lato-Light'), url(//themes.googleusercontent.com/static/fonts/lato/v6/KT3KS9Aol4WfR6Vas8kNcg.woff) format('woff');
+}
+@font-face {
+  font-family: Lato;
+  font-style: normal;
+  font-weight: 400;
+  src: local('Lato Regular'), local('Lato-Regular'), url(//themes.googleusercontent.com/static/fonts/lato/v6/9k-RPmcnxYEPm8CNFsH2gg.woff) format('woff');
+}
+
+#kifi-tile {
+  position: fixed;
+  z-index: 2147483639;
+  bottom: 6px;
+  right: 6px;
+  left: auto;
+  top: auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 5px;
+  background-color: #263f5c;
+  background-size: 26px auto;
+  background-position: 9px 15px;
+  background-repeat: no-repeat;
+  text-align: center;
+  cursor: pointer;
+  opacity: .4;
+}
+#kifi-tile.kifi-kept {
+  background-color: #0a5aab;
+  background-image: none !important;
+}
+#kifi-tile.kifi-kept::before {
+  content: "kept";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  color: #fff;
+  font: 300 14px/42px Lato,sans-serif;
+}
+
+.kifi-count {
+  display: inline-block;
+  position: relative;
+  top: -15px;
+  box-sizing: content-box;
+  min-width: 20px;
+  border: 3px solid;
+  border-color: transparent #fff #fff;
+  border-radius: 15px;
+  background: #263f5c padding-box;
+  color: #fff;
+  font: 10px/20px sans-serif;
+}
+.kifi-count.kifi-unread {
+  background-color: #e74c3c;
+  border: none;
+  top: -12px;
+}
+#kifi-tile.kifi-behind-slider .kifi-count {
+  display: none;
+}
