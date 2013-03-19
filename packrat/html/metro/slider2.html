@@ -9,14 +9,20 @@
     <span class="kifi-slider2-dock-sep"></span>
     <span class="kifi-slider2-dock-btn kifi-slider2-comm" style="background-image:url({{bgUrl}})">
       {{#newComments}}
-      <span class="kifi-slider2-dock-count">{{newComments}}</span>
+      <span class="kifi-count kifi-unread">{{newComments}}</span>
       {{/newComments}}
+      {{^newComments}}{{#numComments}}
+      <span class="kifi-count">{{numComments}}</span>
+      {{/numComments}}{{/newComments}}
     </span>
     <span class="kifi-slider2-dock-sep"></span>
     <span class="kifi-slider2-dock-btn kifi-slider2-mess" style="background-image:url({{bgUrl}})">
       {{#newMessages}}
-      <span class="kifi-slider2-dock-count">{{newMessages}}</span>
+      <span class="kifi-count kifi-unread">{{newMessages}}</span>
       {{/newMessages}}
+      {{^newMessages}}{{#numMessages}}
+      <span class="kifi-count">{{numMessages}}</span>
+      {{/numMessages}}{{/newMessages}}
     </span>
     <span class="kifi-slider2-dock-sep"></span>
     <span class="kifi-slider2-dock-btn kifi-slider2-pane" style="background-image:url({{bgUrl}})"></span>

@@ -6,6 +6,10 @@ var meta = meta || require("./meta");
     return !injected[path];
   }
 
+  if (path.substr(-4) === ".css") {
+    return {scripts: [], styles: injected[path] ? [] : [path]};
+  }
+
   var styles = meta.styleDeps[path];
   var scripts = meta.scriptDeps[path];
   return {
