@@ -339,6 +339,7 @@ api.log("[google_inject]");
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
       var $a = $(this).showHover({
         hideDelay: 600,
+        fadesOut: true,
         create: function(callback) {
           var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
           var friend = response.hits[i].users[j];

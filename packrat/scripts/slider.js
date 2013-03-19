@@ -199,6 +199,7 @@ slider = function() {
     .on("mouseenter", ".kifi-keeper", function() {
       var $a = $(this).showHover({
         hideDelay: 600,
+        fadesOut: true,
         create: function(callback) {
           var friend = o.friends[$a.prevAll(".kifi-keeper").length];
           render("html/friend_card.html", {
