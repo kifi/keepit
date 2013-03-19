@@ -9,13 +9,15 @@
   opacity: 0;
   -webkit-transform: translate(0, 3px);
   transform: translate(0, 3px);
-  -webkit-transition: opacity 80ms ease-in-out, -webkit-transform 80ms ease-out;
-  transition: opacity 80ms ease-in-out, -webkit-transform 80ms ease-out, transform 80ms ease-out;
+  -webkit-transition: opacity 100ms ease-in-out, -webkit-transform 100ms ease-out;
+  transition: opacity 100ms ease-in-out, -webkit-transform 100ms ease-out, transform 100ms ease-out;
 }
 .kifi-hover-showing .kifi-kcard {
   opacity: 1;
   -webkit-transform: none;
   transform: none;
+  -webkit-transition-duration: 60ms;
+  transition-duration: 60ms;
 }
 .kifi-kcard::before,
 .kifi-kcard::after {

@@ -94,6 +94,7 @@ slider2 = function() {
                 reuse: false,
                 showDelay: 250,
                 hideDelay: 800,
+                fadesOut: true,
                 recovery: Infinity,
                 create: function(callback) {
                   // TODO: preload friend pictures
@@ -114,11 +115,12 @@ slider2 = function() {
                 hideSlider("mouseout");
               }
             }, true);
-          }).on("mouseenter", ".kifi-slider2-lock", function() {
-            if ($pane) return;
+          }).on("mouseenter", ".kifi-slider2-lock", function(e) {
+            if ($pane || e.target !== this) return;
             $(this).showHover({
               reuse: false,
               showDelay: 250,
+              fadesOut: true,
               recovery: Infinity,
               create: function(callback) {
                 var html = this.parentNode.classList.contains("kifi-unkept") ?
