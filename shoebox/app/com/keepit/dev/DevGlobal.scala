@@ -30,7 +30,7 @@ object DevGlobal extends FortyTwoGlobal(Dev) {
     log.info("starting the shoebox")
     super.onStart(app)
     inject[ScraperPlugin].scrape()
-    inject[SocialGraphRefresher]
+    inject[SocialGraphRefresher].enabled
     inject[ReportBuilderPlugin].enabled
     inject[DataIntegrityPlugin].enabled
     inject[MailSenderPlugin].processOutbox()
