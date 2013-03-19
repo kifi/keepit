@@ -92,16 +92,19 @@ class DomainClassifierImpl @Inject()(system: ActorSystem, db: Database, client: 
   private val splitPattern = """\.""".r
 
   def isSensitive(hostname: String): Either[Future[Boolean], Boolean] = {
-    val domainName = (splitPattern.split(hostname.toLowerCase).toSeq match {
-      case "www" +: domain => domain
-      case domain => domain
-    }).mkString(".")
-    val domainOpt = db.readOnly { implicit s => domainRepo.get(domainName) }
-    domainOpt.flatMap { domain =>
-      domain.sensitive.orElse(db.readWrite { implicit s => updater.calculateSensitivity(domain) })
-    } match {
-      case Some(sensitive) => Right(sensitive)
-      case None => Left(actor.ask(FetchDomainInfo(domainName))(1 minute).mapTo[Boolean])
+    val domainParts = splitPattern.split(hostname.toLowerCase).toSeq
+    if (domainParts.size == 1) {
+      // this is probably a local domain on the network which we want to keep private
+      Right(true)
+    } else {
+      val domainName = domainParts.dropWhile(_ == "www").mkString(".")
+      val domainOpt = db.readOnly { implicit s => domainRepo.get(domainName) }
+      domainOpt.flatMap { domain =>
+        domain.sensitive.orElse(db.readWrite { implicit s => updater.calculateSensitivity(domain) })
+      } match {
+        case Some(sensitive) => Right(sensitive)
+        case None => Left(actor.ask(FetchDomainInfo(domainName))(1 minute).mapTo[Boolean])
+      }
     }
   }
 }
