@@ -1,4 +1,5 @@
 // @require styles/metro/slider2.css
+// @require styles/friend_card.css
 // @require scripts/lib/jquery-1.8.2.min.js
 // @require scripts/lib/jquery-showhover.js
 // @require scripts/lib/keymaster.min.js
@@ -97,15 +98,32 @@ slider2 = function() {
                 fadesOut: true,
                 recovery: Infinity,
                 create: function(callback) {
+                  var keepers = pick(o.keepers, 8);
                   // TODO: preload friend pictures
                   render("html/metro/keepers.html", {
-                    keepers: pick(o.keepers, 8),
+                    keepers: keepers,
                     captionHtml: formatCountHtml(o.kept, o.private, (o.keepers || 0).length, o.otherKeeps)
                   }, function(html) {
-                    callback($("<div class=kifi-slider2-tip>").html(html));
+                    callback($("<div class=kifi-slider2-tip>").html(html).data("keepers", keepers));
                   });
                 }});
             }
+          }).on("mouseenter", ".kifi-slider2-keeper", function() {
+            var $a = $(this).showHover({
+              hideDelay: 600,
+              fadesOut: true,
+              create: function(callback) {
+                var i = $a.prevAll(".kifi-slider2-keeper").length;
+                var friend = $a.closest(".kifi-slider2-tip").data("keepers")[i];
+                render("html/friend_card.html", {
+                  name: friend.firstName + " " + friend.lastName,
+                  facebookId: friend.facebookId,
+                  iconsUrl: api.url("images/social_icons.png")
+                }, callback);
+                api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+                  $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
+                });
+              }});
           }).on("mouseout", ".kifi-slider2-keep-btn", function() {
             this.classList.remove("kifi-hoverless");
           }).on("hover:hide", ".kifi-slider2-keep-btn", function() {

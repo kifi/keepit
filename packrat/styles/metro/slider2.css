@@ -218,27 +218,46 @@
   right: 36px;
 }
 .kifi-slider2-keepers {
-  text-align: right;
-  font-size: 0;
+  float: right;
   white-space: nowrap;
   cursor: default;
-}
-.kifi-slider2-keeper {
-  display: inline-block;
-  width: 36px;
-  height: 36px;
-  margin-right: 1px;
-  background-size: 100%;
-  border-radius: 2px;
   position: relative;
 }
-/*
-.kifi-slider2-keeper .kifi-kcard {
-  bottom: 48px;
-  left: -132px;
+.kifi-slider2-keeper {
+  float: right;
+  width: 36px;
+  height: 36px;
+  margin-left: 1px;
+  background-size: 100%;
+  border-radius: 2px;
 }
-*/
+.kifi-slider2-keeper .kifi-kcard {
+  bottom: 50px;
+  right: -34px;
+}
+.kifi-slider2-keeper:first-child .kifi-kcard::before,
+.kifi-slider2-keeper:first-child .kifi-kcard::after {
+  left: auto;
+  right: 43px;
+}
+.kifi-slider2-keeper:nth-child(2) .kifi-kcard::before,
+.kifi-slider2-keeper:nth-child(2) .kifi-kcard::after {
+  left: auto;
+  right: 80px;
+}
+.kifi-slider2-keeper:nth-child(3) .kifi-kcard::before,
+.kifi-slider2-keeper:nth-child(3) .kifi-kcard::after {
+  left: auto;
+  right: 117px;
+}
+.kifi-slider2-keeper:nth-child(n+4) {
+  position: relative;
+}
+.kifi-slider2-keeper:nth-child(n+4) .kifi-kcard {
+  right: -134px;
+}
 .kifi-slider2-keepers-caption {
+  clear: right;
   text-align: right;
   font: 300 12px Lato,sans-serif;
 }

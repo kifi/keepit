@@ -5,6 +5,8 @@
   color: #faf9f9;
   box-shadow: 2px 5px 12px rgba(0,0,0,.3);
   border: 1px solid #929496;
+  text-align: left;
+  line-height: normal;
   cursor: default;
   opacity: 0;
   -webkit-transform: translate(0, 3px);
@@ -12,7 +14,7 @@
   -webkit-transition: opacity 100ms ease-in-out, -webkit-transform 100ms ease-out;
   transition: opacity 100ms ease-in-out, -webkit-transform 100ms ease-out, transform 100ms ease-out;
 }
-.kifi-hover-showing .kifi-kcard {
+.kifi-hover-showing>.kifi-kcard {
   opacity: 1;
   -webkit-transform: none;
   transform: none;
