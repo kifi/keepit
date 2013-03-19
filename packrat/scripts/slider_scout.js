@@ -49,7 +49,7 @@ var slider, slider2, injected, t0 = +new Date;
       info = o;
       rules = o.rules || 0;
       if (o.metro) {
-        insertTile();
+        insertTile(o);
       }
       if (o.locator) {
         // if (o.metro) { ... } else
@@ -104,7 +104,7 @@ var slider, slider2, injected, t0 = +new Date;
     }
   }
 
-  function insertTile() {
+  function insertTile(o) {
     var el;
     while (el = document.getElementById("kifi-tile")) {
       el.remove();
@@ -115,25 +115,35 @@ var slider, slider2, injected, t0 = +new Date;
     el.id = "kifi-tile";
     el.style.position = "fixed";
     el.style.zIndex = 2147483639;
-    el.style.bottom = "10px";
-    el.style.right = "10px";
+    el.style.bottom = "6px";
+    el.style.right = "6px";
     el.style.left = "auto";
     el.style.top = "auto";
     el.style.width = "42px";
     el.style.height = "42px";
     el.style.borderRadius = "5px";
-    el.style.backgroundColor = "#000";
     el.style.color = "#fff";
-    el.style.opacity = .2;
-    el.style.font = "17px/42px sans-serif";
-    el.style.textAlign = "center";
+    el.style.backgroundRepeat = "no-repeat";
+    el.style.backgroundSize = "26px auto";
     el.style.cursor = "pointer";
-    el.innerHTML = "kifi";
+    updateTile.call(el, o.kept);
     document.documentElement.appendChild(el);
     el.addEventListener("mouseover", function() {
       withSlider2(function() {
         slider2.show(info, "tile");
       });
     });
+    el.addEventListener("kifi:keep", function(e) {
+      api.log("[kifi:keep]", e);
+    });
+
   }
 }();
+
+function updateTile(kept) {
+  var el = this.id === "kifi-tile" ? this : document.getElementById("kifi-tile");
+  el.style.backgroundColor = kept ? "#2980b9": "#000";
+  el.style.backgroundImage = "url(" + api.url(kept ? "images/metro/tile_kept.png" : "images/metro/tile_logo.png") + ")";
+  el.style.backgroundPosition = kept ? "9px 16px" : "9px 15px";
+  el.style.opacity = kept ? .3 : .2;
+}
