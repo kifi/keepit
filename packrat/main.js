@@ -429,7 +429,8 @@ api.tabs.on.loading.add(function(tab) {
 
   checkKeepStatus(tab, function gotKeptStatus(resp) {
     var data = {metro: session.experiments.indexOf("metro") >= 0};
-    ["kept", "private", "keepers", "keeps", "sensitive", "neverOnSite", "unreadComments", "unreadMessages"].forEach(function(key) {
+    ["kept", "private", "keepers", "keeps", "sensitive", "neverOnSite",
+     "numComments", "unreadComments", "numMessages", "unreadMessages"].forEach(function(key) {
       data[key] = resp[key];
     });
     data.otherKeeps = (data.keeps || 0) - (data.keepers || []).length - (data.kept && !data.private ? 1 : 0);
