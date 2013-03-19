@@ -43,7 +43,7 @@
   bottom: 0;
   right: 0;
   height: 68px;
-  width: 134px;
+  width: 142px;
   font-size: 12px;
 }
 .kifi-slider2.kifi-visible {
@@ -121,13 +121,13 @@
   cursor: pointer;
 }
 .kifi-unkept .kifi-slider2-keep-btn {
-  background: #253443;
+  background: #22303f;
 }
 .kifi-unkept .kifi-slider2-keep-btn:hover {
-  background: #2e4154;
+  background: #263647;
 }
 .kifi-unkept .kifi-slider2-keep-btn:active {
-  background: #202e3b;
+  background: #1f2b39;
 }
 .kifi-unkept .kifi-slider2-keep-btn::before {
   content: "keep";
@@ -170,6 +170,7 @@
 .kifi-public .kifi-slider2-keep-btn:hover::before,
 .kifi-private .kifi-slider2-keep-btn:hover::before {
   content: "unkeep";
+  margin-top: 0;
 }
 .kifi-private .kifi-slider2-keep-btn:hover::after {
   content: "";

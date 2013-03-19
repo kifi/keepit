@@ -45,17 +45,20 @@ slider2 = function() {
         // "sensitive": o.sensitive,
         // "site": location.hostname,
         // "neverOnSite": o.neverOnSite,
+        "numComments": o.numComments,
+        "numMessages": o.numMessages,
         "newComments": o.unreadComments,
         "newMessages": o.unreadMessages,
         // "connected_networks": api.url("images/networks.png")
       }, function(html) {
-        if (document.querySelector(".kifi-slider2")) {
-          api.log("[showSlider] already there");  // TODO: remove old one? perhaps from previous installation
+        if ($slider) {
+          api.log("[showSlider] already there");
         } else {
+          $(".kifi-slider2").remove();  // e.g. from earlier version
           $slider = $(html).appendTo("html").layout().addClass("kifi-visible kifi-growing")
           .on("transitionend webkitTransitionEnd", function f(e) {
-            if (e.target === $slider[0]) {
-              $slider.off("transitionend webkitTransitionEnd", f).removeClass("kifi-growing");
+            if (e.target.classList.contains("kifi-slider2")) {
+              $(e.target).off("transitionend webkitTransitionEnd", f).removeClass("kifi-growing");
             }
           });
 
@@ -92,7 +95,7 @@ slider2 = function() {
             if (e.target !== this) {
               this.classList.add("kifi-hoverless");
             }
-            if ((e.target === this || e.target.parentNode === this) && (o.keepers || o.keeps)) {
+            if ((e.target === this || e.target.parentNode === this) && (o.keepers || o.keeps) && !$pane) {
               $(this).showHover({
                 reuse: false,
                 showDelay: 250,
@@ -101,7 +104,7 @@ slider2 = function() {
                 create: function(callback) {
                   // TODO: preload friend pictures
                   render("html/metro/keepers.html", {
-                    keepers: o.keepers,
+                    keepers: shuffle(o.keepers.slice(0, 8)),
                     captionHtml: formatCountHtml(o.kept, o.private, (o.keepers || 0).length, o.otherKeeps)
                   }, function(html) {
                     callback($("<div class=kifi-slider2-tip>").html(html));
@@ -111,6 +114,7 @@ slider2 = function() {
           }).on("mouseout", ".kifi-slider2-keep-btn", function() {
             this.classList.remove("kifi-hoverless");
           }).on("mouseenter", ".kifi-slider2-lock", function() {
+            if ($pane) return;
             $(this).showHover({
               reuse: false,
               showDelay: 250,
@@ -131,10 +135,9 @@ slider2 = function() {
               togglePrivate(el);
             }
           }).on("click", ".kifi-slider2-pane,.kifi-slider2-x", function() {
-            var cl = document.documentElement.classList;
-            if (cl.contains("kifi-with-pane")) {
+            if ($pane) {
               hidePane();
-            } else if (!cl.contains("kifi-pane-parent")) {
+            } else if (!document.documentElement.classList.contains("kifi-pane-parent")) {
               showPane();
             }
           });
@@ -206,6 +209,7 @@ slider2 = function() {
     btn.classList.remove("kifi-unkept");
     btn.classList.add(privately ? "kifi-private" : "kifi-public");
     $(".kifi-pane-kept").addClass("kifi-kept");
+    updateTile(true);
 
     logEvent("slider", "keep", {"isPrivate": privately});
 
@@ -227,6 +231,7 @@ slider2 = function() {
     btn.classList.remove("kifi-private", "kifi-public");
     btn.classList.add("kifi-unkept");
     $(".kifi-pane-kept").removeClass("kifi-kept");
+    updateTile(false);
 
     logEvent("slider", "unkeep");
 
@@ -257,7 +262,7 @@ slider2 = function() {
       kifiLogoUrl: api.url("images/kifi_logo.png"),
       gearUrl: api.url("images/metro/gear.png"),
       kept: info.kept,
-      keepers: info.keepers,
+      keepers: shuffle(info.keepers.slice(0, 7)),
       keepersCaptionHtml: formatCountHtml(0, 0, (info.keepers || 0).length, info.otherKeeps)
     }, function(html) {
       var $html = $("html").addClass("kifi-pane-parent");
@@ -307,6 +312,15 @@ slider2 = function() {
 
   function plural(n, term) {
     return n + " " + term + (n == 1 ? "" : "s");
+  }
+
+  function shuffle(arr) {
+    var i = arr.length, j, v;
+    while (i > 1) {
+      j = Math.random() * i-- | 0;
+      v = arr[i], arr[i] = arr[j], arr[j] = v;
+    }
+    return arr;
   }
 
   // the slider API
