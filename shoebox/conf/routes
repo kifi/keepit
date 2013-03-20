@@ -186,3 +186,6 @@ GET     /admin/labs/rankVsScore     @com.keepit.controllers.admin.AdminSearchLab
 GET     /admin/labs/rankVsScore.json @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
 GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+
+# INTERNAL ROUTES
+POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked

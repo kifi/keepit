@@ -1,5 +1,6 @@
 package com.keepit.common.db
 
+import play.api.libs.json._
 import play.api.mvc.{PathBindable, QueryStringBindable}
 
 case class Id[T](id: Long) {
@@ -7,6 +8,11 @@ case class Id[T](id: Long) {
 }
 
 object Id {
+  def format[T]: Format[Id[T]] = new Format[Id[T]] {
+    def reads(json: JsValue): JsResult[Id[T]] = __.read[Long].reads(json).map(Id(_))
+    def writes(o: Id[T]): JsValue = JsNumber(o.id)
+  }
+
   implicit def queryStringBinder[T](implicit longBinder: QueryStringBindable[Long]) = new QueryStringBindable[Id[T]] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, Id[T]]] = {
       longBinder.bind(key, params) map {

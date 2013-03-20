@@ -3,10 +3,8 @@ package com.keepit.shoebox
 import com.google.common.io.Files
 import com.google.inject.Provides
 import com.google.inject.Singleton
-import com.google.inject.multibindings.Multibinder
 import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.analytics.reports._
-import com.keepit.common.analytics.{SliderShownListener, UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialGraphRefresherImpl, SocialGraphRefresher}
 import com.keepit.inject.AppScoped
