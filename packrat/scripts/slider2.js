@@ -1,4 +1,5 @@
 // @require styles/metro/slider2.css
+// @require styles/friend_card.css
 // @require scripts/lib/jquery-1.8.2.min.js
 // @require scripts/lib/jquery-showhover.js
 // @require scripts/lib/keymaster.min.js
@@ -94,17 +95,36 @@ slider2 = function() {
                 reuse: false,
                 showDelay: 250,
                 hideDelay: 800,
+                fadesOut: true,
                 recovery: Infinity,
                 create: function(callback) {
-                  // TODO: preload friend pictures
+                  var keepers = pick(o.keepers, 8);
                   render("html/metro/keepers.html", {
-                    keepers: pick(o.keepers, 8),
-                    captionHtml: formatCountHtml(o.kept, o.private, (o.keepers || 0).length, o.otherKeeps)
+                    link: true,
+                    keepers: keepers,
+                    anyKeepers: !!keepers,
+                    captionHtml: formatCountHtml(o.kept, (o.keepers || 0).length, o.otherKeeps)
                   }, function(html) {
-                    callback($("<div class=kifi-slider2-tip>").html(html));
+                    callback($("<div class=kifi-slider2-tip>").html(html).data("keepers", keepers));
                   });
                 }});
             }
+          }).on("mouseenter", ".kifi-slider2-keeper", function() {
+            var $a = $(this).showHover({
+              hideDelay: 600,
+              fadesOut: true,
+              create: function(callback) {
+                var i = $a.prevAll(".kifi-slider2-keeper").length;
+                var friend = $a.closest(".kifi-slider2-tip").data("keepers")[i];
+                render("html/friend_card.html", {
+                  name: friend.firstName + " " + friend.lastName,
+                  facebookId: friend.facebookId,
+                  iconsUrl: api.url("images/social_icons.png")
+                }, callback);
+                api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+                  $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
+                });
+              }});
           }).on("mouseout", ".kifi-slider2-keep-btn", function() {
             this.classList.remove("kifi-hoverless");
           }).on("hover:hide", ".kifi-slider2-keep-btn", function() {
@@ -114,11 +134,12 @@ slider2 = function() {
                 hideSlider("mouseout");
               }
             }, true);
-          }).on("mouseenter", ".kifi-slider2-lock", function() {
-            if ($pane) return;
+          }).on("mouseenter", ".kifi-slider2-lock", function(e) {
+            if ($pane || e.target !== this) return;
             $(this).showHover({
               reuse: false,
               showDelay: 250,
+              fadesOut: true,
               recovery: Infinity,
               create: function(callback) {
                 var html = this.parentNode.classList.contains("kifi-unkept") ?
@@ -265,7 +286,7 @@ slider2 = function() {
         gearUrl: api.url("images/metro/gear.png"),
         kept: info.kept,
         keepers: pick(info.keepers, 7),
-        keepersCaptionHtml: formatCountHtml(0, 0, (info.keepers || 0).length, info.otherKeeps)
+        keepersCaptionHtml: formatCountHtml(0, (info.keepers || 0).length, info.otherKeeps)
       }, function(html) {
         var $html = $("html").addClass("kifi-pane-parent");
         $pane = $(html).appendTo($html).layout();
@@ -286,31 +307,13 @@ slider2 = function() {
     var $html = $("html").removeClass("kifi-with-pane");
   }
 
-  function formatCountHtml(kept, isPrivate, numFriends, numOthers) {
-    // Awful decision tree. Got a better way?
-    if (kept) {
-      var priv = ""; // isPrivate ? " <span class=kifi-slider2-private>Private</span>" : "";
-      if (numFriends) {
-        if (numOthers) {
-          return "You" + priv + " + " + plural(numFriends, "friend") + " + " + plural(numOthers, "other") + " kept this";
-        }
-        return "You" + priv + " + " + plural(numFriends, "friend") + " kept this";
-      }
-      if (numOthers) {
-        return "You" + priv + " + " + plural(numOthers, "other") + " kept this";
-      }
-      return "You kept this" + priv;
-    }
-    if (numFriends) {
-      if (numOthers) {
-        return plural(numFriends, "friend") + " + " + plural(numOthers, "other") + " kept this";
-      }
-      return plural(numFriends, "friend") + " kept this";
-    }
-    if (numOthers) {
-      return plural(numOthers, "other") + " kept this";
-    }
-    return "No one kept this";
+  function formatCountHtml(kept, numFriends, numOthers) {
+    return [
+        kept ? "You" : null,
+        numFriends ? plural(numFriends, "friend") : null,
+        numOthers ? plural(numOthers, "other") : null]
+      .filter(function(v) {return v})
+      .join(" + ");
   }
 
   function plural(n, term) {
@@ -345,5 +348,30 @@ slider2 = function() {
       } else {
         showSlider(info, trigger);
       }
+    },
+    showKeepersFor: function(info, tileHasCounter, ms) {
+      var $el = $("<div class=kifi-tile-hover>").toggleClass("kifi-up", tileHasCounter).appendTo("html").showHover({
+        reuse: false,
+        showDelay: 0,
+        hideDelay: 1e9,
+        fadesOut: true,
+        recovery: Infinity,
+        create: function(callback) {
+          var keepers = pick(info.keepers, 8);
+          // TODO: preload friend pictures
+          render("html/metro/keepers.html", {
+            keepers: keepers,
+            anyKeepers: !!keepers,
+            captionHtml: formatCountHtml(info.kept, (info.keepers || 0).length, info.otherKeeps)
+          }, function(html) {
+            callback($("<div class=kifi-slider2-tip>").html(html));
+          });
+        }});
+      setTimeout(function() {
+        $el.triggerHandler("click.showHover")
+        setTimeout(function() {
+          $el.remove();
+        }, 1000);
+      }, ms);
     }};
 }();
