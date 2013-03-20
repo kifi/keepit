@@ -5,7 +5,7 @@ import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.TokenFilter
 import org.apache.lucene.analysis.TokenStream
-import org.apache.lucene.index.Payload
+import org.apache.lucene.util.BytesRef
 import scala.util.Random
 import scala.util.Sorting
 import scala.math._
@@ -17,6 +17,8 @@ class SemanticVector(val bytes: Array[Byte]) extends AnyVal {
 
   // similarity of two vectors (-1.0 to 1.0) ~ cosine distance
   def similarity(other: SemanticVector) = SemanticVector.similarity(bytes, other.bytes)
+
+  def set(data: Array[Byte], offset: Int, length: Int) = System.arraycopy(data, offset, bytes, 0, length)
 }
 
 object SemanticVector {
@@ -148,6 +150,8 @@ class SemanticVectorBuilder(windowSize: Int) {
 
   def load(tokenStream: TokenStream) {
     val termAttr = tokenStream.getAttribute(classOf[CharTermAttribute])
+
+    tokenStream.reset()
     while (tokenStream.incrementToken()) add(new String(termAttr.buffer, 0, termAttr.length))
     flush
   }
@@ -232,7 +236,7 @@ class SemanticVectorBuilder(windowSize: Int) {
         if (iterator.hasNext) {
           clearAttributes()
           val (termText, sketch) = iterator.next
-          payloadAttr.setPayload(new Payload(vectorize(sketch).bytes))
+          payloadAttr.setPayload(new BytesRef(vectorize(sketch).bytes))
           termAttr.append(termText)
           posIncrAttr.setPositionIncrement(1)
           true
@@ -250,7 +254,8 @@ class SemanticVectorComposer {
   private[this] var cnt = 0
   private[this] val counters = new Array[Int](vectorSize)
 
-  def add(vector: Array[Byte], weight: Int) = {
+  def add(sv: SemanticVector, weight: Int) = {
+    val vector = sv.bytes
     var i = 0
     var b = 0
     while (i < vector.length) {

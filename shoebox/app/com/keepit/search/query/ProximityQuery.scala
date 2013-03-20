@@ -1,16 +1,19 @@
 package com.keepit.search.query
 
 import com.keepit.search.index.Searcher
+import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
-import org.apache.lucene.index.TermPositions
+import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
 import org.apache.lucene.search.ComplexExplanation
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Explanation
-import org.apache.lucene.search.Similarity
-import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.search.similarities.Similarity
 import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
 import java.lang.{Float => JFloat}
@@ -18,14 +21,15 @@ import java.util.{Set => JSet}
 import scala.collection.JavaConversions._
 import scala.math._
 import java.util.Arrays
+import org.apache.lucene.util.Bits
 
 object ProximityQuery {
   def apply(terms: Seq[Term]) = new ProximityQuery(terms)
 }
 
-class ProximityQuery(val terms: Seq[Term]) extends Query2 {
+class ProximityQuery(val terms: Seq[Term]) extends Query {
 
-  override def createWeight2(searcher: Searcher): Weight = new ProximityWeight(this)
+  override def createWeight(searcher: IndexSearcher): Weight = new ProximityWeight(this)
 
   override def rewrite(reader: IndexReader): Query = this
 
@@ -44,18 +48,19 @@ class ProximityQuery(val terms: Seq[Term]) extends Query2 {
 class ProximityWeight(query: ProximityQuery) extends Weight {
   private[this] var value = 0.0f
 
-  override def getValue() = value
+  def getValue = value
+
   override def scoresDocsOutOfOrder() = false
 
-  override def sumOfSquaredWeights() = {
+  override def getValueForNormalization() = {
     value = query.getBoost()
     value * value
   }
 
-  override def normalize(norm: Float) { value *= norm }
+  override def normalize(norm: Float, topLevelBoost: Float) { value *= (norm * topLevelBoost) }
 
-  override def explain(reader: IndexReader, doc: Int) = {
-    val sc = scorer(reader, true, false);
+  override def explain(context: AtomicReaderContext, doc: Int) = {
+    val sc = scorer(context, true, false, context.reader.getLiveDocs);
     val exists = (sc != null && sc.advance(doc) == doc);
 
     val result = new ComplexExplanation()
@@ -77,14 +82,14 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
   def getQuery() = query
 
-  override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
+  override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
     if (query.terms.size > 1) {
       var i = -1
       // uses first 64 terms (enough?)
       val tps = query.terms.take(64).foldLeft(Map.empty[String, PositionAndMask]){ (tps, term) =>
         i += 1
         val termText = term.text()
-        tps + (termText -> (tps.getOrElse(termText, new PositionAndMask(reader.termPositions(term), termText).setBit(i))))
+        tps + (termText -> (tps.getOrElse(termText, new PositionAndMask(termPositionsEnum(context, term, acceptDocs), termText).setBit(i))))
       }
       new ProximityScorer(this, tps.values.toArray)
     } else {
@@ -93,7 +98,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
   }
 }
 
-private[query] final class PositionAndMask(val tp: TermPositions, val termText: String) {
+private[query] final class PositionAndMask(val tp: DocsAndPositionsEnum, val termText: String) {
   var doc = -1
   var pos = -1
 
@@ -108,11 +113,10 @@ private[query] final class PositionAndMask(val tp: TermPositions, val termText: 
 
   def fetchDoc(target: Int) {
     pos = -1
-    if (tp.skipTo(target)) {
-      doc = tp.doc()
+    doc = tp.advance(target)
+    if (doc < NO_MORE_DOCS) {
       posLeft = tp.freq()
     } else {
-      doc = DocIdSetIterator.NO_MORE_DOCS
       posLeft = 0
     }
   }
@@ -139,9 +143,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
   private[this] val ls = new Array[Float](numTerms + 1) // local scores
   private[this] val weightVal = weight.getValue
 
-  private[this] val pq = new PriorityQueue[PositionAndMask] {
-    super.initialize(numTerms)
-
+  private[this] val pq = new PriorityQueue[PositionAndMask](numTerms) {
     override def lessThan(nodeA: PositionAndMask, nodeB: PositionAndMask) = {
       if (nodeA.doc == nodeB.doc) nodeA.pos < nodeB.pos
       else nodeA.doc < nodeB.doc
@@ -212,7 +214,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
 
   override def advance(target: Int): Int = {
     var top = pq.top
-    val doc = if (target <= curDoc && curDoc < DocIdSetIterator.NO_MORE_DOCS) curDoc + 1 else target
+    val doc = if (target <= curDoc && curDoc < NO_MORE_DOCS) curDoc + 1 else target
     while (top.doc < doc) {
       top.fetchDoc(doc)
       top = pq.updateTop()
@@ -220,5 +222,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
     curDoc = top.doc
     curDoc
   }
+
+  override def freq(): Int = 1
 }
 

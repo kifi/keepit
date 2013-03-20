@@ -1,35 +1,26 @@
 package com.keepit.search.line
 
-import com.keepit.common.db.Id
-import com.keepit.model.{NormalizedURI, User}
-import com.keepit.search.index.DocIdRemapper
-import org.apache.lucene.index.IndexReader
-import org.apache.lucene.search.DocIdSetIterator
-import org.apache.lucene.search.Query
-import org.apache.lucene.index.Term
-import scala.collection.immutable.LongMap
-import scala.collection.mutable.{Map => MutableMap}
-import java.util.{Map => JMap}
-import java.util.Arrays
-import org.apache.lucene.document.FieldSelector
-import org.apache.lucene.index.TermVectorMapper
-import org.apache.lucene.index.TermEnum
-import org.apache.lucene.index.TermDocs
-import org.apache.lucene.index.TermPositions
-import scala.collection.mutable.ArrayBuffer
-import com.keepit.search.index.IdMapper
-import com.keepit.search.index.ArrayIdMapper
 import com.keepit.search.index.CachingIndexReader
+import com.keepit.search.index.CachedIndex
 import com.keepit.search.index.InvertedList
 import com.keepit.search.index.InvertedListBuilder
 import com.keepit.search.index.EmptyInvertedList
+import org.apache.lucene.index.AtomicReader
+import org.apache.lucene.index.Term
+import org.apache.lucene.util.BytesRef
+import scala.collection.JavaConversions._
+import scala.collection.mutable.ArrayBuffer
+import java.util.{Map=>JMap, Iterator=>JIterator, TreeMap=>JSortedMap, TreeSet=>JSortedSet}
+import scala.collection.SortedMap
 
 object LineIndexReader {
 
-  def apply(indexReader: IndexReader, userDocId: Int, terms: Set[Term], numLines: Int) = {
-    var invertedLists = terms.foldLeft(Map.empty[Term, InvertedList]){ (invertedLists, term) =>
-      val tp = indexReader.termPositions(term)
-      if (tp.skipTo(userDocId) && tp.doc() == userDocId) {
+  def apply(indexReader: AtomicReader, userDocId: Int, terms: Set[Term], numLines: Int) = {
+    val invertedLists = terms.foldLeft(SortedMap.empty[String, SortedMap[BytesRef, InvertedList]]){ (invertedLists, term) =>
+      val field = term.field()
+      val text = term.bytes
+      val tp = indexReader.termPositionsEnum(term)
+      if (tp != null && tp.advance(userDocId) == userDocId) {
         val invertedList = new InvertedListBuilder
         val freq = tp.freq()
         var i = 0
@@ -47,11 +38,15 @@ object LineIndexReader {
           i += 1
         }
         if (curDoc >= 0) invertedList.add(curDoc, plist.toArray)
-        invertedLists + (term -> invertedList.build)
+        invertedLists + (
+          field -> (
+            invertedLists.getOrElse(field, SortedMap.empty[BytesRef, InvertedList]) + (text -> invertedList.build)
+          )
+        )
       } else {
-        invertedLists + (term -> EmptyInvertedList)
+        invertedLists
       }
     }
-    new CachingIndexReader(invertedLists, numLines)
+    new CachingIndexReader(new CachedIndex(invertedLists), numLines)
   }
 }

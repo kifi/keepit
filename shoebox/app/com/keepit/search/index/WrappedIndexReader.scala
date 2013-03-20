@@ -1,27 +1,25 @@
 package com.keepit.search.index
 
-import org.apache.lucene.document.FieldSelector
+import org.apache.lucene.index.AtomicReader
+import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.MultiReader
 import org.apache.lucene.index.SegmentReader
+import org.apache.lucene.index.StoredFieldVisitor
 import org.apache.lucene.index.Term
-import org.apache.lucene.index.TermVectorMapper
 import scala.collection.mutable.ArrayBuffer
-import java.util.{Map => JMap}
+import scala.collection.JavaConversions._
+import org.apache.lucene.index.SlowCompositeReaderWrapper
 
 object WrappedIndexReader {
 
-  def apply(inner: IndexReader): WrappedIndexReader = {
+  def apply(inner: DirectoryReader): WrappedIndexReader = {
     doOpen(inner, Map.empty[String, IdMapper])
-  }
-
-  def apply(inner: IndexReader, idMapper: IdMapper): WrappedIndexReader = {
-    apply(inner, ArrayBuffer(new WrappedSubReader("", inner, idMapper)))
   }
 
   def reopen(oldReader: WrappedIndexReader): WrappedIndexReader = {
     val oldInner = oldReader.inner
-    val newInner = IndexReader.openIfChanged(oldInner)
+    val newInner = DirectoryReader.openIfChanged(oldInner)
     if (newInner != null) {
       var oldIdMappers = oldReader.wrappedSubReaders.foldLeft(Map.empty[String, IdMapper]){ (m, r) => m + (r.name -> r.getIdMapper) }
       doOpen(newInner, oldIdMappers)
@@ -30,27 +28,22 @@ object WrappedIndexReader {
     }
   }
 
-  def apply(inner: IndexReader, subReaders: ArrayBuffer[WrappedSubReader]): WrappedIndexReader = {
-    val seqSubReaders = subReaders.map{ _.asInstanceOf[IndexReader] }.toArray
-    new WrappedIndexReader(inner, subReaders.toArray, seqSubReaders)
-  }
-
-  private def doOpen(inner: IndexReader, oldIdMappers: Map[String, IdMapper]) = {
-    val subReaders = inner.getSequentialSubReaders
-    val newSubReaders = subReaders.foldLeft(new ArrayBuffer[WrappedSubReader]){
-      case (buf, segmentReader: SegmentReader) =>
-        val segmentName = segmentReader.getSegmentName
-        buf += new WrappedSubReader(segmentName, segmentReader, oldIdMappers.getOrElse(segmentName, ArrayIdMapper(segmentReader)))
-      case (buf, subReader) => throw new IllegalStateException("not instance of %s but %s".format(classOf[SegmentReader].getName(), subReader.getClass.getName))
+  private def doOpen(inner: DirectoryReader, oldIdMappers: Map[String, IdMapper]) = {
+    val subReaders = inner.getContext.leaves.foldLeft(new ArrayBuffer[WrappedSubReader]){ (buf, cx) =>
+      cx.reader match {
+        case segmentReader: SegmentReader =>
+          val segmentName = segmentReader.getSegmentName
+          buf += new WrappedSubReader(segmentName, segmentReader, oldIdMappers.getOrElse(segmentName, ArrayIdMapper(segmentReader)))
+        case subReader =>
+          throw new IllegalStateException("not instance of %s but %s".format(classOf[SegmentReader].getName(), subReader.getClass.getName))
+      }
     }
-    apply(inner, newSubReaders)
+    new WrappedIndexReader(inner, subReaders.toArray)
   }
 }
 
-class WrappedIndexReader(val inner: IndexReader, val wrappedSubReaders: Array[WrappedSubReader], sequentialSubReaders: Array[IndexReader])
-extends MultiReader(sequentialSubReaders, false) {
-
-  override def getSequentialSubReaders() = sequentialSubReaders
+class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Array[WrappedSubReader])
+extends MultiReader(wrappedSubReaders.map{ _.asInstanceOf[IndexReader] }.toArray, false) {
 
   def getIdMapper: IdMapper = {
     new IdMapper {
@@ -69,11 +62,12 @@ extends MultiReader(sequentialSubReaders, false) {
       def getDocId(id: Long): Int = {
         var base = 0
         var i = 0
-        while (i < subReaders.length) {
+        while (i < wrappedSubReaders.length) {
           val r = wrappedSubReaders(i)
           val nextBase = base + r.maxDoc
+          val liveDocs = r.getLiveDocs
           val docid = r.getIdMapper.getDocId(id)
-          if (docid >= 0 && !r.isDeleted(docid)) return docid + base
+          if (docid >= 0 && (liveDocs == null || liveDocs.get(docid))) return docid + base
           base = nextBase
           i += 1
         }
@@ -81,6 +75,8 @@ extends MultiReader(sequentialSubReaders, false) {
       }
     }
   }
+
+  def asAtomicReader: WrappedSubReader = new WrappedSubReader("", SlowCompositeReaderWrapper.wrap(this), getIdMapper)
 
   def add(indexReader: CachingIndexReader, idMapper: IdMapper) = {
     val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]){ (m, r) => m + (r.name -> DocIdRemapper(idMapper, r.getIdMapper, r.inner)) }
@@ -93,42 +89,22 @@ extends MultiReader(sequentialSubReaders, false) {
       newSubReaders += new WrappedSubReader("", subReader, idMapper)
     }
 
-    WrappedIndexReader(inner, newSubReaders)
+    new WrappedIndexReader(inner, newSubReaders.toArray)
   }
-
-  override def doDelete(doc: Int) = throw new UnsupportedOperationException()
-  override def doUndeleteAll() = throw new UnsupportedOperationException()
-  override def doCommit(commitUserData: JMap[String, String]) = throw new UnsupportedOperationException()
-  override def doSetNorm(doc: Int, field: String, value: Byte) = throw new UnsupportedOperationException()
-  override protected def doOpenIfChanged() = throw new UnsupportedOperationException()
 }
 
-class WrappedSubReader(val name: String, val inner: IndexReader, idMapper: IdMapper) extends IndexReader {
+class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMapper) extends AtomicReader {
   def getIdMapper = idMapper
 
-  override def getSequentialSubReaders() = null
-  override def docFreq(term: Term) = inner.docFreq(term)
-  override def doClose() = { inner.close() }
   override def hasDeletions() = inner.hasDeletions()
-  override def isDeleted(docid: Int) = inner.isDeleted(docid)
-  override def hasNorms(field: String) = inner.hasNorms(field)
-  override def termDocs() = inner.termDocs()
-  override def termPositions() = inner.termPositions()
-  override def norms(field: String) = inner.norms(field)
-  override def norms(field: String, bytes: Array[Byte], offset: Int) = inner.norms(field, bytes, offset)
-  override def document(doc: Int, fieldSelector: FieldSelector) = inner.document(doc, fieldSelector)
+  override def normValues(field: String) = inner.normValues(field)
+  override def document(doc: Int, visitor: StoredFieldVisitor) = inner.document(doc, visitor)
   override def getFieldInfos() = inner.getFieldInfos()
-  override def getTermFreqVector(doc: Int, field: String) = inner.getTermFreqVector(doc, field)
-  override def getTermFreqVector(doc: Int, mapper: TermVectorMapper) = inner.getTermFreqVector(doc, mapper)
-  override def getTermFreqVector(doc: Int, field: String, mapper: TermVectorMapper) = inner.getTermFreqVector(doc, field, mapper)
-  override def getTermFreqVectors(doc: Int) = inner.getTermFreqVectors(doc)
-  override def terms() = inner.terms()
-  override def terms(term: Term) = inner.terms(term)
+  override def getTermVectors(doc: Int) = inner.getTermVectors(doc)
   override def maxDoc() = inner.maxDoc()
   override def numDocs() = inner.numDocs()
-
-  override def doDelete(doc: Int) = throw new UnsupportedOperationException()
-  override def doUndeleteAll() = throw new UnsupportedOperationException()
-  override def doCommit(commitUserData: JMap[String, String]) = throw new UnsupportedOperationException()
-  override def doSetNorm(doc: Int, field: String, value: Byte) = throw new UnsupportedOperationException()
+  override def docValues(field: String) = inner.docValues(field)
+  override def fields() = inner.fields()
+  override def getLiveDocs() = inner.getLiveDocs()
+  protected def doClose() = {}
 }

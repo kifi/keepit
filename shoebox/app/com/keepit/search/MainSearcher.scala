@@ -233,16 +233,14 @@ class MainSearcher(
     parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
-      val idMapper = personalizedSearcher.indexReader.getIdMapper
+      val doc = personalizedSearcher.indexReader.getIdMapper.getDocId(uriId.id)
 
-      (query, personalizedSearcher.explain(query, idMapper.getDocId(uriId.id)))
+      (query, personalizedSearcher.explain(query, doc))
     }
   }
 }
 
-class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
-
-  super.initialize(sz)
+class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
 
   val NO_FRIEND_IDS = Set.empty[Id[User]]
 

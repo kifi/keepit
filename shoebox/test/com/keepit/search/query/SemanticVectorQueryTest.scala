@@ -13,10 +13,8 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
-import org.apache.lucene.index.TermEnum
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause
-import org.apache.lucene.search.DefaultSimilarity
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
@@ -73,7 +71,7 @@ class SemanticVectorQueryTest extends Specification {
   }
 
   val indexingAnalyzer = DefaultAnalyzer.forIndexing
-  val config = new IndexWriterConfig(Version.LUCENE_36, indexingAnalyzer)
+  val config = new IndexWriterConfig(Version.LUCENE_41, indexingAnalyzer)
 
   val ramDir = new RAMDirectory
   val indexer = new TstIndexer(ramDir, config)

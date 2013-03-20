@@ -23,7 +23,7 @@ import com.keepit.search.index.DefaultAnalyzer
 class QueryParserTest extends Specification {
 
   private trait QueryParserScope extends Scope {
-    val analyzer = DefaultAnalyzer.forParsing(Lang("en"))
+    val analyzer = new org.apache.lucene.analysis.standard.StandardAnalyzer(org.apache.lucene.util.Version.LUCENE_41) //DefaultAnalyzer.forParsing(Lang("en"))
     val parser = new QueryParser(analyzer, None) with DefaultSyntax
   }
 

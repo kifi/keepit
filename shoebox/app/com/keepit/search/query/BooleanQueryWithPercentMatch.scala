@@ -1,16 +1,18 @@
 package com.keepit.search.query
 
+import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.IndexReader
-import org.apache.lucene.search.{BooleanQuery => LBooleanQuery}
-import org.apache.lucene.search.BooleanScorer2
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.Searcher
-import org.apache.lucene.search.Scorer
-import org.apache.lucene.search.Similarity
-import org.apache.lucene.search.Weight
-import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.BooleanClause
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.BooleanScorer2
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.search.Query
+import org.apache.lucene.search.Scorer
+import org.apache.lucene.search.Weight
+import org.apache.lucene.search.similarities.Similarity
 import org.apache.lucene.util.PriorityQueue
+import org.apache.lucene.util.Bits
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import scala.math._
@@ -26,7 +28,7 @@ object BooleanQueryWithPercentMatch {
   }
 }
 
-class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LBooleanQuery(disableCoord) {
+class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) {
 
   private[this] var percentMatch = 0.0f
 
@@ -62,7 +64,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
     returnQuery
   }
 
-  override def clone(): Object = {
+  override def clone(): BooleanQuery = {
     val clone = new BooleanQueryWithPercentMatch(disableCoord)
     clone.setPercentMatch(percentMatch)
     clauses.foreach{ c => clone.add(c) }
@@ -71,10 +73,10 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
     clone
   }
 
-  override def createWeight(searcher: Searcher) = {
+  override def createWeight(searcher: IndexSearcher) = {
 
     new BooleanWeight(searcher, disableCoord) {
-      override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
+      override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
         val required = new ArrayBuffer[Scorer]
         val prohibited = new ArrayBuffer[Scorer]
         val optional = new ArrayBuffer[(Scorer, Float)]
@@ -82,18 +84,18 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
         var totalValueOnRequired = 0.0f
         var totalValueOnOptional = 0.0f
         clauses.zip(weights).foreach{ case (c, w) =>
-          val subScorer = w.scorer(reader, true, false)
+          val subScorer = w.scorer(context, true, false, acceptDocs)
           if (c.isRequired()) {
-            totalValueOnRequired += w.getValue
+            totalValueOnRequired += w.getValueForNormalization
             // if a required clasuse does not have a scorer, no hit
             if (subScorer == null) return null
             required += subScorer
           } else if (c.isProhibited()) {
             if (subScorer != null) prohibited += subScorer
           } else {
-            totalValueOnOptional += w.getValue
+            totalValueOnOptional += w.getValueForNormalization
             if (subScorer != null) {
-              optional += ((subScorer, w.getValue))
+              optional += ((subScorer, w.getValueForNormalization))
             }
           }
         }
@@ -191,6 +193,8 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
     doc
   }
 
+  override def freq(): Int = 1
+
   override def coord = (required.value + optional.value)/value
 }
 
@@ -238,6 +242,8 @@ class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Sc
     doc
   }
 
+  override def freq(): Int = 1
+
   override def coord = 1.0f
 }
 
@@ -263,8 +269,7 @@ extends Scorer(weight) with Coordinator with Logging {
     }
   }
 
-  private[this] val pq = new PriorityQueue[ScorerDoc] {
-    super.initialize(scorers.length)
+  private[this] val pq = new PriorityQueue[ScorerDoc](scorers.length) {
     override def lessThan(a: ScorerDoc, b: ScorerDoc) = (a.doc < b.doc)
   }
 
@@ -313,6 +318,8 @@ extends Scorer(weight) with Coordinator with Logging {
     doc
   }
 
+  override def freq(): Int = 1
+
   def value = overlapValue
   override def coord = overlapValueUnit / (overlapValueUnit + (maxOverlapValue - overlapValue))
 }
@@ -342,6 +349,8 @@ class BooleanNotScorer(weight: Weight, scorer: Scorer with Coordinator, prohibit
     }
     doc
   }
+
+  override def freq(): Int = 1
 
   override def coord = scorer.coord
 

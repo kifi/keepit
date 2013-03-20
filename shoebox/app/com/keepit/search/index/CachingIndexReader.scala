@@ -3,31 +3,41 @@ package com.keepit.search.index
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.{NormalizedURI, User}
-import org.apache.lucene.index.IndexReader
+import org.apache.lucene.index.AtomicReader
+import org.apache.lucene.index.DocsEnum
+import org.apache.lucene.index.DocsAndPositionsEnum
+import org.apache.lucene.index.DocValues
+import org.apache.lucene.index.FieldInfo
+import org.apache.lucene.index.FieldInfo.IndexOptions
+import org.apache.lucene.index.FieldInfos
+import org.apache.lucene.index.Fields
+import org.apache.lucene.index.StoredFieldVisitor
+import org.apache.lucene.index.Term
+import org.apache.lucene.index.Terms
+import org.apache.lucene.index.TermsEnum
+import org.apache.lucene.index.TermsEnum.SeekStatus
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.Query
-import org.apache.lucene.index.Term
-import scala.collection.immutable.LongMap
-import scala.collection.mutable.{Map => MutableMap}
-import java.util.{Map => JMap}
-import java.util.Arrays
-import org.apache.lucene.document.FieldSelector
-import org.apache.lucene.index.TermVectorMapper
-import org.apache.lucene.index.TermEnum
-import org.apache.lucene.index.TermDocs
-import org.apache.lucene.index.TermPositions
+import org.apache.lucene.util.Bits
+import org.apache.lucene.util.BytesRef
+import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.SortedMap
+import scala.collection.SortedSet
+import java.util.Arrays
+import java.util.Comparator
+import java.util.{Iterator=>JIterator}
 
-class CachingIndexReader(val invertedLists: Map[Term, InvertedList], numOfDocs: Int) extends IndexReader with Logging {
+class CachingIndexReader(val index: CachedIndex, numOfDocs: Int) extends AtomicReader with Logging {
 
   def split(remappers: Map[String, DocIdRemapper]): Map[String, CachingIndexReader] = {
-    val (subReaders, remainder) = remappers.foldLeft(Map.empty[String, CachingIndexReader], invertedLists){ case ((subReaders, invertedLists), (name, remapper)) =>
-      var remapped = Map.empty[Term, InvertedList]
-      var remainder = Map.empty[Term, InvertedList]
-      invertedLists.foreach{ case (t, l) =>
+    val (subReaders, remainder) = remappers.foldLeft((Map.empty[String, CachingIndexReader], index)){ case ((subReaders, index), (name, remapper)) =>
+      var remapped = new CachedIndex
+      var remainder = new CachedIndex
+      index.foreach{ (f, t, l) =>
         val (list1, list2) = l.split(remapper)
-        remapped += (t -> list1)
-        remainder += (t -> list2)
+        remapped + (f, t, list1)
+        remainder + (f, t, list2)
       }
       (subReaders + (name -> new CachingIndexReader(remapped, -1)), remainder)
     }
@@ -37,40 +47,25 @@ class CachingIndexReader(val invertedLists: Map[Term, InvertedList], numOfDocs: 
   override def numDocs() = numOfDocs
   override def maxDoc() = numOfDocs
 
-  override def docFreq(term: Term) = {
-    val list = invertedLists.get(term) match {
-      case Some(list) => list
-      case None =>
-        log.debug("term % not found")
-        EmptyInvertedList
-    }
-    list.docFreq
-  }
-  override def doClose() {}
-  override def hasDeletions() = false
-  override def isDeleted(docid: Int) = false
-  override def hasNorms(field: String) = false
-  override def termDocs() = (new CachedTermPositions(this)).asInstanceOf[TermDocs]
-  override def termPositions() = (new CachedTermPositions(this)).asInstanceOf[TermPositions]
+  override def fields() = index.fields
 
-  override def norms(field: String) = null
-  override def norms(field: String, bytes: Array[Byte], offset: Int) {}
-  override def doCommit(commitUserData: JMap[String, String]) = throw new UnsupportedOperationException()
-  override def document(doc: Int, fieldSelector: FieldSelector) = throw new UnsupportedOperationException()
-  override def doDelete(doc: Int) = throw new UnsupportedOperationException()
-  override def doSetNorm(doc: Int, field: String, value: Byte) = throw new UnsupportedOperationException()
-  override def doUndeleteAll() = throw new UnsupportedOperationException()
-  override def getFieldInfos() = throw new UnsupportedOperationException()
-  override def getTermFreqVector(doc: Int, field: String) = throw new UnsupportedOperationException()
-  override def getTermFreqVector(doc: Int, mapper: TermVectorMapper) = throw new UnsupportedOperationException()
-  override def getTermFreqVector(doc: Int, field: String, mapper: TermVectorMapper) = throw new UnsupportedOperationException()
-  override def getTermFreqVectors(doc: Int) = throw new UnsupportedOperationException()
-  override def terms() = throw new UnsupportedOperationException()
-  override def terms(term: Term) = throw new UnsupportedOperationException()
+  override def getFieldInfos(): FieldInfos = index.fieldInfos
+  override def getLiveDocs(): Bits = new Bits.MatchAllBits(numOfDocs)
+
+  override def getTermVectors(doc: Int) = throw new UnsupportedOperationException()
+  override def docValues(field: String): DocValues = null
+  override def normValues(field: String): DocValues = null
+  override def hasDeletions() = false
+  override def document(doc: Int, visitor: StoredFieldVisitor) = throw new UnsupportedOperationException()
+  protected def doClose() {}
 }
 
 class InvertedList(val dlist: Array[(Int, Array[Int])]) {
   def docFreq = dlist.length
+
+  def totalTermFreq = dlist.foldLeft(0){ case (sum, (doc, positions)) => sum + positions.length }
+
+  def iterator = dlist.iterator
 
   def split(remapper: DocIdRemapper) = {
     val remapped = new InvertedListBuilder()
@@ -106,71 +101,169 @@ class InvertedListBuilder() {
   def build = if (isEmpty) EmptyInvertedList else new InvertedList(buf.sortBy(_._1).toArray)
 }
 
-class CachedTermPositions(indexReader: CachingIndexReader) extends TermPositions {
+class CachedIndex(invertedLists: SortedMap[String, SortedMap[BytesRef, InvertedList]]) {
+  def this() = this(SortedMap.empty[String, SortedMap[BytesRef, InvertedList]])
+
+  def isEmpty = invertedLists.isEmpty
+
+  def +(field: String, text: BytesRef, list: InvertedList) = {
+    val terms = invertedLists.getOrElse(field, SortedMap.empty[BytesRef, InvertedList])
+    new CachedIndex(invertedLists + (field -> (terms + (text -> list))))
+  }
+
+  def foreach(f: (String, BytesRef, InvertedList) => Unit) = {
+    invertedLists.foreach{ case (field, terms) =>
+      terms.foreach{ case (text, list) =>f(field, text, list) }
+    }
+  }
+
+  def get(term: Term): Option[InvertedList] = invertedLists.get(term.field).flatMap{ _.get(term.bytes) }
+
+  def apply(term: Term): InvertedList = get(term).getOrElse(EmptyInvertedList)
+
+  lazy val fieldInfos: FieldInfos = {
+    val infos = invertedLists.keys.zipWithIndex.map{ case (name, number) =>
+      new FieldInfo(name, true, number, false, true, false,
+                    IndexOptions.DOCS_AND_FREQS_AND_POSITIONS, null, null, null)
+    }.toArray
+    new FieldInfos(infos)
+  }
+
+  def fields: Fields = new Fields {
+    override def iterator(): JIterator[String] = invertedLists.keySet.iterator
+
+    override def terms(field: String): Terms = {
+      invertedLists.get(field) match {
+        case Some(termSet) => new CachedTerms(termSet)
+        case _ => null
+      }
+    }
+
+    override def size() = invertedLists.size
+  }
+}
+
+class CachedTerms(termMap: SortedMap[BytesRef, InvertedList]) extends Terms {
+  override def iterator(reuse: TermsEnum): TermsEnum = {
+    new CachedTermsEnum(termMap: SortedMap[BytesRef, InvertedList])
+  }
+
+  override def size(): Long = termMap.size.toLong
+
+  override def getSumTotalTermFreq(): Long = {
+    termMap.values.foldLeft(0L){ (sum, list) => sum + list.totalTermFreq.toLong }
+  }
+
+  override def getSumDocFreq(): Long = {
+    termMap.values.foldLeft(0L){ (sum, list) => sum + list.docFreq.toLong }
+  }
+
+  override def getDocCount(): Int = {
+    termMap.values.foldLeft(Set.empty[Int]){ (s, list) => s ++ list.iterator.map(_._1).toSet }.size
+  }
+
+  override def hasOffsets() = false
+
+  override def hasPositions() = true
+
+  override def hasPayloads() = false;
+
+  override def getComparator(): Comparator[BytesRef] = null
+}
+
+class CachedTermsEnum(terms: SortedMap[BytesRef, InvertedList]) extends TermsEnum {
+
+  private[this] var currentEntry: Option[(BytesRef, InvertedList)] = None
+  private[this] var currentCollection = terms
+
+  override def getComparator(): Comparator[BytesRef] = null
+
+  override def seekCeil(text: BytesRef, useCache: Boolean): SeekStatus = {
+    currentCollection = terms.from(text)
+    currentEntry = currentCollection.headOption
+    currentEntry.headOption match {
+      case None => SeekStatus.END
+      case Some((text)) => SeekStatus.FOUND
+      case _ => SeekStatus.NOT_FOUND
+    }
+  }
+
+  override def seekExact(ord: Long): Unit = throw new UnsupportedOperationException
+
+  override def term(): BytesRef = currentEntry.get._1
+
+  override def ord(): Long = throw new UnsupportedOperationException
+
+  override def docFreq(): Int = currentEntry.get._2.docFreq
+
+  override def totalTermFreq(): Long = currentEntry.get._2.totalTermFreq
+
+  override def next(): BytesRef = {
+    currentCollection = currentCollection.tail
+    currentEntry = currentCollection.headOption
+    currentEntry match {
+      case Some(head) => head._1
+      case None => null
+    }
+  }
+
+  override def docs(liveDocs: Bits, reuse: DocsEnum, flags: Int): DocsEnum = {
+    currentEntry match {
+      case Some((_, list)) => new CachedDocsAndPositionsEnum(list)
+      case None => new CachedDocsAndPositionsEnum(EmptyInvertedList)
+    }
+  }
+
+  override def  docsAndPositions(liveDocs: Bits, reuse: DocsAndPositionsEnum, flags: Int): DocsAndPositionsEnum = {
+    currentEntry match {
+      case Some((_, list)) => new CachedDocsAndPositionsEnum(list)
+      case None => new CachedDocsAndPositionsEnum(EmptyInvertedList)
+    }
+  }
+}
+
+class CachedDocsAndPositionsEnum(list: InvertedList) extends DocsAndPositionsEnum {
+  private[this] val dlist = list.dlist
   private[this] var docFreq = 0
   private[this] var docid = -1
-  private[this] var dlist = EmptyInvertedList.dlist
   private[this] var positions = EmptyInvertedList.emptyPositions
   private[this] var ptrDoc = 0
   private[this] var ptrPos = 0
 
-  def close() {}
+  override def docID() = docid
 
-  def doc() = docid
+  override def freq() = positions.length
 
-  def freq() = positions.length
-
-  def next() = {
+  override def nextDoc(): Int = {
     if (ptrDoc < docFreq) {
       docid = dlist(ptrDoc)._1
       positions = dlist(ptrDoc)._2
       ptrPos = 0
       ptrDoc += 1
-      true
+      docid
     } else {
       docid = DocIdSetIterator.NO_MORE_DOCS
       positions = EmptyInvertedList.emptyPositions
-      false
+      docid
     }
   }
 
-  def read(docs: Array[Int], freqs: Array[Int]): Int = {
-    var i = 0
-    while (i < docs.length) {
-      if (next()) {
-        docs(i) = doc()
-        freqs(i) = freq()
-        i += 1
-      } else {
-        return i
-      }
-    }
-    i
+
+  override def advance(target: Int): Int = {
+    do { nextDoc() } while (docid < target)
+    docid
   }
 
-  def seek(term: Term) {
-    val invertedList = indexReader.invertedLists.getOrElse(term, EmptyInvertedList)
-    dlist = invertedList.dlist
-    docFreq = invertedList.docFreq
-  }
-
-  def seek(termEnum: TermEnum) {
-    seek(termEnum.term())
-  }
-
-  def skipTo(target: Int): Boolean = {
-    var ret = false
-    do { ret = next() } while (ret & docid < target)
-    ret
-  }
-
-  def nextPosition() = {
+  override def nextPosition(): Int = {
     val pos = positions(ptrPos)
     ptrPos += 1
     pos
   }
-  // no payload
-  def getPayloadLength() = 0
-  def getPayload(data: Array[Byte], offset: Int) = data
-  def isPayloadAvailable() = false
+
+  override def startOffset(): Int = -1
+
+  override def endOffset(): Int = -1
+
+  override def getPayload(): BytesRef = null
 }
+

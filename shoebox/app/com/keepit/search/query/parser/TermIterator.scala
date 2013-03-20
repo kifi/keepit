@@ -8,7 +8,11 @@ import org.apache.lucene.index.Term
 import java.io.StringReader
 
 class TermIterator(field: String, text: String, analyzer: Analyzer) extends Iterator[Term] {
-  protected val ts = analyzer.tokenStream(field, new StringReader(text))
+  protected val ts = {
+    val ts = analyzer.tokenStream(field, new StringReader(text))
+    ts.reset()
+    ts
+  }
   private[this] val termAttr = ts.getAttribute(classOf[CharTermAttribute])
   private[this] var nextTerm: Term = readAhead
 

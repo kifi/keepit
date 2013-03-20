@@ -4,6 +4,8 @@ import org.apache.lucene.document.Field
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
+import org.apache.lucene.document.FieldType
+import org.apache.lucene.document.TextField
 
 object LineField {
   val MAX_POSITION_PER_LINE = 2048
@@ -11,8 +13,8 @@ object LineField {
 }
 
 trait LineFieldBuilder {
-  def buildLineField(fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>Option[TokenStream]) = {
-    new Field(fieldName, new LineTokenStream(fieldName, lines, tokenStreamFunc))
+  def buildLineField(fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>Option[TokenStream], fieldType: FieldType = TextField.TYPE_NOT_STORED) = {
+    new Field(fieldName, new LineTokenStream(fieldName, lines, tokenStreamFunc), fieldType)
   }
 }
 
@@ -46,6 +48,7 @@ class LineTokenStream(fieldName: String, lines: Seq[(Int, String)], tokenStreamF
       posLimit = lineEnd - 1
       baseTokenStream = tokenStreamFunc(fieldName, text).getOrElse(emptyTokenStream)
       baseHasPosIncrAttr = baseTokenStream.hasAttribute(classOf[PositionIncrementAttribute])
+      baseTokenStream.reset
       moreToken = baseTokenStream.incrementToken()
     }
     moreToken match {
