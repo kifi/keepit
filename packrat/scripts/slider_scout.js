@@ -132,7 +132,7 @@ var slider, slider2, injected, t0 = +new Date;
         });
       });
 
-      if (o.keepers) {
+      if (o.keepers && !o.kept) {
         withSlider2(function() {
           slider2.showKeepersFor(o, !!countEl, 2000);
         });
