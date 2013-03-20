@@ -1,13 +1,15 @@
 package com.keepit.module
 
-import akka.actor.ActorSystem
+import java.io.File
+import java.net.InetAddress
+
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.analytics._
 import com.keepit.common.cache.MemcachedCacheModule
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{HealthcheckPluginImpl, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
@@ -20,10 +22,11 @@ import com.keepit.model.SliderHistoryTracker
 import com.keepit.scraper.ScraperConfig
 import com.keepit.scraper.{HttpFetcherImpl, HttpFetcher}
 import com.keepit.search._
+import com.keepit.shoebox.{ShoeboxServiceClientImpl, ShoeboxServiceClient}
 import com.mongodb.casbah.MongoConnection
 import com.tzavellas.sse.guice.ScalaModule
-import java.io.File
-import java.net.InetAddress
+
+import akka.actor.ActorSystem
 import play.api.Play.current
 
 class CommonModule extends ScalaModule with Logging {
@@ -139,4 +142,21 @@ class CommonModule extends ScalaModule with Logging {
     SliderHistoryTracker(filterSize, numHashFuncs, minHits)
   }
 
+  @Singleton
+  @Provides
+  def searchServiceClient(client: HttpClient): SearchServiceClient = {
+    new SearchServiceClientImpl(
+      current.configuration.getString("service.search.host").get,
+      current.configuration.getInt("service.search.port").get,
+      client)
+  }
+
+  @Singleton
+  @Provides
+  def shoeboxServiceClient(client: HttpClient): ShoeboxServiceClient = {
+    new ShoeboxServiceClientImpl(
+      current.configuration.getString("service.shoebox.host").get,
+      current.configuration.getInt("service.shoebox.port").get,
+      client)
+  }
 }
