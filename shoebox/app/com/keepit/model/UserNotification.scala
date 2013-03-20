@@ -10,6 +10,7 @@ import com.keepit.search.Lang
 import scala.slick.util.CloseableIterator
 import play.api.libs.json.JsObject
 import com.keepit.common.logging.Logging
+import com.keepit.common.time.Clock
 
 case class UserNotificationDetails(payload: JsObject) extends AnyVal
 
@@ -36,7 +37,7 @@ trait UserNotificationRepo extends Repo[UserNotification] with ExternalIdColumnF
 }
 
 @Singleton
-class UserNotificationRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[UserNotification] with UserNotificationRepo with ExternalIdColumnDbFunction[UserNotification] with Logging {
+class UserNotificationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[UserNotification] with UserNotificationRepo with ExternalIdColumnDbFunction[UserNotification] with Logging {
   import db.Driver.Implicit._
   import DBSession._
   import FortyTwoTypeMappers._
