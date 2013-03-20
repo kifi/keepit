@@ -259,6 +259,7 @@
   font: 300 12px/27px Lato,sans-serif;
 }
 .kifi-slider2-keepers {
+  text-align: right;
   direction: rtl;
   font-size: 0;
   line-height: 0;
