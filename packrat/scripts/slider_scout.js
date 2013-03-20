@@ -134,7 +134,7 @@ var slider, slider2, injected, t0 = +new Date;
 
       if (o.keepers && !o.kept) {
         withSlider2(function() {
-          slider2.showKeepersFor(o, !!countEl, 2000);
+          setTimeout(slider2.showKeepersFor.bind(slider2, o, !!countEl, 2000), 3000);
         });
       }
     });

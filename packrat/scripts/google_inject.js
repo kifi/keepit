@@ -50,7 +50,7 @@ api.log("[google_inject]");
     clearTimeout(keyTimer);
     keyTimer = setTimeout(search, 120);  // enough of a delay that we won't search after *every* keystroke (similar to Google's behavior)
   });
-  $("#gbqf").submit(function() {  // stable identifier: "Google Bar Query Form"
+  var $qf = $("#gbqf").submit(function() {  // stable identifier: "Google Bar Query Form"
     tQuery = +new Date;
     clearTimeout(keyTimer);
     search();  // immediate search
@@ -152,11 +152,11 @@ api.log("[google_inject]");
     return m && unescape(m[0].substr(3).replace("+", " ")).trim() || "";
   }
 
-  $(window).bind("hashchange", function() {
+  $(window).on("hashchange", function() {
     api.log("[hashchange]");
     checkSearchType();
     search();  // needed for switch from shopping to web search, for example
-  }).bind("unload", function() {
+  }).on("unload", function() {
     if (response.query === query && new Date - tKifiResultsShown > 2000) {
       logEvent("search", "searchUnload", {
         "query": response.query,
@@ -167,7 +167,7 @@ api.log("[google_inject]");
   });
 
   var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
-  new MutationObserver(function onMutation(mutations) {
+  var observer = new MutationObserver(function onMutation(mutations) {
     for (var i = 0; i < mutations.length; i++) {
       for (var j = 0, nodes = mutations[i].addedNodes; j < nodes.length; j++) {
         if (nodes[j].id === "ires") {
@@ -182,7 +182,22 @@ api.log("[google_inject]");
         }
       }
     }
-  }).observe(document.getElementById("main"), {childList: true, subtree: true});  // TODO: optimize away subtree
+  });
+  observer.observe(document.getElementById("main"), {childList: true, subtree: true});  // TODO: optimize away subtree
+
+  window.addEventListener("kifiunload", function f(e) {
+    if (e.lifeId !== lifeId) {
+      api.log("[google_inject] end life:", lifeId);
+      window.removeEventListener("kifiunload", f);
+      $(window).off("hashchange unload");
+      observer.disconnect();
+      $q.off("input");
+      $qf.off("submit");
+      clearTimeout(idleTimer);
+      $res.remove();
+      $res.length = 0;
+    }
+  });
 
   /*******************************************************/
 
