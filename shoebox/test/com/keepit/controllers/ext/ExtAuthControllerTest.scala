@@ -52,7 +52,7 @@ class ExtAuthControllerTest extends Specification with DbRepos {
         //first round
         val fakeRequest1 = FakeRequest().
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
-            withJsonBody(JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"))))
+            withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"))))
         val authRequest1 = AuthenticatedRequest(null, user.id.get, fakeRequest1)
         val result1 = inject[ExtAuthController].start(authRequest1)
         status(result1) must equalTo(OK)
@@ -75,7 +75,7 @@ class ExtAuthControllerTest extends Specification with DbRepos {
         //second round
         val fakeRequest2 = FakeRequest().
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
-            withJsonBody(JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"), "installation" -> JsString(kifiInstallation1.externalId.id))))
+            withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"), "installation" -> JsString(kifiInstallation1.externalId.id))))
         val authRequest2 = AuthenticatedRequest(null, user.id.get, fakeRequest2)
         val result2 = inject[ExtAuthController].start(authRequest2)
         status(result2) must equalTo(OK)

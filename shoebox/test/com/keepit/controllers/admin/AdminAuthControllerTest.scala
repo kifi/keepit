@@ -57,6 +57,7 @@ class AdminAuthControllerTest extends Specification with DbRepos {
         val whoisRequest1 = FakeRequest("GET", "/whois").
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook", "userId" -> admin.id.get.toString)
         val whoisResult1 = route(whoisRequest1).get
+
         (Json.parse(contentAsString(whoisResult1)) \ "externalUserId").as[String] === admin.externalId.toString
 
         val impersonateRequest = FakeRequest("POST", "/admin/user/%s/impersonate".format(impersonate.id.get.toString)).
