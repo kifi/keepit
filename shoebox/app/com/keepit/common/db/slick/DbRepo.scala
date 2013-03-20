@@ -1,17 +1,17 @@
 package com.keepit.common.db.slick
 
 import com.keepit.common.db._
+import com.keepit.common.time._
 import com.keepit.inject._
 import org.joda.time.DateTime
-import DBSession._
 import play.api.Play.current
 import scala.slick.driver._
 import scala.slick.session._
 import scala.slick.lifted._
+import DBSession._
 
 
 trait Repo[M <: Model[M]] {
-  import DBSession._
   def get(id: Id[M])(implicit session: RSession): M
   def all()(implicit session: RSession): Seq[M]
   def save(model: M)(implicit session: RWSession): M
@@ -27,6 +27,7 @@ trait RepoWithExternalId[M <: ModelWithExternalId[M]] { self: Repo[M] =>
 trait DbRepo[M <: Model[M]] extends Repo[M] {
   import FortyTwoTypeMappers._
   val db: DataBaseComponent
+  val clock: Clock
   import db.Driver.Implicit._ // here's the driver, abstracted away
   import db.Driver.Table
 
@@ -47,7 +48,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   }
 
   def save(model: M)(implicit session: RWSession): M = try {
-    val toUpdate = model.withUpdateTime(inject[DateTime])
+    val toUpdate = model.withUpdateTime(clock.now)
     val result = model.id match {
       case Some(id) => update(toUpdate)
       case None => toUpdate.withId(insert(toUpdate))

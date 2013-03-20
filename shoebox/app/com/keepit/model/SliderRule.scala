@@ -48,7 +48,7 @@ trait SliderRuleRepo extends Repo[SliderRule] {
 }
 
 @Singleton
-class SliderRuleRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[SliderRule] with SliderRuleRepo {
+class SliderRuleRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[SliderRule] with SliderRuleRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

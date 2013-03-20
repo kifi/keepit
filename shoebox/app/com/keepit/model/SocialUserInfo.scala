@@ -76,7 +76,10 @@ class SocialUserInfoNetworkCache @Inject() (val repo: FortyTwoCachePlugin) exten
 
 @Singleton
 class SocialUserInfoRepoImpl @Inject() (
-    val db: DataBaseComponent, val userCache: SocialUserInfoUserCache, val networkCache: SocialUserInfoNetworkCache)
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val userCache: SocialUserInfoUserCache,
+  val networkCache: SocialUserInfoNetworkCache)
     extends DbRepo[SocialUserInfo] with SocialUserInfoRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query

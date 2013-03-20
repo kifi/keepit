@@ -21,8 +21,8 @@ case class URLPattern (
   id: Option[Id[URLPattern]] = None,
   pattern: String,
   example: Option[String],
-  createdAt: DateTime = inject[DateTime],
-  updatedAt: DateTime = inject[DateTime],
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
   state: State[URLPattern] = URLPatternStates.ACTIVE
 ) extends Model[URLPattern] {
   def withId(id: Id[URLPattern]): URLPattern = copy(id = Some(id))
@@ -43,7 +43,7 @@ trait URLPatternRepo extends Repo[URLPattern] {
 }
 
 @Singleton
-class URLPatternRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[URLPattern] with URLPatternRepo {
+class URLPatternRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[URLPattern] with URLPatternRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

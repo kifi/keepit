@@ -36,7 +36,7 @@ trait SocialConnectionRepo extends Repo[SocialConnection] {
 }
 
 @Singleton
-class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[SocialConnection] with SocialConnectionRepo {
+class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[SocialConnection] with SocialConnectionRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import scala.slick.jdbc.StaticQuery

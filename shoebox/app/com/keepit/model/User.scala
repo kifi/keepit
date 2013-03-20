@@ -56,7 +56,12 @@ class UserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCach
 }
 
 @Singleton
-class UserRepoImpl @Inject() (val db: DataBaseComponent, val externalIdCache: UserExternalIdCache, val idCache: UserIdCache) extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
+class UserRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val externalIdCache: UserExternalIdCache,
+  val idCache: UserIdCache)
+    extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

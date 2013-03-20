@@ -89,7 +89,7 @@ object UrlController extends AdminController {
             if(url.normalizedUriId != normalizedUri.id.get.id) {
               changes("url") += 1
               if(!readOnly) {
-                urlRepo.save(url.withNormUriId(normalizedUri.id.get).withHistory(URLHistory(normalizedUri.id.get,reason)))
+                urlRepo.save(url.withNormUriId(normalizedUri.id.get).withHistory(URLHistory(inject[Clock].now, normalizedUri.id.get,reason)))
               }
             }
 

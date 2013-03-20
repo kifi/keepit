@@ -97,7 +97,7 @@ trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnF
 }
 
 @Singleton
-class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[KifiInstallation] with KifiInstallationRepo with ExternalIdColumnDbFunction[KifiInstallation] {
+class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[KifiInstallation] with KifiInstallationRepo with ExternalIdColumnDbFunction[KifiInstallation] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

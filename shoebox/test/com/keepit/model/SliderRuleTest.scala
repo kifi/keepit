@@ -16,7 +16,7 @@ import play.api.test.Helpers._
 class SliderRuleTest extends Specification with DbRepos {
   "SliderRule" should {
     "save, load by group name, cache group versions" in {
-      running(new EmptyApplication().withFakeTime()) {
+      running(new EmptyApplication()) {
         val repo = inject[SliderRuleRepo]
         inject[SliderRuleRepo] must be(repo) // singleton
 

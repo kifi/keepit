@@ -50,7 +50,7 @@ trait UserExperimentRepo extends Repo[UserExperiment] {
 }
 
 @Singleton
-class UserExperimentRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[UserExperiment] with UserExperimentRepo {
+class UserExperimentRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[UserExperiment] with UserExperimentRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

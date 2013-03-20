@@ -22,7 +22,9 @@ object ServiceType {
   case object TEST_MODE extends ServiceType("TEST_MODE")
 }
 
-case class FortyTwoServices(started: DateTime) {
+case class FortyTwoServices(clock: Clock) {
+
+  val started = clock.now
 
   val serviceByCode = Map(
     ServiceType.SHOEBOX.name -> ServiceType.SHOEBOX,
