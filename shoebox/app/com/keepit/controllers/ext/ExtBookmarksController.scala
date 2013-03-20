@@ -1,41 +1,39 @@
 package com.keepit.controllers.ext
 
-import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
-import com.keepit.common.analytics.EventFamilies
-import com.keepit.common.analytics.Events
-import com.keepit.common.async._
+import com.google.inject.{Inject, Singleton}
+import com.keepit.classify.{DomainClassifier, DomainRepo}
 import com.keepit.common.controller.BrowserExtensionController
 import com.keepit.common.db._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
-import com.keepit.common.net._
-import com.keepit.common.social._
-import com.keepit.model._
-import com.keepit.scraper.ScraperPlugin
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.graph.URIGraphPlugin
-import com.keepit.serializer.BookmarkSerializer
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.controllers.core.BookmarkInterner
-import scala.concurrent.Await
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
-import play.api.libs.json._
-import scala.concurrent.duration._
-import com.google.inject.{Inject, Singleton}
-import play.api.libs.json.Json.JsValueWrapper
-import views.html.admin.bookmark
 import com.keepit.controllers.core.SliderInfoLoader
+import com.keepit.model._
+import com.keepit.search.SearchServiceClient
+import com.keepit.serializer.BookmarkSerializer
 import com.keepit.serializer.UserWithSocialSerializer._
+import play.api.libs.json._
 
 @Singleton
-class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkInterner,
-  bookmarkRepo: BookmarkRepo, uriRepo: NormalizedURIRepo, userRepo: UserRepo, urlPatternRepo: URLPatternRepo,
-  domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo,
-  sliderRuleRepo: SliderRuleRepo, socialConnectionRepo: SocialConnectionRepo, commentReadRepo: CommentReadRepo, experimentRepo: UserExperimentRepo,
-  uriGraphPlugin: URIGraphPlugin, healthcheck: HealthcheckPlugin,
-  classifier: DomainClassifier, historyTracker: SliderHistoryTracker, uriGraph: URIGraph, sliderInfoLoader: SliderInfoLoader)
-    extends BrowserExtensionController {
+class ExtBookmarksController @Inject() (
+    db: Database,
+    bookmarkManager: BookmarkInterner,
+    bookmarkRepo: BookmarkRepo,
+    uriRepo: NormalizedURIRepo,
+    userRepo: UserRepo,
+    urlPatternRepo: URLPatternRepo,
+    domainRepo: DomainRepo,
+    userToDomainRepo: UserToDomainRepo,
+    sliderRuleRepo: SliderRuleRepo,
+    socialConnectionRepo: SocialConnectionRepo,
+    commentReadRepo: CommentReadRepo,
+    experimentRepo: UserExperimentRepo,
+    searchClient: SearchServiceClient,
+    healthcheck: HealthcheckPlugin,
+    classifier: DomainClassifier,
+    historyTracker: SliderHistoryTracker,
+    sliderInfoLoader: SliderInfoLoader
+  ) extends BrowserExtensionController {
 
   def checkIfExists(uri: String, ver: String) = AuthenticatedJsonAction { request =>
     val userId = request.userId
@@ -72,7 +70,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
         }
       }
     }
-    uriGraphPlugin.update()
+    searchClient.updateURIGraph()
     bookmark match {
       case Some(bookmark) => Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
       case None => NotFound
@@ -107,7 +105,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
         val experiments = request.experimants
         val user = db.readOnly { implicit s => userRepo.get(userId) }
         bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
-        uriGraphPlugin.update()
+        searchClient.updateURIGraph()
         Ok(JsObject(Seq()))
     }
   }
