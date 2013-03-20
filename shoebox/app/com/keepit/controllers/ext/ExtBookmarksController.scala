@@ -63,8 +63,8 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
     Ok(JsObject(result.flatten))
   }
 
-  def remove() = AuthenticatedJsonAction { request =>
-    val url = (request.body.asJson.get \ "url").as[String]
+  def remove() = AuthenticatedJsonToJsonAction { request =>
+    val url = (request.body \ "url").as[String]
     val bookmark = db.readWrite { implicit s =>
       uriRepo.getByNormalizedUrl(url).flatMap { uri =>
         bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).map { b =>
@@ -79,8 +79,9 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
     }
   }
 
-  def updatePrivacy() = AuthenticatedJsonAction { request =>
-    val (url, priv) = request.body.asJson.map{o => ((o \ "url").as[String], (o \ "private").as[Boolean])}.get
+  def updatePrivacy() = AuthenticatedJsonToJsonAction { request =>
+    val json = request.body
+    val (url, priv) = ((json \ "url").as[String], (json \ "private").as[Boolean])
     db.readWrite { implicit s =>
       uriRepo.getByNormalizedUrl(url).flatMap { uri =>
         bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).filter(_.isPrivate != priv).map {b =>
@@ -93,38 +94,21 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
     }
   }
 
-  def addBookmarks() = AuthenticatedJsonAction { request =>
+  def addBookmarks() = AuthenticatedJsonToJsonAction { request =>
     val userId = request.userId
     val installationId = request.kifiInstallationId
-    request.body.asJson match {
-      case Some(json) =>
-        val bookmarkSource = (json \ "source").asOpt[String]
-        bookmarkSource match {
-          case Some("PLUGIN_START") => Forbidden
-          case _ =>
-            log.info("adding bookmarks of user %s".format(userId))
-            val experiments = request.experimants
-            val user = db.readOnly { implicit s => userRepo.get(userId) }
-            bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
-            uriGraphPlugin.update()
-            Ok(JsObject(Seq()))
-        }
-      case None =>
-        val (user, experiments, installation) = db.readOnly{ implicit session =>
-          (userRepo.get(userId),
-           experimentRepo.getByUser(userId) map (_.experimentType),
-           installationId.map(_.id).getOrElse(""))
-        }
-        val msg = "Unsupported operation for user %s with old installation".format(userId)
-        val metaData = JsObject(Seq("message" -> JsString(msg)))
-        val event = Events.userEvent(EventFamilies.ACCOUNT, "deprecated_add_bookmarks", user, experiments, installation, metaData)
-        dispatch ({
-           event.persistToS3().persistToMongo()
-        }, { e =>
-          healthcheck.addError(HealthcheckError(error = Some(e), callType = Healthcheck.API,
-              errorMessage = Some("Can't persist event %s".format(event))))
-        })
-        BadRequest(msg)
+    val json = request.body
+
+    val bookmarkSource = (json \ "source").asOpt[String]
+    bookmarkSource match {
+      case Some("PLUGIN_START") => Forbidden
+      case _ =>
+        log.info("adding bookmarks of user %s".format(userId))
+        val experiments = request.experimants
+        val user = db.readOnly { implicit s => userRepo.get(userId) }
+        bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
+        uriGraphPlugin.update()
+        Ok(JsObject(Seq()))
     }
   }
 
