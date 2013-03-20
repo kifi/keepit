@@ -4,6 +4,7 @@ import org.specs2.mutable._
 import com.keepit.test.{DbRepos, EmptyApplication}
 
 import play.api.Play.current
+import play.api.libs.json._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
 import com.keepit.common.db._
@@ -162,7 +163,7 @@ class CommentReadTest extends Specification with DbRepos {
         }
 
 
-        val fakeRequest = FakeRequest().withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
+        val fakeRequest = FakeRequest().withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").withBody[JsValue](JsNull)
         val authRequest = AuthenticatedRequest(null, user1.id.get, fakeRequest)
         authRequest.session.get(SecureSocial.ProviderKey) === Some("facebook")
         val result = inject[ExtCommentController].getMessageThread(externalId)(authRequest)

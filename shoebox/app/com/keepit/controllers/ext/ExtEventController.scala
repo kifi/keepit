@@ -42,13 +42,7 @@ class ExtEventController @Inject() (
   def logUserEvents = AuthenticatedJsonAction { request =>
     val userId = request.userId
 
-    val json = try {
-      request.body.asJson.get
-    } catch {
-      case ex: java.util.NoSuchElementException =>
-        log.error(s"Bad event json payload from user id ${request.userId.id}\n${request.headers}\n${request.body}")
-        throw ex
-    }
+    val json = request.body
     (json \ "version").as[Int] match {
       case 1 => createEventsFromPayload(json, userId)
       case i => throw new Exception("Unknown events version: %s".format(i))

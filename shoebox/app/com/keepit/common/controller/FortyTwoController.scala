@@ -1,34 +1,29 @@
 package com.keepit.common.controller
 
-import play.api.data._
-import java.util.concurrent.TimeUnit
-import java.sql.Connection
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.healthcheck.Healthcheck
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.logging.Logging
+import com.keepit.common.social._
+import com.keepit.inject._
+import com.keepit.model._
+
 import play.api._
 import play.api.Play.current
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
-import play.api.libs.ws.WS
-import play.api.mvc._
-import play.api.mvc.Results.InternalServerError
-import play.api.libs.json.JsArray
-import play.api.libs.json.Json
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsNumber
-import com.keepit.inject._
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
-import com.keepit.common.net._
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.logging.Logging
-import com.keepit.model._
-
 import play.api.http.ContentTypes
+import play.api.libs.json.JsValue
+import play.api.mvc._
+import play.api.libs.iteratee._
+import play.api.libs.iteratee.Input._
+import play.api.libs.iteratee.Parsing._
+import play.api.libs.json._
+import play.api.mvc.Results.InternalServerError
 import securesocial.core._
-import com.keepit.common.social._
-import views.html.defaultpages.unauthorized
 
 case class ReportedException(val id: ExternalId[HealthcheckError], val cause: Throwable) extends Exception(id.toString, cause)
 
@@ -57,10 +52,10 @@ object FortyTwoController {
   }
 }
 
-case class AuthenticatedRequest(
+case class AuthenticatedRequest[T](
     socialUser: SocialUser,
     userId: Id[User],
-    request: Request[AnyContent],
+    request: Request[T],
     experimants: Seq[State[ExperimentType]] = Nil,
     kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
     adminUserId: Option[Id[User]] = None)
@@ -68,6 +63,26 @@ case class AuthenticatedRequest(
 
 trait AuthenticatedController extends Controller with Logging with SecureSocial {
   import FortyTwoController._
+
+  def actualTolerantJsonForReals: BodyParser[JsValue] = actualTolerantJsonForReals(parse.DEFAULT_MAX_TEXT_LENGTH)
+  
+  def actualTolerantJsonForReals(maxLength: Int): BodyParser[JsValue] = BodyParser("json, maxLength=" + maxLength) { request =>
+    Traversable.takeUpTo[Array[Byte]](maxLength).apply(Iteratee.consume[Array[Byte]]().map { bytes =>
+      scala.util.control.Exception.allCatch[JsValue].either {
+        if(bytes.length == 0) JsNull
+        else Json.parse(new String(bytes, request.charset.getOrElse("utf-8")))
+      }.left.map { e =>
+        (Play.maybeApplication.map(_.global.onBadRequest(request, "Invalid Json")).getOrElse(Results.BadRequest), bytes)
+      }
+    }).flatMap(Iteratee.eofOrElse(Results.EntityTooLarge))
+      .flatMap {
+        case Left(b) => Done(Left(b), Empty)
+        case Right(it) => it.flatMap {
+          case Left((r, in)) => Done(Left(r), El(in))
+          case Right(json) => Done(Right(json), Empty)
+        }
+      }
+  }
 
   private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession) = {
     val repo = inject[SocialUserInfoRepo]
@@ -91,8 +106,11 @@ trait AuthenticatedController extends Controller with Logging with SecureSocial 
   private def getExperiments(userId: Id[User])(implicit session: RSession): Seq[State[ExperimentType]] =
     inject[UserExperimentRepo].getByUser(userId).map(_.experimentType)
 
-  private[controller] def AuthenticatedAction[A](isApi: Boolean, action: AuthenticatedRequest => Result) = {
-    SecuredAction(isApi, parse.anyContent) { implicit request =>
+  private[controller] def AuthenticatedAction(isApi: Boolean, action: AuthenticatedRequest[AnyContent] => Result) =
+    AuthenticatedAction[AnyContent](parse.anyContent)(isApi, action)
+
+  private[controller] def AuthenticatedAction[T](bodyParser: BodyParser[T])(isApi: Boolean, action: AuthenticatedRequest[T] => Result): Action[T] = {
+    SecuredAction(isApi, bodyParser) { implicit request =>
       val userIdOpt = request.session.get(FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
       val impersonatedUserIdOpt: Option[ExternalId[User]] = ImpersonateCookie.decodeFromCookie(request.cookies.get(ImpersonateCookie.COOKIE_NAME))
       val kifiInstallationId: Option[ExternalId[KifiInstallation]] = KifiInstallationCookie.decodeFromCookie(request.cookies.get(KifiInstallationCookie.COOKIE_NAME))
@@ -117,9 +135,9 @@ trait AuthenticatedController extends Controller with Logging with SecureSocial 
 
   private def isAdmin(experiments: Seq[State[ExperimentType]]) = experiments.find(e => e == ExperimentTypes.ADMIN).isDefined
 
-  private def executeAction(action: AuthenticatedRequest => Result, userId: Id[User], socialUser: SocialUser,
+  private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], socialUser: SocialUser,
       experiments: Seq[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
-      newSession: Session, request: Request[AnyContent], adminUserId: Option[Id[User]] = None) = {
+      newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None) = {
     if (experiments.contains(ExperimentTypes.BLOCK)) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
@@ -128,9 +146,9 @@ trait AuthenticatedController extends Controller with Logging with SecureSocial 
       val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> inject[FortyTwoServices].currentVersion.value)
       log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
       try {
-        action(AuthenticatedRequest(socialUser, userId, request, experiments, kifiInstallationId, adminUserId)) match {
+        action(AuthenticatedRequest[T](socialUser, userId, request, experiments, kifiInstallationId, adminUserId)) match {
           case r: PlainResult => r.withSession(newSession)
-          case any => any
+          case any: Result => any
         }
       } catch {
         case e: Throwable =>
@@ -151,16 +169,16 @@ trait AuthenticatedController extends Controller with Logging with SecureSocial 
 
 trait AdminController extends AuthenticatedController {
 
-  def AdminHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] = AdminAction(false, action)
+  def AdminHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = AdminAction(false, action)
 
-  def AdminJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
+  def AdminJsonAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
     AdminAction(true, action)(request) match {
       case r: PlainResult => r.as(ContentTypes.JSON)
-      case any => any
+      case any: Result => any
     }
   }
 
-  private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest => Result): Action[AnyContent] = {
+  private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = {
     AuthenticatedAction(isApi, { implicit request =>
       val userId = request.adminUserId.getOrElse(request.userId)
       val isAdmin = inject[Database].readOnly{ implicit session =>
@@ -178,8 +196,8 @@ trait AdminController extends AuthenticatedController {
 }
 
 trait BrowserExtensionController extends AuthenticatedController {
-  def AuthenticatedJsonAction(action: AuthenticatedRequest => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
-    AuthenticatedAction(true, action)(request) match {
+  def AuthenticatedJsonAction(action: AuthenticatedRequest[JsValue] => Result): Action[JsValue] = Action(actualTolerantJsonForReals) { request =>
+    AuthenticatedAction(actualTolerantJsonForReals)(true, action)(request) match {
       case r: PlainResult => r.as(ContentTypes.JSON)
       case any => any
     }
@@ -187,8 +205,9 @@ trait BrowserExtensionController extends AuthenticatedController {
 }
 
 trait WebsiteController extends AuthenticatedController {
-  def AuthenticatedHtmlAction(action: AuthenticatedRequest => Result): Action[AnyContent] =
+  def AuthenticatedHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
     AuthenticatedAction(false, action)
 }
 
 trait FortyTwoController extends BrowserExtensionController with AdminController with WebsiteController
+

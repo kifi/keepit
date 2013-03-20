@@ -64,7 +64,7 @@ class ExtCommentController @Inject() (db: Database,
   }
 
   def createComment() = AuthenticatedJsonAction { request =>
-    val o = request.body.asJson.get
+    val o = request.body
     val (urlStr, title, text, permissions, recipients, parent) = (
       (o \ "url").as[String],
       (o \ "title") match { case JsString(s) => s; case _ => ""},
@@ -231,7 +231,7 @@ class ExtCommentController @Inject() (db: Database,
   }
 
   def startFollowing() = AuthenticatedJsonAction { request =>
-    val url = (request.body.asJson.get \ "url").as[String]
+    val url = (request.body \ "url").as[String]
     db.readWrite { implicit session =>
       val uriId = normalizedURIRepo.getByNormalizedUrl(url).getOrElse(normalizedURIRepo.save(NormalizedURIFactory(url = url))).id.get
       followRepo.get(request.userId, uriId, excludeState = None) match {
@@ -248,7 +248,7 @@ class ExtCommentController @Inject() (db: Database,
   }
 
   def stopFollowing() = AuthenticatedJsonAction { request =>
-    val url = (request.body.asJson.get \ "url").as[String]
+    val url = (request.body \ "url").as[String]
     db.readWrite { implicit session =>
       normalizedURIRepo.getByNormalizedUrl(url).map { uri =>
         followRepo.get(request.userId, uri.id.get).map { follow =>
