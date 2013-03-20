@@ -51,9 +51,9 @@ class AdminUserController @Inject() (
           r => userWithSocialRepo.toUserWithSocial(userRepo.get(r.userId.get))
         })
       }
-      val sentElectronicMails = mailRepo.forSender(userId);
+      val sentElectronicMails = mailRepo.forSender(userId)
       val mailAddresses = userWithSocialRepo.toUserWithSocial(userRepo.get(userId)).emails.map(_.address)
-      val receivedElectronicMails = mailRepo.forRecipient(mailAddresses);
+      val receivedElectronicMails = mailRepo.forRecipient(mailAddresses)
       (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails)
     }
     val rawInfos = socialUserInfos map {info =>
@@ -83,7 +83,7 @@ class AdminUserController @Inject() (
     val filteredBookmarks = bookmarkSearch.map{ query =>
       if (query.trim.length == 0) bookmarks
       else {
-        val uris = Await.result(searchClient.searchKeeps(userId, query), 1 second)
+        val uris = Await.result(searchClient.searchKeeps(userId, query), Duration.Inf)
         bookmarks.filter{ case (b, u) => uris.contains(u.id.get) }
       }
     }
