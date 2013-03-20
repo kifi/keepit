@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
 import com.keepit.controllers.search.{ArticleIndexInfo, ResultClicked, routes}
 import com.keepit.model.{NormalizedURI, User}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.api.templates.Html
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -19,6 +19,7 @@ trait SearchServiceClient extends ServiceClient {
   def articleIndexInfo(): Future[ArticleIndexInfo]
   def articleIndexerSequenceNumber(): Future[Int]
   def refreshSearcher(): Future[Unit]
+  def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
@@ -52,6 +53,12 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
 
   def refreshSearcher(): Future[Unit] = {
     call(routes.ArticleIndexerController.refreshSearcher()).map(_ => Unit)
+  }
+
+  def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]] = {
+    call(routes.SearchController.searchKeeps(userId, query)).map {
+      _.json.as[Seq[JsValue]].map(v => Id[NormalizedURI](v.as[Long])).toSet
+    }
   }
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = {
