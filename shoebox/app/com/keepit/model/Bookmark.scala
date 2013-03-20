@@ -90,6 +90,7 @@ class BookmarkCountCache @Inject() (val repo: FortyTwoCachePlugin) extends Forty
 @Singleton
 class BookmarkRepoImpl @Inject() (
   val db: DataBaseComponent,
+  val clock: Clock,
   val countCache: BookmarkCountCache)
       extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
   import FortyTwoTypeMappers._

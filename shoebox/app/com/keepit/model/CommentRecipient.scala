@@ -44,7 +44,7 @@ trait CommentRecipientRepo extends Repo[CommentRecipient] {
 }
 
 @Singleton
-class CommentRecipientRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[CommentRecipient] with CommentRecipientRepo {
+class CommentRecipientRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[CommentRecipient] with CommentRecipientRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

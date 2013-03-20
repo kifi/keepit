@@ -8,6 +8,7 @@ import com.google.inject.Module
 import com.google.inject.Singleton
 import com.google.inject.Provides
 import com.google.inject.util.Modules
+import com.keepit.common.logging.Logging
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.healthcheck.FakeHealthcheck
 import com.keepit.common.healthcheck.FakeHealthcheckModule
@@ -53,7 +54,6 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withFakeHttpClient() = overrideWith(FakeHttpClientModule())
   def withFakeStore() = overrideWith(FakeStoreModule())
   def withRealBabysitter() = overrideWith(BabysitterModule())
-  def withFakeTime() = overrideWith(FakeTimeModule())
   def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
 
   def overrideWith(model: Module): TestApplication =
@@ -98,14 +98,13 @@ case class TestModule() extends ScalaModule {
     listenerBinder.addBinding().to(classOf[SliderShownListener])
   }
 
-  @Provides @Singleton
-  def clock = new FakeClock
+  @Provides
+  @Singleton
+  def fakeClock: FakeClock = new FakeClock()
 
   @Provides
-  def dateTime(clock: FakeClock) : DateTime = clock.pop
-
-  @Provides
-  def localDate(clock: FakeClock) : LocalDate = clock.pop.toLocalDate
+  @Singleton
+  def clock(clock: FakeClock): Clock = clock
 
   @Provides
   @AppScoped
@@ -113,29 +112,27 @@ case class TestModule() extends ScalaModule {
 
   @Provides
   @Singleton
-  def fortyTwoServices(dateTime: DateTime): FortyTwoServices = FortyTwoServices(dateTime)
+  def fortyTwoServices(clock: Clock): FortyTwoServices = FortyTwoServices(clock)
 }
 
-case class FakeTimeModule() extends ScalaModule {
-  def configure(): Unit = {}
-
-  @Provides @Singleton
-  def clock = new FakeClock
-
-  @Provides
-  def dateTime(clock: FakeClock) : DateTime = clock.pop
-
-  @Provides
-  def localDate(clock: FakeClock) : LocalDate = clock.pop.toLocalDate
-}
-
-
-class FakeClock {
+class FakeClock extends Clock with Logging {
   val stack = MutableStack[DateTime]()
 
   def push(t : DateTime): FakeClock = { stack push t; this }
-  def push(d : LocalDate): FakeClock = { stack push d.toDateTimeAtStartOfDay(DEFAULT_DATE_TIME_ZONE); this }
-  def pop(): DateTime = if (stack.isEmpty) currentDateTime else stack.pop
+  def push(d : LocalDate): FakeClock = { stack push d.toDateTimeAtStartOfDay(clockZone); this }
+
+  override def today: LocalDate = this.now.toLocalDate
+  override def now: DateTime = {
+    if (stack.isEmpty) {
+      val nowTime = super.now
+      log.debug(s"FakeClock is retuning real now value: $nowTime")
+      nowTime
+    } else {
+      val fakeNowTime = stack.pop
+      log.debug(s"FakeClock is retuning fake now value: $fakeNowTime")
+      fakeNowTime
+    }
+  }
 }
 
 case class BabysitterModule() extends ScalaModule {

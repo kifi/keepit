@@ -45,7 +45,7 @@ class URLTest extends Specification {
       }
     }
     "correctly parse domains when using the factory" in {
-      val uri = URLFactory("https://mail.google.com/mail/u/1/", Id[NormalizedURI](42), null, null)
+      val uri = URLFactory("https://mail.google.com/mail/u/1/", Id[NormalizedURI](42))
       uri.domain === Some("mail.google.com")
     }
   }

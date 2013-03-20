@@ -38,7 +38,7 @@ class AdminDashboardController @Inject() (
   db: Database,
   userRepo: UserRepo,
   bookmarkRepo: BookmarkRepo,
-  date: Provider[LocalDate])
+  clock: Clock)
     extends AdminController {
 
   implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
@@ -52,7 +52,7 @@ class AdminDashboardController @Inject() (
     val userCounts = if (Play.isDev) {
       Seq.fill(40)(math.round(math.pow((math.random * 4), 2D).toFloat) - 2)
     } else {
-      (0 to Days.daysBetween(day0, date.get).getDays()) map {i => dayCounts(day0.plusDays(i))}
+      (0 to Days.daysBetween(day0, clock.today).getDays()) map {i => dayCounts(day0.plusDays(i))}
     }
     JsObject(List(
         "day0" -> day0.toJson,

@@ -39,7 +39,9 @@ trait SearchConfigExperimentRepo extends Repo[SearchConfigExperiment] {
 }
 
 @Singleton
-class SearchConfigExperimentRepoImpl @Inject()(val db: DataBaseComponent)
+class SearchConfigExperimentRepoImpl @Inject()(
+  val db: DataBaseComponent,
+  val clock: Clock)
     extends DbRepo[SearchConfigExperiment] with SearchConfigExperimentRepo {
 
   import DBSession._

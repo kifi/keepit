@@ -69,7 +69,10 @@ trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
 }
 
 @Singleton
-class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent, val normUriRepo: NormalizedURIRepoImpl)
+class ScrapeInfoRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val normUriRepo: NormalizedURIRepoImpl)
     extends DbRepo[ScrapeInfo] with ScrapeInfoRepo {
 
   import DBSession._

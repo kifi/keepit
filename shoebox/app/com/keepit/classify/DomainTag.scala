@@ -48,7 +48,7 @@ trait DomainTagRepo extends Repo[DomainTag] {
 }
 
 @Singleton
-class DomainTagRepoImpl @Inject()(val db: DataBaseComponent) extends DbRepo[DomainTag] with DomainTagRepo {
+class DomainTagRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) extends DbRepo[DomainTag] with DomainTagRepo {
 
   import DBSession._
   import FortyTwoTypeMappers._

@@ -47,7 +47,7 @@ trait DomainRepo extends Repo[Domain] {
 }
 
 @Singleton
-class DomainRepoImpl @Inject()(val db: DataBaseComponent) extends DbRepo[Domain] with DomainRepo {
+class DomainRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) extends DbRepo[Domain] with DomainRepo {
 
   import db.Driver.Implicit._
 

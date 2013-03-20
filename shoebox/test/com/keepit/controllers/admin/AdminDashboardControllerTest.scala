@@ -37,8 +37,7 @@ class AdminDashboardControllerTest extends Specification with DbRepos {
       running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck()) {
 
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
-        val today = now.toDateTime
-        inject[FakeClock].push(today)
+        inject[FakeClock].push(now)
 
         val u1 = db.readWrite {implicit s =>
           val u1 = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1"))
@@ -60,7 +59,7 @@ class AdminDashboardControllerTest extends Specification with DbRepos {
         val fakeRequest = FakeRequest().withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
         val authRequest = AuthenticatedRequest(null, u1.id.get, fakeRequest)
         authRequest.session.get(SecureSocial.ProviderKey) === Some("facebook")
-        inject[FakeClock].push(today)
+        inject[FakeClock].push(now)
         val result = inject[AdminDashboardController].usersByDate(authRequest)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")

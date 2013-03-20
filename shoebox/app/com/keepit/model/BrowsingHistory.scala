@@ -55,7 +55,11 @@ class BrowsingHistoryUserIdCache @Inject() (val repo: FortyTwoCachePlugin) exten
 
 
 @Singleton
-class BrowsingHistoryRepoImpl @Inject() (val db: DataBaseComponent, val browsingCache: BrowsingHistoryUserIdCache) extends DbRepo[BrowsingHistory] with BrowsingHistoryRepo {
+class BrowsingHistoryRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val browsingCache: BrowsingHistoryUserIdCache)
+    extends DbRepo[BrowsingHistory] with BrowsingHistoryRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

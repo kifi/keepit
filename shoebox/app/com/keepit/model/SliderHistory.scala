@@ -53,9 +53,12 @@ class SliderHistoryUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends
   def serialize(sliderHistory: SliderHistory) = SliderHistoryBinarySerializer.sliderHistoryBinarySerializer.writes(sliderHistory)
 }
 
-
 @Singleton
-class SliderHistoryRepoImpl @Inject() (val db: DataBaseComponent, val browsingCache: SliderHistoryUserIdCache) extends DbRepo[SliderHistory] with SliderHistoryRepo {
+class SliderHistoryRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val browsingCache: SliderHistoryUserIdCache)
+    extends DbRepo[SliderHistory] with SliderHistoryRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
