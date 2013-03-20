@@ -48,7 +48,7 @@ class ExtAuthController @Inject() (
   sliderRuleRepo: SliderRuleRepo,
   userExperimentRepo: UserExperimentRepo)
     extends BrowserExtensionController {
-  def start = AuthenticatedJsonAction { implicit request =>
+  def start = AuthenticatedJsonToJsonAction { implicit request =>
     val userId = request.userId
     val socialUser = request.socialUser
     log.info(s"start id: $userId, facebook id: ${socialUser.id}")

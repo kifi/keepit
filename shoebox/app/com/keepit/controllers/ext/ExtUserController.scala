@@ -49,7 +49,7 @@ class ExtUserController @Inject() (
         "sensitive" -> JsBoolean(sliderInfo.sensitive.getOrElse(false))))
   }
 
-  def suppressSliderForSite() = AuthenticatedJsonAction { request =>
+  def suppressSliderForSite() = AuthenticatedJsonToJsonAction { request =>
     val json = request.body
     val host: String = URI.parse((json \ "url").as[String]).get.host.get.name
     val suppress: Boolean = (json \ "suppress").as[Boolean]

@@ -63,7 +63,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
     Ok(JsObject(result.flatten))
   }
 
-  def remove() = AuthenticatedJsonAction { request =>
+  def remove() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
     val bookmark = db.readWrite { implicit s =>
       uriRepo.getByNormalizedUrl(url).flatMap { uri =>
@@ -79,7 +79,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
     }
   }
 
-  def updatePrivacy() = AuthenticatedJsonAction { request =>
+  def updatePrivacy() = AuthenticatedJsonToJsonAction { request =>
     val json = request.body
     val (url, priv) = ((json \ "url").as[String], (json \ "private").as[Boolean])
     db.readWrite { implicit s =>
@@ -94,7 +94,7 @@ class ExtBookmarksController @Inject() (db: Database, bookmarkManager: BookmarkI
     }
   }
 
-  def addBookmarks() = AuthenticatedJsonAction { request =>
+  def addBookmarks() = AuthenticatedJsonToJsonAction { request =>
     val userId = request.userId
     val installationId = request.kifiInstallationId
     val json = request.body

@@ -163,7 +163,7 @@ class CommentReadTest extends Specification with DbRepos {
         }
 
 
-        val fakeRequest = FakeRequest().withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").withBody[JsValue](JsNull)
+        val fakeRequest = FakeRequest().withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
         val authRequest = AuthenticatedRequest(null, user1.id.get, fakeRequest)
         authRequest.session.get(SecureSocial.ProviderKey) === Some("facebook")
         val result = inject[ExtCommentController].getMessageThread(externalId)(authRequest)

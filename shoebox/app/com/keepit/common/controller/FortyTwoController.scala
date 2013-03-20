@@ -64,26 +64,6 @@ case class AuthenticatedRequest[T](
 trait AuthenticatedController extends Controller with Logging with SecureSocial {
   import FortyTwoController._
 
-  def actualTolerantJsonForReals: BodyParser[JsValue] = actualTolerantJsonForReals(parse.DEFAULT_MAX_TEXT_LENGTH)
-  
-  def actualTolerantJsonForReals(maxLength: Int): BodyParser[JsValue] = BodyParser("json, maxLength=" + maxLength) { request =>
-    Traversable.takeUpTo[Array[Byte]](maxLength).apply(Iteratee.consume[Array[Byte]]().map { bytes =>
-      scala.util.control.Exception.allCatch[JsValue].either {
-        if(bytes.length == 0) JsNull
-        else Json.parse(new String(bytes, request.charset.getOrElse("utf-8")))
-      }.left.map { e =>
-        (Play.maybeApplication.map(_.global.onBadRequest(request, "Invalid Json")).getOrElse(Results.BadRequest), bytes)
-      }
-    }).flatMap(Iteratee.eofOrElse(Results.EntityTooLarge))
-      .flatMap {
-        case Left(b) => Done(Left(b), Empty)
-        case Right(it) => it.flatMap {
-          case Left((r, in)) => Done(Left(r), El(in))
-          case Right(json) => Done(Right(json), Empty)
-        }
-      }
-  }
-
   private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession) = {
     val repo = inject[SocialUserInfoRepo]
     userIdOpt match {
@@ -196,8 +176,15 @@ trait AdminController extends AuthenticatedController {
 }
 
 trait BrowserExtensionController extends AuthenticatedController {
-  def AuthenticatedJsonAction(action: AuthenticatedRequest[JsValue] => Result): Action[JsValue] = Action(actualTolerantJsonForReals) { request =>
-    AuthenticatedAction(actualTolerantJsonForReals)(true, action)(request) match {
+
+  def AuthenticatedJsonAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
+    AuthenticatedJsonAction(parse.anyContent)(action)
+
+  def AuthenticatedJsonToJsonAction(action: AuthenticatedRequest[JsValue] => Result): Action[JsValue] =
+    AuthenticatedJsonAction(parse.tolerantJson)(action)
+
+  def AuthenticatedJsonAction[T](bodyParser: BodyParser[T])(action: AuthenticatedRequest[T] => Result): Action[T] = Action(bodyParser) { request =>
+    AuthenticatedAction(bodyParser)(true, action)(request) match {
       case r: PlainResult => r.as(ContentTypes.JSON)
       case any => any
     }

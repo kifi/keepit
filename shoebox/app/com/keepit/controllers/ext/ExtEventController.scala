@@ -39,7 +39,7 @@ class ExtEventController @Inject() (
   persistEventPlugin: PersistEventPlugin)
     extends BrowserExtensionController {
 
-  def logUserEvents = AuthenticatedJsonAction { request =>
+  def logUserEvents = AuthenticatedJsonToJsonAction { request =>
     val userId = request.userId
 
     val json = request.body

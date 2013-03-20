@@ -50,11 +50,11 @@ class ExtAuthControllerTest extends Specification with DbRepos {
         }
 
         //first round
-        val fakeRequest1: FakeRequest[JsValue] = FakeRequest().
+        val fakeRequest1 = FakeRequest().
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
             withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"))))
         val authRequest1 = AuthenticatedRequest(null, user.id.get, fakeRequest1)
-        val result1: Result = inject[ExtAuthController].start(authRequest1)
+        val result1 = inject[ExtAuthController].start(authRequest1)
         status(result1) must equalTo(OK)
         val kifiInstallation1 = db.readOnly {implicit s =>
           val all = installationRepo.all()(s)
