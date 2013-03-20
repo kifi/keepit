@@ -339,6 +339,7 @@ api.log("[google_inject]");
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
       var $a = $(this).showHover({
         hideDelay: 600,
+        fadesOut: true,
         create: function(callback) {
           var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
           var friend = response.hits[i].users[j];
@@ -351,29 +352,27 @@ api.log("[google_inject]");
             $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
           });
         }});
-    }).on("mouseenter", ".kifi-res-friends", function() {
-      var $a = $(this).showHover(function(callback) {
-        var i = $a.closest("li.g").prevAll("li.g").length;
-        render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
-          callback(html, function(w) {this.style.left = ($a[0].offsetWidth - w) / 2 + "px"});
-        });
-      });
+    }).on("mouseenter", ".kifi-res-friends", function(e) {
+      if (e.target !== this) return;
+      var $a = $(this).showHover({
+        fadesOut: true,
+        create: function(callback) {
+          var i = $a.closest("li.g").prevAll("li.g").length;
+          render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
+            callback(html, function(w) {this.style.left = ($a[0].offsetWidth - w) / 2 + "px"});
+          });
+        }});
     }).on("mouseenter", ".kifi-chatter", function() {
       var $ch = $(this).showHover({
         hideDelay: 600,
+        fadesOut: true,
         create: function(callback) {
           var n = $ch.data("n");
           render("html/search/chatter.html", {
             numComments: n[0],
             numMessages: n[1],
             pluralize: function() {return pluralLambda}
-          }, function(html) {
-            callback($(html).on("transitionend", function(e) {
-              if (e.originalEvent.propertyName === "opacity" && !$ch.hasClass("kifi-hover-showing")) {
-                this.style.display = "none";
-              }
-            }));
-          });
+          }, callback);
         }});
     }).on("click", ".kifi-chatter-deeplink", function() {
       api.port.emit("add_deep_link_listener", {locator: $(this).data("locator")});

@@ -42,15 +42,13 @@ home-grown at FortyTwo, not intended for distribution (yet)
       } else {
         var t0 = +new Date;
         $a.data("hover", data = {lastShowTime: 0});
-        setTimeout(opts.create.bind(this, function(hover, useSize) {
+        setTimeout(opts.create.bind(this, function(hover, useSize) {  // async to allow create to reference return val
           var $h = $(hover);
           if (useSize) {
             $h.css({visibility: "hidden", display: "block"}).appendTo($a);
             var r = $h[0].getBoundingClientRect();
-            $h.css({visibility: "", display: ""});
+            $h.css({visibility: "", display: ""}).detach();
             useSize.call($h[0], r.width, r.height);
-          } else {
-            $h.appendTo($a);
           }
           data.$h = $h;
           onMouseEnter(Math.max(0, opts.showDelay - (new Date - t0)));
@@ -60,7 +58,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
             onMouseLeave(opts.hideDelay, e);
           }
         }).on("click.showHover", function(e) {
-          if (!data.$h[0].contains(e.target) && new Date - data.lastShowTime > opts.recovery) {
+          if (!data.$h[0].contains(e.target) && (e.isTrigger || new Date - data.lastShowTime > opts.recovery)) {
             if ($a.hasClass("kifi-hover-showing")) {
               onMouseLeave();
             } else {
@@ -98,18 +96,32 @@ home-grown at FortyTwo, not intended for distribution (yet)
         }
       }
       function show() {
-        data.$h.show();
+        data.$h.appendTo($a).each(function(){this.offsetHeight});
         $a.addClass("kifi-hover-showing");
         data.lastShowTime = +new Date;
       }
       function hide() {
         $a.removeClass("kifi-hover-showing");
-        if (opts.reuse) {
-          data.$h.css("display", "");
+        if (opts.fadesOut) {
+          data.$h.on("transitionend webkitTransitionEnd", function f(e) {
+            if (e.originalEvent.propertyName === "opacity") {
+              data.$h.off("transitionend webkitTransitionEnd", f);
+              if (!$a.hasClass("kifi-hover-showing")) {
+                finishHiding();
+              }
+            }
+          });
         } else {
-          $a.showHover("destroy");
+          finishHiding();
         }
-        $a.trigger("hover:hide");
+        function finishHiding() {
+          if (opts.reuse) {
+            data.$h.detach();
+          } else {
+            $a.showHover("destroy");
+          }
+          $a.trigger("hover:hide");
+        }
       }
       // Returns whether the viewport coords (x, y) are in the trapezoid between the top edge
       // of hover trigger element and the bottom edge of the hover element.

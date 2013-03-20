@@ -131,6 +131,12 @@ var slider, slider2, injected, t0 = +new Date;
           slider2.show(info, "tile");
         });
       });
+
+      if (o.keepers) {
+        withSlider2(function() {
+          slider2.showKeepersFor(o, !!countEl, 2000);
+        });
+      }
     });
   }
 }();
