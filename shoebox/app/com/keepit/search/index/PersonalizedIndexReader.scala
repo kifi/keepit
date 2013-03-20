@@ -4,13 +4,16 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.index.AtomicReader
 import org.apache.lucene.index.DirectoryReader
-import org.apache.lucene.index.DocValues
 import org.apache.lucene.index.DocsEnum
 import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.index.FieldInfo
 import org.apache.lucene.index.FieldInfo.IndexOptions
 import org.apache.lucene.index.FieldInfos
 import org.apache.lucene.index.Fields
+import org.apache.lucene.index.NumericDocValues
+import org.apache.lucene.index.BinaryDocValues
+import org.apache.lucene.index.SortedDocValues
+import org.apache.lucene.index.SortedSetDocValues
 import org.apache.lucene.index.StoredFieldVisitor
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.Terms
@@ -59,8 +62,11 @@ class PersonalizedIndexReader(mainReader: AtomicReader, personalReader: CachingI
   override def getLiveDocs(): Bits = mainReader.getLiveDocs
 
   override def getTermVectors(doc: Int) = throw new UnsupportedOperationException()
-  override def docValues(field: String): DocValues = null
-  override def normValues(field: String): DocValues = null
+  override def getNumericDocValues(field: String): NumericDocValues = null
+  override def getBinaryDocValues(field: String): BinaryDocValues = null
+  override def getSortedDocValues(field: String): SortedDocValues = null
+  override def getSortedSetDocValues(field: String): SortedSetDocValues = null
+  override def getNormValues(field: String): NumericDocValues = null
   override def hasDeletions() = mainReader.hasDeletions()
   override def document(doc: Int, visitor: StoredFieldVisitor) = throw new UnsupportedOperationException()
   protected def doClose() {}

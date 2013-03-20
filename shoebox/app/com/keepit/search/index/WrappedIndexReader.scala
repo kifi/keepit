@@ -6,6 +6,10 @@ import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.MultiReader
 import org.apache.lucene.index.SegmentReader
 import org.apache.lucene.index.StoredFieldVisitor
+import org.apache.lucene.index.NumericDocValues
+import org.apache.lucene.index.BinaryDocValues
+import org.apache.lucene.index.SortedDocValues
+import org.apache.lucene.index.SortedSetDocValues
 import org.apache.lucene.index.Term
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
@@ -96,14 +100,17 @@ extends MultiReader(wrappedSubReaders.map{ _.asInstanceOf[IndexReader] }.toArray
 class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMapper) extends AtomicReader {
   def getIdMapper = idMapper
 
+  override def getNumericDocValues(field: String): NumericDocValues = inner.getNumericDocValues(field)
+  override def getBinaryDocValues(field: String): BinaryDocValues = inner.getBinaryDocValues(field)
+  override def getSortedDocValues(field: String): SortedDocValues = inner.getSortedDocValues(field)
+  override def getSortedSetDocValues(field: String): SortedSetDocValues = inner.getSortedSetDocValues(field)
+  override def getNormValues(field: String): NumericDocValues = inner.getNormValues(field)
   override def hasDeletions() = inner.hasDeletions()
-  override def normValues(field: String) = inner.normValues(field)
   override def document(doc: Int, visitor: StoredFieldVisitor) = inner.document(doc, visitor)
   override def getFieldInfos() = inner.getFieldInfos()
   override def getTermVectors(doc: Int) = inner.getTermVectors(doc)
   override def maxDoc() = inner.maxDoc()
   override def numDocs() = inner.numDocs()
-  override def docValues(field: String) = inner.docValues(field)
   override def fields() = inner.fields()
   override def getLiveDocs() = inner.getLiveDocs()
   protected def doClose() = {}
