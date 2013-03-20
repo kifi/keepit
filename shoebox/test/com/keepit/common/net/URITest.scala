@@ -21,6 +21,7 @@ class URITest extends Specification {
       URI.parse("http://4945457844119005844_911a106f1584b002d8018a27243b8aa2829655c4.blogspot.com").get.host.get.domain ===
         Seq("com", "blogspot", "4945457844119005844_911a106f1584b002d8018a27243b8aa2829655c4")
       URI.parse("http://foo+bar").get.host.get.domain === Seq("foo+bar")
+      URI.parse("http://www.liveleak.com/view?comments=1\\").get.query.get.params === Seq(Param("comments", Some("1%5C")))
     }
     "parse URLs via unapply" in {
       "http://premium.nba.com/pr/leaguepass/app/2012/console.html?debug=false&type=lp&TinedSid=Gaa419b-25665208-1262918951531-1&nsfg=1355463185|billing.lpbchoice_LAL_LAC_NYK_MIA_OKC^billing.lpbchoice^giBJ5TL8HJT8eLc6&retryCount=3" match {
@@ -64,7 +65,7 @@ class URITest extends Specification {
       success
     }
     "throw URISyntaxException upon .get after failed parse" in {
-      URI.parse("http:\\\\host").get must throwA[java.net.URISyntaxException]
+      URI.parse("http://ho\tst").get must throwA[java.net.URISyntaxException]
     }
   }
 }
