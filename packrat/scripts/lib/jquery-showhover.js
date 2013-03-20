@@ -58,7 +58,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
             onMouseLeave(opts.hideDelay, e);
           }
         }).on("click.showHover", function(e) {
-          if (!data.$h[0].contains(e.target) && new Date - data.lastShowTime > opts.recovery) {
+          if (!data.$h[0].contains(e.target) && (e.isTrigger || new Date - data.lastShowTime > opts.recovery)) {
             if ($a.hasClass("kifi-hover-showing")) {
               onMouseLeave();
             } else {

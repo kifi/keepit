@@ -99,8 +99,8 @@ slider2 = function() {
                 recovery: Infinity,
                 create: function(callback) {
                   var keepers = pick(o.keepers, 8);
-                  // TODO: preload friend pictures
                   render("html/metro/keepers.html", {
+                    link: true,
                     keepers: keepers,
                     anyKeepers: !!keepers,
                     captionHtml: formatCountHtml(o.kept, (o.keepers || 0).length, o.otherKeeps)
@@ -348,5 +348,30 @@ slider2 = function() {
       } else {
         showSlider(info, trigger);
       }
+    },
+    showKeepersFor: function(info, tileHasCounter, ms) {
+      var $el = $("<div class=kifi-tile-hover>").toggleClass("kifi-up", tileHasCounter).appendTo("html").showHover({
+        reuse: false,
+        showDelay: 0,
+        hideDelay: 1e9,
+        fadesOut: true,
+        recovery: Infinity,
+        create: function(callback) {
+          var keepers = pick(info.keepers, 8);
+          // TODO: preload friend pictures
+          render("html/metro/keepers.html", {
+            keepers: keepers,
+            anyKeepers: !!keepers,
+            captionHtml: formatCountHtml(info.kept, (info.keepers || 0).length, info.otherKeeps)
+          }, function(html) {
+            callback($("<div class=kifi-slider2-tip>").html(html));
+          });
+        }});
+      setTimeout(function() {
+        $el.triggerHandler("click.showHover")
+        setTimeout(function() {
+          $el.remove();
+        }, 1000);
+      }, ms);
     }};
 }();
