@@ -1,6 +1,6 @@
 {
   "name": "Kifi Beta",
-  "version": "2.2.35",
+  "version": "2.2.36",
   "manifest_version": 2,
   "description": "Keep it, Find it!",
   "icons": {
@@ -55,6 +55,10 @@
     "html/footer.html",
     "html/metro/keepers.html",
     "html/metro/pane.html",
+    "html/metro/pane_comments.html",
+    "html/metro/pane_general.html",
+    "html/metro/pane_notices.html",
+    "html/metro/pane_threads.html",
     "html/metro/slider2.html",
     "html/comments/hearts.html",
     "html/comments/comments_list.html",
