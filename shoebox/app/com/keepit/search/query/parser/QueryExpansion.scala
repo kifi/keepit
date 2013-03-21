@@ -44,17 +44,6 @@ trait QueryExpansion extends QueryParser {
     }
   }
 
-  override def getStemmedFieldQuery(field: String, queryText: String): Option[Query] = {
-    super.getStemmedFieldQuery(field, queryText).map{ query =>
-      val termSeq = getTermSeq("ts", query)
-      termSeq.foreach{ term =>
-        stemmedTerms += term
-        stemmedQueries += query
-      }
-      query
-    }
-  }
-
   protected def getSiteQuery(domain: String): Option[Query] = if (domain != null) Some(SiteQuery(domain)) else None
 
   protected def getTextQuery(queryText: String, quoted: Boolean): Option[Query] = {
@@ -77,6 +66,13 @@ trait QueryExpansion extends QueryParser {
       }
     }
 
+    def saveStemmedTerms(query: Query, parent: Query) {
+      getTermSeq("ts", query).foreach{ term =>
+        stemmedTerms += term
+        stemmedQueries += parent
+      }
+    }
+
     val booleanQuery = new BooleanQuery(true) with Coordinator // add Coordinator trait for TopLevelQuery
 
     super.getFieldQuery("t", queryText, quoted).foreach{ query =>
@@ -88,6 +84,7 @@ trait QueryExpansion extends QueryParser {
 
     if(!quoted) {
       getStemmedFieldQuery("ts", queryText).foreach{ query =>
+        saveStemmedTerms(query, booleanQuery)
         booleanQuery.add(query, Occur.SHOULD)
         booleanQuery.add(copyFieldQuery(query, "cs"), Occur.SHOULD)
         booleanQuery.add(copyFieldQuery(query, "title_stemmed"), Occur.SHOULD)
