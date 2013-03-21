@@ -69,7 +69,7 @@ api = function() {
     if (lastPage) { // ignore popups, etc.
       if (/^https?:/.test(lastPage.url)) {
         dispatch.call(api.tabs.on.blur, lastPage);
-      } else {
+      } else if (lastPage.id) {
         // Chrome Instant search feature sometimes silently destroys chrome://newtab tabs (crbug.com/88458)
         chrome.tabs.get(lastPage.id, function(tab) {
           if (!tab) {
@@ -149,9 +149,10 @@ api = function() {
     delete selectedTabPages[winId];
   });
 
-  var focusedWinId;
+  var focusedWinId, topNormalWinId;
   chrome.windows.getLastFocused(null, function(win) {
     focusedWinId = win.focused ? win.id : chrome.windows.WINDOW_ID_NONE;
+    topNormalWinId = win.type == "normal" ? win.id : chrome.windows.WINDOW_ID_NONE;
   });
   chrome.windows.onFocusChanged.addListener(function(winId) {
     api.log("[onFocusChanged] win:", winId, "was:", focusedWinId);
@@ -163,6 +164,9 @@ api = function() {
     }
     focusedWinId = winId;
     if (winId !== chrome.windows.WINDOW_ID_NONE) {
+      if (selectedTabPages[winId]) {
+        topNormalWinId = winId;
+      }
       var page = selectedTabPages[winId];
       if (page && /^https?:/.test(page.url)) {
         dispatch.call(api.tabs.on.focus, page);
@@ -449,6 +453,10 @@ api = function() {
       },
       get: function(tabId) {
         return pages[tabId];
+      },
+      getActive: function() {
+        var page = selectedTabPages[topNormalWinId];
+        return page && /^https?:/.test(page.url) ? page : null;
       },
       isFocused: function(tab) {
         return selectedTabPages[focusedWinId] === tab;

@@ -45,7 +45,7 @@ object URI extends Logging {
   val authorityRe = """(?:([^@]*)@)?(.*?)(?::(\d{1,5}))?""".r
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
   val encodedPercent = java.net.URLEncoder.encode("%", "UTF-8")
-  val symbols = """'"`@$^()[]{}<>| """
+  val symbols = """'"`@$^()[]{}<>\| """  // note: may want to remove '@$() as java.net.URI doesn't require escaping them
   val symbolRe = ("[\\Q" + symbols + "\\E]").r
   val delimiters = "?#"
   val encodingMap = (symbols ++ delimiters).map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap

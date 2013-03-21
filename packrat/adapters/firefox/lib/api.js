@@ -25,7 +25,7 @@ const windows = require("sdk/windows").browserWindows;
 const tabs = require("sdk/tabs");
 const privateMode = require("sdk/private-browsing");
 
-var nextTabId = 1;
+var nextTabId = 1, topTabWin = windows.activeWindow;
 const pages = {}, workers = {}, tabsById = {};  // all by tab.id
 function createPage(tab) {
   if (!tab || !tab.id) throw Error(tab ? "tab without id" : "tab required");
@@ -198,6 +198,11 @@ exports.tabs = {
   get: function(pageId) {
     return pages[pageId];
   },
+  getActive: function() {
+    var tab = topTabWin && topTabWin.tabs.activeTab;
+    var page = tab && pages[tab.id];
+    return page && /^https?:/.test(page.url) ? page : null;
+  },
   isFocused: function(page) {
     var tab = tabsById[page.id], win = tab.window;
     return win === windows.activeWindow && tab === win.tabs.activeTab;
@@ -282,6 +287,9 @@ windows
   removeFromWindow(win);
 })
 .on("activate", function(win) {
+  if (win.tabs.activeTab) {  // TODO: better detection of a window's tab support (popups have activeTab)
+    topTabWin = win;
+  }
   var page = pages[win.tabs.activeTab.id];
   if (page && /^https?:/.test(page.url)) {
     dispatch.call(exports.tabs.on.focus, page);

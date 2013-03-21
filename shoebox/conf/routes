@@ -101,16 +101,16 @@ GET     /admin/data/renormalize     com.keepit.controllers.admin.UrlController.r
 POST    /admin/data/handleDuplicate com.keepit.controllers.admin.ScraperController.handleDuplicate
 POST    /admin/data/handleDuplicates com.keepit.controllers.admin.ScraperController.handleDuplicates
 
-GET     /admin/article/index        @com.keepit.controllers.admin.ArticleIndexerController.index
-GET     /admin/article/getSequenceNumber @com.keepit.controllers.admin.ArticleIndexerController.getSequenceNumber
-GET     /admin/article/index/:state @com.keepit.controllers.admin.ArticleIndexerController.indexByState(state: State[NormalizedURI])
-GET     /admin/article/indexInfo    @com.keepit.controllers.admin.ArticleIndexerController.indexInfo
-GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.ArticleIndexerController.refreshSearcher
-GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.ArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
+GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
+GET     /admin/article/sequenceNumber @com.keepit.controllers.admin.AdminArticleIndexerController.getSequenceNumber
+GET     /admin/article/index/:state @com.keepit.controllers.admin.AdminArticleIndexerController.indexByState(state: State[NormalizedURI])
+GET     /admin/article/indexInfo    @com.keepit.controllers.admin.AdminArticleIndexerController.indexInfo
+GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.AdminArticleIndexerController.refreshSearcher
+GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
 
-GET     /admin/uriGraph/load        com.keepit.controllers.admin.URIGraphController.load
-GET     /admin/uriGraph/update/:userId com.keepit.controllers.admin.URIGraphController.update(userId: Id[User])
-GET     /admin/uriGraph/dumpDoc/:userId  com.keepit.controllers.admin.URIGraphController.dumpLuceneDocument(userId: Id[User])
+GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
+GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGraphController.update(userId: Id[User])
+GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIGraphController.dumpLuceneDocument(userId: Id[User])
 
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.usersView
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
@@ -186,3 +186,17 @@ GET     /admin/labs/rankVsScore     @com.keepit.controllers.admin.AdminSearchLab
 GET     /admin/labs/rankVsScore.json @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
 GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+
+# INTERNAL ROUTES
+POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked
+
+POST    /internal/search/uriGraph/update       @com.keepit.controllers.search.URIGraphController.updateURIGraph
+POST    /internal/search/uriGraph/dumpDoc/:id  @com.keepit.controllers.search.URIGraphController.dumpLuceneDocument(id: Id[User])
+
+GET     /internal/search/index/info            @com.keepit.controllers.search.ArticleIndexerController.indexInfo()
+POST    /internal/search/index/update          @com.keepit.controllers.search.ArticleIndexerController.index()
+GET     /internal/search/index/sequenceNumber  @com.keepit.controllers.search.ArticleIndexerController.getSequenceNumber()
+POST    /internal/search/index/refreshSearcher @com.keepit.controllers.search.ArticleIndexerController.refreshSearcher()
+POST    /internal/search/index/dumpDoc/:id     @com.keepit.controllers.search.ArticleIndexerController.dumpLuceneDocument(id: Id[NormalizedURI])
+POST    /internal/search/search/keeps          @com.keepit.controllers.search.SearchController.searchKeeps(userId: Id[User], query: String)
+
