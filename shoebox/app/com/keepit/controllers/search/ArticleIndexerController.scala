@@ -39,6 +39,11 @@ class ArticleIndexerController @Inject()(
     Ok(JsObject(Seq("articles" -> JsNumber(cnt))))
   }
 
+  def reindex() = Action { implicit request =>
+    indexerPlugin.reindex()
+    Ok(JsObject(Seq("started" -> JsString("ok"))))
+  }
+
   def indexInfo = Action { implicit request =>
     Ok(Json.toJson(ArticleIndexInfo(
       numDocs = indexer.numDocs,
