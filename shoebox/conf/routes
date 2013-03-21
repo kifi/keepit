@@ -190,6 +190,7 @@ GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLab
 # INTERNAL ROUTES
 POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked()
 
+GET     /internal/search/uriGraph/info         @com.keepit.controllers.search.URIGraphController.indexInfo()
 POST    /internal/search/uriGraph/update       @com.keepit.controllers.search.URIGraphController.updateURIGraph()
 POST    /internal/search/uriGraph/reindex      @com.keepit.controllers.search.URIGraphController.reindex()
 POST    /internal/search/uriGraph/dumpDoc/:id  @com.keepit.controllers.search.URIGraphController.dumpLuceneDocument(id: Id[User])
