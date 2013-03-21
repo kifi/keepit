@@ -122,6 +122,9 @@ a.kifi-pane-back:hover {
   text-decoration: none;
   background-color: #67829c;
 }
+a.kifi-pane-back:active {
+  background-color: #607991;
+}
 .kifi-pane-tall {
   position: absolute;
   top: 40px;
@@ -208,4 +211,7 @@ a.kifi-pane-action {
 a.kifi-pane-action:hover {
   color: #fff !important;
   background: #67829c;
+}
+a.kifi-pane-action:active {
+  background-color: #607991;
 }
