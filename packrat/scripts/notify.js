@@ -18,6 +18,23 @@ KifiNotification.add({
   showForMs: 3000
 });
 
+var notify = function() {
+  api.port.on({
+    notification: function(data) {
+      api.log("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+    },
+    event: function(data) {
+      KifiNotification.add({
+        title: 'New event',
+        contentHtml: data,
+        image: 'https://fbcdn-profile-a.akamaihd.net/hprofile-ak-ash3/49938_508538138_1167343243_q.jpg',
+        sticky: false,
+        showForMs: 1000
+      });
+    }
+  });
+}();
+
 
 
 setTimeout(function() {

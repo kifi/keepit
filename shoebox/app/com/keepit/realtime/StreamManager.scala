@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentHashMap
 import com.keepit.common.db.Id
 import com.keepit.model._
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsObject, JsValue}
+import play.api.libs.json._
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
@@ -17,7 +17,7 @@ trait StreamManager[T, S] {
   def disconnect(identifier: T): Unit
   def disconnectAll(identifier: T): Unit
   def push(identifier: T, msg: S): Unit
-  def pushAll(msg: S): Unit
+  def broadcast(msg: S): Unit
 }
 
 
@@ -62,15 +62,21 @@ trait MultiClientStreamManager[T, S] extends StreamManager[T, S] with Logging {
     }
   }
 
-  def pushAll(msg: S): Unit = {
-    import scala.collection.JavaConversions.collectionAsScalaIterable
+  def broadcast(msg: S): Unit = {
     for (client <- clients.values) {
       client.push(msg)
     }
   }
 }
 
-trait UserStreamManager extends MultiClientStreamManager[Id[User], JsValue]
+trait UserStreamManager extends MultiClientStreamManager[Id[User], JsArray] {
+  def push(clientIdentifier: Id[User], messageType: String, msg: JsValue): Unit = {
+    push(clientIdentifier, Json.arr(messageType, msg))
+  }
+  def broadcast(messageType: String, msg: JsValue): Unit = {
+    broadcast(Json.arr(messageType, msg))
+  }
+}
 
 @Singleton
 class DouglasAdamsQuoteStreamManager @Inject() (streams: Streams, system: ActorSystem) extends UserStreamManager {
@@ -85,7 +91,7 @@ class DouglasAdamsQuoteStreamManager @Inject() (streams: Streams, system: ActorS
     val maybeCancel = if (!isConnected(userId)) {
       Some(system.scheduler.schedule(5.seconds, 10.seconds) {
         log.info("Sending quote!")
-        push(userId, Json.obj("quote" -> DouglasAdamsQuotes.random.quote))
+        push(userId, Json.arr("quote", DouglasAdamsQuotes.random.quote))
       })
     } else None
     val enumerator = super.connect(userId)
@@ -117,11 +123,12 @@ class UserNotificationStreamManager @Inject() (streams: Streams)  extends UserSt
 class AdminEventStreamManager extends UserStreamManager
 
 @Singleton
-class UserStreamProvider @Inject() (userDefault: UserDefaultStreamManager, userNotification: UserNotificationStreamManager, hgttg: DouglasAdamsQuoteStreamManager){
+class UserStreamProvider @Inject() (userDefault: UserDefaultStreamManager, userNotification: UserNotificationStreamManager, adminEvent: AdminEventStreamManager, hgttg: DouglasAdamsQuoteStreamManager){
   def getStreams(feeds: Seq[String]): Seq[UserStreamManager] = {
     feeds.collect {
         case "notifications" =>  userNotification
         case "hgttg" => hgttg
+        case "admin" => adminEvent
     } :+ userDefault
   }
 }

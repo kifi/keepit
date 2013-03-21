@@ -1,6 +1,8 @@
 var api = api || require("./api");
 
-// ===== Async requests
+var ReconnectingWebSocket = ReconnectingWebSocket || require("./scripts/lib/reconnecting-websocket.js");
+
+// ===== Async 
 
 function ajax(method, uri, data, done, fail) {  // method and uri are required
   if (typeof data == "function") {  // shift args if data is missing and done is present
@@ -72,6 +74,21 @@ api.timers.setTimeout(function maybeSend() {
   }
   api.timers.setTimeout(maybeSend, eventLogDelay);
 }, 4000);
+
+// ===== WebSockets
+var wsAddress = (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws?admin"
+var wsHandlers = {
+  notification: function(data) {
+    api.log("New notification!!!!", data)
+  },
+  event: function(data) {
+    api.log("New event!!!!", data);
+    
+    api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator});
+  }
+}
+
+api.socket.open(wsAddress, wsHandlers)
 
 // ===== Handling messages from content scripts or other extension pages
 
@@ -173,7 +190,11 @@ api.port.on({
   add_deep_link_listener: function(data, respond, tab) {
     createDeepLinkListener(data, tab.id, respond);
     return true;
-  }});
+  },
+  send_socket_message: function(data, respond, tab) {
+    return true;
+  }
+});
 
 function getSliderInfo(tab, respond) {
   ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {

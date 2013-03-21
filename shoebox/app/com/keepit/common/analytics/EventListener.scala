@@ -22,6 +22,8 @@ import com.keepit.common.akka.FortyTwoActor
 import akka.actor.ActorSystem
 import akka.actor.Props
 import com.keepit.classify.DomainTagImportActor
+import com.keepit.realtime.AdminEventStreamManager
+import play.api.libs.json.Json
 
 trait EventListenerPlugin extends SchedulingPlugin {
   def onEvent: PartialFunction[Event,Unit]
@@ -38,18 +40,20 @@ trait EventListenerPlugin extends SchedulingPlugin {
 }
 
 @Singleton
-class EventHelper @Inject() (system: ActorSystem, listeners: JSet[EventListenerPlugin], eventStream: EventStream) {
-  private val default = system.actorOf(Props(new EventHelperActor(listeners, eventStream)))
+class EventHelper @Inject() (system: ActorSystem, listeners: JSet[EventListenerPlugin], eventStream: EventStream, adminEvent: AdminEventStreamManager) {
+  private val default = system.actorOf(Props(new EventHelperActor(listeners, eventStream, adminEvent)))
   def newEvent(event: Event): Seq[String] = {
     default ! event
     listeners.filter(_.onEvent.isDefinedAt(event)).map(_.getClass.getSimpleName.replaceAll("\\$","")).toSeq
   }
 }
 
-class EventHelperActor(listeners: JSet[EventListenerPlugin], eventStream: EventStream) extends FortyTwoActor {
+class EventHelperActor(listeners: JSet[EventListenerPlugin], eventStream: EventStream, adminEvent: AdminEventStreamManager) extends FortyTwoActor {
+  implicit val eventWriter = EventWriter.writes
   def receive = {
     case event: Event =>
       eventStream.streamEvent(event)
+      adminEvent.broadcast("event", Json.toJson(event))
       val events = listeners.filter(_.onEvent.isDefinedAt(event))
       events.map(_.onEvent(event))
   }

@@ -42,8 +42,35 @@ class EventStream {
 
 }
 
+object EventWriter {
+  implicit val writes = new Writes[Event] {
+    def writes(event: Event): JsValue = {
+      event match {
+        case Event(_,UserEventMetadata(eventFamily,eventName,externalUser,_,experiments,metaData,_),createdAt,_) =>
+          val (user, social) = inject[Database].readOnly { implicit session =>
+            val user = inject[UserRepo].get(externalUser)
+            val social = inject[SocialUserInfoRepo].getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
+            (user, social)
+          }
+          Json.obj(
+            "user" -> Json.obj(
+              "id" -> user.id.get.id,
+              "name" -> s"${user.firstName} ${user.lastName}",
+              "avatar" -> s"https://graph.facebook.com/${social}/picture?height=150&width=150"),
+            "time" -> createdAt.toStandardTimeString,
+            "name" -> eventName,
+            "family" -> eventFamily.name
+          )
+        case _ => JsNull
+      }
+    }
+  }
+}
+
 class EventStreamActor extends FortyTwoActor {
   val (eventEnumerator, eventChannel) = Concurrent.broadcast[JsValue]
+
+  implicit val eventWriter = EventWriter.writes
 
   def receive = {
     case NewStream =>
@@ -58,21 +85,7 @@ class EventStreamActor extends FortyTwoActor {
 
     event match {
       case Event(_,UserEventMetadata(eventFamily,eventName,externalUser,_,experiments,metaData,_),createdAt,_) =>
-        val (user, social) = inject[Database].readOnly { implicit session =>
-          val user = inject[UserRepo].get(externalUser)
-          val social = inject[SocialUserInfoRepo].getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
-          (user, social)
-        }
-        val msg = Json.obj(
-          "user" -> Json.obj(
-            "id" -> user.id.get.id,
-            "name" -> s"${user.firstName} ${user.lastName}",
-            "avatar" -> s"https://graph.facebook.com/${social}/picture?height=150&width=150"),
-          "time" -> createdAt.toStandardTimeString,
-          "name" -> eventName,
-          "family" -> eventFamily.name
-        )
-        eventChannel.push(msg)
+        eventChannel.push(Json.toJson(event))
       case _ =>
     }
 
