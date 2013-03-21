@@ -309,19 +309,21 @@ slider2 = function() {
     }
     if ($pane) {
       render("html/metro/pane_" + pane + ".html", params, function(html) {
-        var swapClass = back || pane == "general" ? "kifi-swapping-b" : "kifi-swapping-f";
-        var $cubby = $pane.find(".kifi-pane-cubby");
-        var $old = $cubby.children().addClass("kifi-hiding")
+        back = back || pane == "general";
+        var $cubby = $pane.find(".kifi-pane-cubby"), w = $cubby[0].offsetWidth, d = w + 6;
+        var $boxes = $("<div class=kifi-pane-boxes>").css({
+          width: w + d,
+          transform: "translate(" + (back ? -d : 0) + "px,0)"}).appendTo($cubby.css("overflow", "hidden"));
+        var $old = $cubby.find(".kifi-pane-box").css({left: back ? d : 0, width: w}).appendTo($boxes);
+        var $new = $(html).css({left: back ? 0 : d, width: w}).appendTo($boxes);
+        $boxes.layout().css("transform", "translate(" + (back ? 0 : -d) + "px,0)")
         .on("transitionend webkitTransitionEnd", function() {
           $old.remove();
+          $new.detach().css({left: "", width: ""}).appendTo($cubby);
+          $boxes.remove();
+          $cubby.css("overflow", "");
         });
-        $cubby.addClass(swapClass);
-        var $new = $(html).insertAfter($old).layout().addClass("kifi-showing")
-        .on("transitionend webkitTransitionEnd", function() {
-          $new.removeClass("kifi-showing");
-          $cubby.removeClass(swapClass)
-          $pane.data("pane", pane);
-        });
+        $pane.data("pane", pane);
       });
     } else {
       api.require("styles/metro/pane.css", function() {

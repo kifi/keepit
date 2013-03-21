@@ -83,9 +83,13 @@ a.kifi-pane-head-settings:active {
   left: 6px;
   right: 6px;
 }
-.kifi-pane-cubby.kifi-swapping-f,
-.kifi-pane-cubby.kifi-swapping-b {
-  overflow: hidden;
+.kifi-pane-boxes {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  -webkit-transition: -webkit-transform ease-in-out .15s;
+  transition: -webkit-transform ease-in-out .15s, transform ease-in-out .15s;
 }
 .kifi-pane-box {
   position: absolute;
@@ -95,20 +99,6 @@ a.kifi-pane-head-settings:active {
   width: 100%;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  -webkit-transition: left ease-in-out .15s;
-  transition: left ease-in-out .15s;
-}
-.kifi-swapping-f .kifi-pane-box,
-.kifi-swapping-b .kifi-pane-box.kifi-hiding {
-  left: 103%;
-}
-.kifi-swapping-b .kifi-pane-box,
-.kifi-swapping-f .kifi-pane-box.kifi-hiding {
-  left: -103%;
-}
-.kifi-swapping-f .kifi-pane-box.kifi-showing,
-.kifi-swapping-b .kifi-pane-box.kifi-showing {
-  left: 0;
 }
 .kifi-pane-title,
 a.kifi-pane-back {
