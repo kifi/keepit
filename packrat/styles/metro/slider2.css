@@ -357,23 +357,23 @@
   background-repeat: no-repeat;
   height: 17px;
 }
-.kifi-slider2-dock-btn.kifi-slider2-noti::before {
+.kifi-slider2-dock-btn.kifi-slider2-notices::before {
   background-position: 0 0;
   width: 14px;
   left: 15px;
   top: 14px;
 }
-.kifi-slider2-dock-btn.kifi-slider2-comm::before {
+.kifi-slider2-dock-btn.kifi-slider2-comments::before {
   background-position: -14px 0;
   width: 17px;
   left: 12px;
 }
-.kifi-slider2-dock-btn.kifi-slider2-mess::before {
+.kifi-slider2-dock-btn.kifi-slider2-threads::before {
   background-position: -31px 0;
   width: 22px;
   left: 10px;
 }
-.kifi-slider2-dock-btn.kifi-slider2-pane::before {
+.kifi-slider2-dock-btn.kifi-slider2-general::before {
   background-position: -53px 0;
   width: 18px;
   left: 12px;
