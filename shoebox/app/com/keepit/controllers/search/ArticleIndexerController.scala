@@ -19,10 +19,6 @@ case class ArticleIndexInfo(
     committedAt: Option[String])
 
 object ArticleIndexInfoJson {
-  private implicit val sequenceNumberFormat = new Format[SequenceNumber] {
-    def reads(json: JsValue): JsResult[SequenceNumber] = __.read[Long].reads(json).map(SequenceNumber(_))
-    def writes(o: SequenceNumber): JsValue = JsNumber(o.value)
-  }
   implicit val articleIndexInfoFormat = Json.format[ArticleIndexInfo]
 }
 
