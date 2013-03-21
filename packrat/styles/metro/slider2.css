@@ -37,14 +37,14 @@
   right: 0;
   padding: 0 18px 3px;
   margin-bottom: 13px;
-  -webkit-transform: translate(0, 3px);
-  transform: translate(0, 3px);
-  -webkit-transition-duration: 250ms;
-  transition-duration: 250ms;
+  -webkit-transform: translate(0, 20px);
+  transform: translate(0, 20px);
+  -webkit-transition: opacity .8s ease-out, -webkit-transform .8s ease-out;
+  transition: opacity .8s ease-out, -webkit-transform .8s ease-out, transform .8s ease-out;
 }
-.kifi-hover-showing .kifi-tile-hover .kifi-slider2-tip {
-  -webkit-transition-duration: 150ms;
-  transition-duration: 150ms;
+.kifi-tile-hover.kifi-hover-showing .kifi-slider2-tip {
+  -webkit-transition: opacity .5s ease-in, -webkit-transform .5s ease-out;
+  transition: opacity .5s ease-in, -webkit-transform .5s ease-out, transform .5s ease-out;
 }
 .kifi-tile-hover.kifi-up .kifi-slider2-tip {
   margin-bottom: 23px;
@@ -253,10 +253,9 @@
   left: auto;
   right: 36px;
 }
-.kifi-slider2-keepers-intro,
-.kifi-slider2-keepers-caption {
+.kifi-slider2-keepers-intro {
+  font: 300 14px/29px Lato,sans-serif;
   text-align: left;
-  font: 300 12px/27px Lato,sans-serif;
 }
 .kifi-slider2-keepers {
   text-align: right;
@@ -303,6 +302,7 @@
 }
 .kifi-slider2-keepers-caption {
   clear: right;
+  font: 300 12px/27px Lato,sans-serif;
   text-align: right;
 }
 
@@ -401,7 +401,7 @@
   margin-bottom: 20px;
   border-radius: 6px;
   padding: 16px 24px 18px;
-  background-color: #2c3e50;
+  background-color: rgba(53,60,67,.9);
   color: #fff;
   font: 300 12px/16px Lato,sans-serif;
   text-align: center;
@@ -429,5 +429,5 @@
   font: 0/0 serif;
   border-style: solid;
   border-width: 8px 8px 0;
-  border-color: #2c3e50 transparent;
+  border-color: rgba(53,60,67,.9) transparent;
 }

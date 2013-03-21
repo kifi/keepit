@@ -1,7 +1,7 @@
-@(indexer: com.keepit.search.index.Indexer[_])
+@(indexInfo: com.keepit.controllers.search.ArticleIndexInfo)
 
 @admin("Index") {
-  <b>num documents indexed:</b> @{indexer.numDocs}<br/>
-  <b>last committed at:</b> @{indexer.commitData.getOrElse(com.keepit.search.index.Indexer.CommitData.committedAt, "N/A")}<br/>
-  <b>last sequence number:</b> @{indexer.commitData.getOrElse(com.keepit.search.index.Indexer.CommitData.sequenceNumber, "N/A")}<br/>
+  <b>num documents indexed:</b> @{indexInfo.numDocs}<br/>
+  <b>last committed at:</b> @{indexInfo.committedAt.getOrElse("N/A")}<br/>
+  <b>last sequence number:</b> @{indexInfo.sequenceNumber.getOrElse("N/A")}<br/>
 }

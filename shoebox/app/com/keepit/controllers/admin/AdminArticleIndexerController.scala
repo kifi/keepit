@@ -6,22 +6,22 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model._
-import com.keepit.search.index.ArticleIndexer
-import com.keepit.search.index.ArticleIndexerPlugin
-import org.apache.lucene.document.Document
+import com.keepit.search.SearchServiceClient
 import play.api.libs.json.{JsNumber, JsObject}
-import views.html
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class ArticleIndexerController @Inject()(
+class AdminArticleIndexerController @Inject()(
+    searchClient: SearchServiceClient,
     db: Database,
-    indexerPlugin: ArticleIndexerPlugin,
-    indexer: ArticleIndexer,
     normUriRepo: NormalizedURIRepo
   ) extends AdminController {
 
   def index = AdminHtmlAction { implicit request =>
-    val cnt = indexerPlugin.index()
-    Ok("indexed %d articles".format(cnt))
+    Async {
+      searchClient.index().map { cnt =>
+        Ok("indexed %d articles".format(cnt))
+      }
+    }
   }
 
   def indexByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
@@ -29,30 +29,41 @@ class ArticleIndexerController @Inject()(
       db.readWrite { implicit s =>
         normUriRepo.getByState(state).foreach{ uri => normUriRepo.save(uri.withState(newState)) }
       }
-      val cnt = indexerPlugin.index()
-      Ok("indexed %d articles".format(cnt))
+      Async {
+        searchClient.index().map { cnt =>
+          Ok("indexed %d articles".format(cnt))
+        }
+      }
     }
   }
 
   def indexInfo = AdminHtmlAction { implicit request =>
-    Ok(html.admin.indexer(indexer))
+    Async {
+      searchClient.articleIndexInfo().map { info =>
+        Ok(views.html.admin.indexer(info))
+      }
+    }
   }
 
   def getSequenceNumber = AdminJsonAction { implicit request =>
-    Ok(JsObject(Seq("sequenceNumber" -> JsNumber(indexer.sequenceNumber.value))))
+    Async {
+      searchClient.articleIndexerSequenceNumber().map { number =>
+        Ok(JsObject(Seq("sequenceNumber" -> JsNumber(number))))
+      }
+    }
   }
 
   def refreshSearcher = AdminHtmlAction { implicit request =>
-    indexer.refreshSearcher()
-    Ok("searcher refreshed")
+    Async {
+      searchClient.refreshSearcher().map { _ =>
+        Ok("searcher refreshed")
+      }
+    }
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]) =  AdminHtmlAction { implicit request =>
-    try {
-      val doc = indexer.buildIndexable(id).buildDocument
-      Ok(html.admin.luceneDocDump("Article", doc, indexer))
-    } catch {
-      case e: Throwable => Ok(html.admin.luceneDocDump("No Article", new Document, indexer))
+    Async {
+      searchClient.dumpLuceneDocument(id).map(Ok(_))
     }
   }
 }

@@ -800,6 +800,9 @@ slider = function() {
     $cpv.on("focus", ".kifi-comment-compose", function() {
       $(this).find(".kifi-placeholder").remove();
     }).on("blur", ".kifi-comment-compose", function() {
+      // wkb.ug/112854 crbug.com/222546
+      $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
+
       var value = $(this).html();
       value = commentSerializer(value);
       if (!value) { // unchanged text!

@@ -1,39 +1,42 @@
 package com.keepit.controllers.admin
 
-import com.keepit.classify.{Domain, DomainClassifier, DomainRepo, DomainStates}
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.net.URI
-import com.keepit.model._
-import com.keepit.serializer.UserWithSocialSerializer._
-import com.keepit.serializer.BasicUserSerializer
-import com.keepit.common.social._
+import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.AdminController
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.Lang
-import com.keepit.search.MainSearcherFactory
+import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.slick._
 import com.keepit.common.mail._
-
+import com.keepit.common.social._
+import com.keepit.model._
+import com.keepit.search.SearchServiceClient
+import play.api.libs.json.Json
 import scala.concurrent.Await
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
-import play.api.libs.json.{Json, JsArray, JsBoolean, JsNumber, JsObject, JsString}
 import scala.concurrent.duration._
 import views.html
-
-import com.google.inject.{Inject, Singleton}
 
 case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstallations: Seq[KifiInstallation])
 
 @Singleton
-class AdminUserController @Inject() (db: Database,
-  userWithSocialRepo: UserWithSocialRepo, userRepo: UserRepo, socialUserInfoRepo: SocialUserInfoRepo, followRepo: FollowRepo,
-  normalizedURIRepo: NormalizedURIRepo, commentRepo: CommentRepo, mailRepo: ElectronicMailRepo, commentRecipientRepo: CommentRecipientRepo,
-  socialUserRawInfoStore: SocialUserRawInfoStore, bookmarkRepo: BookmarkRepo, socialConnectionRepo: SocialConnectionRepo, kifiInstallationRepo: KifiInstallationRepo,
-  browsingHistoryRepo: BrowsingHistoryRepo, emailRepo: EmailAddressRepo, userExperimentRepo: UserExperimentRepo,
-  searcherFactory: MainSearcherFactory, socialGraphPlugin: SocialGraphPlugin)
-    extends AdminController {
+class AdminUserController @Inject() (
+    db: Database,
+    userWithSocialRepo: UserWithSocialRepo,
+    userRepo: UserRepo,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    followRepo: FollowRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    commentRepo: CommentRepo,
+    mailRepo: ElectronicMailRepo,
+    commentRecipientRepo: CommentRecipientRepo,
+    socialUserRawInfoStore: SocialUserRawInfoStore,
+    bookmarkRepo: BookmarkRepo,
+    socialConnectionRepo: SocialConnectionRepo,
+    kifiInstallationRepo: KifiInstallationRepo,
+    browsingHistoryRepo: BrowsingHistoryRepo,
+    emailRepo: EmailAddressRepo,
+    userExperimentRepo: UserExperimentRepo,
+    socialGraphPlugin: SocialGraphPlugin,
+    searchClient: SearchServiceClient
+  ) extends AdminController {
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = db.readOnly { implicit s =>
@@ -48,9 +51,9 @@ class AdminUserController @Inject() (db: Database,
           r => userWithSocialRepo.toUserWithSocial(userRepo.get(r.userId.get))
         })
       }
-      val sentElectronicMails = mailRepo.forSender(userId);
+      val sentElectronicMails = mailRepo.forSender(userId)
       val mailAddresses = userWithSocialRepo.toUserWithSocial(userRepo.get(userId)).emails.map(_.address)
-      val receivedElectronicMails = mailRepo.forRecipient(mailAddresses);
+      val receivedElectronicMails = mailRepo.forRecipient(mailAddresses)
       (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails)
     }
     val rawInfos = socialUserInfos map {info =>
@@ -80,9 +83,8 @@ class AdminUserController @Inject() (db: Database,
     val filteredBookmarks = bookmarkSearch.map{ query =>
       if (query.trim.length == 0) bookmarks
       else {
-        val searcher = searcherFactory.bookmarkSearcher(userId)
-        val uris = searcher.search(query, Lang("en"))
-        bookmarks.filter{ case (b, u) => uris.contains(u.id.get.id) }
+        val uris = Await.result(searchClient.searchKeeps(userId, query), Duration.Inf)
+        bookmarks.filter{ case (b, u) => uris.contains(u.id.get) }
       }
     }
 
