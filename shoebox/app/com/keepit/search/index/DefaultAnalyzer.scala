@@ -189,18 +189,30 @@ class LazyTokenStream(field: String, text: String, analyzer: Analyzer) extends T
   private[this] val termAttr = addAttribute(classOf[CharTermAttribute])
   private[this] val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
 
-
-  private[this] var tokenStream: TokenStream = null
+  private[this] var baseTokenStream: TokenStream = null
+  private[this] var baseTermAttr: CharTermAttribute = null
+  private[this] var basePosIncrAttr: PositionIncrementAttribute = null
 
   override def incrementToken(): Boolean = {
-    if (tokenStream == null) {
-      tokenStream = analyzer.tokenStream(field, new StringReader(text))
-      tokenStream.reset()
+    if (baseTokenStream == null) {
+      baseTokenStream = analyzer.tokenStream(field, new StringReader(text))
+      baseTokenStream.reset()
+      baseTermAttr = baseTokenStream.getAttribute(classOf[CharTermAttribute])
+      if (baseTokenStream.hasAttribute(classOf[PositionIncrementAttribute]))
+        basePosIncrAttr = baseTokenStream.getAttribute(classOf[PositionIncrementAttribute])
     }
-    tokenStream.incrementToken()
+    val more = baseTokenStream.incrementToken()
+    if (more) {
+      termAttr.setEmpty
+      termAttr.append(baseTermAttr)
+      if (basePosIncrAttr != null) posIncrAttr.setPositionIncrement(basePosIncrAttr.getPositionIncrement)
+    }
+    more
   }
-  override def reset() { /* nothing to do */}
+  override def reset() {
+    if (baseTokenStream != null) baseTokenStream.reset()
+  }
   override def close() {
-    if (tokenStream != null) tokenStream.close()
+    if (baseTokenStream != null) baseTokenStream.close()
   }
 }

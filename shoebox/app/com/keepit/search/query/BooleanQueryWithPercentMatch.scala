@@ -76,28 +76,50 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
   override def createWeight(searcher: IndexSearcher) = {
 
     new BooleanWeight(searcher, disableCoord) {
+      private[this] val requiredWeight = new ArrayBuffer[Weight]
+      private[this] val prohibitedWeight = new ArrayBuffer[Weight]
+      private[this] val optionalWeight = new ArrayBuffer[(Weight, Float)]
+      private[this] var totalValueOnRequired = 0.0f
+      private[this] var totalValueOnOptional = 0.0f
+
+      override def getValueForNormalization(): Float = {
+        var sum = 0.0d
+        clauses.zip(weights).foreach{ case (c, w) =>
+          val value = w.getValueForNormalization.toDouble
+          if (c.isRequired()) {
+            totalValueOnRequired += sqrt(value).toFloat
+            // if a required clause does not have a scorer, no hit
+            requiredWeight += w
+            sum + value
+          } else if (c.isProhibited()) {
+            prohibitedWeight += w
+          } else {
+            totalValueOnOptional += sqrt(value).toFloat
+            optionalWeight += ((w, sqrt(value).toFloat))
+            sum + value
+          }
+        }
+        sum.toFloat * getBoost() * getBoost()
+      }
+
       override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
         val required = new ArrayBuffer[Scorer]
         val prohibited = new ArrayBuffer[Scorer]
         val optional = new ArrayBuffer[(Scorer, Float)]
 
-        var totalValueOnRequired = 0.0f
-        var totalValueOnOptional = 0.0f
-        clauses.zip(weights).foreach{ case (c, w) =>
+        requiredWeight.foreach{ w =>
           val subScorer = w.scorer(context, true, false, acceptDocs)
-          if (c.isRequired()) {
-            totalValueOnRequired += w.getValueForNormalization
-            // if a required clasuse does not have a scorer, no hit
-            if (subScorer == null) return null
-            required += subScorer
-          } else if (c.isProhibited()) {
-            if (subScorer != null) prohibited += subScorer
-          } else {
-            totalValueOnOptional += w.getValueForNormalization
-            if (subScorer != null) {
-              optional += ((subScorer, w.getValueForNormalization))
-            }
-          }
+          // if a required clasuse does not have a scorer, no hit
+          if (subScorer == null) return null
+          required += subScorer
+        }
+        prohibitedWeight.foreach{ w =>
+          val subScorer = w.scorer(context, true, false, acceptDocs)
+          if (subScorer != null) prohibited += subScorer
+        }
+        optionalWeight.foreach{ case (w, value) =>
+          val subScorer = w.scorer(context, true, false, acceptDocs)
+          if (subScorer != null) optional += ((subScorer, value))
         }
 
         if (required.isEmpty && optional.isEmpty) {

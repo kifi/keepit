@@ -16,8 +16,8 @@ import scala.collection.SortedMap
 object LineIndexReader {
 
   def apply(indexReader: AtomicReader, userDocId: Int, terms: Set[Term], numLines: Int) = {
-    val invertedLists = terms.foldLeft(SortedMap.empty[String, SortedMap[BytesRef, InvertedList]]){ (invertedLists, term) =>
-      val field = term.field()
+    val index = terms.foldLeft(new CachedIndex){ (index, term) =>
+      val field = term.field
       val text = term.bytes
       val tp = indexReader.termPositionsEnum(term)
       if (tp != null && tp.advance(userDocId) == userDocId) {
@@ -38,15 +38,11 @@ object LineIndexReader {
           i += 1
         }
         if (curDoc >= 0) invertedList.add(curDoc, plist.toArray)
-        invertedLists + (
-          field -> (
-            invertedLists.getOrElse(field, SortedMap.empty[BytesRef, InvertedList]) + (text -> invertedList.build)
-          )
-        )
+        index + (field, text, invertedList.build)
       } else {
-        invertedLists
+        index
       }
     }
-    new CachingIndexReader(new CachedIndex(invertedLists), numLines)
+    new CachingIndexReader(index, numLines)
   }
 }

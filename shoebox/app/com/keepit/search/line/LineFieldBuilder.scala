@@ -19,19 +19,20 @@ trait LineFieldBuilder {
 }
 
 class LineTokenStream(fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>Option[TokenStream]) extends TokenStream {
-  val termAttr = addAttribute(classOf[CharTermAttribute])
-  val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
-  val lineIter = lines.sortBy(_._1).iterator
+  private[this] val termAttr = addAttribute(classOf[CharTermAttribute])
+  private[this] val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
+  private[this] val lineIter = lines.sortBy(_._1).iterator
 
-  val emptyTokenStream = new TokenStream {
+  private[this] val emptyTokenStream = new TokenStream {
     override def incrementToken() = false
   }
-  var baseTokenStream = emptyTokenStream
+  private[this] var baseTokenStream = emptyTokenStream
 
-  var gap = 0
-  var curPos = 0
-  var posLimit = 0
-  var baseHasPosIncrAttr = false
+  private[this] var gap = 0
+  private[this] var curPos = 0
+  private[this] var posLimit = 0
+  private[this] var baseTermAttr: CharTermAttribute = null
+  private[this] var basePosIncrAttr: PositionIncrementAttribute = null
 
   private def lineRange(lineNo: Int) = (lineNo * LineField.MAX_POSITION_PER_LINE,
                                         (lineNo + 1) * LineField.MAX_POSITION_PER_LINE - LineField.LINE_GAP)
@@ -47,15 +48,20 @@ class LineTokenStream(fieldName: String, lines: Seq[(Int, String)], tokenStreamF
       incr = lineStart - curPos
       posLimit = lineEnd - 1
       baseTokenStream = tokenStreamFunc(fieldName, text).getOrElse(emptyTokenStream)
-      baseHasPosIncrAttr = baseTokenStream.hasAttribute(classOf[PositionIncrementAttribute])
       baseTokenStream.reset
+      baseTermAttr = baseTokenStream.getAttribute(classOf[CharTermAttribute])
+      basePosIncrAttr =
+        if (baseTokenStream.hasAttribute(classOf[PositionIncrementAttribute])) {
+          baseTokenStream.getAttribute(classOf[PositionIncrementAttribute])
+        } else {
+          null
+        }
       moreToken = baseTokenStream.incrementToken()
     }
     moreToken match {
       case true =>
-        termAttr.append(baseTokenStream.getAttribute(classOf[CharTermAttribute]))
-        if (baseHasPosIncrAttr) {
-          val basePosIncrAttr = baseTokenStream.getAttribute(classOf[PositionIncrementAttribute])
+        termAttr.append(baseTermAttr)
+        if (basePosIncrAttr != null) {
           incr += basePosIncrAttr.getPositionIncrement
         } else {
           incr += 1

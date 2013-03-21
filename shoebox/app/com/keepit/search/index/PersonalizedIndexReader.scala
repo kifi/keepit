@@ -30,8 +30,8 @@ class PersonalizedIndexReader(mainReader: AtomicReader, personalReader: CachingI
   private[this] val mainFields: Fields = mainReader.fields
   private[this] val personalFields: Fields = personalReader.fields
   private[this] val fieldToFields: Map[String, Fields] = {
-    val m = mainReader.fields.iterator.foldLeft(Map.empty[String, Fields]){ (m, f) => m + (f -> mainFields) }
-    personalReader.fields.iterator.foldLeft(m){ (m, f) => m + (f -> personalFields) }
+    val m = mainFields.iterator.foldLeft(Map.empty[String, Fields]){ (m, f) => m + (f -> mainFields) }
+    personalFields.iterator.foldLeft(m){ (m, f) => m + (f -> personalFields) }
   }
   private[this] lazy val fieldToFieldInfo: Map[String, FieldInfo] = {
     val m = mainReader.getFieldInfos.iterator.foldLeft(Map.empty[String, FieldInfo]){ (m, fi) => m + (fi.name -> fi) }
@@ -72,31 +72,3 @@ class PersonalizedIndexReader(mainReader: AtomicReader, personalReader: CachingI
   protected def doClose() {}
 }
 
-//object PersonalizedIndexReader {
-//  def termDocsEnum(personalizedIndexReader: PersonalizedIndexReader) = {
-//    termDocsEnum(personalizedIndexReader)new PersonalizedDocsEnum(personalizedIndexReader)
-//  }
-//  def termPositionsEnum(personalizedIndexReader: PersonalizedIndexReader) = new PersonalizedDocsAndPositionsEnum(personalizedIndexReader)
-//
-//  class PersonalizedDocsEnum(personalizedIndexReader: PersonalizedIndexReader) extends DocsEnum {
-//    private[this] var inner: DocsEnum = emptyDocsEnum
-//
-//    override def docID(): Int = inner.docID()
-//    override def freq(): Int = inner.freq()
-//    override def nextDoc(): Int = inner.nextDoc()
-//    override def advance(did: Int): Int = inner.advance(did)
-//  }
-//
-//  class PersonalizedDocsAndPositionsEnum(personalizedIndexReader: PersonalizedIndexReader) extends DocsAndPositionsEnum {
-//    private[this] var inner: DocsAndPositionsEnum = emptyDocsAndPositionsEnum
-//
-//    override def docID(): Int = inner.docID()
-//    override def freq(): Int = inner.freq()
-//    override def nextDoc(): Int = inner.nextDoc()
-//    override def advance(did: Int): Int = inner.advance(did)
-//    override def nextPosition(): Int = inner.nextPosition()
-//    override def startOffset(): Int = -1
-//    override def endOffset(): Int = -1
-//    override def getPayload(): BytesRef = inner.getPayload()
-//  }
-//}

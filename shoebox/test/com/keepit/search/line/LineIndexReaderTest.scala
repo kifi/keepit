@@ -13,7 +13,6 @@ import org.apache.lucene.document.Document
 import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.IndexWriter
-import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.SlowCompositeReaderWrapper
 import org.apache.lucene.search.BooleanQuery
@@ -36,8 +35,7 @@ class LineIndexReaderTest extends Specification {
   val config = new IndexWriterConfig(Version.LUCENE_41, indexingAnalyzer)
 
   val ramDir = new RAMDirectory
-  val indexReader = populateIndex
-  val reader = new SlowCompositeReaderWrapper(indexReader)
+  val reader = new SlowCompositeReaderWrapper(populateIndex)
 
   def populateIndex: DirectoryReader = {
     val lineFieldBuilder = new LineFieldBuilder {}
@@ -56,7 +54,7 @@ class LineIndexReaderTest extends Specification {
     writer.commit()
     writer.close()
 
-    IndexReader.open(ramDir)
+    DirectoryReader.open(ramDir)
   }
 
   def doQuery(query: Query, ir: AtomicReader) = {

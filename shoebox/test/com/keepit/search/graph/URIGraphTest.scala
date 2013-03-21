@@ -71,21 +71,23 @@ class URIGraphTest extends Specification with DbRepos {
 
   class Searchable(uriGraphSearcher: URIGraphSearcher) {
     def search(user: Id[User], query: Query): Map[Long, Float] = {
+      var result = Map.empty[Long,Float]
       uriGraphSearcher.openPersonalIndex(user, query) match {
         case Some((indexReader, idMapper)) =>
           val ir = new WrappedSubReader("", indexReader, idMapper)
-          val searcher = new IndexSearcher(ir)
+          val searcher = new Searcher(new WrappedIndexReader(null, Array(ir)))
           val weight = searcher.createNormalizedWeight(query)
           val scorer = weight.scorer(ir.getContext, true, true, ir.getLiveDocs)
-          var result = Map.empty[Long,Float]
-          var doc = scorer.nextDoc()
-          while (doc < NO_MORE_DOCS) {
-            result += (idMapper.getId(doc) -> scorer.score())
-            doc = scorer.nextDoc()
+          if (scorer != null) {
+            var doc = scorer.nextDoc()
+            while (doc < NO_MORE_DOCS) {
+              result += (idMapper.getId(doc) -> scorer.score())
+              doc = scorer.nextDoc()
+            }
           }
-          result
-        case None => Map.empty[Long, Float]
+        case None =>
       }
+      result
     }
   }
   implicit def toSearchable(uriGraphSearcher: URIGraphSearcher) = new Searchable(uriGraphSearcher: URIGraphSearcher)

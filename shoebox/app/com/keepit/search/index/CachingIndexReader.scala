@@ -1,8 +1,7 @@
 package com.keepit.search.index
 
-import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.model.{NormalizedURI, User}
+import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.index.AtomicReader
 import org.apache.lucene.index.DocsEnum
 import org.apache.lucene.index.DocsAndPositionsEnum
@@ -39,8 +38,8 @@ class CachingIndexReader(val index: CachedIndex, numOfDocs: Int) extends AtomicR
       var remainder = new CachedIndex
       index.foreach{ (f, t, l) =>
         val (list1, list2) = l.split(remapper)
-        remapped + (f, t, list1)
-        remainder + (f, t, list2)
+        remapped += (f, t, list1)
+        remainder += (f, t, list2)
       }
       (subReaders + (name -> new CachingIndexReader(remapped, -1)), remainder)
     }
@@ -79,12 +78,18 @@ class InvertedList(val dlist: Array[(Int, Array[Int])]) {
     val remainder = new InvertedListBuilder()
     var i = 0
     while (i < dlist.length) {
-      val newDID = remapper.src2dst(dlist(i)._1)
+      val newDID = remapper.remap(dlist(i)._1)
       if (newDID >= 0) remapped.add(newDID, dlist(i)._2)
       else remainder.add(dlist(i))
       i += 1
     }
     (remapped.build, remainder.build)
+  }
+
+  override def toString() = {
+    dlist.map{ case (doc, plist) =>
+      "[d=%d,p=%s]".format(doc, plist.mkString("(", "," ,")"))
+    }.mkString("InvertedList(", "," ,")")
   }
 }
 
@@ -120,7 +125,7 @@ class CachedIndex(invertedLists: SortedMap[String, SortedMap[BytesRef, InvertedL
 
   def foreach(f: (String, BytesRef, InvertedList) => Unit) = {
     invertedLists.foreach{ case (field, terms) =>
-      terms.foreach{ case (text, list) =>f(field, text, list) }
+      terms.foreach{ case (text, list) => f(field, text, list) }
     }
   }
 
@@ -148,6 +153,8 @@ class CachedIndex(invertedLists: SortedMap[String, SortedMap[BytesRef, InvertedL
 
     override def size() = invertedLists.size
   }
+
+  override def toString() = s"CachedIndex(${invertedLists.toString})"
 }
 
 class CachedTerms(termMap: SortedMap[BytesRef, InvertedList]) extends Terms {
@@ -190,7 +197,7 @@ class CachedTermsEnum(terms: SortedMap[BytesRef, InvertedList]) extends TermsEnu
     currentEntry = currentCollection.headOption
     currentEntry.headOption match {
       case None => SeekStatus.END
-      case Some((text)) => SeekStatus.FOUND
+      case Some((foundText, _)) => if (foundText.equals(text)) SeekStatus.FOUND else SeekStatus.NOT_FOUND
       case _ => SeekStatus.NOT_FOUND
     }
   }
@@ -217,21 +224,21 @@ class CachedTermsEnum(terms: SortedMap[BytesRef, InvertedList]) extends TermsEnu
   override def docs(liveDocs: Bits, reuse: DocsEnum, flags: Int): DocsEnum = {
     currentEntry match {
       case Some((_, list)) => new CachedDocsAndPositionsEnum(list)
-      case None => new CachedDocsAndPositionsEnum(EmptyInvertedList)
+      case None => emptyDocsAndPositionsEnum
     }
   }
 
   override def  docsAndPositions(liveDocs: Bits, reuse: DocsAndPositionsEnum, flags: Int): DocsAndPositionsEnum = {
     currentEntry match {
       case Some((_, list)) => new CachedDocsAndPositionsEnum(list)
-      case None => new CachedDocsAndPositionsEnum(EmptyInvertedList)
+      case None => emptyDocsAndPositionsEnum
     }
   }
 }
 
 class CachedDocsAndPositionsEnum(list: InvertedList) extends DocsAndPositionsEnum {
   private[this] val dlist = list.dlist
-  private[this] var docFreq = 0
+  private[this] var docFreq = list.docFreq
   private[this] var docid = -1
   private[this] var positions = EmptyInvertedList.emptyPositions
   private[this] var ptrDoc = 0

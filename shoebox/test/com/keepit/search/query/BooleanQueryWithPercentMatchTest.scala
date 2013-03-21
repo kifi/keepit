@@ -11,13 +11,14 @@ import com.keepit.search.index.DefaultAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.TextField
+import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.IndexWriter
-import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.SlowCompositeReaderWrapper
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause.Occur
+import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
@@ -25,7 +26,6 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
-import org.apache.lucene.search.DocIdSetIterator
 
 class BooleanQueryWithPercentMatchTest extends Specification {
 
@@ -45,7 +45,7 @@ class BooleanQueryWithPercentMatchTest extends Specification {
     writer.commit()
     writer.close()
 
-    IndexReader.open(ramDir)
+    DirectoryReader.open(ramDir)
   }
 
   val reader = new SlowCompositeReaderWrapper(indexReader)
@@ -119,7 +119,7 @@ class BooleanQueryWithPercentMatchTest extends Specification {
 
       pct = (aaaIdf * 0.1f + bbbIdf + cccIdf) / (aaaIdf + bbbIdf + cccIdf) * 100.0f
       q.setPercentMatch(pct)
-      doQuery(q).map(_._1) === Seq(1, 5, 7) // docs with bbb and ccc
+      doQuery(q).map(_._1) === Seq(1, 7) // docs with aaa, bbb and ccc
     }
 
     "search with required terms" in {
