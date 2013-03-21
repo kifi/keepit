@@ -21,39 +21,16 @@ KifiNotification.add({
 var notify = function() {
   api.port.on({
     notification: function(data) {
-      api.log("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
-    },
-    event: function(data) {
       KifiNotification.add({
         title: 'New event',
-        contentHtml: data,
+        contentHtml: JSON.stringify(data),
         image: 'https://fbcdn-profile-a.akamaihd.net/hprofile-ak-ash3/49938_508538138_1167343243_q.jpg',
         sticky: false,
         showForMs: 1000
       });
+    },
+    event: function(data) {
+      api.log("New event!!", data)
     }
   });
 }();
-
-
-
-setTimeout(function() {
-  KifiNotification.add({
-    title: 'Alexander Willis Schultz',
-    contentHtml: 'I commented on it above, but people I\'m talking to are hesitant to add on group because they are unsure of how to explain it.',
-    image: 'https://fbcdn-profile-a.akamaihd.net/hprofile-ak-ash3/49938_508538138_1167343243_q.jpg',
-    click: function() {alert('hi')},
-    sticky: false,
-    showForMs: 3000
-  });
-}, 2000)
-
-setTimeout(function() {
-  KifiNotification.add({
-    title: 'This is a sticky notice!',
-    contentHtml: 'stiiiiiiicky',
-    image: 'https://fbcdn-profile-a.akamaihd.net/hprofile-ak-ash3/49938_508538138_1167343243_q.jpg',
-    sticky: true,
-    showForMs: 3000
-  });
-}, 4000)

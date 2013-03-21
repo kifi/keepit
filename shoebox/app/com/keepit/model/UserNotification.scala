@@ -11,15 +11,18 @@ import scala.slick.util.CloseableIterator
 import play.api.libs.json.JsObject
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
+import play.libs.Json
+import com.keepit.realtime.UserNotificationStreamManager
+import com.keepit.serializer.SendableNotificationSerializer
 
-case class UserNotificationDetails(payload: JsObject) extends AnyVal
+trait UserNotificationDetails { val payload: JsObject }
 
 case class UserNotification(
   id: Option[Id[UserNotification]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   userId: Id[User],
-  externalId: ExternalId[UserNotification],
+  externalId: ExternalId[UserNotification] = ExternalId[UserNotification](),
   category: UserNotificationCategory,
   details: UserNotificationDetails,
   commentId: Option[Id[Comment]],
@@ -28,6 +31,28 @@ case class UserNotification(
   def withUpdateTime(now: DateTime): UserNotification = this.copy(updatedAt = now)
   def isActive: Boolean = state != UserNotificationStates.INACTIVE
   def withState(state: State[UserNotification]): UserNotification = copy(state = state)
+}
+
+case class SendableNotification(
+  id: ExternalId[UserNotification],
+  createdAt: DateTime,
+  updatedAt: DateTime,
+  category: UserNotificationCategory,
+  details: UserNotificationDetails
+)
+
+object SendableNotification {
+  def fromUserNotification(notify: UserNotification) = {
+    SendableNotification(id = notify.externalId, createdAt = notify.createdAt, updatedAt = notify.updatedAt, category = notify.category, details = notify.details)
+  }
+}
+
+class NotificationBroadcast @Inject() (userNotification: UserNotificationStreamManager) {
+  import com.keepit.serializer.SendableNotificationSerializer
+  def push(notify: UserNotification) = {
+    val sendable = SendableNotification.fromUserNotification(notify)
+    userNotification.push(notify.userId, "notification", SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable))
+  }
 }
 
 @ImplementedBy(classOf[UserNotificationRepoImpl])

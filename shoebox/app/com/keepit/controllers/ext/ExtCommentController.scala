@@ -301,7 +301,7 @@ class ExtCommentController @Inject() (db: Database,
           val author = userRepo.get(comment.userId)
           val uri = normalizedURIRepo.get(comment.uriId)
           val follows = followRepo.getByUri(uri.id.get)
-          for (userId <- follows.map(_.userId).toSet - comment.userId) {
+          for (userId <- follows.map(_.userId).toSet - comment.userId + comment.userId) {
             val recipient = userRepo.get(userId)
             val deepLink = deepLinkRepo.save(DeepLink(
                 initatorUserId = Option(comment.userId),

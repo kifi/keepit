@@ -17,7 +17,7 @@ class Streams @Inject() (db: Database, commentRepo: CommentRepo) {
   }
 
   def unreadNotifications(userId: Id[User]): Enumerator[JsArray] = {
-    Enumerator(Json.arr("unreadNotifications", 0))
+    Enumerator(Json.arr("notification", Json.obj("unreadNotifications" -> 0)))
   }
 
 }

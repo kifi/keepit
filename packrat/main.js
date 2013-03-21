@@ -76,15 +76,17 @@ api.timers.setTimeout(function maybeSend() {
 }, 4000);
 
 // ===== WebSockets
-var wsAddress = (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws?admin"
+var wsAddress = (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws?admin&notifications"
 var wsHandlers = {
   notification: function(data) {
     api.log("New notification!!!!", data)
   },
   event: function(data) {
     api.log("New event!!!!", data);
-    
-    api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator});
+    var activeTab = api.tabs.getActive();
+    if(activeTab) {
+      api.tabs.emit(activeTab, "event", data);
+    }
   }
 }
 
