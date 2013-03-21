@@ -52,6 +52,9 @@ trait URIGraph {
   def update(): Int
   def getURIGraphSearcher(): URIGraphSearcher
   def close(): Unit
+
+  private[search] def sequenceNumber: SequenceNumber
+  private[search] def sequenceNumber_=(n: SequenceNumber)
 }
 
 class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, decoders: Map[String, FieldDecoder])

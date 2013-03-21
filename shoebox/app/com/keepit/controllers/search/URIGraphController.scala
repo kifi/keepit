@@ -7,7 +7,7 @@ import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.model.{BookmarkRepo, User}
 import com.keepit.search.graph.{URIGraphImpl, URIGraph, URIGraphPlugin}
 import org.apache.lucene.document.Document
-import play.api.libs.json.{JsObject, JsNumber}
+import play.api.libs.json.{JsString, JsObject, JsNumber}
 import play.api.mvc.Action
 import scala.concurrent.ExecutionContext.Implicits.global
 import views.html
@@ -17,6 +17,11 @@ class URIGraphController @Inject()(
     uriGraphPlugin: URIGraphPlugin,
     bookmarkRepo: BookmarkRepo,
     uriGraph: URIGraph) extends FortyTwoController {
+
+  def reindex() = Action { implicit request =>
+    uriGraphPlugin.reindex()
+    Ok(JsObject(Seq("started" -> JsString("ok"))))
+  }
 
   def updateURIGraph() = Action { implicit request =>
     Async {
