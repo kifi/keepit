@@ -90,25 +90,17 @@ class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigE
     }.getOrElse(new SearchConfig(SearchConfig.defaultParams))
   }
 
-  private[this] val _activeExperiments = new AtomicReference(db.readWrite { implicit s =>
-    experimentRepo.getActive()
-  })
+  def activeExperiments: Seq[SearchConfigExperiment] =
+    db.readOnly { implicit s => experimentRepo.getActive() }
 
-  def activeExperiments: Seq[SearchConfigExperiment] = _activeExperiments.get
+  def getExperiments: Seq[SearchConfigExperiment] =
+    db.readOnly { implicit s => experimentRepo.getNotInactive() }
 
-  def getExperiments: Seq[SearchConfigExperiment] = db.readOnly { implicit s =>
-    experimentRepo.getNotInactive()
-  }
+  def getExperiment(id: Id[SearchConfigExperiment]): SearchConfigExperiment =
+    db.readOnly { implicit s => experimentRepo.get(id) }
 
-  def getExperiment(id: Id[SearchConfigExperiment]): SearchConfigExperiment = db.readOnly { implicit s =>
-    experimentRepo.get(id)
-  }
-
-  def saveExperiment(experiment: SearchConfigExperiment): SearchConfigExperiment = db.readWrite { implicit s =>
-    val exp = experimentRepo.save(experiment)
-    _activeExperiments.set(experimentRepo.getActive())
-    exp
-  }
+  def saveExperiment(experiment: SearchConfigExperiment): SearchConfigExperiment =
+    db.readWrite { implicit s => experimentRepo.save(experiment) }
 
   private var userConfig = Map.empty[Long, SearchConfig]
   def getUserConfig(userId: Id[User]) = userConfig.getOrElse(userId.id, defaultConfig)
