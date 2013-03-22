@@ -140,6 +140,7 @@ input#token-input-kifi-res-filter-cust {
   box-sizing: border-box;
 }
 input#kifi-res-filter-cust { /* shown temporarily until $.tokenInput called */
+  -moz-box-sizing: border-box;
   box-sizing: border-box;
   width: 467px;
   border: 1px solid #e2e2e2;
@@ -154,6 +155,7 @@ input#token-input-kifi-res-filter-cust:-moz-placeholder {
 }
 ul.token-input-list-googly {
   overflow: hidden;
+  -moz-box-sizing: border-box;
   box-sizing: border-box;
   width: 467px;
   margin: 0;
