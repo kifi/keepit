@@ -107,7 +107,7 @@ class UserNotifier @Inject() (
     }
   }
 
-  def notifyCommentByEmail(recipient: User, details: CommentDetails)(implicit session: RSession) = {
+  private def notifyCommentByEmail(recipient: User, details: CommentDetails)(implicit session: RSession) = {
     val author = userRepo.get(details.author.externalId)
     val addrs = emailAddressRepo.getByUser(recipient.id.get)
     for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
@@ -120,7 +120,7 @@ class UserNotifier @Inject() (
           category = PostOffice.Categories.COMMENT))
     }
   }
-  def notifyMessageByEmail(recipient: User, details: MessageDetails)(implicit session: RSession) = {
+  private def notifyMessageByEmail(recipient: User, details: MessageDetails)(implicit session: RSession) = {
     val author = userRepo.get(details.author.externalId)
     val addrs = emailAddressRepo.getByUser(recipient.id.get)
     for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
@@ -136,7 +136,7 @@ class UserNotifier @Inject() (
     }
   }
 
-  def createCommentDetails(comment: Comment)(implicit session: RWSession): Set[CommentDetails] = {
+  private def createCommentDetails(comment: Comment)(implicit session: RWSession): Set[CommentDetails] = {
     implicit val bus = BasicUserSerializer.basicUserSerializer
 
     val author = userRepo.get(comment.userId)
@@ -161,7 +161,7 @@ class UserNotifier @Inject() (
     }
   }
 
-  def createMessageDetails(message: Comment)(implicit session: RWSession): Set[MessageDetails] = {
+  private def createMessageDetails(message: Comment)(implicit session: RWSession): Set[MessageDetails] = {
     implicit val bus = BasicUserSerializer.basicUserSerializer
 
     val author = userRepo.get(message.userId)
@@ -189,9 +189,9 @@ class UserNotifier @Inject() (
   }
 
 
-  val lookHereLinkRe = """\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)""".r
+  private val lookHereLinkRe = """\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)""".r
   //e.g. [look here](x-kifi-sel:body>div#page.watch>div:nth-child(4\)>div#watch7-video-container)
-  def replaceLookHereLinks(text: String): String =
+  private def replaceLookHereLinks(text: String): String =
     lookHereLinkRe.replaceAllIn(
         text, m => "[" + m.group(1).replaceAll("""\\(.)""", "$1") + "]")
 
