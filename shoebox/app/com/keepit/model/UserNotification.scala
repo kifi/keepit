@@ -15,7 +15,7 @@ import play.libs.Json
 import com.keepit.realtime.UserNotificationStreamManager
 import com.keepit.serializer.SendableNotificationSerializer
 
-case class UserNotificationDetails(payload: JsValue)
+case class UserNotificationDetails(payload: JsValue) extends AnyVal
 
 case class UserNotification(
   id: Option[Id[UserNotification]] = None,

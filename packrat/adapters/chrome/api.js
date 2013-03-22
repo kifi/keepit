@@ -418,7 +418,7 @@ api = function() {
             if (Array.isArray(msg)) {
               var handler = handlers[msg[0]];
               if (handler) {
-                handler(msg.splice(1));
+                handler.apply(null, msg.splice(1));
               }
             } else {
               api.log("[api.socket.onmessage] ignoring (not array):", msg, "from url", url);

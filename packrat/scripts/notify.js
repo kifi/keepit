@@ -10,9 +10,9 @@
 
 api.port.on({
   notification: function(data) {
-    var details = data[0].details;
+    var details = data.details;
     if (details) {
-      switch (data[0].category) {
+      switch (data.category) {
         case "comment":
           KifiNotification.add({
             title: details.author.firstName + ' ' + details.author.lastName,

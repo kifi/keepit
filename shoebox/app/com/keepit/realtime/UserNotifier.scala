@@ -40,7 +40,7 @@ object SendableNotification {
 
 class NotificationBroadcaster @Inject() (userNotification: UserNotificationStreamManager) {
   import com.keepit.serializer.SendableNotificationSerializer
-  def push(notify: UserNotification) = {
+  def push(notify: UserNotification) {
     val sendable = SendableNotification.fromUserNotification(notify)
     userNotification.push(notify.userId, "notification", SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable))
   }

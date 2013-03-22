@@ -24,10 +24,10 @@ import com.keepit.inject._
 import com.keepit.common.db.slick.Database
 
 @Singleton
-class EventStream {
+class EventStream @Inject() (eventWriter: EventWriter) {
   implicit val timeout = Timeout(1 second)
 
-  lazy val default = Akka.system.actorOf(Props[EventStreamActor])
+  lazy val default = Akka.system.actorOf(Props {new EventStreamActor(eventWriter) })
 
   def newStream(): Future[(Iteratee[JsValue,_],Enumerator[JsValue])] = {
     (default ? NewStream).map {
@@ -42,35 +42,39 @@ class EventStream {
 
 }
 
-object EventWriter {
-  implicit val writes = new Writes[Event] {
-    def writes(event: Event): JsValue = {
+class EventWriter @Inject() (db: Database, userRepo: UserRepo, socialUserInfoRepo: SocialUserInfoRepo){
+  implicit val writesUserEvent = new Writes[WrappedUserEvent] {
+    def writes(wrapped: WrappedUserEvent): JsValue = {
+      Json.obj(
+        "user" -> Json.obj(
+          "id" -> wrapped.user.id.get.id,
+          "name" -> s"${wrapped.user.firstName} ${wrapped.user.lastName}",
+          "avatar" -> s"https://graph.facebook.com/${wrapped.social}/picture?height=150&width=150"),
+        "time" -> wrapped.createdAt.toStandardTimeString,
+        "name" -> wrapped.eventName,
+        "family" -> wrapped.eventFamily.name
+      )
+    }
+  }
+  case class WrappedUserEvent(event: Event, user: User, social: String, eventName: String, eventFamily: EventFamily, createdAt: DateTime)
+
+  def toJson(event: Event): JsValue = {
       event match {
         case Event(_,UserEventMetadata(eventFamily,eventName,externalUser,_,experiments,metaData,_),createdAt,_) =>
-          val (user, social) = inject[Database].readOnly { implicit session =>
-            val user = inject[UserRepo].get(externalUser)
-            val social = inject[SocialUserInfoRepo].getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
+          val (user, social) = db.readOnly { implicit session =>
+            val user = userRepo.get(externalUser)
+            val social = socialUserInfoRepo.getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
             (user, social)
           }
-          Json.obj(
-            "user" -> Json.obj(
-              "id" -> user.id.get.id,
-              "name" -> s"${user.firstName} ${user.lastName}",
-              "avatar" -> s"https://graph.facebook.com/${social}/picture?height=150&width=150"),
-            "time" -> createdAt.toStandardTimeString,
-            "name" -> eventName,
-            "family" -> eventFamily.name
-          )
+
+          Json.toJson(WrappedUserEvent(event, user, social, eventName, eventFamily, createdAt))
         case _ => JsNull
       }
-    }
   }
 }
 
-class EventStreamActor extends FortyTwoActor {
+class EventStreamActor(eventWriter: EventWriter) extends FortyTwoActor {
   val (eventEnumerator, eventChannel) = Concurrent.broadcast[JsValue]
-
-  implicit val eventWriter = EventWriter.writes
 
   def receive = {
     case NewStream =>
@@ -85,7 +89,7 @@ class EventStreamActor extends FortyTwoActor {
 
     event match {
       case Event(_,UserEventMetadata(eventFamily,eventName,externalUser,_,experiments,metaData,_),createdAt,_) =>
-        eventChannel.push(Json.toJson(event))
+        eventChannel.push(eventWriter.toJson(event))
       case _ =>
     }
 
