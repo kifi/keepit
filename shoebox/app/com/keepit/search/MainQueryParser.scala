@@ -85,7 +85,7 @@ class MainQueryParser(
           None
         }
 
-        val proxOpt = if (hasStemmedTerms && proximityBoost > 0.0f) {
+        val proxOpt = if (numStemmedTerms > 1 && proximityBoost > 0.0f) {
           val proxQ = new BooleanQuery(true)
           proxQ.add(ProximityQuery(getStemmedTerms("cs")), SHOULD)
           proxQ.add(ProximityQuery(getStemmedTerms("ts")), SHOULD)
