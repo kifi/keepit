@@ -219,7 +219,6 @@ api = function() {
     }
   });
 
-  var socketId = 0;
   var sockets = [];
 
   // TODO: Use another property (besides .ready) on page to indicate that content script injection has begun,
