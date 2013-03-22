@@ -23,6 +23,8 @@ trait QueryExpansion extends QueryParser {
 
   def hasStemmedTerms = !stemmedTerms.isEmpty
 
+  def numStemmedTerms = stemmedTerms.size
+
   def getStemmedTermArray = stemmedTerms.toArray
 
   def getStemmedTerms(field: String) = stemmedTerms.map(t => new Term(field, t.text()))
