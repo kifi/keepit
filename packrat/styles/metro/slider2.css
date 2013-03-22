@@ -25,6 +25,63 @@
 }
 */
 
+/* a weak blank-slate (insulation) attempt */
+.kifi-slider2 *,
+.kifi-pane * {
+  float: none;
+  width: auto;
+  line-height: normal;
+  letter-spacing: normal;
+  word-spacing: normal;
+  position: static;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: normal;
+  background: transparent;
+  border: none;
+  margin: 0;
+  padding: 0;
+  box-shadow: none;
+  border-radius: 0;
+  min-width: 0;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+  text-align: left;
+  direction: ltr;
+  -webkit-user-select: auto;
+  -moz-user-select: auto;
+  user-select: auto;
+  -webkit-transition: none;
+  transition: none;
+}
+.kifi-slider2 div,
+.kifi-pane div {
+  display: block;
+}
+.kifi-slider2 a,
+.kifi-slider2 span,
+.kifi-pane a,
+.kifi-pane span {
+  display: inline;
+}
+.kifi-slider2 img,
+.kifi-pane img {
+  display: inline-block;
+}
+.kifi-slider2 a:link,
+.kifi-slider2 a:visited,
+.kifi-slider2 a:link:hover,
+.kifi-slider2 a:visited:hover,
+.kifi-pane a:link,
+.kifi-pane a:visited,
+.kifi-pane a:link:hover,
+.kifi-pane a:visited:hover {
+  color: -webkit-link;
+  color: -moz-hyperlinktext;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .kifi-tile-hover {
   position: fixed;
   z-index: 2147483638;
