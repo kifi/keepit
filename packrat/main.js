@@ -76,7 +76,7 @@ api.timers.setTimeout(function maybeSend() {
 }, 4000);
 
 // ===== WebSockets
-var wsAddress = (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws?admin&notifications"
+var wsAddress = (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws?notifications"
 var wsHandlers = {
   notification: function(data) {
     var activeTab = api.tabs.getActive();
