@@ -1,3 +1,4 @@
+// @match /^https?:\/\/[^\/]*\/.*/
 // @require styles/notify.css
 // @require scripts/lib/jquery-1.8.2.min.js
 // @require scripts/lib/mustache-0.7.1.min.js
