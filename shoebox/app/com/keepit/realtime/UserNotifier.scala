@@ -129,7 +129,9 @@ class UserNotifier @Inject() (
           from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
           to = addr,
           subject = "%s %s sent you a message using KiFi".format(author.firstName, author.lastName),
-          htmlBody = replaceLookHereLinks(views.html.email.newMessage(author, recipient, details.url.getOrElse(""), details.title.getOrElse("No title"), details.text, details.isParent).body),
+          htmlBody = replaceLookHereLinks(
+              views.html.email.newMessage(author, recipient, details.url.getOrElse(""), details.title.getOrElse("No title"), details.text, details.isParent).body
+          ),
           category = PostOffice.Categories.COMMENT))
     }
   }
@@ -148,7 +150,14 @@ class UserNotifier @Inject() (
           uriId = Some(comment.uriId),
           urlId = comment.urlId,
           deepLocator = DeepLocator.ofComment(comment)))
-      new CommentDetails(basicUserRepo.load(comment.userId), basicUserRepo.load(userId), deepLink.url, comment.pageTitle, comment.text, comment.createdAt)
+      new CommentDetails(
+        basicUserRepo.load(comment.userId),
+        basicUserRepo.load(userId),
+        deepLink.url,
+        comment.pageTitle,
+        comment.text,
+        comment.createdAt
+      )
     }
   }
 
@@ -167,15 +176,23 @@ class UserNotifier @Inject() (
           uriId = Some(message.uriId),
           urlId = message.urlId,
           deepLocator = DeepLocator.ofMessageThread(message)))
-      new MessageDetails(basicUserRepo.load(message.userId), basicUserRepo.load(userId), Some(deepLink.url), Some(message.pageTitle), message.text, message.createdAt, message.parent.isDefined)
+      new MessageDetails(
+        basicUserRepo.load(message.userId),
+        basicUserRepo.load(userId),
+        Some(deepLink.url),
+        Some(message.pageTitle),
+        message.text,
+        message.createdAt,
+        message.parent.isDefined
+      )
     }
   }
 
 
-
+  val lookHereLinkRe = """\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)""".r
   //e.g. [look here](x-kifi-sel:body>div#page.watch>div:nth-child(4\)>div#watch7-video-container)
   def replaceLookHereLinks(text: String): String =
-    """\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)""".r.replaceAllIn(
+    lookHereLinkRe.replaceAllIn(
         text, m => "[" + m.group(1).replaceAll("""\\(.)""", "$1") + "]")
 
 }
