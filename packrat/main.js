@@ -190,9 +190,6 @@ api.port.on({
   add_deep_link_listener: function(data, respond, tab) {
     createDeepLinkListener(data, tab.id, respond);
     return true;
-  },
-  send_socket_message: function(data, respond, tab) {
-    return true;
   }
 });
 
