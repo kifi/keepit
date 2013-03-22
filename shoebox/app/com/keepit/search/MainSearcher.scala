@@ -14,6 +14,8 @@ import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
 import org.apache.lucene.search.Explanation
+import com.keepit.search.query.{TopLevelQuery,QueryUtil}
+
 
 class MainSearcher(
     userId: Id[User],
@@ -30,6 +32,9 @@ class MainSearcher(
   val currentTime = currentDateTime.getMillis()
   val idFilter = filter.idFilter
   val isInitialSearch = idFilter.isEmpty
+
+
+  var query: Option[Query]= None			// will set this during search
 
   // get config params
   val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
@@ -75,6 +80,8 @@ class MainSearcher(
   private[this] val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
   private[this] val filteredFriendEdgeSet = if (customFilterOn) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
 
+
+
   def findSharingUsers(id: Id[NormalizedURI]) = {
     val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
     val effectiveSharingSize = if (customFilterOn) uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).size else sharingUsers.size
@@ -99,7 +106,10 @@ class MainSearcher(
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
-    parser.parse(queryString).map{ articleQuery =>
+
+    query = parser.parse(queryString)
+
+    query.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
@@ -203,9 +213,12 @@ class MainSearcher(
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
+    val svVar = svVariance(hitList);								// compute sv variance. may need to record the time elapsed.
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
+
+
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
-        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt)
+        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt, svVariance =svVar)
   }
 
   private def getPublicBookmarkCount(id: Long) = {
@@ -222,6 +235,57 @@ class MainSearcher(
     val t = max(currentTime - createdAt, 0).toFloat / halfDecayMillis
     val t2 = t * t
     (1.0f/(1.0f + t2))
+  }
+
+
+  /**
+   * vects: a collection of 128-bit vectors. We measure the variance of each bit,
+   * and take the average. This measures overall randomness of input semantic vectors.
+   */
+  private def avgBitVariance( vects: Iterable[Array[Byte]]) = {
+    if ( vects.size > 0){
+	  val composer = new SemanticVectorComposer
+	  for(vect <- vects){
+	    composer.add(vect, 1)
+	  }
+    // qs.vec(i) + 0.5 = empirical probability that position i takes value 1.
+    val qs = composer.getQuasiSketch
+    val prob = for( i <- 0 until qs.vec.length) yield ( qs.vec(i) + 0.5f)
+    val sumOfVar = prob.foldLeft(0.0f)( (sum: Float, p:Float) => sum + p*(1-p))			// variance of Bernoulli distribution.
+    Some(sumOfVar/qs.vec.length)
+    }
+    else{
+      None
+    }
+  }
+
+  /**
+   * Given a hitList, find the variance of the semantic vectors.
+   */
+  private def svVariance(hitList : List[MutableArticleHit]) : Float = {
+    val svSearcher = new SemanticVectorSearcher(this.articleSearcher,this.uriGraphSearcher)
+    val uriIds = hitList.map(_.id).toSet
+    val variance = query.map{ q =>
+      val terms = QueryUtil.getTerms("sv", q)
+      var s = 0.0f
+      var cnt = 0
+      for(term <- terms){
+        val sv =  svSearcher.getSemanticVectors(term, uriIds).collect{case (id,vec) => vec}
+        // semantic vector v of terms will be concatenated from semantic vector v_i from each term
+        // avg bit variance of v is the avg of avgBitVariance of each v_i
+        val variance = avgBitVariance(sv)
+        variance match{
+          case Some(v) => {cnt+=1 ; s += v}
+          case None => None
+        }
+
+      }
+      if ( cnt > 0) s/cnt.toFloat else Float.NaN
+    }
+    variance match{
+      case Some(v) => v
+      case None => Float.NaN
+    }
   }
 
   def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
@@ -324,7 +388,10 @@ case class ArticleSearchResult(
   millisPassed: Int,
   pageNumber: Int,
   uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
-  time: DateTime = currentDateTime)
+  time: DateTime = currentDateTime,
+  svVariance : Float 			// semantic vector variance
+)
+
 
 class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float) extends Equals {
   var boostedTextScore: Float = Float.NaN

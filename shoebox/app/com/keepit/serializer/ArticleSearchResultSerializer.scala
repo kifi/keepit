@@ -26,7 +26,12 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
         "uuid" -> JsString(res.uuid.id),
         "time" -> JsString(res.time.toStandardTimeString),
         "millisPassed" -> JsNumber(res.millisPassed),
-        "pageNumber" -> JsNumber(res.pageNumber)
+        "pageNumber" -> JsNumber(res.pageNumber),
+        "svVariance" ->  (res.svVariance match{
+          case s  if s.isNaN => JsNull
+          case s => JsNumber(s)
+        })
+
       )
     )
 
@@ -64,7 +69,8 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       uuid = ExternalId[ArticleSearchResultRef]((json \ "uuid").as[String]),
       time = parseStandardTime((json \ "time").as[String]),
       millisPassed = (json \ "millisPassed").as[Int],
-      pageNumber = (json \ "pageNumber").as[Int]
+      pageNumber = (json \ "pageNumber").as[Int],
+      svVariance = (json\ "svVariance").asOpt[Float].getOrElse(Float.NaN)
     ))
 }
 
