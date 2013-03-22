@@ -11,37 +11,35 @@
 api.port.on({
   notification: function(data) {
     var details = data.details;
-    if (details) {
-      switch (data.category) {
-        case "comment":
-          KifiNotification.add({
-            title: details.author.firstName + ' ' + details.author.lastName,
-            contentHtml: details.text,
-            link: details.title,
-            image: details.author.avatar,
-            sticky: false,
-            showForMs: 7000,
-            clickAction: function () {
-              var win=window.open(details.url, '_blank');
-              win.focus();
-            }
-          });
-          break;
-        case "message":
-          KifiNotification.add({
-            title: details.author.firstName + ' ' + details.author.lastName,
-            contentHtml: details.text,
-            link: details.title,
-            image: details.author.avatar,
-            sticky: false,
-            showForMs: 7000,
-            clickAction: function () {
-              var win=window.open(details.url, '_blank');
-              win.focus();
-            }
-          });
-          break;
-      }
+    switch (data.category) {
+      case "comment":
+        KifiNotification.add({
+          title: details.author.firstName + ' ' + details.author.lastName,
+          contentHtml: details.text,
+          link: details.title,
+          image: details.author.avatar,
+          sticky: false,
+          showForMs: 7000,
+          clickAction: function () {
+            var win=window.open(details.url, '_blank');
+            win.focus();
+          }
+        });
+        break;
+      case "message":
+        KifiNotification.add({
+          title: details.author.firstName + ' ' + details.author.lastName,
+          contentHtml: details.text,
+          link: details.title,
+          image: details.author.avatar,
+          sticky: false,
+          showForMs: 7000,
+          clickAction: function () {
+            var win=window.open(details.url, '_blank');
+            win.focus();
+          }
+        });
+        break;
     }
   }
 });
