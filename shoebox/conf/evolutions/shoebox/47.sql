@@ -12,7 +12,7 @@ CREATE TABLE user_notification (
     updated_at datetime NOT NULL,
     PRIMARY KEY (id),
 
-    CONSTRAINT user_notification_f_user FOREIGN KEY (user_id) REFERENCES user(id),
+    CONSTRAINT user_notification_f_user_id FOREIGN KEY (user_id) REFERENCES user(id),
     CONSTRAINT user_notification_f_comment_id FOREIGN KEY (comment_id) REFERENCES comment(id)
 );
 

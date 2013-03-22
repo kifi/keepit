@@ -11,13 +11,13 @@ import com.keepit.realtime.SendableNotification
 class SendableNotificationSerializer extends Format[SendableNotification] {
 
   def writes(notify: SendableNotification): JsValue =
-    JsObject(List(
+    Json.obj(
       "createdAt" -> JsString(notify.createdAt.toStandardTimeString),
       "updatedAt" -> JsString(notify.updatedAt.toStandardTimeString),
       "id" -> JsString(notify.id.id),
       "category"  -> JsString(notify.category.name),
       "details"  -> notify.details.payload
-    ))
+    )
 
   def reads(json: JsValue): JsResult[SendableNotification] =
     JsSuccess(SendableNotification(
