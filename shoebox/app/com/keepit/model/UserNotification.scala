@@ -8,18 +8,21 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.search.Lang
 import scala.slick.util.CloseableIterator
-import play.api.libs.json.JsObject
+import play.api.libs.json.JsValue
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
+import play.libs.Json
+import com.keepit.realtime.UserNotificationStreamManager
+import com.keepit.serializer.SendableNotificationSerializer
 
-case class UserNotificationDetails(payload: JsObject) extends AnyVal
+case class UserNotificationDetails(payload: JsValue) extends AnyVal
 
 case class UserNotification(
   id: Option[Id[UserNotification]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   userId: Id[User],
-  externalId: ExternalId[UserNotification],
+  externalId: ExternalId[UserNotification] = ExternalId[UserNotification](),
   category: UserNotificationCategory,
   details: UserNotificationDetails,
   commentId: Option[Id[Comment]],
@@ -42,7 +45,7 @@ class UserNotificationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
   import DBSession._
   import FortyTwoTypeMappers._
 
-  override lazy val table = new RepoTable[UserNotification](db, "phrase") with ExternalIdColumn[UserNotification] {
+  override lazy val table = new RepoTable[UserNotification](db, "user_notification") with ExternalIdColumn[UserNotification] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def category = column[UserNotificationCategory]("category", O.NotNull)
     def details = column[UserNotificationDetails]("details", O.NotNull)
@@ -73,6 +76,7 @@ case class UserNotificationCategory(val name: String) extends AnyVal
 
 object UserNotificationCategories {
   val COMMENT = UserNotificationCategory("comment")
+  val MESSAGE = UserNotificationCategory("message")
   val GLOBAL = UserNotificationCategory("global")
 }
 

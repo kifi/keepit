@@ -1,13 +1,16 @@
 package com.keepit.search
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.keepit.common.cache.{Key, FortyTwoCache, FortyTwoCachePlugin}
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{Model, State, States}
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import java.util.concurrent.atomic.AtomicReference
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import scala.concurrent.duration._
 
 case class SearchConfigExperiment(
     id: Option[Id[SearchConfigExperiment]] = None,
@@ -32,6 +35,49 @@ case class SearchConfigExperiment(
   def isEditable = state == SearchConfigExperimentStates.CREATED
 }
 
+object SearchConfigExperiment {
+  private implicit val idFormat = Id.format[SearchConfigExperiment]
+  private implicit val stateFormat = State.format[SearchConfigExperiment]
+  private implicit val searchConfigFormat = new Format[SearchConfig] {
+    def reads(json: JsValue): JsResult[SearchConfig] =
+      JsSuccess(SearchConfig(json.as[JsObject].fields.toMap.mapValues(_.as[String])))
+    def writes(o: SearchConfig): JsValue =
+      JsObject(o.params.mapValues(JsString(_)).toSeq)
+  }
+
+  implicit val format: Format[SearchConfigExperiment] = (
+    (__ \ 'id).formatNullable[Id[SearchConfigExperiment]] and
+    (__ \ 'weight).format[Double] and
+    (__ \ 'description).format[String] and
+    (__ \ 'config).format[SearchConfig] and
+    (__ \ 'startedAt).formatNullable[DateTime] and
+    (__ \ 'state).format[State[SearchConfigExperiment]] and
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime]
+  )(SearchConfigExperiment.apply, unlift(SearchConfigExperiment.unapply))
+}
+
+sealed trait ActiveExperimentsKey extends Key[Seq[SearchConfigExperiment]] {
+  val namespace = "search_config"
+  def toKey() = "active_experiments"
+}
+
+object ActiveExperimentsKey extends ActiveExperimentsKey
+
+class ActiveExperimentsCache @Inject()(val repo: FortyTwoCachePlugin)
+    extends FortyTwoCache[ActiveExperimentsKey, Seq[SearchConfigExperiment]] {
+  val ttl = 1 day
+  def serialize(value: Seq[SearchConfigExperiment]) = Json.toJson(value)
+  def deserialize(obj: Any): Seq[SearchConfigExperiment] =
+    Json.fromJson[Seq[SearchConfigExperiment]](Json.parse(obj.asInstanceOf[String])).get
+  def getOrElseUpdate(value: => Seq[SearchConfigExperiment]): Seq[SearchConfigExperiment] = {
+    getOrElse(ActiveExperimentsKey)(value)
+  }
+  def remove() {
+    remove(ActiveExperimentsKey)
+  }
+}
+
 @ImplementedBy(classOf[SearchConfigExperimentRepoImpl])
 trait SearchConfigExperimentRepo extends Repo[SearchConfigExperiment] {
   def getActive()(implicit session: RSession): Seq[SearchConfigExperiment]
@@ -40,9 +86,10 @@ trait SearchConfigExperimentRepo extends Repo[SearchConfigExperiment] {
 
 @Singleton
 class SearchConfigExperimentRepoImpl @Inject()(
-  val db: DataBaseComponent,
-  val clock: Clock)
-    extends DbRepo[SearchConfigExperiment] with SearchConfigExperimentRepo {
+    val db: DataBaseComponent,
+    val clock: Clock,
+    val cache: ActiveExperimentsCache
+  ) extends DbRepo[SearchConfigExperiment] with SearchConfigExperimentRepo {
 
   import DBSession._
   import FortyTwoTypeMappers._
@@ -57,8 +104,16 @@ class SearchConfigExperimentRepoImpl @Inject()(
         (SearchConfigExperiment.apply _, SearchConfigExperiment.unapply _)
   }
 
-  def getActive()(implicit session: RSession): Seq[SearchConfigExperiment] =
-    (for (v <- table if v.state === SearchConfigExperimentStates.ACTIVE) yield v).list
+  def getActive()(implicit session: RSession): Seq[SearchConfigExperiment] = {
+    cache.getOrElseUpdate {
+      (for (v <- table if v.state === SearchConfigExperimentStates.ACTIVE) yield v).list
+    }
+  }
+
+  override def save(model: SearchConfigExperiment)(implicit session: RWSession) = {
+    cache.remove()
+    super.save(model)
+  }
 
   def getNotInactive()(implicit session: RSession): Seq[SearchConfigExperiment] =
     (for (v <- table if v.state =!= SearchConfigExperimentStates.INACTIVE) yield v).list

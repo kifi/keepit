@@ -176,6 +176,17 @@ exports.request = function(method, url, data, done, fail) {
   require("sdk/request").Request(options)[method.toLowerCase()]();
 };
 
+exports.socket = {
+  open: function(url, handlers) {
+    // Not implemented
+    return 0;
+  },
+  close: function(socketId) {
+    // Not implemented
+    return;
+  }
+}
+
 exports.storage = require("sdk/simple-storage").storage;
 
 exports.tabs = {

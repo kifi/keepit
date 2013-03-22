@@ -3,6 +3,7 @@ package com.keepit.common.db
 import com.keepit.common.db.slick.DBSession.RWSession
 import scalax.io.JavaConverters._
 import scala.util.matching.Regex
+import play.api.libs.json._
 
 /*
 
@@ -24,6 +25,10 @@ case class SequenceNumber(value: Long) extends AnyVal with Ordered[SequenceNumbe
 
 object SequenceNumber {
   val ZERO = SequenceNumber(0)
+  implicit val sequenceNumberFormat = new Format[SequenceNumber] {
+    def reads(json: JsValue): JsResult[SequenceNumber] = __.read[Long].reads(json).map(SequenceNumber(_))
+    def writes(o: SequenceNumber): JsValue = JsNumber(o.value)
+  }
 }
 
 abstract class DbSequence(val name: String) {

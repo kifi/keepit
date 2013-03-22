@@ -4,6 +4,7 @@ import org.specs2.mutable._
 import com.keepit.test.{DbRepos, EmptyApplication}
 
 import play.api.Play.current
+import play.api.libs.json._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
 import com.keepit.common.db._

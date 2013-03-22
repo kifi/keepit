@@ -48,12 +48,13 @@ class ExtAuthController @Inject() (
   sliderRuleRepo: SliderRuleRepo,
   userExperimentRepo: UserExperimentRepo)
     extends BrowserExtensionController {
-  def start = AuthenticatedJsonAction { implicit request =>
+  def start = AuthenticatedJsonToJsonAction { implicit request =>
     val userId = request.userId
     val socialUser = request.socialUser
     log.info(s"start id: $userId, facebook id: ${socialUser.id}")
 
-    val (userAgent, version, installationIdOpt) = request.body.asJson.map { json =>
+    val json = request.body
+    val (userAgent, version, installationIdOpt) =
       (UserAgent((json \ "agent").as[String]),
        KifiVersion((json \ "version").as[String]),
        (json \ "installation").asOpt[String].flatMap { id =>
@@ -69,7 +70,7 @@ class ExtAuthController @Inject() (
                errorMessage = Some("Invalid ExternalId passed in \"%s\" for userId %s".format(id, userId))))
          }
          kiId
-       })}.get
+       })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
     val (user, installation, experiments, sliderRuleGroup, urlPatterns) = db.readWrite{implicit s =>

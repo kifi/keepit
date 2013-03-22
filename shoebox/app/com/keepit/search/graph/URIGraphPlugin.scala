@@ -5,6 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.SchedulingPlugin
@@ -32,6 +33,7 @@ private[graph] class URIGraphActor(uriGraph: URIGraph) extends FortyTwoActor wit
 
 trait URIGraphPlugin extends SchedulingPlugin {
   def update(): Future[Int]
+  def reindex()
 }
 
 class URIGraphPluginImpl @Inject() (system: ActorSystem, uriGraph: URIGraph) extends URIGraphPlugin with Logging {
@@ -52,4 +54,9 @@ class URIGraphPluginImpl @Inject() (system: ActorSystem, uriGraph: URIGraph) ext
   }
 
   override def update(): Future[Int] = actor.ask(Update)(1 minutes).mapTo[Int]
+
+  override def reindex() {
+    uriGraph.sequenceNumber = SequenceNumber.ZERO
+    actor ! Update
+  }
 }
