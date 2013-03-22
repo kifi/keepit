@@ -1,7 +1,5 @@
 var api = api || require("./api");
 
-var ReconnectingWebSocket = ReconnectingWebSocket || require("./scripts/lib/reconnecting-websocket.js");
-
 // ===== Async 
 
 function ajax(method, uri, data, done, fail) {  // method and uri are required
@@ -76,8 +74,8 @@ api.timers.setTimeout(function maybeSend() {
 }, 4000);
 
 // ===== WebSockets
-var wsAddress = (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws?notifications"
-var wsHandlers = {
+
+api.socket.open((api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws?notifications", {
   notification: function(data) {
     var activeTab = api.tabs.getActive();
     if (activeTab) {
@@ -90,9 +88,7 @@ var wsHandlers = {
       api.tabs.emit(activeTab, "event", data);
     }
   }
-}
-
-api.socket.open(wsAddress, wsHandlers)
+})
 
 // ===== Handling messages from content scripts or other extension pages
 
