@@ -8,7 +8,7 @@
 // @require scripts/render.js
 // @require scripts/lib/notification.js
 
-var notify = function() {
+!function() {
   api.port.on({
     notification: function(data) {
       var details = data[0].details;
