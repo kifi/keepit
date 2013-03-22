@@ -10,19 +10,6 @@ import com.keepit.realtime.SendableNotification
 
 class SendableNotificationSerializer extends Format[SendableNotification] {
 
-  /**
-   *
-  id: Option[Id[UserNotification]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  userId: Id[User],
-  externalId: ExternalId[UserNotification] = ExternalId[UserNotification](),
-  category: UserNotificationCategory,
-  details: UserNotificationDetails,
-  commentId: Option[Id[Comment]],
-  state: State[UserNotification] = UserNotificationStates.UNDELIVERED) extends ModelWithExternalId[UserNotification] {
-   */
-
   def writes(notify: SendableNotification): JsValue =
     JsObject(List(
       "createdAt" -> JsString(notify.createdAt.toStandardTimeString),
