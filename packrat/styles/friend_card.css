@@ -47,6 +47,7 @@
 }
 .kifi-kcard .kifi-kcard-pic {
   display: table-cell;
+  -moz-box-sizing: content-box;
   box-sizing: content-box;
   height: 100px;
   width: 100px;
