@@ -7,6 +7,7 @@ import play.api.mvc.Controller
 import com.keepit.inject._
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.realtime._
+import com.keepit.common.logging.Logging
 import play.api.Play.current
 import play.api.libs.iteratee._
 import play.api.libs.concurrent._
@@ -37,7 +38,7 @@ class ExtStreamController @Inject() (
     userRepo: UserRepo,
     experimentRepo: UserExperimentRepo,
     streamProvider: UserStreamProvider,
-    streams: Streams) extends BrowserExtensionController {
+    streams: Streams) extends BrowserExtensionController with Logging {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
     /*
      * Unfortunately, everything related to existing secured actions intimately deals with Action, Request, Result, etc.
@@ -73,9 +74,9 @@ class ExtStreamController @Inject() (
 
         val feeds = streamProvider.getStreams(request.queryString.keys.toSeq)
 
-        val enumerator = Enumerator.interleave(feeds.map(_.connect(streamSession.userId)))
-        val iteratee = Iteratee.foreach[JsValue]{ s =>
-          println(s)
+        val enumerator = Enumerator.interleave(feeds.map(_.connect(streamSession.userId))).asInstanceOf[Enumerator[JsValue]]
+        val iteratee = Iteratee.foreach[JsValue]{ message =>
+          handleIncomingMessage(streamSession, message)
         }.mapDone { _ =>
           log.info(s"Client ${streamSession.userId} disconnecting!")
           feeds.map(_.disconnect(streamSession.userId))
@@ -90,6 +91,11 @@ class ExtStreamController @Inject() (
 
         (iteratee, enumerator >>> Enumerator.eof)
     }
+  }
+
+  def handleIncomingMessage(streamSession: StreamSession, message: JsValue) = {
+    log.info(s"New message from ${streamSession.userId}: $message")
+    // And handle here...
   }
 
 }

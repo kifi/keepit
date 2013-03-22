@@ -1,11 +1,12 @@
 package com.keepit.common.analytics
 
+import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
 import scala.collection.JavaConversions._
-
 import java.util.{Set => JSet}
-
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.realtime.AdminEventStreamManager
+import com.keepit.inject._
+import com.keepit.model._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -13,11 +14,12 @@ import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search.{SearchServiceClient, ArticleSearchResultRef, BrowsingHistoryTracker, ClickHistoryTracker}
-
+import com.keepit.common.akka.FortyTwoActor
 import akka.actor.ActorSystem
 import akka.actor.Props
 import play.api.Play.current
 import play.api.libs.json.JsObject
+import play.api.libs.json.Json
 
 trait EventListenerPlugin extends SchedulingPlugin {
   def onEvent: PartialFunction[Event,Unit]
