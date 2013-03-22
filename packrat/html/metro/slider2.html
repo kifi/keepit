@@ -5,9 +5,9 @@
     <span class="kifi-slider2-lock" style="background-image:url({{bgUrl}})"></span>
   </span>
   <span class="kifi-slider2-dock">
-    <span class="kifi-slider2-dock-btn kifi-slider2-noti" style="background-image:url({{bgUrl}})"></span>
+    <span class="kifi-slider2-dock-btn kifi-slider2-notices" style="background-image:url({{bgUrl}})" data-pane="notices"></span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-comm" style="background-image:url({{bgUrl}})">
+    <span class="kifi-slider2-dock-btn kifi-slider2-comments" style="background-image:url({{bgUrl}})" data-pane="comments">
       {{#newComments}}
       <span class="kifi-count kifi-unread">{{newComments}}</span>
       {{/newComments}}
@@ -16,7 +16,7 @@
       {{/numComments}}{{/newComments}}
     </span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-mess" style="background-image:url({{bgUrl}})">
+    <span class="kifi-slider2-dock-btn kifi-slider2-threads" style="background-image:url({{bgUrl}})" data-pane="threads">
       {{#newMessages}}
       <span class="kifi-count kifi-unread">{{newMessages}}</span>
       {{/newMessages}}
@@ -25,6 +25,6 @@
       {{/numMessages}}{{/newMessages}}
     </span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-pane" style="background-image:url({{bgUrl}})"></span>
+    <span class="kifi-slider2-dock-btn kifi-slider2-general" style="background-image:url({{bgUrl}})" data-pane="general"></span>
   </span>
 </div>

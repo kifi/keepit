@@ -77,7 +77,7 @@ class MainSearcher(
 
   def findSharingUsers(id: Id[NormalizedURI]) = {
     val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
-    val effectiveSharingSize = if (customFilterOn) uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).size else sharingUsers.size
+    val effectiveSharingSize = if (customFilterOn) filter.filterFriends(sharingUsers).size else sharingUsers.size
     (sharingUsers, effectiveSharingSize)
   }
 
@@ -141,8 +141,8 @@ class MainSearcher(
 
     val hits = createQueue(numHitsToReturn)
 
-    // global high score
-    val highScore = max(max(myHits.highScore, friendsHits.highScore), othersHits.highScore)
+    // global high score excluding others (an orphan uri sometimes makes results disappear)
+    val highScore = max(myHits.highScore, friendsHits.highScore)
 
     var threshold = highScore * tailCutting
 
