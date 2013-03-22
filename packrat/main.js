@@ -79,14 +79,12 @@ api.timers.setTimeout(function maybeSend() {
 var wsAddress = (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws?admin&notifications"
 var wsHandlers = {
   notification: function(data) {
-    api.log("New notification!!!!", data)
     var activeTab = api.tabs.getActive();
     if(activeTab) {
       api.tabs.emit(activeTab, "notification", data);
     }
   },
   event: function(data) {
-    api.log("New event!!!!", data);
     var activeTab = api.tabs.getActive();
     if(activeTab) {
       api.tabs.emit(activeTab, "event", data);

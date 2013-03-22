@@ -13,7 +13,6 @@ var notify = function() {
     notification: function(data) {
       var details = data[0].details;
       if (details) {
-        api.log("xxxxxx", details)
         switch (data[0].category) {
           case "comment":
             KifiNotification.add({
