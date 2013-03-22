@@ -415,9 +415,9 @@ api = function() {
         socket.onmessage = function(data) {
           try {
             var msg = JSON.parse(data.data);
-            if(Array.isArray(msg)) {
+            if (Array.isArray(msg)) {
               var handler = handlers[msg[0]];
-              if(handler) {
+              if (handler) {
                 handler(msg.splice(1));
               }
             } else {
