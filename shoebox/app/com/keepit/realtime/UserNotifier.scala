@@ -139,7 +139,7 @@ class UserNotifier @Inject() (
     val author = userRepo.get(comment.userId)
     val uri = normalizedURIRepo.get(comment.uriId)
     val follows = followRepo.getByUri(uri.id.get)
-    for (userId <- follows.map(_.userId).toSet - comment.userId + comment.userId) yield {
+    for (userId <- follows.map(_.userId).toSet - comment.userId) yield {
       val recipient = userRepo.get(userId)
       val deepLink = deepLinkRepo.save(DeepLink(
           initatorUserId = Option(comment.userId),
@@ -157,7 +157,7 @@ class UserNotifier @Inject() (
     val author = userRepo.get(message.userId)
     val uri = normalizedURIRepo.get(message.uriId)
     val participants = commentRepo.getParticipantsUserIds(message.id.get)
-    for (userId <- participants - author.id.get + author.id.get) yield {
+    for (userId <- participants - author.id.get) yield {
       val recipient = userRepo.get(userId)
       val deepLink = deepLinkRepo.save(DeepLink(
           initatorUserId = Option(message.userId),
