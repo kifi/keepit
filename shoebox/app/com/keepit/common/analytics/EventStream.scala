@@ -60,7 +60,7 @@ class EventWriter @Inject() (db: Database, userRepo: UserRepo, socialUserInfoRep
 
   def toJson(event: Event): JsValue = {
       event match {
-        case Event(_,UserEventMetadata(eventFamily,eventName,externalUser,_,experiments,metaData,_),createdAt,_) =>
+        case Event(_,UserEventMetadata(eventFamily, eventName, externalUser, _, experiments, metaData, _), createdAt, _) =>
           val (user, social) = db.readOnly { implicit session =>
             val user = userRepo.get(externalUser)
             val social = socialUserInfoRepo.getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
