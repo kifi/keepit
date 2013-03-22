@@ -23,6 +23,8 @@
   -webkit-user-select: auto;
   -moz-user-select: auto;
   user-select: auto;
+  -webkit-transition: none;
+  transition: none;
 }
 .kifi-slider div {
   display: block;
