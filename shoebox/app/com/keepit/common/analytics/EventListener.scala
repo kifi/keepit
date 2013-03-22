@@ -36,19 +36,18 @@ trait EventListenerPlugin extends SchedulingPlugin {
 }
 
 @Singleton
-class EventHelper @Inject() (system: ActorSystem, listeners: JSet[EventListenerPlugin], eventStream: EventStream, adminEvent: AdminEventStreamManager, eventWriter: EventWriter) {
-  private val default = system.actorOf(Props(new EventHelperActor(listeners, eventStream, adminEvent, eventWriter: EventWriter)))
+class EventHelper @Inject() (system: ActorSystem, listeners: JSet[EventListenerPlugin], eventStream: EventStream) {
+  private val default = system.actorOf(Props(new EventHelperActor(listeners, eventStream)))
   def newEvent(event: Event): Seq[String] = {
     default ! event
     listeners.filter(_.onEvent.isDefinedAt(event)).map(_.getClass.getSimpleName.replaceAll("\\$","")).toSeq
   }
 }
 
-class EventHelperActor(listeners: JSet[EventListenerPlugin], eventStream: EventStream, adminEvent: AdminEventStreamManager, eventWriter: EventWriter) extends FortyTwoActor {
+class EventHelperActor(listeners: JSet[EventListenerPlugin], eventStream: EventStream) extends FortyTwoActor {
   def receive = {
     case event: Event =>
       eventStream.streamEvent(event)
-      adminEvent.broadcast("event", eventWriter.toJson(event))
       val events = listeners.filter(_.onEvent.isDefinedAt(event))
       events.map(_.onEvent(event))
   }

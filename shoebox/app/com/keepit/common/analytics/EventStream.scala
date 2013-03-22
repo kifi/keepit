@@ -2,15 +2,12 @@ package com.keepit.common.analytics
 
 import akka.actor._
 import scala.concurrent.duration._
-
 import play.api._
 import play.api.libs.json._
 import play.api.libs.iteratee._
 import play.api.libs.concurrent._
-
 import akka.util.Timeout
 import akka.pattern.ask
-
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.akka.FortyTwoActor
@@ -22,9 +19,10 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.inject._
 import com.keepit.common.db.slick.Database
+import com.keepit.realtime.AdminEventStreamManager
 
 @Singleton
-class EventStream @Inject() (eventWriter: EventWriter) {
+class EventStream @Inject() (eventWriter: EventWriter, adminEvent: AdminEventStreamManager) {
   implicit val timeout = Timeout(1 second)
 
   lazy val default = Akka.system.actorOf(Props {new EventStreamActor(eventWriter) })
@@ -38,7 +36,13 @@ class EventStream @Inject() (eventWriter: EventWriter) {
     }
   }
 
-  def streamEvent(event: Event) = default ! BroadcastEvent(event)
+  def streamEvent(event: Event) = {
+    implicit val writes = eventWriter.writesUserEvent
+    eventWriter.wrapEvent(event).map { wrappedEvent =>
+      adminEvent.broadcast("event", Json.toJson(wrappedEvent))
+      default ! BroadcastEvent(Json.toJson(wrappedEvent))
+    }
+  }
 
 }
 
@@ -56,9 +60,10 @@ class EventWriter @Inject() (db: Database, userRepo: UserRepo, socialUserInfoRep
       )
     }
   }
-  case class WrappedUserEvent(event: Event, user: User, social: String, eventName: String, eventFamily: EventFamily, createdAt: DateTime)
+  trait WrappedEvent
+  case class WrappedUserEvent(event: Event, user: User, social: String, eventName: String, eventFamily: EventFamily, createdAt: DateTime) extends WrappedEvent
 
-  def toJson(event: Event): JsValue = {
+  def wrapEvent(event: Event): Option[WrappedUserEvent] = {
       event match {
         case Event(_,UserEventMetadata(eventFamily, eventName, externalUser, _, experiments, metaData, _), createdAt, _) =>
           val (user, social) = db.readOnly { implicit session =>
@@ -66,9 +71,8 @@ class EventWriter @Inject() (db: Database, userRepo: UserRepo, socialUserInfoRep
             val social = socialUserInfoRepo.getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
             (user, social)
           }
-
-          Json.toJson(WrappedUserEvent(event, user, social, eventName, eventFamily, createdAt))
-        case _ => JsNull
+          Some(WrappedUserEvent(event, user, social, eventName, eventFamily, createdAt))
+        case _ => None
       }
   }
 }
@@ -85,17 +89,11 @@ class EventStreamActor(eventWriter: EventWriter) extends FortyTwoActor {
       eventChannel.push(Json.obj("echo" -> System.currentTimeMillis.toString))
   }
 
-  def notifyAll(event: Event) {
-
-    event match {
-      case Event(_,UserEventMetadata(eventFamily,eventName,externalUser,_,experiments,metaData,_),createdAt,_) =>
-        eventChannel.push(eventWriter.toJson(event))
-      case _ =>
-    }
-
+  def notifyAll(event: JsValue) {
+    eventChannel.push(event)
   }
 }
 
 private trait EventStreamMessage
-private case class BroadcastEvent(event: Event) extends EventStreamMessage
+private case class BroadcastEvent(event: JsValue) extends EventStreamMessage
 private case object ReplyEcho
