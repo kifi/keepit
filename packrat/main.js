@@ -80,6 +80,10 @@ var wsAddress = (api.prefs.get("env") === "development" ? "ws://" : "wss://") + 
 var wsHandlers = {
   notification: function(data) {
     api.log("New notification!!!!", data)
+    var activeTab = api.tabs.getActive();
+    if(activeTab) {
+      api.tabs.emit(activeTab, "notification", data);
+    }
   },
   event: function(data) {
     api.log("New event!!!!", data);

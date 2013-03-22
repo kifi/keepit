@@ -6,6 +6,7 @@ import com.keepit.model._
 import play.api.libs.json._
 import com.keepit.common.social.UserWithSocial
 import com.keepit.common.db._
+import com.keepit.realtime.SendableNotification
 
 class SendableNotificationSerializer extends Format[SendableNotification] {
 

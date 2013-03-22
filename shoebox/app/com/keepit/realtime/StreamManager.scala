@@ -73,6 +73,7 @@ trait UserStreamManager extends MultiClientStreamManager[Id[User], JsArray] {
   def push(clientIdentifier: Id[User], messageType: String, msg: JsValue): Unit = {
     push(clientIdentifier, Json.arr(messageType, msg))
   }
+
   def broadcast(messageType: String, msg: JsValue): Unit = {
     broadcast(Json.arr(messageType, msg))
   }

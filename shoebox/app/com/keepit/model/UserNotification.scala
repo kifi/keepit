@@ -8,14 +8,14 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.search.Lang
 import scala.slick.util.CloseableIterator
-import play.api.libs.json.JsObject
+import play.api.libs.json.JsValue
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import play.libs.Json
 import com.keepit.realtime.UserNotificationStreamManager
 import com.keepit.serializer.SendableNotificationSerializer
 
-trait UserNotificationDetails { val payload: JsObject }
+case class UserNotificationDetails(payload: JsValue)
 
 case class UserNotification(
   id: Option[Id[UserNotification]] = None,
@@ -33,28 +33,6 @@ case class UserNotification(
   def withState(state: State[UserNotification]): UserNotification = copy(state = state)
 }
 
-case class SendableNotification(
-  id: ExternalId[UserNotification],
-  createdAt: DateTime,
-  updatedAt: DateTime,
-  category: UserNotificationCategory,
-  details: UserNotificationDetails
-)
-
-object SendableNotification {
-  def fromUserNotification(notify: UserNotification) = {
-    SendableNotification(id = notify.externalId, createdAt = notify.createdAt, updatedAt = notify.updatedAt, category = notify.category, details = notify.details)
-  }
-}
-
-class NotificationBroadcast @Inject() (userNotification: UserNotificationStreamManager) {
-  import com.keepit.serializer.SendableNotificationSerializer
-  def push(notify: UserNotification) = {
-    val sendable = SendableNotification.fromUserNotification(notify)
-    userNotification.push(notify.userId, "notification", SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable))
-  }
-}
-
 @ImplementedBy(classOf[UserNotificationRepoImpl])
 trait UserNotificationRepo extends Repo[UserNotification] with ExternalIdColumnFunction[UserNotification]  {
   def getWithUserId(userId: Id[User], startingTime: DateTime, howMany: Option[Int], excludeState: Option[State[UserNotification]])(implicit session: RSession): Seq[UserNotification]
@@ -67,7 +45,7 @@ class UserNotificationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
   import DBSession._
   import FortyTwoTypeMappers._
 
-  override lazy val table = new RepoTable[UserNotification](db, "phrase") with ExternalIdColumn[UserNotification] {
+  override lazy val table = new RepoTable[UserNotification](db, "user_notification") with ExternalIdColumn[UserNotification] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def category = column[UserNotificationCategory]("category", O.NotNull)
     def details = column[UserNotificationDetails]("details", O.NotNull)
@@ -98,6 +76,7 @@ case class UserNotificationCategory(val name: String) extends AnyVal
 
 object UserNotificationCategories {
   val COMMENT = UserNotificationCategory("comment")
+  val MESSAGE = UserNotificationCategory("message")
   val GLOBAL = UserNotificationCategory("global")
 }
 

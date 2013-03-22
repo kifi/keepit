@@ -1,4 +1,4 @@
-// @match /^https?:\/\/kifi\.com.*/
+// @match /^https?:\/\/[^\/]*\/.*/
 // @require styles/notify.css
 // @require scripts/lib/jquery-1.8.2.min.js
 // @require scripts/lib/jquery-showhover.js
@@ -6,31 +6,45 @@
 // @require scripts/lib/mustache-0.7.1.min.js
 // @require scripts/api.js
 // @require scripts/render.js
-// @require scripts/lib/notification.min.js
-
-
-KifiNotification.add({
-  title: 'Alexander Willis Schultz',
-  contentHtml: 'I commented on it above, but people I\'m talking to are hesitant to add on group because they are unsure of how to explain it.',
-  link: 'Label Reading 101 Wellness City',
-  image: 'https://fbcdn-profile-a.akamaihd.net/hprofile-ak-ash3/49938_508538138_1167343243_q.jpg',
-  sticky: true,
-  showForMs: 3000
-});
+// @require scripts/lib/notification.js
 
 var notify = function() {
   api.port.on({
     notification: function(data) {
-      KifiNotification.add({
-        title: 'New event',
-        contentHtml: JSON.stringify(data),
-        image: 'https://fbcdn-profile-a.akamaihd.net/hprofile-ak-ash3/49938_508538138_1167343243_q.jpg',
-        sticky: false,
-        showForMs: 1000
-      });
-    },
-    event: function(data) {
-      api.log("New event!!", data)
+      var details = data[0].details;
+      if (details) {
+        api.log("xxxxxx", details)
+        switch (data[0].category) {
+          case "comment":
+            KifiNotification.add({
+              title: details.author.firstName + ' ' + details.author.lastName,
+              contentHtml: details.text,
+              link: details.title,
+              image: details.author.avatar,
+              sticky: false,
+              showForMs: 7000,
+              clickAction: function () {
+                var win=window.open(details.url, '_blank');
+                win.focus();
+              }
+            });
+            break;
+          case "message":
+            KifiNotification.add({
+              title: details.author.firstName + ' ' + details.author.lastName,
+              contentHtml: details.text,
+              link: details.title,
+              image: details.author.avatar,
+              sticky: false,
+              showForMs: 7000,
+              clickAction: function () {
+                var win=window.open(details.url, '_blank');
+                win.focus();
+              }
+            });
+            break;
+        }
+      }
     }
   });
 }();

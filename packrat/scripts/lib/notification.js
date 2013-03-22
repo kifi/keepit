@@ -2,9 +2,9 @@
 var KifiNotification = {
 	defaultParams: {
 		wrapperClass: '',
-		fadeInMs: 300,
-		fadeOutMs: 100,
-		showForMs: 4000,
+		fadeInMs: 500,
+		fadeOutMs: 200,
+		showForMs: 7000,
 		image: '',
 		link: '',
 		contentHtml: '',
@@ -15,9 +15,6 @@ var KifiNotification = {
 	},
 	
 	add: function (params){
-		if (params.click && typeof(params.click) == 'string') {
-			params.click = function () { document.location = params.click };
-		}
 		
 		params = $.extend(this.defaultParams, params)
 
