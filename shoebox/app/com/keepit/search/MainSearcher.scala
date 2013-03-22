@@ -77,7 +77,7 @@ class MainSearcher(
 
   def findSharingUsers(id: Id[NormalizedURI]) = {
     val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
-    val effectiveSharingSize = if (customFilterOn) uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).size else sharingUsers.size
+    val effectiveSharingSize = if (customFilterOn) filter.filterFriends(sharingUsers).size else sharingUsers.size
     (sharingUsers, effectiveSharingSize)
   }
 
