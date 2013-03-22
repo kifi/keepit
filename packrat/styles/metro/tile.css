@@ -43,8 +43,8 @@
   font: 300 14px/42px Lato,sans-serif;
 }
 
-.kifi-count {
-  display: inline-block;
+span.kifi-count {
+  display: inline-block !important;
   position: relative;
   top: -15px;
   box-sizing: content-box;

@@ -36,7 +36,7 @@
   position: static;
   font-family: inherit;
   font-size: inherit;
-  font-weight: normal;
+  font-weight: inherit;
   background: transparent;
   border: none;
   margin: 0;
@@ -46,8 +46,8 @@
   min-width: 0;
   -moz-box-sizing: content-box;
   box-sizing: content-box;
-  text-align: left;
-  direction: ltr;
+  text-align: inherit;
+  direction: inherit;
   -webkit-user-select: auto;
   -moz-user-select: auto;
   user-select: auto;
@@ -78,7 +78,7 @@
 .kifi-pane a:visited:hover {
   color: -webkit-link;
   color: -moz-hyperlinktext;
-  text-decoration: underline;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -125,7 +125,8 @@
   right: 0;
   height: 68px;
   width: 142px;
-  font-size: 12px;
+  font: 12px Lato,sans-serif;
+  direction: ltr;
 }
 .kifi-slider2.kifi-visible {
   width: 322px;
@@ -197,7 +198,6 @@
   line-height: 42px;
   border-radius: inherit;
   color: #fff;
-  font-family: Lato,sans-serif;
   text-align: center;
   cursor: pointer;
 }
@@ -323,9 +323,8 @@
   cursor: default;
   position: relative;
 }
-.kifi-slider2-keeper {
+a.kifi-slider2-keeper {
   display: inline-block;
-  direction: ltr;
   width: 36px;
   height: 36px;
   margin-left: 1px;
@@ -335,6 +334,7 @@
 .kifi-slider2-keeper .kifi-kcard {
   bottom: 50px;
   right: -34px;
+  direction: ltr;
 }
 .kifi-slider2-keeper:first-child .kifi-kcard::before,
 .kifi-slider2-keeper:first-child .kifi-kcard::after {
@@ -375,7 +375,7 @@
   text-align: right; /* keeps contents still during transition */
 }
 .kifi-slider2-dock-btn {
-  display: inline-block;
+  display: inline-block !important;
   height: 42px;
   width: 42px;
   background-position: 0 999px;
@@ -444,7 +444,7 @@
   display: none;
 }
 .kifi-slider2-dock-sep {
-  display: inline-block;
+  display: inline-block !important;
   width: 1px;
   height: 34px;
   margin-top: 4px;

@@ -16,6 +16,9 @@
   width: 322px;
   height: 100%;
   background: #34495e;
+  font: 300 12px Lato,sans-serif;
+  text-align: left;
+  direction: ltr;
   z-index: 2147483639;
   -webkit-transition: right .25s ease-in;
   transition: right .25s ease-in;
@@ -182,7 +185,7 @@ a.kifi-pane-back:active {
   white-space: nowrap;
   cursor: default;
 }
-.kifi-pane-keeper {
+a.kifi-pane-keeper {
   display: inline-block;
   width: 40px;
   height: 40px;
