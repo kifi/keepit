@@ -18,6 +18,7 @@ import org.joda.time.DateTime
 import com.keepit.model.UserNotificationDetails
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db.ExternalId
+import com.keepit.common.logging._
 
 
 case class CommentDetails(author: BasicUser, recipient: BasicUser, url: String, title: String, text: String, createdAt: DateTime)
@@ -59,7 +60,7 @@ class UserNotifier @Inject() (
   commentRepo: CommentRepo,
   userNotifyRepo: UserNotificationRepo,
   userNotifyStream: UserNotificationStreamManager,
-  notificationBroadcast: NotificationBroadcaster) {
+  notificationBroadcast: NotificationBroadcaster) extends Logging {
 
 
   implicit val basicUserFormat = BasicUserSerializer.basicUserSerializer
@@ -90,6 +91,7 @@ class UserNotifier @Inject() (
     // For now, we will email instantly & push streaming notifications.
     // Soon, we will email only when the user did not get the notification.
     db.readWrite { implicit s =>
+
       val messageDetails = createMessageDetails(message)
       messageDetails.map { messageDetail =>
         val user = userRepo.get(messageDetail.recipient.externalId)
@@ -99,7 +101,6 @@ class UserNotifier @Inject() (
           details = UserNotificationDetails(Json.toJson(messageDetail)),
           commentId = message.id
         ))
-
         notifyMessageByEmail(user, messageDetail)
         notificationBroadcast.push(userNotification)
       }
@@ -157,6 +158,7 @@ class UserNotifier @Inject() (
     val author = userRepo.get(message.userId)
     val uri = normalizedURIRepo.get(message.uriId)
     val participants = commentRepo.getParticipantsUserIds(message.id.get)
+
     for (userId <- participants - author.id.get) yield {
       val recipient = userRepo.get(userId)
       val deepLink = deepLinkRepo.save(DeepLink(
