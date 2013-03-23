@@ -472,11 +472,7 @@ api = function() {
         loading: new Listeners,
         ready: new Listeners,
         complete: new Listeners,
-        unload: new Listeners},
-      require: function(tab, path, callback) {
-        injectWithDeps(tab.id, path, callback);
-      }
-    },
+        unload: new Listeners}},
     timers: window,
     version: chrome.app.getDetails().version};
 

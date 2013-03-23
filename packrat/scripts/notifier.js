@@ -1,11 +1,11 @@
-// @require styles/notify.css
+// @require styles/notifier.css
 // @require scripts/lib/jquery-1.8.2.min.js
 // @require scripts/lib/mustache-0.7.1.min.js
 // @require scripts/api.js
 // @require scripts/render.js
 
-api.port.on({
-  show_notification: function(data) {
+var notififer = {
+  show: function(data) {
     var details = data.details;
     switch (data.category) {
       case "comment":
@@ -38,7 +38,7 @@ api.port.on({
         break;
     }
   }
-});
+};
 
 var KifiNotification = {
   defaultParams: {

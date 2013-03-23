@@ -5,7 +5,7 @@ function logEvent() {  // parameters defined in main.js
   api.port.emit("log_event", Array.prototype.slice.call(arguments));
 }
 
-var slider, slider2, injected, t0 = +new Date;
+var injected, t0 = +new Date;
 
 !function() {
   api.log("host:", location.hostname);
@@ -45,6 +45,11 @@ var slider, slider2, injected, t0 = +new Date;
   }, 60000);
 
   api.port.on({
+    show_notification: function(data) {
+      api.require("scripts/notifier.js", function() {
+        notifier.show(data);
+      });
+    },
     init_slider: function(o) {
       info = o;
       rules = o.rules || 0;
@@ -88,20 +93,12 @@ var slider, slider2, injected, t0 = +new Date;
 
   function withSlider(callback) {
     document.removeEventListener("scroll", onScrollMaybeShow);
-    if (slider) {
-      callback();
-    } else {
-      api.require("scripts/slider.js", callback);
-    }
+    api.require("scripts/slider.js", callback);
   }
 
   function withSlider2(callback) {
     document.removeEventListener("scroll", onScrollMaybeShow);
-    if (slider2) {
-      callback();
-    } else {
-      api.require("scripts/slider2.js", callback);
-    }
+    api.require("scripts/slider2.js", callback);
   }
 
   function insertTile(o) {

@@ -228,10 +228,7 @@ exports.tabs = {
     loading: new Listeners,
     ready: new Listeners,
     complete: new Listeners,
-    unload: new Listeners},
-  require: function(tab, path, callback) {
-    // TODO
-  }};
+    unload: new Listeners}};
 
 exports.timers = timers;
 exports.version = self.version;
