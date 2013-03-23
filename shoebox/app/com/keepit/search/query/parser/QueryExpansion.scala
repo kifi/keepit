@@ -46,7 +46,7 @@ trait QueryExpansion extends QueryParser {
     }
   }
 
-  protected def getSiteQuery(domain: String): Option[Query] = if (domain != null) Some(SiteQuery(domain)) else None
+  protected def getSiteQuery(domain: String): Option[Query] = if (domain != null) Option(SiteQuery(domain)) else None
 
   protected def getTextQuery(queryText: String, quoted: Boolean): Option[Query] = {
     def copyFieldQuery(query:Query, field: String) = {
