@@ -80,9 +80,7 @@ api.socket.open((api.prefs.get("env") === "development" ? "ws://" : "wss://") + 
     api.log("[socket:notification]", data);
     var activeTab = api.tabs.getActive();
     if (activeTab) {
-      api.tabs.require(activeTab, "scripts/notify.js", function() {
-        api.tabs.emit(activeTab, "show_notification", data);
-      });
+      api.tabs.emit(activeTab, "show_notification", data);
     }
   },
   event: function(data) {
