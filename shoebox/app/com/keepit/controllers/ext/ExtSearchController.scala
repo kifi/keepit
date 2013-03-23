@@ -63,7 +63,7 @@ class ExtSearchController @Inject() (
     }
 
     val userId = request.userId
-    log.info("searching with %s using userId id %s".format(query, userId))
+    log.info(s"""User ${userId} searched ${query.length} characters""")
     val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
     val (friendIds, searchFilter) = time("search-connections") {
       db.readOnly { implicit s =>
