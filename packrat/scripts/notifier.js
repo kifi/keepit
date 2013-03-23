@@ -4,7 +4,7 @@
 // @require scripts/api.js
 // @require scripts/render.js
 
-var notififer = {
+var notifier = {
   show: function(data) {
     var details = data.details;
     switch (data.category) {
