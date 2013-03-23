@@ -3,11 +3,11 @@ package com.keepit.search
 import java.io.File
 import java.io.FileInputStream
 import java.util.Properties
-import java.util.concurrent.atomic.AtomicReference
 
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.model.User
+import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
+import com.keepit.model.{UserExperimentRepo, User}
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
 
@@ -68,7 +68,11 @@ object SearchConfig {
   def getDescription(name: String) = descriptions.get(name)
 }
 
-class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigExperimentRepo, db: Database) {
+class SearchConfigManager(
+    configDir: Option[File],
+    experimentRepo: SearchConfigExperimentRepo,
+    userExperimentRepo: UserExperimentRepo,
+    db: Database) {
 
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
@@ -118,12 +122,16 @@ class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigE
     userConfig.get(userId.id) match {
       case Some(config) => (config, None)
       case None =>
-        val hashFrac = hash(userId, queryText)
-
-        var frac = 0.0
-        val experiment = activeExperiments.find { e =>
-          frac += e.weight
-          frac >= hashFrac
+        val shouldExclude = db.readOnly { implicit s =>
+          userExperimentRepo.hasExperiment(userId, NO_SEARCH_EXPERIMENTS)
+        }
+        val experiment = if (shouldExclude) None else {
+          val hashFrac = hash(userId, queryText)
+          var frac = 0.0
+          activeExperiments.find { e =>
+            frac += e.weight
+            frac >= hashFrac
+          }
         }
 
         (defaultConfig(experiment.map(_.config.params).getOrElse(Map())), experiment.map(_.id.get))
