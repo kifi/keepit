@@ -1,6 +1,6 @@
 var api = api || require("./api");
 
-// ===== Async 
+// ===== Async
 
 function ajax(method, uri, data, done, fail) {  // method and uri are required
   if (typeof data == "function") {  // shift args if data is missing and done is present
@@ -77,16 +77,16 @@ api.timers.setTimeout(function maybeSend() {
 
 api.socket.open((api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws?notifications", {
   notification: function(data) {
+    api.log("[socket:notification]", data);
     var activeTab = api.tabs.getActive();
     if (activeTab) {
-      api.tabs.emit(activeTab, "notification", data);
+      api.tabs.require(activeTab, "scripts/notify.js", function() {
+        api.tabs.emit(activeTab, "show_notification", data);
+      });
     }
   },
   event: function(data) {
-    var activeTab = api.tabs.getActive();
-    if (activeTab) {
-      api.tabs.emit(activeTab, "event", data);
-    }
+    api.log("[socket:event]", data);
   }
 })
 
