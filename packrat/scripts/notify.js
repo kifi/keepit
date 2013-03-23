@@ -1,4 +1,3 @@
-// @match /^https?:\/\/[^\/]*\/.*/
 // @require styles/notify.css
 // @require scripts/lib/jquery-1.8.2.min.js
 // @require scripts/lib/mustache-0.7.1.min.js
@@ -6,7 +5,7 @@
 // @require scripts/render.js
 
 api.port.on({
-  notification: function(data) {
+  show_notification: function(data) {
     var details = data.details;
     switch (data.category) {
       case "comment":

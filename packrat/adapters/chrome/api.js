@@ -432,6 +432,7 @@ api = function() {
       },
       close: function(socketId) {
         sockets[socketId].close();
+        sockets[socketId] = null;
       }
     },
     storage: localStorage,
@@ -471,7 +472,10 @@ api = function() {
         loading: new Listeners,
         ready: new Listeners,
         complete: new Listeners,
-        unload: new Listeners}
+        unload: new Listeners},
+      require: function(tab, path, callback) {
+        injectWithDeps(tab.id, path, callback);
+      }
     },
     timers: window,
     version: chrome.app.getDetails().version};
