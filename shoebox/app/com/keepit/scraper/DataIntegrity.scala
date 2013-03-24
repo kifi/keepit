@@ -46,8 +46,8 @@ private[scraper] class DataIntegrityActor() extends FortyTwoActor with Logging {
     case CleanOrphans =>
       val orphanCleaner = new OrphanCleaner
       inject[Database].readWrite { implicit session =>
-        orphanCleaner.cleanNormalizedURIs()
-        orphanCleaner.cleanScrapeInfo()
+        orphanCleaner.cleanNormalizedURIs(false)
+        orphanCleaner.cleanScrapeInfo(false)
       }
     case Cron =>
       if (currentDateTime.hourOfDay().get() == 21) // 9pm PST
