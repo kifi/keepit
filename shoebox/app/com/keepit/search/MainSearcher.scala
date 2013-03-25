@@ -32,7 +32,6 @@ class MainSearcher(
   val currentTime = currentDateTime.getMillis()
   val idFilter = filter.idFilter
   val isInitialSearch = idFilter.isEmpty
-  var query: Option[Query]= None			// will set this during search
 
   // get config params
   val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
@@ -105,9 +104,9 @@ class MainSearcher(
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 
-    query = parser.parse(queryString)
+    val parsedQuery = parser.parse(queryString)
 
-    query.map{ articleQuery =>
+    parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
@@ -134,7 +133,7 @@ class MainSearcher(
       }
     }
 
-    (myHits, friendsHits, othersHits)
+    (myHits, friendsHits, othersHits, parsedQuery)
   }
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter.default()): ArticleSearchResult = {
@@ -142,7 +141,7 @@ class MainSearcher(
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
-    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
+    val (myHits, friendsHits, othersHits, parsedQuery) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
@@ -211,12 +210,11 @@ class MainSearcher(
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
-    val svVar = svVariance(hitList);								// compute sv variance. may need to record the time elapsed.
+    val svVar = svVariance(parsedQuery, hitList);								// compute sv variance. may need to record the time elapsed.
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
-    println("================= variance = "  + svVar)
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
-        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt, svVariance =svVar)
+        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt, svVariance = svVar)
   }
 
   private def getPublicBookmarkCount(id: Long) = {
@@ -240,7 +238,7 @@ class MainSearcher(
    * vects: a collection of 128-bit vectors. We measure the variance of each bit,
    * and take the average. This measures overall randomness of input semantic vectors.
    */
-  private def avgBitVariance( vects: Iterable[Array[Byte]]) = {
+  private def avgBitVariance(vects: Iterable[Array[Byte]]) = {
     if ( vects.size > 0){
 	  val composer = new SemanticVectorComposer
 	  vects.foreach( composer.add(_, 1))
@@ -259,7 +257,7 @@ class MainSearcher(
   /**
    * Given a hitList, find the variance of the semantic vectors.
    */
-  private def svVariance(hitList : List[MutableArticleHit]) : Float = {
+  private def svVariance(query: Option[Query], hitList: List[MutableArticleHit]): Float = {
     val svSearcher = new SemanticVectorSearcher(this.articleSearcher,this.uriGraphSearcher)
     val uriIds = hitList.map(_.id).toSet
     val variance = query.map{ q =>
@@ -384,7 +382,7 @@ case class ArticleSearchResult(
   pageNumber: Int,
   uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
   time: DateTime = currentDateTime,
-  svVariance : Float = Float.NaN			// semantic vector variance
+  svVariance: Float = Float.NaN			// semantic vector variance
 )
 
 

@@ -70,7 +70,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       time = parseStandardTime((json \ "time").as[String]),
       millisPassed = (json \ "millisPassed").as[Int],
       pageNumber = (json \ "pageNumber").as[Int],
-      svVariance = (json\ "svVariance").asOpt[Float].getOrElse(Float.NaN)
+      svVariance = (json \ "svVariance").asOpt[Float].getOrElse(Float.NaN)
     ))
 }
 
