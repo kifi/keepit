@@ -46,7 +46,8 @@ private[scraper] class DataIntegrityActor() extends FortyTwoActor with Logging {
     case CleanOrphans =>
       val orphanCleaner = new OrphanCleaner
       inject[Database].readWrite { implicit session =>
-        orphanCleaner.cleanNormalizedURIs(false)
+        // This cleans up cases when we have a normalizedUri, but no Url. This *only* happens when we renormalize, so does not need to happen every night.
+        //orphanCleaner.cleanNormalizedURIs(false)
         orphanCleaner.cleanScrapeInfo(false)
       }
     case Cron =>
@@ -64,14 +65,14 @@ class OrphanCleaner {
     val nuris = nuriRepo.allActive()
     val urlRepo = inject[URLRepo]
     var changedNuris = Seq[NormalizedURI]()
-    nuris map { nuri =>
+    nuris foreach { nuri =>
       val urls = urlRepo.getByNormUri(nuri.id.get)
       if (urls.isEmpty)
         changedNuris = changedNuris.+:(nuri)
     }
     if (!readOnly) {
-      changedNuris map { nuri =>
-        nuriRepo.save(nuri.withState(NormalizedURIStates.INACTIVE))
+      changedNuris foreach { nuri =>
+        nuriRepo.save(nuri.withState(NormalizedURIStates.ACTIVE))
       }
     }
     changedNuris.map(_.id.get)
@@ -82,15 +83,15 @@ class OrphanCleaner {
     val sis = scrapeInfoRepo.all() // allActive does the join with nuri. Come up with a better way?
     val nuriRepo = inject[NormalizedURIRepo]
     var oldScrapeInfos = Seq[ScrapeInfo]()
-    sis map { si =>
+    sis foreach { si =>
       if (si.state == ScrapeInfoStates.ACTIVE) {
         val nuri = nuriRepo.get(si.uriId)
-        if (nuri.state == NormalizedURIStates.INACTIVE)
+        if (nuri.state == NormalizedURIStates.INACTIVE || nuri.state == NormalizedURIStates.ACTIVE)
           oldScrapeInfos = oldScrapeInfos.+:(si)
       }
     }
     if (!readOnly) {
-      oldScrapeInfos map { si =>
+      oldScrapeInfos foreach { si =>
         scrapeInfoRepo.save(si.withState(ScrapeInfoStates.INACTIVE))
       }
     }

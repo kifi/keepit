@@ -99,7 +99,7 @@ class SliderShownListener extends EventListenerPlugin {
         val user = inject[UserRepo].get(externalUser)
         val normUri = (metaData \ "url").asOpt[String].map { url =>
           val repo = inject[NormalizedURIRepo]
-          repo.getByNormalizedUrl(url).getOrElse(repo.save(NormalizedURIFactory(url)))
+          repo.getByNormalizedUrl(url).getOrElse(repo.save(NormalizedURIFactory(url, NormalizedURIStates.ACTIVE)))
         }
         (user, normUri)
       }

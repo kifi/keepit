@@ -119,8 +119,26 @@ class NormalizedURIRepoImpl @Inject() (
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
     val saved = super.save(uri)
+
     val scrapeRepo = inject[ScrapeInfoRepo]
-    scrapeRepo.getByUri(saved.id.get).getOrElse(scrapeRepo.save(ScrapeInfo(uriId = saved.id.get)))
+    if(uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE) {
+      // If uri.state is ACTIVE or INACTIVE, we do not want an ACTIVE ScrapeInfo record for it
+      scrapeRepo.getByUri(saved.id.get) match {
+        case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
+          scrapeInfo.withState(ScrapeInfoStates.INACTIVE)
+        case _ => // do nothing
+      }
+    } else {
+      // Otherwise, ensure that ScrapeInfo has an active record for it.
+      scrapeRepo.getByUri(saved.id.get) match {
+        case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
+          scrapeInfo.withState(ScrapeInfoStates.ACTIVE)
+        case Some(scrapeInfo) => // do nothing
+        case None =>
+          scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
+      }
+    }
+
     saved
   }
 
@@ -147,6 +165,9 @@ object NormalizedURIFactory {
   def apply(url: String): NormalizedURI =
     apply(title = None, url = url, state = NormalizedURIStates.ACTIVE)
 
+  def apply(url: String, state: State[NormalizedURI]): NormalizedURI =
+    apply(title = None, url = url, state = state)
+
   def apply(title: String, url: String): NormalizedURI =
     NormalizedURIFactory(title = Some(title), url = url, state = NormalizedURIStates.ACTIVE)
 
@@ -170,15 +191,17 @@ object NormalizedURIStates extends States[NormalizedURI] {
   val SCRAPED	= State[NormalizedURI]("scraped")
   val SCRAPE_FAILED = State[NormalizedURI]("scrape_failed")
   val UNSCRAPABLE = State[NormalizedURI]("unscrapable")
+  val SCRAPE_WANTED = State[NormalizedURI]("scrape_wanted")
 
   type Transitions = Map[State[NormalizedURI], Set[State[NormalizedURI]]]
 
   val ALL_TRANSITIONS: Transitions = Map(
-      (ACTIVE -> Set(SCRAPED, SCRAPE_FAILED, UNSCRAPABLE, INACTIVE)),
-      (SCRAPED -> Set(ACTIVE, INACTIVE)),
-      (SCRAPE_FAILED -> Set(ACTIVE, INACTIVE)),
-      (UNSCRAPABLE -> Set(ACTIVE, INACTIVE)),
-      (INACTIVE -> Set(ACTIVE, INACTIVE)))
+      (ACTIVE -> Set(SCRAPE_WANTED)),
+      (SCRAPE_WANTED -> Set(SCRAPED, SCRAPE_FAILED, UNSCRAPABLE, INACTIVE)),
+      (SCRAPED -> Set(SCRAPE_WANTED, INACTIVE)),
+      (SCRAPE_FAILED -> Set(SCRAPE_WANTED, INACTIVE)),
+      (UNSCRAPABLE -> Set(SCRAPE_WANTED, INACTIVE)),
+      (INACTIVE -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE)))
 
   val ADMIN_TRANSITIONS: Transitions = Map(
       (ACTIVE -> Set.empty),
