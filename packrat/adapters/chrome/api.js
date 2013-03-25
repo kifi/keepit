@@ -219,8 +219,6 @@ api = function() {
     }
   });
 
-  var sockets = [];
-
   // TODO: Use another property (besides .ready) on page to indicate that content script injection has begun,
   // to prevent starting it again before the first one is done.
   function injectContentScripts(tab, callback) {
@@ -278,6 +276,7 @@ api = function() {
     }
   }
 
+  var sockets = [,];
   var api = {
     bookmarks: {
       create: function(parentId, name, url, callback) {
@@ -431,8 +430,11 @@ api = function() {
         return sockets.length - 1;
       },
       close: function(socketId) {
-        sockets[socketId].close();
-        sockets[socketId] = null;
+        var socket = sockets[socketId];
+        if (socket) {
+          socket.close();
+          delete sockets[socketId];
+        }
       }
     },
     storage: localStorage,
