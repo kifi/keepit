@@ -99,7 +99,6 @@ class BooleanQueryWithPercentMatchTest extends Specification {
     "filter result according to importance of terms (three term cases)" in {
       indexReader.numDocs() === 10
 
-
       var q = new BooleanQueryWithPercentMatch(false)
       q.add(new TermQuery(aaa), Occur.SHOULD)
       q.add(new TermQuery(bbb), Occur.SHOULD)
@@ -112,7 +111,7 @@ class BooleanQueryWithPercentMatchTest extends Specification {
 
       pct = (aaaIdf * 0.1f + bbbIdf + cccIdf) / (aaaIdf + bbbIdf + cccIdf) * 100.0f
       q.setPercentMatch(pct)
-      doQuery(q).map(_._1) === Seq(1, 5, 7) // docs with bbb and ccc
+      doQuery(q).map(_._1) === Seq(1, 7) // docs with aaa, bbb and ccc
     }
 
     "search with required terms" in {

@@ -1,15 +1,14 @@
 package com.keepit.search.query
 
 import org.apache.lucene.index.IndexReader
-import org.apache.lucene.search.{BooleanQuery => LBooleanQuery}
-import org.apache.lucene.search.BooleanScorer2
+import org.apache.lucene.search.BooleanClause
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Searcher
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Similarity
 import org.apache.lucene.search.Weight
-import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
@@ -28,7 +27,7 @@ object BooleanQueryWithPercentMatch {
   }
 }
 
-class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LBooleanQuery(disableCoord) {
+class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) {
 
   private[this] var percentMatch = 0.0f
 
@@ -76,28 +75,50 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
   override def createWeight(searcher: Searcher) = {
 
     new BooleanWeight(searcher, disableCoord) {
+      private[this] val requiredWeights = new ArrayBuffer[Weight]
+      private[this] val prohibitedWeights = new ArrayBuffer[Weight]
+      private[this] val optionalWeights = new ArrayBuffer[(Weight, Float)]
+      private[this] var totalValueOnRequired = 0.0f
+      private[this] var totalValueOnOptional = 0.0f
+
+      override def sumOfSquaredWeights(): Float = {
+        var sum = 0.0d
+        clauses.zip(weights).foreach{ case (c, w) =>
+          val value = w.sumOfSquaredWeights().toDouble
+          if (c.isRequired()) {
+            totalValueOnRequired += sqrt(value).toFloat
+            // if a required clause does not have a scorer, no hit
+            requiredWeights += w
+            sum + value
+          } else if (c.isProhibited()) {
+            prohibitedWeights += w
+          } else {
+            totalValueOnOptional += sqrt(value).toFloat
+            optionalWeights += ((w, sqrt(value).toFloat))
+            sum + value
+          }
+        }
+        sum.toFloat * getBoost() * getBoost()
+      }
+
       override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
         val required = new ArrayBuffer[Scorer]
         val prohibited = new ArrayBuffer[Scorer]
         val optional = new ArrayBuffer[(Scorer, Float)]
 
-        var totalValueOnRequired = 0.0f
-        var totalValueOnOptional = 0.0f
-        clauses.zip(weights).foreach{ case (c, w) =>
+        requiredWeights.foreach{ w =>
           val subScorer = w.scorer(reader, true, false)
-          if (c.isRequired()) {
-            totalValueOnRequired += w.getValue
-            // if a required clasuse does not have a scorer, no hit
-            if (subScorer == null) return null
-            required += subScorer
-          } else if (c.isProhibited()) {
-            if (subScorer != null) prohibited += subScorer
-          } else {
-            totalValueOnOptional += w.getValue
-            if (subScorer != null) {
-              optional += ((subScorer, w.getValue))
-            }
-          }
+          // if a required clasuse does not have a scorer, no hit
+          if (subScorer == null) return null
+          required += subScorer
+        }
+        prohibitedWeights.foreach{ w =>
+          val subScorer = w.scorer(reader, true, false)
+          if (subScorer != null) prohibited += subScorer
+        }
+        optionalWeights.foreach{ case (w, value) =>
+          val subScorer = w.scorer(reader, true, false)
+          if (subScorer != null) optional += ((subScorer, value))
         }
 
         if (required.isEmpty && optional.isEmpty) {

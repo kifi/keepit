@@ -170,7 +170,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       var res = indexer.search("title1 alldocs", percentMatch = 0.0f)
       res.size === 3
 
-      res = indexer.search("title1 alldocs", percentMatch = 50.0f)
+      res = indexer.search("title1 alldocs", percentMatch = 40.0f)
       res.size === 3
 
       res = indexer.search("title1 alldocs", percentMatch = 60.0f)
