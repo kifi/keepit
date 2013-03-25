@@ -45,7 +45,7 @@ class ScraperTest extends Specification {
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/existing"
-        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(33)))
+        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.SCRAPE_WANTED).copy(id = Some(Id(33)))
         val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
 
         result must beAnInstanceOf[Scraped] // Article
@@ -62,7 +62,7 @@ class ScraperTest extends Specification {
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/missing"
-        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(44)))
+        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.SCRAPE_WANTED).copy(id = Some(Id(44)))
         val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
         result must beAnInstanceOf[Error]
         (result: @unchecked) match {
@@ -88,13 +88,13 @@ class ScraperTest extends Specification {
       }
     }
 
-    "fetch ACTIVE uris and scrape them" in {
+    "fetch SCRAPE_WANTED uris and scrape them" in {
       running(new EmptyApplication().withFakeHealthcheck) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         val (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
-          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
-          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing"))
+          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
+          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing", state = NormalizedURIStates.SCRAPE_WANTED))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           val info2 = scrapeRepo.getByUri(uri2.id.get).get
           (uri1, uri2, info1, info2)
@@ -120,8 +120,8 @@ class ScraperTest extends Specification {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
-          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
-          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing"))
+          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
+          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing", state = NormalizedURIStates.SCRAPE_WANTED))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           val info2 = scrapeRepo.getByUri(uri2.id.get).get
           (uri1, uri2, info1, info2)
@@ -186,7 +186,7 @@ class ScraperTest extends Specification {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var (uri1, info1) = inject[Database].readWrite { implicit s =>
-          val uri1 = uriRepo.save(NormalizedURIFactory(title = "notModified", url = "http://www.keepit.com/notModified"))
+          val uri1 = uriRepo.save(NormalizedURIFactory(title = "notModified", url = "http://www.keepit.com/notModified", state = NormalizedURIStates.SCRAPE_WANTED))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           (uri1, info1)
         }
@@ -230,7 +230,7 @@ class ScraperTest extends Specification {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var info = inject[Database].readWrite { implicit s =>
-          val uri = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
+          val uri = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
           scrapeRepo.getByUri(uri.id.get).get
         }
         inject[Database].readWrite { implicit s =>

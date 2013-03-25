@@ -73,7 +73,7 @@ class BookmarkInterner @Inject() (db: Database, uriRepo: NormalizedURIRepo, scra
   }
 
   private def createNewURI(title: String, url: String)(implicit session: RWSession) =
-    uriRepo.save(NormalizedURIFactory(title = title, url = url))
+    uriRepo.save(NormalizedURIFactory(title = title, url = url, state = NormalizedURIStates.SCRAPE_WANTED))
 
   private def addToActivityStream(user: User, bookmark: Bookmark) = {
     val social = db.readOnly { implicit session =>

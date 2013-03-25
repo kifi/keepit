@@ -30,11 +30,11 @@ class DuplicateDocumentDetectionTest extends Specification {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         val documentSignatures2 = inject[Database].readWrite { implicit s =>
-          val nuri1 = uriRepo.save(NormalizedURIFactory("http://google.com/1"))
-          val nuri2 = uriRepo.save(NormalizedURIFactory("http://google.com/2"))
-          val nuri3 = uriRepo.save(NormalizedURIFactory("http://google.com/3"))
-          val nuri4 = uriRepo.save(NormalizedURIFactory("http://google.com/4"))
-          val nuri5 = uriRepo.save(NormalizedURIFactory("http://google.com/5"))
+          val nuri1 = uriRepo.save(NormalizedURIFactory("http://google.com/1", NormalizedURIStates.SCRAPE_WANTED))
+          val nuri2 = uriRepo.save(NormalizedURIFactory("http://google.com/2", NormalizedURIStates.SCRAPE_WANTED))
+          val nuri3 = uriRepo.save(NormalizedURIFactory("http://google.com/3", NormalizedURIStates.SCRAPE_WANTED))
+          val nuri4 = uriRepo.save(NormalizedURIFactory("http://google.com/4", NormalizedURIStates.SCRAPE_WANTED))
+          val nuri5 = uriRepo.save(NormalizedURIFactory("http://google.com/5", NormalizedURIStates.SCRAPE_WANTED))
 
           implicit val conf = com.keepit.scraper.ScraperConfig()
 
