@@ -15,7 +15,7 @@ var notifier = {
           link: details.title,
           image: details.author.avatar,
           sticky: false,
-          showForMs: 7000,
+          showForMs: 15000,
           clickAction: function() {
             var win = window.open(details.url, "_blank");
             win.focus();
@@ -29,7 +29,7 @@ var notifier = {
           link: details.title,
           image: details.author.avatar,
           sticky: false,
-          showForMs: 7000,
+          showForMs: 15000,
           clickAction: function() {
             var win = window.open(details.url, "_blank");
             win.focus();
@@ -103,8 +103,9 @@ var KifiNotification = {
         params.clickAction();
       });
 
-      $item.find(".kifi-notify-close").click(function() {
+      $item.find(".kifi-notify-close").click(function(event) {
         KifiNotification.removeSpecific($item, {}, true);
+        return false;
       });
     });
 

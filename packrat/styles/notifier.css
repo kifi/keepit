@@ -39,7 +39,14 @@
 	font-size: 11px;
 	font-family:verdana;
   border-radius: 10px;
+  border: 1px solid #ddd;
 }
+
+#kifi-notify-notice-wrapper .kifi-notify-item:hover {
+  opacity: 1.0;
+  cursor: pointer;
+}
+
 #kifi-notify-notice-wrapper .kifi-notify-item p {
 	padding:0;
 	margin:0;
