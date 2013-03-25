@@ -53,9 +53,8 @@ class ExtEventController @Inject() (
   private def createEventsFromPayload(params: JsValue, userId: Id[User]) = {
     val logRecievedTime = currentDateTime
 
-    val (user, experiments) = db.readOnly{ implicit session =>
-      (userRepo.get(userId),
-       userExperimentRepo.getByUser(userId) map (_.experimentType))
+    val (user, experiments) = db.readOnly { implicit session =>
+      (userRepo.get(userId), userExperimentRepo.getUserExperiments(userId))
     }
 
     val events = (params \ "events") match {

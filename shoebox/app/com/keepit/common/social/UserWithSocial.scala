@@ -16,7 +16,7 @@ class UserWithSocialRepo {
         format(user, socialInfos, inject[SocialUserInfoRepo].all))
     val bookmarksCount = inject[BookmarkRepo].count(user.id.get)
     val emails = inject[EmailAddressRepo].getByUser(user.id.get)
-    val experiments = inject[UserExperimentRepo].getByUser(user.id.get).map(_.experimentType)
+    val experiments = inject[UserExperimentRepo].getUserExperiments(user.id.get)
     UserWithSocial(user, socialInfos.head, bookmarksCount, emails, experiments)
   }
 }
