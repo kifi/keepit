@@ -222,13 +222,13 @@ function onSocketMessage(socketId, data) {
           handler.apply(null, msg.splice(1));
         }
       } else {
-        api.log("[api.onSocketMessage] no handlers for", socketId);
+        exports.log("[api.onSocketMessage] no handlers for", socketId);
       }
     } else {
-      api.log("[api.onSocketMessage] ignoring (not array)", msg);
+      exports.log("[api.onSocketMessage] ignoring (not array)", msg);
     }
   } catch (e) {
-    api.log.error("[api.onSocketMessage]", e);
+    exports.log.error("[api.onSocketMessage]", e);
   }
 }
 
