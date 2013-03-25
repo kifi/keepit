@@ -47,7 +47,7 @@ case class NormalizedURI  (
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
 
   def withState(state: State[NormalizedURI]) = copy(state = state)
-  def withTitle(title: String) = if(title.isEmpty()) this else copy(title = Some(title))
+  def withTitle(title: String) = if (title.isEmpty()) this else copy(title = Some(title))
 }
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
@@ -123,7 +123,7 @@ class NormalizedURIRepoImpl @Inject() (
     val saved = super.save(uri)
 
     lazy val scrapeRepo = scrapeRepoProvider.get
-    if(uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE) {
+    if (uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE) {
       // If uri.state is ACTIVE or INACTIVE, we do not want an ACTIVE ScrapeInfo record for it
       scrapeRepo.getByUri(saved.id.get) match {
         case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
