@@ -25,6 +25,63 @@
 }
 */
 
+/* a weak blank-slate (insulation) attempt */
+.kifi-slider2 *,
+.kifi-pane * {
+  float: none;
+  width: auto;
+  line-height: normal;
+  letter-spacing: normal;
+  word-spacing: normal;
+  position: static;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  background: transparent;
+  border: none;
+  margin: 0;
+  padding: 0;
+  box-shadow: none;
+  border-radius: 0;
+  min-width: 0;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+  text-align: inherit;
+  direction: inherit;
+  -webkit-user-select: auto;
+  -moz-user-select: auto;
+  user-select: auto;
+  -webkit-transition: none;
+  transition: none;
+}
+.kifi-slider2 div,
+.kifi-pane div {
+  display: block;
+}
+.kifi-slider2 a,
+.kifi-slider2 span,
+.kifi-pane a,
+.kifi-pane span {
+  display: inline;
+}
+.kifi-slider2 img,
+.kifi-pane img {
+  display: inline-block;
+}
+.kifi-slider2 a:link,
+.kifi-slider2 a:visited,
+.kifi-slider2 a:link:hover,
+.kifi-slider2 a:visited:hover,
+.kifi-pane a:link,
+.kifi-pane a:visited,
+.kifi-pane a:link:hover,
+.kifi-pane a:visited:hover {
+  color: -webkit-link;
+  color: -moz-hyperlinktext;
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .kifi-tile-hover {
   position: fixed;
   z-index: 2147483638;
@@ -68,7 +125,8 @@
   right: 0;
   height: 68px;
   width: 142px;
-  font-size: 12px;
+  font: 12px Lato,sans-serif;
+  direction: ltr;
 }
 .kifi-slider2.kifi-visible {
   width: 322px;
@@ -140,7 +198,6 @@
   line-height: 42px;
   border-radius: inherit;
   color: #fff;
-  font-family: Lato,sans-serif;
   text-align: center;
   cursor: pointer;
 }
@@ -258,7 +315,7 @@
   text-align: left;
 }
 .kifi-slider2-keepers {
-  text-align: right;
+  text-align: left;
   direction: rtl;
   font-size: 0;
   line-height: 0;
@@ -266,9 +323,8 @@
   cursor: default;
   position: relative;
 }
-.kifi-slider2-keeper {
+a.kifi-slider2-keeper {
   display: inline-block;
-  direction: ltr;
   width: 36px;
   height: 36px;
   margin-left: 1px;
@@ -278,6 +334,7 @@
 .kifi-slider2-keeper .kifi-kcard {
   bottom: 50px;
   right: -34px;
+  direction: ltr;
 }
 .kifi-slider2-keeper:first-child .kifi-kcard::before,
 .kifi-slider2-keeper:first-child .kifi-kcard::after {
@@ -318,7 +375,7 @@
   text-align: right; /* keeps contents still during transition */
 }
 .kifi-slider2-dock-btn {
-  display: inline-block;
+  display: inline-block !important;
   height: 42px;
   width: 42px;
   background-position: 0 999px;
@@ -357,23 +414,23 @@
   background-repeat: no-repeat;
   height: 17px;
 }
-.kifi-slider2-dock-btn.kifi-slider2-noti::before {
+.kifi-slider2-dock-btn.kifi-slider2-notices::before {
   background-position: 0 0;
   width: 14px;
   left: 15px;
   top: 14px;
 }
-.kifi-slider2-dock-btn.kifi-slider2-comm::before {
+.kifi-slider2-dock-btn.kifi-slider2-comments::before {
   background-position: -14px 0;
   width: 17px;
   left: 12px;
 }
-.kifi-slider2-dock-btn.kifi-slider2-mess::before {
+.kifi-slider2-dock-btn.kifi-slider2-threads::before {
   background-position: -31px 0;
   width: 22px;
   left: 10px;
 }
-.kifi-slider2-dock-btn.kifi-slider2-pane::before {
+.kifi-slider2-dock-btn.kifi-slider2-general::before {
   background-position: -53px 0;
   width: 18px;
   left: 12px;
@@ -387,7 +444,7 @@
   display: none;
 }
 .kifi-slider2-dock-sep {
-  display: inline-block;
+  display: inline-block !important;
   width: 1px;
   height: 34px;
   margin-top: 4px;

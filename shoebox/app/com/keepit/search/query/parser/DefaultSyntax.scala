@@ -6,6 +6,7 @@ import org.apache.lucene.search.BooleanClause.Occur._
 import org.apache.lucene.search.Query
 import scala.util.matching.Regex.Match
 import scala.collection.mutable.ArrayBuffer
+import scala.annotation.tailrec
 
 object DefaultSyntax {
   val queryFields = Set("", "site")
@@ -101,6 +102,7 @@ trait DefaultSyntax extends QueryParser {
     QuerySpec(occur, field, term, quoted)
   }
 
+  @tailrec
   private def parse(result: List[QuerySpec]): List[QuerySpec] = {
     buf match {
       case "" => result.reverse

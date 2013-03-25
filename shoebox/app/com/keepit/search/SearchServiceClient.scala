@@ -3,7 +3,7 @@ package com.keepit.search
 import com.keepit.common.controller.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
-import com.keepit.controllers.search.{ArticleIndexInfo, ResultClicked, routes}
+import com.keepit.controllers.search.{URIGraphIndexInfo, ArticleIndexInfo, ResultClicked, routes}
 import com.keepit.model.{NormalizedURI, User}
 import play.api.libs.json.{JsValue, Json}
 import play.api.templates.Html
@@ -18,6 +18,7 @@ trait SearchServiceClient extends ServiceClient {
   def index(): Future[Int]
   def articleIndexInfo(): Future[ArticleIndexInfo]
   def articleIndexerSequenceNumber(): Future[Int]
+  def uriGraphIndexInfo(): Future[URIGraphIndexInfo]
   def refreshSearcher(): Future[Unit]
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
 
@@ -29,6 +30,7 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
 
   import com.keepit.controllers.search.ResultClickedJson._
   import com.keepit.controllers.search.ArticleIndexInfoJson._
+  import com.keepit.controllers.search.URIGraphIndexInfoJson._
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], isKeep: Boolean): Future[Unit] = {
     val json = Json.toJson(ResultClicked(userId, query, uriId, isKeep))
@@ -45,6 +47,10 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
 
   def articleIndexInfo(): Future[ArticleIndexInfo] = {
     call(routes.ArticleIndexerController.indexInfo()).map(r => Json.fromJson[ArticleIndexInfo](r.json).get)
+  }
+
+  def uriGraphIndexInfo(): Future[URIGraphIndexInfo] = {
+    call(routes.URIGraphController.indexInfo()).map(r => Json.fromJson[URIGraphIndexInfo](r.json).get)
   }
 
   def articleIndexerSequenceNumber(): Future[Int] = {

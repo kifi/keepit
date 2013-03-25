@@ -33,6 +33,7 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.analytics.ActivityStream
 import views.html
+import com.keepit.realtime.UserNotifier
 
 @Singleton
 class ExtCommentController @Inject() (db: Database,
@@ -49,7 +50,8 @@ class ExtCommentController @Inject() (db: Database,
   emailAddressRepo: EmailAddressRepo,
   deepLinkRepo: DeepLinkRepo,
   postOffice: PostOffice,
-  activityStream: ActivityStream)
+  activityStream: ActivityStream,
+  userNotifier: UserNotifier)
     extends BrowserExtensionController {
 
   def getCounts(ids: String) = AuthenticatedJsonAction { request =>
@@ -297,56 +299,9 @@ class ExtCommentController @Inject() (db: Database,
   private[controllers] def notifyRecipients(comment: Comment): Unit = {
     comment.permissions match {
       case CommentPermissions.PUBLIC =>
-        db.readWrite { implicit s =>
-          val author = userRepo.get(comment.userId)
-          val uri = normalizedURIRepo.get(comment.uriId)
-          val follows = followRepo.getByUri(uri.id.get)
-          for (userId <- follows.map(_.userId).toSet - comment.userId) {
-            val recipient = userRepo.get(userId)
-            val deepLink = deepLinkRepo.save(DeepLink(
-                initatorUserId = Option(comment.userId),
-                recipientUserId = Some(userId),
-                uriId = Some(comment.uriId),
-                urlId = comment.urlId,
-                deepLocator = DeepLocator.ofComment(comment)))
-            val addrs = emailAddressRepo.getByUser(userId)
-            for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
-              postOffice.sendMail(ElectronicMail(
-                  senderUserId = Option(comment.userId),
-                  from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
-                  to = addr,
-                  subject = "%s %s commented on a page you are following".format(author.firstName, author.lastName),
-                  htmlBody = replaceLookHereLinks(html.email.newComment(author, recipient, deepLink.url, comment).body),
-                  category = PostOffice.Categories.COMMENT))
-            }
-          }
-        }
+        userNotifier.comment(comment)
       case CommentPermissions.MESSAGE =>
-        db.readWrite { implicit s =>
-          val senderId = comment.userId
-          val sender = userRepo.get(senderId)
-          val uri = normalizedURIRepo.get(comment.uriId)
-          val participants = commentRepo.getParticipantsUserIds(comment.id.get)
-          for (userId <- participants - senderId) {
-            val recipient = userRepo.get(userId)
-            val deepLink = deepLinkRepo.save(DeepLink(
-                initatorUserId = Option(comment.userId),
-                recipientUserId = Some(userId),
-                uriId = Some(comment.uriId),
-                urlId = comment.urlId,
-                deepLocator = DeepLocator.ofMessageThread(comment)))
-            val addrs = emailAddressRepo.getByUser(userId)
-            for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
-              postOffice.sendMail(ElectronicMail(
-                  senderUserId = Option(comment.userId),
-                  from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(sender.firstName, sender.lastName)),
-                  to = addr,
-                  subject = "%s %s sent you a message using KiFi".format(sender.firstName, sender.lastName),
-                  htmlBody = replaceLookHereLinks(html.email.newMessage(sender, recipient, deepLink.url, comment).body),
-                  category = PostOffice.Categories.MESSAGE))
-            }
-          }
-        }
+        userNotifier.message(comment)
       case unsupported =>
         log.error("unsupported comment type for email %s".format(unsupported))
     }

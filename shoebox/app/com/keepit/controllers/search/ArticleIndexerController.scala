@@ -19,10 +19,6 @@ case class ArticleIndexInfo(
     committedAt: Option[String])
 
 object ArticleIndexInfoJson {
-  private implicit val sequenceNumberFormat = new Format[SequenceNumber] {
-    def reads(json: JsValue): JsResult[SequenceNumber] = __.read[Long].reads(json).map(SequenceNumber(_))
-    def writes(o: SequenceNumber): JsValue = JsNumber(o.value)
-  }
   implicit val articleIndexInfoFormat = Json.format[ArticleIndexInfo]
 }
 
@@ -37,6 +33,11 @@ class ArticleIndexerController @Inject()(
   def index() = Action { implicit request =>
     val cnt = indexerPlugin.index()
     Ok(JsObject(Seq("articles" -> JsNumber(cnt))))
+  }
+
+  def reindex() = Action { implicit request =>
+    indexerPlugin.reindex()
+    Ok(JsObject(Seq("started" -> JsString("ok"))))
   }
 
   def indexInfo = Action { implicit request =>

@@ -100,8 +100,8 @@ object ScraperController extends AdminController {
     val orphanCleaner = new OrphanCleaner
     Akka.future {
       inject[Database].readWrite { implicit session =>
-        orphanCleaner.cleanNormalizedURIs()
-        orphanCleaner.cleanScrapeInfo()
+        orphanCleaner.cleanNormalizedURIs(false)
+        orphanCleaner.cleanScrapeInfo(false)
       }
     }
     Redirect(com.keepit.controllers.admin.routes.ScraperController.documentIntegrity())

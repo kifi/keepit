@@ -156,11 +156,21 @@ slider2 = function() {
             } else {
               togglePrivate(el);
             }
-          }).on("click", ".kifi-slider2-pane,.kifi-slider2-x", function() {
+          }).on("click", ".kifi-slider2-x", function() {
             if ($pane) {
               hidePane();
-            } else if (!document.documentElement.classList.contains("kifi-pane-parent")) {
-              showPane();
+            }
+          }).on("click", ".kifi-slider2-dock-btn", function() {
+            var pane = $(this).data("pane");
+            if ($pane) {
+              if (pane == $pane.data("pane")) {
+                hidePane();
+              } else {
+                showPane(pane);
+              }
+            } else if (!document.documentElement.classList.contains("kifi-pane-parent")) { // ensure it's finished hiding
+              idleTimer.kill();
+              showPane(pane);
             }
           });
 
@@ -275,24 +285,64 @@ slider2 = function() {
     });
   }
 
-  function showPane() {
-    api.log("[showPane]");
-    idleTimer.kill();
-    api.require("styles/metro/pane.css", function() {
-      render("html/metro/pane.html", {
-        title: document.title,
-        url: location.href,
-        kifiLogoUrl: api.url("images/kifi_logo.png"),
-        gearUrl: api.url("images/metro/gear.png"),
-        kept: info.kept,
-        keepers: pick(info.keepers, 7),
-        keepersCaptionHtml: formatCountHtml(0, (info.keepers || 0).length, info.otherKeeps)
-      }, function(html) {
-        var $html = $("html").addClass("kifi-pane-parent");
-        $pane = $(html).appendTo($html).layout();
-        $html.addClass("kifi-with-pane");
+  function showPane(pane, back) {
+    api.log("[showPane]", pane, back ? "back" : "");
+    var params;
+    switch (pane) {
+      case "general":
+        params = {
+          title: document.title,
+          url: location.href,
+          kept: info.kept,
+          keepers: pick(info.keepers, 7),
+          keepersCaptionHtml: formatCountHtml(0, (info.keepers || 0).length, info.otherKeeps)};
+        break;
+      case "comments":
+        params = {};
+        break;
+      case "threads":
+        params = {};
+        break;
+      case "notices":
+        params = {};
+        break;
+    }
+    if ($pane) {
+      render("html/metro/pane_" + pane + ".html", params, function(html) {
+        back = back || pane == "general";
+        var $cubby = $pane.find(".kifi-pane-cubby"), w = $cubby[0].offsetWidth, d = w + 6;
+        var $boxes = $("<div class=kifi-pane-boxes>").css({
+          width: w + d,
+          transform: "translate(" + (back ? -d : 0) + "px,0)"}).appendTo($cubby.css("overflow", "hidden"));
+        var $old = $cubby.find(".kifi-pane-box").css({left: back ? d : 0, width: w}).appendTo($boxes);
+        var $new = $(html).css({left: back ? 0 : d, width: w}).appendTo($boxes);
+        $boxes.layout().css("transform", "translate(" + (back ? 0 : -d) + "px,0)")
+        .on("transitionend webkitTransitionEnd", function() {
+          $old.remove();
+          $new.detach().css({left: "", width: ""}).appendTo($cubby);
+          $boxes.remove();
+          $cubby.css("overflow", "");
+        });
+        $pane.data("pane", pane);
       });
-    });
+    } else {
+      api.require("styles/metro/pane.css", function() {
+        render("html/metro/pane.html", $.extend(params, {
+          kifiLogoUrl: api.url("images/kifi_logo.png"),
+          gearUrl: api.url("images/metro/gear.png")
+        }), {
+          pane: "pane_" + pane + ".html"
+        },
+        function(html) {
+          var $html = $("html").addClass("kifi-pane-parent");
+          $pane = $(html).data("pane", pane).appendTo($html).layout();
+          $html.addClass("kifi-with-pane");
+          $pane.on("click", ".kifi-pane-back", function() {
+            showPane("general", true);
+          });
+        });
+      });
+    }
   }
 
   function hidePane() {

@@ -1,6 +1,6 @@
 var api = api || require("./api");
 
-// ===== Async requests
+// ===== Async
 
 function ajax(method, uri, data, done, fail) {  // method and uri are required
   if (typeof data == "function") {  // shift args if data is missing and done is present
@@ -72,6 +72,21 @@ api.timers.setTimeout(function maybeSend() {
   }
   api.timers.setTimeout(maybeSend, eventLogDelay);
 }, 4000);
+
+// ===== WebSockets
+
+api.socket.open((api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws?notifications", {
+  notification: function(data) {
+    api.log("[socket:notification]", data);
+    var activeTab = api.tabs.getActive();
+    if (activeTab) {
+      api.tabs.emit(activeTab, "show_notification", data);
+    }
+  },
+  event: function(data) {
+    api.log("[socket:event]", data);
+  }
+})
 
 // ===== Handling messages from content scripts or other extension pages
 
@@ -173,7 +188,8 @@ api.port.on({
   add_deep_link_listener: function(data, respond, tab) {
     createDeepLinkListener(data, tab.id, respond);
     return true;
-  }});
+  }
+});
 
 function getSliderInfo(tab, respond) {
   ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
