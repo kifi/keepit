@@ -20,20 +20,27 @@
   top: auto;
   width: 42px;
   height: 42px;
+  text-align: center;
+  cursor: pointer;
+}
+.kifi-tile-transparent {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   border-radius: 5px;
   background-color: #263f5c;
   background-size: 26px auto;
   background-position: 9px 15px;
   background-repeat: no-repeat;
-  text-align: center;
-  cursor: pointer;
   opacity: .4;
 }
-#kifi-tile.kifi-kept {
+.kifi-kept .kifi-tile-transparent {
   background-color: #0a5aab;
   background-image: none !important;
 }
-#kifi-tile.kifi-kept::before {
+.kifi-kept .kifi-tile-transparent::before {
   content: "kept";
   position: absolute;
   top: 0;
@@ -43,15 +50,14 @@
   font: 300 14px/42px Lato,sans-serif;
 }
 
-span.kifi-count {
-  display: inline-block !important;
+.kifi-count,
+.kifi-slider2 .kifi-count {
+  display: inline-block;
   position: relative;
-  top: -15px;
+  top: -12px;
   -moz-box-sizing: content-box;
   box-sizing: content-box;
   min-width: 20px;
-  border: 3px solid;
-  border-color: transparent #fff #fff;
   border-radius: 15px;
   background: #263f5c padding-box;
   color: #fff;
@@ -59,8 +65,11 @@ span.kifi-count {
 }
 .kifi-count.kifi-unread {
   background-color: #e74c3c;
-  border: none;
-  top: -12px;
+}
+.kifi-tile-transparent .kifi-count {
+  border: 3px solid;
+  border-color: transparent #fff #fff;
+  top: -15px;
 }
 #kifi-tile.kifi-behind-slider .kifi-count {
   display: none;
