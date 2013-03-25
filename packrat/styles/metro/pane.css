@@ -1,3 +1,12 @@
+/* a weak blank-slate (insulation) attempt, continued from slider2.css */
+.kifi-pane input:not([type]),
+.kifi-pane input[type=text] {
+  background: #fff !important;
+  color: #2D2D2D !important;
+  box-shadow: none;
+  outline: none;
+}
+
 .kifi-pane {
   position: fixed;
   top: 0;
@@ -7,6 +16,9 @@
   width: 322px;
   height: 100%;
   background: #34495e;
+  font: 300 12px Lato,sans-serif;
+  text-align: left;
+  direction: ltr;
   z-index: 2147483639;
   -webkit-transition: right .25s ease-in;
   transition: right .25s ease-in;
@@ -30,7 +42,9 @@ html.kifi-pane-parent.kifi-with-pane {
   background: #2c3e50;
 }
 .kifi-pane-head-logo {
-  margin: 10px 0 0 19px;
+  position: relative;
+  top: 10px;
+  left: 19px;
   width: 38px;
   height: 18px;
   border: 0;
@@ -52,15 +66,17 @@ a.kifi-pane-head-settings:active {
   background-color: #324559;
 }
 .kifi-pane input[type=text].kifi-pane-search {
-  margin: 0 6px;
-  width: 308px;
+  margin: 0;
+  width: 100%;
   height: auto;
+  -moz-box-sizing: border-box;
   box-sizing: border-box;
-  border: none;
+  border: 0 solid transparent;
+  border-width: 0 6px;
   border-radius: 0;
   outline: none;
   box-shadow: none;
-  background: #ecf0f1;
+  background: #ecf0f1 padding-box;
   padding: 9px 12px;
   font: 300 16px/20px Lato,sans-serif;
   color: #333;
@@ -68,7 +84,7 @@ a.kifi-pane-head-settings:active {
   transition: background-color linear .1s;
 }
 .kifi-pane input[type=text].kifi-pane-search:focus {
-  background: #fff;
+  background-color: #fff;
 }
 
 /* shared */
@@ -79,9 +95,13 @@ a.kifi-pane-head-settings:active {
   left: 6px;
   right: 6px;
 }
-.kifi-pane-cubby.kifi-swapping-f,
-.kifi-pane-cubby.kifi-swapping-b {
-  overflow: hidden;
+.kifi-pane-boxes {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  -webkit-transition: -webkit-transform ease-in-out .15s;
+  transition: -webkit-transform ease-in-out .15s, transform ease-in-out .15s;
 }
 .kifi-pane-box {
   position: absolute;
@@ -89,21 +109,8 @@ a.kifi-pane-head-settings:active {
   bottom: 0;
   left: 0;
   width: 100%;
+  -moz-box-sizing: border-box;
   box-sizing: border-box;
-  -webkit-transition: left ease-in-out .15s;
-  transition: left ease-in-out .15s;
-}
-.kifi-swapping-f .kifi-pane-box,
-.kifi-swapping-b .kifi-pane-box.kifi-hiding {
-  left: 100%;
-}
-.kifi-swapping-b .kifi-pane-box,
-.kifi-swapping-f .kifi-pane-box.kifi-hiding {
-  left: -100%;
-}
-.kifi-swapping-f .kifi-pane-box.kifi-showing,
-.kifi-swapping-b .kifi-pane-box.kifi-showing {
-  left: 0;
 }
 .kifi-pane-title,
 a.kifi-pane-back {
@@ -173,7 +180,7 @@ a.kifi-pane-back:active {
   white-space: nowrap;
   cursor: default;
 }
-.kifi-pane-keeper {
+a.kifi-pane-keeper {
   display: inline-block;
   width: 40px;
   height: 40px;

@@ -56,7 +56,7 @@ class AdminSearchLabsController @Inject() (
     val hits = new HitQueue(topN)
     val nullClickBoost = new ResultClickBoosts{ def apply(value: Long) = 1.0f }
     q.foreach{ query =>
-      val (myHits, friendsHits, othersHits) = searcher.searchText(query, 20, nullClickBoost)(Lang("en"))
+      val (myHits, friendsHits, othersHits, parsedQuery) = searcher.searchText(query, 20, nullClickBoost)(Lang("en"))
       myHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
       friendsHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
       othersHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}

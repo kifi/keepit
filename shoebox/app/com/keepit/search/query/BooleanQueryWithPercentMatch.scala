@@ -1,21 +1,22 @@
 package com.keepit.search.query
 
 import org.apache.lucene.index.IndexReader
-import org.apache.lucene.search.{BooleanQuery => LBooleanQuery}
-import org.apache.lucene.search.BooleanScorer2
+import org.apache.lucene.search.BooleanClause
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Searcher
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Similarity
 import org.apache.lucene.search.Weight
-import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import scala.math._
 import java.util.{ArrayList, List => JList}
 import com.keepit.common.logging.Logging
+import org.apache.lucene.search.Explanation
+import org.apache.lucene.search.ComplexExplanation
 
 object BooleanQueryWithPercentMatch {
   def apply(clauses: JList[BooleanClause], percentMatch: Float, disableCoord: Boolean) = {
@@ -26,7 +27,7 @@ object BooleanQueryWithPercentMatch {
   }
 }
 
-class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LBooleanQuery(disableCoord) {
+class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) {
 
   private[this] var percentMatch = 0.0f
 
@@ -74,28 +75,53 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
   override def createWeight(searcher: Searcher) = {
 
     new BooleanWeight(searcher, disableCoord) {
+      private[this] val requiredWeights = new ArrayBuffer[Weight]
+      private[this] val prohibitedWeights = new ArrayBuffer[Weight]
+      private[this] val optionalWeights = new ArrayBuffer[(Weight, Float)]
+      private[this] var totalValueOnRequired = 0.0f
+      private[this] var totalValueOnOptional = 0.0f
+
+      override def sumOfSquaredWeights(): Float = {
+        var sum = 0.0d
+        clauses.zip(weights).foreach{ case (c, w) =>
+          if (c.isProhibited()) {
+            prohibitedWeights += w
+          } else {
+            val value = w.sumOfSquaredWeights().toDouble
+            val sqrtValue = sqrt(value).toFloat
+
+            if (c.isRequired()) {
+              totalValueOnRequired += sqrtValue
+              requiredWeights += w
+            }
+            else {
+              totalValueOnOptional += sqrtValue
+              optionalWeights += ((w, sqrtValue))
+            }
+            sum += value
+          }
+        }
+        sum.toFloat * getBoost() * getBoost()
+      }
+
       override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
         val required = new ArrayBuffer[Scorer]
         val prohibited = new ArrayBuffer[Scorer]
         val optional = new ArrayBuffer[(Scorer, Float)]
 
-        var totalValueOnRequired = 0.0f
-        var totalValueOnOptional = 0.0f
-        clauses.zip(weights).foreach{ case (c, w) =>
+        requiredWeights.foreach{ w =>
           val subScorer = w.scorer(reader, true, false)
-          if (c.isRequired()) {
-            totalValueOnRequired += w.getValue
-            // if a required clasuse does not have a scorer, no hit
-            if (subScorer == null) return null
-            required += subScorer
-          } else if (c.isProhibited()) {
-            if (subScorer != null) prohibited += subScorer
-          } else {
-            totalValueOnOptional += w.getValue
-            if (subScorer != null) {
-              optional += ((subScorer, w.getValue))
-            }
-          }
+          // if a required clasuse does not have a scorer, no hit
+          if (subScorer == null) return null
+          required += subScorer
+        }
+        prohibitedWeights.foreach{ w =>
+          val subScorer = w.scorer(reader, true, false)
+          if (subScorer != null) prohibited += subScorer
+        }
+        optionalWeights.foreach{ case (w, value) =>
+          val subScorer = w.scorer(reader, true, false)
+          if (subScorer != null) optional += ((subScorer, value))
         }
 
         if (required.isEmpty && optional.isEmpty) {
@@ -106,6 +132,74 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends LB
           BooleanScorer(this, disableCoord, similarity, maxCoord, threshold,
                         required.toArray, totalValueOnRequired, optional.toArray, totalValueOnOptional, prohibited.toArray)
         }
+      }
+
+      override def explain(reader: IndexReader, doc: Int): Explanation = {
+         // set up percent match weights
+        sumOfSquaredWeights()
+        val totalValue = totalValueOnOptional + totalValueOnRequired
+        val threshold = totalValue * percentMatch / 100.0f
+
+        val maxCoord = clauses.filterNot{ _.isProhibited }.size
+
+        val sumExpl = new ComplexExplanation()
+        sumExpl.setDescription("sum of:")
+
+        var coord = 0
+        var sum = 0.0f
+        var fail = false
+        var overlapValue = totalValueOnRequired
+        requiredWeights.foreach{ w =>
+          val e = w.explain(reader, doc)
+          if (e.isMatch()) {
+            sumExpl.addDetail(e)
+            coord += 1
+            sum += e.getValue()
+          } else {
+            val r = new Explanation(0.0f, s"no match on required clause (${w.getQuery().toString()})")
+            sumExpl.addDetail(r)
+            fail = true
+          }
+        }
+        prohibitedWeights.foreach{ w =>
+          val e = w.explain(reader, doc)
+          if (e.isMatch()) {
+            val r = new Explanation(0.0f, s"match on prohibited clause (${w.getQuery().toString()})")
+            r.addDetail(e)
+            sumExpl.addDetail(r)
+            fail = true
+          }
+        }
+        optionalWeights.foreach{ case (w, v) =>
+          val e = w.explain(reader, doc)
+          if (e.isMatch()) {
+            sumExpl.addDetail(e)
+            coord += 1
+            sum += e.getValue()
+            overlapValue += v
+          }
+        }
+
+        if (fail) {
+          sumExpl.setMatch(false)
+          sumExpl.setValue(0.0f)
+          sumExpl.setDescription("Failure to meet condition(s) of required/prohibited clause(s)")
+          return sumExpl
+        } else if (overlapValue < threshold) {
+          sumExpl.setDescription(s"below percentMatch threshold (${overlapValue}/${totalValue})")
+          sumExpl.setMatch(false)
+          sumExpl.setValue(0.0f)
+          return sumExpl
+        }
+        sumExpl.setMatch(true)
+        sumExpl.setValue(sum)
+
+        val coordFactor = if (disableCoord) 1.0f else similarity.coord(coord, maxCoord)
+        val result = new ComplexExplanation(sumExpl.isMatch(), sum*coordFactor, "product of:")
+        result.addDetail(sumExpl)
+        if (coordFactor != 1.0f) result.addDetail(new Explanation(coordFactor, s"coord(${coord}/${maxCoord})"))
+        result.addDetail(new Explanation(overlapValue/totalValue, s"percentMatch(${overlapValue/totalValue*100}% = ${overlapValue}/${totalValue})"))
+        result
       }
     }
   }
