@@ -32,8 +32,6 @@ class MainSearcher(
   val currentTime = currentDateTime.getMillis()
   val idFilter = filter.idFilter
   val isInitialSearch = idFilter.isEmpty
-
-
   var query: Option[Query]= None			// will set this during search
 
   // get config params
@@ -216,7 +214,7 @@ class MainSearcher(
     val svVar = svVariance(hitList);								// compute sv variance. may need to record the time elapsed.
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
-
+    println("================= variance = "  + svVar)
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt, svVariance =svVar)
   }
@@ -245,14 +243,13 @@ class MainSearcher(
   private def avgBitVariance( vects: Iterable[Array[Byte]]) = {
     if ( vects.size > 0){
 	  val composer = new SemanticVectorComposer
-	  for(vect <- vects){
-	    composer.add(vect, 1)
-	  }
-    // qs.vec(i) + 0.5 = empirical probability that position i takes value 1.
-    val qs = composer.getQuasiSketch
-    val prob = for( i <- 0 until qs.vec.length) yield ( qs.vec(i) + 0.5f)
-    val sumOfVar = prob.foldLeft(0.0f)( (sum: Float, p:Float) => sum + p*(1-p))			// variance of Bernoulli distribution.
-    Some(sumOfVar/qs.vec.length)
+	  vects.foreach( composer.add(_, 1))
+
+	  // qs.vec(i) + 0.5 = empirical probability that position i takes value 1.
+	  val qs = composer.getQuasiSketch
+	  val prob = for( i <- 0 until qs.vec.length) yield ( qs.vec(i) + 0.5f)
+	  val sumOfVar = prob.foldLeft(0.0f)( (sum: Float, p:Float) => sum + p*(1-p))			// variance of Bernoulli distribution.
+	  Some(sumOfVar/qs.vec.length)
     }
     else{
       None
@@ -280,12 +277,10 @@ class MainSearcher(
         }
 
       }
-      if ( cnt > 0) s/cnt.toFloat else Float.NaN
+      s/cnt.toFloat				// returns Float.NaN if cnt == 0
     }
-    variance match{
-      case Some(v) => v
-      case None => Float.NaN
-    }
+    variance.getOrElse(Float.NaN)
+
   }
 
   def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
@@ -389,7 +384,7 @@ case class ArticleSearchResult(
   pageNumber: Int,
   uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
   time: DateTime = currentDateTime,
-  svVariance : Float 			// semantic vector variance
+  svVariance : Float = Float.NaN			// semantic vector variance
 )
 
 

@@ -91,7 +91,7 @@ class ExtSearchController @Inject() (
         searcher.search(query, maxHits, lastUUID, searchFilter)
       } else {
         log.warn("maxHits is zero")
-        ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue, svVariance = Float.NaN)
+        ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue)
       }
 
       searchRes
