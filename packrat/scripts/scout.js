@@ -108,22 +108,25 @@ var injected, t0 = +new Date;
     }
 
     api.require("styles/metro/tile.css", function() {
-      var tileEl = document.createElement("div");
-      tileEl.id = "kifi-tile";
-      tileEl.style.backgroundImage = "url(" + api.url("images/metro/tile_logo.png") + ")";
+      var el = document.createElement("div");
+      el.id = "kifi-tile";
       if (o.kept) {
-        tileEl.className = "kifi-kept";
+        el.className = "kifi-kept";
       }
+      var transEl = document.createElement("div");
+      transEl.className = "kifi-tile-transparent";
+      transEl.style.backgroundImage = "url(" + api.url("images/metro/tile_logo.png") + ")";
+      el.appendChild(transEl);
       var nUnread = (o.unreadComments || 0) + (o.unreadMessages || 0);
       var nTot = (o.numComments || 0) + (o.numMessages || 0);
       if (nUnread || nTot) {
         var countEl = document.createElement("span");
-        countEl.className = "kifi-count" + (nUnread ? " kifi-unread" : "");
+        countEl.className = "kifi-count" + (nUnread ? " kifi-unread" : "");;
         countEl.textContent = nUnread || nTot;
-        tileEl.appendChild(countEl);
+        (nUnread ? el : transEl).appendChild(countEl);
       }
-      document.documentElement.appendChild(tileEl);
-      tileEl.addEventListener("mouseover", function() {
+      document.documentElement.appendChild(el);
+      el.addEventListener("mouseover", function() {
         withSlider2(function() {
           slider2.show(info, "tile");
         });

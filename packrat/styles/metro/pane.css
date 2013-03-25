@@ -74,9 +74,9 @@ a.kifi-pane-head-settings:active {
   border: 0 solid transparent;
   border-width: 0 6px;
   border-radius: 0;
-  outline: none;
-  box-shadow: none;
-  background: #ecf0f1 padding-box;
+  outline: none !important;
+  box-shadow: none !important;
+  background: #ecf0f1 padding-box !important;
   padding: 9px 12px;
   font: 300 16px/20px Lato,sans-serif;
   color: #333;
@@ -84,7 +84,7 @@ a.kifi-pane-head-settings:active {
   transition: background-color linear .1s;
 }
 .kifi-pane input[type=text].kifi-pane-search:focus {
-  background-color: #fff;
+  background-color: #fff !important;
 }
 
 /* shared */
