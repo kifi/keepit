@@ -219,6 +219,8 @@ api = function() {
     }
   });
 
+  var sockets = [];
+
   // TODO: Use another property (besides .ready) on page to indicate that content script injection has begun,
   // to prevent starting it again before the first one is done.
   function injectContentScripts(tab, callback) {
@@ -407,6 +409,32 @@ api = function() {
       }
       xhr.send(data);
     },
+    socket: {
+      open: function(url, handlers) {
+        var socket = new ReconnectingWebSocket(url);
+        socket.onmessage = function(data) {
+          try {
+            var msg = JSON.parse(data.data);
+            if (Array.isArray(msg)) {
+              var handler = handlers[msg[0]];
+              if (handler) {
+                handler.apply(null, msg.splice(1));
+              }
+            } else {
+              api.log("[api.socket.onmessage] ignoring (not array):", msg, "from url", url);
+            }
+          } catch (e) {
+            api.log.error("[api.socket.onmessage]", e);
+          }
+        }
+        sockets.push(socket);
+        return sockets.length - 1;
+      },
+      close: function(socketId) {
+        sockets[socketId].close();
+        sockets[socketId] = null;
+      }
+    },
     storage: localStorage,
     tabs: {
       each: function(callback) {
@@ -444,8 +472,7 @@ api = function() {
         loading: new Listeners,
         ready: new Listeners,
         complete: new Listeners,
-        unload: new Listeners}
-    },
+        unload: new Listeners}},
     timers: window,
     version: chrome.app.getDetails().version};
 

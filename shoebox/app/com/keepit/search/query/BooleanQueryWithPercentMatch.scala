@@ -18,6 +18,8 @@ import scala.collection.JavaConversions._
 import scala.math._
 import java.util.{ArrayList, List => JList}
 import com.keepit.common.logging.Logging
+import org.apache.lucene.search.Explanation
+import org.apache.lucene.search.ComplexExplanation
 
 object BooleanQueryWithPercentMatch {
   def apply(clauses: JList[BooleanClause], percentMatch: Float, disableCoord: Boolean) = {
@@ -130,6 +132,69 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
           BooleanScorer(this, disableCoord, similarity, maxCoord, threshold,
                         required.toArray, totalValueOnRequired, optional.toArray, totalValueOnOptional, prohibited.toArray)
         }
+      }
+      override def explain(reader: IndexReader, doc: Int): Explanation = {
+        val sumExpl = new ComplexExplanation()
+        sumExpl.setDescription("sum of:")
+        val (totalValue, maxCoord) = clauses.zip(weights).foldLeft((0.0f, 0)){ case ((sum, cnt), (c, w)) =>
+          if (c.isProhibited()) (sum, cnt) else (sum + w.getValue, cnt + 1)
+        }
+        val threshold = totalValue * percentMatch / 100.0f
+
+        var coord = 0
+        var sum = 0.0f
+        var fail = false
+        var overlapValue = 0.0f
+        clauses.zip(weights).foreach{ case (c, w) =>
+          if (w.scorer(reader, true, true) == null) {
+            if (c.isRequired) {
+              val r = new Explanation(0.0f, s"no match on required clause (${c.getQuery().toString()})")
+              sumExpl.addDetail(r)
+              fail = true
+            }
+          } else {
+            val e = w.explain(reader, doc)
+            if (e.isMatch()) {
+              if (!c.isProhibited()) {
+                sumExpl.addDetail(e)
+                coord += 1
+                sum += e.getValue()
+                overlapValue += w.getValue
+              } else {
+                val r = new Explanation(0.0f, s"match on prohibited clause (${c.getQuery().toString()})")
+                r.addDetail(e)
+                sumExpl.addDetail(r)
+                fail = true
+              }
+            }
+            else if (c.isRequired()) {
+              val r = new Explanation(0.0f, s"no match on required clause (${c.getQuery().toString()})")
+              r.addDetail(e)
+              sumExpl.addDetail(r)
+              fail = true
+            }
+          }
+        }
+        if (fail) {
+          sumExpl.setMatch(false)
+          sumExpl.setValue(0.0f)
+          sumExpl.setDescription("Failure to meet condition(s) of required/prohibited clause(s)")
+          return sumExpl
+        } else if (overlapValue < threshold) {
+          sumExpl.setDescription(s"below percentMatch threshold (${overlapValue}/${totalValue})")
+          sumExpl.setMatch(false)
+          sumExpl.setValue(0.0f)
+          return sumExpl
+        }
+        sumExpl.setMatch(true)
+        sumExpl.setValue(sum)
+
+        val coordFactor = if (disableCoord) 1.0f else similarity.coord(coord, maxCoord)
+        val result = new ComplexExplanation(sumExpl.isMatch(), sum*coordFactor, "product of:")
+        result.addDetail(sumExpl)
+        if (coordFactor != 1.0f) result.addDetail(new Explanation(coordFactor, s"coord(${coord}/${maxCoord})"))
+        result.addDetail(new Explanation(overlapValue/totalValue, s"percentMatch(${overlapValue/totalValue*100}% = ${overlapValue}/${totalValue})"))
+        result
       }
     }
   }
