@@ -5,8 +5,13 @@
     {{{image}}}
     <div class="{{innerClass}}">
       <div class="kifi-notify-title">{{title}}</div>
+      {{#subtitle}}
+      <div class="kifi-notify-subtitle">{{subtitle}}</div>
+      <div class="kifi-on-page">On this page:</div>
+      {{/subtitle}}
       {{#link}}<div class="kifi-notify-link">{{link}}</div>{{/link}}
       <div class="kifi-notify-text">&ldquo;{{{contentHtml}}}&rdquo;</div>
+      <div class="kifi-notify-footer">KiFi</div>
     </div>
     <div style="clear:both"></div>
   </div>

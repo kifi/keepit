@@ -11,6 +11,7 @@ var notifier = {
       case "comment":
         KifiNotification.add({
           title: details.author.firstName + " " + details.author.lastName,
+          subtitle: "Wrote a new KiFi Comment",
           contentHtml: details.text,
           link: details.title,
           image: details.author.avatar,
@@ -25,6 +26,7 @@ var notifier = {
       case "message":
         KifiNotification.add({
           title: details.author.firstName + " " + details.author.lastName,
+          subtitle: "Sent you a new KiFi Message",
           contentHtml: details.text,
           link: details.title,
           image: details.author.avatar,
@@ -64,6 +66,7 @@ var KifiNotification = {
 
     render("html/notify_box.html", {
       title: params.title,
+      subtitle: params.subtitle,
       contentHtml: params.contentHtml,
       image: params.image ? '<img src="' + params.image + '" class=kifi-notify-image>' : "",
       popupClass: params.popupClass,
