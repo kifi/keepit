@@ -9,14 +9,14 @@ import com.keepit.inject._
 class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector) {
   def apply(lang: Lang, proximityBoost: Float = 0.0f, semanticBoost: Float = 0.0f, phraseBoost: Float = 0.0f,
       siteBoost: Float = 0.0f): MainQueryParser = {
-    val total = 1.0f + proximityBoost + semanticBoost
+    val total = 1.0f + proximityBoost + semanticBoost + phraseBoost
     new MainQueryParser(
       DefaultAnalyzer.forParsing(lang),
       DefaultAnalyzer.forParsingWithStemmer(lang),
       1.0f/total,
       proximityBoost/total,
       semanticBoost/total,
-      phraseBoost,
+      phraseBoost/total,
       siteBoost,
       phraseDetector
     )
