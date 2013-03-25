@@ -1,7 +1,6 @@
 var sockets = {};
-self.port.on({
-  open_socket: openSocket,
-  close_socket: closeSocket});
+self.port.on("open_socket", openSocket);
+self.port.on("close_socket", closeSocket);
 if (self.options) {
   openSocket(self.options.socketId, self.options.url);
 }
