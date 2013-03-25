@@ -127,14 +127,14 @@ class NormalizedURIRepoImpl @Inject() (
       // If uri.state is ACTIVE or INACTIVE, we do not want an ACTIVE ScrapeInfo record for it
       scrapeRepo.getByUri(saved.id.get) match {
         case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
-          scrapeInfo.withState(ScrapeInfoStates.INACTIVE)
+          scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.INACTIVE))
         case _ => // do nothing
       }
     } else {
       // Otherwise, ensure that ScrapeInfo has an active record for it.
       scrapeRepo.getByUri(saved.id.get) match {
         case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
-          scrapeInfo.withState(ScrapeInfoStates.ACTIVE)
+          scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
         case Some(scrapeInfo) => // do nothing
         case None =>
           scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
