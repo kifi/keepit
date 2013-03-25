@@ -18,7 +18,7 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.net.HttpClientImpl
 import com.keepit.common.social.{SocialGraphPluginImpl, SocialGraphPlugin}
 import com.keepit.inject.{FortyTwoModule, AppScoped}
-import com.keepit.model.SliderHistoryTracker
+import com.keepit.model.{UserExperimentRepo, SliderHistoryTracker}
 import com.keepit.scraper.ScraperConfig
 import com.keepit.scraper.{HttpFetcherImpl, HttpFetcher}
 import com.keepit.search._
@@ -50,9 +50,10 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def searchConfigManager(expRepo: SearchConfigExperimentRepo, db: Database): SearchConfigManager = {
+  def searchConfigManager(
+      expRepo: SearchConfigExperimentRepo, userExpRepo: UserExperimentRepo, db: Database): SearchConfigManager = {
     val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
-    new SearchConfigManager(optFile, expRepo, db)
+    new SearchConfigManager(optFile, expRepo, userExpRepo, db)
   }
 
   @Singleton
