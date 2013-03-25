@@ -58,7 +58,7 @@ private[scraper] class DataIntegrityActor() extends FortyTwoActor with Logging {
   }
 }
 
-class OrphanCleaner {
+class OrphanCleaner extends Logging {
 
   def cleanNormalizedURIs(readOnly: Boolean = true)(implicit session: RWSession) = {
     val nuriRepo = inject[NormalizedURIRepo]
@@ -71,9 +71,12 @@ class OrphanCleaner {
         changedNuris = changedNuris.+:(nuri)
     }
     if (!readOnly) {
+      log.info(s"Changing ${changedNuris.size} NormalizedURIs.")
       changedNuris foreach { nuri =>
         nuriRepo.save(nuri.withState(NormalizedURIStates.ACTIVE))
       }
+    } else {
+      log.info(s"Would have changed ${changedNuris.size} NormalizedURIs.")
     }
     changedNuris.map(_.id.get)
   }
@@ -91,9 +94,12 @@ class OrphanCleaner {
       }
     }
     if (!readOnly) {
+      log.info(s"Changing ${oldScrapeInfos.size} ScrapeInfos.")
       oldScrapeInfos foreach { si =>
         scrapeInfoRepo.save(si.withState(ScrapeInfoStates.INACTIVE))
       }
+    } else {
+      log.info(s"Would have changed ${oldScrapeInfos.size} ScrapeInfos.")
     }
     oldScrapeInfos.map(_.id.get)
   }
