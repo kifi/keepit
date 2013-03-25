@@ -84,18 +84,21 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
       override def sumOfSquaredWeights(): Float = {
         var sum = 0.0d
         clauses.zip(weights).foreach{ case (c, w) =>
-          val value = w.sumOfSquaredWeights().toDouble
-          if (c.isRequired()) {
-            totalValueOnRequired += sqrt(value).toFloat
-            // if a required clause does not have a scorer, no hit
-            requiredWeights += w
-            sum + value
-          } else if (c.isProhibited()) {
+          if (c.isProhibited()) {
             prohibitedWeights += w
           } else {
-            totalValueOnOptional += sqrt(value).toFloat
-            optionalWeights += ((w, sqrt(value).toFloat))
-            sum + value
+            val value = w.sumOfSquaredWeights().toDouble
+            val sqrtValue = sqrt(value).toFloat
+
+            if (c.isRequired()) {
+              totalValueOnRequired += sqrtValue
+              requiredWeights += w
+            }
+            else {
+              totalValueOnOptional += sqrtValue
+              optionalWeights += ((w, sqrtValue))
+            }
+            sum += value
           }
         }
         sum.toFloat * getBoost() * getBoost()
@@ -130,48 +133,53 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
                         required.toArray, totalValueOnRequired, optional.toArray, totalValueOnOptional, prohibited.toArray)
         }
       }
+
       override def explain(reader: IndexReader, doc: Int): Explanation = {
+         // set up percent match weights
+        sumOfSquaredWeights()
+        val totalValue = totalValueOnOptional + totalValueOnRequired
+        val threshold = totalValue * percentMatch / 100.0f
+
+        val maxCoord = clauses.filterNot{ _.isProhibited }.size
+
         val sumExpl = new ComplexExplanation()
         sumExpl.setDescription("sum of:")
-        val (totalValue, maxCoord) = clauses.zip(weights).foldLeft((0.0f, 0)){ case ((sum, cnt), (c, w)) =>
-          if (c.isProhibited()) (sum, cnt) else (sum + w.getValue, cnt + 1)
-        }
-        val threshold = totalValue * percentMatch / 100.0f
 
         var coord = 0
         var sum = 0.0f
         var fail = false
-        var overlapValue = 0.0f
-        clauses.zip(weights).foreach{ case (c, w) =>
-          if (w.scorer(reader, true, true) == null) {
-            if (c.isRequired) {
-              val r = new Explanation(0.0f, s"no match on required clause (${c.getQuery().toString()})")
-              sumExpl.addDetail(r)
-              fail = true
-            }
+        var overlapValue = totalValueOnRequired
+        requiredWeights.foreach{ w =>
+          val e = w.explain(reader, doc)
+          if (e.isMatch()) {
+            sumExpl.addDetail(e)
+            coord += 1
+            sum += e.getValue()
           } else {
-            val e = w.explain(reader, doc)
-            if (e.isMatch()) {
-              if (!c.isProhibited()) {
-                sumExpl.addDetail(e)
-                coord += 1
-                sum += e.getValue()
-                overlapValue += w.getValue
-              } else {
-                val r = new Explanation(0.0f, s"match on prohibited clause (${c.getQuery().toString()})")
-                r.addDetail(e)
-                sumExpl.addDetail(r)
-                fail = true
-              }
-            }
-            else if (c.isRequired()) {
-              val r = new Explanation(0.0f, s"no match on required clause (${c.getQuery().toString()})")
-              r.addDetail(e)
-              sumExpl.addDetail(r)
-              fail = true
-            }
+            val r = new Explanation(0.0f, s"no match on required clause (${w.getQuery().toString()})")
+            sumExpl.addDetail(r)
+            fail = true
           }
         }
+        prohibitedWeights.foreach{ w =>
+          val e = w.explain(reader, doc)
+          if (e.isMatch()) {
+            val r = new Explanation(0.0f, s"match on prohibited clause (${w.getQuery().toString()})")
+            r.addDetail(e)
+            sumExpl.addDetail(r)
+            fail = true
+          }
+        }
+        optionalWeights.foreach{ case (w, v) =>
+          val e = w.explain(reader, doc)
+          if (e.isMatch()) {
+            sumExpl.addDetail(e)
+            coord += 1
+            sum += e.getValue()
+            overlapValue += v
+          }
+        }
+
         if (fail) {
           sumExpl.setMatch(false)
           sumExpl.setValue(0.0f)
