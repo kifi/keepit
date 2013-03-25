@@ -106,7 +106,6 @@ class BooleanQueryWithPercentMatchTest extends Specification {
     "filter result according to importance of terms (three term cases)" in {
       indexReader.numDocs() === 10
 
-
       var q = new BooleanQueryWithPercentMatch(false)
       q.add(new TermQuery(aaa), Occur.SHOULD)
       q.add(new TermQuery(bbb), Occur.SHOULD)
