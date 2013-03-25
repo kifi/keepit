@@ -25,6 +25,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.model._
 import com.keepit.common.db._
+import com.google.inject.Provider
 
 import scala.concurrent.duration._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
@@ -72,7 +73,8 @@ class NormalizedURICache @Inject() (val repo: FortyTwoCachePlugin) extends Forty
 class NormalizedURIRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  idCache: NormalizedURICache)
+  idCache: NormalizedURICache,
+  scrapeRepoProvider: Provider[ScrapeInfoRepo])
     extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
@@ -120,7 +122,7 @@ class NormalizedURIRepoImpl @Inject() (
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
     val saved = super.save(uri)
 
-    val scrapeRepo = inject[ScrapeInfoRepo]
+    lazy val scrapeRepo = scrapeRepoProvider.get
     if(uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE) {
       // If uri.state is ACTIVE or INACTIVE, we do not want an ACTIVE ScrapeInfo record for it
       scrapeRepo.getByUri(saved.id.get) match {
