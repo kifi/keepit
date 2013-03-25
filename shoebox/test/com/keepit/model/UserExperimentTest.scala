@@ -58,12 +58,12 @@ class UserExperimentTest extends Specification {
         }
 
         inject[Database].readWrite{ implicit session =>
-          val shanees = expRepo.getByUser(shanee.id.get)
+          val shanees = expRepo.getUserExperiments(shanee.id.get)
           shanees.size === 1
-          shanees.head.experimentType === ExperimentTypes.ADMIN
-          val santas = expRepo.getByUser(santa.id.get)
+          shanees.head === ExperimentTypes.ADMIN
+          val santas = expRepo.getUserExperiments(santa.id.get)
           santas.size === 2
-          val shachafs = expRepo.getByUser(shachaf.id.get)
+          val shachafs = expRepo.getUserExperiments(shachaf.id.get)
           shachafs.size === 0
           val admins = expRepo.getByType(ExperimentTypes.ADMIN)
           admins.size === 2

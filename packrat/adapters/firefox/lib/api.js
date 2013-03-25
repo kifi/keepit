@@ -176,14 +176,59 @@ exports.request = function(method, url, data, done, fail) {
   require("sdk/request").Request(options)[method.toLowerCase()]();
 };
 
+var socketPage, socketHandlers = [,];
 exports.socket = {
   open: function(url, handlers) {
-    // Not implemented
-    return 0;
+    socketHandlers.push(handlers);
+    var socketId = socketHandlers.length - 1;
+    exports.log("[api.socket.open]", socketId, url);
+    if (socketPage) {
+      socketPage.port.emit("open_socket", socketId, url);
+    } else {
+      socketPage = require("sdk/page-worker").Page({
+        contentScriptFile: [
+          data.url("scripts/lib/reconnecting-websocket.js"),
+          data.url("scripts/workers/socket.js")],
+        contentScriptWhen: "start",
+        contentScriptOptions: {socketId: socketId, url: url},
+        contentURL: data.url("html/workers/socket.html")
+      });
+      socketPage.port.on("socket_message", onSocketMessage);
+    }
+    return socketId;
   },
   close: function(socketId) {
-    // Not implemented
-    return;
+    if (socketHandlers[socketId]) {
+      exports.log("[api.socket.close]", socketId);
+      delete socketHandlers[socketId];
+      socketPage.port.emit("close_socket", socketId);
+      if (!socketHandlers.some(function(h) {return h})) {
+        socketPage.destroy();
+        socketPage = null;
+      }
+    } else {
+      exports.log("[api.socket.close]", socketId, "(ignored)");
+    }
+  }
+}
+function onSocketMessage(socketId, data) {
+  try {
+    var msg = JSON.parse(data);
+    if (Array.isArray(msg)) {
+      var handlers = socketHandlers[socketId];
+      if (handlers) {
+        var handler = handlers[msg[0]];
+        if (handler) {
+          handler.apply(null, msg.splice(1));
+        }
+      } else {
+        exports.log("[api.onSocketMessage] no handlers for", socketId);
+      }
+    } else {
+      exports.log("[api.onSocketMessage] ignoring (not array)", msg);
+    }
+  } catch (e) {
+    exports.log.error("[api.onSocketMessage]", e);
   }
 }
 

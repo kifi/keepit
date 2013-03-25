@@ -2,18 +2,21 @@ package com.keepit.search
 
 import com.keepit.common.db.slick.Database
 import com.keepit.inject._
-import com.keepit.model.{UserRepo, User}
+import com.keepit.model._
+import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
 import com.keepit.test.{DbRepos, EmptyApplication}
 import org.specs2.mutable.Specification
 import play.api.Play.current
 import play.api.test.Helpers._
+import com.keepit.model.User
+import com.keepit.model.UserExperiment
 
 class SearchConfigTest extends Specification with DbRepos {
   "The search configuration" should {
     "load defaults correctly" in {
       running(new EmptyApplication()) {
         val searchConfigManager =
-          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[Database])
+          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[UserExperimentRepo], inject[Database])
         val userRepo = inject[UserRepo]
         inject[Database].readWrite { implicit s =>
           val andrew = userRepo.save(User(firstName = "Andrew", lastName = "Connor"))
@@ -28,7 +31,7 @@ class SearchConfigTest extends Specification with DbRepos {
     "load overrides for experiments" in {
       running(new EmptyApplication()) {
         val searchConfigManager =
-          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[Database])
+          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[UserExperimentRepo], inject[Database])
         val userRepo = inject[UserRepo]
         inject[Database].readWrite { implicit s =>
           val andrew = userRepo.save(User(firstName = "Andrew", lastName = "Connor"))
@@ -58,7 +61,7 @@ class SearchConfigTest extends Specification with DbRepos {
     }
     "load correct override based on weights" in {
       running(new EmptyApplication()) {
-        val searchConfigManager = new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[Database])
+        val searchConfigManager = new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[UserExperimentRepo], inject[Database])
         val userRepo = inject[UserRepo]
         inject[Database].readWrite { implicit s =>
           val andrew = userRepo.save(User(firstName = "Andrew", lastName = "Connor"))
@@ -87,7 +90,7 @@ class SearchConfigTest extends Specification with DbRepos {
     "not get configs from inactive experiments" in {
       running(new EmptyApplication()) {
         val searchConfigManager =
-          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[Database])
+          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[UserExperimentRepo], inject[Database])
         val userRepo = inject[UserRepo]
         inject[Database].readWrite { implicit s =>
           val greg = userRepo.save(User(firstName = "Greg", lastName = "Metvin"))
@@ -106,6 +109,33 @@ class SearchConfigTest extends Specification with DbRepos {
           c2.asInt("percentMatch") !== 700
           c2.asDouble("phraseBoost") !== 500.0
         }
+      }
+    }
+    "ignore experiments for users excluded from experiments" in {
+      running(new EmptyApplication()) {
+        val userExperimentRepo = inject[UserExperimentRepo]
+        val searchConfigManager =
+          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], userExperimentRepo, inject[Database])
+        val userRepo = inject[UserRepo]
+        val greg = db.readWrite { implicit s =>
+          userRepo.save(User(firstName = "Greg", lastName = "Metvin"))
+        }
+        searchConfigManager.saveExperiment(SearchConfigExperiment(config = SearchConfig(
+          "percentMatch" -> "9000",
+          "phraseBoost" -> "10000.0"
+        ), weight = 1, state = SearchConfigExperimentStates.ACTIVE))
+        val (c1, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
+        c1.asInt("percentMatch") === 9000
+        c1.asDouble("phraseBoost") === 10000.0
+        db.readWrite { implicit s =>
+          userExperimentRepo.save(UserExperiment(
+            userId = greg.id.get,
+            experimentType = NO_SEARCH_EXPERIMENTS
+          ))
+        }
+        val (c2, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
+        c2.asInt("percentMatch") !== 9000
+        c2.asDouble("phraseBoost") !== 10000.0
       }
     }
     "update startedAt in experiments when started" in {

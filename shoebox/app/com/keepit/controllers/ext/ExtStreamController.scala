@@ -55,7 +55,7 @@ class ExtStreamController @Inject() (
       db.readOnly { implicit session =>
         val socialUser = socialUserInfoRepo.get(SocialId(secSocialUser.id.id), SocialNetworks.FACEBOOK)
         val userId = socialUser.userId.get
-        val experiments = experimentRepo.getByUser(userId).map(_.experimentType)
+        val experiments = experimentRepo.getUserExperiments(userId)
         impersonatedUserIdOpt match {
           case Some(impExtUserId) if experiments.find(e => e == ExperimentTypes.ADMIN).isDefined =>
             val impUserId =  userRepo.get(impExtUserId).id.get
