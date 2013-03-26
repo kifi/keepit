@@ -10,6 +10,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
 import akka.actor.ActorSystem
 import scala.collection.JavaConverters._
+import com.keepit.common.db.State
+import play.api.libs.iteratee.Iteratee
 
 trait StreamManager[T, S] {
   def connect(identifier: T): Enumerator[S]
@@ -105,6 +107,7 @@ class DouglasAdamsQuoteStreamManager @Inject() (streams: Streams, system: ActorS
   }
 }
 
+case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Seq[State[ExperimentType]], adminUserId: Option[Id[User]])
 
 @Singleton
 class UserDefaultStreamManager @Inject() (streams: Streams) extends UserStreamManager {

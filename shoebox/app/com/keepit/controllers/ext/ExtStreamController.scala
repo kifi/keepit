@@ -29,8 +29,6 @@ import com.keepit.common.db.slick.Database
 import play.api.mvc.RequestHeader
 import com.keepit.common.controller.BrowserExtensionController
 
-case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Seq[State[ExperimentType]], adminUserId: Option[Id[User]])
-
 @Singleton
 class ExtStreamController @Inject() (
     db: Database,
@@ -38,6 +36,8 @@ class ExtStreamController @Inject() (
     userRepo: UserRepo,
     experimentRepo: UserExperimentRepo,
     streamProvider: UserStreamProvider,
+    userStream: UserDefaultStreamManager,
+    notifyStream: UserNotificationStreamManager,
     streams: Streams) extends BrowserExtensionController with Logging {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
     /*
@@ -75,6 +75,7 @@ class ExtStreamController @Inject() (
         val feeds = streamProvider.getStreams(request.queryString.keys.toSeq)
 
         val enumerator = Enumerator.interleave(feeds.map(_.connect(streamSession.userId))).asInstanceOf[Enumerator[JsValue]]
+
         val iteratee = Iteratee.foreach[JsValue]{ message =>
           handleIncomingMessage(streamSession, message)
         }.mapDone { _ =>
@@ -96,6 +97,14 @@ class ExtStreamController @Inject() (
   def handleIncomingMessage(streamSession: StreamSession, message: JsValue) = {
     log.info(s"New message from ${streamSession.userId}: $message")
     // And handle here...
+
+    message match {
+      case JsString("ping") =>
+        userStream.push(streamSession.userId, Json.arr("pong"))
+      case JsString("get_unread_count") =>
+        streams.sendUnreadCount(streamSession.userId)
+    }
+
   }
 
 }

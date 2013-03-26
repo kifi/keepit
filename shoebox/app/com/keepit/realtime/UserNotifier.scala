@@ -83,6 +83,8 @@ class UserNotifier @Inject() (
 
         notifyCommentByEmail(user, commentDetail)
         notificationBroadcast.push(userNotification)
+
+        userNotification.withState(UserNotificationStates.DELIVERED)
       }
     }
   }
@@ -103,6 +105,8 @@ class UserNotifier @Inject() (
         ))
         notifyMessageByEmail(user, messageDetail)
         notificationBroadcast.push(userNotification)
+
+        userNotification.withState(UserNotificationStates.DELIVERED)
       }
     }
   }
