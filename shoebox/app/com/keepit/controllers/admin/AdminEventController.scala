@@ -1,28 +1,39 @@
 package com.keepit.controllers.admin
 
-import play.api.Play.current
-import play.api.mvc._
-
-import com.keepit.inject._
-import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
-import com.keepit.common.controller.AdminController
-import play.api.libs.json._
+import com.google.inject.{Inject, Singleton}
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
-import play.api.data._
-import play.api.data.Forms._
-import play.api.libs.iteratee._
-import play.api.libs.concurrent._
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.controller.AdminController
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.Database
+import com.keepit.common.time._
+import com.keepit.model.{UserRepo, User}
 import com.keepit.search.SearchConfigManager
-
+import org.joda.time.{Months, ReadablePeriod, Weeks}
+import play.api.data.Forms._
+import play.api.data._
+import play.api.libs.json._
+import play.api.mvc._
+import scala.collection.mutable
 import views.html
 
-import com.google.inject.{Inject, Singleton}
+case class ActivityData(
+  numUsers: Int,
+  activeUsers1Mo: Set[User],
+  inactiveUsers1Mo: Set[User],
+  keeping1Mo: Int,
+  commenting1Mo: Int,
+  activeUsers1Wk: Set[User],
+  inactiveUsers1Wk: Set[User],
+  keeping1Wk: Int,
+  commenting1Wk: Int
+)
 
 @Singleton
 class AdminEventController @Inject() (
+  db: Database,
+  userRepo: UserRepo,
   searchConfigManager: SearchConfigManager,
   rb: ReportBuilderPlugin,
   reportStore: ReportStore,
@@ -60,10 +71,42 @@ class AdminEventController @Inject() (
   }
 
   def reportList() = AdminHtmlAction { request =>
+    def queryUserIds(table: String, ago: ReadablePeriod)
+        (implicit s: RSession): Set[Id[User]] = {
+      val ids = new mutable.ArrayBuffer[Long]()
+      val date = currentDate.minus(ago)
+      val query = s"SELECT DISTINCT u.id FROM user u, $table t WHERE t.user_id = u.id AND t.created_at > '$date';"
+      val rs = s.getPreparedStatement(query).executeQuery()
+      while (rs.next()) {
+        ids += rs.getLong("id")
+      }
+      ids.map(Id[User](_)).toSet
+    }
+
+    // TODO: stop doing this when we have a large number of users
+    val userMap: Map[Id[User], User] =
+      db.readOnly { implicit s => userRepo.all() }.map(user => user.id.get -> user).toMap
+    val (activeUsers1Wk, inactiveUsers1Wk, b1w, c1w) = db.readOnly { implicit session =>
+      val b = queryUserIds("bookmark", Weeks.ONE)
+      val c = queryUserIds("comment", Weeks.ONE)
+      val active = (b ++ c).map(userMap.get(_).get)
+      val notActive = userMap.values.toSet -- active
+      (active, notActive, b.size, c.size)
+    }
+    val (activeUsers1Mo, inactiveUsers1Mo, b1m, c1m) = db.readOnly { implicit session=>
+      val b = queryUserIds("bookmark", Months.ONE)
+      val c = queryUserIds("comment", Months.ONE)
+      val active = (b ++ c).map(userMap.get(_).get)
+      val notActive = userMap.values.toSet -- active
+      (active, notActive, b.size, c.size)
+    }
+
+    val activityData = ActivityData(
+      userMap.size, activeUsers1Mo, inactiveUsers1Mo, b1m, c1m, activeUsers1Wk, inactiveUsers1Wk, b1w, c1w)
 
     val availableReports = reportStore.getReports() // strip ".json"
 
-    Ok(html.admin.reports(availableReports))
+    Ok(html.admin.reports(availableReports, activityData))
   }
 
   def activityViewer() = AdminHtmlAction { implicit request =>
