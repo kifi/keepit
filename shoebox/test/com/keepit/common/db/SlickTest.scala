@@ -15,6 +15,7 @@ import org.specs2.mutable.Specification
 import scala.slick.lifted.Query
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 
 class SlickTest extends Specification {
 
@@ -142,6 +143,41 @@ class SlickTest extends Specification {
         db.readOnly{ implicit session =>
           q.firstOption === None
         }
+      }
+    }
+
+
+    "re-try MySQLIntegrityConstraintViolationException failed transactions" in {
+
+      running(new ShoeboxApplication()) {
+        val db = inject[Database]
+        import db.db.Driver.Implicit._ // here's the driver, abstracted away
+
+        var count = 0
+
+        db.readWrite(3) { implicit session =>
+          count += 1
+        }
+        count === 1
+
+        count = 0
+        db.readWrite(3) { implicit session =>
+          count += 1
+          if(count < 3) throw new MySQLIntegrityConstraintViolationException
+        }
+        count === 3
+
+        count = 0
+        ({
+          db.readWrite(1) { implicit session =>
+            count += 1
+            throw new MySQLIntegrityConstraintViolationException
+          }
+          Unit
+        }) must throwA[MySQLIntegrityConstraintViolationException]
+        count === 1
+
+
       }
     }
 

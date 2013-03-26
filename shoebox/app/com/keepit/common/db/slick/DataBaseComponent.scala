@@ -1,11 +1,16 @@
 package com.keepit.common.db.slick
 
 import com.google.inject.Inject
-import com.keepit.common.db.{DbSequence, DbInfo}
-import java.sql.{PreparedStatement, Connection}
+import com.keepit.common.db.{ DbSequence, DbInfo }
+import java.sql.{ PreparedStatement, Connection }
 import scala.collection.mutable
 import scala.slick.driver._
-import scala.slick.session.{Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability}
+import scala.slick.session.{ Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
+import scala.annotation.tailrec
+import com.keepit.common.logging.Logging
+import scala.util.Failure
+import scala.util.Success
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
@@ -18,7 +23,7 @@ trait DataBaseComponent {
   def entityName(name: String): String = name
 }
 
-class Database @Inject() (val db: DataBaseComponent) {
+class Database @Inject() (val db: DataBaseComponent) extends Logging {
 
   import DBSession._
 
@@ -34,6 +39,26 @@ class Database @Inject() (val db: DataBaseComponent) {
         f(new RWSession(s))
       }
     } finally s.close()
+  }
+
+  def readWrite[T](attempts: Int = 1)(f: RWSession => T): T = {
+    @tailrec
+    def readWriteHelper(attempt: Int, f: RWSession => T): T = {
+      {
+        try { Success(readWrite(f)) }
+        catch { case ex: MySQLIntegrityConstraintViolationException => Failure(ex) }
+      } match {
+        case Success(res) => res
+        case Failure(ex) =>
+          if (attempt >= attempts) throw ex
+          else {
+            log.warn(s"Failed readWrite transaction. Retrying (${attempt+1}/$attempts)")
+            readWriteHelper(attempt + 1, f)
+          }
+      }
+    }
+    assert(attempts > 0)
+    readWriteHelper(1, f)
   }
 }
 
