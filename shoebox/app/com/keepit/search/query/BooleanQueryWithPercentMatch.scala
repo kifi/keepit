@@ -80,8 +80,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
       private[this] val optionalWeights = new ArrayBuffer[(Weight, Float)]
       private[this] var totalValueOnRequired = 0.0f
       private[this] var totalValueOnOptional = 0.0f
-
-      override def sumOfSquaredWeights(): Float = {
+      private[this] val normalizationValue: Float = {
         var sum = 0.0d
         clauses.zip(weights).foreach{ case (c, w) =>
           if (c.isProhibited()) {
@@ -103,6 +102,8 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
         }
         sum.toFloat * getBoost() * getBoost()
       }
+
+      override def sumOfSquaredWeights(): Float = normalizationValue
 
       override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
         val required = new ArrayBuffer[Scorer]
@@ -135,11 +136,8 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
       }
 
       override def explain(reader: IndexReader, doc: Int): Explanation = {
-         // set up percent match weights
-        sumOfSquaredWeights()
         val totalValue = totalValueOnOptional + totalValueOnRequired
         val threshold = totalValue * percentMatch / 100.0f
-
         val maxCoord = clauses.filterNot{ _.isProhibited }.size
 
         val sumExpl = new ComplexExplanation()
@@ -193,13 +191,18 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
         }
         sumExpl.setMatch(true)
         sumExpl.setValue(sum)
+        sumExpl.setDescription(s"percentMatch(${overlapValue/totalValue*100}% = ${overlapValue}/${totalValue}), sum of:")
 
-        val coordFactor = if (disableCoord) 1.0f else similarity.coord(coord, maxCoord)
-        val result = new ComplexExplanation(sumExpl.isMatch(), sum*coordFactor, "product of:")
-        result.addDetail(sumExpl)
-        if (coordFactor != 1.0f) result.addDetail(new Explanation(coordFactor, s"coord(${coord}/${maxCoord})"))
-        result.addDetail(new Explanation(overlapValue/totalValue, s"percentMatch(${overlapValue/totalValue*100}% = ${overlapValue}/${totalValue})"))
-        result
+        if (disableCoord) {
+          sumExpl
+        }
+        else {
+          val coordFactor = similarity.coord(coord, maxCoord)
+          val result = new ComplexExplanation(sumExpl.isMatch(), sum*coordFactor, "product of:")
+          result.addDetail(sumExpl)
+          result.addDetail(new Explanation(coordFactor, s"coord(${coord}/${maxCoord})"))
+          result
+        }
       }
     }
   }

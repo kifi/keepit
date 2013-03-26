@@ -50,6 +50,7 @@ class SemanticVectorQueryTest extends Specification {
       implicit def toReader(text: String) = new StringReader(text)
 
       override val sequenceNumber = SequenceNumber.ZERO
+      override val isDeleted = false
 
       override def buildDocument = {
         val doc = super.buildDocument

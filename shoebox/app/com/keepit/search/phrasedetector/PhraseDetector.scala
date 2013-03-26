@@ -156,6 +156,7 @@ class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: Phr
 
 class PhraseIndexable(override val id: Id[Phrase], phrase: String, lang: Lang) extends Indexable[Phrase] with PhraseFieldBuilder {
   override val sequenceNumber = SequenceNumber.ZERO
+  override val isDeleted = false
   override def buildDocument = {
     val doc = super.buildDocument
     doc.add(buildPhraseField("p", phrase, lang))
