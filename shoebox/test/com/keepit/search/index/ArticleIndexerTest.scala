@@ -235,5 +235,51 @@ class ArticleIndexerTest extends Specification with DbRepos {
       val doc = indexer.buildIndexable(uri1.id.get).buildDocument
       doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
     })
+
+    "delete documents with inactive, active, unscrapable, oe scrape_wanted state" in running(new EmptyApplication())(new IndexerScope {
+      indexer.run()
+      indexer.numDocs == 3
+
+      db.readWrite { implicit s =>
+        uri1 = uriRepo.saveAsIndexable(uriRepo.get(uri1.id.get).withState(ACTIVE))
+      }
+      indexer.run()
+      indexer.numDocs === 2
+      indexer.search("content1").size === 0
+      indexer.search("content2").size === 1
+      indexer.search("content3").size === 1
+
+      db.readWrite { implicit s =>
+        uri1 = uriRepo.saveAsIndexable(uriRepo.get(uri1.id.get).withState(SCRAPED))
+        uri2 = uriRepo.saveAsIndexable(uriRepo.get(uri2.id.get).withState(INACTIVE))
+      }
+      indexer.run()
+      indexer.numDocs === 2
+      indexer.search("content1").size === 1
+      indexer.search("content2").size === 0
+      indexer.search("content3").size === 1
+
+      db.readWrite { implicit s =>
+        uri1 = uriRepo.saveAsIndexable(uri1.withState(SCRAPED))
+        uri2 = uriRepo.saveAsIndexable(uri2.withState(SCRAPED))
+        uri3 = uriRepo.saveAsIndexable(uri3.withState(UNSCRAPABLE))
+      }
+      indexer.run()
+      indexer.numDocs === 2
+      indexer.search("content1").size === 1
+      indexer.search("content2").size === 1
+      indexer.search("content3").size === 0
+
+      db.readWrite { implicit s =>
+        uri1 = uriRepo.saveAsIndexable(uri1.withState(SCRAPE_WANTED))
+        uri2 = uriRepo.saveAsIndexable(uri2.withState(SCRAPED))
+        uri3 = uriRepo.saveAsIndexable(uri3.withState(SCRAPED))
+      }
+      indexer.run()
+      indexer.numDocs === 2
+      indexer.search("content1").size === 0
+      indexer.search("content2").size === 1
+      indexer.search("content3").size === 1
+})
   }
 }
