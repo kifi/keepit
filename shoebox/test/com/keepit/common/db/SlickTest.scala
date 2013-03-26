@@ -152,23 +152,6 @@ class SlickTest extends Specification {
       running(new ShoeboxApplication()) {
         val db = inject[Database]
         import db.db.Driver.Implicit._ // here's the driver, abstracted away
-        import db.db.Driver.Table
-
-        val T = new Table[Int]("t") {
-          def a = column[Int]("a")
-          def * = a
-        }
-
-        db.readWrite{ implicit session =>
-          T.ddl.create
-        }
-
-        val q = Query(T)
-
-        db.readWrite{ implicit session =>
-          T.insert(42)
-          q.firstOption === Some(42)
-        }
 
         var count = 0
 

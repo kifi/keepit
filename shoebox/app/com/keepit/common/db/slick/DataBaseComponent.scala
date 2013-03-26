@@ -1,11 +1,11 @@
 package com.keepit.common.db.slick
 
 import com.google.inject.Inject
-import com.keepit.common.db.{DbSequence, DbInfo}
-import java.sql.{PreparedStatement, Connection}
+import com.keepit.common.db.{ DbSequence, DbInfo }
+import java.sql.{ PreparedStatement, Connection }
 import scala.collection.mutable
 import scala.slick.driver._
-import scala.slick.session.{Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability}
+import scala.slick.session.{ Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
 import scala.annotation.tailrec
 import com.keepit.common.logging.Logging
 import scala.util.Failure
@@ -50,9 +50,9 @@ class Database @Inject() (val db: DataBaseComponent) extends Logging {
       } match {
         case Success(res) => res
         case Failure(ex) =>
-          if(attempt >= attempts) throw ex
+          if (attempt >= attempts) throw ex
           else {
-            log.warn(s"Failed readWrite transaction. Retrying ($attempt/$attempts)")
+            log.warn(s"Failed readWrite transaction. Retrying (${attempt+1}/$attempts)")
             readWriteHelper(attempt + 1, f)
           }
       }
