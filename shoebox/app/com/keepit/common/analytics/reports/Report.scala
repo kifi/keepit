@@ -1,19 +1,16 @@
 package com.keepit.common.analytics.reports
 
-import play.api.libs.json._
+import org.joda.time._
+
 import com.keepit.common.analytics._
-import com.keepit.model._
+import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.inject._
-import play.api.Play.current
-import com.keepit.common.time._
-import com.keepit.common.logging.Logging
-import com.mongodb.casbah.Imports._
-import scala.util.Random
-import org.joda.time._
-import com.keepit.common.db.slick.{DBSession, FortyTwoTypeMappers, Database}
 import com.keepit.search.SearchConfigExperiment
-import com.keepit.common.db.Id
+import com.mongodb.casbah.Imports._
+
+import play.api.Play.current
 
 object Parsers {
   type ParsedDBObject = (DateTime, Map[String, ValueOrdering])
@@ -47,7 +44,7 @@ case class CompleteReport(reportName: String, reportVersion: String, list: Seq[R
 
     log.info(keyedList mkString ", ")
 
-    val duration = new Duration(currentDateTime.minusDays(1),currentDateTime) // for now, all reports are 1 day durations
+    val period = Period.days(1) // for now, all reports are 1 day durations
 
     val startDate = dates.headOption.getOrElse(currentDateTime.minusDays(30))
     val endDate = dates.lastOption.getOrElse(currentDateTime)
@@ -56,7 +53,7 @@ case class CompleteReport(reportName: String, reportVersion: String, list: Seq[R
     while(!d.isAfter(endDate)) {
       val newCSVRow = (d.toStandardTimeString + "," + (keyedList.getOrElse(d,Seq.fill(columns.length-1)(",")).mkString(",")))
       csvList = newCSVRow +: csvList
-      d = d.plus(duration)
+      d = d.plus(period)
     }
     csvList = ("datetime," + columns.mkString(",")) +: csvList
     csvList.mkString("\n")
@@ -417,6 +414,46 @@ class DailyNewThread extends Report with Logging {
       }
     }
     CompleteReport(reportName = reportName, reportVersion = reportVersion, list = fields)
+  }
+}
+
+class DailyActiveUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT,
+  Seq("keep", "comment", "message", "kifiResultClicked"))
+class WeeklyActiveUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT,
+  Seq("keep", "comment", "message", "kifiResultClicked"))
+class MonthlyActiveUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT,
+  Seq("keep", "comment", "message", "kifiResultClicked"))
+
+class DailyKeepingUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT, Seq("keep"))
+class WeeklyKeepingUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT, Seq("keep"))
+class MonthlyKeepingUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT, Seq("keep"))
+
+class DailyKCMUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT, Seq("keep", "comment", "message"))
+class WeeklyKCMUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT, Seq("keep", "comment", "message"))
+class MonthlyKCMUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT, Seq("keep", "comment", "message"))
+
+class DailyClickingUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT, Seq("kifiResultClicked"))
+class WeeklyClickingUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT, Seq("kifiResultClicked"))
+class MonthlyClickingUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT, Seq("kifiResultClicked"))
+
+sealed abstract class ActiveUsersReport(func: MongoMapFunc, events: Seq[String]) extends Report with Logging {
+  override val reportName = getClass.getSimpleName
+  override val numFields = 2
+  override val ordering = 230
+
+  def get(startDate: DateTime, endDate: DateTime): CompleteReport  = {
+    val selector = MongoSelector(EventFamilies.GENERIC_USER).withDateRange(startDate, endDate)
+        .withEventNameIn(events: _*).build
+
+    store.mapReduce(EventFamilies.GENERIC_USER.collection, func, MongoReduceFunc.BASIC_COUNT, Some(collectionName), Some(selector), None)
+    store.mapReduce(collectionName, MongoMapFunc.KEY_DAY_COUNT, MongoReduceFunc.BASIC_COUNT, Some(collectionName), None, None)
+
+    val resultsSelector = MongoSelector(EventFamilies.GENERIC_USER)
+    val results = store.find(collectionName, resultsSelector).toSeq
+
+    val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2) _
+
+    builder(results map(Parsers.dateCountParser(reportName,_, ordering)) toMap)
   }
 }
 
