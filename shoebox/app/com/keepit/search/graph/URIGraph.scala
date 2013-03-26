@@ -102,12 +102,16 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     val bookmarks = inject[Database].readOnly { implicit session =>
       inject[BookmarkRepo].getByUser(userId)
     }
-    new URIListIndexable(userId, seq, bookmarks)
+    new URIListIndexable(id = userId,
+                         sequenceNumber = seq,
+                         isDeleted = false,
+                         bookmarks = bookmarks)
   }
 
   class URIListIndexable(
     override val id: Id[User],
     override val sequenceNumber: SequenceNumber,
+    override val isDeleted: Boolean,
     val bookmarks: Seq[Bookmark]
   ) extends Indexable[User] with LineFieldBuilder {
 

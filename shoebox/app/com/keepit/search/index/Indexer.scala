@@ -96,7 +96,11 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
           val error = document match {
             case Left(doc) =>
               try {
-                indexWriter.updateDocument(indexable.idTerm, doc)
+                if (indexable.isDeleted) {
+                  indexWriter.deleteDocuments(indexable.idTerm)
+                } else {
+                  indexWriter.updateDocument(indexable.idTerm, doc)
+                }
                 if (maxSequenceNumber < indexable.sequenceNumber)
                   maxSequenceNumber = indexable.sequenceNumber
                 log.debug("indexed id=%s seq=%s".format(indexable.id, indexable.sequenceNumber))
