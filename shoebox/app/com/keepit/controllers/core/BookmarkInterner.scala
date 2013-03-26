@@ -47,7 +47,7 @@ class BookmarkInterner @Inject() (db: Database, uriRepo: NormalizedURIRepo, scra
 
     if (!url.toLowerCase.startsWith("javascript:")) {
       log.debug("interning bookmark %s with title [%s]".format(json, title))
-      val (uri, needsToScrape) = db.readWrite { implicit s =>
+      val (uri, needsToScrape) = db.readWrite(attempts = 2) { implicit s =>
         uriRepo.getByNormalizedUrl(url) match {
           case Some(uri) if uri.state == NormalizedURIStates.ACTIVE | uri.state == NormalizedURIStates.INACTIVE =>
             (uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_WANTED)), true)
@@ -57,7 +57,7 @@ class BookmarkInterner @Inject() (db: Database, uriRepo: NormalizedURIRepo, scra
       }
       if (needsToScrape) scraper.asyncScrape(uri)
 
-      val bookmark = db.readWrite { implicit s =>
+      val bookmark = db.readWrite(attempts = 2) { implicit s =>
         bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get) match {
           case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
           case Some(bookmark) => Some(bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate)))

@@ -8,6 +8,7 @@ import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.inject._
 import com.keepit.model._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import java.io.StringReader
@@ -24,6 +25,9 @@ object ArticleIndexer {
 
     new ArticleIndexer(indexDirectory, config, articleStore)
   }
+
+  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE)
+  def shouldDelete(uri: NormalizedURI): Boolean = toBeDeletedStates.contains(uri.state)
 }
 
 class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, articleStore: ArticleStore)
@@ -63,12 +67,17 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   }
 
   def buildIndexable(uri: NormalizedURI): ArticleIndexable = {
-    new ArticleIndexable(uri.id.get, uri.seq, uri, articleStore)
+    new ArticleIndexable(id = uri.id.get,
+                         sequenceNumber = uri.seq,
+                         isDeleted = ArticleIndexer.shouldDelete(uri),
+                         uri = uri,
+                         articleStore = articleStore)
   }
 
   class ArticleIndexable(
-    val id: Id[NormalizedURI],
-    val sequenceNumber: SequenceNumber,
+    override val id: Id[NormalizedURI],
+    override val sequenceNumber: SequenceNumber,
+    override val isDeleted: Boolean,
     val uri: NormalizedURI,
     articleStore: ArticleStore
   ) extends Indexable[NormalizedURI] {
