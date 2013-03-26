@@ -19,6 +19,8 @@ trait Indexable[T] {
 
   val sequenceNumber: SequenceNumber
   val id: Id[T]
+  val isDeleted: Boolean
+
   val idTerm = Indexer.idFieldTerm.createTerm(id.toString)
 
   def buildDocument: Document = {
