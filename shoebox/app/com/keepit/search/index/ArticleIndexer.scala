@@ -25,6 +25,9 @@ object ArticleIndexer {
 
     new ArticleIndexer(indexDirectory, config, articleStore)
   }
+
+  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE)
+  def shouldDelete(uri: NormalizedURI): Boolean = toBeDeletedStates.contains(uri.state)
 }
 
 class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, articleStore: ArticleStore)
@@ -66,7 +69,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   def buildIndexable(uri: NormalizedURI): ArticleIndexable = {
     new ArticleIndexable(id = uri.id.get,
                          sequenceNumber = uri.seq,
-                         isDeleted = (uri.state == INACTIVE),
+                         isDeleted = ArticleIndexer.shouldDelete(uri),
                          uri = uri,
                          articleStore = articleStore)
   }
