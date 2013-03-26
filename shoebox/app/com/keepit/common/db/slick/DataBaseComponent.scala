@@ -6,6 +6,11 @@ import java.sql.{PreparedStatement, Connection}
 import scala.collection.mutable
 import scala.slick.driver._
 import scala.slick.session.{Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability}
+import scala.annotation.tailrec
+import com.keepit.common.logging.Logging
+import scala.util.Failure
+import scala.util.Success
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
@@ -18,7 +23,7 @@ trait DataBaseComponent {
   def entityName(name: String): String = name
 }
 
-class Database @Inject() (val db: DataBaseComponent) {
+class Database @Inject() (val db: DataBaseComponent) extends Logging {
 
   import DBSession._
 
