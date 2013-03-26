@@ -8,6 +8,10 @@
           <form action="@com.keepit.controllers.admin.routes.AdminEventController.buildReport" method="POST">
             <div><input type="hidden" name="reportName" value="daily"><input type="submit" value="Build Daily Reports"></div>
           </form>
+            <form action="@com.keepit.controllers.admin.routes.AdminEventController.buildReport" method="POST">
+                <div><input type="hidden" name="reportName" value="active_users"><input type="submit"
+                value="Build Active Users Reports"></div>
+            </form>
           <form action="@com.keepit.controllers.admin.routes.AdminEventController.buildReport" method="POST">
             <div><input type="hidden" name="reportName" value="admin"><input type="submit" value="Build Admin Reports"></div>
           </form>
