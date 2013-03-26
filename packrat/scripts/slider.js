@@ -10,6 +10,8 @@
 // @require scripts/lib/lodash.min.js
 // @require scripts/lib/mustache-0.7.1.min.js
 // @require scripts/render.js
+// @require scripts/formatting.js
+// @require scripts/look.js
 // @require scripts/snapshot.js
 
 slider = function() {
@@ -424,69 +426,6 @@ slider = function() {
     });
   }
 
-  function commentTextFormatter() {
-    return function(text, render) {
-      // Careful... this is raw text (necessary for URL detection). Be sure to Mustache.escape untrusted portions!
-      text = render(text);
-
-      // linkify look-here links (from markdown)
-      var parts = text.split(/\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/);
-      for (var i = 1; i < parts.length; i += 3) {
-        parts[i] = "<a href='x-kifi-sel:" + parts[i+1].replace(/\\\)/g, ")") + "'>" + Mustache.escape(parts[i].replace(/\\\]/g, "]")) + "</a>";
-        parts[i+1] = "";
-      }
-
-      for (i = 0; i < parts.length; i += 3) {
-        // linkify URLs, from http://regex.info/listing.cgi?ed=3&p=207
-        var bits = parts[i].split(/(\b(?:(ftp|https?):\/\/[-\w]+(?:\.\w[-\w]*)+|(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/[^.!,?;"'<>()\[\]{}\s\x7F-\xFF]*(?:[.!,?]+[^.!,?;"'<>()\[\]{}\s\x7F-\xFF]+)*)?)/);
-        for (var j = 1; j < bits.length; j += 3) {
-          var escapedUri = Mustache.escape(bits[j]);
-          bits[j] = '<a target=_blank href="' + (bits[j+1] ? ""  : "http://") + escapedUri + '">' + escapedUri + "</a>";
-          bits[j+1] = "";
-        }
-        for (j = 0; j < bits.length; j += 3) {
-          bits[j] = Mustache.escape(bits[j]);
-        }
-        parts[i] = bits.join("");
-      }
-
-      return "<p class=first-line>" + parts.join("").replace(/\n(?:[ \t\r]*\n)*/g, "</p><p>") + "</p>";
-    }
-  }
-
-  function commentDateFormatter() {
-    return function(text, render) {
-      try {
-        return new Date(render(text)).toString();
-      } catch (e) {
-        return "";
-      }
-    }
-  }
-
-  function isoDateFormatter() {
-    return function(text, render) {
-      try {
-        return new Date(render(text)).toISOString();
-      } catch (e) {
-        return "";
-      }
-    }
-  }
-
-  function commentSerializer(html) {
-    html = html
-      .replace(/<div><br\s*[\/]?><\/div>/gi, '\n')
-      .replace(/<br\s*[\/]?>/gi, '\n')
-      .replace(/<\/div><div>/gi, '\n')
-      .replace(/<div\s*[\/]?>/gi, '\n')
-      .replace(/<\/div>/gi, '')
-      .replace(/<a [^>]*\bhref="x-kifi-sel:([^"]*)"[^>]*>(.*?)<\/a>/gi, function($0, $1, $2) {
-        return "[" + $2.replace(/\]/g, "\\]") + "](x-kifi-sel:" + $1.replace(/\)/g, "\\)") + ")";
-      });
-    return $('<div>').html(html).text().trim();
-  }
-
   function updateCommentCount(type, count) {
     count = count != null ? count : $(".kifi-comment-real").length; // if no count passed in, count DOM nodes
 
@@ -511,9 +450,9 @@ slider = function() {
         "lastName": "",
         "avatar": session.avatarUrl
       },
-      formatComments: commentTextFormatter,
-      formatDate: commentDateFormatter,
-      formatIsoDate: isoDateFormatter,
+      formatComments: getCommentTextFormatter,
+      formatDate: getCommentDateFormatter,
+      formatIsoDate: getIsoDateFormatter,
       comments: visibleComments,
       showControlBar: type == "public",
       following: following,
@@ -678,77 +617,9 @@ slider = function() {
       $(this).toggleClass("kifi-following", following);
     });
 
-    $container.children(".kifi-comments-body,.kifi-comments-post").on("mousedown", "a[href^='x-kifi-sel:']", function(e) {
-      if (e.which != 1) return;
-      e.preventDefault();
-      var el = snapshot.fuzzyFind(this.href.substring(11));
-      if (el) {
-        // make absolute positioning relative to document instead of viewport
-        document.documentElement.style.position = "relative";
-
-        var aRect = this.getBoundingClientRect();
-        var elRect = el.getBoundingClientRect();
-        var sTop = e.pageY - e.clientY, sLeft = e.pageX - e.clientX;
-        var ms = scrollTo(elRect);
-        $("<div class=kifi-snapshot-highlight>").css({
-          left: aRect.left + sLeft,
-          top: aRect.top + sTop,
-          width: aRect.width,
-          height: aRect.height
-        }).appendTo("body").animate({
-          left: elRect.left + sLeft - 3,
-          top: elRect.top + sTop - 2,
-          width: elRect.width + 6,
-          height: elRect.height + 4
-        }, ms).delay(2000).fadeOut(1000, function() {$(this).remove()});
-      } else {
-        alert("Sorry, this reference is no longer valid on this page.");
-      }
-
-      function scrollTo(r) {  // TODO: factor out for reuse
-        var pad = 100;
-        var hWin = $(window).height();
-        var wWin = $(window).width();
-        var sTop = $(document).scrollTop(), sTop2;
-        var sLeft = $(document).scrollLeft(), sLeft2;
-        var oTop = sTop + r.top;
-        var oLeft = sLeft + r.left;
-
-        if (r.height + 2 * pad < hWin) { // fits with space around it
-          sTop2 = (sTop > oTop - pad) ? oTop - pad :
-            (sTop + hWin < oTop + r.height + pad) ? oTop + r.height + pad - hWin : sTop;
-        } else if (r.height < hWin) { // fits without full space around it, so center
-          sTop2 = oTop - (hWin - r.height) / 2;
-        } else { // does not fit, so get it to fill up window
-          sTop2 = sTop < oTop ? oTop : (sTop + hWin > oTop + r.height) ? oTop + r.height - hWin : sTop;
-        }
-        sTop2 = Math.max(0, sTop2);
-
-        if (r.width + 2 * pad < wWin) { // fits with space around it
-          sLeft2 = (sLeft > oLeft - pad) ? oLeft - pad :
-            (sLeft + wWin < oLeft + r.width + pad) ? oLeft + r.width + pad - wWin : sLeft;
-        } else if (r.width < wWin) { // fits without full space around it, so center
-          sLeft2 = oLeft - (wWin - r.width) / 2;
-        } else { // does not fit, so get it to fill up window
-          sLeft2 = sLeft < oLeft ? oLeft : (sLeft + wWin > oLeft + r.width) ? oLeft + r.width - wWin : sLeft;
-        }
-        sLeft2 = Math.max(0, sLeft2);
-
-        if (sTop2 == sTop && sLeft2 == sLeft) return 400;
-
-        var ms = Math.max(400, Math.min(800, 100 * Math.log(Math.max(Math.abs(sLeft2 - sLeft), Math.abs(sTop2, sTop)))));
-        $("<b>").css({position: "absolute", opacity: 0, display: "none"}).appendTo("body").animate({opacity: 1}, {
-            duration: ms,
-            step: function(a) {
-              window.scroll(
-                sLeft2 * a + sLeft * (1 - a),
-                sTop2 * a + sTop * (1 - a));
-            }, complete: function() {
-              $(this).remove()
-            }});
-        return ms;
-      }
-    }).on("click", "a[href^='x-kifi-sel:']", function(e) {
+    $container.children(".kifi-comments-body,.kifi-comments-post")
+    .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
+    .on("click", "a[href^='x-kifi-sel:']", function(e) {
       e.preventDefault();
     });
 
@@ -804,7 +675,7 @@ slider = function() {
       $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
 
       var value = $(this).html();
-      value = commentSerializer(value);
+      value = convertDraftToText(value);
       if (!value) { // unchanged text!
         $(this).html(placeholder);
       }
@@ -897,7 +768,7 @@ slider = function() {
       $(this).closest("form").submit();
     }).on("submit", ".kifi-comment-form", function(e) {
       e.preventDefault();
-      var text = commentSerializer($(".kifi-comment-compose").find(".kifi-placeholder").remove().end().html());
+      var text = convertDraftToText($(".kifi-comment-compose").find(".kifi-placeholder").remove().end().html());
       if (!text) {
         $(".kifi-comment-compose").html(placeholder);
         return false;
@@ -914,9 +785,9 @@ slider = function() {
         var params = newComment;
 
         newComment.isLoggedInUser = true;
-        params["formatComments"] = commentTextFormatter;
-        params["formatDate"] = commentDateFormatter;
-        params["formatIsoDate"] = isoDateFormatter;
+        params["formatComments"] = getCommentTextFormatter;
+        params["formatDate"] = getCommentDateFormatter;
+        params["formatIsoDate"] = getIsoDateFormatter;
 
         badGlobalState["updates"].publicCount++;
         badGlobalState["updates"].countSum++;
@@ -932,7 +803,7 @@ slider = function() {
       return false;
     }).on("submit", ".kifi-message-form", function(e) {
       e.preventDefault();
-      var text = commentSerializer($(".kifi-comment-compose").find(".kifi-placeholder").remove().end().html());
+      var text = convertDraftToText($(".kifi-comment-compose").find(".kifi-placeholder").remove().end().html());
       if (!text) {
         $(".kifi-comment-compose").html(placeholder);
         return false;
@@ -982,9 +853,9 @@ slider = function() {
 
         var params = newComment.message;
         newComment.message.isLoggedInUser = true;
-        params["formatComments"] = commentTextFormatter;
-        params["formatDate"] = commentDateFormatter;
-        params["formatIsoDate"] = isoDateFormatter;
+        params["formatComments"] = getCommentTextFormatter;
+        params["formatDate"] = getCommentDateFormatter;
+        params["formatIsoDate"] = getIsoDateFormatter;
 
         render("html/comments/comment.html", params, function(html) {
           //drawCommentView(html, session, type);
