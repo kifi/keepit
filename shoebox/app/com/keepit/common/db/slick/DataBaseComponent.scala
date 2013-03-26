@@ -41,24 +41,15 @@ class Database @Inject() (val db: DataBaseComponent) extends Logging {
     } finally s.close()
   }
 
-  def readWrite[T](attempts: Int = 1)(f: RWSession => T): T = {
-    @tailrec
-    def readWriteHelper(attempt: Int, f: RWSession => T): T = {
-      {
-        try { Success(readWrite(f)) }
-        catch { case ex: MySQLIntegrityConstraintViolationException => Failure(ex) }
-      } match {
-        case Success(res) => res
-        case Failure(ex) =>
-          if (attempt >= attempts) throw ex
-          else {
-            log.warn(s"Failed readWrite transaction. Retrying (${attempt+1}/$attempts)")
-            readWriteHelper(attempt + 1, f)
-          }
+  def readWrite[T](attempts: Int)(f: RWSession => T): T = {
+    1 to attempts - 1 foreach { attempt =>
+      try {
+        return readWrite(f)
+      } catch { case ex: MySQLIntegrityConstraintViolationException =>
+        log.warn(s"Failed readWrite transaction attempt $attempt of $attempts")
       }
     }
-    assert(attempts > 0)
-    readWriteHelper(1, f)
+    readWrite(f)
   }
 }
 
