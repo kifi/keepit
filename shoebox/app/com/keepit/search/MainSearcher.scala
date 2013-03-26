@@ -213,8 +213,11 @@ class MainSearcher(
     val svVar = svVariance(parsedQuery, hitList);								// compute sv variance. may need to record the time elapsed.
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
+    val searchResultUuid = ExternalId[ArticleSearchResultRef]()
+    log.info( " = %s , svVariance = %f".format(searchResultUuid, svVar) )
+
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
-        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt, svVariance = svVar)
+        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar)
   }
 
   private def getPublicBookmarkCount(id: Long) = {
@@ -383,7 +386,7 @@ case class ArticleSearchResult(
   uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
   time: DateTime = currentDateTime,
   svVariance: Float = Float.NaN			// semantic vector variance
-)
+)extends Logging
 
 
 class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float) extends Equals {
