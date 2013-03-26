@@ -214,7 +214,7 @@ class MainSearcher(
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
-    log.info( " = %s , svVariance = %f".format(searchResultUuid, svVar) )
+    log.info( "searchResultUuid = %s , svVariance = %f".format(searchResultUuid, svVar) )
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar)
