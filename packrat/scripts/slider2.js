@@ -23,7 +23,7 @@ slider2 = function() {
   });
 
   function showSlider(o, trigger, locator) {
-    info = o = info || o;  // ignore o after first call
+    info = o = info || o;  // ignore o after first call (may be out of date)
     api.log("slider info:", o);
 
     lastShownAt = +new Date;
@@ -285,28 +285,20 @@ slider2 = function() {
     });
   }
 
-  function showPane(pane, back) {
-    api.log("[showPane]", pane, back ? "back" : "");
-    var params;
-    switch (pane) {
-      case "general":
-        params = {
+  const createPaneTemplateParams = {
+    general: function() {
+      return {
           title: document.title,
           url: location.href,
           kept: info.kept,
           keepers: pick(info.keepers, 7),
           keepersCaptionHtml: formatCountHtml(0, (info.keepers || 0).length, info.otherKeeps)};
-        break;
-      case "comments":
-        params = {};
-        break;
-      case "threads":
-        params = {};
-        break;
-      case "notices":
-        params = {};
-        break;
     }
+  };
+
+  function showPane(pane, back) {
+    api.log("[showPane]", pane, back ? "back" : "");
+    var params = (createPaneTemplateParams[pane] || Object)();
     if ($pane) {
       render("html/metro/pane_" + pane + ".html", params, function(html) {
         back = back || pane == "general";
@@ -318,7 +310,7 @@ slider2 = function() {
         var $new = $(html).css({left: back ? 0 : d, width: w}).appendTo($boxes);
         $boxes.layout().css("transform", "translate(" + (back ? 0 : -d) + "px,0)")
         .on("transitionend webkitTransitionEnd", function() {
-          $old.remove();
+          $old.trigger("kifi:remove").remove();
           $new.detach().css({left: "", width: ""}).appendTo($cubby);
           $boxes.remove();
           $cubby.css("overflow", "");
@@ -343,19 +335,38 @@ slider2 = function() {
         });
       });
     }
+    (populatePane[pane] || $.noop)();
   }
 
   function hidePane() {
     api.log("[hidePane]");
     $pane.on("transitionend webkitTransitionEnd", function(e) {
       if (e.target.classList.contains("kifi-pane")) {
-        $(e.target).remove();
+        $(e.target).find(".kifi-pane-box").trigger("kifi:remove").end().remove();
         $html.removeClass("kifi-pane-parent");
       }
     });
     $pane = null;
     var $html = $("html").removeClass("kifi-with-pane");
   }
+
+  const populatePane = {
+    comments: function() {
+      api.port.emit("get_comments", {kind: "public"}, function(comments) {
+        api.log("comments:", comments);
+        var session = comments.session;
+        comments = comments.public;
+        //updateCommentCount(type, comments.length);
+        comments.forEach(function(c) {
+          c.isLoggedInUser = c.user.externalId == session.userId;
+        });
+
+        api.require("scripts/comments.js", function() {
+          renderComments($pane.find(".kifi-pane-comments .kifi-pane-tall"), comments);
+        });
+      });
+    }
+  };
 
   function formatCountHtml(kept, numFriends, numOthers) {
     return [
