@@ -95,7 +95,7 @@ class SliderShownListener extends EventListenerPlugin {
 
   def onEvent: PartialFunction[Event,Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SLIDER, "sliderShown", externalUser, _, experiments, metaData, _), _, _) =>
-      val (user, normUri) = inject[Database].readWrite {implicit s =>
+      val (user, normUri) = inject[Database].readWrite(3) {implicit s =>
         val user = inject[UserRepo].get(externalUser)
         val normUri = (metaData \ "url").asOpt[String].map { url =>
           val repo = inject[NormalizedURIRepo]
