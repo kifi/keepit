@@ -38,6 +38,10 @@ case class MongoSelector(eventFamily: EventFamily) {
     q = q ++ ("metaData.eventName" -> name)
     this
   }
+  def withEventNameIn(names: String*): this.type = {
+    q = q ++ ("metaData.eventName" $in names)
+    this
+  }
   def withMetaData(field: String): this.type = {
     q = q ++ (s"metaData.metaData.$field" $exists true)
     this
