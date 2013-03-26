@@ -38,6 +38,7 @@ class AdminEventController @Inject() (
     )
 
     val reportGroup = reportForm.bindFromRequest.get.toLowerCase match {
+      case "active_users" => Reports.ActiveUsersReports
       case "daily" => Reports.DailyReports
       case "admin" => Reports.DailyAdminReports
       case "experiment" =>
