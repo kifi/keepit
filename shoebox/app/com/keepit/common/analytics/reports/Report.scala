@@ -417,13 +417,20 @@ class DailyNewThread extends Report with Logging {
   }
 }
 
-class DailyActiveUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT, Seq("keep", "kifiResultClicked"))
-class WeeklyActiveUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT, Seq("keep", "kifiResultClicked"))
-class MonthlyActiveUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT, Seq("keep", "kifiResultClicked"))
+class DailyActiveUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT,
+  Seq("keep", "comment", "message", "kifiResultClicked"))
+class WeeklyActiveUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT,
+  Seq("keep", "comment", "message", "kifiResultClicked"))
+class MonthlyActiveUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT,
+  Seq("keep", "comment", "message", "kifiResultClicked"))
 
 class DailyKeepingUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT, Seq("keep"))
 class WeeklyKeepingUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT, Seq("keep"))
 class MonthlyKeepingUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT, Seq("keep"))
+
+class DailyKCMUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT, Seq("keep", "comment", "message"))
+class WeeklyKCMUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT, Seq("keep", "comment", "message"))
+class MonthlyKCMUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT, Seq("keep", "comment", "message"))
 
 class DailyClickingUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT, Seq("kifiResultClicked"))
 class WeeklyClickingUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT, Seq("kifiResultClicked"))
