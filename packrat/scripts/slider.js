@@ -127,6 +127,7 @@ slider = function() {
           }
         });
 
+        badGlobalState["session"] = o.session;
         badGlobalState["updates"] = {
           publicCount: o.numComments,
           messageCount: o.numMessages,

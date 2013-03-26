@@ -11,11 +11,12 @@ var notifier = {
       case "comment":
         KifiNotification.add({
           title: details.author.firstName + " " + details.author.lastName,
+          subtitle: "Wrote a new KiFi Comment",
           contentHtml: details.text,
           link: details.title,
           image: details.author.avatar,
           sticky: false,
-          showForMs: 7000,
+          showForMs: 15000,
           clickAction: function() {
             var win = window.open(details.url, "_blank");
             win.focus();
@@ -25,11 +26,12 @@ var notifier = {
       case "message":
         KifiNotification.add({
           title: details.author.firstName + " " + details.author.lastName,
+          subtitle: "Sent you a new KiFi Message",
           contentHtml: details.text,
           link: details.title,
           image: details.author.avatar,
           sticky: false,
-          showForMs: 7000,
+          showForMs: 15000,
           clickAction: function() {
             var win = window.open(details.url, "_blank");
             win.focus();
@@ -64,6 +66,7 @@ var KifiNotification = {
 
     render("html/notify_box.html", {
       title: params.title,
+      subtitle: params.subtitle,
       contentHtml: params.contentHtml,
       image: params.image ? '<img src="' + params.image + '" class=kifi-notify-image>' : "",
       popupClass: params.popupClass,
@@ -103,8 +106,9 @@ var KifiNotification = {
         params.clickAction();
       });
 
-      $item.find(".kifi-notify-close").click(function() {
+      $item.find(".kifi-notify-close").click(function(event) {
         KifiNotification.removeSpecific($item, {}, true);
+        return false;
       });
     });
 

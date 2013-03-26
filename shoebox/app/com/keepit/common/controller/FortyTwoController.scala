@@ -84,7 +84,7 @@ trait AuthenticatedController extends Controller with Logging with SecureSocial 
   }
 
   private def getExperiments(userId: Id[User])(implicit session: RSession): Seq[State[ExperimentType]] =
-    inject[UserExperimentRepo].getByUser(userId).map(_.experimentType)
+    inject[UserExperimentRepo].getUserExperiments(userId)
 
   private[controller] def AuthenticatedAction(isApi: Boolean, action: AuthenticatedRequest[AnyContent] => Result) =
     AuthenticatedAction[AnyContent](parse.anyContent)(isApi, action)
@@ -162,7 +162,7 @@ trait AdminController extends AuthenticatedController {
     AuthenticatedAction(isApi, { implicit request =>
       val userId = request.adminUserId.getOrElse(request.userId)
       val isAdmin = inject[Database].readOnly{ implicit session =>
-        inject[UserExperimentRepo].get(userId, ExperimentTypes.ADMIN).isDefined
+        inject[UserExperimentRepo].hasExperiment(userId, ExperimentTypes.ADMIN)
       }
       val authorizedDevUser = Play.isDev && userId.id == 1L
       if (authorizedDevUser || isAdmin) {

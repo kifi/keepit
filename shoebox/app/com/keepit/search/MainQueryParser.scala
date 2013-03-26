@@ -36,30 +36,26 @@ class MainQueryParser(
 
   private[this] val phraseDiscount = (1.0f - phraseBoost)
 
-  private def tryAddPhraseQueries(query: BooleanQuery) {
-    var discountedQuery = Set.empty[Query]
+  private def createPhraseQueries(query: BooleanQuery): Option[Query] = {
+    var phraseQueries = new BooleanQuery(true)
+
     phraseDetector.detectAll(getStemmedTermArray).foreach{ phrase =>
-      val phraseQueries = List("ts", "cs", "title_stemmed").foldLeft(new BooleanQuery()){ (bq, field) =>
+      List("ts", "cs", "title_stemmed").foreach{ field =>
         val phraseStart = phrase._1
         val phraseEnd = phraseStart + phrase._2
-
-        // discount subqueries that are deemed as a part of the detected phrase
-        var i = phraseStart
-        while (i < phraseEnd) {
-          val curQuery = getStemmedQuery(i)
-          // don't discount the same query again
-          if (!discountedQuery.contains(curQuery)) curQuery.setBoost(phraseDiscount)
-          i += 1
-        }
 
         // construct a phrase query
         val phraseQuery = getStemmedPhrase(field, phraseStart, phraseEnd)
 
-        bq.add(phraseQuery, Occur.SHOULD)
-        bq
+        phraseQueries.add(phraseQuery, Occur.SHOULD)
       }
-      phraseQueries.setBoost(phraseBoost)
       query.add(phraseQueries, Occur.SHOULD)
+    }
+    if (phraseQueries.clauses.size > 0) {
+      phraseQueries.setBoost(phraseBoost)
+      Some(phraseQueries)
+    } else {
+      None
     }
   }
 
@@ -68,35 +64,32 @@ class MainQueryParser(
       val terms = getTerms(query)
       if (terms.size <= 0) query
       else {
+        query.setBoost(baseBoost)
+
+        val auxQueries = ArrayBuffer.empty[Query]
+
         if (phraseBoost > 0.0f) {
           query match {
-            case query: BooleanQuery => tryAddPhraseQueries(query)
+            case query: BooleanQuery => createPhraseQueries(query).foreach{ q => auxQueries += q }
             case _ =>
           }
         }
 
-        query.setBoost(baseBoost)
-
-        val svq = if (semanticBoost > 0.0f) {
+        if (semanticBoost > 0.0f) {
           val svq = SemanticVectorQuery("sv", terms)
           svq.setBoost(semanticBoost)
-          Some(svq)
-        } else {
-          None
+          auxQueries += svq
         }
 
-        val proxOpt = if (numStemmedTerms > 1 && proximityBoost > 0.0f) {
+        if (numStemmedTerms > 1 && proximityBoost > 0.0f) {
           val proxQ = new BooleanQuery(true)
           proxQ.add(ProximityQuery(getStemmedTerms("cs")), SHOULD)
           proxQ.add(ProximityQuery(getStemmedTerms("ts")), SHOULD)
           proxQ.add(ProximityQuery(getStemmedTerms("title_stemmed")), SHOULD)
           proxQ.setBoost(proximityBoost)
-          Some(proxQ)
-        } else {
-          None
+          auxQueries += proxQ
         }
-
-        new TopLevelQuery(query, svq, proxOpt, enableCoord)
+        new TopLevelQuery(query, auxQueries.toArray, enableCoord)
       }
     }
   }

@@ -33,7 +33,8 @@ class ArticleSearchResultTest extends Specification with DbRepos {
               filter = Set(100L, 200L, 300L),
               uuid = ExternalId[ArticleSearchResultRef](),
               pageNumber = 3,
-              millisPassed = 23)
+              millisPassed = 23,
+              svVariance = 1.0f)
          val json = new ArticleSearchResultSerializer().writes(res)
          val deserialized = new ArticleSearchResultSerializer().reads(json).get
          deserialized.uuid === res.uuid
@@ -58,7 +59,8 @@ class ArticleSearchResultTest extends Specification with DbRepos {
               filter = Set(100L, 200L, 300L),
               uuid = ExternalId[ArticleSearchResultRef](),
               pageNumber = 4,
-              millisPassed = 24)
+              millisPassed = 24,
+              svVariance = 1.0f)
          val model = db.readWrite { implicit s =>
            repo.save(ArticleSearchResultFactory(res))
          }

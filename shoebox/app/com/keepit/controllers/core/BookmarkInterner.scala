@@ -47,13 +47,16 @@ class BookmarkInterner @Inject() (db: Database, uriRepo: NormalizedURIRepo, scra
 
     if (!url.toLowerCase.startsWith("javascript:")) {
       log.debug("interning bookmark %s with title [%s]".format(json, title))
-      val (uri, isNewURI) = db.readWrite { implicit s =>
+      val (uri, needsToScrape) = db.readWrite { implicit s =>
         uriRepo.getByNormalizedUrl(url) match {
+          case Some(uri) if uri.state == NormalizedURIStates.ACTIVE | uri.state == NormalizedURIStates.INACTIVE =>
+            (uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_WANTED)), true)
           case Some(uri) => (uri, false)
           case None => (createNewURI(title, url), true)
         }
       }
-      if (isNewURI) scraper.asyncScrape(uri)
+      if (needsToScrape) scraper.asyncScrape(uri)
+
       val bookmark = db.readWrite { implicit s =>
         bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get) match {
           case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
@@ -73,7 +76,7 @@ class BookmarkInterner @Inject() (db: Database, uriRepo: NormalizedURIRepo, scra
   }
 
   private def createNewURI(title: String, url: String)(implicit session: RWSession) =
-    uriRepo.save(NormalizedURIFactory(title = title, url = url))
+    uriRepo.save(NormalizedURIFactory(title = title, url = url, state = NormalizedURIStates.SCRAPE_WANTED))
 
   private def addToActivityStream(user: User, bookmark: Bookmark) = {
     val social = db.readOnly { implicit session =>
