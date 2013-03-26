@@ -1,0 +1,13 @@
+<div class="kifi-pane-tall-bottom">
+  <div class="kifi-comments-posted">
+    {{#comments}}
+      {{>comment}}
+    {{/comments}}
+    {{^comments}}
+    <div class="kifi-comments-none">
+      Be the first to leave a comment!
+    </div>
+    {{/comments}}
+  </div>
+  {{>compose}}
+</div>
