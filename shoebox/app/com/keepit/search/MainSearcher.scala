@@ -386,7 +386,7 @@ case class ArticleSearchResult(
   uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
   time: DateTime = currentDateTime,
   svVariance: Float = Float.NaN			// semantic vector variance
-)extends Logging
+)
 
 
 class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float) extends Equals {
