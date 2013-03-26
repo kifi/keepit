@@ -14,7 +14,7 @@ import com.keepit.search.query.QueryHash
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
-      "phraseBoost" -> "0.0",
+      "phraseBoost" -> "1.0",
       "siteBoost" -> "2.0",
       "enableCoordinator" -> "true",
       "similarity" -> "default",
@@ -30,7 +30,7 @@ object SearchConfig {
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
       "tailCutting" -> "0.20",
-      "proximityBoost" -> "1.0",
+      "proximityBoost" -> "2.0",
       "semanticBoost" -> "5.0",
       "dumpingByRank" -> "true",
       "dumpingHalfDecayMine" -> "8.0",
