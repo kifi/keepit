@@ -55,6 +55,9 @@ object Reports {
   lazy val dailyKeepingUsers = new DailyKeepingUsers
   lazy val weeklyKeepingUsers = new WeeklyKeepingUsers
   lazy val monthlyKeepingUsers = new MonthlyKeepingUsers
+  lazy val dailyKCMUsers = new DailyKCMUsers
+  lazy val weeklyKCMUsers = new WeeklyKCMUsers
+  lazy val monthlyKCMUsers = new MonthlyKCMUsers
 
   case class ReportGroup(name: String, reports: Seq[Report])
 
@@ -93,6 +96,7 @@ object Reports {
     Seq(
       dailyActiveUsers, weeklyActiveUsers, monthlyActiveUsers,
       dailyClickingUsers, weeklyClickingUsers, monthlyClickingUsers,
+      dailyKCMUsers, weeklyKCMUsers, monthlyKCMUsers,
       dailyKeepingUsers, weeklyKeepingUsers, monthlyKeepingUsers
     )
   )
