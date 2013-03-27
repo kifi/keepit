@@ -12,7 +12,6 @@ import play.api.libs.json.JsValue
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import play.libs.Json
-import com.keepit.realtime.UserNotificationStreamManager
 import com.keepit.serializer.SendableNotificationSerializer
 import scala.slick.lifted.Query
 
