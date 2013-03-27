@@ -122,13 +122,11 @@ class ExtCommentController @Inject() (db: Database,
     addToActivityStream(comment)
 
     comment.permissions match {
-      case CommentPermissions.PUBLIC =>
-        Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
       case CommentPermissions.MESSAGE =>
         val threadInfo = db.readOnly(implicit s => commentWithSocialUserRepo.load(comment))
-        Ok(JsObject(Seq("message" -> commentWithSocialUserSerializer.writes(threadInfo))))
+        Ok(Json.obj("message" -> commentWithSocialUserSerializer.writes(threadInfo)))
       case _ =>
-        Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
+        Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
     }
   }
 
