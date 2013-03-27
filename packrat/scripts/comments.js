@@ -34,7 +34,7 @@ function renderComments($container, comments) {
       e.preventDefault();
     });
 
-    attachComposeBindings($c);
+    attachComposeBindings($c, "comment");
     $c.find(".kifi-compose-draft")
     .on("input", updateMinHeight)
     .on("kifi:compose-submit", submitComment);

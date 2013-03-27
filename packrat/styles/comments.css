@@ -317,6 +317,9 @@ div.kifi-more-recipient-list {
   background-color: inherit;
   background-position: -40px 0;
 }
+.kifi-snapshot-mode body {
+  position: relative;
+}
 body .kifi-snapshot-glass {
   position: absolute;
   z-index: 2147483639;

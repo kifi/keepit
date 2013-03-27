@@ -23,6 +23,9 @@
   text-align: center;
   cursor: pointer;
 }
+.kifi-with-pane #kifi-tile {
+  display: none;
+}
 .kifi-tile-transparent {
   position: absolute;
   top: 0;
