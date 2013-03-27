@@ -1,17 +1,20 @@
 package com.keepit.search.query
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.index.Searcher
+import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.index.IndexReader
+import com.keepit.search.index.Searcher
 import org.apache.lucene.index.Term
-import org.apache.lucene.index.TermPositions
+import org.apache.lucene.search.ComplexExplanation
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import org.apache.lucene.search.Explanation
+import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
-import org.apache.lucene.search.ComplexExplanation
-import org.apache.lucene.search.Explanation
-import org.apache.lucene.search.Similarity
-import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.similarities.Similarity
+import org.apache.lucene.util.Bits
 import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
 import java.util.{Set => JSet}
@@ -19,9 +22,9 @@ import java.lang.{Float => JFloat}
 import scala.collection.JavaConversions._
 import scala.math._
 
-class TopLevelQuery(val textQuery: Query, val auxQueries: Array[Query], val enableCoord: Boolean) extends Query2 {
+class TopLevelQuery(val textQuery: Query, val auxQueries: Array[Query], val enableCoord: Boolean) extends Query {
 
-  override def createWeight2(searcher: Searcher): Weight = new TopLevelWeight(this, searcher)
+  override def createWeight(searcher: IndexSearcher): Weight = new TopLevelWeight(this, searcher.asInstanceOf[Searcher])
 
   override def rewrite(reader: IndexReader): Query = {
     val rewrittenTextQuery = textQuery.rewrite(reader)
@@ -63,23 +66,22 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
   val auxWeights: Array[Weight] = query.auxQueries.map(_.createWeight(searcher))
 
   override def getQuery() = query
-  override def getValue() = query.getBoost()
   override def scoresDocsOutOfOrder() = false
 
-  override def sumOfSquaredWeights() = {
-    val sum = auxWeights.foldLeft(textWeight.sumOfSquaredWeights){ (sum, w) => sum + w.sumOfSquaredWeights }
+  override def getValueForNormalization() = {
+    val sum = auxWeights.foldLeft(textWeight.getValueForNormalization){ (sum, w) => sum + w.getValueForNormalization }
     val value = query.getBoost()
     (sum * value * value)
   }
 
-  override def normalize(norm: Float) {
-    val n = norm * getValue()
-    textWeight.normalize(n)
-    auxWeights.foreach(_.normalize(n))
+  override def normalize(norm: Float, topLevelBoost: Float) {
+    val boost = topLevelBoost * query.getBoost
+    textWeight.normalize(norm, boost)
+    auxWeights.foreach(_.normalize(norm, boost))
   }
 
-  override def explain(reader: IndexReader, doc: Int) = {
-    val sc = scorer(reader, true, false);
+  override def explain(context: AtomicReaderContext, doc: Int) = {
+    val sc = scorer(context, true, false, context.reader.getLiveDocs);
     val exists = (sc != null && sc.advance(doc) == doc);
 
     val result = new ComplexExplanation()
@@ -95,7 +97,7 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
     }
 
     var sum = 0.0f
-    val eTxt = textWeight.explain(reader, doc)
+    val eTxt = textWeight.explain(context, doc)
     eTxt.isMatch() match {
       case false =>
         val r = new Explanation(0.0f, "no match in (" + textWeight.getQuery.toString() + ")")
@@ -108,7 +110,7 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
         result.addDetail(eTxt)
 
         auxWeights.map{ w =>
-          val eSV = w.explain(reader, doc)
+          val eSV = w.explain(context, doc)
           eSV.isMatch() match {
             case true =>
               result.addDetail(eSV)
@@ -123,8 +125,8 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
     result
   }
 
-  override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
-    val textScorer = textWeight.scorer(reader, true, false)
+  override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
+    val textScorer = textWeight.scorer(context, true, false, acceptDocs)
     if (textScorer == null) null
     else {
       // main scorer has to implement Coordinator trait
@@ -137,7 +139,7 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
       } else {
         QueryUtil.toScorerWithCoordinator(textScorer)
       }
-      new TopLevelScorer(this, mainScorer, auxWeights.flatMap{ w => Option(w.scorer(reader, true, false)) })
+      new TopLevelScorer(this, mainScorer, auxWeights.flatMap{ w => Option(w.scorer(context, true, false, acceptDocs)) })
     }
   }
 }
@@ -179,4 +181,5 @@ class TopLevelScorer(weight: TopLevelWeight, textScorer: Scorer with Coordinator
     }
     scr
   }
+  override def freq(): Int = 1
 }

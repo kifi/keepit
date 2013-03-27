@@ -1,6 +1,6 @@
 @(title: String, doc: org.apache.lucene.document.Document, indexer: com.keepit.search.index.Indexer[_])
 
-@printField(f: org.apache.lucene.document.Fieldable) = {
+@printField(f: org.apache.lucene.index.IndexableField) = {
   <tr> <td>@f.name</td> <td>@indexer.getFieldDecoder(f.name).apply(f)</td> </tr>
 }
 

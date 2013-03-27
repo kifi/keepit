@@ -2,7 +2,6 @@ package com.keepit.search.index
 
 import java.io.Reader
 import java.lang.reflect.Constructor
-
 import org.apache.lucene.analysis.ar.ArabicNormalizationFilter
 import org.apache.lucene.analysis.ar.ArabicStemFilter
 import org.apache.lucene.analysis.bg.BulgarianStemFilter
@@ -17,7 +16,7 @@ import org.apache.lucene.analysis.es.SpanishLightStemFilter
 import org.apache.lucene.analysis.fa.PersianCharFilter
 import org.apache.lucene.analysis.fa.PersianNormalizationFilter
 import org.apache.lucene.analysis.fi.FinnishLightStemFilter
-import org.apache.lucene.analysis.fr.ElisionFilter
+import org.apache.lucene.analysis.util.ElisionFilter
 import org.apache.lucene.analysis.fr.FrenchLightStemFilter
 import org.apache.lucene.analysis.hi.HindiNormalizationFilter
 import org.apache.lucene.analysis.hi.HindiStemFilter
@@ -33,33 +32,34 @@ import org.apache.lucene.analysis.standard.StandardTokenizer
 import org.apache.lucene.analysis.sv.SwedishLightStemFilter
 import org.apache.lucene.analysis.th.ThaiWordFilter
 import org.apache.lucene.analysis.tr.TurkishLowerCaseFilter
-import org.apache.lucene.analysis.CharStream
-import org.apache.lucene.analysis.Analyzer
+import org.apache.lucene.analysis.{Analyzer=>LAnalyzer}
+import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.CharFilter
-import org.apache.lucene.analysis.CharReader
-import org.apache.lucene.analysis.LowerCaseFilter
+import org.apache.lucene.analysis.core.LowerCaseFilter
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.TokenFilter
 import org.apache.lucene.analysis.TokenStream
+import org.apache.lucene.analysis.Tokenizer
+import org.apache.lucene.analysis.util.TokenizerFactory
 import org.apache.lucene.util.Version
-
 import com.keepit.common.logging.Logging
-import com.keepit.search.index.AnalyzerBuilder.toAnalyzer
-import com.keepit.search.index.AnalyzerBuilder.toAnalyzerBuilder
 import com.keepit.search.Lang
-
 import LuceneVersion.version
 import scala.reflect.ClassTag
+import java.io.Reader
+import java.io.StringReader
 
 object LuceneVersion {
-  val version = Version.LUCENE_36
+  val version = Version.LUCENE_41
 }
 
 object DefaultAnalyzer {
   import LuceneVersion.version
-  import AnalyzerBuilder._
 
-  private val stdAnalyzer = analyzer[DefaultAnalyzer]
-  val defaultAnalyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
+  private val stdAnalyzer = new Analyzer(new DefaultTokenizerFactory, Nil, None)
+
+  val defaultAnalyzer: Analyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
 
   val langAnalyzers = Map[String, Analyzer](
     "ar" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Arabic).withFilter[ArabicNormalizationFilter],
@@ -72,7 +72,7 @@ object DefaultAnalyzer {
     "es" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Spanish),
     "fa" -> stdAnalyzer.withCharFilter[PersianCharFilter].withFilter[LowerCaseFilter].withFilter[ArabicNormalizationFilter].withFilter[PersianNormalizationFilter].withStopFilter(_.Persian),
     "fi" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Finnish),
-    "fr" -> stdAnalyzer.withFilter[ElisionFilter].withFilter[LowerCaseFilter].withStopFilter(_.French),
+    "fr" -> stdAnalyzer.withFilter[FrenchElisionFilter].withFilter[LowerCaseFilter].withStopFilter(_.French),
     "hi" -> stdAnalyzer.withFilter[LowerCaseFilter].withFilter[IndicNormalizationFilter].withFilter[HindiNormalizationFilter].withStopFilter(_.Hindi),
     "hu" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Hungarian),
     "id" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Indonesian),
@@ -113,10 +113,6 @@ object DefaultAnalyzer {
     "tr" -> langAnalyzers("tr").withStemFilter(_.Turkish)
   )
 
-  private def analyzer[A <: Analyzer](implicit m : ClassTag[A]) = {
-    m.runtimeClass.getConstructor(classOf[Version]).newInstance(version).asInstanceOf[Analyzer]
-  }
-
   private def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, defaultAnalyzer)
   private def getAnalyzerWithStemmer(lang: Lang): Option[Analyzer] = langAnalyzerWithStemmer.get(lang.lang)
 
@@ -133,67 +129,90 @@ object DefaultAnalyzer {
   def forParsingWithStemmer(lang: Lang): Option[Analyzer] = getAnalyzerWithStemmer(lang)
 }
 
-class DefaultAnalyzer(version: Version) extends Analyzer {
-  def tokenStream(fieldName: String, reader: Reader): TokenStream = {
+class DefaultTokenizerFactory extends TokenizerFactory {
+  override def create(reader: Reader): Tokenizer = {
     var tokenizer = new StandardTokenizer(version, reader)
     tokenizer.setMaxTokenLength(256)
     tokenizer
   }
 }
 
-class AnalyzerWithCharFilter(analyzer: Analyzer, charFilterConstructor: Constructor[CharFilter]) extends Analyzer {
-  def tokenStream(fieldName: String, reader: Reader): TokenStream = {
-    var charFilter = charFilterConstructor.newInstance(CharReader.get(reader))
-    analyzer.tokenStream(fieldName, charFilter)
-  }
-}
-
-object AnalyzerBuilder extends Logging {
+class Analyzer(tokenizerFactory: TokenizerFactory,
+               factories: List[TokenFilterFactory],
+               charFilterConstructor: Option[Constructor[CharFilter]]) extends LAnalyzer with Logging {
   import LuceneVersion.version
 
-  implicit def toAnalyzerBuilder(analyzer: Analyzer): AnalyzerBuilder = new AnalyzerBuilder(analyzer, Nil, None)
-  implicit def toAnalyzer(builder: AnalyzerBuilder): Analyzer = builder.build
-
-  class AnalyzerBuilder(analyzer: Analyzer, factories: List[TokenFilterFactory], charFilterConstructor: Option[Constructor[CharFilter]]) {
-
-    def withFilter[T <: TokenFilter](implicit m : ClassTag[T]): AnalyzerBuilder = {
-      try {
-        val constructor = m.runtimeClass.getConstructor(classOf[Version], classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
-        withFilter(WrapperTokenFilterFactory(constructor, version))
-      } catch {
-        case ex: NoSuchMethodException =>
-          try {
-            val constructor = m.runtimeClass.getConstructor(classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
-            withFilter(WrapperTokenFilterFactory(constructor))
-          } catch {
-            case ex: NoSuchMethodException => log.error("failed to find a filter constructor: %s".format(m.runtimeClass.toString))
-            this
-          }
-      }
-    }
-
-    def withStopFilter(f: StopFilterFactories=>TokenFilterFactory): AnalyzerBuilder = withFilter(f(TokenFilterFactories.stopFilter))
-    def withStemFilter(f: StemFilterFactories=>TokenFilterFactory): AnalyzerBuilder = withFilter(f(TokenFilterFactories.stemFilter))
-
-    def withFilter(factory: TokenFilterFactory): AnalyzerBuilder = new AnalyzerBuilder(analyzer, factory::factories, charFilterConstructor)
-
-    def withCharFilter[T <: CharFilter](implicit m : ClassTag[T]): AnalyzerBuilder = {
-      val constructor = m.runtimeClass.getConstructor(classOf[CharStream]).asInstanceOf[Constructor[CharFilter]]
-      new AnalyzerBuilder(analyzer, factories, Some(constructor))
-    }
-
-    def build: Analyzer = {
-      val baseAnalyzer = charFilterConstructor match {
-        case Some(charFilterConstructor) => new AnalyzerWithCharFilter(analyzer, charFilterConstructor)
-        case None => analyzer
-      }
-      val filters = factories.reverse
-      new Analyzer {
-        def tokenStream(fieldName: String, reader: Reader): TokenStream = {
-          filters.foldLeft(baseAnalyzer.tokenStream(fieldName, reader)){ (tokenStream, filter) => filter(tokenStream) }
+  def withFilter[T <: TokenFilter](implicit m : ClassTag[T]): Analyzer = {
+    try {
+      val constructor = m.runtimeClass.getConstructor(classOf[Version], classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
+      withFilter(WrapperTokenFilterFactory(constructor, version))
+    } catch {
+      case ex: NoSuchMethodException =>
+        try {
+          val constructor = m.runtimeClass.getConstructor(classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
+          withFilter(WrapperTokenFilterFactory(constructor))
+        } catch {
+          case ex: NoSuchMethodException => log.error("failed to find a filter constructor: %s".format(m.runtimeClass.toString))
+          this
         }
-      }
     }
   }
+
+  def withStopFilter(f: StopFilterFactories=>TokenFilterFactory): Analyzer = withFilter(f(TokenFilterFactories.stopFilter))
+  def withStemFilter(f: StemFilterFactories=>TokenFilterFactory): Analyzer = withFilter(f(TokenFilterFactories.stemFilter))
+
+  def withFilter(factory: TokenFilterFactory): Analyzer = new Analyzer(tokenizerFactory, factory::factories, charFilterConstructor)
+
+  def withCharFilter[T <: CharFilter](implicit m : ClassTag[T]): Analyzer = {
+    val constructor = m.runtimeClass.getConstructor(classOf[Reader]).asInstanceOf[Constructor[CharFilter]]
+    new Analyzer(tokenizerFactory, factories, Some(constructor))
+  }
+
+  override protected def initReader(fieldName: String, reader: Reader): Reader = {
+    charFilterConstructor match {
+      case Some(charFilterConstructor) => charFilterConstructor.newInstance(reader)
+      case None => reader
+    }
+  }
+
+  override def createComponents(fieldName: String, reader: Reader): TokenStreamComponents = {
+    val filters = factories.reverse
+    val tokenizer = tokenizerFactory.create(reader)
+    val tokenStream = filters.foldLeft(tokenizer.asInstanceOf[TokenStream]){ (tokenStream, filter) => filter(tokenStream) }
+    new TokenStreamComponents(tokenizer, tokenStream)
+  }
+
+  def createLazyTokenStream(field: String, text: String) = new LazyTokenStream(field, text, this)
 }
 
+class LazyTokenStream(field: String, text: String, analyzer: Analyzer) extends TokenStream {
+  private[this] val termAttr = addAttribute(classOf[CharTermAttribute])
+  private[this] val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
+
+  private[this] var baseTokenStream: TokenStream = null
+  private[this] var baseTermAttr: CharTermAttribute = null
+  private[this] var basePosIncrAttr: PositionIncrementAttribute = null
+
+  override def incrementToken(): Boolean = {
+    if (baseTokenStream == null) {
+      baseTokenStream = analyzer.tokenStream(field, new StringReader(text))
+      baseTokenStream.reset()
+      baseTermAttr = baseTokenStream.getAttribute(classOf[CharTermAttribute])
+      if (baseTokenStream.hasAttribute(classOf[PositionIncrementAttribute]))
+        basePosIncrAttr = baseTokenStream.getAttribute(classOf[PositionIncrementAttribute])
+    }
+    val more = baseTokenStream.incrementToken()
+    if (more) {
+      termAttr.setEmpty
+      termAttr.append(baseTermAttr)
+      if (basePosIncrAttr != null) posIncrAttr.setPositionIncrement(basePosIncrAttr.getPositionIncrement)
+    }
+    more
+  }
+  override def reset() {
+    if (baseTokenStream != null) baseTokenStream.reset()
+  }
+  override def close() {
+    if (baseTokenStream != null) baseTokenStream.close()
+  }
+}

@@ -21,28 +21,29 @@ import com.keepit.search.LangDetector
 import com.keepit.search.index.DocUtil
 import com.keepit.search.index.FieldDecoder
 import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
+import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineFieldBuilder
 
 import play.api.Play.current
 
 object URIGraph {
-  val userTerm = new Term("usr", "")
-  val uriTerm = new Term("uri", "")
-  val langTerm = new Term("title_lang", "")
-  val titleTerm = new Term("title", "")
-  val stemmedTerm = new Term("title_stemmed", "")
-  val siteTerm = new Term("site", "")
+  val userField = "usr"
+  val uriField = "uri"
+  val langField = "title_lang"
+  val titleField = "title"
+  val stemmedField = "title_stemmed"
+  val siteField = "site"
 
   val decoders = Map(
-    userTerm.field() -> DocUtil.URIListDecoder,
-    langTerm.field() -> DocUtil.LineFieldDecoder,
-    titleTerm.field() -> DocUtil.LineFieldDecoder,
-    stemmedTerm.field() -> DocUtil.LineFieldDecoder,
-    siteTerm.field() -> DocUtil.LineFieldDecoder
+    userField -> DocUtil.URIListDecoder,
+    langField -> DocUtil.LineFieldDecoder,
+    titleField -> DocUtil.LineFieldDecoder,
+    stemmedField -> DocUtil.LineFieldDecoder,
+    siteField -> DocUtil.LineFieldDecoder
   )
 
   def apply(indexDirectory: Directory): URIGraph = {
-    val config = new IndexWriterConfig(Version.LUCENE_36, DefaultAnalyzer.forIndexing)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
 
     new URIGraphImpl(indexDirectory, config, decoders)
   }
@@ -122,12 +123,12 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
 
       val uriList = new URIList(payload)
       val langMap = buildLangMap(bookmarks, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
-      val langs = buildBookmarkTitleField(URIGraph.langTerm.field(), uriList, bookmarks){ (fieldName, text) =>
+      val langs = buildBookmarkTitleField(URIGraph.langField, uriList, bookmarks){ (fieldName, text) =>
         val lang = langMap.getOrElse(text, Lang("en"))
         Some(new IteratorTokenStream(Some(lang.lang).iterator, (s: String) => s))
       }
 
-      val title = buildBookmarkTitleField(URIGraph.titleTerm.field(), uriList, bookmarks){ (fieldName, text) =>
+      val title = buildBookmarkTitleField(URIGraph.titleField, uriList, bookmarks){ (fieldName, text) =>
         val lang = langMap.getOrElse(text, Lang("en"))
         val analyzer = DefaultAnalyzer.forIndexing(lang)
         Some(analyzer.tokenStream(fieldName, new StringReader(text)))
@@ -135,24 +136,23 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       doc.add(usr)
       doc.add(uri)
       doc.add(title)
-      val titleStemmed = buildBookmarkTitleField(URIGraph.stemmedTerm.field(), uriList, bookmarks){ (fieldName, text) =>
+      val titleStemmed = buildBookmarkTitleField(URIGraph.stemmedField, uriList, bookmarks){ (fieldName, text) =>
         val lang = langMap.getOrElse(text, Lang("en"))
         DefaultAnalyzer.forIndexingWithStemmer(lang).map{ analyzer =>
           analyzer.tokenStream(fieldName, new StringReader(text))
         }
       }
       doc.add(titleStemmed)
-      doc.add(buildBookmarkSiteField(URIGraph.siteTerm.field(), uriList, bookmarks))
+      doc.add(buildBookmarkSiteField(URIGraph.siteField, uriList, bookmarks))
       doc
     }
 
     def buildURIListPayloadField(payload: Array[Byte]) = {
-      buildDataPayloadField(URIGraph.userTerm.createTerm(id.toString), payload)
+      buildDataPayloadField(new Term(URIGraph.userField, id.toString), payload)
     }
 
     def buildURIIdField(bookmarks: Seq[Bookmark]) = {
-      val fld = buildIteratorField(URIGraph.uriTerm.field(), bookmarks.iterator.filter(bm => !bm.isPrivate)){ bm => bm.uriId.toString }
-      fld.setOmitNorms(true)
+      val fld = buildIteratorField(URIGraph.uriField, bookmarks.iterator.filter(bm => !bm.isPrivate)){ bm => bm.uriId.toString }
       fld
     }
 

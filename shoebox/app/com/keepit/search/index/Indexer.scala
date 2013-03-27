@@ -1,19 +1,18 @@
 package com.keepit.search.index
 
 import scala.collection.JavaConversions._
-
 import java.io.IOException
 import java.lang.OutOfMemoryError
-
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
+import org.apache.lucene.document.StringField
+import org.apache.lucene.document.TextField
 import org.apache.lucene.index.CorruptIndexException
-import org.apache.lucene.index.IndexReader
+import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.store.Directory
-
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -22,10 +21,7 @@ case class IndexError(msg: String)
 
 object Indexer {
   val idFieldName = "_ID"
-  val idFieldTerm = new Term(idFieldName, "")
-  val idPayloadFieldName = "_UD_PAYLOAD"
-  val idPayloadTermText = "ID"
-  val idPayloadTerm = new Term(idPayloadFieldName, idPayloadTermText)
+  val idValueFieldName = "_ID_VAL"
 
   val DELETED_ID = -1
 
@@ -40,14 +36,14 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
 
   protected var searcher: Searcher = {
-    if (!IndexReader.indexExists(indexDirectory)) {
+    if (!DirectoryReader.indexExists(indexDirectory)) {
       val seedDoc = new Document()
-      val idTerm = Indexer.idFieldTerm.createTerm((-1L).toString)
-      seedDoc.add(new Field(Indexer.idFieldName, idTerm.text(), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO))
+      val idTerm = new Term(Indexer.idFieldName, (-1L).toString)
+      seedDoc.add(new Field(Indexer.idFieldName, idTerm.text(), Indexable.keywordFieldType))
       indexWriter.updateDocument(idTerm, seedDoc)
       indexWriter.commit()
     }
-    val reader = IndexReader.open(indexDirectory)
+    val reader = DirectoryReader.open(indexDirectory)
     Searcher(reader)
   }
 
@@ -129,15 +125,16 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
 
   private def commit(seqNum: SequenceNumber = this.sequenceNumber) {
     this.sequenceNumber = seqNum
-    indexWriter.commit(Map(
+    indexWriter.setCommitData(Map(
           Indexer.CommitData.committedAt -> currentDateTime.toStandardTimeString,
           Indexer.CommitData.sequenceNumber -> sequenceNumber.toString
     ))
+    indexWriter.commit()
     log.info("index committed")
   }
 
   def deleteAllDocuments(refresh: Boolean = true) {
-    if (IndexReader.indexExists(indexDirectory)) {
+    if (DirectoryReader.indexExists(indexDirectory)) {
       doWithIndexWriter{ indexWriter =>
         indexWriter.deleteAll()
         commit()
@@ -148,7 +145,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
 
   def commitData: Map[String, String] = {
     // get the latest commit
-    val indexReader = Option(IndexReader.openIfChanged(searcher.indexReader.inner)).getOrElse(searcher.indexReader.inner)
+    val indexReader = Option(DirectoryReader.openIfChanged(searcher.indexReader.inner)).getOrElse(searcher.indexReader.inner)
     val indexCommit = indexReader.getIndexCommit()
     val mutableMap = indexCommit.getUserData()
     log.info("commit data =" + mutableMap)
@@ -165,7 +162,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     fieldDecoders.get(fieldName) match {
       case Some(decoder) => decoder
       case _ => fieldName match {
-        case Indexer.idPayloadFieldName => DocUtil.IdPayloadFieldDecoder
+        case Indexer.idValueFieldName => DocUtil.IdValueFieldDecoder
         case _ => DocUtil.TextFieldDecoder
       }
     }

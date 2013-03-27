@@ -10,6 +10,7 @@ import com.keepit.search.MultiHashFilter
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.SegmentReader
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import scala.collection.mutable.ArrayBuffer
@@ -39,15 +40,15 @@ extends Searcher(indexReader) {
   override protected def getSemanticVectorComposer(term: Term) = {
     val subReaders = indexReader.wrappedSubReaders
     val composer = new SemanticVectorComposer
-    var vector = new Array[Byte](SemanticVector.arraySize)
+    var vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
     var i = 0
     while (i < subReaders.length) {
       val subReader = subReaders(i)
       val idMapper = subReader.getIdMapper
-      val tp = subReader.termPositions(term)
-      try {
-        while (tp.next) {
-          val id = idMapper.getId(tp.doc())
+      val tp = subReader.termPositionsEnum(term)
+      if (tp != null) {
+        while (tp.nextDoc() < NO_MORE_DOCS) {
+          val id = idMapper.getId(tp.docID())
           val weight = {
             if (clickFilter.mayContain(id)) svWeightClickHistory
             else if (browsingFilter.mayContain(id)) svWeightBrowsingHistory
@@ -59,13 +60,12 @@ extends Searcher(indexReader) {
             while (freq > 0) {
               freq -= 1
               tp.nextPosition()
-              vector = tp.getPayload(vector, 0)
+              val payload = tp.getPayload()
+              vector.set(payload.bytes, payload.offset, payload.length)
               composer.add(vector, weight)
             }
           }
         }
-      } finally {
-        tp.close()
       }
       i += 1
     }
