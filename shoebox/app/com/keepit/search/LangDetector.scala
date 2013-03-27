@@ -31,6 +31,12 @@ object LangDetector extends Logging {
 
   val languages: Seq[Lang] = DetectorFactory.getLangList().map(Lang(_)).toSeq
 
+  val uniformPriorMap = {
+    val langList = DetectorFactory.getLangList
+    val prob = 1.0f/langList.size()
+    langList.foldLeft(Map.empty[String, Double]){ (m, lang) => m + (lang -> prob)}
+  }
+
   val biasedProbability = 0.5d
   val priorMapForBiasedDetection = {
     val langList = DetectorFactory.getLangList
@@ -52,7 +58,7 @@ object LangDetector extends Logging {
   private def makeDetector(text: String, priorMap: Option[Map[String, Double]]) = {
     val detector = DetectorFactory.create()
     // limit the iteration in the detection process when the text is short
-    val iterationLimit = (detector.getIterationLimit.toDouble * (1.0d - (1.0d / (1.0d - ((text.length + 1).toDouble / 30.0d))))).toInt
+    val iterationLimit = (detector.getIterationLimit.toDouble * (1.0d - (1.0d / (1.0d - ((text.length + 1).toDouble / 30.0d))))).toInt			//TODO: this hyperbolic function has problems. need to modify this.
     detector.setIterationLimit(iterationLimit)
     detector.setProbabilityThreshold(0.0d)
     priorMap match {
@@ -75,6 +81,29 @@ object LangDetector extends Logging {
       }
     } catch {
       case e: LangDetectException => Lang("en") // no text? defaulting to English
+    }
+  }
+
+  def detectShortText(text:String, lang: Lang): Lang = {
+    detectShortText(text, priorMapForBiasedDetection + (lang.lang -> biasedProbability))
+  }
+
+  def detectShortText(text:String): Lang = {
+    detectShortText(text, uniformPriorMap)
+  }
+
+
+  private def detectShortText(text:String,  prior: Map[String, Double]): Lang = {
+    val detector = DetectorFactory.create()
+    detector.append(text)
+    detector.setPriorMap(new JHashMap(prior.mapValues{ v => new JDouble(v) }))
+    try{
+      detector.detectForShort() match{
+        case "unknown" => Lang("en")
+        case lang => Lang(lang)
+      }
+    } catch{
+      case e: LangDetectException => Lang("en")
     }
   }
 
