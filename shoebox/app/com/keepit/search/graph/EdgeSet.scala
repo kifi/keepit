@@ -3,6 +3,7 @@ package com.keepit.search.graph
 import com.keepit.common.db.Id
 import com.keepit.search.index.IdMapper
 import com.keepit.search.index.Searcher
+import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.search.DocIdSet
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
@@ -19,13 +20,19 @@ trait EdgeSet[S,D] {
 }
 
 object EdgeSetUtil {
-  implicit def toIterator(it: DocIdSetIterator) = new Iterator[Int] {
-    var nextDocId = it.nextDoc()
-    def hasNext = nextDocId < NO_MORE_DOCS
-    def next = {
-      var cur = nextDocId
-      nextDocId = it.nextDoc()
-      cur
+  implicit def toIterator(it: DocIdSetIterator): Iterator[Int] = {
+    if (it != null) {
+      new Iterator[Int] {
+        var nextDocId = it.nextDoc()
+        def hasNext = nextDocId < NO_MORE_DOCS
+        def next = {
+          var cur = nextDocId
+          nextDocId = it.nextDoc()
+          cur
+        }
+      }
+    } else {
+      Iterator.empty
     }
   }
 }
@@ -35,7 +42,9 @@ class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destId
   def destIdLongSet = destIdSet.map(_.id)
   def size = destIdSet.size
 
-  def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = getDestDocIdSetIterator(searcher.indexReader.getIdMapper)
+  def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = {
+    getDestDocIdSetIterator(searcher.indexReader.asAtomicReader.getIdMapper)
+  }
 
   private def getDestDocIdSetIterator(mapper: IdMapper): DocIdSetIterator = {
     val docids = destIdSet.map{ id => mapper.getDocId(id.id) }.filter{ _ >= 0 }.toArray
@@ -64,7 +73,8 @@ class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destId
 abstract class LuceneBackedEdgeSet[S, D](override val sourceId: Id[S], searcher: Searcher) extends EdgeSet[S, D] {
   import EdgeSetUtil._
 
-  lazy val lazyDestIdLongSet = getDestDocIdSetIterator(searcher).map(docid => searcher.indexReader.getIdMapper.getId(docid)).toSet
+  val reader = searcher.indexReader.asAtomicReader
+  lazy val lazyDestIdLongSet = getDestDocIdSetIterator(searcher).map(docid => reader.getIdMapper.getId(docid)).toSet
   lazy val lazyDestIdSet = lazyDestIdLongSet.map(toId(_))
 
   override def destIdLongSet = lazyDestIdLongSet
@@ -72,30 +82,9 @@ abstract class LuceneBackedEdgeSet[S, D](override val sourceId: Id[S], searcher:
 
   def size = getDestDocIdSetIterator(searcher).size
 
-  def getDestDocIdSetIterator(searcher: Searcher) = {
-    val termDocs = searcher.indexReader.termDocs(createSourceTerm)
-
-    new DocIdSetIterator {
-      var curDoc = NO_MORE_DOCS
-
-      def docID() = curDoc
-
-      def nextDoc() = {
-        curDoc = if (termDocs.next()) termDocs.doc() else {
-          termDocs.close()
-          NO_MORE_DOCS
-        }
-        curDoc
-      }
-
-      def advance(target: Int) = {
-        curDoc = if (termDocs.skipTo(target)) termDocs.doc() else {
-          termDocs.close()
-          NO_MORE_DOCS
-        }
-        curDoc
-      }
-    }
+  def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = {
+    val td = reader.termDocsEnum(createSourceTerm)
+    if (td != null) td else emptyDocIdSetIterator
   }
 
   def toId(longId: Long): Id[D]

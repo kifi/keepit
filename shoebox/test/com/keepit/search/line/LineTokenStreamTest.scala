@@ -6,7 +6,8 @@ import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import scala.math._
-import org.apache.lucene.analysis.WhitespaceAnalyzer
+import com.keepit.search.index.DefaultAnalyzer
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import scala.collection.mutable.ArrayBuffer
@@ -14,7 +15,7 @@ import org.apache.lucene.util.Version
 import java.io.StringReader
 
 class LineTokenStreamTest extends Specification {
-  val analyzer = new WhitespaceAnalyzer(Version.LUCENE_36)
+  val analyzer = new WhitespaceAnalyzer(Version.LUCENE_41)
   "LineTokenStream" should {
     "tokenize strings aligning the position according to the line number" in {
       val ts = new LineTokenStream("B", Seq((0, "a b c"), (1, "d"), (2, "e f")), (f, t) => Some(analyzer.tokenStream(f, new StringReader(t))))

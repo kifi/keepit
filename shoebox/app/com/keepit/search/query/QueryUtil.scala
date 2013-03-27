@@ -1,20 +1,25 @@
 package com.keepit.search.query
 
 import com.keepit.common.logging.Logging
+import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.DocsEnum
+import org.apache.lucene.index.DocsAndPositionsEnum
 import com.keepit.search.index.Searcher
 import org.apache.lucene.index.IndexReader
-import org.apache.lucene.index.Payload
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.index.ReaderUtil
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.Weight
-import org.apache.lucene.util.ReaderUtil
+import org.apache.lucene.util.Bits
 import java.util.{HashSet => JHashSet}
 import scala.collection.JavaConversions._
+import org.apache.lucene.util.BytesRef
+import org.apache.lucene.search.DocIdSetIterator
 
 object QueryUtil extends Logging {
 
@@ -82,9 +87,10 @@ object QueryUtil extends Logging {
 
   def emptyScorer(weight: Weight) = new Scorer(weight) with Coordinator {
     override def score(): Float = 0.0f
-    override def docID() = DocIdSetIterator.NO_MORE_DOCS
-    override def nextDoc(): Int = DocIdSetIterator.NO_MORE_DOCS
-    override def advance(target: Int): Int = DocIdSetIterator.NO_MORE_DOCS
+    override def docID() = NO_MORE_DOCS
+    override def nextDoc(): Int = NO_MORE_DOCS
+    override def advance(target: Int): Int = NO_MORE_DOCS
+    override def freq() = 0
   }
 
   def toScorerWithCoordinator(scorer: Scorer) = new Scorer(null.asInstanceOf[Weight]) with Coordinator {
@@ -92,6 +98,7 @@ object QueryUtil extends Logging {
     override def docID() = scorer.docID()
     override def nextDoc() = scorer.nextDoc()
     override def advance(target: Int) = scorer.advance(target)
+    override def freq() = scorer.freq()
   }
 
   def copy(query: TermQuery, field: String): Query = {
@@ -112,4 +119,47 @@ object QueryUtil extends Logging {
       newQuery
     }
   }
+
+  def termDocsEnum(context: AtomicReaderContext, term: Term, acceptDocs: Bits): DocsEnum = {
+    val fields = context.reader.fields()
+    if (fields != null) {
+      val terms = fields.terms(term.field())
+      if (terms != null) {
+        val termsEnum = terms.iterator(null)
+        if (termsEnum.seekExact(term.bytes(), true)) {
+          return termsEnum.docs(acceptDocs, null)
+        }
+      }
+    }
+    return null
+  }
+
+  def termPositionsEnum(context: AtomicReaderContext, term: Term, acceptDocs: Bits): DocsAndPositionsEnum = {
+    val fields = context.reader.fields()
+    if (fields != null) {
+      val terms = fields.terms(term.field())
+      if (terms != null) {
+        val termsEnum = terms.iterator(null)
+        if (termsEnum.seekExact(term.bytes(), true)) {
+          return termsEnum.docsAndPositions(acceptDocs, null)
+        }
+      }
+    }
+    return null
+  }
+
+  object EmptyDocsAndPositionsEnum extends DocsAndPositionsEnum {
+    override def docID() = NO_MORE_DOCS
+    override def freq() = 0
+    override def nextDoc(): Int = NO_MORE_DOCS
+    override def advance(did: Int): Int = NO_MORE_DOCS
+    override def nextPosition(): Int = 0
+    override def startOffset(): Int = -1
+    override def endOffset(): Int = -1
+    override def getPayload(): BytesRef = null
+  }
+
+  def emptyDocIdSetIterator: DocIdSetIterator = EmptyDocsAndPositionsEnum
+  def emptyDocsEnum: DocsEnum = EmptyDocsAndPositionsEnum
+  def emptyDocsAndPositionsEnum: DocsAndPositionsEnum = EmptyDocsAndPositionsEnum
 }

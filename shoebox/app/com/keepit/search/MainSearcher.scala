@@ -241,7 +241,7 @@ class MainSearcher(
    * vects: a collection of 128-bit vectors. We measure the variance of each bit,
    * and take the average. This measures overall randomness of input semantic vectors.
    */
-  private def avgBitVariance(vects: Iterable[Array[Byte]]) = {
+  private def avgBitVariance(vects: Iterable[SemanticVector]) = {
     if ( vects.size > 0){
 	  val composer = new SemanticVectorComposer
 	  vects.foreach( composer.add(_, 1))
@@ -293,16 +293,14 @@ class MainSearcher(
     parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
-      val idMapper = personalizedSearcher.indexReader.getIdMapper
+      val doc = personalizedSearcher.indexReader.getIdMapper.getDocId(uriId.id)
 
-      (query, personalizedSearcher.explain(query, idMapper.getDocId(uriId.id)))
+      (query, personalizedSearcher.explain(query, doc))
     }
   }
 }
 
-class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
-
-  super.initialize(sz)
+class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
 
   val NO_FRIEND_IDS = Set.empty[Id[User]]
 

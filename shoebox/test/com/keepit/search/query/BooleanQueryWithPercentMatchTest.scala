@@ -7,29 +7,31 @@ import play.api.test._
 import play.api.test.Helpers._
 import scala.math._
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.search.index.DefaultAnalyzer
 import org.apache.lucene.document.Document
+import org.apache.lucene.document.Field
+import org.apache.lucene.document.TextField
+import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.IndexWriter
-import org.apache.lucene.index.IndexReader
+import org.apache.lucene.index.SlowCompositeReaderWrapper
 import org.apache.lucene.index.Term
-import org.apache.lucene.index.TermEnum
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause.Occur
-import org.apache.lucene.search.DefaultSimilarity
+import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
-import com.keepit.search.index.DefaultAnalyzer
-import org.apache.lucene.document.Field
-import org.apache.lucene.search.DocIdSetIterator
 
 class BooleanQueryWithPercentMatchTest extends Specification {
 
   val indexingAnalyzer = DefaultAnalyzer.forIndexing
-  val config = new IndexWriterConfig(Version.LUCENE_36, indexingAnalyzer)
+  val config = new IndexWriterConfig(Version.LUCENE_41, indexingAnalyzer)
+  val similarity = new DefaultSimilarity()
 
   val ramDir = new RAMDirectory
   val indexReader = {
@@ -37,26 +39,31 @@ class BooleanQueryWithPercentMatchTest extends Specification {
     (0 until 10).foreach{ d =>
       val text = ("%s %s %s".format("aaa "* (d % 5), "bbb "*(d % 3) , "ccc "*(d % 2)))
       val doc = new Document()
-      doc.add(new Field("B", text, Field.Store.NO, Field.Index.ANALYZED, Field.TermVector.NO))
+      doc.add(new Field("B", text, TextField.TYPE_NOT_STORED))
       writer.addDocument(doc)
     }
     writer.commit()
     writer.close()
 
-    IndexReader.open(ramDir)
+    DirectoryReader.open(ramDir)
   }
 
-  val searcher = new IndexSearcher(indexReader)
+  val reader = new SlowCompositeReaderWrapper(indexReader)
+  val readerContextLeaves = reader.leaves()
+  val readerContext = readerContextLeaves.get(0)
+
+  val searcher = new IndexSearcher(reader)
   searcher.setSimilarity(new DefaultSimilarity {
     override def queryNorm(sumOfSquaredWeights: Float) = 1.0f
   })
 
+
   val aaa = new Term("B", "aaa")
   val bbb = new Term("B", "bbb")
   val ccc = new Term("B", "ccc")
-  val aaaIdf = searcher.getSimilarity.idf(indexReader.docFreq(aaa), indexReader.numDocs())
-  val bbbIdf = searcher.getSimilarity.idf(indexReader.docFreq(bbb), indexReader.numDocs())
-  val cccIdf = searcher.getSimilarity.idf(indexReader.docFreq(ccc), indexReader.numDocs())
+  val aaaIdf = similarity.idf(indexReader.docFreq(aaa), indexReader.numDocs())
+  val bbbIdf = similarity.idf(indexReader.docFreq(bbb), indexReader.numDocs())
+  val cccIdf = similarity.idf(indexReader.docFreq(ccc), indexReader.numDocs())
 
   println("%f %f %f".format(aaaIdf, bbbIdf, cccIdf))
 
@@ -64,7 +71,7 @@ class BooleanQueryWithPercentMatchTest extends Specification {
     var weight = searcher.createNormalizedWeight(query)
     (weight != null) === true
 
-    var scorer = weight.scorer(indexReader, true, true)
+    var scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
     val buf = new ArrayBuffer[(Int, Float)]()
     var doc = scorer.nextDoc()
     while (doc < DocIdSetIterator.NO_MORE_DOCS) {

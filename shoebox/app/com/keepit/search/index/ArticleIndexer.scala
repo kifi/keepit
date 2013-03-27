@@ -21,7 +21,7 @@ object ArticleIndexer {
 
   def apply(indexDirectory: Directory, articleStore: ArticleStore): ArticleIndexer = {
     val analyzer = DefaultAnalyzer.forIndexing
-    val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
+    val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
 
     new ArticleIndexer(indexDirectory, config, articleStore)
   }

@@ -23,6 +23,8 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.BooleanQuery
 import scala.collection.JavaConversions._
+import com.keepit.search.index.WrappedSubReader
+import org.apache.lucene.search.IndexSearcher
 
 class URIGraphTest extends Specification with DbRepos {
 
@@ -69,21 +71,23 @@ class URIGraphTest extends Specification with DbRepos {
 
   class Searchable(uriGraphSearcher: URIGraphSearcher) {
     def search(user: Id[User], query: Query): Map[Long, Float] = {
+      var result = Map.empty[Long,Float]
       uriGraphSearcher.openPersonalIndex(user, query) match {
         case Some((indexReader, idMapper)) =>
-          val ir = WrappedIndexReader(indexReader, idMapper)
-          val searcher = new Searcher(ir)
-          var result = Map.empty[Long,Float]
-          searcher.doSearch(query){ (scorer, idMapper) =>
+          val ir = new WrappedSubReader("", indexReader, idMapper)
+          val searcher = new Searcher(new WrappedIndexReader(null, Array(ir)))
+          val weight = searcher.createNormalizedWeight(query)
+          val scorer = weight.scorer(ir.getContext, true, true, ir.getLiveDocs)
+          if (scorer != null) {
             var doc = scorer.nextDoc()
             while (doc < NO_MORE_DOCS) {
               result += (idMapper.getId(doc) -> scorer.score())
               doc = scorer.nextDoc()
             }
           }
-          result
-        case None => Map.empty[Long, Float]
+        case None =>
       }
+      result
     }
   }
   implicit def toSearchable(uriGraphSearcher: URIGraphSearcher) = new Searchable(uriGraphSearcher: URIGraphSearcher)
@@ -290,9 +294,9 @@ class URIGraphTest extends Specification with DbRepos {
         graph.update() === 2
 
         val searcher = graph.getURIGraphSearcher()
-        val personaltitle = new TermQuery(URIGraph.titleTerm.createTerm("personaltitle"))
-        val bmt1 = new TermQuery(URIGraph.titleTerm.createTerm("bmt1"))
-        val bmt2 = new TermQuery(URIGraph.titleTerm.createTerm("bmt2"))
+        val personaltitle = new TermQuery(new Term(URIGraph.titleField, "personaltitle"))
+        val bmt1 = new TermQuery(new Term(URIGraph.titleField, "bmt1"))
+        val bmt2 = new TermQuery(new Term(URIGraph.titleField, "bmt2"))
 
         searcher.search(users(0).id.get, personaltitle).keySet === Set(2L, 4L, 6L)
         searcher.search(users(1).id.get, personaltitle).keySet === Set(1L, 3L, 5L)
