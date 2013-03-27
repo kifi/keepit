@@ -40,7 +40,7 @@ function attachComposeBindings($f, composeTypeName) {
       }
       $d.focus();
       var r = document.createRange();
-      r.selectNodeContents(this);
+      r.selectNodeContents($d[0]);
       r.collapse(false);
       var s = window.getSelection();
       s.removeAllRanges();

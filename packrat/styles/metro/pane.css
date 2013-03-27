@@ -45,6 +45,9 @@ html.kifi-pane-parent {
 html.kifi-pane-parent.kifi-with-pane {
   margin-right: 322px;
 }
+html.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode {
+  margin-right: 0;
+}
 .kifi-pane-head {
   height: 39px;
   background: #2c3e50;
@@ -216,8 +219,8 @@ a.kifi-compose-submit.kifi-active {
   background-color: #a2a7ab;
 }
 
-.kifi-snapshot-mode body {
-  position: relative;
+body.kifi-snapshot-root {
+  position: relative; /* replace viewport as absolute positioning root */
 }
 div.kifi-snapshot-glass {
   position: absolute;

@@ -317,8 +317,8 @@ div.kifi-more-recipient-list {
   background-color: inherit;
   background-position: -40px 0;
 }
-.kifi-snapshot-mode body {
-  position: relative;
+body.kifi-snapshot-root {
+  position: relative; /* replace viewport as absolute positioning root */
 }
 body .kifi-snapshot-glass {
   position: absolute;

@@ -135,8 +135,8 @@ var snapshot = {
   },
 
   take: function(composeTypeName, onExit) {
-    // make absolute positioning relative to document instead of viewport
     document.documentElement.classList.add("kifi-snapshot-mode");
+    document.body.classList.add("kifi-snapshot-root");
 
     var sel = {}, cX, cY;
     var $shades = $(["t","b","l","r"].map(function(s) {
@@ -163,9 +163,10 @@ var snapshot = {
       exitSnapshotMode(snapshot.generateSelector(sel.el));
     });
     function exitSnapshotMode(selector) {
+      document.documentElement.classList.remove("kifi-snapshot-mode");
       $selectable.add(".kifi-snapshot-bar-wrap").animate({opacity: 0}, 400, function() {
         $(this).remove();
-        document.documentElement.classList.remove("kifi-snapshot-mode");
+        document.body.classList.remove("kifi-snapshot-root");
       });
       key.setScope();
       key.deleteScope("snapshot");
