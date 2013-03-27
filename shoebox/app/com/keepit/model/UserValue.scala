@@ -25,7 +25,7 @@ case class UserValue(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   userId: Id[User],
-  key: String,
+  name: String,
   value: LargeString,
   state: State[UserValue] = UserValueStates.ACTIVE
 ) extends Model[UserValue] {
@@ -66,18 +66,20 @@ class UserValueRepoImpl @Inject() (
   override lazy val table = new RepoTable[UserValue](db, "user_value") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def value = column[LargeString]("value", O.NotNull)
-    def key = column[String]("user_key", O.NotNull)
+    def name = column[String]("name", O.NotNull)
 
-    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ key ~ value ~ state <> (UserValue, UserValue.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ name ~ value ~ state <> (UserValue, UserValue.unapply _)
   }
 
   override def invalidateCache(userValue: UserValue)(implicit session: RSession) = {
-    valueCache.remove(UserValueKey(userValue.userId, userValue.key))
+    valueCache.remove(UserValueKey(userValue.userId, userValue.name))
     userValue
   }
 
-  def getValue(userId: Id[User], key: String)(implicit session: RSession): Option[String] = {
-    (for(f <- table if f.state === UserValueStates.ACTIVE && f.userId === userId && f.key === key) yield f.value).firstOption.map(_.value)
+  def getValue(userId: Id[User], name: String)(implicit session: RSession): Option[String] = {
+    valueCache.getOrElseOpt(UserValueKey(userId, name)) {
+      (for(f <- table if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === name) yield f.value).firstOption.map(_.value)
+    }
   }
 
 }
