@@ -21,9 +21,7 @@ case class IndexError(msg: String)
 
 object Indexer {
   val idFieldName = "_ID"
-  val idPayloadFieldName = "_UD_PAYLOAD"
-  val idPayloadTermText = "ID"
-  val idPayloadTerm = new Term(idPayloadFieldName, idPayloadTermText)
+  val idValueFieldName = "_ID_VAL"
 
   val DELETED_ID = -1
 
@@ -164,7 +162,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     fieldDecoders.get(fieldName) match {
       case Some(decoder) => decoder
       case _ => fieldName match {
-        case Indexer.idPayloadFieldName => DocUtil.IdPayloadFieldDecoder
+        case Indexer.idValueFieldName => DocUtil.IdValueFieldDecoder
         case _ => DocUtil.TextFieldDecoder
       }
     }

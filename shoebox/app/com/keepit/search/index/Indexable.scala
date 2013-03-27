@@ -10,6 +10,7 @@ import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.FieldType
+import org.apache.lucene.document.NumericDocValuesField
 import org.apache.lucene.document.StringField
 import org.apache.lucene.document.TextField
 import org.apache.lucene.index.Term
@@ -76,7 +77,7 @@ trait Indexable[T] {
   def buildDocument: Document = {
     val doc = new Document()
     doc.add(buildKeywordField(Indexer.idFieldName, idTerm.text()))
-    doc.add(buildIdPayloadField(id))
+    doc.add(buildIdValueField(id))
     doc
   }
 
@@ -93,19 +94,7 @@ trait Indexable[T] {
     new Field(fieldName, ts, textFieldType)
   }
 
-  def buildIdPayloadField(typedId: Id[T]) = {
-    val id = typedId.id
-    val buf = new Array[Byte](8)
-    buf(0) = id.toByte
-    buf(1) = (id >> 8).toByte
-    buf(2) = (id >> 16).toByte
-    buf(3) = (id >> 24).toByte
-    buf(4) = (id >> 32).toByte
-    buf(5) = (id >> 40).toByte
-    buf(6) = (id >> 48).toByte
-    buf(7) = (id >> 56).toByte
-    buildDataPayloadField(Indexer.idPayloadTerm, buf)
-  }
+  def buildIdValueField(typedId: Id[T]) = new NumericDocValuesField(Indexer.idValueFieldName, typedId.id)
 
   def buildDataPayloadField(term: Term, data: Array[Byte]): Field = {
     new Field(term.field(), new DataPayloadTokenStream(term.text(), data), dataPayloadFieldType)

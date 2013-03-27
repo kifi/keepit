@@ -68,11 +68,7 @@ object DocUtil {
 
   object TextFieldDecoder extends FieldDecoder
 
-  object IdPayloadFieldDecoder extends FieldDecoder {
-    override def decodePayload(payload: BytesRef) = {
-      ArrayIdMapper.bytesToLong(payload.bytes, payload.offset).toString
-    }
-  }
+  object IdValueFieldDecoder extends FieldDecoder
 
   object URIListDecoder extends FieldDecoder {
     override def decodePayload(payload: BytesRef) = {
