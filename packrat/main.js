@@ -348,6 +348,7 @@ function postComment(request, respond) {
       recipients: request.recipients},
     function(o) {
       api.log("[postComment] resp:", o);
+      o.session = session;
       respond(o);
     });
 }

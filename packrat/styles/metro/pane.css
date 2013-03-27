@@ -147,7 +147,8 @@ a.kifi-pane-back:active {
   bottom: 0;
   height: auto;
 }
-.kifi-compose {
+form.kifi-compose {
+  margin: 0;
   padding: 10px 6px;
 }
 .kifi-pane-tall-bottom .kifi-compose-draft[contenteditable] {
@@ -196,6 +197,13 @@ a.kifi-compose-submit {
   background-color: #bdc3c7;
   color: #fff !important;
   line-height: 28px;
+}
+a.kifi-compose-submit:hover {
+  background-color: #b6bbbf;
+}
+a.kifi-compose-submit:active,
+a.kifi-compose-submit.kifi-active {
+  background-color: #a2a7ab;
 }
 .kifi-snapshot-highlight {
   position: absolute;
