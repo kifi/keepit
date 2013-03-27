@@ -2,7 +2,7 @@ package com.keepit.search
 
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.analytics.PersistEventPlugin
-import com.keepit.common.cache.MemcachedPlugin
+import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
 import com.keepit.common.mail.MailSenderPlugin
 import com.keepit.inject._
@@ -16,20 +16,21 @@ import play.api._
 object SearchGlobal extends FortyTwoGlobal(Prod) {
   val modules = Seq(new CommonModule, new SearchModule)
 
-  override def onStart(app: Application): Unit = {
-    log.info("starting the shoebox")
-    // TODO(greg): figure out how to do service type for search
-    // require(inject[FortyTwoServices].currentService == ServiceType.SHOEBOX,
-    //    "ShoeboxGlobal can only be run on a shoebox service")
+  override def onStart(app: Application) {
+    log.info("starting the search")
     super.onStart(app)
+    startServices()
+    log.info("search started")
+  }
+
+  def startServices() {
     require(inject[ArticleIndexerPlugin].enabled)
     require(inject[URIGraphPlugin].enabled)
     require(inject[MailSenderPlugin].enabled)
     inject[MailSenderPlugin].processOutbox()
     require(inject[HealthcheckPlugin].enabled)
     require(inject[PersistEventPlugin].enabled)
-    require(inject[MemcachedPlugin].enabled)
-    log.info("shoebox started")
+    require(inject[FortyTwoCachePlugin].enabled)
   }
 
 }
