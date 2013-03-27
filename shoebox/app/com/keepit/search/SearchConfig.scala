@@ -45,7 +45,7 @@ object SearchConfig {
       "similarity" -> "similarity characteristics",
       "svWeightMyBookMarks" -> "semantics vector weight for my bookmarks",
       "svWeightBrowsingHistory" -> "semantic vector weight for browsing history",
-      "svWeightBrowsingHistory" -> "semantic vector weight for click history",
+      "svWeightClickHistory" -> "semantic vector weight for click history",
       "maxResultClickBoost" -> "boosting by recent result clicks",
       "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
       "myBookmarkBoost" -> "importance of my bookmark",
