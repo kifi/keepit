@@ -1,22 +1,20 @@
 package com.keepit
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.google.inject.{Stage, Guice, Module, Injector}
 import com.keepit.common.controller.FortyTwoServices
-import com.keepit.common.controller.ServiceType
+import com.keepit.common.controller.ReportedException
 import com.keepit.common.db.ExternalId
+import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
-import com.keepit.common.controller
 import com.keepit.inject._
-import play.api.Play.current
+
+import play.api._
 import play.api.mvc.Results.InternalServerError
 import play.api.mvc._
-import play.api._
-import play.api.Mode
 import play.utils.Threads
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.controller.ReportedException
-import java.util.concurrent.atomic.AtomicBoolean
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with Logging {
 
@@ -45,7 +43,13 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
     }
   }
 
-  override def getControllerInstance[A](clazz: Class[A]) = injector.getInstance(clazz)
+  override def getControllerInstance[A](clazz: Class[A]) = try {
+    injector.getInstance(clazz)
+  } catch {
+    case e: Throwable =>
+      injector.inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.API))
+      throw e
+  }
 
   override def beforeStart (app: Application): Unit = {
     val conf = app.configuration
