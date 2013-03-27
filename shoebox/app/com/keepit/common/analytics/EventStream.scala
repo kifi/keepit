@@ -38,7 +38,7 @@ class EventStream @Inject() (eventWriter: EventWriter) {
   def streamEvent(event: Event) = {
     implicit val writes = eventWriter.writesUserEvent
     eventWriter.wrapEvent(event).map { wrappedEvent =>
-      // Todo: Wire up to new WS
+      // Todo(Andrew): Wire up to new WS
       //adminEvent.broadcast("event", Json.toJson(wrappedEvent))
       default ! BroadcastEvent(Json.toJson(wrappedEvent))
     }

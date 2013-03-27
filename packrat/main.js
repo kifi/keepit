@@ -75,9 +75,16 @@ api.timers.setTimeout(function maybeSend() {
 
 // ===== WebSockets
 
-api.socket.open((api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws?notifications", {
-  notification: function(data) {
-    api.log("[socket:notification]", data);
+api.socket.open((api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws", {
+  message: function(data) {
+    api.log("[socket:message]", data);
+    var activeTab = api.tabs.getActive();
+    if (activeTab) {
+      api.tabs.emit(activeTab, "show_notification", data);
+    }
+  },
+  comment: function(data) {
+    api.log("[socket:comment]", data);
     var activeTab = api.tabs.getActive();
     if (activeTab) {
       api.tabs.emit(activeTab, "show_notification", data);
