@@ -369,7 +369,7 @@ public class Detector {
 //        	System.out.format( "%s : %-8.3f", langlist.get(i), langprob[i]) ;
 //        	if ( (i+1) % 5 == 0 )
 //        		System.out.println();
-//    	}
+//      }
 //      System.out.println();
     }
 

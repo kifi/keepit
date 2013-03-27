@@ -31,6 +31,12 @@ object LangDetector extends Logging {
 
   val languages: Seq[Lang] = DetectorFactory.getLangList().map(Lang(_)).toSeq
 
+  val uniformPriorMap = {
+    val langList = DetectorFactory.getLangList
+    val prob = 1.0f/langList.size()
+    langList.foldLeft(Map.empty[String, Double]){ (m, lang) => m + (lang -> prob)}
+  }
+
   val biasedProbability = 0.5d
   val priorMapForBiasedDetection = {
     val langList = DetectorFactory.getLangList
@@ -79,34 +85,13 @@ object LangDetector extends Logging {
   }
 
   def detectShortText(text:String, lang: Lang): Lang = {
-    detectShortText(text, generateBiasedPriorMap(lang))
+    detectShortText(text, priorMapForBiasedDetection + (lang.lang -> biasedProbability))
   }
 
   def detectShortText(text:String): Lang = {
-    detectShortText(text, generateUniformPriorMap)
+    detectShortText(text, uniformPriorMap)
   }
 
-  private def generateBiasedPriorMap(biasedLang:Lang) = {
-    val biasedProb = 0.5d
-    val langList = DetectorFactory.getLangList
-    val prob = (1.0d - biasedProb)/ (langList.size()-1)				// assume size > 1
-    var prior = Map.empty[String, Double]
-    for(lang<-langList){
-      prior += (lang -> prob)
-    }
-    prior += (biasedLang.lang-> biasedProb)
-    prior
-  }
-
-  private def generateUniformPriorMap() = {
-    val langList = DetectorFactory.getLangList
-    val prob = 1.0f/langList.size()				// assume size > 0
-    var prior = Map.empty[String, Double]
-    for(lang<-langList){
-      prior += (lang -> prob)
-    }
-    prior
-  }
 
   private def detectShortText(text:String,  prior: Map[String, Double]): Lang = {
     val detector = DetectorFactory.create()
