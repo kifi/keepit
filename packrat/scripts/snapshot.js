@@ -138,11 +138,12 @@ var snapshot = {
     document.documentElement.classList.add("kifi-snapshot-mode");
     document.body.classList.add("kifi-snapshot-root");
 
+    var elViewport = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"];
     var sel = {}, cX, cY;
     var $shades = $(["t","b","l","r"].map(function(s) {
       return $("<div class='kifi-snapshot-shade kifi-snapshot-shade-" + s + "'>")[0];
     }));
-    var $glass = $("<div class=kifi-snapshot-glass>");
+    var $glass = $("<div class=kifi-snapshot-glass>").css("position", "fixed");
     var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
       updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
     });
@@ -157,12 +158,12 @@ var snapshot = {
       });
     });
     $(window).scroll(function() {
-      if (sel) updateSelection(cX, cY);
+      if (cX != null) updateSelection(cX, cY);
     });
     $glass.click(function() {
-      exitSnapshotMode(snapshot.generateSelector(sel.el));
+      exitSnapshotMode(null, snapshot.generateSelector(sel.el));
     });
-    function exitSnapshotMode(selector) {
+    function exitSnapshotMode(_, selector) {
       document.documentElement.classList.remove("kifi-snapshot-mode");
       $selectable.add(".kifi-snapshot-bar-wrap").animate({opacity: 0}, 400, function() {
         $(this).remove();
@@ -181,6 +182,7 @@ var snapshot = {
       if (scrollTop == null) scrollTop = document.body.scrollTop;
       var pageX = scrollLeft + clientX;
       var pageY = scrollTop + clientY;
+      var pageHeight = Math.max(document.documentElement.scrollHeight, elViewport.clientHeight);
       if (el === sel.el) {
         // track the latest hover point over the current element
         sel.x = pageX; sel.y = pageY;
@@ -201,10 +203,10 @@ var snapshot = {
           var xL = scrollLeft + r.left - 3;
           var xR = scrollLeft + r.right + 3;
           $shades.eq(0).css({height: yT});
-          $shades.eq(1).css({top: yB, height: document.documentElement.scrollHeight - yB});
+          $shades.eq(1).css({top: yB, height: pageHeight - yB});
           $shades.eq(2).css({top: yT, height: yB - yT, width: xL});
           $shades.eq(3).css({top: yT, height: yB - yT, left: xR});
-          $glass.css({top: yT, height: yB - yT, left: xL, width: xR - xL});
+          $glass.css({top: yT, height: yB - yT, left: xL, width: xR - xL, position: ""});
           sel.el = el; sel.r = r; sel.x = pageX; sel.y = pageY;
         }
       }
