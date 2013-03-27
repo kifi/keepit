@@ -19,6 +19,7 @@ import com.keepit.model.UserNotificationDetails
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging._
+import com.keepit.common.net.URINormalizer
 
 
 case class CommentDetails(author: BasicUser, recipient: BasicUser, url: String, page: String, title: String, text: String, createdAt: DateTime)
@@ -157,7 +158,7 @@ class UserNotifier @Inject() (
         basicUserRepo.load(comment.userId),
         basicUserRepo.load(userId),
         deepLink.url,
-        uri.url,
+        URINormalizer.normalize(uri.url),
         comment.pageTitle,
         comment.text,
         comment.createdAt
@@ -184,7 +185,7 @@ class UserNotifier @Inject() (
         basicUserRepo.load(message.userId),
         basicUserRepo.load(userId),
         Some(deepLink.url),
-        Some(uri.url),
+        Some(URINormalizer.normalize(uri.url)),
         Some(message.pageTitle),
         message.text,
         message.createdAt,
