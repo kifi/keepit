@@ -317,6 +317,7 @@ slider2 = function() {
         });
         $pane.data("pane", pane);
       });
+      populatePane[pane]();
     } else {
       api.require("styles/metro/pane.css", function() {
         render("html/metro/pane.html", $.extend(params, {
@@ -332,10 +333,10 @@ slider2 = function() {
           $pane.on("click", ".kifi-pane-back", function() {
             showPane("general", true);
           });
+          populatePane[pane]();
         });
       });
     }
-    (populatePane[pane] || $.noop)();
   }
 
   function hidePane() {
@@ -351,6 +352,9 @@ slider2 = function() {
   }
 
   const populatePane = {
+    notifications: function() {
+      // TODO
+    },
     comments: function() {
       api.port.emit("get_comments", {kind: "public"}, function(comments) {
         api.log("comments:", comments);
@@ -365,7 +369,11 @@ slider2 = function() {
           renderComments($pane.find(".kifi-pane-comments .kifi-pane-tall"), comments);
         });
       });
-    }
+    },
+    threads: function() {
+      // TODO
+    },
+    general: $.noop
   };
 
   function formatCountHtml(kept, numFriends, numOthers) {
