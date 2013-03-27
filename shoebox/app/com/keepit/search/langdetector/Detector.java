@@ -365,12 +365,12 @@ public class Detector {
         }
         normalizeProb(langprob);
 
-      for(int i = 0 ; i < langlist.size(); i++){
-        	System.out.format( "%s : %-8.3f", langlist.get(i), langprob[i]) ;
-        	if ( (i+1) % 5 == 0 )
-        		System.out.println();
-    	}
-      System.out.println();
+//      for(int i = 0 ; i < langlist.size(); i++){
+//        	System.out.format( "%s : %-8.3f", langlist.get(i), langprob[i]) ;
+//        	if ( (i+1) % 5 == 0 )
+//        		System.out.println();
+//    	}
+//      System.out.println();
     }
 
     /**
