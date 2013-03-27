@@ -20,7 +20,7 @@ function attachComposeBindings($f) {
       $d.empty().append($p);
     }
   }).keydown(function(e) {
-    if (e.which == 13 && e.metaKey) {
+    if (e.which == 13 && e.metaKey) { // ⌘-Enter
       $f.submit();
     }
   });
