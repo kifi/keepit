@@ -26,7 +26,7 @@ case class UserValue(
   updatedAt: DateTime = currentDateTime,
   userId: Id[User],
   name: String,
-  value: LargeString,
+  value: String,
   state: State[UserValue] = UserValueStates.ACTIVE
 ) extends Model[UserValue] {
 
@@ -45,7 +45,7 @@ case class UserValueKey(userId: Id[User], key: String) extends Key[String] {
   def toKey(): String = userId.id + "_" + key
 }
 class UserValueCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UserValueKey, String] {
-  val ttl = 0 seconds
+  val ttl = 7 days
   def deserialize(obj: Any): String = obj.asInstanceOf[String]
   def serialize(value: String) = value
 }
@@ -68,7 +68,16 @@ class UserValueRepoImpl @Inject() (
     def value = column[LargeString]("value", O.NotNull)
     def name = column[String]("name", O.NotNull)
 
-    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ name ~ value ~ state <> (UserValue, UserValue.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ name ~ value ~ state <> (
+      apply => apply match {
+        case (id, createdAt, updatedAt, userId, name, value, state) =>
+          UserValue(id, createdAt, updatedAt, userId, name, value.value, state)
+      },
+      unapply => unapply match {
+        case UserValue(id, createdAt, updatedAt, userId, name, value, state) =>
+          Some((id, createdAt, updatedAt, userId, name, LargeString(value), state))
+        case _ => None
+      })
   }
 
   override def invalidateCache(userValue: UserValue)(implicit session: RSession) = {
