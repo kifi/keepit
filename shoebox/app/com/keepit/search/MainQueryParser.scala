@@ -49,7 +49,6 @@ class MainQueryParser(
 
         phraseQueries.add(phraseQuery, Occur.SHOULD)
       }
-      query.add(phraseQueries, Occur.SHOULD)
     }
     if (phraseQueries.clauses.size > 0) {
       phraseQueries.setBoost(phraseBoost)
