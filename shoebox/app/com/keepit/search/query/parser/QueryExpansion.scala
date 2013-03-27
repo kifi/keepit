@@ -19,7 +19,6 @@ trait QueryExpansion extends QueryParser {
   val siteBoost: Float
 
   private[this] val stemmedTerms = new ArrayBuffer[Term]
-  private[this] val stemmedQueries = new ArrayBuffer[Query]
 
   def hasStemmedTerms = !stemmedTerms.isEmpty
 
@@ -35,9 +34,6 @@ trait QueryExpansion extends QueryParser {
       phraseQuery
     }
   }
-
-  def getStemmedQuery(i: Int) = stemmedQueries(i)
-
 
   override def getFieldQuery(field: String, queryText: String, quoted: Boolean): Option[Query] = {
     field.toLowerCase match {
@@ -69,10 +65,7 @@ trait QueryExpansion extends QueryParser {
     }
 
     def saveStemmedTerms(query: Query, parent: Query) {
-      getTermSeq("ts", query).foreach{ term =>
-        stemmedTerms += term
-        stemmedQueries += parent
-      }
+      stemmedTerms ++= getTermSeq("ts", query)
     }
 
     val booleanQuery = new BooleanQuery(true) with Coordinator // add Coordinator trait for TopLevelQuery
