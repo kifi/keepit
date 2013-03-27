@@ -23,6 +23,7 @@ trait SearchServiceClient extends ServiceClient {
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo]
   def refreshSearcher(): Future[Unit]
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
+  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html]
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
@@ -71,6 +72,10 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
     call(routes.SearchController.searchKeeps(userId, query)).map {
       _.json.as[Seq[JsValue]].map(v => Id[NormalizedURI](v.as[Long])).toSet
     }
+  }
+
+  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html] = {
+    call(routes.SearchController.explain(query, userId, uriId)).map(r => Html(r.body))
   }
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = {

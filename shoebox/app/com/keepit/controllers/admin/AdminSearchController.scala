@@ -1,61 +1,32 @@
 package com.keepit.controllers.admin
 
-import play.api.data._
-import play.api._
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.libs.ws.WS
-import play.api.mvc._
-import play.api.http.ContentTypes
-
-import play.api.Play.current
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.async._
-import com.keepit.model._
-import java.sql.Connection
-import com.keepit.common.logging.Logging
-import com.keepit.search.index.ArticleIndexer
-import com.keepit.search.index.Hit
-import com.keepit.search.graph._
-import com.keepit.search._
-import com.keepit.common.social.UserWithSocial
-import com.keepit.search.ArticleSearchResultStore
-import com.keepit.common.controller.AdminController
-
-import scala.util.Try
-import views.html
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.AdminController
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.model._
+import com.keepit.search._
+
+import views.html
 
 case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
 
 @Singleton
 class AdminSearchController @Inject() (
-  db: Database,
-  userRepo: UserRepo,
-  socialConnectionRepo: SocialConnectionRepo,
-  searchConfigManager: SearchConfigManager,
-  mainSearcherFactory: MainSearcherFactory,
-  articleSearchResultStore: ArticleSearchResultStore,
-  articleSearchResultRefRepo: ArticleSearchResultRefRepo,
-  socialUserInfoRepo: SocialUserInfoRepo,
-  bookmarkRepo: BookmarkRepo,
-  uriRepo: NormalizedURIRepo)
-    extends AdminController {
+    db: Database,
+    userRepo: UserRepo,
+    articleSearchResultStore: ArticleSearchResultStore,
+    articleSearchResultRefRepo: ArticleSearchResultRefRepo,
+    uriRepo: NormalizedURIRepo,
+    searchClient: SearchServiceClient
+  ) extends AdminController {
 
-  def explain(queryString: String, uriId: Id[NormalizedURI]) = AdminHtmlAction { request =>
-    val userId = request.userId
-    val friendIds = db.readOnly { implicit s =>
-      socialConnectionRepo.getFortyTwoUserConnections(userId)
+  def explain(query: String, uriId: Id[NormalizedURI]) = AdminHtmlAction { request =>
+    Async {
+      searchClient.explainResult(query, request.userId, uriId).map(Ok(_))
     }
-    val (config, _) = searchConfigManager.getConfig(userId, queryString)
-
-    val searcher = mainSearcherFactory(userId, friendIds, SearchFilter.default(), config)
-    val explanation = searcher.explain(queryString, uriId)
-
-    Ok(html.admin.explainResult(queryString, userId, uriId, explanation))
   }
 
   def articleSearchResult(id: ExternalId[ArticleSearchResultRef]) = AdminHtmlAction { implicit request =>

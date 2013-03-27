@@ -1,4 +1,4 @@
-function attachComposeBindings($f) {
+function attachComposeBindings($f, composeTypeName) {
   var $d = $f.find(".kifi-compose-draft");
   var $p = $d.find(".kifi-placeholder");
   $d.focus(function() {
@@ -32,5 +32,19 @@ function attachComposeBindings($f) {
     if (!$p[0].parentNode) {  // placeholder detached
       $d.trigger("kifi:compose-submit", [convertDraftToText($d.html())]);
     }
+  })
+  .on("click", ".kifi-compose-snapshot", function() {
+    snapshot.take(composeTypeName, function(selector) {
+      if (selector) {
+        $d.append(" <a href='x-kifi-sel:" + selector.replace("'", "&#39;") + "'>look here</a>");
+      }
+      $d.focus();
+      var r = document.createRange();
+      r.selectNodeContents($d[0]);
+      r.collapse(false);
+      var s = window.getSelection();
+      s.removeAllRanges();
+      s.addRange(r);
+    });
   });
 }

@@ -195,15 +195,15 @@ object ReverseArrayMapper {
     (bitmap, chain)
   }
 
-  private[this] def distribute(ids: Array[Long], sz: Int, bucketStart: Array[Int]) = {
+  private[this] def distribute(ids: Array[Long], sz: Int, buckets: Array[Int]) = {
     val indexes = new Array[Int](ids.length)
     var i = 0
     while (i < ids.length) {
       val id = ids(i)
       if (id != Indexer.DELETED_ID) {
         val bucket = (hash(id) % sz).toInt
-        bucketStart(bucket) -= 1
-        indexes(bucketStart(bucket)) = i
+        buckets(bucket) -= 1
+        indexes(buckets(bucket)) = i
       }
       i += 1
     }
