@@ -27,20 +27,20 @@ object DevGlobal extends FortyTwoGlobal(Dev) {
 
 object SearchDevGlobal extends FortyTwoGlobal(Dev) {
   override val modules =
-    Seq(Modules.`override`(new CommonModule, new SearchModule).`with`(new DevModule))
+    Seq(Modules.`override`(new CommonModule, new SearchModule).`with`(new DevCommonModule, new SearchDevModule))
 
   override def onStart(app: Application) {
     super.onStart(app)
-    ShoeboxGlobal.startServices()
+    SearchGlobal.startServices()
   }
 }
 
 object ShoeboxDevGlobal extends FortyTwoGlobal(Dev) {
   override val modules =
-    Seq(Modules.`override`(new CommonModule, new ShoeboxModule).`with`(new DevModule))
+    Seq(Modules.`override`(new CommonModule, new ShoeboxModule).`with`(new DevCommonModule, new ShoeboxDevModule))
 
   override def onStart(app: Application) {
     super.onStart(app)
-    SearchGlobal.startServices()
+    ShoeboxGlobal.startServices()
   }
 }
