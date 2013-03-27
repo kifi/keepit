@@ -140,6 +140,80 @@ a.kifi-pane-back:active {
   bottom: 0;
   background: #fafafa;
 }
+.kifi-pane-tall-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: auto;
+}
+form.kifi-compose {
+  margin: 0;
+  padding: 10px 6px;
+}
+.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable] {
+  border: 1px solid #d2d2d2;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+  padding: 5px;
+  background-color: #fff;
+  min-height: 40px;
+  max-height: 145px;
+  overflow: auto;
+  outline: none;
+  box-shadow: none;
+  font-size: inherit;
+  line-height: inherit;
+}
+.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable] .kifi-placeholder {
+  color: #a9a9a9;
+}
+.kifi-compose-bar {
+  border: 1px solid #d2d2d2;
+  border-radius: 0 0 3px 3px;
+  text-align: right;
+}
+a.kifi-compose-snapshot {
+  float: left;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  width: 35px;
+  height: 28px;
+  border-right: 1px solid #d2d2d2;
+  padding: 4px 7px;
+  background-clip: content-box;
+  background-origin: content-box;
+  background-repeat: no-repeat;
+}
+a.kifi-compose-snapshot:hover {
+  background-position: -20px 0;
+}
+a.kifi-compose-snapshot:active {
+  background-position: -40px 0;
+}
+a.kifi-compose-submit {
+  display: inline-block;
+  padding: 0 18px;
+  background-color: #bdc3c7;
+  color: #fff !important;
+  line-height: 28px;
+}
+a.kifi-compose-submit:hover {
+  background-color: #b6bbbf;
+}
+a.kifi-compose-submit:active,
+a.kifi-compose-submit.kifi-active {
+  background-color: #a2a7ab;
+}
+.kifi-snapshot-highlight {
+  position: absolute;
+  z-index: 2147483641;
+  background: rgba(255,255,0,.15);
+  border: 3px solid rgba(255,255,0,.7);
+  border-radius: 6px;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
 
 /* general pane */
 .kifi-pane-general {

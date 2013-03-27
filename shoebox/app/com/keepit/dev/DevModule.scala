@@ -15,45 +15,27 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.model.PhraseRepo
-import com.keepit.search.{ResultClickTracker, ArticleStore}
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.phrasedetector.PhraseIndexer
+import com.keepit.search.{ResultClickTracker, ArticleStore}
 import com.mongodb.casbah.MongoConnection
 import com.tzavellas.sse.guice.ScalaModule
 
 import play.api.Play.current
 
-class DevModule() extends ScalaModule with Logging {
-  def configure(): Unit = {
-    println("configuring DevModule")
-
-    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped]
-    bind[FortyTwoCachePlugin].to[InMemoryCache].in[AppScoped]
-  }
-
-  @Singleton
-  @Provides
-  def mongoEventStore(): MongoEventStore = {
-    current.configuration.getString("mongo.events.server").map { server =>
-      val mongoConn = MongoConnection(server)
-      val mongoDB = mongoConn(current.configuration.getString("mongo.events.database").getOrElse("events"))
-      new MongoEventStoreImpl(mongoDB)
-    }.getOrElse {
-      new FakeMongoEventStoreImpl()
-    }
-  }
-
-  @Provides
-  @AppScoped
-  def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-dev-actor-system")
+class ShoeboxDevModule extends ScalaModule with Logging {
+  def configure() {}
 
   @Singleton
   @Provides
   def domainTagImportSettings: DomainTagImportSettings = {
     DomainTagImportSettings(localDir = Files.createTempDir().getAbsolutePath, url = "http://localhost:8000/42.zip")
   }
+}
 
+class SearchDevModule extends ScalaModule with Logging {
+  def configure() {}
 
   private def getDirectory(maybeDir: Option[String]): Directory = {
     maybeDir.map { d =>
@@ -66,6 +48,25 @@ class DevModule() extends ScalaModule with Logging {
       new MMapDirectory(dir)
     }.getOrElse {
       new RAMDirectory()
+    }
+  }
+
+  @Provides
+  @Singleton
+  def resultClickTracker: ResultClickTracker = {
+    val conf = current.configuration.getConfig("result-click-tracker").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val syncEvery = conf.getInt("syncEvery").get
+    conf.getString("dir") match {
+      case None => ResultClickTracker(numHashFuncs)
+      case Some(dirPath) =>
+      val dir = new File(dirPath).getCanonicalFile()
+      if (!dir.exists()) {
+        if (!dir.mkdirs()) {
+          throw new Exception("could not create dir %s".format(dir))
+        }
+      }
+      ResultClickTracker(dir, numHashFuncs, syncEvery)
     }
   }
 
@@ -95,25 +96,35 @@ class DevModule() extends ScalaModule with Logging {
     }
     PhraseIndexer(dir, db, phraseRepo)
   }
+}
+
+class DevCommonModule extends ScalaModule with Logging {
+  def configure() {
+    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped]
+    bind[FortyTwoCachePlugin].to[InMemoryCache].in[AppScoped]
+  }
 
   @Singleton
   @Provides
-  def resultClickTracker: ResultClickTracker = {
-    val conf = current.configuration.getConfig("result-click-tracker").get
-    val numHashFuncs = conf.getInt("numHashFuncs").get
-    val syncEvery = conf.getInt("syncEvery").get
-
-    conf.getString("dir") match {
-      case None => ResultClickTracker(numHashFuncs)
-      case Some(dirPath) =>
-        val dir = new File(dirPath).getCanonicalFile()
-        if (!dir.exists()) {
-          if (!dir.mkdirs()) {
-            throw new Exception("could not create dir %s".format(dir))
-          }
-        }
-        ResultClickTracker(dir, numHashFuncs, syncEvery)
+  def mongoEventStore(): MongoEventStore = {
+    current.configuration.getString("mongo.events.server").map { server =>
+      val mongoConn = MongoConnection(server)
+      val mongoDB = mongoConn(current.configuration.getString("mongo.events.database").getOrElse("events"))
+      new MongoEventStoreImpl(mongoDB)
+    }.getOrElse {
+      new FakeMongoEventStoreImpl()
     }
   }
 
+  @Provides
+  @AppScoped
+  def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-dev-actor-system")
+}
+
+class DevModule extends ScalaModule with Logging {
+  def configure() {
+    install(new DevCommonModule)
+    install(new ShoeboxDevModule)
+    install(new SearchDevModule)
+  }
 }

@@ -1,4 +1,11 @@
-@(availableReports: List[String])
+@(availableReports: List[String], activityData: com.keepit.controllers.admin.ActivityData)
+
+@userDisplay(user: User) = {
+<a title="@user.firstName @user.lastName" style="margin: 4px"
+    href="@com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get)">
+  @user.firstName @user.lastName
+</a>
+}
 
 @admin("Reports") {
    <table class="table table-bordered">
@@ -30,5 +37,24 @@
         </td>
       </tr>
   </table>
+
+<h2>User activity</h2>
+
+<table class="table table-bordered">
+  <tr><th>parameter</th><th>last 7 days</th><th>last 30 days</th></tr>
+  <tr><td>active keepers</td><td>@activityData.keeping1Wk/@activityData.numUsers</td><td>@activityData.keeping1Mo/@activityData.numUsers</td></tr>
+  <tr><td>active commenters and messagers</td><td>@activityData.commenting1Wk/@activityData.numUsers</td><td>@activityData.commenting1Mo/@activityData.numUsers</td></tr>
+  <tr><td>active users (keep, comment and message)</td><td>@activityData.activeUsers1Wk.size/@activityData.numUsers</td><td>@activityData.activeUsers1Mo.size/@activityData.numUsers</td></tr>
+  <tr>
+    <td>active name list</td>
+    <td>@activityData.activeUsers1Wk.map { user => @userDisplay(user) }</td>
+    <td>@activityData.activeUsers1Mo.map { user => @userDisplay(user) }</td>
+  </tr>
+  <tr>
+    <td>inactive name list</td>
+    <td>@activityData.inactiveUsers1Wk.map { user => @userDisplay(user) }</td>
+    <td>@activityData.inactiveUsers1Mo.map { user => @userDisplay(user) }</td>
+  </tr>
+</table>
 
 }
