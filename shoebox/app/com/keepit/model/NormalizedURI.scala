@@ -56,7 +56,6 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def saveAsIndexable(model: NormalizedURI)(implicit session: RWSession): NormalizedURI
 }
 
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
@@ -92,11 +91,6 @@ class NormalizedURIRepoImpl @Inject() (
         NormalizedURI.unapply _)
   }
 
-  def saveAsIndexable(model: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
-    val num = sequence.incrementAndGet()
-    save(model.copy(seq = num))
-  }
-
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
     val q = (for (f <- table if f.seq > sequenceNumber) yield f).sortBy(_.seq)
     (if (limit >= 0) q.take(limit) else q).list
@@ -120,7 +114,8 @@ class NormalizedURIRepoImpl @Inject() (
     (for(f <- table if f.state === NormalizedURIStates.ACTIVE) yield f).list
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
-    val saved = super.save(uri)
+    val num = sequence.incrementAndGet()
+    val saved = super.save(uri.copy(seq = num))
 
     lazy val scrapeRepo = scrapeRepoProvider.get
     if (uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE) {

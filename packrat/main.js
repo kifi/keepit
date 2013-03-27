@@ -174,7 +174,10 @@ api.port.on({
     ajax("GET", "http://" + getConfigs().server +
       (data.kind == "public" ? "/comments/public" : "/messages/threads") +
       (data.commentId ? "/" + data.commentId : "?url=" + encodeURIComponent(tab.url)),
-      respond);
+      function(o) {
+        o.session = session;
+        respond(o);
+      });
     return true;
   },
   post_comment: function(data, respond) {
@@ -345,6 +348,7 @@ function postComment(request, respond) {
       recipients: request.recipients},
     function(o) {
       api.log("[postComment] resp:", o);
+      o.session = session;
       respond(o);
     });
 }

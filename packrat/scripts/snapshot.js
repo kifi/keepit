@@ -132,5 +132,84 @@ var snapshot = {
     }
 
     return null;
+  },
+
+  take: function(composeTypeName, onExit) {
+    document.documentElement.classList.add("kifi-snapshot-mode");
+    document.body.classList.add("kifi-snapshot-root");
+
+    var elViewport = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"];
+    var sel = {}, cX, cY;
+    var $shades = $(["t","b","l","r"].map(function(s) {
+      return $("<div class='kifi-snapshot-shade kifi-snapshot-shade-" + s + "'>")[0];
+    }));
+    var $glass = $("<div class=kifi-snapshot-glass>").css("position", "fixed");
+    var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
+      updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
+    });
+    render("html/comments/snapshot_bar.html", {"type": composeTypeName}, function(html) {
+      api.require("scripts/lib/jquery-ui-1.9.1.custom.min.js", function() {  // for draggable
+        $(html).appendTo("body")
+          .draggable({cursor: "move", distance: 10, handle: ".kifi-snapshot-bar", scroll: false})
+          .on("click", ".kifi-snapshot-cancel", exitSnapshotMode)
+          .add($shades).css("opacity", 0).animate({opacity: 1}, 300);
+        key("esc", "snapshot", exitSnapshotMode);
+        key.setScope("snapshot");
+      });
+    });
+    $(window).scroll(function() {
+      if (cX != null) updateSelection(cX, cY);
+    });
+    $glass.click(function() {
+      exitSnapshotMode(null, snapshot.generateSelector(sel.el));
+    });
+    function exitSnapshotMode(_, selector) {
+      document.documentElement.classList.remove("kifi-snapshot-mode");
+      $selectable.add(".kifi-snapshot-bar-wrap").animate({opacity: 0}, 400, function() {
+        $(this).remove();
+        document.body.classList.remove("kifi-snapshot-root");
+      });
+      key.setScope();
+      key.deleteScope("snapshot");
+      setTimeout(onExit.bind(null, selector));
+    }
+    function updateSelection(clientX, clientY, scrollLeft, scrollTop) {
+      $selectable.hide();
+      var el = document.elementFromPoint(clientX, clientY);
+      $selectable.show();
+      if (!el) return;
+      if (scrollLeft == null) scrollLeft = document.body.scrollLeft;
+      if (scrollTop == null) scrollTop = document.body.scrollTop;
+      var pageX = scrollLeft + clientX;
+      var pageY = scrollTop + clientY;
+      var pageHeight = Math.max(document.documentElement.scrollHeight, elViewport.clientHeight);
+      if (el === sel.el) {
+        // track the latest hover point over the current element
+        sel.x = pageX; sel.y = pageY;
+      } else {
+        var r = el.getBoundingClientRect();
+        var dx = Math.abs(pageX - sel.x);
+        var dy = Math.abs(pageY - sel.y);
+        if (!sel.el ||
+            (dx == 0 || r.width < sel.r.width * 2 * dx) &&
+            (dy == 0 || r.height < sel.r.height * 2 * dy) &&
+            (dx == 0 && dy == 0 || r.width * r.height < sel.r.width * sel.r.height * Math.sqrt(dx * dx + dy * dy))) {
+          // if (sel.el) api.log(
+          //   r.width + " < " + sel.r.width + " * 2 * " + dx + " AND " +
+          //   r.height + " < " + sel.r.height + " * 2 * " + dy + " AND " +
+          //   r.width * r.height + " < " + sel.r.width * sel.r.height + " * " + Math.sqrt(dx * dx + dy * dy));
+          var yT = scrollTop + r.top - 2;
+          var yB = scrollTop + r.bottom + 2;
+          var xL = scrollLeft + r.left - 3;
+          var xR = scrollLeft + r.right + 3;
+          $shades.eq(0).css({height: yT});
+          $shades.eq(1).css({top: yB, height: pageHeight - yB});
+          $shades.eq(2).css({top: yT, height: yB - yT, width: xL});
+          $shades.eq(3).css({top: yT, height: yB - yT, left: xR});
+          $glass.css({top: yT, height: yB - yT, left: xL, width: xR - xL, position: ""});
+          sel.el = el; sel.r = r; sel.x = pageX; sel.y = pageY;
+        }
+      }
+    }
   }
 };

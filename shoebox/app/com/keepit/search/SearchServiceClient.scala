@@ -3,8 +3,9 @@ package com.keepit.search
 import com.keepit.common.controller.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
-import com.keepit.controllers.search.{URIGraphIndexInfo, ArticleIndexInfo, ResultClicked, routes}
-import com.keepit.model.{NormalizedURI, User}
+import com.keepit.controllers.search._
+import com.keepit.model.NormalizedURI
+import com.keepit.model.User
 import play.api.libs.json.{JsValue, Json}
 import play.api.templates.Html
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -19,8 +20,10 @@ trait SearchServiceClient extends ServiceClient {
   def articleIndexInfo(): Future[ArticleIndexInfo]
   def articleIndexerSequenceNumber(): Future[Int]
   def uriGraphIndexInfo(): Future[URIGraphIndexInfo]
+  def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo]
   def refreshSearcher(): Future[Unit]
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
+  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html]
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
@@ -28,9 +31,9 @@ trait SearchServiceClient extends ServiceClient {
 class SearchServiceClientImpl(override val host: String, override val port: Int, override val httpClient: HttpClient)
     extends SearchServiceClient {
 
-  import com.keepit.controllers.search.ResultClickedJson._
   import com.keepit.controllers.search.ArticleIndexInfoJson._
-  import com.keepit.controllers.search.URIGraphIndexInfoJson._
+  import com.keepit.controllers.search.ResultClickedJson._
+  import com.keepit.controllers.search.URIGraphJson._
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], isKeep: Boolean): Future[Unit] = {
     val json = Json.toJson(ResultClicked(userId, query, uriId, isKeep))
@@ -53,6 +56,10 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
     call(routes.URIGraphController.indexInfo()).map(r => Json.fromJson[URIGraphIndexInfo](r.json).get)
   }
 
+  def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = {
+    call(routes.URIGraphController.sharingUserInfo(userId, uriId)).map(r => Json.fromJson[SharingUserInfo](r.json).get)
+  }
+
   def articleIndexerSequenceNumber(): Future[Int] = {
     call(routes.ArticleIndexerController.getSequenceNumber()).map(r => (r.json \ "sequenceNumber").as[Int])
   }
@@ -65,6 +72,10 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
     call(routes.SearchController.searchKeeps(userId, query)).map {
       _.json.as[Seq[JsValue]].map(v => Id[NormalizedURI](v.as[Long])).toSet
     }
+  }
+
+  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html] = {
+    call(routes.SearchController.explain(query, userId, uriId)).map(r => Html(r.body))
   }
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = {

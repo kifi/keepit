@@ -79,7 +79,7 @@ public class Detector {
     private int iterationLimit = ITERATION_LIMIT;
     private double probThreshold = PROB_THRESHOLD;
     private double alpha = ALPHA_DEFAULT;
-    private int n_trial = 7;
+    private final int n_trial = 7;
     private int max_text_length = 10000;
     private double[] priorMap = null;
     private boolean verbose = false;
@@ -252,6 +252,24 @@ public class Detector {
     }
 
     /**
+     * used for short text detection
+     * @return
+     * @throws LangDetectException
+     */
+    public String detectForShort() throws LangDetectException {
+    	if (langprob == null) detectShortBlock();
+
+    	ArrayList<Language> list = sortProbability(langprob);
+
+        if (list.size() > 0) {
+           	return list.get(0).lang;
+        }else{
+        	return UNKNOWN_LANG;
+        }
+    }
+
+
+    /**
      * Get language candidates which have high probabilities
      * @return possible languages list (whose probabilities are over the probability threshold, ordered by probabilities descendently
      * @throws LangDetectException
@@ -293,6 +311,66 @@ public class Detector {
             for(int j=0;j<langprob.length;++j) langprob[j] += prob[j] / n_trial;
             if (verbose) System.out.println("==> " + sortProbability(prob));
         }
+    }
+
+    /**
+     * Original detectBlock() does a bootstrap-like estimation. The final probability is the average of the
+     * estimations from sub-samples of the char n-grams. In each estimation, it does an online updating
+     * for the posterior probability, until it converges. This methodology makes sense for detecting large
+     * body of text. But may not be equally good (or necessary) for short text (like query).
+     *
+     * This functions is intended for short text language detection.
+     * We use a simple naive-Bayes approach, with all n-grams as features.
+     * Let L denote the unknown language, f_1 to f_N denote the grams.
+     * We estimate p( L | f_1, ... , f_N), which is proportional to
+     * P( f_1 | L)*...*P(f_N | L )*P(L) .
+     *
+     * NOTE: In the computation below, we replace P( f_i | L ) with P( L | f_i )
+     * because the Cybozu package provides posterior, not likelihoods. This is fine if we assume
+     * that Cybozu computed posteriors using uniform prior.
+     *
+     * TODO: currently we only use 1-gram, 2-gram, 3-gram. They are weighted equally in the Naive Bayes.
+     * 1) Need to consider 4-gram. 2) We can apply different weights for n-grams.
+     *
+     * @throws LangDetectException
+     */
+    private void detectShortBlock() throws LangDetectException {
+    	cleaningText();
+    	ArrayList<String> ngrams = extractNGrams();
+        if (ngrams.size()==0)
+            throw new LangDetectException(ErrorCode.CantDetectError, "no features in text");
+        langprob = new double[langlist.size()];
+
+        int N = ngrams.size();
+        int nFeat = 0;
+        for(int i = 0 ; i < N; i++){
+        	String gram = ngrams.get(i);
+        	if ( gram != null && wordLangProbMap.containsKey(gram)){
+        		nFeat += 1;
+        		double[] langProbMap = wordLangProbMap.get(gram);
+        		for(int j = 0; j < langlist.size(); j++){
+        			// add 0.001 as a perturbation, since Naive-Bayes doesn't like zero-probability
+        			langprob[j] += Math.log( 0.001 + langProbMap[j] );
+        		}
+        	}
+        }
+
+        if ( nFeat == 0){
+        	langprob = priorMap;
+        }else{
+        	for(int j = 0 ; j < langlist.size(); j++){
+        		langprob[j] += Math.log( priorMap[j] );
+        		langprob[j] = Math.exp(langprob[j]);
+        	}
+        }
+        normalizeProb(langprob);
+
+//      for(int i = 0 ; i < langlist.size(); i++){
+//        	System.out.format( "%s : %-8.3f", langlist.get(i), langprob[i]) ;
+//        	if ( (i+1) % 5 == 0 )
+//        		System.out.println();
+//      }
+//      System.out.println();
     }
 
     /**
@@ -400,7 +478,7 @@ public class Detector {
         for (int i = 0; i < word.length(); ++i) {
             char ch = word.charAt(i);
             if (ch >= '\u0080') {
-                String st = Integer.toHexString(0x10000 + (int) ch);
+                String st = Integer.toHexString(0x10000 + ch);
                 while (st.length() < 4) st = "0" + st;
                 buf.append("\\u").append(st.subSequence(1, 5));
             } else {
