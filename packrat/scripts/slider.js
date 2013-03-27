@@ -668,103 +668,34 @@ slider = function() {
 
     var typeName = type == "public" ? "comment" : "message";
     var placeholder = "<span class=kifi-placeholder>Add a " + typeName + "…</span>";
-    $cpv.find(".kifi-comment-compose").html(placeholder);
-    $cpv.on("focus", ".kifi-comment-compose", function() {
-      $(this).find(".kifi-placeholder").remove();
-    }).on("blur", ".kifi-comment-compose", function() {
+    var $kcc = $cpv.find(".kifi-comment-compose").html(placeholder)
+    .focus(function() {
+      $kcc.find(".kifi-placeholder").remove();
+    })
+    .blur(function() {
       // wkb.ug/112854 crbug.com/222546
       $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
 
-      var value = $(this).html();
-      value = convertDraftToText(value);
-      if (!value) { // unchanged text!
-        $(this).html(placeholder);
+      if (!convertDraftToText($kcc.html())) { // unchanged text!
+        $kcc.html(placeholder);
       }
-    }).on("click", ".kifi-take-snapshot", function() {
-      // make absolute positioning relative to document instead of viewport
-      document.documentElement.style.position = "relative";
-      this.blur();
+    });
+    $cpv.on("click", ".kifi-take-snapshot", function() {
+      $cpv.blur();
       slideOut();
-
-      var sel = {}, cX, cY;
-      var $shades = $(["t","b","l","r"].map(function(s) {
-        return $("<div class='kifi-snapshot-shade kifi-snapshot-shade-" + s + "'>")[0];
-      }));
-      var $glass = $("<div class=kifi-snapshot-glass>");
-      var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
-        updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
-      });
-      render("html/comments/snapshot_bar.html", {"type": typeName}, function(html) {
-        $(html).appendTo("body")
-          .draggable({cursor: "move", distance: 10, handle: ".kifi-snapshot-bar", scroll: false})
-          .on("click", ".kifi-snapshot-cancel", exitSnapshotMode)
-          .add($shades).css("opacity", 0).animate({opacity: 1}, 300);
-        key("esc", "snapshot", exitSnapshotMode);
-        key.setScope("snapshot");
-      });
-      $(window).scroll(function() {
-        if (sel) updateSelection(cX, cY);
-      });
-      $glass.click(function() {
-        exitSnapshotMode();
-        $(".kifi-slider").find(".kifi-comment-compose")
-          .find(".kifi-placeholder").remove().end()
-          .append(" <a href='x-kifi-sel:" + snapshot.generateSelector(sel.el).replace("'", "&#39;") + "'>look here</a>");
-      });
-      function exitSnapshotMode() {
-        $selectable.add(".kifi-snapshot-bar-wrap").animate({opacity: 0}, 400, function() { $(this).remove(); });
-        key.setScope();
-        key.deleteScope("snapshot");
+      snapshot.take(typeName, function(selector) {
         slideIn();
-        $(".kifi-slider").find(".kifi-comment-compose").each(function() {
-          var el = this;
-          setTimeout(function() {
-            el.focus();
-            var r = document.createRange(), s = window.getSelection();
-            r.selectNodeContents(el);
-            r.collapse(false);
-            s.removeAllRanges();
-            s.addRange(r);
-          }, 0);
-        });
-      }
-      function updateSelection(clientX, clientY, scrollLeft, scrollTop) {
-        $selectable.hide();
-        var el = document.elementFromPoint(clientX, clientY);
-        $selectable.show();
-        if (!el) return;
-        if (scrollLeft == null) scrollLeft = document.body.scrollLeft;
-        if (scrollTop == null) scrollTop = document.body.scrollTop;
-        var pageX = scrollLeft + clientX;
-        var pageY = scrollTop + clientY;
-        if (el === sel.el) {
-          // track the latest hover point over the current element
-          sel.x = pageX; sel.y = pageY;
-        } else {
-          var r = el.getBoundingClientRect();
-          var dx = Math.abs(pageX - sel.x);
-          var dy = Math.abs(pageY - sel.y);
-          if (!sel.el ||
-              (dx == 0 || r.width < sel.r.width * 2 * dx) &&
-              (dy == 0 || r.height < sel.r.height * 2 * dy) &&
-              (dx == 0 && dy == 0 || r.width * r.height < sel.r.width * sel.r.height * Math.sqrt(dx * dx + dy * dy))) {
-            // if (sel.el) api.log(
-            //   r.width + " < " + sel.r.width + " * 2 * " + dx + " AND " +
-            //   r.height + " < " + sel.r.height + " * 2 * " + dy + " AND " +
-            //   r.width * r.height + " < " + sel.r.width * sel.r.height + " * " + Math.sqrt(dx * dx + dy * dy));
-            var yT = scrollTop + r.top - 2;
-            var yB = scrollTop + r.bottom + 2;
-            var xL = scrollLeft + r.left - 3;
-            var xR = scrollLeft + r.right + 3;
-            $shades.eq(0).css({height: yT});
-            $shades.eq(1).css({top: yB, height: document.documentElement.scrollHeight - yB});
-            $shades.eq(2).css({top: yT, height: yB - yT, width: xL});
-            $shades.eq(3).css({top: yT, height: yB - yT, left: xR});
-            $glass.css({top: yT, height: yB - yT, left: xL, width: xR - xL});
-            sel.el = el; sel.r = r; sel.x = pageX; sel.y = pageY;
-          }
+        if (selector) {
+          $kcc.append(" <a href='x-kifi-sel:" + selector.replace("'", "&#39;") + "'>look here</a>");
         }
-      }
+        $kcc.focus();
+        var r = document.createRange();
+        r.selectNodeContents($kcc[0]);
+        r.collapse(false);
+        var s = window.getSelection();
+        s.removeAllRanges();
+        s.addRange(r);
+      });
     }).on("click", ".kifi-submit-comment", function() {
       $(this).closest("form").submit();
     }).on("submit", ".kifi-comment-form", function(e) {
