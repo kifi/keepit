@@ -1,5 +1,5 @@
-function attachComposeBindings($c) {
-  var $d = $c.find(".kifi-compose-draft");
+function attachComposeBindings($f) {
+  var $d = $f.find(".kifi-compose-draft");
   var $p = $d.find(".kifi-placeholder");
   $d.focus(function() {
     if ($p[0].parentNode) {
@@ -18,6 +18,19 @@ function attachComposeBindings($c) {
 
     if (!convertDraftToText($(this).html())) {
       $d.empty().append($p);
+    }
+  }).keydown(function(e) {
+    if (e.which == 13 && e.metaKey) {
+      $f.submit();
+    }
+  });
+  $f.on("click", ".kifi-compose-submit", function() {
+    $f.submit();
+  })
+  .submit(function(e) {
+    e.preventDefault();
+    if (!$p[0].parentNode) {  // placeholder detached
+      $d.trigger("kifi:compose-submit", [convertDraftToText($d.html())]);
     }
   });
 }

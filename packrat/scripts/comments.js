@@ -8,13 +8,8 @@
 // @require scripts/snapshot.js
 
 function renderComments($container, comments) {
-  var postedEl;
+  var elComments, hComments;
   render("html/metro/comments.html", {
-    // kifiuser: {
-    //   "firstName": session.name,
-    //   "lastName": "",
-    //   "avatar": session.avatarUrl
-    // },
     formatComment: getCommentTextFormatter,
     formatDate: getCommentDateFormatter,
     formatIsoDate: getIsoDateFormatter,
@@ -29,17 +24,21 @@ function renderComments($container, comments) {
     compose: "compose.html"
   }, function(html) {
     var $c = $(html).prependTo($container);
-    postedEl = $c[0].querySelector(".kifi-comments-posted");
+    elComments = $c[0].querySelector(".kifi-comments-posted");
     updateMinHeight();
+    elComments.scrollTop = 9999;
 
+    $c.find("time").timeago();
     $c.on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
     .on("click", "a[href^='x-kifi-sel:']", function(e) {
       e.preventDefault();
     });
 
     attachComposeBindings($c);
-    $c.find("time").timeago();
-    $c.find(".kifi-compose-draft").on("input", updateMinHeight);
+    $c.find(".kifi-compose-draft")
+    .on("input", updateMinHeight)
+    .on("kifi:compose-submit", submitComment);
+
     $(window).on("resize", updateMinHeight);
   });
 
@@ -48,9 +47,55 @@ function renderComments($container, comments) {
   });
 
   function updateMinHeight() {
-    api.log("[comments:updateMinHeight]");
-    if (postedEl) {
-      postedEl.style.maxHeight = Math.max(0, $container[0].offsetHeight - postedEl.nextElementSibling.offsetHeight) + "px";
+    if (elComments) {
+      var hCommentsNew = Math.max(0, $container[0].offsetHeight - elComments.nextElementSibling.offsetHeight);
+      if (hCommentsNew != hComments) {
+        api.log("[comments:updateMinHeight]", hComments, "→", hCommentsNew);
+        var scrollTop = elComments.scrollTop;
+        elComments.style.maxHeight = hCommentsNew + "px";
+        if (hComments != null) {
+          elComments.scrollTop = Math.max(0, scrollTop + hComments - hCommentsNew);
+        }
+        hComments = hCommentsNew;
+      }
     }
+  }
+
+  function submitComment(e, text) {
+    logEvent("slider", "comment");
+    api.port.emit("post_comment", {
+      "url": document.URL,
+      "title": document.title,
+      "text": text,
+      "permissions": "public"
+    }, function(response) {
+      api.log("[submitComment] resp:", response);
+      render("html/metro/comment.html", {
+        "formatComment": getCommentTextFormatter,
+        "formatDate": getCommentDateFormatter,
+        "formatIsoDate": getIsoDateFormatter,
+        "createdAt": response.createdAt,
+        "text": text,
+        "user": {
+          "externalId": response.session.userId,
+          "firstName": response.session.name,
+          "lastName": "",
+          "facebookId": response.session.facebookId
+        },
+        "isLoggedInUser": true,
+        "externalId": response.commentId
+      }, function(html) {
+        var $posted = $container.find(".kifi-comments-posted");
+        $(html).find("time").timeago().end().appendTo($posted);
+        $posted[0].scrollTop = 99999;
+        $container.find(".kifi-compose-draft").empty().blur();
+        // TOOD: better way to update comment counts
+        $(".kifi-slider2-dock-btn.kifi-slider2-comments .kifi-count:not(.kifi-unread),#kifi-tile .kifi-count:not(.kifi-unread)").each(function() {
+          this.innerHTML = 1 + (+this.innerHTML);
+        });
+      });
+    });
+    var $submit = $container.find(".kifi-compose-submit").addClass("kifi-active");
+    setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   }
 }
