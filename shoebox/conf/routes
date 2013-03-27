@@ -74,6 +74,7 @@ GET     /admin/graphs/bookmarks.json    @com.keepit.controllers.admin.AdminDashb
 GET     /admin/events               @com.keepit.controllers.admin.AdminEventController.reportList
 POST    /admin/events/buildReport   @com.keepit.controllers.admin.AdminEventController.buildReport
 GET     /admin/events/report        @com.keepit.controllers.admin.AdminEventController.getReport(reportName: String)
+POST    /admin/events/activityData  @com.keepit.controllers.admin.AdminEventController.activityDataAsCsv
 
 GET     /admin/realtime/event       @com.keepit.controllers.admin.AdminEventController.eventViewer
 GET     /admin/realtime/event/stream      @com.keepit.controllers.admin.AdminEventController.eventStream
