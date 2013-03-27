@@ -37,7 +37,7 @@ class MainSearcherTest extends Specification with DbRepos {
 
   def initData(numUsers: Int, numUris: Int) = db.readWrite { implicit s =>
     ((0 until numUsers).map(n => userRepo.save(User(firstName = "foo" + n, lastName = ""))).toList,
-     (0 until numUris).map(n => uriRepo.saveAsIndexable(NormalizedURIFactory(title = "a" + n,
+     (0 until numUris).map(n => uriRepo.save(NormalizedURIFactory(title = "a" + n,
        url = "http://www.keepit.com/article" + n, state = SCRAPED))).toList)
   }
 
