@@ -1,17 +1,15 @@
 package com.keepit.controllers.core
 
+import com.google.inject.{Inject, Singleton}
+import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.net.URI
 import com.keepit.common.social.{UserWithSocial, UserWithSocialRepo}
-import com.keepit.search.graph.URIGraph
-
-import com.keepit.classify.{Domain, DomainClassifier, DomainRepo, DomainStates}
-
 import com.keepit.model._
-
-import com.google.inject.{Inject, Singleton}
+import com.keepit.search.SearchServiceClient
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 case class SliderInfo(
   bookmark: Option[Bookmark],
@@ -37,11 +35,24 @@ case class SliderInitialInfo(
   patterns: Option[Seq[String]])
 
 @Singleton
-class SliderInfoLoader @Inject() (db: Database,
-  normalizedURIRepo: NormalizedURIRepo, domainRepo: DomainRepo, userToDomainRepo: UserToDomainRepo, socialConnectionRepo: SocialConnectionRepo, userRepo: UserRepo,
-  followRepo: FollowRepo, bookmarkRepo: BookmarkRepo, commentRepo: CommentRepo, commentReadRepo: CommentReadRepo,
-  domainClassifier: DomainClassifier, uriGraph: URIGraph, userWithSocialRepo: UserWithSocialRepo, historyTracker: SliderHistoryTracker,
-  sliderRuleRepo: SliderRuleRepo, urlPatternRepo: URLPatternRepo) {
+class SliderInfoLoader @Inject() (
+    db: Database,
+    normalizedURIRepo: NormalizedURIRepo,
+    domainRepo: DomainRepo,
+    userToDomainRepo: UserToDomainRepo,
+    socialConnectionRepo: SocialConnectionRepo,
+    userRepo: UserRepo,
+    followRepo: FollowRepo,
+    bookmarkRepo: BookmarkRepo,
+    commentRepo: CommentRepo,
+    commentReadRepo: CommentReadRepo,
+    domainClassifier: DomainClassifier,
+    userWithSocialRepo: UserWithSocialRepo,
+    historyTracker: SliderHistoryTracker,
+    sliderRuleRepo: SliderRuleRepo,
+    urlPatternRepo: URLPatternRepo,
+    searchClient: SearchServiceClient
+  ) {
 
   def load(userId: Id[User], url: String): SliderInfo = db.readOnly {implicit s =>
     val nUri = normalizedURIRepo.getByNormalizedUrl(url)
@@ -57,10 +68,8 @@ class SliderInfoLoader @Inject() (db: Database,
 
         val following = followRepo.get(userId, uri.id.get).isDefined
 
-        val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
-        val searcher = uriGraph.getURIGraphSearcher
-        val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
-        val sharingUserIds = searcher.intersect(friendEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet - userId
+        val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
+        val sharingUserIds = sharingUserInfo.sharingUserIds
         val socialUsers = sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
 
         val numComments = commentRepo.getPublicCount(uri.id.get)
@@ -88,11 +97,9 @@ class SliderInfoLoader @Inject() (db: Database,
         val bookmark = bookmarkRepo.getByUriAndUser(uri.id.get, userId)
         val sensitive: Option[Boolean] = bookmark.flatMap(b => domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption)))
 
-        val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
-        val searcher = uriGraph.getURIGraphSearcher
-        val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
-        val keepersEdgeSet = searcher.getUriToUserEdgeSet(uri.id.get)
-        val sharingUserIds = searcher.intersect(friendEdgeSet, keepersEdgeSet).destIdSet - userId
+        val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
+        val sharingUserIds = sharingUserInfo.sharingUserIds
+        val keepersEdgeSetSize = sharingUserInfo.keepersEdgeSetSize
         val socialUsers = sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
 
         val numComments = commentRepo.getPublicCount(uri.id.get)
@@ -110,7 +117,7 @@ class SliderInfoLoader @Inject() (db: Database,
         }
 
         SliderInitialInfo(
-          bookmark, socialUsers, keepersEdgeSet.size, numComments, numUnreadComments, numMessages, numUnreadMessages,
+          bookmark, socialUsers, keepersEdgeSetSize, numComments, numUnreadComments, numMessages, numUnreadMessages,
           neverOnSite, sensitive, locator, shown, ruleGroup, patterns)
       case None =>
         val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))

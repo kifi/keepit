@@ -4,8 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.FortyTwoController
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{SequenceNumber, Id}
-import com.keepit.model.BookmarkRepo
-import com.keepit.model.User
+import com.keepit.model.{NormalizedURI, SocialConnectionRepo, BookmarkRepo, User}
 import com.keepit.search.graph.{URIGraphImpl, URIGraph, URIGraphPlugin}
 import com.keepit.search.index.Indexer.CommitData
 import org.apache.lucene.document.Document
@@ -19,17 +18,26 @@ case class URIGraphIndexInfo(
     numDocs: Int,
     committedAt: Option[String])
 
-object URIGraphIndexInfoJson {
-  implicit val format = Json.format[URIGraphIndexInfo]
+case class SharingUserInfo(
+    sharingUserIds: Set[Id[User]],
+    keepersEdgeSetSize: Int)
+
+object URIGraphJson {
+  implicit val uriGraphIndexInfoFormat = Json.format[URIGraphIndexInfo]
+
+  private implicit val userIdFormat = Id.format[User]
+  implicit val sharingUserInfoFormat = Json.format[SharingUserInfo]
 }
+
 
 class URIGraphController @Inject()(
     db: Database,
     uriGraphPlugin: URIGraphPlugin,
     bookmarkRepo: BookmarkRepo,
+    socialConnectionRepo: SocialConnectionRepo,
     uriGraph: URIGraph) extends FortyTwoController {
 
-  import URIGraphIndexInfoJson._
+  import URIGraphJson._
 
   def reindex() = Action { implicit request =>
     uriGraphPlugin.reindex()
@@ -42,6 +50,15 @@ class URIGraphController @Inject()(
         Ok(JsObject(Seq("users" -> JsNumber(cnt))))
       }
     }
+  }
+
+  def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]) = Action { implicit request =>
+    val friendIds = db.readOnly { implicit s => socialConnectionRepo.getFortyTwoUserConnections(userId) }
+    val searcher = uriGraph.getURIGraphSearcher
+    val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
+    val keepersEdgeSet = searcher.getUriToUserEdgeSet(uriId)
+    val sharingUserIds = searcher.intersect(friendEdgeSet, keepersEdgeSet).destIdSet - userId
+    Ok(Json.toJson(SharingUserInfo(sharingUserIds, keepersEdgeSet.size)))
   }
 
   def indexInfo = Action { implicit request =>
