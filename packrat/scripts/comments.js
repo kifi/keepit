@@ -1,7 +1,6 @@
 // @require styles/metro/comments.css
 // @require styles/metro/compose.css
 // @require scripts/lib/jquery.timeago.js
-// @require scripts/lib/jquery-tokeninput-1.6.1.min.js
 // @require scripts/api.js
 // @require scripts/formatting.js
 // @require scripts/look.js
