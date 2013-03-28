@@ -61,13 +61,10 @@ class AdminEventController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminEventController.reportList())
   }
 
-  def getReport(reportName: String) = AdminHtmlAction { request =>
-
+  def getReport(reportName: String) = AdminCsvAction(reportName) { request =>
     log.info(reportName)
-
     val report = reportStore.get(reportName).get
-
-    Ok(report.toCSV).withHeaders(("Content-Disposition", "attachment; filename=" + reportName + ".csv"))
+    Ok(report.toCSV)
   }
 
   private def getActivityData(): ActivityData = {
@@ -104,7 +101,7 @@ class AdminEventController @Inject() (
     ActivityData(userMap.size, activeUsers1Mo, inactiveUsers1Mo, b1m, c1m, activeUsers1Wk, inactiveUsers1Wk, b1w, c1w)
   }
 
-  def activityDataAsCsv() = AdminHtmlAction { request =>
+  def activityDataAsCsv() = AdminCsvAction("user_activity_data.csv") { request =>
     val activityData = getActivityData()
     val header = Seq("Name", "active past 7 days", "active past 30 days").mkString(",")
     val users = db.readOnly { implicit s => userRepo.all() }.toSeq.sortBy(u => s"${u.lastName}, ${u.firstName}")
@@ -114,10 +111,7 @@ class AdminEventController @Inject() (
         if (activityData.activeUsers1Mo.contains(user)) "yes" else "no"
       ).mkString(",")
     }.mkString("\n", "\n", "\n")
-    Ok(csvString).withHeaders(
-      "Content-Type" -> "text/csv",
-      "Content-Disposition" -> "attachment; filename=user_activity_data.csv"
-    )
+    Ok(csvString)
   }
 
   def reportList() = AdminHtmlAction { request =>

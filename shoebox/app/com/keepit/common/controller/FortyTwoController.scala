@@ -158,6 +158,17 @@ trait AdminController extends AuthenticatedController {
     }
   }
 
+  def AdminCsvAction(filename: String)(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
+      Action(parse.anyContent) { request =>
+    AdminAction(true, action)(request) match {
+      case r: PlainResult => r.withHeaders(
+        "Content-Type" -> "text/csv",
+        "Content-Disposition" -> s"attachment; filename='$filename'"
+      )
+      case any: Result => any
+    }
+  }
+
   private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = {
     AuthenticatedAction(isApi, { implicit request =>
       val userId = request.adminUserId.getOrElse(request.userId)
