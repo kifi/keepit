@@ -190,7 +190,7 @@ class ExtCommentController @Inject() (db: Database,
   def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
     val comments = db.readOnly { implicit s =>
       normalizedURIRepo.getByNormalizedUrl(url) map { normalizedURI =>
-          messageComments(request.userId, normalizedURI).map(threadInfoRepo.load(_, Some(request.userId))).reverse
+          messageComments(request.userId, normalizedURI).map(threadInfoRepo.load(_, Some(request.userId)))
         } getOrElse Nil
     }
     log.info("comments for url %s:\n%s".format(url, comments mkString "\n"))
