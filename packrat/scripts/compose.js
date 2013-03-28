@@ -5,14 +5,12 @@ function attachComposeBindings($c, composeTypeName) {
   var $p = $d.find(".kifi-placeholder");
 
   if ($t.length) {
-    api.port.emit("get_friends", function(data) {
-      api.log("friends:", data);
-      var friends = data.friends; //TODO!
-      for (var i in friends) {
-        var f = friends[i];
+    api.port.emit("get_friends", function(o) {
+      api.log("friends:", o);
+      o.friends.forEach(function(f) {
         f.name = f.firstName + " " + f.lastName;
-      }
-      $t.tokenInput(friends, {
+      });
+      $t.tokenInput(o.friends, {
         searchDelay: 0,
         minChars: 2,
         placeholder: "To",
@@ -25,9 +23,6 @@ function attachComposeBindings($c, composeTypeName) {
         tokenValue: "externalId",
         theme: "KiFi",
         zindex: 2147483641});
-      $f.find("#token-input-to-list").keypress(function(e) {  // TODO
-        return e.which !== 13;
-      });
     });
   }
 
