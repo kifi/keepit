@@ -55,7 +55,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
     }
     invalidateCache(result)
   } catch {
-    case t: Throwable => throw new Exception(s"error persisting $model: ${t.getClass} ${t.getMessage}", t)
+    case t: Throwable => throw new Exception(s"error persisting $model", t)
   }
 
   def count(implicit session: RSession): Int = Query(table.length).first
