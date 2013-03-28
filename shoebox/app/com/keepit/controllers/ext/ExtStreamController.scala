@@ -91,15 +91,15 @@ class ExtStreamController @Inject() (
 
         val iteratee = Iteratee.foreach[JsArray] {
           _.as[Seq[JsValue]] match {
-            case JsString("ping") :: _ =>
+            case JsString("ping") +: _ =>
               channel.push(Json.arr("pong"))
-            case JsString("stats") :: _ =>
+            case JsString("stats") +: _ =>
               channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
-            case JsString("normalize") :: JsString(url) :: _ =>
+            case JsString("normalize") +: JsString(url) +: _ =>
               channel.push(Json.arr("normalized", URINormalizer.normalize(url)))
-            case JsString("subscribe") :: sub =>
+            case JsString("subscribe") +: sub =>
               subscriptions = subscribe(streamSession, socketId, channel, subscriptions, sub)
-            case JsString("unsubscribe") :: unsub =>
+            case JsString("unsubscribe") +: unsub =>
               subscriptions = unsubscribe(streamSession, socketId, channel, subscriptions, unsub)
             case json =>
               log.warn(s"Not sure what to do with: $json")
@@ -121,13 +121,13 @@ class ExtStreamController @Inject() (
 
   def subscribe(session: StreamSession, socketId: String, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], sub: Seq[JsValue]) = {
     sub match {
-      case JsString(sub) :: _ if subscriptions.contains(sub) =>
+      case JsString(sub) +: _ if subscriptions.contains(sub) =>
         subscriptions
-      case JsString("user") :: _ =>
+      case JsString("user") +: _ =>
         val sub = userChannel.subscribe(session.userId, socketId, channel)
         channel.push(Json.arr("subscribed", "user"))
         subscriptions + (("user", sub))
-      case JsString("uri") :: JsString(url) :: _ => // todo
+      case JsString("uri") +: JsString(url) +: _ => // todo
         val normalized = URINormalizer.normalize(url)
         val sub = uriChannel.subscribe(normalized, socketId, channel)
         channel.push(Json.arr("subscribed", sub.name))
@@ -141,27 +141,27 @@ class ExtStreamController @Inject() (
 
   def unsubscribe(session: StreamSession, socketId: String, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], subParams: Seq[JsValue]) = {
     subParams match {
-      case JsString(sub) :: _ if subscriptions.contains(sub) =>
+      case JsString(sub) +: _ if subscriptions.contains(sub) =>
         // For all subscriptions with an id
         val subscription = subscriptions.get(sub).get
         channel.push(Json.arr("unsubscribed", sub))
         subscription.unsubscribe
         subscriptions - sub
-      case JsString("uri") :: JsString(url) :: _ if subscriptions.contains(s"uri:${URINormalizer.normalize(url)}") =>
+      case JsString("uri") +: JsString(url) +: _ if subscriptions.contains(s"uri:${URINormalizer.normalize(url)}") =>
         // Handled separately because of URL normalization
         val name = s"uri:${URINormalizer.normalize(url)}"
         val subscription = subscriptions.get(name).get
         channel.push(Json.arr("unsubscribed", name))
         subscription.unsubscribe
         subscriptions - name
-      case JsString(sub) :: JsString(id) :: _ if subscriptions.contains(s"$sub:$id") =>
+      case JsString(sub) +: JsString(id) +: _ if subscriptions.contains(s"$sub:$id") =>
         // For all subscriptions with an id and sub-id
         val name = s"$sub:$id"
         val subscription = subscriptions.get(name).get
         channel.push(Json.arr("unsubscribed", name))
         subscription.unsubscribe
         subscriptions - name
-      case JsString(sub) :: _ =>
+      case JsString(sub) +: _ =>
         channel.push(Json.arr("unsubscribed_error", s"Not currently subscribed to $sub"))
         subscriptions
       case json =>
