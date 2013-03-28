@@ -1,15 +1,14 @@
 package com.keepit.search.graph
 
 import scala.collection.mutable.ArrayBuffer
-
 import java.io.StringReader
-
 import org.apache.lucene.analysis.TokenStream
+import org.apache.lucene.document.BinaryDocValuesField
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.store.Directory
+import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.Version
-
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.Host
@@ -23,7 +22,6 @@ import com.keepit.search.index.FieldDecoder
 import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
 import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineFieldBuilder
-
 import play.api.Play.current
 
 object URIGraph {
@@ -117,11 +115,11 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
 
     override def buildDocument = {
       val doc = super.buildDocument
-      val payload = URIList.toByteArray(bookmarks)
-      val usr = buildURIListPayloadField(payload)
+      val uriListBytes = URIList.toByteArray(bookmarks)
+      val usr = buildURIListField(uriListBytes)
       val uri = buildURIIdField(bookmarks)
 
-      val uriList = new URIList(payload)
+      val uriList = new URIList(uriListBytes)
       val langMap = buildLangMap(bookmarks, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
       val langs = buildBookmarkTitleField(URIGraph.langField, uriList, bookmarks){ (fieldName, text) =>
         val lang = langMap.getOrElse(text, Lang("en"))
@@ -147,13 +145,12 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
       doc
     }
 
-    def buildURIListPayloadField(payload: Array[Byte]) = {
-      buildDataPayloadField(new Term(URIGraph.userField, id.toString), payload)
+    def buildURIListField(uriListBytes: Array[Byte]) = {
+      new BinaryDocValuesField(URIGraph.userField, new BytesRef(uriListBytes))
     }
 
     def buildURIIdField(bookmarks: Seq[Bookmark]) = {
-      val fld = buildIteratorField(URIGraph.uriField, bookmarks.iterator.filter(bm => !bm.isPrivate)){ bm => bm.uriId.toString }
-      fld
+      buildIteratorField(URIGraph.uriField, bookmarks.iterator.filter(bm => !bm.isPrivate)){ bm => bm.uriId.toString }
     }
 
     def buildLangMap(bookmarks: Seq[Bookmark], preferedLang: Lang) = {
