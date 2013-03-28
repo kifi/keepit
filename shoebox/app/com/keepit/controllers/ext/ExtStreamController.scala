@@ -59,7 +59,7 @@ class ExtStreamController @Inject() (
             val impUserId =  userRepo.get(impExtUserId).id.get
             val impSocUserInfo = socialUserInfoRepo.getByUser(impUserId)
             StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId))
-          case None if experiments.find(_ == ExperimentTypes.ADMIN).isDefined =>
+          case None if experiments.contains(ExperimentTypes.ADMIN) =>
             StreamSession(userId, socialUser, experiments, Some(userId))
           case _ =>
             StreamSession(userId, socialUser, experiments, None)
