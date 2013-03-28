@@ -418,6 +418,8 @@ api = function() {
               var handler = handlers[msg[0]];
               if (handler) {
                 handler.apply(null, msg.splice(1));
+              } else {
+                api.log("[api.socket.onmessage] Ignoring message, no handler.", msg);
               }
             } else {
               api.log("[api.socket.onmessage] ignoring (not array):", msg, "from url", url);

@@ -1,33 +1,32 @@
 package com.keepit.controllers.ext
 
-import play.api.mvc.Action
-import play.api.mvc.WebSocket
-import play.api.libs.json._
-import play.api.mvc.Controller
-import com.keepit.inject._
-import com.keepit.common.controller.FortyTwoController
-import com.keepit.realtime._
-import com.keepit.common.logging.Logging
-import play.api.Play.current
-import play.api.libs.iteratee._
-import play.api.libs.concurrent._
-import com.keepit.common.db._
-import com.keepit.model.User
-import play.api.libs.concurrent.Execution.Implicits._
-import scala.concurrent.duration._
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import securesocial.core.SecureSocial
-import securesocial.core.UserService
-import securesocial.core.UserId
-import com.keepit.model.KifiInstallation
-import com.keepit.common.controller.FortyTwoController._
-import com.keepit.common.social.SocialId
-import com.keepit.model._
-import com.keepit.common.db._
-import com.keepit.common.social.SocialNetworks
+import com.keepit.common.controller._
+import com.keepit.common.controller.FortyTwoController.ImpersonateCookie
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
+import com.keepit.common.net.URINormalizer
+import com.keepit.common.social._
+import com.keepit.common.time.Clock
+import com.keepit.model._
+import com.keepit.realtime._
+import java.util.UUID
+import com.google.inject.ImplementedBy
+import com.google.inject.Inject
+import com.google.inject.Singleton
+import play.api.libs.iteratee.Concurrent
+import play.api.libs.iteratee.Concurrent.{Channel => PlayChannel}
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.Iteratee
+import play.api.libs.json._
+import play.api.libs.json.Json
 import play.api.mvc.RequestHeader
-import com.keepit.common.controller.BrowserExtensionController
+import play.api.mvc.WebSocket
+import play.api.mvc.WebSocket.FrameFormatter
+import securesocial.core._
+import com.keepit.common.db.Id
+import com.keepit.common.db.State
+import scala.util.Random
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Seq[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -37,8 +36,9 @@ class ExtStreamController @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
     experimentRepo: UserExperimentRepo,
-    streamProvider: UserStreamProvider,
-    streams: Streams) extends BrowserExtensionController with Logging {
+    userChannel: UserChannel,
+    uriChannel: UriChannel,
+    clock: Clock) extends BrowserExtensionController with Logging {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
     /*
      * Unfortunately, everything related to existing secured actions intimately deals with Action, Request, Result, etc.
@@ -49,7 +49,6 @@ class ExtStreamController @Inject() (
       providerId <- request.session.get(SecureSocial.ProviderKey);
       secSocialUser <- UserService.find(UserId(userId, providerId))
     ) yield {
-      //val userIdOpt = request.session.get(FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
       val impersonatedUserIdOpt: Option[ExternalId[User]] = ImpersonateCookie.decodeFromCookie(request.cookies.get(ImpersonateCookie.COOKIE_NAME))
 
       db.readOnly { implicit session =>
@@ -57,10 +56,12 @@ class ExtStreamController @Inject() (
         val userId = socialUser.userId.get
         val experiments = experimentRepo.getUserExperiments(userId)
         impersonatedUserIdOpt match {
-          case Some(impExtUserId) if experiments.find(e => e == ExperimentTypes.ADMIN).isDefined =>
+          case Some(impExtUserId) if experiments.contains(ExperimentTypes.ADMIN) =>
             val impUserId =  userRepo.get(impExtUserId).id.get
             val impSocUserInfo = socialUserInfoRepo.getByUser(impUserId)
             StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId))
+          case None if experiments.contains(ExperimentTypes.ADMIN) =>
+            StreamSession(userId, socialUser, experiments, Some(userId))
           case _ =>
             StreamSession(userId, socialUser, experiments, None)
         }
@@ -68,34 +69,106 @@ class ExtStreamController @Inject() (
     }
   }
 
-  def ws() = WebSocket.using[JsValue] { implicit request  =>
+  implicit val jsonFrame: FrameFormatter[JsArray] =
+    FrameFormatter.stringFrame.transform(
+      Json.stringify,
+      in =>
+        Json.parse(in) match {
+          case j: JsArray => j
+          case j: JsValue => Json.arr(j)
+        })
+
+  def ws() = WebSocket.using[JsArray] { implicit request =>
     authenticate(request) match {
       case Some(streamSession) =>
 
-        val feeds = streamProvider.getStreams(request.queryString.keys.toSeq)
+        val connectedAt = clock.now
+        val (enumerator, channel) = Concurrent.broadcast[JsArray]
+        val socketId = Random.nextLong()
 
-        val enumerator = Enumerator.interleave(feeds.map(_.connect(streamSession.userId))).asInstanceOf[Enumerator[JsValue]]
-        val iteratee = Iteratee.foreach[JsValue]{ message =>
-          handleIncomingMessage(streamSession, message)
+        var subscriptions = Map[String, Subscription]()
+
+        subscriptions += (("user", userChannel.subscribe(streamSession.userId, socketId, channel)))
+
+        val iteratee = Iteratee.foreach[JsArray] {
+          _.as[Seq[JsValue]] match {
+            case JsString("ping") +: _ =>
+              channel.push(Json.arr("pong"))
+            case JsString("stats") +: _ =>
+              channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
+            case JsString("normalize") +: JsString(url) +: _ =>
+              channel.push(Json.arr("normalized", URINormalizer.normalize(url)))
+            case JsString("subscribe") +: sub =>
+              subscriptions = subscribe(streamSession, socketId, channel, subscriptions, sub)
+            case JsString("unsubscribe") +: unsub =>
+              subscriptions = unsubscribe(streamSession, socketId, channel, subscriptions, unsub)
+            case json =>
+              log.warn(s"Not sure what to do with: $json")
+          }
         }.mapDone { _ =>
-          log.info(s"Client ${streamSession.userId} disconnecting!")
-          feeds.map(_.disconnect(streamSession.userId))
+          subscriptions.map(_._2.unsubscribe)
         }
 
         (iteratee, enumerator)
 
       case None =>
         log.info(s"Anonymous user trying to connect. Disconnecting!")
-        val enumerator: Enumerator[JsValue] = Enumerator(Json.obj("error" -> "Permission denied. Are you logged in? Connect again to re-authenticate."))
-        val iteratee = Iteratee.ignore[JsValue]
+        val enumerator: Enumerator[JsArray] = Enumerator(Json.arr("error", "Permission denied. Are you logged in? Connect again to re-authenticate."))
+        val iteratee = Iteratee.ignore[JsArray]
 
         (iteratee, enumerator >>> Enumerator.eof)
     }
   }
 
-  def handleIncomingMessage(streamSession: StreamSession, message: JsValue) = {
-    log.info(s"New message from ${streamSession.userId}: $message")
-    // And handle here...
+  private def subscribe(session: StreamSession, socketId: Long, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], sub: Seq[JsValue]): Map[String, Subscription] = {
+    sub match {
+      case JsString(sub) +: _ if subscriptions.contains(sub) =>
+        subscriptions
+      case JsString("user") +: _ =>
+        val sub = userChannel.subscribe(session.userId, socketId, channel)
+        channel.push(Json.arr("subscribed", "user"))
+        subscriptions + (("user", sub))
+      case JsString("uri") +: JsString(url) +: _ => // todo
+        val normalized = URINormalizer.normalize(url)
+        val sub = uriChannel.subscribe(normalized, socketId, channel)
+        channel.push(Json.arr("subscribed", sub.name))
+        subscriptions + ((sub.name, sub))
+      case json =>
+        log.warn(s"Can't subscribe to $json. No handler.")
+        channel.push(Json.arr("subscribed_error", "Can't subscribe, no handler."))
+        subscriptions
+    }
+  }
+
+  private def unsubscribe(session: StreamSession, socketId: Long, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], subParams: Seq[JsValue]): Map[String, Subscription] = {
+    subParams match {
+      case JsString(sub) +: _ if subscriptions.contains(sub) =>
+        // For all subscriptions with an id
+        val subscription = subscriptions.get(sub).get
+        channel.push(Json.arr("unsubscribed", sub))
+        subscription.unsubscribe()
+        subscriptions - sub
+      case JsString("uri") +: JsString(url) +: _ if subscriptions.contains(s"uri:${URINormalizer.normalize(url)}") =>
+        // Handled separately because of URL normalization
+        val name = s"uri:${URINormalizer.normalize(url)}"
+        val subscription = subscriptions.get(name).get
+        channel.push(Json.arr("unsubscribed", name))
+        subscription.unsubscribe()
+        subscriptions - name
+      case JsString(sub) +: JsString(id) +: _ if subscriptions.contains(s"$sub:$id") =>
+        // For all subscriptions with an id and sub-id
+        val name = s"$sub:$id"
+        val subscription = subscriptions.get(name).get
+        channel.push(Json.arr("unsubscribed", name))
+        subscription.unsubscribe()
+        subscriptions - name
+      case JsString(sub) +: _ =>
+        channel.push(Json.arr("unsubscribed_error", s"Not currently subscribed to $sub"))
+        subscriptions
+      case json =>
+        log.warn(s"Can't unsubscribe from $json. No handler.")
+        subscriptions
+    }
   }
 
 }
