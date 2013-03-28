@@ -39,10 +39,12 @@ img.kifi-comment-pic {
   width: 35px;
   height: 35px;
   border-radius: 2px;
-  margin-right: 8px;
 }
 img.kifi-comment-pic.kifi-self {
   border-radius: 20px;
+}
+.kifi-comment-body {
+  margin-left: 43px;
 }
 .kifi-comment-name {
   font-weight: 400;
