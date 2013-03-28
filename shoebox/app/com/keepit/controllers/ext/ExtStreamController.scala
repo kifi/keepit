@@ -119,7 +119,7 @@ class ExtStreamController @Inject() (
     }
   }
 
-  def subscribe(session: StreamSession, socketId: String, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], sub: Seq[JsValue]) = {
+  private def subscribe(session: StreamSession, socketId: String, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], sub: Seq[JsValue]) = {
     sub match {
       case JsString(sub) +: _ if subscriptions.contains(sub) =>
         subscriptions
@@ -139,7 +139,7 @@ class ExtStreamController @Inject() (
     }
   }
 
-  def unsubscribe(session: StreamSession, socketId: String, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], subParams: Seq[JsValue]) = {
+  private def unsubscribe(session: StreamSession, socketId: String, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], subParams: Seq[JsValue]) = {
     subParams match {
       case JsString(sub) +: _ if subscriptions.contains(sub) =>
         // For all subscriptions with an id
