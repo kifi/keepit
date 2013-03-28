@@ -63,6 +63,8 @@
     "html/metro/pane_notices.html",
     "html/metro/pane_threads.html",
     "html/metro/slider2.html",
+    "html/metro/thread.html",
+    "html/metro/threads.html",
     "html/comments/hearts.html",
     "html/comments/comments_list.html",
     "html/comments/comments_view.html",

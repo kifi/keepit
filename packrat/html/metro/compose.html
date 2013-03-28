@@ -1,4 +1,7 @@
 <form class="kifi-compose">
+  {{#showTo}}
+  <input type="text" class="kifi-compose-to" id="kifi-compose-to" placeholder="To">
+  {{/showTo}}
   <div class="kifi-compose-draft" contenteditable>
     <div class="kifi-placeholder">{{draftPlaceholder}}</div>
   </div>

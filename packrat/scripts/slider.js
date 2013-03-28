@@ -451,8 +451,8 @@ slider = function() {
         "lastName": "",
         "avatar": session.avatarUrl
       },
-      formatComments: getCommentTextFormatter,
-      formatDate: getCommentDateFormatter,
+      formatComments: getTextFormatter,
+      formatLocalDate: getLocalDateFormatter,
       formatIsoDate: getIsoDateFormatter,
       comments: visibleComments,
       showControlBar: type == "public",
@@ -717,8 +717,8 @@ slider = function() {
         var params = newComment;
 
         newComment.isLoggedInUser = true;
-        params["formatComments"] = getCommentTextFormatter;
-        params["formatDate"] = getCommentDateFormatter;
+        params["formatComments"] = getTextFormatter;
+        params["formatLocalDate"] = getLocalDateFormatter;
         params["formatIsoDate"] = getIsoDateFormatter;
 
         badGlobalState["updates"].publicCount++;
@@ -785,8 +785,8 @@ slider = function() {
 
         var params = newComment.message;
         newComment.message.isLoggedInUser = true;
-        params["formatComments"] = getCommentTextFormatter;
-        params["formatDate"] = getCommentDateFormatter;
+        params["formatComments"] = getTextFormatter;
+        params["formatLocalDate"] = getLocalDateFormatter;
         params["formatIsoDate"] = getIsoDateFormatter;
 
         render("html/comments/comment.html", params, function(html) {

@@ -1,0 +1,84 @@
+.kifi-threads-list {
+  margin: 0 6px;
+  overflow-y: auto;
+  max-height: 0;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+div.kifi-threads-none {
+  display: none;
+}
+div.kifi-threads-none:only-child {
+  display: block;
+}
+.kifi-thread {
+  margin-top: 6px;
+  border: 1px solid #dcdcdc;
+  border-width: 27px 1px 1px;
+  border-radius: 3px;
+  background-color: #efefef;
+  position: relative;
+  cursor: pointer;
+}
+.kifi-thread time {
+  position: absolute;
+  right: 10px;
+  top: -27px;
+  line-height: 27px;
+  font-size: 11px;
+  color: #a9a9a9;
+}
+.kifi-thread-pics {
+  position: absolute;
+  left: 10px;
+  top: -21px;
+  font-size: 0;
+  line-height: 0;
+}
+img.kifi-thread-pic {
+  width: 35px;
+  height: 35px;
+  border-radius: 2px;
+  margin-right: 4px;
+}
+span.kifi-thread-msg-count {
+  display: inline-block;
+  margin: -2px 0 0 3px;
+  vertical-align: top;
+  text-align: center;
+  min-width: 18px;
+  border-radius: 15px;
+  background-color: #efefef;
+  color: #a9a9a9;
+  font: 10px/18px sans-serif;
+}
+.kifi-thread-msg-count.kifi-unread {
+  background-color: #e74c3c;
+  color: #fff;
+}
+.kifi-thread-snippet {
+  margin: 22px 24px 10px 10px;
+}
+.kifi-thread-snippet p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kifi-thread-arrow {
+  position: absolute;
+  top: 21px;
+  right: 11px;
+  width: 9px;
+  height: 9px;
+  overflow: hidden;
+}
+.kifi-thread-arrow::before {
+  content: "\21e7";
+  position: absolute;
+  top: -10px;
+  left: -14px;
+  font: 24px arial,sans-serif;
+  color: #7f8c8d;
+  -webkit-transform: scale(1,1.4) rotate(90deg);
+  transform: scale(1,1.4) rotate(90deg);
+}
