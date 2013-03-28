@@ -8,25 +8,27 @@ import com.keepit.search.index.ArrayIdMapper
 import com.keepit.search.index.CachingIndexReader
 import com.keepit.search.index.IdMapper
 import com.keepit.search.index.Searcher
+import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.query.QueryUtil
-import org.apache.lucene.index.AtomicReader
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
+import org.apache.lucene.util.BytesRef
 
 class URIGraphSearcher(searcher: Searcher) {
 
-  def reader: AtomicReader = searcher.indexReader.asAtomicReader
+  def reader: WrappedSubReader = searcher.indexReader.asAtomicReader
 
   def getUserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) = new UserToUserEdgeSet(sourceId, destIdSet)
 
   def getUriToUserEdgeSet(sourceId: Id[NormalizedURI]) = new UriToUserEdgeSet(sourceId, searcher)
 
   def getUserToUriEdgeSet(sourceId: Id[User], publicOnly: Boolean = true) = {
-    val uriIdSet = getURIList(sourceId) match {
+    val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
+    val uriIdSet = getURIList(sourceDocId) match {
       case Some(uriList) =>
         if (publicOnly) uriList.publicList.map(id => new Id[NormalizedURI](id)).toSet
         else (uriList.publicList.map(id => new Id[NormalizedURI](id)).toSet ++
@@ -37,7 +39,8 @@ class URIGraphSearcher(searcher: Searcher) {
   }
 
   def getUserToUriEdgeSetWithCreatedAt(sourceId: Id[User], publicOnly: Boolean = true) = {
-    val uriIdMap = getURIList(sourceId) match {
+    val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
+    val uriIdMap = getURIList(sourceDocId) match {
       case Some(uriList) =>
         var m = uriList.publicList.zip(uriList.publicCreatedAt).foldLeft(Map.empty[Id[NormalizedURI], Long]) {
           case (m, (id, createdAt)) => m + (Id[NormalizedURI](id) -> createdAt)
@@ -106,36 +109,35 @@ class URIGraphSearcher(searcher: Searcher) {
     di != NO_MORE_DOCS
   }
 
-  private def getURIList(user: Id[User]): Option[URIList] = {
-    val term = new Term(userField, user.toString)
+  private def getURIList(userDocId: Int): Option[URIList] = {
     var uriList: Option[URIList] = None
-    val tp = reader.termPositionsEnum(term)
-    if (tp != null) {
-      if (tp.nextDoc() < NO_MORE_DOCS) {
-        tp.nextPosition()
-        val payload = tp.getPayload()
-        if (payload != null) {
-          val payloadBuffer = new Array[Byte](payload.length)
-          System.arraycopy(payload.bytes, payload.offset, payloadBuffer, 0, payload.length)
-          uriList = Some(new URIList(payloadBuffer))
+
+    if (userDocId >= 0) {
+      var docValues = reader.getBinaryDocValues(URIGraph.userField)
+      var ref = new BytesRef()
+      if (docValues != null) {
+        docValues.get(userDocId, ref)
+        if (ref.length > 0) {
+          val buf = new Array[Byte](ref.length)
+          System.arraycopy(ref.bytes, ref.offset, buf, 0, ref.length)
+          uriList = Some(new URIList(buf))
         }
       }
     }
     uriList
   }
 
-  private def getIndexReader(user: Id[User], uriList: URIList, terms: Set[Term]) = {
-    val term = new Term(userField, user.toString)
-    val td = reader.termDocsEnum(term)
-    val userDocId = if (td != null) td.nextDoc() else NO_MORE_DOCS
+  private def getIndexReader(userDocId: Int, uriList: URIList, terms: Set[Term]) = {
     val numDocs = uriList.publicListSize + uriList.privateListSize
     LineIndexReader(reader, userDocId, terms, numDocs)
   }
 
   def openPersonalIndex(user: Id[User], query: Query): Option[(CachingIndexReader, IdMapper)] = {
-    getURIList(user).map{ uriList =>
+    val userDocId = reader.getIdMapper.getDocId(user.id)
+
+    getURIList(userDocId).map{ uriList =>
       val terms = QueryUtil.getTerms(query)
-      (getIndexReader(user, uriList, terms), new ArrayIdMapper(uriList.publicList ++ uriList.privateList))
+      (getIndexReader(userDocId, uriList, terms), new ArrayIdMapper(uriList.publicList ++ uriList.privateList))
     }
   }
 }

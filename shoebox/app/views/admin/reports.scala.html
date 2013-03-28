@@ -40,6 +40,12 @@
 
 <h2>User activity</h2>
 
+<p>
+  <a class="btn" href="@com.keepit.controllers.admin.routes.AdminEventController.activityDataAsCsv">
+    Get data as CSV
+  </a>
+</p>
+
 <table class="table table-bordered">
   <tr><th>parameter</th><th>last 7 days</th><th>last 30 days</th></tr>
   <tr><td>active keepers</td><td>@activityData.keeping1Wk/@activityData.numUsers</td><td>@activityData.keeping1Mo/@activityData.numUsers</td></tr>

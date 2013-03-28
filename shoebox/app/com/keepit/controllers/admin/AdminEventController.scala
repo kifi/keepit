@@ -61,16 +61,13 @@ class AdminEventController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminEventController.reportList())
   }
 
-  def getReport(reportName: String) = AdminHtmlAction { request =>
-
+  def getReport(reportName: String) = AdminCsvAction(reportName) { request =>
     log.info(reportName)
-
     val report = reportStore.get(reportName).get
-
-    Ok(report.toCSV).withHeaders(("Content-Disposition", "attachment; filename=" + reportName + ".csv"))
+    Ok(report.toCSV)
   }
 
-  def reportList() = AdminHtmlAction { request =>
+  private def getActivityData(): ActivityData = {
     def queryUserIds(table: String, ago: ReadablePeriod)
         (implicit s: RSession): Set[Id[User]] = {
       val ids = new mutable.ArrayBuffer[Long]()
@@ -101,11 +98,25 @@ class AdminEventController @Inject() (
       (active, notActive, b.size, c.size)
     }
 
-    val activityData = ActivityData(
-      userMap.size, activeUsers1Mo, inactiveUsers1Mo, b1m, c1m, activeUsers1Wk, inactiveUsers1Wk, b1w, c1w)
+    ActivityData(userMap.size, activeUsers1Mo, inactiveUsers1Mo, b1m, c1m, activeUsers1Wk, inactiveUsers1Wk, b1w, c1w)
+  }
 
+  def activityDataAsCsv() = AdminCsvAction("user_activity_data.csv") { request =>
+    val activityData = getActivityData()
+    val header = Seq("Name", "active past 7 days", "active past 30 days").mkString(",")
+    val users = db.readOnly { implicit s => userRepo.all() }.toSeq.sortBy(u => s"${u.lastName}, ${u.firstName}")
+    val csvString = header + users.map { user =>
+      Seq(s"${user.firstName} ${user.lastName}",
+        if (activityData.activeUsers1Wk.contains(user)) "yes" else "no",
+        if (activityData.activeUsers1Mo.contains(user)) "yes" else "no"
+      ).mkString(",")
+    }.mkString("\n", "\n", "\n")
+    Ok(csvString)
+  }
+
+  def reportList() = AdminHtmlAction { request =>
     val availableReports = reportStore.getReports() // strip ".json"
-
+    val activityData = getActivityData()
     Ok(html.admin.reports(availableReports, activityData))
   }
 
