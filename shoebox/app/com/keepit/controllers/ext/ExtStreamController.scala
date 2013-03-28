@@ -120,7 +120,7 @@ class ExtStreamController @Inject() (
     }
   }
 
-  private def subscribe(session: StreamSession, socketId: Long, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], sub: Seq[JsValue]) = {
+  private def subscribe(session: StreamSession, socketId: Long, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], sub: Seq[JsValue]): Map[String, Subscription] = {
     sub match {
       case JsString(sub) +: _ if subscriptions.contains(sub) =>
         subscriptions
@@ -140,27 +140,27 @@ class ExtStreamController @Inject() (
     }
   }
 
-  private def unsubscribe(session: StreamSession, socketId: Long, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], subParams: Seq[JsValue]) = {
+  private def unsubscribe(session: StreamSession, socketId: Long, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], subParams: Seq[JsValue]): Map[String, Subscription] = {
     subParams match {
       case JsString(sub) +: _ if subscriptions.contains(sub) =>
         // For all subscriptions with an id
         val subscription = subscriptions.get(sub).get
         channel.push(Json.arr("unsubscribed", sub))
-        subscription.unsubscribe
+        subscription.unsubscribe()
         subscriptions - sub
       case JsString("uri") +: JsString(url) +: _ if subscriptions.contains(s"uri:${URINormalizer.normalize(url)}") =>
         // Handled separately because of URL normalization
         val name = s"uri:${URINormalizer.normalize(url)}"
         val subscription = subscriptions.get(name).get
         channel.push(Json.arr("unsubscribed", name))
-        subscription.unsubscribe
+        subscription.unsubscribe()
         subscriptions - name
       case JsString(sub) +: JsString(id) +: _ if subscriptions.contains(s"$sub:$id") =>
         // For all subscriptions with an id and sub-id
         val name = s"$sub:$id"
         val subscription = subscriptions.get(name).get
         channel.push(Json.arr("unsubscribed", name))
-        subscription.unsubscribe
+        subscription.unsubscribe()
         subscriptions - name
       case JsString(sub) +: _ =>
         channel.push(Json.arr("unsubscribed_error", s"Not currently subscribed to $sub"))

@@ -67,7 +67,7 @@ trait ChannelManager[T, S <: Channel] {
 }
 
 class Subscription(val name: String, unsub: () => Option[Boolean]) {
-  private var active = new AtomicBoolean(true)
+  private val active = new AtomicBoolean(true)
   def isActive = active.get()
   def unsubscribe(): Option[Boolean] = {
     val res = if(active.getAndSet(false)) unsub() else None
@@ -90,7 +90,7 @@ abstract class ChannelImpl[T](id: T) extends Channel {
     pool.remove(socketId).isDefined
   }
 
-  def unsubscribeAll(): Unit = synchronized {
+  def unsubscribeAll(): Unit = {
     pool.clear
   }
 
@@ -119,12 +119,11 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
   }
 
   def push(id: T, msg: JsArray): Int = {
-    find(id).map(_.push(msg)).sum
+    find(id).map(_.push(msg)).getOrElse(0)
   }
 
   private def findOrCreateChannel(id: T): Channel = {
-    channels.putIfAbsent(id, creator(id))
-    channels.get(id).get
+    channels.getOrElseUpdate(id, creator(id))
   }
 
   private def find(id: T): Option[Channel] = {
