@@ -108,13 +108,12 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
 
   def subscribe(id: T, socketId: Long, playChannel: PlayChannel[JsArray]): Subscription = {
     val channel = findOrCreateChannel(id)
-    if (channel.isEmpty) {
-      // An empty channel may be removed at any time, so the first subscription requires synchronization.
+    if (channel.size > 3) {
+      channel.subscribe(socketId, playChannel)  // skipping synchronization (taking a risk) when channel is popular
+    } else {
       synchronized {
         findOrCreateChannel(id).subscribe(socketId, playChannel)
       }
-    } else {
-      channel.subscribe(socketId, playChannel)
     }
 
     new Subscription(s"$name:$id", () => unsubscribe(id, socketId))
@@ -122,15 +121,17 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
 
   def unsubscribe(id: T, socketId: Long): Option[Boolean] = {
     find(id).map { channel =>
-      val res = channel.unsubscribe(socketId)
-      if (channel.isEmpty) {
+      if (channel.size > 3) {
+        channel.unsubscribe(socketId)  // skipping synchronization (taking a risk) when channel is popular
+      } else {
         synchronized {
+          val res = channel.unsubscribe(socketId)
           if (channel.isEmpty) {
             channels.remove(id)
           }
+          res
         }
       }
-      res
     }
   }
 
