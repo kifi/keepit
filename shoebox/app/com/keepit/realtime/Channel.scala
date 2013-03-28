@@ -7,6 +7,7 @@ import com.keepit.model.User
 import play.api.libs.iteratee.Concurrent.{Channel => PlayChannel}
 import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** A Channel, which accepts pushed messages, and manages connections to it.
   */
@@ -66,11 +67,10 @@ trait ChannelManager[T, S <: Channel] {
 }
 
 class Subscription(val name: String, unsub: () => Option[Boolean]) {
-  private var active = true
+  private var active = new AtomicBoolean(true)
   def isActive = active
   def unsubscribe(): Option[Boolean] = {
-    val res = if(active) unsub() else None
-    active = false
+    val res = if(active.getAndSet(false)) unsub() else None
     res
   }
 }
