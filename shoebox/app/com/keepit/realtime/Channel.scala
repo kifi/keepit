@@ -16,14 +16,14 @@ trait Channel {
    *  This is called by a ChannelManager when a client wants to subscribe to this channel's messages.
    *  The caller must provide a unique identifier, socketId, for the client, and a play.api.libs.iteratee.Concurrent.Channel which will receive messages.
    */
-  def subscribe(socketId: String, channel: PlayChannel[JsArray]): Boolean
+  def subscribe(socketId: Long, channel: PlayChannel[JsArray]): Boolean
 
   /** Unsubscribe from this Channel.
    *
    *  This is called by a Channel Manager when a client wants to unsubscribe to this channel's messages.
    *  The caller provides the same unique identifier (socketId) as provided to `subscribe()`
    */
-  def unsubscribe(socketId: String): Boolean
+  def unsubscribe(socketId: Long): Boolean
 
   /** Unsubscribe all clients from this Channel.
    *
@@ -49,14 +49,14 @@ trait ChannelManager[T, S <: Channel] {
    *  The caller must provide a unique identifier, socketId, for the client, and a play.api.libs.iteratee.Concurrent.Channel which will receive messages.
    *  This returns a `Subscription`
    */
-  def subscribe(channelId: T, socketId: String, channel: PlayChannel[JsArray]): Subscription
+  def subscribe(channelId: T, socketId: Long, channel: PlayChannel[JsArray]): Subscription
 
   /** Unsubscribe from a channel managed by this ChannelManager.
    *
    *  This is called by a client when it wants to unsubscribe to this channel's messages.
    *  The caller provides the same unique identifier (socketId) as provided to `subscribe()`
    */
-  def unsubscribe(channelId: T, socketId: String): Option[Boolean]
+  def unsubscribe(channelId: T, socketId: Long): Option[Boolean]
 
   /** Push a message to a channel managed by this ChannelManager.
    *
@@ -78,15 +78,15 @@ class Subscription(val name: String, unsub: () => Option[Boolean]) {
 abstract class ChannelImpl[T](id: T) extends Channel {
   // The concurrent TrieMap is particularly good for O(1), atomic, lock-free snapshots for size, iterator, and clear
   // http://lampwww.epfl.ch/~prokopec/ctries-snapshot.pdf
-  private val pool = TrieMap[String, PlayChannel[JsArray]]()
+  private val pool = TrieMap[Long, PlayChannel[JsArray]]()
 
   def size = pool.size
 
-  def subscribe(socketId: String, channel: PlayChannel[JsArray]): Boolean = {
+  def subscribe(socketId: Long, channel: PlayChannel[JsArray]): Boolean = {
     pool.put(socketId, channel).isDefined
   }
 
-  def unsubscribe(socketId: String): Boolean = {
+  def unsubscribe(socketId: Long): Boolean = {
     pool.remove(socketId).isDefined
   }
 
@@ -102,13 +102,13 @@ abstract class ChannelImpl[T](id: T) extends Channel {
 abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extends ChannelManager[T, Channel] {
   private val channels = TrieMap[T, Channel]()
 
-  def subscribe(id: T, socketId: String, channel: PlayChannel[JsArray]): Subscription = {
+  def subscribe(id: T, socketId: Long, channel: PlayChannel[JsArray]): Subscription = {
     findOrCreateChannel(id).subscribe(socketId, channel)
 
     new Subscription(s"$name:$id", () => unsubscribe(id, socketId))
   }
 
-  def unsubscribe(id: T, socketId: String): Option[Boolean] = {
+  def unsubscribe(id: T, socketId: Long): Option[Boolean] = {
     find(id).map { channel =>
       val res = channel.unsubscribe(socketId)
       // I'm not completely happy with this. It's not thread-safe if this runs at the same time as lines 77-78. Input? - Andrew

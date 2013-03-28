@@ -26,6 +26,7 @@ import play.api.mvc.WebSocket.FrameFormatter
 import securesocial.core._
 import com.keepit.common.db.Id
 import com.keepit.common.db.State
+import scala.util.Random
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Seq[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -83,7 +84,7 @@ class ExtStreamController @Inject() (
 
         val connectedAt = clock.now
         val (enumerator, channel) = Concurrent.broadcast[JsArray]
-        val socketId = UUID.randomUUID().toString
+        val socketId = Random.nextLong()
 
         var subscriptions = Map[String, Subscription]()
 
@@ -119,7 +120,7 @@ class ExtStreamController @Inject() (
     }
   }
 
-  private def subscribe(session: StreamSession, socketId: String, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], sub: Seq[JsValue]) = {
+  private def subscribe(session: StreamSession, socketId: Long, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], sub: Seq[JsValue]) = {
     sub match {
       case JsString(sub) +: _ if subscriptions.contains(sub) =>
         subscriptions
@@ -139,7 +140,7 @@ class ExtStreamController @Inject() (
     }
   }
 
-  private def unsubscribe(session: StreamSession, socketId: String, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], subParams: Seq[JsValue]) = {
+  private def unsubscribe(session: StreamSession, socketId: Long, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], subParams: Seq[JsValue]) = {
     subParams match {
       case JsString(sub) +: _ if subscriptions.contains(sub) =>
         // For all subscriptions with an id
