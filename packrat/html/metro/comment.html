@@ -1,6 +1,6 @@
 <div class="kifi-comment-posted">
   <time datetime="{{#formatIsoDate}}{{createdAt}}{{/formatIsoDate}}">{{#formatDate}}{{createdAt}}{{/formatDate}}</time>
-  <img class="kifi-comment-pic{{#isLoggedInUser}} kifi-self{{/isLoggedInUser}}" src="//graph.facebook.com/{{user.facebookId}}/picture?type=square">
+  <img class="kifi-comment-pic{{#isLoggedInUser}} kifi-self{{/isLoggedInUser}}" src="//graph.facebook.com/{{user.facebookId}}/picture?width=100&amp;height=100">
   <div class="kifi-comment-body">
     <span class="kifi-comment-name">{{user.firstName}} {{user.lastName}}</span>
     {{#formatComment}}{{{text}}}{{!TODO: rename text → html}}{{/formatComment}}
