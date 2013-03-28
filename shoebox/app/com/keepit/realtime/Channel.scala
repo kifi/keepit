@@ -68,7 +68,7 @@ trait ChannelManager[T, S <: Channel] {
 
 class Subscription(val name: String, unsub: () => Option[Boolean]) {
   private var active = new AtomicBoolean(true)
-  def isActive = active
+  def isActive = active.get()
   def unsubscribe(): Option[Boolean] = {
     val res = if(active.getAndSet(false)) unsub() else None
     res
