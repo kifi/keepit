@@ -68,6 +68,12 @@ trait ChannelManager[T, S <: Channel] {
    *  The message will be sent to the specified channel, and will return the number of channels the message was sent to.
    */
   def push(channelId: T, msg: JsArray): Int
+
+  /** Broadcast a message to all channels managed by this ChannelManager.
+   *
+   *  The message will be sent to all channels, and will return the number of channels the message was sent to.
+   */
+  def broadcast(msg: JsArray): Int
 }
 
 class Subscription(val name: String, unsub: () => Option[Boolean]) {
@@ -132,6 +138,10 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
 
   def push(id: T, msg: JsArray): Int = {
     find(id).map(_.push(msg)).getOrElse(0)
+  }
+
+  def broadcast(msg: JsArray): Int = {
+    channels.map(_._2.push(msg)).sum
   }
 
   private def findOrCreateChannel(id: T): Channel = {

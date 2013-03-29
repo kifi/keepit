@@ -101,14 +101,16 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr("pong"))
             case JsString("stats") +: _ =>
               channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
-            case JsString("normalize") +: JsString(url) +: _ =>
-              channel.push(Json.arr("normalized", URINormalizer.normalize(url)))
+            case JsString("normalize") +: JsNumber(requestId) +: JsString(url) +: _ =>
+              channel.push(Json.arr(requestId.toLong, URINormalizer.normalize(url)))
             case JsString("subscribe") +: sub =>
               subscriptions = subscribe(streamSession, socketId, channel, subscriptions, sub)
             case JsString("unsubscribe") +: unsub =>
               subscriptions = unsubscribe(streamSession, socketId, channel, subscriptions, unsub)
-            case JsString("get_pane_data") +: JsString(requestId) +:JsString(url) +: _ =>
-              channel.push(getPaneDetails(streamSession, requestId, url))
+            case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>
+              channel.push(Json.arr(requestId.toLong, paneData.getComments(streamSession.userId, url)))
+            case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>
+              channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(streamSession.userId, url)))
             case json =>
               log.warn(s"Not sure what to do with: $json")
           }
@@ -176,18 +178,6 @@ class ExtStreamController @Inject() (
         log.warn(s"Can't unsubscribe from $json. No handler.")
         subscriptions
     }
-  }
-
-  private def getPaneDetails(session: StreamSession, requestId: String, url: String): JsArray = {
-    val comments = paneData.getComments(session.userId, url)
-    val messageThreadList = paneData.getMessageThreadList(session.userId, url)
-    val normalizedUri = URINormalizer.normalize(url)
-
-    Json.arr("got_pane_data", requestId, Map(
-      "comments" -> Json.toJson(comments),
-      "messageThreads" -> Json.toJson(messageThreadList),
-      "normalizedUri" -> Json.toJson(normalizedUri)
-    ))
   }
 
 }
