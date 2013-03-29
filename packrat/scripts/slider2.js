@@ -357,21 +357,30 @@ slider2 = function() {
     },
     comments: function() {
       api.port.emit("get_comments", {kind: "public"}, function(comments) {
-        api.log("comments:", comments);
         var session = comments.session;
         comments = comments.public;
-        //updateCommentCount(type, comments.length);
+        //updateCommentCount(comments.length);
         comments.forEach(function(c) {
           c.isLoggedInUser = c.user.externalId == session.userId;
         });
-
         api.require("scripts/comments.js", function() {
           renderComments($pane.find(".kifi-pane-comments .kifi-pane-tall"), comments);
         });
       });
     },
     threads: function() {
-      // TODO
+      api.port.emit("get_comments", {kind: "message"}, function(threads) {
+        api.log("[threads]", threads);
+        var session = threads.session;
+        threads = threads.message;
+        //updateThreadsCount(threads.length);
+        api.require("scripts/threads.js", function() {
+          renderThreads($pane.find(".kifi-pane-threads .kifi-pane-tall"), threads);
+        });
+      });
+    },
+    thread: function() {
+
     },
     general: $.noop
   };

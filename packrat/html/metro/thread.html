@@ -1,0 +1,13 @@
+<div class="kifi-thread">
+  <div class="kifi-thread-pics">
+    {{#recipients}}
+    <img class="kifi-thread-pic" src="//graph.facebook.com/{{facebookId}}/picture?width=100&amp;height=100" alt="{{firstName}} {{lastName}}">
+    {{/recipients}}
+    <span class="kifi-thread-msg-count">{{messageCount}}</span>
+  </div>
+  <time datetime="{{#formatIsoDate}}{{lastCommentedAt}}{{/formatIsoDate}}">{{#formatLocalDate}}{{lastCommentedAt}}{{/formatLocalDate}}</time>
+  <div class="kifi-thread-snippet">
+    {{#formatSnippet}}{{{digest}}}{{/formatSnippet}}
+  </div>
+  <span class="kifi-thread-arrow"></span>
+</div>

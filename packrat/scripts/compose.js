@@ -1,6 +1,31 @@
-function attachComposeBindings($f, composeTypeName) {
+function attachComposeBindings($c, composeTypeName) {
+  var $f = $c.find(".kifi-compose");
+  var $t = $f.find(".kifi-compose-to");
   var $d = $f.find(".kifi-compose-draft");
   var $p = $d.find(".kifi-placeholder");
+
+  if ($t.length) {
+    api.port.emit("get_friends", function(o) {
+      api.log("friends:", o);
+      o.friends.forEach(function(f) {
+        f.name = f.firstName + " " + f.lastName;
+      });
+      $t.tokenInput(o.friends, {
+        searchDelay: 0,
+        minChars: 2,
+        placeholder: "To",
+        hintText: "",
+        noResultsText: "",
+        searchingText: "",
+        animateDropdown: false,
+        preventDuplicates: true,
+        allowTabOut: true,
+        tokenValue: "externalId",
+        theme: "KiFi",
+        zindex: 2147483641});
+    });
+  }
+
   $d.focus(function() {
     if ($p[0].parentNode) {
       $p.detach();
@@ -23,15 +48,28 @@ function attachComposeBindings($f, composeTypeName) {
     if (e.which == 13 && e.metaKey) { // ⌘-Enter
       $f.submit();
     }
-  });
+  }).on("input", updateMinHeight);
+
   $f.on("click", ".kifi-compose-submit", function() {
     $f.submit();
   })
   .submit(function(e) {
     e.preventDefault();
-    if (!$p[0].parentNode) {  // placeholder detached
-      $d.trigger("kifi:compose-submit", [convertDraftToText($d.html())]);
+    var text = convertDraftToText($d.html());
+    if (!text) {
+      $d.focus();
+      return;
     }
+    var args = [text];
+    if ($t.length) {
+      var recipients = $t.tokenInput("get");
+      if (!recipients.length) {
+        $f.find("#token-input-kifi-compose-to").focus();
+        return;
+      }
+      args.push(recipients.map(function(r) {return r.externalId}).join(","));
+    }
+    $d.trigger("kifi:compose-submit", args);
   })
   .on("click", ".kifi-compose-snapshot", function() {
     snapshot.take(composeTypeName, function(selector) {
@@ -47,4 +85,25 @@ function attachComposeBindings($f, composeTypeName) {
       s.addRange(r);
     });
   });
+
+  var hOld, elAbove = $f[0].previousElementSibling;
+  updateMinHeight();
+
+  $(window).on("resize", updateMinHeight);
+
+  $c.closest(".kifi-pane-box").on("kifi:remove", function() {
+    $(window).off("resize", updateMinHeight);
+  });
+
+  function updateMinHeight() {
+    var hNew = Math.max(0, $c[0].offsetHeight - $f[0].offsetHeight);
+    if (hNew != hOld) {
+      api.log("[threads:updateMinHeight]", hOld, "→", hNew);
+      var scrollTop = elAbove.scrollTop;
+      elAbove.style.maxHeight = hNew + "px";
+      elAbove.scrollTop = hOld == null ? 9999 : Math.max(0, scrollTop + hOld - hNew);
+      hOld = hNew;
+    }
+  }
+
 }
