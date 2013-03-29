@@ -101,16 +101,16 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr("pong"))
             case JsString("stats") +: _ =>
               channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
-            case JsString("normalize") +: JsString(url) +: _ =>
-              channel.push(Json.arr("normalized", URINormalizer.normalize(url)))
+            case JsString("normalize") +: JsNumber(requestId) +: JsString(url) +: _ =>
+              channel.push(Json.arr(requestId.toLong, URINormalizer.normalize(url)))
             case JsString("subscribe") +: sub =>
               subscriptions = subscribe(streamSession, socketId, channel, subscriptions, sub)
             case JsString("unsubscribe") +: unsub =>
               subscriptions = unsubscribe(streamSession, socketId, channel, subscriptions, unsub)
             case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>
-              channel.push(Json.arr("got_comments", requestId.toLong, paneData.getComments(streamSession.userId, url)))
+              channel.push(Json.arr(requestId.toLong, paneData.getComments(streamSession.userId, url)))
             case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>
-              channel.push(Json.arr("got_message_threads", requestId.toLong, paneData.getMessageThreadList(streamSession.userId, url)))
+              channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(streamSession.userId, url)))
             case json =>
               log.warn(s"Not sure what to do with: $json")
           }
