@@ -40,7 +40,6 @@ function renderThreads($container, threads) {
     .on("kifi:compose-submit", sendMessage)
     .find("time").timeago();
 
-
     attachComposeBindings($container, "message");
   });
 
