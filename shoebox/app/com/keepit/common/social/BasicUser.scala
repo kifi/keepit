@@ -15,7 +15,6 @@ import com.keepit.common.cache.Key
 import play.api.libs.json.Json
 import play.api.libs.json.JsObject
 import scala.concurrent.duration._
-import com.keepit.controllers.core.UserHelper
 
 case class BasicUser(externalId: ExternalId[User], firstName: String, lastName: String, facebookId: String, avatar: String) // todo: avatar is a URL
 
@@ -31,7 +30,7 @@ class BasicUserUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends For
   // TODO(andrew): Invalidate cache. More tricky on this multi-object cache. Right now, the data doesn't change. When we go multi-network, it will.
 }
 
-class BasicUserRepo @Inject() (socialUserRepo: SocialUserInfoRepo, userRepo: UserRepo, userCache: BasicUserUserIdCache, userHelper: UserHelper){
+class BasicUserRepo @Inject() (socialUserRepo: SocialUserInfoRepo, userRepo: UserRepo, userCache: BasicUserUserIdCache){
   def load(userId: Id[User])(implicit session: RSession): BasicUser = userCache.getOrElse(BasicUserUserIdKey(userId)) {
     val user = userRepo.get(userId)
     val socialUserInfo = socialUserRepo.getByUser(user.id.get)
@@ -40,7 +39,7 @@ class BasicUserRepo @Inject() (socialUserRepo: SocialUserInfoRepo, userRepo: Use
       firstName = user.firstName,
       lastName = user.lastName,
       facebookId = socialUserInfo.headOption.map(_.socialId.id).getOrElse(""), // This needs to be refactored when we switch to multiple social networks. However, the extension relies on it now.
-      avatar = userHelper.getAvatarByUserId(200, userId) // todo: The extension should fetch avatars based on the size it needs
+      avatar = s"http://graph.facebook.com/${socialUserInfo.headOption.map(_.socialId.id).getOrElse("")}/picture?width=200&height=200" // todo: The extension should fetch avatars based on the size it needs
     )
   }
 }
