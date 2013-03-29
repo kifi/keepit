@@ -1,0 +1,22 @@
+<div class="kifi-pane-box kifi-pane-thread">
+  <div class="kifi-pane-title">Messages</div>
+  <a class="kifi-pane-back" href="javascript:" data-pane="threads">&lsaquo; Back</a>
+  <div class="kifi-thread-who">
+    <div class="kifi-thread-with">A conversation with
+      {{^numRecipients}}
+        {{#recipients}}
+          <span class="kifi-thread-participant">{{firstName}} {{lastName}}</span>
+        {{/recipients}}
+      {{/numRecipients}}
+      {{#numRecipients}}
+        {{numRecipients}} people:
+        <div class="kifi-thread-participants">
+        {{#recipients}}{{!
+        }}<span class="kifi-thread-participant">{{firstName}} {{lastName}}</span>{{!
+      }}{{/recipients}}
+        </div>
+      {{/numRecipients}}
+    </div>
+  </div>
+  <div class="kifi-pane-tall"></div>
+</div>
