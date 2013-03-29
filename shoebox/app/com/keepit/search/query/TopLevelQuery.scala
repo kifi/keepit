@@ -67,15 +67,31 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
   override def scoresDocsOutOfOrder() = false
 
   override def sumOfSquaredWeights() = {
-    val sum = auxWeights.foldLeft(textWeight.sumOfSquaredWeights){ (sum, w) => sum + w.sumOfSquaredWeights }
-    val value = query.getBoost()
+    // take boost values only, each weight will be normalized individually.
+    // this makes tuning (balancing the weighting of text and auxiliary queries) more intuitive.
+    var textBoost = textWeight.getQuery.getBoost
+    val sum = auxWeights.foldLeft(textBoost * textBoost){ (sum, w) =>
+      val auxBoost = w.getQuery.getBoost
+      sum + (auxBoost * auxBoost)
+    }
+    val value = query.getBoost
     (sum * value * value)
   }
 
+  private def queryNorm(sum: Float): Float = {
+    var norm = searcher.getSimilarity.queryNorm(sum)
+    if (norm == Float.PositiveInfinity || norm == Float.NaN) norm = 1.0f
+    norm
+  }
+
   override def normalize(norm: Float) {
-    val n = norm * getValue()
-    textWeight.normalize(n)
-    auxWeights.foreach(_.normalize(n))
+    // normalize each weigth individually, then take the global normalization into account
+    val textNorm = queryNorm(textWeight.sumOfSquaredWeights)
+    textWeight.normalize(textNorm * norm)
+    auxWeights.foreach{ w =>
+      val auxNorm = queryNorm(w.sumOfSquaredWeights)
+      w.normalize(auxNorm * norm)
+    }
   }
 
   override def explain(reader: IndexReader, doc: Int) = {
