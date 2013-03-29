@@ -86,7 +86,7 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
 
   override def normalize(norm: Float) {
     val boost = query.getBoost
-    // normalize each weigth individually, then take the global normalization into account
+    // normalize each weight individually, then take the global normalization into account
     val textNorm = queryNorm(textWeight.sumOfSquaredWeights)
     textWeight.normalize(textNorm * norm * boost)
     auxWeights.foreach{ w =>
@@ -110,7 +110,7 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
       ret.setMatch(true)
 
       ret.addDetail(result)
-      ret.addDetail(new Explanation(coordFactor, s"coord factor"))
+      ret.addDetail(new Explanation(coordFactor, "coord factor"))
 
       result.setDescription("sum of:")
       result.setValue(score/coordFactor)
@@ -171,7 +171,8 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
   }
 }
 
-class TopLevelScorer(weight: TopLevelWeight, textScorer: Scorer with Coordinator, auxScorers: Array[Scorer]) extends Scorer(weight) with Logging {
+class TopLevelScorer(weight: TopLevelWeight, textScorer: Scorer with Coordinator, auxScorers: Array[Scorer])
+extends Scorer(weight) with Coordinator with Logging {
   protected var doc = -1
   protected var scoredDoc = -1
   protected var scr = 0.0f
@@ -208,4 +209,6 @@ class TopLevelScorer(weight: TopLevelWeight, textScorer: Scorer with Coordinator
     }
     scr
   }
+
+  override def coord = textScorer.coord
 }
