@@ -41,6 +41,10 @@ trait Channel {
   /** Returns the number of clients currently connected.
    */
   def size: Int
+
+  /** Returns whether no clients are currently connected.
+   */
+  def isEmpty: Boolean
 }
 
 trait ChannelManager[T, S <: Channel] {
@@ -68,10 +72,9 @@ trait ChannelManager[T, S <: Channel] {
 
 class Subscription(val name: String, unsub: () => Option[Boolean]) {
   private val active = new AtomicBoolean(true)
-  def isActive = active.get()
+  def isActive: Boolean = active.get()
   def unsubscribe(): Option[Boolean] = {
-    val res = if(active.getAndSet(false)) unsub() else None
-    res
+    if (active.getAndSet(false)) unsub() else None
   }
 }
 
@@ -79,8 +82,6 @@ abstract class ChannelImpl[T](id: T) extends Channel {
   // The concurrent TrieMap is particularly good for O(1), atomic, lock-free snapshots for size, iterator, and clear
   // http://lampwww.epfl.ch/~prokopec/ctries-snapshot.pdf
   private val pool = TrieMap[Long, PlayChannel[JsArray]]()
-
-  def size = pool.size
 
   def subscribe(socketId: Long, channel: PlayChannel[JsArray]): Boolean = {
     pool.put(socketId, channel).isDefined
@@ -97,13 +98,24 @@ abstract class ChannelImpl[T](id: T) extends Channel {
   def push(msg: JsArray): Int = {
     pool.map(s => s._2.push(msg)).size
   }
+
+  def size: Int = pool.size
+  def isEmpty: Boolean = pool.isEmpty
 }
 
 abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extends ChannelManager[T, Channel] {
   private val channels = TrieMap[T, Channel]()
 
-  def subscribe(id: T, socketId: Long, channel: PlayChannel[JsArray]): Subscription = {
-    findOrCreateChannel(id).subscribe(socketId, channel)
+  def subscribe(id: T, socketId: Long, playChannel: PlayChannel[JsArray]): Subscription = {
+    val channel = findOrCreateChannel(id)
+    if (channel.isEmpty) {
+      // An empty channel may be removed at any time, so the first subscription requires synchronization.
+      synchronized {
+        findOrCreateChannel(id).subscribe(socketId, playChannel)
+      }
+    } else {
+      channel.subscribe(socketId, playChannel)
+    }
 
     new Subscription(s"$name:$id", () => unsubscribe(id, socketId))
   }
@@ -111,9 +123,13 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
   def unsubscribe(id: T, socketId: Long): Option[Boolean] = {
     find(id).map { channel =>
       val res = channel.unsubscribe(socketId)
-      // I'm not completely happy with this. It's not thread-safe if this runs at the same time as lines 77-78. Input? - Andrew
-      if(channel.size == 0)
-        channels.remove(id)
+      if (channel.isEmpty) {
+        synchronized {
+          if (channel.isEmpty) {
+            channels.remove(id)
+          }
+        }
+      }
       res
     }
   }

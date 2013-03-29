@@ -74,7 +74,7 @@ GET     /admin/graphs/bookmarks.json    @com.keepit.controllers.admin.AdminDashb
 GET     /admin/events               @com.keepit.controllers.admin.AdminEventController.reportList
 POST    /admin/events/buildReport   @com.keepit.controllers.admin.AdminEventController.buildReport
 GET     /admin/events/report        @com.keepit.controllers.admin.AdminEventController.getReport(reportName: String)
-POST    /admin/events/activityData  @com.keepit.controllers.admin.AdminEventController.activityDataAsCsv
+GET     /admin/events/activityData  @com.keepit.controllers.admin.AdminEventController.activityDataAsCsv
 
 GET     /admin/realtime/event       @com.keepit.controllers.admin.AdminEventController.eventViewer
 GET     /admin/realtime/event/stream      @com.keepit.controllers.admin.AdminEventController.eventStream
@@ -207,3 +207,5 @@ POST    /internal/search/index/dumpDoc/:id     @com.keepit.controllers.search.Ar
 POST    /internal/search/search/keeps          @com.keepit.controllers.search.SearchController.searchKeeps(userId: Id[User], query: String)
 GET     /internal/search/search/explainResult  @com.keepit.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI])
 
+GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+GET     /internal/search/search/rankVsScoreJson @com.keepit.controllers.search.SearchController.rankVsScoreJson(query: Option[String] ?= None)
