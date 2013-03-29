@@ -1,4 +1,4 @@
-// @require styles/metro/comments.css
+// @require styles/metro/thread.css
 // @require styles/metro/compose.css
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/api.js
@@ -8,19 +8,17 @@
 // @require scripts/compose.js
 // @require scripts/snapshot.js
 
-function renderComments($container, comments) {
-  render("html/metro/comments.html", {
-    formatComment: getTextFormatter,
+function renderThread($container, threadId, messages) {
+  render("html/metro/messages.html", {
+    formatMessage: getTextFormatter,
     formatLocalDate: getLocalDateFormatter,
     formatIsoDate: getIsoDateFormatter,
-    comments: comments,
-    draftPlaceholder: "Type a comment…",
-    submitButtonLabel: "Post",
-    // following: following,
+    messages: messages,
+    draftPlaceholder: "Type a message…",
+    submitButtonLabel: "Send",
     snapshotUri: api.url("images/snapshot.png")
-    // connected_networks: api.url("images/social_icons.png")
   }, {
-    comment: "comment.html",
+    message: "message.html",
     compose: "compose.html"
   }, function(html) {
     $(html).prependTo($container)
@@ -28,26 +26,28 @@ function renderComments($container, comments) {
     .on("click", "a[href^='x-kifi-sel:']", function(e) {
       e.preventDefault();
     })
-    .on("kifi:compose-submit", submitComment)
+    .on("kifi:compose-submit", sendReply)
     .find("time").timeago();
 
-    attachComposeBindings($container, "comment");
+    attachComposeBindings($container, "message");
   });
 
-  function submitComment(e, text) {
-    logEvent("slider", "comment");
+  function sendReply(e, text, recipientIds) {
+    // logEvent("slider", "comment");
     api.port.emit("post_comment", {
       "url": document.URL,
       "title": document.title,
       "text": text,
-      "permissions": "public"
+      "permissions": "message",
+      "recipients": recipientIds,
+      "parent": threadId
     }, function(response) {
-      api.log("[submitComment] resp:", response);
-      render("html/metro/comment.html", {
-        "formatComment": getTextFormatter,
+      api.log("[sendReply] resp:", response);
+      render("html/metro/message.html", {
+        "formatMessage": getTextFormatter,
         "formatLocalDate": getLocalDateFormatter,
         "formatIsoDate": getIsoDateFormatter,
-        "createdAt": response.createdAt,
+        "createdAt": response.message.createdAt,
         "text": text,
         "user": {
           "externalId": response.session.userId,
@@ -58,14 +58,10 @@ function renderComments($container, comments) {
         "isLoggedInUser": true,
         "externalId": response.commentId
       }, function(html) {
-        var $posted = $container.find(".kifi-comments-posted");
-        $(html).find("time").timeago().end().appendTo($posted);
-        $posted[0].scrollTop = 99999;
+        var $sent = $container.find(".kifi-messages-sent");
+        $(html).find("time").timeago().end().appendTo($sent);
+        $sent[0].scrollTop = 99999;
         $container.find(".kifi-compose-draft").empty().blur();
-        // TODO: better way to update comment counts
-        $(".kifi-slider2-dock-btn.kifi-slider2-comments .kifi-count:not(.kifi-unread),#kifi-tile .kifi-count:not(.kifi-unread)").each(function() {
-          this.innerHTML = 1 + (+this.innerHTML);
-        });
       });
     });
   }
