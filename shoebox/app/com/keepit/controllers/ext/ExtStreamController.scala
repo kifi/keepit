@@ -15,7 +15,7 @@ import com.google.inject.ImplementedBy
 import com.google.inject.Inject
 import com.google.inject.Singleton
 import play.api.libs.iteratee.Concurrent
-import play.api.libs.iteratee.Concurrent.{Channel => PlayChannel}
+import play.api.libs.iteratee.Concurrent.{ Channel => PlayChannel }
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json._
@@ -27,18 +27,23 @@ import securesocial.core._
 import com.keepit.common.db.Id
 import com.keepit.common.db.State
 import scala.util.Random
+import com.keepit.controllers.core.PaneDetails
+import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
+import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
+import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Seq[State[ExperimentType]], adminUserId: Option[Id[User]])
 
 @Singleton
 class ExtStreamController @Inject() (
-    db: Database,
-    socialUserInfoRepo: SocialUserInfoRepo,
-    userRepo: UserRepo,
-    experimentRepo: UserExperimentRepo,
-    userChannel: UserChannel,
-    uriChannel: UriChannel,
-    clock: Clock) extends BrowserExtensionController with Logging {
+  db: Database,
+  socialUserInfoRepo: SocialUserInfoRepo,
+  userRepo: UserRepo,
+  experimentRepo: UserExperimentRepo,
+  userChannel: UserChannel,
+  uriChannel: UriChannel,
+  clock: Clock,
+  paneData: PaneDetails) extends BrowserExtensionController with Logging {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
     /*
      * Unfortunately, everything related to existing secured actions intimately deals with Action, Request, Result, etc.
@@ -57,7 +62,7 @@ class ExtStreamController @Inject() (
         val experiments = experimentRepo.getUserExperiments(userId)
         impersonatedUserIdOpt match {
           case Some(impExtUserId) if experiments.contains(ExperimentTypes.ADMIN) =>
-            val impUserId =  userRepo.get(impExtUserId).id.get
+            val impUserId = userRepo.get(impExtUserId).id.get
             val impSocUserInfo = socialUserInfoRepo.getByUser(impUserId)
             StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId))
           case None if experiments.contains(ExperimentTypes.ADMIN) =>
@@ -102,6 +107,8 @@ class ExtStreamController @Inject() (
               subscriptions = subscribe(streamSession, socketId, channel, subscriptions, sub)
             case JsString("unsubscribe") +: unsub =>
               subscriptions = unsubscribe(streamSession, socketId, channel, subscriptions, unsub)
+            case JsString("get_pane_data") +: JsString(url) +: _ =>
+              channel.push(getPaneDetails(streamSession, url))
             case json =>
               log.warn(s"Not sure what to do with: $json")
           }
@@ -171,4 +178,17 @@ class ExtStreamController @Inject() (
     }
   }
 
+  private def getPaneDetails(session: StreamSession, url: String): JsArray = {
+    val comments = paneData.getComments(session.userId, url)
+    val messageThreadList = paneData.getMessageThreadList(session.userId, url)
+    val normalizedUri = URINormalizer.normalize(url)
+
+    Json.arr("got_pane_data", Map(
+      "comments" -> Json.toJson(comments),
+      "messageThreads" -> Json.toJson(messageThreadList),
+      "normalizedUri" -> Json.toJson(normalizedUri)
+    ))
+  }
+
 }
+

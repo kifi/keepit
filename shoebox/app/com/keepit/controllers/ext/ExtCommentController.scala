@@ -34,9 +34,11 @@ import org.joda.time.DateTime
 import com.keepit.common.analytics.ActivityStream
 import views.html
 import com.keepit.realtime.UserNotifier
+import com.keepit.controllers.core.PaneDetails
 
 @Singleton
-class ExtCommentController @Inject() (db: Database,
+class ExtCommentController @Inject() (
+  db: Database,
   commentRepo: CommentRepo,
   commentRecipientRepo: CommentRecipientRepo,
   normalizedURIRepo: NormalizedURIRepo,
@@ -51,7 +53,8 @@ class ExtCommentController @Inject() (db: Database,
   deepLinkRepo: DeepLinkRepo,
   postOffice: PostOffice,
   activityStream: ActivityStream,
-  userNotifier: UserNotifier)
+  userNotifier: UserNotifier,
+  paneDetails: PaneDetails)
     extends BrowserExtensionController {
 
   def getCounts(ids: String) = AuthenticatedJsonAction { request =>
@@ -152,80 +155,19 @@ class ExtCommentController @Inject() (db: Database,
   }
 
   def getComments(url: String) = AuthenticatedJsonAction { request =>
-    val (comments, commentRead) = db.readOnly { implicit session =>
-      val normUriOpt = normalizedURIRepo.getByNormalizedUrl(url)
-
-      val comments = normUriOpt map { normalizedURI =>
-          publicComments(normalizedURI).map(commentWithSocialUserRepo.load(_))
-        } getOrElse Nil
-
-      val lastCommentId = comments match {
-        case Nil => None
-        case commentList => Some(commentList.map(_.comment.id.get).maxBy(_.id))
-      }
-
-      val commentRead = normUriOpt.flatMap { normUri =>
-        lastCommentId.map { lastCom =>
-          commentReadRepo.getByUserAndUri(request.userId, normUri.id.get) match {
-            case Some(commentRead) => // existing CommentRead entry for this user/url
-              if (commentRead.lastReadId.id < lastCom.id) Some(commentRead.withLastReadId(lastCom))
-              else None
-            case None =>
-              Some(CommentRead(userId = request.userId, uriId = normUri.id.get, lastReadId = lastCom))
-          }
-        }
-      }
-      (comments, commentRead.flatten)
-    }
-
-    commentRead.map { cr =>
-      db.readWrite { implicit session =>
-        commentReadRepo.save(cr)
-      }
-    }
+    val comments = paneDetails.getComments(request.userId, url)
 
     Ok(commentWithSocialUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
   }
 
   def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
-    val comments = db.readOnly { implicit s =>
-      normalizedURIRepo.getByNormalizedUrl(url) map { normalizedURI =>
-          messageComments(request.userId, normalizedURI).map(threadInfoRepo.load(_, Some(request.userId))).reverse
-        } getOrElse Nil
-    }
-    log.info("comments for url %s:\n%s".format(url, comments mkString "\n"))
+    val comments = paneDetails.getMessageThreadList(request.userId, url)
+
     Ok(threadInfoSerializer.writes(CommentPermissions.MESSAGE -> comments))
   }
 
   def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
-    val (messages, commentReadToSave) = db.readOnly{ implicit session =>
-      val comment = commentRepo.get(commentId)
-      val parent = comment.parent.map(commentRepo.get).getOrElse(comment)
-
-      val messages: Seq[CommentWithSocialUser] = parent +: commentRepo.getChildren(parent.id.get) map { msg =>
-        commentWithSocialUserRepo.load(msg)
-      }
-
-      // mark latest message as read for viewer
-
-      val lastMessageId = messages.map(_.comment.id.get).maxBy(_.id)
-
-      val commentReadToSave = commentReadRepo.getByUserAndParent(request.userId, parent.id.get) match {
-        case Some(cr) if cr.lastReadId == lastMessageId =>
-          None
-        case Some(cr) =>
-          Some(cr.withLastReadId(lastMessageId))
-        case None =>
-          Some(CommentRead(userId = request.userId, uriId = parent.uriId, parentId = parent.id, lastReadId = lastMessageId))
-      }
-      (messages, commentReadToSave)
-    }
-
-    commentReadToSave.map { cr =>
-      db.readWrite{ implicit session =>
-        commentReadRepo.save(cr)
-      }
-    }
+    val messages = paneDetails.getMessageThread(request.userId, commentId)
 
     Ok(commentWithSocialUserSerializer.writes(CommentPermissions.MESSAGE -> messages))
   }
