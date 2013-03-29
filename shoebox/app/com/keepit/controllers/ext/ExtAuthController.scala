@@ -26,13 +26,12 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.json.Json
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.{ShoeboxServiceController, FortyTwoController, BrowserExtensionController}
 import com.keepit.common.controller.FortyTwoController._
 import com.keepit.common.db._
 import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.net._
 import com.keepit.model._
-import com.keepit.common.controller.BrowserExtensionController
 import com.keepit.common.healthcheck._
 import com.keepit.common.db.slick._
 
@@ -47,7 +46,7 @@ class ExtAuthController @Inject() (
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
   userExperimentRepo: UserExperimentRepo)
-    extends BrowserExtensionController {
+    extends BrowserExtensionController with ShoeboxServiceController {
   def start = AuthenticatedJsonToJsonAction { implicit request =>
     val userId = request.userId
     val socialUser = request.socialUser

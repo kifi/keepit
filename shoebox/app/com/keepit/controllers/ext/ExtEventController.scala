@@ -23,7 +23,7 @@ import com.keepit.search.graph._
 import com.keepit.search._
 import com.keepit.common.social.UserWithSocial
 import com.keepit.search.ArticleSearchResultStore
-import com.keepit.common.controller.BrowserExtensionController
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController}
 import com.keepit.common.analytics._
 import com.keepit.model._
 import com.keepit.common.time._
@@ -37,7 +37,7 @@ class ExtEventController @Inject() (
   userExperimentRepo: UserExperimentRepo,
   userRepo: UserRepo,
   persistEventPlugin: PersistEventPlugin)
-    extends BrowserExtensionController {
+    extends BrowserExtensionController with ShoeboxServiceController {
 
   def logUserEvents = AuthenticatedJsonToJsonAction { request =>
     val userId = request.userId
