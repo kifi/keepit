@@ -106,29 +106,25 @@ abstract class ChannelImpl[T](id: T) extends Channel {
 abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extends ChannelManager[T, Channel] {
   private val channels = TrieMap[T, Channel]()
 
-  def subscribe(id: T, socketId: Long, playChannel: PlayChannel[JsArray]): Subscription = {
+  @scala.annotation.tailrec
+  final def subscribe(id: T, socketId: Long, playChannel: PlayChannel[JsArray]): Subscription = {
     val channel = findOrCreateChannel(id)
-    if (channel.isEmpty) {
-      // An empty channel may be removed at any time, so the first subscription requires synchronization.
-      synchronized {
-        findOrCreateChannel(id).subscribe(socketId, playChannel)
-      }
-    } else {
-      channel.subscribe(socketId, playChannel)
+    channel.subscribe(socketId, playChannel)
+    find(id) match {
+      case Some(ch) if ch eq channel =>
+        new Subscription(s"$name:$id", () => unsubscribe(id, socketId))
+      case _ =>
+        // channel was removed before we subscribed, so try again
+        channel.unsubscribe(socketId)
+        subscribe(id, socketId, playChannel)
     }
-
-    new Subscription(s"$name:$id", () => unsubscribe(id, socketId))
   }
 
-  def unsubscribe(id: T, socketId: Long): Option[Boolean] = {
+  final def unsubscribe(id: T, socketId: Long): Option[Boolean] = {
     find(id).map { channel =>
       val res = channel.unsubscribe(socketId)
       if (channel.isEmpty) {
-        synchronized {
-          if (channel.isEmpty) {
-            channels.remove(id)
-          }
-        }
+        channels.remove(id)
       }
       res
     }

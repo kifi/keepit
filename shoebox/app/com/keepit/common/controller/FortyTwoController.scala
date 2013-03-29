@@ -147,7 +147,7 @@ trait AuthenticatedController extends Controller with Logging with SecureSocial 
 
 }
 
-trait AdminController extends AuthenticatedController {
+trait AdminController extends AuthenticatedController with ShoeboxServiceController {
 
   def AdminHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = AdminAction(false, action)
 
@@ -209,3 +209,5 @@ trait WebsiteController extends AuthenticatedController {
 
 trait FortyTwoController extends BrowserExtensionController with AdminController with WebsiteController
 
+trait SearchServiceController extends Controller with Logging
+trait ShoeboxServiceController extends Controller with Logging

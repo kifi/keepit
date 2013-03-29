@@ -6,7 +6,7 @@ import com.keepit.common.net.HttpClient
 import com.keepit.controllers.search._
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.templates.Html
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -24,6 +24,8 @@ trait SearchServiceClient extends ServiceClient {
   def refreshSearcher(): Future[Unit]
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html]
+  def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
+  def rankVsScoreJson(q: Option[String] = None): Future[JsArray]
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
@@ -76,6 +78,14 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
 
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html] = {
     call(routes.SearchController.explain(query, userId, uriId)).map(r => Html(r.body))
+  }
+
+  def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray] = {
+    call(routes.SearchController.friendMapJson(userId, q, minKeeps)).map(_.json.as[JsArray])
+  }
+
+  def rankVsScoreJson(q: Option[String] = None): Future[JsArray] = {
+    call(routes.SearchController.rankVsScoreJson(q)).map(_.json.as[JsArray])
   }
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = {
