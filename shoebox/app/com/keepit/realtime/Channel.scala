@@ -106,8 +106,8 @@ abstract class ChannelImpl[T](id: T) extends Channel {
 abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extends ChannelManager[T, Channel] {
   private val channels = TrieMap[T, Channel]()
 
-  @tailrec
-  def subscribe(id: T, socketId: Long, playChannel: PlayChannel[JsArray]): Subscription = {
+  @scala.annotation.tailrec
+  final def subscribe(id: T, socketId: Long, playChannel: PlayChannel[JsArray]): Subscription = {
     val channel = findOrCreateChannel(id)
     channel.subscribe(socketId, playChannel)
     find(id) match {
@@ -120,7 +120,7 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
     }
   }
 
-  def unsubscribe(id: T, socketId: Long): Option[Boolean] = {
+  final def unsubscribe(id: T, socketId: Long): Option[Boolean] = {
     find(id).map { channel =>
       val res = channel.unsubscribe(socketId)
       if (channel.isEmpty) {
