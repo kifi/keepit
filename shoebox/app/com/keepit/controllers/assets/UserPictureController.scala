@@ -15,17 +15,13 @@ import com.keepit.common.db.ExternalId
 import com.keepit.controllers.core.UserHelper
 
 @Singleton
-class UserPicture @Inject() (
+class UserPictureController @Inject() (
   db: Database,
   userHelper: UserHelper)
   extends WebsiteController {
 
-  /* Usage: /widthxheight/userExternalId
-   * /200/9de9a8c4-74aa-43fb-bdd3-f329b4a1c0f6 for a 200x200 square
-   * /200x250/9de9a8c4-74aa-43fb-bdd3-f329b4a1c0f6 for a 200x250 square
-   */
-  def getByExternalId(sizeStr: String, userExternalId: ExternalId[User]) = Action { request =>
-    val url = db.readOnly(implicit s => userHelper.getAvatarByUserExternalId(sizeStr, userExternalId))
+  def get(width: Int, userExternalId: ExternalId[User]) = Action { request =>
+    val url = db.readOnly(implicit s => userHelper.getAvatarByUserExternalId(width, userExternalId))
     Redirect(url)
   }
 }

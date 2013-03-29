@@ -21,37 +21,25 @@ class UserHelper @Inject() (
 
   /* Usage: /widthxheight/userExternalId
    * /200/9de9a8c4-74aa-43fb-bdd3-f329b4a1c0f6 for a 200x200 square
-   * /200x250/9de9a8c4-74aa-43fb-bdd3-f329b4a1c0f6 for a 200x250 rectangle
    */
 
   private val defaultAvatar = "https://graph.facebook.com//picture?type=square"
 
-  def getAvatarByUserId(sizeStr: String, userId: Id[User])(implicit session: RSession): String = {
-    val (width, height) = try {
-      val parts = sizeStr.toLowerCase.split("x").map(i => Math.max(Math.min(i.toInt, 500), 50))
-      if (parts.size == 1)
-        (parts(0), parts(0))
-      else
-        (parts(0), parts(1))
-    } catch { // Bad input, use default
-      case ex: Throwable =>
-        log.warn(s"Can't parse user picture request, for size $sizeStr")
-        (200, 200)
-    }
+  def getAvatarByUserId(width: Int, userId: Id[User])(implicit session: RSession): String = {
     try {
       val socialUserInfo = suiRepo.getByUser(userId)
       val socialId = socialUserInfo.headOption.map(_.socialId.id).getOrElse("")
-      s"https://graph.facebook.com/$socialId/picture?type=square&width=$width&height=$height"
+      s"https://graph.facebook.com/$socialId/picture?type=square&width=$width&height=$width"
     } catch {
       case ex: Throwable => // default avatar
         log.warn(s"Can't find a social user for $userId")
         defaultAvatar
     }
   }
-  def getAvatarByUserExternalId(sizeStr: String, userExternalId: ExternalId[User])(implicit session: RSession) = {
+  def getAvatarByUserExternalId(width: Int, userExternalId: ExternalId[User])(implicit session: RSession) = {
     try {
       val user = userRepo.get(userExternalId)
-      getAvatarByUserId(sizeStr, user.id.get)
+      getAvatarByUserId(width, user.id.get)
     } catch {
       case ex: Throwable => // default avatar
         log.warn(s"Can't identify user $userExternalId")
