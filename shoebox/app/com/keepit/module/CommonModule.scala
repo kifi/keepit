@@ -104,7 +104,7 @@ class CommonModule extends ScalaModule with Logging {
   @Provides
   @AppScoped
   def healthcheckProvider(system: ActorSystem, postOffice: PostOffice, services: FortyTwoServices): HealthcheckPlugin = {
-    val host = InetAddress.getLocalHost().getCanonicalHostName()
+    val host = InetAddress.getLocalHost().getHostName()
     new HealthcheckPluginImpl(system, host, postOffice, services)
   }
 
