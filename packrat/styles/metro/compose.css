@@ -1,0 +1,245 @@
+form.kifi-compose {
+  margin: 0;
+  padding: 10px 6px;
+}
+.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable] {
+  border: 1px solid #d2d2d2;
+  border-bottom: none;
+  border-radius: 0;
+  padding: 5px;
+  background-color: #fff;
+  min-height: 40px;
+  max-height: 145px;
+  overflow: auto;
+  outline: none;
+  box-shadow: none;
+  font-size: inherit;
+  line-height: inherit;
+}
+.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable]:first-child {
+  border-radius: 3px 3px 0 0;
+}
+.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable] .kifi-placeholder {
+  color: #a9a9a9;
+}
+.kifi-compose-bar {
+  border: 1px solid #d2d2d2;
+  border-radius: 0 0 3px 3px;
+  text-align: right;
+}
+a.kifi-compose-snapshot {
+  float: left;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  width: 35px;
+  height: 28px;
+  border-right: 1px solid #d2d2d2;
+  padding: 4px 7px;
+  background-clip: content-box;
+  background-origin: content-box;
+  background-repeat: no-repeat;
+  -webkit-transition: none;
+  transition: none;
+}
+a.kifi-compose-snapshot:hover {
+  background-position: -20px 0;
+}
+a.kifi-compose-snapshot:active {
+  background-position: -40px 0;
+}
+a.kifi-compose-submit {
+  display: inline-block;
+  padding: 0 18px;
+  background-color: #bdc3c7;
+  color: #fff !important;
+  line-height: 28px;
+}
+a.kifi-compose-submit:hover {
+  background-color: #b6bbbf;
+}
+a.kifi-compose-submit:active,
+a.kifi-compose-submit.kifi-active {
+  background-color: #a2a7ab;
+}
+
+body.kifi-snapshot-root {
+  position: relative; /* replace viewport as absolute positioning root */
+}
+div.kifi-snapshot-glass {
+  position: absolute;
+  z-index: 2147483639;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  box-shadow: 0 0 5px 1px #fff;
+  cursor: crosshair;
+}
+div.kifi-snapshot-shade {
+  background-color: rgba(0,0,0,.4);
+  position: absolute;
+  z-index: 2147483639;
+  cursor: crosshair;
+}
+div.kifi-snapshot-shade-t { left: 0; right: 0; top: 0; bottom: 0; }
+div.kifi-snapshot-shade-b { left: 0; right: 0; bottom: 0; }
+div.kifi-snapshot-shade-l { left: 0; }
+div.kifi-snapshot-shade-r { right: 0; }
+
+div.kifi-snapshot-bar-wrap {
+  position: fixed;
+  z-index: 2147483639;
+  left: 0;
+  right: 0;
+  bottom: 80px;
+  height: 0;
+  text-align: center;
+}
+.kifi-snapshot-bar-wrap .kifi-snapshot-bar {
+  display: inline-block;
+  background-color: black;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 15px;
+  cursor: move;
+}
+.kifi-snapshot-bar-wrap .kifi-snapshot-bar .kifi-snapshot-cancel {
+  display: inline-block;
+  padding: 2px 6px 3px;
+  border-image: initial;
+  background-color: buttonface;
+  color: buttontext;
+  font: -webkit-small-control;
+  -webkit-box-align: center;
+  text-align: center;
+  cursor: pointer;
+}
+.kifi-snapshot-bar-wrap .kifi-snapshot-bar .kifi-snapshot-cancel:active {
+  border-image: initial;
+}
+div.kifi-snapshot-highlight {
+  position: absolute;
+  z-index: 2147483641;
+  background: rgba(255,255,0,.15);
+  border: 3px solid rgba(255,255,0,.7);
+  border-radius: 6px;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+form.kifi-compose input[type=text] { /* either input */
+  height: auto;
+  margin: 0;
+  border: none;
+  background-color: #fff;
+  font: inherit;
+  box-shadow: none;
+}
+form.kifi-compose input[type=text].kifi-compose-to, /* initial input */
+form.kifi-compose ul.token-input-list-KiFi {
+  width: 100%;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  border: 1px solid #d2d2d2;
+  border-radius: 3px 3px 0 0;
+  margin: 0 0 -1px !important;
+}
+form.kifi-compose input[type=text].kifi-compose-to { /* initial input */
+  padding: 4px 5px;
+}
+form.kifi-compose input[type=text]#token-input-kifi-compose-to { /* token input */
+  width: 100px;
+  padding: 1px 0 4px;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+form.kifi-compose input[type=text]:-moz-placeholder {
+  color: #a9a9a9 !important;
+}
+form.kifi-compose ul.token-input-list-KiFi {
+  padding: 3px 0 0 !important;
+  height: auto !important;
+  min-height: 1px;
+  list-style: none;
+  overflow: hidden;
+  background-color: #fff;
+  color: #524d4d;
+  font: inherit;
+  cursor: text;
+}
+form.kifi-compose li.token-input-input-token-KiFi { /* input wrapper */
+  float: left;
+  margin: 0 0 0 5px !important;
+  padding: 0 !important;
+  list-style-type: none;
+}
+form.kifi-compose li.token-input-token-KiFi {
+  overflow: hidden;
+  margin: 0 0 3px 3px !important;
+  padding: 0 3px !important;
+  background-color: #eaeaea;
+  color: #524d4d;
+  cursor: default;
+  border: 1px solid #e2e2e2;
+  border-radius: 2px;
+  float: left;
+  white-space: nowrap;
+}
+form.kifi-compose li.token-input-selected-token-KiFi {
+  background-color: #fafafa;
+  border-color: #e2e2e2;
+  color: #414B52;
+}
+form.kifi-compose li.token-input-token-KiFi p {
+  display: inline;
+  padding: 0;
+  margin: 0;
+}
+form.kifi-compose li.token-input-token-KiFi .token-input-delete-token-KiFi {
+  color: #524d4d;
+  margin-left: 5px;
+  font-weight: normal;
+  cursor: pointer;
+}
+form.kifi-compose li.token-input-selected-token-KiFi .token-input-delete-token-KiFi {
+  color: #414b52;
+}
+div.token-input-dropdown-KiFi {
+  border: 1px solid #ccc;
+  border-top: none;
+  background-color: #fff;
+  overflow: hidden;
+  cursor: default;
+  font: 300 12px Lato,sans-serif;
+}
+div.token-input-dropdown-KiFi p {
+  margin: 0 !important;
+  padding: 5px;
+  font-weight: bold;
+  color: #777;
+}
+div.token-input-dropdown-KiFi ul {
+  position: static;
+  float: none;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+div.token-input-dropdown-KiFi ul li {
+  background: #fff;
+  position: static;
+  float: none;
+  margin: 0 !important;
+  padding: 3px !important;
+  list-style-type: none;
+  text-align: left;
+  font: inherit;
+}
+div.token-input-dropdown-KiFi ul li.token-input-dropdown-item-KiFi,
+div.token-input-dropdown-KiFi ul li.token-input-dropdown-item2-KiFi {
+  background-color: #fff;
+}
+div.token-input-dropdown-KiFi ul li.token-input-selected-dropdown-item-KiFi {
+  background-color: #faf9f9;
+  color: #414b52;
+}
+
