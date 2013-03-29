@@ -1,7 +1,7 @@
 package com.keepit.controllers.search
 
 import com.google.inject.Inject
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.model.{NormalizedURI, SocialConnectionRepo, BookmarkRepo, User}
@@ -35,7 +35,7 @@ class URIGraphController @Inject()(
     uriGraphPlugin: URIGraphPlugin,
     bookmarkRepo: BookmarkRepo,
     socialConnectionRepo: SocialConnectionRepo,
-    uriGraph: URIGraph) extends FortyTwoController {
+    uriGraph: URIGraph) extends SearchServiceController {
 
   import URIGraphJson._
 
