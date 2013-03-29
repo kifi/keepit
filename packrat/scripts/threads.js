@@ -10,6 +10,9 @@
 // @require scripts/snapshot.js
 
 function renderThreads($container, threads) {
+  threads.forEach(function(t) {
+    t.recipientsPictured = t.recipients.slice(0, 4);
+  });
   render("html/metro/threads.html", {
     formatSnippet: getSnippetFormatter,
     formatLocalDate: getLocalDateFormatter,
@@ -28,8 +31,15 @@ function renderThreads($container, threads) {
     .on("click", "a[href^='x-kifi-sel:']", function(e) {
       e.preventDefault();
     })
+    .on("click", ".kifi-thread", function() {
+      var $th = $(this), id = $th.data("id");
+      var recipients = $th.data("recipients") ||
+        threads.filter(function(t) {return t.externalId == id})[0].recipients;
+      $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["thread", recipients, id])
+    })
     .on("kifi:compose-submit", sendMessage)
     .find("time").timeago();
+
 
     attachComposeBindings($container, "message");
   });
@@ -44,24 +54,20 @@ function renderThreads($container, threads) {
       "recipients": recipientIds
     }, function(response) {
       api.log("[sendMessage] resp:", response);
-      render("html/metro/comment.html", {
-        "formatComment": getTextFormatter,
+      render("html/metro/thread.html", {
+        "formatSnippet": getSnippetFormatter,
         "formatLocalDate": getLocalDateFormatter,
         "formatIsoDate": getIsoDateFormatter,
-        "createdAt": response.createdAt,
-        "text": text,
-        "user": {
-          "externalId": response.session.userId,
-          "firstName": response.session.name,
-          "lastName": "",
-          "facebookId": response.session.facebookId
-        },
-        "isLoggedInUser": true,
-        "externalId": response.commentId
+        "lastCommentedAt": response.message.createdAt,
+        "recipientsPictured": response.message.recipients.slice(0, 4),
+        "messageCount": 1,
+        "digest": text,
+        "externalId": response.message.externalId
       }, function(html) {
-        var $posted = $container.find(".kifi-threads-list");
-        $(html).find("time").timeago().end().appendTo($posted);
-        $posted[0].scrollTop = 99999;
+        var $threads = $container.find(".kifi-threads-list");
+        $(html).data("recipients", response.message.recipients)
+        .find("time").timeago().end().appendTo($threads);
+        $threads[0].scrollTop = 99999;
         $container.find(".kifi-compose-draft").empty().blur();
         $container.find(".kifi-compose-to").tokenInput("clear");
         // TODO: better way to update thread counts
@@ -70,7 +76,5 @@ function renderThreads($container, threads) {
         });
       });
     });
-    var $submit = $container.find(".kifi-compose-submit").addClass("kifi-active");
-    setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   }
 }

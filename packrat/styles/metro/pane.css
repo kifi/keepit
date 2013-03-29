@@ -240,3 +240,25 @@ a.kifi-pane-action:hover {
 a.kifi-pane-action:active {
   background-color: #607991;
 }
+
+/* thread pane */
+.kifi-thread-who {
+  background-color: #ecf0f1;
+  padding: 10px 12px;
+}
+.kifi-thread-participants {
+  margin-top: 3px;
+}
+.kifi-thread-participant {
+  font-weight: 400;
+}
+.kifi-thread-participants .kifi-thread-participant::before {
+  content: ", ";
+  font-weight: 300;
+}
+.kifi-thread-participants .kifi-thread-participant:first-child::before {
+  content: ""
+}
+.kifi-thread-participants .kifi-thread-participant:last-child::before {
+  content: " and "
+}

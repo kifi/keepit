@@ -70,6 +70,8 @@ function attachComposeBindings($c, composeTypeName) {
       args.push(recipients.map(function(r) {return r.externalId}).join(","));
     }
     $d.trigger("kifi:compose-submit", args);
+    var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
+    setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   })
   .on("click", ".kifi-compose-snapshot", function() {
     snapshot.take(composeTypeName, function(selector) {
