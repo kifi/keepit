@@ -1,7 +1,7 @@
 package com.keepit.controllers.search
 
 import com.google.inject.Inject
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
@@ -26,7 +26,7 @@ class ArticleIndexerController @Inject()(
     db: Database,
     indexer: ArticleIndexer,
     indexerPlugin: ArticleIndexerPlugin,
-    normUriRepo: NormalizedURIRepo) extends FortyTwoController {
+    normUriRepo: NormalizedURIRepo) extends SearchServiceController {
 
   import ArticleIndexInfoJson._
 

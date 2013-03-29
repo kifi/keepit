@@ -9,7 +9,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.async.dispatch
-import com.keepit.common.controller.BrowserExtensionController
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController}
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
 import com.keepit.common.social._
 import com.keepit.model._
@@ -55,7 +55,7 @@ class ExtCommentController @Inject() (
   activityStream: ActivityStream,
   userNotifier: UserNotifier,
   paneDetails: PaneDetails)
-    extends BrowserExtensionController {
+    extends BrowserExtensionController with ShoeboxServiceController {
 
   def getCounts(ids: String) = AuthenticatedJsonAction { request =>
     val nUriExtIds = ids.split('.').map(ExternalId[NormalizedURI](_))

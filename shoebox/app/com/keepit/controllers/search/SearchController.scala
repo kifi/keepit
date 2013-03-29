@@ -2,7 +2,7 @@
 package com.keepit.controllers.search
 
 import com.google.inject.Inject
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
@@ -26,7 +26,7 @@ class SearchController @Inject()(
     bookmarkRepo: BookmarkRepo,
     normUriRepo: NormalizedURIRepo,
     searcherFactory: MainSearcherFactory
-  ) extends FortyTwoController {
+  ) extends SearchServiceController {
 
   def searchKeeps(userId: Id[User], query: String) = Action { request =>
     val searcher = searcherFactory.bookmarkSearcher(userId)

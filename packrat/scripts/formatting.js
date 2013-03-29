@@ -1,4 +1,4 @@
-function getCommentTextFormatter() {
+function getTextFormatter() {
   return function(text, render) {
     // Careful... this is raw text (necessary for URL detection). Be sure to Mustache.escape untrusted portions!
     text = render(text);
@@ -24,11 +24,26 @@ function getCommentTextFormatter() {
       parts[i] = bits.join("");
     }
 
-    return "<p class=first-line>" + parts.join("").replace(/\n(?:[ \t\r]*\n)*/g, "</p><p>") + "</p>";
+    return "<p>" + parts.join("").replace(/\n(?:[ \t\r]*\n)*/g, "</p><p>") + "</p>";
   }
 }
 
-function getCommentDateFormatter() {
+function getSnippetFormatter() {
+  return function(text, render) {
+    // Careful... this is raw text (necessary for URL detection). Be sure to Mustache.escape untrusted portions!
+    text = render(text);
+
+    // plain-textify look-here links (from markdown)
+    var parts = text.split(/\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)/);
+    for (var i = 1; i < parts.length; i += 2) {
+      parts[i] = parts[i].replace(/\\\]/g, "]");
+    }
+
+    return Mustache.escape(parts.join(""));
+  }
+}
+
+function getLocalDateFormatter() {
   return function(text, render) {
     try {
       return new Date(render(text)).toString();

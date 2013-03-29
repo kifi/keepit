@@ -21,6 +21,8 @@ import java.util.Arrays
 
 object ProximityQuery {
   def apply(terms: Seq[Term]) = new ProximityQuery(terms)
+
+  val gapPenalty = 0.05f
 }
 
 class ProximityQuery(val terms: Seq[Term]) extends Query2 {
@@ -43,16 +45,20 @@ class ProximityQuery(val terms: Seq[Term]) extends Query2 {
 
 class ProximityWeight(query: ProximityQuery) extends Weight {
   private[this] var value = 0.0f
-
-  override def getValue() = value
-  override def scoresDocsOutOfOrder() = false
-
-  override def sumOfSquaredWeights() = {
-    value = query.getBoost()
-    value * value
+  private[this] val maxRawScore = {
+    val n = query.terms.size.toFloat
+    // max possible proximity score
+    ((n * (n + 1.0f) / 2.0f) - (ProximityQuery.gapPenalty * n * (n - 1.0f) / 2.0f))
   }
 
-  override def normalize(norm: Float) { value *= norm }
+  override def getValue() = value / maxRawScore
+  override def scoresDocsOutOfOrder() = false
+
+  override def sumOfSquaredWeights(): Float = {
+    query.getBoost * query.getBoost
+  }
+
+  override def normalize(norm: Float) { value = norm * query.getBoost }
 
   override def explain(reader: IndexReader, doc: Int) = {
     val sc = scorer(reader, true, false);
@@ -62,11 +68,10 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
     if (exists) {
       result.setDescription("proximity(%s), product of:".format(query.terms.mkString(",")))
       val proxScore = sc.score
-      val boost = getValue
       result.setValue(proxScore)
       result.setMatch(true)
-      result.addDetail(new Explanation(proxScore/boost, "proximity score"))
-      result.addDetail(new Explanation(boost, "boost"))
+      result.addDetail(new Explanation(proxScore/value, "proximity score"))
+      result.addDetail(new Explanation(value, "weight value"))
     } else {
       result.setDescription("proximity(%s), doesn't match id %d".format(query.terms.mkString(","), doc))
       result.setValue(0)
@@ -133,11 +138,11 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
   private[this] var proximityScore = 0.0f
   private[this] var scoredDoc = -1
   private[this] val numTerms = tps.length
-  private[this] val termPresenceScore = 1.0f // base score per term presence
-  private[this] def gapPenalty(distance: Int) = 0.05f * distance.toFloat // gap penalty
   private[this] val rl = new Array[Float](numTerms + 1) // run lengths
   private[this] val ls = new Array[Float](numTerms + 1) // local scores
   private[this] val weightVal = weight.getValue
+
+  private[this] def gapPenalty(distance: Int) = ProximityQuery.gapPenalty * distance.toFloat
 
   private[this] val pq = new PriorityQueue[PositionAndMask] {
     super.initialize(numTerms)
@@ -163,9 +168,8 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
         Arrays.fill(rl, 0.0f) // clear the run lengths
         Arrays.fill(ls, 0.0f) // clear the local scores
 
-        // start fetching position for all terms, and cumulate term presence scores as the base score
+        // start fetching position for all terms
         while (top.doc == doc && top.pos == -1) {
-          proximityScore += termPresenceScore
           top.nextPos()
           top = pq.updateTop()
         }
@@ -187,7 +191,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
           while (i <= numTerms) {
             val runLen = if (((1L << (i - 1)) & mask) != 0) prevRun + 1.0f else 0.0f
             val localScore = max(ls(i) - (gapPenalty(curPos - prevPos)), 0.0f)
-            prevRun = rl(i)
+            prevRun = rl(i) // save the run length of previous round
             rl(i) = runLen
             ls(i) = if (localScore < runLen) runLen else localScore
             localScoreSum += ls(i)

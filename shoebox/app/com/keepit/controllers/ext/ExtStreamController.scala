@@ -43,7 +43,7 @@ class ExtStreamController @Inject() (
   userChannel: UserChannel,
   uriChannel: UriChannel,
   clock: Clock,
-  paneData: PaneDetails) extends BrowserExtensionController with Logging {
+  paneData: PaneDetails) extends BrowserExtensionController with ShoeboxServiceController {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
     /*
      * Unfortunately, everything related to existing secured actions intimately deals with Action, Request, Result, etc.
