@@ -107,10 +107,10 @@ class ExtStreamController @Inject() (
               subscriptions = subscribe(streamSession, socketId, channel, subscriptions, sub)
             case JsString("unsubscribe") +: unsub =>
               subscriptions = unsubscribe(streamSession, socketId, channel, subscriptions, unsub)
-            case JsString("get_comments") +: JsString(requestId) +: JsString(url) +: _ =>
-              channel.push(Json.arr("got_comments", paneData.getComments(streamSession.userId, url)))
-            case JsString("get_message_threads") +: JsString(requestId) +: JsString(url) +: _ =>
-              channel.push(Json.arr("got_message_threads", paneData.getMessageThreadList(streamSession.userId, url)))
+            case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>
+              channel.push(Json.arr("got_comments", requestId.toLong, paneData.getComments(streamSession.userId, url)))
+            case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>
+              channel.push(Json.arr("got_message_threads", requestId.toLong, paneData.getMessageThreadList(streamSession.userId, url)))
             case json =>
               log.warn(s"Not sure what to do with: $json")
           }
