@@ -1,50 +1,39 @@
 package com.keepit.test
 
-import play.api.Play
-import play.api.GlobalSettings
-import play.api.Application
-import play.api.db.DB
+import akka.actor.ActorSystem
+import akka.actor.Cancellable
+import akka.actor.Scheduler
 import com.google.inject.Module
-import com.google.inject.Singleton
 import com.google.inject.Provides
-import com.google.inject.util.Modules
-import com.keepit.common.logging.Logging
-import com.keepit.common.controller.FortyTwoServices
-import com.keepit.common.healthcheck.FakeHealthcheck
-import com.keepit.common.healthcheck.FakeHealthcheckModule
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.time._
-import com.keepit.common.social.FakeSecureSocialUserServiceModule
-import com.keepit.shoebox.{ShoeboxGlobal, ShoeboxModule}
-import com.keepit.dev.{DevGlobal, DevModule}
-import com.keepit.inject._
-import com.keepit.model._
-import com.keepit.FortyTwoGlobal
-import com.tzavellas.sse.guice.ScalaModule
-import com.keepit.common.store.FakeStoreModule
-import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout}
-import com.keepit.common.db.SlickModule
-import com.keepit.common.db.DbInfo
-import com.keepit.common.db.slick._
-import scala.slick.session.{Database => SlickDatabase}
-import org.joda.time.DateTime
-import org.joda.time.LocalDate
-import akka.actor.{Scheduler, Cancellable, ActorRef}
-import akka.util.Duration
-import scala.collection.mutable.{Stack => MutableStack}
+import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
+import com.google.inject.util.Modules
+import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.analytics.{SliderShownListener, UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
-import akka.actor.Scheduler
-import akka.actor.Cancellable
-import akka.actor.ActorRef
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Future
-import scala.concurrent.duration._
-import com.keepit.common.actor.ActorPlugin
-import akka.actor.ActorSystem
+import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.db.DbInfo
+import com.keepit.common.db.SlickModule
+import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.FakeHealthcheckModule
+import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout}
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.social.FakeSecureSocialUserServiceModule
+import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.time._
+import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal}
+import com.keepit.inject._
+import com.keepit.model._
+import com.tzavellas.sse.guice.ScalaModule
+import org.joda.time.DateTime
+import org.joda.time.LocalDate
+import play.api.Application
+import play.api.Play
+import play.api.db.DB
+import scala.collection.mutable.{Stack => MutableStack}
+import scala.slick.session.{Database => SlickDatabase}
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -61,11 +50,14 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
 }
 
 class DevApplication() extends TestApplication(new TestGlobal(DevGlobal.modules: _*))
-class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxGlobal.modules: _*))
+class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlobal.modules: _*))
+class SearchApplication() extends TestApplication(new TestGlobal(SearchDevGlobal.modules: _*))
 class EmptyApplication() extends TestApplication(new TestGlobal(TestModule()))
 
 trait DbRepos {
+
   import play.api.Play.current
+
   def db = inject[Database]
   def userRepo = inject[UserRepo]
   def uriRepo = inject[NormalizedURIRepo]
