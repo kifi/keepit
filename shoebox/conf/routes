@@ -50,6 +50,9 @@ GET     /users/friends              @com.keepit.controllers.ext.ExtUserControlle
 
 POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
 
+
+GET     /users/picture/$width<[0-9]{2,3}>/:id       @com.keepit.controllers.assets.UserPictureController.get(width: Int, id: ExternalId[User])
+
 GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
 GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)
 
