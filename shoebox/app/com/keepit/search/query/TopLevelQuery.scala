@@ -85,29 +85,42 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
   }
 
   override def normalize(norm: Float) {
+    val boost = query.getBoost
     // normalize each weigth individually, then take the global normalization into account
     val textNorm = queryNorm(textWeight.sumOfSquaredWeights)
-    textWeight.normalize(textNorm * norm)
+    textWeight.normalize(textNorm * norm * boost)
     auxWeights.foreach{ w =>
       val auxNorm = queryNorm(w.sumOfSquaredWeights)
-      w.normalize(auxNorm * norm)
+      w.normalize(auxNorm * norm * boost)
     }
   }
 
   override def explain(reader: IndexReader, doc: Int) = {
-    val sc = scorer(reader, true, false);
-    val exists = (sc != null && sc.advance(doc) == doc);
+    val sc = scorer(reader, true, false)
+    val exists = (sc != null && sc.advance(doc) == doc)
 
     val result = new ComplexExplanation()
-    if (exists) {
-      result.setDescription("top level, sum of:")
+    var ret = if (exists) {
       val score = sc.score
-      result.setValue(score)
+      val coordFactor = sc.asInstanceOf[Coordinator].coord
+
+      val ret = new ComplexExplanation()
+      ret.setDescription("top level, product of:")
+      ret.setValue(score)
+      ret.setMatch(true)
+
+      ret.addDetail(result)
+      ret.addDetail(new Explanation(coordFactor, s"coord factor"))
+
+      result.setDescription("sum of:")
+      result.setValue(score/coordFactor)
       result.setMatch(true)
+      ret
     } else {
       result.setDescription("top level, doesn't match id %d".format(doc))
       result.setValue(0)
       result.setMatch(false)
+      result
     }
 
     var sum = 0.0f
@@ -136,7 +149,7 @@ class TopLevelWeight(query: TopLevelQuery, searcher: Searcher) extends Weight wi
           }
         }
     }
-    result
+    ret
   }
 
   override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
