@@ -11,13 +11,29 @@ jQuery.fn.layout = function() {
 };
 
 slider2 = function() {
-  var $tile = $("#kifi-tile"), $slider, $pane, info, lastShownAt;
+  var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt;
+  var info, nUri, comments, threads, messages;
+
+  // pre-fetch some data
+  api.port.emit("normalize", function(u) {
+    api.log("normalized", u);
+    nUri = u;
+  });
+  api.port.emit("comments", function(c) {
+    api.log("comments", c);
+    comments = c;
+    //updateCommentCount(comments.length);
+  });
+  api.port.emit("threads", function(t) {
+    api.log("threads", t);
+    threads = t;
+    //updateThreadsCount(threads.length);
+  });
 
   key("esc", function() {
     if ($pane) {
       hidePane();
-    }
-    if ($slider) {
+    } else if ($slider) {
       hideSlider("esc");
     }
   });
@@ -360,14 +376,11 @@ slider2 = function() {
   }
 
   const populatePane = {
-    notifications: function($box) {
+    notices: function($box) {
       // TODO
     },
     comments: function($box) {
-      api.port.emit("get_comments", {kind: "public"}, function(comments) {
-        var session = comments.session;
-        comments = comments.public;
-        //updateCommentCount(comments.length);
+      api.port.emit("session", function(session) {
         comments.forEach(function(c) {
           c.isLoggedInUser = c.user.externalId == session.userId;
         });
@@ -377,13 +390,8 @@ slider2 = function() {
       });
     },
     threads: function($box) {
-      api.port.emit("get_comments", {kind: "message"}, function(threads) {
-        api.log("[threads]", threads);
-        threads = threads.message;
-        //updateThreadsCount(threads.length);
-        api.require("scripts/threads.js", function() {
-          renderThreads($box.find(".kifi-pane-tall"), threads);
-        });
+      api.require("scripts/threads.js", function() {
+        renderThreads($box.find(".kifi-pane-tall"), threads);
       });
     },
     thread: function($box, threadId) {
