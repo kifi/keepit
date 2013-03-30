@@ -75,7 +75,7 @@ api.timers.setTimeout(function maybeSend() {
 
 // ===== WebSockets
 
-api.socket.open((api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws", {
+var socket = api.socket.open((api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws", {
   message: function(data) {
     api.log("[socket:message]", data);
     var activeTab = api.tabs.getActive();
@@ -93,7 +93,7 @@ api.socket.open((api.prefs.get("env") === "development" ? "ws://" : "wss://") + 
   event: function(data) {
     api.log("[socket:event]", data);
   }
-})
+});
 
 // ===== Handling messages from content scripts or other extension pages
 
@@ -190,6 +190,21 @@ api.port.on({
   post_comment: function(data, respond) {
     postComment(data, respond);
     return true;
+  },
+  normalize: function(_, respond, tab) {
+    socket.send(["normalize", tab.url], respond);
+    return true;
+  },
+  comments: function(_, respond, tab) {
+    socket.send(["get_comments", tab.url], respond);
+    return true;
+  },
+  threads: function(_, respond, tab) {
+    socket.send(["get_message_threads", tab.url], respond);
+    return true;
+  },
+  session: function(_, respond) {
+    respond(session);
   },
   get_friends: function(_, respond) {
     ajax("GET", "http://" + getConfigs().server + "/users/friends", respond);
