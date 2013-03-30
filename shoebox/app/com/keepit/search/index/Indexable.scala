@@ -7,6 +7,7 @@ import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
+import org.apache.lucene.document.BinaryDocValuesField
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.FieldType
@@ -64,6 +65,7 @@ object Indexable {
     }
   }
 }
+import org.apache.lucene.document.BinaryDocValuesField
 
 trait Indexable[T] {
   import Indexable._
@@ -124,10 +126,13 @@ trait Indexable[T] {
     new Field(fieldName, new IteratorTokenStream(iterator, toToken), fieldType)
   }
 
-  def buildSemanticVectorField(fieldName: String, tokenStreams: TokenStream*) = {
-    val builder = new SemanticVectorBuilder(60)
-    tokenStreams.foreach{ builder.load(_) }
-    new Field(fieldName, builder.tokenStream, semanticVectorFieldType)
+  def buildDocSemanticVectorField(fieldName: String, svBuilder: SemanticVectorBuilder) = {
+    new BinaryDocValuesField(fieldName, new BytesRef(svBuilder.aggregatedVector.bytes))
   }
+
+  def buildSemanticVectorField(fieldName: String, svBuilder: SemanticVectorBuilder) = {
+    new Field(fieldName, svBuilder.tokenStream, semanticVectorFieldType)
+  }
+
 }
 

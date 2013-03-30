@@ -16,6 +16,8 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
 import play.api.Play.current
+import com.keepit.search.SemanticVectorBuilder
+
 
 object ArticleIndexer {
 
@@ -105,7 +107,14 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           DefaultAnalyzer.forIndexingWithStemmer(contentLang).foreach{ analyzer =>
             doc.add(buildTextField("cs", article.content, analyzer))
           }
-          doc.add(buildSemanticVectorField("sv", titleAnalyzer.tokenStream("t", article.title), contentAnalyzer.tokenStream("c", article.content)))
+
+          val titleTS = titleAnalyzer.tokenStream("t", article.title)
+          val contentTS = contentAnalyzer.tokenStream("c", article.content)
+          val builder = new SemanticVectorBuilder(60)
+          builder.load(titleTS)
+          builder.load(contentTS)
+          doc.add(buildDocSemanticVectorField("docSv", builder))
+          doc.add(buildSemanticVectorField("sv", builder))
 
           // index domain name
           URI.parse(uri.url).toOption.flatMap(_.host) match {
