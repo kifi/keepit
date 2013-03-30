@@ -54,9 +54,13 @@ class SemanticVectorQueryTest extends Specification {
         val doc = super.buildDocument
         val analyzer = indexWriterConfig.getAnalyzer
         val content = buildTextField("c", text)
-        val semanticVector = buildSemanticVectorField("sv", analyzer.tokenStream("c", text))
+        val builder = new SemanticVectorBuilder(60)
+        builder.load( analyzer.tokenStream("c", text) )
+        val semanticVector = buildSemanticVectorField("sv", builder)
+        val docSemanticVector = buildDocSemanticVectorField("docSV", builder)
         doc.add(content)
         doc.add(semanticVector)
+        doc.add(docSemanticVector)
         doc
       }
     }
