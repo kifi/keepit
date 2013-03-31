@@ -47,15 +47,13 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
     table.ddl.createStatements mkString "\n"
   }
 
-  def save(model: M)(implicit session: RWSession): M = try {
+  def save(model: M)(implicit session: RWSession): M = {
     val toUpdate = model.withUpdateTime(clock.now)
     val result = model.id match {
       case Some(id) => update(toUpdate)
       case None => toUpdate.withId(insert(toUpdate))
     }
     invalidateCache(result)
-  } catch {
-    case t: Throwable => throw new Exception(s"error persisting $model", t)
   }
 
   def count(implicit session: RSession): Int = Query(table.length).first
