@@ -160,16 +160,16 @@ GET     /admin/searchExperiments/kifiHadResults/:id   @com.keepit.controllers.ad
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI])
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
 
-GET     /admin/slider/rules         com.keepit.controllers.admin.SliderAdminController.getRules
-POST    /admin/slider/rules         com.keepit.controllers.admin.SliderAdminController.saveRules
-GET     /admin/slider/patterns      com.keepit.controllers.admin.SliderAdminController.getPatterns
-POST    /admin/slider/patterns      com.keepit.controllers.admin.SliderAdminController.savePatterns
-GET     /admin/slider/domainTags    com.keepit.controllers.admin.SliderAdminController.getDomainTags
-POST    /admin/slider/domainTags    com.keepit.controllers.admin.SliderAdminController.saveDomainTags
-GET     /admin/slider/domains       com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
-POST    /admin/slider/domains       com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
-POST    /admin/slider/domains/fetch com.keepit.controllers.admin.SliderAdminController.refetchClassifications
-GET     /admin/slider/importEvents  com.keepit.controllers.admin.SliderAdminController.getImportEvents
+GET     /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.getRules
+POST    /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.saveRules
+GET     /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.getPatterns
+POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.savePatterns
+GET     /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.getDomainTags
+POST    /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.saveDomainTags
+GET     /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
+POST    /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
+POST    /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminController.refetchClassifications
+GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
 
 GET     /admin/phrases              com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
 POST    /admin/phrases/add          com.keepit.controllers.admin.PhraseController.addPhrase
