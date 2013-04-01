@@ -9,6 +9,8 @@ import scala.slick.driver._
 import scala.slick.session._
 import scala.slick.lifted._
 import DBSession._
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
+import java.sql.SQLException
 
 
 trait Repo[M <: Model[M]] {
@@ -55,7 +57,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
     }
     invalidateCache(result)
   } catch {
-    case t: Throwable => throw new Exception("error persisting %s".format(model), t)
+    case m: MySQLIntegrityConstraintViolationException =>
+      throw new MySQLIntegrityConstraintViolationException(s"Could not persist $model: ${m.getClass} ${m.getMessage}")
+    case t: SQLException => throw new SQLException(s"error persisting $model", t)
   }
 
   def count(implicit session: RSession): Int = Query(table.length).first

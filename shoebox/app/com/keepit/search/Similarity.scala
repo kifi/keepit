@@ -22,19 +22,22 @@ object Similarity extends Logging {
   trait ReciprocalCoord extends DefaultSimilarity {
     override def coord(overlap: Int, maxOverlap: Int) = 1.0f / ((1 + maxOverlap - overlap).toFloat)
   }
-
-  private[this] val similarities = {
-    var m = Map.empty[String, DefaultSimilarity]
-    m += ("default" -> new DefaultSimilarity with NoCoord)
-    m += ("propotionalCoord" -> new DefaultSimilarity with ProportionalCoord)
-    m += ("squaredCoord" -> new DefaultSimilarity with SquaredCoord)
-    m += ("reciprocalCoord" -> new DefaultSimilarity with ReciprocalCoord)
-    m += ("noTF" -> new DefaultSimilarity with NoTF with NoCoord)
-    m += ("noTF-propotionalCoord" -> new DefaultSimilarity with ProportionalCoord)
-    m += ("noTF-squaredCoord" -> new DefaultSimilarity with NoTF with SquaredCoord)
-    m += ("noTF-reciprocalCoord" -> new DefaultSimilarity with NoTF with ReciprocalCoord)
-    m
+  trait NoFieldNorm extends DefaultSimilarity {
+    override def decodeNormValue(b: Byte) = 1.0f
   }
+
+  private[this] val similarities: Map[String, DefaultSimilarity] = Map(
+    ("default" -> new DefaultSimilarity with NoCoord),
+    ("propotionalCoord" -> new DefaultSimilarity with ProportionalCoord),
+    ("squaredCoord" -> new DefaultSimilarity with SquaredCoord),
+    ("reciprocalCoord" -> new DefaultSimilarity with ReciprocalCoord),
+    ("noTF" -> new DefaultSimilarity with NoTF with NoCoord),
+    ("noTF-propotionalCoord" -> new DefaultSimilarity with ProportionalCoord),
+    ("noTF-squaredCoord" -> new DefaultSimilarity with NoTF with SquaredCoord),
+    ("noTF-reciprocalCoord" -> new DefaultSimilarity with NoTF with ReciprocalCoord),
+    ("noFieldNorm" -> new DefaultSimilarity with NoFieldNorm with NoCoord),
+    ("noTF-noFieldNorm" -> new DefaultSimilarity with NoTF with NoFieldNorm with NoCoord)
+  )
 
   def apply(name: String) = {
     def fallback = {

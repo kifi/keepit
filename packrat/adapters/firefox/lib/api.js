@@ -177,6 +177,7 @@ exports.request = function(method, url, data, done, fail) {
 };
 
 var socketPage, socketHandlers = [,];
+var socketCallbacks = {}, nextSocketCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
 exports.socket = {
   open: function(url, handlers) {
     socketHandlers.push(handlers);
@@ -195,37 +196,56 @@ exports.socket = {
       });
       socketPage.port.on("socket_message", onSocketMessage);
     }
-    return socketId;
-  },
-  close: function(socketId) {
-    if (socketHandlers[socketId]) {
-      exports.log("[api.socket.close]", socketId);
-      delete socketHandlers[socketId];
-      socketPage.port.emit("close_socket", socketId);
-      if (!socketHandlers.some(function(h) {return h})) {
-        socketPage.destroy();
-        socketPage = null;
+    return {
+      send: function(arr, callback) {
+        if (callback) {
+          var id = nextSocketCallbackId++;
+          socketCallbacks[id] = callback;
+          arr.splice(1, 0, id);
+        }
+        socketPage.port.emit("socket_send", socketId, arr);
+      },
+      close: function() {
+        exports.log("[api.socket.close]", socketId);
+        delete socketHandlers[socketId];
+        socketPage.port.emit("close_socket", socketId);
+        if (!socketHandlers.some(function(h) {return h})) {
+          socketPage.destroy();
+          socketPage = null;
+        }
+        this.send = this.close = api.noop;
       }
-    } else {
-      exports.log("[api.socket.close]", socketId, "(ignored)");
-    }
+    };
   }
 }
 function onSocketMessage(socketId, data) {
   try {
     var msg = JSON.parse(data);
     if (Array.isArray(msg)) {
-      var handlers = socketHandlers[socketId];
-      if (handlers) {
-        var handler = handlers[msg[0]];
-        if (handler) {
-          handler.apply(null, msg.splice(1));
+      var id = msg.shift();
+      if (id > 0) {
+        var callback = socketCallbacks[id];
+        if (callback) {
+          delete socketCallbacks[id];
+          callback.apply(null, msg);
+        } else {
+          exports.log("[api.onSocketMessage] Ignoring, no callback", id, msg);
         }
       } else {
-        exports.log("[api.onSocketMessage] no handlers for", socketId);
+        var handlers = socketHandlers[socketId];
+        if (handlers) {
+          var handler = handlers[id];
+          if (handler) {
+            handler.apply(null, msg);
+          } else {
+            exports.log("[api.onSocketMessage] Ignoring, no handler", id, msg);
+          }
+        } else {
+          exports.log("[api.onSocketMessage] Ignoring, no handlers", socketId, id, msg);
+        }
       }
     } else {
-      exports.log("[api.onSocketMessage] ignoring (not array)", msg);
+      exports.log("[api.onSocketMessage] Ignoring, not array", msg);
     }
   } catch (e) {
     exports.log.error("[api.onSocketMessage]", e);

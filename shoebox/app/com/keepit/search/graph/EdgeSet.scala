@@ -42,16 +42,27 @@ class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destId
   def destIdLongSet = destIdSet.map(_.id)
   def size = destIdSet.size
 
-  def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = {
-    getDestDocIdSetIterator(searcher.indexReader.asAtomicReader.getIdMapper)
+  private[this] var cache: (Searcher, Array[Int]) = (null, null)
+
+  private def getDocIds(searcher: Searcher): Array[Int] = {
+    cache match {
+      case (curSearcher, curDocIds) if (curSearcher eq searcher) =>
+        curDocIds
+      case _ =>
+        val mapper = searcher.indexReader.getIdMapper
+        val docids = destIdSet.map{ id => mapper.getDocId(id.id) }.filter{ _ >= 0 }.toArray
+        Sorting.quickSort(docids)
+        cache = (searcher, docids)
+        docids
+    }
   }
 
-  private def getDestDocIdSetIterator(mapper: IdMapper): DocIdSetIterator = {
-    val docids = destIdSet.map{ id => mapper.getDocId(id.id) }.filter{ _ >= 0 }.toArray
-    Sorting.quickSort(docids)
+  def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = {
+    val docids = getDocIds(searcher)
+
     new DocIdSetIterator {
-      var curDoc = NO_MORE_DOCS
-      var curIdx = -1
+      private[this] var curDoc = NO_MORE_DOCS
+      private[this] var curIdx = -1
 
       def docID() = curDoc
 
@@ -73,9 +84,9 @@ class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destId
 abstract class LuceneBackedEdgeSet[S, D](override val sourceId: Id[S], searcher: Searcher) extends EdgeSet[S, D] {
   import EdgeSetUtil._
 
-  val reader = searcher.indexReader.asAtomicReader
-  lazy val lazyDestIdLongSet = getDestDocIdSetIterator(searcher).map(docid => reader.getIdMapper.getId(docid)).toSet
-  lazy val lazyDestIdSet = lazyDestIdLongSet.map(toId(_))
+  private val reader = searcher.indexReader.asAtomicReader
+  private[this] lazy val lazyDestIdLongSet = getDestDocIdSetIterator(searcher).map(docid => searcher.indexReader.getIdMapper.getId(docid)).toSet
+  private[this] lazy val lazyDestIdSet = lazyDestIdLongSet.map(toId(_))
 
   override def destIdLongSet = lazyDestIdLongSet
   override def destIdSet = lazyDestIdSet

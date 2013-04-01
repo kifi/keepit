@@ -22,7 +22,7 @@ import com.keepit.search.graph._
 import com.keepit.search._
 import com.keepit.common.social.UserWithSocial
 import com.keepit.search.ArticleSearchResultStore
-import com.keepit.common.controller.BrowserExtensionController
+import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController}
 import com.keepit.common.performance._
 import scala.util.Try
 import views.html
@@ -54,7 +54,7 @@ class ExtSearchController @Inject() (
   bookmarkRepo: BookmarkRepo,
   uriRepo: NormalizedURIRepo,
   basicUserRepo: BasicUserRepo)
-    extends BrowserExtensionController {
+    extends BrowserExtensionController with SearchServiceController {
 
   def search(query: String, filter: Option[String], maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
     val lastUUID = lastUUIDStr.flatMap{

@@ -2,7 +2,7 @@
 package com.keepit.controllers.search
 
 import com.google.inject.Inject
-import com.keepit.common.controller.FortyTwoController
+import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
 import com.keepit.model.{User, NormalizedURI}
 import com.keepit.search.ResultClickTracker
@@ -17,7 +17,7 @@ object ResultClickedJson {
   implicit val resultClickedFormat = Json.format[ResultClicked]
 }
 
-class SearchEventController @Inject()(resultClickTracker: ResultClickTracker) extends FortyTwoController {
+class SearchEventController @Inject()(resultClickTracker: ResultClickTracker) extends SearchServiceController {
 
   import ResultClickedJson._
 

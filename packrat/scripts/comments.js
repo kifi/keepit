@@ -1,4 +1,5 @@
 // @require styles/metro/comments.css
+// @require styles/metro/compose.css
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/api.js
 // @require scripts/formatting.js
@@ -8,10 +9,9 @@
 // @require scripts/snapshot.js
 
 function renderComments($container, comments) {
-  var elComments, hComments;
   render("html/metro/comments.html", {
-    formatComment: getCommentTextFormatter,
-    formatDate: getCommentDateFormatter,
+    formatComment: getTextFormatter,
+    formatLocalDate: getLocalDateFormatter,
     formatIsoDate: getIsoDateFormatter,
     comments: comments,
     draftPlaceholder: "Type a comment…",
@@ -23,43 +23,16 @@ function renderComments($container, comments) {
     comment: "comment.html",
     compose: "compose.html"
   }, function(html) {
-    var $c = $(html).prependTo($container);
-    elComments = $c[0].querySelector(".kifi-comments-posted");
-    updateMinHeight();
-    elComments.scrollTop = 9999;
-
-    $c.find("time").timeago();
-    $c.on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
+    $(html).prependTo($container)
+    .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
     .on("click", "a[href^='x-kifi-sel:']", function(e) {
       e.preventDefault();
-    });
+    })
+    .on("kifi:compose-submit", submitComment)
+    .find("time").timeago();
 
-    attachComposeBindings($c, "comment");
-    $c.find(".kifi-compose-draft")
-    .on("input", updateMinHeight)
-    .on("kifi:compose-submit", submitComment);
-
-    $(window).on("resize", updateMinHeight);
+    attachComposeBindings($container, "comment");
   });
-
-  $container.closest(".kifi-pane-box").on("kifi:remove", function() {
-    $(window).off("resize", updateMinHeight);
-  });
-
-  function updateMinHeight() {
-    if (elComments) {
-      var hCommentsNew = Math.max(0, $container[0].offsetHeight - elComments.nextElementSibling.offsetHeight);
-      if (hCommentsNew != hComments) {
-        api.log("[comments:updateMinHeight]", hComments, "→", hCommentsNew);
-        var scrollTop = elComments.scrollTop;
-        elComments.style.maxHeight = hCommentsNew + "px";
-        if (hComments != null) {
-          elComments.scrollTop = Math.max(0, scrollTop + hComments - hCommentsNew);
-        }
-        hComments = hCommentsNew;
-      }
-    }
-  }
 
   function submitComment(e, text) {
     logEvent("slider", "comment");
@@ -71,8 +44,8 @@ function renderComments($container, comments) {
     }, function(response) {
       api.log("[submitComment] resp:", response);
       render("html/metro/comment.html", {
-        "formatComment": getCommentTextFormatter,
-        "formatDate": getCommentDateFormatter,
+        "formatComment": getTextFormatter,
+        "formatLocalDate": getLocalDateFormatter,
         "formatIsoDate": getIsoDateFormatter,
         "createdAt": response.createdAt,
         "text": text,
@@ -95,7 +68,5 @@ function renderComments($container, comments) {
         });
       });
     });
-    var $submit = $container.find(".kifi-compose-submit").addClass("kifi-active");
-    setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   }
 }

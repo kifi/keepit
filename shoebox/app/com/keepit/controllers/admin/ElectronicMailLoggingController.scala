@@ -1,18 +1,15 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.WebsiteController
 import play.api.mvc.Action
 import play.api.Play
 import play.api.http.ContentTypes
 
-/**
- * Created with IntelliJ IDEA.
- * User: yonatan
- * Date: 1/13/13
- * Time: 12:18 AM
- * To change this template use File | Settings | File Templates.
- */
-object ElectronicMailLoggingController extends AdminController  {
+import com.google.inject.{Inject, Singleton}
+
+@Singleton
+class ElectronicMailLoggingController @Inject() ()
+    extends WebsiteController {
 
   def doLog() = Action { implicit request =>
     request.body.asFormUrlEncoded match {
