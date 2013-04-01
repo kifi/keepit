@@ -130,7 +130,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
           Indexer.CommitData.sequenceNumber -> sequenceNumber.toString
     ))
     indexWriter.commit()
-    log.info("index committed")
+    log.info(s"index committed seqNum=${seqNum}")
   }
 
   def deleteAllDocuments(refresh: Boolean = true) {
