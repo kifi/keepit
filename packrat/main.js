@@ -203,6 +203,10 @@ api.port.on({
     socket.send(["get_message_threads", tab.url], respond);
     return true;
   },
+  thread: function(id, respond) {
+    socket.send(["get_message_thread", id], respond);
+    return true;
+  },
   session: function(_, respond) {
     respond(session);
   },
@@ -235,7 +239,7 @@ function createDeepLinkListener(link, linkTabId, respond) {
       var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") < 0 && tab.url.indexOf("dev.ezkeep.com") < 0;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
-        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator});
+        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator, metro: session.experiments.indexOf("metro") >= 0});
         api.tabs.on.ready.remove(deepLinkListener);
         return;
       }
