@@ -132,7 +132,7 @@ GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUse
 GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 
-GET     /admin/server               com.keepit.common.healthcheck.HealthController.serviceView()
+GET     /admin/server               @com.keepit.common.healthcheck.AdminHealthController.serviceView()
 
 GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPreviewController.newComment
 GET     /admin/emails/message       @com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
@@ -176,13 +176,14 @@ POST    /admin/phrases/add          com.keepit.controllers.admin.PhraseControlle
 POST    /admin/phrases/refresh      com.keepit.controllers.admin.PhraseController.refreshPhrases
 POST    /admin/phrases/save         com.keepit.controllers.admin.PhraseController.savePhrases
 
-GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
-GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()
+# todo(eishay): We should move the paths of the following two and update pingdom
+GET     /admin/healthcheck/ping     @com.keepit.common.healthcheck.WebsiteHealthController.ping()
+GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHealthController.isHealthy()
 # Using a get so we can invoke from browser and have it take care of the auth part
-GET     /admin/healthcheck/emailErrors    com.keepit.common.healthcheck.HealthController.reportErrors()
-GET     /admin/healthcheck/errors   com.keepit.common.healthcheck.HealthController.getErrors()
-GET     /admin/healthcheck/isHealthy    com.keepit.common.healthcheck.HealthController.isHealthy()
-GET     /admin/healthcheck/resetErrorCount    com.keepit.common.healthcheck.HealthController.resetErrorCount()
+GET     /admin/healthcheck/error    @com.keepit.common.healthcheck.AdminHealthController.causeError()
+GET     /admin/healthcheck/emailErrors    @com.keepit.common.healthcheck.AdminHealthController.reportErrors()
+GET     /admin/healthcheck/errors   @com.keepit.common.healthcheck.AdminHealthController.getErrors()
+GET     /admin/healthcheck/resetErrorCount    @com.keepit.common.healthcheck.AdminHealthController.resetErrorCount()
 
 POST    /admin/logging/emails       com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
 
