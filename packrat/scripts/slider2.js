@@ -355,6 +355,9 @@ slider2 = function() {
           })
           .on("kifi:show-pane", function(e, pane, paramsArg, populateArg) {
             showPane(pane, false, paramsArg, populateArg);
+          })
+          .on("mousedown click keydown keypress keyup", function(e) {
+            e.stopPropagation();
           });
           $html.addClass("kifi-with-pane");
           populatePane[pane]($pane.find(".kifi-pane-box"), populateArg);
