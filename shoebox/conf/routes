@@ -144,8 +144,8 @@ GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPrev
 GET     /admin/emails/message       @com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
 GET     /admin/emails/message-reply @com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
 
-GET     /admin/electronicMails       com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
-GET     /admin/electronicMails/:page com.keepit.controllers.admin.ElectronicMailController.electronicMailsView(page: Int)
+GET     /admin/electronicMails       @com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
+GET     /admin/electronicMails/:page @com.keepit.controllers.admin.ElectronicMailController.electronicMailsView(page: Int)
 
 GET     /admin/follows              @com.keepit.controllers.admin.AdminCommentController.followsView
 GET     /admin/comments             @com.keepit.controllers.admin.AdminCommentController.commentsViewFirstPage
