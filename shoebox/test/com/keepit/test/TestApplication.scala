@@ -26,6 +26,7 @@ import com.keepit.common.time._
 import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal}
 import com.keepit.inject._
 import com.keepit.model._
+import com.keepit.search.index._
 import com.tzavellas.sse.guice.ScalaModule
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
@@ -44,6 +45,7 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withFakeStore() = overrideWith(FakeStoreModule())
   def withRealBabysitter() = overrideWith(BabysitterModule())
   def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
+  def withFakePhraseIndexer() = overrideWith(FakePhraseIndexerModule())
 
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))

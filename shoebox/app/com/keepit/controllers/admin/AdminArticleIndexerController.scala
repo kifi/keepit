@@ -1,7 +1,5 @@
 package com.keepit.controllers.admin
 
-import com.google.inject.Inject
-import com.keepit.common.controller.AdminController
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model.NormalizedURIStates._
@@ -10,6 +8,10 @@ import com.keepit.search.SearchServiceClient
 import play.api.libs.json.{JsNumber, JsObject}
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import com.keepit.common.controller.AdminController
+import com.google.inject.{Inject, Singleton}
+
+@Singleton
 class AdminArticleIndexerController @Inject()(
     searchClient: SearchServiceClient,
     db: Database,
