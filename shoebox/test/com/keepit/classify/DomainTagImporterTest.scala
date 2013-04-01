@@ -27,14 +27,11 @@ class DomainTagImporterTest extends Specification {
   "The domain tag importer" should {
     "load domain sensitivity from a map of tags to domains" in {
       throw new SkipException(skipped)
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakePersistEvent) {
         val db = inject[Database]
         val tagRepo = inject[DomainTagRepo]
+        val domainTagImporter = inject[DomainTagImporterImpl]
         val domainRepo = inject[DomainRepo]
-        val domainToTagRepo = inject[DomainToTagRepo]
-        val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], inject[Clock], system, db,
-          new FakePersistEventPluginImpl(system), settings)
         db.readWrite { implicit s =>
           // add some existing tags
           tagRepo.save(DomainTag(name = DomainTagName("t1"), sensitive = Option(false)))
@@ -71,15 +68,12 @@ class DomainTagImporterTest extends Specification {
     }
     "properly remove domain tags" in {
       throw new SkipException(skipped)
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakePersistEvent) {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val domainToTagRepo = inject[DomainToTagRepo]
         val db = inject[Database]
-        val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], inject[Clock], system, db,
-          new FakePersistEventPluginImpl(system), settings)
-
+        val domainTagImporter = inject[DomainTagImporterImpl]
         db.readWrite { implicit s =>
         // add some existing tags
           tagRepo.save(DomainTag(name = DomainTagName("t1"), sensitive = Some(false)))
@@ -116,14 +110,12 @@ class DomainTagImporterTest extends Specification {
     }
     "respect manual overrides" in {
       throw new SkipException(skipped)
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakePersistEvent) {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val domainToTagRepo = inject[DomainToTagRepo]
         val db = inject[Database]
-        val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], inject[Clock], system, db,
-          new FakePersistEventPluginImpl(system), settings)
+        val domainTagImporter = inject[DomainTagImporterImpl]
 
         val future1 = db.readWrite { implicit s =>
           tagRepo.save(DomainTag(name = DomainTagName("things"), sensitive = Some(false)))

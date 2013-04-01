@@ -24,7 +24,6 @@ import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, Healthcheck
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice}
 import com.keepit.common.time._
-import com.keepit.inject.inject
 
 import akka.actor.Status.Failure
 import akka.actor.{ActorSystem, Props}
@@ -54,7 +53,8 @@ object DomainTagImportEvents {
 
 private[classify] class DomainTagImportActor(db: Database, updater: SensitivityUpdater, clock: Clock,
     domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo,
-    persistEventPlugin: PersistEventPlugin, settings: DomainTagImportSettings)
+    persistEventPlugin: PersistEventPlugin, settings: DomainTagImportSettings, postOffice: PostOffice,
+    healthcheckPlugin: HealthcheckPlugin)
     extends FortyTwoActor with Logging {
 
   import DomainTagImportEvents._
@@ -76,7 +76,7 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
         WS.url(settings.url).get().onSuccess { case res =>
           persistEvent(IMPORT_START, JsObject(Seq()))
           val startTime = currentDateTime
-          inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+          postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
             subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
             category = PostOffice.Categories.ADMIN))
           val s = new FileOutputStream(outputPath)
@@ -110,7 +110,7 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
             "totalDomains" -> JsNumber(total)
           )))
           val endTime = currentDateTime
-          inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+          postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
             subject = "Domain import finished",
             htmlBody =
                 s"Domain import started at $startTime and completed successfully at $endTime " +
@@ -156,7 +156,7 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
 
   private def failWithException(eventName: String, e: Exception) {
     log.error(s"fail on event $eventName", e)
-    inject[HealthcheckPlugin].addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(e.getMessage)))
+    healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(e.getMessage)))
     persistEventPlugin.persist(Events.serverEvent(
       EventFamilies.EXCEPTION,
       eventName,
@@ -288,13 +288,23 @@ trait DomainTagImporter {
   def applyTagToDomains(tagName: DomainTagName, domainNames: Seq[String]): Future[DomainTag]
 }
 
-class DomainTagImporterImpl @Inject()(domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo,
-    updater: SensitivityUpdater, clock: Clock, system: ActorSystem, db: Database,
-    persistEventPlugin: PersistEventPlugin, settings: DomainTagImportSettings)
+class DomainTagImporterImpl @Inject()(
+  domainRepo: DomainRepo,
+  tagRepo: DomainTagRepo,
+  domainToTagRepo: DomainToTagRepo,
+  updater: SensitivityUpdater,
+  clock: Clock,
+  system: ActorSystem,
+  db: Database,
+  persistEventPlugin: PersistEventPlugin,
+  settings: DomainTagImportSettings,
+  postOffice: PostOffice,
+  healthcheckPlugin: HealthcheckPlugin)
     extends DomainTagImporter {
 
   private val actor = system.actorOf(Props {
-    new DomainTagImportActor(db, updater, clock, domainRepo, tagRepo, domainToTagRepo, persistEventPlugin, settings)
+    new DomainTagImportActor(db, updater, clock, domainRepo, tagRepo, domainToTagRepo,
+      persistEventPlugin, settings, postOffice, healthcheckPlugin)
   })
 
   def refetchClassifications() {
