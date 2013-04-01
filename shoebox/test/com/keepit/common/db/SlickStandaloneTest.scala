@@ -14,7 +14,7 @@ import scala.slick.lifted.Query
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
 
-class SlickStandaloneTest extends Specification with TestDBRunner {
+class SlickStandalonTest extends Specification with TestDBRunner {
 
   "Slick" should {
 
