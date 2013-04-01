@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.inject._
 import com.keepit.test._
 
+import com.keepit.common.time.Clock
 import akka.actor.ActorSystem
 import scala.concurrent.{Await, Future}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -32,7 +33,7 @@ class DomainTagImporterTest extends Specification {
         val domainRepo = inject[DomainRepo]
         val domainToTagRepo = inject[DomainToTagRepo]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], provide(new DateTime), system, db,
+          inject[SensitivityUpdater], inject[Clock], system, db,
           new FakePersistEventPluginImpl(system), settings)
         db.readWrite { implicit s =>
           // add some existing tags
@@ -76,7 +77,7 @@ class DomainTagImporterTest extends Specification {
         val domainToTagRepo = inject[DomainToTagRepo]
         val db = inject[Database]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], provide(new DateTime), system, db,
+          inject[SensitivityUpdater], inject[Clock], system, db,
           new FakePersistEventPluginImpl(system), settings)
 
         db.readWrite { implicit s =>
@@ -121,7 +122,7 @@ class DomainTagImporterTest extends Specification {
         val domainToTagRepo = inject[DomainToTagRepo]
         val db = inject[Database]
         val domainTagImporter = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], provide(new DateTime), system, db,
+          inject[SensitivityUpdater], inject[Clock], system, db,
           new FakePersistEventPluginImpl(system), settings)
 
         val future1 = db.readWrite { implicit s =>

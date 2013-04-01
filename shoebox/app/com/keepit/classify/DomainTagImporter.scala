@@ -52,7 +52,7 @@ object DomainTagImportEvents {
   val REMOVE_TAG_FAILURE = "removeTagFailure"
 }
 
-private[classify] class DomainTagImportActor(db: Database, updater: SensitivityUpdater, clock: Provider[DateTime],
+private[classify] class DomainTagImportActor(db: Database, updater: SensitivityUpdater, clock: Clock,
     domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo,
     persistEventPlugin: PersistEventPlugin, settings: DomainTagImportSettings)
     extends FortyTwoActor with Logging {
@@ -70,7 +70,7 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
  def receive = {
     case RefetchAll =>
       try {
-        val outputFilename = FILE_FORMAT.format(clock.get().toString(DATE_FORMAT))
+        val outputFilename = FILE_FORMAT.format(clock.now.toString(DATE_FORMAT))
         val outputPath = new URI(s"${settings.localDir}/$outputFilename").normalize.getPath
         log.info(s"refetching all domains to $outputPath")
         WS.url(settings.url).get().onSuccess { case res =>
@@ -289,7 +289,7 @@ trait DomainTagImporter {
 }
 
 class DomainTagImporterImpl @Inject()(domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo,
-    updater: SensitivityUpdater, clock: Provider[DateTime], system: ActorSystem, db: Database,
+    updater: SensitivityUpdater, clock: Clock, system: ActorSystem, db: Database,
     persistEventPlugin: PersistEventPlugin, settings: DomainTagImportSettings)
     extends DomainTagImporter {
 

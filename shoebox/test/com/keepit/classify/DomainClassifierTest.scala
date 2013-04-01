@@ -6,6 +6,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.analytics.FakePersistEventPluginImpl
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.FakeHttpClient
+import com.keepit.common.time.Clock
 import com.keepit.inject.{provide, inject}
 import com.keepit.test.{DbRepos, EmptyApplication}
 
@@ -33,7 +34,7 @@ class DomainClassifierTest extends Specification with DbRepos {
         val domainRepo = inject[DomainRepo]
         val domainToTagRepo = inject[DomainToTagRepo]
         val importer = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], provide(new DateTime), system, db,
+          inject[SensitivityUpdater], inject[Clock], system, db,
           new FakePersistEventPluginImpl(system), DomainTagImportSettings())
         inject[Database].readWrite { implicit s =>
           tagRepo.save(DomainTag(name = DomainTagName("Search Engines"), sensitive = Some(false)))
