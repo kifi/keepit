@@ -25,6 +25,49 @@
     </tr>
   }
   </table>
+  
+  <h2>Global notification</h2>
+  <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.AdminUserController.sendNotificationToAllUsers()" method="POST">
+    <div class="control-group">
+      <label class="control-label" for="inputTitle">Title</label>
+      <div class="controls">
+        <input type="text" name="title" id="inputTitle" value="Hey Kifi beta tester!">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="inputLink">Link text</label>
+      <div class="controls">
+        <input type="text" name="linkText" id="inputLink" value="Kifi.com">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="inputUrl">Link URL</label>
+      <div class="controls">
+        <input type="text" name="url" id="inputUrl" value="http://www.42go.com/">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="inputBody">Text Body</label>
+      <div class="controls">
+        <input type="text" name="body" id="inputBody" value="Check out our new features. They're really great.">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="inputImage">Image</label>
+      <div class="controls">
+        <input type="text" name="image" id="inputImage" value="http://www.42go.com/images/favicon.png">
+      </div>
+    </div>
+    <div class="control-group">
+      <div class="controls">
+        <label class="checkbox">
+          <input type="checkbox" name="sticky"> Sticky
+        </label>
+        <button type="submit" class="btn">Send to everyone!</button>
+        <div>This is the point of no return.</div>
+      </div>
+    </div>
+  </form>
 
   <h3>
     User's email

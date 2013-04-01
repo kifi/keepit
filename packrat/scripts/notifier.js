@@ -38,6 +38,23 @@ var notifier = {
           }
         });
         break;
+      case "general_notification":
+        KifiNotification.add({
+          title: details.title,
+          subtitle: details.subtitle,
+          contentHtml: details.text,
+          link: details.link,
+          image: details.image,
+          sticky: details.sticky || false,
+          showForMs: details.showForMs || 15000,
+          clickAction: function() {
+            if(details.url) {
+              var win = window.open(details.url, "_blank");
+              win.focus();
+            }
+          }
+        });
+        break;
     }
   }
 };

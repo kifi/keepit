@@ -13,6 +13,10 @@ import play.api.libs.json.Json
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import views.html
+import play.api.data._
+import play.api.data.Forms._
+import com.keepit.realtime.UserChannel
+import com.keepit.common.time.Clock
 
 case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstallations: Seq[KifiInstallation])
 
@@ -35,7 +39,9 @@ class AdminUserController @Inject() (
     emailRepo: EmailAddressRepo,
     userExperimentRepo: UserExperimentRepo,
     socialGraphPlugin: SocialGraphPlugin,
-    searchClient: SearchServiceClient
+    searchClient: SearchServiceClient,
+    userChannel: UserChannel,
+    clock: Clock
   ) extends AdminController {
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -167,5 +173,38 @@ class AdminUserController @Inject() (
       Await.result(socialGraphPlugin.asyncFetch(info), 5 minutes)
     }
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
+  }
+
+  def sendNotificationToAllUsers() = AdminHtmlAction { implicit request =>
+    implicit val playRequest = request.request
+    val notifyForm = Form(tuple(
+      "title" -> text,
+      "body" -> text,
+      "linkText" -> text,
+      "url" -> text,
+      "image" -> text,
+      "sticky" -> optional(text)
+    ))
+
+    val (title, body, linkText, url, image, sticky) = notifyForm.bindFromRequest.get
+
+    val json = Json.arr(
+      "notify", Json.obj(
+        "createdAt" -> clock.now,
+        "category" -> "general_notification",
+        "details" -> Json.obj(
+          "title" -> title,
+          "text" -> body,
+          "link" -> linkText,
+          "image" -> image,
+          "sticky" -> sticky,
+          "url" -> url
+        )
+      )
+    )
+
+    userChannel.broadcast(json)
+
+    Redirect(routes.AdminUserController.usersView())
   }
 }

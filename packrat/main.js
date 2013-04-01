@@ -90,6 +90,13 @@ var socket = api.socket.open((api.prefs.get("env") === "development" ? "ws://" :
       api.tabs.emit(activeTab, "show_notification", data);
     }
   },
+  notify: function(data) {
+    api.log("[socket:notify", data);
+    var activeTab = api.tabs.getActive();
+    if(activeTab) {
+      api.tabs.emit(activeTab, "show_notification", data);
+    }
+  },
   event: function(data) {
     api.log("[socket:event]", data);
   }
