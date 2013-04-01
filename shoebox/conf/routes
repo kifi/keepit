@@ -91,19 +91,19 @@ POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarks
 GET     /admin/bookmarks/all        @com.keepit.controllers.admin.AdminBookmarksController.all
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
 
-GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape
-GET     /admin/scrape/:state        com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
-GET     /admin/scraped/:uriId       com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
+GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
+GET     /admin/scrape/:state        @com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
+GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
 
-GET     /admin/data/integrity       com.keepit.controllers.admin.ScraperController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
-GET     /admin/data/dupe            com.keepit.controllers.admin.ScraperController.duplicateDocumentDetection
-GET     /admin/data/orphan          com.keepit.controllers.admin.ScraperController.orphanCleanup
-GET     /admin/data/unscrapable     com.keepit.controllers.admin.ScraperController.getUnscrapable()
-POST    /admin/data/previewUnscrapable     com.keepit.controllers.admin.ScraperController.previewUnscrapable()
-POST    /admin/data/unscrapable     com.keepit.controllers.admin.ScraperController.createUnscrapable()
+GET     /admin/data/integrity       @com.keepit.controllers.admin.ScraperController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
+GET     /admin/data/dupe            @com.keepit.controllers.admin.ScraperController.duplicateDocumentDetection
+GET     /admin/data/orphan          @com.keepit.controllers.admin.ScraperController.orphanCleanup
+GET     /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperController.getUnscrapable()
+POST    /admin/data/previewUnscrapable     @com.keepit.controllers.admin.ScraperController.previewUnscrapable()
+POST    /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperController.createUnscrapable()
 GET     /admin/data/renormalize     com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
-POST    /admin/data/handleDuplicate com.keepit.controllers.admin.ScraperController.handleDuplicate
-POST    /admin/data/handleDuplicates com.keepit.controllers.admin.ScraperController.handleDuplicates
+POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.ScraperController.handleDuplicate
+POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.ScraperController.handleDuplicates
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/sequenceNumber @com.keepit.controllers.admin.AdminArticleIndexerController.getSequenceNumber
@@ -134,9 +134,9 @@ GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUs
 
 GET     /admin/server               com.keepit.common.healthcheck.HealthController.serviceView()
 
-GET     /admin/emails/comment       com.keepit.controllers.admin.AdminEmailPreviewController.newComment
-GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
-GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
+GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPreviewController.newComment
+GET     /admin/emails/message       @com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
+GET     /admin/emails/message-reply @com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
 
 GET     /admin/electronicMails       com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
 GET     /admin/electronicMails/:page com.keepit.controllers.admin.ElectronicMailController.electronicMailsView(page: Int)
