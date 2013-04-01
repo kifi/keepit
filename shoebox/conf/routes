@@ -25,6 +25,12 @@ GET     /authenticate/:provider     securesocial.controllers.LoginPage.authentic
 POST    /authenticate/:provider     securesocial.controllers.LoginPage.authenticateByPost(provider)
 
 ##########################################
+# External Services API
+##########################################
+#todo(eishay): change routes and callback in sendgrid
+POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
+
+##########################################
 # Extension API
 ##########################################
 
@@ -184,8 +190,6 @@ GET     /admin/healthcheck/error    @com.keepit.common.healthcheck.AdminHealthCo
 GET     /admin/healthcheck/emailErrors    @com.keepit.common.healthcheck.AdminHealthController.reportErrors()
 GET     /admin/healthcheck/errors   @com.keepit.common.healthcheck.AdminHealthController.getErrors()
 GET     /admin/healthcheck/resetErrorCount    @com.keepit.common.healthcheck.AdminHealthController.resetErrorCount()
-
-POST    /admin/logging/emails       com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
 
 GET     /admin/labs/rankVsScore     @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScore(q: Option[String] ?= None)
 GET     /admin/labs/rankVsScore.json @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
