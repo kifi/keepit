@@ -48,7 +48,7 @@ function attachComposeBindings($c, composeTypeName) {
     if (e.which == 13 && e.metaKey) { // ⌘-Enter
       $f.submit();
     }
-  }).on("input", updateMinHeight);
+  }).on("input", updateMaxHeight);
 
   $f.on("click", ".kifi-compose-submit", function() {
     $f.submit();
@@ -70,6 +70,8 @@ function attachComposeBindings($c, composeTypeName) {
       args.push(recipients.map(function(r) {return r.externalId}).join(","));
     }
     $d.trigger("kifi:compose-submit", args);
+    var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
+    setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   })
   .on("click", ".kifi-compose-snapshot", function() {
     snapshot.take(composeTypeName, function(selector) {
@@ -87,18 +89,18 @@ function attachComposeBindings($c, composeTypeName) {
   });
 
   var hOld, elAbove = $f[0].previousElementSibling;
-  updateMinHeight();
+  updateMaxHeight();
 
-  $(window).on("resize", updateMinHeight);
+  $(window).on("resize", updateMaxHeight);
 
   $c.closest(".kifi-pane-box").on("kifi:remove", function() {
-    $(window).off("resize", updateMinHeight);
+    $(window).off("resize", updateMaxHeight);
   });
 
-  function updateMinHeight() {
+  function updateMaxHeight() {
     var hNew = Math.max(0, $c[0].offsetHeight - $f[0].offsetHeight);
     if (hNew != hOld) {
-      api.log("[threads:updateMinHeight]", hOld, "→", hNew);
+      api.log("[updateMaxHeight]", hOld, "→", hNew);
       var scrollTop = elAbove.scrollTop;
       elAbove.style.maxHeight = hNew + "px";
       elAbove.scrollTop = hOld == null ? 9999 : Math.max(0, scrollTop + hOld - hNew);

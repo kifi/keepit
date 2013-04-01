@@ -1,4 +1,4 @@
-.kifi-comments-posted {
+.kifi-messages-sent {
   margin: 0 12px;
   padding-top: 10px;
   overflow-y: auto;
@@ -6,21 +6,15 @@
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
-div.kifi-comments-none {
-  display: none;
-}
-div.kifi-comments-none:only-child {
-  display: block;
-}
-.kifi-comment-posted {
+.kifi-message-sent {
   border-top: 1px solid #d2d2d2;
   padding: 7px 0;
   position: relative;
 }
-.kifi-comment-posted:last-child {
+.kifi-message-sent:last-child {
   padding-bottom: 0;
 }
-.kifi-comment-posted time {
+.kifi-message-sent time {
   position: absolute;
   right: 10px;
   top: -7px;
@@ -31,27 +25,27 @@ div.kifi-comments-none:only-child {
   color: #a9a9a9;
   display: none;
 }
-.kifi-comment-posted:hover time {
+.kifi-message-sent:hover time {
   display: block;
 }
-img.kifi-comment-pic {
+img.kifi-message-pic {
   float: left;
   width: 35px;
   height: 35px;
   border-radius: 2px;
 }
-img.kifi-comment-pic.kifi-self {
+img.kifi-message-pic.kifi-self {
   border-radius: 20px;
 }
-.kifi-comment-body {
+.kifi-message-body {
   margin-left: 43px;
 }
-.kifi-comment-name {
+.kifi-message-name {
   font-weight: 400;
   position: relative;
   top: -2px;
 }
-.kifi-comment-posted::after {
+.kifi-message-sent::after {
   content: " ";
   display: block;
   font: 0/0 serif;

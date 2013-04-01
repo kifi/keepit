@@ -1,13 +1,17 @@
 package com.keepit.controllers.admin
 
 import play.api.Play.current
-import com.keepit.common.controller.AdminController
 import com.keepit.common.db.Id
 import com.keepit.common.db.LargeString._
 import com.keepit.model.{Comment, NormalizedURI, User}
 import views.html
 
-object AdminEmailPreviewController extends AdminController {
+import com.keepit.common.controller.AdminController
+import com.google.inject.{Inject, Singleton, Provider}
+
+@Singleton
+class AdminEmailPreviewController @Inject() ()
+    extends AdminController {
 
   val sender = User(firstName = "Jared", lastName = "Jacobs")
   val recipient = User(firstName = "Eishay", lastName = "Smith")

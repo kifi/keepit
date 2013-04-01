@@ -1,0 +1,8 @@
+<div class="kifi-message-sent">
+  <time datetime="{{#formatIsoDate}}{{createdAt}}{{/formatIsoDate}}">{{#formatLocalDate}}{{createdAt}}{{/formatLocalDate}}</time>
+  <img class="kifi-message-pic{{#isLoggedInUser}} kifi-self{{/isLoggedInUser}}" src="//graph.facebook.com/{{user.facebookId}}/picture?width=100&amp;height=100">
+  <div class="kifi-message-body">
+    <span class="kifi-message-name">{{user.firstName}} {{user.lastName}}</span>
+    {{#formatMessage}}{{{text}}}{{/formatMessage}}
+  </div>
+</div>
