@@ -11,13 +11,29 @@ jQuery.fn.layout = function() {
 };
 
 slider2 = function() {
-  var $tile = $("#kifi-tile"), $slider, $pane, info, lastShownAt;
+  var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt;
+  var info, nUri, comments, threads, messages;
+
+  // pre-fetch some data
+  api.port.emit("normalize", function(u) {
+    api.log("normalized", u);
+    nUri = u;
+  });
+  api.port.emit("comments", function(c) {
+    api.log("comments", c);
+    comments = c;
+    //updateCommentCount(comments.length);
+  });
+  api.port.emit("threads", function(t) {
+    api.log("threads", t);
+    threads = t;
+    //updateThreadsCount(threads.length);
+  });
 
   key("esc", function() {
     if ($pane) {
       hidePane();
-    }
-    if ($slider) {
+    } else if ($slider) {
       hideSlider("esc");
     }
   });
@@ -288,17 +304,22 @@ slider2 = function() {
   const createPaneTemplateParams = {
     general: function() {
       return {
-          title: document.title,
-          url: location.href,
-          kept: info.kept,
-          keepers: pick(info.keepers, 7),
-          keepersCaptionHtml: formatCountHtml(0, (info.keepers || 0).length, info.otherKeeps)};
+        title: document.title,
+        url: location.href,
+        kept: info.kept,
+        keepers: pick(info.keepers, 7),
+        keepersCaptionHtml: formatCountHtml(0, (info.keepers || 0).length, info.otherKeeps)};
+    },
+    thread: function(recipients) {
+      return {
+        recipients: recipients,
+        numRecipients: recipients.length > 1 ? recipients.length : null};
     }
   };
 
-  function showPane(pane, back) {
+  function showPane(pane, back, paramsArg, populateArg) {
     api.log("[showPane]", pane, back ? "back" : "");
-    var params = (createPaneTemplateParams[pane] || Object)();
+    var params = (createPaneTemplateParams[pane] || Object)(paramsArg);
     if ($pane) {
       render("html/metro/pane_" + pane + ".html", params, function(html) {
         back = back || pane == "general";
@@ -316,8 +337,8 @@ slider2 = function() {
           $cubby.css("overflow", "");
         });
         $pane.data("pane", pane);
+        populatePane[pane]($new, populateArg);
       });
-      populatePane[pane]();
     } else {
       api.require("styles/metro/pane.css", function() {
         render("html/metro/pane.html", $.extend(params, {
@@ -328,12 +349,15 @@ slider2 = function() {
         },
         function(html) {
           var $html = $("html").addClass("kifi-pane-parent");
-          $pane = $(html).data("pane", pane).appendTo($html).layout();
-          $html.addClass("kifi-with-pane");
-          $pane.on("click", ".kifi-pane-back", function() {
-            showPane("general", true);
+          $pane = $(html).data("pane", pane).appendTo($html).layout()
+          .on("click", ".kifi-pane-back", function() {
+            showPane($(this).data("pane") || "general", true);
+          })
+          .on("kifi:show-pane", function(e, pane, paramsArg, populateArg) {
+            showPane(pane, false, paramsArg, populateArg);
           });
-          populatePane[pane]();
+          $html.addClass("kifi-with-pane");
+          populatePane[pane]($pane.find(".kifi-pane-box"), populateArg);
         });
       });
     }
@@ -352,26 +376,35 @@ slider2 = function() {
   }
 
   const populatePane = {
-    notifications: function() {
+    notices: function($box) {
       // TODO
     },
-    comments: function() {
-      api.port.emit("get_comments", {kind: "public"}, function(comments) {
-        api.log("comments:", comments);
-        var session = comments.session;
-        comments = comments.public;
-        //updateCommentCount(type, comments.length);
+    comments: function($box) {
+      api.port.emit("session", function(session) {
         comments.forEach(function(c) {
           c.isLoggedInUser = c.user.externalId == session.userId;
         });
-
         api.require("scripts/comments.js", function() {
-          renderComments($pane.find(".kifi-pane-comments .kifi-pane-tall"), comments);
+          renderComments($box.find(".kifi-pane-tall"), comments);
         });
       });
     },
-    threads: function() {
-      // TODO
+    threads: function($box) {
+      api.require("scripts/threads.js", function() {
+        renderThreads($box.find(".kifi-pane-tall"), threads);
+      });
+    },
+    thread: function($box, threadId) {
+      var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
+      api.port.emit("get_comments", {kind: "message", commentId: threadId}, function(messages) {
+        api.log("[messages]", messages);
+        var session = messages.session;
+        messages = messages.message;
+        //updateThreadsCount(threads.length);
+        api.require("scripts/thread.js", function() {
+          renderThread($tall, threadId, messages);
+        });
+      });
     },
     general: $.noop
   };

@@ -568,6 +568,13 @@ trait DailyByExperiment extends BasicDailyAggregationReport with Logging {
     }.build
     super.get(selectorWithExperimentId, startDate, endDate)
   }
+  override def hashCode() = (reportName, eventName, experiment.flatMap(_.id)).hashCode()
+  override def equals(other: Any) = other match {
+    case that: DailyByExperiment =>
+      (reportName, eventName, experiment.flatMap(_.id)) ==
+          (that.reportName, that.eventName, that.experiment.flatMap(_.id))
+    case _ => false
+  }
 }
 
 class DailyDustSettledKifiHadResultsByExperiment(val experiment: Option[SearchConfigExperiment],

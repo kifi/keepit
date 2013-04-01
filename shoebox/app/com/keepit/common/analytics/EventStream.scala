@@ -19,10 +19,9 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.inject._
 import com.keepit.common.db.slick.Database
-import com.keepit.realtime.AdminEventStreamManager
 
 @Singleton
-class EventStream @Inject() (eventWriter: EventWriter, adminEvent: AdminEventStreamManager) {
+class EventStream @Inject() (eventWriter: EventWriter) {
   implicit val timeout = Timeout(1 second)
 
   lazy val default = Akka.system.actorOf(Props {new EventStreamActor(eventWriter) })
@@ -39,7 +38,8 @@ class EventStream @Inject() (eventWriter: EventWriter, adminEvent: AdminEventStr
   def streamEvent(event: Event) = {
     implicit val writes = eventWriter.writesUserEvent
     eventWriter.wrapEvent(event).map { wrappedEvent =>
-      adminEvent.broadcast("event", Json.toJson(wrappedEvent))
+      // Todo(Andrew): Wire up to new WS
+      //adminEvent.broadcast("event", Json.toJson(wrappedEvent))
       default ! BroadcastEvent(Json.toJson(wrappedEvent))
     }
   }

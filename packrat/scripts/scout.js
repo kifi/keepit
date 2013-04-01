@@ -12,7 +12,7 @@ var injected, t0 = +new Date;
   var viewportEl = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"], info, rules = 0;
 
   document.addEventListener("keydown", function(e) {
-    if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75 /*&& !info.metro*/) {  // cmd-shift-K or ctrl-shift-K
+    if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75 && !info.metro) {  // cmd-shift-K or ctrl-shift-K
       withSlider(function() {
         slider.toggle("key");
       });
@@ -57,24 +57,22 @@ var injected, t0 = +new Date;
         insertTile(o);
       }
       if (o.locator) {
-        // if (o.metro) { ... } else
-        withSlider(function() {
-          slider.shown() || slider.show(o.trigger, o.locator);
-        });
+        openSlider(o);
       } else if (rules.scroll) {
         document.addEventListener("scroll", onScrollMaybeShow);
       }
     },
-    open_slider_to: function(data) {
-      // if (info.metro) { ... } else
-      withSlider(function() {
-        slider.shown() || slider.show(data.trigger, data.locator);
-      });
-    },
+    open_slider_to: openSlider,
     button_click: function() {
-      withSlider(function() {
-        slider.toggle("button");
-      });
+      if (info.metro) {
+        withSlider2(function() {
+          slider2.toggle(info, "button");
+        });
+      } else {
+        withSlider(function() {
+          slider.toggle("button");
+        });
+      }
     },
     auto_show: autoShow.bind(null, "auto")});
   api.port.emit("init_slider_please");
@@ -83,10 +81,19 @@ var injected, t0 = +new Date;
     var width;
     if (rules.viewport && (width = viewportEl.clientWidth) < rules.viewport[0]) {
       api.log("[autoShow] viewport too narrow:", width, "<", rules.viewport[0]);
-    // } else if (info.metro) { ...
+    } else {
+      openSlider({trigger: trigger});
+    }
+  }
+
+  function openSlider(o) {
+    if (info.metro) {
+      withSlider2(function() {
+        slider2.shown() || slider2.show(info, o.trigger, o.locator);
+      });
     } else {
       withSlider(function() {
-        slider.shown() || slider.show(trigger);
+        slider.shown() || slider.show(o.trigger, o.locator);
       });
     }
   }

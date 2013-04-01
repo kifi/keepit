@@ -133,12 +133,26 @@ class ProximityQueryTest extends Specification {
     }
 
     "score using proximity (four terms)" in {
-      var q = ProximityQuery(Seq(new Term("B", "aaa"), new Term("B", "ccc"), new Term("B", "bbb"), new Term("B", "ddd")))
+      var q = ProximityQuery(Seq(new Term("B", "aaa"), new Term("B", "bbb"), new Term("B", "ccc"), new Term("B", "ddd")))
       var weight = searcher.createNormalizedWeight(q)
 
       var scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
-      val buf = new ArrayBuffer[(Int, Float)]()
+      var buf = new ArrayBuffer[(Int, Float)]()
       var doc = scorer.nextDoc()
+      while (doc < DocIdSetIterator.NO_MORE_DOCS) {
+        buf += ((doc, scorer.score()))
+        doc = scorer.nextDoc()
+      }
+      indexReader.numDocs() === 30
+      buf.size === 10
+      buf.sortBy(_._2).map(_._1) === Seq(19, 18, 17, 16, 15, 14, 13, 12, 11, 10)
+
+      q = ProximityQuery(Seq(new Term("B", "aaa"), new Term("B", "ccc"), new Term("B", "bbb"), new Term("B", "ddd")))
+      weight = searcher.createNormalizedWeight(q)
+
+      scorer = weight.scorer(readerContext, true, true, reader.getLiveDocs)
+      buf = new ArrayBuffer[(Int, Float)]()
+      doc = scorer.nextDoc()
       while (doc < DocIdSetIterator.NO_MORE_DOCS) {
         buf += ((doc, scorer.score()))
         doc = scorer.nextDoc()

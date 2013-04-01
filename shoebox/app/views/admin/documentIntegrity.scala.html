@@ -1,11 +1,11 @@
-@(dupes: Seq[com.keepit.controllers.admin.ScraperController.DisplayedDuplicates])(implicit flash: Flash)
+@(dupes: Seq[com.keepit.controllers.admin.DisplayedDuplicates])(implicit flash: Flash)
 @import com.keepit.model.NormalizedURI
 
 @admin("Document Integrity") {
 
     <script>
       function handleDuplicate(action, id, element, cb) {
-        $.post("@com.keepit.controllers.admin.routes.ScraperController.handleDuplicate", 
+        $.post("@com.keepit.controllers.admin.routes.ScraperController.handleDuplicate",
           { 'action': action, 'id': id },
           function(data) {
             cb && cb(element);
@@ -13,7 +13,7 @@
         return true;
       }
       function handleDuplicates(action, id, element, cb) {
-        $.post("@com.keepit.controllers.admin.routes.ScraperController.handleDuplicates", 
+        $.post("@com.keepit.controllers.admin.routes.ScraperController.handleDuplicates",
           { 'action': action, 'id': id },
           function(data) {
             console.log(data);
