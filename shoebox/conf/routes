@@ -107,7 +107,7 @@ GET     /admin/data/orphan          @com.keepit.controllers.admin.ScraperControl
 GET     /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperController.getUnscrapable()
 POST    /admin/data/previewUnscrapable     @com.keepit.controllers.admin.ScraperController.previewUnscrapable()
 POST    /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperController.createUnscrapable()
-GET     /admin/data/renormalize     com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
+GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.ScraperController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.ScraperController.handleDuplicates
 
