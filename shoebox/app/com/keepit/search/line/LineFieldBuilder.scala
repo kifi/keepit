@@ -49,7 +49,12 @@ class LineTokenStream(fieldName: String, lines: Seq[(Int, String)], tokenStreamF
       posLimit = lineEnd - 1
       baseTokenStream = tokenStreamFunc(fieldName, text).getOrElse(emptyTokenStream)
       baseTokenStream.reset
-      baseTermAttr = baseTokenStream.getAttribute(classOf[CharTermAttribute])
+      baseTermAttr =
+        if (baseTokenStream.hasAttribute(classOf[CharTermAttribute])) {
+          baseTokenStream.getAttribute(classOf[CharTermAttribute])
+        } else {
+          null
+        }
       basePosIncrAttr =
         if (baseTokenStream.hasAttribute(classOf[PositionIncrementAttribute])) {
           baseTokenStream.getAttribute(classOf[PositionIncrementAttribute])

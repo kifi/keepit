@@ -14,7 +14,7 @@ import com.keepit.search.graph.URIGraph
 import com.keepit.search.Lang
 import com.keepit.search.MainSearcherFactory
 import com.keepit.common.mail._
-import com.keepit.common.controller.BrowserExtensionController
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController}
 
 import scala.concurrent.Await
 import play.api.libs.concurrent.Execution.Implicits._
@@ -34,7 +34,7 @@ class ExtUserController @Inject() (
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   sliderInfoLoader: SliderInfoLoader)
-    extends BrowserExtensionController {
+    extends BrowserExtensionController with ShoeboxServiceController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
     val sliderInfo = sliderInfoLoader.load(request.userId, url)

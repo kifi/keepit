@@ -276,7 +276,6 @@ api = function() {
     }
   }
 
-  var sockets = [,];
   var api = {
     bookmarks: {
       create: function(parentId, name, url, callback) {
@@ -410,14 +409,29 @@ api = function() {
     },
     socket: {
       open: function(url, handlers) {
+        var callbacks = {}, nextCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
         var socket = new ReconnectingWebSocket(url);
         socket.onmessage = function(data) {
           try {
             var msg = JSON.parse(data.data);
+            api.log("[socket.onmessage]", msg);
             if (Array.isArray(msg)) {
-              var handler = handlers[msg[0]];
-              if (handler) {
-                handler.apply(null, msg.splice(1));
+              var id = msg.shift();
+              if (id > 0) {
+                var callback = callbacks[id];
+                if (callback) {
+                  delete callbacks[id];
+                  callback.apply(null, msg);
+                } else {
+                  api.log("[api.socket.onmessage] Ignoring message, no callback", id, msg);
+                }
+              } else {
+                var handler = handlers[id];
+                if (handler) {
+                  handler.apply(null, msg);
+                } else {
+                  api.log("[api.socket.onmessage] Ignoring message, no handler", id, msg);
+                }
               }
             } else {
               api.log("[api.socket.onmessage] ignoring (not array):", msg, "from url", url);
@@ -426,15 +440,20 @@ api = function() {
             api.log.error("[api.socket.onmessage]", e);
           }
         }
-        sockets.push(socket);
-        return sockets.length - 1;
-      },
-      close: function(socketId) {
-        var socket = sockets[socketId];
-        if (socket) {
-          socket.close();
-          delete sockets[socketId];
-        }
+        return {
+          send: function(arr, callback) {
+            if (callback) {
+              var id = nextCallbackId++;
+              callbacks[id] = callback;
+              arr.splice(1, 0, id);
+            }
+            api.log("[socket.send]", arr, socket.send(JSON.stringify(arr)));
+          },
+          close: function() {
+            socket.close();
+            this.send = this.close = socket.onmessage = api.noop;
+          }
+        };
       }
     },
     storage: localStorage,

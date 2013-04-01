@@ -4,7 +4,6 @@ import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
 import scala.collection.JavaConversions._
 import java.util.{Set => JSet}
 import com.google.inject.{Inject, Singleton}
-import com.keepit.realtime.AdminEventStreamManager
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.common.db._

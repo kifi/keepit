@@ -112,8 +112,10 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
           val endTime = currentDateTime
           inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
             subject = "Domain import finished",
-            htmlBody = s"Domain import started at $startTime and succeeded at $endTime with $added added, " +
-                s"$removed removed, and $total total domains.",
+            htmlBody =
+                s"Domain import started at $startTime and completed successfully at $endTime " +
+                s"with $added domain-tag pairs added, $removed domain-tag pairs removed, " +
+                s"and $total total domain-tag pairs.",
             category = PostOffice.Categories.ADMIN))
         }
       } catch {
