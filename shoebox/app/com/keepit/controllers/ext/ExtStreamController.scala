@@ -111,6 +111,8 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr(requestId.toLong, paneData.getComments(streamSession.userId, url)))
             case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>
               channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(streamSession.userId, url)))
+            case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>
+              channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(streamSession.userId, ExternalId[Comment](threadId))))
             case json =>
               log.warn(s"Not sure what to do with: $json")
           }
