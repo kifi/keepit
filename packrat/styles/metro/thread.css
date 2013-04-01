@@ -42,6 +42,8 @@ img.kifi-message-pic.kifi-self {
 }
 .kifi-message-name {
   font-weight: 400;
+  position: relative;
+  top: -2px;
 }
 .kifi-message-sent::after {
   content: " ";

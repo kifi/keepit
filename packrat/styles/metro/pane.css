@@ -158,6 +158,11 @@ a.kifi-pane-back:active {
   bottom: 0;
   height: auto;
 }
+.kifi-pane .kifi-pane-tall-bottom p,
+.kifi-pane .kifi-pane-tall-bottom div[contenteditable] {
+  font: 11px/12px "Helvetica Neue",arial,sans-serif;
+  color: #444;
+}
 
 /* general pane */
 .kifi-pane-general {
