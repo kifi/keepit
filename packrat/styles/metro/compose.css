@@ -13,13 +13,12 @@ form.kifi-compose {
   overflow: auto;
   outline: none;
   box-shadow: none;
-  font-size: inherit;
-  line-height: inherit;
 }
 .kifi-pane-tall-bottom .kifi-compose-draft[contenteditable]:first-child {
   border-radius: 3px 3px 0 0;
 }
 .kifi-pane-tall-bottom .kifi-compose-draft[contenteditable] .kifi-placeholder {
+  font: 300 12px Lato,sans-serif;
   color: #a9a9a9;
 }
 .kifi-compose-bar {

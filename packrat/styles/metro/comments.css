@@ -48,6 +48,8 @@ img.kifi-comment-pic.kifi-self {
 }
 .kifi-comment-name {
   font-weight: 400;
+  position: relative;
+  top: -2px;
 }
 .kifi-comment-posted::after {
   content: " ";
