@@ -65,3 +65,32 @@ img.kifi-comment-pic.kifi-self {
   visibility: hidden;
   clear: both;
 }
+div.kifi-comment-x {
+  position: absolute;
+  right: 16px;
+  top: 13px;
+  padding: 0 3px;
+  border-radius: 9px;
+  line-height: 13px;
+  color: #d2d2d2;
+  cursor: pointer;
+  display: none;
+  -webkit-transition: right ease-in-out 60ms, background-color linear 60ms;
+  transition: right ease-in-out 60ms, background-color linear 60ms;
+}
+div.kifi-comment-x:hover,
+div.kifi-comment-x.kifi-confirm {
+  background-color: #d2d2d2;
+  color: #fff;
+}
+div.kifi-comment-x.kifi-confirm,
+div.kifi-comment-x.kifi-confirmed {
+  right: 32px;
+  background-color: #c00;
+}
+.kifi-comment-posted:hover .kifi-comment-x {
+  display: block;
+}
+.kifi-comment-x::before {
+  content: "\00d7";
+}

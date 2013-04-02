@@ -198,6 +198,13 @@ api.port.on({
     postComment(data, respond);
     return true;
   },
+  delete_comment: function(id, respond) {
+    ajax("POST", "http://" + getConfigs().server + "/comments/" + id + "/remove", function(o) {
+      api.log("[deleteComment] response:", o);
+      respond(o);
+    });
+    return true;
+  },
   normalize: function(_, respond, tab) {
     socket.send(["normalize", tab.url], respond);
     return true;
