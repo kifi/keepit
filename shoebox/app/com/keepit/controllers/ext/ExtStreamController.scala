@@ -119,11 +119,11 @@ class ExtStreamController @Inject() (
             case JsString("get_last_notify_read_time") +: _ =>
               channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(streamSession.userId).toString()))
             case JsString("get_notifications") +: JsNumber(howMany) +: params =>
-              val lastTime = params match {
-                case JsString(lastTime) +: _ => Some(parseStandardTime(lastTime))
+              val createdBefore = params match {
+                case JsString(time) +: _ => Some(parseStandardTime(time))
                 case _ => None
               }
-              channel.push(Json.arr("notifications", getNotifications(streamSession.userId, lastTime, howMany.toInt)))
+              channel.push(Json.arr("notifications", getNotifications(streamSession.userId, createdBefore, howMany.toInt)))
             case json =>
               log.warn(s"Not sure what to do with: $json")
           }
@@ -147,8 +147,8 @@ class ExtStreamController @Inject() (
     db.readOnly(implicit s => userNotification.getLastReadTime(userId))
   }
 
-  private def getNotifications(userId: Id[User], lastTime: Option[DateTime], howMany: Int): Seq[SendableNotification] = {
-    db.readOnly(implicit s => userNotification.getWithUserId(userId, lastTime, howMany)).map(n => SendableNotification.fromUserNotification(n))
+  private def getNotifications(userId: Id[User], createdBefore: Option[DateTime], howMany: Int): Seq[SendableNotification] = {
+    db.readOnly(implicit s => userNotification.getWithUserId(userId, createdBefore, howMany)).map(n => SendableNotification.fromUserNotification(n))
   }
 
   private def subscribe(session: StreamSession, socketId: Long, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], sub: Seq[JsValue]): Map[String, Subscription] = {
