@@ -22,6 +22,9 @@ import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.search.query.AdditiveBoostQuery
+import com.keepit.search.query.MultiplicativeBoostQuery
+import com.keepit.search.query.BoostQuery
 
 class MainQueryParser(
   analyzer: Analyzer,
@@ -33,8 +36,6 @@ class MainQueryParser(
   override val siteBoost: Float,
   phraseDetector: PhraseDetector
 ) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
-
-  private[this] val phraseDiscount = (1.0f - phraseBoost)
 
   private def createPhraseQueries(query: BooleanQuery): Option[Query] = {
     var phraseQueries = new BooleanQuery(true)
@@ -65,19 +66,20 @@ class MainQueryParser(
       else {
         query.setBoost(baseBoost)
 
-        val auxQueries = ArrayBuffer.empty[Query]
-
-        if (phraseBoost > 0.0f) {
-          query match {
-            case query: BooleanQuery => createPhraseQueries(query).foreach{ q => auxQueries += q }
-            case _ =>
-          }
+        val textQuery = query match {
+          case query: BooleanQuery if (phraseBoost > 0.0f) =>
+            createPhraseQueries(query).map{ q => new AdditiveBoostQuery(query, Array[Query](q)) }.getOrElse(query)
+          case _ => query
         }
+
+        val auxQueries = ArrayBuffer.empty[Query]
+        val auxStrengths = ArrayBuffer.empty[Float]
 
         if (semanticBoost > 0.0f) {
           val svq = SemanticVectorQuery("sv", terms)
           svq.setBoost(semanticBoost)
           auxQueries += svq
+          auxStrengths += semanticBoost
         }
 
         if (numStemmedTerms > 1 && proximityBoost > 0.0f) {
@@ -87,8 +89,20 @@ class MainQueryParser(
           proxQ.add(ProximityQuery(getStemmedTerms("title_stemmed")), SHOULD)
           proxQ.setBoost(proximityBoost)
           auxQueries += proxQ
+          auxStrengths += proximityBoost
         }
-        new TopLevelQuery(query, auxQueries.toArray, enableCoord)
+
+        val topLevelQuery = if (!auxQueries.isEmpty) {
+          new MultiplicativeBoostQuery(textQuery, auxQueries.toArray, auxStrengths.toArray)
+        } else {
+          textQuery
+        }
+
+        topLevelQuery match {
+          case q: BoostQuery => q.enableCoord = enableCoord
+          case _ =>
+        }
+        topLevelQuery
       }
     }
   }
