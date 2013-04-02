@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.WebsiteController
+import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
 import com.keepit.common.logging.Logging
 
 import play.api.Play.current
@@ -15,11 +15,13 @@ import com.keepit.common.db.slick._
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
-class HomeController @Inject() (db: Database,
+class HomeController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
+  db: Database,
   userRepo: UserRepo)
-    extends WebsiteController {
+    extends WebsiteController(actionAuthenticator) {
 
-  def home = Action{ request =>
+  def home = Action { request =>
     log.info("yet another homepage access!")
     val html = io.Source.fromURL(Play.resource("/public/html/index.html").get).mkString
     Ok(html).as(ContentTypes.HTML)

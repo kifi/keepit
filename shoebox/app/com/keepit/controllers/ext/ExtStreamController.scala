@@ -38,6 +38,7 @@ case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experimen
 
 @Singleton
 class ExtStreamController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
@@ -46,7 +47,7 @@ class ExtStreamController @Inject() (
   uriChannel: UriChannel,
   userNotification: UserNotificationRepo,
   clock: Clock,
-  paneData: PaneDetails) extends BrowserExtensionController with ShoeboxServiceController {
+  paneData: PaneDetails) extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
     /*
      * Unfortunately, everything related to existing secured actions intimately deals with Action, Request, Result, etc.

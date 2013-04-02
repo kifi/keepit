@@ -18,14 +18,15 @@ import com.keepit.model._
 import com.keepit.common.healthcheck._
 import com.keepit.common.db.slick._
 
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class AdminAuthController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   userRepo: UserRepo)
-    extends AdminController {
+    extends AdminController(actionAuthenticator) {
 
   def unimpersonate = AdminJsonAction { request =>
     Ok(Json.obj("userId" -> request.userId.toString)).discardingCookies(ImpersonateCookie.discard)
