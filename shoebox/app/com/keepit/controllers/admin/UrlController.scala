@@ -20,7 +20,7 @@ import com.keepit.common.db.slick._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.model._
 import com.keepit.search.ArticleStore
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.BabysitterTimeout
 import org.joda.time.LocalDate
@@ -34,11 +34,12 @@ import views.html
 /**
  * Charts, etc.
  */
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class UrlController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   clock: Clock,
   postOffice: PostOffice,
@@ -49,7 +50,7 @@ class UrlController @Inject() (
   commentRepo: CommentRepo,
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo)
-    extends AdminController {
+    extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 

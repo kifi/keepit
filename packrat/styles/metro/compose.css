@@ -6,34 +6,18 @@ form.kifi-compose {
   border: 1px solid #d2d2d2;
   border-bottom: none;
   border-radius: 0;
+  background-color: #fff;
   padding: 5px;
   min-height: 40px;
   max-height: 145px;
   overflow: auto;
   outline: none;
   box-shadow: none;
-  position: relative;
-  z-index: 0;
 }
 .kifi-pane-tall-bottom .kifi-compose-draft[contenteditable]:first-child {
   border-radius: 3px 3px 0 0;
 }
-.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable]::before {
-  content: " ";
-  position: absolute;
-  z-index: -1;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  padding: 5px;
-  background: #fff;
-  font-size: 0;
-  line-height: 0;
-}
-.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable].kifi-empty::before {
-  content: attr(data-placeholder);
-  font: inherit;
+.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable] .kifi-placeholder {
   color: #a9a9a9;
 }
 .kifi-compose-bar {

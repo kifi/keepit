@@ -21,7 +21,7 @@ import com.keepit.search.graph._
 import com.keepit.search._
 import com.keepit.common.social.UserWithSocial
 import com.keepit.search.ArticleSearchResultStore
-import com.keepit.common.controller.{ShoeboxServiceController, FortyTwoController, WebsiteController}
+import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController, ActionAuthenticator}
 import play.api.libs.json._
 import com.keepit.common.analytics._
 import com.keepit.model._
@@ -32,10 +32,11 @@ import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class ExtDeepLinkController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   deepLinkRepo: DeepLinkRepo,
   normalizedURIRepo: NormalizedURIRepo)
-    extends WebsiteController with ShoeboxServiceController {
+    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def handle(token: String) = AuthenticatedHtmlAction { request =>
     val deepLink = db.readOnly { implicit session => deepLinkRepo.getByToken(DeepLinkToken(token)) }

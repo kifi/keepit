@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.WebsiteController
+import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
 import play.api.mvc.Action
 import play.api.Play
 import play.api.http.ContentTypes
@@ -8,8 +8,9 @@ import play.api.http.ContentTypes
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
-class ElectronicMailLoggingController @Inject() ()
-    extends WebsiteController {
+class ElectronicMailLoggingController @Inject() (
+  actionAuthenticator: ActionAuthenticator)
+    extends WebsiteController(actionAuthenticator) {
 
   def doLog() = Action { implicit request =>
     request.body.asFormUrlEncoded match {

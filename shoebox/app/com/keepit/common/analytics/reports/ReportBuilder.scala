@@ -127,14 +127,16 @@ trait ReportBuilderPlugin extends SchedulingPlugin {
   def defaultEndTime = currentDate.plusDays(1).toDateTimeAtStartOfDay
 }
 
-class ReportBuilderPluginImpl @Inject() (system: ActorSystem, searchConfigManager: SearchConfigManager)
-  extends Logging with ReportBuilderPlugin {
-
+class ReportBuilderPluginImpl @Inject() (
+  system: ActorSystem,
+  searchConfigManager: SearchConfigManager,
+  reportStore: ReportStore)
+    extends Logging with ReportBuilderPlugin {
 
   def buildReport(startDate: DateTime, endDate: DateTime, report: Report): Unit = actor ! BuildReport(startDate, endDate, report)
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor ! BuildReports(startDate, endDate, reportGroup)
 
-  private val actor = system.actorOf(Props { new ReportBuilderActor() })
+  private val actor = system.actorOf(Props { new ReportBuilderActor(reportStore) })
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
@@ -154,20 +156,22 @@ private[reports] case class ReportCron(sender: ReportBuilderPlugin)
 private[reports] case class BuildReport(startDate: DateTime, endDate: DateTime, report: Report)
 private[reports] case class BuildReports(startDate: DateTime, endDate: DateTime, reportGroup: Reports.ReportGroup)
 
-private[reports] class ReportBuilderActor() extends FortyTwoActor with Logging {
+private[reports] class ReportBuilderActor(reportStore: ReportStore) extends FortyTwoActor with Logging {
 
   def receive() = {
     case ReportCron(sender) =>
       sender.reportCron()
     case BuildReport(startDate, endDate, report) =>
-      report.get(startDate, endDate).persist
+      val toPersist = report.get(startDate, endDate)
+      reportStore += (toPersist.persistenceKey -> toPersist)
     case BuildReports(startDate, endDate, reportGroup) =>
       val builtReports = reportGroup.reports map { report =>
         report.get(startDate, endDate)
       }
 
       val outputReport = builtReports.foldRight(CompleteReport("","",Nil))((a,b) => a + b)
-      outputReport.copy(reportName = reportGroup.name).persist
+      val report = outputReport.copy(reportName = reportGroup.name)
+      reportStore += (report.persistenceKey -> report)
     case unknown =>
       throw new Exception("unknown message: %s".format(unknown))
   }

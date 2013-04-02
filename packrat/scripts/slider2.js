@@ -354,7 +354,7 @@ slider2 = function() {
           .on("keydown", ".kifi-pane-search", function(e) {
             var q;
             if (e.which == 13 && (q = this.value.trim())) {
-              location.href = "https://www.google.com/search?q=" + encodeURIComponent(q).replace(/%20/g, "+");
+              window.open("https://www.google.com/search?q=" + encodeURIComponent(q).replace(/%20/g, "+"));
             }
           })
           .on("click", ".kifi-pane-back", function() {

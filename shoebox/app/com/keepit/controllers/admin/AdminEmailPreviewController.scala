@@ -6,12 +6,13 @@ import com.keepit.common.db.LargeString._
 import com.keepit.model.{Comment, NormalizedURI, User}
 import views.html
 
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.{Inject, Singleton, Provider}
 
 @Singleton
-class AdminEmailPreviewController @Inject() ()
-    extends AdminController {
+class AdminEmailPreviewController @Inject() (
+  actionAuthenticator: ActionAuthenticator)
+    extends AdminController(actionAuthenticator) {
 
   val sender = User(firstName = "Jared", lastName = "Jacobs")
   val recipient = User(firstName = "Eishay", lastName = "Smith")
