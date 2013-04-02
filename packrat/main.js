@@ -186,7 +186,7 @@ api.port.on({
   },
   get_comments: function(data, respond, tab) {
     ajax("GET", "http://" + getConfigs().server +
-      (data.kind == "public" ? "/comments/public" : "/messages/threads") +
+      (data.kind == "public" ? "/comments" : "/messages/threads") +
       (data.commentId ? "/" + data.commentId : "?url=" + encodeURIComponent(tab.url)),
       function(o) {
         o.session = session;
