@@ -1,7 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.keepit.common.controller._
-import com.keepit.common.controller.FortyTwoController.ImpersonateCookie
+import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
