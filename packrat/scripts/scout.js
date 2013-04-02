@@ -139,9 +139,10 @@ var injected, t0 = +new Date;
       var nTot = (o.numComments || 0) + (o.numMessages || 0);
       if (nUnread || nTot) {
         var countEl = document.createElement("span");
-        countEl.className = "kifi-count" + (nUnread ? " kifi-unread" : "");;
+        countEl.className = "kifi-count" + (nUnread ? " kifi-unread" : "");
         countEl.textContent = nUnread || nTot;
         (nUnread ? el : transEl).appendChild(countEl);
+        el.classList.add("kifi-with-count");
       }
       document.documentElement.appendChild(el);
       el.addEventListener("mouseover", function() {
@@ -152,7 +153,7 @@ var injected, t0 = +new Date;
 
       if (o.keepers && !o.kept) {
         withSlider2(function() {
-          setTimeout(slider2.showKeepersFor.bind(slider2, o, !!countEl, 2000), 3000);
+          setTimeout(slider2.showKeepersFor.bind(slider2, o, el, 2000), 3000);
         });
       }
     });
