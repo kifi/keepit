@@ -22,6 +22,7 @@ import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
+import play.api.Play
 import play.api.Play.current
 import play.api.libs.json.JsArray
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
@@ -45,7 +46,9 @@ class SocialUserImportFriends() extends Logging {
     val store = inject[SocialUserRawInfoStore]
     socialUserRawInfos map { info =>
       log.info("Adding user %s (%s) to S3".format(info.fullName, info.socialUserInfoId.get))
-      store += (info.socialUserInfoId.get -> info)
+      if (!Play.isDev) {
+        store += (info.socialUserInfoId.get -> info)
+      }
     }
 
     log.info("Imported %s friends".format(socialUserRawInfos.size))
