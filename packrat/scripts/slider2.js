@@ -396,7 +396,7 @@ slider2 = function() {
             c.isLoggedInUser = c.user.externalId == session.userId;
           });
           api.require("scripts/comments.js", function() {
-            renderComments($box.find(".kifi-pane-tall"), comments);
+            renderComments($box.find(".kifi-pane-tall"), comments, ~session.experiments.indexOf("admin"));
           });
         });
       });
