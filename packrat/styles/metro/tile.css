@@ -9,7 +9,6 @@
   height: 42px;
   text-align: center;
   font-family: "Helvetica Neue",arial,sans-serif;
-  cursor: pointer;
 }
 .kifi-with-pane #kifi-tile {
   display: none;
