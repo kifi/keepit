@@ -134,7 +134,7 @@ class CommentReadTest extends Specification with DbRepos {
       }
     }
     "update lastreadid when viewing thread" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService.withFakeHealthcheck.withFakeMail) {
+      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck().withFakeMail()) {
 
         import com.keepit.common.time._
         val (user1, user2, uri1, uri2, comment1, comment2, comment3, msg1, msg2, msg3, msg4) = setup()
