@@ -38,17 +38,17 @@ var notifier = {
           }
         });
         break;
-      case "general_notification":
+      case "server_generated":
         KifiNotification.add({
           title: details.title,
           subtitle: details.subtitle,
-          contentHtml: details.text,
-          link: details.link,
+          contentHtml: details.bodyHtml,
+          link: details.linkText,
           image: details.image,
           sticky: details.sticky || false,
           showForMs: details.showForMs || 15000,
           clickAction: function() {
-            if(details.url) {
+            if (details.url) {
               var win = window.open(details.url, "_blank");
               win.focus();
             }

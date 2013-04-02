@@ -117,7 +117,7 @@ class ExtStreamController @Inject() (
             case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>
               channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(streamSession.userId, ExternalId[Comment](threadId))))
             case JsString("get_last_notify_read_time") +: _ =>
-              channel.push(Json.arr("get_last_notify_read_time", getLastNotifyTime(streamSession.userId).toString()))
+              channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(streamSession.userId).toString()))
             case JsString("get_notifications") +: JsNumber(howMany) +: params =>
               val lastTime = params match {
                 case JsString(lastTime) +: _ => Some(parseStandardTime(lastTime))

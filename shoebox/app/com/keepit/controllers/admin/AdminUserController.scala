@@ -179,23 +179,23 @@ class AdminUserController @Inject() (
     implicit val playRequest = request.request
     val notifyForm = Form(tuple(
       "title" -> text,
-      "body" -> text,
+      "bodyHtml" -> text,
       "linkText" -> text,
       "url" -> text,
       "image" -> text,
       "sticky" -> optional(text)
     ))
 
-    val (title, body, linkText, url, image, sticky) = notifyForm.bindFromRequest.get
+    val (title, bodyHtml, linkText, url, image, sticky) = notifyForm.bindFromRequest.get
 
     val json = Json.arr(
       "notify", Json.obj(
         "createdAt" -> clock.now,
-        "category" -> "general_notification",
+        "category" -> "server_generated",
         "details" -> Json.obj(
           "title" -> title,
-          "text" -> body,
-          "link" -> linkText,
+          "bodyHtml" -> bodyHtml,
+          "linkText" -> linkText,
           "image" -> image,
           "sticky" -> sticky,
           "url" -> url
