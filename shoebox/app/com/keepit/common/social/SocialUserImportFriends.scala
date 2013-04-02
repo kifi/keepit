@@ -46,7 +46,7 @@ class SocialUserImportFriends() extends Logging {
     val store = inject[SocialUserRawInfoStore]
     socialUserRawInfos map { info =>
       log.info("Adding user %s (%s) to S3".format(info.fullName, info.socialUserInfoId.get))
-      if(!Play.isDev)
+      if (!Play.isDev)
         store += (info.socialUserInfoId.get -> info)
     }
 
