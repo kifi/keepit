@@ -34,7 +34,7 @@ class CompleteReportSerializer extends Format[CompleteReport] {
     JsSuccess(CompleteReport(
       reportName = (json \ "reportName").as[String],
       reportVersion = (json \ "reportVersion").as[String],
-      createdAt = parseStandardTime((json \ "createdAt").as[String]),
+      createdAt = UTC_DATETIME_FORMAT.parseDateTime((json \ "createdAt").as[String]),
       list = list
     ))
   }

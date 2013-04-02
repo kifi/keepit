@@ -62,7 +62,7 @@ class AdminEventController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminEventController.reportList())
   }
 
-  def getReport(reportName: String) = AdminCsvAction(reportName) { request =>
+  def getReport(reportName: String) = AdminCsvAction(reportName + ".csv") { request =>
     log.info(reportName)
     val report = reportStore.get(reportName).get
     Ok(report.toCSV)
