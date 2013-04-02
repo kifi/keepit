@@ -45,6 +45,7 @@ img.kifi-comment-pic.kifi-self {
 }
 .kifi-comment-body {
   margin-left: 45px;
+  word-wrap: break-word;
 }
 .kifi-comment-name {
   position: relative;
