@@ -14,7 +14,7 @@ div.kifi-comments-none:only-child {
 }
 .kifi-comment-posted {
   border-top: 1px solid #d2d2d2;
-  padding: 7px 0;
+  padding: 14px 10px 12px 0;
   position: relative;
 }
 .kifi-comment-posted:last-child {
@@ -23,7 +23,7 @@ div.kifi-comments-none:only-child {
 .kifi-comment-posted time {
   position: absolute;
   right: 10px;
-  top: -7px;
+  top: -6px;
   line-height: 11px;
   font-size: 11px;
   padding: 0 3px;
@@ -44,17 +44,23 @@ img.kifi-comment-pic.kifi-self {
   border-radius: 20px;
 }
 .kifi-comment-body {
-  margin-left: 43px;
+  margin-left: 45px;
 }
 .kifi-comment-name {
-  font-weight: 400;
   position: relative;
   top: -2px;
+  margin-bottom: 2px;
+  font-weight: bold;
+}
+.kifi-comment-posted p {
+  line-height: 16px;
+  color: #444;
 }
 .kifi-comment-posted::after {
   content: " ";
   display: block;
-  font: 0/0 serif;
+  font-size: 0;
+  line-height: 0;
   visibility: hidden;
   clear: both;
 }

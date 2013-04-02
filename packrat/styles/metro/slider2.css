@@ -1,30 +1,3 @@
-/*
-@font-face {
-  font-family: Lato;
-  font-style: normal;
-  font-weight: 700;
-  src: local('Lato Bold'), local('Lato-Bold'), url(//themes.googleusercontent.com/static/fonts/lato/v6/wkfQbvfT_02e2IWO3yYueQ.woff) format('woff');
-}
-@font-face {
-  font-family: Lato;
-  font-style: italic;
-  font-weight: 300;
-  src: local('Lato Light Italic'), local('Lato-LightItalic'), url(//themes.googleusercontent.com/static/fonts/lato/v6/2HG_tEPiQ4Z6795cGfdivD8E0i7KZn-EPnyo3HZu7kw.woff) format('woff');
-}
-@font-face {
-  font-family: Lato;
-  font-style: italic;
-  font-weight: 400;
-  src: local('Lato Italic'), local('Lato-Italic'), url(//themes.googleusercontent.com/static/fonts/lato/v6/oUan5VrEkpzIazlUe5ieaA.woff) format('woff');
-}
-@font-face {
-  font-family: Lato;
-  font-style: italic;
-  font-weight: 700;
-  src: local('Lato Bold Italic'), local('Lato-BoldItalic'), url(//themes.googleusercontent.com/static/fonts/lato/v6/HkF_qI1x_noxlxhrhMQYED8E0i7KZn-EPnyo3HZu7kw.woff) format('woff');
-}
-*/
-
 /* a weak blank-slate (insulation) attempt */
 .kifi-slider2 *,
 .kifi-pane * {
@@ -126,7 +99,7 @@
   right: 0;
   height: 68px;
   width: 142px;
-  font: 12px Lato,sans-serif;
+  font: 12px "Helvetica Neue",arial,sans-serif;
   direction: ltr;
 }
 .kifi-slider2.kifi-visible {
@@ -312,7 +285,8 @@
   right: 36px;
 }
 .kifi-slider2-keepers-intro {
-  font: 300 14px/29px Lato,sans-serif;
+  font-size: 14px;
+  line-height: 29px;
   text-align: left;
 }
 .kifi-slider2-keepers {
@@ -360,7 +334,8 @@ a.kifi-slider2-keeper {
 }
 .kifi-slider2-keepers-caption {
   clear: right;
-  font: 300 12px/27px Lato,sans-serif;
+  font-size: 12px;
+  line-height: 27px;
   text-align: right;
 }
 
@@ -372,7 +347,8 @@ a.kifi-slider2-keeper {
   height: 42px;
   background: #67829c;
   border-radius: 5px;
-  font: 0/0 serif;
+  font-size: 0;
+  line-height: 0;
   text-align: right; /* keeps contents still during transition */
 }
 .kifi-slider2-dock-btn {
@@ -461,7 +437,8 @@ a.kifi-slider2-keeper {
   padding: 16px 24px 18px;
   background-color: rgba(53,60,67,.9);
   color: #fff;
-  font: 300 12px/16px Lato,sans-serif;
+  font-size: 12px;
+  line-height: 16px;
   text-align: center;
   white-space: nowrap;
   cursor: default;
@@ -484,7 +461,8 @@ a.kifi-slider2-keeper {
   top: 100%;
   left: 50%;
   margin-left: -8px;
-  font: 0/0 serif;
+  font-size: 0;
+  line-height: 0;
   border-style: solid;
   border-width: 8px 8px 0;
   border-color: rgba(53,60,67,.9) transparent;

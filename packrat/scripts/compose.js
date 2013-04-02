@@ -2,7 +2,6 @@ function attachComposeBindings($c, composeTypeName) {
   var $f = $c.find(".kifi-compose");
   var $t = $f.find(".kifi-compose-to");
   var $d = $f.find(".kifi-compose-draft");
-  var $p = $d.find(".kifi-placeholder");
 
   if ($t.length) {
     api.port.emit("get_friends", function(o) {
@@ -23,32 +22,27 @@ function attachComposeBindings($c, composeTypeName) {
         tokenValue: "externalId",
         theme: "KiFi",
         zindex: 2147483641});
+      $("#token-input-kifi-compose-to").focus();
     });
+  } else {
+    $d.focus();
   }
 
-  $d.focus(function() {
-    if ($p[0].parentNode) {
-      $p.detach();
-      // detaching destroys the selection if it was in the placeholder
-      var sel = window.getSelection();
-      if (!sel.rangeCount) {
-        var r = document.createRange();
-        r.selectNodeContents(this);
-        sel.addRange(r);
-      }
-    }
-  }).blur(function() {
+  $d.blur(function() {
     // wkb.ug/112854 crbug.com/222546
     $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
 
-    if (!convertDraftToText($(this).html())) {
-      $d.empty().append($p);
+    if (!convertDraftToText($d.html())) {
+      $d.empty().addClass("kifi-empty");
     }
   }).keydown(function(e) {
     if (e.which == 13 && e.metaKey) { // ⌘-Enter
       $f.submit();
     }
-  }).on("input", updateMaxHeight);
+  }).on("input", function() {
+    updateMaxHeight();
+    this.classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
+  });
 
   $f.on("click", ".kifi-compose-submit", function() {
     $f.submit();
@@ -107,5 +101,4 @@ function attachComposeBindings($c, composeTypeName) {
       hOld = hNew;
     }
   }
-
 }
