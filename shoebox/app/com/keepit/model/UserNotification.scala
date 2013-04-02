@@ -59,7 +59,7 @@ class UserNotificationRepoImpl @Inject() (
   }
 
   def getWithUserId(userId: Id[User], createdBefore: Option[DateTime], howMany: Int = 10, excludeState: Option[State[UserNotification]] = Some(UserNotificationStates.INACTIVE))(implicit session: RSession): Seq[UserNotification] = {
-    (for(b <- table if b.userId === userId && b.state =!= UserNotificationStates.INACTIVE && b.createdAt <= createdBefore.getOrElse(START_OF_TIME)) yield b)
+    (for(b <- table if b.userId === userId && b.state =!= UserNotificationStates.INACTIVE && b.createdAt <= createdBefore.getOrElse(END_OF_TIME)) yield b)
       .sortBy(_.id desc)
       .take(howMany).list
   }
