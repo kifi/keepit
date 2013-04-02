@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.social._
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.realtime._
 import java.util.UUID
@@ -31,6 +31,8 @@ import com.keepit.controllers.core.PaneDetails
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
+import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
+import org.joda.time.DateTime
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Seq[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -42,6 +44,7 @@ class ExtStreamController @Inject() (
   experimentRepo: UserExperimentRepo,
   userChannel: UserChannel,
   uriChannel: UriChannel,
+  userNotification: UserNotificationRepo,
   clock: Clock,
   paneData: PaneDetails) extends BrowserExtensionController with ShoeboxServiceController {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
@@ -113,11 +116,20 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(streamSession.userId, url)))
             case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>
               channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(streamSession.userId, ExternalId[Comment](threadId))))
+            case JsString("get_last_notify_read_time") +: _ =>
+              channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(streamSession.userId).toString()))
+            case JsString("get_notifications") +: JsNumber(howMany) +: params =>
+              val createdBefore = params match {
+                case JsString(time) +: _ => Some(parseStandardTime(time))
+                case _ => None
+              }
+              channel.push(Json.arr("notifications", getNotifications(streamSession.userId, createdBefore, howMany.toInt)))
             case json =>
               log.warn(s"Not sure what to do with: $json")
           }
         }.mapDone { _ =>
           subscriptions.map(_._2.unsubscribe)
+          subscriptions = Map.empty
         }
 
         (iteratee, enumerator)
@@ -129,6 +141,14 @@ class ExtStreamController @Inject() (
 
         (iteratee, enumerator >>> Enumerator.eof)
     }
+  }
+
+  private def getLastNotifyTime(userId: Id[User]): DateTime = {
+    db.readOnly(implicit s => userNotification.getLastReadTime(userId))
+  }
+
+  private def getNotifications(userId: Id[User], createdBefore: Option[DateTime], howMany: Int): Seq[SendableNotification] = {
+    db.readOnly(implicit s => userNotification.getWithUserId(userId, createdBefore, howMany)).map(n => SendableNotification.fromUserNotification(n))
   }
 
   private def subscribe(session: StreamSession, socketId: Long, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], sub: Seq[JsValue]): Map[String, Subscription] = {

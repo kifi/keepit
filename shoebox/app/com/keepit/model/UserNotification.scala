@@ -35,9 +35,10 @@ case class UserNotification(
 
 @ImplementedBy(classOf[UserNotificationRepoImpl])
 trait UserNotificationRepo extends Repo[UserNotification] with ExternalIdColumnFunction[UserNotification]  {
-  def getWithUserId(userId: Id[User], startingTime: DateTime, howMany: Option[Int], excludeState: Option[State[UserNotification]] = Some(UserNotificationStates.INACTIVE))(implicit session: RSession): Seq[UserNotification]
+  def getWithUserId(userId: Id[User], lastTime: Option[DateTime], howMany: Int = 10, excludeState: Option[State[UserNotification]] = Some(UserNotificationStates.INACTIVE))(implicit session: RSession): Seq[UserNotification]
   def getWithCommentId(userId: Id[User], commentId: Id[Comment])(implicit session: RSession): Seq[UserNotification]
   def getUnreadCount(userId: Id[User])(implicit session: RSession): Int
+  def getLastReadTime(userId: Id[User])(implicit session: RSession): DateTime
 }
 
 @Singleton
@@ -57,13 +58,14 @@ class UserNotificationRepoImpl @Inject() (
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ externalId ~ category ~ details ~ commentId.? ~ state <> (UserNotification, UserNotification.unapply _)
   }
 
-  def getWithUserId(userId: Id[User], startingTime: DateTime, howMany: Option[Int], excludeState: Option[State[UserNotification]] = Some(UserNotificationStates.INACTIVE))(implicit session: RSession): Seq[UserNotification] = {
-    val q = (for(b <- table if b.userId === userId && b.state =!= UserNotificationStates.INACTIVE && b.createdAt > startingTime) yield b)
-    (howMany match {
-      case Some(i) => q.take(i)
-      case None => q
-    }).sortBy(_.id desc).list
+  def getWithUserId(userId: Id[User], createdBefore: Option[DateTime], howMany: Int = 10, excludeState: Option[State[UserNotification]] = Some(UserNotificationStates.INACTIVE))(implicit session: RSession): Seq[UserNotification] = {
+    (for(b <- table if b.userId === userId && b.state =!= UserNotificationStates.INACTIVE && b.createdAt <= createdBefore.getOrElse(START_OF_TIME)) yield b)
+      .sortBy(_.id desc)
+      .take(howMany).list
   }
+
+  def getLastReadTime(userId: Id[User])(implicit session: RSession): DateTime =
+    userValueRepo.getValue(userId, "notificationLastRead").map(parseStandardTime).getOrElse(START_OF_TIME)
 
   def getUnreadCount(userId: Id[User])(implicit session: RSession): Int = {
     val lastRead = userValueRepo.getValue(userId, "notificationLastRead").map(parseStandardTime).getOrElse(START_OF_TIME)
