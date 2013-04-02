@@ -5,12 +5,10 @@ import com.keepit.search.query.Coordinator
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.SiteQuery
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
-import org.apache.lucene.search.BooleanClause.Occur
-import org.apache.lucene.search.BooleanClause.Occur._
+import org.apache.lucene.search.DisjunctionMaxQuery
 import scala.collection.mutable.ArrayBuffer
 
 trait QueryExpansion extends QueryParser {
@@ -54,12 +52,12 @@ trait QueryExpansion extends QueryParser {
       }
     }
 
-    def addSiteQuery(baseQuery: BooleanQuery, query: Query) {
+    def addSiteQuery(baseQuery: DisjunctionMaxQuery, query: Query) {
       query match {
         case query: TermQuery =>
           val q = copyFieldQuery(query, if (Domain.isValid(query.getTerm.text)) "site" else "site_keywords")
           q.setBoost(siteBoost)
-          baseQuery.add(q, SHOULD)
+          baseQuery.add(q)
         case _ =>
       }
     }
@@ -68,24 +66,23 @@ trait QueryExpansion extends QueryParser {
       stemmedTerms ++= getTermSeq("ts", query)
     }
 
-    val booleanQuery = new BooleanQuery(true) with Coordinator // add Coordinator trait for TopLevelQuery
+    val disjunct = new DisjunctionMaxQuery(0.5f)
 
     super.getFieldQuery("t", queryText, quoted).foreach{ query =>
-      booleanQuery.add(query, Occur.SHOULD)
-      booleanQuery.add(copyFieldQuery(query, "c"), Occur.SHOULD)
-      booleanQuery.add(copyFieldQuery(query, "title"), Occur.SHOULD)
-      addSiteQuery(booleanQuery, query)
+      disjunct.add(query)
+      disjunct.add(copyFieldQuery(query, "c"))
+      disjunct.add(copyFieldQuery(query, "title"))
+      addSiteQuery(disjunct, query)
     }
 
     if(!quoted) {
       getStemmedFieldQuery("ts", queryText).foreach{ query =>
-        saveStemmedTerms(query, booleanQuery)
-        booleanQuery.add(query, Occur.SHOULD)
-        booleanQuery.add(copyFieldQuery(query, "cs"), Occur.SHOULD)
-        booleanQuery.add(copyFieldQuery(query, "title_stemmed"), Occur.SHOULD)
+        saveStemmedTerms(query, disjunct)
+        disjunct.add(query)
+        disjunct.add(copyFieldQuery(query, "cs"))
+        disjunct.add(copyFieldQuery(query, "title_stemmed"))
       }
     }
-    if (booleanQuery.clauses().size == 0) None
-    else Some(booleanQuery)
+    if (disjunct.iterator().hasNext) Some(disjunct) else None
   }
 }
