@@ -77,7 +77,6 @@ class MainQueryParser(
 
         if (semanticBoost > 0.0f) {
           val svq = SemanticVectorQuery("sv", terms)
-          svq.setBoost(semanticBoost)
           auxQueries += svq
           auxStrengths += semanticBoost
         }
@@ -87,7 +86,6 @@ class MainQueryParser(
           proxQ.add(ProximityQuery(getStemmedTerms("cs")), SHOULD)
           proxQ.add(ProximityQuery(getStemmedTerms("ts")), SHOULD)
           proxQ.add(ProximityQuery(getStemmedTerms("title_stemmed")), SHOULD)
-          proxQ.setBoost(proximityBoost)
           auxQueries += proxQ
           auxStrengths += proximityBoost
         }

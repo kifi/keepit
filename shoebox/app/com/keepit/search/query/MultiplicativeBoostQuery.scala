@@ -93,7 +93,7 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
           val eSV = w.explain(reader, doc)
           val r = eSV.isMatch() match {
             case true =>
-              new Explanation((eSV.getValue * s + (1.0f - s)), s"boost stength=${s}")
+              new Explanation((eSV.getValue * s + (1.0f - s)), s"boosting (stength=${s})")
             case false =>
               new Explanation(0.0f, "no match in (" + w.getQuery.toString() + ")")
           }
