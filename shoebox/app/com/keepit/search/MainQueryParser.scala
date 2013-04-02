@@ -18,6 +18,7 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.BooleanClause.Occur._
 import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.DisjunctionMaxQuery
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
@@ -82,10 +83,10 @@ class MainQueryParser(
         }
 
         if (numStemmedTerms > 1 && proximityBoost > 0.0f) {
-          val proxQ = new BooleanQuery(true)
-          proxQ.add(ProximityQuery(getStemmedTerms("cs")), SHOULD)
-          proxQ.add(ProximityQuery(getStemmedTerms("ts")), SHOULD)
-          proxQ.add(ProximityQuery(getStemmedTerms("title_stemmed")), SHOULD)
+          val proxQ = new DisjunctionMaxQuery(0.0f)
+          proxQ.add(ProximityQuery(getStemmedTerms("cs")))
+          proxQ.add(ProximityQuery(getStemmedTerms("ts")))
+          proxQ.add(ProximityQuery(getStemmedTerms("title_stemmed")))
           auxQueries += proxQ
           auxStrengths += proximityBoost
         }
