@@ -498,8 +498,9 @@ slider2 = function() {
         showSlider(info, trigger);
       }
     },
-    showKeepersFor: function(info, tileHasCounter, ms) {
-      var $el = $("<div class=kifi-tile-hover>").toggleClass("kifi-up", tileHasCounter).appendTo("html").showHover({
+    showKeepersFor: function(info, el, ms) {
+      if (lastShownAt) return;
+      var $el = $(el).showHover({
         reuse: false,
         showDelay: 0,
         hideDelay: 1e9,
@@ -517,10 +518,7 @@ slider2 = function() {
           });
         }});
       setTimeout(function() {
-        $el.triggerHandler("click.showHover")
-        setTimeout(function() {
-          $el.remove();
-        }, 1000);
+        $el.triggerHandler("click.showHover");
       }, ms);
     }};
 }();
