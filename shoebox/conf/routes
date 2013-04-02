@@ -43,9 +43,11 @@ POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
+GET     /comments                   @com.keepit.controllers.ext.ExtCommentController.getComments(url: String)
+GET     /comments/public            @com.keepit.controllers.ext.ExtCommentController.getComments(url: String)
+# TODO: delete redundant /comments/public route above after all extensions reach 2.2.49
 POST    /comments/add               @com.keepit.controllers.ext.ExtCommentController.createComment()
 POST    /comments/:id/remove        @com.keepit.controllers.ext.ExtCommentController.removeComment(id: ExternalId[Comment])
-GET     /comments/public            @com.keepit.controllers.ext.ExtCommentController.getComments(url: String)
 POST    /comments/follow            @com.keepit.controllers.ext.ExtCommentController.startFollowing()
 POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentController.stopFollowing()
 
