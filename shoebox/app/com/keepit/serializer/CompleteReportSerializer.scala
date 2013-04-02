@@ -22,7 +22,7 @@ class CompleteReportSerializer extends Format[CompleteReport] {
 
   def reads(json: JsValue): JsResult[CompleteReport] =  {
     val list = (json \ "report").as[JsObject].fields.map { case (dateVal, row) =>
-      val date = parseStandardTime(dateVal)
+      val date = UTC_DATETIME_FORMAT.parseDateTime(dateVal)
       val fields = (row.as[JsObject].fields map { case (key, value) =>
         key -> value.asOpt[String].map(ValueOrdering(_, 0)).getOrElse {
           val valueOrdering = value.as[List[JsValue]]
