@@ -23,6 +23,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.common.store.FakeStoreModule
 import com.keepit.common.time._
+import com.keepit.common.analytics._
 import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal}
 import com.keepit.inject._
 import com.keepit.model._
@@ -46,6 +47,8 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withRealBabysitter() = overrideWith(BabysitterModule())
   def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
   def withFakePhraseIndexer() = overrideWith(FakePhraseIndexerModule())
+  def withTestActorSystem() = overrideWith(TestActorSystemModule())
+  def withFakePersistEvent() = overrideWith(FakePersistEventModule())
 
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
@@ -126,6 +129,18 @@ class FakeClock extends Clock with Logging {
       log.debug(s"FakeClock is retuning fake now value: $fakeNowTime")
       fakeNowTime
     }
+  }
+}
+
+case class TestActorSystemModule() extends ScalaModule {
+  override def configure(): Unit = {
+    bind[ActorSystem].toInstance(ActorSystem("system"))
+  }
+}
+
+case class FakePersistEventModule() extends ScalaModule {
+  override def configure(): Unit = {
+    bind[PersistEventPlugin].to[FakePersistEventPluginImpl]
   }
 }
 
