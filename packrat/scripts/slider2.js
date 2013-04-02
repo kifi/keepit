@@ -492,7 +492,9 @@ slider2 = function() {
       return !!lastShownAt;
     },
     toggle: function(info, trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
-      if (document.querySelector(".kifi-slider2")) {
+      if ($pane) {
+        hidePane();
+      } else if ($slider) {
         hideSlider(trigger);
       } else {
         showSlider(info, trigger);
