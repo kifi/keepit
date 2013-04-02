@@ -46,6 +46,7 @@ class ExtCommentController @Inject() (
   commentReadRepo: CommentReadRepo,
   urlRepo: URLRepo,
   userRepo: UserRepo,
+  userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   commentWithSocialUserRepo: CommentWithSocialUserRepo,
   followRepo: FollowRepo,
@@ -131,6 +132,19 @@ class ExtCommentController @Inject() (
         Ok(Json.obj("message" -> commentWithSocialUserSerializer.writes(threadInfo)))
       case _ =>
         Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
+    }
+  }
+
+  def removeComment(id: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      if (userExperimentRepo.hasExperiment(request.userId, ExperimentTypes.ADMIN)) {
+        commentRepo.getOpt(id).filter(_.isActive).map { c =>
+          commentRepo.save(c.withState(CommentStates.INACTIVE))
+        }
+        Ok(Json.obj("state" -> "INACTIVE"))
+      } else {
+        Unauthorized("ADMIN")
+      }
     }
   }
 
