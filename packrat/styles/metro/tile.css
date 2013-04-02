@@ -8,6 +8,7 @@
   width: 42px;
   height: 42px;
   text-align: center;
+  font-family: "Helvetica Neue",arial,sans-serif;
   cursor: pointer;
 }
 .kifi-with-pane #kifi-tile {
@@ -37,7 +38,8 @@
   left: 0;
   width: 100%;
   color: #fff;
-  font: 14px/42px "Helvetica Neue",arial,sans-serif;
+  font-size: 14px;
+  line-height: 42px;
 }
 
 .kifi-count,

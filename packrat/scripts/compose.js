@@ -2,6 +2,34 @@ function attachComposeBindings($c, composeTypeName) {
   var $f = $c.find(".kifi-compose");
   var $t = $f.find(".kifi-compose-to");
   var $d = $f.find(".kifi-compose-draft");
+  var $p = $d.find(".kifi-placeholder");
+
+  $d.focus(function() {  // TODO: reinstate pull request 1292 after Chrome 28 reaches Stable channel
+    if ($p[0].parentNode) {
+      $p.detach();
+      // detaching destroys the selection if it was in the placeholder
+      var r = document.createRange();
+      r.selectNodeContents(this);
+      r.collapse(false);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+  }).blur(function() {
+    // wkb.ug/112854 crbug.com/222546
+    $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
+
+    if (!convertDraftToText($d.html())) {
+      $d.empty().append($p);
+    }
+  }).keydown(function(e) {
+    if (e.which == 13 && e.metaKey) { // ⌘-Enter
+      $f.submit();
+    }
+  }).on("input", function() {
+    updateMaxHeight();
+    this.classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
+  });
 
   if ($t.length) {
     api.port.emit("get_friends", function(o) {
@@ -27,22 +55,6 @@ function attachComposeBindings($c, composeTypeName) {
   } else {
     $d.focus();
   }
-
-  $d.blur(function() {
-    // wkb.ug/112854 crbug.com/222546
-    $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
-
-    if (!convertDraftToText($d.html())) {
-      $d.empty().addClass("kifi-empty");
-    }
-  }).keydown(function(e) {
-    if (e.which == 13 && e.metaKey) { // ⌘-Enter
-      $f.submit();
-    }
-  }).on("input", function() {
-    updateMaxHeight();
-    this.classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
-  });
 
   $f.on("click", ".kifi-compose-submit", function() {
     $f.submit();
