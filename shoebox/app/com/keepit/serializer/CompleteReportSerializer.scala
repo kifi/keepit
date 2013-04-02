@@ -8,6 +8,7 @@ import securesocial.core._
 import securesocial.core.AuthenticationMethod._
 import play.api.libs.json._
 import com.keepit.common.analytics.reports._
+import org.joda.time.DateTimeZone
 
 class CompleteReportSerializer extends Format[CompleteReport] {
   def writes(report: CompleteReport): JsValue =
@@ -15,7 +16,7 @@ class CompleteReportSerializer extends Format[CompleteReport] {
         "reportName" -> JsString(report.reportName),
         "reportVersion" -> JsString(report.reportVersion),
         "createdAt" -> JsString(report.createdAt.toStandardTimeString),
-        "report" -> JsObject(report.list map (r => r.date.toStandardTimeString -> JsObject((r.fields map (s => s._1 -> JsArray(Seq(JsString(s._2.value), JsNumber(s._2.ordering))))).toSeq)))
+        "report" -> JsObject(report.list map (r => r.date.withZone(DateTimeZone.UTC).toString() -> JsObject((r.fields map (s => s._1 -> JsArray(Seq(JsString(s._2.value), JsNumber(s._2.ordering))))).toSeq)))
       )
     )
 
