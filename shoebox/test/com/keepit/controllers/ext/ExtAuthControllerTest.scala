@@ -13,9 +13,7 @@ import com.keepit.common.social.SocialId
 import com.keepit.common.db._
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoController
-import com.keepit.common.controller.FortyTwoController.ImpersonateCookie
-import com.keepit.common.controller.FortyTwoController.KifiInstallationCookie
+import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
 import com.keepit.model._
 import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.test.FakeClock

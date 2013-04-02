@@ -11,15 +11,16 @@ import com.keepit.search.Lang
 import com.keepit.common.db._
 import views.html
 
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class PhraseController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   phraseRepo: PhraseRepo,
   phraseIndexer: PhraseIndexer)
-    extends AdminController {
+    extends AdminController(actionAuthenticator) {
 
   val pageSize = 50
 

@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.model.{BookmarkRepo, User}
@@ -9,9 +9,11 @@ import com.keepit.search.SearchServiceClient
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class AdminURIGraphController @Inject()(
-    db: Database,
-    bookmarkRepo: BookmarkRepo,
-    searchClient: SearchServiceClient) extends AdminController {
+  actionAuthenticator: ActionAuthenticator,
+  db: Database,
+  bookmarkRepo: BookmarkRepo,
+  searchClient: SearchServiceClient)
+    extends AdminController(actionAuthenticator) {
 
   def load = AdminHtmlAction { implicit request =>
     Async {

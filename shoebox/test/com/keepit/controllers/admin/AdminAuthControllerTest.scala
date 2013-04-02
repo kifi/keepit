@@ -13,9 +13,8 @@ import com.keepit.common.social.SocialId
 import com.keepit.common.db._
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoController
-import com.keepit.common.controller.FortyTwoController.ImpersonateCookie
-import com.keepit.common.controller.FortyTwoController.KifiInstallationCookie
+import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
+import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.model._
 import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.test.FakeClock
@@ -48,7 +47,7 @@ class AdminAuthControllerTest extends Specification with DbRepos {
         val startResult = route(startRequest).get
         status(startResult) must equalTo(200)
         val sessionCookie = session(startResult)
-        sessionCookie(FortyTwoController.FORTYTWO_USER_ID) === admin.id.get.toString
+        sessionCookie(ActionAuthenticator.FORTYTWO_USER_ID) === admin.id.get.toString
         sessionCookie("securesocial.user") === "111"
         sessionCookie("securesocial.provider") === "facebook"
         cookies(startResult).get(ImpersonateCookie.COOKIE_NAME) === None
@@ -70,7 +69,7 @@ class AdminAuthControllerTest extends Specification with DbRepos {
         }
         val impersonateResult = route(impersonateRequest).get
         val imprSessionCookie = session(impersonateResult)
-        imprSessionCookie(FortyTwoController.FORTYTWO_USER_ID) === admin.id.get.toString
+        imprSessionCookie(ActionAuthenticator.FORTYTWO_USER_ID) === admin.id.get.toString
         imprSessionCookie("securesocial.user") === "111"
         imprSessionCookie("securesocial.provider") === "facebook"
         ImpersonateCookie.decodeFromCookie(cookies(impersonateResult).get(ImpersonateCookie.COOKIE_NAME)) === Some(impersonate.externalId)

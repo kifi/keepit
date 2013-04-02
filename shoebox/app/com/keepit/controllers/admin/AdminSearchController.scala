@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
@@ -15,13 +15,14 @@ case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scor
 
 @Singleton
 class AdminSearchController @Inject() (
+    actionAuthenticator: ActionAuthenticator,
     db: Database,
     userRepo: UserRepo,
     articleSearchResultStore: ArticleSearchResultStore,
     articleSearchResultRefRepo: ArticleSearchResultRefRepo,
     uriRepo: NormalizedURIRepo,
     searchClient: SearchServiceClient
-  ) extends AdminController {
+  ) extends AdminController(actionAuthenticator) {
 
   def explain(query: String, uriId: Id[NormalizedURI]) = AdminHtmlAction { request =>
     Async {

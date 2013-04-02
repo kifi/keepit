@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -32,6 +32,7 @@ case class ActivityData(
 
 @Singleton
 class AdminEventController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   userRepo: UserRepo,
   searchConfigManager: SearchConfigManager,
@@ -39,7 +40,7 @@ class AdminEventController @Inject() (
   reportStore: ReportStore,
   events: EventStream,
   activities: ActivityStream)
-    extends AdminController {
+    extends AdminController(actionAuthenticator) {
 
   def buildReport() = AdminHtmlAction { request =>
 

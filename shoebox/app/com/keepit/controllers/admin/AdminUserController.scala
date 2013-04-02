@@ -1,7 +1,5 @@
 package com.keepit.controllers.admin
 
-import com.google.inject.{Inject, Singleton}
-import com.keepit.common.controller.AdminController
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -18,10 +16,14 @@ import play.api.data.Forms._
 import com.keepit.realtime.UserChannel
 import com.keepit.common.time.Clock
 
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+
 case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstallations: Seq[KifiInstallation])
 
 @Singleton
 class AdminUserController @Inject() (
+    actionAuthenticator: ActionAuthenticator,
     db: Database,
     userWithSocialRepo: UserWithSocialRepo,
     userRepo: UserRepo,
@@ -42,7 +44,7 @@ class AdminUserController @Inject() (
     searchClient: SearchServiceClient,
     userChannel: UserChannel,
     clock: Clock
-  ) extends AdminController {
+  ) extends AdminController(actionAuthenticator) {
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = db.readOnly { implicit s =>
