@@ -11,6 +11,9 @@ import com.keepit.common.analytics.reports.Reports.ReportGroup
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.search.{SearchConfigManager, SearchConfigExperiment}
+import com.keepit.inject._
+
+import play.api.Play.current
 
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
@@ -160,14 +163,16 @@ private[reports] class ReportBuilderActor() extends FortyTwoActor with Logging {
     case ReportCron(sender) =>
       sender.reportCron()
     case BuildReport(startDate, endDate, report) =>
-      report.get(startDate, endDate).persist
+      val toPersist = report.get(startDate, endDate)
+      inject[ReportStore] += (toPersist.persistenceKey -> toPersist)
     case BuildReports(startDate, endDate, reportGroup) =>
       val builtReports = reportGroup.reports map { report =>
         report.get(startDate, endDate)
       }
 
       val outputReport = builtReports.foldRight(CompleteReport("","",Nil))((a,b) => a + b)
-      outputReport.copy(reportName = reportGroup.name).persist
+      val report = outputReport.copy(reportName = reportGroup.name)
+      inject[ReportStore] += (report.persistenceKey -> report)
     case unknown =>
       throw new Exception("unknown message: %s".format(unknown))
   }
