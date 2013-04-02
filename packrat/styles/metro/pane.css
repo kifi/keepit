@@ -262,7 +262,7 @@ a.kifi-pane-action:active {
 }
 .kifi-thread-participants .kifi-thread-participant::before {
   content: ", ";
-  font-weight: 300;
+  font-weight: normal;
 }
 .kifi-thread-participants .kifi-thread-participant:first-child::before {
   content: ""
