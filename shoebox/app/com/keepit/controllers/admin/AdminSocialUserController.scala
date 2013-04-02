@@ -29,19 +29,20 @@ import securesocial.core._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social.{SocialGraphPlugin, UserWithSocial}
 import com.keepit.common.social.SocialUserRawInfoStore
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import views.html
 
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class AdminSocialUserController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialUserRawInfoStore: SocialUserRawInfoStore,
   socialGraphPlugin: SocialGraphPlugin)
-    extends AdminController {
+    extends AdminController(actionAuthenticator) {
 
   def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
     val socialUserInfo = db.readWrite { implicit s =>

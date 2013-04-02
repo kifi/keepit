@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.search._
@@ -11,13 +11,14 @@ import views.html
 
 @Singleton
 class AdminSearchLabsController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   searchConfigManager: SearchConfigManager,
   normalizedURIRepo: NormalizedURIRepo,
   socialConnectionRepo: SocialConnectionRepo,
   userRepo: UserRepo,
   searchClient: SearchServiceClient)
-    extends AdminController {
+    extends AdminController(actionAuthenticator) {
 
   def rankVsScore(q: Option[String] = None) = AdminHtmlAction { implicit request =>
     Ok(html.labs.rankVsScore(q))

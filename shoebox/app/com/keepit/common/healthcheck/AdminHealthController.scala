@@ -13,15 +13,16 @@ import securesocial.core.SecureSocial
 
 import views.html
 
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.{Inject, Singleton, Provider}
 
 @Singleton
 class AdminHealthController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   healthcheckPlugin: HealthcheckPlugin,
   services: FortyTwoServices,
   cacheStatistics: CacheStatistics)
-    extends AdminController {
+    extends AdminController(actionAuthenticator) {
 
   def serviceView = AdminHtmlAction { implicit request =>
     val errorCount = healthcheckPlugin.errorCount

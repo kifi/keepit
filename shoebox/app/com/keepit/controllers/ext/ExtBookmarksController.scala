@@ -2,7 +2,7 @@ package com.keepit.controllers.ext
 
 import com.google.inject.{Inject, Singleton}
 import com.keepit.classify.{DomainClassifier, DomainRepo}
-import com.keepit.common.controller.BrowserExtensionController
+import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -16,6 +16,7 @@ import play.api.libs.json._
 
 @Singleton
 class ExtBookmarksController @Inject() (
+    actionAuthenticator: ActionAuthenticator,
     db: Database,
     bookmarkManager: BookmarkInterner,
     bookmarkRepo: BookmarkRepo,
@@ -33,7 +34,7 @@ class ExtBookmarksController @Inject() (
     classifier: DomainClassifier,
     historyTracker: SliderHistoryTracker,
     sliderInfoLoader: SliderInfoLoader
-  ) extends BrowserExtensionController {
+  ) extends BrowserExtensionController(actionAuthenticator) {
 
   def checkIfExists(uri: String, ver: String) = AuthenticatedJsonAction { request =>
     val userId = request.userId

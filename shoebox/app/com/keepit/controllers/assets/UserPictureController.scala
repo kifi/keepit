@@ -3,7 +3,7 @@ package com.keepit.controllers.assets
 import com.google.inject.ImplementedBy
 import com.google.inject.Inject
 import com.google.inject.Singleton
-import com.keepit.common.controller.WebsiteController
+import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
@@ -18,10 +18,11 @@ import play.api.mvc.Action
 
 @Singleton
 class UserPictureController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   userRepo: UserRepo,
   suiRepo: SocialUserInfoRepo)
-  extends WebsiteController {
+  extends WebsiteController(actionAuthenticator) {
 
   def get(width: Int, userExternalId: ExternalId[User]) = Action { request =>
     val url = db.readOnly(implicit s => getAvatarByUserExternalId(width, userExternalId))
