@@ -80,6 +80,7 @@ trait MongoEventStore {
   def save(event: Event): Event
   def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoKeyMapFunc): Seq[JsObject]
   def mapReduce(collection: String, map: MongoMapFunc, reduce: MongoReduceFunc, outputCollection: Option[String], query: Option[DBObject], finalize: Option[MongoReduceFunc]): Iterator[DBObject]
+  def find(mongoSelector: MongoSelector): MongoCursor
   def find(collection: String, mongoSelector: MongoSelector): MongoCursor
 }
 
@@ -164,6 +165,10 @@ class FakeMongoEventStoreImpl() extends MongoEventStore with Logging {
 
   def mapReduce(collection: String, map: MongoMapFunc, reduce: MongoReduceFunc, outputCollection: Option[String], query: Option[DBObject], finalize: Option[MongoReduceFunc]): Iterator[DBObject] = {
     Iterator(new MongoDBObject())
+  }
+
+  def find(mongoSelector: MongoSelector): MongoCursor = {
+    throw new Exception("Can't implement")
   }
 
   def find(collection: String, mongoSelector: MongoSelector): MongoCursor = {

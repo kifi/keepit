@@ -9,7 +9,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.async.dispatch
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController}
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
 import com.keepit.common.social._
 import com.keepit.model._
@@ -38,6 +38,7 @@ import com.keepit.controllers.core.PaneDetails
 
 @Singleton
 class ExtCommentController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   commentRepo: CommentRepo,
   commentRecipientRepo: CommentRecipientRepo,
@@ -45,6 +46,7 @@ class ExtCommentController @Inject() (
   commentReadRepo: CommentReadRepo,
   urlRepo: URLRepo,
   userRepo: UserRepo,
+  userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   commentWithSocialUserRepo: CommentWithSocialUserRepo,
   followRepo: FollowRepo,
@@ -55,7 +57,7 @@ class ExtCommentController @Inject() (
   activityStream: ActivityStream,
   userNotifier: UserNotifier,
   paneDetails: PaneDetails)
-    extends BrowserExtensionController with ShoeboxServiceController {
+    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def getCounts(ids: String) = AuthenticatedJsonAction { request =>
     val nUriExtIds = ids.split('.').map(ExternalId[NormalizedURI](_))
@@ -130,6 +132,19 @@ class ExtCommentController @Inject() (
         Ok(Json.obj("message" -> commentWithSocialUserSerializer.writes(threadInfo)))
       case _ =>
         Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
+    }
+  }
+
+  def removeComment(id: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      if (userExperimentRepo.hasExperiment(request.userId, ExperimentTypes.ADMIN)) {
+        commentRepo.getOpt(id).filter(_.isActive).map { c =>
+          commentRepo.save(c.withState(CommentStates.INACTIVE))
+        }
+        Ok(Json.obj("state" -> "INACTIVE"))
+      } else {
+        Unauthorized("ADMIN")
+      }
     }
   }
 

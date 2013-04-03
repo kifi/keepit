@@ -26,7 +26,8 @@ class ArticleIndexerController @Inject()(
     db: Database,
     indexer: ArticleIndexer,
     indexerPlugin: ArticleIndexerPlugin,
-    normUriRepo: NormalizedURIRepo) extends SearchServiceController {
+    normUriRepo: NormalizedURIRepo)
+  extends SearchServiceController {
 
   import ArticleIndexInfoJson._
 

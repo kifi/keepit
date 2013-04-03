@@ -154,11 +154,13 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     }
 
     def buildLangMap(bookmarks: Seq[Bookmark], preferedLang: Lang) = {
-      bookmarks.foldLeft(Map.empty[String,Lang]){ (m, b) => m + (b.title -> LangDetector.detect(b.title, preferedLang)) }
+      bookmarks.foldLeft(Map.empty[String,Lang]){ (m, b) =>
+        m + (b.title.getOrElse("") -> LangDetector.detect(b.title.getOrElse(""), preferedLang))
+      }
     }
 
     def buildBookmarkTitleField(fieldName: String, uriList: URIList, bookmarks: Seq[Bookmark])(tokenStreamFunc: (String, String)=>Option[TokenStream]) = {
-      val titleMap = bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.title) }
+      val titleMap = bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.title.getOrElse("")) }
 
       val publicList = uriList.publicList
       val privateList = uriList.privateList

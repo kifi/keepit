@@ -13,6 +13,8 @@ import akka.pattern.ask
 
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.actor.ActorFactory
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.akka.FortyTwoActor
 import scala.concurrent.Future
 import com.keepit.serializer.EventSerializer
@@ -22,13 +24,15 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 
 @Singleton
-class ActivityStream @Inject() (clock: Clock) {
+class ActivityStream @Inject() (
+    actorFactory: ActorFactory[ActivityStreamActor],
+    clock: Clock) {
   implicit val timeout = Timeout(1 second)
 
-  lazy val default = Akka.system.actorOf(Props {new ActivityStreamActor(clock)})
+  lazy val actor = actorFactory.get()
 
   def newStream(): Future[(Iteratee[JsValue,_],Enumerator[JsValue])] = {
-    (default ? NewStream).map {
+    (actor ? NewStream).map {
       case Connected(enumerator) =>
         // Since we're expecting no input from the client, just consume and discard the input
         val iteratee = Iteratee.foreach[JsValue]{ s => /* ignore for now */ }
@@ -36,11 +40,15 @@ class ActivityStream @Inject() (clock: Clock) {
     }
   }
 
-  def streamActivity(kind: String, json: JsObject) = default ! BroadcastActivity(kind, json)
+  def streamActivity(kind: String, json: JsObject) = actor ! BroadcastActivity(kind, json)
 
 }
 
-class ActivityStreamActor @Inject() (clock: Clock) extends FortyTwoActor {
+class ActivityStreamActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
+    clock: Clock)
+  extends FortyTwoActor(healthcheckPlugin) {
+
   val (activityEnumerator, activityChannel) = Concurrent.broadcast[JsValue]
 
   def receive = {

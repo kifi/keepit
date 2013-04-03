@@ -8,6 +8,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
+import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime

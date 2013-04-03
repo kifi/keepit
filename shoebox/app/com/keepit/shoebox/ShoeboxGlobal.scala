@@ -5,7 +5,7 @@ import com.keepit.common.analytics.PersistEventPlugin
 import com.keepit.common.analytics.reports.ReportBuilderPlugin
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
-import com.keepit.common.mail.MailSenderPlugin
+import com.keepit.common.mail.{MailToKeepPlugin, MailSenderPlugin}
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialGraphRefresher
 import com.keepit.inject._
@@ -32,6 +32,7 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
     require(inject[SocialGraphRefresher].enabled)
     require(inject[MailSenderPlugin].enabled)
     inject[MailSenderPlugin].processOutbox()
+    require(inject[MailToKeepPlugin].enabled)
     require(inject[HealthcheckPlugin].enabled)
     require(inject[PersistEventPlugin].enabled)
     require(inject[ReportBuilderPlugin].enabled)

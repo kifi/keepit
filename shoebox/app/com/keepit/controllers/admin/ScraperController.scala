@@ -24,7 +24,7 @@ import slick.Database
 import com.keepit.scraper.DuplicateDocumentDetection
 import views.html
 
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.{Inject, Singleton, Provider}
 
 case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
@@ -32,6 +32,7 @@ case class DisplayedDuplicates(normUriId: Id[NormalizedURI], url: String, dupes:
 
 @Singleton
 class ScraperController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   scraper: ScraperPlugin,
   scrapeInfoRepo: ScrapeInfoRepo,
@@ -43,7 +44,7 @@ class ScraperController @Inject() (
   deeplinkRepo: DeepLinkRepo,
   commentRepo: CommentRepo,
   bookmarkRepo: BookmarkRepo)
-    extends AdminController {
+    extends AdminController(actionAuthenticator) {
 
   def scrape = AdminHtmlAction { implicit request =>
     val articles = scraper.scrape()

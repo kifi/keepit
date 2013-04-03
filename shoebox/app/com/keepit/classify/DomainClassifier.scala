@@ -10,9 +10,12 @@ import java.util.UUID
 
 import com.coremedia.iso.Hex.encodeHex
 import com.google.inject.{Inject, ImplementedBy}
+
+import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.HttpClient
+import com.keepit.common.healthcheck.HealthcheckPlugin
 
 import akka.actor.{Props, ActorSystem}
 import akka.pattern.ask
@@ -20,8 +23,15 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 private case class FetchDomainInfo(domain: String)
 
-private[classify] class DomainClassificationActor(db: Database, client: HttpClient, updater: SensitivityUpdater,
-    domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo) extends FortyTwoActor {
+private[classify] class DomainClassificationActor @Inject() (
+  healthcheck: HealthcheckPlugin,
+  db: Database,
+  client: HttpClient,
+  updater: SensitivityUpdater,
+  domainRepo: DomainRepo,
+  tagRepo: DomainTagRepo,
+  domainToTagRepo: DomainToTagRepo)
+    extends FortyTwoActor(healthcheck) {
 
   private final val KEY = "42go42"
 
@@ -81,13 +91,14 @@ trait DomainClassifier {
   def isSensitive(domain: String): Either[Future[Boolean], Boolean]
 }
 
-class DomainClassifierImpl @Inject()(system: ActorSystem, db: Database, client: HttpClient,
-    updater: SensitivityUpdater, domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo)
+class DomainClassifierImpl @Inject()(
+  actorFactory: ActorFactory[DomainClassificationActor],
+  db: Database,
+  domainRepo: DomainRepo,
+  updater: SensitivityUpdater)
     extends DomainClassifier {
 
-  private val actor = system.actorOf(Props {
-    new DomainClassificationActor(db, client, updater, domainRepo, tagRepo, domainToTagRepo)
-  })
+  private val actor = actorFactory.get()
 
   private val splitPattern = """\.""".r
 

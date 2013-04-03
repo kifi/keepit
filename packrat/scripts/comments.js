@@ -8,7 +8,7 @@
 // @require scripts/compose.js
 // @require scripts/snapshot.js
 
-function renderComments($container, comments) {
+function renderComments($container, comments, isAdmin) {
   render("html/metro/comments.html", {
     formatComment: getTextFormatter,
     formatLocalDate: getLocalDateFormatter,
@@ -23,13 +23,37 @@ function renderComments($container, comments) {
     comment: "comment.html",
     compose: "compose.html"
   }, function(html) {
-    $(html).prependTo($container)
+    var $posted = $(html).prependTo($container)
     .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
     .on("click", "a[href^='x-kifi-sel:']", function(e) {
       e.preventDefault();
     })
     .on("kifi:compose-submit", submitComment)
-    .find("time").timeago();
+    .find(".kifi-comments-posted");
+
+    $posted.find("time").timeago();
+    if (isAdmin) {
+      $posted.on("mouseenter", ".kifi-comment-posted", function() {
+        if (this.lastChild.className != "kifi-comment-x") {
+          $(this).append("<div class=kifi-comment-x>");
+        }
+      }).on("click", ".kifi-comment-x", function() {
+        var $x = $(this);
+        if ($x.hasClass("kifi-confirm")) {
+          $x.addClass("kifi-confirmed");
+          var id = $x.parent().animate({opacity: .1}, 400).data("id");
+          api.log("[deleteComment]", id);
+          api.port.emit("delete_comment", id, function() {
+            $x.parent().slideUp(function() {
+              $(this).remove();
+            });
+          });
+        } else {
+          $x.addClass("kifi-confirm");
+          setTimeout($x.removeClass.bind($x, "kifi-confirm"), 1000);
+        }
+      });
+    }
 
     attachComposeBindings($container, "comment");
   });

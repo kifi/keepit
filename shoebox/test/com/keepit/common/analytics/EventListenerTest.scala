@@ -35,7 +35,7 @@ class EventListenerTest extends Specification with DbRepos {
 
   "EventHelper" should {
     "parse search events" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val (normUrlId, url, user, bookmark) = setup()
         val listener = new EventListenerPlugin {
          def onEvent: PartialFunction[Event,Unit] = { case _ => }
@@ -54,7 +54,7 @@ class EventListenerTest extends Specification with DbRepos {
 
   "EventListener" should {
     "process events" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val system = ActorSystem("system")
         val (normUrlId, url, user, bookmark) = setup()
 

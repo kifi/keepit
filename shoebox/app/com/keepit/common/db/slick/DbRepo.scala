@@ -58,7 +58,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
     invalidateCache(result)
   } catch {
     case m: MySQLIntegrityConstraintViolationException =>
-      throw new MySQLIntegrityConstraintViolationException(s"Could not persist $model: ${m.getClass} ${m.getMessage}")
+      throw new MySQLIntegrityConstraintViolationException(s"error persisting $model").initCause(m)
     case t: SQLException => throw new SQLException(s"error persisting $model", t)
   }
 
