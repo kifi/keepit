@@ -89,7 +89,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
   def getQuery() = query
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    if (query.terms.size > 1) {
+    if (query.terms.size > 0) {
       var i = -1
       // uses first 64 terms (enough?)
       val tps = query.terms.take(64).foldLeft(Map.empty[String, PositionAndMask]){ (tps, term) =>
@@ -97,11 +97,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
         val termText = term.text()
         tps + (termText -> (tps.getOrElse(termText, new PositionAndMask(termPositionsEnum(context, term, acceptDocs), termText).setBit(i))))
       }
-      if (tps.size > 0) {
-        new ProximityScorer(this, tps.values.toArray)
-      } else {
-        null
-      }
+      new ProximityScorer(this, tps.values.toArray)
     } else {
       null
     }
