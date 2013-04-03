@@ -97,9 +97,13 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
         val termText = term.text()
         tps + (termText -> (tps.getOrElse(termText, new PositionAndMask(termPositionsEnum(context, term, acceptDocs), termText).setBit(i))))
       }
-      new ProximityScorer(this, tps.values.toArray)
+      if (tps.size > 0) {
+        new ProximityScorer(this, tps.values.toArray)
+      } else {
+        null
+      }
     } else {
-      QueryUtil.emptyScorer(this)
+      null
     }
   }
 }
