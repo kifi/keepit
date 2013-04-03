@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.model._
+import com.keepit.common.actor.ActorFactory
 
 import akka.actor._
 import scala.concurrent.Await
@@ -22,7 +23,12 @@ private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
 private case object FetchAll
 
-private[social] class SocialGraphActor(graph: FacebookSocialGraph, db: Database, socialRepo: SocialUserInfoRepo) extends FortyTwoActor with Logging {
+private[social] class SocialGraphActor @Inject() (
+    graph: FacebookSocialGraph,
+    db: Database,
+    socialRepo: SocialUserInfoRepo)
+  extends FortyTwoActor with Logging {
+
   def receive() = {
     case FetchAll =>
       val unprocessedUsers = db.readOnly {implicit s =>
@@ -75,18 +81,19 @@ trait SocialGraphPlugin extends SchedulingPlugin {
   def asyncFetch(socialUserInfo: SocialUserInfo): Future[Try[Seq[SocialConnection]]]
 }
 
-class SocialGraphPluginImpl @Inject() (system: ActorSystem, socialGraph: FacebookSocialGraph, db: Database, socialRepo: SocialUserInfoRepo)
-    extends SocialGraphPlugin with Logging {
+class SocialGraphPluginImpl @Inject() (
+    actorFactory: ActorFactory[SocialGraphActor])
+  extends SocialGraphPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = system.actorOf(Props { new SocialGraphActor(socialGraph, db, socialRepo) })
+  private val actor = actorFactory.get()
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting SocialGraphPluginImpl")
-    scheduleTask(system, 10 seconds, 1 minutes, actor, FetchAll)
+    scheduleTask(actorFactory.system, 10 seconds, 1 minutes, actor, FetchAll)
   }
   override def onStop() {
     log.info("stopping SocialGraphPluginImpl")

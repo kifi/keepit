@@ -6,12 +6,14 @@ import java.net.InetAddress
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
+
+import com.keepit.common.actor.ActorFactory
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.analytics._
 import com.keepit.common.cache.MemcachedCacheModule
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{HealthcheckPluginImpl, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{MailSenderPluginImpl, MailSenderPlugin, PostOffice}
 import com.keepit.common.net.HttpClient
@@ -103,9 +105,9 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def healthcheckProvider(system: ActorSystem, postOffice: PostOffice, services: FortyTwoServices): HealthcheckPlugin = {
+  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], postOffice: PostOffice, services: FortyTwoServices): HealthcheckPlugin = {
     val host = InetAddress.getLocalHost().getHostName()
-    new HealthcheckPluginImpl(system, host, postOffice, services)
+    new HealthcheckPluginImpl(actorFactory, services, postOffice, host)
   }
 
   @Singleton

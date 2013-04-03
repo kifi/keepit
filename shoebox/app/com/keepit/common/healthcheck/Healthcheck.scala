@@ -3,6 +3,8 @@ package com.keepit.common.healthcheck
 import org.apache.commons.codec.binary.Base64
 import java.security.MessageDigest
 import scala.collection.mutable.MutableList
+
+import com.keepit.common.actor.ActorFactory
 import com.keepit.common.healthcheck.Healthcheck._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.mail.PostOffice
@@ -14,6 +16,10 @@ import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.time._
+import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.akka.FortyTwoActor
+
 import play.api.templates.Html
 import akka.util.Timeout
 import akka.actor._
@@ -26,8 +32,6 @@ import org.joda.time.DateTime
 import scala.concurrent.{Future, Await}
 import com.google.inject.{Inject, Provider}
 import scala.concurrent.duration._
-import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.plugin.SchedulingPlugin
 
 case class HealthcheckErrorSignature(value: String) extends AnyVal
 
@@ -117,7 +121,10 @@ case object ResetErrorCount
 case object Heartbeat
 case object GetErrors
 
-private[healthcheck] class HealthcheckActor(postOffice: PostOffice, services: FortyTwoServices) extends Actor with Logging {
+class HealthcheckActor @Inject() (
+    postOffice: PostOffice,
+    services: FortyTwoServices)
+  extends FortyTwoActor with Logging {
 
   private def initErrors: Map[HealthcheckErrorSignature, List[HealthcheckError]] = Map().withDefaultValue(List[HealthcheckError]())
 
@@ -180,17 +187,22 @@ trait HealthcheckPlugin extends SchedulingPlugin {
   def reportErrors(): Unit
 }
 
-class HealthcheckPluginImpl(system: ActorSystem, host: String, postOffice: PostOffice, services: FortyTwoServices) extends HealthcheckPlugin {
+class HealthcheckPluginImpl @Inject() (
+    actorFactory: ActorFactory[HealthcheckActor],
+    services: FortyTwoServices,
+    postOffice: PostOffice,
+    host: String)
+  extends HealthcheckPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = system.actorOf(Props { new HealthcheckActor(postOffice, services) })
+  private val actor = actorFactory.get()
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-     scheduleTask(system, 0 seconds, 10 minutes, actor, ReportErrorsAction)
-     scheduleTask(system, 12 hours, 12 hours, actor, Heartbeat)
+     scheduleTask(actorFactory.system, 0 seconds, 10 minutes, actor, ReportErrorsAction)
+     scheduleTask(actorFactory.system, 12 hours, 12 hours, actor, Heartbeat)
   }
 
   def errorCountFuture(): Future[Int] = (actor ? ErrorCountSinceLastCheck).mapTo[Int]
