@@ -60,6 +60,7 @@ object Reports {
   lazy val dailyKCMUsers = new DailyKCMUsers
   lazy val weeklyKCMUsers = new WeeklyKCMUsers
   lazy val monthlyKCMUsers = new MonthlyKCMUsers
+  lazy val dailySearchStatstics = new DailySearchStatisticsReport
 
   case class ReportGroup(name: String, reports: Seq[Report])
 
@@ -105,6 +106,10 @@ object Reports {
 
   lazy val DailyAdminReports = ReportGroup("DailyAdminReport",
     Seq(dailyUniqueDepricatedAddBookmarks, dailySearchQueriesReport)
+  )
+
+  lazy val DailySearchStatisticsReports = ReportGroup("DailySearchStatistics",
+    Seq(dailySearchStatstics)
   )
 
   def searchExperimentReports(experiments: Seq[SearchConfigExperiment]): ReportGroup = {
