@@ -444,6 +444,10 @@ api = function() {
               arr.splice(1, 0, id);
             }
             api.log("[socket.send]", arr, socket.send(JSON.stringify(arr)));
+          },
+          close: function() {
+            socket.close();
+            this.send = this.close = api.noop;
           }
         };
       }

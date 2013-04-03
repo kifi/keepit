@@ -1,6 +1,8 @@
 function ReconnectingWebSocket(url, onmessage) {
   var ws, self = this, buffer = [];
 
+  connect();
+
   this.send = function(data) {
     if (ws) {
       ws.send(data);
@@ -9,8 +11,13 @@ function ReconnectingWebSocket(url, onmessage) {
       connect();
     }
   };
-
-  connect();
+  this.close = function() {
+    buffer.length = 0;
+    if (ws) {
+      ws.close();
+    }
+    self.send = self.close = function() {};
+  };
 
   function connect() {
     console.debug("[ReconnectingWebSocket.connect]");
