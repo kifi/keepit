@@ -16,6 +16,8 @@ import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 
 import com.google.inject.{Provider, ImplementedBy, Inject}
+
+import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.db.Id
@@ -51,10 +53,17 @@ object DomainTagImportEvents {
   val REMOVE_TAG_FAILURE = "removeTagFailure"
 }
 
-private[classify] class DomainTagImportActor(db: Database, updater: SensitivityUpdater, clock: Clock,
-    domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo,
-    persistEventPlugin: PersistEventPlugin, settings: DomainTagImportSettings, postOffice: PostOffice,
-    healthcheckPlugin: HealthcheckPlugin)
+private[classify] class DomainTagImportActor @Inject() (
+  db: Database,
+  updater: SensitivityUpdater,
+  clock: Clock,
+  domainRepo: DomainRepo,
+  tagRepo: DomainTagRepo,
+  domainToTagRepo: DomainToTagRepo,
+  persistEventPlugin: PersistEventPlugin,
+  settings: DomainTagImportSettings,
+  postOffice: PostOffice,
+  healthcheckPlugin: HealthcheckPlugin)
     extends FortyTwoActor with Logging {
 
   import DomainTagImportEvents._
@@ -288,24 +297,11 @@ trait DomainTagImporter {
   def applyTagToDomains(tagName: DomainTagName, domainNames: Seq[String]): Future[DomainTag]
 }
 
-class DomainTagImporterImpl @Inject()(
-  domainRepo: DomainRepo,
-  tagRepo: DomainTagRepo,
-  domainToTagRepo: DomainToTagRepo,
-  updater: SensitivityUpdater,
-  clock: Clock,
-  system: ActorSystem,
-  db: Database,
-  persistEventPlugin: PersistEventPlugin,
-  settings: DomainTagImportSettings,
-  postOffice: PostOffice,
-  healthcheckPlugin: HealthcheckPlugin)
+class DomainTagImporterImpl @Inject() (
+  actorFactory: ActorFactory[DomainTagImportActor])
     extends DomainTagImporter {
 
-  private val actor = system.actorOf(Props {
-    new DomainTagImportActor(db, updater, clock, domainRepo, tagRepo, domainToTagRepo,
-      persistEventPlugin, settings, postOffice, healthcheckPlugin)
-  })
+  private val actor = actorFactory.get()
 
   def refetchClassifications() {
     actor ! RefetchAll

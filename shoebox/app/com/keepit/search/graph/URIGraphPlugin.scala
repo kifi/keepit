@@ -9,6 +9,7 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.actor.ActorFactory
 import com.keepit.inject._
 import play.api.Play.current
 import scala.concurrent.Future
@@ -16,7 +17,9 @@ import scala.concurrent.duration._
 
 case object Update
 
-private[graph] class URIGraphActor(uriGraph: URIGraph) extends FortyTwoActor with Logging {
+private[graph] class URIGraphActor @Inject() (
+    uriGraph: URIGraph)
+  extends FortyTwoActor with Logging {
 
   def receive() = {
     case Update => try {
@@ -36,15 +39,18 @@ trait URIGraphPlugin extends SchedulingPlugin {
   def reindex()
 }
 
-class URIGraphPluginImpl @Inject() (system: ActorSystem, uriGraph: URIGraph) extends URIGraphPlugin with Logging {
+class URIGraphPluginImpl @Inject() (
+    actorFactory: ActorFactory[URIGraphActor],
+    uriGraph: URIGraph)
+  extends URIGraphPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = system.actorOf(Props { new URIGraphActor(uriGraph) })
+  private val actor = actorFactory.get()
 
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(system, 30 seconds, 1 minute, actor, Update)
+    scheduleTask(actorFactory.system, 30 seconds, 1 minute, actor, Update)
     log.info("starting URIGraphPluginImpl")
   }
   override def onStop() {
