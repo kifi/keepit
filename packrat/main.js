@@ -26,52 +26,43 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
 
 // ===== Event logging
 
-var _eventLog = [];
 var eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1};
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
-    api.log("[logEvent] invalid event family:", eventFamily);
+    api.log.error("[logEvent] invalid event family:", eventFamily);
     return;
   }
-  var event = {
-      "time": new Date().getTime(),
-      "eventFamily": eventFamily, /* Category (see eventFamilies) */
-      "eventName": eventName}; /* Any key for this event */
+  var ev = {
+    installId: getConfigs().kifi_installation_id, // ExternalId[KifiInstallation]
+    eventFamily: eventFamily, // Category (see eventFamilies)
+    eventName: eventName}; // Any key for this event
   if (metaData) {
-    event.metaData = metaData; /* Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc. */
+    ev.metaData = metaData; // Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc.
   }
   if (prevEvents && prevEvents.length) {
-    event.prevEvents = prevEvents; /* a list of previous ExternalId[Event]s that are associated with this action. !!!: The frontend determines what is associated with what. */
+    ev.prevEvents = prevEvents; // a list of previous ExternalId[Event]s that are associated with this action. The frontend determines what is associated with what.
   }
-  _eventLog.push(event);
-}
-
-var eventLogDelay = 4000;
-api.timers.setTimeout(function maybeSend() {
-  if (_eventLog.length) {
-    var t0 = _eventLog[0].time;
-    _eventLog.forEach(function(e) { e.time -= t0 }); // relative times = fewer bytes
-    var config = getConfigs();
-    var data = {
-      "version": 1,
-      "time": new Date - t0,
-      "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
-      "events": _eventLog};
-    api.log("[EventLog] sending:", data);
-    ajax("POST", "http://" + config.server + "/users/events", data, function done(o) {
-      api.log("[EventLog] done:", o)
-    }, function fail(xhr) {
-      api.log("[EventLog] fail:", xhr.responseText);
-    });
-
-    _eventLog.length = 0;
-    eventLogDelay = Math.round(Math.max(Math.sqrt(eventLogDelay), 5 * 1000));
+  api.log("[logEvent]", ev);
+  if (socket) {
+    socket.send(["log_event", ev]);
   } else {
-    eventLogDelay = Math.min(eventLogDelay * 2, 60 * 1000);
+    ev.time = +new Date;
+    logEvent.queue.push(ev);
+    if (logEvent.queue.length > 50) {
+      logEvent.queue.shift();  // discard oldest
+    }
   }
-  api.timers.setTimeout(maybeSend, eventLogDelay);
-}, 4000);
+}
+logEvent.queue = [];
+logEvent.catchUp = function() {
+  var t = +new Date;
+  while (logEvent.queue.length) {
+    var ev = logEvent.queue.shift();
+    ev.time = t - ev.time;
+    socket.send(["log_event", ev]);
+  }
+}
 
 // ===== WebSocket handlers
 
@@ -632,6 +623,7 @@ function authenticate(callback) {
       socket = api.socket.open(
         (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws",
         socketHandlers);
+      logEvent.catchUp();
 
       setConfigs("kifi_installation_id", data.installationId);
 
