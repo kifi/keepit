@@ -5,7 +5,7 @@ import com.google.common.io.Files
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.keepit.classify.DomainTagImportSettings
-import com.keepit.common.actor.ActorPlugin
+import com.keepit.common.actor.{ActorPlugin, ActorFactory}
 import com.keepit.common.analytics._
 import com.keepit.common.cache._
 import com.keepit.common.db.slick.Database
@@ -33,14 +33,9 @@ class ShoeboxDevModule extends ScalaModule with Logging {
     DomainTagImportSettings(localDir = Files.createTempDir().getAbsolutePath, url = "http://localhost:8000/42.zip")
   }
 
-  @AppScoped
   @Provides
-  def mailToKeepPlugin(
-      system: ActorSystem,
-      bookmarkInterner: BookmarkInterner,
-      persistEventPlugin: PersistEventPlugin,
-      postOffice: PostOffice,
-      messageParser: MailToKeepMessageParser): MailToKeepPlugin = {
+  @Singleton
+  def mailToKeepServerSettings: Option[MailToKeepServerSettings] =
     for {
       username <- current.configuration.getString("mailtokeep.username")
       password <- current.configuration.getString("mailtokeep.password")
@@ -48,16 +43,22 @@ class ShoeboxDevModule extends ScalaModule with Logging {
       val server = current.configuration.getString("mailtokeep.server").getOrElse("imap.gmail.com")
       val protocol = current.configuration.getString("mailtokeep.protocol").getOrElse("imaps")
       val emailLabel = System.getProperty("user.name")
-      val settings = MailToKeepServerSettings(
+      MailToKeepServerSettings(
         username = username,
         password = password,
         server = server,
         protocol = protocol,
         emailLabel = Some(emailLabel))
-      new MailToKeepPluginImpl(system, settings, bookmarkInterner, persistEventPlugin, postOffice, messageParser)
     }
-  } getOrElse {
-    new FakeMailToKeepPlugin
+
+  @AppScoped
+  @Provides
+  def mailToKeepPlugin(
+      actorFactory: ActorFactory[MailToKeepActor], mailToKeepServerSettings: Option[MailToKeepServerSettings]): MailToKeepPlugin = {
+    mailToKeepServerSettings match {
+      case None => new FakeMailToKeepPlugin
+      case _ => new MailToKeepPluginImpl(actorFactory)
+    }
   }
 }
 
