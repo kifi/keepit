@@ -59,7 +59,8 @@ logEvent.catchUp = function() {
   var t = +new Date;
   while (logEvent.queue.length) {
     var ev = logEvent.queue.shift();
-    ev.time = t - ev.time;
+    ev.msAgo = t - ev.time;
+    delete ev.time;
     socket.send(["log_event", ev]);
   }
 }
