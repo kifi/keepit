@@ -4,11 +4,13 @@ function ReconnectingWebSocket(url, onmessage) {
   connect();
 
   this.send = function(data) {
-    if (ws) {
+    if (ws && ws.readyState == WebSocket.OPEN) {
       ws.send(data);
     } else {
       buffer.push([data, +new Date]);
-      connect();
+      if (!ws) {
+        connect();
+      }
     }
   };
   this.close = function() {

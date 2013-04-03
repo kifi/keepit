@@ -1,5 +1,6 @@
 package com.keepit.controllers.ext
 
+import com.keepit.common.analytics._
 import com.keepit.common.controller._
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.db.ExternalId
@@ -46,8 +47,10 @@ class ExtStreamController @Inject() (
   userChannel: UserChannel,
   uriChannel: UriChannel,
   userNotification: UserNotificationRepo,
+  persistEventPlugin: PersistEventPlugin,
   clock: Clock,
-  paneData: PaneDetails) extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+  paneData: PaneDetails)
+    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
     /*
      * Unfortunately, everything related to existing secured actions intimately deals with Action, Request, Result, etc.
@@ -111,6 +114,8 @@ class ExtStreamController @Inject() (
               subscriptions = subscribe(streamSession, socketId, channel, subscriptions, sub)
             case JsString("unsubscribe") +: unsub =>
               subscriptions = unsubscribe(streamSession, socketId, channel, subscriptions, unsub)
+            case JsString("log_event") +: JsObject(pairs) +: _ =>
+              logEvent(streamSession, JsObject(pairs))
             case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>
               channel.push(Json.arr(requestId.toLong, paneData.getComments(streamSession.userId, url)))
             case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>
@@ -201,6 +206,19 @@ class ExtStreamController @Inject() (
         log.warn(s"Can't unsubscribe from $json. No handler.")
         subscriptions
     }
+  }
+
+  private def logEvent(session: StreamSession, o: JsObject) {
+    val eventTime = clock.now.minusMillis((o \ "msAgo").asOpt[Int].getOrElse(0))
+    val eventFamily = EventFamilies((o \ "eventFamily").as[String])
+    val eventName = (o \ "eventName").as[String]
+    val installId = (o \ "installId").as[String]
+    val metaData = (o \ "metaData").asOpt[JsObject].getOrElse(Json.obj())
+    val prevEvents = (o \ "prevEvents").asOpt[Seq[String]].getOrElse(Seq.empty).map(ExternalId[Event])
+    val user = db.readOnly { implicit s => userRepo.get(session.userId) }
+    val event = Events.userEvent(eventFamily, eventName, user, session.experiments, installId, metaData, prevEvents, eventTime)
+    log.debug("Created new event: %s".format(event))
+    persistEventPlugin.persist(event)
   }
 
 }
