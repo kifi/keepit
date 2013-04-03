@@ -119,7 +119,7 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
         QueryUtil.toScorerWithCoordinator(textScorer)
       }
       new MultiplicativeBoostScorer(this, mainScorer,
-        boosterWeights.flatMap{ w => Option(w.scorer(reader, true, false)) }, boosterStrengths)
+        boosterWeights.map{ w => w.scorer(reader, true, false) }, boosterStrengths)
     }
   }
 }
@@ -145,11 +145,17 @@ extends Scorer(weight) with Coordinator with Logging {
         var score = textScorer.score()
         var i = 0
         while (i < boosterScorers.length) {
+          val s = boosterStrengths(i)
           val boosterScorer = boosterScorers(i)
-          if (boosterScorer.docID() < doc) boosterScorer.advance(doc)
-          if (boosterScorer.docID() == doc) {
-            val s = boosterStrengths(i)
-            score *= (boosterScorer.score() * s + (1.0f - s))
+          if (boosterScorer != null) {
+            if (boosterScorer.docID() < doc) boosterScorer.advance(doc)
+            if (boosterScorer.docID() == doc) {
+              score *= (boosterScorer.score() * s + (1.0f - s))
+            } else {
+              score *= (1.0f - s)
+            }
+          } else {
+            score *= (1.0f - s)
           }
           i += 1
         }

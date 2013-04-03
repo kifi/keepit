@@ -155,20 +155,13 @@ class ProximityQueryTest extends Specification {
       buf.sortBy(_._2).map(_._1) === Seq(19, 18, 17, 16, 15, 14, 13, 12, 11, 10)
     }
 
-    "not return hits when the number of terms is 1 or less" in {
-      var q = ProximityQuery(Seq(new Term("B", "abc")))
-      var weight = searcher.createNormalizedWeight(q)
+    "not return hits when no term" in {
+      val q = ProximityQuery(Seq.empty[Term])
+      val weight = searcher.createNormalizedWeight(q)
       (weight != null) === true
 
-      var scorer = weight.scorer(indexReader, true, true)
-      scorer.nextDoc() === DocIdSetIterator.NO_MORE_DOCS
-
-      q = ProximityQuery(Seq.empty[Term])
-      weight = searcher.createNormalizedWeight(q)
-      (weight != null) === true
-
-      scorer = weight.scorer(indexReader, true, true)
-      scorer.nextDoc() === DocIdSetIterator.NO_MORE_DOCS
+      val scorer = weight.scorer(indexReader, true, true)
+      scorer === null
     }
   }
 }
