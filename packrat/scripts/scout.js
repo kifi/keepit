@@ -9,7 +9,7 @@ var injected, t0 = +new Date;
 
 !function() {
   api.log("host:", location.hostname);
-  var viewportEl = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"], info, rules = 0;
+  var viewportEl = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"], info, openTo, rules = 0;
 
   document.addEventListener("keydown", function(e) {
     if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75 && !info.metro) {  // cmd-shift-K or ctrl-shift-K
@@ -52,6 +52,11 @@ var injected, t0 = +new Date;
     },
     init_slider: function(o) {
       info = o;
+      if (openTo) {
+        o.locator = openTo.locator;
+        o.trigger = openTo.trigger;
+        openTo = null;
+      }
       rules = o.rules || 0;
       if (o.metro) {
         insertTile(o);
@@ -62,7 +67,13 @@ var injected, t0 = +new Date;
         document.addEventListener("scroll", onScrollMaybeShow);
       }
     },
-    open_slider_to: openSlider,
+    open_slider_to: function(o) {
+      if (o.metro && !info) {
+        openTo = o;
+      } else {
+        openSlider(o);
+      }
+    },
     button_click: function() {
       if (info.metro) {
         withSlider2(function() {
@@ -128,9 +139,10 @@ var injected, t0 = +new Date;
       var nTot = (o.numComments || 0) + (o.numMessages || 0);
       if (nUnread || nTot) {
         var countEl = document.createElement("span");
-        countEl.className = "kifi-count" + (nUnread ? " kifi-unread" : "");;
+        countEl.className = "kifi-count" + (nUnread ? " kifi-unread" : "");
         countEl.textContent = nUnread || nTot;
         (nUnread ? el : transEl).appendChild(countEl);
+        el.classList.add("kifi-with-count");
       }
       document.documentElement.appendChild(el);
       el.addEventListener("mouseover", function() {
@@ -141,7 +153,7 @@ var injected, t0 = +new Date;
 
       if (o.keepers && !o.kept) {
         withSlider2(function() {
-          setTimeout(slider2.showKeepersFor.bind(slider2, o, !!countEl, 2000), 3000);
+          setTimeout(slider2.showKeepersFor.bind(slider2, o, el, 2000), 3000);
         });
       }
     });

@@ -29,6 +29,9 @@ POST    /authenticate/:provider     securesocial.controllers.LoginPage.authentic
 ##########################################
 #todo(eishay): change routes and callback in sendgrid
 POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
+# todo(eishay): We should move the paths of the following two and update pingdom
+GET     /admin/healthcheck/ping     @com.keepit.common.healthcheck.WebsiteHealthController.ping()
+GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHealthController.isHealthy()
 
 ##########################################
 # Extension API
@@ -40,8 +43,11 @@ POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
-POST    /comments/add               @com.keepit.controllers.ext.ExtCommentController.createComment()
+GET     /comments                   @com.keepit.controllers.ext.ExtCommentController.getComments(url: String)
 GET     /comments/public            @com.keepit.controllers.ext.ExtCommentController.getComments(url: String)
+# TODO: delete redundant /comments/public route above after all extensions reach 2.2.49
+POST    /comments/add               @com.keepit.controllers.ext.ExtCommentController.createComment()
+POST    /comments/:id/remove        @com.keepit.controllers.ext.ExtCommentController.removeComment(id: ExternalId[Comment])
 POST    /comments/follow            @com.keepit.controllers.ext.ExtCommentController.startFollowing()
 POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentController.stopFollowing()
 
@@ -183,9 +189,6 @@ POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseControll
 POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseController.refreshPhrases
 POST    /admin/phrases/save         @com.keepit.controllers.admin.PhraseController.savePhrases
 
-# todo(eishay): We should move the paths of the following two and update pingdom
-GET     /admin/healthcheck/ping     @com.keepit.common.healthcheck.WebsiteHealthController.ping()
-GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHealthController.isHealthy()
 # Using a get so we can invoke from browser and have it take care of the auth part
 GET     /admin/healthcheck/error    @com.keepit.common.healthcheck.AdminHealthController.causeError()
 GET     /admin/healthcheck/emailErrors    @com.keepit.common.healthcheck.AdminHealthController.reportErrors()

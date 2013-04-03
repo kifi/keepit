@@ -11,13 +11,15 @@ import play.api.mvc._
 import play.api._
 import com.keepit.model._
 import com.keepit.common.db.slick._
+import com.keepit.common.controller.ActionAuthenticator
 
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class HomeController @Inject() (db: Database,
-  userRepo: UserRepo)
-    extends WebsiteController {
+  userRepo: UserRepo,
+  actionAuthenticator: ActionAuthenticator)
+    extends WebsiteController(actionAuthenticator) {
 
   def home = Action{ request =>
     Ok(views.html.website.onboarding.userRequestReceived())

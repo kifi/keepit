@@ -16,7 +16,7 @@
   width: 322px;
   height: 100%;
   background: #34495e;
-  font: 300 12px Lato,sans-serif;
+  font: 12px "Helvetica Neue",arial,sans-serif;
   text-align: left;
   direction: ltr;
   z-index: 2147483639;
@@ -56,8 +56,8 @@ html.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode {
   position: relative;
   top: 10px;
   left: 19px;
-  width: 38px;
   height: 18px;
+  width: auto;
   border: 0;
   padding: 0;
 }
@@ -89,7 +89,10 @@ a.kifi-pane-head-settings:active {
   box-shadow: none !important;
   background: #ecf0f1 padding-box !important;
   padding: 9px 12px;
-  font: 300 16px/20px Lato,sans-serif;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: normal;
   color: #333;
   -webkit-transition: background-color linear .1s;
   transition: background-color linear .1s;
@@ -126,7 +129,8 @@ a.kifi-pane-head-settings:active {
 .kifi-pane-title,
 a.kifi-pane-back {
   padding: 0 12px;
-  font: 300 12px/40px Lato,sans-serif;
+  font-size: 12px;
+  line-height: 40px;
   color: #fff !important;
 }
 .kifi-pane-title {
@@ -158,16 +162,11 @@ a.kifi-pane-back:active {
   bottom: 0;
   height: auto;
 }
-.kifi-pane .kifi-pane-tall-bottom p,
-.kifi-pane .kifi-pane-tall-bottom div[contenteditable] {
-  font: 11px/12px "Helvetica Neue",arial,sans-serif;
-  color: #444;
-}
 
 /* general pane */
 .kifi-pane-general {
   padding: 0 12px;
-  font: 300 13px Lato,sans-serif;
+  font-size: 13px;
   color: #f8f8f8;
 }
 .kifi-pane-page-title {
@@ -228,7 +227,8 @@ a.kifi-pane-keeper {
   left: 0;
   width: 100%;
   height: auto;
-  font: 300 14px/20px Lato,sans-serif;
+  font-size: 14px;
+  line-height: 20px;
   color: #f8f8f8;
 }
 a.kifi-pane-action {
@@ -255,11 +255,14 @@ a.kifi-pane-action:active {
   margin-top: 3px;
 }
 .kifi-thread-participant {
-  font-weight: 400;
+  font-weight: bold;
+}
+.kifi-thread-who>.kifi-thread-participant {
+  margin-left: 1px;
 }
 .kifi-thread-participants .kifi-thread-participant::before {
   content: ", ";
-  font-weight: 300;
+  font-weight: normal;
 }
 .kifi-thread-participants .kifi-thread-participant:first-child::before {
   content: ""

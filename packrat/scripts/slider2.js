@@ -11,24 +11,7 @@ jQuery.fn.layout = function() {
 };
 
 slider2 = function() {
-  var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt;
-  var info, nUri, comments, threads, messages;
-
-  // pre-fetch some data
-  api.port.emit("normalize", function(u) {
-    api.log("normalized", u);
-    nUri = u;
-  });
-  api.port.emit("comments", function(c) {
-    api.log("comments", c);
-    comments = c;
-    //updateCommentCount(comments.length);
-  });
-  api.port.emit("threads", function(t) {
-    api.log("threads", t);
-    threads = t;
-    //updateThreadsCount(threads.length);
-  });
+  var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt, info;
 
   key("esc", function() {
     if ($pane) {
@@ -193,7 +176,7 @@ slider2 = function() {
           logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: location.href});
 
           if (locator) {
-            openDeepLink(o.session, locator);
+            openDeepLink(locator);
           } else if (trigger != "tile") {
             idleTimer.start(5000);
           }
@@ -301,6 +284,24 @@ slider2 = function() {
     });
   }
 
+  function openDeepLink(locator) {
+    var loc = locator.split("/");
+    switch (loc[1]) {
+      case "messages":
+        if (loc[2]) {
+          requireData("thread/" + loc[2], function(messages) {
+            showPane("thread", false, messages[0].recipients, loc[2]);
+          });
+        } else {
+          showPane("threads");
+        }
+        break;
+      case "comments":
+        showPane("comments");
+        break;
+    }
+  }
+
   const createPaneTemplateParams = {
     general: function() {
       return {
@@ -353,7 +354,7 @@ slider2 = function() {
           .on("keydown", ".kifi-pane-search", function(e) {
             var q;
             if (e.which == 13 && (q = this.value.trim())) {
-              location.href = "https://www.google.com/search?q=" + encodeURIComponent(q).replace(/%20/g, "+");
+              window.open("https://www.google.com/search?q=" + encodeURIComponent(q).replace(/%20/g, "+"));
             }
           })
           .on("click", ".kifi-pane-back", function() {
@@ -389,27 +390,27 @@ slider2 = function() {
       // TODO
     },
     comments: function($box) {
-      api.port.emit("session", function(session) {
-        comments.forEach(function(c) {
-          c.isLoggedInUser = c.user.externalId == session.userId;
-        });
-        api.require("scripts/comments.js", function() {
-          renderComments($box.find(".kifi-pane-tall"), comments);
+      requireData("comments", function(comments) {
+        api.port.emit("session", function(session) {
+          comments.forEach(function(c) {
+            c.isLoggedInUser = c.user.externalId == session.userId;
+          });
+          api.require("scripts/comments.js", function() {
+            renderComments($box.find(".kifi-pane-tall"), comments, ~session.experiments.indexOf("admin"));
+          });
         });
       });
     },
     threads: function($box) {
-      api.require("scripts/threads.js", function() {
-        renderThreads($box.find(".kifi-pane-tall"), threads);
+      requireData("threads", function(threads) {
+        api.require("scripts/threads.js", function() {
+          renderThreads($box.find(".kifi-pane-tall"), threads);
+        });
       });
     },
     thread: function($box, threadId) {
       var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
-      api.port.emit("get_comments", {kind: "message", commentId: threadId}, function(messages) {
-        api.log("[messages]", messages);
-        var session = messages.session;
-        messages = messages.message;
-        //updateThreadsCount(threads.length);
+      requireData("thread/" + threadId, function(messages) {
         api.require("scripts/thread.js", function() {
           renderThread($tall, threadId, messages);
         });
@@ -445,6 +446,43 @@ slider2 = function() {
     return arr;
   }
 
+  var cache = {}, requested = {};
+  requireData("normalize", "comments", "threads");  // pre-fetching
+  function requireData() {
+    var keys = Array.prototype.slice.call(arguments), callback = keys.pop();
+    if (typeof callback != "function") {
+      keys.push(callback);
+      callback = $.noop;
+    }
+
+    if (!invokeIfReady()) {
+      var t = +new Date;
+      keys
+      .filter(function(k) {
+        return !cache.hasOwnProperty(k) && t - (requested[k] || 0) > 3000;
+      })
+      .forEach(function(k) {
+        var kArr = k.split("/");
+        api.log("[requireData:emit]", kArr[0], kArr[1]);
+        api.port.emit(kArr[0], kArr[1], function(v) {
+          api.log("[requireData:emit:callback]", k, v);
+          cache[k] = v;
+          invokeIfReady();
+        });
+        requested[k] = t;
+      });
+    }
+
+    function invokeIfReady() {
+      api.log("[requireData:invokeIfReady]", keys);
+      if (keys.every(function(k) {return cache.hasOwnProperty(k)})) {
+        api.log("[requireData:invokeIfReady] calling:", keys);
+        callback.apply(null, keys.map(function(k) {return cache[k]}));
+        return true;
+      }
+    }
+  }
+
   // the slider API
   return {
     show: function(info, trigger, locator) {  // trigger is for the event log (e.g. "auto", "key", "icon")
@@ -454,14 +492,17 @@ slider2 = function() {
       return !!lastShownAt;
     },
     toggle: function(info, trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
-      if (document.querySelector(".kifi-slider2")) {
+      if ($pane) {
+        hidePane();
+      } else if ($slider) {
         hideSlider(trigger);
       } else {
         showSlider(info, trigger);
       }
     },
-    showKeepersFor: function(info, tileHasCounter, ms) {
-      var $el = $("<div class=kifi-tile-hover>").toggleClass("kifi-up", tileHasCounter).appendTo("html").showHover({
+    showKeepersFor: function(info, el, ms) {
+      if (lastShownAt) return;
+      var $el = $(el).showHover({
         reuse: false,
         showDelay: 0,
         hideDelay: 1e9,
@@ -479,10 +520,7 @@ slider2 = function() {
           });
         }});
       setTimeout(function() {
-        $el.triggerHandler("click.showHover")
-        setTimeout(function() {
-          $el.remove();
-        }, 1000);
+        $el.triggerHandler("click.showHover");
       }, ms);
     }};
 }();

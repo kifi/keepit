@@ -186,7 +186,7 @@ api.port.on({
   },
   get_comments: function(data, respond, tab) {
     ajax("GET", "http://" + getConfigs().server +
-      (data.kind == "public" ? "/comments/public" : "/messages/threads") +
+      (data.kind == "public" ? "/comments" : "/messages/threads") +
       (data.commentId ? "/" + data.commentId : "?url=" + encodeURIComponent(tab.url)),
       function(o) {
         o.session = session;
@@ -196,6 +196,13 @@ api.port.on({
   },
   post_comment: function(data, respond) {
     postComment(data, respond);
+    return true;
+  },
+  delete_comment: function(id, respond) {
+    ajax("POST", "http://" + getConfigs().server + "/comments/" + id + "/remove", function(o) {
+      api.log("[deleteComment] response:", o);
+      respond(o);
+    });
     return true;
   },
   normalize: function(_, respond, tab) {
@@ -208,6 +215,10 @@ api.port.on({
   },
   threads: function(_, respond, tab) {
     socket.send(["get_message_threads", tab.url], respond);
+    return true;
+  },
+  thread: function(id, respond) {
+    socket.send(["get_message_thread", id], respond);
     return true;
   },
   session: function(_, respond) {
@@ -242,7 +253,7 @@ function createDeepLinkListener(link, linkTabId, respond) {
       var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") < 0 && tab.url.indexOf("dev.ezkeep.com") < 0;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
-        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator});
+        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator, metro: session.experiments.indexOf("metro") >= 0});
         api.tabs.on.ready.remove(deepLinkListener);
         return;
       }

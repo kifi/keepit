@@ -30,11 +30,17 @@ import scala.concurrent.duration._
 import scala.concurrent.Await
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.actor.ActorFactory
 
 private case class RefreshUserInfo(socialUserInfo: SocialUserInfo)
 private case object RefreshAll
 
-private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphPlugin, db: Database, socialRepo: SocialUserInfoRepo) extends FortyTwoActor with Logging {
+private[social] class SocialGraphRefresherActor @Inject() (
+    socialGraphPlugin : SocialGraphPlugin,
+    db: Database,
+    socialRepo: SocialUserInfoRepo)
+  extends FortyTwoActor with Logging {
+
   def receive() = {
     case RefreshAll => {
       log.info("going to check which SocilaUserInfo Was not fetched Lately")
@@ -53,14 +59,17 @@ private[social] class SocialGraphRefresherActor(socialGraphPlugin : SocialGraphP
 
 trait SocialGraphRefresher extends SchedulingPlugin {}
 
-class SocialGraphRefresherImpl @Inject() (system: ActorSystem, socialGraphPlugin : SocialGraphPlugin, db: Database, socialRepo: SocialUserInfoRepo) extends SocialGraphRefresher with Logging {
+class SocialGraphRefresherImpl @Inject() (
+    actorFactory: ActorFactory[SocialGraphRefresherActor])
+  extends SocialGraphRefresher with Logging {
+
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = system.actorOf(Props { new SocialGraphRefresherActor(socialGraphPlugin, db, socialRepo) })
+  private val actor = actorFactory.get()
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(system, 90 seconds, 5 minutes, actor, RefreshAll)
+    scheduleTask(actorFactory.system, 90 seconds, 5 minutes, actor, RefreshAll)
   }
 }

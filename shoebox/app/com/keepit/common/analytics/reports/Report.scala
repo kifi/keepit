@@ -83,10 +83,7 @@ case class CompleteReport(reportName: String, reportVersion: String, list: Seq[R
     CompleteReport(newName, reportVersion, newList.sortWith((a,b) => a.date.isAfter(b.date)))
   }
 
-  def persist = {
-    inject[ReportStore] += ("%s %s".format(createdAt.toStandardTimeString, reportName) -> this)
-  }
-
+  def persistenceKey = "%s %s".format(createdAt.toStandardTimeString, reportName)
 }
 
 trait Report {

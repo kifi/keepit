@@ -5,6 +5,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import org.joda.time.DateTime
 
+import com.keepit.common.actor.ActorFactory
 import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.analytics.reports.Reports.ReportGroup
@@ -127,18 +128,20 @@ trait ReportBuilderPlugin extends SchedulingPlugin {
   def defaultEndTime = currentDate.plusDays(1).toDateTimeAtStartOfDay
 }
 
-class ReportBuilderPluginImpl @Inject() (system: ActorSystem, searchConfigManager: SearchConfigManager)
-  extends Logging with ReportBuilderPlugin {
-
+class ReportBuilderPluginImpl @Inject() (
+  actorFactory: ActorFactory[ReportBuilderActor],
+  searchConfigManager: SearchConfigManager,
+  reportStore: ReportStore)
+    extends Logging with ReportBuilderPlugin {
 
   def buildReport(startDate: DateTime, endDate: DateTime, report: Report): Unit = actor ! BuildReport(startDate, endDate, report)
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor ! BuildReports(startDate, endDate, reportGroup)
 
-  private val actor = system.actorOf(Props { new ReportBuilderActor() })
+  private val actor = actorFactory.get()
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(system, 10 seconds, 1 hour, actor, ReportCron(this))
+    scheduleTask(actorFactory.system, 10 seconds, 1 hour, actor, ReportCron(this))
   }
 
   override def reportCron(): Unit = {
@@ -154,20 +157,24 @@ private[reports] case class ReportCron(sender: ReportBuilderPlugin)
 private[reports] case class BuildReport(startDate: DateTime, endDate: DateTime, report: Report)
 private[reports] case class BuildReports(startDate: DateTime, endDate: DateTime, reportGroup: Reports.ReportGroup)
 
-private[reports] class ReportBuilderActor() extends FortyTwoActor with Logging {
+private[reports] class ReportBuilderActor @Inject() (
+  reportStore: ReportStore)
+    extends FortyTwoActor with Logging {
 
   def receive() = {
     case ReportCron(sender) =>
       sender.reportCron()
     case BuildReport(startDate, endDate, report) =>
-      report.get(startDate, endDate).persist
+      val toPersist = report.get(startDate, endDate)
+      reportStore += (toPersist.persistenceKey -> toPersist)
     case BuildReports(startDate, endDate, reportGroup) =>
       val builtReports = reportGroup.reports map { report =>
         report.get(startDate, endDate)
       }
 
       val outputReport = builtReports.foldRight(CompleteReport("","",Nil))((a,b) => a + b)
-      outputReport.copy(reportName = reportGroup.name).persist
+      val report = outputReport.copy(reportName = reportGroup.name)
+      reportStore += (report.persistenceKey -> report)
     case unknown =>
       throw new Exception("unknown message: %s".format(unknown))
   }

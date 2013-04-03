@@ -35,6 +35,7 @@ class Scraper @Inject() (
   scrapeInfoRepo: ScrapeInfoRepo,
   normalizedURIRepo: NormalizedURIRepo,
   healthcheckPlugin: HealthcheckPlugin,
+  bookmarkRepo: BookmarkRepo,
   unscrapableRepo: UnscrapableRepo)
     extends Logging {
 
@@ -93,7 +94,11 @@ class Scraper @Inject() (
         val scrapedURI = db.readWrite { implicit s =>
           // update the scrape schedule and the uri state to SCRAPED
           scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
-          normalizedURIRepo.save(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          val savedUri = normalizedURIRepo.save(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
+            bookmarkRepo.save(bookmark.copy(title = savedUri.title))
+          }
+          savedUri
         }
         log.info("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))

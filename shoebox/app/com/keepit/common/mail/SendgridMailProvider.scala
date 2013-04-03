@@ -46,7 +46,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
     props.put("mail.smtp.auth", "true")
 
     val auth = new SMTPAuthenticator()
-    val mailSession = Session.getDefaultInstance(props, auth)
+    val mailSession = Session.getInstance(props, auth)
 //    mailSession.setDebug(log.isDebugEnabled)
     mailSession.setDebug(true)
     mailSession
