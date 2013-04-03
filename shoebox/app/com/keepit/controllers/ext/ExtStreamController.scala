@@ -46,7 +46,8 @@ class ExtStreamController @Inject() (
   uriChannel: UriChannel,
   userNotification: UserNotificationRepo,
   clock: Clock,
-  paneData: PaneDetails) extends BrowserExtensionController with ShoeboxServiceController {
+  paneData: PaneDetails,
+  eventController: ExtEventController) extends BrowserExtensionController with ShoeboxServiceController {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
     /*
      * Unfortunately, everything related to existing secured actions intimately deals with Action, Request, Result, etc.
@@ -124,6 +125,11 @@ class ExtStreamController @Inject() (
                 case _ => None
               }
               channel.push(Json.arr("notifications", getNotifications(streamSession.userId, createdBefore, howMany.toInt)))
+            case JsString("event") +: payload +: _ =>
+              (payload \ "version").as[Int] match {
+                case 1 => eventController.createEventsFromPayload(payload, streamSession.userId)
+                case i => throw new Exception("Unknown events version: %s".format(i))
+              }
             case json =>
               log.warn(s"Not sure what to do with: $json")
           }

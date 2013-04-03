@@ -20,9 +20,7 @@ class HomeController @Inject() (db: Database,
     extends WebsiteController {
 
   def home = Action{ request =>
-    log.info("yet another homepage access!")
-    val html = io.Source.fromURL(Play.resource("/public/html/index.html").get).mkString
-    Ok(html).as(ContentTypes.HTML)
+    Ok(views.html.website.onboarding.userRequestReceived())
   }
 
   def giveMeA200 = Action { request =>
