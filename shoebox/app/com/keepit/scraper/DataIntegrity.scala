@@ -3,6 +3,7 @@ package com.keepit.scraper
 import com.keepit.common.logging.Logging
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -42,7 +43,9 @@ class DataIntegrityPluginImpl @Inject() (
 private[scraper] case object CleanOrphans
 private[scraper] case object Cron
 
-private[scraper] class DataIntegrityActor() extends FortyTwoActor with Logging {
+private[scraper] class DataIntegrityActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin)
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case CleanOrphans =>

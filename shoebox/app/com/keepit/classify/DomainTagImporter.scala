@@ -64,7 +64,7 @@ private[classify] class DomainTagImportActor @Inject() (
   settings: DomainTagImportSettings,
   postOffice: PostOffice,
   healthcheckPlugin: HealthcheckPlugin)
-    extends FortyTwoActor with Logging {
+    extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   import DomainTagImportEvents._
 

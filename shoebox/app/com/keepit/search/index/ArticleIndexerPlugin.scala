@@ -19,8 +19,9 @@ import scala.concurrent.duration._
 case object Index
 
 private[index] class ArticleIndexerActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
     articleIndexer: ArticleIndexer)
-  extends FortyTwoActor with Logging {
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case Index => try {
