@@ -120,7 +120,7 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
         QueryUtil.toScorerWithCoordinator(textScorer)
       }
       new MultiplicativeBoostScorer(this, mainScorer,
-        boosterWeights.flatMap{ w => Option(w.scorer(context, true, false, liveDocs)) }, boosterStrengths)
+        boosterWeights.map{ w => w.scorer(context, true, false, liveDocs) }, boosterStrengths)
     }
   }
 }
@@ -147,17 +147,19 @@ extends Scorer(weight) with Coordinator with Logging {
         var i = 0
         while (i < boosterScorers.length) {
           val boosterScorer = boosterScorers(i)
-          if (boosterScorer.docID() < doc) boosterScorer.advance(doc)
-          if (boosterScorer.docID() == doc) {
-            val s = boosterStrengths(i)
-            score *= (boosterScorer.score() * s + (1.0f - s))
+          if (boosterScorer != null) {
+            if (boosterScorer.docID() < doc) boosterScorer.advance(doc)
+            if (boosterScorer.docID() == doc) {
+              val s = boosterStrengths(i)
+              score *= (boosterScorer.score() * s + (1.0f - s))
+            }
           }
           i += 1
         }
         scr = score
       } catch {
         case e: Exception =>
-          log.error("scorer error: scoredDoc=%d doc=%d textScorer.docID=%s exception=%s".format(scoredDoc, doc, textScorer.docID, e.toString))
+          log.error("scorer error: scoredDoc=%d doc=%d textScorer.docID=%s exception=%s stack=\n%s\n".format(scoredDoc, doc, textScorer.docID, e.toString, e.getStackTraceString))
           scr = 0.0f
       }
       scoredDoc = doc
