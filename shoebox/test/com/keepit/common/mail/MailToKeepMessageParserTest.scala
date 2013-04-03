@@ -48,11 +48,11 @@ class MailToKeepMessageParserTest extends Specification {
       val message = new MimeMessage(session)
       message.setSubject("Hey, this is Eishay from 42go.com")
       message.setFrom(new InternetAddress("eishay@42go.com"))
-      message.setRecipient(RecipientType.TO, new InternetAddress("greg@42go.com"))
+      message.setRecipient(RecipientType.TO, new InternetAddress("greg@methvin.net"))
 
       val content = new MimeMultipart("alternative")
       val (text, html) = (new MimeBodyPart(), new MimeBodyPart())
-      text.setText("Hey, you should check out http://google.com/.")
+      text.setText("Hey greg@methvin.net, you should check out http://google.com/.")
       val htmlText = "<p>Hey, you should check out fuks.co.il, google.com/search and HTTP://YAHOO.COM/</p>"
       html.setContent(htmlText, "text/html")
       content.addBodyPart(html)
