@@ -1,0 +1,100 @@
+@()
+
+@views.html.website.helper.main(title = "Installing Kifi") {
+  <div class="user_avatar">
+  <img src="images/effi.jpg" width="112" height="112">
+  </div>
+
+  <section class="content clearfix">
+  <header class="content_header">
+        <h2>Hi, Effi</h2>
+        <h3 class="blue">You can invite some facebook friends to the KiFi private beta</h3>
+        <div class="fb_friends_small clearfix">
+          <h4>Your facebook friends using KiFi: 82</h4>
+            <div class="friends">
+              <a href="#"><img src="images/fb_friend_small1.jpg" width="30" height="30"></a>
+                <a href="#"><img src="images/fb_friend_small2.jpg" width="30" height="30"></a>
+                <a href="#"><img src="images/fb_friend_small3.jpg" width="30" height="30"></a>
+                <a href="#"><img src="images/fb_friend_small4.jpg" width="30" height="30"></a>
+                <a href="#"><img src="images/fb_friend_small5.jpg" width="30" height="30"></a>
+                <a href="#"><img src="images/fb_friend_small6.jpg" width="30" height="30"></a>
+                <a href="#"><img src="images/fb_friend_small7.jpg" width="30" height="30"></a>
+                <a href="#"><span class="more_friends">+70</span></a>
+            </div>
+        </div>
+    </header>
+  </section>
+
+  <section id="invites">
+  <ul class="invites_status clearfix">
+      <li>Invites Left <span class="amount">6</span></li>
+        <li>Invites Sent <span class="amount blue_bg">4</span></li>
+        <li>Invites Accepted <span class="amount green_bg">1</span></li>
+    </ul>
+    
+    <div class="invites_list clearfix">
+      <ul>
+          <li class="waiting clearfix">
+              <div class="avatar">
+                  <img src="images/fb_friend_invite1.jpg" width="75" height="75">
+                </div>
+                <div class="avatar_info">
+                    <div class="name">Dandrew Conner</div>
+                    <div class="status">Invited - waiting approval</div>
+                </div>
+            </li>
+          <li class="joined clearfix">
+              <div class="avatar">
+                  <img src="images/fb_friend_invite2.jpg" width="75" height="75">
+                </div>
+                <div class="avatar_info">                            
+                  <div class="name">Yasuhiro Matsuda</div>
+                  <div class="status">Joined</div>
+                </div>
+            </li>
+          <li class="rejected clearfix">
+              <div class="avatar">
+                  <img src="images/fb_friend_invite3.jpg" width="75" height="75">
+                </div>
+                <div class="avatar_info">                            
+                  <div class="name">Ori Zaltzman</div>
+                  <div class="status">Not Approved</div>
+                  <a class="btn small red reset">Reset</a>
+                </div>
+            </li>
+        </ul>
+      <ul>
+          <li class="waiting clearfix">
+              <div class="avatar">
+                  <img src="images/fb_friend_invite4.jpg" width="75" height="75">
+                </div>
+                <div class="avatar_info">                            
+                  <div class="name">Tamila Stavinsky </div>
+                  <div class="status">Invited - waiting approval</div>
+                </div>
+            </li>
+          <li class="clearfix">
+              <div class="avatar">
+                  <img src="images/default_avatar.png" width="75" height="75">
+                </div>
+                <div class="avatar_info">                             
+                  <input type="text" class="invite_field" value="Select a facebook friend to invite">
+                    <a href="#" class="btn blue small invite_btn">Invite</a>
+                </div>
+            </li>
+          <li class="clearfix">
+              <div class="avatar">
+                  <img src="images/default_avatar.png" width="75" height="75">
+                </div>
+                <div class="avatar_info">                             
+                  <input class="invite_field" type="text" value="Select a facebook friend to invite">
+                    <a href="#" class="btn blue small invite_btn">Invite</a>
+                </div>
+            </li>
+        </ul>
+        
+    </div>
+  </section>
+
+
+}
