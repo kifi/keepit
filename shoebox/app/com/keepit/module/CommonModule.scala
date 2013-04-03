@@ -46,6 +46,7 @@ class CommonModule extends ScalaModule with Logging {
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
     listenerBinder.addBinding().to(classOf[SliderShownListener])
+    listenerBinder.addBinding().to(classOf[SearchUnloadListener])
   }
 
   @Singleton
