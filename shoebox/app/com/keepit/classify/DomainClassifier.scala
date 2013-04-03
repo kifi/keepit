@@ -15,6 +15,7 @@ import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.HttpClient
+import com.keepit.common.healthcheck.HealthcheckPlugin
 
 import akka.actor.{Props, ActorSystem}
 import akka.pattern.ask
@@ -23,13 +24,14 @@ import play.api.libs.concurrent.Execution.Implicits._
 private case class FetchDomainInfo(domain: String)
 
 private[classify] class DomainClassificationActor @Inject() (
+  healthcheck: HealthcheckPlugin,
   db: Database,
   client: HttpClient,
   updater: SensitivityUpdater,
   domainRepo: DomainRepo,
   tagRepo: DomainTagRepo,
   domainToTagRepo: DomainToTagRepo)
-    extends FortyTwoActor {
+    extends FortyTwoActor(healthcheck) {
 
   private final val KEY = "42go42"
 
