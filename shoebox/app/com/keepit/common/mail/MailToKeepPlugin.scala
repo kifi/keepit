@@ -38,7 +38,7 @@ private class MailToKeepActor(
 
   // add +$emailLabel to the end if provided
   // this is so in dev mode we can append your username so as not to conflict with prod emails
-  private val KeepEmail = raw"""(\w+)${settings.emailLabel.map("""\+""" + _).getOrElse("")}@[\w\.]+""".r
+  private val KeepEmail = raw"""^(\w+)${settings.emailLabel.map("""\+""" + _).getOrElse("")}@[\w\.]+$$""".r
 
   private object KeepSearchTerm extends SearchTerm {
     def `match`(m: Message) =
