@@ -412,37 +412,42 @@ api = function() {
         var callbacks = {}, nextCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
         var socket = new ReconnectingWebSocket(url, function(e) {
           var msg = JSON.parse(e.data);
-          api.log("[socket.onmessage]", msg);
           if (Array.isArray(msg)) {
             var id = msg.shift();
             if (id > 0) {
-              var callback = callbacks[id];
-              if (callback) {
+              var cb = callbacks[id];
+              if (cb) {
+                api.log("[socket.receive] calling back after", new Date - cb[1], "ms:", id, msg);
                 delete callbacks[id];
-                callback.apply(null, msg);
+                cb[0].apply(null, msg);
               } else {
-                api.log("[api.socket.onmessage] Ignoring message, no callback", id, msg);
+                api.log("[socket.receive] ignoring, no callback", id, msg);
               }
             } else {
               var handler = handlers[id];
               if (handler) {
+                api.log("[socket.receive] invoking handler", id, msg);
                 handler.apply(null, msg);
               } else {
-                api.log("[api.socket.onmessage] Ignoring message, no handler", id, msg);
+                api.log("[socket.receive] ignoring, no handler", id, msg);
               }
             }
           } else {
-            api.log("[api.socket.onmessage] ignoring (not array):", msg, "from url", url);
+            api.log("[socket.receive] ignoring (not array):", msg, "from url", url);
           }
         });
         return {
           send: function(arr, callback) {
             if (callback) {
               var id = nextCallbackId++;
-              callbacks[id] = callback;
+              callbacks[id] = [callback, +new Date];
               arr.splice(1, 0, id);
             }
             api.log("[socket.send]", arr, socket.send(JSON.stringify(arr)));
+          },
+          close: function() {
+            socket.close();
+            this.send = this.close = api.noop;
           }
         };
       }
