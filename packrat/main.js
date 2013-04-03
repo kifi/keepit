@@ -30,7 +30,7 @@ var eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1}
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
-    api.log.error("[logEvent] invalid event family:", eventFamily);
+    api.log("[logEvent] invalid event family:", eventFamily);
     return;
   }
   var ev = {
