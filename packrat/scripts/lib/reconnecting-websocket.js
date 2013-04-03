@@ -5,7 +5,7 @@ function ReconnectingWebSocket(url, onmessage) {
     if (ws) {
       ws.send(data);
     } else {
-      buffer.push(data);
+      buffer.push([data, +new Date]);
       connect();
     }
   };
@@ -16,17 +16,18 @@ function ReconnectingWebSocket(url, onmessage) {
     console.debug("[ReconnectingWebSocket.connect]");
 
     ws = new WebSocket(url);
-    var t = setTimeout(timeout.bind(null, ws), 5000);
+    var t = setTimeout(onConnectTimeout.bind(null, ws), 5000);
 
-    ws.onopen = function(event) {
-      console.debug("[ReconnectingWebSocket.onopen] buffer size:", buffer.length);
+    ws.onopen = function() {
       clearTimeout(t);
       while (buffer.length) {
-        this.send(buffer.shift());
+        var a = buffer.shift();
+        console.debug("[ReconnectingWebSocket.onopen] sending, buffered for", new Date - a[1], "ms:", a[0]);
+        ws.send(a[0]);
       }
     };
 
-    ws.onclose = function(event) {
+    ws.onclose = function() {
       console.debug("[ReconnectingWebSocket.onclose] buffer size:", buffer.length);
       clearTimeout(t);
       ws = null;
@@ -38,8 +39,8 @@ function ReconnectingWebSocket(url, onmessage) {
     ws.onmessage = onmessage.bind(self);
   }
 
-  function timeout(ws) {
-    console.debug("[ReconnectingWebSocket.timeout]");
+  function onConnectTimeout(ws) {
+    console.debug("[ReconnectingWebSocket.onConnectTimeout]");
     ws.close();
   }
 }
