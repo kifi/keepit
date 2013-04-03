@@ -10,7 +10,7 @@ trait FortyTwoActor extends Actor {
     inject[HealthcheckPlugin].addError(
       HealthcheckError(error = Some(reason),
         callType = Healthcheck.INTERNAL,
-        errorMessage = Some("Actor %s threw an uncaught exception. Message: %s".format(this.getClass.getSimpleName,message))
+        errorMessage = Some("Actor %s threw an uncaught exception. Message: %s".format(this.getClass.getSimpleName, message))
       )
     )
     postStop()

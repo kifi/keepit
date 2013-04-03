@@ -8,6 +8,8 @@ import akka.actor.Cancellable
 import org.joda.time._
 
 import com.google.inject.Inject
+
+import com.keepit.common.actor.ActorFactory
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
@@ -60,9 +62,11 @@ trait PersistEventPlugin extends SchedulingPlugin {
 }
 
 
-class PersistEventPluginImpl @Inject() (system: ActorSystem) extends PersistEventPlugin with Logging {
+class PersistEventPluginImpl @Inject() (
+    actorFactory: ActorFactory[PersistEventActor])
+    extends PersistEventPlugin with Logging {
 
-  private val actor = system.actorOf(Props { new PersistEventActor })
+  private val actor = actorFactory.get()
 
   override def enabled: Boolean = true
   override def onStart() {
