@@ -76,9 +76,9 @@ class AppScope extends Scope with Logging {
     new Provider[T] {
       def get: T = {
         log.info(s"requesting for $key")
-        if (stopped || stopping) throw new Exception(s"requesting for $key (pre lock) while the scope stopped=$stopped, stopping=$stopping")
+        if (stopped || stopping) throw new IllegalStateException(s"requesting for $key (pre lock) while the scope stopped=$stopped, stopping=$stopping")
         val instance = appScope synchronized {
-          if (stopped || stopping) throw new Exception(s"requesting for $key (in lock) while the scope stopped=$stopped, stopping=$stopping")
+          if (stopped || stopping) throw new IllegalStateException(s"requesting for $key (in lock) while the scope stopped=$stopped, stopping=$stopping")
           instances.get(key) match {
             case Some(inst) =>
               log.info(s"returning existing instance of ${inst.getClass().getName()}")
