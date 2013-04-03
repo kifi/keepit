@@ -24,6 +24,7 @@ import scala.util.Random
 import com.keepit.inject._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
+import com.keepit.common.analytics.FakePersistEventPluginImpl
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -50,7 +51,8 @@ class MainSearcherTest extends Specification with DbRepos {
         new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
         resultClickTracker,
         browsingHistoryTracker,
-        clickHistoryTracker)
+        clickHistoryTracker,
+        inject[FakePersistEventPluginImpl])
     (uriGraph, articleIndexer, mainSearcherFactory)
   }
 

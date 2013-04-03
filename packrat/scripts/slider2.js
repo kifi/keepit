@@ -354,7 +354,7 @@ slider2 = function() {
           .on("keydown", ".kifi-pane-search", function(e) {
             var q;
             if (e.which == 13 && (q = this.value.trim())) {
-              location.href = "https://www.google.com/search?q=" + encodeURIComponent(q).replace(/%20/g, "+");
+              window.open("https://www.google.com/search?q=" + encodeURIComponent(q).replace(/%20/g, "+"));
             }
           })
           .on("click", ".kifi-pane-back", function() {
@@ -396,7 +396,7 @@ slider2 = function() {
             c.isLoggedInUser = c.user.externalId == session.userId;
           });
           api.require("scripts/comments.js", function() {
-            renderComments($box.find(".kifi-pane-tall"), comments);
+            renderComments($box.find(".kifi-pane-tall"), comments, ~session.experiments.indexOf("admin"));
           });
         });
       });
@@ -492,14 +492,17 @@ slider2 = function() {
       return !!lastShownAt;
     },
     toggle: function(info, trigger) {  // trigger is for the event log (e.g. "auto", "key", "icon")
-      if (document.querySelector(".kifi-slider2")) {
+      if ($pane) {
+        hidePane();
+      } else if ($slider) {
         hideSlider(trigger);
       } else {
         showSlider(info, trigger);
       }
     },
-    showKeepersFor: function(info, tileHasCounter, ms) {
-      var $el = $("<div class=kifi-tile-hover>").toggleClass("kifi-up", tileHasCounter).appendTo("html").showHover({
+    showKeepersFor: function(info, el, ms) {
+      if (lastShownAt) return;
+      var $el = $(el).showHover({
         reuse: false,
         showDelay: 0,
         hideDelay: 1e9,
@@ -517,10 +520,7 @@ slider2 = function() {
           });
         }});
       setTimeout(function() {
-        $el.triggerHandler("click.showHover")
-        setTimeout(function() {
-          $el.remove();
-        }, 1000);
+        $el.triggerHandler("click.showHover");
       }, ms);
     }};
 }();

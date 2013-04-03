@@ -38,11 +38,12 @@ case class Comment(
   permissions: State[CommentPermission] = CommentPermissions.PUBLIC,
   state: State[Comment] = CommentStates.ACTIVE
 ) extends ModelWithExternalId[Comment] {
-  def withId(id: Id[Comment]) = this.copy(id = Some(id))
-  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def withState(state: State[Comment]) = copy(state = state)
-  def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
-  def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
+  def withId(id: Id[Comment]): Comment = copy(id = Some(id))
+  def withUpdateTime(now: DateTime): Comment = copy(updatedAt = now)
+  def withState(state: State[Comment]): Comment = copy(state = state)
+  def withUrlId(urlId: Id[URL]): Comment = copy(urlId = Some(urlId))
+  def withNormUriId(normUriId: Id[NormalizedURI]): Comment = copy(uriId = normUriId)
+  def isActive: Boolean = state == CommentStates.ACTIVE
 }
 
 @ImplementedBy(classOf[CommentRepoImpl])

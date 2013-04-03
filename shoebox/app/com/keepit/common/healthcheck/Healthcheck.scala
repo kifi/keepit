@@ -118,7 +118,6 @@ object Healthcheck {
 case object ReportErrorsAction
 case object ErrorCountSinceLastCheck
 case object ResetErrorCount
-case object Heartbeat
 case object GetErrors
 
 class HealthcheckActor @Inject() (
@@ -151,13 +150,6 @@ class HealthcheckActor @Inject() (
 
         postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = htmlMessage.body, category = PostOffice.Categories.HEALTHCHECK))
       }
-    case Heartbeat =>
-      val now = currentDateTime
-      val partOfDay = if (now.getHourOfDay() < 12) "morning" else "afternoon"
-      val message = Html("Good %s!<br/>Time is %s, service %s version %s compiled at %s started on %s is happily running. Last error time was %s".
-          format(partOfDay, now, services.currentService, services.currentVersion, services.compilationTime, startupTime, lastError.map(_.format).getOrElse("Never!")))
-      val subject = "Heartbeat message from %s version %s".format(services.currentService, services.currentVersion)
-      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = message.body, category = PostOffice.Categories.HEALTHCHECK))
     case ErrorCountSinceLastCheck =>
       val errorCountSinceLastCheck = errorCount
       sender ! errorCountSinceLastCheck
@@ -202,7 +194,6 @@ class HealthcheckPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
      scheduleTask(actorFactory.system, 0 seconds, 10 minutes, actor, ReportErrorsAction)
-     scheduleTask(actorFactory.system, 12 hours, 12 hours, actor, Heartbeat)
   }
 
   def errorCountFuture(): Future[Int] = (actor ? ErrorCountSinceLastCheck).mapTo[Int]
