@@ -13,9 +13,7 @@ import com.keepit.common.social.SocialId
 import com.keepit.common.db._
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoController
-import com.keepit.common.controller.FortyTwoController.ImpersonateCookie
-import com.keepit.common.controller.FortyTwoController.KifiInstallationCookie
+import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
 import com.keepit.model._
 import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.test.FakeClock
@@ -31,7 +29,7 @@ class ExtAuthControllerTest extends Specification with DbRepos {
 
   "ExtAuthController" should {
     "start" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService.withFakeHealthcheck) {
+      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck()) {
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)

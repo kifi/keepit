@@ -8,6 +8,8 @@ import akka.actor.Cancellable
 import org.joda.time._
 
 import com.google.inject.Inject
+
+import com.keepit.common.actor.ActorFactory
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
@@ -29,7 +31,9 @@ case class Update(userId: Id[User])
 case class Persist(event: Event, queueTime: DateTime)
 case class PersistMany(events: Seq[Event], queueTime: DateTime)
 
-private[analytics] class PersistEventActor extends FortyTwoActor with Logging {
+private[analytics] class PersistEventActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin)
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case Persist(event, queueTime) =>
@@ -59,10 +63,11 @@ trait PersistEventPlugin extends SchedulingPlugin {
   def persist(events: Seq[Event]): Unit
 }
 
+class PersistEventPluginImpl @Inject() (
+    actorFactory: ActorFactory[PersistEventActor])
+    extends PersistEventPlugin with Logging {
 
-class PersistEventPluginImpl @Inject() (system: ActorSystem) extends PersistEventPlugin with Logging {
-
-  private val actor = system.actorOf(Props { new PersistEventActor })
+  private val actor = actorFactory.get()
 
   override def enabled: Boolean = true
   override def onStart() {

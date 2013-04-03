@@ -35,7 +35,7 @@ class CommentControllerTest extends Specification with DbRepos {
   "CommentController" should {
 
     "follow and unfollow" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck.withFakeMail) {
+      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck().withFakeMail()) {
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)
@@ -81,7 +81,7 @@ class CommentControllerTest extends Specification with DbRepos {
     }
 
     "persist comment emails" in {
-      running(new EmptyApplication().withFakeMail()) {
+      running(new EmptyApplication().withFakeHealthcheck().withFakeMail()) {
         val comment = db.readWrite { implicit s =>
           val userRepo = inject[UserRepo]
           val emailRepo = inject[EmailAddressRepo]

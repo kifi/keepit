@@ -7,7 +7,7 @@ import org.joda.time._
 
 import com.keepit.classify._
 import com.keepit.common.analytics.{MongoEventStore, EventFamilies, MongoSelector}
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
@@ -20,11 +20,12 @@ import play.api.libs.json.{JsBoolean, JsArray, JsObject, Json}
 import play.api.mvc.Action
 import views.html
 
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class SliderAdminController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   sliderRuleRepo: SliderRuleRepo,
   urlPatternRepo: URLPatternRepo,
@@ -34,7 +35,7 @@ class SliderAdminController @Inject() (
   domainRepo: DomainRepo,
   domainTagImporter: DomainTagImporter,
   mongoEventStore: MongoEventStore)
-    extends AdminController {
+    extends AdminController(actionAuthenticator) {
   def getRules = AdminHtmlAction { implicit request =>
     val groupName = "default"
     val group = db.readOnly { implicit session =>
