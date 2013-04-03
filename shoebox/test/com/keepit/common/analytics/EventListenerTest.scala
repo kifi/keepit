@@ -60,9 +60,8 @@ class EventListenerTest extends Specification with DbRepos {
 
         val event = Events.userEvent(EventFamilies.SEARCH,"kifiResultClicked", user, Seq(), "", JsObject(Seq()), Seq())
 
-        inject[EventHelper].newEvent(unrelatedEvent) === Seq()
-        inject[EventHelper].newEvent(event) === Seq("KifiResultClickedListener")
-
+        inject[EventHelper].matchEvent(unrelatedEvent) === Seq()
+        inject[EventHelper].matchEvent(event) === Seq("KifiResultClickedListener")
       }
     }
 
