@@ -8,6 +8,7 @@ import securesocial.core._
 import securesocial.core.AuthenticationMethod._
 import play.api.libs.json._
 import com.keepit.common.analytics.reports._
+import org.joda.time.DateTimeZone
 
 class CompleteReportSerializer extends Format[CompleteReport] {
   def writes(report: CompleteReport): JsValue =
@@ -15,13 +16,13 @@ class CompleteReportSerializer extends Format[CompleteReport] {
         "reportName" -> JsString(report.reportName),
         "reportVersion" -> JsString(report.reportVersion),
         "createdAt" -> JsString(report.createdAt.toStandardTimeString),
-        "report" -> JsObject(report.list map (r => r.date.toStandardTimeString -> JsObject((r.fields map (s => s._1 -> JsArray(Seq(JsString(s._2.value), JsNumber(s._2.ordering))))).toSeq)))
+        "report" -> JsObject(report.list map (r => UTC_DATETIME_FORMAT.print(r.date.withZone(DateTimeZone.UTC)) -> JsObject((r.fields map (s => s._1 -> JsArray(Seq(JsString(s._2.value), JsNumber(s._2.ordering))))).toSeq)))
       )
     )
 
   def reads(json: JsValue): JsResult[CompleteReport] =  {
     val list = (json \ "report").as[JsObject].fields.map { case (dateVal, row) =>
-      val date = parseStandardTime(dateVal)
+      val date = UTC_DATETIME_FORMAT.parseDateTime(dateVal)
       val fields = (row.as[JsObject].fields map { case (key, value) =>
         key -> value.asOpt[String].map(ValueOrdering(_, 0)).getOrElse {
           val valueOrdering = value.as[List[JsValue]]
@@ -33,7 +34,7 @@ class CompleteReportSerializer extends Format[CompleteReport] {
     JsSuccess(CompleteReport(
       reportName = (json \ "reportName").as[String],
       reportVersion = (json \ "reportVersion").as[String],
-      createdAt = parseStandardTime((json \ "createdAt").as[String]),
+      createdAt = UTC_DATETIME_FORMAT.parseDateTime((json \ "createdAt").as[String]),
       list = list
     ))
   }

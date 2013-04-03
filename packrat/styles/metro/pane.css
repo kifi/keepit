@@ -56,8 +56,8 @@ html.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode {
   position: relative;
   top: 10px;
   left: 19px;
-  width: 38px;
   height: 18px;
+  width: auto;
   border: 0;
   padding: 0;
 }

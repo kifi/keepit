@@ -186,7 +186,7 @@ api.port.on({
   },
   get_comments: function(data, respond, tab) {
     ajax("GET", "http://" + getConfigs().server +
-      (data.kind == "public" ? "/comments/public" : "/messages/threads") +
+      (data.kind == "public" ? "/comments" : "/messages/threads") +
       (data.commentId ? "/" + data.commentId : "?url=" + encodeURIComponent(tab.url)),
       function(o) {
         o.session = session;
@@ -196,6 +196,13 @@ api.port.on({
   },
   post_comment: function(data, respond) {
     postComment(data, respond);
+    return true;
+  },
+  delete_comment: function(id, respond) {
+    ajax("POST", "http://" + getConfigs().server + "/comments/" + id + "/remove", function(o) {
+      api.log("[deleteComment] response:", o);
+      respond(o);
+    });
     return true;
   },
   normalize: function(_, respond, tab) {
