@@ -40,6 +40,8 @@ object EventFamilies {
   val GENERIC_SERVER = ServerEventFamily("")
   val EXCEPTION = ServerEventFamily("exception")
   val DOMAIN_TAG_IMPORT = ServerEventFamily("domain_tag_import")
+  val SERVER_SEARCH = ServerEventFamily("server_search")
+
 
   def apply(event: String): EventFamily = {
     event.toLowerCase.trim match {
@@ -49,6 +51,7 @@ object EventFamilies {
       case ACCOUNT.name => ACCOUNT
       case NOTIFICATION.name => NOTIFICATION
       case EXCEPTION.name => EXCEPTION
+      case SERVER_SEARCH.name => SERVER_SEARCH
       case s => throw new Exception("Unknown event family %s".format(s))
     }
   }
