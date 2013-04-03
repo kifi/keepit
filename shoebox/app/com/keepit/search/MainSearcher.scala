@@ -15,6 +15,8 @@ import scala.math._
 import org.joda.time.DateTime
 import org.apache.lucene.search.Explanation
 import com.keepit.search.query.{TopLevelQuery,QueryUtil}
+import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
+import play.api.libs.json._
 
 
 class MainSearcher(
@@ -27,7 +29,8 @@ class MainSearcher(
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
-    clickHistoryTracker: ClickHistoryTracker
+    clickHistoryTracker: ClickHistoryTracker,
+    persistEventPlugin: PersistEventPlugin
 ) extends Logging {
   val currentTime = currentDateTime.getMillis()
   val idFilter = filter.idFilter
@@ -216,6 +219,9 @@ class MainSearcher(
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
     log.info( "searchResultUuid = %s , svVariance = %f".format(searchResultUuid, svVar) )
 
+    val metaData = JsObject( Seq("queryUUID"->JsString(searchResultUuid.id), "svVariance"-> JsNumber(svVar) ))
+    persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
+
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar)
   }
@@ -278,9 +284,9 @@ class MainSearcher(
         }
 
       }
-      s/cnt.toFloat				// returns Float.NaN if cnt == 0
+      if (cnt > 0) s/cnt.toFloat else -1.0f
     }
-    variance.getOrElse(Float.NaN)
+    variance.getOrElse(-1.0f)
 
   }
 
@@ -385,7 +391,7 @@ case class ArticleSearchResult(
   pageNumber: Int,
   uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
   time: DateTime = currentDateTime,
-  svVariance: Float = Float.NaN			// semantic vector variance
+  svVariance: Float = -1.0f			// semantic vector variance
 )
 
 
