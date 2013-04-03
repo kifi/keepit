@@ -204,16 +204,6 @@ exports.socket = {
           arr.splice(1, 0, id);
         }
         socketPage.port.emit("socket_send", socketId, arr);
-      },
-      close: function() {
-        exports.log("[api.socket.close]", socketId);
-        delete socketHandlers[socketId];
-        socketPage.port.emit("close_socket", socketId);
-        if (!socketHandlers.some(function(h) {return h})) {
-          socketPage.destroy();
-          socketPage = null;
-        }
-        this.send = this.close = api.noop;
       }
     };
   }
