@@ -16,6 +16,7 @@ class AppScope extends Scope with Logging {
   private val identifier = ExternalId[AppScope]()
 
   private var started = false
+  private var stopping = false
   private var stopped = false
 
   private var app: Application = _
@@ -42,6 +43,7 @@ class AppScope extends Scope with Logging {
   }
 
   def onStop(app: Application): Unit = synchronized {
+    stopping = true
     println(s"[$identifier] scope stopping...")
     if(!started) {
       log.error("App not started!", new Exception(s"[$identifier] AppScore has not been started"))
@@ -64,6 +66,7 @@ class AppScope extends Scope with Logging {
       log.info(s"[$identifier] scope stopped!")
       plugins = Nil
       stopped = true
+      stopping = false
     }
   }
 
@@ -73,7 +76,9 @@ class AppScope extends Scope with Logging {
     new Provider[T] {
       def get: T = {
         log.info(s"requesting for $key")
+        if (stopped || stopping) throw new Exception(s"requesting for $key (pre lock) while the scope stopped=$stopped, stopping=$stopping")
         val instance = appScope synchronized {
+          if (stopped || stopping) throw new Exception(s"requesting for $key (in lock) while the scope stopped=$stopped, stopping=$stopping")
           instances.get(key) match {
             case Some(inst) =>
               log.info(s"returning existing instance of ${inst.getClass().getName()}")
