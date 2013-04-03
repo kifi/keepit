@@ -164,7 +164,6 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
     val doc = curDoc
     if (scoredDoc != doc) {
       var top = pq.top
-      proximityScore = 0.0f
       var maxScore = 0.0f
       if (top.pos < Int.MaxValue) {
         var i = 0
@@ -177,19 +176,19 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
           top = pq.updateTop()
         }
 
-        var prevPos = -1
-        var prevRun = 0.0f
         // Find all partial sequence matches (possible phrases) using the dynamic programming.
         // This is similar to a local alignment matching in bioinformatics, but we disallow gaps.
         // We give a weight to each term occurrence using a local alignment score, thus, a term in a
         // a matching sequence gets a high weight. A weight is diffused to following positions with a constant decay.
         // A local score at a position is the sum of weights of all terms.
         // The max local score + the base score is the score of the current document.
+        var prevPos = -1
         while (top.doc == doc && top.pos < Int.MaxValue) {
           val curPos = top.pos
           val mask = top.getMask
           var i = 1
           // update run lengths and local scores
+          var prevRun = 0.0f
           var localScoreSum = 0.0f
           while (i <= numTerms) {
             val runLen = if (((1L << (i - 1)) & mask) != 0) prevRun + 1.0f else 0.0f
@@ -205,9 +204,8 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
           top = pq.updateTop()
           if (top.pos > curPos) prevPos = curPos
         }
-        proximityScore += maxScore
+        proximityScore = maxScore * weightVal
       }
-      proximityScore *= weightVal
       scoredDoc = doc
     }
     proximityScore

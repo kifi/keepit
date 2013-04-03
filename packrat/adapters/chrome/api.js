@@ -410,36 +410,31 @@ api = function() {
     socket: {
       open: function(url, handlers) {
         var callbacks = {}, nextCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
-        var socket = new ReconnectingWebSocket(url);
-        socket.onmessage = function(data) {
-          try {
-            var msg = JSON.parse(data.data);
-            api.log("[socket.onmessage]", msg);
-            if (Array.isArray(msg)) {
-              var id = msg.shift();
-              if (id > 0) {
-                var callback = callbacks[id];
-                if (callback) {
-                  delete callbacks[id];
-                  callback.apply(null, msg);
-                } else {
-                  api.log("[api.socket.onmessage] Ignoring message, no callback", id, msg);
-                }
+        var socket = new ReconnectingWebSocket(url, function(e) {
+          var msg = JSON.parse(e.data);
+          api.log("[socket.onmessage]", msg);
+          if (Array.isArray(msg)) {
+            var id = msg.shift();
+            if (id > 0) {
+              var callback = callbacks[id];
+              if (callback) {
+                delete callbacks[id];
+                callback.apply(null, msg);
               } else {
-                var handler = handlers[id];
-                if (handler) {
-                  handler.apply(null, msg);
-                } else {
-                  api.log("[api.socket.onmessage] Ignoring message, no handler", id, msg);
-                }
+                api.log("[api.socket.onmessage] Ignoring message, no callback", id, msg);
               }
             } else {
-              api.log("[api.socket.onmessage] ignoring (not array):", msg, "from url", url);
+              var handler = handlers[id];
+              if (handler) {
+                handler.apply(null, msg);
+              } else {
+                api.log("[api.socket.onmessage] Ignoring message, no handler", id, msg);
+              }
             }
-          } catch (e) {
-            api.log.error("[api.socket.onmessage]", e);
+          } else {
+            api.log("[api.socket.onmessage] ignoring (not array):", msg, "from url", url);
           }
-        }
+        });
         return {
           send: function(arr, callback) {
             if (callback) {
@@ -448,10 +443,6 @@ api = function() {
               arr.splice(1, 0, id);
             }
             api.log("[socket.send]", arr, socket.send(JSON.stringify(arr)));
-          },
-          close: function() {
-            socket.close();
-            this.send = this.close = socket.onmessage = api.noop;
           }
         };
       }

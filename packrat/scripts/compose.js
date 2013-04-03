@@ -4,6 +4,33 @@ function attachComposeBindings($c, composeTypeName) {
   var $d = $f.find(".kifi-compose-draft");
   var $p = $d.find(".kifi-placeholder");
 
+  $d.focus(function() {  // TODO: reinstate pull request 1292 after Chrome 28 reaches Stable channel
+    if ($p[0].parentNode) {
+      $p.detach();
+      // detaching destroys the selection if it was in the placeholder
+      var r = document.createRange();
+      r.selectNodeContents(this);
+      r.collapse(false);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+  }).blur(function() {
+    // wkb.ug/112854 crbug.com/222546
+    $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
+
+    if (!convertDraftToText($d.html())) {
+      $d.empty().append($p);
+    }
+  }).keydown(function(e) {
+    if (e.which == 13 && e.metaKey) { // ⌘-Enter
+      $f.submit();
+    }
+  }).on("input", function() {
+    updateMaxHeight();
+    this.classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
+  });
+
   if ($t.length) {
     api.port.emit("get_friends", function(o) {
       api.log("friends:", o);
@@ -23,32 +50,11 @@ function attachComposeBindings($c, composeTypeName) {
         tokenValue: "externalId",
         theme: "KiFi",
         zindex: 2147483641});
+      $("#token-input-kifi-compose-to").focus();
     });
+  } else {
+    $d.focus();
   }
-
-  $d.focus(function() {
-    if ($p[0].parentNode) {
-      $p.detach();
-      // detaching destroys the selection if it was in the placeholder
-      var sel = window.getSelection();
-      if (!sel.rangeCount) {
-        var r = document.createRange();
-        r.selectNodeContents(this);
-        sel.addRange(r);
-      }
-    }
-  }).blur(function() {
-    // wkb.ug/112854 crbug.com/222546
-    $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
-
-    if (!convertDraftToText($(this).html())) {
-      $d.empty().append($p);
-    }
-  }).keydown(function(e) {
-    if (e.which == 13 && e.metaKey) { // ⌘-Enter
-      $f.submit();
-    }
-  }).on("input", updateMaxHeight);
 
   $f.on("click", ".kifi-compose-submit", function() {
     $f.submit();
@@ -107,5 +113,4 @@ function attachComposeBindings($c, composeTypeName) {
       hOld = hNew;
     }
   }
-
 }

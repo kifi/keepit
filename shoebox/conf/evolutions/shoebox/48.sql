@@ -1,3 +1,5 @@
+# ALTER TABLE user_experiment MODIFY COLUMN experiment_type VARCHAR(32) NOT NULL;
+
 # --- !Ups
 
 ALTER TABLE user_experiment ALTER COLUMN experiment_type VARCHAR(32) NOT NULL;

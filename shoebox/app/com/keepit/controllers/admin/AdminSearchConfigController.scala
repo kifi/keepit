@@ -9,7 +9,7 @@ import org.joda.time._
 
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.analytics.reports.{Report, DailyDustSettledKifiHadResultsByExperiment, DailyKifiResultClickedByExperiment, DailyGoogleResultClickedByExperiment}
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.social._
@@ -26,11 +26,12 @@ import views.html
 
 @Singleton
 class AdminSearchConfigController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   userWithSocialRepo: UserWithSocialRepo,
   userRepo: UserRepo,
   configManager: SearchConfigManager)
-    extends AdminController {
+    extends AdminController(actionAuthenticator) {
 
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val user = db.readOnly { implicit s =>

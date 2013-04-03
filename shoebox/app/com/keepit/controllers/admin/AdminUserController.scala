@@ -1,7 +1,5 @@
 package com.keepit.controllers.admin
 
-import com.google.inject.{Inject, Singleton}
-import com.keepit.common.controller.AdminController
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -13,11 +11,19 @@ import play.api.libs.json.Json
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import views.html
+import play.api.data._
+import play.api.data.Forms._
+import com.keepit.realtime.UserChannel
+import com.keepit.common.time.Clock
+
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 
 case class UserStatistics(user: User, userWithSocial: UserWithSocial, kifiInstallations: Seq[KifiInstallation])
 
 @Singleton
 class AdminUserController @Inject() (
+    actionAuthenticator: ActionAuthenticator,
     db: Database,
     userWithSocialRepo: UserWithSocialRepo,
     userRepo: UserRepo,
@@ -35,8 +41,10 @@ class AdminUserController @Inject() (
     emailRepo: EmailAddressRepo,
     userExperimentRepo: UserExperimentRepo,
     socialGraphPlugin: SocialGraphPlugin,
-    searchClient: SearchServiceClient
-  ) extends AdminController {
+    searchClient: SearchServiceClient,
+    userChannel: UserChannel,
+    clock: Clock
+  ) extends AdminController(actionAuthenticator) {
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = db.readOnly { implicit s =>
@@ -167,5 +175,38 @@ class AdminUserController @Inject() (
       Await.result(socialGraphPlugin.asyncFetch(info), 5 minutes)
     }
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
+  }
+
+  def sendNotificationToAllUsers() = AdminHtmlAction { implicit request =>
+    implicit val playRequest = request.request
+    val notifyForm = Form(tuple(
+      "title" -> text,
+      "bodyHtml" -> text,
+      "linkText" -> text,
+      "url" -> text,
+      "image" -> text,
+      "sticky" -> optional(text)
+    ))
+
+    val (title, bodyHtml, linkText, url, image, sticky) = notifyForm.bindFromRequest.get
+
+    val json = Json.arr(
+      "notify", Json.obj(
+        "createdAt" -> clock.now,
+        "category" -> "server_generated",
+        "details" -> Json.obj(
+          "title" -> title,
+          "bodyHtml" -> bodyHtml,
+          "linkText" -> linkText,
+          "image" -> image,
+          "sticky" -> sticky,
+          "url" -> url
+        )
+      )
+    )
+
+    userChannel.broadcast(json)
+
+    Redirect(routes.AdminUserController.usersView())
   }
 }

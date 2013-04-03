@@ -36,9 +36,12 @@ class BookmarkTest extends Specification with DbRepos {
 
       val hover = BookmarkSource("HOVER_KEEP")
 
-      bookmarkRepo.save(Bookmark(title = "G1", userId = user1.id.get, url = url1.url, urlId = url1.id, uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
-      bookmarkRepo.save(Bookmark(title = "A1", userId = user1.id.get, url = url2.url, urlId = url2.id, uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50)))
-      bookmarkRepo.save(Bookmark(title = "G2", userId = user2.id.get, url = url1.url, urlId = url1.id, uriId = uri1.id.get, source = hover, createdAt = t2.plusDays(1)))
+      bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+        uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
+      bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+        uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50)))
+      bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
+        uriId = uri1.id.get, source = hover, createdAt = t2.plusDays(1)))
 
       (user1, user2, uri1, uri2)
     }
@@ -53,15 +56,15 @@ class BookmarkTest extends Specification with DbRepos {
         }
         println(cxAll mkString "\n")
         val all = inject[Database].readOnly(implicit session => bookmarkRepo.all)
-        all.map(_.title) === Seq("G1", "A1", "G2")
+        all.map(_.title) === Seq(Some("G1"), Some("A1"), None)
       }
     }
     "load by user" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
-          bookmarkRepo.getByUser(user1.id.get).map(_.title) === Seq("G1", "A1")
-          bookmarkRepo.getByUser(user2.id.get).map(_.title) === Seq("G2")
+          bookmarkRepo.getByUser(user1.id.get).map(_.title) === Seq(Some("G1"), Some("A1"))
+          bookmarkRepo.getByUser(user2.id.get).map(_.title) === Seq(None)
         }
       }
     }
@@ -69,8 +72,8 @@ class BookmarkTest extends Specification with DbRepos {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
-          bookmarkRepo.getByUri(uri1.id.get).map(_.title) === Seq("G1", "G2")
-          bookmarkRepo.getByUri(uri2.id.get).map(_.title) === Seq("A1")
+          bookmarkRepo.getByUri(uri1.id.get).map(_.title) === Seq(Some("G1"), None)
+          bookmarkRepo.getByUri(uri2.id.get).map(_.title) === Seq(Some("A1"))
         }
       }
     }

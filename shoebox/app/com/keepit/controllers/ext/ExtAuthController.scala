@@ -26,8 +26,8 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.json.Json
-import com.keepit.common.controller.{ShoeboxServiceController, FortyTwoController, BrowserExtensionController}
-import com.keepit.common.controller.FortyTwoController._
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.db._
 import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.net._
@@ -39,6 +39,7 @@ import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class ExtAuthController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   healthcheckPlugin: HealthcheckPlugin,
   userRepo: UserRepo,
@@ -46,7 +47,7 @@ class ExtAuthController @Inject() (
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
   userExperimentRepo: UserExperimentRepo)
-    extends BrowserExtensionController with ShoeboxServiceController {
+    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
   def start = AuthenticatedJsonToJsonAction { implicit request =>
     val userId = request.userId
     val socialUser = request.socialUser
@@ -104,13 +105,13 @@ class ExtAuthController @Inject() (
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)
-  def welcome = SecuredAction() { implicit request =>
-    log.debug("in welcome. with user : [ %s ]".format(request.user ))
+  def welcome = AuthenticatedJsonAction { implicit request =>
+    log.debug("in welcome. with user : [ %s ]".format(request.socialUser))
     Redirect(com.keepit.controllers.website.routes.HomeController.home())
   }
 
-  def logOut = UserAwareAction { implicit request =>
-    Ok(views.html.logOut(request.user)).withNewSession
+  def logOut = AuthenticatedJsonAction { implicit request =>
+    Ok(views.html.logOut(Some(request.socialUser))).withNewSession
   }
 
   def whois = AuthenticatedJsonAction { request =>

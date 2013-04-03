@@ -8,15 +8,16 @@ import com.keepit.search.SearchServiceClient
 import play.api.libs.json.{JsNumber, JsObject}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class AdminArticleIndexerController @Inject()(
+    actionAuthenticator: ActionAuthenticator,
     searchClient: SearchServiceClient,
     db: Database,
     normUriRepo: NormalizedURIRepo
-  ) extends AdminController {
+  ) extends AdminController(actionAuthenticator) {
 
   def index = AdminHtmlAction { implicit request =>
     Async {

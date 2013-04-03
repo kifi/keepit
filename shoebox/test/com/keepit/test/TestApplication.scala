@@ -18,11 +18,12 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout}
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule}
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.common.store.FakeStoreModule
 import com.keepit.common.time._
+import com.keepit.common.analytics._
 import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal}
 import com.keepit.inject._
 import com.keepit.model._
@@ -46,6 +47,8 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withRealBabysitter() = overrideWith(BabysitterModule())
   def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
   def withFakePhraseIndexer() = overrideWith(FakePhraseIndexerModule())
+  def withTestActorSystem() = overrideWith(TestActorSystemModule())
+  def withFakePersistEvent() = overrideWith(FakePersistEventModule())
 
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
@@ -85,6 +88,7 @@ case class TestModule() extends ScalaModule {
       lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
     }))
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
+    bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
@@ -126,6 +130,18 @@ class FakeClock extends Clock with Logging {
       log.debug(s"FakeClock is retuning fake now value: $fakeNowTime")
       fakeNowTime
     }
+  }
+}
+
+case class TestActorSystemModule() extends ScalaModule {
+  override def configure(): Unit = {
+    bind[ActorSystem].toInstance(ActorSystem("system"))
+  }
+}
+
+case class FakePersistEventModule() extends ScalaModule {
+  override def configure(): Unit = {
+    bind[PersistEventPlugin].to[FakePersistEventPluginImpl]
   }
 }
 

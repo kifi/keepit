@@ -1,27 +1,27 @@
 package com.keepit.dev
 
-import java.io.File
-
-import org.apache.lucene.store.{RAMDirectory, MMapDirectory, Directory}
-
+import akka.actor.ActorSystem
 import com.google.common.io.Files
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.keepit.classify.DomainTagImportSettings
-import com.keepit.common.actor.ActorPlugin
+import com.keepit.common.actor.{ActorPlugin, ActorFactory}
 import com.keepit.common.analytics._
 import com.keepit.common.cache._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail._
+import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.inject._
-import com.keepit.model.PhraseRepo
+import com.keepit.model.{EmailAddressRepo, UserRepo, PhraseRepo}
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.phrasedetector.PhraseIndexer
 import com.keepit.search.{ResultClickTracker, ArticleStore}
 import com.mongodb.casbah.MongoConnection
 import com.tzavellas.sse.guice.ScalaModule
-
+import java.io.File
+import org.apache.lucene.store.{RAMDirectory, MMapDirectory, Directory}
 import play.api.Play.current
 
 class ShoeboxDevModule extends ScalaModule with Logging {
@@ -31,6 +31,34 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Provides
   def domainTagImportSettings: DomainTagImportSettings = {
     DomainTagImportSettings(localDir = Files.createTempDir().getAbsolutePath, url = "http://localhost:8000/42.zip")
+  }
+
+  @Provides
+  @Singleton
+  def mailToKeepServerSettings: Option[MailToKeepServerSettings] =
+    for {
+      username <- current.configuration.getString("mailtokeep.username")
+      password <- current.configuration.getString("mailtokeep.password")
+    } yield {
+      val server = current.configuration.getString("mailtokeep.server").getOrElse("imap.gmail.com")
+      val protocol = current.configuration.getString("mailtokeep.protocol").getOrElse("imaps")
+      val emailLabel = System.getProperty("user.name")
+      MailToKeepServerSettings(
+        username = username,
+        password = password,
+        server = server,
+        protocol = protocol,
+        emailLabel = Some(emailLabel))
+    }
+
+  @AppScoped
+  @Provides
+  def mailToKeepPlugin(
+      actorFactory: ActorFactory[MailToKeepActor], mailToKeepServerSettings: Option[MailToKeepServerSettings]): MailToKeepPlugin = {
+    mailToKeepServerSettings match {
+      case None => new FakeMailToKeepPlugin
+      case _ => new MailToKeepPluginImpl(actorFactory)
+    }
   }
 }
 

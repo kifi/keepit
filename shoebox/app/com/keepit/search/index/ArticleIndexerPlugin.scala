@@ -5,6 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.actor.ActorFactory
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
@@ -17,7 +18,10 @@ import scala.concurrent.duration._
 
 case object Index
 
-private[index] class ArticleIndexerActor(articleIndexer: ArticleIndexer) extends FortyTwoActor with Logging {
+private[index] class ArticleIndexerActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
+    articleIndexer: ArticleIndexer)
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case Index => try {
@@ -40,17 +44,20 @@ trait ArticleIndexerPlugin extends SchedulingPlugin {
   def reindex()
 }
 
-class ArticleIndexerPluginImpl @Inject() (system: ActorSystem, articleIndexer: ArticleIndexer) extends ArticleIndexerPlugin with Logging {
+class ArticleIndexerPluginImpl @Inject() (
+    actorFactory: ActorFactory[ArticleIndexerActor],
+    articleIndexer: ArticleIndexer)
+  extends ArticleIndexerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = system.actorOf(Props { new ArticleIndexerActor(articleIndexer) })
+  private val actor = actorFactory.get()
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ArticleIndexerPluginImpl")
-    scheduleTask(system, 30 seconds, 1 minutes, actor, Index)
+    scheduleTask(actorFactory.system, 30 seconds, 1 minutes, actor, Index)
   }
   override def onStop() {
     log.info("stopping ArticleIndexerPluginImpl")
