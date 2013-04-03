@@ -44,19 +44,9 @@ case class CompleteReport(reportName: String, reportVersion: String, list: Seq[R
 
     log.info(keyedList mkString ", ")
 
-    val period = Period.days(1) // for now, all reports are 1 day durations
+    val res = keyedList.toSeq.sortWith((a, b) => a._1.compareTo(b._1) > 0).map(v => v._1.toStandardTimeString + "," + v._2.mkString(",")).mkString("\n")
 
-    val startDate = dates.headOption.getOrElse(currentDateTime.minusDays(30))
-    val endDate = dates.lastOption.getOrElse(currentDateTime)
-    var d = startDate
-    var csvList = Seq[String]()
-    while(!d.isAfter(endDate)) {
-      val newCSVRow = (d.toStandardTimeString + "," + (keyedList.getOrElse(d,Seq.fill(columns.length-1)(",")).mkString(",")))
-      csvList = newCSVRow +: csvList
-      d = d.plus(period)
-    }
-    csvList = ("datetime," + columns.mkString(",")) +: csvList
-    csvList.mkString("\n")
+    ("datetime," + columns.mkString(",") + "\n") + res
   }
   def +(that: CompleteReport) = {
     // Challenge: rewrite to be functional and use only immutable objects

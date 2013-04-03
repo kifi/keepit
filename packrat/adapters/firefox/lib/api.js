@@ -204,6 +204,16 @@ exports.socket = {
           arr.splice(1, 0, id);
         }
         socketPage.port.emit("socket_send", socketId, arr);
+      },
+      close: function() {
+        exports.log("[api.socket.close]", socketId);
+        delete socketHandlers[socketId];
+        socketPage.port.emit("close_socket", socketId);
+        if (!socketHandlers.some(function(h) {return h})) {
+          socketPage.destroy();
+          socketPage = null;
+        }
+        this.send = this.close = exports.noop;
       }
     };
   }
@@ -219,7 +229,7 @@ function onSocketMessage(socketId, data) {
           delete socketCallbacks[id];
           callback.apply(null, msg);
         } else {
-          exports.log("[api.onSocketMessage] Ignoring, no callback", id, msg);
+          exports.log("[api.socket.receive] Ignoring, no callback", id, msg);
         }
       } else {
         var handlers = socketHandlers[socketId];
@@ -228,17 +238,17 @@ function onSocketMessage(socketId, data) {
           if (handler) {
             handler.apply(null, msg);
           } else {
-            exports.log("[api.onSocketMessage] Ignoring, no handler", id, msg);
+            exports.log("[api.socket.receive] Ignoring, no handler", id, msg);
           }
         } else {
-          exports.log("[api.onSocketMessage] Ignoring, no handlers", socketId, id, msg);
+          exports.log("[api.socket.receive] Ignoring, no handlers", socketId, id, msg);
         }
       }
     } else {
-      exports.log("[api.onSocketMessage] Ignoring, not array", msg);
+      exports.log("[api.socket.receive] Ignoring, not array", msg);
     }
   } catch (e) {
-    exports.log.error("[api.onSocketMessage]", e);
+    exports.log.error("[api.socket.receive]", e);
   }
 }
 

@@ -73,9 +73,9 @@ api.timers.setTimeout(function maybeSend() {
   api.timers.setTimeout(maybeSend, eventLogDelay);
 }, 4000);
 
-// ===== WebSockets
+// ===== WebSocket handlers
 
-var socket = api.socket.open((api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws", {
+var socketHandlers = {
   message: function(data) {
     api.log("[socket:message]", data);
     var activeTab = api.tabs.getActive();
@@ -100,7 +100,7 @@ var socket = api.socket.open((api.prefs.get("env") === "development" ? "ws://" :
   event: function(data) {
     api.log("[socket:event]", data);
   }
-});
+};
 
 // ===== Handling messages from content scripts or other extension pages
 
@@ -168,11 +168,18 @@ api.port.on({
   },
   get_slider_info: function(data, respond, tab) {
     if (session) {
-      getSliderInfo(tab, respond);
+      getSliderInfo();
     } else {
-      authenticate(getSliderInfo.bind(null, tab, respond));
+      authenticate(getSliderInfo);
     }
     return true;
+
+    function getSliderInfo(tab, respond) {
+      ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
+        o.session = session;
+        respond(o);
+      });
+    }
   },
   get_slider_updates: function(_, respond, tab) {
     ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, respond);
@@ -233,13 +240,6 @@ api.port.on({
     return true;
   }
 });
-
-function getSliderInfo(tab, respond) {
-  ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
-    o.session = session;
-    respond(o);
-  });
-}
 
 function createDeepLinkListener(link, linkTabId, respond) {
   var createdTime = new Date;
@@ -609,7 +609,7 @@ api.on.update.add(function() {
 
 // ===== Session management
 
-var session;
+var session, socket;
 
 function authenticate(callback) {
   var config = getConfigs(), dev = api.prefs.get("env") === "development";
@@ -629,6 +629,10 @@ function authenticate(callback) {
       logEvent("extension", "authenticated");
 
       session = compilePatterns(data);
+      socket = api.socket.open(
+        (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws",
+        socketHandlers);
+
       setConfigs("kifi_installation_id", data.installationId);
 
       // Locate or create KeepIt bookmark folder.
@@ -667,6 +671,10 @@ function authenticate(callback) {
 function deauthenticate(callback) {
   api.log("[deauthenticate]");
   session = null;
+  if (socket) {
+    socket.close();
+    socket = null;
+  }
   api.popup.open({
     name: "kifi-deauthenticate",
     url: "http://" + getConfigs().server + "/session/end",

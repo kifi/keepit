@@ -128,14 +128,16 @@ class MailToKeepMessageParser @Inject() (
     userRepo: UserRepo
   ) {
 
-  private val Url = """\bhttps?://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]\b""".r
+  private val Url = """(?i)(?<!@)\b(https?://)?([a-z0-9\-\.]+\.[a-z]{2,3}(/\S*)?)\b""".r
 
   def getSenderAddr(m: Message): String = {
     m.getReplyTo.headOption.orElse(m.getFrom.headOption).map(getAddr).head
   }
 
   def getUris(m: Message): Seq[URI] = {
-    Url.findAllIn(getContent(m) + " " + m.getSubject).map(URI.parse(_).toOption).flatten.toList.distinct
+    Url.findAllMatchIn(m.getSubject + " " + getContent(m)).map { m =>
+      URI.parse(Option(m.group(1)).getOrElse("http://") + m.group(2)).toOption
+    }.flatten.toList.distinct
   }
 
   def getContent(m: Message): String = {
