@@ -151,7 +151,7 @@ class ExtSearchController @Inject() (
 
   private[ext] def toPersonalSearchHit(uri: NormalizedURI, bookmark: Option[Bookmark]) = {
     val (title, url) = bookmark match {
-      case Some(bookmark) => (Some(bookmark.title), bookmark.url)
+      case Some(bookmark) => (bookmark.title, bookmark.url)
       case None => (uri.title, uri.url)
     }
 

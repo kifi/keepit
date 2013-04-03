@@ -5,6 +5,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import org.joda.time.DateTime
 
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.actor.ActorFactory
 import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.analytics.reports.Reports.ReportGroup
@@ -133,7 +135,7 @@ trait ReportBuilderPlugin extends SchedulingPlugin {
 }
 
 class ReportBuilderPluginImpl @Inject() (
-  system: ActorSystem,
+  actorFactory: ActorFactory[ReportBuilderActor],
   searchConfigManager: SearchConfigManager,
   reportStore: ReportStore)
     extends Logging with ReportBuilderPlugin {
@@ -141,11 +143,11 @@ class ReportBuilderPluginImpl @Inject() (
   def buildReport(startDate: DateTime, endDate: DateTime, report: Report): Unit = actor ! BuildReport(startDate, endDate, report)
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor ! BuildReports(startDate, endDate, reportGroup)
 
-  private val actor = system.actorOf(Props { new ReportBuilderActor(reportStore) })
+  private val actor = actorFactory.get()
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(system, 10 seconds, 1 hour, actor, ReportCron(this))
+    scheduleTask(actorFactory.system, 10 seconds, 1 hour, actor, ReportCron(this))
   }
 
   override def reportCron(): Unit = {
@@ -161,7 +163,10 @@ private[reports] case class ReportCron(sender: ReportBuilderPlugin)
 private[reports] case class BuildReport(startDate: DateTime, endDate: DateTime, report: Report)
 private[reports] case class BuildReports(startDate: DateTime, endDate: DateTime, reportGroup: Reports.ReportGroup)
 
-private[reports] class ReportBuilderActor(reportStore: ReportStore) extends FortyTwoActor with Logging {
+private[reports] class ReportBuilderActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
+    reportStore: ReportStore)
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case ReportCron(sender) =>

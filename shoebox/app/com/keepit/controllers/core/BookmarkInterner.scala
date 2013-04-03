@@ -1,27 +1,15 @@
 package com.keepit.controllers.core
 
-import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
-import com.keepit.common.async._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
-import com.keepit.common.net._
-import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.scraper.ScraperPlugin
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.graph.URIGraphPlugin
-import com.keepit.serializer.BookmarkSerializer
 import com.keepit.common.logging.Logging
 
-import scala.concurrent.Await
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
 import play.api.libs.json._
-import scala.concurrent.duration._
 
 import com.keepit.common.analytics.ActivityStream
 
@@ -40,7 +28,7 @@ class BookmarkInterner @Inject() (db: Database, uriRepo: NormalizedURIRepo, scra
   }
 
   private def internBookmark(json: JsObject, user: User, experiments: Seq[State[ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = {
-    val title = (json \ "title").as[String]
+    val title = (json \ "title").asOpt[String]
     val url = (json \ "url").as[String]
     val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
 
@@ -63,18 +51,20 @@ class BookmarkInterner @Inject() (db: Database, uriRepo: NormalizedURIRepo, scra
           case None =>
             Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
             val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-            Some(bookmarkRepo.save(BookmarkFactory(uri, user.id.get, title, urlObj, source, isPrivate, installationId)))
+            Some(bookmarkRepo.save(
+              BookmarkFactory(uri, user.id.get, title orElse uri.title, urlObj, source, isPrivate, installationId)))
         }
       }
       if(bookmark.isDefined) addToActivityStream(user, bookmark.get)
 
+      bookmark.foreach { b => log.info(db.readWrite { implicit s => bookmarkRepo.get(b.id.get) }.toString) }
       bookmark
     } else {
       None
     }
   }
 
-  private def createNewURI(title: String, url: String)(implicit session: RWSession) =
+  private def createNewURI(title: Option[String], url: String)(implicit session: RWSession) =
     uriRepo.save(NormalizedURIFactory(title = title, url = url, state = NormalizedURIStates.SCRAPE_WANTED))
 
   private def addToActivityStream(user: User, bookmark: Bookmark) = {

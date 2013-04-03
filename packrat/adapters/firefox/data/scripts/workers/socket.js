@@ -8,9 +8,9 @@ if (self.options) {
 
 function openSocket(socketId, url) {
   console.log("[worker:openSocket]", socketId, url);
-  (sockets[socketId] = new ReconnectingWebSocket(url)).onmessage = function(data) {
-    self.port.emit("socket_message", socketId, data.data);
-  };
+  sockets[socketId] = new ReconnectingWebSocket(url, function(e) {
+    self.port.emit("socket_message", socketId, e.data);
+  });
 }
 
 function closeSocket(socketId) {
@@ -18,7 +18,6 @@ function closeSocket(socketId) {
   var socket = sockets[socketId];
   if (socket) {
     socket.close();
-    socket.onmessage = function() {};
     delete sockets[socketId];
   }
 }
