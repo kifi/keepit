@@ -18,8 +18,9 @@ import scala.concurrent.duration._
 case object Update
 
 private[graph] class URIGraphActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
     uriGraph: URIGraph)
-  extends FortyTwoActor with Logging {
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case Update => try {

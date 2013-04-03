@@ -31,7 +31,9 @@ case class Update(userId: Id[User])
 case class Persist(event: Event, queueTime: DateTime)
 case class PersistMany(events: Seq[Event], queueTime: DateTime)
 
-private[analytics] class PersistEventActor extends FortyTwoActor with Logging {
+private[analytics] class PersistEventActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin)
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case Persist(event, queueTime) =>
@@ -60,7 +62,6 @@ trait PersistEventPlugin extends SchedulingPlugin {
   def persist(event: Event): Unit
   def persist(events: Seq[Event]): Unit
 }
-
 
 class PersistEventPluginImpl @Inject() (
     actorFactory: ActorFactory[PersistEventActor])

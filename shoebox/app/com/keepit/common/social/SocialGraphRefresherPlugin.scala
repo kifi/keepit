@@ -1,5 +1,6 @@
 package com.keepit.common.social
 
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import scala.collection.mutable.MutableList
 import com.keepit.search.ArticleStore
 import com.keepit.common.logging.Logging
@@ -36,10 +37,11 @@ private case class RefreshUserInfo(socialUserInfo: SocialUserInfo)
 private case object RefreshAll
 
 private[social] class SocialGraphRefresherActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
     socialGraphPlugin : SocialGraphPlugin,
     db: Database,
     socialRepo: SocialUserInfoRepo)
-  extends FortyTwoActor with Logging {
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case RefreshAll => {

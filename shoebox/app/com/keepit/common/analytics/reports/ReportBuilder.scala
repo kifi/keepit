@@ -5,6 +5,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import org.joda.time.DateTime
 
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.ActorFactory
 import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
@@ -158,8 +159,9 @@ private[reports] case class BuildReport(startDate: DateTime, endDate: DateTime, 
 private[reports] case class BuildReports(startDate: DateTime, endDate: DateTime, reportGroup: Reports.ReportGroup)
 
 private[reports] class ReportBuilderActor @Inject() (
-  reportStore: ReportStore)
-    extends FortyTwoActor with Logging {
+    healthcheckPlugin: HealthcheckPlugin,
+    reportStore: ReportStore)
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case ReportCron(sender) =>
