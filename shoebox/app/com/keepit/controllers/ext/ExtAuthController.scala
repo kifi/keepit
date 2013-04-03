@@ -110,7 +110,7 @@ class ExtAuthController @Inject() (
     Redirect(com.keepit.controllers.website.routes.HomeController.home())
   }
 
-  def logOut = AuthenticatedJsonAction { implicit request =>
+  def logOut = AuthenticatedHtmlAction { implicit request =>
     Ok(views.html.logOut(Some(request.socialUser))).withNewSession
   }
 
