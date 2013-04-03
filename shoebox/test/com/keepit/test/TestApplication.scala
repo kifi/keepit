@@ -18,7 +18,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout}
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule}
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.common.store.FakeStoreModule
@@ -88,6 +88,7 @@ case class TestModule() extends ScalaModule {
       lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
     }))
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
+    bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
