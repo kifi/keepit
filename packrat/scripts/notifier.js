@@ -2,6 +2,7 @@
 // @require scripts/lib/jquery-1.8.2.min.js
 // @require scripts/lib/mustache-0.7.1.min.js
 // @require scripts/api.js
+// @require scripts/formatting.js
 // @require scripts/render.js
 
 var notifier = {
@@ -82,6 +83,7 @@ var KifiNotification = {
     }
 
     render("html/notify_box.html", {
+      formatSnippet: getSnippetFormatter,
       title: params.title,
       subtitle: params.subtitle,
       contentHtml: params.contentHtml,
