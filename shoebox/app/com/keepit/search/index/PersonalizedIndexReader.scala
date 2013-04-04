@@ -60,13 +60,13 @@ class PersonalizedIndexReader(mainReader: AtomicReader, personalReader: CachingI
     new FieldInfos(infos)
   }
   override def getLiveDocs(): Bits = mainReader.getLiveDocs
+  override def getNormValues(field: String): NumericDocValues = mainReader.getNormValues(field)
 
   override def getTermVectors(doc: Int) = throw new UnsupportedOperationException()
   override def getNumericDocValues(field: String): NumericDocValues = null
   override def getBinaryDocValues(field: String): BinaryDocValues = null
   override def getSortedDocValues(field: String): SortedDocValues = null
   override def getSortedSetDocValues(field: String): SortedSetDocValues = null
-  override def getNormValues(field: String): NumericDocValues = null
   override def hasDeletions() = mainReader.hasDeletions()
   override def document(doc: Int, visitor: StoredFieldVisitor) = throw new UnsupportedOperationException()
   protected def doClose() {}
