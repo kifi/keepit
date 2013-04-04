@@ -50,7 +50,7 @@ private[social] class SocialGraphActor @Inject() (
     case m => throw new Exception("unknown message %s".format(m))
   }
 
-  def fetchUserInfo(socialUserInfo: SocialUserInfo): Try[Seq[SocialConnection]] = {
+  def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[SocialConnection] = {
       try {
         require(socialUserInfo.credentials.isDefined,
           "social user info's credentials are not defined: %s".format(socialUserInfo))
@@ -66,21 +66,20 @@ private[social] class SocialGraphActor @Inject() (
         db.readWrite { implicit c =>
           socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }
-        Success(connections)
+        connections
       } catch {
         //todo(yonatan): healthcheck event, granular exception catching, frontend should be notified.
         case ex: Exception =>
           db.readWrite { implicit c =>
             socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
           }
-          log.error("Problem Fetching User Info for %s".format(socialUserInfo), ex)
-          Failure(ex)
+          throw new Exception(s"Problem Fetching User Info for $socialUserInfo", ex)
       }
   }
 }
 
 trait SocialGraphPlugin extends SchedulingPlugin {
-  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Try[Seq[SocialConnection]]]
+  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]]
 }
 
 class SocialGraphPluginImpl @Inject() (
@@ -101,10 +100,10 @@ class SocialGraphPluginImpl @Inject() (
     log.info("stopping SocialGraphPluginImpl")
   }
 
-  override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Try[Seq[SocialConnection]]] = {
+  override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] = {
     require(socialUserInfo.credentials.isDefined,
       "social user info's credentials are not defined: %s".format(socialUserInfo))
-    actor.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Try[Seq[SocialConnection]]]
+    actor.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Seq[SocialConnection]]
   }
 }
 
