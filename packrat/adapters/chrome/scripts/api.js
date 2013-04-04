@@ -14,8 +14,9 @@ api = function() {
     req.send(null);
   },
   log: function(message) {
-    var d = new Date(), ds = d.toString();
-    console.log.apply(console, Array.prototype.concat.apply(["[" + ds.substring(0, 2) + ds.substring(15,24) + "." + String(+d).substring(10) + "]"], arguments));
+    var d = new Date, ds = d.toString();
+    arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
+    console.log.apply(console, arguments);
   },
   noop: function() {},
   port: {

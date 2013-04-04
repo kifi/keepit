@@ -6,7 +6,7 @@ var api = {log: function() {
       a[i] = JSON.stringify(v);
     }
   }
-  console.log("'" + ds.substring(0,2) + ds.substring(15,24) + "." + String(+d).substring(10) + "'", a.join(" "));
+  console.log("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'", a.join(" "));
 }};
 
 var sockets = {};
