@@ -185,7 +185,11 @@ api = function() {
       if (page) {
         injectContentScripts(page);
       } else {
-        api.log.error(Error("no page for " + tabId), "api:dom_ready");
+        chrome.windows.get(tab.windowId, function(win) {
+          if (win.type == "normal") {
+            api.log.error(Error("no page for " + tabId), "api:dom_ready");
+          }
+        });
       }
     } else if (msg[0] === "api:require") {
       if (tab) {
