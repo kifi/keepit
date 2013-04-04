@@ -46,20 +46,20 @@ class MailToKeepMessageParserTest extends Specification {
 
       val session = Session.getDefaultInstance(new Properties())
       val message = new MimeMessage(session)
-      message.setSubject("hi")
+      message.setSubject("Hey, this is Eishay from 42go.com")
       message.setFrom(new InternetAddress("eishay@42go.com"))
-      message.setRecipient(RecipientType.TO, new InternetAddress("greg@42go.com"))
+      message.setRecipient(RecipientType.TO, new InternetAddress("greg@methvin.net"))
 
       val content = new MimeMultipart("alternative")
       val (text, html) = (new MimeBodyPart(), new MimeBodyPart())
-      text.setText("Hey, you should check out http://google.com/.")
-      val htmlText = "<p>Hey, you should check out http://google.com/search and http://yahoo.com/</p>"
+      text.setText("Hey greg@methvin.net, you should check out http://google.com/.")
+      val htmlText = "<p>Hey, you should check out fuks.co.il, google.com/search and HTTP://YAHOO.COM/</p>"
       html.setContent(htmlText, "text/html")
       content.addBodyPart(html)
       content.addBodyPart(text)
       message.setContent(content)
 
-      parser.getUris(message).map(_.host.get.toString) === Seq("google.com", "yahoo.com")
+      parser.getUris(message).map(_.host.get.toString) === Seq("42go.com", "fuks.co.il", "google.com", "yahoo.com")
     }
   }
   "parse out users correctly" in {

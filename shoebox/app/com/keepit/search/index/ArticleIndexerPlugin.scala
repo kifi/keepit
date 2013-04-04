@@ -19,8 +19,9 @@ import scala.concurrent.duration._
 case object Index
 
 private[index] class ArticleIndexerActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
     articleIndexer: ArticleIndexer)
-  extends FortyTwoActor with Logging {
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case Index => try {
@@ -50,7 +51,7 @@ class ArticleIndexerPluginImpl @Inject() (
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   // plugin lifecycle methods
   override def enabled: Boolean = true

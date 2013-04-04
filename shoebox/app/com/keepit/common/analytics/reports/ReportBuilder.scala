@@ -5,6 +5,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import org.joda.time.DateTime
 
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.ActorFactory
 import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
@@ -59,6 +60,7 @@ object Reports {
   lazy val dailyKCMUsers = new DailyKCMUsers
   lazy val weeklyKCMUsers = new WeeklyKCMUsers
   lazy val monthlyKCMUsers = new MonthlyKCMUsers
+  lazy val dailySearchStatstics = new DailySearchStatisticsReport
 
   case class ReportGroup(name: String, reports: Seq[Report])
 
@@ -106,6 +108,10 @@ object Reports {
     Seq(dailyUniqueDepricatedAddBookmarks, dailySearchQueriesReport)
   )
 
+  lazy val DailySearchStatisticsReports = ReportGroup("DailySearchStatistics",
+    Seq(dailySearchStatstics)
+  )
+
   def searchExperimentReports(experiments: Seq[SearchConfigExperiment]): ReportGroup = {
     val constructors = Seq(
       new DailyKifiResultClickedByExperiment(_),
@@ -137,7 +143,7 @@ class ReportBuilderPluginImpl @Inject() (
   def buildReport(startDate: DateTime, endDate: DateTime, report: Report): Unit = actor ! BuildReport(startDate, endDate, report)
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor ! BuildReports(startDate, endDate, reportGroup)
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
@@ -158,8 +164,9 @@ private[reports] case class BuildReport(startDate: DateTime, endDate: DateTime, 
 private[reports] case class BuildReports(startDate: DateTime, endDate: DateTime, reportGroup: Reports.ReportGroup)
 
 private[reports] class ReportBuilderActor @Inject() (
-  reportStore: ReportStore)
-    extends FortyTwoActor with Logging {
+    healthcheckPlugin: HealthcheckPlugin,
+    reportStore: ReportStore)
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case ReportCron(sender) =>

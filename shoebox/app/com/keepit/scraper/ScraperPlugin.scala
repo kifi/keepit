@@ -1,5 +1,6 @@
 package com.keepit.scraper
 
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.ActorFactory
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
@@ -19,7 +20,11 @@ import com.keepit.common.plugin.SchedulingPlugin
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
 
-private[scraper] class ScraperActor @Inject() (scraper: Scraper) extends FortyTwoActor with Logging {
+private[scraper] class ScraperActor @Inject() (
+    scraper: Scraper,
+    healthcheckPlugin: HealthcheckPlugin)
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
+
   def receive() = {
     case Scrape => sender ! scraper.run()
     case ScrapeInstance(uri) => sender ! scraper.safeProcessURI(uri)
@@ -39,7 +44,7 @@ class ScraperPluginImpl @Inject() (
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   // plugin lifecycle methods
   override def enabled: Boolean = true

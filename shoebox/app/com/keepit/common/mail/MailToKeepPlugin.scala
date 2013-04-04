@@ -9,6 +9,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.actor.ActorFactory
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model.{EmailAddress, EmailAddressRepo, User, UserRepo}
 
@@ -28,17 +30,18 @@ case class MailToKeepServerSettings(
   emailLabel: Option[String] = None
 )
 
-private class MailToKeepActor(
+class MailToKeepActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
     settings: MailToKeepServerSettings,
     bookmarkInterner: BookmarkInterner,
     persistEventPlugin: PersistEventPlugin,
     postOffice: PostOffice,
     messageParser: MailToKeepMessageParser
-  ) extends FortyTwoActor with Logging {
+  ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   // add +$emailLabel to the end if provided
   // this is so in dev mode we can append your username so as not to conflict with prod emails
-  private val KeepEmail = raw"""(\w+)${settings.emailLabel.map("""\+""" + _).getOrElse("")}@[\w\.]+""".r
+  private val KeepEmail = raw"""^(\w+)${settings.emailLabel.map("""\+""" + _).getOrElse("")}@[\w\.]+$$""".r
 
   private object KeepSearchTerm extends SearchTerm {
     def `match`(m: Message) =
@@ -125,14 +128,16 @@ class MailToKeepMessageParser @Inject() (
     userRepo: UserRepo
   ) {
 
-  private val Url = """\bhttps?://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]\b""".r
+  private val Url = """(?i)(?<!@)\b(https?://)?([a-z0-9\-\.]+\.[a-z]{2,3}(/\S*)?)\b""".r
 
   def getSenderAddr(m: Message): String = {
     m.getReplyTo.headOption.orElse(m.getFrom.headOption).map(getAddr).head
   }
 
   def getUris(m: Message): Seq[URI] = {
-    Url.findAllIn(getContent(m) + " " + m.getSubject).map(URI.parse(_).toOption).flatten.toList.distinct
+    Url.findAllMatchIn(m.getSubject + " " + getContent(m)).map { m =>
+      URI.parse(Option(m.group(1)).getOrElse("http://") + m.group(2)).toOption
+    }.flatten.toList.distinct
   }
 
   def getContent(m: Message): String = {
@@ -185,26 +190,19 @@ trait MailToKeepPlugin extends SchedulingPlugin {
 }
 
 class MailToKeepPluginImpl @Inject()(
-  system: ActorSystem,
-  settings: MailToKeepServerSettings,
-  bookmarkInterner: BookmarkInterner,
-  persistEventPlugin: PersistEventPlugin,
-  postOffice: PostOffice,
-  messageParser: MailToKeepMessageParser
+  actorFactory: ActorFactory[MailToKeepActor]
 ) extends MailToKeepPlugin with Logging {
 
   override def enabled: Boolean = true
 
-  val actor = system.actorOf(Props {
-    new MailToKeepActor(settings, bookmarkInterner, persistEventPlugin, postOffice, messageParser)
-  })
+  private lazy val actor = actorFactory.get()
 
   def fetchNewKeeps() {
     actor ! FetchNewKeeps
   }
   override def onStart() {
     log.info("Starting MailToKeepPluginImpl")
-    scheduleTask(system, 10 seconds, 1 minute, actor, FetchNewKeeps)
+    scheduleTask(actorFactory.system, 10 seconds, 1 minute, actor, FetchNewKeeps)
   }
 }
 

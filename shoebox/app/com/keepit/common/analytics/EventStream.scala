@@ -10,6 +10,8 @@ import akka.util.Timeout
 import akka.pattern.ask
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.actor.ActorFactory
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.akka.FortyTwoActor
 import scala.concurrent.Future
 import com.keepit.serializer.EventSerializer
@@ -21,16 +23,18 @@ import com.keepit.inject._
 import com.keepit.common.db.slick.Database
 
 @Singleton
-class EventStream @Inject() (eventWriter: EventWriter) {
+class EventStream @Inject() (
+    actorFactory: ActorFactory[EventStreamActor],
+    eventWriter: EventWriter) {
   implicit val timeout = Timeout(1 second)
 
-  lazy val default = Akka.system.actorOf(Props {new EventStreamActor(eventWriter) })
+  private lazy val actor = actorFactory.get()
 
   def newStream(): Future[(Iteratee[JsValue,_],Enumerator[JsValue])] = {
-    (default ? NewStream).map {
+    (actor ? NewStream).map {
       case Connected(enumerator) =>
         // Since we're expecting no input from the client, just consume and discard the input
-        val iteratee = Iteratee.foreach[JsValue]{ s => default ! ReplyEcho }
+        val iteratee = Iteratee.foreach[JsValue]{ s => actor ! ReplyEcho }
         (iteratee, enumerator)
     }
   }
@@ -40,7 +44,7 @@ class EventStream @Inject() (eventWriter: EventWriter) {
     eventWriter.wrapEvent(event).map { wrappedEvent =>
       // Todo(Andrew): Wire up to new WS
       //adminEvent.broadcast("event", Json.toJson(wrappedEvent))
-      default ! BroadcastEvent(Json.toJson(wrappedEvent))
+      actor ! BroadcastEvent(Json.toJson(wrappedEvent))
     }
   }
 
@@ -77,7 +81,11 @@ class EventWriter @Inject() (db: Database, userRepo: UserRepo, socialUserInfoRep
   }
 }
 
-class EventStreamActor(eventWriter: EventWriter) extends FortyTwoActor {
+class EventStreamActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
+    eventWriter: EventWriter)
+  extends FortyTwoActor(healthcheckPlugin) {
+
   val (eventEnumerator, eventChannel) = Concurrent.broadcast[JsValue]
 
   def receive = {

@@ -1,6 +1,7 @@
 package com.keepit.search.phrasedetector
 
 import java.io._
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.actor.ActorFactory
 import com.keepit.search.Lang
@@ -49,9 +50,10 @@ case object StartImport extends PhraseMessage
 case object EndImport extends PhraseMessage
 
 private[phrasedetector] class PhraseImporterActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
     dbConnection: Database,
     phraseRepo: PhraseRepo)
-  extends FortyTwoActor with Logging {
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   private val GROUP_SIZE = 500
 
@@ -97,7 +99,7 @@ class PhraseImporterImpl @Inject()(
     persistEventPlugin: PersistEventPlugin)
   extends PhraseImporter {
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   def importFile(file: File): Unit = {
     actor ! ImportFile(file)

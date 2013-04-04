@@ -10,7 +10,9 @@ import com.keepit.model._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.actor.ActorFactory
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef, BrowsingHistoryTracker, ClickHistoryTracker }
@@ -36,15 +38,23 @@ trait EventListenerPlugin extends SchedulingPlugin {
 }
 
 @Singleton
-class EventHelper @Inject() (system: ActorSystem, listeners: JSet[EventListenerPlugin], eventStream: EventStream) {
-  private val default = system.actorOf(Props(new EventHelperActor(listeners, eventStream)))
-  def newEvent(event: Event): Seq[String] = {
-    default ! event
+class EventHelper @Inject() (
+    actorFactory: ActorFactory[EventHelperActor],
+    listeners: JSet[EventListenerPlugin]) {
+  private lazy val actor = actorFactory.get()
+
+  def newEvent(event: Event): Unit = actor ! event
+
+  def matchEvent(event: Event): Seq[String] =
     listeners.filter(_.onEvent.isDefinedAt(event)).map(_.getClass.getSimpleName.replaceAll("\\$", "")).toSeq
-  }
 }
 
-class EventHelperActor(listeners: JSet[EventListenerPlugin], eventStream: EventStream) extends FortyTwoActor {
+class EventHelperActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
+    listeners: JSet[EventListenerPlugin],
+    eventStream: EventStream)
+  extends FortyTwoActor(healthcheckPlugin) {
+
   def receive = {
     case event: Event =>
       eventStream.streamEvent(event)

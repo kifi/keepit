@@ -64,7 +64,7 @@ private[classify] class DomainTagImportActor @Inject() (
   settings: DomainTagImportSettings,
   postOffice: PostOffice,
   healthcheckPlugin: HealthcheckPlugin)
-    extends FortyTwoActor with Logging {
+    extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   import DomainTagImportEvents._
 
@@ -301,7 +301,7 @@ class DomainTagImporterImpl @Inject() (
   actorFactory: ActorFactory[DomainTagImportActor])
     extends DomainTagImporter {
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   def refetchClassifications() {
     actor ! RefetchAll

@@ -18,8 +18,9 @@ import scala.concurrent.duration._
 case object Update
 
 private[graph] class URIGraphActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
     uriGraph: URIGraph)
-  extends FortyTwoActor with Logging {
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case Update => try {
@@ -46,7 +47,7 @@ class URIGraphPluginImpl @Inject() (
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   override def enabled: Boolean = true
   override def onStart() {

@@ -16,7 +16,6 @@ import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.time._
-import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.akka.FortyTwoActor
 
@@ -121,9 +120,10 @@ case object ResetErrorCount
 case object GetErrors
 
 class HealthcheckActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
     postOffice: PostOffice,
     services: FortyTwoServices)
-  extends FortyTwoActor with Logging {
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   private def initErrors: Map[HealthcheckErrorSignature, List[HealthcheckError]] = Map().withDefaultValue(List[HealthcheckError]())
 
@@ -188,7 +188,7 @@ class HealthcheckPluginImpl @Inject() (
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   // plugin lifecycle methods
   override def enabled: Boolean = true

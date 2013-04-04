@@ -6,6 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.common.actor.ActorFactory
+import com.keepit.common.healthcheck.HealthcheckPlugin
 
 import akka.actor._
 import scala.concurrent.Await
@@ -24,10 +25,11 @@ private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
 private case object FetchAll
 
 private[social] class SocialGraphActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
     graph: FacebookSocialGraph,
     db: Database,
     socialRepo: SocialUserInfoRepo)
-  extends FortyTwoActor with Logging {
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case FetchAll =>
@@ -87,7 +89,7 @@ class SocialGraphPluginImpl @Inject() (
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   // plugin lifecycle methods
   override def enabled: Boolean = true

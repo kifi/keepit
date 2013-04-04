@@ -7,6 +7,7 @@ import play.api.libs.ws.WS
 import play.api.libs.json._
 import play.api.libs.ws._
 
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError}
@@ -43,7 +44,7 @@ class MailSenderPluginImpl @Inject() (
 
   override def processMail(mail: ElectronicMail): Unit = actor ! ProcessMail(mail, this)
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
@@ -62,7 +63,9 @@ class MailSenderPluginImpl @Inject() (
 private[mail] case class ProcessOutbox(sender: MailSenderPlugin)
 private[mail] case class ProcessMail(mail: ElectronicMail, sender: MailSenderPlugin)
 
-private[mail] class MailSenderActor() extends FortyTwoActor with Logging {
+private[mail] class MailSenderActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin)
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case ProcessOutbox(sender) => sender.processOutbox()
