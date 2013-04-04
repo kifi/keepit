@@ -13,7 +13,6 @@ import com.keepit.model._
 import com.keepit.common.db._
 import play.api.Play.current
 import com.keepit.inject.inject
-import akka.actor.ActorSystem
 
 class EventListenerTest extends Specification with DbRepos {
 
@@ -55,16 +54,14 @@ class EventListenerTest extends Specification with DbRepos {
   "EventListener" should {
     "process events" in {
       running(new EmptyApplication().withFakeHealthcheck()) {
-        val system = ActorSystem("system")
         val (normUrlId, url, user, bookmark) = setup()
 
         val unrelatedEvent = Events.userEvent(EventFamilies.SEARCH,"someOtherEvent", user, Seq(), "", JsObject(Seq()), Seq())
 
         val event = Events.userEvent(EventFamilies.SEARCH,"kifiResultClicked", user, Seq(), "", JsObject(Seq()), Seq())
 
-        inject[EventHelper].newEvent(unrelatedEvent) === Seq()
-        inject[EventHelper].newEvent(event) === Seq("KifiResultClickedListener")
-
+        inject[EventHelper].matchEvent(unrelatedEvent) === Seq()
+        inject[EventHelper].matchEvent(event) === Seq("KifiResultClickedListener")
       }
     }
 

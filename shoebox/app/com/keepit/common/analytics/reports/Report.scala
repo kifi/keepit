@@ -9,6 +9,7 @@ import com.keepit.common.time._
 import com.keepit.inject._
 import com.keepit.search.SearchConfigExperiment
 import com.mongodb.casbah.Imports._
+import com.keepit.serializer.EventSerializer
 
 import play.api.Play.current
 
@@ -591,3 +592,27 @@ class DailyKifiResultClickedByExperiment(val experiment: Option[SearchConfigExpe
   override val ordering = 3000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
 }
 
+class DailySearchStatisticsReport extends Report with Logging{
+  override val reportName = "DailySearchStatistics"
+
+  def get(startDate: DateTime, endDate: DateTime): CompleteReport = {
+    val selector = MongoSelector(EventFamilies.SERVER_SEARCH).withEventName("search_statistics")
+    val cursor = store.find(selector)
+    val rows = cursor.map{ iter =>
+      val data = EventSerializer.eventSerializer.mongoReads(iter).get
+      val dateTime = data.createdAt
+      val meta = data.metaData.metaData
+      val uuid = (meta \ "queryUUID").asOpt[String].getOrElse("")
+      val variance = (meta \ "svVariance").asOpt[Double].getOrElse(-1.0).toString
+      val kifiClicks = (meta \ "kifiResultsClicked").asOpt[Int].getOrElse(-1).toString
+      val googleClicks = (meta \ "googleResultsClicked").asOpt[Int].getOrElse(-1).toString
+      ReportRow(dateTime, Map(
+    		  "queryUUID" -> ValueOrdering(uuid, 10),
+    		  "svVariance" -> ValueOrdering(variance, 20),
+    		  "kifiClicks" -> ValueOrdering(kifiClicks,30),
+    		  "googleClicks" -> ValueOrdering(googleClicks, 40)
+          ))
+    }.toList
+    CompleteReport(reportName = reportName, reportVersion = reportVersion, list = rows)
+  }
+}
