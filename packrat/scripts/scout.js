@@ -90,7 +90,7 @@ var injected, t0 = +new Date;
 
   function autoShow(trigger) {
     var width;
-    if (rules.viewport && (width = viewportEl.clientWidth) < rules.viewport[0]) {
+    if (rules.viewport && !info.metro && (width = viewportEl.clientWidth) < rules.viewport[0]) {
       api.log("[autoShow] viewport too narrow:", width, "<", rules.viewport[0]);
     } else {
       openSlider({trigger: trigger});
