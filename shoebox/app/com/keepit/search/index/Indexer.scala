@@ -50,7 +50,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   def getSearcher = searcher
 
   private var _sequenceNumber =
-    SequenceNumber(commitData.getOrElse(Indexer.CommitData.sequenceNumber, "0").toLong)
+    SequenceNumber(commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong)
 
   def sequenceNumber = _sequenceNumber
 
