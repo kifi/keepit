@@ -122,25 +122,20 @@ class SliderShownListener extends EventListenerPlugin {
 class SearchUnloadListener @Inject() (persistEventPlugin: PersistEventPlugin, store: MongoEventStore) extends EventListenerPlugin {
   def onEvent: PartialFunction[Event, Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", externalUser, _, experiments, metaData, _), _, _) => {
-      persistEventPlugin match {
-        case persist: FakePersistEventPluginImpl => // Do nothing, we can't query.
-        case _ =>
-          val kifiClicks = (metaData \ "kifiResultsClicked").asOpt[Int].getOrElse(-1)
-          val googleClicks = (metaData \ "googleResultsClicked").asOpt[Int].getOrElse(-1)
-          val uuid = (metaData \ "queryUUID").asOpt[String].getOrElse("")
-          val q = MongoSelector(EventFamilies.SERVER_SEARCH).withEventName("search_return_hits").withMetaData("queryUUID", uuid)
-          val cursor = store.find(q)
-          if (cursor.size == 1) {
-            val data = cursor.map(dbo => EventSerializer.eventSerializer.mongoReads(dbo).get).next.metaData
-            val svVar = (data.metaData \ "svVariance").asOpt[Double].getOrElse(-1.0) // retrieve the related semantic variance
-            val newMetaData = Json.obj("queryUUID" -> uuid,
-              "svVariance" -> svVar,
-              "kifiResultsClicked" -> kifiClicks,
-              "googleResultsClicked" -> googleClicks)
+      val kifiClicks = (metaData \ "kifiResultsClicked").asOpt[Int].getOrElse(-1)
+      val googleClicks = (metaData \ "googleResultsClicked").asOpt[Int].getOrElse(-1)
+      val uuid = (metaData \ "queryUUID").asOpt[String].getOrElse("")
+      val q = MongoSelector(EventFamilies.SERVER_SEARCH).withEventName("search_return_hits").withMetaData("queryUUID", uuid)
+      store.find(q).map { dbo =>
+        val data = EventSerializer.eventSerializer.mongoReads(dbo).get.metaData
+        val svVar = (data.metaData \ "svVariance").asOpt[Double].getOrElse(-1.0) // retrieve the related semantic variance
+        val newMetaData = Json.obj("queryUUID" -> uuid,
+          "svVariance" -> svVar,
+          "kifiResultsClicked" -> kifiClicks,
+          "googleResultsClicked" -> googleClicks)
 
-            val event = Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_statistics", newMetaData)
-            persistEventPlugin.persist(event)
-          }
+        val event = Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_statistics", newMetaData)
+        persistEventPlugin.persist(event)
       }
     }
   }
