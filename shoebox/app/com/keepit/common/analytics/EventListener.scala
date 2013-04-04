@@ -41,11 +41,12 @@ trait EventListenerPlugin extends SchedulingPlugin {
 class EventHelper @Inject() (
     actorFactory: ActorFactory[EventHelperActor],
     listeners: JSet[EventListenerPlugin]) {
-  private val actor = actorFactory.get()
-  def newEvent(event: Event): Seq[String] = {
-    actor ! event
+  private lazy val actor = actorFactory.get()
+
+  def newEvent(event: Event): Unit = actor ! event
+
+  def matchEvent(event: Event): Seq[String] =
     listeners.filter(_.onEvent.isDefinedAt(event)).map(_.getClass.getSimpleName.replaceAll("\\$", "")).toSeq
-  }
 }
 
 class EventHelperActor @Inject() (

@@ -56,6 +56,7 @@ class AdminEventController @Inject() (
       case "experiment" =>
         val activeExperiments = searchConfigManager.activeExperiments
         Reports.searchExperimentReports(activeExperiments)
+      case "daily_search_statisitcs" => Reports.DailySearchStatisticsReports
       case unknown => throw new Exception("Unknown report: %s".format(unknown))
     }
     rb.buildReports(rb.defaultStartTime, rb.defaultEndTime, reportGroup)
