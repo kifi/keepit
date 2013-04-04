@@ -3,18 +3,18 @@ package com.keepit.common.mail
 import scala.concurrent.duration._
 
 import com.google.inject.{ImplementedBy, Inject}
+import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.plugin.SchedulingPlugin
-import com.keepit.common.actor.ActorFactory
-import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.controllers.core.BookmarkInterner
-import com.keepit.model.{EmailAddress, EmailAddressRepo, User, UserRepo}
+import com.keepit.model.{EmailAddressRepo, User, UserRepo}
 
-import akka.actor.{Props, ActorSystem}
+import javax.mail.Message.RecipientType
 import javax.mail._
 import javax.mail.internet.{InternetAddress, MimeMultipart}
 import javax.mail.search._
@@ -81,15 +81,13 @@ class MailToKeepActor @Inject() (
             val senderAddr = messageParser.getSenderAddr(message)
             (messageParser.getUser(message), messageParser.getUris(message)) match {
               case (None, _) =>
-                sendEmail(
-                  to = senderAddr,
-                  subject = "Could not identify user",
+                sendReply(
+                  message = message,
                   htmlBody = s"<p>Kifi could not find a user for $senderAddr.</p>"
                 )
               case (Some(user), Seq()) =>
-                sendEmail(
-                  to = senderAddr,
-                  subject = s"Your message '${message.getSubject}' contained no URLs",
+                sendReply(
+                  message = message,
                   htmlBody =
                       s"<p>Hi ${user.firstName},</p>" +
                       "<p>We couldn't find any URLs in your message. Try making sure your URL format is valid.</p>"
@@ -106,9 +104,8 @@ class MailToKeepActor @Inject() (
                     "bookmark_id" -> bookmark.id.get.id
                   ))
                   persistEventPlugin.persist(event)
-                  sendEmail(
-                    to = senderAddr,
-                    subject = s"Successfully kept $uri",
+                  sendReply(
+                    message = message,
                     htmlBody =
                         s"<p>Hi ${user.firstName},</p>" +
                         s"<p>Congratulations! We added a $keepType keep for $uri.</p>" +
@@ -125,12 +122,15 @@ class MailToKeepActor @Inject() (
       }
   }
 
-  private def sendEmail(to: String, subject: String, htmlBody: String) {
+  private def sendReply(message: javax.mail.Message, htmlBody: String) {
+    val newMessage = message.reply(false)
     postOffice.sendMail(ElectronicMail(
       from = EmailAddresses.NOTIFICATIONS,
       fromName = Some("Kifi Elves"),
-      to = new EmailAddressHolder { val address = to },
-      subject = subject,
+      to = new EmailAddressHolder {
+        val address = messageParser.getAddr(newMessage.getRecipients(RecipientType.TO).head)
+      },
+      subject = newMessage.getSubject,
       htmlBody = htmlBody,
       category = PostOffice.Categories.EMAIL_KEEP
     ))
