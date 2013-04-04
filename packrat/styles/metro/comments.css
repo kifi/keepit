@@ -38,6 +38,7 @@ img.kifi-comment-pic {
   float: left;
   width: 35px;
   height: 35px;
+  background-color: rgba(0,0,0,.1);
   border-radius: 2px;
 }
 img.kifi-comment-pic.kifi-self {
