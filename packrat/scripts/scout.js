@@ -50,7 +50,7 @@ var injected, t0 = +new Date;
         notifier.show(data);
       });
     },
-    init_slider: function(o) {
+    init_slider: function(o) {  // may be called multiple times due to in-page navigation (e.g. hashchange, popstate)
       info = o;
       if (openTo) {
         o.locator = openTo.locator;
@@ -64,8 +64,10 @@ var injected, t0 = +new Date;
       if (o.locator) {
         openSlider(o);
       } else if (rules.scroll) {
+        document.removeEventListener("scroll", onScrollMaybeShow);  // in case already registered
         document.addEventListener("scroll", onScrollMaybeShow);
       }
+      clearTimeout(initSliderTimeout);
     },
     open_slider_to: function(o) {
       if (o.metro && !info) {
@@ -86,11 +88,13 @@ var injected, t0 = +new Date;
       }
     },
     auto_show: autoShow.bind(null, "auto")});
+
   api.port.emit("init_slider_please");
+  var initSliderTimeout = setTimeout(api.port.emit.bind(api.port, "init_slider_please"), 1000);
 
   function autoShow(trigger) {
     var width;
-    if (rules.viewport && (width = viewportEl.clientWidth) < rules.viewport[0]) {
+    if (rules.viewport && !info.metro && (width = viewportEl.clientWidth) < rules.viewport[0]) {
       api.log("[autoShow] viewport too narrow:", width, "<", rules.viewport[0]);
     } else {
       openSlider({trigger: trigger});
@@ -120,13 +124,12 @@ var injected, t0 = +new Date;
   }
 
   function insertTile(o) {
-    var el;
-    while (el = document.getElementById("kifi-tile")) {
-      el.remove();
-    }
-
     api.require("styles/metro/tile.css", function() {
-      var el = document.createElement("div");
+      var el;
+      while (el = document.getElementById("kifi-tile")) {
+        el.remove();
+      }
+      el = document.createElement("div");
       el.id = "kifi-tile";
       if (o.kept) {
         el.className = "kifi-kept";
