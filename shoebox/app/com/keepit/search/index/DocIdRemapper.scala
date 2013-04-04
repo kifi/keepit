@@ -5,9 +5,9 @@ import org.apache.lucene.util.Bits
 
 object DocIdRemapper {
   def apply(srcMapper: IdMapper, dstIdMapper: IdMapper, indexReader: AtomicReader): DocIdRemapper = {
-    indexReader.hasDeletions match {
-      case true => new DocIdRemapperWithDeletionCheck(srcMapper, dstIdMapper, indexReader.getLiveDocs())
-      case false => new DocIdRemapperNoDeletionCheck(srcMapper, dstIdMapper)
+    indexReader.getLiveDocs match {
+      case null => new DocIdRemapperNoDeletionCheck(srcMapper, dstIdMapper)
+      case liveDocs => new DocIdRemapperWithDeletionCheck(srcMapper, dstIdMapper, liveDocs)
     }
   }
 }
@@ -19,7 +19,7 @@ abstract class DocIdRemapper {
 class DocIdRemapperWithDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper, liveDocs: Bits) extends DocIdRemapper {
   def remap(docid: Int): Int = {
     val newDocId = dstMapper.getDocId(srcMapper.getId(docid))
-    if (newDocId < 0 || liveDocs.get(newDocId)) -1 else newDocId
+    if (newDocId >= 0 && liveDocs.get(newDocId)) newDocId else -1
   }
 }
 
