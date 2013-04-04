@@ -1,25 +1,37 @@
 package com.keepit.social
 
 import play.api.Application
-import securesocial.core.{UserServicePlugin, UserId, SocialUser}
+import securesocial.core.{UserServicePlugin, UserId, SocialUser, UserService}
 import com.keepit.common.db.slick._
 import com.keepit.common.db._
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.net.HttpClient
 import com.keepit.model._
 import com.keepit.inject._
-import play.api.Play.current
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialId, SocialNetworks, SocialNetworkType}
+import com.google.inject.{Inject, Singleton}
 
-class SecureSocialUserService(application: Application) extends UserServicePlugin(application) with Logging {
+class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
+  lazy val proxy = inject[SecureSocialUserServiceImpl]
+  def find(id: UserId): Option[SocialUser] = proxy.find(id)
+  def save(socialUser: SocialUser): Unit = proxy.save(socialUser)
+}
+
+@Singleton
+class SecureSocialUserServiceImpl @Inject() (
+    db: Database,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    socialGraphPlugin: SocialGraphPlugin,
+    userRepo: UserRepo)
+  extends UserService with Logging {
 
   /**
    * Assuming for now that there is only facebook
    */
   def find(id: UserId): Option[SocialUser] =
-    inject[Database].readOnly { implicit s =>
-      inject[SocialUserInfoRepo].getOpt(SocialId(id.id), SocialNetworks.FACEBOOK)
+    db.readOnly { implicit s =>
+      socialUserInfoRepo.getOpt(SocialId(id.id), SocialNetworks.FACEBOOK)
     } match {
       case None =>
         log.debug("No SocialUserInfo found for %s".format(id))
@@ -29,15 +41,15 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
         Some(user.credentials.getOrElse(throw new Exception("user [%s] does not have credentials".format(user))))
     }
 
-  def save(socialUser: SocialUser): Unit = inject[Database].readWrite { implicit s =>
+  def save(socialUser: SocialUser): Unit = db.readWrite { implicit s =>
     //todo(eishay) take the network type from the socialUser
     log.debug("persisting social user %s".format(socialUser))
-    val socialUserInfo = inject[SocialUserInfoRepo].save(internUser(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK, socialUser)
+    val socialUserInfo = socialUserInfoRepo.save(internUser(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK, socialUser)
                            .withCredentials(socialUser))
     require(socialUserInfo.credentials.isDefined, "social user info's credentias is not defined: %s".format(socialUserInfo))
     require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
     if (socialUserInfo.state != SocialUserInfoStates.FETCHED_USING_SELF) {
-      inject[SocialGraphPlugin].asyncFetch(socialUserInfo)
+      socialGraphPlugin.asyncFetch(socialUserInfo)
     }
     log.debug("persisting %s into %s".format(socialUser, socialUserInfo))
   }
@@ -50,9 +62,8 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
     )
   }
 
-  private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser): SocialUserInfo = inject[Database].readWrite { implicit s =>
-    val userRepo = inject[UserRepo]
-    inject[SocialUserInfoRepo].getOpt(socialId, socialNetworkType) match {
+  private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser): SocialUserInfo = db.readWrite { implicit s =>
+    socialUserInfoRepo.getOpt(socialId, socialNetworkType) match {
       case Some(socialUserInfo) if (!socialUserInfo.userId.isEmpty) =>
         socialUserInfo
       case Some(socialUserInfo) if (socialUserInfo.userId.isEmpty) =>
@@ -70,5 +81,4 @@ class SecureSocialUserService(application: Application) extends UserServicePlugi
         userInfo
     }
   }
-
 }
