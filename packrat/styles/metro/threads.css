@@ -59,8 +59,6 @@ span.kifi-thread-msg-count {
 }
 .kifi-thread-snippet {
   margin: 22px 24px 10px 10px;
-}
-.kifi-thread-snippet p {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
