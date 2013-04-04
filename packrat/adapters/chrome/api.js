@@ -276,6 +276,7 @@ api = function() {
     }
   }
 
+  var hostRe = /^https?:\/\/[^\/]*/;
   var api = {
     bookmarks: {
       create: function(parentId, name, url, callback) {
@@ -461,11 +462,12 @@ api = function() {
         .forEach(callback);
       },
       emit: function(tab, type, data) {
-        if (tab === pages[tab.id]) {
+        var currTab = pages[tab.id];
+        if (tab === currTab || currTab && currTab.url.match(hostRe)[0] == tab.url.match(hostRe)[0]) {
           api.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data);
           chrome.tabs.sendMessage(tab.id, [t0, type, data]);
         } else {
-          api.log("[api.tabs.emit] IGNORING:", type, "data:", data, "because page", tab, "replaced by", pages[tab.id]);
+          api.log("[api.tabs.emit] IGNORING:", type, "data:", data, "because page", tab.url, "replaced by", currTab.url);
         }
       },
       get: function(tabId) {
