@@ -98,7 +98,7 @@ class DomainClassifierImpl @Inject()(
   updater: SensitivityUpdater)
     extends DomainClassifier {
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   private val splitPattern = """\.""".r
 

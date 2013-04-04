@@ -44,7 +44,7 @@ class MailSenderPluginImpl @Inject() (
 
   override def processMail(mail: ElectronicMail): Unit = actor ! ProcessMail(mail, this)
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
