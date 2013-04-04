@@ -67,7 +67,6 @@ var injected, t0 = +new Date;
         document.removeEventListener("scroll", onScrollMaybeShow);  // in case already registered
         document.addEventListener("scroll", onScrollMaybeShow);
       }
-      clearTimeout(initSliderTimeout);
     },
     open_slider_to: function(o) {
       if (o.metro && !info) {
@@ -90,7 +89,6 @@ var injected, t0 = +new Date;
     auto_show: autoShow.bind(null, "auto")});
 
   api.port.emit("init_slider_please");
-  var initSliderTimeout = setTimeout(api.port.emit.bind(api.port, "init_slider_please"), 1000);
 
   function autoShow(trigger) {
     var width;
