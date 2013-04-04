@@ -139,8 +139,8 @@ class FakeClock extends Clock with Logging {
 }
 
 class FakeSocialGraphPlugin extends SocialGraphPlugin {
-  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Try[Seq[SocialConnection]]] =
-    future { Failure(new Exception("Not Implemented")) }
+  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] =
+    future { throw new Exception("Not Implemented") }
 }
 
 case class TestActorSystemModule() extends ScalaModule {

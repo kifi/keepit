@@ -13,13 +13,13 @@ import com.keepit.common.social.{SocialId, SocialNetworks, SocialNetworkType}
 import com.google.inject.{Inject, Singleton}
 
 class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
-  lazy val proxy = inject[SecureSocialUserServiceImpl]
+  lazy val proxy = inject[SecureSocialUserPlugin]
   def find(id: UserId): Option[SocialUser] = proxy.find(id)
   def save(socialUser: SocialUser): Unit = proxy.save(socialUser)
 }
 
 @Singleton
-class SecureSocialUserServiceImpl @Inject() (
+class SecureSocialUserPlugin @Inject() (
     db: Database,
     socialUserInfoRepo: SocialUserInfoRepo,
     socialGraphPlugin: SocialGraphPlugin,
