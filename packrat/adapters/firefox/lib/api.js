@@ -254,6 +254,7 @@ function onSocketMessage(socketId, data) {
 
 exports.storage = require("sdk/simple-storage").storage;
 
+const hostRe = /^https?:\/\/[^\/]*/;
 exports.tabs = {
   each: function(callback) {
     Object.keys(pages)
@@ -262,13 +263,14 @@ exports.tabs = {
     .forEach(callback);
   },
   emit: function(tab, type, data) {
-    if (tab === pages[tab.id]) {
+    var currTab = pages[tab.id];
+    if (tab === currTab || currTab && currTab.url.match(hostRe)[0] == tab.url.match(hostRe)[0]) {
       exports.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data, "url:", tab.url);
       workers[tab.id].forEach(function(worker) {
         worker.port.emit(type, data);
       });
     } else {
-      exports.log.error(Error("tab " + tab.id + " no longer at " + tab.url), "api.tabs.emit:" + type);
+      exports.log("[api.tabs.emit] SUPPRESSED tab:", tab.id, "type:", type, "navigated:", tab.url, "→", currTab && currTab.url);
     }
   },
   get: function(pageId) {
