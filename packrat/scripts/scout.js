@@ -64,7 +64,6 @@ var injected, t0 = +new Date;
       if (o.locator) {
         openSlider(o);
       } else if (rules.scroll) {
-        document.removeEventListener("scroll", onScrollMaybeShow);  // in case already registered
         document.addEventListener("scroll", onScrollMaybeShow);
       }
     },
