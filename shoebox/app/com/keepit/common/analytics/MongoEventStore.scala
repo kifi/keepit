@@ -14,6 +14,8 @@ import com.keepit.model.User
 import play.api.libs.json._
 import play.api.libs.json.Json._
 import com.mongodb.casbah.map_reduce.MapReduceStandardOutput
+import com.mongodb.DBCursor
+import com.mongodb.DBCollection
 
 
 case class MongoSelector(eventFamily: EventFamily) {
@@ -80,8 +82,8 @@ trait MongoEventStore {
   def save(event: Event): Event
   def countGroup(eventFamily: EventFamily, query: DBObject, keyMap: MongoKeyMapFunc): Seq[JsObject]
   def mapReduce(collection: String, map: MongoMapFunc, reduce: MongoReduceFunc, outputCollection: Option[String], query: Option[DBObject], finalize: Option[MongoReduceFunc]): Iterator[DBObject]
-  def find(mongoSelector: MongoSelector): MongoCursor
-  def find(collection: String, mongoSelector: MongoSelector): MongoCursor
+  def find(mongoSelector: MongoSelector): Iterator[DBObject]
+  def find(collection: String, mongoSelector: MongoSelector): Iterator[DBObject]
 }
 
 class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Logging {
@@ -126,12 +128,12 @@ class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Log
     coll.mapReduce(map.js, reduce.js, output, query).cursor
   }
 
-  def find(mongoSelector: MongoSelector): MongoCursor = {
+  def find(mongoSelector: MongoSelector): Iterator[DBObject] = {
     val coll = mongoDB(mongoSelector.eventFamily.collection)
     coll.find(mongoSelector)
   }
 
-  def find(collection: String, mongoSelector: MongoSelector): MongoCursor = {
+  def find(collection: String, mongoSelector: MongoSelector): Iterator[DBObject] = {
     val coll = mongoDB(collection)
     coll.find(mongoSelector)
   }
@@ -164,15 +166,15 @@ class FakeMongoEventStoreImpl() extends MongoEventStore with Logging {
   }
 
   def mapReduce(collection: String, map: MongoMapFunc, reduce: MongoReduceFunc, outputCollection: Option[String], query: Option[DBObject], finalize: Option[MongoReduceFunc]): Iterator[DBObject] = {
-    Iterator(new MongoDBObject())
+    Seq[DBObject]().toIterator
   }
 
-  def find(mongoSelector: MongoSelector): MongoCursor = {
-    throw new Exception("Can't implement")
+  def find(mongoSelector: MongoSelector): Iterator[DBObject] = {
+    Seq[DBObject]().toIterator
   }
 
-  def find(collection: String, mongoSelector: MongoSelector): MongoCursor = {
-    throw new Exception("Can't implement")
+  def find(collection: String, mongoSelector: MongoSelector): Iterator[DBObject] = {
+    Seq[DBObject]().toIterator
   }
 }
 
