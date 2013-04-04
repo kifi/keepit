@@ -4,6 +4,9 @@ import com.keepit.common.logging.Logging
 import org.apache.lucene.search.similarities.DefaultSimilarity
 
 object Similarity extends Logging {
+  trait NewTF extends DefaultSimilarity {
+    override def tf(freq: Int) = 1.0f - (1.0f / (freq + 1.0f))
+  }
   trait NoTF extends DefaultSimilarity {
     override def tf(freq: Int) = 1.0f
   }
@@ -27,7 +30,7 @@ object Similarity extends Logging {
   }
 
   private[this] val similarities: Map[String, DefaultSimilarity] = Map(
-    ("default" -> new DefaultSimilarity with NoCoord),
+    ("default" -> new DefaultSimilarity with NewTF with NoCoord),
     ("propotionalCoord" -> new DefaultSimilarity with ProportionalCoord),
     ("squaredCoord" -> new DefaultSimilarity with SquaredCoord),
     ("reciprocalCoord" -> new DefaultSimilarity with ReciprocalCoord),
