@@ -19,9 +19,9 @@ object DevGlobal extends FortyTwoGlobal(Dev) {
   override def onStart(app: Application) {
     require(inject[FortyTwoServices].currentService == ServiceType.DEV_MODE,
         "DevGlobal can only be run on a dev service")
-    super.onStart(app)
     ShoeboxGlobal.startServices()
     SearchGlobal.startServices()
+    super.onStart(app)
   }
 }
 
@@ -30,8 +30,8 @@ object SearchDevGlobal extends FortyTwoGlobal(Dev) {
     Seq(Modules.`override`(new CommonModule, new SearchModule).`with`(new DevCommonModule, new SearchDevModule))
 
   override def onStart(app: Application) {
-    super.onStart(app)
     SearchGlobal.startServices()
+    super.onStart(app)
   }
 }
 
@@ -40,7 +40,7 @@ object ShoeboxDevGlobal extends FortyTwoGlobal(Dev) {
     Seq(Modules.`override`(new CommonModule, new ShoeboxModule).`with`(new DevCommonModule, new ShoeboxDevModule))
 
   override def onStart(app: Application) {
-    super.onStart(app)
     ShoeboxGlobal.startServices()
+    super.onStart(app)
   }
 }
