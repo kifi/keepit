@@ -95,11 +95,20 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
       val tps = query.terms.take(64).foldLeft(Map.empty[String, PositionAndMask]){ (tps, term) =>
         i += 1
         val termText = term.text()
-        tps + (termText -> (tps.getOrElse(termText, new PositionAndMask(termPositionsEnum(context, term, acceptDocs), termText).setBit(i))))
+        tps + (termText -> (tps.getOrElse(termText, makePositionAndMask(context, term, acceptDocs)).setBit(i)))
       }
       new ProximityScorer(this, tps.values.toArray)
     } else {
       null
+    }
+  }
+
+  private def makePositionAndMask(context: AtomicReaderContext, term: Term, acceptDocs: Bits) = {
+    val enum = termPositionsEnum(context, term, acceptDocs)
+    if (enum == null) {
+      new PositionAndMask(EmptyDocsAndPositionsEnum, term.text())
+    } else {
+      new PositionAndMask(enum, term.text())
     }
   }
 }
