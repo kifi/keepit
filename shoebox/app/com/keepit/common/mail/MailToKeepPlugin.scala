@@ -30,6 +30,16 @@ case class MailToKeepServerSettings(
   emailLabel: Option[String] = None
 )
 
+private sealed abstract class KeepType(val name: String, val emailPrefix: String) {
+  override def toString = name
+}
+
+private object KeepType {
+  object Public extends KeepType("public", "keep")
+  object Private extends KeepType("private", "private")
+  val allTypes: Seq[KeepType] = Seq(Public, Private)
+}
+
 class MailToKeepActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
     settings: MailToKeepServerSettings,
@@ -64,43 +74,48 @@ class MailToKeepActor @Inject() (
         inbox.open(Folder.READ_WRITE)
         val messages = inbox.search(KeepSearchTerm)
         for (message <- messages) {
-          val senderAddr = messageParser.getSenderAddr(message)
-          (messageParser.getUser(message), messageParser.getUris(message)) match {
-            case (None, _) =>
-              sendEmail(
-                to = senderAddr,
-                subject = "Could not identify user",
-                htmlBody = s"<p>Kifi could not find a user for $senderAddr.</p>"
-              )
-            case (Some(user), Seq()) =>
-              sendEmail(
-                to = senderAddr,
-                subject = s"Your message '${message.getSubject}' contained no URLs",
-                htmlBody =
-                    s"<p>Hi ${user.firstName},</p>" +
-                    "<p>We couldn't find any URLs in your message. Try making sure your URL format is valid.</p>"
-              )
-            case (Some(user), uris) =>
-              for (uri <- uris) {
-                val bookmark = bookmarkInterner.internBookmarks(Json.obj(
-                  "url" -> uri.toString,
-                  "isPrivate" -> true
-                ), user, Seq(), "EMAIL").head
-                log.info(s"created bookmark from email with id ${bookmark.id.get}")
-                val event = Events.serverEvent(EventFamilies.GENERIC_SERVER, "email_keep", Json.obj(
-                  "user_id" -> user.id.get.id,
-                  "bookmark_id" -> bookmark.id.get.id
-                ))
-                persistEventPlugin.persist(event)
+          val prefixes = message.getAllRecipients.map(messageParser.getAddr).map {
+            KeepEmail.findFirstMatchIn(_).map(_.group(1).toLowerCase.trim)
+          }.flatten
+          for (keepType <- KeepType.allTypes.filter(prefixes contains _.emailPrefix)) {
+            val senderAddr = messageParser.getSenderAddr(message)
+            (messageParser.getUser(message), messageParser.getUris(message)) match {
+              case (None, _) =>
                 sendEmail(
                   to = senderAddr,
-                  subject = s"Successfully kept $uri",
+                  subject = "Could not identify user",
+                  htmlBody = s"<p>Kifi could not find a user for $senderAddr.</p>"
+                )
+              case (Some(user), Seq()) =>
+                sendEmail(
+                  to = senderAddr,
+                  subject = s"Your message '${message.getSubject}' contained no URLs",
                   htmlBody =
                       s"<p>Hi ${user.firstName},</p>" +
-                      s"<p>Congratulations! We successfully kept $uri for you.</p>" +
-                      "<p>Sincerely,<br>The kifi elves</p>"
+                      "<p>We couldn't find any URLs in your message. Try making sure your URL format is valid.</p>"
                 )
-              }
+              case (Some(user), uris) =>
+                for (uri <- uris) {
+                  val bookmark = bookmarkInterner.internBookmarks(Json.obj(
+                    "url" -> uri.toString,
+                    "isPrivate" -> (keepType == KeepType.Private)
+                  ), user, Seq(), "EMAIL").head
+                  log.info(s"created bookmark from email with id ${bookmark.id.get}")
+                  val event = Events.serverEvent(EventFamilies.GENERIC_SERVER, "email_keep", Json.obj(
+                    "user_id" -> user.id.get.id,
+                    "bookmark_id" -> bookmark.id.get.id
+                  ))
+                  persistEventPlugin.persist(event)
+                  sendEmail(
+                    to = senderAddr,
+                    subject = s"Successfully kept $uri",
+                    htmlBody =
+                        s"<p>Hi ${user.firstName},</p>" +
+                        s"<p>Congratulations! We added a $keepType keep for $uri.</p>" +
+                        "<p>Sincerely,<br>The kifi elves</p>"
+                  )
+                }
+            }
           }
           message.setFlags(new Flags(Flags.Flag.DELETED), true)
         }
@@ -128,7 +143,7 @@ class MailToKeepMessageParser @Inject() (
     userRepo: UserRepo
   ) {
 
-  private val Url = """(?i)(?<!@)\b(https?://)?([a-z0-9\-\.]+\.[a-z]{2,3}(/\S*)?)\b""".r
+  private val Url = """(?i)(?<!@)\b(https?://)?(([a-z0-9\-]+\.)+[a-z]{2,3}(/\S*)?)\b""".r
 
   def getSenderAddr(m: Message): String = {
     m.getReplyTo.headOption.orElse(m.getFrom.headOption).map(getAddr).head
