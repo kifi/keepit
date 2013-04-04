@@ -1,7 +1,7 @@
 function lookMouseDown(e) {
   if (e.which != 1) return;
   e.preventDefault();
-  var el = snapshot.fuzzyFind(this.href.substring(11));
+  var el = snapshot.fuzzyFind(this.href.substr(11));
   if (el) {
     // make absolute positioning relative to document instead of viewport
     document.documentElement.style.position = "relative";

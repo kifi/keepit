@@ -1,28 +1,29 @@
 function ReconnectingWebSocket(url, onmessage) {
-  var ws, self = this, buffer = [];
+  var ws, self = this, buffer = [], closed;
 
   connect();
 
   this.send = function(data) {
-    if (ws && ws.readyState == WebSocket.OPEN) {
+    if (closed) {
+      throw "closed, try back tomorrow";
+    } else if (ws && ws.readyState == WebSocket.OPEN) {
       ws.send(data);
     } else {
       buffer.push([data, +new Date]);
-      if (!ws) {
-        connect();
-      }
     }
   };
   this.close = function() {
-    buffer.length = 0;
-    if (ws) {
-      ws.close();
+    if (!closed) {
+      closed = true;
+      buffer = null;
+      if (ws) {
+        ws.close();
+      }
     }
-    self.send = self.close = function() {};
   };
 
   function connect() {
-    console.debug("[ReconnectingWebSocket.connect]");
+    api.log("[ReconnectingWebSocket.connect]");
 
     ws = new WebSocket(url);
     var t = setTimeout(onConnectTimeout.bind(null, ws), 5000);
@@ -31,16 +32,16 @@ function ReconnectingWebSocket(url, onmessage) {
       clearTimeout(t);
       while (buffer.length) {
         var a = buffer.shift();
-        console.debug("[ReconnectingWebSocket.onopen] sending, buffered for", new Date - a[1], "ms:", a[0]);
+        api.log("[ReconnectingWebSocket.onopen] sending, buffered for %i ms: %o", new Date - a[1], a[0]);
         ws.send(a[0]);
       }
     };
 
-    ws.onclose = function() {
-      console.debug("[ReconnectingWebSocket.onclose] buffer size:", buffer.length);
+    ws.onclose = function(e) {
+      api.log("[ReconnectingWebSocket.onclose] %o buffer: %o", e, buffer);
       clearTimeout(t);
       ws = null;
-      if (buffer.length) {
+      if (!closed) {
         connect();
       }
     };
@@ -49,7 +50,7 @@ function ReconnectingWebSocket(url, onmessage) {
   }
 
   function onConnectTimeout(ws) {
-    console.debug("[ReconnectingWebSocket.onConnectTimeout]");
+    api.log("[ReconnectingWebSocket.onConnectTimeout]");
     ws.close();
   }
 }
