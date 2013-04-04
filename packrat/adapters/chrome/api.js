@@ -330,8 +330,9 @@ api = function() {
       }},
     loadReason: "enable",  // assuming "enable" by elimination
     log: function() {
-      var d = new Date(), ds = d.toString();
-      console.log.apply(console, Array.prototype.concat.apply(["[" + ds.substring(0, 2) + ds.substring(15,24) + "." + String(+d).substring(10) + "]"], arguments));
+      var d = new Date, ds = d.toString();
+      arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
+      console.log.apply(console, arguments);
     },
     on: {
       install: new Listeners,
@@ -500,8 +501,8 @@ api = function() {
     version: chrome.app.getDetails().version};
 
   api.log.error = function(exception, context) {
-    var d = new Date(), ds = d.toString();
-    console.error("[" + ds.substring(0, 2) + ds.substring(15,24) + "." + String(+d).substring(10) + "]" + (context ? "[" + context + "] " : ""), exception.message, exception.stack);
+    var d = new Date, ds = d.toString();
+    console.error("[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "]" + (context ? "[" + context + "] " : ""), exception.message, exception.stack);
   };
 
   return api;
