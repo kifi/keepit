@@ -18,8 +18,8 @@ object SearchGlobal extends FortyTwoGlobal(Prod) {
 
   override def onStart(app: Application) {
     log.info("starting the search")
-    super.onStart(app)
     startServices()
+    super.onStart(app)
     log.info("search started")
   }
 
