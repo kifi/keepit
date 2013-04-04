@@ -467,7 +467,7 @@ api = function() {
           api.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data);
           chrome.tabs.sendMessage(tab.id, [t0, type, data]);
         } else {
-          api.log("[api.tabs.emit] IGNORING:", type, "data:", data, "because page", tab.url, "replaced by", currTab.url);
+          api.log("[api.tabs.emit] SUPPRESSED tab:", tab.id, "type:", type, "navigated:", tab.url, "→", currTab && currTab.url);
         }
       },
       get: function(tabId) {
