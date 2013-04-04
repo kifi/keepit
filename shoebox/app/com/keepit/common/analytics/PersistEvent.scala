@@ -67,7 +67,7 @@ class PersistEventPluginImpl @Inject() (
     actorFactory: ActorFactory[PersistEventActor])
     extends PersistEventPlugin with Logging {
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   override def enabled: Boolean = true
   override def onStart() {

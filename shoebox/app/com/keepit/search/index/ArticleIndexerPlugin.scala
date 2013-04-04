@@ -51,7 +51,7 @@ class ArticleIndexerPluginImpl @Inject() (
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
