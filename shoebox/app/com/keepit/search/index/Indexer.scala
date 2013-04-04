@@ -82,7 +82,17 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     doWithIndexWriter{ indexWriter =>
       var maxSequenceNumber = sequenceNumber
       indexables.grouped(commitBatchSize).foreach{ indexableBatch =>
-        val commitBatch = indexableBatch.map{ indexable =>
+        // create a map from id to its highest seqNum in the batch
+        val idToSeqNum = indexableBatch.foldLeft(Map.empty[Id[T], SequenceNumber]){ (m, indexable) =>
+          m + (indexable.id -> indexable.sequenceNumber)
+        }
+        val commitBatch = indexableBatch.filter{ indexable =>
+          // ignore an indexable if its seqNum is old
+          idToSeqNum.get(indexable.id) match {
+            case Some(seqNum) => (seqNum == indexable.sequenceNumber)
+            case None => false
+          }
+        }.map{ indexable =>
           val document = try {
             Left(indexable.buildDocument)
           } catch {
