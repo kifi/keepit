@@ -32,7 +32,7 @@ private[index] class ArticleIndexerActor @Inject() (
         sender ! articlesIndexed
       } catch {
         case e: Exception =>
-          inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH, errorMessage = Some("Error indexing articles")))
+          healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH, errorMessage = Some("Error indexing articles")))
           sender ! -1
       }
     case m => throw new Exception("unknown message %s".format(m))

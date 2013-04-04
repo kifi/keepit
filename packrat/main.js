@@ -480,18 +480,18 @@ api.tabs.on.loading.add(function(tab) {
   setIcon(tab);
 
   checkKeepStatus(tab, function gotKeptStatus(resp) {
-    var data = {metro: session.experiments.indexOf("metro") >= 0};
+    var metro = session.experiments.indexOf("metro") >= 0, data = {metro: metro};
     ["kept", "private", "keepers", "keeps", "sensitive", "neverOnSite",
      "numComments", "unreadComments", "numMessages", "unreadMessages"].forEach(function(key) {
       data[key] = resp[key];
     });
     data.otherKeeps = (data.keeps || 0) - (data.keepers || []).length - (data.kept && !data.private ? 1 : 0);
     if (session.rules.rules.message && /^\/messages/.test(resp.locator) ||
-        session.rules.rules.comment && /^\/comments/.test(resp.locator) && !resp.neverOnSite) {
+        session.rules.rules.comment && /^\/comments/.test(resp.locator) && (metro || !resp.neverOnSite)) {
       api.log("[gotKeptStatus]", tab.id, resp.locator);
       data.trigger = resp.locator.substr(1, 7); // "message" or "comment"
       data.locator = resp.locator;
-    } else if (!resp.kept && !resp.neverOnSite && (!resp.sensitive || !session.rules.rules.sensitive)) {
+    } else if (!resp.kept && (metro || !resp.neverOnSite) && (!resp.sensitive || !session.rules.rules.sensitive)) {
       var url = tab.url;
       if (session.rules.rules.url && session.patterns.some(function(re) {return re.test(url)})) {
         api.log("[gotKeptStatus]", tab.id, "restricted");
@@ -503,7 +503,7 @@ api.tabs.on.loading.add(function(tab) {
             scroll: session.rules.rules.scroll,
             viewport: session.rules.rules.viewport};
         }
-        tab.autoShowSec = (session.rules.rules[resp.keepers ? "friendKept" : "focus"] || [])[0];
+        tab.autoShowSec = (session.rules.rules[!metro && resp.keepers ? "friendKept" : "focus"] || [])[0];
         if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
           scheduleAutoShow(tab);
         }
