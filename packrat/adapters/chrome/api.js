@@ -12,34 +12,26 @@ api = function() {
     return {
       id: tab.id,
       url: tab.url,
-      ready: undefined,  // only set when we know for sure whether content scripts are in the page
+      ready: undefined,  // ready state not known
       complete: tab.status === "complete"};
   }
 
-  function createPageAndInjectContentScripts(tab, dispatchOnReady) {
+  function createPageAndInjectContentScripts(tab, suppressOnReady) {
     var page = pages[tab.id] = newPage(tab);
     if (tab.active) {
       selectedTabPages[tab.windowId] = page;
     }
     if (/^https?:/.test(tab.url)) {
       if (page.complete) {
-        injectContentScripts(page, callback);
+        injectContentScripts(page, suppressOnReady);
       } else if (tab.status === "loading") {
         // we might want to dispatch on.loading here.
         chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
           page.complete = arr && arr[0] === "complete";
           if (page.complete || arr && arr[0] === "interactive") {
-            injectContentScripts(page, callback);
+            injectContentScripts(page, suppressOnReady);
           }
         });
-      }
-    }
-    return page;
-
-    function callback() {
-      page.ready = true;
-      if (dispatchOnReady) {
-        dispatch.call(api.tabs.on.ready, page);
       }
     }
   }
@@ -89,7 +81,7 @@ api = function() {
         chrome.tabs.get(info.tabId, function(tab) {
           if (/^https?:\/\/www.google.com\/webhp\?sourceid=chrome-instant&/.test(tab && tab.url)) {  // TODO: support all Google domains/locales
             api.log("[onActivated] Instant results page:", tab.id, "url:", tab.url);
-            createPageAndInjectContentScripts(tab, true);
+            createPageAndInjectContentScripts(tab);
           }
         });
       }
@@ -116,10 +108,9 @@ api = function() {
       if (change.status === "complete") {
         var page = pages[tabId];
         if (page) {
-          // TODO: dispatch ready handler here if !page.ready
-          // i.e. hide for API clients the fact that sometimes we get here before "api:dom_ready" arrives
           page.complete = true;
           if (/^https?:/.test(page.url)) {
+            injectContentScripts(page);
             dispatch.call(api.tabs.on.complete, page);
           }
         } else {
@@ -179,7 +170,7 @@ api = function() {
   chrome.tabs.query({windowType: "normal"}, function(tabs) {
     tabs.forEach(function(tab) {
       if (!pages[tab.id]) {
-        createPageAndInjectContentScripts(tab, false);
+        createPageAndInjectContentScripts(tab, true);
       }
     });
   });
@@ -192,10 +183,9 @@ api = function() {
     }
     if (msg === "api:dom_ready") {
       if (page) {
-        injectContentScripts(tab, function() {
-          page.ready = true;
-          dispatch.call(api.tabs.on.ready, page);
-        });
+        injectContentScripts(page);
+      } else {
+        api.log.error(Error("no page for " + tabId), "api:dom_ready");
       }
     } else if (msg[0] === "api:require") {
       if (tab) {
@@ -219,26 +209,36 @@ api = function() {
     }
   });
 
-  // TODO: Use another property (besides .ready) on page to indicate that content script injection has begun,
-  // to prevent starting it again before the first one is done.
-  function injectContentScripts(tab, callback) {
+  function injectContentScripts(page, suppressOnReady) {
+    if (page.injecting || page.ready) return;
+
+    page.injecting = true;
+
     // for ignoring messages from future updates/installs/reloads of this extension
-    chrome.tabs.executeScript(tab.id, {
+    chrome.tabs.executeScript(page.id, {
       code: "lifeId=" + t0 + ";!function(e){e.initEvent('kifiunload');e.lifeId=lifeId;dispatchEvent(e)}(document.createEvent('Event'))",
       runAt: "document_start"});
 
     for (var i = 0, n = 0, N = 0; i < meta.contentScripts.length; i++) {
       var cs = meta.contentScripts[i];
-      if (cs[1].test(tab.url)) {
+      if (cs[1].test(page.url)) {
         N++;
-        injectWithDeps(tab.id, cs[0], function() {
+        injectWithDeps(page.id, cs[0], function() {
           if (++n === N) {
-            callback();
+            done();
           }
         });
       }
     }
-    if (N === 0) callback();
+    if (N === 0) done();
+
+    function done() {
+      page.ready = true;
+      delete page.injecting;
+      if (!suppressOnReady) {
+        dispatch.call(api.tabs.on.ready, page);
+      }
+    }
   }
 
   function injectWithDeps(tabId, path, callback) {
