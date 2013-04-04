@@ -32,7 +32,7 @@ class DataIntegrityPluginImpl @Inject() (
     actorFactory: ActorFactory[DataIntegrityActor])
   extends Logging with DataIntegrityPlugin {
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {

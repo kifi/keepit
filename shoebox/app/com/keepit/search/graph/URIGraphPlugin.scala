@@ -47,7 +47,7 @@ class URIGraphPluginImpl @Inject() (
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   override def enabled: Boolean = true
   override def onStart() {
