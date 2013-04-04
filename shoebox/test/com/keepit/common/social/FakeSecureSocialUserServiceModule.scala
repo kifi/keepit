@@ -7,7 +7,7 @@ import com.tzavellas.sse.guice.ScalaModule
 
 case class FakeSecureSocialUserServiceModule() extends ScalaModule {
   override def configure(): Unit = {
-    new SecureSocialUserService(current).onStart()
+    new SecureSocialUserService().onStart()
     require(UserService.delegate.isDefined)
   }
 }

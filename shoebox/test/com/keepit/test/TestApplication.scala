@@ -34,6 +34,10 @@ import org.joda.time.LocalDate
 import play.api.Application
 import play.api.Play
 import play.api.db.DB
+import scala.concurrent._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.util._
+import com.keepit.common.social.SocialGraphPlugin
 import scala.collection.mutable.{Stack => MutableStack}
 import scala.slick.session.{Database => SlickDatabase}
 
@@ -89,6 +93,7 @@ case class TestModule() extends ScalaModule {
     }))
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
+    bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
@@ -131,6 +136,11 @@ class FakeClock extends Clock with Logging {
       fakeNowTime
     }
   }
+}
+
+class FakeSocialGraphPlugin extends SocialGraphPlugin {
+  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] =
+    future { throw new Exception("Not Implemented") }
 }
 
 case class TestActorSystemModule() extends ScalaModule {

@@ -174,6 +174,12 @@ class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Opt
     fragment.foreach{ fragment => uri = uri + "#" + fragment }
     uri
   }
+
+  override def hashCode() = URI.unapply(this).hashCode()
+  override def equals(o: Any) = o match {
+    case that: URI if getClass == that.getClass => URI.unapply(this) == URI.unapply(that)
+    case _ => false
+  }
 }
 
 object Host {
@@ -189,6 +195,11 @@ object Host {
 class Host(val domain: Seq[String]) {
   def name: String = domain.reverse.mkString(".")
   override def toString = name
+  override def hashCode() = domain.hashCode()
+  override def equals(o: Any) = o match {
+    case h: Host if getClass == h.getClass => domain == h.domain
+    case _ => false
+  }
 }
 
 object Query {
@@ -220,10 +231,15 @@ class Query(val params: Seq[Param]) {
     if (params.size > 0) params.mkString("&") else ""
   }
 
+  override def hashCode() = params.hashCode()
+  override def equals(o: Any) = o match {
+    case that: Query if getClass == that.getClass => params == that.params
+    case _ => false
+  }
   def containsParam(name: String) = params.exists(_.name == name)
 }
 
-case class Param(val name: String, val value: Option[String]) {
+case class Param(name: String, value: Option[String]) {
   override def toString() = {
     if (value.isDefined) (name + "=" + value.get) else name
   }
