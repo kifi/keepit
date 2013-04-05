@@ -56,13 +56,10 @@ function attachComposeBindings($c, composeTypeName) {
     $d.focus();
   }
 
-  $f.on("click", ".kifi-compose-submit", function() {
-    $f.submit();
-  })
-  .submit(function(e) {
+  $f.submit(function(e) {
     e.preventDefault();
-    var text = convertDraftToText($d.html());
-    if (!text) {
+    var text;
+    if ($p[0].parentNode || !(text = convertDraftToText($d.html()))) {
       $d.focus();
       return;
     }
@@ -92,6 +89,15 @@ function attachComposeBindings($c, composeTypeName) {
       s.removeAllRanges();
       s.addRange(r);
     });
+  })
+  .find(".kifi-compose-submit")
+  .click(function() {
+    $f.submit();
+  })
+  .keypress(function(e) {
+    if (e.which == 32) {
+      $f.submit();
+    }
   });
 
   var hOld, elAbove = $f[0].previousElementSibling;
