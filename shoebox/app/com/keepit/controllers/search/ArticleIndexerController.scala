@@ -61,8 +61,8 @@ class ArticleIndexerController @Inject()(
   }
 
   def refreshPhrases = Action { implicit request =>
-    phraseIndexer.refreshSearcher()
-    Ok("searcher refreshed")
+    phraseIndexer.reload()
+    Ok("phrases refreshed")
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]) = Action { implicit request =>
