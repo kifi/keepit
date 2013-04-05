@@ -31,7 +31,7 @@ api = function() {
       api.port.emit("api:load", path, callback);
     },
     log: function() {
-      var d = new Date(), ds = d.toString();
+      var d = new Date, ds = d.toString();
       var args = Array.prototype.slice.apply(arguments);
       for (var i = 0; i < args.length; i++) {
         var arg = args[i];
@@ -39,7 +39,7 @@ api = function() {
           args[i] = JSON.stringify(arg);
         }
       }
-      console.log("'" + ds.substring(0,2) + ds.substring(15,24) + "." + String(+d).substring(10) + "'", args.join(" "));
+      console.log("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'", args.join(" "));
     },
     port: {
       emit: function(type, data, callback) {

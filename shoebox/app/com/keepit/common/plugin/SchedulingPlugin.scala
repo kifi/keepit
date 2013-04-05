@@ -6,10 +6,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.{ActorSystem, Cancellable, ActorRef}
 import play.api.Play.current
 import play.api.Plugin
+import play.api.Mode
 
 trait SchedulingPlugin extends Plugin {
   final protected lazy val schedulerIsEnabled: Boolean =
-    current.configuration.getBoolean("scheduler.enabled").getOrElse(true)
+    current.mode != Mode.Test && current.configuration.getBoolean("scheduler.enabled").getOrElse(true)
 
   private var _cancellables: Seq[Cancellable] = Seq()
 

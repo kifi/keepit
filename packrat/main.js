@@ -26,52 +26,44 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
 
 // ===== Event logging
 
-var _eventLog = [];
 var eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1};
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
-    api.log("[logEvent] invalid event family:", eventFamily);
+    api.log("#800", "[logEvent] invalid event family:", eventFamily);
     return;
   }
-  var event = {
-      "time": new Date().getTime(),
-      "eventFamily": eventFamily, /* Category (see eventFamilies) */
-      "eventName": eventName}; /* Any key for this event */
+  var ev = {
+    installId: getConfigs().kifi_installation_id, // ExternalId[KifiInstallation]
+    eventFamily: eventFamily, // Category (see eventFamilies)
+    eventName: eventName}; // Any key for this event
   if (metaData) {
-    event.metaData = metaData; /* Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc. */
+    ev.metaData = metaData; // Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc.
   }
   if (prevEvents && prevEvents.length) {
-    event.prevEvents = prevEvents; /* a list of previous ExternalId[Event]s that are associated with this action. !!!: The frontend determines what is associated with what. */
+    ev.prevEvents = prevEvents; // a list of previous ExternalId[Event]s that are associated with this action. The frontend determines what is associated with what.
   }
-  _eventLog.push(event);
-}
-
-var eventLogDelay = 4000;
-api.timers.setTimeout(function maybeSend() {
-  if (_eventLog.length) {
-    var t0 = _eventLog[0].time;
-    _eventLog.forEach(function(e) { e.time -= t0 }); // relative times = fewer bytes
-    var config = getConfigs();
-    var data = {
-      "version": 1,
-      "time": new Date - t0,
-      "installId": config.kifi_installation_id, /* User's ExternalId[KifiInstallation] */
-      "events": _eventLog};
-    api.log("[EventLog] sending:", data);
-    ajax("POST", "http://" + config.server + "/users/events", data, function done(o) {
-      api.log("[EventLog] done:", o)
-    }, function fail(xhr) {
-      api.log("[EventLog] fail:", xhr.responseText);
-    });
-
-    _eventLog.length = 0;
-    eventLogDelay = Math.round(Math.max(Math.sqrt(eventLogDelay), 5 * 1000));
+  api.log("#aaa", "[logEvent] %s %o", ev.eventName, ev);
+  if (socket) {
+    socket.send(["log_event", ev]);
   } else {
-    eventLogDelay = Math.min(eventLogDelay * 2, 60 * 1000);
+    ev.time = +new Date;
+    logEvent.queue.push(ev);
+    if (logEvent.queue.length > 50) {
+      logEvent.queue.shift();  // discard oldest
+    }
   }
-  api.timers.setTimeout(maybeSend, eventLogDelay);
-}, 4000);
+}
+logEvent.queue = [];
+logEvent.catchUp = function() {
+  var t = +new Date;
+  while (logEvent.queue.length) {
+    var ev = logEvent.queue.shift();
+    ev.msAgo = t - ev.time;
+    delete ev.time;
+    socket.send(["log_event", ev]);
+  }
+}
 
 // ===== WebSocket handlers
 
@@ -161,7 +153,7 @@ api.port.on({
   init_slider_please: function(_, _, tab) {
     var emission = tab.emitOnReady;
     if (session && emission) {
-      api.log("[init_slider_please] emitting:", tab.id, emission);
+      api.log("[init_slider_please] %i emitting %s", tab.id, emission[0]);
       api.tabs.emit(tab, emission[0], emission[1]);
       delete tab.emitOnReady;
     }
@@ -433,7 +425,7 @@ function checkKeepStatus(tab, callback) {
     return;
   }
 
-  api.log("[checkKeepStatus]", tab);
+  api.log("[checkKeepStatus] %i %o", tab.id, tab);
 
   tab.keepStatusKnown = true;  // setting before request to avoid making two overlapping requests
   ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url, ver: session.rules.version}, function done(o) {
@@ -469,7 +461,7 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
 }
 
 api.tabs.on.focus.add(function(tab) {
-  api.log("[tabs.on.focus]", tab);
+  api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
   if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
   } else {
@@ -478,28 +470,28 @@ api.tabs.on.focus.add(function(tab) {
 });
 
 api.tabs.on.blur.add(function(tab) {
-  api.log("[tabs.on.blur]", tab);
+  api.log("#b8a", "[tabs.on.blur] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
 });
 
 api.tabs.on.loading.add(function(tab) {
-  api.log("[tabs.on.loading]", tab);
+  api.log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab);
   setIcon(tab);
 
   checkKeepStatus(tab, function gotKeptStatus(resp) {
-    var data = {metro: session.experiments.indexOf("metro") >= 0};
+    var metro = session.experiments.indexOf("metro") >= 0, data = {metro: metro};
     ["kept", "private", "keepers", "keeps", "sensitive", "neverOnSite",
      "numComments", "unreadComments", "numMessages", "unreadMessages"].forEach(function(key) {
       data[key] = resp[key];
     });
     data.otherKeeps = (data.keeps || 0) - (data.keepers || []).length - (data.kept && !data.private ? 1 : 0);
     if (session.rules.rules.message && /^\/messages/.test(resp.locator) ||
-        session.rules.rules.comment && /^\/comments/.test(resp.locator) && !resp.neverOnSite) {
+        session.rules.rules.comment && /^\/comments/.test(resp.locator) && (metro || !resp.neverOnSite)) {
       api.log("[gotKeptStatus]", tab.id, resp.locator);
       data.trigger = resp.locator.substr(1, 7); // "message" or "comment"
       data.locator = resp.locator;
-    } else if (!resp.kept && !resp.neverOnSite && (!resp.sensitive || !session.rules.rules.sensitive)) {
+    } else if (!resp.kept && (metro || !resp.neverOnSite) && (!resp.sensitive || !session.rules.rules.sensitive)) {
       var url = tab.url;
       if (session.rules.rules.url && session.patterns.some(function(re) {return re.test(url)})) {
         api.log("[gotKeptStatus]", tab.id, "restricted");
@@ -511,14 +503,14 @@ api.tabs.on.loading.add(function(tab) {
             scroll: session.rules.rules.scroll,
             viewport: session.rules.rules.viewport};
         }
-        tab.autoShowSec = (session.rules.rules[resp.keepers ? "friendKept" : "focus"] || [])[0];
+        tab.autoShowSec = (session.rules.rules[!metro && resp.keepers ? "friendKept" : "focus"] || [])[0];
         if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
           scheduleAutoShow(tab);
         }
       }
     }
 
-    api.log("[gotKeptStatus]", tab.id, data);
+    api.log("[gotKeptStatus] %i %o", tab.id, data);
     if (tab.ready) {
       api.tabs.emit(tab, "init_slider", data);
     } else {
@@ -528,23 +520,23 @@ api.tabs.on.loading.add(function(tab) {
 });
 
 api.tabs.on.ready.add(function(tab) {
-  api.log("[tabs.on.ready]", tab);
+  api.log("#b8a", "[tabs.on.ready] %i %o", tab.id, tab);
   logEvent("extension", "pageLoad");
 
-  var emission = tab.emitOnReady;  // TODO: promote emitOnReady to API layer
+  var emission = tab.emitOnReady;
   if (emission) {
-    api.log("[tabs.on.ready] emitting:", tab.id, emission);
+    api.log("[tabs.on.ready] emitting: %i %o", tab.id, emission);
     api.tabs.emit(tab, emission[0], emission[1]);
     delete tab.emitOnReady;
   }
 });
 
 api.tabs.on.complete.add(function(tab) {
-  api.log("[tabs.on.complete]", tab);
+  api.log("#b8a", "[tabs.on.complete] %i %o", tab.id, tab);
 });
 
 api.tabs.on.unload.add(function(tab) {
-  api.log("[tabs.on.unload]", tab);
+  api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
 });
@@ -625,13 +617,14 @@ function authenticate(callback) {
       version: api.version,
       agent: api.browserVersion},
     function done(data) {
-      api.log("[startSession] done, loadReason:", api.loadReason, "session:", data);
+      api.log("[startSession] reason: %s session: %o", api.loadReason, data);
       logEvent("extension", "authenticated");
 
       session = compilePatterns(data);
       socket = api.socket.open(
         (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws",
         socketHandlers);
+      logEvent.catchUp();
 
       setConfigs("kifi_installation_id", data.installationId);
 

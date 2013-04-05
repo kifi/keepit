@@ -21,8 +21,8 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
 
   override def onStart(app: Application): Unit = {
     log.info("starting the shoebox")
-    super.onStart(app)
     startServices()
+    super.onStart(app)
     log.info("shoebox started")
   }
 

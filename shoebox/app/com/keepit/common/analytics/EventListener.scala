@@ -22,6 +22,7 @@ import akka.actor.Props
 import play.api.Play.current
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
+import com.google.inject.Inject
 
 trait EventListenerPlugin extends SchedulingPlugin {
   def onEvent: PartialFunction[Event, Unit]
@@ -41,11 +42,12 @@ trait EventListenerPlugin extends SchedulingPlugin {
 class EventHelper @Inject() (
     actorFactory: ActorFactory[EventHelperActor],
     listeners: JSet[EventListenerPlugin]) {
-  private val actor = actorFactory.get()
-  def newEvent(event: Event): Seq[String] = {
-    actor ! event
+  private lazy val actor = actorFactory.get()
+
+  def newEvent(event: Event): Unit = actor ! event
+
+  def matchEvent(event: Event): Seq[String] =
     listeners.filter(_.onEvent.isDefinedAt(event)).map(_.getClass.getSimpleName.replaceAll("\\$", "")).toSeq
-  }
 }
 
 class EventHelperActor @Inject() (
@@ -124,9 +126,8 @@ class SearchUnloadListener @Inject() (persistEventPlugin: PersistEventPlugin, st
       val googleClicks = (metaData \ "googleResultsClicked").asOpt[Int].getOrElse(-1)
       val uuid = (metaData \ "queryUUID").asOpt[String].getOrElse("")
       val q = MongoSelector(EventFamilies.SERVER_SEARCH).withEventName("search_return_hits").withMetaData("queryUUID", uuid)
-      val cursor = store.find(q)
-      if (cursor.size == 1) {
-        val data = cursor.map(dbo => EventSerializer.eventSerializer.mongoReads(dbo).get).next.metaData
+      store.find(q).map { dbo =>
+        val data = EventSerializer.eventSerializer.mongoReads(dbo).get.metaData
         val svVar = (data.metaData \ "svVariance").asOpt[Double].getOrElse(-1.0) // retrieve the related semantic variance
         val newMetaData = Json.obj("queryUUID" -> uuid,
           "svVariance" -> svVar,

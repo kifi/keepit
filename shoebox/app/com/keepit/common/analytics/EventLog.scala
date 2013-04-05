@@ -11,6 +11,7 @@ import com.keepit.model._
 
 import play.api.Play.current
 import play.api.libs.json._
+import com.google.inject.Inject
 
 trait EventFamily {
   val name: String
@@ -67,16 +68,25 @@ trait EventMetadata {
 case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: String, userExperiments: Seq[State[ExperimentType]], metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 
-case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime,
-    serverVersion: String = inject[FortyTwoServices].currentService + ":" + inject[FortyTwoServices].currentVersion) {
+case class Event(
+  externalId: ExternalId[Event] = ExternalId[Event](),
+  metaData: EventMetadata,
+  createdAt: DateTime,
+  serverVersion: String = inject[FortyTwoServices].currentService + ":" + inject[FortyTwoServices].currentVersion
+)
 
-  inject[EventHelper].newEvent(this)
-
-  def persistToS3(): Event = {
-    inject[S3EventStore] += (externalId -> this)
-    this
+class EventRepo @Inject() (s3EventStore: S3EventStore, mongoEventStore: MongoEventStore, eventHelper: EventHelper) {
+  def persistToS3(event: Event): Event = {
+    s3EventStore += (event.externalId -> event)
+    event
   }
-  def persistToMongo(): Event = inject[MongoEventStore].save(this)
+  def persistToMongo(event: Event): Event = mongoEventStore.save(event)
+  def persist(event: Event): Event = {
+    persistToS3(event)
+    persistToMongo(event)
+  }
+
+  def feedToListeners(event: Event) = eventHelper.newEvent(event)
 }
 
 object Events {

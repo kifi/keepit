@@ -32,24 +32,25 @@ case class Persist(event: Event, queueTime: DateTime)
 case class PersistMany(events: Seq[Event], queueTime: DateTime)
 
 private[analytics] class PersistEventActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin)
+    healthcheckPlugin: HealthcheckPlugin, eventRepo: EventRepo)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case Persist(event, queueTime) =>
+      eventRepo.feedToListeners(event)
       val diff = Seconds.secondsBetween(queueTime, currentDateTime).getSeconds
       if(diff > 120) {
         val ex = new Exception("Event log is backing up. Event was queued %s seconds ago".format(diff))
-        inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         // To keep the event log from backing too far up, ignore very old events.
         // If we get this, use parallel actors.
       }
       else {
-        try { event.persistToS3() } catch { case ex: Throwable =>
-          inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        try { eventRepo.persistToS3(event) } catch { case ex: Throwable =>
+          healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         }
-        try { event.persistToMongo() } catch { case ex: Throwable =>
-          inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        try { eventRepo.persistToMongo(event) } catch { case ex: Throwable =>
+          healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         }
       }
     case PersistMany(events, queueTime) =>
@@ -67,7 +68,7 @@ class PersistEventPluginImpl @Inject() (
     actorFactory: ActorFactory[PersistEventActor])
     extends PersistEventPlugin with Logging {
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   override def enabled: Boolean = true
   override def onStart() {
