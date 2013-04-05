@@ -30,7 +30,7 @@ var eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1}
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
-    api.log("[logEvent] invalid event family:", eventFamily);
+    api.log("#800", "[logEvent] invalid event family:", eventFamily);
     return;
   }
   var ev = {
@@ -43,7 +43,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (prevEvents && prevEvents.length) {
     ev.prevEvents = prevEvents; // a list of previous ExternalId[Event]s that are associated with this action. The frontend determines what is associated with what.
   }
-  api.log("[logEvent]", ev);
+  api.log("#aaa", "[logEvent] %s %o", ev.eventName, ev);
   if (socket) {
     socket.send(["log_event", ev]);
   } else {
@@ -153,7 +153,7 @@ api.port.on({
   init_slider_please: function(_, _, tab) {
     var emission = tab.emitOnReady;
     if (session && emission) {
-      api.log("[init_slider_please] emitting:", tab.id, emission);
+      api.log("[init_slider_please] %i emitting %s", tab.id, emission[0]);
       api.tabs.emit(tab, emission[0], emission[1]);
       delete tab.emitOnReady;
     }
@@ -425,7 +425,7 @@ function checkKeepStatus(tab, callback) {
     return;
   }
 
-  api.log("[checkKeepStatus]", tab);
+  api.log("[checkKeepStatus] %i %o", tab.id, tab);
 
   tab.keepStatusKnown = true;  // setting before request to avoid making two overlapping requests
   ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url, ver: session.rules.version}, function done(o) {
@@ -461,7 +461,7 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
 }
 
 api.tabs.on.focus.add(function(tab) {
-  api.log("[tabs.on.focus]", tab);
+  api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
   if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
   } else {
@@ -470,13 +470,13 @@ api.tabs.on.focus.add(function(tab) {
 });
 
 api.tabs.on.blur.add(function(tab) {
-  api.log("[tabs.on.blur]", tab);
+  api.log("#b8a", "[tabs.on.blur] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
 });
 
 api.tabs.on.loading.add(function(tab) {
-  api.log("[tabs.on.loading]", tab);
+  api.log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab);
   setIcon(tab);
 
   checkKeepStatus(tab, function gotKeptStatus(resp) {
@@ -510,7 +510,7 @@ api.tabs.on.loading.add(function(tab) {
       }
     }
 
-    api.log("[gotKeptStatus]", tab.id, data);
+    api.log("[gotKeptStatus] %i %o", tab.id, data);
     if (tab.ready) {
       api.tabs.emit(tab, "init_slider", data);
     } else {
@@ -520,23 +520,23 @@ api.tabs.on.loading.add(function(tab) {
 });
 
 api.tabs.on.ready.add(function(tab) {
-  api.log("[tabs.on.ready]", tab);
+  api.log("#b8a", "[tabs.on.ready] %i %o", tab.id, tab);
   logEvent("extension", "pageLoad");
 
-  var emission = tab.emitOnReady;  // TODO: promote emitOnReady to API layer
+  var emission = tab.emitOnReady;
   if (emission) {
-    api.log("[tabs.on.ready] emitting:", tab.id, emission);
+    api.log("[tabs.on.ready] emitting: %i %o", tab.id, emission);
     api.tabs.emit(tab, emission[0], emission[1]);
     delete tab.emitOnReady;
   }
 });
 
 api.tabs.on.complete.add(function(tab) {
-  api.log("[tabs.on.complete]", tab);
+  api.log("#b8a", "[tabs.on.complete] %i %o", tab.id, tab);
 });
 
 api.tabs.on.unload.add(function(tab) {
-  api.log("[tabs.on.unload]", tab);
+  api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
 });
@@ -617,7 +617,7 @@ function authenticate(callback) {
       version: api.version,
       agent: api.browserVersion},
     function done(data) {
-      api.log("[startSession] done, loadReason:", api.loadReason, "session:", data);
+      api.log("[startSession] reason: %s session: %o", api.loadReason, data);
       logEvent("extension", "authenticated");
 
       session = compilePatterns(data);

@@ -89,7 +89,7 @@ api = function() {
   });
 
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
-    api.log("[onUpdated] tab:", tabId, "change:", change);
+    api.log("#666", "[onUpdated] %i change: %o", tabId, change);
     if (selectedTabPages[tab.windowId]) {  // window is "normal"
       if (change.status === "loading") {
         var page = pages[tabId];
@@ -146,7 +146,7 @@ api = function() {
     topNormalWinId = win.type == "normal" ? win.id : chrome.windows.WINDOW_ID_NONE;
   });
   chrome.windows.onFocusChanged.addListener(function(winId) {
-    api.log("[onFocusChanged] win:", winId, "was:", focusedWinId);
+    api.log("[onFocusChanged] win %o -> %o", focusedWinId, winId);
     if (focusedWinId > 0) {
       var page = selectedTabPages[focusedWinId];
       if (page && /^https?:/.test(page.url)) {
@@ -186,7 +186,7 @@ api = function() {
         injectContentScripts(page);
       } else {
         chrome.windows.get(tab.windowId, function(win) {
-          if (win.type == "normal") {
+          if (win && win.type == "normal") {
             api.log.error(Error("no page for " + tabId), "api:dom_ready");
           }
         });
@@ -199,16 +199,14 @@ api = function() {
     } else if (portHandlers) {
       var handler = portHandlers[msg[0]];
       if (handler) {
-        api.log("[onMessage] handling:", msg, "from:", tabId);
+        api.log("#0a0", "[onMessage] %i %s %o", tabId, msg[0], msg[1]);
         try {
           return handler(msg[1], respond, page);
         } catch (e) {
           api.log.error(e);
-        } finally {
-          api.log("[onMessage] done:", msg);
         }
       } else {
-        api.log("[onMessage] ignoring:", msg, "from:", tabId);
+        api.log("#c00", "[onMessage] ignoring:", msg, "from:", tabId);
       }
     }
   });
@@ -267,7 +265,7 @@ api = function() {
       var n = 0, N = paths.length;
       if (N) {
         paths.forEach(function(path) {
-          api.log("[injectWithDeps] tab:", tabId, path);
+          api.log("#bbb", "[injectWithDeps] %i %s", tabId, path);
           inject(tabId, {file: path, runAt: "document_end"}, function() {
             if (++n === N) {
               callback();
@@ -280,7 +278,7 @@ api = function() {
     }
   }
 
-  var hostRe = /^https?:\/\/[^\/]*/;
+  var hostRe = /^https?:\/\/[^\/]*/, hexRe = /^#[0-9a-f]{3}$/i;
   var api = {
     bookmarks: {
       create: function(parentId, name, url, callback) {
@@ -330,8 +328,14 @@ api = function() {
       }},
     loadReason: "enable",  // assuming "enable" by elimination
     log: function() {
-      var d = new Date, ds = d.toString();
-      arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
+      var d = new Date, ds = d.toString(), t = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] ";
+      if (hexRe.test(arguments[0])) {
+        var c = arguments[0];
+        arguments[0] = "%c" + t + arguments[1];
+        arguments[1] = "color:" + c;
+      } else {
+        arguments[0] = t + arguments[0];
+      }
       console.log.apply(console, arguments);
     },
     on: {
@@ -423,23 +427,23 @@ api = function() {
             if (id > 0) {
               var cb = callbacks[id];
               if (cb) {
-                api.log("[socket.receive] calling back after", new Date - cb[1], "ms:", id, msg);
+                api.log("#0ac", "[socket.receive] calling back after", new Date - cb[1], "ms:", id, msg);
                 delete callbacks[id];
                 cb[0].apply(null, msg);
               } else {
-                api.log("[socket.receive] ignoring, no callback", id, msg);
+                api.log("#0ac", "[socket.receive] ignoring, no callback", id, msg);
               }
             } else {
               var handler = handlers[id];
               if (handler) {
-                api.log("[socket.receive] invoking handler", id, msg);
+                api.log("#0ac", "[socket.receive] invoking handler", id, msg);
                 handler.apply(null, msg);
               } else {
-                api.log("[socket.receive] ignoring, no handler", id, msg);
+                api.log("#0ac", "[socket.receive] ignoring, no handler", id, msg);
               }
             }
           } else {
-            api.log("[socket.receive] ignoring (not array):", msg, "from url", url);
+            api.log("#0ac", "[socket.receive] ignoring (not array):", msg, "from url", url);
           }
         });
         return {
@@ -449,7 +453,8 @@ api = function() {
               callbacks[id] = [callback, +new Date];
               arr.splice(1, 0, id);
             }
-            api.log("[socket.send]", arr, socket.send(JSON.stringify(arr)));
+            api.log("#0ac", "[socket.send]", arr);
+            socket.send(JSON.stringify(arr));
           },
           close: function() {
             socket.close();
@@ -469,10 +474,10 @@ api = function() {
       emit: function(tab, type, data) {
         var currTab = pages[tab.id];
         if (tab === currTab || currTab && currTab.url.match(hostRe)[0] == tab.url.match(hostRe)[0]) {
-          api.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data);
+          api.log("#0c0", "[api.tabs.emit] %i %s %o", tab.id, type, data);
           chrome.tabs.sendMessage(tab.id, [t0, type, data]);
         } else {
-          api.log("[api.tabs.emit] SUPPRESSED tab:", tab.id, "type:", type, "navigated:", tab.url, "→", currTab && currTab.url);
+          api.log("[api.tabs.emit] SUPPRESSED %i %s navigated: %s -> %s", tab.id, type, tab.url, currTab && currTab.url);
         }
       },
       get: function(tabId) {
