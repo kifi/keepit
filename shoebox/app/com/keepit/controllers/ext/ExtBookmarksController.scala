@@ -16,25 +16,16 @@ import play.api.libs.json._
 
 @Singleton
 class ExtBookmarksController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
-    db: Database,
-    bookmarkManager: BookmarkInterner,
-    bookmarkRepo: BookmarkRepo,
-    uriRepo: NormalizedURIRepo,
-    userRepo: UserRepo,
-    urlPatternRepo: URLPatternRepo,
-    domainRepo: DomainRepo,
-    userToDomainRepo: UserToDomainRepo,
-    sliderRuleRepo: SliderRuleRepo,
-    socialConnectionRepo: SocialConnectionRepo,
-    commentReadRepo: CommentReadRepo,
-    experimentRepo: UserExperimentRepo,
-    searchClient: SearchServiceClient,
-    healthcheck: HealthcheckPlugin,
-    classifier: DomainClassifier,
-    historyTracker: SliderHistoryTracker,
-    sliderInfoLoader: SliderInfoLoader
-  ) extends BrowserExtensionController(actionAuthenticator) {
+  actionAuthenticator: ActionAuthenticator,
+  db: Database,
+  bookmarkManager: BookmarkInterner,
+  bookmarkRepo: BookmarkRepo,
+  uriRepo: NormalizedURIRepo,
+  userRepo: UserRepo,
+  searchClient: SearchServiceClient,
+  healthcheck: HealthcheckPlugin,
+  sliderInfoLoader: SliderInfoLoader)
+    extends BrowserExtensionController(actionAuthenticator) {
 
   def checkIfExists(uri: String, ver: String) = AuthenticatedJsonAction { request =>
     val userId = request.userId
