@@ -106,6 +106,7 @@ class ExtStreamController @Inject() (
           subscriptions += (("user", userChannel.subscribe(streamSession.userId, socketId, channel)))
 
           val iteratee = asyncIteratee { json =>
+            log.info("WS just received: " + json)
             json.as[Seq[JsValue]] match {
               case JsString("ping") +: _ =>
                 channel.push(Json.arr("pong"))
