@@ -52,9 +52,13 @@ function onIconClick(win) {
 }
 
 exports.loadReason = {upgrade: "update", downgrade: "update"}[self.loadReason] || self.loadReason;
+
+const hexRe = /^#[0-9a-f]{3}$/i;
 exports.log = function() {
-  var d = new Date(), ds = d.toString();
-  var args = Array.prototype.slice.apply(arguments);
+  var d = new Date, ds = d.toString(), args = Array.slice(arguments);
+  if (hexRe.test(args[0])) {
+    args.shift();
+  }
   for (var i = 0; i < args.length; i++) {
     var arg = args[i];
     if (typeof arg == "object") {
@@ -270,7 +274,7 @@ exports.tabs = {
         worker.port.emit(type, data);
       });
     } else {
-      exports.log("[api.tabs.emit] SUPPRESSED tab:", tab.id, "type:", type, "navigated:", tab.url, "→", currTab && currTab.url);
+      exports.log("[api.tabs.emit] SUPPRESSED tab:", tab.id, "type:", type, "navigated:", tab.url, "->", currTab && currTab.url);
     }
   },
   get: function(pageId) {
