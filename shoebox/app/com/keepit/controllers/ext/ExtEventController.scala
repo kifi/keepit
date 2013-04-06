@@ -28,6 +28,7 @@ import com.keepit.common.analytics._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.analytics.reports._
+import com.keepit.common.controller.FortyTwoServices
 
 import com.google.inject.{Inject, Singleton}
 
@@ -37,7 +38,9 @@ class ExtEventController @Inject() (
   db: Database,
   userExperimentRepo: UserExperimentRepo,
   userRepo: UserRepo,
-  persistEventPlugin: PersistEventPlugin)
+  persistEventPlugin: PersistEventPlugin,
+  implicit private val clock: Clock,
+  implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def logUserEvents = AuthenticatedJsonToJsonAction { request =>

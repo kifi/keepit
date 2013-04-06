@@ -13,6 +13,8 @@ import com.keepit.common.net.URI
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model.{EmailAddressRepo, User, UserRepo}
+import com.keepit.common.time._
+import com.keepit.common.controller.FortyTwoServices
 
 import javax.mail.Message.RecipientType
 import javax.mail._
@@ -46,7 +48,9 @@ class MailToKeepActor @Inject() (
     bookmarkInterner: BookmarkInterner,
     persistEventPlugin: PersistEventPlugin,
     postOffice: PostOffice,
-    messageParser: MailToKeepMessageParser
+    messageParser: MailToKeepMessageParser,
+    implicit private val clock: Clock,
+    implicit private val fortyTwoServices: FortyTwoServices
   ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   // add +$emailLabel to the end if provided
