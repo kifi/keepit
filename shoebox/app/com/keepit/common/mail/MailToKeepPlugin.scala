@@ -2,6 +2,8 @@ package com.keepit.common.mail
 
 import scala.concurrent.duration._
 
+import org.jsoup.Jsoup
+
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
@@ -151,32 +153,23 @@ class MailToKeepMessageParser @Inject() (
   }
 
   def getUris(m: Message): Seq[URI] = {
-    Url.findAllMatchIn(m.getSubject + " " + getContent(m)).map { m =>
+    Url.findAllMatchIn(m.getSubject + " " + getText(m).getOrElse("")).map { m =>
       URI.parse(Option(m.group(1)).getOrElse("http://") + m.group(2)).toOption
     }.flatten.toList.distinct
   }
 
-  def getContent(m: Message): String = {
-    m.getContent match {
-      case mm: MimeMultipart =>
-        (0 until mm.getCount).map(mm.getBodyPart).foldLeft(None: Option[String]) { (v, part) =>
-          if (!Option(part.getDisposition).getOrElse("").equalsIgnoreCase("ATTACHMENT"))
-            v orElse getText(part)
-          else v
-        }.getOrElse("")
-      case c => c.toString
-    }
-  }
-
   // see http://www.oracle.com/technetwork/java/javamail/faq/index.html#mainbody
   // This makes no attempts to deal with malformed emails.
-  private def getText(p: Part): Option[String] = {
+  def getText(p: Part): Option[String] = {
     if (p.isMimeType("text/*")) {
-      Option(p.getContent.asInstanceOf[String])
+      Option(p.getContent.asInstanceOf[String]).map {
+        case html if p.isMimeType("text/html") => Jsoup.parse(html).text()
+        case text => text
+      }
     } else if (p.isMimeType("multipart/alternative")) {
       val mp = p.getContent.asInstanceOf[Multipart]
       (0 until mp.getCount).map(mp.getBodyPart).foldLeft(None: Option[String]) { (text, bp) =>
-        if (bp.isMimeType("text/html"))
+        if (bp.isMimeType("text/plain"))
           getText(bp) orElse text
         else
           text orElse getText(bp)
