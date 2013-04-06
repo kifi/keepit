@@ -26,7 +26,7 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
 
 // ===== Event logging
 
-var eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1};
+const eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1};
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
@@ -67,7 +67,11 @@ logEvent.catchUp = function() {
 
 // ===== WebSocket handlers
 
-var socketHandlers = {
+const socketHandlers = {
+  experiments: function(data) {
+    api.log("[socket:message]", data);
+    session.experiments = data;
+  },
   message: function(data) {
     api.log("[socket:message]", data);
     var activeTab = api.tabs.getActive();
@@ -596,7 +600,6 @@ api.on.install.add(function() {
 });
 api.on.update.add(function() {
   logEvent("extension", "update");
-  removeFromConfigs("user"); // remove this line in early Feb or so
 });
 
 // ===== Session management
