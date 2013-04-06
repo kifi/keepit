@@ -86,7 +86,6 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     doWithIndexWriter{ indexWriter =>
       var maxSequenceNumber = sequenceNumber
       indexables.grouped(commitBatchSize).foreach{ indexableBatch =>
-        log.info("Starting new batch, first element: " + indexableBatch.headOption.getOrElse(""))
         val commitBatch = indexableBatch.map{ indexable =>
           val document = try {
             Left(indexable.buildDocument)
