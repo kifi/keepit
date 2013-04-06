@@ -20,23 +20,22 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging._
 import com.keepit.common.net.URINormalizer
-import com.keepit.common.db.State
 
 
-case class CommentDetails(id: String, author: BasicUser, recipient: BasicUser, url: String, page: String, title: String, text: String, createdAt: DateTime)
-case class MessageDetails(id: String, author: BasicUser, recipient: BasicUser, url: Option[String], page: Option[String], title: Option[String], text: String, createdAt: DateTime, isParent: Boolean)
+case class CommentDetails(author: BasicUser, recipient: BasicUser, url: String, page: String, title: String, text: String, createdAt: DateTime)
+case class MessageDetails(author: BasicUser, recipient: BasicUser, url: Option[String], page: Option[String], title: Option[String], text: String, createdAt: DateTime, isParent: Boolean)
 
 case class SendableNotification(
   id: ExternalId[UserNotification],
-  time: DateTime,
+  createdAt: DateTime,
+  updatedAt: DateTime,
   category: UserNotificationCategory,
-  details: UserNotificationDetails,
-  state: State[UserNotification]
+  details: UserNotificationDetails
 )
 
 object SendableNotification {
   def fromUserNotification(notify: UserNotification) = {
-    SendableNotification(id = notify.externalId, time = notify.updatedAt, category = notify.category, details = notify.details, state = notify.state)
+    SendableNotification(id = notify.externalId, createdAt = notify.createdAt, updatedAt = notify.updatedAt, category = notify.category, details = notify.details)
   }
 }
 
@@ -45,7 +44,7 @@ class NotificationBroadcaster @Inject() (userChannel: UserChannel) extends Loggi
   def push(notify: UserNotification) {
     val sendable = SendableNotification.fromUserNotification(notify)
     log.info("User notification serialized: " + sendable)
-    userChannel.push(notify.userId, Json.arr("notifications", Json.arr(SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable))))
+    userChannel.push(notify.userId, Json.arr(notify.category.name, SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable)))
   }
 }
 
@@ -161,7 +160,6 @@ class UserNotifier @Inject() (
           urlId = comment.urlId,
           deepLocator = DeepLocator.ofComment(comment)))
       new CommentDetails(
-        comment.externalId.id,
         basicUserRepo.load(comment.userId),
         basicUserRepo.load(userId),
         deepLink.url,
@@ -189,7 +187,6 @@ class UserNotifier @Inject() (
           urlId = message.urlId,
           deepLocator = DeepLocator.ofMessageThread(message)))
       new MessageDetails(
-        message.externalId.id,
         basicUserRepo.load(message.userId),
         basicUserRepo.load(userId),
         Some(deepLink.url),

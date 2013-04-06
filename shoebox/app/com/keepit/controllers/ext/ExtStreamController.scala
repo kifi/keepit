@@ -51,9 +51,7 @@ class ExtStreamController @Inject() (
   userNotification: UserNotificationRepo,
   persistEventPlugin: PersistEventPlugin,
   clock: Clock,
-  paneData: PaneDetails,
-  commentRepo: CommentRepo,
-  userNotifyRepo: UserNotificationRepo)
+  paneData: PaneDetails)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
     /*
@@ -136,10 +134,6 @@ class ExtStreamController @Inject() (
                   case _ => None
                 }
                 channel.push(Json.arr("notifications", getNotifications(streamSession.userId, createdBefore, howMany.toInt)))
-              case JsString("set_message_read") +: JsString(parentExternalId) +: _ =>
-                setMessageRead(streamSession.userId, parentExternalId)
-              case JsString("set_comment_read") +: JsString(externalId) +: _ =>
-                setCommentRead(streamSession.userId, externalId)
               case json =>
                 log.warn(s"Not sure what to do with: $json")
             }
@@ -242,25 +236,6 @@ class ExtStreamController @Inject() (
     val event = Events.userEvent(eventFamily, eventName, user, session.experiments, installId, metaData, prevEvents, eventTime)
     log.debug("Created new event: %s".format(event))
     persistEventPlugin.persist(event)
-  }
-
-  private def setMessageRead(userId: Id[User], externalId: String) = {
-    db.readWrite { implicit session =>
-      val comment = commentRepo.get(ExternalId[Comment](externalId))
-      val parentId = comment.parent.map(p => commentRepo.get(p).id.get).getOrElse(comment.id.get)
-      userNotifyRepo.getWithCommentId(userId, parentId).foreach { n =>
-        userNotifyRepo.save(n.withState(UserNotificationStates.VISITED))
-      }
-    }
-  }
-
-  private def setCommentRead(userId: Id[User], externalId: String) = {
-    db.readWrite { implicit session =>
-      val commentId = commentRepo.get(ExternalId[Comment](externalId)).id.get
-      userNotifyRepo.getWithCommentId(userId, commentId).foreach { n =>
-        userNotifyRepo.save(n.withState(UserNotificationStates.VISITED))
-      }
-    }
   }
 
 }
