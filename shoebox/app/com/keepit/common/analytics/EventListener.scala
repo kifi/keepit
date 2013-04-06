@@ -24,15 +24,20 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import com.google.inject.Inject
 
-trait EventListenerPlugin extends SchedulingPlugin {
+abstract class EventListenerPlugin(
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo)
+  extends SchedulingPlugin {
+
   def onEvent: PartialFunction[Event, Unit]
 
   case class SearchMeta(query: String, url: String, normUrl: Option[NormalizedURI], queryUUID: Option[ExternalId[ArticleSearchResultRef]])
+
   def searchParser(externalUser: ExternalId[User], json: JsObject)(implicit s: RSession) = {
     val query = (json \ "query").asOpt[String].getOrElse("")
     val url = (json \ "url").asOpt[String].getOrElse("")
-    val user = inject[UserRepo].get(externalUser)
-    val normUrl = inject[NormalizedURIRepo].getByNormalizedUrl(url)
+    val user = userRepo.get(externalUser)
+    val normUrl = normalizedURIRepo.getByNormalizedUrl(url)
     val queryUUID = ExternalId.asOpt[ArticleSearchResultRef]((json \ "queryUUID").asOpt[String].getOrElse(""))
     (user, SearchMeta(query, url, normUrl, queryUUID))
   }
@@ -65,7 +70,11 @@ class EventHelperActor @Inject() (
 }
 
 @Singleton
-class KifiResultClickedListener extends EventListenerPlugin {
+class KifiResultClickedListener @Inject() (
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo)
+  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
+
   private lazy val searchServiceClient = inject[SearchServiceClient]
   private lazy val clickHistoryTracker = inject[ClickHistoryTracker]
 
@@ -85,7 +94,11 @@ class KifiResultClickedListener extends EventListenerPlugin {
 }
 
 @Singleton
-class UsefulPageListener extends EventListenerPlugin {
+class UsefulPageListener @Inject() (
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo)
+  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
+
   private lazy val browsingHistoryTracker = inject[BrowsingHistoryTracker]
 
   def onEvent: PartialFunction[Event, Unit] = {
@@ -101,7 +114,11 @@ class UsefulPageListener extends EventListenerPlugin {
 }
 
 @Singleton
-class SliderShownListener extends EventListenerPlugin {
+class SliderShownListener @Inject() (
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo)
+  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
+
   private lazy val sliderHistoryTracker = inject[SliderHistoryTracker]
 
   def onEvent: PartialFunction[Event, Unit] = {
@@ -119,7 +136,13 @@ class SliderShownListener extends EventListenerPlugin {
 }
 
 @Singleton
-class SearchUnloadListener @Inject() (persistEventPlugin: PersistEventPlugin, store: MongoEventStore) extends EventListenerPlugin {
+class SearchUnloadListener @Inject() (
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    persistEventPlugin: PersistEventPlugin,
+    store: MongoEventStore)
+  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
+
   def onEvent: PartialFunction[Event, Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", externalUser, _, experiments, metaData, _), _, _) => {
       val kifiClicks = (metaData \ "kifiResultsClicked").asOpt[Int].getOrElse(-1)
