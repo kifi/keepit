@@ -13,6 +13,8 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.actor.ActorFactory
+import com.keepit.common.time._
+import com.keepit.common.controller.FortyTwoServices
 import com.keepit.model._
 import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef, BrowsingHistoryTracker, ClickHistoryTracker }
 import com.keepit.common.akka.FortyTwoActor
@@ -137,7 +139,9 @@ class SearchUnloadListener @Inject() (
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
     persistEventPlugin: PersistEventPlugin,
-    store: MongoEventStore)
+    store: MongoEventStore,
+    implicit private val clock: Clock,
+    implicit private val fortyTwoServices: FortyTwoServices)
   extends EventListenerPlugin(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
