@@ -13,6 +13,7 @@ import com.keepit.model._
 import com.keepit.common.db._
 import play.api.Play.current
 import com.keepit.inject.inject
+import com.keepit.common.controller.FortyTwoServices
 
 class EventListenerTest extends Specification with DbRepos {
 
@@ -55,6 +56,8 @@ class EventListenerTest extends Specification with DbRepos {
     "process events" in {
       running(new EmptyApplication().withFakeHealthcheck()) {
         val (normUrlId, url, user, bookmark) = setup()
+        implicit val clock = inject[Clock]
+        implicit val fortyTwoServices = inject[FortyTwoServices]
 
         val unrelatedEvent = Events.userEvent(EventFamilies.SEARCH,"someOtherEvent", user, Seq(), "", JsObject(Seq()), Seq())
 
