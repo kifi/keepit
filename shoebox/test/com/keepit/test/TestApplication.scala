@@ -28,6 +28,7 @@ import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal}
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search.index._
+import com.keepit.search._
 import com.tzavellas.sse.guice.ScalaModule
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
@@ -104,6 +105,22 @@ case class TestModule() extends ScalaModule {
   @Provides
   @Singleton
   def fakeClock: FakeClock = new FakeClock()
+
+  @Provides
+  @Singleton
+  def clickHistoryTracker: ClickHistoryTracker = new ClickHistoryTracker(-1, -1, -1)
+
+  @Provides
+  @Singleton
+  def sliderHistoryTracker: SliderHistoryTracker = new SliderHistoryTracker(-1, -1, -1)
+
+  @Provides
+  @Singleton
+  def browsingHistoryTracker: BrowsingHistoryTracker = new BrowsingHistoryTracker(-1, -1, -1)
+
+  @Provides
+  @Singleton
+  def searchServiceClient: SearchServiceClient = new SearchServiceClientImpl(null, -1, null)
 
   @Provides
   @Singleton
