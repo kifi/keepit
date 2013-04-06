@@ -148,10 +148,12 @@ class AdminUserController @Inject() (
   def addExperiment(userId: Id[User], experiment: String) = AdminJsonAction { request =>
     val expType = ExperimentTypes(experiment)
     db.readWrite { implicit session =>
-      userExperimentRepo.get(userId, expType, excludeState = None) match {
-        case Some(ue) if ue.isActive => ue
-        case Some(ue) => userExperimentRepo.save(ue.withState(UserExperimentStates.ACTIVE))
-        case None => userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType))
+      (userExperimentRepo.get(userId, expType, excludeState = None) match {
+        case Some(ue) if ue.isActive => None
+        case Some(ue) => Some(userExperimentRepo.save(ue.withState(UserExperimentStates.ACTIVE)))
+        case None => Some(userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType)))
+      }) foreach { _ =>
+        userChannel.push(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }
     }
     Ok(Json.obj(experiment -> true))
@@ -161,6 +163,7 @@ class AdminUserController @Inject() (
     db.readWrite { implicit session =>
       userExperimentRepo.get(userId, ExperimentTypes(experiment)).foreach { ue =>
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
+        userChannel.push(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }
     }
     Ok(Json.obj(experiment -> false))
