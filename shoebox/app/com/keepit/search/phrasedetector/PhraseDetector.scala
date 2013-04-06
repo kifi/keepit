@@ -130,16 +130,38 @@ abstract class PhraseIndexer(indexDirectory: Directory, indexWriterConfig: Index
 
 class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: PhraseRepo, indexWriterConfig: IndexWriterConfig) extends PhraseIndexer(indexDirectory, indexWriterConfig) with Logging  {
 
+  final val BATCH_SIZE = 200000
+
   def reload() {
-    db.readOnly { implicit session =>
       log.info("[PhraseIndexer] reloading phrase index")
-      val indexableIterator = phraseRepo.allIterator.map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
+      val indexableIterator = new Iterator[PhraseIndexable] {
+        var cache = collection.mutable.Queue[PhraseIndexable]()
+        var page = 0
+        def next() = {
+          if(cache.size <= 1) {
+            db.readOnly { implicit session =>
+              cache = cache ++ phraseRepo.page(page, BATCH_SIZE).map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
+              page += 1
+            }
+          }
+          cache.dequeue
+        }
+        def hasNext() = {
+          if(cache.size <= 1) {
+            db.readOnly { implicit session =>
+              cache = cache ++ phraseRepo.page(page, BATCH_SIZE).map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
+              page += 1
+            }
+          }
+          cache.size > 0
+        }
+      }
+      //val indexableIterator = phraseRepo.allIterator.map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
       log.info("[PhraseIndexer] Iterator created")
-      reloadWithCloseableIterator(indexableIterator, refresh = false)
+      reload(indexableIterator, refresh = false)
       log.info("[PhraseIndexer] refreshing searcher")
       refreshSearcher()
       log.info("[PhraseIndexer] phrase import complete")
-    }
   }
 
   def reloadWithCloseableIterator(indexableIterator: CloseableIterator[PhraseIndexable], refresh: Boolean) {
@@ -149,7 +171,7 @@ class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: Phr
 
   def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true) {
     deleteAllDocuments(refresh = false)
-    indexDocuments(indexableIterator, 50000, refresh = false){ s => log.info(s"[PhraseIndexer] imported ${s.length} phrases. First in batch id: ${s.headOption.map(t=> t._1.id.id).getOrElse("")}") }
+    indexDocuments(indexableIterator, BATCH_SIZE, refresh = false){ s => log.info(s"[PhraseIndexer] imported ${s.length} phrases. First in batch id: ${s.headOption.map(t=> t._1.id.id).getOrElse("")}") }
     if (refresh) refreshSearcher()
   }
 }
