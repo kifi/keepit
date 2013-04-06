@@ -31,6 +31,7 @@ trait SearchServiceClient extends ServiceClient {
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
 }
+
 class SearchServiceClientImpl(override val host: String, override val port: Int, override val httpClient: HttpClient)
     extends SearchServiceClient {
 
