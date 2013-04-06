@@ -1,25 +1,20 @@
 package com.keepit.controllers.admin
 
-import play.api.mvc.Action
-import play.api.Play
-import play.api.http.ContentTypes
-import play.api.Play.current
-import com.keepit.search.phrasedetector.{PhraseIndexer, PhraseImporter}
-import com.keepit.model.{PhraseStates, PhraseRepo, Phrase}
-import com.keepit.common.db.slick.Database
-import com.keepit.search.Lang
-import com.keepit.common.db._
-import views.html
-
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.db._
+import com.keepit.common.db.slick.Database
+import com.keepit.model.{PhraseStates, PhraseRepo, Phrase}
+import com.keepit.search.phrasedetector.PhraseImporter
+import com.keepit.search.{SearchServiceClient, Lang}
+import views.html
 
 @Singleton
 class PhraseController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   phraseRepo: PhraseRepo,
-  phraseIndexer: PhraseIndexer)
+  searchClient: SearchServiceClient)
     extends AdminController(actionAuthenticator) {
 
   val pageSize = 50
@@ -39,7 +34,7 @@ class PhraseController @Inject() (
   }
 
   def refreshPhrases = AdminHtmlAction{ implicit request =>
-    phraseIndexer.reload()
+    searchClient.refreshPhrases()
     Redirect(com.keepit.controllers.admin.routes.PhraseController.displayPhrases())
   }
   def addPhrase = AdminHtmlAction{ implicit request =>
