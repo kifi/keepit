@@ -137,22 +137,21 @@ class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: Phr
       val indexableIterator = new Iterator[PhraseIndexable] {
         var cache = collection.mutable.Queue[PhraseIndexable]()
         var page = 0
-        def next() = {
+        private def update() = {
           if(cache.size <= 1) {
             db.readOnly { implicit session =>
               cache = cache ++ phraseRepo.page(page, BATCH_SIZE).map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
               page += 1
             }
           }
+        }
+
+        def next() = {
+          update()
           cache.dequeue
         }
         def hasNext() = {
-          if(cache.size <= 1) {
-            db.readOnly { implicit session =>
-              cache = cache ++ phraseRepo.page(page, BATCH_SIZE).map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
-              page += 1
-            }
-          }
+          update()
           cache.size > 0
         }
       }
