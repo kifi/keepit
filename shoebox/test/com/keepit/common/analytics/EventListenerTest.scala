@@ -36,7 +36,7 @@ class EventListenerTest extends Specification with DbRepos {
     "parse search events" in {
       running(new EmptyApplication().withFakeHealthcheck()) {
         val (normUrlId, url, user, bookmark) = setup()
-        val listener = new EventListenerPlugin {
+        val listener = new EventListenerPlugin(inject[UserRepo], inject[NormalizedURIRepo]) {
          def onEvent: PartialFunction[Event,Unit] = { case _ => }
         }
         val (user2, result) = db.readWrite {implicit s =>
