@@ -12,12 +12,22 @@ import com.keepit.common.logging.Logging
 import play.api.libs.json._
 
 import com.keepit.common.analytics.ActivityStream
+import com.keepit.common.time._
+import com.keepit.common.controller.FortyTwoServices
 
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
-class BookmarkInterner @Inject() (db: Database, uriRepo: NormalizedURIRepo, scraper: ScraperPlugin, bookmarkRepo: BookmarkRepo,
-  urlRepo: URLRepo, socialUserInfoRepo: SocialUserInfoRepo, activityStream: ActivityStream)
+class BookmarkInterner @Inject() (
+  db: Database,
+  uriRepo: NormalizedURIRepo,
+  scraper: ScraperPlugin,
+  bookmarkRepo: BookmarkRepo,
+  urlRepo: URLRepo,
+  socialUserInfoRepo: SocialUserInfoRepo,
+  activityStream: ActivityStream,
+  implicit private val clock: Clock,
+  implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
 
   def internBookmarks(value: JsValue, user: User, experiments: Seq[State[ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): List[Bookmark] = value match {
