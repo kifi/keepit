@@ -118,8 +118,8 @@ class ExtStreamController @Inject() (
                 val nUri = URINormalizer.normalize(url)
                 subscriptions = subscriptions + (nUri -> uriChannel.subscribe(nUri, socketId, channel))
                 channel.push(Json.arr(requestId.toLong, nUri))
-                channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))  // TODO: async
-                channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))  // TODO: async
+                channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
+                channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
               case JsString("unsubscribe_uri") +: JsString(url) +: _ =>
                 val nUri = URINormalizer.normalize(url)
                 subscriptions.get(nUri).foreach(_.unsubscribe())
