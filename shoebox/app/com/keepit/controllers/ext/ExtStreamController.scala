@@ -36,6 +36,7 @@ import com.keepit.serializer.SendableNotificationSerializer.sendableNotification
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
+import com.keepit.common.controller.FortyTwoServices
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Seq[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -50,9 +51,10 @@ class ExtStreamController @Inject() (
   uriChannel: UriChannel,
   userNotification: UserNotificationRepo,
   persistEventPlugin: PersistEventPlugin,
-  clock: Clock,
   keeperInfoLoader: KeeperInfoLoader,
-  paneData: PaneDetails)
+  paneData: PaneDetails,
+  implicit private val clock: Clock,
+  implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
     /*
