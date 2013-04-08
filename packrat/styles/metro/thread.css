@@ -32,6 +32,7 @@ img.kifi-message-pic {
   float: left;
   width: 35px;
   height: 35px;
+  background-color: rgba(0,0,0,.1);
   border-radius: 2px;
 }
 img.kifi-message-pic.kifi-self {

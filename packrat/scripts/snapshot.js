@@ -21,7 +21,7 @@ var snapshot = {
     if (code == 45) // a leading hyphen (-) must be escaped, can be backslash-escaped
       return "\\" + name.replace(snapshot.escapeChar, snapshot.escapeReplace);
     if (code >= 48 && code <= 57) // a leading digit (0-9) must be unicode-escaped
-      return snapshot.escapeReplace(name[0]) + name.substring(1).replace(snapshot.escapeChar, snapshot.escapeReplace);
+      return snapshot.escapeReplace(name[0]) + name.substr(1).replace(snapshot.escapeChar, snapshot.escapeReplace);
     return name.replace(snapshot.escapeChar, snapshot.escapeReplace);
   },
 
@@ -84,16 +84,16 @@ var snapshot = {
 
     // 2. Allow a single class on any ancestor to have been removed.
     for (var i = sel.indexOf("."); i > 0; i = sel.indexOf(".", i + 1)) {
-      var len = sel.substring(i + 1).search(snapshot.delim);
-      var sel2 = sel.substring(0, i) + (len < 0 ? "" : sel.substring(i + 1 + len));
+      var len = sel.substr(i + 1).search(snapshot.delim);
+      var sel2 = sel.substr(0, i) + (len < 0 ? "" : sel.substr(i + 1 + len));
       els = doc.querySelectorAll(sel2);
       if (els.length == 1) return els[0];
     }
 
     // 3. Allow a single tag name change. Skip the first ancestor (body).
     for (var i = sel.indexOf(ancDelim); i > 0; i = sel.indexOf(ancDelim, i + 1)) {
-      var len = sel.substring(i + 1).search(snapshot.delim);
-      var sel3 = sel.substring(0, i + 1) + "*" + (len < 0 ? "" : sel.substring(i + 1 + len));
+      var len = sel.substr(i + 1).search(snapshot.delim);
+      var sel3 = sel.substr(0, i + 1) + "*" + (len < 0 ? "" : sel.substr(i + 1 + len));
       els = doc.querySelectorAll(sel3);
       if (els.length == 1) return els[0];
     }
@@ -101,9 +101,9 @@ var snapshot = {
     // 4. Allow a tag name change on any ancestor that also had a class or id. Skip the first (body).
     var sel4 = sel;
     for (var i = sel4.indexOf(ancDelim); i > 0; i = sel4.indexOf(ancDelim, i + 1)) {
-      var len = sel4.substring(i + 1).search(snapshot.delim);
+      var len = sel4.substr(i + 1).search(snapshot.delim);
       if (len >= 0 && "#.".indexOf(sel4.charAt(i + 1 + len)) >= 0) {
-        sel4 = sel4.substring(0, i + 1) + "*" + sel4.substring(i + 1 + len);
+        sel4 = sel4.substr(0, i + 1) + "*" + sel4.substr(i + 1 + len);
       }
     }
     els = doc.querySelectorAll(sel4);
@@ -114,15 +114,15 @@ var snapshot = {
 
     // 5. Allow removal of any one ancestor except the first (body) and last (the element itself).
     for (var i = sel.indexOf(ancDelim), j = sel.indexOf(ancDelim, i + 1); j > 0; i = j, j = sel.indexOf(ancDelim, i + 1)) {
-      els = doc.querySelectorAll(sel.substring(0, i) + sel.substring(j));
+      els = doc.querySelectorAll(sel.substr(0, i) + sel.substr(j));
       if (els.length == 1) return els[0];
     }
 
     // 6. Allow removal of any number of selector parts, beginning at the front of the selector (body).
     var sel6 = sel;
-    for (var i = sel6.search(snapshot.delim); i > 0; i = sel6.substring(1).search(snapshot.delim) + 1) {
-      sel6 = sel6.substring(i + (sel6.charAt(i) == ancDelim ? 1 : 0));
-      if (sel6.charAt(0) == "*") sel6 = sel6.substring(1);
+    for (var i = sel6.search(snapshot.delim); i > 0; i = sel6.substr(1).search(snapshot.delim) + 1) {
+      sel6 = sel6.substr(i + (sel6.charAt(i) == ancDelim ? 1 : 0));
+      if (sel6.charAt(0) == "*") sel6 = sel6.substr(1);
       els = doc.querySelectorAll(sel6);
       switch (els.length) {
         case 0: break; // proceed

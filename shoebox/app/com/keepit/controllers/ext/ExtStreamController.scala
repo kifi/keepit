@@ -34,6 +34,9 @@ import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUs
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
 import org.joda.time.DateTime
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
+import com.keepit.common.controller.FortyTwoServices
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Seq[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -48,7 +51,8 @@ class ExtStreamController @Inject() (
   uriChannel: UriChannel,
   userNotification: UserNotificationRepo,
   persistEventPlugin: PersistEventPlugin,
-  clock: Clock,
+  implicit private val clock: Clock,
+  implicit private val fortyTwoServices: FortyTwoServices,
   paneData: PaneDetails)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
@@ -90,63 +94,78 @@ class ExtStreamController @Inject() (
           case j: JsValue => Json.arr(j)
         })
 
-  def ws() = WebSocket.using[JsArray] { implicit request =>
-    authenticate(request) match {
-      case Some(streamSession) =>
+  def ws() = WebSocket.async[JsArray] { implicit request =>
+    Akka.future {
+      authenticate(request) match {
+        case Some(streamSession) =>
 
-        val connectedAt = clock.now
-        val (enumerator, channel) = Concurrent.broadcast[JsArray]
-        val socketId = Random.nextLong()
+          val connectedAt = clock.now
+          val (enumerator, channel) = Concurrent.broadcast[JsArray]
+          val socketId = Random.nextLong()
 
-        var subscriptions = Map[String, Subscription]()
+          var subscriptions = Map[String, Subscription]()
 
-        subscriptions += (("user", userChannel.subscribe(streamSession.userId, socketId, channel)))
+          subscriptions += (("user", userChannel.subscribe(streamSession.userId, socketId, channel)))
 
-        val iteratee = Iteratee.foreach[JsArray] {
-          _.as[Seq[JsValue]] match {
-            case JsString("ping") +: _ =>
-              channel.push(Json.arr("pong"))
-            case JsString("stats") +: _ =>
-              channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
-            case JsString("normalize") +: JsNumber(requestId) +: JsString(url) +: _ =>
-              channel.push(Json.arr(requestId.toLong, URINormalizer.normalize(url)))
-            case JsString("subscribe") +: sub =>
-              subscriptions = subscribe(streamSession, socketId, channel, subscriptions, sub)
-            case JsString("unsubscribe") +: unsub =>
-              subscriptions = unsubscribe(streamSession, socketId, channel, subscriptions, unsub)
-            case JsString("log_event") +: JsObject(pairs) +: _ =>
-              logEvent(streamSession, JsObject(pairs))
-            case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>
-              channel.push(Json.arr(requestId.toLong, paneData.getComments(streamSession.userId, url)))
-            case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>
-              channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(streamSession.userId, url)))
-            case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>
-              channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(streamSession.userId, ExternalId[Comment](threadId))))
-            case JsString("get_last_notify_read_time") +: _ =>
-              channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(streamSession.userId).toString()))
-            case JsString("get_notifications") +: JsNumber(howMany) +: params =>
-              val createdBefore = params match {
-                case JsString(time) +: _ => Some(parseStandardTime(time))
-                case _ => None
-              }
-              channel.push(Json.arr("notifications", getNotifications(streamSession.userId, createdBefore, howMany.toInt)))
-            case json =>
-              log.warn(s"Not sure what to do with: $json")
+          val iteratee = asyncIteratee { json =>
+            log.info("WS just received: " + json)
+            json.as[Seq[JsValue]] match {
+              case JsString("ping") +: _ =>
+                channel.push(Json.arr("pong"))
+              case JsString("stats") +: _ =>
+                channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
+              case JsString("normalize") +: JsNumber(requestId) +: JsString(url) +: _ =>
+                channel.push(Json.arr(requestId.toLong, URINormalizer.normalize(url)))
+              case JsString("subscribe") +: sub =>
+                subscriptions = subscribe(streamSession, socketId, channel, subscriptions, sub)
+              case JsString("unsubscribe") +: unsub =>
+                subscriptions = unsubscribe(streamSession, socketId, channel, subscriptions, unsub)
+              case JsString("log_event") +: JsObject(pairs) +: _ =>
+                logEvent(streamSession, JsObject(pairs))
+              case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>
+                channel.push(Json.arr(requestId.toLong, paneData.getComments(streamSession.userId, url)))
+              case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>
+                channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(streamSession.userId, url)))
+              case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>
+                channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(streamSession.userId, ExternalId[Comment](threadId))))
+              case JsString("get_last_notify_read_time") +: _ =>
+                channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(streamSession.userId).toString()))
+              case JsString("get_notifications") +: JsNumber(howMany) +: params =>
+                val createdBefore = params match {
+                  case JsString(time) +: _ => Some(parseStandardTime(time))
+                  case _ => None
+                }
+                channel.push(Json.arr("notifications", getNotifications(streamSession.userId, createdBefore, howMany.toInt)))
+              case json =>
+                log.warn(s"Not sure what to do with: $json")
+            }
+          }.mapDone { _ =>
+            subscriptions.map(_._2.unsubscribe)
+            subscriptions = Map.empty
           }
-        }.mapDone { _ =>
-          subscriptions.map(_._2.unsubscribe)
-          subscriptions = Map.empty
-        }
 
-        (iteratee, enumerator)
+          (iteratee, enumerator)
 
-      case None =>
-        log.info(s"Anonymous user trying to connect. Disconnecting!")
-        val enumerator: Enumerator[JsArray] = Enumerator(Json.arr("error", "Permission denied. Are you logged in? Connect again to re-authenticate."))
-        val iteratee = Iteratee.ignore[JsArray]
+        case None =>
+          log.info(s"Anonymous user trying to connect. Disconnecting!")
+          val enumerator: Enumerator[JsArray] = Enumerator(Json.arr("error", "Permission denied. Are you logged in? Connect again to re-authenticate."))
+          val iteratee = Iteratee.ignore[JsArray]
 
-        (iteratee, enumerator >>> Enumerator.eof)
+          (iteratee, enumerator >>> Enumerator.eof)
+      }
     }
+  }
+
+  private def asyncIteratee(f: JsValue => Unit): Iteratee[JsArray, Unit] = {
+    import play.api.libs.iteratee._
+    def step(i: Input[JsArray]): Iteratee[JsArray, Unit] = i match {
+      case Input.EOF => Done(Unit, Input.EOF)
+      case Input.Empty => Cont[JsArray, Unit](i => step(i))
+      case Input.El(e) =>
+        Akka.future { f(e) }
+        Cont[JsArray, Unit](i => step(i))
+    }
+    (Cont[JsArray, Unit](i => step(i)))
   }
 
   private def getLastNotifyTime(userId: Id[User]): DateTime = {

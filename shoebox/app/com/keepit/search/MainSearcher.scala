@@ -10,13 +10,15 @@ import com.keepit.model._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.util.PriorityQueue
+import com.keepit.search.query.{TopLevelQuery,QueryUtil}
+import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
+import com.keepit.common.time._
+import com.keepit.common.controller.FortyTwoServices
+import play.api.libs.json._
 import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
 import org.apache.lucene.search.Explanation
-import com.keepit.search.query.{TopLevelQuery,QueryUtil}
-import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
-import play.api.libs.json._
 
 
 class MainSearcher(
@@ -30,7 +32,9 @@ class MainSearcher(
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker,
-    persistEventPlugin: PersistEventPlugin
+    persistEventPlugin: PersistEventPlugin)
+    (implicit private val clock: Clock,
+    private val fortyTwoServices: FortyTwoServices
 ) extends Logging {
   val currentTime = currentDateTime.getMillis()
   val idFilter = filter.idFilter
