@@ -45,7 +45,7 @@ class NotificationBroadcaster @Inject() (userChannel: UserChannel) extends Loggi
   def push(notify: UserNotification) {
     val sendable = SendableNotification.fromUserNotification(notify)
     log.info("User notification serialized: " + sendable)
-    userChannel.push(notify.userId, Json.arr("notifications", Json.arr(SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable))))
+    userChannel.push(notify.userId, Json.arr("notification", SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable)))
   }
 }
 
