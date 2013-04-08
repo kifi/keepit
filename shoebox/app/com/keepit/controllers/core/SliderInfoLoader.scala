@@ -89,13 +89,13 @@ class SliderInfoLoader @Inject() (
     val neverOnSite: Option[UserToDomain] = domain.flatMap { domain =>
       userToDomainRepo.get(userId, domain.id.get, UserToDomainKinds.NEVER_SHOW)
     }
+    val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
     val ruleGroup: Option[SliderRuleGroup] = Option(sliderRuleRepo.getGroup("default")).filter(_.version != ver)
     val patterns: Option[Seq[String]] = ruleGroup.map(_ => urlPatternRepo.getActivePatterns)
 
     nUri match {
       case Some(uri) =>
         val bookmark = bookmarkRepo.getByUriAndUser(uri.id.get, userId)
-        val sensitive: Option[Boolean] = bookmark.flatMap(b => domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption)))
 
         val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
         val sharingUserIds = sharingUserInfo.sharingUserIds
@@ -120,7 +120,6 @@ class SliderInfoLoader @Inject() (
           bookmark, socialUsers, keepersEdgeSetSize, numComments, numUnreadComments, numMessages, numUnreadMessages,
           neverOnSite, sensitive, locator, shown, ruleGroup, patterns)
       case None =>
-        val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
         SliderInitialInfo(None, Nil, 0, 0, 0, 0, 0, neverOnSite, sensitive, None, None, None, None)
     }
   }
