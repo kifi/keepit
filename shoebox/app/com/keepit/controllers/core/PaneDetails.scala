@@ -16,16 +16,17 @@ class PaneDetails @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   commentReadRepo: CommentReadRepo,
   commentWithSocialUserRepo: CommentWithSocialUserRepo,
-  threadInfoRepo: ThreadInfoRepo
-) extends Logging {
+  threadInfoRepo: ThreadInfoRepo)
+    extends Logging {
 
-  def getComments(userId: Id[User], url: String): Seq[CommentWithSocialUser] = {
+  /** Returns a page's comments and marks them read for the viewer. */
+  def getComments(viewerUserId: Id[User], url: String): Seq[CommentWithSocialUser] = {
     val (comments, commentRead) = db.readOnly { implicit session =>
       val normUriOpt = normalizedURIRepo.getByNormalizedUrl(url)
 
-      val comments = normUriOpt map { normalizedURI =>
-          publicComments(normalizedURI).map(commentWithSocialUserRepo.load(_))
-        } getOrElse Nil
+      val comments = normUriOpt map { normUri =>
+        getComments(normUri.id.get)
+      } getOrElse Nil
 
       val lastCommentId = comments match {
         case Nil => None
@@ -34,19 +35,19 @@ class PaneDetails @Inject() (
 
       val commentRead = normUriOpt.flatMap { normUri =>
         lastCommentId.map { lastCom =>
-          commentReadRepo.getByUserAndUri(userId, normUri.id.get) match {
+          commentReadRepo.getByUserAndUri(viewerUserId, normUri.id.get) match {
             case Some(commentRead) => // existing CommentRead entry for this user/url
               if (commentRead.lastReadId.id < lastCom.id) Some(commentRead.withLastReadId(lastCom))
               else None
             case None =>
-              Some(CommentRead(userId = userId, uriId = normUri.id.get, lastReadId = lastCom))
+              Some(CommentRead(userId = viewerUserId, uriId = normUri.id.get, lastReadId = lastCom))
           }
         }
       }
       (comments, commentRead.flatten)
     }
 
-    commentRead.map { cr =>
+    commentRead foreach { cr =>
       db.readWrite { implicit session =>
         commentReadRepo.save(cr)
       }
@@ -55,15 +56,25 @@ class PaneDetails @Inject() (
     comments
   }
 
+  /** Returns a page's comments. */
+  def getComments(nUriId: Id[NormalizedURI])(implicit session: RSession): Seq[CommentWithSocialUser] =
+    commentRepo.getPublic(nUriId).map(commentWithSocialUserRepo.load(_))
+
+  /** Returns a user's message threadlist for a specific page. Result does not include all full message bodies. */
   def getMessageThreadList(userId: Id[User], url: String): Seq[ThreadInfo] = {
     db.readOnly { implicit s =>
-      normalizedURIRepo.getByNormalizedUrl(url) map { normalizedURI =>
-          messageComments(userId, normalizedURI).map(threadInfoRepo.load(_, Some(userId))).reverse
-        } getOrElse Nil
+      normalizedURIRepo.getByNormalizedUrl(url) map { uri =>
+        getMessageThreadList(userId, uri.id.get)
+      } getOrElse Nil
     }
   }
 
-  def getMessageThread(userId: Id[User], commentId: ExternalId[Comment]): Seq[CommentWithSocialUser] = {
+  /** Returns a user's message threadlist for a specific page. Result does not include all full message bodies. */
+  def getMessageThreadList(userId: Id[User], nUriId: Id[NormalizedURI])(implicit session: RSession): Seq[ThreadInfo] =
+    commentRepo.getMessages(nUriId, userId).map(threadInfoRepo.load(_, Some(userId))).reverse
+
+  /** Returns the messages in a specific thread and marks them read for the viewer. */
+  def getMessageThread(viewerUserId: Id[User], commentId: ExternalId[Comment]): Seq[CommentWithSocialUser] = {
     val (messages, commentReadToSave) = db.readOnly{ implicit session =>
       val comment = commentRepo.get(commentId)
       val parent = comment.parent.map(commentRepo.get).getOrElse(comment)
@@ -76,13 +87,13 @@ class PaneDetails @Inject() (
 
       val lastMessageId = messages.map(_.comment.id.get).maxBy(_.id)
 
-      val commentReadToSave = commentReadRepo.getByUserAndParent(userId, parent.id.get) match {
+      val commentReadToSave = commentReadRepo.getByUserAndParent(viewerUserId, parent.id.get) match {
         case Some(cr) if cr.lastReadId == lastMessageId =>
           None
         case Some(cr) =>
           Some(cr.withLastReadId(lastMessageId))
         case None =>
-          Some(CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = lastMessageId))
+          Some(CommentRead(userId = viewerUserId, uriId = parent.uriId, parentId = parent.id, lastReadId = lastMessageId))
       }
       (messages, commentReadToSave)
     }
@@ -95,11 +106,5 @@ class PaneDetails @Inject() (
 
     messages
   }
-
-  private def publicComments(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit session: RSession) =
-    commentRepo.getPublic(normalizedURI.id.get)
-
-  private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit session: RSession) =
-    commentRepo.getMessages(normalizedURI.id.get, userId)
 
 }
