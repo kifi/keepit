@@ -117,7 +117,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
       val messageId = message.getHeader(SendgridMailProvider.MESSAGE_ID)(0).trim
       log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
       db.readWrite { implicit s =>
-        mailRepo.save(mail.sent("message sent", ElectronicMailMessageId(messageId.substring(1, messageId.length - 1))))
+        mailRepo.save(mail.sent("message sent", ElectronicMailMessageId.fromEmailHeader(messageId)))
       }
     } catch {
       case e: Throwable =>
@@ -129,6 +129,10 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
   private def createMessage(mail: ElectronicMail) = {
     val message = new MimeMessage(mailSession)
     message.setHeader(SendgridMailProvider.KIFI_MAIL_ID, mail.externalId.id)
+    for (id <- mail.inReplyTo) {
+      message.setHeader("In-Reply-To", id.toEmailHeader)
+      message.setHeader("References", id.toEmailHeader)
+    }
     val multipart = new MimeMultipart("alternative")
 
     val part1 = new MimeBodyPart()

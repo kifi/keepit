@@ -242,7 +242,7 @@ api.log("[google_inject]");
     }
     url = url.replace(/^https?:\/\//, "");
     if (url.length > 64) {
-      url = url.substring(0, 60) + "...";
+      url = url.substr(0, 60) + "...";
     }
     return boldSearchTerms(url, response.query);
   }

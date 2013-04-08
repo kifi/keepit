@@ -39,10 +39,11 @@ object SendableNotification {
   }
 }
 
-class NotificationBroadcaster @Inject() (userChannel: UserChannel) {
+class NotificationBroadcaster @Inject() (userChannel: UserChannel) extends Logging {
   import com.keepit.serializer.SendableNotificationSerializer
   def push(notify: UserNotification) {
     val sendable = SendableNotification.fromUserNotification(notify)
+    log.info("User notification serialized: " + sendable)
     userChannel.push(notify.userId, Json.arr(notify.category.name, SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable)))
   }
 }
@@ -81,8 +82,8 @@ class UserNotifier @Inject() (
           commentId = comment.id
         ))
 
-        notifyCommentByEmail(user, commentDetail)
         notificationBroadcast.push(userNotification)
+        notifyCommentByEmail(user, commentDetail)
 
         userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
       }
@@ -103,8 +104,12 @@ class UserNotifier @Inject() (
           details = UserNotificationDetails(Json.toJson(messageDetail)),
           commentId = message.id
         ))
-        notifyMessageByEmail(user, messageDetail)
+
+        log.info("User notification created: " + userNotification)
         notificationBroadcast.push(userNotification)
+        log.info("User notification pushed: " + userNotification)
+        notifyMessageByEmail(user, messageDetail)
+        log.info("User notification emailed: " + userNotification)
 
         userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
       }
