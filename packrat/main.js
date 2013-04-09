@@ -760,6 +760,7 @@ authenticate(function() {
     if (!tab.keepStatusKnown) {
       setIcon(tab);
       if (api.tabs.isSelected(tab)) {
+        checkKeepStatus(tab);
         subscribe(tab);
       }
     }
