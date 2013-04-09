@@ -179,7 +179,7 @@ private[reports] class ReportBuilderActor @Inject() (
         report.get(startDate, endDate)
       }
 
-      val outputReport = builtReports.foldRight(CompleteReport("","",Nil))((a,b) => a + b)
+      val outputReport = builtReports.foldRight(Report("","",Nil))((a,b) => a + b)
       val report = outputReport.copy(reportName = reportGroup.name)
       reportStore += (report.persistenceKey -> report)
     case unknown =>
