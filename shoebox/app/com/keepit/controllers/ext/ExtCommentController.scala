@@ -8,7 +8,6 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.async.dispatch
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
 import com.keepit.common.social._
@@ -35,6 +34,8 @@ import com.keepit.common.analytics.ActivityStream
 import views.html
 import com.keepit.realtime.UserNotifier
 import com.keepit.controllers.core.PaneDetails
+import scala.concurrent.future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @Singleton
 class ExtCommentController @Inject() (
@@ -123,7 +124,11 @@ class ExtCommentController @Inject() (
       }
     }
 
-    dispatch(notifyRecipients(comment), {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
+    future {
+      notifyRecipients(comment)
+    } onFailure { case e =>
+      log.error("Could not persist emails for comment %s".format(comment.id.get), e)
+    }
 
     addToActivityStream(comment)
 

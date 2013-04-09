@@ -16,6 +16,7 @@ import org.apache.lucene.index.DirectoryReader
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.common.logging.Logging
 import com.google.inject.{Singleton}
+import org.apache.lucene.search.spell.HighFrequencyDictionary
 
 
 trait SpellCorrector {
@@ -34,6 +35,7 @@ object SpellCorrector {
 
 class SpellCorrectorImpl(spellIndexDirectory: Directory, articleIndexDirectory: Directory, config: IndexWriterConfig) extends SpellCorrector with Logging {
   val spellChecker = new SpellChecker(spellIndexDirectory)
+  val threshold = 0.001f
   private[this] var isBuilding = false
   def buildDictionary() = {
     if ( !isBuilding ) {
@@ -41,7 +43,7 @@ class SpellCorrectorImpl(spellIndexDirectory: Directory, articleIndexDirectory: 
       try {
         log.info("spell-checker is building dictionary ... ")
         isBuilding = true
-        spellChecker.indexDictionary(new LuceneDictionary(reader, "c"), config, false) // fullMerge = false
+        spellChecker.indexDictionary(new HighFrequencyDictionary(reader, "c", threshold), config, false) // fullMerge = false
       } finally {
         reader.close()
         isBuilding = false
@@ -69,7 +71,7 @@ class SpellCorrectorImpl(spellIndexDirectory: Directory, articleIndexDirectory: 
 }
 
 class FakeSpellCorrector() extends SpellCorrector {
-  def getAlternativeQuery(input: String) = input
+  def getAlternativeQuery(input: String) = "fake correction: " + input
   def buildDictionary() = {}
   def getBuildingStatus = false
 }

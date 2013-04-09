@@ -3,10 +3,12 @@ package com.keepit.search.index
 import com.keepit.search.SemanticVector
 import com.keepit.search.SemanticVectorComposer
 import org.apache.lucene.index.AtomicReader
+import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.SegmentReader
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
@@ -52,6 +54,29 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
           }
         }
       }
+    }
+  }
+
+  def findDocIdAndAtomicReaderContext(id: Long): Option[(Int, AtomicReaderContext)] = {
+    val wrappedSubReaders = indexReader.wrappedSubReaders
+    var i = 0
+    while (i < wrappedSubReaders.length) {
+      val r = wrappedSubReaders(i)
+      val liveDocs = r.getLiveDocs
+      val docid = r.getIdMapper.getDocId(id)
+      if (docid >= 0 && (liveDocs == null || liveDocs.get(docid))) return Some((docid, r.getContext()))
+      i += 1
+    }
+    None
+  }
+
+  def explain(query: Query, id: Long): Explanation = {
+    findDocIdAndAtomicReaderContext(id) match {
+      case Some((docid, context)) =>
+        val weight = createNormalizedWeight(query)
+        weight.explain(context, docid)
+      case None =>
+        new Explanation(0.0f, "failed to find docid")
     }
   }
 

@@ -39,7 +39,7 @@ class PersonalizedIndexReader(mainReader: AtomicReader, personalReader: CachingI
   }
 
   override def numDocs() = mainReader.numDocs
-  override def maxDoc() = mainReader.numDocs
+  override def maxDoc() = mainReader.maxDoc
 
   override def fields(): Fields = new Fields {
     override def iterator(): JIterator[String] = fieldToFields.keys.iterator

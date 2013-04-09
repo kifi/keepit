@@ -8,4 +8,20 @@
     <button class="btn"> Building SpellCorrector Dictionary</button> 
   }
 </form>
+
+<form id="spelling-form" action="@com.keepit.controllers.admin.routes.AdminSpellCorrectorController.correctSpelling("")" method="POST" class="form-inline">
+  <input type="text" name="query">
+  <button class="btn">Submit</button> 
+</form>
 }
+
+<script>
+$("#spelling-form").submit(function(e) {
+  e.preventDefault();
+  var $input = $(this).find("input");
+  $.get(this.action + encodeURIComponent($input.val()), function(resp) {
+    console.log("correction response:", resp);
+    $input.val(resp.correction);
+  });
+});
+</script>

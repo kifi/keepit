@@ -3,7 +3,6 @@ package com.keepit.controllers.admin
 import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
-import com.keepit.common.async._
 import com.keepit.common.performance._
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._

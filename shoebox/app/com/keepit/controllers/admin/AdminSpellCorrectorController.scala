@@ -6,6 +6,7 @@ import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.search.SearchServiceClient
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.concurrent.Akka
+import play.api.libs.json.Json
 
 @Singleton
 class AdminSpellCorrectorController @Inject() (
@@ -16,6 +17,12 @@ class AdminSpellCorrectorController @Inject() (
       searchClient.buildSpellCorrectorDictionary()
     }
     Redirect(routes.AdminSpellCorrectorController.spellController())
+  }
+
+  def correctSpelling(text: String) = AdminJsonAction{ implicit request =>
+    Async {
+      searchClient.correctSpelling(text).map( r => Ok(Json.obj("correction" -> r )))
+    }
   }
 
   def spellController() = AdminHtmlAction { implicit request =>
