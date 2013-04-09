@@ -9,8 +9,10 @@ import com.keepit.common.time._
 import com.keepit.model._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
+import org.apache.lucene.search.Explanation
 import org.apache.lucene.util.PriorityQueue
 import com.keepit.search.query.{TopLevelQuery,QueryUtil}
+import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.time._
 import com.keepit.common.controller.FortyTwoServices
@@ -18,7 +20,6 @@ import play.api.libs.json._
 import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
-import org.apache.lucene.search.Explanation
 
 
 class MainSearcher(
@@ -32,7 +33,8 @@ class MainSearcher(
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker,
-    persistEventPlugin: PersistEventPlugin)
+    persistEventPlugin: PersistEventPlugin,
+    spellCorrector: SpellCorrector)
     (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 ) extends Logging {
@@ -221,7 +223,6 @@ class MainSearcher(
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
-    log.info( "searchResultUuid = %s , svVariance = %f".format(searchResultUuid, svVar) )
 
     val metaData = JsObject( Seq("queryUUID"->JsString(searchResultUuid.id), "svVariance"-> JsNumber(svVar) ))
     persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
@@ -229,6 +230,8 @@ class MainSearcher(
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar)
   }
+
+
 
   private def getPublicBookmarkCount(id: Long) = {
     uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
@@ -251,7 +254,7 @@ class MainSearcher(
    * vects: a collection of 128-bit vectors. We measure the variance of each bit,
    * and take the average. This measures overall randomness of input semantic vectors.
    */
-  private def avgBitVariance(vects: Iterable[Array[Byte]]) = {
+  private def avgBitVariance(vects: Iterable[SemanticVector]) = {
     if ( vects.size > 0){
 	  val composer = new SemanticVectorComposer
 	  vects.foreach( composer.add(_, 1))
@@ -303,16 +306,14 @@ class MainSearcher(
     parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
-      val idMapper = personalizedSearcher.indexReader.getIdMapper
+      val doc = personalizedSearcher.indexReader.getIdMapper.getDocId(uriId.id)
 
-      (query, personalizedSearcher.explain(query, idMapper.getDocId(uriId.id)))
+      (query, personalizedSearcher.explain(query, doc))
     }
   }
 }
 
-class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
-
-  super.initialize(sz)
+class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
 
   val NO_FRIEND_IDS = Set.empty[Id[User]]
 

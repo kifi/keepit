@@ -1,0 +1,11 @@
+@(buildStatus: Boolean)
+
+@admin("SpellCorrector"){
+<form action="@com.keepit.controllers.admin.routes.AdminSpellCorrectorController.buildDictionary" method="POST">
+  @if( buildStatus == false) { 
+    <button class="btn"> Build SpellCorrector Dictionary</button> 
+  }else { 
+    <button class="btn"> Building SpellCorrector Dictionary</button> 
+  }
+</form>
+}

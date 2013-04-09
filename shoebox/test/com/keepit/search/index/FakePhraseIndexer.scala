@@ -6,10 +6,9 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.model.Phrase
 import com.keepit.common.db.Id
-
 import com.tzavellas.sse.guice.ScalaModule
 
-class FakePhraseIndexer extends PhraseIndexer(new RAMDirectory, new IndexWriterConfig(Version.LUCENE_36, DefaultAnalyzer.forIndexing)) {
+class FakePhraseIndexer extends PhraseIndexer(new RAMDirectory, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)) {
   def reload() = {}
   def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true) = {}
   def buildIndexable(data: Phrase): Indexable[Phrase] = throw new UnsupportedOperationException

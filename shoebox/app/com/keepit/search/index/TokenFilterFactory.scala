@@ -3,12 +3,12 @@ package com.keepit.search.index
 import java.io.IOException
 import java.io.Reader
 import java.lang.reflect.Constructor
-
 import org.apache.lucene.analysis.ar.ArabicAnalyzer
 import org.apache.lucene.analysis.bg.BulgarianAnalyzer
 import org.apache.lucene.analysis.cz.CzechAnalyzer
 import org.apache.lucene.analysis.el.GreekAnalyzer
 import org.apache.lucene.analysis.fa.PersianAnalyzer
+import org.apache.lucene.analysis.fr.FrenchAnalyzer
 import org.apache.lucene.analysis.hi.HindiAnalyzer
 import org.apache.lucene.analysis.id.IndonesianAnalyzer
 import org.apache.lucene.analysis.lv.LatvianAnalyzer
@@ -20,12 +20,13 @@ import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute
 import org.apache.lucene.analysis.tokenattributes.TypeAttributeImpl
 import org.apache.lucene.analysis.tr.TurkishAnalyzer
-import org.apache.lucene.analysis.Analyzer
-import org.apache.lucene.analysis.CharArraySet
-import org.apache.lucene.analysis.StopFilter
+import org.apache.lucene.analysis.{Analyzer=>LAnalyzer}
 import org.apache.lucene.analysis.TokenFilter
 import org.apache.lucene.analysis.TokenStream
-import org.apache.lucene.analysis.WordlistLoader
+import org.apache.lucene.analysis.core.StopFilter
+import org.apache.lucene.analysis.util.CharArraySet
+import org.apache.lucene.analysis.util.ElisionFilter
+import org.apache.lucene.analysis.util.WordlistLoader
 import org.apache.lucene.util.IOUtils
 import org.apache.lucene.util.Version
 import org.tartarus.snowball.ext.DanishStemmer
@@ -33,7 +34,6 @@ import org.tartarus.snowball.ext.DutchStemmer
 import org.tartarus.snowball.ext.RomanianStemmer
 import org.tartarus.snowball.ext.TurkishStemmer
 import org.tartarus.snowball.SnowballProgram
-
 import com.keepit.search.index.LuceneVersion.version
 import scala.reflect.ClassTag
 
@@ -78,7 +78,7 @@ class StopFilterFactories {
     var reader: Reader = null
     try {
       reader = IOUtils.getDecodingReader(classOf[SnowballFilter], stopWordFile, IOUtils.CHARSET_UTF_8)
-      val stopSet = WordlistLoader.getSnowballWordSet(reader, Version.LUCENE_36)
+      val stopSet = WordlistLoader.getSnowballWordSet(reader, Version.LUCENE_41)
       load(stopSet)
     } catch {
       case ex: IOException =>
@@ -89,7 +89,7 @@ class StopFilterFactories {
     }
   }
 
-  private def loadFrom[A <: Analyzer](implicit m : ClassTag[A]): TokenFilterFactory = loadFrom[A](false, "stopwords.txt", "#")
+  private def loadFrom[A <: LAnalyzer](implicit m : ClassTag[A]): TokenFilterFactory = loadFrom[A](false, "stopwords.txt", "#")
 
   private def loadFrom[A](ignoreCase: Boolean, file: String, comment: String)(implicit m : ClassTag[A]): TokenFilterFactory = {
     var reader: Reader = null
@@ -136,6 +136,11 @@ object WrapperTokenFilterFactory {
   def apply(constructor: Constructor[TokenStream], version: Version) = new TokenFilterFactory {
     def apply(tokenStream: TokenStream) = constructor.newInstance(version, tokenStream)
   }
+}
+
+class FrenchElisionFilter(tokenStream: TokenStream)
+extends TokenFilter(new ElisionFilter(tokenStream, FrenchAnalyzer.DEFAULT_ARTICLES)) {
+  override def incrementToken() = input.incrementToken()
 }
 
 class DotDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStream) {
