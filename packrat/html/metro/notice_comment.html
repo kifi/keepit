@@ -1,0 +1,14 @@
+<div class="kifi-notice kifi-notice-comment" data-id="{{id}}">
+  <time datetime="{{#formatIsoDate}}{{time}}{{/formatIsoDate}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
+  <img class="kifi-notice-avatar" src="{{details.author.avatar}}">
+  <div class="kifi-notice-name">
+    {{details.author.firstName}} {{details.author.lastName}}
+  </div>
+  <div class="kifi-notice-action">
+  	 left a comment
+  </div>
+  <div class="kifi-notice-page">
+  	on this page: <a href="{{details.url}}">{{details.title}}</a>
+  </div>
+  <div class="kifi-notice-text">{{#formatMessage}}{{{details.text}}}{{/formatMessage}}</div>
+</div>
