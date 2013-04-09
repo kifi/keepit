@@ -1,15 +1,17 @@
 package com.keepit.search.query
 
+import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Query
-import org.apache.lucene.search.Searcher
 import org.apache.lucene.search.Scorer
-import org.apache.lucene.search.Similarity
 import org.apache.lucene.search.Weight
+import org.apache.lucene.search.similarities.Similarity
 import org.apache.lucene.util.PriorityQueue
+import org.apache.lucene.util.Bits
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import scala.math._
@@ -63,7 +65,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
     returnQuery
   }
 
-  override def clone(): Object = {
+  override def clone(): BooleanQuery = {
     val clone = new BooleanQueryWithPercentMatch(disableCoord)
     clone.setPercentMatch(percentMatch)
     clauses.foreach{ c => clone.add(c) }
@@ -72,7 +74,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
     clone
   }
 
-  override def createWeight(searcher: Searcher) = {
+  override def createWeight(searcher: IndexSearcher) = {
 
     new BooleanWeight(searcher, disableCoord) {
       private[this] val requiredWeights = new ArrayBuffer[Weight]
@@ -86,7 +88,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
           if (c.isProhibited()) {
             prohibitedWeights += w
           } else {
-            val value = w.sumOfSquaredWeights().toDouble
+            val value = w.getValueForNormalization().toDouble
             val sqrtValue = sqrt(value).toFloat
 
             if (c.isRequired()) {
@@ -103,25 +105,25 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
         sum.toFloat * getBoost() * getBoost()
       }
 
-      override def sumOfSquaredWeights(): Float = normalizationValue
+      override def getValueForNormalization(): Float = normalizationValue
 
-      override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
+      override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
         val required = new ArrayBuffer[Scorer]
         val prohibited = new ArrayBuffer[Scorer]
         val optional = new ArrayBuffer[(Scorer, Float)]
 
         requiredWeights.foreach{ w =>
-          val subScorer = w.scorer(reader, true, false)
+          val subScorer = w.scorer(context, true, false, acceptDocs)
           // if a required clasuse does not have a scorer, no hit
           if (subScorer == null) return null
           required += subScorer
         }
         prohibitedWeights.foreach{ w =>
-          val subScorer = w.scorer(reader, true, false)
+          val subScorer = w.scorer(context, true, false, acceptDocs)
           if (subScorer != null) prohibited += subScorer
         }
         optionalWeights.foreach{ case (w, value) =>
-          val subScorer = w.scorer(reader, true, false)
+          val subScorer = w.scorer(context, true, false, acceptDocs)
           if (subScorer != null) optional += ((subScorer, value))
         }
 
@@ -135,7 +137,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
         }
       }
 
-      override def explain(reader: IndexReader, doc: Int): Explanation = {
+      override def explain(context: AtomicReaderContext, doc: Int): Explanation = {
         val totalValue = totalValueOnOptional + totalValueOnRequired
         val threshold = totalValue * percentMatch / 100.0f
         val maxCoord = clauses.filterNot{ _.isProhibited }.size
@@ -148,7 +150,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
         var fail = false
         var overlapValue = totalValueOnRequired
         requiredWeights.foreach{ w =>
-          val e = w.explain(reader, doc)
+          val e = w.explain(context, doc)
           if (e.isMatch()) {
             sumExpl.addDetail(e)
             coord += 1
@@ -160,7 +162,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
           }
         }
         prohibitedWeights.foreach{ w =>
-          val e = w.explain(reader, doc)
+          val e = w.explain(context, doc)
           if (e.isMatch()) {
             val r = new Explanation(0.0f, s"match on prohibited clause (${w.getQuery().toString()})")
             r.addDetail(e)
@@ -169,7 +171,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
           }
         }
         optionalWeights.foreach{ case (w, v) =>
-          val e = w.explain(reader, doc)
+          val e = w.explain(context, doc)
           if (e.isMatch()) {
             sumExpl.addDetail(e)
             coord += 1
@@ -288,6 +290,8 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
     doc
   }
 
+  override def freq(): Int = 1
+
   override def coord = (required.value + optional.value)/value
 }
 
@@ -335,6 +339,8 @@ class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Sc
     doc
   }
 
+  override def freq(): Int = 1
+
   override def coord = 1.0f
 }
 
@@ -360,8 +366,7 @@ extends Scorer(weight) with Coordinator with Logging {
     }
   }
 
-  private[this] val pq = new PriorityQueue[ScorerDoc] {
-    super.initialize(scorers.length)
+  private[this] val pq = new PriorityQueue[ScorerDoc](scorers.length) {
     override def lessThan(a: ScorerDoc, b: ScorerDoc) = (a.doc < b.doc)
   }
 
@@ -410,6 +415,8 @@ extends Scorer(weight) with Coordinator with Logging {
     doc
   }
 
+  override def freq(): Int = 1
+
   def value = overlapValue
   override def coord = overlapValueUnit / (overlapValueUnit + (maxOverlapValue - overlapValue))
 }
@@ -439,6 +446,8 @@ class BooleanNotScorer(weight: Weight, scorer: Scorer with Coordinator, prohibit
     }
     doc
   }
+
+  override def freq(): Int = 1
 
   override def coord = scorer.coord
 

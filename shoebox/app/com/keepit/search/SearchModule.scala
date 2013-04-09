@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.google.inject.{Provides, Singleton}
+import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.inject.AppScoped
@@ -59,6 +60,14 @@ class SearchModule() extends ScalaModule with Logging {
       new File(configDir, "phrase")
     }
     PhraseIndexer(dir, db, phraseRepo)
+  }
+
+  @Singleton
+  @Provides
+  def spellCorrector: SpellCorrector = {
+    val spellDir = getDirectory(current.configuration.getString("index.spell.directory"))
+    val articleDir = getDirectory(current.configuration.getString("index.article.directory"))
+    SpellCorrector(spellDir, articleDir)
   }
 
 }
