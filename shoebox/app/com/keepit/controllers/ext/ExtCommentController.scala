@@ -96,6 +96,7 @@ class ExtCommentController @Inject() (
         case "private" =>
           commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PRIVATE, parent = parentIdOpt))
         case "message" =>
+          val lastMessageIdInConvo = parentIdOpt.map { commentRepo.getLastChildId }
           val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
           createRecipients(newComment.id.get, recipients, parentIdOpt)
 
@@ -107,7 +108,7 @@ class ExtCommentController @Inject() (
               CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(parentIdOpt.getOrElse(newComment.id.get)), lastReadId = newComment.id.get)
           }
           commentReadRepo.save(newCommentRead)
-          newComment
+          (newComment, lastMessageIdInConvo)
         case "public" | "" =>
           val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = None))
           commentReadRepo.save(commentReadRepo.getByUserAndUri(userId, uri.id.get) match {
@@ -116,7 +117,7 @@ class ExtCommentController @Inject() (
             case None =>
               CommentRead(userId = userId, uriId = uri.id.get, lastReadId = newComment.id.get)
           })
-          newComment
+          (newComment, None)
         case _ =>
           throw new Exception("Invalid comment permission")
       }

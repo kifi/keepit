@@ -23,8 +23,34 @@ import com.keepit.common.net.URINormalizer
 import com.keepit.common.db.State
 
 
-case class CommentDetails(id: String, author: BasicUser, recipient: BasicUser, url: String, page: String, title: String, text: String, createdAt: DateTime, newCount: Int, totalCount: Int)
-case class MessageDetails(id: String, author: BasicUser, recipient: BasicUser, url: Option[String], page: Option[String], title: Option[String], text: String, createdAt: DateTime, isParent: Boolean, newCount: Int, totalCount: Int)
+case class CommentDetails(
+  id: String,
+  author: BasicUser,
+  recipient: BasicUser,
+  url: String,
+  page: String,
+  title: String,
+  text: String,
+  createdAt: DateTime,
+  newCount: Int,
+  totalCount: Int,
+  subsumes: Option[String]
+)
+
+case class MessageDetails(
+  id: String,
+  author: BasicUser,
+  recipient: BasicUser,
+  url: Option[String],
+  page: Option[String],
+  title: Option[String],
+  text: String,
+  createdAt: DateTime,
+  isParent: Boolean,
+  newCount: Int,
+  totalCount: Int,
+  subsumes: Option[String]
+)
 
 case class SendableNotification(
   id: ExternalId[UserNotification],
@@ -61,9 +87,9 @@ class UserNotifier @Inject() (
   CommentWithBasicUserRepo: CommentWithBasicUserRepo,
   basicUserRepo: BasicUserRepo,
   commentRepo: CommentRepo,
+  commentRecipientRepo: CommentRecipientRepo,
   userNotifyRepo: UserNotificationRepo,
   notificationBroadcast: NotificationBroadcaster) extends Logging {
-
 
   implicit val basicUserFormat = BasicUserSerializer.basicUserSerializer
   implicit val commentDetailsFormat = Json.format[CommentDetails]
@@ -97,6 +123,22 @@ class UserNotifier @Inject() (
     db.readWrite { implicit s =>
 
       val messageDetails = createMessageDetails(message)
+
+      val conversationId = message.parent.getOrElse(message.id.get)
+
+      // If not parent:
+
+      // This isn't scalable long term, but is currently the *only* way we have to get the previous message.
+      //
+      val lastMessageInConversation = commentRepo
+
+
+      userNotifyRepo.getWithCommentId(message.userId, conversationId)
+
+      commentRecipientRepo.getByComment(id)
+
+
+
       messageDetails.map { messageDetail =>
         val user = userRepo.get(messageDetail.recipient.externalId)
         val userNotification = userNotifyRepo.save(UserNotification(
@@ -169,7 +211,7 @@ class UserNotifier @Inject() (
         comment.pageTitle,
         comment.text,
         comment.createdAt,
-        0,0
+        0,0, None
       )
     }
   }
@@ -200,7 +242,7 @@ class UserNotifier @Inject() (
         message.text,
         message.createdAt,
         message.parent.isDefined,
-        0,0
+        0,0, None
       )
     }
   }

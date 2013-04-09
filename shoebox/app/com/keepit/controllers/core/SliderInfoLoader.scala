@@ -10,18 +10,20 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.social.BasicUser
 
 case class SliderInfo(
   bookmark: Option[Bookmark],
   following: Boolean,
-  socialUsers: Seq[UserWithSocial],
+  socialUsers: Seq[BasicUser],
   numComments: Int,
   numMessages: Int,
   neverOnSite: Option[UserToDomain],
   sensitive: Option[Boolean])
 case class SliderInitialInfo(
   bookmark: Option[Bookmark],
-  socialUsers: Seq[UserWithSocial],
+  socialUsers: Seq[BasicUser],
   numKeeps: Int,
   numComments: Int,
   numUnreadComments: Int,
@@ -45,7 +47,7 @@ class SliderInfoLoader @Inject() (
     commentRepo: CommentRepo,
     commentReadRepo: CommentReadRepo,
     domainClassifier: DomainClassifier,
-    userWithSocialRepo: UserWithSocialRepo,
+    basicUserRepo: BasicUserRepo,
     historyTracker: SliderHistoryTracker,
     searchClient: SearchServiceClient) {
 
@@ -65,7 +67,7 @@ class SliderInfoLoader @Inject() (
 
         val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
         val sharingUserIds = sharingUserInfo.sharingUserIds
-        val socialUsers = sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
+        val socialUsers = sharingUserIds.map(basicUserRepo.load).toSeq
 
         val numComments = commentRepo.getPublicCount(uri.id.get)
         val numMessages = commentRepo.getMessages(uri.id.get, userId).size
@@ -113,7 +115,7 @@ class SliderInfoLoader @Inject() (
     val (socialUsers, numKeeps) = nUri map { uri =>
       val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
       val socialUsers = db.readOnly { implicit session =>
-        sharingUserInfo.sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
+        sharingUserInfo.sharingUserIds.map(basicUserRepo.load).toSeq
       }
       (socialUsers, sharingUserInfo.keepersEdgeSetSize)
     } getOrElse (Nil, 0)

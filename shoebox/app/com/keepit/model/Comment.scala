@@ -58,6 +58,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getPublicCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int
   def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
+  def getLastChildId(parentId: Id[Comment])(implicit session: RSession)
   def getMessagesWithChildrenCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Int
   def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def count(permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit session: RSession): Int
@@ -90,7 +91,8 @@ class CommentRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val commentCountCache: CommentCountUriIdCache,
-  val messageWithChildrenCountCache: MessageWithChildrenCountUriIdUserIdCache)
+  val messageWithChildrenCountCache: MessageWithChildrenCountUriIdUserIdCache,
+  commentRecipientRepo: CommentRecipientRepo)
     extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
@@ -114,8 +116,8 @@ class CommentRepoImpl @Inject() (
         commentCountCache.remove(CommentCountUriIdKey(comment.uriId))
       case CommentPermissions.MESSAGE =>
         val comments = (comment.id :: comment.parent :: Nil).flatten
-        val parentUserId = comment.parent.map(inject[CommentRepo].get(_).userId)
-        val usersToInvalidate = (Some(comment.userId) :: parentUserId :: Nil).flatten ++ comments.flatMap(inject[CommentRecipientRepo].getByComment(_).map(_.userId).flatten)
+        val parentUserId = comment.parent.map(get(_).userId)
+        val usersToInvalidate = (Some(comment.userId) :: parentUserId :: Nil).flatten ++ comments.flatMap(commentRecipientRepo.getByComment(_).map(_.userId).flatten)
         usersToInvalidate foreach { user =>
           messageWithChildrenCountCache.remove(MessageWithChildrenCountUriIdUserIdKey(comment.uriId, user))
         }
@@ -171,6 +173,9 @@ class CommentRepoImpl @Inject() (
 
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment] =
     (for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b).list
+
+  def getLastChildId(parentId: Id[Comment])(implicit session: RSession) =
+    (for(b <- table if b.parent === parentId) yield b.id).sortBy(_ desc).firstOption.getOrElse(parentId)
 
   def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] = {
     val q1 = for {
