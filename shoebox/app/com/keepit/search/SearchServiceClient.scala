@@ -29,6 +29,7 @@ trait SearchServiceClient extends ServiceClient {
   def rankVsScoreJson(q: Option[String] = None): Future[JsArray]
   def buildSpellCorrectorDictionary(): Future[Unit]
   def getSpellCorrectorStatus(): Future[Boolean]
+  def correctSpelling(text: String): Future[String]
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
@@ -111,4 +112,9 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
   def getSpellCorrectorStatus(): Future[Boolean] = {
     call(routes.SpellCorrectorController.getBuildStatus()).map(r => r.body.toBoolean)
   }
+
+  def correctSpelling(text: String): Future[String] = {
+    call(routes.SpellCorrectorController.correctSpelling(text)).map(r => (r.json \ "correction").asOpt[String].getOrElse(text))
+  }
+
 }
