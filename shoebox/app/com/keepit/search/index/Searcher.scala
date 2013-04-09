@@ -65,7 +65,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
       val liveDocs = r.getLiveDocs
       val docid = r.getIdMapper.getDocId(id)
       if (docid >= 0 && (liveDocs == null || liveDocs.get(docid))) return Some((docid, r.getContext()))
-        i += 1
+      i += 1
     }
     None
   }
