@@ -69,7 +69,7 @@ class SpellCorrectorImpl(spellIndexDirectory: Directory, articleIndexDirectory: 
 }
 
 class FakeSpellCorrector() extends SpellCorrector {
-  def getAlternativeQuery(input: String) = input
+  def getAlternativeQuery(input: String) = "fake correction: " + input
   def buildDictionary() = {}
   def getBuildingStatus = false
 }

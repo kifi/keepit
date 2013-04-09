@@ -126,6 +126,7 @@ GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticl
 
 POST     /admin/search/spell/buildDict         @com.keepit.controllers.admin.AdminSpellCorrectorController.buildDictionary
 GET     /admin/search/spell        @com.keepit.controllers.admin.AdminSpellCorrectorController.spellController
+GET     /admin/search/spell/test-correct  @com.keepit.controllers.admin.AdminSpellCorrectorController.correctSpelling(query: String)
 
 GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
 GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGraphController.update(userId: Id[User])
@@ -225,6 +226,8 @@ GET     /internal/search/search/explainResult  @com.keepit.controllers.search.Se
 
 POST    /internal/search/spell/buildDict       @com.keepit.controllers.search.SpellCorrectorController.buildDictionary()
 GET     /internal/search/spell/buildStatus     @com.keepit.controllers.search.SpellCorrectorController.getBuildStatus()
+GET     /internal/search/spell/make-correction     @com.keepit.controllers.search.SpellCorrectorController.correctSpelling(query: String)
+
 
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /internal/search/search/rankVsScoreJson @com.keepit.controllers.search.SearchController.rankVsScoreJson(query: Option[String] ?= None)
