@@ -39,7 +39,12 @@ class AdminEventController @Inject() (
   rb: ReportBuilderPlugin,
   reportStore: ReportStore,
   events: EventStream,
-  activities: ActivityStream)
+  activities: ActivityStream,
+  activeUsersReports: ActiveUsersReports,
+  dailyReports: DailyReports,
+  dailyAdminReports: DailyAdminReports,
+  reportBuilderPlugin: ReportBuilderPlugin,
+  dailySearchStatisticsReports: DailySearchStatisticsReports)
     extends AdminController(actionAuthenticator) {
 
   def buildReport() = AdminHtmlAction { request =>
@@ -50,13 +55,13 @@ class AdminEventController @Inject() (
     )
 
     val reportGroup = reportForm.bindFromRequest.get.toLowerCase match {
-      case "active_users" => Reports.ActiveUsersReports
-      case "daily" => Reports.DailyReports
-      case "admin" => Reports.DailyAdminReports
+      case "active_users" => activeUsersReports
+      case "daily" => dailyReports
+      case "admin" => dailyAdminReports
       case "experiment" =>
         val activeExperiments = searchConfigManager.activeExperiments
-        Reports.searchExperimentReports(activeExperiments)
-      case "daily_search_statisitcs" => Reports.DailySearchStatisticsReports
+        reportBuilderPlugin.searchExperimentReports(activeExperiments)
+      case "daily_search_statisitcs" => dailySearchStatisticsReports
       case unknown => throw new Exception("Unknown report: %s".format(unknown))
     }
     rb.buildReports(rb.defaultStartTime, rb.defaultEndTime, reportGroup)
