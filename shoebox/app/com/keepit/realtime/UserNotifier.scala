@@ -23,8 +23,8 @@ import com.keepit.common.net.URINormalizer
 import com.keepit.common.db.State
 
 
-case class CommentDetails(id: String, author: BasicUser, recipient: BasicUser, url: String, page: String, title: String, text: String, createdAt: DateTime)
-case class MessageDetails(id: String, author: BasicUser, recipient: BasicUser, url: Option[String], page: Option[String], title: Option[String], text: String, createdAt: DateTime, isParent: Boolean)
+case class CommentDetails(id: String, author: BasicUser, recipient: BasicUser, url: String, page: String, title: String, text: String, createdAt: DateTime, newCount: Int, totalCount: Int)
+case class MessageDetails(id: String, author: BasicUser, recipient: BasicUser, url: Option[String], page: Option[String], title: Option[String], text: String, createdAt: DateTime, isParent: Boolean, newCount: Int, totalCount: Int)
 
 case class SendableNotification(
   id: ExternalId[UserNotification],
@@ -168,7 +168,8 @@ class UserNotifier @Inject() (
         URINormalizer.normalize(uri.url),
         comment.pageTitle,
         comment.text,
-        comment.createdAt
+        comment.createdAt,
+        0,0
       )
     }
   }
@@ -179,6 +180,7 @@ class UserNotifier @Inject() (
     val author = userRepo.get(message.userId)
     val uri = normalizedURIRepo.get(message.uriId)
     val participants = commentRepo.getParticipantsUserIds(message.id.get)
+    val parent = message.parent.map(commentRepo.get).getOrElse(message)
 
     for (userId <- participants - author.id.get) yield {
       val recipient = userRepo.get(userId)
@@ -187,7 +189,7 @@ class UserNotifier @Inject() (
           recipientUserId = Some(userId),
           uriId = Some(message.uriId),
           urlId = message.urlId,
-          deepLocator = DeepLocator.ofMessageThread(message)))
+          deepLocator = DeepLocator.ofMessageThread(parent)))
       new MessageDetails(
         message.externalId.id,
         basicUserRepo.load(message.userId),
@@ -197,7 +199,8 @@ class UserNotifier @Inject() (
         Some(message.pageTitle),
         message.text,
         message.createdAt,
-        message.parent.isDefined
+        message.parent.isDefined,
+        0,0
       )
     }
   }
