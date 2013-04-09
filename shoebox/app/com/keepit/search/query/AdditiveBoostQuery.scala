@@ -1,17 +1,17 @@
 package com.keepit.search.query
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.index.Searcher
+import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
-import org.apache.lucene.index.TermPositions
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
 import org.apache.lucene.search.ComplexExplanation
 import org.apache.lucene.search.Explanation
-import org.apache.lucene.search.Similarity
 import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.util.Bits
 import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
 import java.util.{Set => JSet}
@@ -21,7 +21,7 @@ import scala.math._
 
 class AdditiveBoostQuery(override val textQuery: Query, override val boosterQueries: Array[Query]) extends BoostQuery {
 
-  override def createWeight2(searcher: Searcher): Weight = new AdditiveBoostWeight(this, searcher)
+  override def createWeight(searcher: IndexSearcher): Weight = new AdditiveBoostWeight(this, searcher)
 
   override protected val name = "AdditiveBoost"
 
@@ -32,9 +32,9 @@ class AdditiveBoostQuery(override val textQuery: Query, override val boosterQuer
   }
 }
 
-class AdditiveBoostWeight(override val query: AdditiveBoostQuery, override val searcher: Searcher) extends BoostWeight with Logging {
+class AdditiveBoostWeight(override val query: AdditiveBoostQuery, override val searcher: IndexSearcher) extends BoostWeight with Logging {
 
-  override def sumOfSquaredWeights() = {
+  override def getValueForNormalization() = {
     // take boost values only, each weight will be normalized individually.
     // this makes tuning (balancing the weighting of text and booster queries) more intuitive.
     var textBoost = textWeight.getQuery.getBoost
@@ -46,19 +46,19 @@ class AdditiveBoostWeight(override val query: AdditiveBoostQuery, override val s
     (sum * value * value)
   }
 
-  override def normalize(norm: Float) {
-    val boost = query.getBoost
+  override def normalize(norm: Float, topLevelBoost: Float) {
+    val boost = topLevelBoost * query.getBoost
     // normalize each weight individually, then take the global normalization into account
-    val textNorm = queryNorm(textWeight.sumOfSquaredWeights)
-    textWeight.normalize(textNorm * norm * boost)
+    val textNorm = queryNorm(textWeight.getValueForNormalization)
+    textWeight.normalize(textNorm * norm, boost)
     boosterWeights.foreach{ w =>
-      val boosterNorm = queryNorm(w.sumOfSquaredWeights)
-      w.normalize(boosterNorm * norm * boost)
+      val boosterNorm = queryNorm(w.getValueForNormalization)
+      w.normalize(boosterNorm * norm, boost)
     }
   }
 
-  override def explain(reader: IndexReader, doc: Int) = {
-    val sc = scorer(reader, true, false)
+  override def explain(context: AtomicReaderContext, doc: Int) = {
+    val sc = scorer(context, true, false, context.reader.getLiveDocs)
     val exists = (sc != null && sc.advance(doc) == doc)
 
     val result = new ComplexExplanation()
@@ -86,7 +86,7 @@ class AdditiveBoostWeight(override val query: AdditiveBoostQuery, override val s
     }
 
     var sum = 0.0f
-    val eTxt = textWeight.explain(reader, doc)
+    val eTxt = textWeight.explain(context, doc)
     eTxt.isMatch() match {
       case false =>
         val r = new Explanation(0.0f, "no match in (" + textWeight.getQuery.toString() + ")")
@@ -99,14 +99,14 @@ class AdditiveBoostWeight(override val query: AdditiveBoostQuery, override val s
         result.addDetail(eTxt)
 
         boosterWeights.map{ w =>
-          val eSV = w.explain(reader, doc)
-          eSV.isMatch() match {
+          val e = w.explain(context, doc)
+          e.isMatch() match {
             case true =>
-              result.addDetail(eSV)
-              sum += eSV.getValue
+              result.addDetail(e)
+              sum += e.getValue
             case false =>
               val r = new Explanation(0.0f, "no match in (" + w.getQuery.toString() + ")")
-              r.addDetail(eSV)
+              r.addDetail(e)
               result.addDetail(r)
           }
         }
@@ -114,8 +114,8 @@ class AdditiveBoostWeight(override val query: AdditiveBoostQuery, override val s
     ret
   }
 
-  override def scorer(reader: IndexReader, scoreDocsInOrder: Boolean, topScorer: Boolean): Scorer = {
-    val textScorer = textWeight.scorer(reader, true, false)
+  override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, liveDocs: Bits): Scorer = {
+    val textScorer = textWeight.scorer(context, true, false, liveDocs)
     if (textScorer == null) null
     else {
       // main scorer has to implement Coordinator trait
@@ -128,7 +128,7 @@ class AdditiveBoostWeight(override val query: AdditiveBoostQuery, override val s
       } else {
         QueryUtil.toScorerWithCoordinator(textScorer)
       }
-      new AdditiveBoostScorer(this, mainScorer, boosterWeights.flatMap{ w => Option(w.scorer(reader, true, false)) })
+      new AdditiveBoostScorer(this, mainScorer, boosterWeights.flatMap{ w => Option(w.scorer(context, true, false, liveDocs)) })
     }
   }
 }
@@ -171,6 +171,8 @@ extends Scorer(weight) with Coordinator with Logging {
     }
     scr
   }
+
+  override def freq(): Int = 1
 
   override def coord = textScorer.coord
 }
