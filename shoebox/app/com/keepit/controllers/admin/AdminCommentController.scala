@@ -16,7 +16,7 @@ import com.keepit.model._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
-import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
+import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka

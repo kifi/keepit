@@ -30,7 +30,7 @@ import com.keepit.common.db.State
 import scala.util.Random
 import com.keepit.controllers.core.PaneDetails
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
-import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
+import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
 import org.joda.time.DateTime
@@ -125,7 +125,7 @@ class ExtStreamController @Inject() (
               case JsString("log_event") +: JsObject(pairs) +: _ =>
                 logEvent(streamSession, JsObject(pairs))
               case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>
-                channel.push(Json.arr(requestId.toLong, paneData.getComments(streamSession.userId, url)))
+                channel.push(Json.arr(requestId.toLong, commentWithBasicUserSerializer.writes(paneData.getComments(streamSession.userId, url))))
               case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>
                 channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(streamSession.userId, url)))
               case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>
