@@ -4,6 +4,7 @@ var api = api || require("./api");
 
 const notifications = [];
 const pageData = {};
+var lastNotifyRead;
 
 // ===== Server requests
 
@@ -87,22 +88,6 @@ const socketHandlers = {
     session.patterns = data;
     compilePatterns(session);
   },
-  notification: function(data) {
-    api.log("[socket:notification]", data);
-    var activeTab = api.tabs.getActive();
-    if (activeTab) {
-      api.tabs.emit(activeTab, "show_notification", data);
-    }
-    notifications.unshift(data);
-  },
-  notifications: function(data) {
-    api.log("[socket:notifications]", data);
-    notifications.length = 0;  // TODO: stop loading dupes and then remove this line
-    notifications.push.apply(notifications, data);
-    while (notifyCallbacks.length) {
-      notifyCallbacks.shift()(notifications);
-    }
-  },
   uri_1: function(uri, o) {
     api.log("[socket:uri_1]", o);
     var d = pageData[uri];
@@ -123,6 +108,35 @@ const socketHandlers = {
       d.comments = o.comments || [];
       d.threads = o.threads || [];
     }
+  },
+  notification: function(data) {
+    api.log("[socket:notification]", data);
+    var activeTab = api.tabs.getActive();
+    if (activeTab) {
+      api.tabs.emit(activeTab, "show_notification", data);
+    }
+    notifications.unshift(data);
+  },
+  notifications: function(data) {
+    api.log("[socket:notifications]", data);
+    var idToNotif = {};
+    notifications.concat(data).forEach(function (n) {
+      idToNotif[n.id] = n;
+    });
+    notifications.length = 0;
+    for (id in idToNotif) {
+      notifications.push(idToNotif[id]);
+    }
+    notifications.sort(function (a, b) {
+      return new Date(b.time) - new Date(a.time);
+    });
+    while (notifyCallbacks.length) {
+      notifyCallbacks.shift()(notifications);
+    }
+  },
+  last_notify_read_time: function(data) {
+    api.log("[socket:last_notify_read_time]", data);
+    lastNotifyRead = new Date(data[0]);
   },
   event: function(data) {
     api.log("[socket:event]", data);
@@ -260,12 +274,16 @@ api.port.on({
       respond(n.slice(0, howMany));
     };
     if (howMany > notifications.length) {
-      socket.send(["get_notifications", howMany]);
+      var oldest = (notifications[notifications.length-1] || {}).time;
+      socket.send(["get_notifications", howMany, oldest]);
       notifyCallbacks.push(cb);
       return true;
     } else {
       respond(notifications.slice(0, howMany));
     }
+  },
+  set_last_notify_read_time: function() {
+    socket.send(["set_last_notify_read_time"]);
   },
   session: function(_, respond) {
     respond(session);
@@ -576,6 +594,9 @@ api.tabs.on.loading.add(function(tab) {
         }
       }
     }
+    data.newNotices = notifications.filter(function (n) {
+      return new Date(n.time) > lastNotifyRead;
+    }).length;
 
     api.log("[gotKeptStatus] %i %o", tab.id, data);
     if (tab.ready) {
@@ -698,6 +719,7 @@ function authenticate(callback) {
         (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws",
         socketHandlers);
       socket.send(["get_notifications", 10]);
+      socket.send(["get_last_notify_read_time"])
       logEvent.catchUp();
 
       setConfigs("kifi_installation_id", data.installationId);

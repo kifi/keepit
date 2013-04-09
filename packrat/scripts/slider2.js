@@ -42,6 +42,7 @@ slider2 = function() {
         "numMessages": o.numMessages,
         "newComments": o.unreadComments,
         "newMessages": o.unreadMessages,
+        newNotices: o.newNotices,
         // "connected_networks": api.url("images/networks.png")
       }, function(html) {
         if ($slider) {
@@ -389,7 +390,8 @@ slider2 = function() {
     notices: function($box) {
       api.port.emit("session", function (session) {
         api.require("scripts/notices.js", function() {
-          renderNotices($box.find(".kifi-pane-tall"), ~session.experiments.indexOf("admin"))
+          renderNotices($box.find(".kifi-pane-tall"), ~session.experiments.indexOf("admin"));
+          api.port.emit("set_last_notify_read_time");
         });
       });
     },
