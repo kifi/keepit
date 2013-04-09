@@ -12,14 +12,14 @@ class ThreadInfoSerializer extends Writes[ThreadInfo] {
 
   def writes(ThreadInfo: ThreadInfo): JsValue =
     JsObject(List(
-      "externalId" -> JsString(ThreadInfo.externalId.toString),
-      "recipients" -> JsArray(ThreadInfo.recipients map (r => BasicUserSerializer.basicUserSerializer.writes(r))),
+      "id" -> JsString(ThreadInfo.externalId.toString),
+      "externalId" -> JsString(ThreadInfo.externalId.toString),  // TODO: deprecate, eliminate
+      "recipients" -> JsArray(ThreadInfo.recipients map BasicUserSerializer.basicUserSerializer.writes),
       "digest" -> JsString(ThreadInfo.digest),
       "messageCount" -> JsNumber(ThreadInfo.messageCount),
       "hasAttachments" -> JsBoolean(ThreadInfo.hasAttachments),
       "createdAt" -> JsString(ThreadInfo.createdAt.toString),
-      "lastCommentedAt" -> JsString(ThreadInfo.lastCommentedAt.toString)
-    ))
+      "lastCommentedAt" -> JsString(ThreadInfo.lastCommentedAt.toString)))
 
   def writes (comments: Seq[ThreadInfo]): JsValue = JsArray(comments map writes)
 
