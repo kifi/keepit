@@ -4,9 +4,7 @@ import scala.Some
 import scala.collection.concurrent
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
-
 import org.joda.time._
-
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.analytics.reports.{ReportRepo, DailyDustSettledKifiHadResultsByExperimentRepo, DailyKifiResultClickedByExperimentRepo, DailyGoogleResultClickedByExperimentRepo}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
@@ -17,12 +15,12 @@ import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.model._
 import com.keepit.search._
-
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsNumber
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import views.html
+import com.keepit.common.analytics.MongoEventStore
 
 @Singleton
 class AdminSearchConfigController @Inject() (
@@ -30,7 +28,8 @@ class AdminSearchConfigController @Inject() (
   db: Database,
   userWithSocialRepo: UserWithSocialRepo,
   userRepo: UserRepo,
-  configManager: SearchConfigManager)
+  configManager: SearchConfigManager,
+  store: MongoEventStore)
     extends AdminController(actionAuthenticator) {
 
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -126,14 +125,14 @@ class AdminSearchConfigController @Inject() (
 
   def getKifiVsGoogle(expId: Id[SearchConfigExperiment]) = AdminJsonAction { implicit request =>
     val e = Some(expId).filter(_.id > 0).map(configManager.getExperiment)
-    val data = getChartData(new DailyKifiResultClickedByExperimentRepo(_), new DailyGoogleResultClickedByExperimentRepo(_), e)
+    val data = getChartData(new DailyKifiResultClickedByExperimentRepo(store, _), new DailyGoogleResultClickedByExperimentRepo(store, _), e)
     Ok(data)
   }
 
   def getKifiHadResults(expId: Id[SearchConfigExperiment]) = AdminJsonAction { implicit request =>
     val e = Some(expId).filter(_.id > 0).map(configManager.getExperiment)
-    val data = getChartData(new DailyDustSettledKifiHadResultsByExperimentRepo(_, true),
-      new DailyDustSettledKifiHadResultsByExperimentRepo(_, false), e)
+    val data = getChartData(new DailyDustSettledKifiHadResultsByExperimentRepo(store, _, true),
+      new DailyDustSettledKifiHadResultsByExperimentRepo(store, _, false), e)
     Ok(data)
   }
 
