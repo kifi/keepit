@@ -77,7 +77,7 @@ class SliderInfoLoader @Inject() (
     }
   }
 
-  def initialLoad(userId: Id[User], url: String, ver: String): SliderInitialInfo = {
+  def initialLoad(userId: Id[User], url: String): SliderInitialInfo = {
     val (nUri, bookmark, numComments, numUnreadComments, numMessages, numUnreadMessages,
          neverOnSite, sensitive, locator, shown) = db.readOnly { implicit session =>
       val nUri = normalizedURIRepo.getByNormalizedUrl(url)
@@ -119,6 +119,6 @@ class SliderInfoLoader @Inject() (
     } getOrElse (Nil, 0)
     SliderInitialInfo(
       bookmark, socialUsers, numKeeps, numComments, numUnreadComments, numMessages, numUnreadMessages,
-      neverOnSite, sensitive, locator, shown, ruleGroup, patterns)
+      neverOnSite, sensitive, locator, shown)
   }
 }
