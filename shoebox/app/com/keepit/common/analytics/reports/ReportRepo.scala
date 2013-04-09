@@ -77,7 +77,7 @@ case class CompleteReport(reportName: String, reportVersion: String, list: Seq[R
   def persistenceKey = "%s %s".format(createdAt.toStandardTimeString, reportName)
 }
 
-trait Report {
+trait ReportRepo {
   lazy val store = inject[MongoEventStore]
   val default_report_size = 10
   def reportName = "report"
@@ -97,7 +97,7 @@ trait Report {
   }
 }
 
-trait BasicDailyAggregationReport extends Report {
+trait BasicDailyAggregationReport extends ReportRepo {
   override val numFields = 2
 
   def get(query: DBObject, startDate: DateTime, endDate: DateTime): CompleteReport  = {
@@ -107,7 +107,7 @@ trait BasicDailyAggregationReport extends Report {
   }
 }
 
-class DailyActiveUniqueUserReport extends Report with Logging {
+class DailyActiveUniqueUserReport extends ReportRepo with Logging {
   override val reportName = "DailyActiveUniqueUser"
   override val numFields = 2
   override val ordering = 10
@@ -129,7 +129,7 @@ class DailyActiveUniqueUserReport extends Report with Logging {
   }
 }
 
-class DailyUniqueDepricatedAddBookmarks extends Report with Logging {
+class DailyUniqueDepricatedAddBookmarks extends ReportRepo with Logging {
   override val reportName = "DailyUniqueDepricatedAddBookmarks"
   override val numFields = 2
   override val ordering = 20
@@ -241,6 +241,7 @@ class DailySliderClosedByKey extends BasicDailyAggregationReport with Logging {
     super.get(selector, startDate, endDate)
   }
 }
+
 class DailySliderClosedByX extends BasicDailyAggregationReport with Logging {
   override val reportName = "DailySliderClosedByX"
   override val ordering = 130
@@ -301,7 +302,7 @@ class DailyUsefulPage extends BasicDailyAggregationReport with Logging {
   }
 }
 
-class DailyTotalUsers extends Report with Logging {
+class DailyTotalUsers extends ReportRepo with Logging {
   override val reportName = "DailyTotalUsers"
   override val ordering = 190
 
@@ -327,7 +328,7 @@ class DailyTotalUsers extends Report with Logging {
   }
 }
 
-class DailyPrivateKeeps extends Report with Logging {
+class DailyPrivateKeeps extends ReportRepo with Logging {
   override val reportName = "DailyPrivateKeeps"
   override val ordering = 200
 
@@ -353,7 +354,7 @@ class DailyPrivateKeeps extends Report with Logging {
   }
 }
 
-class DailyPublicKeeps extends Report with Logging {
+class DailyPublicKeeps extends ReportRepo with Logging {
   override val reportName = "DailyPublicKeeps"
   override val ordering = 210
 
@@ -379,7 +380,7 @@ class DailyPublicKeeps extends Report with Logging {
   }
 }
 
-class DailyNewThread extends Report with Logging {
+class DailyNewThread extends ReportRepo with Logging {
   override val reportName = "DailyNewThread"
   override val ordering = 220
 
@@ -424,7 +425,7 @@ class DailyClickingUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT,
 class WeeklyClickingUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT, Seq("kifiResultClicked"))
 class MonthlyClickingUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT, Seq("kifiResultClicked"))
 
-sealed abstract class ActiveUsersReport(func: MongoMapFunc, events: Seq[String]) extends Report with Logging {
+sealed abstract class ActiveUsersReport(func: MongoMapFunc, events: Seq[String]) extends ReportRepo with Logging {
   override val reportName = getClass.getSimpleName
   override val numFields = 2
   override val ordering = 230
@@ -445,7 +446,7 @@ sealed abstract class ActiveUsersReport(func: MongoMapFunc, events: Seq[String])
   }
 }
 
-class DailyUniqueUsersKeeping extends Report with Logging {
+class DailyUniqueUsersKeeping extends ReportRepo with Logging {
   override val reportName = "DailyUniqueUsersKeeping"
   override val numFields = 2
   override val ordering = 230
@@ -465,7 +466,7 @@ class DailyUniqueUsersKeeping extends Report with Logging {
   }
 }
 
-class DailyUniqueUsersMessaging extends Report with Logging {
+class DailyUniqueUsersMessaging extends ReportRepo with Logging {
   override val reportName = "DailyUniqueUsersMessaging"
   override val numFields = 2
   override val ordering = 240
@@ -485,7 +486,7 @@ class DailyUniqueUsersMessaging extends Report with Logging {
   }
 }
 
-class DailyUniqueUsersCommenting extends Report with Logging {
+class DailyUniqueUsersCommenting extends ReportRepo with Logging {
   override val reportName = "DailyUniqueUsersCommenting"
   override val numFields = 2
   override val ordering = 240
@@ -592,7 +593,7 @@ class DailyKifiResultClickedByExperiment(val experiment: Option[SearchConfigExpe
   override val ordering = 3000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
 }
 
-class DailySearchStatisticsReport extends Report with Logging{
+class DailySearchStatisticsReport extends ReportRepo with Logging{
   override val reportName = "DailySearchStatistics"
 
   def get(startDate: DateTime, endDate: DateTime): CompleteReport = {
