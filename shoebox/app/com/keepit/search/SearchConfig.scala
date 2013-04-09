@@ -32,10 +32,9 @@ object SearchConfig {
       "tailCutting" -> "0.20",
       "proximityBoost" -> "0.3",
       "semanticBoost" -> "0.4",
-      "dumpingByRank" -> "true",
-      "dumpingHalfDecayMine" -> "8.0",
-      "dumpingHalfDecayFriends" -> "6.0",
-      "dumpingHalfDecayOthers" -> "2.0"
+      "dampingHalfDecayMine" -> "8.0",
+      "dampingHalfDecayFriends" -> "6.0",
+      "dampingHalfDecayOthers" -> "2.0"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -55,13 +54,13 @@ object SearchConfig {
       "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF)",
       "halfDecayHours" -> "the time the recency boost becomes half",
       "recencyBoost" -> "importance of the recent bookmarks",
-      "tailCutting" -> "after dumping, a hit with a score below the high score multiplied by this will be removed",
+      "tailCutting" -> "after damping, a hit with a score below the high score multiplied by this will be removed",
       "proximityBoost" -> "boosting by proximity",
       "semanticBoost" -> "boosting by semantic vector",
-      "dumpingByRank" -> "enable score dumping by rank",
-      "dumpingHalfDecayMine" -> "how many top hits in my bookmarks are important",
-      "dumpingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
-      "dumpingHalfDecayOthers" -> "how many top hits in others' bookmark are important"
+      "dampingByRank" -> "enable score damping by rank",
+      "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
+      "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
+      "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important"
     )
 
   def apply(params: (String, String)*): SearchConfig = SearchConfig(Map(params:_*))
