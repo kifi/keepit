@@ -107,7 +107,7 @@ trait BasicDailyAggregationReportRepo extends ReportRepo {
   }
 }
 
-class DailyActiveUniqueUserReport extends ReportRepo with Logging {
+class DailyActiveUniqueUserReportRepo extends ReportRepo with Logging {
   override val reportName = "DailyActiveUniqueUser"
   override val numFields = 2
   override val ordering = 10
@@ -129,7 +129,7 @@ class DailyActiveUniqueUserReport extends ReportRepo with Logging {
   }
 }
 
-class DailyUniqueDepricatedAddBookmarks extends ReportRepo with Logging {
+class DailyUniqueDepricatedAddBookmarksRepo extends ReportRepo with Logging {
   override val reportName = "DailyUniqueDepricatedAddBookmarks"
   override val numFields = 2
   override val ordering = 20
@@ -152,7 +152,7 @@ class DailyUniqueDepricatedAddBookmarks extends ReportRepo with Logging {
   }
 }
 
-class DailyPageLoadReport extends BasicDailyAggregationReportRepo with Logging {
+class DailyPageLoadReportRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailyPageLoadReport"
   override val ordering = 30
 
@@ -162,7 +162,7 @@ class DailyPageLoadReport extends BasicDailyAggregationReportRepo with Logging {
   }
 }
 
-class DailySearchQueriesReport extends BasicDailyAggregationReportRepo with Logging {
+class DailySearchQueriesReportRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailySearchQueriesReport"
   override val ordering = 40
 
@@ -172,7 +172,7 @@ class DailySearchQueriesReport extends BasicDailyAggregationReportRepo with Logg
   }
 }
 
-class DailyGoogleResultClicked extends BasicDailyAggregationReportRepo with Logging {
+class DailyGoogleResultClickedRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailyGoogleResultClicked"
   override val ordering = 50
 
@@ -182,7 +182,7 @@ class DailyGoogleResultClicked extends BasicDailyAggregationReportRepo with Logg
   }
 }
 
-class DailyKifiResultClicked extends BasicDailyAggregationReportRepo with Logging {
+class DailyKifiResultClickedRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailyKifiResultClicked"
   override val ordering = 70
 
@@ -192,7 +192,7 @@ class DailyKifiResultClicked extends BasicDailyAggregationReportRepo with Loggin
   }
 }
 
-class DailySliderShownByAuto extends BasicDailyAggregationReportRepo with Logging {
+class DailySliderShownByAutoRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailySliderShownByAuto"
   override val ordering = 80
 
@@ -202,7 +202,7 @@ class DailySliderShownByAuto extends BasicDailyAggregationReportRepo with Loggin
   }
 }
 
-class DailySliderShownByIcon extends BasicDailyAggregationReportRepo with Logging {
+class DailySliderShownByIconRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailySliderShownByButton"
   override val ordering = 90
 
@@ -212,7 +212,7 @@ class DailySliderShownByIcon extends BasicDailyAggregationReportRepo with Loggin
   }
 }
 
-class DailySliderShownByKey extends BasicDailyAggregationReportRepo with Logging {
+class DailySliderShownByKeyRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailySliderShownByKey"
   override val ordering = 100
 
@@ -222,7 +222,7 @@ class DailySliderShownByKey extends BasicDailyAggregationReportRepo with Logging
   }
 }
 
-class DailySliderClosedByIcon extends BasicDailyAggregationReportRepo with Logging {
+class DailySliderClosedByIconRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailySliderClosedByButton"
   override val ordering = 110
 
@@ -232,7 +232,7 @@ class DailySliderClosedByIcon extends BasicDailyAggregationReportRepo with Loggi
   }
 }
 
-class DailySliderClosedByKey extends BasicDailyAggregationReportRepo with Logging {
+class DailySliderClosedByKeyRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailySliderClosedByKey"
   override val ordering = 120
 
@@ -242,7 +242,7 @@ class DailySliderClosedByKey extends BasicDailyAggregationReportRepo with Loggin
   }
 }
 
-class DailySliderClosedByX extends BasicDailyAggregationReportRepo with Logging {
+class DailySliderClosedByXRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailySliderClosedByX"
   override val ordering = 130
 
@@ -252,7 +252,7 @@ class DailySliderClosedByX extends BasicDailyAggregationReportRepo with Logging 
   }
 }
 
-class DailyComment extends BasicDailyAggregationReportRepo with Logging {
+class DailyCommentRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailyComment"
   override val ordering = 140
 
@@ -262,7 +262,7 @@ class DailyComment extends BasicDailyAggregationReportRepo with Logging {
   }
 }
 
-class DailyMessage extends BasicDailyAggregationReportRepo with Logging {
+class DailyMessageRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailyMessage"
   override val ordering = 150
 
@@ -272,7 +272,7 @@ class DailyMessage extends BasicDailyAggregationReportRepo with Logging {
   }
 }
 
-class DailyUnkeep extends BasicDailyAggregationReportRepo with Logging {
+class DailyUnkeepRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailyUnkeep"
   override val ordering = 160
 
@@ -282,7 +282,7 @@ class DailyUnkeep extends BasicDailyAggregationReportRepo with Logging {
   }
 }
 
-class DailyKeep extends BasicDailyAggregationReportRepo with Logging {
+class DailyKeepRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailyKeep"
   override val ordering = 170
 
@@ -292,7 +292,7 @@ class DailyKeep extends BasicDailyAggregationReportRepo with Logging {
   }
 }
 
-class DailyUsefulPage extends BasicDailyAggregationReportRepo with Logging {
+class DailyUsefulPageRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailyUsefulPage"
   override val ordering = 180
 
@@ -302,7 +302,7 @@ class DailyUsefulPage extends BasicDailyAggregationReportRepo with Logging {
   }
 }
 
-class DailyTotalUsers extends ReportRepo with Logging {
+class DailyTotalUsersRepo extends ReportRepo with Logging {
   override val reportName = "DailyTotalUsers"
   override val ordering = 190
 
@@ -328,7 +328,7 @@ class DailyTotalUsers extends ReportRepo with Logging {
   }
 }
 
-class DailyPrivateKeeps extends ReportRepo with Logging {
+class DailyPrivateKeepsRepo extends ReportRepo with Logging {
   override val reportName = "DailyPrivateKeeps"
   override val ordering = 200
 
@@ -354,7 +354,7 @@ class DailyPrivateKeeps extends ReportRepo with Logging {
   }
 }
 
-class DailyPublicKeeps extends ReportRepo with Logging {
+class DailyPublicKeepsRepo extends ReportRepo with Logging {
   override val reportName = "DailyPublicKeeps"
   override val ordering = 210
 
@@ -380,7 +380,7 @@ class DailyPublicKeeps extends ReportRepo with Logging {
   }
 }
 
-class DailyNewThread extends ReportRepo with Logging {
+class DailyNewThreadRepo extends ReportRepo with Logging {
   override val reportName = "DailyNewThread"
   override val ordering = 220
 
@@ -406,26 +406,26 @@ class DailyNewThread extends ReportRepo with Logging {
   }
 }
 
-class DailyActiveUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT,
+class DailyActiveUsersRepo extends ActiveUsersReportRepo(MongoMapFunc.USER_DATE_COUNT,
   Seq("keep", "comment", "message", "kifiResultClicked"))
-class WeeklyActiveUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT,
+class WeeklyActiveUsersRepo extends ActiveUsersReportRepo(MongoMapFunc.USER_WEEK_COUNT,
   Seq("keep", "comment", "message", "kifiResultClicked"))
-class MonthlyActiveUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT,
+class MonthlyActiveUsersRepo extends ActiveUsersReportRepo(MongoMapFunc.USER_MONTH_COUNT,
   Seq("keep", "comment", "message", "kifiResultClicked"))
 
-class DailyKeepingUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT, Seq("keep"))
-class WeeklyKeepingUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT, Seq("keep"))
-class MonthlyKeepingUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT, Seq("keep"))
+class DailyKeepingUsersRepo extends ActiveUsersReportRepo(MongoMapFunc.USER_DATE_COUNT, Seq("keep"))
+class WeeklyKeepingUsersRepo extends ActiveUsersReportRepo(MongoMapFunc.USER_WEEK_COUNT, Seq("keep"))
+class MonthlyKeepingUsersRepo extends ActiveUsersReportRepo(MongoMapFunc.USER_MONTH_COUNT, Seq("keep"))
 
-class DailyKCMUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT, Seq("keep", "comment", "message"))
-class WeeklyKCMUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT, Seq("keep", "comment", "message"))
-class MonthlyKCMUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT, Seq("keep", "comment", "message"))
+class DailyKCMUsersRepo extends ActiveUsersReportRepo(MongoMapFunc.USER_DATE_COUNT, Seq("keep", "comment", "message"))
+class WeeklyKCMUsersRepo extends ActiveUsersReportRepo(MongoMapFunc.USER_WEEK_COUNT, Seq("keep", "comment", "message"))
+class MonthlyKCMUsersRepo extends ActiveUsersReportRepo(MongoMapFunc.USER_MONTH_COUNT, Seq("keep", "comment", "message"))
 
-class DailyClickingUsers extends ActiveUsersReport(MongoMapFunc.USER_DATE_COUNT, Seq("kifiResultClicked"))
-class WeeklyClickingUsers extends ActiveUsersReport(MongoMapFunc.USER_WEEK_COUNT, Seq("kifiResultClicked"))
-class MonthlyClickingUsers extends ActiveUsersReport(MongoMapFunc.USER_MONTH_COUNT, Seq("kifiResultClicked"))
+class DailyClickingUsersRepo extends ActiveUsersReportRepo(MongoMapFunc.USER_DATE_COUNT, Seq("kifiResultClicked"))
+class WeeklyClickingUsersRepo extends ActiveUsersReportRepo(MongoMapFunc.USER_WEEK_COUNT, Seq("kifiResultClicked"))
+class MonthlyClickingUsersRepo extends ActiveUsersReportRepo(MongoMapFunc.USER_MONTH_COUNT, Seq("kifiResultClicked"))
 
-sealed abstract class ActiveUsersReport(func: MongoMapFunc, events: Seq[String]) extends ReportRepo with Logging {
+sealed abstract class ActiveUsersReportRepo(func: MongoMapFunc, events: Seq[String]) extends ReportRepo with Logging {
   override val reportName = getClass.getSimpleName
   override val numFields = 2
   override val ordering = 230
@@ -446,7 +446,7 @@ sealed abstract class ActiveUsersReport(func: MongoMapFunc, events: Seq[String])
   }
 }
 
-class DailyUniqueUsersKeeping extends ReportRepo with Logging {
+class DailyUniqueUsersKeepingRepo extends ReportRepo with Logging {
   override val reportName = "DailyUniqueUsersKeeping"
   override val numFields = 2
   override val ordering = 230
@@ -466,7 +466,7 @@ class DailyUniqueUsersKeeping extends ReportRepo with Logging {
   }
 }
 
-class DailyUniqueUsersMessaging extends ReportRepo with Logging {
+class DailyUniqueUsersMessagingRepo extends ReportRepo with Logging {
   override val reportName = "DailyUniqueUsersMessaging"
   override val numFields = 2
   override val ordering = 240
@@ -486,7 +486,7 @@ class DailyUniqueUsersMessaging extends ReportRepo with Logging {
   }
 }
 
-class DailyUniqueUsersCommenting extends ReportRepo with Logging {
+class DailyUniqueUsersCommentingRepo extends ReportRepo with Logging {
   override val reportName = "DailyUniqueUsersCommenting"
   override val numFields = 2
   override val ordering = 240
@@ -506,7 +506,7 @@ class DailyUniqueUsersCommenting extends ReportRepo with Logging {
   }
 }
 
-class DailyKifiLoadedReport extends BasicDailyAggregationReportRepo with Logging {
+class DailyKifiLoadedReportRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailyKifiLoadedReport"
   override val ordering = 250
 
@@ -516,7 +516,7 @@ class DailyKifiLoadedReport extends BasicDailyAggregationReportRepo with Logging
   }
 }
 
-class DailyKifiAtLeastOneResult extends BasicDailyAggregationReportRepo with Logging {
+class DailyKifiAtLeastOneResultRepo extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = "DailyKifiAtLeastOneResult"
   override val ordering = 260
 
@@ -526,7 +526,7 @@ class DailyKifiAtLeastOneResult extends BasicDailyAggregationReportRepo with Log
   }
 }
 
-class DailyDustSettledKifiHadResults(kifiHadResults: Boolean = true) extends BasicDailyAggregationReportRepo with Logging {
+class DailyDustSettledKifiHadResultsRepo(kifiHadResults: Boolean = true) extends BasicDailyAggregationReportRepo with Logging {
   override val reportName = s"DailyDustSettledKifiHad${if (kifiHadResults) "" else "No"}Results"
   override val ordering = 270 + (if (kifiHadResults) 1 else 0)
 
@@ -539,7 +539,7 @@ class DailyDustSettledKifiHadResults(kifiHadResults: Boolean = true) extends Bas
   }
 }
 
-trait DailyByExperiment extends BasicDailyAggregationReportRepo with Logging {
+trait DailyByExperimentRepo extends BasicDailyAggregationReportRepo with Logging {
   def eventName: String
   def experiment: Option[SearchConfigExperiment]
 
@@ -558,15 +558,15 @@ trait DailyByExperiment extends BasicDailyAggregationReportRepo with Logging {
   }
   override def hashCode() = (reportName, eventName, experiment.flatMap(_.id)).hashCode()
   override def equals(other: Any) = other match {
-    case that: DailyByExperiment =>
+    case that: DailyByExperimentRepo =>
       (reportName, eventName, experiment.flatMap(_.id)) ==
         (that.reportName, that.eventName, that.experiment.flatMap(_.id))
     case _ => false
   }
 }
 
-class DailyDustSettledKifiHadResultsByExperiment(val experiment: Option[SearchConfigExperiment],
-  val kifiHadResults: Boolean = true) extends DailyByExperiment {
+class DailyDustSettledKifiHadResultsByExperimentRepo(val experiment: Option[SearchConfigExperiment],
+  val kifiHadResults: Boolean = true) extends DailyByExperimentRepo {
   override val eventName = "dustSettled"
   override lazy val reportName = s"DailyDustSettledKifiHad${if (kifiHadResults) "" else "No"}Results " +
     s"${experiment.map(_.description).getOrElse("Default")}"
@@ -577,22 +577,22 @@ class DailyDustSettledKifiHadResultsByExperiment(val experiment: Option[SearchCo
       .withMetaData("kifiHadResults", kifiHadResults)
 }
 
-class DailyKifiAtLeastOneResultByExperiment(val experiment: Option[SearchConfigExperiment]) extends DailyByExperiment {
+class DailyKifiAtLeastOneResultByExperimentRepo(val experiment: Option[SearchConfigExperiment]) extends DailyByExperimentRepo {
   override val eventName = "kifiAtLeastOneResult"
   override val ordering = 1000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
 }
 
-class DailyGoogleResultClickedByExperiment(val experiment: Option[SearchConfigExperiment]) extends DailyByExperiment {
+class DailyGoogleResultClickedByExperimentRepo(val experiment: Option[SearchConfigExperiment]) extends DailyByExperimentRepo {
   override val eventName = "googleResultClicked"
   override val ordering = 2000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
 }
 
-class DailyKifiResultClickedByExperiment(val experiment: Option[SearchConfigExperiment]) extends DailyByExperiment {
+class DailyKifiResultClickedByExperimentRepo(val experiment: Option[SearchConfigExperiment]) extends DailyByExperimentRepo {
   override val eventName = "kifiResultClicked"
   override val ordering = 3000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
 }
 
-class DailySearchStatisticsReport extends ReportRepo with Logging {
+class DailySearchStatisticsReportRepo extends ReportRepo with Logging {
   override val reportName = "DailySearchStatistics"
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
