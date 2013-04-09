@@ -13,6 +13,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.model.{SliderRuleRepo, SliderRuleStates}
 import com.keepit.model.{URLPattern, URLPatternRepo, URLPatternStates}
+import com.keepit.realtime.UserChannel
 import com.mongodb.casbah.Imports._
 
 import play.api.Play.current
@@ -34,7 +35,8 @@ class SliderAdminController @Inject() (
   domainToTagRepo: DomainToTagRepo,
   domainRepo: DomainRepo,
   domainTagImporter: DomainTagImporter,
-  mongoEventStore: MongoEventStore)
+  mongoEventStore: MongoEventStore,
+  userChannel: UserChannel)
     extends AdminController(actionAuthenticator) {
   def getRules = AdminHtmlAction { implicit request =>
     val groupName = "default"
@@ -47,14 +49,18 @@ class SliderAdminController @Inject() (
   def saveRules = AdminHtmlAction { implicit request =>
     val body = request.body.asFormUrlEncoded.get
     val groupName = body("group").head
-    db.readWrite { implicit session =>
+    val ruleGroup = db.readWrite { implicit session =>
       sliderRuleRepo.getGroup(groupName).rules.foreach { rule =>
         val newRule = rule
           .withState(if (body.contains(rule.name)) SliderRuleStates.ACTIVE else SliderRuleStates.INACTIVE)
           .withParameters(body.get(rule.name + "Params").map { arr => JsArray(arr.map(Json.parse)) })
-        if (newRule != rule) sliderRuleRepo.save(newRule)
+        if (newRule != rule) {
+          sliderRuleRepo.save(newRule)
+        }
       }
+      sliderRuleRepo.getGroup(groupName)
     }
+    userChannel.broadcast(Json.arr("slider_rules", ruleGroup.compactJson))
     Redirect(routes.SliderAdminController.getRules)
   }
 
@@ -67,7 +73,7 @@ class SliderAdminController @Inject() (
 
   def savePatterns = AdminHtmlAction { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
-    db.readWrite { implicit session =>
+    val patterns = db.readWrite { implicit session =>
       for (key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))) {
         val id = Id[URLPattern](key.toLong)
         val oldPat = urlPatternRepo.get(id)
@@ -85,7 +91,9 @@ class SliderAdminController @Inject() (
           Some(body("new_example")).filter(!_.isEmpty),
           state = if (body.contains("new_active")) URLPatternStates.ACTIVE else URLPatternStates.INACTIVE))
       }
+      urlPatternRepo.getActivePatterns()
     }
+    userChannel.broadcast(Json.arr("url_patterns", patterns))
     Redirect(routes.SliderAdminController.getPatterns)
   }
 

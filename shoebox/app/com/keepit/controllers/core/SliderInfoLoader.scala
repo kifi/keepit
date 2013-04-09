@@ -30,9 +30,7 @@ case class SliderInitialInfo(
   neverOnSite: Option[UserToDomain],
   sensitive: Option[Boolean],
   locator: Option[DeepLocator],
-  shown: Option[Boolean],
-  ruleGroup: Option[SliderRuleGroup],
-  patterns: Option[Seq[String]])
+  shown: Option[Boolean])
 
 @Singleton
 class SliderInfoLoader @Inject() (
@@ -49,10 +47,7 @@ class SliderInfoLoader @Inject() (
     domainClassifier: DomainClassifier,
     userWithSocialRepo: UserWithSocialRepo,
     historyTracker: SliderHistoryTracker,
-    sliderRuleRepo: SliderRuleRepo,
-    urlPatternRepo: URLPatternRepo,
-    searchClient: SearchServiceClient
-  ) {
+    searchClient: SearchServiceClient) {
 
   def load(userId: Id[User], url: String): SliderInfo = db.readOnly {implicit s =>
     val nUri = normalizedURIRepo.getByNormalizedUrl(url)
@@ -82,7 +77,7 @@ class SliderInfoLoader @Inject() (
     }
   }
 
-  def initialLoad(userId: Id[User], url: String, ver: String) = db.readOnly { implicit s =>
+  def initialLoad(userId: Id[User], url: String) = db.readOnly { implicit s =>
     val nUri = normalizedURIRepo.getByNormalizedUrl(url)
     val host: Option[String] = URI.parse(url).get.host.map(_.name)
     val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
@@ -90,8 +85,6 @@ class SliderInfoLoader @Inject() (
       userToDomainRepo.get(userId, domain.id.get, UserToDomainKinds.NEVER_SHOW)
     }
     val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
-    val ruleGroup: Option[SliderRuleGroup] = Option(sliderRuleRepo.getGroup("default")).filter(_.version != ver)
-    val patterns: Option[Seq[String]] = ruleGroup.map(_ => urlPatternRepo.getActivePatterns)
 
     nUri match {
       case Some(uri) =>
@@ -118,9 +111,9 @@ class SliderInfoLoader @Inject() (
 
         SliderInitialInfo(
           bookmark, socialUsers, keepersEdgeSetSize, numComments, numUnreadComments, numMessages, numUnreadMessages,
-          neverOnSite, sensitive, locator, shown, ruleGroup, patterns)
+          neverOnSite, sensitive, locator, shown)
       case None =>
-        SliderInitialInfo(None, Nil, 0, 0, 0, 0, 0, neverOnSite, sensitive, None, None, None, None)
+        SliderInitialInfo(None, Nil, 0, 0, 0, 0, 0, neverOnSite, sensitive, None, None)
     }
   }
 }

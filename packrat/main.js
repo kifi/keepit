@@ -70,8 +70,17 @@ logEvent.catchUp = function() {
 var notifications = [], notifyCallbacks = []
 const socketHandlers = {
   experiments: function(data) {
-    api.log("[socket:message]", data);
+    api.log("[socket:experiments]", data);
     session.experiments = data;
+  },
+  slider_rules: function(data) {
+    api.log("[socket:slider_rules]", data);
+    session.rules = data;
+  },
+  url_patterns: function(data) {
+    api.log("[socket:url_patterns]", data);
+    session.patterns = data;
+    compilePatterns(session);
   },
   notification: function(data) {
     api.log("[socket:notification]", data);
@@ -440,13 +449,8 @@ function checkKeepStatus(tab, callback) {
   api.log("[checkKeepStatus] %i %o", tab.id, tab);
 
   tab.keepStatusKnown = true;  // setting before request to avoid making two overlapping requests
-  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url, ver: session.rules.version}, function done(o) {
+  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url}, function done(o) {
     setIcon(tab, o.kept);
-    if (o.rules) {
-      session.rules = o.rules;
-      session.patterns = o.patterns;
-      compilePatterns(session);
-    }
     callback && callback(o);
   }, function fail(xhr) {
     api.log("[checkKeepStatus] error:", xhr.responseText);
