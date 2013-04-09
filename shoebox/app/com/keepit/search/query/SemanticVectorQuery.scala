@@ -98,19 +98,21 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
     result
   }
 
-  private def explainTerm(term: Term, reader: AtomicReader, vector: SemanticVector, value: Float, doc: Int) = {
-    val dv = new DocAndVector(reader.termPositionsEnum(term), vector, value)
-    dv.fetchDoc(doc)
-    if (dv.doc == doc && value > 0.0f) {
-      val sc = dv.scoreAndNext()
-      val expl = new ComplexExplanation()
-      expl.setDescription("term(%s)".format(term.toString))
-      expl.addDetail(new Explanation(sc/value, "similarity"))
-      expl.addDetail(new Explanation(value, "boost"))
-      expl.setValue(sc)
-      Some(expl)
-    } else {
-      None
+  private def explainTerm(term: Term, reader: AtomicReader, vector: SemanticVector, value: Float, doc: Int): Option[Explanation] = {
+    Option(reader.termPositionsEnum(term)).flatMap{ tp =>
+      val dv = new DocAndVector(tp, vector, value)
+      dv.fetchDoc(doc)
+      if (dv.doc == doc && value > 0.0f) {
+        val sc = dv.scoreAndNext()
+        val expl = new ComplexExplanation()
+        expl.setDescription("term(%s)".format(term.toString))
+        expl.addDetail(new Explanation(sc/value, "similarity"))
+        expl.addDetail(new Explanation(value, "boost"))
+        expl.setValue(sc)
+        Some(expl)
+      } else {
+        None
+      }
     }
   }
 

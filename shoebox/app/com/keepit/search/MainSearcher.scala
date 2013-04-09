@@ -50,10 +50,9 @@ class MainSearcher(
   val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
   val proximityBoost = config.asFloat("proximityBoost")
   val semanticBoost = config.asFloat("semanticBoost")
-  val dumpingByRank = config.asBoolean("dumpingByRank")
-  val dumpingHalfDecayMine = config.asFloat("dumpingHalfDecayMine")
-  val dumpingHalfDecayFriends = config.asFloat("dumpingHalfDecayFriends")
-  val dumpingHalfDecayOthers = config.asFloat("dumpingHalfDecayOthers")
+  val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
+  val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
+  val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
   val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
   val svWeightClickHistory = config.asInt("svWeightClickHistory")
@@ -164,7 +163,7 @@ class MainSearcher(
 
     if (myHits.size > 0) {
       myHits.toRankedIterator.map{ case (h, rank) =>
-        if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayMine) // dumping the scores by rank
+        h.score = h.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
         h
       }.takeWhile{ h =>
         h.score > threshold
@@ -182,7 +181,7 @@ class MainSearcher(
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
       friendsHits.toRankedIterator.map{ case (h, rank) =>
-        if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayFriends) // dumping the scores by rank
+        h.score = h.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
         h
       }.takeWhile{ h =>
         h.score > threshold
@@ -200,7 +199,7 @@ class MainSearcher(
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
       val queue = createQueue(numHitsToReturn - hits.size)
       othersHits.toRankedIterator.map{ case (h, rank) =>
-        if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayOthers) // dumping the scores by rank
+        h.score = h.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
         h
       }.takeWhile{
         h => h.score > threshold
@@ -239,7 +238,7 @@ class MainSearcher(
 
   def createQueue(sz: Int) = new ArticleHitQueue(sz)
 
-  private def dumpFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/halfDecay, 3.0d))).toFloat
+  private def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/halfDecay, 3.0d))).toFloat
 
   private def bookmarkScore(bookmarkCount: Int) = (1.0f - (1.0f/(1.0f + bookmarkCount.toFloat)))
 
