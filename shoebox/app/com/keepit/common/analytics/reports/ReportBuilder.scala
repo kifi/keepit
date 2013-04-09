@@ -62,7 +62,7 @@ object Reports {
   lazy val monthlyKCMUsers = new MonthlyKCMUsers
   lazy val dailySearchStatstics = new DailySearchStatisticsReport
 
-  case class ReportGroup(name: String, reports: Seq[Report])
+  case class ReportGroup(name: String, reports: Seq[ReportRepo])
 
   lazy val DailyReports = ReportGroup("DailyReport",
     Seq(dailyActiveUniqueUserReport,
@@ -126,7 +126,7 @@ object Reports {
 }
 
 trait ReportBuilderPlugin extends SchedulingPlugin {
-  def buildReport(startDate: DateTime, endDate: DateTime, report: Report) : Unit
+  def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo) : Unit
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit
   def reportCron(): Unit
 
@@ -140,7 +140,7 @@ class ReportBuilderPluginImpl @Inject() (
   reportStore: ReportStore)
     extends Logging with ReportBuilderPlugin {
 
-  def buildReport(startDate: DateTime, endDate: DateTime, report: Report): Unit = actor ! BuildReport(startDate, endDate, report)
+  def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo): Unit = actor ! BuildReport(startDate, endDate, report)
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor ! BuildReports(startDate, endDate, reportGroup)
 
   private lazy val actor = actorFactory.get()
@@ -160,7 +160,7 @@ class ReportBuilderPluginImpl @Inject() (
 }
 
 private[reports] case class ReportCron(sender: ReportBuilderPlugin)
-private[reports] case class BuildReport(startDate: DateTime, endDate: DateTime, report: Report)
+private[reports] case class BuildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo)
 private[reports] case class BuildReports(startDate: DateTime, endDate: DateTime, reportGroup: Reports.ReportGroup)
 
 private[reports] class ReportBuilderActor @Inject() (
@@ -179,7 +179,7 @@ private[reports] class ReportBuilderActor @Inject() (
         report.get(startDate, endDate)
       }
 
-      val outputReport = builtReports.foldRight(CompleteReport("","",Nil))((a,b) => a + b)
+      val outputReport = builtReports.foldRight(Report("","",Nil))((a,b) => a + b)
       val report = outputReport.copy(reportName = reportGroup.name)
       reportStore += (report.persistenceKey -> report)
     case unknown =>
