@@ -25,6 +25,7 @@ import com.keepit.inject._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.common.analytics.FakePersistEventPluginImpl
+import com.keepit.search.query.parser.FakeSpellCorrector
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -52,7 +53,9 @@ class MainSearcherTest extends Specification with DbRepos {
         resultClickTracker,
         browsingHistoryTracker,
         clickHistoryTracker,
-        inject[FakePersistEventPluginImpl])
+        inject[FakePersistEventPluginImpl],
+        inject[FakeSpellCorrector]
+        )
     (uriGraph, articleIndexer, mainSearcherFactory)
   }
 

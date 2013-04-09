@@ -17,6 +17,7 @@ import org.apache.lucene.search.Explanation
 import com.keepit.search.query.{TopLevelQuery,QueryUtil}
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import play.api.libs.json._
+import com.keepit.search.query.parser.SpellCorrector
 
 
 class MainSearcher(
@@ -30,7 +31,8 @@ class MainSearcher(
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker,
-    persistEventPlugin: PersistEventPlugin
+    persistEventPlugin: PersistEventPlugin,
+    spellCorrector: SpellCorrector
 ) extends Logging {
   val currentTime = currentDateTime.getMillis()
   val idFilter = filter.idFilter
@@ -217,7 +219,6 @@ class MainSearcher(
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
-    log.info( "searchResultUuid = %s , svVariance = %f".format(searchResultUuid, svVar) )
 
     val metaData = JsObject( Seq("queryUUID"->JsString(searchResultUuid.id), "svVariance"-> JsNumber(svVar) ))
     persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
@@ -225,6 +226,8 @@ class MainSearcher(
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar)
   }
+
+
 
   private def getPublicBookmarkCount(id: Long) = {
     uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
