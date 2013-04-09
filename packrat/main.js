@@ -73,22 +73,8 @@ const socketHandlers = {
     api.log("[socket:message]", data);
     session.experiments = data;
   },
-  message: function(data) {
-    api.log("[socket:message]", data);
-    var activeTab = api.tabs.getActive();
-    if (activeTab) {
-      api.tabs.emit(activeTab, "show_notification", data);
-    }
-  },
-  comment: function(data) {
-    api.log("[socket:comment]", data);
-    var activeTab = api.tabs.getActive();
-    if (activeTab) {
-      api.tabs.emit(activeTab, "show_notification", data);
-    }
-  },
-  notify: function(data) {
-    api.log("[socket:notify]", data);
+  notification: function(data) {
+    api.log("[socket:notification]", data);
     var activeTab = api.tabs.getActive();
     if (activeTab) {
       api.tabs.emit(activeTab, "show_notification", data);

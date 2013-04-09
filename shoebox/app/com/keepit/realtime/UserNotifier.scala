@@ -24,7 +24,7 @@ import com.keepit.common.db.State
 
 
 case class CommentDetails(id: String, author: BasicUser, recipient: BasicUser, url: String, page: String, title: String, text: String, createdAt: DateTime)
-case class MessageDetails(id: String, authors: Seq[BasicUser], recipient: BasicUser, url: Option[String], page: Option[String], title: Option[String], text: String, createdAt: DateTime, isParent: Boolean)
+case class MessageDetails(id: String, author: BasicUser, recipient: BasicUser, url: Option[String], page: Option[String], title: Option[String], text: String, createdAt: DateTime, isParent: Boolean)
 
 case class SendableNotification(
   id: ExternalId[UserNotification],
@@ -131,7 +131,7 @@ class UserNotifier @Inject() (
     }
   }
   private def notifyMessageByEmail(recipient: User, details: MessageDetails)(implicit session: RSession) = {
-    val author = userRepo.get(details.authors.head.externalId)
+    val author = userRepo.get(details.author.externalId)
     val addrs = emailAddressRepo.getByUser(recipient.id.get)
     for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
       postOffice.sendMail(ElectronicMail(
@@ -190,7 +190,7 @@ class UserNotifier @Inject() (
           deepLocator = DeepLocator.ofMessageThread(message)))
       new MessageDetails(
         message.externalId.id,
-        Seq(basicUserRepo.load(message.userId)),
+        basicUserRepo.load(message.userId),
         basicUserRepo.load(userId),
         Some(deepLink.url),
         Some(URINormalizer.normalize(uri.url)),
