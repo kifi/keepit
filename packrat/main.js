@@ -166,7 +166,7 @@ api.port.on({
     }
     return true;
 
-    function getSliderInfo(tab, respond) {
+    function getSliderInfo() {
       ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
         o.session = session;
         respond(o);
