@@ -8,7 +8,7 @@ import play.api.mvc.Action
 
 class SpellCorrectorController @Inject()(spellCorrector: SpellCorrector) extends SearchServiceController{
   def buildDictionary() = Action { request =>
-    spellCorrector.buildDictionary
+    spellCorrector.buildDictionary()
     Ok("spell-corrector dictionary is built")
   }
 

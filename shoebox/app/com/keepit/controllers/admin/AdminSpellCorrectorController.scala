@@ -13,7 +13,7 @@ class AdminSpellCorrectorController @Inject() (
   searchClient: SearchServiceClient) extends AdminController(actionAuthenticator) {
   def buildDictionary() = AdminHtmlAction { implicit request =>
     Akka.future {
-      searchClient.buildSpellCorrectorDictionary
+      searchClient.buildSpellCorrectorDictionary()
     }
     Redirect(routes.AdminSpellCorrectorController.spellController())
   }
@@ -24,5 +24,4 @@ class AdminSpellCorrectorController @Inject() (
       response.map(r => Ok(views.html.admin.spellCorrector(r)))
     }
   }
-
 }

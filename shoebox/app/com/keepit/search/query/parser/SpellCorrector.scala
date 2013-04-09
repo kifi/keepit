@@ -34,7 +34,7 @@ object SpellCorrector {
 
 class SpellCorrectorImpl(spellIndexDirectory: Directory, articleIndexDirectory: Directory, config: IndexWriterConfig) extends SpellCorrector with Logging {
   val spellChecker = new SpellChecker(spellIndexDirectory)
-  var isBuilding = false
+  private[this] var isBuilding = false
   def buildDictionary() = {
     if ( !isBuilding ) {
       val reader = DirectoryReader.open(articleIndexDirectory)
@@ -73,21 +73,3 @@ class FakeSpellCorrector() extends SpellCorrector {
   def buildDictionary() = {}
   def getBuildingStatus = false
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
