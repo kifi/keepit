@@ -27,10 +27,10 @@ class ExtBookmarksController @Inject() (
   sliderInfoLoader: SliderInfoLoader)
     extends BrowserExtensionController(actionAuthenticator) {
 
-  def checkIfExists(uri: String, ver: String) = AuthenticatedJsonAction { request =>
+  def checkIfExists(uri: String) = AuthenticatedJsonAction { request =>
     val userId = request.userId
 
-    val sliderInfo = sliderInfoLoader.initialLoad(userId, uri, ver)
+    val sliderInfo = sliderInfoLoader.initialLoad(userId, uri)
 
     type wrapped = Option[(String, JsValue)]
     val result: Seq[wrapped] = Seq(
@@ -46,9 +46,7 @@ class ExtBookmarksController @Inject() (
       sliderInfo.sensitive.flatMap { s => if (s) Some("sensitive" -> JsBoolean(true)) else None },
       sliderInfo.neverOnSite.map { _ => "neverOnSite" -> JsBoolean(true) },
       sliderInfo.locator.map { s => "locator" -> JsString(s.value) },
-      sliderInfo.shown.map { "shown" -> JsBoolean(_) },
-      sliderInfo.ruleGroup.map { "rules" -> _.compactJson },
-      sliderInfo.patterns.map { p => "patterns" -> JsArray(p.map(JsString)) })
+      sliderInfo.shown.map { "shown" -> JsBoolean(_) })
 
     Ok(JsObject(result.flatten))
   }
