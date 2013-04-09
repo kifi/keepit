@@ -10,7 +10,6 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits._
 
 case class SliderInfo(
   bookmark: Option[Bookmark],
