@@ -530,6 +530,7 @@ api.tabs.on.focus.add(function(tab) {
   if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
   } else {
+    checkKeepStatus(tab);
     subscribe(tab);
   }
 });
