@@ -82,6 +82,7 @@ class DefaultAnalyzerTest extends Specification {
     val typeAcc = new TypeAttributeAccessor
 
     var ret: List[Token] = Nil
+    ts.reset()
     while (ts.incrementToken) {
       ret = Token(typeAcc(typeAttr), new String(termAttr.buffer, 0, termAttr.length), posIncrAttr.getPositionIncrement) :: ret
     }

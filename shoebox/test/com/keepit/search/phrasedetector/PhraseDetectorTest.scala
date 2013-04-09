@@ -14,6 +14,7 @@ import com.keepit.model.{PhraseRepo, Phrase}
 import com.keepit.test.EmptyApplication
 import com.keepit.common.db.slick.Database
 import com.keepit.inject._
+import java.io.StringReader
 
 class PhraseDetectorTest extends Specification {
 
@@ -47,7 +48,7 @@ class PhraseDetectorTest extends Specification {
         val analyzer = DefaultAnalyzer.forIndexingWithStemmer(Lang("en")).get
 
         def toTerms(text: String) = {
-          indexer.getFieldDecoder("b").decodeTokenStream(analyzer.tokenStream("b", new java.io.StringReader(text))).map{ case (t, _, _) => new Term("b", t) }.toArray
+          indexer.getFieldDecoder("b").decodeTokenStream(analyzer.tokenStream("b", new StringReader(text))).map{ case (t, _, _) => new Term("b", t) }.toArray
         }
 
         val ok = testcases.forall{ case (text, expected) =>
