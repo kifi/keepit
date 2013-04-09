@@ -5,8 +5,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.EmailAddresses
-import com.keepit.serializer.CommentWithSocialUserSerializer._
-import com.keepit.common.social.CommentWithSocialUserRepo
+import com.keepit.serializer.CommentWithBasicUserSerializer._
+import com.keepit.common.social.CommentWithBasicUserRepo
 import com.keepit.common.db.slick.DBSession._
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
@@ -58,7 +58,7 @@ class UserNotifier @Inject() (
   emailAddressRepo: EmailAddressRepo,
   deepLinkRepo: DeepLinkRepo,
   postOffice: PostOffice,
-  commentWithSocialUserRepo: CommentWithSocialUserRepo,
+  CommentWithBasicUserRepo: CommentWithBasicUserRepo,
   basicUserRepo: BasicUserRepo,
   commentRepo: CommentRepo,
   userNotifyRepo: UserNotificationRepo,

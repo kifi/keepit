@@ -4,7 +4,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
 import com.keepit.model._
 import play.api.libs.json._
-import com.keepit.common.social.CommentWithSocialUser
+import com.keepit.common.social.CommentWithBasicUser
 import com.keepit.common.db.State
 import com.keepit.common.social.ThreadInfo
 

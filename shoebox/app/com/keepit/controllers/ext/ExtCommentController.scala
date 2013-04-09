@@ -16,7 +16,7 @@ import com.keepit.model._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
-import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
+import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka
@@ -48,7 +48,7 @@ class ExtCommentController @Inject() (
   userRepo: UserRepo,
   userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  commentWithSocialUserRepo: CommentWithSocialUserRepo,
+  CommentWithBasicUserRepo: CommentWithBasicUserRepo,
   followRepo: FollowRepo,
   threadInfoRepo: ThreadInfoRepo,
   emailAddressRepo: EmailAddressRepo,
@@ -128,8 +128,8 @@ class ExtCommentController @Inject() (
 
     comment.permissions match {
       case CommentPermissions.MESSAGE =>
-        val threadInfo = db.readOnly(implicit s => commentWithSocialUserRepo.load(comment))
-        Ok(Json.obj("message" -> commentWithSocialUserSerializer.writes(threadInfo)))
+        val threadInfo = db.readOnly(implicit s => CommentWithBasicUserRepo.load(comment))
+        Ok(Json.obj("message" -> commentWithBasicUserSerializer.writes(threadInfo)))
       case _ =>
         Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
     }
@@ -172,7 +172,7 @@ class ExtCommentController @Inject() (
   def getComments(url: String) = AuthenticatedJsonAction { request =>
     val comments = paneDetails.getComments(request.userId, url)
 
-    Ok(commentWithSocialUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
+    Ok(commentWithBasicUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
   }
 
   def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
@@ -184,7 +184,7 @@ class ExtCommentController @Inject() (
   def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     val messages = paneDetails.getMessageThread(request.userId, commentId)
 
-    Ok(commentWithSocialUserSerializer.writes(CommentPermissions.MESSAGE -> messages))
+    Ok(commentWithBasicUserSerializer.writes(CommentPermissions.MESSAGE -> messages))
   }
 
   def startFollowing() = AuthenticatedJsonToJsonAction { request =>
