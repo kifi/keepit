@@ -30,9 +30,7 @@ case class SliderInitialInfo(
   neverOnSite: Option[UserToDomain],
   sensitive: Option[Boolean],
   locator: Option[DeepLocator],
-  shown: Option[Boolean],
-  ruleGroup: Option[SliderRuleGroup],
-  patterns: Option[Seq[String]])
+  shown: Option[Boolean])
 
 @Singleton
 class SliderInfoLoader @Inject() (
@@ -49,10 +47,7 @@ class SliderInfoLoader @Inject() (
     domainClassifier: DomainClassifier,
     userWithSocialRepo: UserWithSocialRepo,
     historyTracker: SliderHistoryTracker,
-    sliderRuleRepo: SliderRuleRepo,
-    urlPatternRepo: URLPatternRepo,
-    searchClient: SearchServiceClient
-  ) {
+    searchClient: SearchServiceClient) {
 
   def load(userId: Id[User], url: String): SliderInfo = db.readOnly {implicit s =>
     val nUri = normalizedURIRepo.getByNormalizedUrl(url)
@@ -82,46 +77,48 @@ class SliderInfoLoader @Inject() (
     }
   }
 
-  def initialLoad(userId: Id[User], url: String, ver: String) = db.readOnly { implicit s =>
-    val nUri = normalizedURIRepo.getByNormalizedUrl(url)
-    val host: Option[String] = URI.parse(url).get.host.map(_.name)
-    val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
-    val neverOnSite: Option[UserToDomain] = domain.flatMap { domain =>
-      userToDomainRepo.get(userId, domain.id.get, UserToDomainKinds.NEVER_SHOW)
+  def initialLoad(userId: Id[User], url: String): SliderInitialInfo = {
+    val (nUri, bookmark, numComments, numUnreadComments, numMessages, numUnreadMessages,
+         neverOnSite, sensitive, locator, shown) = db.readOnly { implicit session =>
+      val nUri = normalizedURIRepo.getByNormalizedUrl(url)
+      val host: Option[String] = URI.parse(url).get.host.map(_.name)
+      val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
+      val neverOnSite: Option[UserToDomain] = domain.flatMap { domain =>
+        userToDomainRepo.get(userId, domain.id.get, UserToDomainKinds.NEVER_SHOW)
+      }
+      val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
+
+      nUri match {
+        case Some(uri) =>
+          val bookmark = bookmarkRepo.getByUriAndUser(uri.id.get, userId)
+          val numComments = commentRepo.getPublicCount(uri.id.get)
+          val numUnreadComments = commentReadRepo.getUnreadCommentsCount(userId, uri.id.get)
+          val numMessages = commentRepo.getMessages(uri.id.get, userId).size
+          val unreadMessages = commentReadRepo.getParentsOfUnreadMessages(userId, uri.id.get)
+          val numUnreadMessages = unreadMessages.size
+          val locator: Option[DeepLocator] = numUnreadMessages match {
+            case 0 => if (numUnreadComments > 0) Some(DeepLocator.ofCommentList) else None
+            case 1 => Some(DeepLocator.ofMessageThread(unreadMessages.head))
+            case _ => Some(DeepLocator.ofMessageThreadList)
+          }
+          val shown: Option[Boolean] = if (locator.isDefined) None else uri.id.map { uriId =>
+            historyTracker.getMultiHashFilter(userId).mayContain(uriId.id)
+          }
+          (nUri, bookmark, numComments, numUnreadComments, numMessages, numUnreadMessages,
+           neverOnSite, sensitive, locator, shown)
+        case None =>
+          (nUri, None, 0, 0, 0, 0, neverOnSite, sensitive, None, None)
+      }
     }
-    val ruleGroup: Option[SliderRuleGroup] = Option(sliderRuleRepo.getGroup("default")).filter(_.version != ver)
-    val patterns: Option[Seq[String]] = ruleGroup.map(_ => urlPatternRepo.getActivePatterns)
-
-    nUri match {
-      case Some(uri) =>
-        val bookmark = bookmarkRepo.getByUriAndUser(uri.id.get, userId)
-        val sensitive: Option[Boolean] = bookmark.flatMap(b => domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption)))
-
-        val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
-        val sharingUserIds = sharingUserInfo.sharingUserIds
-        val keepersEdgeSetSize = sharingUserInfo.keepersEdgeSetSize
-        val socialUsers = sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
-
-        val numComments = commentRepo.getPublicCount(uri.id.get)
-        val numUnreadComments = commentReadRepo.getUnreadCommentsCount(userId, uri.id.get)
-        val numMessages = commentRepo.getMessages(uri.id.get, userId).size
-        val unreadMessages = commentReadRepo.getParentsOfUnreadMessages(userId, uri.id.get)
-        val numUnreadMessages = unreadMessages.size
-        val locator: Option[DeepLocator] = numUnreadMessages match {
-          case 0 => if (numUnreadComments > 0) Some(DeepLocator.ofCommentList) else None
-          case 1 => Some(DeepLocator.ofMessageThread(unreadMessages.head))
-          case _ => Some(DeepLocator.ofMessageThreadList)
-        }
-        val shown: Option[Boolean] = if (locator.isDefined) None else uri.id.map { uriId =>
-          historyTracker.getMultiHashFilter(userId).mayContain(uriId.id)
-        }
-
-        SliderInitialInfo(
-          bookmark, socialUsers, keepersEdgeSetSize, numComments, numUnreadComments, numMessages, numUnreadMessages,
-          neverOnSite, sensitive, locator, shown, ruleGroup, patterns)
-      case None =>
-        val sensitive: Option[Boolean] = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
-        SliderInitialInfo(None, Nil, 0, 0, 0, 0, 0, neverOnSite, sensitive, None, None, None, None)
-    }
+    val (socialUsers, numKeeps) = nUri map { uri =>
+      val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
+      val socialUsers = db.readOnly { implicit session =>
+        sharingUserInfo.sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
+      }
+      (socialUsers, sharingUserInfo.keepersEdgeSetSize)
+    } getOrElse (Nil, 0)
+    SliderInitialInfo(
+      bookmark, socialUsers, numKeeps, numComments, numUnreadComments, numMessages, numUnreadMessages,
+      neverOnSite, sensitive, locator, shown)
   }
 }

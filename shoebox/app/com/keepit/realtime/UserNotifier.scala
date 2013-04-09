@@ -5,8 +5,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.EmailAddresses
-import com.keepit.serializer.CommentWithSocialUserSerializer._
-import com.keepit.common.social.CommentWithSocialUserRepo
+import com.keepit.serializer.CommentWithBasicUserSerializer._
+import com.keepit.common.social.CommentWithBasicUserRepo
 import com.keepit.common.db.slick.DBSession._
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
@@ -20,22 +20,23 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging._
 import com.keepit.common.net.URINormalizer
+import com.keepit.common.db.State
 
 
-case class CommentDetails(author: BasicUser, recipient: BasicUser, url: String, page: String, title: String, text: String, createdAt: DateTime)
-case class MessageDetails(author: BasicUser, recipient: BasicUser, url: Option[String], page: Option[String], title: Option[String], text: String, createdAt: DateTime, isParent: Boolean)
+case class CommentDetails(id: String, author: BasicUser, recipient: BasicUser, url: String, page: String, title: String, text: String, createdAt: DateTime, newCount: Int, totalCount: Int)
+case class MessageDetails(id: String, author: BasicUser, recipient: BasicUser, url: Option[String], page: Option[String], title: Option[String], text: String, createdAt: DateTime, isParent: Boolean, newCount: Int, totalCount: Int)
 
 case class SendableNotification(
   id: ExternalId[UserNotification],
-  createdAt: DateTime,
-  updatedAt: DateTime,
+  time: DateTime,
   category: UserNotificationCategory,
-  details: UserNotificationDetails
+  details: UserNotificationDetails,
+  state: State[UserNotification]
 )
 
 object SendableNotification {
   def fromUserNotification(notify: UserNotification) = {
-    SendableNotification(id = notify.externalId, createdAt = notify.createdAt, updatedAt = notify.updatedAt, category = notify.category, details = notify.details)
+    SendableNotification(id = notify.externalId, time = notify.updatedAt, category = notify.category, details = notify.details, state = notify.state)
   }
 }
 
@@ -44,7 +45,7 @@ class NotificationBroadcaster @Inject() (userChannel: UserChannel) extends Loggi
   def push(notify: UserNotification) {
     val sendable = SendableNotification.fromUserNotification(notify)
     log.info("User notification serialized: " + sendable)
-    userChannel.push(notify.userId, Json.arr(notify.category.name, SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable)))
+    userChannel.push(notify.userId, Json.arr("notification", SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable)))
   }
 }
 
@@ -57,7 +58,7 @@ class UserNotifier @Inject() (
   emailAddressRepo: EmailAddressRepo,
   deepLinkRepo: DeepLinkRepo,
   postOffice: PostOffice,
-  commentWithSocialUserRepo: CommentWithSocialUserRepo,
+  CommentWithBasicUserRepo: CommentWithBasicUserRepo,
   basicUserRepo: BasicUserRepo,
   commentRepo: CommentRepo,
   userNotifyRepo: UserNotificationRepo,
@@ -160,13 +161,15 @@ class UserNotifier @Inject() (
           urlId = comment.urlId,
           deepLocator = DeepLocator.ofComment(comment)))
       new CommentDetails(
+        comment.externalId.id,
         basicUserRepo.load(comment.userId),
         basicUserRepo.load(userId),
         deepLink.url,
         URINormalizer.normalize(uri.url),
         comment.pageTitle,
         comment.text,
-        comment.createdAt
+        comment.createdAt,
+        0,0
       )
     }
   }
@@ -177,6 +180,7 @@ class UserNotifier @Inject() (
     val author = userRepo.get(message.userId)
     val uri = normalizedURIRepo.get(message.uriId)
     val participants = commentRepo.getParticipantsUserIds(message.id.get)
+    val parent = message.parent.map(commentRepo.get).getOrElse(message)
 
     for (userId <- participants - author.id.get) yield {
       val recipient = userRepo.get(userId)
@@ -185,8 +189,9 @@ class UserNotifier @Inject() (
           recipientUserId = Some(userId),
           uriId = Some(message.uriId),
           urlId = message.urlId,
-          deepLocator = DeepLocator.ofMessageThread(message)))
+          deepLocator = DeepLocator.ofMessageThread(parent)))
       new MessageDetails(
+        message.externalId.id,
         basicUserRepo.load(message.userId),
         basicUserRepo.load(userId),
         Some(deepLink.url),
@@ -194,7 +199,8 @@ class UserNotifier @Inject() (
         Some(message.pageTitle),
         message.text,
         message.createdAt,
-        message.parent.isDefined
+        message.parent.isDefined,
+        0,0
       )
     }
   }

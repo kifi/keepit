@@ -67,31 +67,36 @@ logEvent.catchUp = function() {
 
 // ===== WebSocket handlers
 
+var notifications = [], notifyCallbacks = []
 const socketHandlers = {
   experiments: function(data) {
-    api.log("[socket:message]", data);
+    api.log("[socket:experiments]", data);
     session.experiments = data;
   },
-  message: function(data) {
-    api.log("[socket:message]", data);
-    var activeTab = api.tabs.getActive();
-    if (activeTab) {
-      api.tabs.emit(activeTab, "show_notification", data);
-    }
+  slider_rules: function(data) {
+    api.log("[socket:slider_rules]", data);
+    session.rules = data;
   },
-  comment: function(data) {
-    api.log("[socket:comment]", data);
-    var activeTab = api.tabs.getActive();
-    if (activeTab) {
-      api.tabs.emit(activeTab, "show_notification", data);
-    }
+  url_patterns: function(data) {
+    api.log("[socket:url_patterns]", data);
+    session.patterns = data;
+    compilePatterns(session);
   },
-  notify: function(data) {
-    api.log("[socket:notify]", data);
+  notification: function(data) {
+    api.log("[socket:notification]", data);
     var activeTab = api.tabs.getActive();
     if (activeTab) {
       api.tabs.emit(activeTab, "show_notification", data);
     }
+    notifications.unshift(data)
+  },
+  notifications: function(data) {
+    api.log("[socket:notifications]", data)
+    notifications = data
+    notifyCallbacks.forEach(function (cb) {
+      cb(notifications);
+    });
+    notifyCallbacks = [];
   },
   event: function(data) {
     api.log("[socket:event]", data);
@@ -170,7 +175,7 @@ api.port.on({
     }
     return true;
 
-    function getSliderInfo(tab, respond) {
+    function getSliderInfo() {
       ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
         o.session = session;
         respond(o);
@@ -223,6 +228,18 @@ api.port.on({
   thread: function(id, respond) {
     socket.send(["get_message_thread", id], respond);
     return true;
+  },
+  notifications: function(howMany, respond, tab) {
+    var cb = function (n) {
+      respond(n.slice(0, howMany));
+    };
+    if (howMany > notifications.length) {
+      socket.send(["get_notifications", howMany]);
+      notifyCallbacks.push(cb);
+      return true;
+    } else {
+      respond(notifications.slice(0, howMany));
+    }
   },
   session: function(_, respond) {
     respond(session);
@@ -432,13 +449,8 @@ function checkKeepStatus(tab, callback) {
   api.log("[checkKeepStatus] %i %o", tab.id, tab);
 
   tab.keepStatusKnown = true;  // setting before request to avoid making two overlapping requests
-  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url, ver: session.rules.version}, function done(o) {
+  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url}, function done(o) {
     setIcon(tab, o.kept);
-    if (o.rules) {
-      session.rules = o.rules;
-      session.patterns = o.patterns;
-      compilePatterns(session);
-    }
     callback && callback(o);
   }, function fail(xhr) {
     api.log("[checkKeepStatus] error:", xhr.responseText);
@@ -627,6 +639,7 @@ function authenticate(callback) {
       socket = api.socket.open(
         (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws",
         socketHandlers);
+      socket.send(["get_notifications", 10]);
       logEvent.catchUp();
 
       setConfigs("kifi_installation_id", data.installationId);

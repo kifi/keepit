@@ -28,9 +28,9 @@ import securesocial.core._
 import com.keepit.common.db.Id
 import com.keepit.common.db.State
 import scala.util.Random
-import com.keepit.controllers.core.PaneDetails
+import com.keepit.controllers.core.{PaneDetails, KeeperInfoLoader}
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
-import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
+import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
 import org.joda.time.DateTime
@@ -49,11 +49,15 @@ class ExtStreamController @Inject() (
   experimentRepo: UserExperimentRepo,
   userChannel: UserChannel,
   uriChannel: UriChannel,
-  userNotification: UserNotificationRepo,
+  userNotificationRepo: UserNotificationRepo,
   persistEventPlugin: PersistEventPlugin,
+  keeperInfoLoader: KeeperInfoLoader,
+  sliderRuleRepo: SliderRuleRepo,
+  urlPatternRepo: URLPatternRepo,
+  commentRepo: CommentRepo,
+  paneData: PaneDetails,
   implicit private val clock: Clock,
-  implicit private val fortyTwoServices: FortyTwoServices,
-  paneData: PaneDetails)
+  implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
     /*
@@ -102,10 +106,9 @@ class ExtStreamController @Inject() (
           val connectedAt = clock.now
           val (enumerator, channel) = Concurrent.broadcast[JsArray]
           val socketId = Random.nextLong()
-
-          var subscriptions = Map[String, Subscription]()
-
-          subscriptions += (("user", userChannel.subscribe(streamSession.userId, socketId, channel)))
+          val userId = streamSession.userId
+          var subscriptions: Map[String, Subscription] = Map(
+            "user" -> userChannel.subscribe(userId, socketId, channel))
 
           val iteratee = asyncIteratee { json =>
             log.info("WS just received: " + json)
@@ -116,26 +119,37 @@ class ExtStreamController @Inject() (
                 channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
               case JsString("normalize") +: JsNumber(requestId) +: JsString(url) +: _ =>
                 channel.push(Json.arr(requestId.toLong, URINormalizer.normalize(url)))
-              case JsString("subscribe") +: sub =>
-                subscriptions = subscribe(streamSession, socketId, channel, subscriptions, sub)
-              case JsString("unsubscribe") +: unsub =>
-                subscriptions = unsubscribe(streamSession, socketId, channel, subscriptions, unsub)
+              case JsString("subscribe_uri") +: JsNumber(requestId) +: JsString(url) +: _ =>
+                val nUri = URINormalizer.normalize(url)
+                subscriptions = subscriptions + (nUri -> uriChannel.subscribe(nUri, socketId, channel))
+                channel.push(Json.arr(requestId.toLong, nUri))
+                channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
+                channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
+              case JsString("unsubscribe_uri") +: JsString(url) +: _ =>
+                val nUri = URINormalizer.normalize(url)
+                subscriptions.get(nUri).foreach(_.unsubscribe())
+                subscriptions = subscriptions - nUri
               case JsString("log_event") +: JsObject(pairs) +: _ =>
                 logEvent(streamSession, JsObject(pairs))
               case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>
-                channel.push(Json.arr(requestId.toLong, paneData.getComments(streamSession.userId, url)))
+                channel.push(Json.arr(requestId.toLong, paneData.getComments(userId, url)))
+                // channel.push(Json.arr(requestId.toLong, commentWithBasicUserSerializer.writes(paneData.getComments(userId, url))))
               case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>
-                channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(streamSession.userId, url)))
+                channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(userId, url)))
               case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>
-                channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(streamSession.userId, ExternalId[Comment](threadId))))
+                channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(userId, ExternalId[Comment](threadId))))
               case JsString("get_last_notify_read_time") +: _ =>
-                channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(streamSession.userId).toString()))
+                channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toString()))
               case JsString("get_notifications") +: JsNumber(howMany) +: params =>
                 val createdBefore = params match {
                   case JsString(time) +: _ => Some(parseStandardTime(time))
                   case _ => None
                 }
-                channel.push(Json.arr("notifications", getNotifications(streamSession.userId, createdBefore, howMany.toInt)))
+                channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, howMany.toInt)))
+              case JsString("set_message_read") +: JsString(parentExternalId) +: _ =>
+                setMessageRead(userId, parentExternalId)
+              case JsString("set_comment_read") +: JsString(externalId) +: _ =>
+                setCommentRead(userId, externalId)
               case json =>
                 log.warn(s"Not sure what to do with: $json")
             }
@@ -169,62 +183,11 @@ class ExtStreamController @Inject() (
   }
 
   private def getLastNotifyTime(userId: Id[User]): DateTime = {
-    db.readOnly(implicit s => userNotification.getLastReadTime(userId))
+    db.readOnly(implicit s => userNotificationRepo.getLastReadTime(userId))
   }
 
   private def getNotifications(userId: Id[User], createdBefore: Option[DateTime], howMany: Int): Seq[SendableNotification] = {
-    db.readOnly(implicit s => userNotification.getWithUserId(userId, createdBefore, howMany)).map(n => SendableNotification.fromUserNotification(n))
-  }
-
-  private def subscribe(session: StreamSession, socketId: Long, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], sub: Seq[JsValue]): Map[String, Subscription] = {
-    sub match {
-      case JsString(sub) +: _ if subscriptions.contains(sub) =>
-        subscriptions
-      case JsString("user") +: _ =>
-        val sub = userChannel.subscribe(session.userId, socketId, channel)
-        channel.push(Json.arr("subscribed", "user"))
-        subscriptions + (("user", sub))
-      case JsString("uri") +: JsString(url) +: _ => // todo
-        val normalized = URINormalizer.normalize(url)
-        val sub = uriChannel.subscribe(normalized, socketId, channel)
-        channel.push(Json.arr("subscribed", sub.name))
-        subscriptions + ((sub.name, sub))
-      case json =>
-        log.warn(s"Can't subscribe to $json. No handler.")
-        channel.push(Json.arr("subscribed_error", "Can't subscribe, no handler."))
-        subscriptions
-    }
-  }
-
-  private def unsubscribe(session: StreamSession, socketId: Long, channel: PlayChannel[JsArray], subscriptions: Map[String, Subscription], subParams: Seq[JsValue]): Map[String, Subscription] = {
-    subParams match {
-      case JsString(sub) +: _ if subscriptions.contains(sub) =>
-        // For all subscriptions with an id
-        val subscription = subscriptions.get(sub).get
-        channel.push(Json.arr("unsubscribed", sub))
-        subscription.unsubscribe()
-        subscriptions - sub
-      case JsString("uri") +: JsString(url) +: _ if subscriptions.contains(s"uri:${URINormalizer.normalize(url)}") =>
-        // Handled separately because of URL normalization
-        val name = s"uri:${URINormalizer.normalize(url)}"
-        val subscription = subscriptions.get(name).get
-        channel.push(Json.arr("unsubscribed", name))
-        subscription.unsubscribe()
-        subscriptions - name
-      case JsString(sub) +: JsString(id) +: _ if subscriptions.contains(s"$sub:$id") =>
-        // For all subscriptions with an id and sub-id
-        val name = s"$sub:$id"
-        val subscription = subscriptions.get(name).get
-        channel.push(Json.arr("unsubscribed", name))
-        subscription.unsubscribe()
-        subscriptions - name
-      case JsString(sub) +: _ =>
-        channel.push(Json.arr("unsubscribed_error", s"Not currently subscribed to $sub"))
-        subscriptions
-      case json =>
-        log.warn(s"Can't unsubscribe from $json. No handler.")
-        subscriptions
-    }
+    db.readOnly(implicit s => userNotificationRepo.getWithUserId(userId, createdBefore, howMany)).map(n => SendableNotification.fromUserNotification(n))
   }
 
   private def logEvent(session: StreamSession, o: JsObject) {
@@ -240,5 +203,23 @@ class ExtStreamController @Inject() (
     persistEventPlugin.persist(event)
   }
 
-}
+  private def setMessageRead(userId: Id[User], externalId: String) = {
+    db.readWrite { implicit session =>
+      val comment = commentRepo.get(ExternalId[Comment](externalId))
+      val parentId = comment.parent.map(p => commentRepo.get(p).id.get).getOrElse(comment.id.get)
+      userNotificationRepo.getWithCommentId(userId, parentId).foreach { n =>
+        userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
+      }
+    }
+  }
 
+  private def setCommentRead(userId: Id[User], externalId: String) = {
+    db.readWrite { implicit session =>
+      val commentId = commentRepo.get(ExternalId[Comment](externalId)).id.get
+      userNotificationRepo.getWithCommentId(userId, commentId).foreach { n =>
+        userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
+      }
+    }
+  }
+
+}
