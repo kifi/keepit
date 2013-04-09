@@ -1,6 +1,11 @@
 var api = api || require("./api");
 
-// ===== Async
+// ===== Cached data from server
+
+const notifications = [];
+const pageData = {};
+
+// ===== Server requests
 
 function ajax(method, uri, data, done, fail) {  // method and uri are required
   if (typeof data == "function") {  // shift args if data is missing and done is present
@@ -67,7 +72,7 @@ logEvent.catchUp = function() {
 
 // ===== WebSocket handlers
 
-var notifications = [], notifyCallbacks = []
+const notifyCallbacks = [];
 const socketHandlers = {
   experiments: function(data) {
     api.log("[socket:experiments]", data);
@@ -88,15 +93,36 @@ const socketHandlers = {
     if (activeTab) {
       api.tabs.emit(activeTab, "show_notification", data);
     }
-    notifications.unshift(data)
+    notifications.unshift(data);
   },
   notifications: function(data) {
-    api.log("[socket:notifications]", data)
-    notifications = data
-    notifyCallbacks.forEach(function (cb) {
-      cb(notifications);
-    });
-    notifyCallbacks = [];
+    api.log("[socket:notifications]", data);
+    notifications.length = 0;  // TODO: stop loading dupes and then remove this line
+    notifications.push.apply(notifications, data);
+    while (notifyCallbacks.length) {
+      notifyCallbacks.shift()(notifications);
+    }
+  },
+  uri_1: function(uri, o) {
+    api.log("[socket:uri_1]", o);
+    var d = pageData[uri];
+    if (d) {
+      d.kept = o.kept;
+      d.sensitive = o.sensitive;
+    }
+  },
+  uri_2: function(uri, o) {
+    api.log("[socket:uri_2]", o);
+    var d = pageData[uri];
+    if (d) {
+      d.shown = o.shown;
+      d.neverOnSite = o.neverOnSite;
+      d.keepers = o.keepers || [];
+      d.keeps = o.keeps || 0;
+      d.following = o.following;
+      d.comments = o.comments || [];
+      d.threads = o.threads || [];
+    }
   },
   event: function(data) {
     api.log("[socket:event]", data);
@@ -458,6 +484,27 @@ function checkKeepStatus(tab, callback) {
   });
 }
 
+function subscribe(tab) {
+  if (!tab.nUri) {
+    var d = pageData[tab.url];
+    if (d) {
+      finish(tab.url);
+    } else if (socket) {
+      socket.send(["subscribe_uri", tab.url], function(uri) {
+        d = pageData[uri] = pageData[uri] || {tabs: []};
+        finish(uri);
+      });
+    }
+  }
+  function finish(uri) {
+    tab.nUri = uri;
+    if (d.tabs.indexOf(tab.id) < 0) {
+      d.tabs.push(tab.id);
+    }
+    api.log("[subscribe] %i page data: %o", tab.id, d);
+  }
+}
+
 function setIcon(tab, kept) {
   api.log("[setIcon] tab:", tab.id, "kept:", kept);
   api.icon.set(tab, kept == null ? "icons/keep.faint.png" : kept ? "icons/kept.png" : "icons/keep.png");
@@ -476,12 +523,15 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
   });
 }
 
+// ===== Browser event listeners
+
 api.tabs.on.focus.add(function(tab) {
   api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
   if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
   } else {
     checkKeepStatus(tab);
+    subscribe(tab);
   }
 });
 
@@ -494,6 +544,7 @@ api.tabs.on.blur.add(function(tab) {
 api.tabs.on.loading.add(function(tab) {
   api.log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab);
   setIcon(tab);
+  subscribe(tab);
 
   checkKeepStatus(tab, function gotKeptStatus(resp) {
     var metro = session.experiments.indexOf("metro") >= 0, data = {metro: metro};
@@ -555,6 +606,13 @@ api.tabs.on.unload.add(function(tab) {
   api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
+  var d = pageData[tab.nUri], i;
+  if (d && ~(i = d.tabs.indexOf(tab.id))) {
+    d.tabs.splice(i, 1);
+    if (!d.tabs.length) {
+      delete pageData[tab.nUri];
+    }
+  }
 });
 
 function scheduleAutoShow(tab) {
@@ -703,6 +761,7 @@ authenticate(function() {
       setIcon(tab);
       if (api.tabs.isSelected(tab)) {
         checkKeepStatus(tab);
+        subscribe(tab);
       }
     }
   });

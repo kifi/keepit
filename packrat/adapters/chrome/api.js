@@ -326,6 +326,10 @@ api = function() {
           chrome.pageAction.show(tab.id);
         }
       }},
+    // internal: {
+    //   pages: pages,
+    //   selectedTabPages: selectedTabPages
+    // },
     loadReason: "enable",  // assuming "enable" by elimination
     log: function() {
       var d = new Date, ds = d.toString(), t = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] ";
