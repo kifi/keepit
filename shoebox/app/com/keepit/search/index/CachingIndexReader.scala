@@ -29,8 +29,10 @@ import scala.collection.SortedSet
 import java.util.Arrays
 import java.util.Comparator
 import java.util.{Iterator=>JIterator}
+import org.apache.lucene.util.FixedBitSet
 
-class CachingIndexReader(val index: CachedIndex, numOfDocs: Int) extends AtomicReader with Logging {
+class CachingIndexReader(val index: CachedIndex, numOfDocs: Int, liveDocs: Bits) extends AtomicReader with Logging {
+  def this(index: CachedIndex, numOfDocs: Int) = this(index, numOfDocs, new Bits.MatchAllBits(numOfDocs))
 
   def split(remappers: Map[String, DocIdRemapper]): Map[String, CachingIndexReader] = {
     val (subReaders, remainder) = remappers.foldLeft((Map.empty[String, CachingIndexReader], index)){ case ((subReaders, index), (name, remapper)) =>
@@ -43,7 +45,13 @@ class CachingIndexReader(val index: CachedIndex, numOfDocs: Int) extends AtomicR
       }
       (subReaders + (name -> new CachingIndexReader(remapped, -1)), remainder)
     }
-    if (remainder.isEmpty) subReaders else subReaders + ("" -> new CachingIndexReader(remainder, numOfDocs))
+    if (remainder.isEmpty) {
+      subReaders
+    } else {
+      val bits = new FixedBitSet(numDocs)
+      remainder.foreach{ (_, _, list) =>  list.dlist.foreach{ case (d, _) => bits.set(d) } }
+      subReaders + ("" -> new CachingIndexReader(remainder, numOfDocs, bits))
+    }
   }
 
   override def numDocs() = numOfDocs

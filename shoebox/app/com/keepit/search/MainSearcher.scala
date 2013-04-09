@@ -306,9 +306,7 @@ class MainSearcher(
     parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
-      val doc = personalizedSearcher.indexReader.getIdMapper.getDocId(uriId.id)
-
-      (query, personalizedSearcher.explain(query, doc))
+      (query, personalizedSearcher.explain(query, uriId.id))
     }
   }
 }
