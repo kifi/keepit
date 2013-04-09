@@ -140,6 +140,8 @@ class ExtStreamController @Inject() (
                 channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(userId, ExternalId[Comment](threadId))))
               case JsString("get_last_notify_read_time") +: _ =>
                 channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toString()))
+              case JsString("set_last_notify_read_time") +: _ =>
+                channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId).toString()))
               case JsString("get_notifications") +: JsNumber(howMany) +: params =>
                 val createdBefore = params match {
                   case JsString(time) +: _ => Some(parseStandardTime(time))
@@ -184,6 +186,10 @@ class ExtStreamController @Inject() (
 
   private def getLastNotifyTime(userId: Id[User]): DateTime = {
     db.readOnly(implicit s => userNotificationRepo.getLastReadTime(userId))
+  }
+
+  private def setLastNotifyTime(userId: Id[User]): DateTime = {
+    db.readWrite(implicit s => userNotificationRepo.setLastReadTime(userId))
   }
 
   private def getNotifications(userId: Id[User], createdBefore: Option[DateTime], howMany: Int): Seq[SendableNotification] = {
