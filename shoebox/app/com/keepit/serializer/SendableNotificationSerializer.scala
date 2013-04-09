@@ -12,20 +12,20 @@ class SendableNotificationSerializer extends Format[SendableNotification] {
 
   def writes(notify: SendableNotification): JsValue =
     Json.obj(
-      "createdAt" -> JsString(notify.createdAt.toStandardTimeString),
-      "updatedAt" -> JsString(notify.updatedAt.toStandardTimeString),
+      "time" -> JsString(notify.time.toStandardTimeString),
       "id" -> JsString(notify.id.id),
       "category"  -> JsString(notify.category.name),
-      "details"  -> notify.details.payload
+      "details"  -> notify.details.payload,
+      "state" -> notify.state.value
     )
 
   def reads(json: JsValue): JsResult[SendableNotification] =
     JsSuccess(SendableNotification(
       id = ExternalId[UserNotification]((json \ "id").as[String]),
-      createdAt = parseStandardTime((json \ "createdAt").as[String]),
-      updatedAt = parseStandardTime((json \ "updatedAt").as[String]),
+      time = parseStandardTime((json \ "time").as[String]),
       category = UserNotificationCategory((json \ "firstName").as[String]),
-      details = UserNotificationDetails((json \ "details").as[JsObject])
+      details = UserNotificationDetails((json \ "details").as[JsObject]),
+      state = State[UserNotification]((json \ "state").as[String])
     ))
 }
 
