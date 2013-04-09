@@ -36,7 +36,7 @@ case class UserNotification(
 @ImplementedBy(classOf[UserNotificationRepoImpl])
 trait UserNotificationRepo extends Repo[UserNotification] with ExternalIdColumnFunction[UserNotification]  {
   def getWithUserId(userId: Id[User], lastTime: Option[DateTime], howMany: Int = 10, excludeState: Option[State[UserNotification]] = Some(UserNotificationStates.INACTIVE))(implicit session: RSession): Seq[UserNotification]
-  def getWithCommentId(userId: Id[User], commentId: Id[Comment])(implicit session: RSession): Option[UserNotification]
+  def getWithCommentId(userId: Id[User], commentId: Id[Comment])(implicit session: RSession): Seq[UserNotification]
   def getUnreadCount(userId: Id[User])(implicit session: RSession): Int
   def getLastReadTime(userId: Id[User])(implicit session: RSession): DateTime
 }
@@ -73,8 +73,8 @@ class UserNotificationRepoImpl @Inject() (
     Query((for (b <- table if b.userId === userId && b.state === UserNotificationStates.UNDELIVERED && b.createdAt > lastRead) yield b).length).first
   }
 
-  def getWithCommentId(userId: Id[User], commentId: Id[Comment])(implicit session: RSession): Option[UserNotification] =
-    (for(b <- table if b.userId === userId && b.state =!= UserNotificationStates.INACTIVE && b.commentId === commentId) yield b).firstOption
+  def getWithCommentId(userId: Id[User], commentId: Id[Comment])(implicit session: RSession): Seq[UserNotification] =
+    (for(b <- table if b.userId === userId && b.state =!= UserNotificationStates.INACTIVE && b.commentId === commentId) yield b).list
 }
 
 object UserNotificationStates {

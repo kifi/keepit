@@ -38,6 +38,7 @@ object Indexer {
 abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, fieldDecoders: Map[String, FieldDecoder]) extends Logging {
   def this(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
+  private[this] val indexWriterLock = new AnyRef
 
   protected var searcher: Searcher = {
     if (!IndexReader.indexExists(indexDirectory)) {
@@ -64,7 +65,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
 
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
     try {
-      indexWriter.synchronized{ f(indexWriter) }
+      indexWriterLock.synchronized{ f(indexWriter) }
     } catch {
       case ioe: IOException =>
         log.error("indexing failed", ioe)
