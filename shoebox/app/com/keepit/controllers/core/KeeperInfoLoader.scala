@@ -13,6 +13,7 @@ import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
@@ -68,39 +69,45 @@ class KeeperInfoLoader @Inject() (
     historyTracker: SliderHistoryTracker,
     searchClient: SearchServiceClient) {
 
-  def load1(userId: Id[User], normalizedUri: String): KeeperInfo1 = db.readOnly { implicit s =>
-    val bookmark: Option[Bookmark] = normalizedURIRepo.getByNormalizedUri(normalizedUri).flatMap { uri =>
-      bookmarkRepo.getByUriAndUser(uri.id.get, userId)
+  def load1(userId: Id[User], normalizedUri: String): KeeperInfo1 = {
+    db.readOnly { implicit session =>
+      val bookmark: Option[Bookmark] = normalizedURIRepo.getByNormalizedUri(normalizedUri).flatMap { uri =>
+        bookmarkRepo.getByUriAndUser(uri.id.get, userId)
+      }
+      val host: Option[String] = URI.parse(normalizedUri).get.host.map(_.name)
+      val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
+      val sensitive = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
+      KeeperInfo1(bookmark.map { b => if (b.isPrivate) "private" else "public" }, sensitive.getOrElse(false))
     }
-    val host: Option[String] = URI.parse(normalizedUri).get.host.map(_.name)
-    val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
-    val sensitive = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
-    KeeperInfo1(bookmark.map { b => if (b.isPrivate) "private" else "public" }, sensitive.getOrElse(false))
   }
 
-  def load2(userId: Id[User], normalizedUri: String): KeeperInfo2 = db.readOnly { implicit s =>
-    val nUri = normalizedURIRepo.getByNormalizedUri(normalizedUri)
-    val host: Option[String] = URI.parse(normalizedUri).get.host.map(_.name)
-    val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
-    val neverOnSite: Boolean = domain.map { dom =>
-      userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
-    }.getOrElse(false)
+  def load2(userId: Id[User], normalizedUri: String): KeeperInfo2 = {
+    val (nUri, shown, neverOnSite, following, comments, threads) = db.readOnly { implicit session =>
+      val nUri = normalizedURIRepo.getByNormalizedUri(normalizedUri)
+      val host: Option[String] = URI.parse(normalizedUri).get.host.map(_.name)
+      val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
+      val neverOnSite: Boolean = domain.map { dom =>
+        userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
+      }.getOrElse(false)
 
-    nUri match {
-      case Some(uri) =>
-        val shown = historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id)
-
-        val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
-        val sharingUserIds = sharingUserInfo.sharingUserIds
-        val keepersEdgeSetSize = sharingUserInfo.keepersEdgeSetSize
-        val keepers = sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
-
-        val following = followRepo.get(userId, uri.id.get).isDefined
-        val comments = paneDetails.getComments(uri.id.get)
-        val threads = paneDetails.getMessageThreadList(userId, uri.id.get)
-        KeeperInfo2(shown, neverOnSite, keepers, keepersEdgeSetSize, following, comments, threads)
-      case None =>
-        KeeperInfo2(false, neverOnSite, Nil, 0, false, Nil, Nil)
+      nUri match {
+        case Some(uri) =>
+          val shown = historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id)
+          val following = followRepo.get(userId, uri.id.get).isDefined
+          val comments = paneDetails.getComments(uri.id.get)
+          val threads = paneDetails.getMessageThreadList(userId, uri.id.get)
+          (nUri, shown, neverOnSite, following, comments, threads)
+        case None =>
+          (nUri, false, neverOnSite, false, Nil, Nil)
+      }
     }
+    val (keepers, keeps) = nUri map { uri =>
+      val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
+      val socialUsers = db.readOnly { implicit session =>
+        sharingUserInfo.sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
+      }
+      (socialUsers, sharingUserInfo.keepersEdgeSetSize)
+    } getOrElse (Nil, 0)
+    KeeperInfo2(shown, neverOnSite, keepers, keeps, following, comments, threads)
   }
 }
