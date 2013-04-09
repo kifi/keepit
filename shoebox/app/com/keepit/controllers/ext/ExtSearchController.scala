@@ -11,7 +11,6 @@ import play.api.Play.current
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.async._
 import com.keepit.model._
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import java.sql.Connection
@@ -29,6 +28,8 @@ import views.html
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.BasicUserRepo
+import scala.concurrent.future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
@@ -104,14 +105,14 @@ class ExtSearchController @Inject() (
   }
 
   private def reportArticleSearchResult(res: ArticleSearchResult) {
-    dispatch ({
+    future {
       db.readWrite { implicit s =>
         articleSearchResultRefRepo.save(ArticleSearchResultFactory(res))
       }
       articleSearchResultStore += (res.uuid -> res)
-    }, { e =>
+    } onFailure { case e =>
       log.error("Could not persist article search result %s".format(res), e)
-    })
+    }
   }
 
   private[ext] def toPersonalSearchResultPacket(userId: Id[User],
