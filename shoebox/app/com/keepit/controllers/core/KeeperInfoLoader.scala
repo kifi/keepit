@@ -13,20 +13,18 @@ import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import play.api.libs.json.{Json, JsBoolean, JsNumber, JsObject, JsString, JsValue, Writes}
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 case class KeeperInfo1(  // information needed immediately when a page is visited
     kept: Option[String],
     sensitive: Boolean)
 
 object KeeperInfo1 {
-  implicit val writesKeeperInfo1 = new Writes[KeeperInfo1] {
-    def writes(o: KeeperInfo1): JsValue =
-      JsObject(Seq[Option[(String, JsValue)]](
-        o.kept.map { k => "kept" -> JsString(k) },
-        if (o.sensitive) Some("sensitive" -> JsBoolean(true)) else None)
-      .flatten)
-  }
+  implicit val writesKeeperInfo1 = (
+    (__ \ 'kept).writeNullable[String] and
+    (__ \ 'sensitive).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
+  )(unlift(KeeperInfo1.unapply))
 }
 
 case class KeeperInfo2(  // supplemental information
@@ -39,7 +37,7 @@ case class KeeperInfo2(  // supplemental information
     threads: Seq[ThreadInfo])
 
 object KeeperInfo2 {
-  implicit val writesKeeperInfo2 = new Writes[KeeperInfo2] {
+  implicit val writesKeeperInfo2 = new Writes[KeeperInfo2] {  // TODO: rewrite fancy
     def writes(o: KeeperInfo2): JsValue =
       JsObject(Seq[Option[(String, JsValue)]](
         if (o.shown) Some("shown" -> JsBoolean(true)) else None,
