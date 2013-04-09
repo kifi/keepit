@@ -31,8 +31,7 @@ import java.util.Comparator
 import java.util.{Iterator=>JIterator}
 import org.apache.lucene.util.FixedBitSet
 
-class CachingIndexReader(val index: CachedIndex, numOfDocs: Int, liveDocs: Bits) extends AtomicReader with Logging {
-  def this(index: CachedIndex, numOfDocs: Int) = this(index, numOfDocs, new Bits.MatchAllBits(numOfDocs))
+class CachingIndexReader(val index: CachedIndex, numOfDocs: Int, liveDocs: FixedBitSet = null) extends AtomicReader with Logging {
 
   def split(remappers: Map[String, DocIdRemapper]): Map[String, CachingIndexReader] = {
     val (subReaders, remainder) = remappers.foldLeft((Map.empty[String, CachingIndexReader], index)){ case ((subReaders, index), (name, remapper)) =>
@@ -48,19 +47,19 @@ class CachingIndexReader(val index: CachedIndex, numOfDocs: Int, liveDocs: Bits)
     if (remainder.isEmpty) {
       subReaders
     } else {
-      val bits = new FixedBitSet(numDocs)
+      val bits = new FixedBitSet(maxDoc)
       remainder.foreach{ (_, _, list) =>  list.dlist.foreach{ case (d, _) => bits.set(d) } }
-      subReaders + ("" -> new CachingIndexReader(remainder, numOfDocs, bits))
+      subReaders + ("" -> new CachingIndexReader(remainder, maxDoc, bits))
     }
   }
 
-  override def numDocs() = numOfDocs
+  override def numDocs() = if (liveDocs == null) numOfDocs else liveDocs.cardinality
   override def maxDoc() = numOfDocs
 
   override def fields() = index.fields
 
   override def getFieldInfos(): FieldInfos = index.fieldInfos
-  override def getLiveDocs(): Bits = new Bits.MatchAllBits(numOfDocs)
+  override def getLiveDocs(): Bits = liveDocs
 
   override def getTermVectors(doc: Int) = throw new UnsupportedOperationException()
 
