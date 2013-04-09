@@ -44,6 +44,7 @@ class SpellCorrectorImpl(spellIndexDirectory: Directory, articleIndexDirectory: 
         log.info("spell-checker is building dictionary ... ")
         isBuilding = true
         spellChecker.indexDictionary(new HighFrequencyDictionary(reader, "c", threshold), config, false) // fullMerge = false
+        log.info("spell-checker has built the dictionary ... ")
       } finally {
         reader.close()
         isBuilding = false
