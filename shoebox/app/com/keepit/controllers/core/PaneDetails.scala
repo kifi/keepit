@@ -5,7 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.google.inject.Inject
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.social.{CommentWithSocialUser, CommentWithSocialUserRepo}
+import com.keepit.common.social.{CommentWithBasicUser, CommentWithBasicUserRepo}
 import com.keepit.common.logging._
 import com.keepit.common.social.{ThreadInfo, ThreadInfoRepo}
 
@@ -15,16 +15,16 @@ class PaneDetails @Inject() (
   commentRecipientRepo: CommentRecipientRepo,
   normalizedURIRepo: NormalizedURIRepo,
   commentReadRepo: CommentReadRepo,
-  commentWithSocialUserRepo: CommentWithSocialUserRepo,
+  CommentWithBasicUserRepo: CommentWithBasicUserRepo,
   threadInfoRepo: ThreadInfoRepo
 ) extends Logging {
 
-  def getComments(userId: Id[User], url: String): Seq[CommentWithSocialUser] = {
+  def getComments(userId: Id[User], url: String): Seq[CommentWithBasicUser] = {
     val (comments, commentRead) = db.readOnly { implicit session =>
       val normUriOpt = normalizedURIRepo.getByNormalizedUrl(url)
 
       val comments = normUriOpt map { normalizedURI =>
-          publicComments(normalizedURI).map(commentWithSocialUserRepo.load(_))
+          publicComments(normalizedURI).map(CommentWithBasicUserRepo.load(_))
         } getOrElse Nil
 
       val lastCommentId = comments match {
@@ -63,13 +63,13 @@ class PaneDetails @Inject() (
     }
   }
 
-  def getMessageThread(userId: Id[User], commentId: ExternalId[Comment]): Seq[CommentWithSocialUser] = {
+  def getMessageThread(userId: Id[User], commentId: ExternalId[Comment]): Seq[CommentWithBasicUser] = {
     val (messages, commentReadToSave) = db.readOnly{ implicit session =>
       val comment = commentRepo.get(commentId)
       val parent = comment.parent.map(commentRepo.get).getOrElse(comment)
 
-      val messages: Seq[CommentWithSocialUser] = parent +: commentRepo.getChildren(parent.id.get) map { msg =>
-        commentWithSocialUserRepo.load(msg)
+      val messages: Seq[CommentWithBasicUser] = parent +: commentRepo.getChildren(parent.id.get) map { msg =>
+        CommentWithBasicUserRepo.load(msg)
       }
 
       // mark latest message as read for viewer
