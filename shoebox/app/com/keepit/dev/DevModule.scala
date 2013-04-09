@@ -23,6 +23,8 @@ import com.tzavellas.sse.guice.ScalaModule
 import java.io.File
 import org.apache.lucene.store.{RAMDirectory, MMapDirectory, Directory}
 import play.api.Play.current
+import com.keepit.search.query.parser.SpellCorrector
+import com.keepit.search.query.parser.FakeSpellCorrector
 
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {}
@@ -127,6 +129,18 @@ class SearchDevModule extends ScalaModule with Logging {
       new File(configDir, "phrase")
     }
     PhraseIndexer(dir, db, phraseRepo)
+  }
+
+  @Singleton
+  @Provides
+  def spellCorrector : SpellCorrector = {
+    val spellDir = getDirectory(current.configuration.getString("index.spell.directory"))
+    val articleDir = getDirectory(current.configuration.getString("index.article.directory"))
+
+    (spellDir, articleDir) match {
+      case (sDir: MMapDirectory, aDir: MMapDirectory) => SpellCorrector(sDir, aDir)
+      case _ => new FakeSpellCorrector
+    }
   }
 }
 

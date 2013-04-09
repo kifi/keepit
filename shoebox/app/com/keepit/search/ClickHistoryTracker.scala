@@ -16,7 +16,7 @@ object ClickHistoryTracker {
   }
 }
 
-class ClickHistoryTracker(tableSize: Int, numHashFuncs: Int, minHits: Int) {
+class ClickHistoryTracker (tableSize: Int, numHashFuncs: Int, minHits: Int) {
 
   def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
     val filter = getMultiHashFilter(userId)

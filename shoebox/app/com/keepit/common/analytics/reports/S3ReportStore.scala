@@ -19,12 +19,12 @@ import com.keepit.common.store.S3ObjectStore
 import com.keepit.common.store.S3Bucket
 import play.api.libs.json.Format
 
-trait ReportStore extends ObjectStore[String, CompleteReport] {
+trait ReportStore extends ObjectStore[String, Report] {
   def getReports(): List[String] = Nil
 }
 
-class S3ReportStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[CompleteReport] = new CompleteReportSerializer())
-  extends S3ObjectStore[String, CompleteReport] with ReportStore {
+class S3ReportStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[Report] = new CompleteReportSerializer())
+  extends S3ObjectStore[String, Report] with ReportStore {
   override def idToBJsonKey(id: String): String = id
 
   override def getReports(): List[String] = {

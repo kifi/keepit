@@ -16,12 +16,14 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
 import play.api.Play.current
+import com.keepit.search.SemanticVectorBuilder
+
 
 object ArticleIndexer {
 
   def apply(indexDirectory: Directory, articleStore: ArticleStore): ArticleIndexer = {
     val analyzer = DefaultAnalyzer.forIndexing
-    val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
+    val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
 
     new ArticleIndexer(indexDirectory, config, articleStore)
   }
@@ -34,8 +36,9 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
   val commitBatchSize = 100
+  val fetchSize = 20000
 
-  def run(): Int = run(commitBatchSize, commitBatchSize * 3)
+  def run(): Int = run(commitBatchSize, fetchSize)
 
   def run(commitBatchSize: Int, fetchSize: Int): Int = {
     log.info("starting a new indexing round")
@@ -105,7 +108,14 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           DefaultAnalyzer.forIndexingWithStemmer(contentLang).foreach{ analyzer =>
             doc.add(buildTextField("cs", article.content, analyzer))
           }
-          doc.add(buildSemanticVectorField("sv", titleAnalyzer.tokenStream("t", article.title), contentAnalyzer.tokenStream("c", article.content)))
+
+          val titleTS = titleAnalyzer.tokenStream("t", article.title)
+          val contentTS = contentAnalyzer.tokenStream("c", article.content)
+          val builder = new SemanticVectorBuilder(60)
+          builder.load(titleTS)
+          builder.load(contentTS)
+          doc.add(buildDocSemanticVectorField("docSv", builder))
+          doc.add(buildSemanticVectorField("sv", builder))
 
           // index domain name
           URI.parse(uri.url).toOption.flatMap(_.host) match {

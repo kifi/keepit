@@ -55,6 +55,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI]
+  def getByNormalizedUri(normalizedUri: String)(implicit session: RSession): Option[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
 }
 
@@ -150,8 +151,12 @@ class NormalizedURIRepoImpl @Inject() (
     limited.list
   }
 
-  def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    val hash = NormalizedURIFactory.hashUrl(NormalizedURIFactory.normalize(url))
+  // TODO: Rename to getByUrl.
+  def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI] =
+    getByNormalizedUri(NormalizedURIFactory.normalize(url))
+
+  def getByNormalizedUri(normalizedUri: String)(implicit session: RSession): Option[NormalizedURI] = {
+    val hash = NormalizedURIFactory.hashUrl(normalizedUri)
     (for (t <- table if t.urlHash === hash) yield t).firstOption
   }
 }
