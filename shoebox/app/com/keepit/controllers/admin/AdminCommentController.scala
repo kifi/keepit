@@ -8,7 +8,6 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.async.dispatch
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
 import com.keepit.common.social._
