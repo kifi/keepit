@@ -34,6 +34,7 @@ object Indexer {
 abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, fieldDecoders: Map[String, FieldDecoder]) extends Logging {
   def this(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
+  private[this] val indexWriterLock = new AnyRef
 
   protected var searcher: Searcher = {
     if (!DirectoryReader.indexExists(indexDirectory)) {
@@ -50,7 +51,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
   def getSearcher = searcher
 
   private var _sequenceNumber =
-    SequenceNumber(commitData.getOrElse(Indexer.CommitData.sequenceNumber, "0").toLong)
+    SequenceNumber(commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong)
 
   def sequenceNumber = _sequenceNumber
 
@@ -60,7 +61,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
 
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
     try {
-      indexWriter.synchronized{ f(indexWriter) }
+      indexWriterLock.synchronized{ f(indexWriter) }
     } catch {
       case ioe: IOException =>
         log.error("indexing failed", ioe)
@@ -82,7 +83,17 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     doWithIndexWriter{ indexWriter =>
       var maxSequenceNumber = sequenceNumber
       indexables.grouped(commitBatchSize).foreach{ indexableBatch =>
-        val commitBatch = indexableBatch.map{ indexable =>
+        // create a map from id to its highest seqNum in the batch
+        val idToSeqNum = indexableBatch.foldLeft(Map.empty[Id[T], SequenceNumber]){ (m, indexable) =>
+          m + (indexable.id -> indexable.sequenceNumber)
+        }
+        val commitBatch = indexableBatch.filter{ indexable =>
+          // ignore an indexable if its seqNum is old
+          idToSeqNum.get(indexable.id) match {
+            case Some(seqNum) => (seqNum == indexable.sequenceNumber)
+            case None => false
+          }
+        }.map{ indexable =>
           val document = try {
             Left(indexable.buildDocument)
           } catch {

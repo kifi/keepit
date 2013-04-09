@@ -18,6 +18,9 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
 import com.keepit.common.analytics.PersistEventPlugin
 import com.keepit.search.query.parser.SpellCorrector
+import com.keepit.common.time._
+import com.keepit.common.controller.FortyTwoServices
+
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -28,7 +31,9 @@ class MainSearcherFactory @Inject() (
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker,
     persistEventPlugin: PersistEventPlugin,
-    spellCorrector: SpellCorrector
+    spellCorrector: SpellCorrector,
+    implicit private val clock: Clock,
+    implicit private val fortyTwoServices: FortyTwoServices
  ) {
 
   def apply(userId: Id[User], friendIds: Set[Id[User]], filter: SearchFilter, config: SearchConfig) = {

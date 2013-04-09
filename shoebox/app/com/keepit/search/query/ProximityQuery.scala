@@ -55,7 +55,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
     ((n * (n + 1.0f) / 2.0f) - (ProximityQuery.gapPenalty * n * (n - 1.0f) / 2.0f))
   }
 
-  def getValue = value
+  def getWeightValue = value / maxRawScore
 
   override def scoresDocsOutOfOrder() = false
 
@@ -95,11 +95,20 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
       val tps = query.terms.take(64).foldLeft(Map.empty[String, PositionAndMask]){ (tps, term) =>
         i += 1
         val termText = term.text()
-        tps + (termText -> (tps.getOrElse(termText, new PositionAndMask(termPositionsEnum(context, term, acceptDocs), termText).setBit(i))))
+        tps + (termText -> (tps.getOrElse(termText, makePositionAndMask(context, term, acceptDocs)).setBit(i)))
       }
       new ProximityScorer(this, tps.values.toArray)
     } else {
       null
+    }
+  }
+
+  private def makePositionAndMask(context: AtomicReaderContext, term: Term, acceptDocs: Bits) = {
+    val enum = termPositionsEnum(context, term, acceptDocs)
+    if (enum == null) {
+      new PositionAndMask(EmptyDocsAndPositionsEnum, term.text())
+    } else {
+      new PositionAndMask(enum, term.text())
     }
   }
 }
@@ -145,7 +154,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
   private[this] val numTerms = tps.length
   private[this] val rl = new Array[Float](numTerms + 1) // run lengths
   private[this] val ls = new Array[Float](numTerms + 1) // local scores
-  private[this] val weightVal = weight.getValue
+  private[this] val weightVal = weight.getWeightValue
 
   private[this] def gapPenalty(distance: Int) = ProximityQuery.gapPenalty * distance.toFloat
 

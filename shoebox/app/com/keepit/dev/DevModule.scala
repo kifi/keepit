@@ -37,7 +37,7 @@ class ShoeboxDevModule extends ScalaModule with Logging {
 
   @Provides
   @Singleton
-  def mailToKeepServerSettings: Option[MailToKeepServerSettings] =
+  def mailToKeepServerSettingsOpt: Option[MailToKeepServerSettings] =
     for {
       username <- current.configuration.getString("mailtokeep.username")
       password <- current.configuration.getString("mailtokeep.password")
@@ -53,11 +53,15 @@ class ShoeboxDevModule extends ScalaModule with Logging {
         emailLabel = Some(emailLabel))
     }
 
+  @Provides
+  @Singleton
+  def mailToKeepServerSettings: MailToKeepServerSettings = mailToKeepServerSettingsOpt.get
+
   @AppScoped
   @Provides
   def mailToKeepPlugin(
       actorFactory: ActorFactory[MailToKeepActor], mailToKeepServerSettings: Option[MailToKeepServerSettings]): MailToKeepPlugin = {
-    mailToKeepServerSettings match {
+    mailToKeepServerSettingsOpt match {
       case None => new FakeMailToKeepPlugin
       case _ => new MailToKeepPluginImpl(actorFactory)
     }

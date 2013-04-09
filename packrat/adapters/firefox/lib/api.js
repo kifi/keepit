@@ -52,9 +52,13 @@ function onIconClick(win) {
 }
 
 exports.loadReason = {upgrade: "update", downgrade: "update"}[self.loadReason] || self.loadReason;
+
+const hexRe = /^#[0-9a-f]{3}$/i;
 exports.log = function() {
-  var d = new Date(), ds = d.toString();
-  var args = Array.prototype.slice.apply(arguments);
+  var d = new Date, ds = d.toString(), args = Array.slice(arguments);
+  if (hexRe.test(args[0])) {
+    args.shift();
+  }
   for (var i = 0; i < args.length; i++) {
     var arg = args[i];
     if (typeof arg == "object") {
@@ -65,7 +69,7 @@ exports.log = function() {
       }
     }
   }
-  console.log("[" + ds.substring(0,2) + ds.substring(15,24) + "." + String(+d).substring(10) + "]", args.join(" "));
+  console.log("[" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "]", args.join(" "));
 };
 exports.log.error = function(exception, context) {
   console.error((context ? "[" + context + "] " : "") + exception);
@@ -254,6 +258,7 @@ function onSocketMessage(socketId, data) {
 
 exports.storage = require("sdk/simple-storage").storage;
 
+const hostRe = /^https?:\/\/[^\/]*/;
 exports.tabs = {
   each: function(callback) {
     Object.keys(pages)
@@ -262,13 +267,14 @@ exports.tabs = {
     .forEach(callback);
   },
   emit: function(tab, type, data) {
-    if (tab === pages[tab.id]) {
+    var currTab = pages[tab.id];
+    if (tab === currTab || currTab && currTab.url.match(hostRe)[0] == tab.url.match(hostRe)[0]) {
       exports.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data, "url:", tab.url);
       workers[tab.id].forEach(function(worker) {
         worker.port.emit(type, data);
       });
     } else {
-      exports.log.error(Error("tab " + tab.id + " no longer at " + tab.url), "api.tabs.emit:" + type);
+      exports.log("[api.tabs.emit] SUPPRESSED tab:", tab.id, "type:", type, "navigated:", tab.url, "->", currTab && currTab.url);
     }
   },
   get: function(pageId) {

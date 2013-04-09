@@ -28,12 +28,17 @@ import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal}
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search.index._
+import com.keepit.search._
 import com.tzavellas.sse.guice.ScalaModule
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import play.api.Application
 import play.api.Play
 import play.api.db.DB
+import scala.concurrent._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.util._
+import com.keepit.common.social.SocialGraphPlugin
 import scala.collection.mutable.{Stack => MutableStack}
 import scala.slick.session.{Database => SlickDatabase}
 
@@ -89,6 +94,7 @@ case class TestModule() extends ScalaModule {
     }))
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
+    bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
@@ -99,6 +105,22 @@ case class TestModule() extends ScalaModule {
   @Provides
   @Singleton
   def fakeClock: FakeClock = new FakeClock()
+
+  @Provides
+  @Singleton
+  def clickHistoryTracker: ClickHistoryTracker = new ClickHistoryTracker(-1, -1, -1)
+
+  @Provides
+  @Singleton
+  def sliderHistoryTracker: SliderHistoryTracker = new SliderHistoryTracker(-1, -1, -1)
+
+  @Provides
+  @Singleton
+  def browsingHistoryTracker: BrowsingHistoryTracker = new BrowsingHistoryTracker(-1, -1, -1)
+
+  @Provides
+  @Singleton
+  def searchServiceClient: SearchServiceClient = new SearchServiceClientImpl(null, -1, null)
 
   @Provides
   @Singleton
@@ -131,6 +153,11 @@ class FakeClock extends Clock with Logging {
       fakeNowTime
     }
   }
+}
+
+class FakeSocialGraphPlugin extends SocialGraphPlugin {
+  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] =
+    future { throw new Exception("Not Implemented") }
 }
 
 case class TestActorSystemModule() extends ScalaModule {

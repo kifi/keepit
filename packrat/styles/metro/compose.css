@@ -53,6 +53,10 @@ a.kifi-compose-submit {
   color: #fff !important;
   line-height: 28px;
 }
+a.kifi-compose-submit:focus {
+  outline: 1px dashed #aaa;
+  outline: 5px auto -webkit-focus-ring-color;
+}
 a.kifi-compose-submit:hover {
   background-color: #b6bbbf;
 }

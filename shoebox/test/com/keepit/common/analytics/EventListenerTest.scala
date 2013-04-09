@@ -13,7 +13,7 @@ import com.keepit.model._
 import com.keepit.common.db._
 import play.api.Play.current
 import com.keepit.inject.inject
-import akka.actor.ActorSystem
+import com.keepit.common.controller.FortyTwoServices
 
 class EventListenerTest extends Specification with DbRepos {
 
@@ -37,7 +37,7 @@ class EventListenerTest extends Specification with DbRepos {
     "parse search events" in {
       running(new EmptyApplication().withFakeHealthcheck()) {
         val (normUrlId, url, user, bookmark) = setup()
-        val listener = new EventListenerPlugin {
+        val listener = new EventListenerPlugin(inject[UserRepo], inject[NormalizedURIRepo]) {
          def onEvent: PartialFunction[Event,Unit] = { case _ => }
         }
         val (user2, result) = db.readWrite {implicit s =>
@@ -55,16 +55,16 @@ class EventListenerTest extends Specification with DbRepos {
   "EventListener" should {
     "process events" in {
       running(new EmptyApplication().withFakeHealthcheck()) {
-        val system = ActorSystem("system")
         val (normUrlId, url, user, bookmark) = setup()
+        implicit val clock = inject[Clock]
+        implicit val fortyTwoServices = inject[FortyTwoServices]
 
         val unrelatedEvent = Events.userEvent(EventFamilies.SEARCH,"someOtherEvent", user, Seq(), "", JsObject(Seq()), Seq())
 
         val event = Events.userEvent(EventFamilies.SEARCH,"kifiResultClicked", user, Seq(), "", JsObject(Seq()), Seq())
 
-        inject[EventHelper].newEvent(unrelatedEvent) === Seq()
-        inject[EventHelper].newEvent(event) === Seq("KifiResultClickedListener")
-
+        inject[EventHelper].matchEvent(unrelatedEvent) === Seq()
+        inject[EventHelper].matchEvent(event) === Seq("KifiResultClickedListener")
       }
     }
 

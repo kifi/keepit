@@ -60,6 +60,7 @@ object Reports {
   lazy val dailyKCMUsers = new DailyKCMUsers
   lazy val weeklyKCMUsers = new WeeklyKCMUsers
   lazy val monthlyKCMUsers = new MonthlyKCMUsers
+  lazy val dailySearchStatstics = new DailySearchStatisticsReport
 
   case class ReportGroup(name: String, reports: Seq[Report])
 
@@ -107,6 +108,10 @@ object Reports {
     Seq(dailyUniqueDepricatedAddBookmarks, dailySearchQueriesReport)
   )
 
+  lazy val DailySearchStatisticsReports = ReportGroup("DailySearchStatistics",
+    Seq(dailySearchStatstics)
+  )
+
   def searchExperimentReports(experiments: Seq[SearchConfigExperiment]): ReportGroup = {
     val constructors = Seq(
       new DailyKifiResultClickedByExperiment(_),
@@ -138,7 +143,7 @@ class ReportBuilderPluginImpl @Inject() (
   def buildReport(startDate: DateTime, endDate: DateTime, report: Report): Unit = actor ! BuildReport(startDate, endDate, report)
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor ! BuildReports(startDate, endDate, reportGroup)
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {

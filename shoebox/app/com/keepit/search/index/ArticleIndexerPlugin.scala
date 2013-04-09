@@ -32,7 +32,7 @@ private[index] class ArticleIndexerActor @Inject() (
         sender ! articlesIndexed
       } catch {
         case e: Exception =>
-          inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH, errorMessage = Some("Error indexing articles")))
+          healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH, errorMessage = Some("Error indexing articles")))
           sender ! -1
       }
     case m => throw new Exception("unknown message %s".format(m))
@@ -51,7 +51,7 @@ class ArticleIndexerPluginImpl @Inject() (
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   // plugin lifecycle methods
   override def enabled: Boolean = true

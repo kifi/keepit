@@ -22,6 +22,7 @@ trait SearchServiceClient extends ServiceClient {
   def uriGraphIndexInfo(): Future[URIGraphIndexInfo]
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo]
   def refreshSearcher(): Future[Unit]
+  def refreshPhrases(): Future[Unit]
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
@@ -32,6 +33,7 @@ trait SearchServiceClient extends ServiceClient {
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
 }
+
 class SearchServiceClientImpl(override val host: String, override val port: Int, override val httpClient: HttpClient)
     extends SearchServiceClient {
 
@@ -70,6 +72,10 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
 
   def refreshSearcher(): Future[Unit] = {
     call(routes.ArticleIndexerController.refreshSearcher()).map(_ => Unit)
+  }
+
+  def refreshPhrases(): Future[Unit] = {
+    call(routes.ArticleIndexerController.refreshPhrases()).map(_ => Unit)
   }
 
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]] = {

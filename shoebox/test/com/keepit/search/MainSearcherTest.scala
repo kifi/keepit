@@ -11,7 +11,6 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.inject._
 import com.keepit.test._
 import org.specs2.mutable._
 import play.api.Play.current
@@ -26,6 +25,7 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.common.analytics.FakePersistEventPluginImpl
 import com.keepit.search.query.parser.FakeSpellCorrector
+import com.keepit.common.controller.FortyTwoServices
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -46,6 +46,8 @@ class MainSearcherTest extends Specification with DbRepos {
   def initIndexes(store: ArticleStore) = {
     val articleIndexer = ArticleIndexer(new RAMDirectory, store)
     val uriGraph = URIGraph(new RAMDirectory)
+    implicit val clock = inject[Clock]
+    implicit val fortyTwoServices = inject[FortyTwoServices]
     val mainSearcherFactory = new MainSearcherFactory(
         articleIndexer,
         uriGraph,
@@ -54,8 +56,9 @@ class MainSearcherTest extends Specification with DbRepos {
         browsingHistoryTracker,
         clickHistoryTracker,
         inject[FakePersistEventPluginImpl],
-        inject[FakeSpellCorrector]
-        )
+        inject[FakeSpellCorrector],
+        clock,
+        fortyTwoServices)
     (uriGraph, articleIndexer, mainSearcherFactory)
   }
 

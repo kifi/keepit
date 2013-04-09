@@ -217,6 +217,7 @@ POST    /internal/search/index/update          @com.keepit.controllers.search.Ar
 POST    /internal/search/index/reindex         @com.keepit.controllers.search.ArticleIndexerController.reindex()
 GET     /internal/search/index/sequenceNumber  @com.keepit.controllers.search.ArticleIndexerController.getSequenceNumber()
 POST    /internal/search/index/refreshSearcher @com.keepit.controllers.search.ArticleIndexerController.refreshSearcher()
+POST    /internal/search/index/refreshPhrases  @com.keepit.controllers.search.ArticleIndexerController.refreshPhrases()
 POST    /internal/search/index/dumpDoc/:id     @com.keepit.controllers.search.ArticleIndexerController.dumpLuceneDocument(id: Id[NormalizedURI])
 
 POST    /internal/search/search/keeps          @com.keepit.controllers.search.SearchController.searchKeeps(userId: Id[User], query: String)

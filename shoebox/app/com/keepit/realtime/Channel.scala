@@ -8,6 +8,7 @@ import play.api.libs.iteratee.Concurrent.{Channel => PlayChannel}
 import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
 import java.util.concurrent.atomic.AtomicBoolean
+import com.keepit.common.logging.Logging
 
 /** A Channel, which accepts pushed messages, and manages connections to it.
   */
@@ -109,7 +110,7 @@ abstract class ChannelImpl[T](id: T) extends Channel {
   def isEmpty: Boolean = pool.isEmpty
 }
 
-abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extends ChannelManager[T, Channel] {
+abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extends ChannelManager[T, Channel] with Logging {
   private val channels = TrieMap[T, Channel]()
 
   @scala.annotation.tailrec
@@ -137,7 +138,10 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
   }
 
   def push(id: T, msg: JsArray): Int = {
-    find(id).map(_.push(msg)).getOrElse(0)
+    log.info("Pushing to " + name + " : " + id + ":\n" + msg)
+    val res = find(id).map(_.push(msg)).getOrElse(0)
+    log.info("Pushed to " + name + " : " + id + ":\n" + msg)
+    res
   }
 
   def broadcast(msg: JsArray): Int = {

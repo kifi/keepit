@@ -12,7 +12,17 @@ import org.joda.time.DateTime
 import play.api.Play.current
 import com.keepit.model.User
 
-case class ElectronicMailMessageId(val id: String)
+case class ElectronicMailMessageId(id: String) {
+  def toEmailHeader = s"<$id>"
+}
+object ElectronicMailMessageId {
+  private val MessageIdWithAngleBrackets = """^<(.*)>$""".r
+  def fromEmailHeader(value: String): ElectronicMailMessageId =
+    ElectronicMailMessageId(value.trim match {
+      case MessageIdWithAngleBrackets(id) => id
+      case id => id
+    })
+}
 case class ElectronicMailCategory(val category: String)
 
 case class ElectronicMail (
@@ -31,6 +41,7 @@ case class ElectronicMail (
   responseMessage: Option[String] = None,
   timeSubmitted: Option[DateTime] = None,
   messageId: Option[ElectronicMailMessageId] = None, //of the format 475082848.3.1353745094337.JavaMail.eishay@eishay-mbp.local
+  inReplyTo: Option[ElectronicMailMessageId] = None,
   category: ElectronicMailCategory //type of mail in free form, will be use for tracking
 ) extends ModelWithExternalId[ElectronicMail] {
   def withId(id: Id[ElectronicMail]) = this.copy(id = Some(id))
@@ -79,8 +90,11 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
     def responseMessage = column[String]("response_message", O.Nullable)
     def timeSubmitted = column[DateTime]("time_submitted", O.Nullable)
     def messageId = column[ElectronicMailMessageId]("message_id", O.Nullable)
+    def inReplyTo = column[ElectronicMailMessageId]("in_reply_to", O.Nullable)
     def category = column[ElectronicMailCategory]("category", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ from ~ fromName.? ~ to ~ subject ~ state ~ htmlBody ~ textBody.? ~ responseMessage.? ~ timeSubmitted.? ~ messageId.? ~ category <> (ElectronicMail, ElectronicMail.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ from ~ fromName.? ~ to ~ subject ~ state ~
+        htmlBody ~ textBody.? ~ responseMessage.? ~ timeSubmitted.? ~ messageId.? ~ inReplyTo.? ~ category <>
+        (ElectronicMail, ElectronicMail.unapply _)
   }
 
   def outbox()(implicit session: RSession): Seq[ElectronicMail] =

@@ -17,6 +17,7 @@ import org.joda.time.format.DateTimeFormat
 
 import com.google.inject.{Provider, ImplementedBy, Inject}
 
+import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
@@ -56,14 +57,15 @@ object DomainTagImportEvents {
 private[classify] class DomainTagImportActor @Inject() (
   db: Database,
   updater: SensitivityUpdater,
-  clock: Clock,
+  implicit private val clock: Clock,
   domainRepo: DomainRepo,
   tagRepo: DomainTagRepo,
   domainToTagRepo: DomainToTagRepo,
   persistEventPlugin: PersistEventPlugin,
   settings: DomainTagImportSettings,
   postOffice: PostOffice,
-  healthcheckPlugin: HealthcheckPlugin)
+  healthcheckPlugin: HealthcheckPlugin,
+  implicit private val fortyTwoServices: FortyTwoServices)
     extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   import DomainTagImportEvents._
@@ -301,7 +303,7 @@ class DomainTagImporterImpl @Inject() (
   actorFactory: ActorFactory[DomainTagImportActor])
     extends DomainTagImporter {
 
-  private val actor = actorFactory.get()
+  private lazy val actor = actorFactory.get()
 
   def refetchClassifications() {
     actor ! RefetchAll

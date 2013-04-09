@@ -67,5 +67,22 @@ class URITest extends Specification {
     "throw URISyntaxException upon .get after failed parse" in {
       URI.parse("http://ho\tst").get must throwA[java.net.URISyntaxException]
     }
+    "compare equal to equal URIs" in {
+      val uri1 = URI.parse("http://google.com/").get
+      val uri2 = URI.parse("http://google.com/").get
+      val uri3 = URI.parse("http://google.com").get
+      val uri4 = URI.parse("http://www.42go.com/team.html").get
+      val uri5 = URI.parse("HTTP://WWW.42GO.COM/team.html").get
+      val uri6 = URI.parse("http://www.42go.com/TEAM.html").get
+      val uri7 = URI.parse("http://www.linkedin.com/?trk=hb-0-h-logo").get
+      val uri8 = URI.parse("http://www.linkedin.com/?trk=hb-0-h-logo").get
+      val uri9 = URI.parse("http://www.linkedin.com/?trk=HB-0-H-LOGO").get
+      uri1 === uri2
+      uri2 !== uri3
+      uri4 === uri5
+      uri5 !== uri6
+      uri7 === uri8
+      uri8 !== uri9
+    }
   }
 }
