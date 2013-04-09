@@ -387,7 +387,11 @@ slider2 = function() {
 
   const populatePane = {
     notices: function($box) {
-      // TODO
+      api.port.emit("session", function (session) {
+        api.require("scripts/notices.js", function() {
+          renderNotices($box.find(".kifi-pane-tall"), ~session.experiments.indexOf("admin"))
+        });
+      });
     },
     comments: function($box) {
       requireData("comments", function(comments) {

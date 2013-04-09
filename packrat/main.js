@@ -67,6 +67,7 @@ logEvent.catchUp = function() {
 
 // ===== WebSocket handlers
 
+var notifications = [], notifyCallbacks = []
 const socketHandlers = {
   experiments: function(data) {
     api.log("[socket:message]", data);
@@ -92,6 +93,15 @@ const socketHandlers = {
     if (activeTab) {
       api.tabs.emit(activeTab, "show_notification", data);
     }
+    notifications.unshift(data)
+  },
+  notifications: function(data) {
+    api.log("[socket:notifications]", data)
+    notifications = data
+    notifyCallbacks.forEach(function (cb) {
+      cb(notifications);
+    });
+    notifyCallbacks = [];
   },
   event: function(data) {
     api.log("[socket:event]", data);
@@ -223,6 +233,18 @@ api.port.on({
   thread: function(id, respond) {
     socket.send(["get_message_thread", id], respond);
     return true;
+  },
+  notifications: function(howMany, respond, tab) {
+    var cb = function (n) {
+      respond(n.slice(0, howMany));
+    };
+    if (howMany > notifications.length) {
+      socket.send(["get_notifications", howMany]);
+      notifyCallbacks.push(cb);
+      return true;
+    } else {
+      respond(notifications.slice(0, howMany));
+    }
   },
   session: function(_, respond) {
     respond(session);
@@ -627,6 +649,7 @@ function authenticate(callback) {
       socket = api.socket.open(
         (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws",
         socketHandlers);
+      socket.send(["get_notifications", 10]);
       logEvent.catchUp();
 
       setConfigs("kifi_installation_id", data.installationId);
