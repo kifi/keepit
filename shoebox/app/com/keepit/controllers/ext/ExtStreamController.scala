@@ -52,6 +52,8 @@ class ExtStreamController @Inject() (
   userNotificationRepo: UserNotificationRepo,
   persistEventPlugin: PersistEventPlugin,
   keeperInfoLoader: KeeperInfoLoader,
+  sliderRuleRepo: SliderRuleRepo,
+  urlPatternRepo: URLPatternRepo,
   commentRepo: CommentRepo,
   paneData: PaneDetails,
   implicit private val clock: Clock,
@@ -156,9 +158,7 @@ class ExtStreamController @Inject() (
             subscriptions = Map.empty
           }
 
-          (iteratee, Enumerator(
-            Json.arr("experiments", streamSession.experiments.map(_.value))
-          ) andThen enumerator)
+          (iteratee, enumerator)
 
         case None =>
           log.info(s"Anonymous user trying to connect. Disconnecting!")
@@ -223,4 +223,3 @@ class ExtStreamController @Inject() (
   }
 
 }
-
