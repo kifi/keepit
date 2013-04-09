@@ -5,7 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.google.inject.Inject
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.social.{CommentWithSocialUser, CommentWithSocialUserRepo}
+import com.keepit.common.social.{CommentWithBasicUser, CommentWithBasicUserRepo}
 import com.keepit.common.logging._
 import com.keepit.common.social.{ThreadInfo, ThreadInfoRepo}
 
@@ -15,12 +15,12 @@ class PaneDetails @Inject() (
   commentRecipientRepo: CommentRecipientRepo,
   normalizedURIRepo: NormalizedURIRepo,
   commentReadRepo: CommentReadRepo,
-  commentWithSocialUserRepo: CommentWithSocialUserRepo,
+  commentWithBasicUserRepo: CommentWithBasicUserRepo,
   threadInfoRepo: ThreadInfoRepo)
     extends Logging {
 
   /** Returns a page's comments and marks them read for the viewer. */
-  def getComments(viewerUserId: Id[User], url: String): Seq[CommentWithSocialUser] = {
+  def getComments(viewerUserId: Id[User], url: String): Seq[CommentWithBasicUser] = {
     val (comments, commentRead) = db.readOnly { implicit session =>
       val normUriOpt = normalizedURIRepo.getByNormalizedUrl(url)
 
@@ -57,8 +57,8 @@ class PaneDetails @Inject() (
   }
 
   /** Returns a page's comments. */
-  def getComments(nUriId: Id[NormalizedURI])(implicit session: RSession): Seq[CommentWithSocialUser] =
-    commentRepo.getPublic(nUriId).map(commentWithSocialUserRepo.load(_))
+  def getComments(nUriId: Id[NormalizedURI])(implicit session: RSession): Seq[CommentWithBasicUser] =
+    commentRepo.getPublic(nUriId).map(commentWithBasicUserRepo.load(_))
 
   /** Returns a user's message threadlist for a specific page. Result does not include all full message bodies. */
   def getMessageThreadList(userId: Id[User], url: String): Seq[ThreadInfo] = {
@@ -74,13 +74,13 @@ class PaneDetails @Inject() (
     commentRepo.getMessages(nUriId, userId).map(threadInfoRepo.load(_, Some(userId))).reverse
 
   /** Returns the messages in a specific thread and marks them read for the viewer. */
-  def getMessageThread(viewerUserId: Id[User], commentId: ExternalId[Comment]): Seq[CommentWithSocialUser] = {
+  def getMessageThread(viewerUserId: Id[User], commentId: ExternalId[Comment]): Seq[CommentWithBasicUser] = {
     val (messages, commentReadToSave) = db.readOnly{ implicit session =>
       val comment = commentRepo.get(commentId)
       val parent = comment.parent.map(commentRepo.get).getOrElse(comment)
 
-      val messages: Seq[CommentWithSocialUser] = parent +: commentRepo.getChildren(parent.id.get) map { msg =>
-        commentWithSocialUserRepo.load(msg)
+      val messages: Seq[CommentWithBasicUser] = parent +: commentRepo.getChildren(parent.id.get) map { msg =>
+        commentWithBasicUserRepo.load(msg)
       }
 
       // mark latest message as read for viewer

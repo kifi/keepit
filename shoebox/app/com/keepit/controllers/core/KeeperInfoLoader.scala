@@ -5,10 +5,10 @@ import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URI
-import com.keepit.common.social.{CommentWithSocialUser, ThreadInfo, UserWithSocial, UserWithSocialRepo}
+import com.keepit.common.social.{CommentWithBasicUser, ThreadInfo, UserWithSocial, UserWithSocialRepo}
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
+import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import scala.concurrent.Await
@@ -35,7 +35,7 @@ case class KeeperInfo2(  // supplemental information
     keepers: Seq[UserWithSocial],
     keeps: Int,
     following: Boolean,
-    comments: Seq[CommentWithSocialUser],
+    comments: Seq[CommentWithBasicUser],
     threads: Seq[ThreadInfo])
 
 object KeeperInfo2 {
@@ -47,7 +47,7 @@ object KeeperInfo2 {
         if (o.keepers.nonEmpty) Some("keepers" -> userWithSocialSerializer.writes(o.keepers)) else None,
         if (o.keeps > 0) Some("keeps" -> JsNumber(o.keeps)) else None,
         if (o.following) Some("following" -> JsBoolean(true)) else None,
-        if (o.comments.nonEmpty) Some("comments" -> commentWithSocialUserSerializer.writes(o.comments)) else None,
+        if (o.comments.nonEmpty) Some("comments" -> commentWithBasicUserSerializer.writes(o.comments)) else None,
         if (o.threads.nonEmpty) Some("threads" -> threadInfoSerializer.writes(o.threads)) else None)
       .flatten)
   }

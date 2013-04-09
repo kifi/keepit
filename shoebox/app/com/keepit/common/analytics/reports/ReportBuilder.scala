@@ -20,49 +20,49 @@ import akka.actor.Props
 import com.keepit.common.plugin.SchedulingPlugin
 
 object Reports {
-  lazy val dailyActiveUniqueUserReport = new DailyActiveUniqueUserReport
-  lazy val dailyPageLoadReport = new DailyPageLoadReport
-  lazy val dailySearchQueriesReport = new DailySearchQueriesReport
-  lazy val dailyGoogleResultClicked = new DailyGoogleResultClicked
-  lazy val dailyKifiResultClicked = new DailyKifiResultClicked
-  lazy val dailyKifiAtLeastOneResult = new DailyKifiAtLeastOneResult
-  lazy val dailySliderShownByAuto = new DailySliderShownByAuto
-  lazy val dailySliderShownByIcon = new DailySliderShownByIcon
-  lazy val dailySliderShownByKey = new DailySliderShownByKey
-  lazy val dailySliderClosedByIcon = new DailySliderClosedByIcon
-  lazy val dailySliderClosedByKey = new DailySliderClosedByKey
-  lazy val dailySliderClosedByX = new DailySliderClosedByX
-  lazy val dailyComment = new DailyComment
-  lazy val dailyMessage = new DailyMessage
-  lazy val dailyUnkeep = new DailyUnkeep
-  lazy val dailyKeep = new DailyKeep
-  lazy val dailyUniqueDepricatedAddBookmarks = new DailyUniqueDepricatedAddBookmarks
-  lazy val dailyUsefulPage = new DailyUsefulPage
-  lazy val dailyTotalUsers = new DailyTotalUsers
-  lazy val dailyPrivateKeeps = new DailyPrivateKeeps
-  lazy val dailyPublicKeeps = new DailyPublicKeeps
-  lazy val dailyNewThread = new DailyNewThread
-  lazy val dailyUniqueUsersKeeping = new DailyUniqueUsersKeeping
-  lazy val dailyUniqueUsersMessaging = new DailyUniqueUsersMessaging
-  lazy val dailyUniqueUsersCommenting = new DailyUniqueUsersCommenting
-  lazy val dailyKifiLoadedReport = new DailyKifiLoadedReport
-  lazy val dailyDustSettledKifiHadResults = new DailyDustSettledKifiHadResults(true)
-  lazy val dailyDustSettledKifiHadNoResults = new DailyDustSettledKifiHadResults(false)
-  lazy val dailyActiveUsers = new DailyActiveUsers
-  lazy val weeklyActiveUsers = new WeeklyActiveUsers
-  lazy val monthlyActiveUsers = new MonthlyActiveUsers
-  lazy val dailyClickingUsers = new DailyClickingUsers
-  lazy val weeklyClickingUsers = new WeeklyClickingUsers
-  lazy val monthlyClickingUsers = new MonthlyClickingUsers
-  lazy val dailyKeepingUsers = new DailyKeepingUsers
-  lazy val weeklyKeepingUsers = new WeeklyKeepingUsers
-  lazy val monthlyKeepingUsers = new MonthlyKeepingUsers
-  lazy val dailyKCMUsers = new DailyKCMUsers
-  lazy val weeklyKCMUsers = new WeeklyKCMUsers
-  lazy val monthlyKCMUsers = new MonthlyKCMUsers
-  lazy val dailySearchStatstics = new DailySearchStatisticsReport
+  lazy val dailyActiveUniqueUserReport = new DailyActiveUniqueUserReportRepo
+  lazy val dailyPageLoadReport = new DailyPageLoadReportRepo
+  lazy val dailySearchQueriesReport = new DailySearchQueriesReportRepo
+  lazy val dailyGoogleResultClicked = new DailyGoogleResultClickedRepo
+  lazy val dailyKifiResultClicked = new DailyKifiResultClickedRepo
+  lazy val dailyKifiAtLeastOneResult = new DailyKifiAtLeastOneResultRepo
+  lazy val dailySliderShownByAuto = new DailySliderShownByAutoRepo
+  lazy val dailySliderShownByIcon = new DailySliderShownByIconRepo
+  lazy val dailySliderShownByKey = new DailySliderShownByKeyRepo
+  lazy val dailySliderClosedByIcon = new DailySliderClosedByIconRepo
+  lazy val dailySliderClosedByKey = new DailySliderClosedByKeyRepo
+  lazy val dailySliderClosedByX = new DailySliderClosedByXRepo
+  lazy val dailyComment = new DailyCommentRepo
+  lazy val dailyMessage = new DailyMessageRepo
+  lazy val dailyUnkeep = new DailyUnkeepRepo
+  lazy val dailyKeep = new DailyKeepRepo
+  lazy val dailyUniqueDepricatedAddBookmarks = new DailyUniqueDepricatedAddBookmarksRepo
+  lazy val dailyUsefulPage = new DailyUsefulPageRepo
+  lazy val dailyTotalUsers = new DailyTotalUsersRepo
+  lazy val dailyPrivateKeeps = new DailyPrivateKeepsRepo
+  lazy val dailyPublicKeeps = new DailyPublicKeepsRepo
+  lazy val dailyNewThread = new DailyNewThreadRepo
+  lazy val dailyUniqueUsersKeeping = new DailyUniqueUsersKeepingRepo
+  lazy val dailyUniqueUsersMessaging = new DailyUniqueUsersMessagingRepo
+  lazy val dailyUniqueUsersCommenting = new DailyUniqueUsersCommentingRepo
+  lazy val dailyKifiLoadedReport = new DailyKifiLoadedReportRepo
+  lazy val dailyDustSettledKifiHadResults = new DailyDustSettledKifiHadResultsRepo(true)
+  lazy val dailyDustSettledKifiHadNoResults = new DailyDustSettledKifiHadResultsRepo(false)
+  lazy val dailyActiveUsers = new DailyActiveUsersRepo
+  lazy val weeklyActiveUsers = new WeeklyActiveUsersRepo
+  lazy val monthlyActiveUsers = new MonthlyActiveUsersRepo
+  lazy val dailyClickingUsers = new DailyClickingUsersRepo
+  lazy val weeklyClickingUsers = new WeeklyClickingUsersRepo
+  lazy val monthlyClickingUsers = new MonthlyClickingUsersRepo
+  lazy val dailyKeepingUsers = new DailyKeepingUsersRepo
+  lazy val weeklyKeepingUsers = new WeeklyKeepingUsersRepo
+  lazy val monthlyKeepingUsers = new MonthlyKeepingUsersRepo
+  lazy val dailyKCMUsers = new DailyKCMUsersRepo
+  lazy val weeklyKCMUsers = new WeeklyKCMUsersRepo
+  lazy val monthlyKCMUsers = new MonthlyKCMUsersRepo
+  lazy val dailySearchStatstics = new DailySearchStatisticsReportRepo
 
-  case class ReportGroup(name: String, reports: Seq[Report])
+  case class ReportGroup(name: String, reports: Seq[ReportRepo])
 
   lazy val DailyReports = ReportGroup("DailyReport",
     Seq(dailyActiveUniqueUserReport,
@@ -114,11 +114,11 @@ object Reports {
 
   def searchExperimentReports(experiments: Seq[SearchConfigExperiment]): ReportGroup = {
     val constructors = Seq(
-      new DailyKifiResultClickedByExperiment(_),
-      new DailyGoogleResultClickedByExperiment(_),
-      new DailyKifiAtLeastOneResultByExperiment(_),
-      (x: Option[SearchConfigExperiment]) => new DailyDustSettledKifiHadResultsByExperiment(x, true),
-      (x: Option[SearchConfigExperiment]) => new DailyDustSettledKifiHadResultsByExperiment(x, false))
+      new DailyKifiResultClickedByExperimentRepo(_),
+      new DailyGoogleResultClickedByExperimentRepo(_),
+      new DailyKifiAtLeastOneResultByExperimentRepo(_),
+      (x: Option[SearchConfigExperiment]) => new DailyDustSettledKifiHadResultsByExperimentRepo(x, true),
+      (x: Option[SearchConfigExperiment]) => new DailyDustSettledKifiHadResultsByExperimentRepo(x, false))
     ReportGroup("SearchExperimentReport",
       for (experiment <- experiments; constructor <- constructors) yield constructor(Some(experiment))
     )
@@ -126,7 +126,7 @@ object Reports {
 }
 
 trait ReportBuilderPlugin extends SchedulingPlugin {
-  def buildReport(startDate: DateTime, endDate: DateTime, report: Report) : Unit
+  def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo) : Unit
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit
   def reportCron(): Unit
 
@@ -140,7 +140,7 @@ class ReportBuilderPluginImpl @Inject() (
   reportStore: ReportStore)
     extends Logging with ReportBuilderPlugin {
 
-  def buildReport(startDate: DateTime, endDate: DateTime, report: Report): Unit = actor ! BuildReport(startDate, endDate, report)
+  def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo): Unit = actor ! BuildReport(startDate, endDate, report)
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor ! BuildReports(startDate, endDate, reportGroup)
 
   private lazy val actor = actorFactory.get()
@@ -160,7 +160,7 @@ class ReportBuilderPluginImpl @Inject() (
 }
 
 private[reports] case class ReportCron(sender: ReportBuilderPlugin)
-private[reports] case class BuildReport(startDate: DateTime, endDate: DateTime, report: Report)
+private[reports] case class BuildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo)
 private[reports] case class BuildReports(startDate: DateTime, endDate: DateTime, reportGroup: Reports.ReportGroup)
 
 private[reports] class ReportBuilderActor @Inject() (
@@ -179,7 +179,7 @@ private[reports] class ReportBuilderActor @Inject() (
         report.get(startDate, endDate)
       }
 
-      val outputReport = builtReports.foldRight(CompleteReport("","",Nil))((a,b) => a + b)
+      val outputReport = builtReports.foldRight(Report("","",Nil))((a,b) => a + b)
       val report = outputReport.copy(reportName = reportGroup.name)
       reportStore += (report.persistenceKey -> report)
     case unknown =>

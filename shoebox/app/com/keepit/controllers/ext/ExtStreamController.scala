@@ -30,7 +30,7 @@ import com.keepit.common.db.State
 import scala.util.Random
 import com.keepit.controllers.core.{PaneDetails, KeeperInfoLoader}
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
-import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
+import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
 import org.joda.time.DateTime
@@ -49,9 +49,10 @@ class ExtStreamController @Inject() (
   experimentRepo: UserExperimentRepo,
   userChannel: UserChannel,
   uriChannel: UriChannel,
-  userNotification: UserNotificationRepo,
+  userNotificationRepo: UserNotificationRepo,
   persistEventPlugin: PersistEventPlugin,
   keeperInfoLoader: KeeperInfoLoader,
+  commentRepo: CommentRepo,
   paneData: PaneDetails,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
@@ -130,6 +131,7 @@ class ExtStreamController @Inject() (
                 logEvent(streamSession, JsObject(pairs))
               case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>
                 channel.push(Json.arr(requestId.toLong, paneData.getComments(userId, url)))
+                // channel.push(Json.arr(requestId.toLong, commentWithBasicUserSerializer.writes(paneData.getComments(userId, url))))
               case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>
                 channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(userId, url)))
               case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>
@@ -142,6 +144,10 @@ class ExtStreamController @Inject() (
                   case _ => None
                 }
                 channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, howMany.toInt)))
+              case JsString("set_message_read") +: JsString(parentExternalId) +: _ =>
+                setMessageRead(userId, parentExternalId)
+              case JsString("set_comment_read") +: JsString(externalId) +: _ =>
+                setCommentRead(userId, externalId)
               case json =>
                 log.warn(s"Not sure what to do with: $json")
             }
@@ -177,11 +183,11 @@ class ExtStreamController @Inject() (
   }
 
   private def getLastNotifyTime(userId: Id[User]): DateTime = {
-    db.readOnly(implicit s => userNotification.getLastReadTime(userId))
+    db.readOnly(implicit s => userNotificationRepo.getLastReadTime(userId))
   }
 
   private def getNotifications(userId: Id[User], createdBefore: Option[DateTime], howMany: Int): Seq[SendableNotification] = {
-    db.readOnly(implicit s => userNotification.getWithUserId(userId, createdBefore, howMany)).map(n => SendableNotification.fromUserNotification(n))
+    db.readOnly(implicit s => userNotificationRepo.getWithUserId(userId, createdBefore, howMany)).map(n => SendableNotification.fromUserNotification(n))
   }
 
   private def logEvent(session: StreamSession, o: JsObject) {
@@ -195,6 +201,25 @@ class ExtStreamController @Inject() (
     val event = Events.userEvent(eventFamily, eventName, user, session.experiments, installId, metaData, prevEvents, eventTime)
     log.debug("Created new event: %s".format(event))
     persistEventPlugin.persist(event)
+  }
+
+  private def setMessageRead(userId: Id[User], externalId: String) = {
+    db.readWrite { implicit session =>
+      val comment = commentRepo.get(ExternalId[Comment](externalId))
+      val parentId = comment.parent.map(p => commentRepo.get(p).id.get).getOrElse(comment.id.get)
+      userNotificationRepo.getWithCommentId(userId, parentId).foreach { n =>
+        userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
+      }
+    }
+  }
+
+  private def setCommentRead(userId: Id[User], externalId: String) = {
+    db.readWrite { implicit session =>
+      val commentId = commentRepo.get(ExternalId[Comment](externalId)).id.get
+      userNotificationRepo.getWithCommentId(userId, commentId).foreach { n =>
+        userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
+      }
+    }
   }
 
 }
