@@ -7,12 +7,9 @@ import com.keepit.common.analytics._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.inject._
 import com.keepit.search.SearchConfigExperiment
 import com.mongodb.casbah.Imports._
 import com.keepit.serializer.EventSerializer
-
-import play.api.Play.current
 
 object Parsers {
   type ParsedDBObject = (DateTime, Map[String, ValueOrdering])
@@ -302,13 +299,13 @@ class DailyUsefulPageRepo @Inject() (store: MongoEventStore) extends BasicDailyA
   }
 }
 
-class DailyTotalUsersRepo @Inject() (store: MongoEventStore) extends ReportRepo(store) with Logging {
+class DailyTotalUsersRepo @Inject() (store: MongoEventStore, db: Database) extends ReportRepo(store) with Logging {
   override val reportName = "DailyTotalUsers"
   override val ordering = 190
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     var fields = Seq[ReportRow]()
-    inject[Database].readOnly { implicit session =>
+    db.readOnly { implicit session =>
       val conn = session.conn
       val st = conn.createStatement()
       val sql =
@@ -328,13 +325,13 @@ class DailyTotalUsersRepo @Inject() (store: MongoEventStore) extends ReportRepo(
   }
 }
 
-class DailyPrivateKeepsRepo @Inject() (store: MongoEventStore) extends ReportRepo(store) with Logging {
+class DailyPrivateKeepsRepo @Inject() (store: MongoEventStore, db: Database) extends ReportRepo(store) with Logging {
   override val reportName = "DailyPrivateKeeps"
   override val ordering = 200
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     var fields = Seq[ReportRow]()
-    inject[Database].readOnly { implicit session =>
+    db.readOnly { implicit session =>
       val conn = session.conn
       val st = conn.createStatement()
       val sql =
@@ -354,13 +351,13 @@ class DailyPrivateKeepsRepo @Inject() (store: MongoEventStore) extends ReportRep
   }
 }
 
-class DailyPublicKeepsRepo @Inject() (store: MongoEventStore) extends ReportRepo(store) with Logging {
+class DailyPublicKeepsRepo @Inject() (store: MongoEventStore, db: Database) extends ReportRepo(store) with Logging {
   override val reportName = "DailyPublicKeeps"
   override val ordering = 210
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     var fields = Seq[ReportRow]()
-    inject[Database].readOnly { implicit session =>
+    db.readOnly { implicit session =>
       val conn = session.conn
       val st = conn.createStatement()
       val sql =
@@ -380,13 +377,13 @@ class DailyPublicKeepsRepo @Inject() (store: MongoEventStore) extends ReportRepo
   }
 }
 
-class DailyNewThreadRepo @Inject() (store: MongoEventStore) extends ReportRepo(store) with Logging {
+class DailyNewThreadRepo @Inject() (store: MongoEventStore, db: Database) extends ReportRepo(store) with Logging {
   override val reportName = "DailyNewThread"
   override val ordering = 220
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     var fields = Seq[ReportRow]()
-    inject[Database].readOnly { implicit session =>
+    db.readOnly { implicit session =>
       val conn = session.conn
       val st = conn.createStatement()
       val sql =
