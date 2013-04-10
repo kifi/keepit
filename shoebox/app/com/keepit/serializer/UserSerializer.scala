@@ -6,14 +6,15 @@ import com.keepit.model.User
 import play.api.libs.json._
 import com.keepit.common.social.UserWithSocial
 import com.keepit.common.db._
+import org.joda.time.DateTime
 
 class UserSerializer extends Format[User] {
 
   def writes(user: User): JsValue =
     JsObject(List(
       "id"  -> user.id.map(u => JsNumber(u.id)).getOrElse(JsNull),
-      "createdAt" -> JsString(user.createdAt.toStandardTimeString),
-      "updatedAt" -> JsString(user.updatedAt.toStandardTimeString),
+      "createdAt" -> Json.toJson(user.createdAt),
+      "updatedAt" -> Json.toJson(user.updatedAt),
       "externalId" -> JsString(user.externalId.id),
       "firstName"  -> JsString(user.firstName),
       "lastName"  -> JsString(user.lastName)
@@ -22,8 +23,8 @@ class UserSerializer extends Format[User] {
   def reads(json: JsValue): JsResult[User] = 
     JsSuccess(User(
       id = (json \ "id").asOpt[Long].map(Id[User](_)),
-      createdAt = parseStandardTime((json \ "createdAt").as[String]),
-      updatedAt = parseStandardTime((json \ "updatedAt").as[String]),
+      createdAt = (json \ "createdAt").as[DateTime],
+      updatedAt = (json \ "updatedAt").as[DateTime],
       externalId = ExternalId[User]((json \ "externalId").as[String]),
       firstName = (json \ "firstName").as[String],
       lastName = (json \ "lastName").as[String]

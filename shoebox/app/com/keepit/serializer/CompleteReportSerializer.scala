@@ -15,7 +15,7 @@ class CompleteReportSerializer extends Format[Report] {
     JsObject(List(
         "reportName" -> JsString(report.reportName),
         "reportVersion" -> JsString(report.reportVersion),
-        "createdAt" -> JsString(report.createdAt.toStandardTimeString),
+        "createdAt" -> Json.toJson(report.createdAt),
         "report" -> JsObject(report.list map (r => UTC_DATETIME_FORMAT.print(r.date.withZone(DateTimeZone.UTC)) -> JsObject((r.fields map (s => s._1 -> JsArray(Seq(JsString(s._2.value), JsNumber(s._2.ordering))))).toSeq)))
       )
     )
