@@ -13,6 +13,7 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.serializer.BookmarkSerializer
 import com.keepit.serializer.UserWithSocialSerializer._
 import play.api.libs.json._
+import com.keepit.serializer.BasicUserSerializer
 
 @Singleton
 class ExtBookmarksController @Inject() (
@@ -37,7 +38,7 @@ class ExtBookmarksController @Inject() (
       Some("kept" -> JsBoolean(sliderInfo.bookmark.isDefined)),
       sliderInfo.bookmark.map(_.isPrivate) match { case Some(true) => Some("private" -> JsBoolean(true)); case _ => None },
       sliderInfo.socialUsers match { case Nil => None; case _ => Some("keptByAnyFriends" -> JsBoolean(true)) }, // TODO: remove
-      sliderInfo.socialUsers match { case Nil => None; case u => Some("keepers" -> userWithSocialSerializer.writes(u)) },
+      sliderInfo.socialUsers match { case Nil => None; case u => Some("keepers" -> BasicUserSerializer.basicUserSerializer.writes(u)) },
       sliderInfo.numKeeps match { case 0 => None; case n => Some("keeps" -> JsNumber(n)) },
       sliderInfo.numComments match { case 0 => None; case n => Some("numComments" -> JsNumber(n)) },
       sliderInfo.numUnreadComments match { case 0 => None; case n => Some("unreadComments" -> JsNumber(n)) },
@@ -77,7 +78,9 @@ class ExtBookmarksController @Inject() (
         }
       }
     } match {
-      case Some(bookmark) => Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
+      case Some(bookmark) =>
+        searchClient.updateURIGraph()
+        Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
       case None => NotFound
     }
   }

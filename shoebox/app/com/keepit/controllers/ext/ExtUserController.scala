@@ -43,7 +43,7 @@ class ExtUserController @Inject() (
         "kept" -> sliderInfo.bookmark.isDefined,
         "private" -> JsBoolean(sliderInfo.bookmark.map(_.isPrivate).getOrElse(false)),
         "following" -> sliderInfo.following,
-        "friends" -> userWithSocialSerializer.writes(sliderInfo.socialUsers),
+        "friends" -> sliderInfo.socialUsers.map(BasicUserSerializer.basicUserSerializer.writes),
         "numComments" -> sliderInfo.numComments,
         "numMessages" -> sliderInfo.numMessages,
         "neverOnSite" -> sliderInfo.neverOnSite.isDefined,
