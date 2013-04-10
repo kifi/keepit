@@ -36,10 +36,6 @@ class MainSearcherTest extends Specification with DbRepos {
 
   val resultClickTracker = ResultClickTracker(8)
 
-  val clickHistoryTracker = running(new EmptyApplication()) {
-    ClickHistoryTracker(307, 2, 1)
-  }
-
   def initData(numUsers: Int, numUris: Int) = db.readWrite { implicit s =>
     ((0 until numUsers).map(n => userRepo.save(User(firstName = "foo" + n, lastName = ""))).toList,
      (0 until numUris).map(n => uriRepo.save(NormalizedURIFactory(title = "a" + n,
@@ -58,7 +54,7 @@ class MainSearcherTest extends Specification with DbRepos {
         new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
         resultClickTracker,
         new BrowsingHistoryTracker(3067, 2, 1, inject[BrowsingHistoryRepo], inject[Database]),
-        clickHistoryTracker,
+        new ClickHistoryTracker(307, 2, 1, inject[ClickHistoryRepo], inject[Database]),
         inject[FakePersistEventPluginImpl],
         inject[FakeSpellCorrector],
         clock,
