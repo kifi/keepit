@@ -95,7 +95,6 @@ class ExtCommentController @Inject() (
 
       permissions.toLowerCase match {
         case "message" =>
-          val lastMessageIdInConvo: Option[Id[Comment]] = parentIdOpt.map(commentRepo.getLastChildId)
           val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
           createRecipients(newComment.id.get, recipients, parentIdOpt)
 
