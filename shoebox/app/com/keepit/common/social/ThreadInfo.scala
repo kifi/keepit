@@ -8,7 +8,8 @@ import com.keepit.model._
 import com.keepit.common.logging.Logging
 import com.google.inject.Inject
 
-case class ThreadInfo(externalId: ExternalId[Comment], recipients: Seq[BasicUser], digest: String, lastAuthor: ExternalId[User], messageCount: Long, hasAttachments: Boolean, createdAt: DateTime, lastCommentedAt: DateTime)
+// TODO: wrap
+case class ThreadInfo(externalId: ExternalId[Comment], recipients: Seq[BasicUser], digest: String, lastAuthor: ExternalId[User], messageCount: Long, messageTimes: Map[ExternalId[Comment], DateTime], createdAt: DateTime, lastCommentedAt: DateTime)
 
 class ThreadInfoRepo @Inject() (
     commentRecipientRepo: CommentRecipientRepo,
@@ -31,10 +32,10 @@ class ThreadInfoRepo @Inject() (
     ThreadInfo(
       externalId = comment.externalId,
       recipients = recipients,
-      digest = lastComment.text, // todo: make smarter
+      digest = lastComment.text, // todo: make smarter, being careful not to break markdown
       lastAuthor = userRepo.get(lastComment.userId).externalId,
       messageCount = children.size + 1,
-      hasAttachments = false, // todo fix
+      messageTimes = Map((comment +: children).map { c => (c.externalId, c.createdAt) }: _*),
       createdAt = comment.createdAt,
       lastCommentedAt = lastComment.createdAt
     )
