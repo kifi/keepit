@@ -75,6 +75,12 @@ logEvent.catchUp = function() {
 
 const notifyCallbacks = [];
 const socketHandlers = {
+  denied: function() {
+    api.log("[socket:denied]");
+    socket.close();
+    socket = null;
+    session = null;
+  },
   experiments: function(data) {
     api.log("[socket:experiments]", data);
     session.experiments = data;
