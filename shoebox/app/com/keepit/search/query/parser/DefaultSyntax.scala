@@ -26,6 +26,7 @@ trait DefaultSyntax extends QueryParser {
 
   override val fields = queryFields
 
+  private[this] var inputText: CharSequence = ""
   private[this] var buf: CharSequence = ""
 
   private def removeLeadingSpaces(queryText: CharSequence): CharSequence = {
@@ -73,7 +74,7 @@ trait DefaultSyntax extends QueryParser {
       case _ =>
         (endOfQueryRegex findPrefixMatchOf buf) match {
           case Some(m) => ""
-          case _ => throw new QueryParserException("failed to parse terms before the end of query")
+          case _ => throw new QueryParserException(s"failed to parse terms before the end of query input=[${inputText}] buf=[${buf}]")
         }
     }
   }
@@ -111,9 +112,10 @@ trait DefaultSyntax extends QueryParser {
   }
 
   override def parse(queryText: CharSequence): Option[Query] = {
-    if(queryText == null) {
+    if (queryText == null) {
       None
     } else {
+      inputText = queryText
       buf = removeLeadingSpaces(queryText)
       val querySpecList = parse(Nil)
       val clauses = querySpecList.foldLeft(ArrayBuffer.empty[BooleanClause]) { (clauses, spec) =>
