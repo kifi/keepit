@@ -30,6 +30,7 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
 import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphDecoders}
+import org.apache.lucene.util.Version
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -48,8 +49,8 @@ class MainSearcherTest extends Specification with DbRepos {
   }
 
   def initIndexes(store: ArticleStore) = {
-    val articleIndexer = ArticleIndexer(new RAMDirectory, store)
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val articleIndexer = new ArticleIndexer(new RAMDirectory, config, store, db, null, null)
     val uriGraph = new URIGraphImpl(new RAMDirectory, config, URIGraphDecoders.decoders(), bookmarkRepo, db)
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]

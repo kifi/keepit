@@ -4,6 +4,7 @@ import java.io.File
 import com.google.common.io.Files
 import com.google.inject.{Provides, Singleton}
 import com.keepit.classify.DomainTagImportSettings
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.{ActorFactory, ActorPlugin}
 import com.keepit.common.analytics._
 import com.keepit.common.cache._
@@ -11,7 +12,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.inject._
-import com.keepit.model.{PhraseRepo, BookmarkRepo}
+import com.keepit.model.{PhraseRepo, BookmarkRepo, NormalizedURIRepo}
 import com.keepit.search.{ArticleStore, ResultClickTracker}
 import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphDecoders}
 import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
@@ -105,10 +106,13 @@ class SearchDevModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph): ArticleIndexer = {
+  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph, db: Database,
+    repo: NormalizedURIRepo, healthcheckPlugin: HealthcheckPlugin): ArticleIndexer = {
     val dir = getDirectory(current.configuration.getString("index.article.directory"))
     log.info(s"storing search index in $dir")
-    ArticleIndexer(dir, articleStore)
+
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new ArticleIndexer(dir, config, articleStore, db, repo, healthcheckPlugin)
   }
 
   @Singleton
