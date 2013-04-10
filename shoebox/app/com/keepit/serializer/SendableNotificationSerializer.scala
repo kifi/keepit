@@ -7,12 +7,13 @@ import play.api.libs.json._
 import com.keepit.common.social.UserWithSocial
 import com.keepit.common.db._
 import com.keepit.realtime.SendableNotification
+import org.joda.time.DateTime
 
 class SendableNotificationSerializer extends Format[SendableNotification] {
 
   def writes(notify: SendableNotification): JsValue =
     Json.obj(
-      "time" -> JsString(notify.time.toStandardTimeString),
+      "time" -> Json.toJson(notify.time),
       "id" -> JsString(notify.id.id),
       "category"  -> JsString(notify.category.name),
       "details"  -> notify.details.payload,
@@ -22,7 +23,7 @@ class SendableNotificationSerializer extends Format[SendableNotification] {
   def reads(json: JsValue): JsResult[SendableNotification] =
     JsSuccess(SendableNotification(
       id = ExternalId[UserNotification]((json \ "id").as[String]),
-      time = parseStandardTime((json \ "time").as[String]),
+      time = (json \ "time").as[DateTime],
       category = UserNotificationCategory((json \ "firstName").as[String]),
       details = UserNotificationDetails((json \ "details").as[JsObject]),
       state = State[UserNotification]((json \ "state").as[String])
