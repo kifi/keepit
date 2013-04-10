@@ -7,7 +7,6 @@ import com.keepit.model.User
 import play.api.libs.json._
 
 class BasicUserSerializer extends Format[BasicUser] {
-
   def reads(json: JsValue): JsResult[BasicUser] =
     JsSuccess(BasicUser(
       externalId = ExternalId[User]((json \ "externalId").as[String]),  // TODO: read "id" or else "externalId"
@@ -17,13 +16,13 @@ class BasicUserSerializer extends Format[BasicUser] {
       facebookId = (json \ "facebookId").as[String]))
 
   def writes(basicUser: BasicUser): JsValue =
-    JsObject(Seq(
-      "id" -> JsString(basicUser.externalId.toString),
-      "externalId" -> JsString(basicUser.externalId.toString),  // TODO: deprecate, eliminate
-      "firstName" -> JsString(basicUser.firstName),
-      "lastName" -> JsString(basicUser.lastName),
-      "avatar" -> JsString(basicUser.avatar),
-      "facebookId" -> JsString(basicUser.facebookId)))
+    Json.obj(
+      "id" -> basicUser.externalId.id,
+      "externalId" -> basicUser.externalId.id,  // TODO: deprecate, eliminate
+      "firstName" -> basicUser.firstName,
+      "lastName" -> basicUser.lastName,
+      "avatar" -> basicUser.avatar,
+      "facebookId" -> basicUser.facebookId)
 
   def writes(users: Seq[BasicUser]): JsValue =
     JsArray(users map BasicUserSerializer.basicUserSerializer.writes)
