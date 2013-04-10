@@ -18,26 +18,26 @@ import org.joda.time.DateTime
 import akka.dispatch.Future
 import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.model._
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import play.api.Play.current
 import play.api.libs.json.JsArray
 import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
 import play.api.libs.json.JsValue
 import java.sql.Connection
 import com.keepit.common.logging.Logging
+import com.google.inject.Inject
 
-class SocialUserImportEmail() extends Logging {
+class SocialUserImportEmail @Inject() (
+    db: Database,
+    userRepo: UserRepo,
+    emailRepo: EmailAddressRepo) extends Logging {
 
   def importEmail(userId: Id[User], parentJsons: Seq[JsValue]): Option[EmailAddress] = importEmailFromJson(userId, parentJsons.head)
 
   private def importEmailFromJson(userId: Id[User], json: JsValue): Option[EmailAddress] = {
     (json \ "email").asOpt[String].map {emailString =>
-      inject[Database].readWrite{ implicit session =>
-        val userRepo = inject[UserRepo]
-        val emailRepo = inject[EmailAddressRepo]
+      db.readWrite{ implicit session =>
         emailRepo.getByAddressOpt(emailString) match {
           case Some(email) =>
             if (email.userId != userId) throw new IllegalStateException("email %s is not associated with user %s".format(email, userRepo.get(userId)))
