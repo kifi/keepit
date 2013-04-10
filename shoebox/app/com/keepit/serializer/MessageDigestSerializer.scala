@@ -10,7 +10,6 @@ import com.keepit.common.social.ThreadInfo
 import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 
 class ThreadInfoSerializer extends Writes[ThreadInfo] {
-
   def writes(o: ThreadInfo): JsValue =
     Json.obj(
       "id" -> o.externalId.id,
