@@ -218,16 +218,17 @@ class MainSearcher(
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
-    val svVar = svVariance(parsedQuery, hitList);								// compute sv variance. may need to record the time elapsed.
+    val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, this.articleSearcher, this.uriGraphSearcher);								// compute sv variance. may need to record the time elapsed.
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
 
-    val metaData = JsObject( Seq("queryUUID"->JsString(searchResultUuid.id), "svVariance"-> JsNumber(svVar) ))
+    val metaData = JsObject( Seq("queryUUID"->JsString(searchResultUuid.id), "svVariance"-> JsNumber(svVar), "svExistVar" -> JsNumber(svExistVar) ))
     persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
-        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar)
+        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
+        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar)
   }
 
 
@@ -393,7 +394,8 @@ case class ArticleSearchResult(
   pageNumber: Int,
   uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
   time: DateTime = currentDateTime,
-  svVariance: Float = -1.0f			// semantic vector variance
+  svVariance: Float = -1.0f,			// semantic vector variance
+  svExistenceVar: Float = -1.0f
 )
 
 
