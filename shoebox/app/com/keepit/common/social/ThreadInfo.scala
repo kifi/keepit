@@ -35,7 +35,7 @@ class ThreadInfoRepo @Inject() (
       digest = lastComment.text, // todo: make smarter, being careful not to break markdown
       lastAuthor = userRepo.get(lastComment.userId).externalId,
       messageCount = children.size + 1,
-      messageTimes = Map((comment +: children).map { c => (c.externalId, c.createdAt) }: _*),
+      messageTimes = Map((comment +: children).map {c => c.externalId -> c.createdAt}: _*),
       createdAt = comment.createdAt,
       lastCommentedAt = lastComment.createdAt
     )
