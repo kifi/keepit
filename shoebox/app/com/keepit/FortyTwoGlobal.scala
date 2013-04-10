@@ -18,6 +18,8 @@ import play.utils.Threads
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with Logging {
 
+  implicit def richInjector(injector: Injector) = new RichInjector(injector)
+
   def modules: Seq[Module]
 
   private val creatingInjector = new AtomicBoolean(false)

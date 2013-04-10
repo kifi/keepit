@@ -2,7 +2,6 @@ package com.keepit.common.social
 
 import play.api.Play.current
 import java.sql.Connection
-import com.keepit.inject.inject
 import com.keepit.model._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._

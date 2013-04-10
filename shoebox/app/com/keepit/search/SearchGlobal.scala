@@ -24,13 +24,13 @@ object SearchGlobal extends FortyTwoGlobal(Prod) {
   }
 
   def startServices() {
-    require(inject[ArticleIndexerPlugin].enabled)
-    require(inject[URIGraphPlugin].enabled)
-    require(inject[MailSenderPlugin].enabled)
-    inject[MailSenderPlugin].processOutbox()
-    require(inject[HealthcheckPlugin].enabled)
-    require(inject[PersistEventPlugin].enabled)
-    require(inject[FortyTwoCachePlugin].enabled)
+    require(injector.inject[ArticleIndexerPlugin].enabled)
+    require(injector.inject[URIGraphPlugin].enabled)
+    require(injector.inject[MailSenderPlugin].enabled)
+    injector.inject[MailSenderPlugin].processOutbox()
+    require(injector.inject[HealthcheckPlugin].enabled)
+    require(injector.inject[PersistEventPlugin].enabled)
+    require(injector.inject[FortyTwoCachePlugin].enabled)
   }
 
 }

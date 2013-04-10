@@ -20,7 +20,7 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.net.HttpClientImpl
 import com.keepit.common.social.{SocialGraphPluginImpl, SocialGraphPlugin}
 import com.keepit.inject.{FortyTwoModule, AppScoped}
-import com.keepit.model.{UserExperimentRepo, SliderHistoryTracker, SliderHistoryRepo, BrowsingHistoryRepo}
+import com.keepit.model.{UserExperimentRepo, SliderHistoryTracker, SliderHistoryRepo, BrowsingHistoryRepo, ClickHistoryRepo}
 import com.keepit.scraper.ScraperConfig
 import com.keepit.scraper.{HttpFetcherImpl, HttpFetcher}
 import com.keepit.search._
@@ -77,13 +77,13 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def clickHistoryTracker: ClickHistoryTracker = {
+  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker = {
     val conf = current.configuration.getConfig("click-history-tracker").get
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
-    ClickHistoryTracker(filterSize, numHashFuncs, minHits)
+    new ClickHistoryTracker(filterSize, numHashFuncs, minHits, repo, db)
   }
 
   @Singleton
