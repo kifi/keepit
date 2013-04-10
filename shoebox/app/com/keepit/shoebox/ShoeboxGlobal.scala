@@ -27,16 +27,16 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
   }
 
   def startServices() {
-    require(inject[ScraperPlugin].enabled)
-    require(inject[SocialGraphPlugin].enabled)
-    require(inject[SocialGraphRefresher].enabled)
-    require(inject[MailSenderPlugin].enabled)
-    inject[MailSenderPlugin].processOutbox()
-    require(inject[MailToKeepPlugin].enabled)
-    require(inject[HealthcheckPlugin].enabled)
-    require(inject[PersistEventPlugin].enabled)
-    require(inject[ReportBuilderPlugin].enabled)
-    require(inject[DataIntegrityPlugin].enabled)
-    require(inject[FortyTwoCachePlugin].enabled)
+    require(injector.inject[ScraperPlugin].enabled)
+    require(injector.inject[SocialGraphPlugin].enabled)
+    require(injector.inject[SocialGraphRefresher].enabled)
+    require(injector.inject[MailSenderPlugin].enabled)
+    injector.inject[MailSenderPlugin].processOutbox()
+    require(injector.inject[MailToKeepPlugin].enabled)
+    require(injector.inject[HealthcheckPlugin].enabled)
+    require(injector.inject[PersistEventPlugin].enabled)
+    require(injector.inject[ReportBuilderPlugin].enabled)
+    require(injector.inject[DataIntegrityPlugin].enabled)
+    require(injector.inject[FortyTwoCachePlugin].enabled)
   }
 }
