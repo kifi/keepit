@@ -52,8 +52,8 @@ object KeeperInfo2 {
         if (o.following) Some("following" -> JsBoolean(true)) else None,
         if (o.comments.nonEmpty) Some("comments" -> commentWithBasicUserSerializer.writes(o.comments)) else None,
         if (o.threads.nonEmpty) Some("threads" -> threadInfoSerializer.writes(o.threads)) else None,
-        if (o.comments.nonEmpty) Some("lastCommentRead" -> o.lastCommentRead.map(s => Json.toJson(s)).getOrElse(JsNull)) else None,
-        if (o.threads.nonEmpty) Some("lastMessageRead" -> Json.toJson(o.lastMessageRead.map(m => m._1.id -> m._2))) else None)
+        if (o.lastCommentRead.nonEmpty) Some("lastCommentRead" -> Json.toJson(o.lastCommentRead.get)) else None,
+        if (o.lastMessageRead.nonEmpty) Some("lastMessageRead" -> Json.toJson(o.lastMessageRead.map(m => m._1.id -> m._2))) else None)
       .flatten)
   }
 }
@@ -123,7 +123,6 @@ class KeeperInfoLoader @Inject() (
       (socialUsers, sharingUserInfo.keepersEdgeSetSize)
     } getOrElse (Nil, 0)
 
-    // TODO: Populate lastCommentRead and lastMessageRead.
     KeeperInfo2(shown, neverOnSite, keepers, keeps, following, comments, threads, lastCommentRead, lastMessageRead)
   }
 }
