@@ -108,7 +108,7 @@ case class TestModule() extends ScalaModule {
 
   @Provides
   @Singleton
-  def clickHistoryTracker: ClickHistoryTracker = new ClickHistoryTracker(-1, -1, -1)
+  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker = new ClickHistoryTracker(-1, -1, -1, repo, db)
 
   @Provides
   @Singleton

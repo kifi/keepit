@@ -6,7 +6,6 @@ import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.State
 import com.keepit.common.time._
-import com.keepit.inject.inject
 import com.keepit.model._
 
 import play.api.Play.current
