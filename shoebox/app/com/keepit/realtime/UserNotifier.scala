@@ -132,8 +132,6 @@ class UserNotifier @Inject() (
           (message.parent.map(commentRepo.get).getOrElse(message) +: commentRepo.getChildren(conversationId)).reverse
 
       val messageDetails = createMessageDetails(message, thread)
-
-      userNotifyRepo.getWithCommentId(message.userId, conversationId)
       messageDetails.map { case (lastNoticeId, messageDetail) =>
         val user = userRepo.get(messageDetail.recipient.externalId)
         val userNotification = userNotifyRepo.save(UserNotification(
