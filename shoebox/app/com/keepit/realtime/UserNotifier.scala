@@ -126,7 +126,10 @@ class UserNotifier @Inject() (
     db.readWrite { implicit s =>
 
       val conversationId = message.parent.getOrElse(message.id.get)
-      val thread = (message.parent.map(commentRepo.get).getOrElse(message) +: commentRepo.getChildren(conversationId)).reverse
+      val thread = if(message.parent.isEmpty)
+          Seq(message)
+        else
+          (message.parent.map(commentRepo.get).getOrElse(message) +: commentRepo.getChildren(conversationId)).reverse
 
       val messageDetails = createMessageDetails(message, thread)
 
@@ -216,17 +219,15 @@ class UserNotifier @Inject() (
 
     for (userId <- participants - author.id.get) yield {
 
-      val recentAuthors = thread.filter(c => c.userId != userId).map(_.userId).take(5)
+      val recentAuthors = thread.filter(c => c.userId != userId).map(_.userId).distinct.take(5)
       val authors = recentAuthors.map(basicUserRepo.load)
 
       val lastNotifiedMessage = thread.find(c => c.id != message.id && c.userId != userId)
 
-      val lastNotice = (lastNotifiedMessage match {
-        case Some(lastMsg) =>
+      val lastNotice = (lastNotifiedMessage flatMap { lastMsg =>
           userNotifyRepo.getWithCommentId(userId, lastMsg.id.get) map { oldNotice =>
             userNotifyRepo.save(oldNotice.withState(UserNotificationStates.SUBSUMED))
           }
-        case None => None
       })
 
       val recipient = userRepo.get(userId)

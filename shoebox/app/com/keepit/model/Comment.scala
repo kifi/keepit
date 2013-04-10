@@ -56,7 +56,6 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getPublicCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int
   def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
-  def getLastChildId(parentId: Id[Comment])(implicit session: RSession): Id[Comment]
   def getMessagesWithChildrenCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Int
   def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def count(permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit session: RSession): Int
@@ -91,8 +90,7 @@ class CommentRepoImpl @Inject() (
   val commentCountCache: CommentCountUriIdCache,
   val messageWithChildrenCountCache: MessageWithChildrenCountUriIdUserIdCache,
   socialConnectionRepoImpl: SocialConnectionRepoImpl,
-  commentRecipientRepoImpl: CommentRecipientRepoImpl,
-  commentRecipientRepo: CommentRecipientRepo)
+  commentRecipientRepoImpl: CommentRecipientRepoImpl)
     extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
@@ -173,9 +171,6 @@ class CommentRepoImpl @Inject() (
 
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment] =
     (for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b).list
-
-  def getLastChildId(parentId: Id[Comment])(implicit session: RSession) =
-    (for(b <- table if b.parent === parentId) yield b.id).sortBy(_ desc).firstOption.getOrElse(parentId)
 
   def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] = {
     val q1 = for {
