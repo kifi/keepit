@@ -136,7 +136,7 @@ const socketHandlers = {
   },
   last_notify_read_time: function(data) {
     api.log("[socket:last_notify_read_time]", data);
-    lastNotifyRead = new Date(data[0]);
+    lastNotifyRead = new Date(data);
   },
   event: function(data) {
     api.log("[socket:event]", data);
