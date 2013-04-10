@@ -117,7 +117,8 @@ case class TestModule() extends ScalaModule {
 
   @Provides
   @Singleton
-  def browsingHistoryTracker: BrowsingHistoryTracker = new BrowsingHistoryTracker(-1, -1, -1)
+  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database): BrowsingHistoryTracker =
+    new BrowsingHistoryTracker(-1, -1, -1, browsingHistoryRepo, db)
 
   @Provides
   @Singleton
