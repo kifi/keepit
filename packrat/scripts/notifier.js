@@ -26,11 +26,11 @@ var notifier = {
         break;
       case "message":
         KifiNotification.add({
-          title: details.author.firstName + " " + details.author.lastName,
+          title: details.authors[0].firstName + " " + details.authors[0].lastName,
           subtitle: "Sent you a new KiFi Message",
           contentHtml: details.text,
           link: details.title,
-          image: details.author.avatar,
+          image: details.authors[0].avatar,
           sticky: false,
           showForMs: 15000,
           clickAction: function() {
