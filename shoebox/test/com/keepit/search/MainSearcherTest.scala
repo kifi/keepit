@@ -35,9 +35,7 @@ import org.apache.lucene.util.Version
 class MainSearcherTest extends Specification with DbRepos {
 
   val resultClickTracker = ResultClickTracker(8)
-  val browsingHistoryTracker = running(new EmptyApplication()) {
-    new BrowsingHistoryTracker(3067, 2, 1, null, db)
-  }
+
   val clickHistoryTracker = running(new EmptyApplication()) {
     ClickHistoryTracker(307, 2, 1)
   }
@@ -50,7 +48,7 @@ class MainSearcherTest extends Specification with DbRepos {
 
   def initIndexes(store: ArticleStore) = {
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val articleIndexer = new ArticleIndexer(new RAMDirectory, config, store, db, null, null)
+    val articleIndexer = new ArticleIndexer(new RAMDirectory, config, store, db, inject[NormalizedURIRepo], null)
     val uriGraph = new URIGraphImpl(new RAMDirectory, config, URIGraphDecoders.decoders(), bookmarkRepo, db)
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
@@ -59,7 +57,7 @@ class MainSearcherTest extends Specification with DbRepos {
         uriGraph,
         new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
         resultClickTracker,
-        browsingHistoryTracker,
+        new BrowsingHistoryTracker(3067, 2, 1, inject[BrowsingHistoryRepo], inject[Database]),
         clickHistoryTracker,
         inject[FakePersistEventPluginImpl],
         inject[FakeSpellCorrector],
