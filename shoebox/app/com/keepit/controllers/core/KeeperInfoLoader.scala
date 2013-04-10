@@ -15,6 +15,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import org.joda.time.DateTime
 
 case class KeeperInfo1(  // information needed immediately when a page is visited
     kept: Option[String],
@@ -34,7 +35,9 @@ case class KeeperInfo2(  // supplemental information
     keeps: Int,
     following: Boolean,
     comments: Seq[CommentWithBasicUser],
-    threads: Seq[ThreadInfo])
+    threads: Seq[ThreadInfo],
+    lastCommentRead: Option[DateTime],
+    lastMessageRead: Map[ExternalId[Comment], DateTime])  // keys are parent IDs (thread IDs)
 
 object KeeperInfo2 {
   implicit val writesKeeperInfo2 = new Writes[KeeperInfo2] {  // TODO: rewrite fancy
@@ -107,6 +110,7 @@ class KeeperInfoLoader @Inject() (
       }
       (socialUsers, sharingUserInfo.keepersEdgeSetSize)
     } getOrElse (Nil, 0)
-    KeeperInfo2(shown, neverOnSite, keepers, keeps, following, comments, threads)
+    // TODO: Populate lastCommentRead and lastMessageRead.
+    KeeperInfo2(shown, neverOnSite, keepers, keeps, following, comments, threads, None, Map.empty)
   }
 }
