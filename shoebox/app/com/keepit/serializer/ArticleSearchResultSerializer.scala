@@ -10,6 +10,7 @@ import com.keepit.search.ArticleSearchResult
 import com.keepit.search.ArticleHit
 import com.keepit.model.User
 import com.keepit.search.ArticleSearchResultRef
+import org.joda.time.DateTime
 
 class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
 
@@ -24,7 +25,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
         "scorings" -> JsArray(res.scorings map ScoringSerializer.scoringSerializer.writes),
         "filter" -> JsArray(res.filter.map(id => JsNumber(id)).toSeq),
         "uuid" -> JsString(res.uuid.id),
-        "time" -> JsString(res.time.toStandardTimeString),
+        "time" -> Json.toJson(res.time),
         "millisPassed" -> JsNumber(res.millisPassed),
         "pageNumber" -> JsNumber(res.pageNumber),
         "svVariance" ->  JsNumber(res.svVariance)
@@ -63,7 +64,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       scorings = (json \ "scorings").asInstanceOf[JsArray].value map (s => ScoringSerializer.scoringSerializer.reads(s).get),
       filter = (json \ "filter").asOpt[Seq[Long]].map(_.toSet).getOrElse(Set.empty[Long]),
       uuid = ExternalId[ArticleSearchResultRef]((json \ "uuid").as[String]),
-      time = parseStandardTime((json \ "time").as[String]),
+      time = (json \ "time").as[DateTime],
       millisPassed = (json \ "millisPassed").as[Int],
       pageNumber = (json \ "pageNumber").as[Int],
       svVariance = (json \ "svVariance").asOpt[Float].getOrElse(-1.0f)
