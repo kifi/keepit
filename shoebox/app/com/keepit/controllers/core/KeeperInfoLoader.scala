@@ -16,6 +16,7 @@ import scala.concurrent.duration._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import org.joda.time.DateTime
+import com.keepit.common.time._
 
 case class KeeperInfo1(  // information needed immediately when a page is visited
     kept: Option[String],
@@ -40,7 +41,8 @@ case class KeeperInfo2(  // supplemental information
     lastMessageRead: Map[ExternalId[Comment], DateTime])  // keys are parent IDs (thread IDs)
 
 object KeeperInfo2 {
-  implicit val writesKeeperInfo2 = new Writes[KeeperInfo2] {  // TODO: rewrite fancy
+
+  implicit val writesKeeperInfo2 = new Writes[KeeperInfo2] {  // TODO: rewrite fancy :D
     def writes(o: KeeperInfo2): JsValue =
       JsObject(Seq[Option[(String, JsValue)]](
         if (o.shown) Some("shown" -> JsBoolean(true)) else None,
@@ -49,7 +51,9 @@ object KeeperInfo2 {
         if (o.keeps > 0) Some("keeps" -> JsNumber(o.keeps)) else None,
         if (o.following) Some("following" -> JsBoolean(true)) else None,
         if (o.comments.nonEmpty) Some("comments" -> commentWithBasicUserSerializer.writes(o.comments)) else None,
-        if (o.threads.nonEmpty) Some("threads" -> threadInfoSerializer.writes(o.threads)) else None)
+        if (o.threads.nonEmpty) Some("threads" -> threadInfoSerializer.writes(o.threads)) else None,
+        if (o.lastCommentRead.nonEmpty) Some("lastCommentRead" -> Json.toJson(o.lastCommentRead.get)) else None,
+        if (o.lastMessageRead.nonEmpty) Some("lastMessageRead" -> Json.toJson(o.lastMessageRead.map(m => m._1.id -> m._2))) else None)
       .flatten)
   }
 }
@@ -65,6 +69,7 @@ class KeeperInfoLoader @Inject() (
     followRepo: FollowRepo,
     bookmarkRepo: BookmarkRepo,
     commentRepo: CommentRepo,
+    commentReadRepo: CommentReadRepo,
     paneDetails: PaneDetails,
     domainClassifier: DomainClassifier,
     userWithSocialRepo: UserWithSocialRepo,
@@ -84,7 +89,7 @@ class KeeperInfoLoader @Inject() (
   }
 
   def load2(userId: Id[User], normalizedUri: String): KeeperInfo2 = {
-    val (nUri, shown, neverOnSite, following, comments, threads) = db.readOnly { implicit session =>
+    val (nUri, shown, neverOnSite, following, comments, threads, lastCommentRead, lastMessageRead) = db.readOnly { implicit session =>
       val nUri = normalizedURIRepo.getByNormalizedUri(normalizedUri)
       val host: Option[String] = URI.parse(normalizedUri).get.host.map(_.name)
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
@@ -98,9 +103,16 @@ class KeeperInfoLoader @Inject() (
           val following = followRepo.get(userId, uri.id.get).isDefined
           val comments = paneDetails.getComments(uri.id.get)
           val threads = paneDetails.getMessageThreadList(userId, uri.id.get)
-          (nUri, shown, neverOnSite, following, comments, threads)
+          val lastCommentRead = commentReadRepo.getByUserAndUri(userId, uri.id.get).map(_.updatedAt)
+          val lastMessageRead = commentRepo.getMessages(uri.id.get, userId)
+              .map(t =>
+                commentReadRepo.getByUserAndParent(userId, t.id.get)
+                  .map((t.externalId -> _.updatedAt))
+              ).flatten.toMap
+
+          (nUri, shown, neverOnSite, following, comments, threads, lastCommentRead, lastMessageRead)
         case None =>
-          (nUri, false, neverOnSite, false, Nil, Nil)
+          (nUri, false, neverOnSite, false, Nil, Nil, None, Map[ExternalId[Comment], DateTime]())
       }
     }
     val (keepers, keeps) = nUri map { uri =>
@@ -110,7 +122,7 @@ class KeeperInfoLoader @Inject() (
       }
       (socialUsers, sharingUserInfo.keepersEdgeSetSize)
     } getOrElse (Nil, 0)
-    // TODO: Populate lastCommentRead and lastMessageRead.
-    KeeperInfo2(shown, neverOnSite, keepers, keeps, following, comments, threads, None, Map.empty)
+
+    KeeperInfo2(shown, neverOnSite, keepers, keeps, following, comments, threads, lastCommentRead, lastMessageRead)
   }
 }
