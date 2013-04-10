@@ -56,7 +56,7 @@ class UserNotificationRepoImpl @Inject() (
     def category = column[UserNotificationCategory]("category", O.NotNull)
     def details = column[UserNotificationDetails]("details", O.NotNull)
     def commentId = column[Id[Comment]]("comment_id", O.Nullable)
-    def subsumedId = column[Id[UserNotification]]("subsumed", O.Nullable)
+    def subsumedId = column[Id[UserNotification]]("subsumed_id", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ externalId ~ category ~ details ~ commentId.? ~ subsumedId.? ~ state <> (UserNotification, UserNotification.unapply _)
   }
 

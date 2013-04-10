@@ -118,18 +118,23 @@ class UserNotifier @Inject() (
     }
   }
 
-  def message(message: Comment, lastIdOpt: Option[Id[Comment]]) = {
+  def message(message: Comment) = {
     // For now, we will email instantly & push streaming notifications.
     // Soon, we will email only when the user did not get the notification.
     db.readWrite { implicit s =>
 
       val messageDetails = createMessageDetails(message)
 
+      // I would love to avoid this, but simply passing the last message id from the thread (before this comment)
+      // means users can't post two messages in a row. We actually have to get the thread, and check (backwards)
+      // for the first post that isn't by the current author.
       val conversationId = message.parent.getOrElse(message.id.get)
+      val thread = (message.parent.map(commentRepo.get).getOrElse(message) +: commentRepo.getChildren(conversationId)).reverse
+      val lastNotifiedMessage = thread.find(c => c.userId != message.userId)
 
-      val lastNotice = (lastIdOpt match {
-        case Some(lastId) =>
-          userNotifyRepo.getWithCommentId(message.userId, lastId) map { oldNotice =>
+      val lastNotice = (lastNotifiedMessage match {
+        case Some(lastMsg) =>
+          userNotifyRepo.getWithCommentId(message.userId, lastMsg.id.get) map { oldNotice =>
             userNotifyRepo.save(oldNotice.withState(UserNotificationStates.SUBSUMED)).id
           }
         case None => None
