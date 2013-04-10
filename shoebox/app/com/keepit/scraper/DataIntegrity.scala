@@ -11,7 +11,6 @@ import com.keepit.common.time._
 import com.keepit.common.net.URI
 import com.keepit.search.{Article, ArticleStore}
 import com.keepit.model._
-import com.google.inject.Inject
 import org.apache.http.HttpStatus
 import org.joda.time.{DateTime, Seconds}
 import scala.collection.Seq

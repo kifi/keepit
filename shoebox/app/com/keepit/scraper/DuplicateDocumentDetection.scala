@@ -3,15 +3,20 @@ package com.keepit.scraper
 import com.keepit.model._
 import javax.xml.bind.DatatypeConverter._
 import com.keepit.common.logging.Logging
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import play.api.libs.concurrent.Akka
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice}
 import play.api.Play.current
+import com.google.inject.Inject
 
-class DuplicateDocumentDetection extends Logging {
+class DuplicateDocumentDetection @Inject() (
+    db: Database,
+    scrapeInfoRepo: ScrapeInfoRepo,
+    dupeRepo: DuplicateDocumentRepo,
+    postOffice: PostOffice)
+  extends Logging {
 
   // These will be removed when the unscrapeable documents are reprocessed
   val IGNORED_DOCUMENTS: Set[String] = Set(/*
@@ -28,8 +33,8 @@ class DuplicateDocumentDetection extends Logging {
     "4k3jinEqzd67np/61CIsuYfehiUCvjwaL+3feeAe+OyBKmzWX9pOiBmttIu6uSSBVocxwdSxGnc4w6xO8cbPxL2K/lrNxL71Bwq51m4/B5fvhmNIhe81wb1cMO6w/Xo4mq8PA==" // Google docs
   */)
 
-  lazy val documentSignatures = inject[Database].readOnly { implicit session =>
-    inject[ScrapeInfoRepo].allActive.map { s =>
+  lazy val documentSignatures = db.readOnly { implicit session =>
+    scrapeInfoRepo.allActive.map { s =>
       if (IGNORED_DOCUMENTS.contains(s.signature)) None
       else Some((s.uriId, parseBase64Binary(s.signature)))
     }.flatten
@@ -47,13 +52,12 @@ class DuplicateDocumentDetection extends Logging {
     }
   }
 
-  def alreadyDetected(nuriId: Id[NormalizedURI])(implicit session: RSession, dupeRepo: DuplicateDocumentRepo) = {
+  def alreadyDetected(nuriId: Id[NormalizedURI])(implicit session: RSession) = {
     dupeRepo.getSimilarTo(nuriId).filter(_.state != DuplicateDocumentStates.NEW).nonEmpty
   }
 
   def processDocument(currentDoc: (Id[NormalizedURI], Array[Byte]), threshold: Double) = {
-    implicit val dupeRepo = inject[DuplicateDocumentRepo]
-    inject[Database].readOnly { implicit session =>
+    db.readOnly { implicit session =>
       documentSignatures.map { case (otherId, otherSig) =>
         if (currentDoc._1.id >= otherId.id) {
           None
@@ -87,8 +91,7 @@ class DuplicateDocumentDetection extends Logging {
      val docs = findDupeDocuments()
 
      var dupeDocumentsCount = 0
-     val dupeRepo = inject[DuplicateDocumentRepo]
-     inject[Database].readWrite { implicit conn =>
+     db.readWrite { implicit conn =>
        docs.foreach { similarDoc =>
          val id = similarDoc._1
          val similars = similarDoc._2
@@ -105,7 +108,6 @@ class DuplicateDocumentDetection extends Logging {
      val elapsedTimeMs = System.currentTimeMillis - startTime
      val result = "Runtime: %sms, Dupes found: %s. See admin panel for details.".format(elapsedTimeMs, dupeDocumentsCount)
 
-     val postOffice = inject[PostOffice]
      val toAddr = if (play.api.Play.isDev) EmailAddresses.ANDREW else EmailAddresses.ENG
      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = toAddr, subject = "Duplication Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
    }

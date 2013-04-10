@@ -44,7 +44,8 @@ class ScraperController @Inject() (
   deeplinkRepo: DeepLinkRepo,
   commentRepo: CommentRepo,
   bookmarkRepo: BookmarkRepo,
-  orphanCleaner: OrphanCleaner)
+  orphanCleaner: OrphanCleaner,
+  dupeDetect: DuplicateDocumentDetection)
     extends AdminController(actionAuthenticator) {
 
   def scrape = AdminHtmlAction { implicit request =>
@@ -206,9 +207,7 @@ class ScraperController @Inject() (
   }
 
   def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
-    val dupeDetect = new DuplicateDocumentDetection
     dupeDetect.asyncProcessDocuments()
-
     Redirect(com.keepit.controllers.admin.routes.ScraperController.documentIntegrity())
   }
 }

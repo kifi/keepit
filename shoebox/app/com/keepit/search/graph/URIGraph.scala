@@ -79,7 +79,6 @@ class URIGraphImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConf
     log.info("updating URIGraph")
     try {
       var cnt = 0
-
       val usersChanged = inject[Database].readOnly { implicit s =>
         inject[BookmarkRepo].getUsersChanged(sequenceNumber)
       }
