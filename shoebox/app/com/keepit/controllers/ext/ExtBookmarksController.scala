@@ -78,7 +78,9 @@ class ExtBookmarksController @Inject() (
         }
       }
     } match {
-      case Some(bookmark) => Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
+      case Some(bookmark) =>
+        searchClient.updateURIGraph()
+        Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
       case None => NotFound
     }
   }
