@@ -1,6 +1,5 @@
 package com.keepit.common.mail
 
-import play.api.Play.current
 import com.keepit.model.EmailAddress
 import play.api.templates.Html
 import play.api.libs.ws.WS
@@ -13,7 +12,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.inject._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.net.ClientResponse
@@ -64,12 +62,13 @@ private[mail] case class ProcessOutbox(sender: MailSenderPlugin)
 private[mail] case class ProcessMail(mail: ElectronicMail, sender: MailSenderPlugin)
 
 private[mail] class MailSenderActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin)
+    healthcheckPlugin: HealthcheckPlugin,
+    sendgridMailProvider: SendgridMailProvider)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case ProcessOutbox(sender) => sender.processOutbox()
-    case ProcessMail(mail, sender) => inject[SendgridMailProvider].sendMailToSendgrid(mail)
+    case ProcessMail(mail, sender) => sendgridMailProvider.sendMailToSendgrid(mail)
     case unknown => throw new Exception("unknown message: %s".format(unknown))
   }
 }
