@@ -13,7 +13,7 @@ import com.keepit.common.analytics._
 import com.keepit.common.cache.MemcachedCacheModule
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
+import com.keepit.common.healthcheck.{HealthcheckHost, HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{MailSenderPluginImpl, MailSenderPlugin, PostOffice}
 import com.keepit.common.net.HttpClient
@@ -106,8 +106,12 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], postOffice: PostOffice, services: FortyTwoServices): HealthcheckPlugin = {
-    val host = InetAddress.getLocalHost().getHostName()
+  def healthcheckHost(): HealthcheckHost = HealthcheckHost(InetAddress.getLocalHost().getHostName())
+
+  @Provides
+  @AppScoped
+  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], postOffice: PostOffice,
+      services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
     new HealthcheckPluginImpl(actorFactory, services, postOffice, host)
   }
 
