@@ -32,6 +32,8 @@ import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import views.html
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 import com.google.inject.{Inject, Singleton}
 
 @Singleton
@@ -52,26 +54,28 @@ class AdminSocialUserController @Inject() (
   }
 
   def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
-
-    val (socialUserInfo, socialConnections) = db.readOnly { implicit s =>
-      val socialUserInfo = socialUserInfoRepo.get(socialUserId)
-      val socialConnections = socialConnectionRepo.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName)
-
-      (socialUserInfo, socialConnections)
+    Async {
+      for {
+        socialUserInfo <- db.readOnlyAsync { implicit s => socialUserInfoRepo.get(socialUserId) }
+        socialConnections <- db.readOnlyAsync { implicit s => socialConnectionRepo.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName) }
+      } yield {
+        val rawInfo = socialUserRawInfoStore.get(socialUserInfo.id.get)
+        Ok(html.admin.socialUser(socialUserInfo, socialConnections, rawInfo))
+      }
     }
-
-    val rawInfo = socialUserRawInfoStore.get(socialUserInfo.id.get)
-
-    Ok(html.admin.socialUser(socialUserInfo, socialConnections, rawInfo))
   }
 
   def socialUsersView(page: Int) = AdminHtmlAction { implicit request =>
     val PAGE_SIZE = 300
-    val (socialUsers, count) = db.readOnly { implicit s =>
-      (socialUserInfoRepo.page(page, PAGE_SIZE), socialUserInfoRepo.count)
+    Async {
+      for {
+        socialUsers <- db.readOnlyAsync { implicit s => socialUserInfoRepo.page(page, PAGE_SIZE)) }
+        count <- db.readOnlyAsync { implicit s => socialUserInfoRepo.count }
+      } yield {
+        val pageCount = (count / PAGE_SIZE + 1).toInt
+        Ok(html.admin.socialUsers(socialUsers, page, count, pageCount))
+      }
     }
-    val pageCount = (count / PAGE_SIZE + 1).toInt
-    Ok(html.admin.socialUsers(socialUsers, page, count, pageCount))
   }
 
   def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
