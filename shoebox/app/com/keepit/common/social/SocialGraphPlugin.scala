@@ -3,7 +3,6 @@ package com.keepit.common.social
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -14,7 +13,6 @@ import scala.concurrent.Future
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.SchedulingPlugin
@@ -28,7 +26,11 @@ private[social] class SocialGraphActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
     graph: FacebookSocialGraph,
     db: Database,
-    socialRepo: SocialUserInfoRepo)
+    socialRepo: SocialUserInfoRepo,
+    socialUserRawInfoStore: SocialUserRawInfoStore,
+    socialUserImportFriends: SocialUserImportFriends,
+    socialUserImportEmail: SocialUserImportEmail,
+    socialUserCreateConnections: SocialUserCreateConnections)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
@@ -57,12 +59,11 @@ private[social] class SocialGraphActor @Inject() (
         log.info("fetching raw info for %s".format(socialUserInfo))
         val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo)
         log.info("fetched raw info %s for %s".format(rawInfo, socialUserInfo))
-        val store = inject[SocialUserRawInfoStore]
-        store += (socialUserInfo.id.get -> rawInfo)
+        socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
 
-        inject[SocialUserImportFriends].importFriends(rawInfo.jsons)
-        val connections = inject[SocialUserCreateConnections].createConnections(socialUserInfo, rawInfo.jsons)
-        inject[SocialUserImportEmail].importEmail(socialUserInfo.userId.get, rawInfo.jsons)
+        socialUserImportFriends.importFriends(rawInfo.jsons)
+        val connections = socialUserCreateConnections.createConnections(socialUserInfo, rawInfo.jsons)
+        socialUserImportEmail.importEmail(socialUserInfo.userId.get, rawInfo.jsons)
         db.readWrite { implicit c =>
           socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }
