@@ -1,8 +1,6 @@
 package com.keepit.model
 
-import play.api.Play.current
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -94,7 +92,7 @@ class CommentReadRepoImpl @Inject() (
   }
 
   def hasUnreadComments(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
-    val lastCommentIdOpt = inject[CommentRepo].getLastPublicIdByConnection(userId, uriId)
+    val lastCommentIdOpt = commentRepo.getLastPublicIdByConnection(userId, uriId)
     lastCommentIdOpt match {
       case Some(lastCommentId) =>
         getByUserAndUri(userId, uriId) match {
