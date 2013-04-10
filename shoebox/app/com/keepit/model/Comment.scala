@@ -58,7 +58,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getPublicCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int
   def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
-  def getLastChildId(parentId: Id[Comment])(implicit session: RSession)
+  def getLastChildId(parentId: Id[Comment])(implicit session: RSession): Id[Comment]
   def getMessagesWithChildrenCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Int
   def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def count(permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit session: RSession): Int

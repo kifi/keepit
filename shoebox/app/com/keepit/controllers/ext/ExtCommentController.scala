@@ -82,7 +82,7 @@ class ExtCommentController @Inject() (
       (o \ "parent") match { case JsString(s) => s; case _ => ""})
 
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
-    val comment = db.readWrite {implicit s =>
+    val (comment, lastId) = db.readWrite {implicit s =>
       val userId = request.userId
       val uri = normalizedURIRepo.save(normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
 
@@ -94,10 +94,8 @@ class ExtCommentController @Inject() (
       val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
 
       permissions.toLowerCase match {
-        case "private" =>
-          commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PRIVATE, parent = parentIdOpt))
         case "message" =>
-          val lastMessageIdInConvo = parentIdOpt.map { commentRepo.getLastChildId }
+          val lastMessageIdInConvo: Option[Id[Comment]] = parentIdOpt.map(commentRepo.getLastChildId)
           val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
           createRecipients(newComment.id.get, recipients, parentIdOpt)
 
@@ -125,7 +123,7 @@ class ExtCommentController @Inject() (
     }
 
     future {
-      notifyRecipients(comment)
+      notifyRecipients(comment, lastId)
     } onFailure { case e =>
       log.error("Could not persist emails for comment %s".format(comment.id.get), e)
     }
@@ -257,12 +255,12 @@ class ExtCommentController @Inject() (
   private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit session: RSession) =
     commentRepo.getMessages(normalizedURI.id.get, userId)
 
-  private[controllers] def notifyRecipients(comment: Comment): Unit = {
+  private[controllers] def notifyRecipients(comment: Comment, lastId: Option[Id[Comment]]): Unit = {
     comment.permissions match {
       case CommentPermissions.PUBLIC =>
         userNotifier.comment(comment)
       case CommentPermissions.MESSAGE =>
-        userNotifier.message(comment)
+        userNotifier.message(comment, lastId)
       case unsupported =>
         log.error("unsupported comment type for email %s".format(unsupported))
     }

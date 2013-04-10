@@ -20,7 +20,7 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging._
 import com.keepit.common.net.URINormalizer
-import com.keepit.common.db.State
+import com.keepit.common.db.{State, Id}
 
 
 case class CommentDetails(
@@ -106,7 +106,8 @@ class UserNotifier @Inject() (
           userId = user.id.get,
           category = UserNotificationCategories.COMMENT,
           details = UserNotificationDetails(Json.toJson(commentDetail)),
-          commentId = comment.id
+          commentId = comment.id,
+          subsumedId = None
         ))
 
         notificationBroadcast.push(userNotification)
@@ -117,7 +118,7 @@ class UserNotifier @Inject() (
     }
   }
 
-  def message(message: Comment /* Can't wait for this to change! */) = {
+  def message(message: Comment, lastIdOpt: Option[Id[Comment]]) = {
     // For now, we will email instantly & push streaming notifications.
     // Soon, we will email only when the user did not get the notification.
     db.readWrite { implicit s =>
@@ -126,18 +127,15 @@ class UserNotifier @Inject() (
 
       val conversationId = message.parent.getOrElse(message.id.get)
 
-      // If not parent:
-
-      // This isn't scalable long term, but is currently the *only* way we have to get the previous message.
-      //
-      val lastMessageInConversation = commentRepo
-
+      val lastNotice = (lastIdOpt match {
+        case Some(lastId) =>
+          userNotifyRepo.getWithCommentId(message.userId, lastId) map { oldNotice =>
+            userNotifyRepo.save(oldNotice.withState(UserNotificationStates.SUBSUMED)).id
+          }
+        case None => None
+      }).flatten
 
       userNotifyRepo.getWithCommentId(message.userId, conversationId)
-
-      commentRecipientRepo.getByComment(id)
-
-
 
       messageDetails.map { messageDetail =>
         val user = userRepo.get(messageDetail.recipient.externalId)
@@ -145,14 +143,12 @@ class UserNotifier @Inject() (
           userId = user.id.get,
           category = UserNotificationCategories.MESSAGE,
           details = UserNotificationDetails(Json.toJson(messageDetail)),
-          commentId = message.id
+          commentId = message.id,
+          subsumedId = lastNotice
         ))
 
-        log.info("User notification created: " + userNotification)
         notificationBroadcast.push(userNotification)
-        log.info("User notification pushed: " + userNotification)
         notifyMessageByEmail(user, messageDetail)
-        log.info("User notification emailed: " + userNotification)
 
         userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
       }
