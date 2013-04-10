@@ -1,30 +1,29 @@
 package com.keepit.dev
 
-import akka.actor.ActorSystem
+import java.io.File
 import com.google.common.io.Files
-import com.google.inject.Provides
-import com.google.inject.Singleton
+import com.google.inject.{Provides, Singleton}
 import com.keepit.classify.DomainTagImportSettings
-import com.keepit.common.actor.{ActorPlugin, ActorFactory}
+import com.keepit.common.actor.{ActorFactory, ActorPlugin}
 import com.keepit.common.analytics._
 import com.keepit.common.cache._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
-import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.inject._
-import com.keepit.model.{EmailAddressRepo, UserRepo, PhraseRepo}
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.index.ArticleIndexer
+import com.keepit.model.{PhraseRepo, BookmarkRepo}
+import com.keepit.search.{ArticleStore, ResultClickTracker}
+import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphDecoders}
+import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
 import com.keepit.search.phrasedetector.PhraseIndexer
-import com.keepit.search.{ResultClickTracker, ArticleStore}
+import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
 import com.mongodb.casbah.MongoConnection
 import com.tzavellas.sse.guice.ScalaModule
-import java.io.File
-import org.apache.lucene.store.{RAMDirectory, MMapDirectory, Directory}
 import play.api.Play.current
-import com.keepit.search.query.parser.SpellCorrector
-import com.keepit.search.query.parser.FakeSpellCorrector
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
+import org.apache.lucene.util.Version
+
 
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {}
@@ -114,10 +113,12 @@ class SearchDevModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def uriGraph: URIGraph = {
+  def uriGraph(bookmarkRepo: BookmarkRepo,
+    db: Database): URIGraph = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
-    URIGraph(dir)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new URIGraphImpl(dir, config, URIGraphDecoders.decoders(), bookmarkRepo, db)
   }
 
   @Singleton

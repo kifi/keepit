@@ -26,6 +26,10 @@ import org.apache.lucene.util.Version
 import com.keepit.common.analytics.FakePersistEventPluginImpl
 import com.keepit.search.query.parser.FakeSpellCorrector
 import com.keepit.common.controller.FortyTwoServices
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
+import org.apache.lucene.util.Version
+import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphDecoders}
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -45,7 +49,8 @@ class MainSearcherTest extends Specification with DbRepos {
 
   def initIndexes(store: ArticleStore) = {
     val articleIndexer = ArticleIndexer(new RAMDirectory, store)
-    val uriGraph = URIGraph(new RAMDirectory)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val uriGraph = new URIGraphImpl(new RAMDirectory, config, URIGraphDecoders.decoders(), bookmarkRepo, db)
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
     val mainSearcherFactory = new MainSearcherFactory(

@@ -3,7 +3,7 @@ package com.keepit.search.graph
 import com.keepit.common.db.Id
 import com.keepit.model.{NormalizedURI, User}
 import com.keepit.search.graph.EdgeSetUtil._
-import com.keepit.search.graph.URIGraph._
+import com.keepit.search.graph.URIGraphDecoders._
 import com.keepit.search.index.ArrayIdMapper
 import com.keepit.search.index.CachingIndexReader
 import com.keepit.search.index.IdMapper
@@ -113,7 +113,7 @@ class URIGraphSearcher(searcher: Searcher) {
     var uriList: Option[URIList] = None
 
     if (userDocId >= 0) {
-      var docValues = reader.getBinaryDocValues(URIGraph.userField)
+      var docValues = reader.getBinaryDocValues(URIGraphDecoders.userField)
       var ref = new BytesRef()
       if (docValues != null) {
         docValues.get(userDocId, ref)
