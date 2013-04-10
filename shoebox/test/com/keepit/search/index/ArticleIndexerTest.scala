@@ -29,7 +29,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
     val uriIdArray = new Array[Long](3)
     val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()))
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    var indexer = new ArticleIndexer(ramDir, config, store, db, null, null)
+    var indexer = new ArticleIndexer(ramDir, config, store, db, uriRepo, null)
 
     var (uri1, uri2, uri3) = db.readWrite { implicit s =>
       val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
@@ -110,7 +110,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       indexer.sequenceNumber.value === currentSeqNum
       indexer.numDocs === 3
 
-      indexer = new ArticleIndexer(new RAMDirectory, config, store, db, null, null)
+      indexer = new ArticleIndexer(ramDir, config, store, db, uriRepo, null)
       indexer.sequenceNumber.value === currentSeqNum
     })
 
