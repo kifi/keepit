@@ -35,7 +35,7 @@ case class CommentDetails(
   createdAt: DateTime,
   newCount: Int,
   totalCount: Int,
-  subsumes: Option[String]
+  subsumes: Option[String] // Option[ExternalId[UserNotification]]
 )
 
 case class MessageDetails(
@@ -50,7 +50,7 @@ case class MessageDetails(
   hasParent: Boolean,
   newCount: Int,
   totalCount: Int,
-  subsumes: Option[String]
+  subsumes: Option[String] // Option[ExternalId[UserNotification]]
 )
 
 case class SendableNotification(
@@ -132,10 +132,10 @@ class UserNotifier @Inject() (
           (message.parent.map(commentRepo.get).getOrElse(message) +: commentRepo.getChildren(conversationId)).reverse
 
       val messageDetails = createMessageDetails(message, thread)
-      messageDetails.map { case (lastNoticeId, messageDetail) =>
-        val user = userRepo.get(messageDetail.recipient.externalId)
+      messageDetails.map { case (userId, (lastNoticeId, messageDetail)) =>
+        val user = userRepo.get(userId)
         val userNotification = userNotifyRepo.save(UserNotification(
-          userId = user.id.get,
+          userId = userId,
           category = UserNotificationCategories.MESSAGE,
           details = UserNotificationDetails(Json.toJson(messageDetail)),
           commentId = message.id,
@@ -207,7 +207,7 @@ class UserNotifier @Inject() (
     }
   }
 
-  private def createMessageDetails(message: Comment, thread: Seq[Comment])(implicit session: RWSession): Set[(Option[Id[UserNotification]], MessageDetails)] = {
+  private def createMessageDetails(message: Comment, thread: Seq[Comment])(implicit session: RWSession): Map[Id[User], (Option[Id[UserNotification]], MessageDetails)] = {
     implicit val bus = BasicUserSerializer.basicUserSerializer
 
     val author = userRepo.get(message.userId)
@@ -215,7 +215,7 @@ class UserNotifier @Inject() (
     val participants = commentRepo.getParticipantsUserIds(message.id.get)
     val parent = message.parent.map(commentRepo.get).getOrElse(message)
 
-    for (userId <- participants - author.id.get) yield {
+    val generatedSet = for (userId <- participants - author.id.get) yield {
 
       val recentAuthors = thread.filter(c => c.userId != userId).map(_.userId).distinct.take(5)
       val authors = recentAuthors.map(basicUserRepo.load)
@@ -235,7 +235,7 @@ class UserNotifier @Inject() (
           uriId = Some(message.uriId),
           urlId = message.urlId,
           deepLocator = DeepLocator.ofMessageThread(parent)))
-      (lastNotice.map(_.id.get) -> new MessageDetails(
+      (userId, (lastNotice.map(_.id.get) -> new MessageDetails(
         message.externalId.id,
         authors,
         basicUserRepo.load(userId),
@@ -248,8 +248,10 @@ class UserNotifier @Inject() (
         1,
         thread.size,
         lastNotice.map(_.externalId.id)
-      ))
+      )))
     }
+
+    generatedSet.toMap
   }
 
 
