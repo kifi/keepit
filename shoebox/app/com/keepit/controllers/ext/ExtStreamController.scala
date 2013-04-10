@@ -163,11 +163,8 @@ class ExtStreamController @Inject() (
           (iteratee, enumerator)
 
         case None =>
-          log.info(s"Anonymous user trying to connect. Disconnecting!")
-          val enumerator: Enumerator[JsArray] = Enumerator(Json.arr("error", "Permission denied. Are you logged in? Connect again to re-authenticate."))
-          val iteratee = Iteratee.ignore[JsArray]
-
-          (iteratee, enumerator >>> Enumerator.eof)
+          log.info("Disconnecting anonymous user")
+          (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
       }
     }
   }
