@@ -18,6 +18,8 @@ import org.apache.lucene.store.RAMDirectory
 import org.specs2.specification.Scope
 import play.api.test.Helpers._
 import scala.collection.JavaConversions._
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.util.Version
 
 class ArticleIndexerTest extends Specification with DbRepos {
 
@@ -26,7 +28,8 @@ class ArticleIndexerTest extends Specification with DbRepos {
     val store = new FakeArticleStore()
     val uriIdArray = new Array[Long](3)
     val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()))
-    var indexer = ArticleIndexer(ramDir, store)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    var indexer = new ArticleIndexer(ramDir, config, store, db, null, null)
 
     var (uri1, uri2, uri3) = db.readWrite { implicit s =>
       val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
@@ -107,7 +110,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       indexer.sequenceNumber.value === currentSeqNum
       indexer.numDocs === 3
 
-      indexer = ArticleIndexer(ramDir, store)
+      indexer = new ArticleIndexer(new RAMDirectory, config, store, db, null, null)
       indexer.sequenceNumber.value === currentSeqNum
     })
 
