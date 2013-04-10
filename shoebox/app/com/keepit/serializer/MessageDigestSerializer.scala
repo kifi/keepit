@@ -7,19 +7,19 @@ import play.api.libs.json._
 import com.keepit.common.social.CommentWithBasicUser
 import com.keepit.common.db.State
 import com.keepit.common.social.ThreadInfo
+import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 
 class ThreadInfoSerializer extends Writes[ThreadInfo] {
-
-  def writes(ThreadInfo: ThreadInfo): JsValue =
-    JsObject(List(
-      "externalId" -> JsString(ThreadInfo.externalId.toString),
-      "recipients" -> JsArray(ThreadInfo.recipients map (r => BasicUserSerializer.basicUserSerializer.writes(r))),
-      "digest" -> JsString(ThreadInfo.digest),
-      "messageCount" -> JsNumber(ThreadInfo.messageCount),
-      "hasAttachments" -> JsBoolean(ThreadInfo.hasAttachments),
-      "createdAt" -> JsString(ThreadInfo.createdAt.toString),
-      "lastCommentedAt" -> JsString(ThreadInfo.lastCommentedAt.toString)
-    ))
+  def writes(o: ThreadInfo): JsValue =
+    Json.obj(
+      "id" -> o.externalId.id,
+      "externalId" -> o.externalId.id,  // TODO: deprecate, eliminate
+      "recipients" -> o.recipients,
+      "digest" -> o.digest,
+      "messageCount" -> o.messageCount,
+      "hasAttachments" -> o.hasAttachments,
+      "createdAt" -> o.createdAt,
+      "lastCommentedAt" -> o.lastCommentedAt)
 
   def writes (comments: Seq[ThreadInfo]): JsValue = JsArray(comments map writes)
 

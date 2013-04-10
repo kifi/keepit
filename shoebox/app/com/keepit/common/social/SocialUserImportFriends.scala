@@ -16,10 +16,8 @@ import scala.concurrent.Await
 import play.api.libs.concurrent._
 import org.joda.time.DateTime
 import akka.dispatch.Future
-import com.google.inject.Inject
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import play.api.Play
@@ -29,21 +27,22 @@ import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
 import play.api.libs.json.JsValue
 import java.sql.Connection
 import com.keepit.common.logging.Logging
+import com.google.inject.Inject
 
-
-class SocialUserImportFriends() extends Logging {
+class SocialUserImportFriends @Inject() (
+    db: Database,
+    repo: SocialUserInfoRepo,
+    store: SocialUserRawInfoStore) extends Logging {
 
   def importFriends(parentJsons: Seq[JsValue]): Seq[SocialUserRawInfo] = parentJsons map importFriendsFromJson flatten
 
   private def importFriendsFromJson(parentJson: JsValue): Seq[SocialUserRawInfo] = {
-    val repo = inject[SocialUserInfoRepo]
     val socialUserInfos = extractFriends(parentJson) filter infoNotInDb map createSocialUserInfo map { t =>
-      (inject[Database].readWrite {implicit s => repo.save(t._1)}, t._2)
+      (db.readWrite {implicit s => repo.save(t._1)}, t._2)
     }
 
     val socialUserRawInfos = socialUserInfos map { case (info, friend) => createSocialUserRawInfo(info, friend) }
 
-    val store = inject[SocialUserRawInfoStore]
     socialUserRawInfos map { info =>
       log.info("Adding user %s (%s) to S3".format(info.fullName, info.socialUserInfoId.get))
       if (!Play.isDev) {
@@ -64,8 +63,8 @@ class SocialUserImportFriends() extends Logging {
         log.error("Can't parse username from friend json %s".format(friend))
         throw e
     }
-    inject[Database].readOnly {implicit s =>
-      inject[SocialUserInfoRepo].getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here
+    db.readOnly {implicit s =>
+      repo.getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here
     }
   }
 

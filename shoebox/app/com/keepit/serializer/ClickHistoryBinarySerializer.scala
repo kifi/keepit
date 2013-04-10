@@ -11,7 +11,7 @@ import play.api.libs.json.JsNumber
 import com.keepit.common.db._
 import com.keepit.model.User
 import com.keepit.common.logging.Logging
-
+import org.joda.time.DateTime
 
 class ClickHistoryBinarySerializer extends BinaryFormat with Logging {
 
@@ -35,8 +35,8 @@ class ClickHistoryBinarySerializer extends BinaryFormat with Logging {
   def historyJsonWrites(history: ClickHistory): JsObject =
     JsObject(List(
       "id"  -> history.id.map(u => JsNumber(u.id)).getOrElse(JsNull),
-      "createdAt" -> JsString(history.createdAt.toStandardTimeString),
-      "updatedAt" -> JsString(history.updatedAt.toStandardTimeString),
+      "createdAt" -> Json.toJson(history.createdAt),
+      "updatedAt" -> Json.toJson(history.updatedAt),
       "state" -> JsString(history.state.value),
       "userId"  -> JsNumber(history.userId.id),
       "tableSize" -> JsNumber(history.tableSize),
@@ -71,8 +71,8 @@ class ClickHistoryBinarySerializer extends BinaryFormat with Logging {
   def historyJsonReads(json: JsValue): ClickHistory =
     ClickHistory(
       id = (json \ "id").asOpt[Long].map(Id[ClickHistory](_)),
-      createdAt = parseStandardTime((json \ "createdAt").as[String]),
-      updatedAt = parseStandardTime((json \ "updatedAt").as[String]),
+      createdAt = (json \ "createdAt").as[DateTime],
+      updatedAt = (json \ "updatedAt").as[DateTime],
       state = State[ClickHistory]((json \ "state").as[String]),
       userId = Id[User]((json \ "userId").as[Long]),
       tableSize = (json \ "tableSize").as[Int],

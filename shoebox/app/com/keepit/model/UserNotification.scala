@@ -40,6 +40,7 @@ trait UserNotificationRepo extends Repo[UserNotification] with ExternalIdColumnF
   def getWithCommentId(userId: Id[User], commentId: Id[Comment])(implicit session: RSession): Option[UserNotification]
   def getUnreadCount(userId: Id[User])(implicit session: RSession): Int
   def getLastReadTime(userId: Id[User])(implicit session: RSession): DateTime
+  def setLastReadTime(userId: Id[User])(implicit session: RWSession): DateTime
 }
 
 @Singleton
@@ -65,6 +66,9 @@ class UserNotificationRepoImpl @Inject() (
       .sortBy(_.id desc)
       .take(howMany).list
   }
+
+  def setLastReadTime(userId: Id[User])(implicit session: RWSession): DateTime =
+    parseStandardTime(userValueRepo.setValue(userId, "notificationLastRead", clock.now.toStandardTimeString))
 
   def getLastReadTime(userId: Id[User])(implicit session: RSession): DateTime =
     userValueRepo.getValue(userId, "notificationLastRead").map(parseStandardTime).getOrElse(START_OF_TIME)

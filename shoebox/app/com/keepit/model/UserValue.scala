@@ -38,6 +38,7 @@ case class UserValue(
 @ImplementedBy(classOf[UserValueRepoImpl])
 trait UserValueRepo extends Repo[UserValue] {
   def getValue(userId: Id[User], key: String)(implicit session: RSession): Option[String]
+  def setValue(userId: Id[User], name: String, value: String)(implicit session: RWSession): String
 }
 
 case class UserValueKey(userId: Id[User], key: String) extends Key[String] {
@@ -89,6 +90,14 @@ class UserValueRepoImpl @Inject() (
     valueCache.getOrElseOpt(UserValueKey(userId, name)) {
       (for(f <- table if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === name) yield f.value).firstOption.map(_.value)
     }
+  }
+
+  def setValue(userId: Id[User], name: String, value: String)(implicit session: RWSession): String = {
+    (for (v <- table if v.userId === userId && v.name === name) yield v).firstOption.map { v =>
+      save(v.copy(value = value))
+    }.getOrElse {
+      save(UserValue(userId = userId, name = name, value = value))
+    }.value
   }
 
 }

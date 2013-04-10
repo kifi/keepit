@@ -1,8 +1,6 @@
 package com.keepit.model
 
-import play.api.Play.current
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -50,8 +48,7 @@ case class DeepLink(
   def withId(id: Id[DeepLink]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
-  lazy val baseUrl = inject[FortyTwoServices].baseUrl
-  lazy val url = "%s/r/%s".format(baseUrl,token.value)
+  def url(implicit fortyTwoServices: FortyTwoServices) = "%s/r/%s".format(fortyTwoServices.baseUrl, token.value)
 
   def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
 

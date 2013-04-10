@@ -1,7 +1,6 @@
 package com.keepit.common.social
 
-import play.api.Play.current
-import com.keepit.inject._
+import com.google.inject.Inject
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -16,7 +15,11 @@ import play.api.libs.iteratee._
 import play.api.libs.concurrent._
 import scala.concurrent.duration._
 
-class SocialUserCreateConnections() extends Logging {
+class SocialUserCreateConnections @Inject() (
+    db: Database,
+    socialRepo: SocialUserInfoRepo,
+    connectionRepo: SocialConnectionRepo)
+  extends Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
 	  disableConnectionsNotInJson(socialUserInfo, parentJson)
@@ -29,9 +32,7 @@ class SocialUserCreateConnections() extends Logging {
 
     implicit val timeout = BabysitterTimeout(30 seconds, 2 minutes)
 
-    inject[Database].readWrite { implicit s =>
-      val socialRepo = inject[SocialUserInfoRepo]
-      val connectionRepo = inject[SocialConnectionRepo]
+    db.readWrite { implicit s =>
       parentJson flatMap extractFriends map extractSocialId map { socialRepo.get(_, SocialNetworks.FACEBOOK)
       } map { sui =>
         connectionRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get) match {
@@ -57,10 +58,8 @@ class SocialUserCreateConnections() extends Logging {
 
   def disableConnectionsNotInJson(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
     log.info("looking for connections to disable for user %s".format(socialUserInfo.fullName))
-    inject[Database].readWrite { implicit s =>
-      val socialRepo = inject[SocialUserInfoRepo]
-      val connectionRepo = inject[SocialConnectionRepo]
-	    val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends map extractSocialId
+    db.readWrite { implicit s =>
+      val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends map extractSocialId
 	    val existingSocialUserInfoIds = connectionRepo.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
 	    log.debug("socialUserInfoForAllFriendsIds = %s".format(socialUserInfoForAllFriendsIds))
 	    log.debug("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
