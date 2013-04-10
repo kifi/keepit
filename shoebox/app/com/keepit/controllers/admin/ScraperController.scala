@@ -43,7 +43,8 @@ class ScraperController @Inject() (
   followRepo: FollowRepo,
   deeplinkRepo: DeepLinkRepo,
   commentRepo: CommentRepo,
-  bookmarkRepo: BookmarkRepo)
+  bookmarkRepo: BookmarkRepo,
+  orphanCleaner: OrphanCleaner)
     extends AdminController(actionAuthenticator) {
 
   def scrape = AdminHtmlAction { implicit request =>
@@ -108,7 +109,6 @@ class ScraperController @Inject() (
   }
 
   def orphanCleanup() = AdminHtmlAction { implicit request =>
-    val orphanCleaner = new OrphanCleaner
     Akka.future {
       db.readWrite { implicit session =>
         orphanCleaner.cleanNormalizedURIs(false)
