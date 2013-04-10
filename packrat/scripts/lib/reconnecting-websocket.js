@@ -1,6 +1,6 @@
 function ReconnectingWebSocket(url, onmessage) {
-  var ws, self = this, buffer = [], closed;
-  const wordRe = /\w+/;
+  const wordRe = /\w+/, minRetryConnectDelayMs = 300, maxRetryConnectDelayMs = 5000;
+  var ws, self = this, buffer = [], closed, retryConnectDelayMs = minRetryConnectDelayMs;
 
   connect();
 
@@ -43,7 +43,9 @@ function ReconnectingWebSocket(url, onmessage) {
       clearTimeout(t);
       ws = null;
       if (!closed) {
-        connect();
+        api.log("#0bf", "[RWS.onclose] will reconnect in %i ms", retryConnectDelayMs);
+        t = setTimeout(connect, retryConnectDelayMs);
+        retryConnectDelayMs = Math.min(maxRetryConnectDelayMs, retryConnectDelayMs * 1.5);
       }
     };
 
@@ -52,6 +54,7 @@ function ReconnectingWebSocket(url, onmessage) {
 
   function onConnectTimeout(ws) {
     api.log("#0bf", "[RWS.onConnectTimeout]");
+    ws.onerror = function() {};
     ws.close();
   }
 }
