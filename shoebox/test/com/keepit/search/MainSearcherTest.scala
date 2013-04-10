@@ -36,7 +36,7 @@ class MainSearcherTest extends Specification with DbRepos {
 
   val resultClickTracker = ResultClickTracker(8)
   val browsingHistoryTracker = running(new EmptyApplication()) {
-    BrowsingHistoryTracker(3067, 2, 1)
+    new BrowsingHistoryTracker(3067, 2, 1, null, db)
   }
   val clickHistoryTracker = running(new EmptyApplication()) {
     ClickHistoryTracker(307, 2, 1)
