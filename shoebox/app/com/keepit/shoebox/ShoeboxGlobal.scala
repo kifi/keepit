@@ -8,25 +8,25 @@ import com.keepit.common.healthcheck._
 import com.keepit.common.mail.{MailToKeepPlugin, MailSenderPlugin}
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialGraphRefresher
-import com.keepit.inject._
 import com.keepit.module.CommonModule
 import com.keepit.scraper._
 import play.api.Mode._
-import play.api.Play.current
 import play.api._
 
-object ShoeboxGlobal extends FortyTwoGlobal(Prod) {
+object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
   val modules = Seq(new CommonModule, new ShoeboxModule)
 
   override def onStart(app: Application): Unit = {
     log.info("starting the shoebox")
-    startServices()
+    startShoeboxServices()
     super.onStart(app)
     log.info("shoebox started")
   }
+}
 
-  def startServices() {
+trait ShoeboxServices { self: FortyTwoGlobal =>
+  def startShoeboxServices() {
     require(injector.inject[ScraperPlugin].enabled)
     require(injector.inject[SocialGraphPlugin].enabled)
     require(injector.inject[SocialGraphRefresher].enabled)
