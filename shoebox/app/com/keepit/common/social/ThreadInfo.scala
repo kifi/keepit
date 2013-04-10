@@ -12,7 +12,6 @@ case class ThreadInfo(externalId: ExternalId[Comment], recipients: Seq[BasicUser
 
 class ThreadInfoRepo @Inject() (
     commentRecipientRepo: CommentRecipientRepo,
-    commentReadRepo: CommentReadRepo,
     commentRepo: CommentRepo,
     userRepo: UserRepo,
     basicUserRepo: BasicUserRepo) extends Logging {
