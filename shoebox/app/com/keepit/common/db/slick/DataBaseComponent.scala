@@ -11,6 +11,8 @@ import com.keepit.common.logging.Logging
 import scala.util.Failure
 import scala.util.Success
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
+import akka.actor.ActorSystem
+import scala.concurrent._
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
@@ -23,9 +25,18 @@ trait DataBaseComponent {
   def entityName(name: String): String = name
 }
 
-class Database @Inject() (val db: DataBaseComponent) extends Logging {
+class Database @Inject() (
+    val db: DataBaseComponent,
+    val system: ActorSystem
+  ) extends Logging {
 
   import DBSession._
+
+  implicit val executionContext = system.dispatchers.lookup("db-thread-pool-dispatcher")
+
+  def readOnlyAsync[T](f: ROSession => T): Future[T] = future { readOnly(f) }
+  def readWriteAsync[T](f: RWSession => T): Future[T] = future { readWrite(f) }
+  def readWriteAsync[T](attempts: Int)(f: RWSession => T): Future[T] = future { readWrite(attempts)(f) }
 
   def readOnly[T](f: ROSession => T): T = {
     val s = db.handle.createSession.forParameters(rsConcurrency = ResultSetConcurrency.ReadOnly)
