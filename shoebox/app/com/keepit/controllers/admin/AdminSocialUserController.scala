@@ -69,7 +69,7 @@ class AdminSocialUserController @Inject() (
     val PAGE_SIZE = 300
     Async {
       for {
-        socialUsers <- db.readOnlyAsync { implicit s => socialUserInfoRepo.page(page, PAGE_SIZE)) }
+        socialUsers <- db.readOnlyAsync { implicit s => socialUserInfoRepo.page(page, PAGE_SIZE) }
         count <- db.readOnlyAsync { implicit s => socialUserInfoRepo.count }
       } yield {
         val pageCount = (count / PAGE_SIZE + 1).toInt
