@@ -54,6 +54,7 @@ function ReconnectingWebSocket(url, onmessage) {
 
   function onConnectTimeout(ws) {
     api.log("#0bf", "[RWS.onConnectTimeout]");
+    ws.onerror = function() {};
     ws.close();
   }
 }
