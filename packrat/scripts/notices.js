@@ -32,12 +32,13 @@ function renderNotices($container, isAdmin) {
 function getRenderedNotices(notices, $notifyPane, callback) {
   var renderedNotices = [];
   var done = 0;
-  $.each(notices, function (i, notice) {
+  $.each(notices, function (i, notice) { 
     if (~NOTICE_TYPES.indexOf(notice.category)) {
       render("html/metro/notice_" + notice.category + ".html", $.extend({
         formatMessage: getSnippetFormatter,
         formatLocalDate: getLocalDateFormatter,
-        formatIsoDate: getIsoDateFormatter
+        formatIsoDate: getIsoDateFormatter,
+        author: notice.details.authors[0]
       }, notice), function (html) {
         renderedNotices[i] = html;
         if (++done == notices.length) {
