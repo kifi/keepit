@@ -92,7 +92,7 @@ class CommentRepoImpl @Inject() (
   val messageWithChildrenCountCache: MessageWithChildrenCountUriIdUserIdCache,
   socialConnectionRepoImpl: SocialConnectionRepoImpl,
   commentRecipientRepoImpl: CommentRecipientRepoImpl,
-  commentRecipientRepo: CommentRecipientRep)
+  commentRecipientRepo: CommentRecipientRepo)
     extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query

@@ -1,11 +1,11 @@
-@(sender: User, recipient: User, url: String, pageTitle: String, text: String, isParent: Boolean)
+@(sender: User, recipient: User, url: String, pageTitle: String, text: String, hasParent: Boolean)
 
 <div style="color:#333;font:13px 'Helvetica Neue',Helvetica,Arial,sans-serif">
 Hi @recipient.firstName,
 
 <p>
 @sender.firstName @sender.lastName
-@if(isParent) {
+@if(hasParent) {
   replied in a private conversation with you at:
 } else {
   left you a private message at:

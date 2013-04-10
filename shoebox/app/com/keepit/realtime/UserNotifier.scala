@@ -40,14 +40,14 @@ case class CommentDetails(
 
 case class MessageDetails(
   id: String,
-  author: BasicUser,
+  authors: Seq[BasicUser],
   recipient: BasicUser,
   url: Option[String],
   page: Option[String],
   title: Option[String],
   text: String,
   createdAt: DateTime,
-  isParent: Boolean,
+  hasParent: Boolean,
   newCount: Int,
   totalCount: Int,
   subsumes: Option[String]
@@ -125,26 +125,29 @@ class UserNotifier @Inject() (
     // Soon, we will email only when the user did not get the notification.
     db.readWrite { implicit s =>
 
-      val messageDetails = createMessageDetails(message)
-
-      // I would love to avoid this, but simply passing the last message id from the thread (before this comment)
+            // I would love to avoid this, but simply passing the last message id from the thread (before this comment)
       // means users can't post two messages in a row. We actually have to get the thread, and check (backwards)
       // for the first post that isn't by the current author.
       val conversationId = message.parent.getOrElse(message.id.get)
       val thread = (message.parent.map(commentRepo.get).getOrElse(message) +: commentRepo.getChildren(conversationId)).reverse
-      val lastNotifiedMessage = thread.find(c => c.userId != message.userId)
 
-      val lastNotice = (lastNotifiedMessage match {
-        case Some(lastMsg) =>
-          userNotifyRepo.getWithCommentId(message.userId, lastMsg.id.get) map { oldNotice =>
-            userNotifyRepo.save(oldNotice.withState(UserNotificationStates.SUBSUMED)).id
-          }
-        case None => None
-      }).flatten
+      val messageDetails = createMessageDetails(message, thread)
+
+      log.info(thread.mkString("\n"))
 
       userNotifyRepo.getWithCommentId(message.userId, conversationId)
 
-      messageDetails.map { messageDetail =>
+      messageDetails.map { case (userId, messageDetail) =>
+        val lastNotifiedMessage = thread.find(c => c.id != message.id && c.userId != userId)
+
+        val lastNotice = (lastNotifiedMessage match {
+          case Some(lastMsg) =>
+            userNotifyRepo.getWithCommentId(userId, lastMsg.id.get) map { oldNotice =>
+              userNotifyRepo.save(oldNotice.withState(UserNotificationStates.SUBSUMED)).id
+            }
+          case None => None
+        }).flatten
+
         val user = userRepo.get(messageDetail.recipient.externalId)
         val userNotification = userNotifyRepo.save(UserNotification(
           userId = user.id.get,
@@ -176,7 +179,7 @@ class UserNotifier @Inject() (
     }
   }
   private def notifyMessageByEmail(recipient: User, details: MessageDetails)(implicit session: RSession) = {
-    val author = userRepo.get(details.author.externalId)
+    val author = userRepo.get(details.authors.head.externalId)
     val addrs = emailAddressRepo.getByUser(recipient.id.get)
     for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
       postOffice.sendMail(ElectronicMail(
@@ -185,7 +188,7 @@ class UserNotifier @Inject() (
           to = addr,
           subject = "%s %s sent you a message using KiFi".format(author.firstName, author.lastName),
           htmlBody = replaceLookHereLinks(
-              views.html.email.newMessage(author, recipient, details.url.getOrElse(""), details.title.getOrElse("No title"), details.text, details.isParent).body
+              views.html.email.newMessage(author, recipient, details.url.getOrElse(""), details.title.getOrElse("No title"), details.text, details.hasParent).body
           ),
           category = PostOffice.Categories.COMMENT))
     }
@@ -219,7 +222,7 @@ class UserNotifier @Inject() (
     }
   }
 
-  private def createMessageDetails(message: Comment)(implicit session: RWSession): Set[MessageDetails] = {
+  private def createMessageDetails(message: Comment, thread: Seq[Comment])(implicit session: RWSession): Set[(Id[User], MessageDetails)] = {
     implicit val bus = BasicUserSerializer.basicUserSerializer
 
     val author = userRepo.get(message.userId)
@@ -228,6 +231,10 @@ class UserNotifier @Inject() (
     val parent = message.parent.map(commentRepo.get).getOrElse(message)
 
     for (userId <- participants - author.id.get) yield {
+
+      val recentAuthors = thread.filter(c => c.userId != userId).map(_.userId).take(5)
+      val authors = recentAuthors.map(basicUserRepo.load)
+
       val recipient = userRepo.get(userId)
       val deepLink = deepLinkRepo.save(DeepLink(
           initatorUserId = Option(message.userId),
@@ -235,9 +242,9 @@ class UserNotifier @Inject() (
           uriId = Some(message.uriId),
           urlId = message.urlId,
           deepLocator = DeepLocator.ofMessageThread(parent)))
-      new MessageDetails(
+      (userId -> new MessageDetails(
         message.externalId.id,
-        basicUserRepo.load(message.userId),
+        authors,
         basicUserRepo.load(userId),
         Some(deepLink.url),
         Some(URINormalizer.normalize(uri.url)),
@@ -246,7 +253,7 @@ class UserNotifier @Inject() (
         message.createdAt,
         message.parent.isDefined,
         0,0, None
-      )
+      ))
     }
   }
 
