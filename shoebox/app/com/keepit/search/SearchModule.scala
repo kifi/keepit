@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import org.apache.lucene.util.Version
 import com.google.inject.{Provides, Singleton}
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.db.slick.Database
@@ -14,6 +15,11 @@ import com.tzavellas.sse.guice.ScalaModule
 import java.io.File
 import org.apache.lucene.store.{Directory, MMapDirectory}
 import play.api.Play.current
+import com.keepit.search.graph.URIGraphDecoders
+import org.apache.lucene.index.IndexWriterConfig
+import com.keepit.search.graph.URIGraphImpl
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.model.BookmarkRepo
 
 class SearchModule() extends ScalaModule with Logging {
 
@@ -45,10 +51,12 @@ class SearchModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def uriGraph: URIGraph = {
+  def uriGraph(bookmarkRepo: BookmarkRepo,
+    db: Database): URIGraph = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
-    URIGraph(dir)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new URIGraphImpl(dir, config, URIGraphDecoders.decoders(), bookmarkRepo, db)
   }
 
   @Singleton
