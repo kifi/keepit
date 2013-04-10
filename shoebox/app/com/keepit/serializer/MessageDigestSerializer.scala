@@ -17,7 +17,7 @@ class ThreadInfoSerializer extends Writes[ThreadInfo] {
       "recipients" -> o.recipients,
       "digest" -> o.digest,
       "messageCount" -> o.messageCount,
-      "hasAttachments" -> o.hasAttachments,
+      "messageTimes" -> o.messageTimes.map(m => m._1.id -> m._2),
       "createdAt" -> o.createdAt,
       "lastCommentedAt" -> o.lastCommentedAt)
 
