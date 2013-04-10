@@ -21,7 +21,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.logging._
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.db.State
-
+import com.keepit.common.controller.FortyTwoServices
 
 case class CommentDetails(id: String, author: BasicUser, recipient: BasicUser, url: String, page: String, title: String, text: String, createdAt: DateTime, newCount: Int, totalCount: Int)
 case class MessageDetails(id: String, author: BasicUser, recipient: BasicUser, url: Option[String], page: Option[String], title: Option[String], text: String, createdAt: DateTime, isParent: Boolean, newCount: Int, totalCount: Int)
@@ -62,8 +62,8 @@ class UserNotifier @Inject() (
   basicUserRepo: BasicUserRepo,
   commentRepo: CommentRepo,
   userNotifyRepo: UserNotificationRepo,
-  notificationBroadcast: NotificationBroadcaster) extends Logging {
-
+  notificationBroadcast: NotificationBroadcaster,
+  implicit val fortyTwoServices: FortyTwoServices) extends Logging {
 
   implicit val basicUserFormat = BasicUserSerializer.basicUserSerializer
   implicit val commentDetailsFormat = Json.format[CommentDetails]
