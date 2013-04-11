@@ -131,8 +131,8 @@ class ExtCommentController @Inject() (
 
     comment.permissions match {
       case CommentPermissions.MESSAGE =>
-        val threadInfo = db.readOnly(implicit s => CommentWithBasicUserRepo.load(comment))
-        Ok(Json.obj("message" -> commentWithBasicUserSerializer.writes(threadInfo)))
+        val message = db.readOnly(implicit s => CommentWithBasicUserRepo.load(comment))
+        Ok(Json.obj("message" -> commentWithBasicUserSerializer.writes(message)))
       case _ =>
         Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
     }
