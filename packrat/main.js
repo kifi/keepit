@@ -301,7 +301,7 @@ api.port.on({
   post_comment: function(data, respond, tab) {
     postComment(data, function(o) {
       var d = pageData[tab.nUri];
-      if (d && d.comments) {
+      if (data.permissions == "public") {
         d.comments.push({
           "id": o.commentId,
           "externalId": o.commentId,
@@ -314,6 +314,16 @@ api.port.on({
             "lastName": "",
             "facebookId": session.facebookId
           }});
+      } else if (data.permissions == "message") {
+        d.threads.forEach(function(th) {
+          if (th.id == data.parent) {
+            th.messages.push(o.message);
+            th.messageCount++;
+            th.messageTimes[o.message.id] = o.message.createdAt;
+            th.lastCommentedAt = o.message.createdAt;
+            th.digest = o.message.text;
+          }
+        });
       }
       respond(o);
     });
@@ -344,10 +354,10 @@ api.port.on({
       api.tabs.emit(tab, "threads", d.threads);
     }
   },
-  thread: function(id) {
-    var d = pageData[tab.nUri];
-    if (d && d.threads && d.threads[id] && d.threads[id].messages) {
-      api.tabs.emit(tab, "thread", d.threads[id]);
+  thread: function(id, _, tab) {
+    var d = pageData[tab.nUri], th;
+    if (d && d.threads && (th = d.threads.filter(function(t) {return t.id == id})[0]) && th.messages) {
+      api.tabs.emit(tab, "thread", th);
     } else {
       socket.send(["get_thread", id]);
     }
@@ -641,6 +651,8 @@ function subscribe(tab) {
     var d = pageData[tab.url];
     if (d) {  // optimization: page is open elsewhere and url happens to be normalized
       finish(tab.url);
+      setIcon(tab, d.kept);
+      initTab(tab, d);
     } else if (socket) {
       socket.send(["subscribe_uri", tab.url], function(uri) {
         d = pageData[uri] = pageData[uri] || {tabs: []};

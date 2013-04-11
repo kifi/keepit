@@ -290,8 +290,8 @@ slider2 = function() {
     switch (loc[1]) {
       case "messages":
         if (loc[2]) {
-          requireData("thread/" + loc[2], function(messages) {
-            showPane("thread", false, messages[0].recipients, loc[2]);
+          requireData("thread/" + loc[2], function(th) {
+            showPane("thread", false, th.messages[0].recipients, loc[2]);
           });
         } else {
           showPane("threads");
@@ -422,10 +422,10 @@ slider2 = function() {
     },
     thread: function($box, threadId) {
       var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
-      requireData("thread/" + threadId, function(messages) {
+      requireData("thread/" + threadId, function(th) {
         api.require("scripts/thread.js", function() {
-          renderThread($tall, threadId, messages);
-          api.port.emit("set_message_read", messages[messages.length - 1].id);
+          renderThread($tall, threadId, th.messages);
+          api.port.emit("set_message_read", th.messages[th.messages.length - 1].id);
         });
       });
     },
@@ -476,7 +476,7 @@ slider2 = function() {
     var arg = data[prop], key = prop ? type + "/" + arg : type;
     for (var i = 0, callbacks = dataCallbacks[key] || 0; i < callbacks.length; i++) {
       var cb = callbacks[i];
-      if (arg == cb[0]) {
+      if (cb[0] == arg) {
         cb[1](data);
         callbacks.splice(i--, 1);
       }
