@@ -316,18 +316,18 @@ api.log("[google_inject]");
               animateDropdown: false,
               preventDuplicates: true,
               allowTabOut: true,
-              tokenValue: "externalId",
+              tokenValue: "id",
               theme: "googly",
               onReady: function() {
                 $("#token-input-kifi-res-filter-cust").focus();
               },
               onAdd: function(friend) {
-                api.log("[onAdd]", friend.externalId, friend.name);
-                search("", filter.length > 1 ? (filter + "." + friend.externalId) : friend.externalId);
+                api.log("[onAdd]", friend.id, friend.name);
+                search("", filter.length > 1 ? (filter + "." + friend.id) : friend.id);
               },
               onDelete: function(friend) {
-                api.log("[onDelete]", friend.externalId, friend.name);
-                var f = filter.split(".").filter(function(id) {return id != friend.externalId}).join(".");
+                api.log("[onDelete]", friend.id, friend.name);
+                var f = filter.split(".").filter(function(id) {return id != friend.id}).join(".");
                 if (f) {
                   search("", f);
                 } else {
@@ -354,7 +354,7 @@ api.log("[google_inject]");
             facebookId: friend.facebookId,
             iconsUrl: api.url("images/social_icons.png")
           }, callback);
-          api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+          api.port.emit("get_num_mutual_keeps", {id: friend.id}, function gotNumMutualKeeps(o) {
             $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
           });
         }});

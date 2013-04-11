@@ -74,13 +74,13 @@ function renderComments($container, comments, isAdmin) {
         "createdAt": response.createdAt,
         "text": text,
         "user": {
-          "externalId": response.session.userId,
+          "id": response.session.userId,
           "firstName": response.session.name,
           "lastName": "",
           "facebookId": response.session.facebookId
         },
         "isLoggedInUser": true,
-        "externalId": response.commentId
+        "id": response.commentId
       }, function(html) {
         var $posted = $container.find(".kifi-comments-posted");
         $(html).find("time").timeago().end().appendTo($posted);
