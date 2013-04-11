@@ -146,7 +146,7 @@ class ExtStreamController @Inject() (
               case JsString("get_thread") +: JsString(threadId) +: _ =>
                 channel.push(Json.arr("thread", paneData.getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
                   Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
-                  }))
+                }))
               case JsString("get_last_notify_read_time") +: _ =>
                 channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toString()))
               case JsString("set_last_notify_read_time") +: _ =>
