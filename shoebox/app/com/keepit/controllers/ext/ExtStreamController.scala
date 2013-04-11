@@ -29,6 +29,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.State
 import scala.util.Random
 import com.keepit.controllers.core.{PaneDetails, KeeperInfoLoader}
+import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
@@ -45,7 +46,9 @@ class ExtStreamController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
+  socialConnectionRepo: SocialConnectionRepo,
   userRepo: UserRepo,
+  basicUserRepo: BasicUserRepo,
   experimentRepo: UserExperimentRepo,
   userChannel: UserChannel,
   uriChannel: UriChannel,
@@ -132,6 +135,8 @@ class ExtStreamController @Inject() (
                 subscriptions = subscriptions - nUri
               case JsString("log_event") +: JsObject(pairs) +: _ =>
                 logEvent(streamSession, JsObject(pairs))
+              case JsString("get_friends") +: _ =>
+                channel.push(Json.arr("friends", getFriends(userId)))
               case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>
                 channel.push(Json.arr(requestId.toLong, paneData.getComments(userId, url)))
                 // channel.push(Json.arr(requestId.toLong, commentWithBasicUserSerializer.writes(paneData.getComments(userId, url))))
@@ -180,6 +185,12 @@ class ExtStreamController @Inject() (
         Cont[JsArray, Unit](i => step(i))
     }
     (Cont[JsArray, Unit](i => step(i)))
+  }
+
+  private def getFriends(userId: Id[User]): Set[BasicUser] = {
+    db.readOnly { implicit s =>
+      socialConnectionRepo.getFortyTwoUserConnections(userId).map(basicUserRepo.load)
+    }
   }
 
   private def getLastNotifyTime(userId: Id[User]): DateTime = {
