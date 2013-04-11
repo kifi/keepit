@@ -134,15 +134,17 @@ class SliderShownListener @Inject() (
   }
 }
 
+abstract class SearchUnloadListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends EventListenerPlugin(userRepo, normalizedURIRepo)
+
 @Singleton
-class SearchUnloadListener @Inject() (
+class SearchUnloadListenerImpl @Inject() (
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
     persistEventPlugin: PersistEventPlugin,
     store: MongoEventStore,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices)
-  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
+  extends SearchUnloadListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", externalUser, _, experiments, metaData, _), _, _) => {
@@ -163,5 +165,9 @@ class SearchUnloadListener @Inject() (
       }
     }
   }
+}
+
+class FakeSearchUnloadListenerImpl @Inject() (userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends SearchUnloadListener(userRepo, normalizedURIRepo) {
+  def onEvent: PartialFunction[Event, Unit] = PartialFunction.empty
 }
 
