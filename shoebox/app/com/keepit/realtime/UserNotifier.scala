@@ -102,7 +102,7 @@ class UserNotifier @Inject() (
   implicit val commentDetailsFormat = Json.format[CommentDetails]
   implicit val messageDetailsFormat = Json.format[MessageDetails]
 
-  def comment(comment: Comment): Unit = {
+  def comment(comment: Comment) {
     db.readWrite { implicit s =>
       val normalizedUri = normalUriRepo.get(comment.uriId).url
       uriChannel.push(normalizedUri, Json.arr("comment", normalizedUri, commentWithBasicUserRepo.load(comment)))
@@ -125,39 +125,31 @@ class UserNotifier @Inject() (
     }
   }
 
-  def message(message: Comment) = {
+  def message(message: Comment) {
     db.readWrite { implicit s =>
-      val normalizedUri = normalUriRepo.get(message.uriId).url
+      val normUri = normalUriRepo.get(message.uriId)
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
-      val conversationId = parent.id.get
-
       val threadInfo = threadInfoRepo.load(parent, Some(message.userId))
-      val messageJson = Json.arr("message", threadInfo, commentWithBasicUserRepo.load(message))
+      val messageJson = Json.arr("message", normUri.url, threadInfo, commentWithBasicUserRepo.load(message))
       userChannel.push(message.userId, messageJson)
 
-      val thread = if(message.parent.isEmpty)
-          Seq(message)
-        else
-          (parent +: commentRepo.getChildren(conversationId)).reverse
+      val thread = if (message eq parent) Seq(message) else (parent +: commentRepo.getChildren(parent.id.get)).reverse
 
-      val messageDetails = createMessageDetails(message, thread)
-      messageDetails.map { case (userId, (lastNoticeId, messageDetail)) =>
+      createMessageDetails(message, thread) map { case (userId, (lastNoticeId, messageDetail)) =>
         val user = userRepo.get(userId)
         val userNotification = userNotifyRepo.save(UserNotification(
           userId = userId,
           category = UserNotificationCategories.MESSAGE,
           details = UserNotificationDetails(Json.toJson(messageDetail)),
           commentId = message.id,
-          subsumedId = lastNoticeId
-        ))
+          subsumedId = lastNoticeId))
 
-        if(userChannel.isConnected(userId)) {
+        if (userChannel.isConnected(userId)) {
           log.info(s"Sending notification because $userId is connected.")
 
           userChannel.push(userId, messageJson)
           notificationBroadcast.push(userNotification)
-        }
-        else {
+        } else {
           log.info(s"Sending email because $userId is not connected.")
           notifyMessageByEmail(user, messageDetail)
         }
@@ -190,8 +182,9 @@ class UserNotifier @Inject() (
           to = addr,
           subject = "%s %s sent you a message using KiFi".format(author.firstName, author.lastName),
           htmlBody = replaceLookHereLinks(
-              views.html.email.newMessage(author, recipient, details.url.getOrElse(""), details.title.getOrElse("No title"), details.text, details.hasParent).body
-          ),
+            views.html.email.newMessage(
+              author, recipient, details.url.getOrElse(""), details.title.getOrElse("No title"), details.text, details.hasParent)
+            .body),
           category = PostOffice.Categories.COMMENT))
     }
   }
@@ -219,12 +212,12 @@ class UserNotifier @Inject() (
         comment.pageTitle,
         comment.text,
         comment.createdAt,
-        0,0, None
-      )
+        0,0, None)
     }
   }
 
-  private def createMessageDetails(message: Comment, thread: Seq[Comment])(implicit session: RWSession): Map[Id[User], (Option[Id[UserNotification]], MessageDetails)] = {
+  private def createMessageDetails(message: Comment, thread: Seq[Comment])(implicit session: RWSession):
+      Map[Id[User], (Option[Id[UserNotification]], MessageDetails)] = {
     implicit val bus = BasicUserSerializer.basicUserSerializer
 
     val author = userRepo.get(message.userId)
@@ -239,11 +232,11 @@ class UserNotifier @Inject() (
 
       val lastNotifiedMessage = thread.find(c => c.id != message.id && c.userId != userId)
 
-      val lastNotice = (lastNotifiedMessage flatMap { lastMsg =>
-          userNotifyRepo.getWithCommentId(userId, lastMsg.id.get) map { oldNotice =>
-            userNotifyRepo.save(oldNotice.withState(UserNotificationStates.SUBSUMED))
-          }
-      })
+      val lastNotice = lastNotifiedMessage flatMap { lastMsg =>
+        userNotifyRepo.getWithCommentId(userId, lastMsg.id.get) map { oldNotice =>
+          userNotifyRepo.save(oldNotice.withState(UserNotificationStates.SUBSUMED))
+        }
+      }
 
       val recipient = userRepo.get(userId)
       val deepLink = deepLinkRepo.save(DeepLink(
@@ -264,8 +257,7 @@ class UserNotifier @Inject() (
         message.parent.isDefined,
         1,
         thread.size,
-        lastNotice.map(_.externalId.id)
-      )))
+        lastNotice.map(_.externalId.id))))
     }
 
     generatedSet.toMap
@@ -275,7 +267,6 @@ class UserNotifier @Inject() (
   private val lookHereLinkRe = """\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)""".r
   //e.g. [look here](x-kifi-sel:body>div#page.watch>div:nth-child(4\)>div#watch7-video-container)
   private def replaceLookHereLinks(text: String): String =
-    lookHereLinkRe.replaceAllIn(
-        text, m => "[" + m.group(1).replaceAll("""\\(.)""", "$1") + "]")
+    lookHereLinkRe.replaceAllIn(text, m => "[" + m.group(1).replaceAll("""\\(.)""", "$1") + "]")
 
 }
