@@ -17,7 +17,6 @@ class CommentWithBasicUserSerializer extends Writes[CommentWithBasicUser] {
       "text" -> JsString(commentWithBasicUser.comment.text),
       "user" -> commentWithBasicUser.user,
       "permissions" -> commentWithBasicUser.comment.permissions.value,
-      "replyCount" -> commentWithBasicUser.replyCount,
       "recipients" -> commentWithBasicUser.recipients)
 
   def writes(comments: Seq[CommentWithBasicUser]): JsValue =
