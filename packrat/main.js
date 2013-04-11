@@ -304,12 +304,10 @@ api.port.on({
       if (data.permissions == "public") {
         d.comments.push({
           "id": o.commentId,
-          "externalId": o.commentId,
           "createdAt": o.createdAt,
           "text": data.text,
           "user": {
             "id": session.userId,
-            "externalId": session.userId,
             "firstName": session.name,
             "lastName": "",
             "facebookId": session.facebookId

@@ -34,7 +34,7 @@ function renderThreads($container, threads) {
     .on("click", ".kifi-thread", function() {
       var $th = $(this), id = $th.data("id");
       var recipients = $th.data("recipients") ||
-        threads.filter(function(t) {return t.externalId == id})[0].recipients;
+        threads.filter(function(t) {return t.id == id})[0].recipients;
       $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["thread", recipients, id])
     })
     .on("kifi:compose-submit", sendMessage)
@@ -61,7 +61,7 @@ function renderThreads($container, threads) {
         "recipientsPictured": response.message.recipients.slice(0, 4),
         "messageCount": 1,
         "digest": text,
-        "externalId": response.message.externalId
+        "id": response.message.id
       }, function(html) {
         var $threads = $container.find(".kifi-threads-list");
         $(html).data("recipients", response.message.recipients)
