@@ -58,7 +58,7 @@ private[classify] class DomainClassificationActor @Inject() (
   def receive = {
     case FetchDomainInfo(hostname) =>
       val future = getTagNames(hostname).map { tagNames =>
-        db.readWrite { implicit s =>
+        db.readWrite(attempts = 3) { implicit s =>
           val domain = domainRepo.get(hostname, excludeState = None) match {
             case Some(d) if d.state != DomainStates.ACTIVE => domainRepo.save(d.withState(DomainStates.ACTIVE))
             case Some(d) => d
@@ -73,7 +73,7 @@ private[classify] class DomainClassificationActor @Inject() (
             }).id.get
           }.toSet
           val existingTagRelationships = domainToTagRepo.getByDomain(domain.id.get, excludeState = None)
-          for (r <- existingTagRelationships.toSeq if r.state != DomainTagStates.ACTIVE) {
+          for (r <- existingTagRelationships.toSeq if r.state != DomainToTagStates.ACTIVE) {
             domainToTagRepo.save(r.withState(DomainToTagStates.ACTIVE))
           }
           domainToTagRepo.insertAll((tagIds -- existingTagRelationships.map(_.tagId)).map { tagId =>

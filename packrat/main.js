@@ -75,6 +75,12 @@ logEvent.catchUp = function() {
 
 const notifyCallbacks = [];
 const socketHandlers = {
+  denied: function() {
+    api.log("[socket:denied]");
+    socket.close();
+    socket = null;
+    session = null;
+  },
   experiments: function(data) {
     api.log("[socket:experiments]", data);
     session.experiments = data;
@@ -115,7 +121,7 @@ const socketHandlers = {
     if (activeTab) {
       api.tabs.emit(activeTab, "show_notification", data);
     }
-    notifications.unshift(data);
+    socketHandlers.notifications([data]);
   },
   notifications: function(data) {
     api.log("[socket:notifications]", data);
@@ -124,7 +130,13 @@ const socketHandlers = {
       idToNotif[n.id] = n;
     });
     notifications.length = 0;
-    for (id in idToNotif) {
+    for (var id in idToNotif) {
+      var subsumes = idToNotif[id].details.subsumes;
+      if (subsumes) {
+        delete idToNotif[subsumes];
+      }
+    }
+    for (var id in idToNotif) {
       notifications.push(idToNotif[id]);
     }
     notifications.sort(function (a, b) {

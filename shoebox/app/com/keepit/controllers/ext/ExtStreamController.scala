@@ -56,6 +56,7 @@ class ExtStreamController @Inject() (
   urlPatternRepo: URLPatternRepo,
   commentRepo: CommentRepo,
   paneData: PaneDetails,
+  eventRepo: EventRepo,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
@@ -148,10 +149,10 @@ class ExtStreamController @Inject() (
                   case _ => None
                 }
                 channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, howMany.toInt)))
-              case JsString("set_message_read") +: JsString(parentExternalId) +: _ =>
-                setMessageRead(userId, parentExternalId)
-              case JsString("set_comment_read") +: JsString(externalId) +: _ =>
-                setCommentRead(userId, externalId)
+              case JsString("set_message_read") +: JsString(messageExternalId) +: _ =>
+                setMessageRead(userId, messageExternalId)
+              case JsString("set_comment_read") +: JsString(commentExternalId) +: _ =>
+                setCommentRead(userId, commentExternalId)
               case json =>
                 log.warn(s"Not sure what to do with: $json")
             }
@@ -163,11 +164,8 @@ class ExtStreamController @Inject() (
           (iteratee, enumerator)
 
         case None =>
-          log.info(s"Anonymous user trying to connect. Disconnecting!")
-          val enumerator: Enumerator[JsArray] = Enumerator(Json.arr("error", "Permission denied. Are you logged in? Connect again to re-authenticate."))
-          val iteratee = Iteratee.ignore[JsArray]
-
-          (iteratee, enumerator >>> Enumerator.eof)
+          log.info("Disconnecting anonymous user")
+          (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
       }
     }
   }
@@ -207,13 +205,13 @@ class ExtStreamController @Inject() (
     val event = Events.userEvent(eventFamily, eventName, user, session.experiments, installId, metaData, prevEvents, eventTime)
     log.debug("Created new event: %s".format(event))
     persistEventPlugin.persist(event)
+    eventRepo.feedToListeners(event)
   }
 
   private def setMessageRead(userId: Id[User], externalId: String) = {
     db.readWrite { implicit session =>
       val comment = commentRepo.get(ExternalId[Comment](externalId))
-      val parentId = comment.parent.map(p => commentRepo.get(p).id.get).getOrElse(comment.id.get)
-      userNotificationRepo.getWithCommentId(userId, parentId).foreach { n =>
+      userNotificationRepo.getWithCommentId(userId, comment.id.get).foreach { n =>
         userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
       }
     }

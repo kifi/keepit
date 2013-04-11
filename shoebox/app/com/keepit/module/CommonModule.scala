@@ -43,12 +43,6 @@ class CommonModule extends ScalaModule with Logging {
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
 
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
-
-    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
-    listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
-    listenerBinder.addBinding().to(classOf[UsefulPageListener])
-    listenerBinder.addBinding().to(classOf[SliderShownListener])
-    listenerBinder.addBinding().to(classOf[SearchUnloadListener])
   }
 
   @Singleton

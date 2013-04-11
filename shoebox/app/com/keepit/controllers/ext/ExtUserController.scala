@@ -54,7 +54,7 @@ class ExtUserController @Inject() (
     val json = request.body
     val host: String = URI.parse((json \ "url").as[String]).get.host.get.name
     val suppress: Boolean = (json \ "suppress").as[Boolean]
-    val utd = db.readWrite {implicit s =>
+    db.readWrite(attempts = 3) { implicit s =>
       val domain = domainRepo.get(host, excludeState = None) match {
         case Some(d) if d.isActive => d
         case Some(d) => domainRepo.save(d.withState(DomainStates.ACTIVE))

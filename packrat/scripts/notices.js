@@ -29,16 +29,34 @@ function renderNotices($container, isAdmin) {
   });
 }
 
+function formatAuthorNames(authors) {
+  var names = authors.length > 1 ?
+    authors.map(function (a) { return a.firstName; }) :
+    [authors[0].firstName + " " + authors[0].lastName];
+  names = names.map(function (n) {
+    return $('<span class="author-name">').text(n).wrapAll('<span>').parent().html();
+  });
+  if (names.length == 1) {
+    return names[0];
+  } else if (names.length <= 3) {
+    return names.slice(0, names.length - 1).join(", ") + " and " + names[names.length - 1];
+  } else {
+    return names.slice(0, 2).join(", ") + " and " + (names.length - 2) + " others";
+  }
+}
+
 function getRenderedNotices(notices, $notifyPane, callback) {
   var renderedNotices = [];
   var done = 0;
   $.each(notices, function (i, notice) { 
     if (~NOTICE_TYPES.indexOf(notice.category)) {
+      var authors = notice.details.authors || [notice.details.author]
       render("html/metro/notice_" + notice.category + ".html", $.extend({
         formatMessage: getSnippetFormatter,
         formatLocalDate: getLocalDateFormatter,
         formatIsoDate: getIsoDateFormatter,
-        author: notice.details.authors[0]
+        avatar: authors[0].avatar,
+        formattedAuthor: formatAuthorNames(authors)
       }, notice), function (html) {
         renderedNotices[i] = html;
         if (++done == notices.length) {
