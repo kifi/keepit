@@ -30,6 +30,7 @@ import play.api.Play.current
 import com.keepit.model.UserRepo
 import com.keepit.model.NormalizedURIRepo
 import com.keepit.common.time.Clock
+import com.google.inject.Provider
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -56,11 +57,11 @@ class CommonModule extends ScalaModule with Logging {
   def searchUnloadProvider(
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
-    persistEventPlugin: PersistEventPlugin,
+    persistEventProvider: Provider[PersistEventPlugin],
     store: MongoEventStore,
     clock: Clock,
     fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
-    new SearchUnloadListenerImpl(userRepo, normalizedURIRepo, persistEventPlugin, store, clock, fortyTwoServices)
+    new SearchUnloadListenerImpl(userRepo, normalizedURIRepo, persistEventProvider, store, clock, fortyTwoServices)
   }
 
   @Singleton
