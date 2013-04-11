@@ -83,7 +83,6 @@ logEvent.catchUp = function() {
 
 // ===== WebSocket handlers
 
-const notifyCallbacks = [];
 const socketHandlers = {
   denied: function() {
     api.log("[socket:denied]");
@@ -175,8 +174,9 @@ const socketHandlers = {
     notifications.sort(function(a, b) {
       return new Date(b.time) - new Date(a.time);
     });
-    while (notifyCallbacks.length) {
-      notifyCallbacks.shift()(notifications);
+    var activeTab = api.tabs.getActive();
+    if (activeTab) {
+      api.tabs.emit(activeTab, "notifications", notifications);
     }
   },
   last_notify_read_time: function(t) {
@@ -362,16 +362,15 @@ api.port.on({
       socket.send(["get_thread", id]);
     }
   },
-  notifications: function(howMany, respond, tab) {
+  notifications: function(howMany, tab) {
     if (howMany > notifications.length) {
       var oldest = (notifications[notifications.length-1] || {}).time;
       socket.send(["get_notifications", howMany - notifications.length, oldest]);
-      notifyCallbacks.push(function(n) {
-        respond(n.slice(0, howMany));
-      });
-      return true;
     } else {
-      respond(notifications.slice(0, howMany));
+      var activeTab = api.tabs.getActive();
+      if (activeTab) {
+        api.tabs.emit(activeTab, "notifications", notifications);
+      }
     }
   },
   set_last_notify_read_time: function() {
