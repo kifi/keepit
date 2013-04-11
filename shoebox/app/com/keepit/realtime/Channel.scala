@@ -82,7 +82,7 @@ trait ChannelManager[T, S <: Channel] {
 
   /** Returns whether a client is connected or not to a given channel.
    */
-  def isConnected(channelId: T): Int
+  def isConnected(channelId: T): Boolean
 }
 
 class Subscription(val name: String, unsub: () => Option[Boolean]) {
