@@ -31,15 +31,22 @@ abstract class EventListenerPlugin(
 
   def onEvent: PartialFunction[Event, Unit]
 
-  case class SearchMeta(query: String, url: String, normUrl: Option[NormalizedURI], queryUUID: Option[ExternalId[ArticleSearchResultRef]])
+  case class SearchMeta(
+    query: String,
+    url: String,
+    normUrl: Option[NormalizedURI],
+    rank: Int,
+    queryUUID: Option[ExternalId[ArticleSearchResultRef]]
+  )
 
   def searchParser(externalUser: ExternalId[User], json: JsObject)(implicit s: RSession) = {
     val query = (json \ "query").asOpt[String].getOrElse("")
     val url = (json \ "url").asOpt[String].getOrElse("")
     val user = userRepo.get(externalUser)
     val normUrl = normalizedURIRepo.getByNormalizedUrl(url)
+    val rank = (json \ "whichResult").asOpt[Int].getOrElse(-1)
     val queryUUID = ExternalId.asOpt[ArticleSearchResultRef]((json \ "queryUUID").asOpt[String].getOrElse(""))
-    (user, SearchMeta(query, url, normUrl, queryUUID))
+    (user, SearchMeta(query, url, normUrl, rank, queryUUID))
   }
 }
 
@@ -87,7 +94,7 @@ class KifiResultClickedListener @Inject() (
         (user, meta, bookmark)
       }
       meta.normUrl.foreach { n =>
-        searchServiceClient.logResultClicked(user.id.get, meta.query, n.id.get, !bookmark.isEmpty)
+        searchServiceClient.logResultClicked(user.id.get, meta.query, n.id.get, meta.rank, !bookmark.isEmpty)
         clickHistoryTracker.add(user.id.get, n.id.get)
       }
   }

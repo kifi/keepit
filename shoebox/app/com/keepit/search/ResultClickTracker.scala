@@ -4,6 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.{User, NormalizedURI}
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
+import scala.math._
 import java.io.File
 
 object ResultClickTracker {
@@ -26,9 +27,13 @@ object ResultClickTracker {
 class ResultClickTracker(lru: ProbablisticLRU) {
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
-  def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], isUserKeep: Boolean) = {
+  def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean) = {
     val hash = QueryHash(userId, query, analyzer)
-    val updateStrength = if (isUserKeep) 0.5d else 0.25d // user's keep => half the slots, others => quarter
+    val updateStrength = if (isUserKeep) {
+      min(0.1d * (rank.toDouble + 1.0d), 0.7d)
+    } else {
+      0.20d
+    }
     lru.put(hash, uriId.id, updateStrength)
   }
 

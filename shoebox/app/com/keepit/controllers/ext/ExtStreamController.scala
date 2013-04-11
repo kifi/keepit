@@ -241,20 +241,26 @@ class ExtStreamController @Inject() (
     eventHelper.newEvent(event)
   }
 
-  private def setMessageRead(userId: Id[User], externalId: String) = {
+  private def setMessageRead(userId: Id[User], externalId: String) {
     db.readWrite { implicit session =>
       val comment = commentRepo.get(ExternalId[Comment](externalId))
       userNotificationRepo.getWithCommentId(userId, comment.id.get).foreach { n =>
-        userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
+        userChannel.push(userId, Json.arr("notifications", Seq(
+          SendableNotification.fromUserNotification(
+            userNotificationRepo.save(n.withState(UserNotificationStates.VISITED)))
+        )))
       }
     }
   }
 
-  private def setCommentRead(userId: Id[User], externalId: String) = {
+  private def setCommentRead(userId: Id[User], externalId: String) {
     db.readWrite { implicit session =>
       val commentId = commentRepo.get(ExternalId[Comment](externalId)).id.get
       userNotificationRepo.getWithCommentId(userId, commentId).foreach { n =>
-        userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
+        userChannel.push(userId, Json.arr("notifications", Seq(
+          SendableNotification.fromUserNotification(
+            userNotificationRepo.save(n.withState(UserNotificationStates.VISITED)))
+        )))
       }
     }
   }
