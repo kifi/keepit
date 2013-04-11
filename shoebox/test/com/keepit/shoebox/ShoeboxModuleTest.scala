@@ -9,6 +9,11 @@ import play.api.Play.current
 import play.api.mvc.Controller
 import play.api.test.Helpers.running
 import scala.reflect.ManifestFactory.classType
+import com.keepit.FortyTwoGlobal
+import scala.collection.JavaConversions._
+import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.mail.MailToKeepServerSettings
+import com.keepit.search.ResultClickTracker
 
 class ShoeboxModuleTest extends Specification with Logging {
 
@@ -24,6 +29,15 @@ class ShoeboxModuleTest extends Specification with Logging {
           case (_, _, ClassRoute(className)) => Class.forName(className)
         }.distinct.filter(isShoeboxController)
         for (c <- classes) inject(classType[Controller](c), current)
+        val injector = current.global.asInstanceOf[FortyTwoGlobal].injector
+        val bindings = injector.getAllBindings()
+        bindings.keySet() filter { key =>
+          val klazz = key.getTypeLiteral().getRawType()
+          val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[MailToKeepServerSettings], classOf[ResultClickTracker])
+          !exclude.contains(klazz) && !exclude.contains(klazz.getSuperclass())
+        } foreach { key =>
+          injector.getInstance(key)
+        }
         true
       }
     }
