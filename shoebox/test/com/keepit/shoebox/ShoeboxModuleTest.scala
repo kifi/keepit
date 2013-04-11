@@ -31,9 +31,9 @@ class ShoeboxModuleTest extends Specification with Logging {
         for (c <- classes) inject(classType[Controller](c), current)
         val injector = current.global.asInstanceOf[FortyTwoGlobal].injector
         val bindings = injector.getAllBindings()
+        val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[MailToKeepServerSettings], classOf[ResultClickTracker])
         bindings.keySet() filter { key =>
           val klazz = key.getTypeLiteral().getRawType()
-          val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[MailToKeepServerSettings], classOf[ResultClickTracker])
           !exclude.contains(klazz) && !exclude.contains(klazz.getSuperclass())
         } foreach { key =>
           injector.getInstance(key)
