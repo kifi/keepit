@@ -121,36 +121,37 @@ var injected, t0 = +new Date;
   }
 
   function insertTile(o) {
-    api.require("styles/metro/tile.css", function() {
-      var el;
-      while (el = document.getElementById("kifi-tile")) {
-        el.remove();
-      }
-      el = document.createElement("div");
-      el.id = "kifi-tile";
-      if (o.kept) {
-        el.className = "kifi-kept";
-      }
-      var transEl = document.createElement("div");
-      transEl.className = "kifi-tile-transparent";
-      transEl.style.backgroundImage = "url(" + api.url("images/metro/tile_logo.png") + ")";
-      el.appendChild(transEl);
-      var nUnread = (o.unreadComments || 0) + (o.unreadMessages || 0);
-      var nTot = (o.numComments || 0) + (o.numMessages || 0);
-      if (nUnread || nTot) {
-        var countEl = document.createElement("span");
-        countEl.className = "kifi-count" + (nUnread ? " kifi-unread" : "");
-        countEl.textContent = nUnread || nTot;
-        (nUnread ? el : transEl).appendChild(countEl);
-        el.classList.add("kifi-with-count");
-      }
-      document.documentElement.appendChild(el);
-      el.addEventListener("mouseover", function() {
-        withSlider2(function() {
-          slider2.show(info, "tile");
-        });
+    var el;
+    while (el = document.getElementById("kifi-tile")) {
+      el.remove();
+    }
+    el = document.createElement("div");
+    el.id = "kifi-tile";
+    if (o.kept) {
+      el.className = "kifi-kept";
+    }
+    var transEl = document.createElement("div");
+    transEl.className = "kifi-tile-transparent";
+    transEl.style.backgroundImage = "url(" + api.url("images/metro/tile_logo.png") + ")";
+    el.appendChild(transEl);
+    var nUnread = (o.unreadComments || 0) + (o.unreadMessages || 0);
+    var nTot = (o.numComments || 0) + (o.numMessages || 0);
+    if (nUnread || nTot) {
+      var countEl = document.createElement("span");
+      countEl.className = "kifi-count" + (nUnread ? " kifi-unread" : "");
+      countEl.textContent = nUnread || nTot;
+      (nUnread ? el : transEl).appendChild(countEl);
+      el.classList.add("kifi-with-count");
+    }
+    el.style.display = "none";
+    document.documentElement.appendChild(el);
+    el.addEventListener("mouseover", function() {
+      withSlider2(function() {
+        slider2.show(info, "tile");
       });
-
+    });
+    api.require("styles/metro/tile.css", function() {
+      el.style.display = "";
       if (o.keepers && !o.kept) {
         withSlider2(function() {
           setTimeout(slider2.showKeepersFor.bind(slider2, o, el, 2000), 3000);

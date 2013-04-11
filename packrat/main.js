@@ -265,6 +265,12 @@ api.port.on({
     });
     return true;
   },
+  set_comment_read: function(id) {
+    socket.send(["set_comment_read", id]);
+  },
+  set_message_read: function(id) {
+    socket.send(["set_message_read", id]);
+  },
   normalize: function(_, respond, tab) {
     socket.send(["normalize", tab.url], respond);
     return true;
@@ -287,7 +293,7 @@ api.port.on({
     };
     if (howMany > notifications.length) {
       var oldest = (notifications[notifications.length-1] || {}).time;
-      socket.send(["get_notifications", howMany, oldest]);
+      socket.send(["get_notifications", howMany - notifications.length, oldest]);
       notifyCallbacks.push(cb);
       return true;
     } else {

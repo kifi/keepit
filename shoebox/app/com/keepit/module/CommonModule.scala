@@ -2,11 +2,9 @@ package com.keepit.module
 
 import java.io.File
 import java.net.InetAddress
-
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
-
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.analytics._
@@ -27,9 +25,11 @@ import com.keepit.search._
 import com.keepit.shoebox.{ShoeboxServiceClientImpl, ShoeboxServiceClient}
 import com.mongodb.casbah.MongoConnection
 import com.tzavellas.sse.guice.ScalaModule
-
 import akka.actor.ActorSystem
 import play.api.Play.current
+import com.keepit.model.UserRepo
+import com.keepit.model.NormalizedURIRepo
+import com.keepit.common.time.Clock
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -49,6 +49,18 @@ class CommonModule extends ScalaModule with Logging {
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
     listenerBinder.addBinding().to(classOf[SliderShownListener])
     listenerBinder.addBinding().to(classOf[SearchUnloadListener])
+  }
+
+  @Singleton
+  @Provides
+  def searchUnloadProvider(
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    persistEventPlugin: PersistEventPlugin,
+    store: MongoEventStore,
+    clock: Clock,
+    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
+    new SearchUnloadListenerImpl(userRepo, normalizedURIRepo, persistEventPlugin, store, clock, fortyTwoServices)
   }
 
   @Singleton

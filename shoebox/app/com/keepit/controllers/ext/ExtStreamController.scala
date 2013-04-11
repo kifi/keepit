@@ -29,6 +29,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.State
 import scala.util.Random
 import com.keepit.controllers.core.{PaneDetails, KeeperInfoLoader}
+import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
@@ -45,7 +46,9 @@ class ExtStreamController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
+  socialConnectionRepo: SocialConnectionRepo,
   userRepo: UserRepo,
+  basicUserRepo: BasicUserRepo,
   experimentRepo: UserExperimentRepo,
   userChannel: UserChannel,
   uriChannel: UriChannel,
@@ -56,6 +59,7 @@ class ExtStreamController @Inject() (
   urlPatternRepo: URLPatternRepo,
   commentRepo: CommentRepo,
   paneData: PaneDetails,
+  eventRepo: EventRepo,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
@@ -131,13 +135,18 @@ class ExtStreamController @Inject() (
                 subscriptions = subscriptions - nUri
               case JsString("log_event") +: JsObject(pairs) +: _ =>
                 logEvent(streamSession, JsObject(pairs))
-              case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>
+              case JsString("get_friends") +: _ =>
+                channel.push(Json.arr("friends", getFriends(userId)))
+              case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>// unused, remove soon
                 channel.push(Json.arr(requestId.toLong, paneData.getComments(userId, url)))
-                // channel.push(Json.arr(requestId.toLong, commentWithBasicUserSerializer.writes(paneData.getComments(userId, url))))
-              case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>
+              case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>     // unused, remove soon
                 channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(userId, url)))
-              case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>
+              case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>  // unused, remove soon
                 channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(userId, ExternalId[Comment](threadId))))
+              case JsString("get_thread") +: JsString(threadId) +: _ =>
+                channel.push(Json.arr("thread", paneData.getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
+                  Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
+                }))
               case JsString("get_last_notify_read_time") +: _ =>
                 channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toString()))
               case JsString("set_last_notify_read_time") +: _ =>
@@ -148,10 +157,10 @@ class ExtStreamController @Inject() (
                   case _ => None
                 }
                 channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, howMany.toInt)))
-              case JsString("set_message_read") +: JsString(parentExternalId) +: _ =>
-                setMessageRead(userId, parentExternalId)
-              case JsString("set_comment_read") +: JsString(externalId) +: _ =>
-                setCommentRead(userId, externalId)
+              case JsString("set_message_read") +: JsString(messageExternalId) +: _ =>
+                setMessageRead(userId, messageExternalId)
+              case JsString("set_comment_read") +: JsString(commentExternalId) +: _ =>
+                setCommentRead(userId, commentExternalId)
               case json =>
                 log.warn(s"Not sure what to do with: $json")
             }
@@ -179,6 +188,12 @@ class ExtStreamController @Inject() (
         Cont[JsArray, Unit](i => step(i))
     }
     (Cont[JsArray, Unit](i => step(i)))
+  }
+
+  private def getFriends(userId: Id[User]): Set[BasicUser] = {
+    db.readOnly { implicit s =>
+      socialConnectionRepo.getFortyTwoUserConnections(userId).map(basicUserRepo.load)
+    }
   }
 
   private def getLastNotifyTime(userId: Id[User]): DateTime = {
@@ -209,8 +224,7 @@ class ExtStreamController @Inject() (
   private def setMessageRead(userId: Id[User], externalId: String) = {
     db.readWrite { implicit session =>
       val comment = commentRepo.get(ExternalId[Comment](externalId))
-      val parentId = comment.parent.map(p => commentRepo.get(p).id.get).getOrElse(comment.id.get)
-      userNotificationRepo.getWithCommentId(userId, parentId).foreach { n =>
+      userNotificationRepo.getWithCommentId(userId, comment.id.get).foreach { n =>
         userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
       }
     }
