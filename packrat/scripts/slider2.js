@@ -42,7 +42,7 @@ slider2 = function() {
         "numMessages": o.numMessages,
         "newComments": o.unreadComments,
         "newMessages": o.unreadMessages,
-        newNotices: o.newNotices,
+        "newNotices": o.unreadNotices,
         // "connected_networks": api.url("images/networks.png")
       }, function(html) {
         if ($slider) {
@@ -290,7 +290,7 @@ slider2 = function() {
     switch (loc[1]) {
       case "messages":
         if (loc[2]) {
-          requireData("thread/" + loc[2], function(messages) {
+          requireData("thread", loc[2], function(messages) {
             showPane("thread", false, messages[0].recipients, loc[2]);
           });
         } else {
@@ -414,12 +414,15 @@ slider2 = function() {
       requireData("threads", function(threads) {
         api.require("scripts/threads.js", function() {
           renderThreads($box.find(".kifi-pane-tall"), threads);
+          threads.forEach(function(th) {
+            requireData("thread", th.id, api.noop);
+          });
         });
       });
     },
     thread: function($box, threadId) {
       var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
-      requireData("thread/" + threadId, function(messages) {
+      requireData("thread", threadId, function(messages) {
         api.require("scripts/thread.js", function() {
           renderThread($tall, threadId, messages);
           api.port.emit("set_message_read", messages[messages.length - 1].id);
@@ -456,42 +459,37 @@ slider2 = function() {
     return arr;
   }
 
-  var cache = {}, requested = {};
-  requireData("normalize", "comments", "threads");  // pre-fetching
-  function requireData() {
-    var keys = Array.prototype.slice.call(arguments), callback = keys.pop();
-    if (typeof callback != "function") {
-      keys.push(callback);
-      callback = $.noop;
-    }
+  const dataCallbacks = {};
+  function requireData(key, callback) {
+    var kArr = key.split("/");
+    var arr = dataCallbacks[key] = dataCallbacks[key] || [];
+    arr.push([kArr[1], callback]);
 
-    if (!invokeIfReady()) {
-      var t = +new Date;
-      keys
-      .filter(function(k) {
-        return !cache.hasOwnProperty(k) && t - (requested[k] || 0) > 3000;
-      })
-      .forEach(function(k) {
-        var kArr = k.split("/");
-        api.log("[requireData:emit]", kArr[0], kArr[1]);
-        api.port.emit(kArr[0], kArr[1], function(v) {
-          api.log("[requireData:emit:callback]", k, v);
-          cache[k] = v;
-          invokeIfReady();
-        });
-        requested[k] = t;
-      });
-    }
+    api.port.emit.apply(api.port, kArr);
+  }
 
-    function invokeIfReady() {
-      api.log("[requireData:invokeIfReady]", keys);
-      if (keys.every(function(k) {return cache.hasOwnProperty(k)})) {
-        api.log("[requireData:invokeIfReady] calling:", keys);
-        callback.apply(null, keys.map(function(k) {return cache[k]}));
-        return true;
+  function receiveData(type, prop, data, respond) {  // prop might be omitted
+    api.log("[receiveData]", arguments);
+    if (arguments.length < 4) {
+      data = prop, prop = null;
+    }
+    var arg = data[prop], key = prop ? type + "/" + arg : type;
+    for (var i = 0, callbacks = dataCallbacks[key] || 0; i < callbacks.length; i++) {
+      var cb = callbacks[i];
+      if (arg == cb[0]) {
+        cb[1](data);
+        callbacks.splice(i--, 1);
       }
     }
+    if (!callbacks.length) {
+      delete dataCallbacks[key];
+    }
   }
+
+  api.port.on({
+    comments: receiveData.bind(null, "comments"),
+    threads: receiveData.bind(null, "threads"),
+    thread: receiveData.bind(null, "thread", "id")});
 
   // the slider API
   return {
