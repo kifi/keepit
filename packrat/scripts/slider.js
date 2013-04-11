@@ -638,9 +638,8 @@ slider = function() {
     });
 
     if (type == "message") {
-      api.port.emit("get_friends", function(data) {
-        api.log("friends:", data);
-        var friends = data.friends; //TODO!
+      api.port.emit("get_friends", function(friends) {
+        api.log("friends:", friends);
         for (var i in friends) {
           var f = friends[i];
           f.name = f.firstName + " " + f.lastName;
