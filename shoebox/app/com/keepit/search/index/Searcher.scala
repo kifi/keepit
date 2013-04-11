@@ -73,8 +73,13 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   def explain(query: Query, id: Long): Explanation = {
     findDocIdAndAtomicReaderContext(id) match {
       case Some((docid, context)) =>
-        val weight = createNormalizedWeight(query)
-        weight.explain(context, docid)
+        val rewrittenQuery = rewrite(query)
+        if (rewrittenQuery != null) {
+          val weight = createNormalizedWeight(rewrittenQuery)
+          weight.explain(context, docid)
+        } else {
+          new Explanation(0.0f, "rewrittten query is null")
+        }
       case None =>
         new Explanation(0.0f, "failed to find docid")
     }
