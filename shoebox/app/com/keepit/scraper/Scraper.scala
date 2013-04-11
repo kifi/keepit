@@ -84,7 +84,7 @@ class Scraper @Inject() (
 
 
   private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
-    log.info(s"scraping $uri")
+    log.debug(s"scraping $uri")
 
     fetchArticle(uri, info) match {
       case Scraped(article, signature) =>
@@ -100,7 +100,7 @@ class Scraper @Inject() (
           }
           savedUri
         }
-        log.info("fetched uri %s => %s".format(uri, article))
+        log.debug("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
       case NotScrapable(destinationUrl) =>
         val unscrapableURI = db.readWrite { implicit s =>
