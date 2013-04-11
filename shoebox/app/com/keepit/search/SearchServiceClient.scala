@@ -14,7 +14,7 @@ import scala.concurrent.Future
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
 
-  def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], isUserKeep: Boolean): Future[Unit]
+  def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean): Future[Unit]
   def updateURIGraph(): Future[Int]
   def index(): Future[Int]
   def articleIndexInfo(): Future[ArticleIndexInfo]
@@ -42,8 +42,8 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
   import com.keepit.controllers.search.ResultClickedJson._
   import com.keepit.controllers.search.URIGraphJson._
 
-  def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], isKeep: Boolean): Future[Unit] = {
-    val json = Json.toJson(ResultClicked(userId, query, uriId, isKeep))
+  def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Future[Unit] = {
+    val json = Json.toJson(ResultClicked(userId, query, uriId, rank, isKeep))
     call(routes.SearchEventController.logResultClicked(), json).map(_ => Unit)
   }
 
