@@ -86,7 +86,6 @@ class UserNotifier @Inject() (
   emailAddressRepo: EmailAddressRepo,
   deepLinkRepo: DeepLinkRepo,
   postOffice: PostOffice,
-  CommentWithBasicUserRepo: CommentWithBasicUserRepo,
   basicUserRepo: BasicUserRepo,
   commentRepo: CommentRepo,
   commentRecipientRepo: CommentRecipientRepo,
@@ -152,10 +151,9 @@ class UserNotifier @Inject() (
           subsumedId = lastNoticeId
         ))
 
-        if(userChannel.clientCount(userId) > 0) {
+        if(userChannel.isConnected(userId)) {
           log.info(s"Sending notification because $userId is connected.")
 
-          val threadInfo = threadInfoRepo.load(parent, Some(userId))
           userChannel.push(userId, messageJson)
           notificationBroadcast.push(userNotification)
         }

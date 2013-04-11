@@ -77,11 +77,12 @@ trait ChannelManager[T, S <: Channel] {
   def broadcast(msg: JsArray): Int
 
   /** Returns the number of currently connected clients.
-   *
-   *  If a channelId is provided, return the number of connected clients for just that channelId.
    */
   def clientCount: Int
-  def clientCount(channelId: T): Int
+
+  /** Returns whether a client is connected or not to a given channel.
+   */
+  def isConnected(channelId: T): Int
 }
 
 class Subscription(val name: String, unsub: () => Option[Boolean]) {
@@ -159,8 +160,8 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
     channels.map(_._2.size).sum
   }
 
-  def clientCount(id: T): Int = {
-    channels.get(id).map(_.size).getOrElse(0)
+  def isConnected(id: T): Boolean = {
+    channels.get(id).isDefined
   }
 
   private def findOrCreateChannel(id: T): Channel = {
