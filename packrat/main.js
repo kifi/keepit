@@ -159,7 +159,7 @@ const socketHandlers = {
   notifications: function(arr) {
     api.log("[socket:notifications]", arr);
     var idToNotif = {};
-    notifications.concat(arr).forEach(function (n) {
+    notifications.concat(arr).forEach(function(n) {
       idToNotif[n.id] = n;
     });
     notifications.length = 0;
@@ -172,7 +172,7 @@ const socketHandlers = {
     for (var id in idToNotif) {
       notifications.push(idToNotif[id]);
     }
-    notifications.sort(function (a, b) {
+    notifications.sort(function(a, b) {
       return new Date(b.time) - new Date(a.time);
     });
     while (notifyCallbacks.length) {
@@ -196,9 +196,6 @@ const socketHandlers = {
         api.tabs.emit(tab, "thread", th);
       }
     }
-  },
-  event: function(e) {
-    api.log("[socket:event]", e);
   }
 };
 

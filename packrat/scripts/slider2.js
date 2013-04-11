@@ -290,7 +290,7 @@ slider2 = function() {
     switch (loc[1]) {
       case "messages":
         if (loc[2]) {
-          requireData("thread", loc[2], function(messages) {
+          requireData("thread/" + loc[2], function(messages) {
             showPane("thread", false, messages[0].recipients, loc[2]);
           });
         } else {
@@ -415,14 +415,14 @@ slider2 = function() {
         api.require("scripts/threads.js", function() {
           renderThreads($box.find(".kifi-pane-tall"), threads);
           threads.forEach(function(th) {
-            requireData("thread", th.id, api.noop);
+            requireData("thread/" + th.id, api.noop);
           });
         });
       });
     },
     thread: function($box, threadId) {
       var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
-      requireData("thread", threadId, function(messages) {
+      requireData("thread/" + threadId, function(messages) {
         api.require("scripts/thread.js", function() {
           renderThread($tall, threadId, messages);
           api.port.emit("set_message_read", messages[messages.length - 1].id);
