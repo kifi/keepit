@@ -32,12 +32,12 @@ case class Persist(event: Event, queueTime: DateTime)
 case class PersistMany(events: Seq[Event], queueTime: DateTime)
 
 private[analytics] class PersistEventActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin, eventRepo: EventRepo)
+    healthcheckPlugin: HealthcheckPlugin, eventHelper: EventHelper, eventRepo: EventRepo)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case Persist(event, queueTime) =>
-      eventRepo.feedToListeners(event)
+      eventHelper.newEvent(event)
       val diff = Seconds.secondsBetween(queueTime, currentDateTime).getSeconds
       if(diff > 120) {
         val ex = new Exception("Event log is backing up. Event was queued %s seconds ago".format(diff))
@@ -82,9 +82,10 @@ class PersistEventPluginImpl @Inject() (
   def persist(events: Seq[Event]): Unit = actor ! PersistMany(events, currentDateTime)
 }
 
-class FakePersistEventPluginImpl @Inject() (system: ActorSystem) extends PersistEventPlugin with Logging {
+class FakePersistEventPluginImpl @Inject() (system: ActorSystem, eventHelper: EventHelper) extends PersistEventPlugin with Logging {
 
   def persist(event: Event): Unit = {
+    eventHelper.newEvent(event)
     log.info("Fake persisting event %s".format(event.externalId))
   }
   def persist(events: Seq[Event]): Unit = {
