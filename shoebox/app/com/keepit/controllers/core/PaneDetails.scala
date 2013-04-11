@@ -87,7 +87,7 @@ class PaneDetails @Inject() (
   def getMessageThread(viewerUserId: Id[User], messageId: ExternalId[Comment]): Seq[CommentWithBasicUser] = {
     val (messages, commentReadToSave) = db.readOnly{ implicit session =>
       val message = commentRepo.get(messageId)
-      val parent = comment.parent.map(commentRepo.get).getOrElse(message)
+      val parent = message.parent.map(commentRepo.get).getOrElse(message)
 
       val messages: Seq[CommentWithBasicUser] = parent +: commentRepo.getChildren(parent.id.get) map { msg =>
         commentWithBasicUserRepo.load(msg)
