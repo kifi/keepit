@@ -91,6 +91,9 @@ class UserNotifier @Inject() (
   commentRecipientRepo: CommentRecipientRepo,
   userNotifyRepo: UserNotificationRepo,
   notificationBroadcast: NotificationBroadcaster,
+  commentWithBasicUserRepo: CommentWithBasicUserRepo,
+  normalUriRepo: NormalizedURIRepo,
+  uriChannel: UriChannel,
   implicit val fortyTwoServices: FortyTwoServices) extends Logging {
 
   implicit val basicUserFormat = BasicUserSerializer.basicUserSerializer
@@ -111,6 +114,9 @@ class UserNotifier @Inject() (
           commentId = comment.id,
           subsumedId = None
         ))
+
+        val normalizedUri = normalUriRepo.get(comment.uriId).url
+        uriChannel.push(normalizedUri, Json.arr("comment", normalizedUri, commentWithBasicUserRepo.load(comment)))
 
         notificationBroadcast.push(userNotification)
         notifyCommentByEmail(user, commentDetail)
