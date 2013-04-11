@@ -136,13 +136,16 @@ class ExtStreamController @Inject() (
                 logEvent(streamSession, JsObject(pairs))
               case JsString("get_friends") +: _ =>
                 channel.push(Json.arr("friends", getFriends(userId)))
-              case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>
+              case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>// unused, remove soon
                 channel.push(Json.arr(requestId.toLong, paneData.getComments(userId, url)))
-                // channel.push(Json.arr(requestId.toLong, commentWithBasicUserSerializer.writes(paneData.getComments(userId, url))))
-              case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>
+              case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>     // unused, remove soon
                 channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(userId, url)))
-              case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>
+              case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>  // unused, remove soon
                 channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(userId, ExternalId[Comment](threadId))))
+              case JsString("get_thread") +: JsString(threadId) +: _ =>
+                channel.push(Json.arr("thread", paneData.getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
+                  Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
+                  }))
               case JsString("get_last_notify_read_time") +: _ =>
                 channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toString()))
               case JsString("set_last_notify_read_time") +: _ =>
