@@ -133,7 +133,8 @@ class UserNotifier @Inject() (
       val conversationId = parent.id.get
 
       val threadInfo = threadInfoRepo.load(parent, Some(message.userId))
-      userChannel.push(message.userId, Json.arr("message", threadInfo, commentWithBasicUserRepo.load(message)))
+      val messageJson = Json.arr("message", threadInfo, commentWithBasicUserRepo.load(message))
+      userChannel.push(message.userId, messageJson)
 
       val thread = if(message.parent.isEmpty)
           Seq(message)
@@ -155,7 +156,7 @@ class UserNotifier @Inject() (
           log.info(s"Sending notification because $userId is connected.")
 
           val threadInfo = threadInfoRepo.load(parent, Some(userId))
-          userChannel.push(userId, Json.arr("message", normalizedUri, threadInfo, commentWithBasicUserRepo.load(message)))
+          userChannel.push(userId, messageJson)
           notificationBroadcast.push(userNotification)
         }
         else {
