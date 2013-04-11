@@ -106,7 +106,7 @@ class UserNotifier @Inject() (
   def comment(comment: Comment): Unit = {
     db.readWrite { implicit s =>
       val normalizedUri = normalUriRepo.get(comment.uriId).url
-      userChannel.push(comment.userId, Json.arr("comment", normalizedUri, commentWithBasicUserRepo.load(comment)))
+      uriChannel.push(normalizedUri, Json.arr("comment", normalizedUri, commentWithBasicUserRepo.load(comment)))
 
       val commentDetails = createCommentDetails(comment)
       commentDetails.map { commentDetail =>
@@ -118,9 +118,6 @@ class UserNotifier @Inject() (
           commentId = comment.id,
           subsumedId = None
         ))
-
-        uriChannel.push(normalizedUri, Json.arr("comment", normalizedUri, commentWithBasicUserRepo.load(comment)))
-
         notificationBroadcast.push(userNotification)
         notifyCommentByEmail(user, commentDetail)
 
