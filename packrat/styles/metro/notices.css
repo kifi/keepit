@@ -9,15 +9,23 @@
   border-bottom: 1px solid #d2d2d2;
   padding: 10px 12px 10px 56px;
   min-height: 10px;
-  position: relative;
+}
+.kifi-notice:hover {
+  cursor: pointer;
+  background: #eee;
 }
 .kifi-notice time {
   float: right;
   margin: -2px -2px 0 0;
   font-size: 11px;
-  background-color: #fafafa;
   color: #a9a9a9;
   display: block;
+}
+.kifi-notice-state-delivered {
+  background: #f6f6ff;
+}
+.kifi-notice-state-delivered:hover {
+  background: #eef;
 }
 .kifi-notice-avatar {
   position: absolute;

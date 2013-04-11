@@ -400,9 +400,13 @@ slider2 = function() {
         api.port.emit("session", function(session) {
           comments.forEach(function(c) {
             c.isLoggedInUser = c.user.externalId == session.userId;
+            api.port.emit("set_comment_read")
           });
           api.require("scripts/comments.js", function() {
             renderComments($box.find(".kifi-pane-tall"), comments, ~session.experiments.indexOf("admin"));
+            comments.forEach(function (c) {
+              api.port.emit("set_comment_read", c.id);
+            });
           });
         });
       });
@@ -419,6 +423,7 @@ slider2 = function() {
       requireData("thread/" + threadId, function(messages) {
         api.require("scripts/thread.js", function() {
           renderThread($tall, threadId, messages);
+          api.port.emit("set_message_read", messages[messages.length - 1].id);
         });
       });
     },
