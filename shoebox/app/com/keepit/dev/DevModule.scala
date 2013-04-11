@@ -44,6 +44,18 @@ class ShoeboxDevModule extends ScalaModule with Logging {
     new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo)
   }
 
+//  @Singleton
+//  @Provides
+//  def searchUnloadProvider(
+//    userRepo: UserRepo,
+//    normalizedURIRepo: NormalizedURIRepo,
+//    persistEventPlugin: PersistEventPlugin,
+//    store: MongoEventStore,
+//    clock: Clock,
+//    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
+//    new SearchUnloadListenerImpl(userRepo, normalizedURIRepo, persistEventPlugin, store, clock, fortyTwoServices)
+//  }
+
   @Singleton
   @Provides
   def domainTagImportSettings: DomainTagImportSettings = {

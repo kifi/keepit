@@ -400,7 +400,6 @@ slider2 = function() {
         api.port.emit("session", function(session) {
           comments.forEach(function(c) {
             c.isLoggedInUser = c.user.externalId == session.userId;
-            api.port.emit("set_comment_read")
           });
           api.require("scripts/comments.js", function() {
             renderComments($box.find(".kifi-pane-tall"), comments, ~session.experiments.indexOf("admin"));
