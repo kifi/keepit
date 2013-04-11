@@ -9,6 +9,12 @@ import play.api.Play.current
 import play.api.mvc.Controller
 import play.api.test.Helpers.running
 import scala.reflect.ManifestFactory.classType
+import com.keepit.common.analytics.EventListenerPlugin
+import com.keepit.common.analytics.EventRepo
+import com.keepit.FortyTwoGlobal
+import scala.collection.JavaConversions._
+import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.analytics.EventHelper
 
 class SearchModuleTest extends Specification with Logging {
 
@@ -24,6 +30,16 @@ class SearchModuleTest extends Specification with Logging {
           case (_, _, ClassRoute(className)) => Class.forName(className)
         }.distinct.filter(isSearchController)
         for (c <- classes) inject(classType[Controller](c), current)
+        val injector = current.global.asInstanceOf[FortyTwoGlobal].injector
+        val bindings = injector.getAllBindings()
+        bindings.keySet() filter { key =>
+          val superClass = key.getTypeLiteral().getRawType().getSuperclass()
+          superClass != classOf[FortyTwoActor]
+        } foreach { key =>
+          injector.getInstance(key)
+        }
+        inject[EventRepo]
+        inject[EventHelper]
         true
       }
     }
