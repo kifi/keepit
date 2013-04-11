@@ -58,7 +58,7 @@ private[classify] class DomainClassificationActor @Inject() (
   def receive = {
     case FetchDomainInfo(hostname) =>
       val tagNames = Await.result(getTagNames(hostname), 100 seconds)
-      val res = db.readWrite(attempts = 3) { implicit s =>
+      val res: Boolean = db.readWrite(attempts = 3) { implicit s =>
         val domain = domainRepo.get(hostname, excludeState = None) match {
           case Some(d) if d.state != DomainStates.ACTIVE => domainRepo.save(d.withState(DomainStates.ACTIVE))
           case Some(d) => d
@@ -83,7 +83,7 @@ private[classify] class DomainClassificationActor @Inject() (
           DomainToTag(domainId = domain.id.get, tagId = tagId)
         }.toSeq)
         if (updated) updater.calculateSensitivity(domain).getOrElse(false)
-        else domain.sensitive
+        else domain.sensitive.get
       }
       sender ! res
   }
