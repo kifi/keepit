@@ -121,7 +121,7 @@ slider2 = function() {
                   facebookId: friend.facebookId,
                   iconsUrl: api.url("images/social_icons.png")
                 }, callback);
-                api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+                api.port.emit("get_num_mutual_keeps", {id: friend.id}, function gotNumMutualKeeps(o) {
                   $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
                 });
               }});
@@ -399,7 +399,7 @@ slider2 = function() {
       requireData("comments", function(comments) {
         api.port.emit("session", function(session) {
           comments.forEach(function(c) {
-            c.isLoggedInUser = c.user.externalId == session.userId;
+            c.isLoggedInUser = c.user.id == session.userId;
           });
           api.require("scripts/comments.js", function() {
             renderComments($box.find(".kifi-pane-tall"), comments, ~session.experiments.indexOf("admin"));

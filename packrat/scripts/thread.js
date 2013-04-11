@@ -50,13 +50,13 @@ function renderThread($container, threadId, messages) {
         "createdAt": response.message.createdAt,
         "text": text,
         "user": {
-          "externalId": response.session.userId,
+          "id": response.session.userId,
           "firstName": response.session.name,
           "lastName": "",
           "facebookId": response.session.facebookId
         },
         "isLoggedInUser": true,
-        "externalId": response.commentId
+        "id": response.commentId
       }, function(html) {
         var $sent = $container.find(".kifi-messages-sent");
         $(html).find("time").timeago().end().appendTo($sent);
