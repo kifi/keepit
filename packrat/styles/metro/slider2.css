@@ -172,7 +172,9 @@
   text-align: center;
   cursor: pointer;
 }
-.kifi-unkept .kifi-slider2-keep-btn {
+.kifi-unkept .kifi-slider2-keep-btn,
+.kifi-unkept .kifi-slider2-keep-btn.kifi-hoverless:hover,
+.kifi-unkept .kifi-slider2-keep-btn.kifi-hoverless:active {
   background: #22303f;
 }
 .kifi-unkept .kifi-slider2-keep-btn:hover {
