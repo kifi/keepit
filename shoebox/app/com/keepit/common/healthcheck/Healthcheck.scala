@@ -31,6 +31,7 @@ import org.joda.time.DateTime
 import scala.concurrent.{Future, Await}
 import com.google.inject.{Inject, Provider}
 import scala.concurrent.duration._
+import scala.collection.mutable.{HashTable => MMap}
 
 object Healthcheck {
 
@@ -53,7 +54,7 @@ case class HealthcheckHost(host: String) extends AnyVal {
   override def toString = host
 }
 
-case class HealthcheckErrorHistory()
+case class HealthcheckErrorHistory(signature: HealthcheckErrorSignature, count: Int, countSinceLastAlert: Int, lastError: HealthcheckError)
 
 class HealthcheckActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
@@ -62,11 +63,7 @@ class HealthcheckActor @Inject() (
     host: HealthcheckHost)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
-  private def initErrors: Map[HealthcheckErrorSignature, HealthcheckErrorHistory] = Map().withDefaultValue(List[HealthcheckErrorHistory]())
-
-  private var errors = initErrors
-  private var lastErrorTime: Option[DateTime] = None
-  private val startupTime = currentDateTime
+  private val errors: MMap[HealthcheckErrorSignature, HealthcheckErrorHistory] = new MMap()
 
   def receive() = {
     case ReportErrorsAction =>
