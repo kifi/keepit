@@ -216,7 +216,6 @@ class ExtStreamController @Inject() (
     val event = Events.userEvent(eventFamily, eventName, user, session.experiments, installId, metaData, prevEvents, eventTime)
     log.debug("Created new event: %s".format(event))
     persistEventPlugin.persist(event)
-    eventRepo.feedToListeners(event)
   }
 
   private def setMessageRead(userId: Id[User], externalId: String) = {
