@@ -57,33 +57,35 @@ private[classify] class DomainClassificationActor @Inject() (
 
   def receive = {
     case FetchDomainInfo(hostname) =>
-      val tagNames = Await.result(getTagNames(hostname), 100 seconds)
-      val res: Option[Boolean] = db.readWrite(attempts = 3) { implicit s =>
-        val domain = domainRepo.get(hostname, excludeState = None) match {
+      val domain = db.readWrite(attempts = 3) { implicit s =>
+        domainRepo.get(hostname, excludeState = None) match {
           case Some(d) if d.state != DomainStates.ACTIVE => domainRepo.save(d.withState(DomainStates.ACTIVE))
           case Some(d) => d
           case None => domainRepo.save(Domain(hostname = hostname))
         }
-        val tagIds = tagNames.map { name =>
-          (tagRepo.get(name, excludeState = None) match {
-            case Some(tag) if tag.state != DomainTagStates.ACTIVE =>
-              tagRepo.save(tag.withState(DomainTagStates.ACTIVE))
-            case Some(tag) => tag
-            case None => tagRepo.save(DomainTag(name = name))
-          }).id.get
-        }.toSet
-        val existingTagRelationships = domainToTagRepo.getByDomain(domain.id.get, excludeState = None)
-        var updated = false
-        for (r <- existingTagRelationships.toSeq if r.state != DomainToTagStates.ACTIVE) {
-          updated = true
-          domainToTagRepo.save(r.withState(DomainToTagStates.ACTIVE))
+      }
+      val res: Option[Boolean] = domain.sensitive orElse {
+        // check again to make sure a previous FetchDomainInfo hasn't filled in the sensitivity
+        val tagNames = Await.result(getTagNames(hostname), 100 seconds)
+        db.readWrite { implicit s =>
+          val tagIds = tagNames.map { name =>
+            (tagRepo.get(name, excludeState = None) match {
+              case Some(tag) if tag.state != DomainTagStates.ACTIVE =>
+                tagRepo.save(tag.withState(DomainTagStates.ACTIVE))
+              case Some(tag) => tag
+              case None => tagRepo.save(DomainTag(name = name))
+            }).id.get
+          }.toSet
+          val existingTagRelationships = domainToTagRepo.getByDomain(domain.id.get, excludeState = None)
+          for (r <- existingTagRelationships.toSeq if r.state != DomainToTagStates.ACTIVE) {
+            domainToTagRepo.save(r.withState(DomainToTagStates.ACTIVE))
+          }
+          domainToTagRepo.insertAll((tagIds -- existingTagRelationships.map(_.tagId)).map { tagId =>
+            DomainToTag(domainId = domain.id.get, tagId = tagId)
+          }.toSeq)
+          // since sensitive had a value of None before, we always need to recompute even if nothing changed
+          updater.calculateSensitivity(domain)
         }
-        domainToTagRepo.insertAll((tagIds -- existingTagRelationships.map(_.tagId)).map { tagId =>
-          updated = true
-          DomainToTag(domainId = domain.id.get, tagId = tagId)
-        }.toSeq)
-        if (updated || domain.sensitive.isEmpty) updater.calculateSensitivity(domain)
-        else domain.sensitive
       }
       sender ! res.getOrElse(false)
   }
