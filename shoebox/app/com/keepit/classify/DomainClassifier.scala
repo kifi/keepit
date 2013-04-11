@@ -82,7 +82,7 @@ private[classify] class DomainClassificationActor @Inject() (
           updated = true
           DomainToTag(domainId = domain.id.get, tagId = tagId)
         }.toSeq)
-        if (updated) updater.calculateSensitivity(domain)
+        if (updated || domain.sensitive.isEmpty) updater.calculateSensitivity(domain)
         else domain.sensitive
       }
       sender ! res.getOrElse(false)
