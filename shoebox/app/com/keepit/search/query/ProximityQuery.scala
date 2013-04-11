@@ -113,6 +113,15 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
   }
 }
 
+
+/**
+ * Each term is associated with a PositionAndMask instance.
+ * At any time,
+ * doc = the current document associated with the term
+ * pos = current position of the term in current document
+ * posLeft = number of unvisited term positions in current document
+ * mask : reflects the position of the term in query.
+ */
 private[query] final class PositionAndMask(val tp: DocsAndPositionsEnum, val termText: String) {
   var doc = -1
   var pos = -1
@@ -171,9 +180,11 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
     val insertCost = 1.0f
     val baseEditCost = 1.0f
     val doc = curDoc
+    // if doc not scored yet
     if (scoredDoc != doc) {
       var top = pq.top
       var maxScore = 0.0f
+      // if term still have positions left in this doc
       if (top.pos < Int.MaxValue) {
         var i = 0
         Arrays.fill(rl, 0.0f) // clear the run lengths
