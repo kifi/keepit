@@ -114,55 +114,74 @@ class ExtStreamController @Inject() (
           var subscriptions: Map[String, Subscription] = Map(
             "user" -> userChannel.subscribe(userId, socketId, channel))
 
-          val iteratee = asyncIteratee { json =>
-            log.info("WS just received: " + json)
-            json.as[Seq[JsValue]] match {
-              case JsString("ping") +: _ =>
-                channel.push(Json.arr("pong"))
-              case JsString("stats") +: _ =>
-                channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
-              case JsString("normalize") +: JsNumber(requestId) +: JsString(url) +: _ =>
-                channel.push(Json.arr(requestId.toLong, URINormalizer.normalize(url)))
-              case JsString("subscribe_uri") +: JsNumber(requestId) +: JsString(url) +: _ =>
-                val nUri = URINormalizer.normalize(url)
-                subscriptions = subscriptions + (nUri -> uriChannel.subscribe(nUri, socketId, channel))
-                channel.push(Json.arr(requestId.toLong, nUri))
-                channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
-                channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
-              case JsString("unsubscribe_uri") +: JsString(url) +: _ =>
-                val nUri = URINormalizer.normalize(url)
-                subscriptions.get(nUri).foreach(_.unsubscribe())
-                subscriptions = subscriptions - nUri
-              case JsString("log_event") +: JsObject(pairs) +: _ =>
-                logEvent(streamSession, JsObject(pairs))
-              case JsString("get_friends") +: _ =>
-                channel.push(Json.arr("friends", getFriends(userId)))
-              case JsString("get_comments") +: JsNumber(requestId) +: JsString(url) +: _ =>// unused, remove soon
-                channel.push(Json.arr(requestId.toLong, paneData.getComments(userId, url)))
-              case JsString("get_message_threads") +: JsNumber(requestId) +: JsString(url) +: _ =>     // unused, remove soon
-                channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(userId, url)))
-              case JsString("get_message_thread") +: JsNumber(requestId) +: JsString(threadId) +: _ =>  // unused, remove soon
-                channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(userId, ExternalId[Comment](threadId))))
-              case JsString("get_thread") +: JsString(threadId) +: _ =>
-                channel.push(Json.arr("thread", paneData.getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
-                  Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
-                }))
-              case JsString("get_last_notify_read_time") +: _ =>
-                channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toString()))
-              case JsString("set_last_notify_read_time") +: _ =>
-                channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId).toString()))
-              case JsString("get_notifications") +: JsNumber(howMany) +: params =>
-                val createdBefore = params match {
-                  case JsString(time) +: _ => Some(parseStandardTime(time))
-                  case _ => None
-                }
-                channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, howMany.toInt)))
-              case JsString("set_message_read") +: JsString(messageExternalId) +: _ =>
-                setMessageRead(userId, messageExternalId)
-              case JsString("set_comment_read") +: JsString(commentExternalId) +: _ =>
-                setCommentRead(userId, commentExternalId)
-              case json =>
-                log.warn(s"Not sure what to do with: $json")
+          val handlers = Map[String, Seq[JsValue] => Unit](
+            "ping" -> { _ =>
+              channel.push(Json.arr("pong"))
+            },
+            "stats" -> { _ =>
+              channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
+            },
+            "normalize" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
+              channel.push(Json.arr(requestId.toLong, URINormalizer.normalize(url)))
+            },
+            "subscribe_uri" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
+              val nUri = URINormalizer.normalize(url)
+              subscriptions = subscriptions + (nUri -> uriChannel.subscribe(nUri, socketId, channel))
+              channel.push(Json.arr(requestId.toLong, nUri))
+              channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
+              channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
+              },
+            "unsubscribe_uri" -> { case JsString(url) +: _ =>
+              val nUri = URINormalizer.normalize(url)
+              subscriptions.get(nUri).foreach(_.unsubscribe())
+              subscriptions = subscriptions - nUri
+            },
+            "log_event" -> { case JsObject(pairs) +: _ =>
+              logEvent(streamSession, JsObject(pairs))
+            },
+            "get_friends" -> { _ =>
+              channel.push(Json.arr("friends", getFriends(userId)))
+            },
+            "get_comments" -> { case JsNumber(requestId) +: JsString(url) +: _ =>// unused, remove soon
+              channel.push(Json.arr(requestId.toLong, paneData.getComments(userId, url)))
+            },
+            "get_message_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>     // unused, remove soon
+              channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(userId, url)))
+            },
+            "get_message_thread" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>  // unused, remove soon
+              channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(userId, ExternalId[Comment](threadId))))
+            },
+            "get_thread" -> { case JsString(threadId) +: _ =>
+              channel.push(Json.arr("thread", paneData.getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
+                Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
+              }))
+            },
+            "get_last_notify_read_time" -> { _ =>
+              channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toString()))
+            },
+            "set_last_notify_read_time" -> { _ =>
+              channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId).toString()))
+            },
+            "get_notifications" -> { case JsNumber(howMany) +: params =>
+              val createdBefore = params match {
+                case JsString(time) +: _ => Some(parseStandardTime(time))
+                case _ => None
+              }
+              channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, howMany.toInt)))
+            },
+            "set_message_read" -> { case JsString(messageExternalId) +: _ =>
+              setMessageRead(userId, messageExternalId)
+            },
+            "set_comment_read" -> { case JsString(commentExternalId) +: _ =>
+              setCommentRead(userId, commentExternalId)
+            })
+
+          val iteratee = asyncIteratee { jsArr =>
+            log.info("WS just received: " + jsArr)
+            Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
+              handler(jsArr.value.tail)
+            } getOrElse {
+              log.warn("WS no handler for: " + jsArr)
             }
           }.mapDone { _ =>
             subscriptions.map(_._2.unsubscribe)
@@ -178,7 +197,7 @@ class ExtStreamController @Inject() (
     }
   }
 
-  private def asyncIteratee(f: JsValue => Unit): Iteratee[JsArray, Unit] = {
+  private def asyncIteratee(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
     import play.api.libs.iteratee._
     def step(i: Input[JsArray]): Iteratee[JsArray, Unit] = i match {
       case Input.EOF => Done(Unit, Input.EOF)
@@ -222,20 +241,26 @@ class ExtStreamController @Inject() (
     eventHelper.newEvent(event)
   }
 
-  private def setMessageRead(userId: Id[User], externalId: String) = {
+  private def setMessageRead(userId: Id[User], externalId: String) {
     db.readWrite { implicit session =>
       val comment = commentRepo.get(ExternalId[Comment](externalId))
       userNotificationRepo.getWithCommentId(userId, comment.id.get).foreach { n =>
-        userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
+        userChannel.push(userId, Json.arr("notifications", Seq(
+          SendableNotification.fromUserNotification(
+            userNotificationRepo.save(n.withState(UserNotificationStates.VISITED)))
+        )))
       }
     }
   }
 
-  private def setCommentRead(userId: Id[User], externalId: String) = {
+  private def setCommentRead(userId: Id[User], externalId: String) {
     db.readWrite { implicit session =>
       val commentId = commentRepo.get(ExternalId[Comment](externalId)).id.get
       userNotificationRepo.getWithCommentId(userId, commentId).foreach { n =>
-        userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
+        userChannel.push(userId, Json.arr("notifications", Seq(
+          SendableNotification.fromUserNotification(
+            userNotificationRepo.save(n.withState(UserNotificationStates.VISITED)))
+        )))
       }
     }
   }
