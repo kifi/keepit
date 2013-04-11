@@ -6,7 +6,6 @@ import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.State
 import com.keepit.common.time._
-import com.keepit.inject.inject
 import com.keepit.model._
 
 import play.api.Play.current
@@ -72,7 +71,7 @@ case class Event(
   externalId: ExternalId[Event] = ExternalId[Event](),
   metaData: EventMetadata,
   createdAt: DateTime,
-  serverVersion: String = inject[FortyTwoServices].currentService + ":" + inject[FortyTwoServices].currentVersion
+  serverVersion: String
 )
 
 class EventRepo @Inject() (s3EventStore: S3EventStore, mongoEventStore: MongoEventStore, eventHelper: EventHelper) {
@@ -90,9 +89,19 @@ class EventRepo @Inject() (s3EventStore: S3EventStore, mongoEventStore: MongoEve
 }
 
 object Events {
-  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[ExperimentType]], installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime) =
-    Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = createdAt)
+  def serverVersion(implicit fortyTwoServices: FortyTwoServices) = fortyTwoServices.currentService + ":" + fortyTwoServices.currentVersion
 
-  def serverEvent(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime) =
-    Event(metaData = ServerEventMetadata(eventFamily, eventName, metaData, prevEvents), createdAt = createdAt)
+  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[ExperimentType]],
+      installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil) (implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
+    Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = clock.now,
+      serverVersion = serverVersion(fortyTwoServices))
+
+  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[ExperimentType]],
+      installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]], createdAt: DateTime) (implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
+    Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = createdAt,
+      serverVersion = serverVersion(fortyTwoServices))
+
+  def serverEvent(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)  (implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
+    Event(metaData = ServerEventMetadata(eventFamily, eventName, metaData, prevEvents), createdAt = clock.now,
+      serverVersion = serverVersion(fortyTwoServices))
 }

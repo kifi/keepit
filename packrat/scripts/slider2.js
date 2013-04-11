@@ -42,6 +42,7 @@ slider2 = function() {
         "numMessages": o.numMessages,
         "newComments": o.unreadComments,
         "newMessages": o.unreadMessages,
+        newNotices: o.newNotices,
         // "connected_networks": api.url("images/networks.png")
       }, function(html) {
         if ($slider) {
@@ -387,7 +388,12 @@ slider2 = function() {
 
   const populatePane = {
     notices: function($box) {
-      // TODO
+      api.port.emit("session", function (session) {
+        api.require("scripts/notices.js", function() {
+          renderNotices($box.find(".kifi-pane-tall"), ~session.experiments.indexOf("admin"));
+          api.port.emit("set_last_notify_read_time");
+        });
+      });
     },
     comments: function($box) {
       requireData("comments", function(comments) {
@@ -397,6 +403,9 @@ slider2 = function() {
           });
           api.require("scripts/comments.js", function() {
             renderComments($box.find(".kifi-pane-tall"), comments, ~session.experiments.indexOf("admin"));
+            comments.forEach(function (c) {
+              api.port.emit("set_comment_read", c.id);
+            });
           });
         });
       });
@@ -413,6 +422,7 @@ slider2 = function() {
       requireData("thread/" + threadId, function(messages) {
         api.require("scripts/thread.js", function() {
           renderThread($tall, threadId, messages);
+          api.port.emit("set_message_read", messages[messages.length - 1].id);
         });
       });
     },

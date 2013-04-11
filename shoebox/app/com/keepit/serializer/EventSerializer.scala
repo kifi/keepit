@@ -11,6 +11,7 @@ import com.mongodb.casbah.commons.conversions.scala._
 import com.keepit.model._
 import com.mongodb.BasicDBObject
 import org.joda.time.format.ISODateTimeFormat
+import org.joda.time.DateTime
 
 class EventSerializer extends Format[Event] {
   // Play! 2.0 Json serializer
@@ -28,11 +29,11 @@ class EventSerializer extends Format[Event] {
       externalId = ExternalId[Event]((json \ "id").as[String]),
       metaData = EventSerializer.eventMetadataSerializer.reads(json \ "metaData").get,
       createdAt = (json \ "createdAt") match {
-        case s: JsString => parseStandardTime(s.as[String])
+        case s: JsString => s.as[DateTime]
         case s: JsObject =>
           val parser = ISODateTimeFormat.dateTime()
           parser.parseDateTime(s.values.head.as[String]) // necessary for Mongo parsing
-        case s: JsValue => parseStandardTime(s.toString)
+        case s: JsValue => s.as[DateTime]
       },
       serverVersion = (json \ "serverVersion").as[String]
     ))

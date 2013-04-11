@@ -6,7 +6,6 @@ import com.keepit.common.healthcheck.Healthcheck.INTERNAL
 import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
-import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
@@ -15,32 +14,30 @@ import java.io.StringReader
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
-import play.api.Play.current
+import com.keepit.search.SemanticVectorBuilder
+import com.google.inject.Inject
 
 object ArticleIndexer {
-
-  def apply(indexDirectory: Directory, articleStore: ArticleStore): ArticleIndexer = {
-    val analyzer = DefaultAnalyzer.forIndexing
-    val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
-
-    new ArticleIndexer(indexDirectory, config, articleStore)
-  }
-
   private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE)
   def shouldDelete(uri: NormalizedURI): Boolean = toBeDeletedStates.contains(uri.state)
 }
 
-class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, articleStore: ArticleStore)
+class ArticleIndexer (
+    indexDirectory: Directory,
+    indexWriterConfig: IndexWriterConfig,
+    articleStore: ArticleStore,
+    db: Database,
+    repo: NormalizedURIRepo,
+    healthcheckPlugin: HealthcheckPlugin)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
   val commitBatchSize = 100
+  val fetchSize = 20000
 
-  def run(): Int = run(commitBatchSize, commitBatchSize * 3)
+  def run(): Int = run(commitBatchSize, fetchSize)
 
   def run(commitBatchSize: Int, fetchSize: Int): Int = {
     log.info("starting a new indexing round")
-    val db = inject[Database]
-    val repo = inject[NormalizedURIRepo]
     try {
       val uris = db.readOnly { implicit s =>
         repo.getIndexable(sequenceNumber, fetchSize)
@@ -49,7 +46,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
       indexDocuments(uris.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
         val (errors, successes) = commitBatch.partition(_._2.isDefined)
         errors.map(_._2.get).foreach { error =>
-          inject[HealthcheckPlugin].addError(HealthcheckError(errorMessage = Some(error.msg), callType = INTERNAL))
+          healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(error.msg), callType = INTERNAL))
         }
         cnt += successes.size
       }
@@ -62,7 +59,7 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
   }
 
   def buildIndexable(id: Id[NormalizedURI]): ArticleIndexable = {
-    val uri = inject[Database].readOnly { implicit c => inject[NormalizedURIRepo].get(id) }
+    val uri = db.readOnly { implicit c => repo.get(id) }
     buildIndexable(uri)
   }
 
@@ -105,7 +102,14 @@ class ArticleIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterCo
           DefaultAnalyzer.forIndexingWithStemmer(contentLang).foreach{ analyzer =>
             doc.add(buildTextField("cs", article.content, analyzer))
           }
-          doc.add(buildSemanticVectorField("sv", titleAnalyzer.tokenStream("t", article.title), contentAnalyzer.tokenStream("c", article.content)))
+
+          val titleTS = titleAnalyzer.tokenStream("t", article.title)
+          val contentTS = contentAnalyzer.tokenStream("c", article.content)
+          val builder = new SemanticVectorBuilder(60)
+          builder.load(titleTS)
+          builder.load(contentTS)
+          doc.add(buildDocSemanticVectorField("docSv", builder))
+          doc.add(buildSemanticVectorField("sv", builder))
 
           // index domain name
           URI.parse(uri.url).toOption.flatMap(_.host) match {

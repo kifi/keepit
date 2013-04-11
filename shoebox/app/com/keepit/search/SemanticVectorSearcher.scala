@@ -3,12 +3,13 @@ package com.keepit.search
 import com.keepit.common.db._
 import com.keepit.model._
 import com.keepit.search.index.ArticleIndexer
+import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.Searcher
 import com.keepit.search.graph.URIGraphSearcher
-import org.apache.lucene.index.Term
-import com.keepit.search.index.DefaultAnalyzer
-import java.io.StringReader
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
+import org.apache.lucene.index.Term
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import java.io.StringReader
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 
@@ -19,27 +20,26 @@ class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGra
   private def getSemanticVector(term: Term, ids: Set[Long], minDocs: Int = 1): Option[SemanticVector] = {
     val subReaders = indexReader.wrappedSubReaders
     val composer = new SemanticVectorComposer
-    var vector = new Array[Byte](SemanticVector.arraySize)
+    var vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
     var i = 0
     while (i < subReaders.length) {
       val subReader = subReaders(i)
       val idMapper = subReader.getIdMapper
-      val tp = subReader.termPositions(term)
-      try {
-        while (tp.next) {
-          val id = idMapper.getId(tp.doc())
+      val tp = subReader.termPositionsEnum(term)
+      if (tp != null) {
+        while (tp.nextDoc() < NO_MORE_DOCS) {
+          val id = idMapper.getId(tp.docID())
           if (ids.contains(id)) {
             var freq = tp.freq()
             while (freq > 0) {
               freq -= 1
               tp.nextPosition()
-              vector = tp.getPayload(vector, 0)
+              val payload = tp.getPayload()
+              vector.set(payload.bytes, payload.offset, payload.length)
               composer.add(vector, 1)
             }
           }
         }
-      } finally {
-        tp.close()
       }
       i += 1
     }
@@ -67,10 +67,10 @@ class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGra
    * (term, document) pair.
    * Note: this may return empty map
    */
-  def getSemanticVectors(term: Term, uriIds:Set[Long]): Map[Long, Array[Byte]] = {
+  def getSemanticVectors(term: Term, uriIds:Set[Long]): Map[Long, SemanticVector] = {
 
     val subReaders = indexReader.wrappedSubReaders
-    var sv = Map[Long, Array[Byte]]();
+    var sv = Map[Long, SemanticVector]();
     var i = 0
 
     var earlyStop = false
@@ -80,24 +80,23 @@ class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGra
     while (i < subReaders.length && !earlyStop) {
       val subReader = subReaders(i)
       val idMapper = subReader.getIdMapper
-      val tp = subReader.termPositions(term)
-      try {
+      val tp = subReader.termPositionsEnum(term)
+      if (tp != null) {
         // iterate over docs containing this term
-        while (tp.next) {
-          val id = idMapper.getId(tp.doc())
+        while (tp.nextDoc < NO_MORE_DOCS) {
+          val id = idMapper.getId(tp.docID())
           if (uriIds.contains(id)) {
             docsRead += 1
             earlyStop = (docsRead == docsToRead)							// early stop: don't need to go through every subreader
-            var vector = new Array[Byte](SemanticVector.arraySize)
-            if ( tp.freq() > 0){
+            var vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
+            if (tp.freq() > 0){
               tp.nextPosition()
-              vector = tp.getPayload(vector, 0)
+              val payload = tp.getPayload()
+              vector.set(payload.bytes, payload.offset, payload.length)
+              sv += (id -> vector)
             }
-            sv += (id -> vector)
           }
         }
-      } finally {
-        tp.close()
       }
       i += 1
     }
@@ -110,6 +109,7 @@ class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGra
     val ts = analyzer.tokenStream("b", new StringReader(query))
     val termAttr = ts.getAttribute(classOf[CharTermAttribute])
     val buf = new ArrayBuffer[Term]
+    ts.reset()
     while (ts.incrementToken()) {
       buf += new Term("sv", new String(termAttr.buffer(), 0, termAttr.length()))
     }

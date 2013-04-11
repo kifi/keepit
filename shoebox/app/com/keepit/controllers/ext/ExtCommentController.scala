@@ -8,7 +8,6 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.async.dispatch
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
 import com.keepit.common.social._
@@ -16,7 +15,7 @@ import com.keepit.model._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
-import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
+import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka
@@ -35,6 +34,8 @@ import com.keepit.common.analytics.ActivityStream
 import views.html
 import com.keepit.realtime.UserNotifier
 import com.keepit.controllers.core.PaneDetails
+import scala.concurrent.future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @Singleton
 class ExtCommentController @Inject() (
@@ -48,7 +49,7 @@ class ExtCommentController @Inject() (
   userRepo: UserRepo,
   userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  commentWithSocialUserRepo: CommentWithSocialUserRepo,
+  CommentWithBasicUserRepo: CommentWithBasicUserRepo,
   followRepo: FollowRepo,
   threadInfoRepo: ThreadInfoRepo,
   emailAddressRepo: EmailAddressRepo,
@@ -93,8 +94,6 @@ class ExtCommentController @Inject() (
       val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
 
       permissions.toLowerCase match {
-        case "private" =>
-          commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PRIVATE, parent = parentIdOpt))
         case "message" =>
           val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
           createRecipients(newComment.id.get, recipients, parentIdOpt)
@@ -122,14 +121,18 @@ class ExtCommentController @Inject() (
       }
     }
 
-    dispatch(notifyRecipients(comment), {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
+    future {
+      notifyRecipients(comment)
+    } onFailure { case e =>
+      log.error("Could not persist emails for comment %s".format(comment.id.get), e)
+    }
 
     addToActivityStream(comment)
 
     comment.permissions match {
       case CommentPermissions.MESSAGE =>
-        val threadInfo = db.readOnly(implicit s => commentWithSocialUserRepo.load(comment))
-        Ok(Json.obj("message" -> commentWithSocialUserSerializer.writes(threadInfo)))
+        val threadInfo = db.readOnly(implicit s => CommentWithBasicUserRepo.load(comment))
+        Ok(Json.obj("message" -> commentWithBasicUserSerializer.writes(threadInfo)))
       case _ =>
         Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
     }
@@ -172,7 +175,7 @@ class ExtCommentController @Inject() (
   def getComments(url: String) = AuthenticatedJsonAction { request =>
     val comments = paneDetails.getComments(request.userId, url)
 
-    Ok(commentWithSocialUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
+    Ok(commentWithBasicUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
   }
 
   def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
@@ -184,7 +187,7 @@ class ExtCommentController @Inject() (
   def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     val messages = paneDetails.getMessageThread(request.userId, commentId)
 
-    Ok(commentWithSocialUserSerializer.writes(CommentPermissions.MESSAGE -> messages))
+    Ok(commentWithBasicUserSerializer.writes(CommentPermissions.MESSAGE -> messages))
   }
 
   def startFollowing() = AuthenticatedJsonToJsonAction { request =>

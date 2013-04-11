@@ -13,9 +13,7 @@ import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
 import com.keepit.common.net.{URI, URINormalizer}
 import com.keepit.serializer.{URLHistorySerializer => URLHS}
-import com.keepit.inject._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import play.api.Play.current
 
 case class URLPattern (
   id: Option[Id[URLPattern]] = None,
@@ -43,7 +41,7 @@ trait URLPatternRepo extends Repo[URLPattern] {
 }
 
 @Singleton
-class URLPatternRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[URLPattern] with URLPatternRepo {
+class URLPatternRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, ruleRepo: SliderRuleRepo) extends DbRepo[URLPattern] with URLPatternRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -60,7 +58,6 @@ class URLPatternRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock)
   override def save(pattern: URLPattern)(implicit session: RWSession): URLPattern = {
     val newPattern = super.save(pattern)
     activePatternsCache.set(null)
-    val ruleRepo = inject[SliderRuleRepo]
     ruleRepo.getByName("url").foreach(ruleRepo.save(_))  // update timestamp of corresponding rule(s)
     newPattern
   }

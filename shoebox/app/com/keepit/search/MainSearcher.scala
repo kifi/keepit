@@ -9,14 +9,17 @@ import com.keepit.common.time._
 import com.keepit.model._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
+import org.apache.lucene.search.Explanation
 import org.apache.lucene.util.PriorityQueue
+import com.keepit.search.query.{TopLevelQuery,QueryUtil}
+import com.keepit.search.query.parser.SpellCorrector
+import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
+import com.keepit.common.time._
+import com.keepit.common.controller.FortyTwoServices
+import play.api.libs.json._
 import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
-import org.apache.lucene.search.Explanation
-import com.keepit.search.query.{TopLevelQuery,QueryUtil}
-import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
-import play.api.libs.json._
 
 
 class MainSearcher(
@@ -30,7 +33,10 @@ class MainSearcher(
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker,
-    persistEventPlugin: PersistEventPlugin
+    persistEventPlugin: PersistEventPlugin,
+    spellCorrector: SpellCorrector)
+    (implicit private val clock: Clock,
+    private val fortyTwoServices: FortyTwoServices
 ) extends Logging {
   val currentTime = currentDateTime.getMillis()
   val idFilter = filter.idFilter
@@ -44,10 +50,9 @@ class MainSearcher(
   val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
   val proximityBoost = config.asFloat("proximityBoost")
   val semanticBoost = config.asFloat("semanticBoost")
-  val dumpingByRank = config.asBoolean("dumpingByRank")
-  val dumpingHalfDecayMine = config.asFloat("dumpingHalfDecayMine")
-  val dumpingHalfDecayFriends = config.asFloat("dumpingHalfDecayFriends")
-  val dumpingHalfDecayOthers = config.asFloat("dumpingHalfDecayOthers")
+  val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
+  val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
+  val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
   val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
   val svWeightClickHistory = config.asInt("svWeightClickHistory")
@@ -158,7 +163,7 @@ class MainSearcher(
 
     if (myHits.size > 0) {
       myHits.toRankedIterator.map{ case (h, rank) =>
-        if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayMine) // dumping the scores by rank
+        h.score = h.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
         h
       }.takeWhile{ h =>
         h.score > threshold
@@ -176,7 +181,7 @@ class MainSearcher(
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
       friendsHits.toRankedIterator.map{ case (h, rank) =>
-        if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayFriends) // dumping the scores by rank
+        h.score = h.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
         h
       }.takeWhile{ h =>
         h.score > threshold
@@ -194,7 +199,7 @@ class MainSearcher(
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
       val queue = createQueue(numHitsToReturn - hits.size)
       othersHits.toRankedIterator.map{ case (h, rank) =>
-        if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayOthers) // dumping the scores by rank
+        h.score = h.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
         h
       }.takeWhile{
         h => h.score > threshold
@@ -213,18 +218,20 @@ class MainSearcher(
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
-    val svVar = svVariance(parsedQuery, hitList);								// compute sv variance. may need to record the time elapsed.
+    val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, this.articleSearcher, this.uriGraphSearcher);								// compute sv variance. may need to record the time elapsed.
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
-    log.info( "searchResultUuid = %s , svVariance = %f".format(searchResultUuid, svVar) )
 
-    val metaData = JsObject( Seq("queryUUID"->JsString(searchResultUuid.id), "svVariance"-> JsNumber(svVar) ))
+    val metaData = JsObject( Seq("queryUUID"->JsString(searchResultUuid.id), "svVariance"-> JsNumber(svVar), "svExistenceVar" -> JsNumber(svExistVar) ))
     persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
-        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar)
+        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
+        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar)
   }
+
+
 
   private def getPublicBookmarkCount(id: Long) = {
     uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
@@ -232,7 +239,7 @@ class MainSearcher(
 
   def createQueue(sz: Int) = new ArticleHitQueue(sz)
 
-  private def dumpFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/halfDecay, 3.0d))).toFloat
+  private def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/halfDecay, 3.0d))).toFloat
 
   private def bookmarkScore(bookmarkCount: Int) = (1.0f - (1.0f/(1.0f + bookmarkCount.toFloat)))
 
@@ -240,54 +247,6 @@ class MainSearcher(
     val t = max(currentTime - createdAt, 0).toFloat / halfDecayMillis
     val t2 = t * t
     (1.0f/(1.0f + t2))
-  }
-
-
-  /**
-   * vects: a collection of 128-bit vectors. We measure the variance of each bit,
-   * and take the average. This measures overall randomness of input semantic vectors.
-   */
-  private def avgBitVariance(vects: Iterable[Array[Byte]]) = {
-    if ( vects.size > 0){
-	  val composer = new SemanticVectorComposer
-	  vects.foreach( composer.add(_, 1))
-
-	  // qs.vec(i) + 0.5 = empirical probability that position i takes value 1.
-	  val qs = composer.getQuasiSketch
-	  val prob = for( i <- 0 until qs.vec.length) yield ( qs.vec(i) + 0.5f)
-	  val sumOfVar = prob.foldLeft(0.0f)( (sum: Float, p:Float) => sum + p*(1-p))			// variance of Bernoulli distribution.
-	  Some(sumOfVar/qs.vec.length)
-    }
-    else{
-      None
-    }
-  }
-
-  /**
-   * Given a hitList, find the variance of the semantic vectors.
-   */
-  private def svVariance(query: Option[Query], hitList: List[MutableArticleHit]): Float = {
-    val svSearcher = new SemanticVectorSearcher(this.articleSearcher,this.uriGraphSearcher)
-    val uriIds = hitList.map(_.id).toSet
-    val variance = query.map{ q =>
-      val terms = QueryUtil.getTerms("sv", q)
-      var s = 0.0f
-      var cnt = 0
-      for(term <- terms){
-        val sv =  svSearcher.getSemanticVectors(term, uriIds).collect{case (id,vec) => vec}
-        // semantic vector v of terms will be concatenated from semantic vector v_i from each term
-        // avg bit variance of v is the avg of avgBitVariance of each v_i
-        val variance = avgBitVariance(sv)
-        variance match{
-          case Some(v) => {cnt+=1 ; s += v}
-          case None => None
-        }
-
-      }
-      if (cnt > 0) s/cnt.toFloat else -1.0f
-    }
-    variance.getOrElse(-1.0f)
-
   }
 
   def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
@@ -299,16 +258,12 @@ class MainSearcher(
     parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
-      val idMapper = personalizedSearcher.indexReader.getIdMapper
-
-      (query, personalizedSearcher.explain(query, idMapper.getDocId(uriId.id)))
+      (query, personalizedSearcher.explain(query, uriId.id))
     }
   }
 }
 
-class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
-
-  super.initialize(sz)
+class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
 
   val NO_FRIEND_IDS = Set.empty[Id[User]]
 
@@ -391,7 +346,8 @@ case class ArticleSearchResult(
   pageNumber: Int,
   uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
   time: DateTime = currentDateTime,
-  svVariance: Float = -1.0f			// semantic vector variance
+  svVariance: Float = -1.0f,			// semantic vector variance
+  svExistenceVar: Float = -1.0f
 )
 
 

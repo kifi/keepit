@@ -3,7 +3,6 @@ package com.keepit.controllers.admin
 import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
-import com.keepit.common.async._
 import com.keepit.common.performance._
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
@@ -49,12 +48,14 @@ class AdminBookmarksController @Inject() (
     extends AdminController(actionAuthenticator) {
 
   def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
-    db.readOnly { implicit session =>
-      val bookmark = bookmarkRepo.get(id)
-      val uri = uriRepo.get(bookmark.uriId)
-      val user = socialRepo.toUserWithSocial(userRepo.get(bookmark.userId))
-      val scrapeInfo = scrapeRepo.getByUri(bookmark.uriId)
-      Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo))
+    Async {
+      db.readOnlyAsync { implicit session =>
+        val bookmark = bookmarkRepo.get(id)
+        val uri = uriRepo.get(bookmark.uriId)
+        val user = socialRepo.toUserWithSocial(userRepo.get(bookmark.userId))
+        val scrapeInfo = scrapeRepo.getByUri(bookmark.uriId)
+        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo))
+      }
     }
   }
 

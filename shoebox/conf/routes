@@ -38,7 +38,7 @@ GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHe
 ##########################################
 
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
-GET     /bookmarks/check            @com.keepit.controllers.ext.ExtBookmarksController.checkIfExists(uri: String, ver: String)
+GET     /bookmarks/check            @com.keepit.controllers.ext.ExtBookmarksController.checkIfExists(uri: String)
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
@@ -123,6 +123,10 @@ GET     /admin/article/index/:state @com.keepit.controllers.admin.AdminArticleIn
 GET     /admin/article/indexInfo    @com.keepit.controllers.admin.AdminArticleIndexerController.indexInfo
 GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.AdminArticleIndexerController.refreshSearcher
 GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
+
+POST     /admin/search/spell/buildDict         @com.keepit.controllers.admin.AdminSpellCorrectorController.buildDictionary
+GET     /admin/search/spell        @com.keepit.controllers.admin.AdminSpellCorrectorController.spellController
+GET     /admin/search/spell/test-correct  @com.keepit.controllers.admin.AdminSpellCorrectorController.correctSpelling(query: String)
 
 GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
 GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGraphController.update(userId: Id[User])
@@ -214,10 +218,16 @@ POST    /internal/search/index/update          @com.keepit.controllers.search.Ar
 POST    /internal/search/index/reindex         @com.keepit.controllers.search.ArticleIndexerController.reindex()
 GET     /internal/search/index/sequenceNumber  @com.keepit.controllers.search.ArticleIndexerController.getSequenceNumber()
 POST    /internal/search/index/refreshSearcher @com.keepit.controllers.search.ArticleIndexerController.refreshSearcher()
+POST    /internal/search/index/refreshPhrases  @com.keepit.controllers.search.ArticleIndexerController.refreshPhrases()
 POST    /internal/search/index/dumpDoc/:id     @com.keepit.controllers.search.ArticleIndexerController.dumpLuceneDocument(id: Id[NormalizedURI])
 
 POST    /internal/search/search/keeps          @com.keepit.controllers.search.SearchController.searchKeeps(userId: Id[User], query: String)
 GET     /internal/search/search/explainResult  @com.keepit.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI])
+
+POST    /internal/search/spell/buildDict       @com.keepit.controllers.search.SpellCorrectorController.buildDictionary()
+GET     /internal/search/spell/buildStatus     @com.keepit.controllers.search.SpellCorrectorController.getBuildStatus()
+GET     /internal/search/spell/make-correction     @com.keepit.controllers.search.SpellCorrectorController.correctSpelling(query: String)
+
 
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /internal/search/search/rankVsScoreJson @com.keepit.controllers.search.SearchController.rankVsScoreJson(query: Option[String] ?= None)

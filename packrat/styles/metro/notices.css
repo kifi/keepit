@@ -1,0 +1,68 @@
+.kifi-notices {
+  overflow-y: auto;
+  max-height: 100%;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.kifi-notice {
+  position: relative;
+  border-bottom: 1px solid #d2d2d2;
+  padding: 10px 12px 10px 56px;
+  min-height: 10px;
+}
+.kifi-notice:hover {
+  cursor: pointer;
+  background: #eee;
+}
+.kifi-notice time {
+  float: right;
+  margin: -2px -2px 0 0;
+  font-size: 11px;
+  color: #a9a9a9;
+  display: block;
+}
+.kifi-notice-state-delivered {
+  background: #f6f6ff;
+}
+.kifi-notice-state-delivered:hover {
+  background: #eef;
+}
+.kifi-notice-avatar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 40px;
+  height: 40px;
+}
+.kifi-notice-name {
+  font-size: 14px;
+  margin: 0 0 2px 0;
+  color: #999;
+}
+.kifi-notice-action {
+  font-size: 12px;
+  margin: 2px 0 4px;
+  color: #333;
+}
+.kifi-notice-page {
+  color: #999;
+  font-size: 12px;
+  margin: 4px 0;
+  font-style: italic;
+}
+.kifi-notice-page a {
+  display: block;
+  margin-top: 2px;
+}
+.kifi-notice-text {
+  margin: 4px;
+  font-size: 13px;
+}
+.kifi-notice-text:before {
+  display: inline;
+  content: "“";
+}
+.kifi-notice-text:after {
+  display: inline;
+  content: "”";
+}

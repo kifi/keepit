@@ -1,5 +1,6 @@
 package com.keepit.social
 
+import com.keepit.FortyTwoGlobal
 import play.api.Application
 import securesocial.core.{UserServicePlugin, UserId, SocialUser, UserService}
 import com.keepit.common.db.slick._
@@ -13,7 +14,8 @@ import com.keepit.common.social.{SocialId, SocialNetworks, SocialNetworkType}
 import com.google.inject.{Inject, Singleton}
 
 class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
-  lazy val proxy = inject[SecureSocialUserPlugin]
+  lazy val injector = application.global.asInstanceOf[FortyTwoGlobal].injector
+  lazy val proxy = new RichInjector(injector).inject[SecureSocialUserPlugin]
   def find(id: UserId): Option[SocialUser] = proxy.find(id)
   def save(socialUser: SocialUser): Unit = proxy.save(socialUser)
 }

@@ -27,7 +27,7 @@ private[graph] class URIGraphActor @Inject() (
         sender ! uriGraph.update()
       } catch {
         case e: Exception =>
-          inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
+          healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
               errorMessage = Some("Error updating uri graph")))
           sender ! -1
       }

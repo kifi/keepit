@@ -13,40 +13,32 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.serializer.BookmarkSerializer
 import com.keepit.serializer.UserWithSocialSerializer._
 import play.api.libs.json._
+import com.keepit.serializer.BasicUserSerializer
 
 @Singleton
 class ExtBookmarksController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
-    db: Database,
-    bookmarkManager: BookmarkInterner,
-    bookmarkRepo: BookmarkRepo,
-    uriRepo: NormalizedURIRepo,
-    userRepo: UserRepo,
-    urlPatternRepo: URLPatternRepo,
-    domainRepo: DomainRepo,
-    userToDomainRepo: UserToDomainRepo,
-    sliderRuleRepo: SliderRuleRepo,
-    socialConnectionRepo: SocialConnectionRepo,
-    commentReadRepo: CommentReadRepo,
-    experimentRepo: UserExperimentRepo,
-    searchClient: SearchServiceClient,
-    healthcheck: HealthcheckPlugin,
-    classifier: DomainClassifier,
-    historyTracker: SliderHistoryTracker,
-    sliderInfoLoader: SliderInfoLoader
-  ) extends BrowserExtensionController(actionAuthenticator) {
+  actionAuthenticator: ActionAuthenticator,
+  db: Database,
+  bookmarkManager: BookmarkInterner,
+  bookmarkRepo: BookmarkRepo,
+  uriRepo: NormalizedURIRepo,
+  userRepo: UserRepo,
+  searchClient: SearchServiceClient,
+  healthcheck: HealthcheckPlugin,
+  sliderInfoLoader: SliderInfoLoader)
+    extends BrowserExtensionController(actionAuthenticator) {
 
-  def checkIfExists(uri: String, ver: String) = AuthenticatedJsonAction { request =>
+  def checkIfExists(uri: String) = AuthenticatedJsonAction { request =>
     val userId = request.userId
 
-    val sliderInfo = sliderInfoLoader.initialLoad(userId, uri, ver)
+    val sliderInfo = sliderInfoLoader.initialLoad(userId, uri)
 
     type wrapped = Option[(String, JsValue)]
     val result: Seq[wrapped] = Seq(
       Some("kept" -> JsBoolean(sliderInfo.bookmark.isDefined)),
       sliderInfo.bookmark.map(_.isPrivate) match { case Some(true) => Some("private" -> JsBoolean(true)); case _ => None },
       sliderInfo.socialUsers match { case Nil => None; case _ => Some("keptByAnyFriends" -> JsBoolean(true)) }, // TODO: remove
-      sliderInfo.socialUsers match { case Nil => None; case u => Some("keepers" -> userWithSocialSerializer.writes(u)) },
+      sliderInfo.socialUsers match { case Nil => None; case u => Some("keepers" -> BasicUserSerializer.basicUserSerializer.writes(u)) },
       sliderInfo.numKeeps match { case 0 => None; case n => Some("keeps" -> JsNumber(n)) },
       sliderInfo.numComments match { case 0 => None; case n => Some("numComments" -> JsNumber(n)) },
       sliderInfo.numUnreadComments match { case 0 => None; case n => Some("unreadComments" -> JsNumber(n)) },
@@ -55,9 +47,7 @@ class ExtBookmarksController @Inject() (
       sliderInfo.sensitive.flatMap { s => if (s) Some("sensitive" -> JsBoolean(true)) else None },
       sliderInfo.neverOnSite.map { _ => "neverOnSite" -> JsBoolean(true) },
       sliderInfo.locator.map { s => "locator" -> JsString(s.value) },
-      sliderInfo.shown.map { "shown" -> JsBoolean(_) },
-      sliderInfo.ruleGroup.map { "rules" -> _.compactJson },
-      sliderInfo.patterns.map { p => "patterns" -> JsArray(p.map(JsString)) })
+      sliderInfo.shown.map { "shown" -> JsBoolean(_) })
 
     Ok(JsObject(result.flatten))
   }
@@ -88,7 +78,9 @@ class ExtBookmarksController @Inject() (
         }
       }
     } match {
-      case Some(bookmark) => Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
+      case Some(bookmark) =>
+        searchClient.updateURIGraph()
+        Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
       case None => NotFound
     }
   }

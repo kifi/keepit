@@ -3,10 +3,12 @@ package com.keepit.search.graph
 import com.keepit.common.db.Id
 import com.keepit.model.{NormalizedURI, User}
 import com.keepit.search.graph.EdgeSetUtil._
+import com.keepit.search.graph.URIGraphDecoders._
 import com.keepit.search.index.ArrayIdMapper
 import com.keepit.search.index.CachingIndexReader
 import com.keepit.search.index.IdMapper
 import com.keepit.search.index.Searcher
+import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.query.QueryUtil
 import org.apache.lucene.index.IndexReader
@@ -14,15 +16,19 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
+import org.apache.lucene.util.BytesRef
 
 class URIGraphSearcher(searcher: Searcher) {
+
+  def reader: WrappedSubReader = searcher.indexReader.asAtomicReader
 
   def getUserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) = new UserToUserEdgeSet(sourceId, destIdSet)
 
   def getUriToUserEdgeSet(sourceId: Id[NormalizedURI]) = new UriToUserEdgeSet(sourceId, searcher)
 
   def getUserToUriEdgeSet(sourceId: Id[User], publicOnly: Boolean = true) = {
-    val uriIdSet = getURIList(sourceId) match {
+    val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
+    val uriIdSet = getURIList(sourceDocId) match {
       case Some(uriList) =>
         if (publicOnly) uriList.publicList.map(id => new Id[NormalizedURI](id)).toSet
         else (uriList.publicList.map(id => new Id[NormalizedURI](id)).toSet ++
@@ -33,7 +39,8 @@ class URIGraphSearcher(searcher: Searcher) {
   }
 
   def getUserToUriEdgeSetWithCreatedAt(sourceId: Id[User], publicOnly: Boolean = true) = {
-    val uriIdMap = getURIList(sourceId) match {
+    val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
+    val uriIdMap = getURIList(sourceDocId) match {
       case Some(uriList) =>
         var m = uriList.publicList.zip(uriList.publicCreatedAt).foldLeft(Map.empty[Id[NormalizedURI], Long]) {
           case (m, (id, createdAt)) => m + (Id[NormalizedURI](id) -> createdAt)
@@ -102,42 +109,35 @@ class URIGraphSearcher(searcher: Searcher) {
     di != NO_MORE_DOCS
   }
 
-  private def getURIList(user: Id[User]): Option[URIList] = {
-    val term = URIGraph.userTerm.createTerm(user.toString)
+  private def getURIList(userDocId: Int): Option[URIList] = {
     var uriList: Option[URIList] = None
-    val tp = searcher.indexReader.termPositions(term)
-    try {
-      if (tp.next()) {
-        tp.nextPosition()
-        val payloadLen = tp.getPayloadLength
-        if (payloadLen > 0) {
-          val payloadBuffer = new Array[Byte](payloadLen)
-          tp.getPayload(payloadBuffer, 0)
-          uriList = Some(new URIList(payloadBuffer))
+
+    if (userDocId >= 0) {
+      var docValues = reader.getBinaryDocValues(URIGraphDecoders.userField)
+      var ref = new BytesRef()
+      if (docValues != null) {
+        docValues.get(userDocId, ref)
+        if (ref.length > 0) {
+          val buf = new Array[Byte](ref.length)
+          System.arraycopy(ref.bytes, ref.offset, buf, 0, ref.length)
+          uriList = Some(new URIList(buf))
         }
       }
-    } finally {
-      tp.close()
     }
     uriList
   }
 
-  private def getIndexReader(user: Id[User], uriList: URIList, terms: Set[Term]) = {
-    val term = URIGraph.userTerm.createTerm(user.toString)
-    val td = searcher.indexReader.termDocs(term)
-    val userDocId = try {
-      if (td.next()) td.doc else NO_MORE_DOCS
-    } finally {
-      td.close()
-    }
+  private def getIndexReader(userDocId: Int, uriList: URIList, terms: Set[Term]) = {
     val numDocs = uriList.publicListSize + uriList.privateListSize
-    LineIndexReader(searcher.indexReader, userDocId, terms, numDocs)
+    LineIndexReader(reader, userDocId, terms, numDocs)
   }
 
   def openPersonalIndex(user: Id[User], query: Query): Option[(CachingIndexReader, IdMapper)] = {
-    getURIList(user).map{ uriList =>
+    val userDocId = reader.getIdMapper.getDocId(user.id)
+
+    getURIList(userDocId).map{ uriList =>
       val terms = QueryUtil.getTerms(query)
-      (getIndexReader(user, uriList, terms), new ArrayIdMapper(uriList.publicList ++ uriList.privateList))
+      (getIndexReader(userDocId, uriList, terms), new ArrayIdMapper(uriList.publicList ++ uriList.privateList))
     }
   }
 }
@@ -154,5 +154,5 @@ class UserToUriEdgeSetWithCreatedAt(sourceId: Id[User], destIdMap: Map[Id[Normal
 
 class UriToUserEdgeSet(sourceId: Id[NormalizedURI], searcher: Searcher) extends LuceneBackedEdgeSet[NormalizedURI, User](sourceId, searcher) {
   def toId(id: Long) = new Id[User](id)
-  def createSourceTerm = URIGraph.uriTerm.createTerm(sourceId.toString)
+  def createSourceTerm = new Term(uriField, sourceId.toString)
 }

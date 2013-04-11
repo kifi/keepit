@@ -119,10 +119,15 @@ case object ErrorCountSinceLastCheck
 case object ResetErrorCount
 case object GetErrors
 
+case class HealthcheckHost(host: String) extends AnyVal {
+  override def toString = host
+}
+
 class HealthcheckActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
     postOffice: PostOffice,
-    services: FortyTwoServices)
+    services: FortyTwoServices,
+    host: HealthcheckHost)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   private def initErrors: Map[HealthcheckErrorSignature, List[HealthcheckError]] = Map().withDefaultValue(List[HealthcheckError]())
@@ -143,7 +148,7 @@ class HealthcheckActor @Inject() (
         val messages = errors map {case(sig, errorList) =>
           s"${errorList.size} since last report, ${errorsSinceStart(sig)} since start of errorList sig ${sig.value}:\n<br/>${errorList.last.toHtml}"
         } mkString "\n<br/><hr/>"
-        val subject = s"ERROR REPORT: ${errors.map(_._2.size).sum} errors since last report on ${services.currentService.name} version ${services.currentVersion} compiled on ${services.compilationTime}"
+        val subject = s"ERROR REPORT: ${errors.map(_._2.size).sum} errors since last report on ${services.currentService.name} ($host) version ${services.currentVersion} compiled on ${services.compilationTime}"
         errors = initErrors
 
         val htmlMessage = Html(s"$titles<br/><hr/><br/>$messages")
@@ -183,7 +188,7 @@ class HealthcheckPluginImpl @Inject() (
     actorFactory: ActorFactory[HealthcheckActor],
     services: FortyTwoServices,
     postOffice: PostOffice,
-    host: String)
+    host: HealthcheckHost)
   extends HealthcheckPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)

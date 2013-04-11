@@ -3,9 +3,7 @@ package com.keepit.model
 import java.sql.Connection
 import scala.annotation.elidable
 import org.joda.time.DateTime
-import play.api.Play.current
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
 import com.keepit.common.time.Clock
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -90,7 +88,9 @@ class CommentRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val commentCountCache: CommentCountUriIdCache,
-  val messageWithChildrenCountCache: MessageWithChildrenCountUriIdUserIdCache)
+  val messageWithChildrenCountCache: MessageWithChildrenCountUriIdUserIdCache,
+  socialConnectionRepoImpl: SocialConnectionRepoImpl,
+  commentRecipientRepoImpl: CommentRecipientRepoImpl)
     extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
@@ -114,8 +114,8 @@ class CommentRepoImpl @Inject() (
         commentCountCache.remove(CommentCountUriIdKey(comment.uriId))
       case CommentPermissions.MESSAGE =>
         val comments = (comment.id :: comment.parent :: Nil).flatten
-        val parentUserId = comment.parent.map(inject[CommentRepo].get(_).userId)
-        val usersToInvalidate = (Some(comment.userId) :: parentUserId :: Nil).flatten ++ comments.flatMap(inject[CommentRecipientRepo].getByComment(_).map(_.userId).flatten)
+        val parentUserId = comment.parent.map(get(_).userId)
+        val usersToInvalidate = (Some(comment.userId) :: parentUserId :: Nil).flatten ++ comments.flatMap(commentRecipientRepoImpl.getByComment(_).map(_.userId).flatten)
         usersToInvalidate foreach { user =>
           messageWithChildrenCountCache.remove(MessageWithChildrenCountUriIdUserIdKey(comment.uriId, user))
         }
@@ -142,7 +142,7 @@ class CommentRepoImpl @Inject() (
     } yield b).list
 
   def getPublicIdsByConnection(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[Comment]] = {
-    val friends = inject[SocialConnectionRepoImpl].getFortyTwoUserConnections(userId)
+    val friends = socialConnectionRepoImpl.getFortyTwoUserConnections(userId)
     val commentsOnPage = (for {
       c <- table  if c.uriId === uriId && c.permissions === CommentPermissions.PUBLIC && c.state === CommentStates.ACTIVE
     } yield c).list
@@ -174,7 +174,7 @@ class CommentRepoImpl @Inject() (
 
   def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] = {
     val q1 = for {
-      (c, cr) <- table innerJoin inject[CommentRecipientRepoImpl].table on (_.id is _.commentId) if (c.uriId === uriId && cr.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
+      (c, cr) <- table innerJoin commentRecipientRepoImpl.table on (_.id is _.commentId) if (c.uriId === uriId && cr.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
     } yield (c.*)
     val q2 = for {
       c <- table if (c.uriId === uriId && c.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
@@ -205,7 +205,7 @@ class CommentRepoImpl @Inject() (
   def getParticipantsUserIds(commentId: Id[Comment])(implicit session: RSession): Set[Id[User]] = {
     val comment = get(commentId)
     val head = comment.parent map get getOrElse(comment)
-    (inject[CommentRecipientRepo].getByComment(head.id.get) map (_.userId)).flatten.toSet + head.userId
+    (commentRecipientRepoImpl.getByComment(head.id.get) map (_.userId)).flatten.toSet + head.userId
   }
 
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Comment] =

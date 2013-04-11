@@ -2,7 +2,6 @@ package com.keepit.scraper
 
 import com.keepit.common.logging.Logging
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.db._
@@ -12,10 +11,8 @@ import com.keepit.common.time._
 import com.keepit.common.net.URI
 import com.keepit.search.{Article, ArticleStore}
 import com.keepit.model._
-import com.google.inject.Inject
 import org.apache.http.HttpStatus
 import org.joda.time.{DateTime, Seconds}
-import play.api.Play.current
 import scala.collection.Seq
 import akka.actor.{Actor, Cancellable, Props, ActorSystem}
 import com.keepit.model.NormalizedURI
@@ -44,13 +41,14 @@ private[scraper] case object CleanOrphans
 private[scraper] case object Cron
 
 private[scraper] class DataIntegrityActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin)
+    healthcheckPlugin: HealthcheckPlugin,
+    db: Database,
+    orphanCleaner: OrphanCleaner)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case CleanOrphans =>
-      val orphanCleaner = new OrphanCleaner
-      inject[Database].readWrite { implicit session =>
+      db.readWrite { implicit session =>
         // This cleans up cases when we have a normalizedUri, but no Url. This *only* happens when we renormalize, so does not need to happen every night.
         //orphanCleaner.cleanNormalizedURIs(false)
         orphanCleaner.cleanScrapeInfo(false)
@@ -63,12 +61,13 @@ private[scraper] class DataIntegrityActor @Inject() (
   }
 }
 
-class OrphanCleaner extends Logging {
+class OrphanCleaner @Inject() (
+    urlRepo: URLRepo,
+    nuriRepo: NormalizedURIRepo,
+    scrapeInfoRepo: ScrapeInfoRepo) extends Logging {
 
   def cleanNormalizedURIs(readOnly: Boolean = true)(implicit session: RWSession) = {
-    val nuriRepo = inject[NormalizedURIRepo]
     val nuris = nuriRepo.allActive()
-    val urlRepo = inject[URLRepo]
     var changedNuris = Seq[NormalizedURI]()
     nuris foreach { nuri =>
       val urls = urlRepo.getByNormUri(nuri.id.get)
@@ -87,9 +86,7 @@ class OrphanCleaner extends Logging {
   }
 
   def cleanScrapeInfo(readOnly: Boolean = true)(implicit session: RWSession) = {
-    val scrapeInfoRepo = inject[ScrapeInfoRepo]
     val sis = scrapeInfoRepo.all() // allActive does the join with nuri. Come up with a better way?
-    val nuriRepo = inject[NormalizedURIRepo]
     var oldScrapeInfos = Seq[ScrapeInfo]()
     sis foreach { si =>
       if (si.state == ScrapeInfoStates.ACTIVE) {

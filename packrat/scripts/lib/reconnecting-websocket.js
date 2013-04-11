@@ -1,28 +1,30 @@
 function ReconnectingWebSocket(url, onmessage) {
-  var ws, self = this, buffer = [];
+  const wordRe = /\w+/, minRetryConnectDelayMs = 300, maxRetryConnectDelayMs = 5000;
+  var ws, self = this, buffer = [], closed, retryConnectDelayMs = minRetryConnectDelayMs;
 
   connect();
 
   this.send = function(data) {
-    if (ws && ws.readyState == WebSocket.OPEN) {
+    if (closed) {
+      throw "closed, try back tomorrow";
+    } else if (ws && ws.readyState == WebSocket.OPEN) {
       ws.send(data);
     } else {
       buffer.push([data, +new Date]);
-      if (!ws) {
-        connect();
-      }
     }
   };
   this.close = function() {
-    buffer.length = 0;
-    if (ws) {
-      ws.close();
+    if (!closed) {
+      closed = true;
+      buffer = null;
+      if (ws) {
+        ws.close();
+      }
     }
-    self.send = self.close = function() {};
   };
 
   function connect() {
-    console.debug("[ReconnectingWebSocket.connect]");
+    api.log("#0bf", "[RWS.connect]");
 
     ws = new WebSocket(url);
     var t = setTimeout(onConnectTimeout.bind(null, ws), 5000);
@@ -31,17 +33,19 @@ function ReconnectingWebSocket(url, onmessage) {
       clearTimeout(t);
       while (buffer.length) {
         var a = buffer.shift();
-        console.debug("[ReconnectingWebSocket.onopen] sending, buffered for", new Date - a[1], "ms:", a[0]);
+        api.log("#0bf", "[RWS.onopen] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
         ws.send(a[0]);
       }
     };
 
-    ws.onclose = function() {
-      console.debug("[ReconnectingWebSocket.onclose] buffer size:", buffer.length);
+    ws.onclose = function(e) {
+      api.log("#0bf", "[RWS.onclose] %o buffer: %o", e, buffer);
       clearTimeout(t);
       ws = null;
-      if (buffer.length) {
-        connect();
+      if (!closed) {
+        api.log("#0bf", "[RWS.onclose] will reconnect in %i ms", retryConnectDelayMs);
+        t = setTimeout(connect, retryConnectDelayMs);
+        retryConnectDelayMs = Math.min(maxRetryConnectDelayMs, retryConnectDelayMs * 1.5);
       }
     };
 
@@ -49,7 +53,8 @@ function ReconnectingWebSocket(url, onmessage) {
   }
 
   function onConnectTimeout(ws) {
-    console.debug("[ReconnectingWebSocket.onConnectTimeout]");
+    api.log("#0bf", "[RWS.onConnectTimeout]");
+    ws.onerror = function() {};
     ws.close();
   }
 }

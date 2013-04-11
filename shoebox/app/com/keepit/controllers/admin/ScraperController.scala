@@ -43,7 +43,9 @@ class ScraperController @Inject() (
   followRepo: FollowRepo,
   deeplinkRepo: DeepLinkRepo,
   commentRepo: CommentRepo,
-  bookmarkRepo: BookmarkRepo)
+  bookmarkRepo: BookmarkRepo,
+  orphanCleaner: OrphanCleaner,
+  dupeDetect: DuplicateDocumentDetection)
     extends AdminController(actionAuthenticator) {
 
   def scrape = AdminHtmlAction { implicit request =>
@@ -108,7 +110,6 @@ class ScraperController @Inject() (
   }
 
   def orphanCleanup() = AdminHtmlAction { implicit request =>
-    val orphanCleaner = new OrphanCleaner
     Akka.future {
       db.readWrite { implicit session =>
         orphanCleaner.cleanNormalizedURIs(false)
@@ -206,9 +207,7 @@ class ScraperController @Inject() (
   }
 
   def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
-    val dupeDetect = new DuplicateDocumentDetection
     dupeDetect.asyncProcessDocuments()
-
     Redirect(com.keepit.controllers.admin.routes.ScraperController.documentIntegrity())
   }
 }

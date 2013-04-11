@@ -8,6 +8,7 @@ import securesocial.core._
 import securesocial.core.AuthenticationMethod._
 import play.api.libs.json._
 import com.keepit.search.Article
+import org.joda.time.DateTime
 
 class ArticleSerializer extends Format[Article] {
 
@@ -16,7 +17,7 @@ class ArticleSerializer extends Format[Article] {
         "normalizedUriId" -> JsNumber(article.id.id),
         "title" -> JsString(article.title),
         "content" -> JsString(article.content),
-        "scrapedAt" -> JsString(article.scrapedAt.toStandardTimeString),
+        "scrapedAt" -> Json.toJson(article.scrapedAt),
         "httpContentType" -> (article.httpContentType map { t => JsString(t) } getOrElse(JsNull)),
         "httpOriginalContentCharset" -> (article.httpOriginalContentCharset map { t => JsString(t) } getOrElse(JsNull)),
         "state" -> JsString(article.state.toString),
@@ -31,7 +32,7 @@ class ArticleSerializer extends Format[Article] {
       Id((json \ "normalizedUriId").as[Long]),
       (json \ "title").as[String],
       (json \ "content").as[String],
-      parseStandardTime((json \ "scrapedAt").as[String]),
+      (json \ "scrapedAt").as[DateTime],
       (json \ "httpContentType").asOpt[String],
       (json \ "httpOriginalContentCharset").asOpt[String],
       State[NormalizedURI]((json \ "state").as[String]),

@@ -3,15 +3,16 @@ package com.keepit.common.db.slick
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.inject._
+
 import org.joda.time.DateTime
 import play.api.Play.current
 import scala.slick.driver._
 import scala.slick.session._
 import scala.slick.lifted._
 import DBSession._
+
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import java.sql.SQLException
-
 
 trait Repo[M <: Model[M]] {
   def get(id: Id[M])(implicit session: RSession): M

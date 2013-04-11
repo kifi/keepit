@@ -1,10 +1,13 @@
 package com.keepit.search
 
+import org.apache.lucene.util.Version
 import com.google.inject.{Provides, Singleton}
+import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.inject.AppScoped
-import com.keepit.model.PhraseRepo
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.model.{PhraseRepo, NormalizedURIRepo}
 import com.keepit.scraper.{ScraperPluginImpl, ScraperPlugin}
 import com.keepit.search.graph.{URIGraphPluginImpl, URIGraphPlugin, URIGraph}
 import com.keepit.search.index.{ArticleIndexerPluginImpl, ArticleIndexerPlugin, ArticleIndexer}
@@ -13,6 +16,11 @@ import com.tzavellas.sse.guice.ScalaModule
 import java.io.File
 import org.apache.lucene.store.{Directory, MMapDirectory}
 import play.api.Play.current
+import com.keepit.search.graph.URIGraphDecoders
+import org.apache.lucene.index.IndexWriterConfig
+import com.keepit.search.graph.URIGraphImpl
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.model.BookmarkRepo
 
 class SearchModule() extends ScalaModule with Logging {
 
@@ -36,18 +44,23 @@ class SearchModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph): ArticleIndexer = {
+  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph, db: Database,
+    repo: NormalizedURIRepo, healthcheckPlugin: HealthcheckPlugin): ArticleIndexer = {
     val dir = getDirectory(current.configuration.getString("index.article.directory"))
     log.info(s"storing search index in $dir")
-    ArticleIndexer(dir, articleStore)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new ArticleIndexer(dir, config, articleStore, db, repo, healthcheckPlugin)
   }
+
 
   @Singleton
   @Provides
-  def uriGraph: URIGraph = {
+  def uriGraph(bookmarkRepo: BookmarkRepo,
+    db: Database): URIGraph = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
-    URIGraph(dir)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new URIGraphImpl(dir, config, URIGraphDecoders.decoders(), bookmarkRepo, db)
   }
 
   @Singleton
@@ -59,6 +72,14 @@ class SearchModule() extends ScalaModule with Logging {
       new File(configDir, "phrase")
     }
     PhraseIndexer(dir, db, phraseRepo)
+  }
+
+  @Singleton
+  @Provides
+  def spellCorrector: SpellCorrector = {
+    val spellDir = getDirectory(current.configuration.getString("index.spell.directory"))
+    val articleDir = getDirectory(current.configuration.getString("index.article.directory"))
+    SpellCorrector(spellDir, articleDir)
   }
 
 }

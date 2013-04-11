@@ -1,6 +1,12 @@
 var api = api || require("./api");
 
-// ===== Async
+// ===== Cached data from server
+
+const notifications = [];
+const pageData = {};
+var lastNotifyRead;
+
+// ===== Server requests
 
 function ajax(method, uri, data, done, fail) {  // method and uri are required
   if (typeof data == "function") {  // shift args if data is missing and done is present
@@ -26,11 +32,11 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
 
 // ===== Event logging
 
-var eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1};
+const eventFamilies = {slider:1, search:1, extension:1, account:1, notification:1};
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (!eventFamilies[eventFamily]) {
-    api.log("[logEvent] invalid event family:", eventFamily);
+    api.log("#800", "[logEvent] invalid event family:", eventFamily);
     return;
   }
   var ev = {
@@ -43,7 +49,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (prevEvents && prevEvents.length) {
     ev.prevEvents = prevEvents; // a list of previous ExternalId[Event]s that are associated with this action. The frontend determines what is associated with what.
   }
-  api.log("[logEvent]", ev);
+  api.log("#aaa", "[logEvent] %s %o", ev.eventName, ev);
   if (socket) {
     socket.send(["log_event", ev]);
   } else {
@@ -67,27 +73,82 @@ logEvent.catchUp = function() {
 
 // ===== WebSocket handlers
 
-var socketHandlers = {
-  message: function(data) {
-    api.log("[socket:message]", data);
-    var activeTab = api.tabs.getActive();
-    if (activeTab) {
-      api.tabs.emit(activeTab, "show_notification", data);
+const notifyCallbacks = [];
+const socketHandlers = {
+  denied: function() {
+    api.log("[socket:denied]");
+    socket.close();
+    socket = null;
+    session = null;
+  },
+  experiments: function(data) {
+    api.log("[socket:experiments]", data);
+    session.experiments = data;
+  },
+  slider_rules: function(data) {
+    api.log("[socket:slider_rules]", data);
+    session.rules = data;
+  },
+  url_patterns: function(data) {
+    api.log("[socket:url_patterns]", data);
+    session.patterns = data;
+    compilePatterns(session);
+  },
+  uri_1: function(uri, o) {
+    api.log("[socket:uri_1]", o);
+    var d = pageData[uri];
+    if (d) {
+      d.kept = o.kept;
+      d.sensitive = o.sensitive;
     }
   },
-  comment: function(data) {
-    api.log("[socket:comment]", data);
-    var activeTab = api.tabs.getActive();
-    if (activeTab) {
-      api.tabs.emit(activeTab, "show_notification", data);
+  uri_2: function(uri, o) {
+    api.log("[socket:uri_2]", o);
+    var d = pageData[uri];
+    if (d) {
+      d.shown = o.shown;
+      d.neverOnSite = o.neverOnSite;
+      d.keepers = o.keepers || [];
+      d.keeps = o.keeps || 0;
+      d.following = o.following;
+      d.comments = o.comments || [];
+      d.threads = o.threads || [];
     }
   },
-  notify: function(data) {
-    api.log("[socket:notify]", data);
+  notification: function(data) {
+    api.log("[socket:notification]", data);
     var activeTab = api.tabs.getActive();
     if (activeTab) {
       api.tabs.emit(activeTab, "show_notification", data);
     }
+    socketHandlers.notifications([data]);
+  },
+  notifications: function(data) {
+    api.log("[socket:notifications]", data);
+    var idToNotif = {};
+    notifications.concat(data).forEach(function (n) {
+      idToNotif[n.id] = n;
+    });
+    notifications.length = 0;
+    for (var id in idToNotif) {
+      var subsumes = idToNotif[id].details.subsumes;
+      if (subsumes) {
+        delete idToNotif[subsumes];
+      }
+    }
+    for (var id in idToNotif) {
+      notifications.push(idToNotif[id]);
+    }
+    notifications.sort(function (a, b) {
+      return new Date(b.time) - new Date(a.time);
+    });
+    while (notifyCallbacks.length) {
+      notifyCallbacks.shift()(notifications);
+    }
+  },
+  last_notify_read_time: function(data) {
+    api.log("[socket:last_notify_read_time]", data);
+    lastNotifyRead = new Date(data);
   },
   event: function(data) {
     api.log("[socket:event]", data);
@@ -153,7 +214,7 @@ api.port.on({
   init_slider_please: function(_, _, tab) {
     var emission = tab.emitOnReady;
     if (session && emission) {
-      api.log("[init_slider_please] emitting:", tab.id, emission);
+      api.log("[init_slider_please] %i emitting %s", tab.id, emission[0]);
       api.tabs.emit(tab, emission[0], emission[1]);
       delete tab.emitOnReady;
     }
@@ -166,7 +227,7 @@ api.port.on({
     }
     return true;
 
-    function getSliderInfo(tab, respond) {
+    function getSliderInfo() {
       ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
         o.session = session;
         respond(o);
@@ -204,6 +265,12 @@ api.port.on({
     });
     return true;
   },
+  set_comment_read: function(id) {
+    socket.send(["set_comment_read", id]);
+  },
+  set_message_read: function(id) {
+    socket.send(["set_message_read", id]);
+  },
   normalize: function(_, respond, tab) {
     socket.send(["normalize", tab.url], respond);
     return true;
@@ -219,6 +286,22 @@ api.port.on({
   thread: function(id, respond) {
     socket.send(["get_message_thread", id], respond);
     return true;
+  },
+  notifications: function(howMany, respond, tab) {
+    var cb = function (n) {
+      respond(n.slice(0, howMany));
+    };
+    if (howMany > notifications.length) {
+      var oldest = (notifications[notifications.length-1] || {}).time;
+      socket.send(["get_notifications", howMany - notifications.length, oldest]);
+      notifyCallbacks.push(cb);
+      return true;
+    } else {
+      respond(notifications.slice(0, howMany));
+    }
+  },
+  set_last_notify_read_time: function() {
+    socket.send(["set_last_notify_read_time"]);
   },
   session: function(_, respond) {
     respond(session);
@@ -425,21 +508,37 @@ function checkKeepStatus(tab, callback) {
     return;
   }
 
-  api.log("[checkKeepStatus]", tab);
+  api.log("[checkKeepStatus] %i %o", tab.id, tab);
 
   tab.keepStatusKnown = true;  // setting before request to avoid making two overlapping requests
-  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url, ver: session.rules.version}, function done(o) {
+  ajax("GET", "http://" + getConfigs().server + "/bookmarks/check", {uri: tab.url}, function done(o) {
     setIcon(tab, o.kept);
-    if (o.rules) {
-      session.rules = o.rules;
-      session.patterns = o.patterns;
-      compilePatterns(session);
-    }
     callback && callback(o);
   }, function fail(xhr) {
     api.log("[checkKeepStatus] error:", xhr.responseText);
     delete tab.keepStatusKnown;
   });
+}
+
+function subscribe(tab) {
+  if (!tab.nUri) {
+    var d = pageData[tab.url];
+    if (d) {
+      finish(tab.url);
+    } else if (socket) {
+      socket.send(["subscribe_uri", tab.url], function(uri) {
+        d = pageData[uri] = pageData[uri] || {tabs: []};
+        finish(uri);
+      });
+    }
+  }
+  function finish(uri) {
+    tab.nUri = uri;
+    if (d.tabs.indexOf(tab.id) < 0) {
+      d.tabs.push(tab.id);
+    }
+    api.log("[subscribe] %i page data: %o", tab.id, d);
+  }
 }
 
 function setIcon(tab, kept) {
@@ -460,24 +559,28 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
   });
 }
 
+// ===== Browser event listeners
+
 api.tabs.on.focus.add(function(tab) {
-  api.log("[tabs.on.focus]", tab);
+  api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
   if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
   } else {
     checkKeepStatus(tab);
+    subscribe(tab);
   }
 });
 
 api.tabs.on.blur.add(function(tab) {
-  api.log("[tabs.on.blur]", tab);
+  api.log("#b8a", "[tabs.on.blur] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
 });
 
 api.tabs.on.loading.add(function(tab) {
-  api.log("[tabs.on.loading]", tab);
+  api.log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab);
   setIcon(tab);
+  subscribe(tab);
 
   checkKeepStatus(tab, function gotKeptStatus(resp) {
     var metro = session.experiments.indexOf("metro") >= 0, data = {metro: metro};
@@ -509,8 +612,11 @@ api.tabs.on.loading.add(function(tab) {
         }
       }
     }
+    data.newNotices = notifications.filter(function (n) {
+      return new Date(n.time) > lastNotifyRead;
+    }).length;
 
-    api.log("[gotKeptStatus]", tab.id, data);
+    api.log("[gotKeptStatus] %i %o", tab.id, data);
     if (tab.ready) {
       api.tabs.emit(tab, "init_slider", data);
     } else {
@@ -520,25 +626,32 @@ api.tabs.on.loading.add(function(tab) {
 });
 
 api.tabs.on.ready.add(function(tab) {
-  api.log("[tabs.on.ready]", tab);
+  api.log("#b8a", "[tabs.on.ready] %i %o", tab.id, tab);
   logEvent("extension", "pageLoad");
 
-  var emission = tab.emitOnReady;  // TODO: promote emitOnReady to API layer
+  var emission = tab.emitOnReady;
   if (emission) {
-    api.log("[tabs.on.ready] emitting:", tab.id, emission);
+    api.log("[tabs.on.ready] emitting: %i %o", tab.id, emission);
     api.tabs.emit(tab, emission[0], emission[1]);
     delete tab.emitOnReady;
   }
 });
 
 api.tabs.on.complete.add(function(tab) {
-  api.log("[tabs.on.complete]", tab);
+  api.log("#b8a", "[tabs.on.complete] %i %o", tab.id, tab);
 });
 
 api.tabs.on.unload.add(function(tab) {
-  api.log("[tabs.on.unload]", tab);
+  api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
+  var d = pageData[tab.nUri], i;
+  if (d && ~(i = d.tabs.indexOf(tab.id))) {
+    d.tabs.splice(i, 1);
+    if (!d.tabs.length) {
+      delete pageData[tab.nUri];
+    }
+  }
 });
 
 function scheduleAutoShow(tab) {
@@ -596,7 +709,6 @@ api.on.install.add(function() {
 });
 api.on.update.add(function() {
   logEvent("extension", "update");
-  removeFromConfigs("user"); // remove this line in early Feb or so
 });
 
 // ===== Session management
@@ -617,13 +729,15 @@ function authenticate(callback) {
       version: api.version,
       agent: api.browserVersion},
     function done(data) {
-      api.log("[startSession] done, loadReason:", api.loadReason, "session:", data);
+      api.log("[startSession] reason: %s session: %o", api.loadReason, data);
       logEvent("extension", "authenticated");
 
       session = compilePatterns(data);
       socket = api.socket.open(
         (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws",
         socketHandlers);
+      socket.send(["get_notifications", 10]);
+      socket.send(["get_last_notify_read_time"])
       logEvent.catchUp();
 
       setConfigs("kifi_installation_id", data.installationId);
@@ -687,6 +801,7 @@ authenticate(function() {
       setIcon(tab);
       if (api.tabs.isSelected(tab)) {
         checkKeepStatus(tab);
+        subscribe(tab);
       }
     }
   });

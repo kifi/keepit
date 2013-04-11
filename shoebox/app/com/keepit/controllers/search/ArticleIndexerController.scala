@@ -8,6 +8,7 @@ import com.keepit.model._
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.ArticleIndexerPlugin
 import com.keepit.search.index.Indexer.CommitData
+import com.keepit.search.phrasedetector.PhraseIndexer
 import org.apache.lucene.document.Document
 import play.api.libs.json._
 import play.api.mvc.Action
@@ -25,6 +26,7 @@ object ArticleIndexInfoJson {
 class ArticleIndexerController @Inject()(
     db: Database,
     indexer: ArticleIndexer,
+    phraseIndexer: PhraseIndexer,
     indexerPlugin: ArticleIndexerPlugin,
     normUriRepo: NormalizedURIRepo)
   extends SearchServiceController {
@@ -56,6 +58,11 @@ class ArticleIndexerController @Inject()(
   def refreshSearcher = Action { implicit request =>
     indexer.refreshSearcher()
     Ok("searcher refreshed")
+  }
+
+  def refreshPhrases = Action { implicit request =>
+    phraseIndexer.reload()
+    Ok("phrases refreshed")
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]) = Action { implicit request =>

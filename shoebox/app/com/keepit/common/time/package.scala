@@ -3,7 +3,9 @@ package com.keepit.common
 import com.google.inject.Singleton
 import java.util.Locale
 import org.joda.time.{DateTime, DateTimeZone, LocalDate, LocalTime}
-import org.joda.time.format.DateTimeFormat
+import org.joda.time.format._
+import play.api.libs.json.{JsValue, Format}
+import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsString
 
 package object time {
@@ -31,15 +33,25 @@ package object time {
   val HTTP_HEADER_DATETIME_FORMAT = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss 'GMT'")
                                              .withLocale(Locale.ENGLISH)
                                              .withZone(zones.UTC)
-  val STANDARD_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS Z")
-                                             .withLocale(Locale.ENGLISH)
-                                             .withZone(zones.PT)
+  val STANDARD_DATETIME_FORMAT =
+    new DateTimeFormatterBuilder().append(
+      ISODateTimeFormat.dateTime.getPrinter,
+      Array[DateTimeParser](
+        ISODateTimeFormat.dateTime.getParser,
+        DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS Z").getParser))
+    .toFormatter.withLocale(Locale.ENGLISH).withZone(zones.PT)
+
   val UTC_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS Z")
                                              .withLocale(Locale.ENGLISH)
                                              .withZone(zones.UTC)
   val STANDARD_DATE_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd")
                                              .withLocale(Locale.ENGLISH)
                                              .withZone(zones.PT)
+
+  implicit val DateTimeJsonFormat: Format[DateTime] = new Format[DateTime] {
+    def reads(json: JsValue) = JsSuccess(parseStandardTime(json.as[String]))
+    def writes(o: DateTime) = JsString(o.toStandardTimeString)
+  }
 
   def currentDate(implicit zone: DateTimeZone) = new LocalDate(zone)
   def currentDateTime(implicit zone: DateTimeZone) = new DateTime(zone)

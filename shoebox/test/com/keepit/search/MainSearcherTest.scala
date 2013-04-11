@@ -11,7 +11,6 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.inject._
 import com.keepit.test._
 import org.specs2.mutable._
 import play.api.Play.current
@@ -25,16 +24,17 @@ import com.keepit.inject._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.common.analytics.FakePersistEventPluginImpl
+import com.keepit.search.query.parser.FakeSpellCorrector
+import com.keepit.common.controller.FortyTwoServices
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
+import org.apache.lucene.util.Version
+import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphDecoders}
+import org.apache.lucene.util.Version
 
 class MainSearcherTest extends Specification with DbRepos {
 
   val resultClickTracker = ResultClickTracker(8)
-  val browsingHistoryTracker = running(new EmptyApplication()) {
-    BrowsingHistoryTracker(3067, 2, 1)
-  }
-  val clickHistoryTracker = running(new EmptyApplication()) {
-    ClickHistoryTracker(307, 2, 1)
-  }
 
   def initData(numUsers: Int, numUris: Int) = db.readWrite { implicit s =>
     ((0 until numUsers).map(n => userRepo.save(User(firstName = "foo" + n, lastName = ""))).toList,
@@ -43,16 +43,22 @@ class MainSearcherTest extends Specification with DbRepos {
   }
 
   def initIndexes(store: ArticleStore) = {
-    val articleIndexer = ArticleIndexer(new RAMDirectory, store)
-    val uriGraph = URIGraph(new RAMDirectory)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val articleIndexer = new ArticleIndexer(new RAMDirectory, config, store, db, inject[NormalizedURIRepo], null)
+    val uriGraph = new URIGraphImpl(new RAMDirectory, config, URIGraphDecoders.decoders(), bookmarkRepo, db)
+    implicit val clock = inject[Clock]
+    implicit val fortyTwoServices = inject[FortyTwoServices]
     val mainSearcherFactory = new MainSearcherFactory(
         articleIndexer,
         uriGraph,
         new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
         resultClickTracker,
-        browsingHistoryTracker,
-        clickHistoryTracker,
-        inject[FakePersistEventPluginImpl])
+        new BrowsingHistoryTracker(3067, 2, 1, inject[BrowsingHistoryRepo], inject[Database]),
+        new ClickHistoryTracker(307, 2, 1, inject[ClickHistoryRepo], inject[Database]),
+        inject[FakePersistEventPluginImpl],
+        inject[FakeSpellCorrector],
+        clock,
+        fortyTwoServices)
     (uriGraph, articleIndexer, mainSearcherFactory)
   }
 
