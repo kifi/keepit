@@ -265,6 +265,12 @@ api.port.on({
     });
     return true;
   },
+  set_comment_read: function(id) {
+    socket.send(["set_comment_read", id]);
+  },
+  set_message_read: function(id) {
+    socket.send(["set_message_read", id]);
+  },
   normalize: function(_, respond, tab) {
     socket.send(["normalize", tab.url], respond);
     return true;
