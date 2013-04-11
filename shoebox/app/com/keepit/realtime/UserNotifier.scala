@@ -22,7 +22,8 @@ import com.keepit.common.logging._
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.db.{State, Id}
 import com.keepit.common.controller.FortyTwoServices
-
+import com.keepit.common.social.ThreadInfoRepo
+import com.keepit.serializer.ThreadInfoSerializer._
 
 case class CommentDetails(
   id: String,
@@ -94,6 +95,8 @@ class UserNotifier @Inject() (
   commentWithBasicUserRepo: CommentWithBasicUserRepo,
   normalUriRepo: NormalizedURIRepo,
   uriChannel: UriChannel,
+  userChannel: UserChannel,
+  threadInfoRepo: ThreadInfoRepo,
   implicit val fortyTwoServices: FortyTwoServices) extends Logging {
 
   implicit val basicUserFormat = BasicUserSerializer.basicUserSerializer
@@ -101,9 +104,10 @@ class UserNotifier @Inject() (
   implicit val messageDetailsFormat = Json.format[MessageDetails]
 
   def comment(comment: Comment): Unit = {
-    // For now, we will email instantly & push streaming notifications.
-    // Soon, we will email only when the user did not get the notification.
     db.readWrite { implicit s =>
+      val normalizedUri = normalUriRepo.get(comment.uriId).url
+      userChannel.push(comment.userId, Json.arr("comment", normalizedUri, commentWithBasicUserRepo.load(comment)))
+
       val commentDetails = createCommentDetails(comment)
       commentDetails.map { commentDetail =>
         val user = userRepo.get(commentDetail.recipient.externalId)
@@ -115,7 +119,6 @@ class UserNotifier @Inject() (
           subsumedId = None
         ))
 
-        val normalizedUri = normalUriRepo.get(comment.uriId).url
         uriChannel.push(normalizedUri, Json.arr("comment", normalizedUri, commentWithBasicUserRepo.load(comment)))
 
         notificationBroadcast.push(userNotification)
@@ -127,15 +130,18 @@ class UserNotifier @Inject() (
   }
 
   def message(message: Comment) = {
-    // For now, we will email instantly & push streaming notifications.
-    // Soon, we will email only when the user did not get the notification.
     db.readWrite { implicit s =>
 
       val conversationId = message.parent.getOrElse(message.id.get)
+      val parent = message.parent.map(commentRepo.get).getOrElse(message)
+
+      val threadInfo = threadInfoRepo.load(parent, Some(message.userId))
+      userChannel.push(message.userId, Json.arr("message", threadInfo, commentWithBasicUserRepo.load(message)))
+
       val thread = if(message.parent.isEmpty)
           Seq(message)
         else
-          (message.parent.map(commentRepo.get).getOrElse(message) +: commentRepo.getChildren(conversationId)).reverse
+          (parent +: commentRepo.getChildren(conversationId)).reverse
 
       val messageDetails = createMessageDetails(message, thread)
       messageDetails.map { case (userId, (lastNoticeId, messageDetail)) =>
@@ -148,8 +154,17 @@ class UserNotifier @Inject() (
           subsumedId = lastNoticeId
         ))
 
-        notificationBroadcast.push(userNotification)
-        notifyMessageByEmail(user, messageDetail)
+        if(userChannel.clientCount(userId) > 0) {
+          log.info(s"Sending notification because $userId is connected.")
+
+          val threadInfo = threadInfoRepo.load(parent, Some(userId))
+          userChannel.push(userId, Json.arr("message", threadInfo, commentWithBasicUserRepo.load(message)))
+          notificationBroadcast.push(userNotification)
+        }
+        else {
+          log.info(s"Sending email because $userId is not connected.")
+          notifyMessageByEmail(user, messageDetail)
+        }
 
         userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
       }

@@ -75,6 +75,13 @@ trait ChannelManager[T, S <: Channel] {
    *  The message will be sent to all channels, and will return the number of channels the message was sent to.
    */
   def broadcast(msg: JsArray): Int
+
+  /** Returns the number of currently connected clients.
+   *
+   *  If a channelId is provided, return the number of connected clients for just that channelId.
+   */
+  def clientCount: Int
+  def clientCount(channelId: T): Int
 }
 
 class Subscription(val name: String, unsub: () => Option[Boolean]) {
@@ -148,6 +155,14 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
     channels.map(_._2.push(msg)).sum
   }
 
+  def clientCount: Int = {
+    channels.map(_._2.size).sum
+  }
+
+  def clientCount(id: T): Int = {
+    channels.get(id).map(_.size).getOrElse(0)
+  }
+
   private def findOrCreateChannel(id: T): Channel = {
     channels.getOrElseUpdate(id, creator(id))
   }
@@ -155,6 +170,7 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
   private def find(id: T): Option[Channel] = {
     channels.get(id)
   }
+
 }
 
 // Used for user-specific transmissions, such as notifications.
