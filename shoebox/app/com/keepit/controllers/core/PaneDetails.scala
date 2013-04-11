@@ -12,7 +12,6 @@ import com.keepit.common.social.{ThreadInfo, ThreadInfoRepo}
 class PaneDetails @Inject() (
   db: Database,
   commentRepo: CommentRepo,
-  commentRecipientRepo: CommentRecipientRepo,
   normalizedURIRepo: NormalizedURIRepo,
   commentReadRepo: CommentReadRepo,
   commentWithBasicUserRepo: CommentWithBasicUserRepo,
