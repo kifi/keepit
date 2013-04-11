@@ -115,10 +115,10 @@ class ExtStreamController @Inject() (
             "user" -> userChannel.subscribe(userId, socketId, channel))
 
           val handlers = Map[String, Seq[JsValue] => Unit](
-            "ping" -> { case _ =>
+            "ping" -> { _ =>
               channel.push(Json.arr("pong"))
             },
-            "stats" -> { case _ =>
+            "stats" -> { _ =>
               channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
             },
             "normalize" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
@@ -139,7 +139,7 @@ class ExtStreamController @Inject() (
             "log_event" -> { case JsObject(pairs) +: _ =>
               logEvent(streamSession, JsObject(pairs))
             },
-            "get_friends" -> { case _ =>
+            "get_friends" -> { _ =>
               channel.push(Json.arr("friends", getFriends(userId)))
             },
             "get_comments" -> { case JsNumber(requestId) +: JsString(url) +: _ =>// unused, remove soon
@@ -156,10 +156,10 @@ class ExtStreamController @Inject() (
                 Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
               }))
             },
-            "get_last_notify_read_time" -> { case _ =>
+            "get_last_notify_read_time" -> { _ =>
               channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toString()))
             },
-            "set_last_notify_read_time" -> { case _ =>
+            "set_last_notify_read_time" -> { _ =>
               channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId).toString()))
             },
             "get_notifications" -> { case JsNumber(howMany) +: params =>
