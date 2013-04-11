@@ -116,64 +116,64 @@ class ExtStreamController @Inject() (
 
           val handlers = Map[String, Seq[JsValue] => Unit](
             "ping" -> { case _ =>
-                channel.push(Json.arr("pong"))
+              channel.push(Json.arr("pong"))
             },
             "stats" -> { case _ =>
-                channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
+              channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
             },
             "normalize" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-                channel.push(Json.arr(requestId.toLong, URINormalizer.normalize(url)))
+              channel.push(Json.arr(requestId.toLong, URINormalizer.normalize(url)))
             },
             "subscribe_uri" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-                val nUri = URINormalizer.normalize(url)
-                subscriptions = subscriptions + (nUri -> uriChannel.subscribe(nUri, socketId, channel))
-                channel.push(Json.arr(requestId.toLong, nUri))
-                channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
-                channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
+              val nUri = URINormalizer.normalize(url)
+              subscriptions = subscriptions + (nUri -> uriChannel.subscribe(nUri, socketId, channel))
+              channel.push(Json.arr(requestId.toLong, nUri))
+              channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
+              channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
               },
             "unsubscribe_uri" -> { case JsString(url) +: _ =>
-                val nUri = URINormalizer.normalize(url)
-                subscriptions.get(nUri).foreach(_.unsubscribe())
-                subscriptions = subscriptions - nUri
+              val nUri = URINormalizer.normalize(url)
+              subscriptions.get(nUri).foreach(_.unsubscribe())
+              subscriptions = subscriptions - nUri
             },
             "log_event" -> { case JsObject(pairs) +: _ =>
-                logEvent(streamSession, JsObject(pairs))
+              logEvent(streamSession, JsObject(pairs))
             },
             "get_friends" -> { case _ =>
-                channel.push(Json.arr("friends", getFriends(userId)))
+              channel.push(Json.arr("friends", getFriends(userId)))
             },
             "get_comments" -> { case JsNumber(requestId) +: JsString(url) +: _ =>// unused, remove soon
-                channel.push(Json.arr(requestId.toLong, paneData.getComments(userId, url)))
+              channel.push(Json.arr(requestId.toLong, paneData.getComments(userId, url)))
             },
             "get_message_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>     // unused, remove soon
-                channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(userId, url)))
+              channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(userId, url)))
             },
             "get_message_thread" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>  // unused, remove soon
-                channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(userId, ExternalId[Comment](threadId))))
+              channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(userId, ExternalId[Comment](threadId))))
             },
             "get_thread" -> { case JsString(threadId) +: _ =>
-                channel.push(Json.arr("thread", paneData.getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
-                  Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
-                }))
+              channel.push(Json.arr("thread", paneData.getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
+                Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
+              }))
             },
             "get_last_notify_read_time" -> { case _ =>
-                channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toString()))
+              channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toString()))
             },
             "set_last_notify_read_time" -> { case _ =>
-                channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId).toString()))
+              channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId).toString()))
             },
             "get_notifications" -> { case JsNumber(howMany) +: params =>
-                val createdBefore = params match {
-                  case JsString(time) +: _ => Some(parseStandardTime(time))
-                  case _ => None
-                }
-                channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, howMany.toInt)))
+              val createdBefore = params match {
+                case JsString(time) +: _ => Some(parseStandardTime(time))
+                case _ => None
+              }
+              channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, howMany.toInt)))
             },
             "set_message_read" -> { case JsString(messageExternalId) +: _ =>
-                setMessageRead(userId, messageExternalId)
+              setMessageRead(userId, messageExternalId)
             },
             "set_comment_read" -> { case JsString(commentExternalId) +: _ =>
-                setCommentRead(userId, commentExternalId)
+              setCommentRead(userId, commentExternalId)
             })
 
           val iteratee = asyncIteratee { jsArr =>
