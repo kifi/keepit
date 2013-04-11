@@ -27,12 +27,6 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[MailToKeepPlugin].to[MailToKeepPluginImpl].in[AppScoped]
-
-    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
-    listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
-    listenerBinder.addBinding().to(classOf[UsefulPageListener])
-    listenerBinder.addBinding().to(classOf[SliderShownListener])
-    listenerBinder.addBinding().to(classOf[SearchUnloadListener])
   }
 
   @Singleton
@@ -40,18 +34,6 @@ class ShoeboxModule() extends ScalaModule with Logging {
   def domainTagImportSettings: DomainTagImportSettings = {
     val dirPath = Files.createTempDir().getAbsolutePath
     DomainTagImportSettings(localDir = dirPath, url = "http://www.komodia.com/clients/42.zip")
-  }
-
-  @Singleton
-  @Provides
-  def searchUnloadProvider(
-    userRepo: UserRepo,
-    normalizedURIRepo: NormalizedURIRepo,
-    persistEventPlugin: PersistEventPlugin,
-    store: MongoEventStore,
-    clock: Clock,
-    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
-    new SearchUnloadListenerImpl(userRepo, normalizedURIRepo, persistEventPlugin, store, clock, fortyTwoServices)
   }
 
   @Singleton
