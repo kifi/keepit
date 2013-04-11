@@ -22,6 +22,7 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
+import com.google.inject.Provider
 
 abstract class EventListenerPlugin(
     userRepo: UserRepo,
@@ -140,14 +141,14 @@ abstract class SearchUnloadListener(userRepo: UserRepo, normalizedURIRepo: Norma
 class SearchUnloadListenerImpl @Inject() (
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
-    persistEventPlugin: PersistEventPlugin,
+    persistEventProvider: Provider[PersistEventPlugin],
     store: MongoEventStore,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices)
   extends SearchUnloadListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
-    case Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", externalUser, _, experiments, metaData, _), _, _) => {
+    case Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", _, _, _, metaData, _), _, _) => {
       val kifiClicks = (metaData \ "kifiResultsClicked").asOpt[Int].getOrElse(-1)
       val googleClicks = (metaData \ "googleResultsClicked").asOpt[Int].getOrElse(-1)
       val uuid = (metaData \ "queryUUID").asOpt[String].getOrElse("")
@@ -161,13 +162,16 @@ class SearchUnloadListenerImpl @Inject() (
           "googleResultsClicked" -> googleClicks)
 
         val event = Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_statistics", newMetaData)
-        persistEventPlugin.persist(event)
+        persistEventProvider.get.persist(event)
       }
     }
   }
 }
 
 class FakeSearchUnloadListenerImpl @Inject() (userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends SearchUnloadListener(userRepo, normalizedURIRepo) {
-  def onEvent: PartialFunction[Event, Unit] = PartialFunction.empty
+  def onEvent: PartialFunction[Event, Unit] = {
+    case event @ Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", _, _, _, metaData, _), _, _) =>
+      // Nothing for now
+  }
 }
 

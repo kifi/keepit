@@ -74,7 +74,7 @@ case class Event(
   serverVersion: String
 )
 
-class EventRepo @Inject() (s3EventStore: S3EventStore, mongoEventStore: MongoEventStore, eventHelper: EventHelper) {
+class EventRepo @Inject() (s3EventStore: S3EventStore, mongoEventStore: MongoEventStore) {
   def persistToS3(event: Event): Event = {
     s3EventStore += (event.externalId -> event)
     event
@@ -84,8 +84,6 @@ class EventRepo @Inject() (s3EventStore: S3EventStore, mongoEventStore: MongoEve
     persistToS3(event)
     persistToMongo(event)
   }
-
-  def feedToListeners(event: Event) = eventHelper.newEvent(event)
 }
 
 object Events {
