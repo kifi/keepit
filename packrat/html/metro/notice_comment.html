@@ -1,4 +1,4 @@
-<div class="kifi-notice kifi-notice-comment" data-id="{{id}}">
+<div class="kifi-notice kifi-notice-comment kifi-notice-state-{{state}}" data-id="{{id}}">
   <time datetime="{{#formatIsoDate}}{{time}}{{/formatIsoDate}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
   <img class="kifi-notice-avatar" src="{{avatar}}">
   <div class="kifi-notice-name">
@@ -8,7 +8,7 @@
   	 left a comment
   </div>
   <div class="kifi-notice-page">
-  	on this page: <a href="{{details.url}}" target="_blank">{{details.title}}</a>
+  	on this page: <a href="{{details.url}}" class="kifi-link" target="_blank">{{details.title}}</a>
   </div>
   <div class="kifi-notice-text">{{#formatMessage}}{{{details.text}}}{{/formatMessage}}</div>
 </div>

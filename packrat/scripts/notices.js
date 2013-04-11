@@ -9,6 +9,7 @@ const MAX_NOTIFICATIONS = 100; // maximum number of notifications
 
 function renderNotices($container, isAdmin) {
   var numShown = 10;
+  var numRequested = numShown;
   api.port.emit("notifications", numShown, function (notices) {
     render("html/metro/notices.html", {}, function (html) {
       $notifyPane = $(html).appendTo($container);
@@ -16,14 +17,22 @@ function renderNotices($container, isAdmin) {
         $notifyPane.scroll(function() {
           var scrollBottom = $(this).scrollTop() + $(this).height();
           var scrollHeight = $(this).prop("scrollHeight");
-          if (scrollHeight - scrollBottom < SCROLL_DISTANCE && numShown < MAX_NOTIFICATIONS) {
-            api.port.emit("notifications", numShown + 10, function (notices) {
+          if (scrollHeight - scrollBottom < SCROLL_DISTANCE && numShown < MAX_NOTIFICATIONS && numRequested <= numShown) {
+            numRequested += 10;
+            api.port.emit("notifications", numRequested, function (notices) {
               getRenderedNotices(notices, $notifyPane, function () {
-                numShown = notices.length;
+                numShown = numRequested = notices.length;
               });
             });
           }
         });
+      });
+      $notifyPane.on('click', '.kifi-notice', function(e) {
+        var url = $(this).find('.kifi-link').attr('href');
+        if (url) {
+          window.open(url,'_blank');
+        }
+        return false;
       });
     });
   });

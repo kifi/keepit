@@ -59,6 +59,7 @@ class ExtStreamController @Inject() (
   urlPatternRepo: URLPatternRepo,
   commentRepo: CommentRepo,
   paneData: PaneDetails,
+  eventRepo: EventRepo,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
@@ -156,10 +157,10 @@ class ExtStreamController @Inject() (
                   case _ => None
                 }
                 channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, howMany.toInt)))
-              case JsString("set_message_read") +: JsString(parentExternalId) +: _ =>
-                setMessageRead(userId, parentExternalId)
-              case JsString("set_comment_read") +: JsString(externalId) +: _ =>
-                setCommentRead(userId, externalId)
+              case JsString("set_message_read") +: JsString(messageExternalId) +: _ =>
+                setMessageRead(userId, messageExternalId)
+              case JsString("set_comment_read") +: JsString(commentExternalId) +: _ =>
+                setCommentRead(userId, commentExternalId)
               case json =>
                 log.warn(s"Not sure what to do with: $json")
             }
@@ -223,8 +224,7 @@ class ExtStreamController @Inject() (
   private def setMessageRead(userId: Id[User], externalId: String) = {
     db.readWrite { implicit session =>
       val comment = commentRepo.get(ExternalId[Comment](externalId))
-      val parentId = comment.parent.map(p => commentRepo.get(p).id.get).getOrElse(comment.id.get)
-      userNotificationRepo.getWithCommentId(userId, parentId).foreach { n =>
+      userNotificationRepo.getWithCommentId(userId, comment.id.get).foreach { n =>
         userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
       }
     }
