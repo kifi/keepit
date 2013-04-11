@@ -24,10 +24,25 @@ import play.api.Play.current
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
+import com.keepit.model.UserRepo
+import com.keepit.common.time.Clock
+import com.keepit.common.controller.FortyTwoServices
 
 
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {}
+
+  @Singleton
+  @Provides
+  def searchUnloadProvider(
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    persistEventPlugin: PersistEventPlugin,
+    store: MongoEventStore,
+    clock: Clock,
+    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
+    new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo)
+  }
 
   @Singleton
   @Provides

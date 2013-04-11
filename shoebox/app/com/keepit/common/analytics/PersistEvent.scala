@@ -37,7 +37,6 @@ private[analytics] class PersistEventActor @Inject() (
 
   def receive() = {
     case Persist(event, queueTime) =>
-      eventRepo.feedToListeners(event)
       val diff = Seconds.secondsBetween(queueTime, currentDateTime).getSeconds
       if(diff > 120) {
         val ex = new Exception("Event log is backing up. Event was queued %s seconds ago".format(diff))
