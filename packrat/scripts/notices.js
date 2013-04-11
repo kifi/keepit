@@ -25,6 +25,13 @@ function renderNotices($container, isAdmin) {
           }
         });
       });
+      $notifyPane.on('click', '.kifi-notice', function(e) {
+        var url = $(this).find('.kifi-link').attr('href');
+        if (url) {
+          window.open(url,'_blank');
+        }
+        return false;
+      });
     });
   });
 }
