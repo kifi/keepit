@@ -128,9 +128,9 @@ class UserNotifier @Inject() (
 
   def message(message: Comment) = {
     db.readWrite { implicit s =>
-
-      val conversationId = message.parent.getOrElse(message.id.get)
+      val normalizedUri = normalUriRepo.get(message.uriId).url
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
+      val conversationId = parent.id.get
 
       val threadInfo = threadInfoRepo.load(parent, Some(message.userId))
       userChannel.push(message.userId, Json.arr("message", threadInfo, commentWithBasicUserRepo.load(message)))
@@ -155,7 +155,7 @@ class UserNotifier @Inject() (
           log.info(s"Sending notification because $userId is connected.")
 
           val threadInfo = threadInfoRepo.load(parent, Some(userId))
-          userChannel.push(userId, Json.arr("message", threadInfo, commentWithBasicUserRepo.load(message)))
+          userChannel.push(userId, Json.arr("message", normalizedUri, threadInfo, commentWithBasicUserRepo.load(message)))
           notificationBroadcast.push(userNotification)
         }
         else {
