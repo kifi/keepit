@@ -149,10 +149,9 @@ const socketHandlers = {
   },
   notification: function(notification) {
     api.log("[socket:notification]", notification);
-    var activeTab = api.tabs.getActive();
-    if (activeTab) {
-      api.tabs.emit(activeTab, "show_notification", notification);
-    }
+    api.tabs.eachSelected(function(tab) {
+      api.tabs.emit(tab, "show_notification", notification);
+    });
     socketHandlers.notifications([notification]);
   },
   notifications: function(arr) {
@@ -174,10 +173,9 @@ const socketHandlers = {
     notifications.sort(function(a, b) {
       return new Date(b.time) - new Date(a.time);
     });
-    var activeTab = api.tabs.getActive();
-    if (activeTab) {
-      api.tabs.emit(activeTab, "notifications", notifications);
-    }
+    api.tabs.eachSelected(function(tab) {
+      api.tabs.emit(tab, "notifications", notifications);
+    });
   },
   last_notify_read_time: function(t) {
     api.log("[socket:last_notify_read_time]", t);
@@ -365,10 +363,9 @@ api.port.on({
       var oldest = (notifications[notifications.length-1] || {}).time;
       socket.send(["get_notifications", howMany - notifications.length, oldest]);
     } else {
-      var activeTab = api.tabs.getActive();
-      if (activeTab) {
-        api.tabs.emit(activeTab, "notifications", notifications);
-      }
+      api.tabs.eachSelected(function(tab) {
+        api.tabs.emit(tab, "notifications", notifications);
+      });
     }
   },
   set_last_notify_read_time: function() {
@@ -881,9 +878,5 @@ logEvent("extension", "started");
 
 authenticate(function() {
   api.log("[main] authenticated");
-  api.tabs.each(function(tab) {
-    if (api.tabs.isSelected(tab)) {
-      subscribe(tab);
-    }
-  });
+  api.tabs.eachSelected(subscribe);
 });

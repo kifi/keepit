@@ -124,7 +124,7 @@ var injected, t0 = +new Date;
 
   function insertTile(o) {
     while (tile = document.getElementById("kifi-tile")) {
-      tile.remove();
+      tile.parentNode.removeChild(tile);
     }
     tile = document.createElement("div");
     tile.id = "kifi-tile";
@@ -158,7 +158,7 @@ var injected, t0 = +new Date;
       count.classList[u ? "add" : "remove"]("kifi-unread");
       (u ? tile : tile.firstChild).appendChild(count);
     } else {
-      count.remove();
+      count.parentNode.removeChild(count);
     }
     tile.classList[u || n ? "add" : "remove"]("kifi-with-count");
   }

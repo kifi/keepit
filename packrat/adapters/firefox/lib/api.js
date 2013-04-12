@@ -261,10 +261,15 @@ exports.storage = require("sdk/simple-storage").storage;
 const hostRe = /^https?:\/\/[^\/]*/;
 exports.tabs = {
   each: function(callback) {
-    Object.keys(pages)
-    .map(function(tabId) { return pages[tabId]; })
-    .filter(function(page) { return /^https?:/.test(page.url); })
-    .forEach(callback);
+    for each (let page in pages) {
+      if (/^https?:/.test(page.url)) callback(page);
+    }
+  },
+  eachSelected: function(callback) {
+    for each (let win in windows) {
+      var page = pages[win.tabs.activeTab.id];
+      if (page && /^https?:/.test(page.url)) callback(page);
+    }
   },
   emit: function(tab, type, data) {
     var currTab = pages[tab.id];
@@ -280,18 +285,9 @@ exports.tabs = {
   get: function(pageId) {
     return pages[pageId];
   },
-  getActive: function() {
-    var tab = topTabWin && topTabWin.tabs.activeTab;
-    var page = tab && pages[tab.id];
-    return page && /^https?:/.test(page.url) ? page : null;
-  },
   isFocused: function(page) {
     var tab = tabsById[page.id], win = tab.window;
     return win === windows.activeWindow && tab === win.tabs.activeTab;
-  },
-  isSelected: function(page) {
-    var tab = tabsById[page.id];
-    return tab === tab.window.tabs.activeTab;
   },
   on: {
     focus: new Listeners,
