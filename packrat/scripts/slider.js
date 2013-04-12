@@ -210,7 +210,7 @@ slider = function() {
             facebookId: friend.facebookId,
             iconsUrl: api.url("images/social_icons.png")
           }, callback);
-          api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+          api.port.emit("get_num_mutual_keeps", {id: friend.id}, function gotNumMutualKeeps(o) {
             $a.find(".kifi-kcard-mutual").text(o.n + " mutual keep" + (o.n == 1 ? "" : "s"));
           });
         }});
@@ -463,9 +463,9 @@ slider = function() {
 
     // TODO: fix indentation below
 
-      if (visibleComments.length && visibleComments[0].user && visibleComments[0].user.externalId) {
+      if (visibleComments.length && visibleComments[0].user && visibleComments[0].user.id) {
         for (msg in visibleComments) {
-          visibleComments[msg]["isLoggedInUser"] = visibleComments[msg].user.externalId == session.userId
+          visibleComments[msg]["isLoggedInUser"] = visibleComments[msg].user.id == session.userId
         }
       }
 
@@ -476,19 +476,17 @@ slider = function() {
         for (msg in iterMessages) {
           var recipients = iterMessages[msg]["recipients"];
           var l = recipients.length;
-          if(l == 0) { // No recipients!
+          if (l == 0) { // No recipients!
             threadAvatar = params.kifiuser.avatar;
-          }
-          else if(l == 1) {
+          } else if (l == 1) {
             threadAvatar = iterMessages[msg]["recipients"][0]["avatar"];
-          }
-          else {
+          } else {
             threadAvatar = api.url("images/convo.png");
           }
           iterMessages[msg]["threadAvatar"] = threadAvatar;
 
           var recipientNames = [];
-          for(r in recipients) {
+          for (r in recipients) {
             var name = recipients[r].firstName + " " + recipients[r].lastName;
             recipientNames.push(name);
           }
@@ -500,31 +498,28 @@ slider = function() {
 
           var displayedRecipients = [];
           var storedRecipients = [];
-          if(l == 0) {
+          if (l == 0) {
             displayedRecipients.push(session.name);
-          }
-          else if(l <= 4) {
+          } else if (l <= 4) {
             displayedRecipients = recipientNames.slice(0, l);
-          }
-          else {
+          } else {
             displayedRecipients = recipientNames.slice(0, 3);
             storedRecipients = recipientNames.slice(3);
           }
 
-          for(d in displayedRecipients) {
+          for (d in displayedRecipients) {
             displayedRecipients[d] = formatRecipient(displayedRecipients[d]);
           }
 
           var recipientText;
-          if(l == 0) {
+          if (l == 0) {
             recipientText = displayedRecipients[0];
-          } else if(l <= 4) {
-            if(l == 1)
-              recipientText = displayedRecipients[0];
-            else if(l == 2)
-              recipientText = displayedRecipients[0] + " and " + displayedRecipients[1];
-            else if(l == 3 || l == 4)
-              recipientText = displayedRecipients.slice(0, l - 1).join(", ") + " and " + displayedRecipients[l - 1];
+          } else if (l == 1) {
+            recipientText = displayedRecipients[0];
+          } else if (l == 2) {
+            recipientText = displayedRecipients[0] + " and " + displayedRecipients[1];
+          } else if (l == 3 || l == 4)
+            recipientText = displayedRecipients.slice(0, l - 1).join(", ") + " and " + displayedRecipients[l - 1];
           } else {
             recipientText = displayedRecipients.slice(0, 3).join(", ");
             storedRecipients = recipientNames.slice(3);
@@ -540,8 +535,8 @@ slider = function() {
           var othersInConversation = {};
           visibleComments.forEach(function(c) {
             c.recipients.concat([c.user]).forEach(function(u) {
-              if (u.externalId != session.userId) {
-                othersInConversation[u.externalId] = u.firstName + " " + u.lastName;
+              if (u.id != session.userId) {
+                othersInConversation[u.id] = u.firstName + " " + u.lastName;
               }
             });
           });
@@ -551,7 +546,7 @@ slider = function() {
           }).join(", ");
           params.recipientText = visibleComments[0].recipientText;
           params.storedRecipients = visibleComments[0].storedRecipients;
-          params.externalId = visibleComments[0].externalId;
+          params.id = visibleComments[0].id;
           params.recipientCount = othersIds.length;
           params.recipientCountText = othersIds.length == 1 ? "person" : "people";
           params.hideComposeTo = true;
@@ -638,9 +633,8 @@ slider = function() {
     });
 
     if (type == "message") {
-      api.port.emit("get_friends", function(data) {
-        api.log("friends:", data);
-        var friends = data.friends; //TODO!
+      api.port.emit("get_friends", function(friends) {
+        api.log("friends:", friends);
         for (var i in friends) {
           var f = friends[i];
           f.name = f.firstName + " " + f.lastName;
@@ -655,7 +649,7 @@ slider = function() {
           animateDropdown: false,
           preventDuplicates: true,
           allowTabOut: true,
-          tokenValue: "externalId",
+          tokenValue: "id",
           theme: "kifi",
           zindex: 2147483641});
         $container.find("#token-input-to-list").keypress(function(e) {
@@ -750,22 +744,21 @@ slider = function() {
       badGlobalState["updates"].messageCount++;
       badGlobalState["updates"].countSum++;
 
-      if(!isReply) {
+      if (!isReply) {
         var recipientJson = $("#to-list").tokenInput("get");
         $("#to-list").tokenInput("clear");
 
         var recipientArr = [];
-        for(r in recipientJson) {
-          recipientArr.push(recipientJson[r]["externalId"]);
+        for (r in recipientJson) {
+          recipientArr.push(recipientJson[r].id);
         }
-        if(recipientArr.length == 0) {
+        if (recipientArr.length == 0) {
           alert("Silly you. You need to add some friends!");
           return false;
         }
         recipients = recipientArr.join(",");
         api.log("[submit] to:", recipients);
-      }
-      else {
+      } else {
         parent = $(this).parents(".kifi-comment-wrapper").find(".kifi-thread-wrapper").data("id");
         api.log("[submit] thread id:", parent);
       }
@@ -779,7 +772,7 @@ slider = function() {
         if (!isReply) {
           updateCommentCount(type, +$(".kifi-tab-count-messages").text() + 1);
           api.log("[submitted] not a reply. redirecting to new message");
-          showComments(session, type, newComment.message.externalId);
+          showComments(session, type, newComment.message.id);
           return;
         }
 
@@ -816,13 +809,13 @@ slider = function() {
           "createdAt": new Date,
           "text": text,
           "user": {
-            "externalId": session.userId,
+            "id": session.userId,
             "firstName": session.name,
             "lastName": "",
             "facebookId": session.facebookId
           },
           "permissions": type,
-          "externalId": response.commentId});
+          "id": response.commentId});
     });
   }
 

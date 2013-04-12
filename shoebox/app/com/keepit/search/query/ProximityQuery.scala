@@ -113,6 +113,15 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
   }
 }
 
+
+/**
+ * Each term is associated with a PositionAndMask instance.
+ * At any time,
+ * doc = the current document associated with the term
+ * pos = current position of the term in current document
+ * posLeft = number of unvisited term positions in current document
+ * mask : reflects the position of the term in query.
+ */
 private[query] final class PositionAndMask(val tp: DocsAndPositionsEnum, val termText: String) {
   var doc = -1
   var pos = -1
@@ -174,12 +183,14 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
     if (scoredDoc != doc) {
       var top = pq.top
       var maxScore = 0.0f
+      // if term still have positions left in this doc
       if (top.pos < Int.MaxValue) {
         var i = 0
         Arrays.fill(rl, 0.0f) // clear the run lengths
         Arrays.fill(ls, 0.0f) // clear the local scores
 
         // start fetching position for all terms
+        // in fact, it only fetches the first position (if exists) for each term
         while (top.doc == doc && top.pos == -1) {
           top.nextPos()
           top = pq.updateTop()
@@ -192,8 +203,8 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
         // A local score at a position is the sum of weights of all terms.
         // The max local score + the base score is the score of the current document.
         var prevPos = -1
-        while (top.doc == doc && top.pos < Int.MaxValue) {
-          val curPos = top.pos
+        while (top.doc == doc && top.pos < Int.MaxValue) {       // while doc still have term positions left
+          val curPos = top.pos                                  // note: doc is fixed, earlier term position fetched first, the associated term also changes
           val mask = top.getMask
           var i = 1
           // update run lengths and local scores
@@ -202,7 +213,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
           while (i <= numTerms) {
             val runLen = if (((1L << (i - 1)) & mask) != 0) prevRun + 1.0f else 0.0f
             val localScore = max(ls(i) - (gapPenalty(curPos - prevPos)), 0.0f)
-            prevRun = rl(i) // save the run length of previous round
+            prevRun = rl(i) // store the run length of previous round
             rl(i) = runLen
             ls(i) = if (localScore < runLen) runLen else localScore
             localScoreSum += ls(i)
@@ -228,7 +239,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
     var top = pq.top
     val doc = if (target <= curDoc && curDoc < NO_MORE_DOCS) curDoc + 1 else target
     while (top.doc < doc) {
-      top.fetchDoc(doc)
+      top.fetchDoc(doc)           // note: this modifies top.doc, need to reheapify.
       top = pq.updateTop()
     }
     curDoc = top.doc

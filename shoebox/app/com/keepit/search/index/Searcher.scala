@@ -48,7 +48,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
       if(weight != null) {
         indexReader.getContext.leaves.foreach{ subReaderContext =>
           val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
-          val scorer = weight.scorer(subReaderContext, true, true, subReader.getLiveDocs)
+          val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
           if (scorer != null) {
             f(scorer, subReader.getIdMapper)
           }
@@ -58,14 +58,11 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   }
 
   def findDocIdAndAtomicReaderContext(id: Long): Option[(Int, AtomicReaderContext)] = {
-    val wrappedSubReaders = indexReader.wrappedSubReaders
-    var i = 0
-    while (i < wrappedSubReaders.length) {
-      val r = wrappedSubReaders(i)
-      val liveDocs = r.getLiveDocs
-      val docid = r.getIdMapper.getDocId(id)
-      if (docid >= 0 && (liveDocs == null || liveDocs.get(docid))) return Some((docid, r.getContext()))
-      i += 1
+    indexReader.getContext.leaves.foreach{ subReaderContext =>
+      val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
+      val liveDocs = subReader.getLiveDocs
+      val docid = subReader.getIdMapper.getDocId(id)
+      if (docid >= 0 && (liveDocs == null || liveDocs.get(docid))) return Some((docid, subReader.getContext()))
     }
     None
   }
@@ -73,8 +70,13 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   def explain(query: Query, id: Long): Explanation = {
     findDocIdAndAtomicReaderContext(id) match {
       case Some((docid, context)) =>
-        val weight = createNormalizedWeight(query)
-        weight.explain(context, docid)
+        val rewrittenQuery = rewrite(query)
+        if (rewrittenQuery != null) {
+          val weight = createNormalizedWeight(rewrittenQuery)
+          weight.explain(context, docid)
+        } else {
+          new Explanation(0.0f, "rewrittten query is null")
+        }
       case None =>
         new Explanation(0.0f, "failed to find docid")
     }

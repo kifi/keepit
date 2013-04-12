@@ -9,15 +9,14 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.model.CommentRecipient
 import com.google.inject.Inject
 
-case class CommentWithBasicUser(user: BasicUser, comment: Comment, replyCount: Long, recipients: Seq[BasicUser])
+case class CommentWithBasicUser(user: BasicUser, comment: Comment, recipients: Seq[BasicUser])
 
-class CommentWithBasicUserRepo @Inject() (basicUserRepo: BasicUserRepo, commentRecipientRepo: CommentRecipientRepo, commentRepo: CommentRepo) {
+class CommentWithBasicUserRepo @Inject() (basicUserRepo: BasicUserRepo, commentRecipientRepo: CommentRecipientRepo) {
   def load(comment: Comment)(implicit session: RSession): CommentWithBasicUser = {
     CommentWithBasicUser(
       basicUserRepo.load(comment.userId),
       comment,
-      commentRepo.getChildCount(comment.id.get),
-      if(comment.permissions != CommentPermissions.MESSAGE) {
+      if (comment.permissions != CommentPermissions.MESSAGE) {
         Nil
       } else {
         commentRecipientRepo.getByComment(comment.id.get) map { cr =>

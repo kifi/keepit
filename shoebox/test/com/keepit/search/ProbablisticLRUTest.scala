@@ -86,7 +86,7 @@ class ProbablisticLRUTest extends Specification {
 
       lru.put(key, v4, 0.1)
       ret = lru.get(key, values)
-      ret.get(v4) must beNone
+      ret(v4) === 1
     }
 
     "put/get multiple keys" in {

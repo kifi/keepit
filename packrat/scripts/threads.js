@@ -34,7 +34,7 @@ function renderThreads($container, threads) {
     .on("click", ".kifi-thread", function() {
       var $th = $(this), id = $th.data("id");
       var recipients = $th.data("recipients") ||
-        threads.filter(function(t) {return t.externalId == id})[0].recipients;
+        threads.filter(function(t) {return t.id == id})[0].recipients;
       $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["thread", recipients, id])
     })
     .on("kifi:compose-submit", sendMessage)
@@ -61,7 +61,7 @@ function renderThreads($container, threads) {
         "recipientsPictured": response.message.recipients.slice(0, 4),
         "messageCount": 1,
         "digest": text,
-        "externalId": response.message.externalId
+        "id": response.message.id
       }, function(html) {
         var $threads = $container.find(".kifi-threads-list");
         $(html).data("recipients", response.message.recipients)
@@ -69,10 +69,6 @@ function renderThreads($container, threads) {
         $threads[0].scrollTop = 99999;
         $container.find(".kifi-compose-draft").empty().blur();
         $container.find(".kifi-compose-to").tokenInput("clear");
-        // TODO: better way to update thread counts
-        $(".kifi-slider2-dock-btn.kifi-slider2-threads .kifi-count:not(.kifi-unread),#kifi-tile .kifi-count:not(.kifi-unread)").each(function() {
-          this.innerHTML = 1 + (+this.innerHTML);
-        });
       });
     });
   }

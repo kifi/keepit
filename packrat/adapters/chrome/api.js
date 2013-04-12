@@ -470,10 +470,16 @@ api = function() {
     storage: localStorage,
     tabs: {
       each: function(callback) {
-        Object.keys(pages)
-        .map(function(tabId) { return pages[tabId]; })
-        .filter(function(page) { return /^https?:/.test(page.url); })
-        .forEach(callback);
+        for (var id in pages) {
+          var page = pages[id];
+          if (/^https?:/.test(page.url)) callback(page);
+        }
+      },
+      eachSelected: function(callback) {
+        for (var id in selectedTabPages) {
+          var page = selectedTabPages[id];
+          if (/^https?:/.test(page.url)) callback(page);
+        }
       },
       emit: function(tab, type, data) {
         var currTab = pages[tab.id];
@@ -487,17 +493,8 @@ api = function() {
       get: function(tabId) {
         return pages[tabId];
       },
-      getActive: function() {
-        var page = selectedTabPages[topNormalWinId];
-        return page && /^https?:/.test(page.url) ? page : null;
-      },
       isFocused: function(tab) {
         return selectedTabPages[focusedWinId] === tab;
-      },
-      isSelected: function(tab) {
-        return Object.keys(selectedTabPages).some(function(winId) {
-          return selectedTabPages[winId] === tab;
-        });
       },
       on: {
         focus: new Listeners,
