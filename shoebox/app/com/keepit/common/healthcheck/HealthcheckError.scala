@@ -76,15 +76,28 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
     causeString(error)
   }
 
-  lazy val subjectName: String = error match {
-    case None => errorMessage.getOrElse(path.getOrElse(callType.toString()))
-    case Some(t) => t.getClass.getName
+  lazy val subjectName: String = {
+    def cause(t: Throwable): Throwable = Option(t.getCause()) match {
+      case None => t
+      case Some(c) => cause(c)
+    }
+    error match {
+      case None =>
+        errorMessage.getOrElse(path.getOrElse(callType.toString()))
+      case Some(t) =>
+        val source = cause(t)
+        val message = source.getMessage() match {
+          case long if long.length > 12 => long.substring(0, 12) + "..."
+          case short => short
+        }
+        s"${source.getClass().toString} : ${message}"
+    }
   }
 
   lazy val titleHtml: String = {
     def causeString(throwableOptions: Option[Throwable]): String = throwableOptions match {
       case None => "[No Cause]"
-      case Some(t) => s"${t.getClass.getName}: ${t.getMessage}\n<br/> &nbsp; Cause: ${causeString(Option(t.getCause))}"
+      case Some(t) => s"""${t.getClass.getName}: ${t.getMessage}\n<br/> &nbsp; <span style="color:red; font-size: 13px; font-style: bold;">Cause:</span> ${causeString(Option(t.getCause))}"""
     }
     (error map (e => causeString(error))).getOrElse(errorMessage.getOrElse(this.toString))
   }
