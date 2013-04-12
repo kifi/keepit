@@ -167,7 +167,11 @@ class ExtStreamController @Inject() (
                 case JsString(time) +: _ => Some(parseStandardTime(time))
                 case _ => None
               }
-              channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, howMany.toInt)))
+              val toFetch =
+                if (createdBefore.isEmpty)
+                  math.max(db.readOnly(implicit s => userNotificationRepo.getUnreadCount(userId)), howMany.toInt)
+                else howMany.toInt
+              channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, toFetch)))
             },
             "set_message_read" -> { case JsString(messageExternalId) +: _ =>
               setMessageRead(userId, messageExternalId)
