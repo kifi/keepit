@@ -128,16 +128,11 @@ var injected, t0 = +new Date;
     }
     tile = document.createElement("div");
     tile.id = "kifi-tile";
-    if (o.kept) {
-      tile.className = "kifi-kept";
-    }
-    var trans = document.createElement("div");
-    trans.className = "kifi-tile-transparent";
-    trans.style.backgroundImage = "url(" + api.url("images/metro/tile_logo.png") + ")";
-    tile.appendChild(trans);
+    tile.className = o.kept ? "kifi-kept" : "";
+    tile.style.display = "none";
+    tile.innerHTML = "<div class=kifi-tile-transparent style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>";
     count = document.createElement("span");
     count.className = "kifi-count";
-    tile.style.display = "none";
     updateCount(o);
     document.documentElement.appendChild(tile);
     tile.addEventListener("mouseover", function() {
