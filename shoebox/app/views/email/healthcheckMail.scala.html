@@ -1,4 +1,4 @@
-@(history: HealthcheckErrorHistory)
+@(history: com.keepit.common.healthcheck.HealthcheckErrorHistory)
 
 @quote(daQuote: com.keepit.common.admin.DouglasAdamsQuote) = {
   <br>
@@ -11,26 +11,29 @@
   </blockquote>
 }
 
+<h2>Summary</h2>
 <div style="color:#333;font:13px 'Helvetica Neue',Helvetica,Arial,sans-serif">
 <p>
-  @{history.lastError.titleHtml}
+  @Html(history.lastError.titleHtml)
   <ul>
-    <li>Signature: @{history.signature}</li>
-    <li>Total Errors since start: @{history.count}</li>
-    <li>Total Errors since last alert: @{history.countSinceLastAlert}</li>
+    <li><b>Total Errors since start:</b> @{history.count}</li>
+    <li><b>Total Errors since last alert:</b> @{history.countSinceLastAlert}</li>
+    <li><b>Signature:</b> @{history.signature.value}</li>
   </ul>
 </p>
+</div>
+
+<h2>Full Details</h2>
+<div style="color:#333;font:13px 'Courier New', monospace">
+<p>
+  @Html(history.lastError.toHtml)
+</p>
+</div>
 
 <p>Check out the <a href="https://keepitfindit.com/admin/server">admin page</a> to reset the pingdom error call.</p>
-
-<p>
-  ${errorList.last.toHtml}"
-</p>
 
 <p>
   <font style="font-size: 8px">If you want to stop being notified about comments on this page please help the team write more tests!</font>
 </p>
 
 @quote(com.keepit.common.admin.DouglasAdamsQuotes.random)
-
-</div>

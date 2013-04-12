@@ -46,7 +46,7 @@ object Healthcheck {
 }
 
 case object ReportErrorsAction
-case object ErrorCountSinceLastCheck
+case object ErrorCount
 case object ResetErrorCount
 case object GetErrors
 
@@ -54,9 +54,9 @@ case class HealthcheckHost(host: String) extends AnyVal {
   override def toString = host
 }
 
-case class SendHealthcheckMail(history: HealthcheckErrorHistory) extends AnyVal {
+case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHost) {
   def sendMail(postOffice: PostOffice, services: FortyTwoServices): Unit = {
-    val subject = s"ERROR: [${services.currentService.currentService}/$host] ${history.lastError.subjectName}"
+    val subject = s"ERROR: [${services.currentService}/$host] ${history.lastError.subjectName}"
     val body = views.html.email.healthcheckMail(history).body
     postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
         subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))
@@ -84,27 +84,31 @@ class HealthcheckActor @Inject() (
     case ReportErrorsAction =>
       errors.values filter { _.countSinceLastAlert > 0 } foreach { history =>
         errors(history.signature) = history.reset()
-        self ! SendHealthcheckMail(history)
+        self ! SendHealthcheckMail(history, host)
       }
     case GetErrors =>
-      sender ! errors.values map {history => history.lastError} toSeq
+      val lastErrors: Seq[HealthcheckError] = errors.values map {history => history.lastError} toSeq;
+      sender ! lastErrors
     case sendMail: SendHealthcheckMail => sendMail.sendMail(postOffice, services)
+    case ErrorCount => sender ! errors.values.foldLeft(0)(_ + _.count)
+    case ResetErrorCount => errors.clear()
     case error: HealthcheckError =>
       val signature = error.signature
       val history = errors.contains(signature) match {
-        case false => HealthcheckErrorHistory(signature, 1, 0, error)
-        case true => errors(signature).addError(error)
+        case false =>
+          val newHistory = HealthcheckErrorHistory(signature, 1, 0, error)
+          self ! SendHealthcheckMail(newHistory, host)
+          newHistory
+        case true =>
+          errors(signature).addError(error)
       }
       errors(signature) = history
-      self ! SendHealthcheckMail(history)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
 
 trait HealthcheckPlugin extends SchedulingPlugin {
-  def errorCountFuture(): Future[Int]
   def errorCount(): Int
-  def errorsFuture(): Future[List[HealthcheckError]]
   def errors(): Seq[HealthcheckError]
   def resetErrorCount(): Unit
   def addError(error: HealthcheckError): HealthcheckError
@@ -130,19 +134,13 @@ class HealthcheckPluginImpl @Inject() (
      scheduleTask(actorFactory.system, 0 seconds, 10 minutes, actor, ReportErrorsAction)
   }
 
-  def errorCountFuture(): Future[Int] = (actor ? ErrorCountSinceLastCheck).mapTo[Int]
+  def errorCount(): Int = Await.result((actor ? ErrorCount).mapTo[Int], 1 seconds)
 
-  def errorCount(): Int = Await.result(errorCountFuture(), 5 seconds)
-
-  def errorsFuture(): Future[List[HealthcheckError]] = (actor ? GetErrors).mapTo[List[HealthcheckError]]
-
-  def errors(): Seq[HealthcheckError] = Await.result(errorsFuture(), 20 seconds)
+  def errors(): Seq[HealthcheckError] = Await.result((actor ? GetErrors).mapTo[List[HealthcheckError]], 1 seconds)
 
   def resetErrorCount(): Unit = actor ! ResetErrorCount
 
   def reportErrors(): Unit = actor ! ReportErrorsAction
-
-  def fakeError() = addError(HealthcheckError(None, None, None, Healthcheck.API, Some("Fake error")))
 
   def addError(error: HealthcheckError): HealthcheckError = {
     actor ! error

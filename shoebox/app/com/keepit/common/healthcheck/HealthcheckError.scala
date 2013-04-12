@@ -58,10 +58,20 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
       }
   }
 
+  private def formatStackElement(e: StackTraceElement) = {
+    def className(klazz: String) =
+      if (klazz.contains("com.keepit")) s"""<span style="color:blue; font-size: 13px; ">$klazz</span>"""
+      else s"""<span style="color:black; font-size: 13px;">$klazz</span>"""
+    s"""${className(e.getClassName)}.<span style="color:black; font-size: 13px; font-style: italic;">${e.getMethodName}</span><span style="color:grey; font-size: 10px;">(${e.getFileName}:${e.getLineNumber})</span>"""
+  }
+
   lazy val stackTraceHtml: String = {
     def causeString(throwableOptions: Option[Throwable]): String = throwableOptions match {
-      case None => "[No Cause]"
-      case Some(t) => (t.getStackTrace() mkString "\n<br/> &nbsp; ") + s"\n<br/> &nbsp; Cause: ${causeString(Option(t.getCause))}"
+      case None =>
+        "[No Cause]"
+      case Some(t) =>
+        (t.getStackTrace() map formatStackElement mkString "\n<br/> &nbsp; ") +
+        s"""\n<br/> &nbsp; <span style="color:red; font-size: 13px; font-style: bold;">Cause:</span> ${causeString(Option(t.getCause))}"""
     }
     causeString(error)
   }
@@ -82,16 +92,16 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
   def toHtml: String = {
     val message = new StringBuilder("%s: [%s] Error during call of type %s".format(createdAt, id, callType))
     method.map { m =>
-      message ++= "<br/>http method [%s]".format(m)
+      message ++= s"""<br/><b>http method</b> <span style="color:blue; font-size: 13px; font-style: italic;">[$m]</span>"""
     }
     path.map { p =>
-      message ++= "<br/>path [%s]v".format(p)
+      message ++= s"""<br/><b>path</b> <span style="color:blue; font-size: 13px; font-style: italic;">[$p]</span>"""
     }
     errorMessage.map { em =>
-      message ++= "<br/>error message: %s".format(em.replaceAll("\n", "\n<br/>"))
+      message ++= s"""<br/><b>error message</b> <span style="color:red; font-size: 13px; font-style: italic;">[${em.replaceAll("\n", "\n<br/>")}]</span>"""
     }
     error.map { e =>
-      message ++= "<br/>Exception %s stack trace: \n<br/>".format(e.toString())
+      message ++= "<br/><b>Exception %s stack trace: \n</b><br/>".format(e.toString())
       message ++= stackTraceHtml
       causeDisplay(e)
     }
