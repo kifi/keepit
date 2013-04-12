@@ -18,12 +18,33 @@ import com.google.inject.{Inject, Singleton}
 @Singleton
 class HomeController @Inject() (db: Database,
   userRepo: UserRepo,
+  userValueRepo: UserValueRepo,
   actionAuthenticator: ActionAuthenticator)
     extends WebsiteController(actionAuthenticator) {
 
-  def home = Action{ request =>
-    Ok(views.html.website.onboarding.userRequestReceived())
+  def home = HtmlAction(true)(authenticatedAction = { implicit request =>
+    if(request.user.state == UserStates.PENDING) {
+      Ok(views.html.website.onboarding.userRequestReceived())
+    }
+    else {
+      val userAgreedToTOS = db.readOnly(userValueRepo.getValue(request.user.id.get, "agreedToTOS")(_)).map(_.toBoolean).getOrElse(false)
+      if(!userAgreedToTOS) {
+        Redirect(routes.OnboardingController.tos())
+      }
+      Ok(views.html.website.userHome())
+    }
+  }, unauthenticatedAction = { implicit request =>
+    Ok(views.html.website.welcome())
+  })
+
+  def invite = AuthenticatedHtmlAction { implicit request =>
+    Ok(views.html.website.inviteFriends())
   }
+
+  def gettingStarted = AuthenticatedHtmlAction { implicit request =>
+    Ok(views.html.website.gettingStarted())
+  }
+
 
   def giveMeA200 = Action { request =>
     Ok("You got it!")

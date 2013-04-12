@@ -31,6 +31,7 @@ case class ReportedException(val id: ExternalId[HealthcheckError], val cause: Th
 case class AuthenticatedRequest[T](
     socialUser: SocialUser,
     userId: Id[User],
+    user: User,
     request: Request[T],
     experimants: Seq[State[ExperimentType]] = Nil,
     kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
@@ -60,7 +61,7 @@ class AdminController(actionAuthenticator: ActionAuthenticator) extends Controll
   }
 
   private[controller] def AdminAction(isApi: Boolean, action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = {
-    actionAuthenticator.authenticatedAction(parse.anyContent)(isApi, { implicit request =>
+    actionAuthenticator.authenticatedAction(isApi, true, parse.anyContent, onAuthenticated = { implicit request =>
       val userId = request.adminUserId.getOrElse(request.userId)
       val authorizedDevUser = Play.isDev && userId.id == 1L
       if (authorizedDevUser || actionAuthenticator.isAdmin(userId)) {
@@ -81,19 +82,25 @@ class BrowserExtensionController(actionAuthenticator: ActionAuthenticator) exten
     AuthenticatedJsonAction(parse.tolerantJson)(action)
 
   def AuthenticatedJsonAction[T](bodyParser: BodyParser[T])(action: AuthenticatedRequest[T] => Result): Action[T] = Action(bodyParser) { request =>
-    actionAuthenticator.authenticatedAction(bodyParser)(true, action)(request) match {
+    actionAuthenticator.authenticatedAction(true, false, bodyParser, action)(request) match {
       case r: PlainResult => r.as(ContentTypes.JSON)
       case any => any
     }
   }
 
   def AuthenticatedHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
-    actionAuthenticator.authenticatedAction(parse.anyContent)(false, action)
+    actionAuthenticator.authenticatedAction(false, false, parse.anyContent, action)
 }
 
 class WebsiteController(actionAuthenticator: ActionAuthenticator) extends Controller with Logging {
   def AuthenticatedHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
-    actionAuthenticator.authenticatedAction(parse.anyContent)(false, action)
+    actionAuthenticator.authenticatedAction(false, false, parse.anyContent, action)
+
+  def HtmlAction(authenticatedAction: AuthenticatedRequest[AnyContent] => Result, unauthenticatedAction: Request[AnyContent] => Result): Action[AnyContent] =
+    HtmlAction(false)(authenticatedAction, unauthenticatedAction)
+
+  def HtmlAction(allowPending: Boolean)(authenticatedAction: AuthenticatedRequest[AnyContent] => Result, unauthenticatedAction: Request[AnyContent] => Result): Action[AnyContent] =
+    actionAuthenticator.authenticatedAction(false, allowPending, parse.anyContent, authenticatedAction, unauthenticatedAction)
 }
 
 trait SearchServiceController extends Controller with Logging

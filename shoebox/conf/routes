@@ -7,13 +7,21 @@
 ##########################################
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
+GET     /invite                     @com.keepit.controllers.website.HomeController.invite
+GET     /gettingStarted             @com.keepit.controllers.website.HomeController.gettingStarted
+
+GET     /onboarding/tos             @com.keepit.controllers.website.OnboardingController.tos
+
 GET     /giveMeA200                 @com.keepit.controllers.website.HomeController.giveMeA200
 
 GET     /login                      securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
-GET     /signup                     securesocial.controllers.Registration.signUp
-POST    /signup                     securesocial.controllers.Registration.handleSignUp
+GET     /signup                     @com.keepit.controllers.website.OnboardingController.signup
+
+# Relevant when we support traditional user signups:
+GET     /register                   securesocial.controllers.Registration.signUp
+POST    /register                   securesocial.controllers.Registration.handleSignUp
 
 ##########################################
 # Web API
@@ -69,7 +77,6 @@ GET     /search                     @com.keepit.controllers.ext.ExtSearchControl
 GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)
 
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
-GET     /welcome                    @com.keepit.controllers.ext.ExtAuthController.welcome
 GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
 
@@ -138,6 +145,7 @@ POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User])
 POST    /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.addExperiment(id: Id[User], exp: String)
 DELETE  /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.removeExperiment(id: Id[User], exp: String)
+POST    /admin/user/:id/state/:state  @com.keepit.controllers.admin.AdminUserController.changeState(id: Id[User], state: String)
 POST    /admin/user/:id/update      @com.keepit.controllers.admin.AdminUserController.updateUser(id: Id[User])
 GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.AdminUserController.refreshAllSocialInfo(id: Id[User])
 POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthController.impersonate(id: Id[User])
