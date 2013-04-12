@@ -22,7 +22,7 @@ slider2 = function() {
   });
 
   function showSlider(o, trigger, locator) {
-    info = o = info || o;  // ignore o after first call (may be out of date)
+    info = o = info || o;  // ignore o after first call (may be out of date) TODO: trust cached state from main.js
     api.log("slider info:", o);
 
     lastShownAt = +new Date;
@@ -38,11 +38,11 @@ slider2 = function() {
         // "sensitive": o.sensitive,
         // "site": location.hostname,
         // "neverOnSite": o.neverOnSite,
-        "numComments": o.numComments,
-        "numMessages": o.numMessages,
-        "newComments": o.unreadComments,
-        "newMessages": o.unreadMessages,
-        "newNotices": o.unreadNotices,
+        "numComments": o.counts.numComments,
+        "numMessages": o.counts.numMessages,
+        "newComments": o.counts.unreadComments,
+        "newMessages": o.counts.unreadMessages,
+        "newNotices": o.counts.unreadNotices,
         // "connected_networks": api.url("images/networks.png")
       }, function(html) {
         if ($slider) {
@@ -498,7 +498,7 @@ slider2 = function() {
         $btns.filter(a[0]).find(".kifi-count")
           .toggleClass("kifi-unread", !!a[1])
           .text(a[1] || a[2] || "")
-          .toggle(a[1] || a[2]);
+          .css("display", a[1] || a[2] ? "" : "none");
       });
     }});
 
