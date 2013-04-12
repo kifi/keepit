@@ -403,9 +403,7 @@ slider2 = function() {
           });
           api.require("scripts/comments.js", function() {
             renderComments($box.find(".kifi-pane-tall"), comments, ~session.experiments.indexOf("admin"));
-            comments.forEach(function (c) {
-              api.port.emit("set_comment_read", c.id);
-            });
+            api.port.emit("set_comment_read", comments[comments.length - 1].id);
           });
         });
       });
@@ -424,8 +422,8 @@ slider2 = function() {
       var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
       requireData("thread/" + threadId, function(th) {
         api.require("scripts/thread.js", function() {
-          renderThread($tall, threadId, th.messages);
-          api.port.emit("set_message_read", th.messages[th.messages.length - 1].id);
+          renderThread($tall, th.id, th.messages);
+          api.port.emit("set_message_read", {threadId: th.id, messageId: th.messages[th.messages.length - 1].id});
         });
       });
     },
