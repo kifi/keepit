@@ -260,12 +260,10 @@ class ExtStreamController @Inject() (
       }) foreach { _ =>
         val nUri = normUriRepo.get(parent.uriId)
         userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.externalId.id))
-      }
-      userNotificationRepo.getWithCommentId(userId, message.id.get) foreach { n =>
-        userChannel.push(userId, Json.arr("notifications", Seq(
-          SendableNotification.fromUserNotification(
-            userNotificationRepo.save(n.withState(UserNotificationStates.VISITED)))
-        )))
+        userNotificationRepo.getWithCommentId(userId, message.id.get) foreach { n =>
+          val vn = userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
+          userChannel.push(userId, Json.arr("notifications", Seq(SendableNotification.fromUserNotification(vn))))
+        }
       }
     }
   }
