@@ -66,6 +66,11 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
     causeString(error)
   }
 
+  lazy val subjectName: String = error match {
+    case None => errorMessage.getOrElse(path.getOrElse(callType.toString()))
+    case Some(t) => t.getClass.getName
+  }
+
   lazy val titleHtml: String = {
     def causeString(throwableOptions: Option[Throwable]): String = throwableOptions match {
       case None => "[No Cause]"

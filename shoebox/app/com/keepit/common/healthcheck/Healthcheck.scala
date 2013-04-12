@@ -31,7 +31,7 @@ import org.joda.time.DateTime
 import scala.concurrent.{Future, Await}
 import com.google.inject.{Inject, Provider}
 import scala.concurrent.duration._
-import scala.collection.mutable.{HashTable => MMap}
+import scala.collection.mutable.{HashMap => MMap}
 
 object Healthcheck {
 
@@ -54,7 +54,22 @@ case class HealthcheckHost(host: String) extends AnyVal {
   override def toString = host
 }
 
-case class HealthcheckErrorHistory(signature: HealthcheckErrorSignature, count: Int, countSinceLastAlert: Int, lastError: HealthcheckError)
+case class SendHealthcheckMail(history: HealthcheckErrorHistory) extends AnyVal {
+  def sendMail(postOffice: PostOffice, services: FortyTwoServices): Unit = {
+    val subject = s"ERROR: [${services.currentService.currentService}/$host] ${history.lastError.subjectName}"
+    val body = views.html.email.healthcheckMail(history).body
+    postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+        subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))
+  }
+}
+
+case class HealthcheckErrorHistory(signature: HealthcheckErrorSignature, count: Int, countSinceLastAlert: Int, lastError: HealthcheckError) {
+  def addError(error: HealthcheckError): HealthcheckErrorHistory = {
+    require(error.signature == signature)
+    copy(count = count + 1, countSinceLastAlert = countSinceLastAlert + 1, lastError = error)
+  }
+  def reset(): HealthcheckErrorHistory = copy(countSinceLastAlert = 0)
+}
 
 class HealthcheckActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
@@ -67,34 +82,21 @@ class HealthcheckActor @Inject() (
 
   def receive() = {
     case ReportErrorsAction =>
-      if (errors.nonEmpty) {
-        val titles = errors map {case(sig, errorList) =>
-          s"${errorList.size} since last report, ${errorsSinceStart(sig)} since start of: ${errorList.last.titleHtml}"
-        } mkString "\n<br/>"
-
-        val messages = errors map {case(sig, errorList) =>
-          s"${errorList.size} since last report, ${errorsSinceStart(sig)} since start of errorList sig ${sig.value}:\n<br/>${errorList.last.toHtml}"
-        } mkString "\n<br/><hr/>"
-        val subject = s"ERROR REPORT: ${errors.map(_._2.size).sum} errors since last report on ${services.currentService.name} ($host) version ${services.currentVersion} compiled on ${services.compilationTime}"
-        errors = initErrors
-
-        val htmlMessage = Html(s"$titles<br/><hr/><br/>$messages")
-
-        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = htmlMessage.body, category = PostOffice.Categories.HEALTHCHECK))
+      errors.values filter { _.countSinceLastAlert > 0 } foreach { history =>
+        errors(history.signature) = history.reset()
+        self ! SendHealthcheckMail(history)
       }
-    case ErrorCountSinceLastCheck =>
-      val errorCountSinceLastCheck = errorCount
-      sender ! errorCountSinceLastCheck
-    case ResetErrorCount =>
-      errorCount = 0
     case GetErrors =>
-      sender ! errors.values.flatten.toSeq
+      sender ! errors.values map {history => history.lastError} toSeq
+    case sendMail: SendHealthcheckMail => sendMail.sendMail(postOffice, services)
     case error: HealthcheckError =>
-      val sigErrors = error :: errors(error.signature)
-      errors = errors + (error.signature -> sigErrors)
-      errorsSinceStart = errorsSinceStart + (error.signature -> (errorsSinceStart(error.signature) + 1))
-      errorCount = errorCount + 1
-      lastErrorTime = Some(currentDateTime)
+      val signature = error.signature
+      val history = errors.contains(signature) match {
+        case false => HealthcheckErrorHistory(signature, 1, 0, error)
+        case true => errors(signature).addError(error)
+      }
+      errors(signature) = history
+      self ! SendHealthcheckMail(history)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
