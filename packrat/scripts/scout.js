@@ -157,7 +157,7 @@ var injected, t0 = +new Date;
       count.textContent = u || n;
       count.classList[u ? "add" : "remove"]("kifi-unread");
       (u ? tile : tile.firstChild).appendChild(count);
-    } else {
+    } else if (count.parentNode) {
       count.parentNode.removeChild(count);
     }
     tile.classList[u || n ? "add" : "remove"]("kifi-with-count");
