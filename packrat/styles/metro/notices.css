@@ -7,38 +7,40 @@
 .kifi-notice {
   position: relative;
   border-bottom: 1px solid #d2d2d2;
-  padding: 10px 12px 10px 56px;
+  padding: 10px 12px 10px 58px;
   min-height: 10px;
-  background: #f6f6ff;
+  background: #e5ebf1;
 }
 .kifi-notice:hover {
   cursor: pointer;
-  background: #eef;
+  background: #dfe7ef;
 }
 .kifi-notice-state-visited {
-  background: #eee;
+  background: #fefefe;
 }
 .kifi-notice-state-visited:hover {
-  background: #eee;
+  background: #f8fafd;
 }
 .kifi-notice time {
-  float: right;
-  margin: -2px -2px 0 0;
+  margin: 4px 0 0 0;
   font-size: 11px;
-  color: #a9a9a9;
+  color: #ccc;
   display: block;
 }
 .kifi-notice-avatar {
   position: absolute;
-  top: 8px;
+  top: 12px;
   left: 8px;
   width: 40px;
   height: 40px;
 }
 .kifi-notice-name {
-  font-size: 14px;
+  font-size: 12px;
   margin: 0 0 2px 0;
-  color: #999;
+  color: #333;
+}
+.kifi-notice-name .kifi-author-name {
+  font-weight: bold;
 }
 .kifi-notice-action {
   font-size: 12px;
@@ -46,24 +48,22 @@
   color: #333;
 }
 .kifi-notice-page {
-  color: #999;
   font-size: 12px;
-  margin: 4px 0;
-  font-style: italic;
+  margin: 8px 0;
 }
-.kifi-notice-page a {
+.kifi-notice-page a.kifi-link,
+.kifi-notice-page a.kifi-link:hover,
+.kifi-notice-page a.kifi-link:visited,
+.kifi-notice-page a.kifi-link:active {
   display: block;
-  margin-top: 2px;
+  color: #97a1ac;
+  width: 220px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .kifi-notice-text {
-  margin: 4px;
+  margin: 6px 0;
   font-size: 13px;
-}
-.kifi-notice-text:before {
-  display: inline;
-  content: "“";
-}
-.kifi-notice-text:after {
-  display: inline;
-  content: "”";
+  color: #3a3c3d;
 }
