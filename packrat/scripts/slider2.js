@@ -403,7 +403,8 @@ slider2 = function() {
           });
           api.require("scripts/comments.js", function() {
             renderComments($box.find(".kifi-pane-tall"), comments, ~session.experiments.indexOf("admin"));
-            api.port.emit("set_comment_read", comments[comments.length - 1].id);
+            var lastCom = comments[comments.length - 1];
+            api.port.emit("set_comment_read", {id: lastCom.id, time: lastCom.createdAt});
           });
         });
       });
@@ -423,7 +424,8 @@ slider2 = function() {
       requireData("thread/" + threadId, function(th) {
         api.require("scripts/thread.js", function() {
           renderThread($tall, th.id, th.messages);
-          api.port.emit("set_message_read", {threadId: th.id, messageId: th.messages[th.messages.length - 1].id});
+          var lastMsg = th.messages[th.messages.length - 1];
+          api.port.emit("set_message_read", {threadId: th.id, messageId: lastMsg.id, time: lastMsg.createdAt});
         });
       });
     },

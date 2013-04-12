@@ -334,22 +334,17 @@ api.port.on({
     });
     return true;
   },
-  set_comment_read: function(id, _, tab) {
-    var d = pageData[tab.nUri];
-    var c = d && d.comments && d.comments.filter(hasId(id))[0];
-    var time = c && new Date(c.createdAt);
-    if (!time || time > d.lastCommentRead) {
-      if (time) d.lastCommentRead = time;
-      socket.send(["set_comment_read", id]);
+  set_comment_read: function(o, _, tab) {
+    var d = pageData[tab.nUri], time = new Date(o.time);
+    if (!d || time > d.lastCommentRead) {
+      if (d) d.lastCommentRead = time;
+      socket.send(["set_comment_read", o.id]);
     }
   },
   set_message_read: function(o, _, tab) {
-    var d = pageData[tab.nUri];
-    var th = d && d.threads && d.threads.filter(hasId(o.threadId))[0];
-    var msg = th && th.messages && th.messages.filter(hasId(o.messageId))[0];
-    var time = msg && new Date(msg.createdAt);
-    if (!time || time > (d.lastMessageRead[o.threadId] || 0)) {
-      if (time) d.lastMessageRead[o.threadId] = time;
+    var d = pageData[tab.nUri], time = new Date(o.time);
+    if (!d || time > (d.lastMessageRead[o.threadId] || 0)) {
+      if (d) d.lastMessageRead[o.threadId] = time;
       socket.send(["set_message_read", o.messageId]);
     }
   },
