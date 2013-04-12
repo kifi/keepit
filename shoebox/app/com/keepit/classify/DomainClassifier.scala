@@ -67,8 +67,8 @@ private[classify] class DomainClassificationActor @Inject() (
       val res: Option[Boolean] = domain.sensitive orElse {
         // check again to make sure a previous FetchDomainInfo hasn't filled in the sensitivity
         val tagNames = Await.result(getTagNames(hostname), 100 seconds)
-        db.readWrite { implicit s =>
-          val tagIds = tagNames.map { name =>
+        val tagIds = db.readWrite { implicit s =>
+          tagNames.map { name =>
             (tagRepo.get(name, excludeState = None) match {
               case Some(tag) if tag.state != DomainTagStates.ACTIVE =>
                 tagRepo.save(tag.withState(DomainTagStates.ACTIVE))
@@ -76,6 +76,8 @@ private[classify] class DomainClassificationActor @Inject() (
               case None => tagRepo.save(DomainTag(name = name))
             }).id.get
           }.toSet
+        }
+        db.readWrite { implicit s =>
           val existingTagRelationships = domainToTagRepo.getByDomain(domain.id.get, excludeState = None)
           for (r <- existingTagRelationships.toSeq if r.state != DomainToTagStates.ACTIVE) {
             domainToTagRepo.save(r.withState(DomainToTagStates.ACTIVE))
@@ -83,6 +85,8 @@ private[classify] class DomainClassificationActor @Inject() (
           domainToTagRepo.insertAll((tagIds -- existingTagRelationships.map(_.tagId)).map { tagId =>
             DomainToTag(domainId = domain.id.get, tagId = tagId)
           }.toSeq)
+        }
+        db.readWrite { implicit s =>
           // since sensitive had a value of None before, we always need to recompute even if nothing changed
           updater.calculateSensitivity(domain)
         }

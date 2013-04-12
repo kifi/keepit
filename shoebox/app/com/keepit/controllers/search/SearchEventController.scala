@@ -9,7 +9,7 @@ import com.keepit.search.ResultClickTracker
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc.Action
 
-case class ResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], isUserKeep: Boolean)
+case class ResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean)
 
 object ResultClickedJson {
   private implicit val uriIdFormat = Id.format[NormalizedURI]
@@ -23,7 +23,7 @@ class SearchEventController @Inject()(resultClickTracker: ResultClickTracker) ex
 
   def logResultClicked = Action(parse.json) { request =>
     val rc = Json.fromJson[ResultClicked](request.body).get
-    resultClickTracker.add(rc.userId, rc.query, rc.uriId, rc.isUserKeep)
+    resultClickTracker.add(rc.userId, rc.query, rc.uriId, rc.rank, rc.isUserKeep)
     Ok(JsObject(Seq("stored" -> JsString("ok"))))
   }
 }

@@ -32,12 +32,12 @@ function attachComposeBindings($c, composeTypeName) {
   });
 
   if ($t.length) {
-    api.port.emit("get_friends", function(o) {
-      api.log("friends:", o);
-      o.friends.forEach(function(f) {
+    api.port.emit("get_friends", function(friends) {
+      api.log("friends:", friends);
+      friends.forEach(function(f) {
         f.name = f.firstName + " " + f.lastName;
       });
-      $t.tokenInput(o.friends, {
+      $t.tokenInput(friends, {
         searchDelay: 0,
         minChars: 2,
         placeholder: "To",
@@ -47,7 +47,7 @@ function attachComposeBindings($c, composeTypeName) {
         animateDropdown: false,
         preventDuplicates: true,
         allowTabOut: true,
-        tokenValue: "externalId",
+        tokenValue: "id",
         theme: "KiFi",
         zindex: 2147483641});
       $("#token-input-kifi-compose-to").focus();
@@ -70,7 +70,7 @@ function attachComposeBindings($c, composeTypeName) {
         $f.find("#token-input-kifi-compose-to").focus();
         return;
       }
-      args.push(recipients.map(function(r) {return r.externalId}).join(","));
+      args.push(recipients.map(function(r) {return r.id}).join(","));
     }
     $d.trigger("kifi:compose-submit", args);
     var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");

@@ -152,7 +152,7 @@ var injected, t0 = +new Date;
     });
     api.require("styles/metro/tile.css", function() {
       el.style.display = "";
-      if (o.keepers && !o.kept) {
+      if (o.keepers.length && !o.kept) {
         withSlider2(function() {
           setTimeout(slider2.showKeepersFor.bind(slider2, o, el, 2000), 3000);
         });

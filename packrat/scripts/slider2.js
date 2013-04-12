@@ -42,7 +42,7 @@ slider2 = function() {
         "numMessages": o.numMessages,
         "newComments": o.unreadComments,
         "newMessages": o.unreadMessages,
-        newNotices: o.newNotices,
+        "newNotices": o.unreadNotices,
         // "connected_networks": api.url("images/networks.png")
       }, function(html) {
         if ($slider) {
@@ -90,7 +90,7 @@ slider2 = function() {
             if (e.target !== this) {
               this.classList.add("kifi-hoverless");
             }
-            if ((e.target === this || e.target.parentNode === this) && (o.keepers || o.keeps) && !$pane) {
+            if ((e.target === this || e.target.parentNode === this) && (o.keepers.length || o.keeps) && !$pane) {
               $(this).showHover({
                 reuse: false,
                 showDelay: 250,
@@ -102,8 +102,8 @@ slider2 = function() {
                   render("html/metro/keepers.html", {
                     link: true,
                     keepers: keepers,
-                    anyKeepers: !!keepers,
-                    captionHtml: formatCountHtml(o.kept, (o.keepers || 0).length, o.otherKeeps)
+                    anyKeepers: keepers.length,
+                    captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps)
                   }, function(html) {
                     callback($("<div class=kifi-slider2-tip>").html(html).data("keepers", keepers));
                   });
@@ -121,7 +121,7 @@ slider2 = function() {
                   facebookId: friend.facebookId,
                   iconsUrl: api.url("images/social_icons.png")
                 }, callback);
-                api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+                api.port.emit("get_num_mutual_keeps", {id: friend.id}, function gotNumMutualKeeps(o) {
                   $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
                 });
               }});
@@ -290,8 +290,8 @@ slider2 = function() {
     switch (loc[1]) {
       case "messages":
         if (loc[2]) {
-          requireData("thread/" + loc[2], function(messages) {
-            showPane("thread", false, messages[0].recipients, loc[2]);
+          requireData("thread/" + loc[2], function(th) {
+            showPane("thread", false, th.messages[0].recipients, loc[2]);
           });
         } else {
           showPane("threads");
@@ -310,7 +310,7 @@ slider2 = function() {
         url: location.href,
         kept: info.kept,
         keepers: pick(info.keepers, 7),
-        keepersCaptionHtml: formatCountHtml(0, (info.keepers || 0).length, info.otherKeeps)};
+        keepersCaptionHtml: formatCountHtml(0, info.keepers.length, info.otherKeeps)};
     },
     thread: function(recipients) {
       return {
@@ -399,7 +399,7 @@ slider2 = function() {
       requireData("comments", function(comments) {
         api.port.emit("session", function(session) {
           comments.forEach(function(c) {
-            c.isLoggedInUser = c.user.externalId == session.userId;
+            c.isLoggedInUser = c.user.id == session.userId;
           });
           api.require("scripts/comments.js", function() {
             renderComments($box.find(".kifi-pane-tall"), comments, ~session.experiments.indexOf("admin"));
@@ -414,15 +414,18 @@ slider2 = function() {
       requireData("threads", function(threads) {
         api.require("scripts/threads.js", function() {
           renderThreads($box.find(".kifi-pane-tall"), threads);
+          threads.forEach(function(th) {
+            requireData("thread/" + th.id, api.noop);
+          });
         });
       });
     },
     thread: function($box, threadId) {
       var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
-      requireData("thread/" + threadId, function(messages) {
+      requireData("thread/" + threadId, function(th) {
         api.require("scripts/thread.js", function() {
-          renderThread($tall, threadId, messages);
-          api.port.emit("set_message_read", messages[messages.length - 1].id);
+          renderThread($tall, threadId, th.messages);
+          api.port.emit("set_message_read", th.messages[th.messages.length - 1].id);
         });
       });
     },
@@ -456,42 +459,37 @@ slider2 = function() {
     return arr;
   }
 
-  var cache = {}, requested = {};
-  requireData("normalize", "comments", "threads");  // pre-fetching
-  function requireData() {
-    var keys = Array.prototype.slice.call(arguments), callback = keys.pop();
-    if (typeof callback != "function") {
-      keys.push(callback);
-      callback = $.noop;
-    }
+  const dataCallbacks = {};
+  function requireData(key, callback) {
+    var kArr = key.split("/");
+    var arr = dataCallbacks[key] = dataCallbacks[key] || [];
+    arr.push([kArr[1], callback]);
 
-    if (!invokeIfReady()) {
-      var t = +new Date;
-      keys
-      .filter(function(k) {
-        return !cache.hasOwnProperty(k) && t - (requested[k] || 0) > 3000;
-      })
-      .forEach(function(k) {
-        var kArr = k.split("/");
-        api.log("[requireData:emit]", kArr[0], kArr[1]);
-        api.port.emit(kArr[0], kArr[1], function(v) {
-          api.log("[requireData:emit:callback]", k, v);
-          cache[k] = v;
-          invokeIfReady();
-        });
-        requested[k] = t;
-      });
-    }
+    api.port.emit.apply(api.port, kArr);
+  }
 
-    function invokeIfReady() {
-      api.log("[requireData:invokeIfReady]", keys);
-      if (keys.every(function(k) {return cache.hasOwnProperty(k)})) {
-        api.log("[requireData:invokeIfReady] calling:", keys);
-        callback.apply(null, keys.map(function(k) {return cache[k]}));
-        return true;
+  function receiveData(type, prop, data, respond) {  // prop might be omitted
+    api.log("[receiveData]", arguments);
+    if (arguments.length < 4) {
+      data = prop, prop = null;
+    }
+    var arg = data[prop], key = prop ? type + "/" + arg : type;
+    for (var i = 0, callbacks = dataCallbacks[key] || 0; i < callbacks.length; i++) {
+      var cb = callbacks[i];
+      if (cb[0] == arg) {
+        cb[1](data);
+        callbacks.splice(i--, 1);
       }
     }
+    if (!callbacks.length) {
+      delete dataCallbacks[key];
+    }
   }
+
+  api.port.on({
+    comments: receiveData.bind(null, "comments"),
+    threads: receiveData.bind(null, "threads"),
+    thread: receiveData.bind(null, "thread", "id")});
 
   // the slider API
   return {
@@ -523,8 +521,8 @@ slider2 = function() {
           // TODO: preload friend pictures
           render("html/metro/keepers.html", {
             keepers: keepers,
-            anyKeepers: !!keepers,
-            captionHtml: formatCountHtml(info.kept, (info.keepers || 0).length, info.otherKeeps)
+            anyKeepers: keepers.length,
+            captionHtml: formatCountHtml(info.kept, info.keepers.length, info.otherKeeps)
           }, function(html) {
             callback($("<div class=kifi-slider2-tip>").html(html));
           });
