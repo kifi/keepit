@@ -64,7 +64,8 @@ case class SendableNotification(
 
 object SendableNotification {
   def fromUserNotification(notify: UserNotification) = {
-    SendableNotification(id = notify.externalId, time = notify.updatedAt, category = notify.category, details = notify.details, state = notify.state)
+    SendableNotification(id = notify.externalId, time = notify.createdAt, category = notify.category,
+      details = notify.details, state = notify.state)
   }
 }
 
