@@ -86,10 +86,6 @@ function renderComments($container, comments, isAdmin) {
         $(html).find("time").timeago().end().appendTo($posted);
         $posted[0].scrollTop = 99999;
         $container.find(".kifi-compose-draft").empty().blur();
-        // TODO: better way to update comment counts
-        $(".kifi-slider2-dock-btn.kifi-slider2-comments .kifi-count:not(.kifi-unread),#kifi-tile .kifi-count:not(.kifi-unread)").each(function() {
-          this.innerHTML = 1 + (+this.innerHTML);
-        });
       });
     });
   }

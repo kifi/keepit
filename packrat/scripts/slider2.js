@@ -489,7 +489,18 @@ slider2 = function() {
   api.port.on({
     comments: receiveData.bind(null, "comments"),
     threads: receiveData.bind(null, "threads"),
-    thread: receiveData.bind(null, "thread", "id")});
+    thread: receiveData.bind(null, "thread", "id"),
+    counts: function(o) {
+      var $btns = $slider.find(".kifi-slider2-dock-btn");
+      [[".kifi-slider2-notices", o.unreadNotices],
+       [".kifi-slider2-comments", o.unreadComments, o.numComments],
+       [".kifi-slider2-threads", o.unreadMessages, o.numMessages]].forEach(function(a) {
+        $btns.filter(a[0]).find(".kifi-count")
+          .toggleClass("kifi-unread", !!a[1])
+          .text(a[1] || a[2] || "")
+          .toggle(a[1] || a[2]);
+      });
+    }});
 
   // the slider API
   return {
