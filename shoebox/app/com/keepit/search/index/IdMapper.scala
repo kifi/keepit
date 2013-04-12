@@ -30,17 +30,6 @@ object ArrayIdMapper {
     }
     new ArrayIdMapper(idArray)
   }
-
-  def bytesToLong(bytes: Array[Byte], offset: Int): Long = {
-    ((bytes(offset + 0) & 0xFF).toLong) |
-    ((bytes(offset + 1) & 0xFF).toLong <<  8) |
-    ((bytes(offset + 2) & 0xFF).toLong << 16) |
-    ((bytes(offset + 3) & 0xFF).toLong << 24) |
-    ((bytes(offset + 4) & 0xFF).toLong << 32) |
-    ((bytes(offset + 5) & 0xFF).toLong << 40) |
-    ((bytes(offset + 6) & 0xFF).toLong << 48) |
-    ((bytes(offset + 7) & 0xFF).toLong << 56)
-  }
 }
 
 class ArrayIdMapper(idArray: Array[Long]) extends IdMapper {
@@ -71,7 +60,7 @@ class ReverseArrayMapper(ids: Array[Long], indexes: Array[Int], sz: Int, bucketS
           while (true) {
             c = base + bitCount(chain & (mask - 1L))
             index = indexes(start + c)
-            if (ids(index) == id) return index // fount it by traversing the chain. now return.
+            if (ids(index) == id) return index // found it by traversing the chain. now return.
             else {
               if (c < 64) {
                 // traverse the chain
