@@ -703,7 +703,6 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
 
 api.tabs.on.focus.add(function(tab) {
   api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
-  var d;
   if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
   } else {
