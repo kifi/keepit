@@ -213,7 +213,7 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndMask]) exte
           while (i <= numTerms) {
             val runLen = if (((1L << (i - 1)) & mask) != 0) prevRun + 1.0f else 0.0f
             val localScore = max(ls(i) - (gapPenalty(curPos - prevPos)), 0.0f)
-            prevRun = rl(i) // retrieve the run length of previous round
+            prevRun = rl(i) // store the run length of previous round
             rl(i) = runLen
             ls(i) = if (localScore < runLen) runLen else localScore
             localScoreSum += ls(i)
