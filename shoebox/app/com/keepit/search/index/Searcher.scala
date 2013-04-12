@@ -48,7 +48,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
       if(weight != null) {
         indexReader.getContext.leaves.foreach{ subReaderContext =>
           val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
-          val scorer = weight.scorer(subReaderContext, true, true, subReader.getLiveDocs)
+          val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
           if (scorer != null) {
             f(scorer, subReader.getIdMapper)
           }
